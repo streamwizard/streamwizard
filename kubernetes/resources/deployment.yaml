@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sr-jochemwhite-frontend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sr-jochemwhite-frontend
+  template:
+    metadata:
+      labels:
+        app: sr-jochemwhite-frontend
+    spec:
+      containers:
+      - name: sr-jochemwhite-frontend
+        image: ghcr.io/streamerbuddybot/sr:latest
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - secretRef:
+            name: jochemwhite-frontend
