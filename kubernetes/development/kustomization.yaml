@@ -1,6 +1,0 @@
-bases:
-  - ../../base
-
-patches:
-  - patch: replicas.yaml
-
