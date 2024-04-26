@@ -54,7 +54,7 @@ export default function Home() {
                 className="text-xl font-bold text-neutral-600 dark:text-white "
               >
                 Hobby
-                <h2 className="text-6xl ">$0</h2>
+                <h2 className="text-6xl ">$1</h2>
               </CardItem>
               <CardItem
                 translateZ="60"
