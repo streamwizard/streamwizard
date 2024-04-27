@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     url: "https://accounts.spotify.com/api/token",
     data: {
       code,
-      redirect_uri: "http://localhost:3000/api/spotify/callback", // Replace with your redirect URI
+      redirect_uri: `${origin}/api/spotify/callback`, // Replace with your redirect URI
       grant_type: "authorization_code",
     },
     headers: {
@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/dashboard/settings`);
   } catch (error) {
     console.error(error);
-    redirect("/error");
+    redirect(`/error?error=${error}}`);
   }
 }
 
