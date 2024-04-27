@@ -57,7 +57,7 @@ export function DashboardUserNav({ username, profile_img }: { username: string; 
       <DropdownMenuSeparator />
       <DropdownMenuGroup>
         <DropdownMenuItem className="cursor-pointer" asChild>
-          <Link href="/dashboard/user/settings">
+          <Link href="/dashboard/settings">
             <LinkIcon className="mr-2 h-3 w-3" />
             Settings
           </Link>
