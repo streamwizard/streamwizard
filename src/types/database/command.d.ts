@@ -1,7 +1,7 @@
 export interface CommandsTable {
   id?: string;
   created_at?: Date   
-  channel_id: number;  
+  broadcaster_id: number;  
   command: string;  
   message: string;  
   action: string | null;

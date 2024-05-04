@@ -15,7 +15,7 @@ export default async function Layout({
   }
 
   return (
-    <CommandProvider initialCommands={commands} channel_id={userdata.channel_id} user_id={userdata.user_id} editor={userdata.username}>
+    <CommandProvider initialCommands={commands} broadcaster_id={userdata.broadcaster_id} user_id={userdata.user_id} editor={userdata.username}>
       {children}
     </CommandProvider>
   );

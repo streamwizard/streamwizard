@@ -23,10 +23,14 @@ export default function CommandActions({ command }: Props) {
   const [modal, setModal] = React.useState<boolean>(false);
 
 
+
+
+
+
   return (
     <>
       <Modal open={modal} setModal={setModal}>
-        <CommandForm command={command} setModal={setModal} />
+        <CommandForm command={command} setModal={setModal}  />
       </Modal>
 
       <DropdownMenu>

@@ -25,7 +25,7 @@ export interface UserMetaData {
 export interface Twitch_integration {
   user_id: string;
   username: string;
-  channel_id: number;
+  broadcaster_id: number;
   access_token: string;
   refresh_token: string;
   email: string;

@@ -20,7 +20,7 @@ interface Props {
   children: ReactNode;
   initialCommands: CommandsTable[];
   user_id: string;
-  channel_id: number;
+  broadcaster_id: number;
   editor: string;
 }
 
@@ -37,7 +37,7 @@ function reducer(state: CommandsTable[], action: { type: string; payload: Comman
   }
 }
 
-export const CommandProvider = ({ children, initialCommands, channel_id, editor, user_id }: Props) => {
+export const CommandProvider = ({ children, initialCommands, broadcaster_id, editor, user_id }: Props) => {
   // const [commands, setCommands] = React.useState<CommandsTable[]>(initialCommands);
   const [optimisticCommands, dispatch] = useOptimistic(initialCommands, reducer);
 
@@ -45,7 +45,7 @@ export const CommandProvider = ({ children, initialCommands, channel_id, editor,
   const addCommand = async (command: CommandSchemaType) => {
     const new_command: CommandsTable = {
       ...command,
-      channel_id: channel_id,
+      broadcaster_id: broadcaster_id,
       user_id: user_id,
       updated_by: editor,
       updated_at: new Date(),

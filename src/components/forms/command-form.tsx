@@ -12,6 +12,7 @@ import useCommands from "@/hooks/useCommands";
 import { CommandSchema } from "@/schemas/command-schema";
 import { CommandsTable } from "@/types/database/command";
 import { Textarea } from "../ui/textarea";
+import { use, useEffect, useState } from "react";
 
 interface Props {
   setModal: (value: boolean) => void;
@@ -21,6 +22,11 @@ interface Props {
 export function CommandForm({ setModal, command }: Props) {
   const { addCommand, updateCommand } = useCommands();
 
+
+
+
+
+
   const form = useForm<z.infer<typeof CommandSchema>>({
     resolver: zodResolver(CommandSchema),
     defaultValues: {
@@ -29,7 +35,7 @@ export function CommandForm({ setModal, command }: Props) {
       message: command?.message || "",
       userlevel: (command?.userlevel as any) || "everyone",
       cooldown: command?.cooldown || 0,
-      status: command?.status || false,
+      status: command?.status || true,
     },
   });
 
