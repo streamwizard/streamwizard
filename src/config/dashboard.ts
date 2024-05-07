@@ -34,8 +34,8 @@ export const dashboardConfig: DashboardConfig = {
         beta: true,
       },
       {
-        label: "Banned Users",
-        href: "/dashboard/banned-user/",
+        label: "Banned Chatters",
+        href: "/dashboard/banned-chatters/",
         icon: User2,
         beta: true,
       },

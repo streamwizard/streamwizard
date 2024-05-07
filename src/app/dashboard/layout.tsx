@@ -15,17 +15,17 @@ export default async function Layout({ children }: Readonly<{ children: React.Re
   }
 
   return (
-    <div className="flex">
-      <Sidebar>
-        <SidebarNav config={dashboardConfig} user={data.user} />
-      </Sidebar>
-      <div className="w-full">
-        <DashboardNav />
-        <div className="h-[calc(100vh-60px)] overflow-x-hidden  pb-10">
-          <Breadcrumb />
-          <div className="mx-auto px-10">{children}</div>
+      <div className="flex">
+        <Sidebar>
+          <SidebarNav config={dashboardConfig} user={data.user} />
+        </Sidebar>
+        <div className="w-full">
+          <DashboardNav />
+          <div className="h-[calc(100vh-60px)] overflow-x-hidden  pb-10">
+            <Breadcrumb />
+            <div className="mx-auto px-10">{children}</div>
+          </div>
         </div>
       </div>
-    </div>
   );
 }
