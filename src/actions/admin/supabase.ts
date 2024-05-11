@@ -13,7 +13,7 @@ export async function add_twitch_integration(user: Twitch_integration) {
 }
 
 export async function get_twitch_integration(user_id: string, channel_id: string): Promise<Twitch_integration[] | null> {
-  const { data, error } = await supabase.from("twitch_integration").select("*").eq("user_id", user_id).eq("channel_id", channel_id);
+  const { data, error } = await supabase.from("twitch_integration").select("*").eq("user_id", user_id).eq("broadcaster_id", channel_id);
 
   const twitch_integration = data as Twitch_integration[] || [];
 
@@ -24,7 +24,7 @@ export async function get_twitch_integration(user_id: string, channel_id: string
 
 
 export async function update_twitch_integration(user_id: string, channel_id: string, data: Partial<Twitch_integration>) {
-  const { error } = await supabase.from("twitch_integration").update(data).eq("user_id", user_id).eq("channel_id", channel_id);
+  const { error } = await supabase.from("twitch_integration").update(data).eq("user_id", user_id).eq("broadcaster_id", channel_id);
   if (error) {
     console.log(error);
   }

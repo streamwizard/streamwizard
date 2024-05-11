@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
     const twitch_user: Twitch_integration = {
       user_id: user.id,
-      username: user.user_metadata.full_name,
+      account: user.user_metadata.full_name,
       broadcaster_id: +user.identities![0].id,
       access_token: session.provider_token!,
       refresh_token: session.provider_refresh_token!,
