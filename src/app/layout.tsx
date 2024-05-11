@@ -21,9 +21,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="dark"  >
           <ModalProvider>{children}</ModalProvider>
-          <Toaster position="bottom-right" visibleToasts={5} theme="dark" />
+          <Toaster position="bottom-right" visibleToasts={10} theme="dark" />
         </ThemeProvider>
       </body>
     </html>

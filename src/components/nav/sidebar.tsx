@@ -17,8 +17,10 @@ export default function Sidebar({ children }: Props) {
           alt="Logo"
           style={{
             maxWidth: "100%",
-            height: "auto"
-          }} />
+            height: "auto",
+          }}
+          priority
+        />
       </div>
       <span className="my-4">
         <Separator />

@@ -73,15 +73,21 @@ TwitchAPI.interceptors.response.use(
 export { TwitchAPI };
 
 async function RefreshToken(refreshToken: string, broadcaster_id: number): Promise<string | null> {
+  console.log("refreshing token");
   try {
     const res = await axios.post(
       `https://id.twitch.tv/oauth2/token?client_id=${process.env.NEXT_PUBLIC_TWITCH_CLIENT_ID}&client_secret=${process.env.TWITCH_CLIENT_SECRET}&grant_type=refresh_token&refresh_token=${refreshToken}`
     );
 
-    await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from("twitch_integration")
       .update({ access_token: res.data.access_token, refresh_token: res.data.refresh_token })
       .eq("broadcaster_id", broadcaster_id);
+
+      if(error){
+        console.log("error updating tokens");
+        return null;
+      }
 
     return res.data.access_token;
   } catch (error) {
