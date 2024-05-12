@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 // Define the type for the context
 export interface BannedSongsContextType {
-  bannedChatters: BannedSongs[];
+  bannedSongs: BannedSongs[];
   unbanSong: (chatter: BannedSongs[]) => void;
   banSong: (song: { song_name: string, song_id: string, chatter_id: string; chatter_name: string }) => void;
 }
@@ -93,7 +93,7 @@ export const BannedSongsProvider = ({ children, initialBannedSongs, broadcaster_
   };
 
   // Value that will be passed to context consumers
-  const value: BannedSongsContextType = { bannedChatters: optimisticBannedChatters, banSong, unbanSong: unBanSong };
+  const value: BannedSongsContextType = { bannedSongs: optimisticBannedChatters, banSong, unbanSong: unBanSong };
 
   return <BannedSongsContext.Provider value={value}>{children}</BannedSongsContext.Provider>;
 };

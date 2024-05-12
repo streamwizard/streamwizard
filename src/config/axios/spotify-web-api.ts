@@ -1,11 +1,13 @@
 "use server";
 
+import { SpotifyAccessToken } from "@/types/API/spotify-web-api";
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import axios from "axios";
 import type { AxiosRequestConfig } from "axios";
+import QueryString from "qs";
 
 const SpotifyWebAPi = axios.create({
-  baseURL: "https://api.spotify.com/v1/",
+  baseURL: "https://api.spotify.com/v1",
   headers: {
     Accept: "application/json",
   },
@@ -22,7 +24,7 @@ SpotifyWebAPi.interceptors.request.use(
   }
 );
 
-//twitch response interceptor
+//spotify response interceptor
 SpotifyWebAPi.interceptors.response.use(
   (response) => {
     return response;
@@ -39,22 +41,25 @@ SpotifyWebAPi.interceptors.response.use(
       //get the channel from the request
       const channelID = error.response?.config.broadcasterID;
 
+      if (!channelID) return Promise.reject("No Broadcaster ID found in request");
+
       const { data, error: DBerror } = await supabaseAdmin
-        .from("twitch_integration")
-        .select("refresh_token")
-        .eq("broadcaster_id", channelID)
+        .from("spotify_integrations")
+        .select("refresh_token, user_id")
+        .eq("twitch_channel_id", +channelID)
         .single();
       if (DBerror) {
-        console.log("Tokens not found");
+        console.log("Error getting refresh token from database");
+        console.log(DBerror);
         return;
       }
 
       //fetch the new accessToken and update the tokens
-      const newToken = await RefreshToken(data.refresh_token, channelID);
+      const newToken = await RefreshToken(data.refresh_token, data.user_id);
 
       if (!newToken) {
         console.log("Error refreshing token");
-        return;
+        return Promise.reject(error);
       }
 
       //update the headers for the new request
@@ -71,24 +76,38 @@ SpotifyWebAPi.interceptors.response.use(
 
 export { SpotifyWebAPi };
 
-async function RefreshToken(refreshToken: string, broadcaster_id: number): Promise<string | null> {
-  console.log("refreshing token");
+async function RefreshToken(refresh_token: string, user_id: string): Promise<string | null> {
   try {
-    const res = await axios.post(
-      `https://id.twitch.tv/oauth2/token?client_id=${process.env.NEXT_PUBLIC_TWITCH_CLIENT_ID}&client_secret=${process.env.TWITCH_CLIENT_SECRET}&grant_type=refresh_token&refresh_token=${refreshToken}`
-    );
+    const authOptions = {
+      method: "post",
+      url: "https://accounts.spotify.com/api/token",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${Buffer.from(process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID + ":" + process.env.SPOTIFY_CLIENT_SECRET).toString("base64")}`,
+      },
+      data: QueryString.stringify({
+        grant_type: "refresh_token",
+        refresh_token: refresh_token,
+      }),
+    };
 
-    const { error } = await supabaseAdmin
-      .from("twitch_integration")
-      .update({ access_token: res.data.access_token, refresh_token: res.data.refresh_token })
-      .eq("broadcaster_id", broadcaster_id);
+    const response = await axios<SpotifyAccessToken>(authOptions);
 
-      if(error){
-        console.log("error updating tokens");
-        return null;
-      }
+    const { data, error } = await supabaseAdmin
+      .from("spotify_integrations")
+      .update({
+        access_token: response.data.access_token,
+        refresh_token: response.data.refresh_token,
+      })
+      .eq("user_id", user_id);
 
-    return res.data.access_token;
+    if (error) {
+      console.error("error updating in database tokens");
+      console.log(error);
+      return null;
+    }
+
+    return response.data.access_token;
   } catch (error) {
     console.error("error refreshing token");
     console.log(error);

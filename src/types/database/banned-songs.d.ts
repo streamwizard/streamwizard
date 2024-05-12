@@ -3,6 +3,7 @@ export interface BannedSongs {
   created_at?: Date;
   song_id: string;
   song_name: string;
+  artists: string;
   broadcaster_id: string;
   broadcaster_name: string;
   settings_id?: string;
