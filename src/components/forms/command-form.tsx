@@ -12,7 +12,7 @@ import useCommands from "@/hooks/useCommands";
 import { CommandSchema } from "@/schemas/command-schema";
 import { CommandsTable } from "@/types/database/command";
 import { Textarea } from "../ui/textarea";
-import { use, useEffect, useState } from "react";
+
 
 interface Props {
   setModal: (value: boolean) => void;

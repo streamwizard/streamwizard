@@ -1,5 +1,5 @@
 "use client";
-import { addBannedChatter, removeBannedChatter } from "@/actions/supabase/table-banned_chatters";
+import { addBannedSong, deleteBannedSong } from "@/actions/supabase/table-banned-songs";
 import { BannedSongs } from "@/types/database/banned-songs";
 import React, { ReactNode, createContext, startTransition, useOptimistic } from "react";
 import { toast } from "sonner";
@@ -8,7 +8,7 @@ import { toast } from "sonner";
 export interface BannedSongsContextType {
   bannedSongs: BannedSongs[];
   unbanSong: (chatter: BannedSongs[]) => void;
-  banSong: (song: { song_name: string, song_id: string, chatter_id: string; chatter_name: string }) => void;
+  banSong: (song: { song_name: string; song_id: string; artists: string  }) => void;
 }
 
 // Create the context with TypeScript type
@@ -26,7 +26,7 @@ interface Props {
 function reducer(state: BannedSongs[], action: { type: string; payload: BannedSongs }) {
   switch (action.type) {
     case "ADD_SONG":
-      return [...state, action.payload];    
+      return [...state, action.payload];
     case "DELETE_SONG":
       return state.filter((c) => c.id !== action.payload.id);
     default:
@@ -38,31 +38,29 @@ export const BannedSongsProvider = ({ children, initialBannedSongs, broadcaster_
   const [optimisticBannedChatters, dispatch] = useOptimistic(initialBannedSongs, reducer);
 
   // Function to add a command
-  const banSong = async (song: { song_name: string, song_id: string, chatter_id: string; chatter_name: string }) => {
+  const banSong = async (song: { song_name: string; song_id: string, artists: string }) => {
     const banned_chatter: BannedSongs = {
       ...song,
       broadcaster_id: broadcaster_id.toString(),
-      broadcaster_name: editor,    
+      broadcaster_name: editor,
       created_at: new Date(),
       settings_id,
       user_id,
+      artists: song.artists,
     };
-
 
     startTransition(() => {
       dispatch({ type: "ADD_SONG", payload: banned_chatter });
     });
 
-    // const {error} = await addBannedChatter(banned_chatter, "/dashboard/banned-chatters")
-
-    // if(error) {
-    //   toast.error(error);
-    //   return;
-    // }
+    try {
+      await addBannedSong(banned_chatter);
+    } catch (error: any) {
+      toast.error(error.message);
+      return;
+    }
 
     toast.success(`${song.song_name} has been banned from using song requests`);
-
-   
   };
 
   // Function to delete a command
@@ -76,19 +74,12 @@ export const BannedSongsProvider = ({ children, initialBannedSongs, broadcaster_
     const song_ids = song.map((c) => c.id).filter((id) => id !== undefined) as string[];
 
     song_ids.forEach(async (id) => {
-      const { affectedRows, error } = await removeBannedChatter(id, "/dashboard/commands");
-
-      if (error) {
-        toast.error(error);
-        return;
+      try {
+        await deleteBannedSong(id);
+        toast.success("Song has been unbanned");
+      } catch (error: any) {
+        toast.error(error.message);
       }
-
-
-      if (affectedRows) {
-        toast.success(`Successfully deleted ${affectedRows} commands`);
-      }
-
-
     });
   };
 

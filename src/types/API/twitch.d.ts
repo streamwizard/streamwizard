@@ -54,3 +54,47 @@ export interface TwitchUser {
 export interface getTwitchUserResponse {
   data: User[];
 }
+
+export interface TwitchChannelPointsResponse {
+  data: TwitchChannelPointsReward[];
+}
+
+interface TwitchChannelPointsReward {
+  id: string;
+  title: string;
+  broadcaster_id: string;
+  broadcaster_login: string;
+  broadcaster_name: string;
+  prompt?: string; // Optional field if user input is required
+  cost: number;
+  image?: TwitchChannelPointsImage; // Optional field if custom images uploaded
+  default_image?: TwitchChannelPointsImage; // Optional field for default images
+  background_color: string;
+  is_enabled: boolean;
+  is_user_input_required: boolean;
+  max_per_stream_setting: TwitchChannelPointsMaxSetting;
+  max_per_user_per_stream_setting: TwitchChannelPointsMaxSetting;
+  global_cooldown_setting: TwitchChannelPointsCooldownSetting;
+  is_paused: boolean;
+  is_in_stock: boolean;
+  should_redemptions_skip_request_queue: boolean;
+  redemptions_redeemed_current_stream?: number; // Optional field if live stream active
+  cooldown_expires_at?: string; // Optional field if reward is in cooldown
+  action? : string; // Optional field if custom action is set
+}
+
+interface TwitchChannelPointsImage {
+  url_1x: string;
+  url_2x: string;
+  url_4x: string;
+}
+
+interface TwitchChannelPointsMaxSetting {
+  is_enabled: boolean;
+  max_per_stream?: number; // Optional field if limit applies
+}
+
+interface TwitchChannelPointsCooldownSetting {
+  is_enabled: boolean;
+  global_cooldown_seconds?: number; // Optional field if cooldown active
+}

@@ -50,7 +50,7 @@ export const BannedSongsColumns: ColumnDef<BannedSongs>[] = [
     accessorKey: "Banned_at",
     header: () => <div className="">Banned At</div>,
     cell: ({ row }) => {
-      return <div className=" font-medium capitalize">{new Date(row.original.created_at!).toLocaleDateString()}</div>;
+      return <div className="font-medium capitalize">{new Date(row.original.created_at!).toLocaleDateString()}</div>;
     },
 
     enableHiding: false,

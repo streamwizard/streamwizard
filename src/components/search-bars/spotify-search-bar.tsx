@@ -7,14 +7,19 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { SearchBar } from "../ui/search-bar";
 import { msToTime } from "@/lib/utils";
+import { Button } from "../ui/button";
 
 export default function SpotifySearchBar() {
   const [results, setResults] = useState<TrackObjectFull[]>([]);
 
   const { banSong } = useBannedSongs();
 
-  const handleBanSong = async (song: { chatter_id: string; chatter_name: string; song_id: string; song_name: string }) => {
-    const data = banSong(song);
+  const handleBanSong = async (song: { song_id: string; song_name: string, artists: string[] }) => {
+    const data = banSong({
+      song_id: song.song_id,
+      song_name: song.song_name,
+      artists: song.artists.join(", "),
+    });
   };
 
   const search = async (searchTerm: string, offset?: number) => {
@@ -43,9 +48,7 @@ export default function SpotifySearchBar() {
               <TableHead className="w-[100px]" />
               <TableHead>Name</TableHead>
               <TableHead>Artists</TableHead>
-              <TableHead>
-                duration
-              </TableHead>
+              <TableHead>duration</TableHead>
               <TableHead className="w-[100px]" align="char">
                 Actions
               </TableHead>
@@ -67,17 +70,18 @@ export default function SpotifySearchBar() {
                   <span>{msToTime(track.duration_ms)}</span>
                 </TableCell>
                 <TableCell>
-                  {/* <Button
+                  <Button
                     variant="destructive"
                     onClick={() => {
-                      handleBanChatter({
-                        chatter_id: channel.id,
-                        chatter_name: channel.display_name,
+                      handleBanSong({
+                        artists: track.artists.map((artist) => artist.name),
+                        song_id: track.id,
+                        song_name: track.name,
                       });
                     }}
                   >
-                    Ban Chatter
-                  </Button> */}
+                    Ban Song
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -87,4 +91,3 @@ export default function SpotifySearchBar() {
     />
   );
 }
-
