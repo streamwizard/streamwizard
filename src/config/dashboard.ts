@@ -6,20 +6,18 @@ import { MdContactPage } from "react-icons/md";
 import { FaMusic, FaCircle } from "react-icons/fa";
 import { BsChatSquareText } from "react-icons/bs";
 
-
 export const dashboardConfig: DashboardConfig = {
   overview: {
     routes: [
       {
         label: "Overview",
-        href: "/admin",
+        href: "/dashboard/",
         icon: LayoutGrid,
       },
     ],
   },
-
-  website: {
-    title: "Song Request",
+  twitch: {
+    title: "Twitch",
     routes: [
       {
         label: "Commands",
@@ -29,10 +27,15 @@ export const dashboardConfig: DashboardConfig = {
       },
       {
         label: "Channel Points",
-        href: "/dashboard/channel-points/",
+        href: "/dashboard/channelpoints/",
         icon: FaCircle,
         beta: true,
       },
+    ],
+  },
+  website: {
+    title: "Song Request",
+    routes: [
       {
         label: "Banned Chatters",
         href: "/dashboard/banned-chatters/",
@@ -47,6 +50,7 @@ export const dashboardConfig: DashboardConfig = {
       },
     ],
   },
+
   community: {
     title: "Community",
     routes: [

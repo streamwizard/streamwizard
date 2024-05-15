@@ -5,7 +5,7 @@ import { useContext } from 'react';
 function useBannedChatters(): BannedChatterContextType {
   const context = useContext(BannedChatterContext);
   if (context === undefined) {
-    throw new Error("useUser must be used within a UserProvider");
+    throw new Error("useBannedChatters must be used within a UseBannedChatterProvider");
   }
   return context;
 }
