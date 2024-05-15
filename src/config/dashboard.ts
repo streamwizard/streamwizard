@@ -27,7 +27,7 @@ export const dashboardConfig: DashboardConfig = {
       },
       {
         label: "Channel Points",
-        href: "/dashboard/channel-points/",
+        href: "/dashboard/channelpoints/",
         icon: FaCircle,
         beta: true,
       },

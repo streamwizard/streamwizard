@@ -1,5 +1,5 @@
 "use client";
-import { deleteChannelPoint } from "@/actions/twitch/twitch-api";
+import { deleteChannelPoint, updateChannelpoint as update } from "@/actions/twitch/twitch-api";
 import { ChannelPointSchema } from "@/schemas/channelpoint-schema";
 import { TwitchChannelPointsReward } from "@/types/API/twitch";
 import { channel } from "process";
@@ -9,9 +9,9 @@ import { toast } from "sonner";
 // Define the type for the context
 export interface ChannelPointContextType {
   channelPoints: TwitchChannelPointsReward[];
-  deleteChannelPoint: (channelpoint: TwitchChannelPointsReward[]) => void;
-  createChannelPoint: (channelpoint: ChannelPointSchema) => void;
-  updateChannelPoint: (channelpoint: TwitchChannelPointsReward) => void;
+  deleteChannelPoint: (channelpoint: TwitchChannelPointsReward[]) => Promise<void>;
+  createChannelPoint: (channelpoint: ChannelPointSchema) => Promise<void>;
+  updateChannelPoint: (channelpoint: ChannelPointSchema, channelpoint_id: string) => Promise<void>;
 }
 
 // Create the context with TypeScript type
@@ -73,7 +73,7 @@ export const ChannelPointsProvider = ({ children, initialChannelPoints }: Props)
   };
 
   // update a channelpoint
-  const updateChannelPoint = async (channelPoint: TwitchChannelPointsReward) => {
+  const updateChannelPoint = async (channelPoint: ChannelPointSchema, channelpoint_id: string) => {
     startTransition(() => {
       dispatch({ type: "UPDATE_SONG", payload: channelPoint });
     });
@@ -84,6 +84,8 @@ export const ChannelPointsProvider = ({ children, initialChannelPoints }: Props)
       toast.error(error.message);
       return;
     }
+
+    await update(channelPoint, channelpoint_id);
 
     toast.success(`${channelPoint.title} has been updated`);
   };

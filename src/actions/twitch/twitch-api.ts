@@ -66,7 +66,6 @@ export async function getUser({ id }: { id: string }) {
 
 // channelpoints
 
-
 // get all the channel points for song requests
 export async function getChannelPoints(): Promise<TwitchChannelPointsReward[] | null> {
   // get broadcaster_id
@@ -80,7 +79,7 @@ export async function getChannelPoints(): Promise<TwitchChannelPointsReward[] | 
 
   const ids: string | undefined = data.twitch_channelpoints.map((x: ChannelpointsDatabaseColumns) => x.channelpoint_id).join("&id=");
 
-  if(!ids) return [];
+  if (!ids) return [];
 
   try {
     const res = await TwitchAPI.get<TwitchChannelPointsResponse>(`/channel_points/custom_rewards?broadcaster_id=${data.broadcaster_id}&id=${ids}`, {
@@ -154,7 +153,6 @@ export async function createChannelPoint(data: ChannelPointSchema) {
   }
 }
 
-
 // delete a channel point
 export async function deleteChannelPoint(id: string) {
   // get broadcaster_id
@@ -184,7 +182,7 @@ export async function deleteChannelPoint(id: string) {
 }
 
 // update a channel point
-export async function updateChannelPoint(data: TwitchChannelPointsReward) {
+export async function updateChannelpoint(channelpoint: ChannelPointSchema, channelpoint_id: string) {
   // get broadcaster_id
   const supabase = createClient();
   const { data: tokens, error: DBerror } = await supabase.from("twitch_integration").select("access_token, broadcaster_id").single();
@@ -194,19 +192,28 @@ export async function updateChannelPoint(data: TwitchChannelPointsReward) {
     return null;
   }
 
-  try {
-    const res = await TwitchAPI.patch<TwitchChannelPointsResponse>(`/channel_points/custom_rewards?broadcaster_id=${tokens.broadcaster_id}&id=${data.id}`, data, {
-      headers: {
-        Authorization: `Bearer ${tokens.access_token}`,
-      },
-      broadcasterID: tokens.broadcaster_id,
-    });
 
-    // update the data in the database
-    await supabase.from("twitch_channelpoints").update({ action: data.action }).eq("channelpoint_id", data.id);
+  try {
+    const res = await TwitchAPI.patch<TwitchChannelPointsResponse>(
+      `/channel_points/custom_rewards?broadcaster_id=${tokens.broadcaster_id}&id=${channelpoint_id}`,
+      channelpoint,
+      {
+        headers: {
+          Authorization: `Bearer ${tokens.access_token}`,
+        },
+        broadcasterID: tokens.broadcaster_id,
+      }
+    );
+
+    // update the database
+    await supabase.from("twitch_channelpoints").update({ action: channelpoint.action }).eq("channelpoint_id", channelpoint_id);
+
+
+
     revalidatePath("/dashboard/channelpoints");
     return res.data.data;
-  } catch (error) {
+  } catch (error: any) {
+    console.log(error.resposne);
     throw error;
   }
 }

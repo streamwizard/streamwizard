@@ -13,8 +13,8 @@ import { channel } from "diagnostics_channel";
 import { Slider } from "../ui/slider";
 import { secondsToHoursMinutesSeconds, secondsToMinutes } from "@/lib/utils";
 import { Switch } from "../ui/switch";
-import { createChannelPoint } from "@/actions/twitch/twitch-api";
 import { TwitchChannelPointsReward } from "@/types/API/twitch";
+import useChannelPoints from "@/hooks/useChannelPoints";
 
 interface Props {
   setModal: (value: boolean) => void;
@@ -22,7 +22,8 @@ interface Props {
 }
 
 export default function ChannelpointForm({ setModal, channelpoint }: Props) {
-  console.log(channelpoint);
+  const { createChannelPoint, updateChannelPoint } = useChannelPoints();
+
   const form = useForm<z.infer<typeof ChannelPointSchema>>({
     resolver: zodResolver(ChannelPointSchema),
     defaultValues: {
@@ -33,36 +34,39 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
       is_global_cooldown_enabled: channelpoint ? channelpoint.global_cooldown_setting.is_enabled : false,
       global_cooldown_seconds: channelpoint ? channelpoint.global_cooldown_setting.global_cooldown_seconds : 60,
       is_max_per_stream_enabled: channelpoint ? channelpoint.max_per_stream_setting.is_enabled : false,
-      max_per_stream: channelpoint ? channelpoint.max_per_stream_setting.max_per_stream : 1,
+      max_per_stream: channelpoint && channelpoint.max_per_stream_setting.is_enabled ? channelpoint.max_per_stream_setting.max_per_stream : 1,
       is_max_per_user_per_stream_enabled: channelpoint ? channelpoint.max_per_user_per_stream_setting.is_enabled : false,
-      max_per_user_per_stream: channelpoint ? channelpoint.max_per_user_per_stream_setting.max_per_stream : 1,
+      max_per_user_per_stream: channelpoint ? channelpoint.max_per_user_per_stream_setting.max_per_user_per_stream : 1,
     },
   });
 
   async function onSubmit(values: z.infer<typeof ChannelPointSchema>) {
+    console.log(`values`, values);
+
     // Update command
     if (channelpoint) {
-      // updateCommand({
-      //   ...command,
-      //   ...values,
-      // })
+      console.log("update");
+      await updateChannelPoint(values, channelpoint.id);
     }
     // Add channel point
     else {
-      console.log(values);
+      console.log("create");
       await createChannelPoint(values);
     }
 
     // setModal(false);
   }
 
-  // useEffect(() => {
-  //   console.log(form.watch());
-  // }, [form.watch()]);
+
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form
+        onSubmit={form.handleSubmit(onSubmit, (error) => {
+          console.log(error);
+        })}
+        className="space-y-8"
+      >
         <div className="flex">
           <FormField
             control={form.control}
