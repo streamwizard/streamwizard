@@ -38,9 +38,9 @@ export const ChannelPointsProvider = ({ children, initialChannelPoints }: Props)
 
   // Function to add a channelpoints
   const createChannelPoint = async (channelPoint: ChannelPointSchema) => {
-    startTransition(() => {
-      dispatch({ type: "ADD_SONG", payload: channelPoint });
-    });
+    // startTransition(() => {
+    //   dispatch({ type: "ADD_SONG", payload: {} });
+    // });
 
     try {
       await createChannelPoint(channelPoint);
@@ -65,18 +65,18 @@ export const ChannelPointsProvider = ({ children, initialChannelPoints }: Props)
       }
     });
 
-    startTransition(() => {
-      channelPoint.forEach((point) => {
-        dispatch({ type: "DELETE_SONG", payload: point });
-      });
-    });
+    // startTransition(() => {
+    //   channelPoint.forEach((point) => {
+    //     dispatch({ type: "DELETE_SONG", payload: point });
+    //   });
+    // });
   };
 
   // update a channelpoint
   const updateChannelPoint = async (channelPoint: ChannelPointSchema, channelpoint_id: string) => {
-    startTransition(() => {
-      dispatch({ type: "UPDATE_SONG", payload: channelPoint });
-    });
+    // startTransition(() => {
+    //   dispatch({ type: "UPDATE_SONG", payload: channelPoint });
+    // });
 
     try {
       // await updateChannelPoint(channelPoint);
