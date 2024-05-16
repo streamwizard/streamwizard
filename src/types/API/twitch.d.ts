@@ -73,7 +73,7 @@ interface TwitchChannelPointsReward {
   is_enabled: boolean;
   is_user_input_required: boolean;
   max_per_stream_setting: TwitchChannelPointsMaxSetting;
-  max_per_user_per_stream_setting: TwitchChannelPointsMaxSetting;
+  max_per_user_per_stream_setting: max_per_user_per_stream_setting;
   global_cooldown_setting: TwitchChannelPointsCooldownSetting;
   is_paused: boolean;
   is_in_stock: boolean;
@@ -92,6 +92,10 @@ interface TwitchChannelPointsImage {
 interface TwitchChannelPointsMaxSetting {
   is_enabled: boolean;
   max_per_stream?: number; // Optional field if limit applies
+}
+interface max_per_user_per_stream_setting {
+  is_enabled: boolean;
+  max_per_user_per_stream?: number; // Optional field if limit applies
 }
 
 interface TwitchChannelPointsCooldownSetting {

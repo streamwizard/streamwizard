@@ -78,7 +78,7 @@ export const ChannelPointsColumns: ColumnDef<TwitchChannelPointsReward>[] = [
     accessorKey: "max_per_user_per_stream_setting",
     header: () => <div className="">Max Per User Per Stream</div>,
     cell: ({ row }) => {
-      const max_per_user_per_stream = row.original.max_per_user_per_stream_setting.max_per_stream;
+      const max_per_user_per_stream = row.original.max_per_user_per_stream_setting.max_per_user_per_stream;
       return <div className=" font-medium capitalize">{max_per_user_per_stream ? max_per_user_per_stream : "not set"}</div>;
     },
   },
