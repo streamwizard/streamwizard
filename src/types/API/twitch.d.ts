@@ -80,7 +80,7 @@ interface TwitchChannelPointsReward {
   should_redemptions_skip_request_queue: boolean;
   redemptions_redeemed_current_stream?: number; // Optional field if live stream active
   cooldown_expires_at?: string; // Optional field if reward is in cooldown
-  action? : string; // Optional field if custom action is set
+  action?: string; // Optional field if custom action is set
 }
 
 interface TwitchChannelPointsImage {
@@ -101,4 +101,61 @@ interface max_per_user_per_stream_setting {
 interface TwitchChannelPointsCooldownSetting {
   is_enabled: boolean;
   global_cooldown_seconds?: number; // Optional field if cooldown active
+}
+
+export interface getConduitsResponse {
+  data: {
+    id: string;
+    shard_count: number;
+  }[];
+}
+
+
+export interface GetEventSubSubscriptionsResponse {
+  data: Subscription[];
+  total: number;
+  total_cost: number;
+  max_total_cost: number;
+  pagination: Pagination;
+}
+
+interface Subscription {
+  id: string;
+  status: SubscriptionStatus;
+  type: string;
+  version: string;
+  condition: Record<string, any>; // Assuming JSON object, use Record<string, any> for a general object type
+  created_at: string; // RFC3339 format
+  transport: Transport;
+  cost: number;
+}
+
+type SubscriptionStatus = 
+  | 'enabled'
+  | 'webhook_callback_verification_pending'
+  | 'webhook_callback_verification_failed'
+  | 'notification_failures_exceeded'
+  | 'authorization_revoked'
+  | 'moderator_removed'
+  | 'user_removed'
+  | 'version_removed'
+  | 'beta_maintenance'
+  | 'websocket_disconnected'
+  | 'websocket_failed_ping_pong'
+  | 'websocket_received_inbound_traffic'
+  | 'websocket_connection_unused'
+  | 'websocket_internal_error'
+  | 'websocket_network_timeout'
+  | 'websocket_network_error';
+
+interface Transport {
+  method: 'webhook' | 'websocket';
+  callback?: string; // Included only if method is set to 'webhook'
+  session_id?: string; // Included only if method is set to 'websocket'
+  connected_at?: string; // Included only if method is set to 'websocket'
+  disconnected_at?: string; // Included only if method is set to 'websocket'
+}
+
+interface Pagination {
+  cursor?: string; // The cursor value for pagination
 }

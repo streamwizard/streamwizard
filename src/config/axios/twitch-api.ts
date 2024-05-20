@@ -2,7 +2,6 @@
 
 import { supabaseAdmin } from "@/utils/supabase/admin";
 import axios from "axios";
-import type { AxiosRequestConfig } from "axios";
 
 const TwitchAPI = axios.create({
   baseURL: "https://api.twitch.tv/helix",
@@ -84,10 +83,10 @@ async function RefreshToken(refreshToken: string, broadcaster_id: number): Promi
       .update({ access_token: res.data.access_token, refresh_token: res.data.refresh_token })
       .eq("broadcaster_id", broadcaster_id);
 
-      if(error){
-        console.log("error updating tokens");
-        return null;
-      }
+    if (error) {
+      console.log("error updating tokens");
+      return null;
+    }
 
     return res.data.access_token;
   } catch (error) {

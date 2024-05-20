@@ -1,5 +1,5 @@
 "use client";
-import { deleteChannelPoint, updateChannelpoint as update } from "@/actions/twitch/twitch-api";
+import { deleteChannelPoint, updateChannelpoint as update, createChannelPoint as create } from "@/actions/twitch/twitch-api";
 import { ChannelPointSchema } from "@/schemas/channelpoint-schema";
 import { TwitchChannelPointsReward } from "@/types/API/twitch";
 import { channel } from "process";
@@ -43,7 +43,7 @@ export const ChannelPointsProvider = ({ children, initialChannelPoints }: Props)
     // });
 
     try {
-      await createChannelPoint(channelPoint);
+      await create(channelPoint);
     } catch (error: any) {
       toast.error(error.message);
       return;

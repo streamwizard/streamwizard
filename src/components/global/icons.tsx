@@ -5,7 +5,7 @@ interface Props {
   icon: string;
 }
 
-export default function Icons({ icon }: Props): JSX.Element {
+export default function SocialIcon({ icon }: Props): JSX.Element {
   switch (icon) {
     case "spotify":
       return <BsSpotify />;

@@ -44,7 +44,7 @@ export const BannedChatterProvider = ({ children, initialBannedChatters, broadca
       broadcaster_id: broadcaster_id.toString(),
       broadcaster_name: editor,
       moderator_name: editor,
-      moderator_id: user_id,
+      moderator_id: broadcaster_id.toString(),
       settings_id: settings_id,
       user_id: user_id,
     };
