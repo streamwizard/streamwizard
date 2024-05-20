@@ -2,6 +2,7 @@
 import { LinkIcon, LogOut, MoreHorizontal } from "lucide-react";
 import Link from "next/link";
 
+import { logout } from "@/actions/auth/logout";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -12,15 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { createSupabaseClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
 
 export function DashboardUserNav({ username, profile_img }: { username: string; profile_img: string }) {
-  const supabase = createSupabaseClient();
-  const router = useRouter();
-  const logout = () => {
-    supabase.auth.signOut();
-    router.push("/login");
+  const signOut = async () => {
+    await logout();
   };
 
   return (
@@ -69,7 +65,7 @@ export function DashboardUserNav({ username, profile_img }: { username: string; 
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive hover:cursor-pointer focus:bg-destructive focus:text-destructive-foreground" onClick={logout}>
+        <DropdownMenuItem className="text-destructive hover:cursor-pointer focus:bg-destructive focus:text-destructive-foreground" onClick={signOut}>
           <LogOut className="mr-2 h-3 w-3" />
           Log out
         </DropdownMenuItem>
