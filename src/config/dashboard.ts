@@ -1,10 +1,9 @@
 import { DashboardConfig } from "@/types";
 
 import { LayoutGrid, User2 } from "lucide-react";
-import { CiCalendarDate } from "react-icons/ci";
-import { MdContactPage } from "react-icons/md";
-import { FaMusic, FaCircle } from "react-icons/fa";
 import { BsChatSquareText } from "react-icons/bs";
+import { FaCircle, FaMusic } from "react-icons/fa";
+import { GiSettingsKnobs } from "react-icons/gi";
 
 export const dashboardConfig: DashboardConfig = {
   overview: {
@@ -33,7 +32,7 @@ export const dashboardConfig: DashboardConfig = {
       },
     ],
   },
-  website: {
+  song_request: {
     title: "Song Request",
     routes: [
       {
@@ -46,6 +45,12 @@ export const dashboardConfig: DashboardConfig = {
         label: "Banned Songs",
         href: "/dashboard/banned-songs/",
         icon: FaMusic,
+        beta: true,
+      },
+      {
+        label: "Settings",
+        href: "/dashboard/song-request-settings/",
+        icon: GiSettingsKnobs,
         beta: true,
       },
     ],

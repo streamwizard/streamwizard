@@ -1,19 +1,15 @@
 "use server";
 
-import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
-import { headers } from "next/headers";
 
-export async function logout() {
-  const supabase = createClient();
-  const origin = headers().get("origin");
+import { signOut } from "@/auth";
 
-  const { error } = await supabase.auth.signOut();
+export async function logout() {  
+  await signOut({
+    redirectTo: `/login`,
+  });
+  
 
-  if (error) {
-    console.error(error);
-    redirect("/error");
-  }
+ 
 
-  redirect("/");
+
 }

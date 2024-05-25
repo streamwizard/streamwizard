@@ -1,26 +1,19 @@
-
-
 import { Badge } from "@/components/ui/badge";
 import { DashboardConfig } from "@/types";
 import { cn } from "@/utils/";
 import { Crown } from "lucide-react";
 import Link from "next/link";
 import { DashboardUserNav } from "./DashboardUserNav";
-import { User } from "@supabase/supabase-js";
 import { UserMetaData } from "@/types/database/user";
+import { Database } from "@/types/supabase";
 
 interface Props {
   config: DashboardConfig;
-  user: User
+  user: Database["public"]["Tables"]["users"]["Row"];
 }
 
 export function SidebarNav({ config, user }: Props) {
-
-  const userdata = user.user_metadata as UserMetaData;
-
- 
-
-
+  
 
   return (
     <>
@@ -47,10 +40,8 @@ export function SidebarNav({ config, user }: Props) {
                   ) : (
                     <Link
                       href={route.href}
-                      
                       className={cn(
-                        "flex h-8 items-center justify-between rounded-md px-2 text-sm text-muted-foreground hover:bg-border/80 hover:text-foreground",
-                        
+                        "flex h-8 items-center justify-between rounded-md px-2 text-sm text-muted-foreground hover:bg-border/80 hover:text-foreground"
                       )}
                     >
                       <div className="flex flex-row items-center gap-2 truncate">
@@ -76,7 +67,7 @@ export function SidebarNav({ config, user }: Props) {
 
       <div className="px-4 py-6">
         <div className="flex flex-1 items-center gap-3 overflow-hidden">
-          <DashboardUserNav profile_img={userdata.avatar_url} username={userdata.name}  />
+          <DashboardUserNav profile_img={user!.image!} username={user.name!} />
         </div>
       </div>
     </>

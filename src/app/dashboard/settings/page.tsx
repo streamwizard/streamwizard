@@ -1,6 +1,6 @@
 import { IntegrationsConnectButton } from "@/components/buttons/integrations/spotify";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 interface Integration {
   [key: string]: {

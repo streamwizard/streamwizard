@@ -1,7 +1,7 @@
 "use server";
 
 import { SpotifyAccessToken } from "@/types/API/spotify-web-api";
-import { supabaseAdmin } from "@/utils/supabase/admin";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import axios from "axios";
 import type { AxiosRequestConfig } from "axios";
 import QueryString from "qs";

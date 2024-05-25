@@ -1,20 +1,18 @@
 "use client";
-import { ChannelPointSchema } from "@/schemas/channelpoint-schema";
-import { zodResolver } from "@hookform/resolvers/zod";
-import React, { use, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, FormSlider } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "../ui/textarea";
-import { channel } from "diagnostics_channel";
-import { Slider } from "../ui/slider";
-import { secondsToHoursMinutesSeconds, secondsToMinutes } from "@/lib/utils";
-import { Switch } from "../ui/switch";
-import { TwitchChannelPointsReward } from "@/types/API/twitch";
 import useChannelPoints from "@/hooks/useChannelPoints";
+import { secondsToMinutes } from "@/lib/utils";
+import { ChannelPointSchema } from "@/schemas/channelpoint-schema";
+import { TwitchChannelPointsReward } from "@/types/API/twitch";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Slider } from "../ui/slider";
+import { Switch } from "../ui/switch";
+import { Textarea } from "../ui/textarea";
 
 interface Props {
   setModal: (value: boolean) => void;
@@ -116,25 +114,7 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
           control={form.control}
           name="cost"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>
-                <div className="flex justify-between">
-                  <span>Cost</span>
-                  <span className="ml-2 text-xs text-gray-500">
-                    <input
-                      className="w-8 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none bg-transparent focus:border"
-                      type="number"
-                      {...field}
-                    />
-                  </span>
-                </div>
-              </FormLabel>
-              <FormControl>
-                <Slider min={0} max={5000} step={50} value={[field.value]} onValueChange={(value) => field.onChange(value[0])} />
-              </FormControl>
-
-              <FormMessage />
-            </FormItem>
+            <FormSlider field={field} />
           )}
         />
 

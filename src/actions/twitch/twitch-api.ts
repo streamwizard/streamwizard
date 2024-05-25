@@ -3,7 +3,7 @@ import { TwitchAPI } from "@/config/axios/twitch-api";
 import { ChannelPointSchema } from "@/schemas/channelpoint-schema";
 import { ChannelSearchResults, TwitchChannelPointsResponse, TwitchChannelPointsReward, getTwitchUserResponse } from "@/types/API/twitch";
 import { ChannelpointsDatabaseColumns } from "@/types/database/twitch-channelpoints";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 export async function searchChatter(value: string, first: number = 10) {

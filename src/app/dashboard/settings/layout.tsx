@@ -2,7 +2,7 @@ import { SidebarNav } from "@/components/nav/SidebarNav";
 import { Separator } from "@/components/ui/separator";
 import React from "react";
 import { Settings } from "@/config/user-settings-menu";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 interface Props {

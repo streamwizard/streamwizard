@@ -1,6 +1,6 @@
 "use server";
 import { BannedSongs } from "@/types/database/banned-songs";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 // add a banned song to the database

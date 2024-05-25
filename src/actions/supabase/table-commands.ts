@@ -1,19 +1,22 @@
 "use server";
-import { CommandsTable } from "@/types/database/command";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
+import { CommandTable } from "@/types/supabase";
 
 
 
 
 interface CommandCreateResponse {
   error?: string;
-  data?: CommandsTable;
+  data?: CommandTable;
 }
 
 // Create a new command
-export async function createCommand(new_command: CommandsTable, url: string): Promise<CommandCreateResponse> {
-  const supabase = createClient();
+export async function createCommand(new_command: CommandTable, url: string): Promise<CommandCreateResponse> {
+  const session = await auth();
+  
+  const supabase = createClient(session?.supabaseAccessToken as string);
   const { data, error } = await supabase.from("commands").insert([new_command]);
 
   if (error) {
@@ -28,12 +31,14 @@ export async function createCommand(new_command: CommandsTable, url: string): Pr
 
 interface CommandUpdateResponse {
   error?: string;
-  data?: CommandsTable;
+  data?: CommandTable;
 }
 
 // Update a command
-export async function updateCommand(command: CommandsTable, url: string): Promise<CommandUpdateResponse> {
-  const supabase = createClient();
+export async function updateCommand(command: CommandTable, url: string): Promise<CommandTable> {
+  const session = await auth();
+  
+  const supabase = createClient(session?.supabaseAccessToken as string);
   const { error } = await supabase
     .from("commands")
     .update({ ...command })
@@ -45,12 +50,17 @@ export async function updateCommand(command: CommandsTable, url: string): Promis
   }
 
   revalidatePath(url);
-  return { data: command };
+  return command;
 }
 
 // get all commands
-export async function getCommands(): Promise<CommandsTable[]> {
-  const supabase = createClient();
+export async function getCommands() {
+  const session = await auth();
+
+  console.log(session?.supabaseAccessToken);
+  
+  const supabase = createClient(session?.supabaseAccessToken as string);
+
   const { data, error } = await supabase.from("commands").select("*");
 
   if (error) {
@@ -58,7 +68,7 @@ export async function getCommands(): Promise<CommandsTable[]> {
     return [];
   }
 
-  return data as CommandsTable[];
+  return data 
 }
 
 
@@ -70,7 +80,9 @@ interface CommandDeleteResponse {
 
 // delete a command
 export async function deleteCommands(command_id: string, url: string): Promise<CommandDeleteResponse> {
-  const supabase = createClient();
+  const session = await auth();
+  
+  const supabase = createClient(session?.supabaseAccessToken as string);
 
   const { error, count } = await supabase.from("commands").delete().eq("id", command_id)
 

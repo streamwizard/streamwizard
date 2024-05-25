@@ -1,6 +1,6 @@
 import { get_twitch_integration } from "@/actions/supabase/table-twitch_integration";
 import { BannedSongsProvider } from "@/providers/banned-songs-provider";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import React from "react";
 
 export default async function Layout({ children }: { children: React.ReactNode }) {

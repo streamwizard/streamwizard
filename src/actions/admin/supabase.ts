@@ -1,7 +1,7 @@
 "use server";
 
 import type { Twitch_integration } from "@/types/database/user";
-import { createAdminClient } from "@/utils/supabase/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 const supabase = createAdminClient();
 

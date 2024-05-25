@@ -2,7 +2,7 @@
 
 import { SpotifyWebAPi } from "@/config/axios/spotify-web-api";
 import { SearchResponse } from "@/types/API/spotify-web-api";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function SearchSongs({ query, limit = 10, offset = 0 }: { query: string; limit: number; offset: number }) {
   const supabase = createClient();

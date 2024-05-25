@@ -1,7 +1,7 @@
 "use server";
 
 import { BannedChatter } from "@/types/database/banned-chatter";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 interface Response {
   error?: string;
