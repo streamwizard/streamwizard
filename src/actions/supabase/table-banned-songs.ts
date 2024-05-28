@@ -1,11 +1,14 @@
 "use server";
-import { BannedSongs } from "@/types/database/banned-songs";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { auth } from "@/auth";
+import { InsertSpotifyBannedSongsTable } from "@/types/database";
 
 // add a banned song to the database
-export async function addBannedSong(song: BannedSongs) {
-  const supabase = createClient();
+export async function addBannedSong(song: InsertSpotifyBannedSongsTable) {
+  const session = await auth();
+  
+  const supabase = createClient(session?.supabaseAccessToken as string);
 
   const { data, error } = await supabase.from("spotify_banned_songs").insert([song]);
 
@@ -19,7 +22,9 @@ export async function addBannedSong(song: BannedSongs) {
 
 // get all banned songs from the database
 export async function getBannedSongs() {
-  const supabase = createClient();
+  const session = await auth();
+  
+  const supabase = createClient(session?.supabaseAccessToken as string);
   const { data, error } = await supabase.from("spotify_banned_songs").select("*");
 
   if (error) throw error;
@@ -28,7 +33,9 @@ export async function getBannedSongs() {
 
 // delete a banned song from the database
 export async function deleteBannedSong(id: string) {
-  const supabase = createClient();
+  const session = await auth();
+  
+  const supabase = createClient(session?.supabaseAccessToken as string);
   const { data, error } = await supabase.from("spotify_banned_songs").delete().match({ id });
 
   if (error) {

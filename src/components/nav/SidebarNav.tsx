@@ -4,7 +4,6 @@ import { cn } from "@/utils/";
 import { Crown } from "lucide-react";
 import Link from "next/link";
 import { DashboardUserNav } from "./DashboardUserNav";
-import { UserMetaData } from "@/types/database/user";
 import { Database } from "@/types/supabase";
 
 interface Props {

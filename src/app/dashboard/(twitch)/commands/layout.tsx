@@ -1,5 +1,5 @@
-import { getCommands } from "@/actions/supabase/table-commands";
-import { get_twitch_integration } from "@/actions/supabase/table-twitch_integration";
+import { auth } from "@/auth";
+import { createClient } from "@/lib/supabase/server";
 import { CommandProvider } from "@/providers/commands-provider";
 
 export default async function Layout({
@@ -7,16 +7,18 @@ export default async function Layout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const commands = await getCommands();
-  // const userdata = await get_twitch_integration();
+  const session = await auth();
 
-  console.log(commands)
+  const supabase = createClient(session?.supabaseAccessToken as string);
 
+  const { data } = await supabase.from("twitch_integration").select("*, commands(*)").single();
+
+  if(!data) return null;
 
   return (
-    // <CommandProvider initialCommands={commands} broadcaster_id={userdata.broadcaster_id} user_id={userdata.user_id} editor={userdata.account}>
-    //   {children}
-    // </CommandProvider>
-    <></>
+    <CommandProvider initialCommands={data?.commands} broadcaster_id={data.broadcaster_id} user_id={data.user_id} editor='Jochemwhite'>
+      {children}
+    </CommandProvider>
+    // <></>
   );
 }

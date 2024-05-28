@@ -5,12 +5,12 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 
 import TruncatedText from "@/components/ui/truncated-text";
-import { BannedChatter } from "@/types/database/banned-chatter";
 import BannedChatterActions from "./banned-chatter-actions";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import TwitchCard from "@/components/hover-cards/twitch-card";
+import { SpotifyBannedChatterTable } from "@/types/database";
 
-export const BannedChatterColumns: ColumnDef<BannedChatter>[] = [
+export const BannedChatterColumns: ColumnDef<SpotifyBannedChatterTable>[] = [
   {
     id: "Select",
     header: ({ table }) => (
@@ -60,7 +60,7 @@ export const BannedChatterColumns: ColumnDef<BannedChatter>[] = [
             <Button variant="link">{row.original.moderator_name}</Button>
           </HoverCardTrigger>
           <HoverCardContent className="w-80">
-            <TwitchCard broadcaster_id={row.original.moderator_id} />
+            <TwitchCard broadcaster_id={row.original.moderator_id!} />
           </HoverCardContent>
         </HoverCard>
       );

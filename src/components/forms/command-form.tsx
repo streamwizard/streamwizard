@@ -10,22 +10,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import useCommands from "@/hooks/useCommands";
 import { CommandSchema } from "@/schemas/command-schema";
-import { CommandsTable } from "@/types/database/command";
 import { Textarea } from "../ui/textarea";
-
+import { CommandTable } from "@/types/database";
 
 interface Props {
   setModal: (value: boolean) => void;
-  command?: CommandsTable;
+  command?: CommandTable;
 }
 
 export function CommandForm({ setModal, command }: Props) {
   const { addCommand, updateCommand } = useCommands();
-
-
-
-
-
 
   const form = useForm<z.infer<typeof CommandSchema>>({
     resolver: zodResolver(CommandSchema),
@@ -46,11 +40,11 @@ export function CommandForm({ setModal, command }: Props) {
       updateCommand({
         ...command,
         ...values,
-      })
+      });
     }
     // Add command
     else {
-      addCommand(values)
+      addCommand(values);
     }
 
     setModal(false);

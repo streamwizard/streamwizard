@@ -1,4 +1,5 @@
 "use client";
+import type { CommandTable } from "@/types/database";
 import { CommandForm } from "@/components/forms/command-form";
 import Modal from "@/components/global/modal";
 import { Button } from "@/components/ui/button";
@@ -10,13 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { CommandsTable } from "@/types/database/command";
 import { MoreHorizontal } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 
 interface Props {
-  command: CommandsTable;
+  command: CommandTable;
 }
 
 export default function CommandActions({ command }: Props) {

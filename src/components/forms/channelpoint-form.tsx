@@ -39,30 +39,24 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
   });
 
   async function onSubmit(values: z.infer<typeof ChannelPointSchema>) {
-    console.log(`values`, values);
+    console.error(`values`, values);
 
     // Update command
     if (channelpoint) {
-      console.log("update");
       await updateChannelPoint(values, channelpoint.id);
     }
     // Add channel point
     else {
-      console.log("create");
       await createChannelPoint(values);
     }
 
     // setModal(false);
   }
 
-
-
   return (
     <Form {...form}>
       <form
-        onSubmit={form.handleSubmit(onSubmit, (error) => {
-          console.log(error);
-        })}
+        onSubmit={form.handleSubmit(onSubmit)}
         className="space-y-8"
       >
         <div className="flex">
@@ -110,13 +104,7 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="cost"
-          render={({ field }) => (
-            <FormSlider field={field} />
-          )}
-        />
+        <FormField control={form.control} name="cost" render={({ field }) => <FormSlider field={field} />} />
 
         <div className="flex justify-between">
           <FormField

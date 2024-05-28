@@ -5,10 +5,9 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 
 import TruncatedText from "@/components/ui/truncated-text";
-import { CommandsTable } from "@/types/database/command";
 import { TwitchChannelPointsReward } from "@/types/API/twitch";
-import ChannelPointSwitch from "./channelpoints-switch";
 import ChannelPointActions from "./channelpoint-actions";
+import ChannelPointSwitch from "./channelpoints-switch";
 
 export const ChannelPointsColumns: ColumnDef<TwitchChannelPointsReward>[] = [
   {

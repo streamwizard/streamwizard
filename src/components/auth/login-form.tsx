@@ -41,7 +41,7 @@ export function UserAuthForm({ redirect }: UserAuthFormProps) {
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(onSubmit, (error) => {
-            console.log(error);
+            console.error(error);
           })}
         >
           <div className="grid gap-2">

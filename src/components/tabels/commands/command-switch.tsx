@@ -1,10 +1,10 @@
 "use client";
 import { Switch } from "@/components/ui/switch";
 import useCommands from "@/hooks/useCommands";
-import { CommandsTable } from "@/types/database/command";
+import { CommandTable } from "@/types/database";
 
 interface Props {
-  command: CommandsTable;
+  command: CommandTable;
 }
 
 export default function CommandSwitch({ command }: Props) {

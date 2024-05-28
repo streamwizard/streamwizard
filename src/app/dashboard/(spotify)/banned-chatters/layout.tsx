@@ -1,4 +1,5 @@
 import { getSpotifySettings } from "@/actions/supabase/table-spotify-settings";
+import { auth } from "@/auth";
 import { BannedChatterProvider } from "@/providers/banned-chatter-provider";
 import { redirect } from "next/navigation";
 
@@ -7,19 +8,21 @@ export default async function Layout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const settings = await getSpotifySettings();
+  const session = await auth();
+  const { data, error } = await getSpotifySettings();
 
-  if (settings.error) {
+  if (error || !data) {
+    console.error(error);
     redirect("/login");
   }
 
   return (
     <BannedChatterProvider
-      broadcaster_id={settings.data.broadcaster_id}
-      editor="jochemwhite"
-      settings_id={settings.data.id}
-      user_id={settings.data.user_id}
-      initialBannedChatters={settings.data.spotify_banned_chatters}
+      broadcaster_id={1}
+      editor={session!.user!.name!}
+      settings_id={data.id}
+      user_id={data.user_id}
+      initialBannedChatters={data.spotify_banned_chatters}
     >
       {children}
     </BannedChatterProvider>

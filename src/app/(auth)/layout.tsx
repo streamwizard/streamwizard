@@ -1,3 +1,4 @@
+import { auth } from "@/auth";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import React from "react";
@@ -7,15 +8,14 @@ export interface LayoutProps {
 }
 
 export default async function layout({ children }: LayoutProps) {
-  // check if user is logged in
+  const session = await auth();
 
-  const supabase = createClient();
+  if(session && session.user){
+    return redirect('/dashboard')
+  } 
+ 
 
-  const { data, error } = await supabase.auth.getUser();
-
-  if(data.user){
-    redirect("/dashboard");
-  }
+  
 
 
 

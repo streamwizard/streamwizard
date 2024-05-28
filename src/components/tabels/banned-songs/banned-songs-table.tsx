@@ -10,13 +10,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { BannedSongs } from "@/types/database/banned-songs";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import useBannedChatters from "@/hooks/useBannedChatter";
-import { BannedChatter } from "@/types/database/banned-chatter";
+import useBannedSongs from "@/hooks/useBannedSongs";
+import { SpotifyBannedSongsTable } from "@/types/database";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -31,10 +30,9 @@ import {
 } from "@tanstack/react-table";
 import { ChevronDown } from "lucide-react";
 import * as React from "react";
-import useBannedSongs from "@/hooks/useBannedSongs";
 
 interface Props {
-  columns: ColumnDef<BannedSongs, any>[];
+  columns: ColumnDef<SpotifyBannedSongsTable, any>[];
 }
 
 export function BannedSongsTable({ columns }: Props) {
@@ -52,7 +50,7 @@ export function BannedSongsTable({ columns }: Props) {
     id: false,
   });
   const { unbanSong, bannedSongs } = useBannedSongs();
-  const [selectedRows, setSelectedRows] = React.useState<BannedSongs[]>([]);
+  const [selectedRows, setSelectedRows] = React.useState<SpotifyBannedSongsTable[]>([]);
 
   const table = useReactTable({
     data: bannedSongs,

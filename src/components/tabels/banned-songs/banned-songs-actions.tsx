@@ -2,13 +2,12 @@
 import { Button } from "@/components/ui/button";
 import useBannedChatters from "@/hooks/useBannedChatter";
 import useBannedSongs from "@/hooks/useBannedSongs";
-import { BannedChatter } from "@/types/database/banned-chatter";
-import { BannedSongs } from "@/types/database/banned-songs";
+import { SpotifyBannedSongsTable } from "@/types/database";
 import React from "react";
 
 
 interface props {
-  song: BannedSongs
+  song: SpotifyBannedSongsTable
 }
 
 export default function BannedSongsActions({ song }: props) {

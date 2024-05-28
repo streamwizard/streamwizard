@@ -1,9 +1,7 @@
 "use client";
 import { Switch } from "@/components/ui/switch";
 import useChannelPoints from "@/hooks/useChannelPoints";
-import useCommands from "@/hooks/useCommands";
 import { TwitchChannelPointsReward } from "@/types/API/twitch";
-import { CommandsTable } from "@/types/database/command";
 
 interface Props {
   channelPoint: TwitchChannelPointsReward;

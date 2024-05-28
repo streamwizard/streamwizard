@@ -4,7 +4,6 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import useCommands from "@/hooks/useCommands";
-import { CommandsTable } from "@/types/database/command";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +29,7 @@ import {
 } from "@tanstack/react-table";
 import { ChevronDown } from "lucide-react";
 import * as React from "react";
+import type { CommandTable } from "@/types/database";
 
 export type CommandColumn = {
   id: string;
@@ -45,7 +45,7 @@ export type CommandColumn = {
 };
 
 interface Props {
-  columns: ColumnDef<CommandsTable, any>[];
+  columns: ColumnDef<CommandTable, any>[];
 }
 
 export function CommandTable({ columns }: Props) {
@@ -63,7 +63,7 @@ export function CommandTable({ columns }: Props) {
     id: false,
   });
   const { commands, deleteCommand } = useCommands();
-  const [selectedRows, setSelectedRows] = React.useState<CommandsTable[]>([]);
+  const [selectedRows, setSelectedRows] = React.useState<CommandTable[]>([]);
 
   const table = useReactTable({
     data: commands,

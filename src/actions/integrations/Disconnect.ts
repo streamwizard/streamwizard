@@ -1,5 +1,6 @@
 "use server";
 
+import { auth } from "@/auth";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
@@ -9,9 +10,10 @@ export async function DeleteIntegrations(integration: string): Promise<{
 }> {
   let message: string = "";
   let error: string = "";
+  const session = await auth();
 
-  const supabase = createClient();
-  const user_id = (await supabase.auth.getUser()).data.user?.id;
+  const supabase = createClient(session?.supabaseAccessToken as string);
+  const user_id = session?.user?.id;
 
   if (!user_id) {
     throw new Error("User not found");

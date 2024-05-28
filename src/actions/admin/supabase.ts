@@ -1,21 +1,21 @@
 "use server";
 
-import type { Twitch_integration } from "@/types/database/user";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { InsertTwitchIntegrationTable, TwitchIntegrationTable, UpdateTwitchIntegrationTable } from "@/types/database";
 
 const supabase = createAdminClient();
 
-export async function add_twitch_integration(user: Twitch_integration) {
+export async function add_twitch_integration(user: InsertTwitchIntegrationTable) {
   const { error } = await supabase.from("twitch_integration").insert(user);
   if (error) {
-    console.log(error);
+    console.error(error);
   }
 }
 
-export async function get_twitch_integration(user_id: string, channel_id: string): Promise<Twitch_integration[] | null> {
+export async function get_twitch_integration(user_id: string, channel_id: string): Promise<TwitchIntegrationTable[] | null> {
   const { data, error } = await supabase.from("twitch_integration").select("*").eq("user_id", user_id).eq("broadcaster_id", channel_id);
 
-  const twitch_integration = data as Twitch_integration[] || [];
+  const twitch_integration = data || [];
 
   if(twitch_integration.length === 0) return null;
 
@@ -23,9 +23,9 @@ export async function get_twitch_integration(user_id: string, channel_id: string
 }
 
 
-export async function update_twitch_integration(user_id: string, channel_id: string, data: Partial<Twitch_integration>) {
+export async function update_twitch_integration(user_id: string, channel_id: string, data: UpdateTwitchIntegrationTable) {
   const { error } = await supabase.from("twitch_integration").update(data).eq("user_id", user_id).eq("broadcaster_id", channel_id);
   if (error) {
-    console.log(error);
+    console.error(error);
   }
 }

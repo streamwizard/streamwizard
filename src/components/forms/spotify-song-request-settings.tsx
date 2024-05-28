@@ -7,27 +7,33 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SpotifySongRequestSettingsSchema } from "@/schemas/spotify-song-request-settings";
+import { SpotifySettingsTable } from "@/types/database";
 import { Switch } from "../ui/switch";
+import { updateSpotifySettings } from "@/actions/supabase/table-spotify-settings";
+import { toast } from "sonner";
 
 interface Props {
-  settings?: any;
+  settings: SpotifySettingsTable
 }
 
 export default function SpotifySongRequestSettings({ settings }: Props) {
   const form = useForm<z.infer<typeof SpotifySongRequestSettingsSchema>>({
     resolver: zodResolver(SpotifySongRequestSettingsSchema),
     defaultValues: {
-      global_queue_limit: settings?.global_queue_limit || 10,
-      chatter_queue_limit: settings?.chatter_queue_limit || 5,
-      live_only: settings?.live_only || false,
+      global_queue_limit: settings?.global_queue_limit, 
+      chatter_queue_limit: settings?.chatter_queue_limit,
+      live_only: settings.live_only 
     },
   });
 
   // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof SpotifySongRequestSettingsSchema>) {
-    // Update command
+    toast.promise(updateSpotifySettings(values, settings?.id as string), {
+      loading: "Updating...",
+      success: "Settings Updated!",
+      error: "Error updating settings",
+    });
   }
 
   return (
@@ -42,7 +48,7 @@ export default function SpotifySongRequestSettings({ settings }: Props) {
                 <div className="flex items-center">
                   <FormLabel>Live Only?</FormLabel>
                   <FormControl className="ml-4">
-                    <Switch {...field} />
+                    <Switch checked={field.value} onClick={() => field.onChange(!field.value)} />
                   </FormControl>
                 </div>
                 <FormDescription>Enable song requests only when you are live? </FormDescription>
@@ -57,7 +63,7 @@ export default function SpotifySongRequestSettings({ settings }: Props) {
               <FormItem className="mx-2">
                 <FormLabel>Global Queue Limit</FormLabel>
                 <FormControl>
-                  <Input placeholder="!song" {...field} />
+                  <Input placeholder="!song" {...field} onChange={(e) => field.onChange(e.target.valueAsNumber)} type="number" />
                 </FormControl>
                 <FormDescription>Maximum number of songs allowed in the queue.</FormDescription>
                 <FormMessage />
@@ -66,27 +72,16 @@ export default function SpotifySongRequestSettings({ settings }: Props) {
           />
           <FormField
             control={form.control}
-            name="global_queue_limit"
+            name="chatter_queue_limit"
             render={({ field }) => (
               <FormItem className="mx-2">
                 <FormLabel>Chatter Queue Limit</FormLabel>
                 <FormControl>
-                  <Select onValueChange={(value) => field.onChange(value)} value={field.value}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a action" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Actions</SelectLabel>
-                        <SelectItem value="null">None</SelectItem>
-                        <SelectItem value="spotify.play">Play</SelectItem>
-                        <SelectItem value="spotify.pause">Pause</SelectItem>
-                        <SelectItem value="spotify.song_request">Song Request</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                <FormControl>
+                  <Input placeholder="!song" {...field} onChange={(e) => field.onChange(e.target.valueAsNumber)} type="number" />
                 </FormControl>
-                <FormDescription>"Maximum number of songs a viewer can queue.</FormDescription>
+                </FormControl>
+                <FormDescription>Maximum number of songs a viewer can queue.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

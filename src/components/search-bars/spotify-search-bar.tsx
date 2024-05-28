@@ -14,7 +14,7 @@ export default function SpotifySearchBar() {
 
   const { banSong } = useBannedSongs();
 
-  const handleBanSong = async (song: { song_id: string; song_name: string, artists: string[] }) => {
+  const handleBanSong = async (song: { song_id: string; song_name: string; artists: string[] }) => {
     const data = banSong({
       song_id: song.song_id,
       song_name: song.song_name,

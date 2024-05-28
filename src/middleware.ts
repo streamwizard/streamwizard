@@ -11,10 +11,7 @@ export default middleware((req) => {
   const { nextUrl } = req;
   const isLoggedIn = !!req.auth;
 
-  if(process.env.NODE_ENV === "development") {
-    console.log("isLoggedIn", isLoggedIn);
-    console.log("Route: ", nextUrl.pathname);
-  }
+
 
   const isApiAuthRoute = nextUrl.pathname.startsWith(apiAuthPrefix);
   const publicRoute = publicRoutes.includes(nextUrl.pathname);

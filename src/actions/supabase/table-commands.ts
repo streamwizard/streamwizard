@@ -2,7 +2,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
-import { CommandTable } from "@/types/supabase";
+import { CommandTable } from "@/types/database";
 
 
 
@@ -57,7 +57,6 @@ export async function updateCommand(command: CommandTable, url: string): Promise
 export async function getCommands() {
   const session = await auth();
 
-  console.log(session?.supabaseAccessToken);
   
   const supabase = createClient(session?.supabaseAccessToken as string);
 
@@ -87,7 +86,7 @@ export async function deleteCommands(command_id: string, url: string): Promise<C
   const { error, count } = await supabase.from("commands").delete().eq("id", command_id)
 
   if (error) {
-    console.log(error);
+    console.error(error);
     revalidatePath(url);
     throw new Error(error.message);
   }

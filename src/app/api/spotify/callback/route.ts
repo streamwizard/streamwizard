@@ -1,25 +1,31 @@
-import axios from "axios";
-import { access } from "fs";
-import { redirect } from "next/navigation";
-import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { createClient } from "@/lib/supabase/server";
+import { CurrentUsersProfileResponse } from "@/types/API/spotify-web-api";
+import axios from "axios";
+import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
+  const session = await auth();
 
-  const supabase = createClient();
+  // check for session
+  if (!session) {
+    return NextResponse.json({ error: "No session" }, { status: 401 });
+  }
 
-  const userdata = await supabase.auth.getUser();
+  const user_id = session?.user.id;
 
- 
+  if (!user_id) {
+    return NextResponse.json({ error: "No user id found" }, { status: 401 });
+  }
+
+  const supabase = createClient(session?.supabaseAccessToken as string);
+
 
   if (!code) {
     return Response.json({ error: "No code provided" }, { status: 400 });
-  }
-
-  if(userdata.error || !userdata.data?.user) {
-    return NextResponse.redirect(`${origin}/error`);
   }
 
   const authOptions = {
@@ -41,19 +47,20 @@ export async function GET(request: Request) {
 
     const spotify_user_data = await getSpotifyUserData(response.data.access_token);
 
-    const spotify_data = {
+    if (!spotify_user_data) {
+      return NextResponse.json({ error: "No user data found" }, { status: 401 });
+    }
+
+    const { status, error } = await supabase.from("spotify_integrations").insert({
+      account: spotify_user_data.display_name!,
+      user_id: user_id,
       access_token: response.data.access_token,
       refresh_token: response.data.refresh_token,
-      account: spotify_user_data.display_name,
-      email: spotify_user_data.email,
+      email: spotify_user_data?.email,
       spotify_id: spotify_user_data.id,
-      twitch_channel_id: +userdata.data.user.user_metadata.provider_id,
-      user_id: userdata.data.user.id,
-    };
+    });
 
-   const {status, error} = await supabase.from("spotify_integrations").insert(spotify_data);
-
-   console.log(error);
+    console.error(error);
 
     // Handle successful response with the access token in response.data
     return NextResponse.redirect(`${origin}/dashboard/settings`);
@@ -64,9 +71,9 @@ export async function GET(request: Request) {
 }
 
 // get the spotify user data'
-async function getSpotifyUserData(access_token: string) {
+async function getSpotifyUserData<SpotifyUser>(access_token: string) {
   try {
-    const response = await axios.get("https://api.spotify.com/v1/me", {
+    const response = await axios.get<CurrentUsersProfileResponse>("https://api.spotify.com/v1/me", {
       headers: {
         Authorization: `Bearer ${access_token}`,
       },

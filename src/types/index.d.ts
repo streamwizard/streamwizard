@@ -34,7 +34,7 @@ export type MenuConfig = {
 
 declare module "axios" {
   export interface AxiosRequestConfig {
-    channelID?: number; // Your custom property
+    user_id?: string; // Your custom property
     broadcasterID?: number; // Your custom property
     // Add more custom properties as needed
   }

@@ -1,16 +1,16 @@
 "use client";
 import { createCommand, deleteCommands, updateCommand as update } from "@/actions/supabase/table-commands";
 import { CommandSchemaType } from "@/schemas/command-schema";
-import { CommandsTable } from "@/types/database/command";
 import React, { ReactNode, createContext, startTransition, useOptimistic } from "react";
 import { toast } from "sonner";
+import { CommandTable } from "@/types/database";
 
 // Define the type for the context
 export interface CommandContextType {
-  commands: CommandsTable[];
+  commands: CommandTable[];
   addCommand: (command: CommandSchemaType) => void;
-  updateCommand: (command: CommandsTable) => void;
-  deleteCommand: (commands: CommandsTable[]) => void;
+  updateCommand: (command: CommandTable) => void;
+  deleteCommand: (commands: CommandTable[]) => void;
 }
 
 // Create the context with TypeScript type
@@ -18,13 +18,13 @@ export const CommandContext = createContext<CommandContextType | undefined>(unde
 
 interface Props {
   children: ReactNode;
-  initialCommands: CommandsTable[];
+  initialCommands: CommandTable[];
   user_id: string;
-  broadcaster_id: number;
+  broadcaster_id: string;
   editor: string;
 }
 
-function reducer(state: CommandsTable[], action: { type: string; payload: CommandsTable }) {
+function reducer(state: CommandTable[], action: { type: string; payload: CommandTable }) {
   switch (action.type) {
     case "ADD_COMMAND":
       return [...state, action.payload];
@@ -43,12 +43,14 @@ export const CommandProvider = ({ children, initialCommands, broadcaster_id, edi
 
   // Function to add a command
   const addCommand = async (command: CommandSchemaType) => {
-    const new_command: CommandsTable = {
+    // TODO: fix type
+    // @ts-ignore
+    const new_command: CommandTable = {
       ...command,
-      broadcaster_id: broadcaster_id,
+      broadcaster_id: +broadcaster_id,
       user_id: user_id,
       updated_by: editor,
-      updated_at: new Date(),
+      updated_at: new Date().toDateString(),
     };
 
     startTransition(() => {
@@ -65,7 +67,7 @@ export const CommandProvider = ({ children, initialCommands, broadcaster_id, edi
   };
 
   // Function to update a command
-  const updateCommand = async (command: CommandsTable) => {
+  const updateCommand = async (command: CommandTable) => {
     startTransition(() => {
       dispatch({ type: "UPDATE_COMMAND", payload: command });
     });
@@ -79,7 +81,7 @@ export const CommandProvider = ({ children, initialCommands, broadcaster_id, edi
   };
 
   // Function to delete a command
-  const deleteCommand = async (commands: CommandsTable[]) => {
+  const deleteCommand = async (commands: CommandTable[]) => {
     startTransition(() => {
       commands.forEach((command) => {
         dispatch({ type: "DELETE_COMMAND", payload: command });

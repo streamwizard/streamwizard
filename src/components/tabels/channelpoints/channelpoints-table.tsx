@@ -1,10 +1,4 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import useCommands from "@/hooks/useCommands";
-import { CommandsTable } from "@/types/database/command";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +10,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import useChannelPoints from "@/hooks/useChannelPoints";
+import { TwitchChannelPointsReward } from "@/types/API/twitch";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -30,8 +30,6 @@ import {
 } from "@tanstack/react-table";
 import { ChevronDown } from "lucide-react";
 import * as React from "react";
-import { TwitchChannelPointsReward } from "@/types/API/twitch";
-import useChannelPoints from "@/hooks/useChannelPoints";
 
 export type CommandColumn = {
   id: string;
@@ -64,7 +62,7 @@ export function ChannelPointsTable({ columns }: Props) {
     updated_by: false,
     id: false,
   });
-  const [selectedRows, setSelectedRows] = React.useState<CommandsTable[]>([]);
+  const [selectedRows, setSelectedRows] = React.useState<any[]>([]);
   const { channelPoints, deleteChannelPoint } = useChannelPoints();
 
   const table = useReactTable({

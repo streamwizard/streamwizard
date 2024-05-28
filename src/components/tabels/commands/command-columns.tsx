@@ -5,11 +5,11 @@ import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 
 import TruncatedText from "@/components/ui/truncated-text";
-import { CommandsTable } from "@/types/database/command";
 import CommandActions from "./command-actions";
 import CommandSwitch from "./command-switch";
+import { CommandTable } from "@/types/database";
 
-export const CommandColumns: ColumnDef<CommandsTable>[] = [
+export const CommandColumns: ColumnDef<CommandTable>[] = [
   {
     id: "Select",
     header: ({ table }) => (

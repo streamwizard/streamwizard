@@ -15,7 +15,7 @@ import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMe
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import useBannedChatters from "@/hooks/useBannedChatter";
-import { BannedChatter } from "@/types/database/banned-chatter";
+import { SpotifyBannedChatterTable } from "@/types/database";
 import {
   ColumnDef,
   ColumnFiltersState,
@@ -32,7 +32,7 @@ import { ChevronDown } from "lucide-react";
 import * as React from "react";
 
 interface Props {
-  columns: ColumnDef<BannedChatter, any>[];
+  columns: ColumnDef<SpotifyBannedChatterTable, any>[];
 }
 
 export function BannedChatterTable({ columns }: Props) {
@@ -50,7 +50,7 @@ export function BannedChatterTable({ columns }: Props) {
     id: false,
   });
   const { unbanChatter, bannedChatters } = useBannedChatters();
-  const [selectedRows, setSelectedRows] = React.useState<BannedChatter[]>([]);
+  const [selectedRows, setSelectedRows] = React.useState<SpotifyBannedChatterTable[]>([]);
 
   const table = useReactTable({
     data: bannedChatters,

@@ -39,18 +39,18 @@ SpotifyWebAPi.interceptors.response.use(
       originalRequest._retry = true;
 
       //get the channel from the request
-      const channelID = error.response?.config.broadcasterID;
+      const user_id = error.response?.config.user_id;
 
-      if (!channelID) return Promise.reject("No Broadcaster ID found in request");
+      if (!user_id) return Promise.reject("No Broadcaster ID found in request");
 
       const { data, error: DBerror } = await supabaseAdmin
         .from("spotify_integrations")
         .select("refresh_token, user_id")
-        .eq("twitch_channel_id", +channelID)
+        .eq("user_id", user_id)
         .single();
       if (DBerror) {
-        console.log("Error getting refresh token from database");
-        console.log(DBerror);
+        console.error("Error getting refresh token from database");
+        console.error(DBerror);
         return;
       }
 
@@ -58,7 +58,7 @@ SpotifyWebAPi.interceptors.response.use(
       const newToken = await RefreshToken(data.refresh_token, data.user_id);
 
       if (!newToken) {
-        console.log("Error refreshing token");
+        console.error("Error refreshing token");
         return Promise.reject(error);
       }
 
@@ -103,14 +103,14 @@ async function RefreshToken(refresh_token: string, user_id: string): Promise<str
 
     if (error) {
       console.error("error updating in database tokens");
-      console.log(error);
+      console.error(error);
       return null;
     }
 
     return response.data.access_token;
   } catch (error) {
     console.error("error refreshing token");
-    console.log(error);
+    console.error(error);
     return null;
   }
 }

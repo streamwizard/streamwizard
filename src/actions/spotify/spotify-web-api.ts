@@ -3,14 +3,16 @@
 import { SpotifyWebAPi } from "@/config/axios/spotify-web-api";
 import { SearchResponse } from "@/types/API/spotify-web-api";
 import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/auth";
 
 export async function SearchSongs({ query, limit = 10, offset = 0 }: { query: string; limit: number; offset: number }) {
-  const supabase = createClient();
+  const sessions = await auth();
+  const supabase = createClient(sessions?.supabaseAccessToken as string);
 
-  const { data, error } = await supabase.from("spotify_integrations").select("access_token, twitch_channel_id").single();
+  const { data, error } = await supabase.from("spotify_integrations").select("access_token").single();
 
   if (error || !data) {
-    console.log("Error getting access token");
+    console.error("Error getting access token");
     return;
   }
 
@@ -25,11 +27,11 @@ export async function SearchSongs({ query, limit = 10, offset = 0 }: { query: st
         limit,
         offset,
       },
-      broadcasterID: data.twitch_channel_id,
+      user_id: sessions?.user.id,
     });
 
     return res.data.tracks;
   } catch (error) {
-    console.log(error);
+    console.error(error);
   }
 }

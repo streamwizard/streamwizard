@@ -1,13 +1,14 @@
 "use client";
 import { addBannedSong, deleteBannedSong } from "@/actions/supabase/table-banned-songs";
-import { BannedSongs } from "@/types/database/banned-songs";
+import { SpotifyBannedSongsTable, InsertSpotifyBannedSongsTable } from "@/types/database";
+
 import React, { ReactNode, createContext, startTransition, useOptimistic } from "react";
 import { toast } from "sonner";
 
 // Define the type for the context
 export interface BannedSongsContextType {
-  bannedSongs: BannedSongs[];
-  unbanSong: (chatter: BannedSongs[]) => void;
+  bannedSongs: SpotifyBannedSongsTable[];
+  unbanSong: (chatter: SpotifyBannedSongsTable[]) => void;
   banSong: (song: { song_name: string; song_id: string; artists: string  }) => void;
 }
 
@@ -16,14 +17,13 @@ export const BannedSongsContext = createContext<BannedSongsContextType | undefin
 
 interface Props {
   children: ReactNode;
-  initialBannedSongs: BannedSongs[];
+  initialBannedSongs: SpotifyBannedSongsTable[];
   user_id: string;
   settings_id: string;
-  broadcaster_id: number;
   editor: string;
 }
 
-function reducer(state: BannedSongs[], action: { type: string; payload: BannedSongs }) {
+function reducer(state: SpotifyBannedSongsTable[], action: { type: string; payload: SpotifyBannedSongsTable }) {
   switch (action.type) {
     case "ADD_SONG":
       return [...state, action.payload];
@@ -34,24 +34,24 @@ function reducer(state: BannedSongs[], action: { type: string; payload: BannedSo
   }
 }
 
-export const BannedSongsProvider = ({ children, initialBannedSongs, broadcaster_id, editor, user_id, settings_id }: Props) => {
+export const BannedSongsProvider = ({ children, initialBannedSongs, editor, user_id, settings_id }: Props) => {
   const [optimisticBannedChatters, dispatch] = useOptimistic(initialBannedSongs, reducer);
 
   // Function to add a command
   const banSong = async (song: { song_name: string; song_id: string, artists: string }) => {
-    const banned_chatter: BannedSongs = {
+    const banned_chatter: InsertSpotifyBannedSongsTable = {
       ...song,
-      broadcaster_id: broadcaster_id.toString(),
       broadcaster_name: editor,
-      created_at: new Date(),
+      created_at: new Date().toDateString(),
       settings_id,
       user_id,
       artists: song.artists,
+      broadcaster_id: user_id,
     };
 
-    startTransition(() => {
-      dispatch({ type: "ADD_SONG", payload: banned_chatter });
-    });
+    // startTransition(() => {
+    //   dispatch({ type: "ADD_SONG", payload: banned_chatter });
+    // });
 
     try {
       await addBannedSong(banned_chatter);
@@ -64,7 +64,7 @@ export const BannedSongsProvider = ({ children, initialBannedSongs, broadcaster_
   };
 
   // Function to delete a command
-  const unBanSong = async (song: BannedSongs[]) => {
+  const unBanSong = async (song: SpotifyBannedSongsTable[]) => {
     startTransition(() => {
       song.forEach((chatter) => {
         dispatch({ type: "DELETE_SONG", payload: chatter });

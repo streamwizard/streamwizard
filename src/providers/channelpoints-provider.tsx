@@ -1,9 +1,8 @@
 "use client";
-import { deleteChannelPoint, updateChannelpoint as update, createChannelPoint as create } from "@/actions/twitch/twitch-api";
+import { createChannelPoint as create, deleteChannelPoint, updateChannelpoint as update } from "@/actions/twitch/twitch-api";
 import { ChannelPointSchema } from "@/schemas/channelpoint-schema";
 import { TwitchChannelPointsReward } from "@/types/API/twitch";
-import { channel } from "process";
-import React, { ReactNode, createContext, startTransition, useOptimistic } from "react";
+import { ReactNode, createContext, useOptimistic } from "react";
 import { toast } from "sonner";
 
 // Define the type for the context
@@ -19,7 +18,7 @@ export const ChannelPointContext = createContext<ChannelPointContextType | undef
 
 interface Props {
   children: ReactNode;
-  initialChannelPoints: TwitchChannelPointsReward[];
+  initialChannelPoints: TwitchChannelPointsReward[] | null
 }
 
 function reducer(state: TwitchChannelPointsReward[], action: { type: string; payload: TwitchChannelPointsReward }) {
@@ -34,7 +33,7 @@ function reducer(state: TwitchChannelPointsReward[], action: { type: string; pay
 }
 
 export const ChannelPointsProvider = ({ children, initialChannelPoints }: Props) => {
-  const [optimisticBannedChatters, dispatch] = useOptimistic(initialChannelPoints, reducer);
+  const [optimisticBannedChatters, dispatch] = useOptimistic(initialChannelPoints ? initialChannelPoints : [], reducer);
 
   // Function to add a channelpoints
   const createChannelPoint = async (channelPoint: ChannelPointSchema) => {

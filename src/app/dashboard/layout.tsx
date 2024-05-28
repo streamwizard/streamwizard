@@ -1,13 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+import { getUser } from "@/actions/supabase/table-user";
 import { SidebarNav } from "@/components/nav/SidebarNav";
 import { Breadcrumb } from "@/components/nav/breadcrumb";
 import { DashboardNav } from "@/components/nav/dashboardNav";
 import Sidebar from "@/components/nav/sidebar";
 import { dashboardConfig } from "@/config/dashboard";
-import { auth } from "@/auth";
-import { getUser } from "@/actions/supabase/table-user";
 
 export default async function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
   const user = await getUser();

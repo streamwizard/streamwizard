@@ -4,10 +4,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 
-import { BannedSongs } from "@/types/database/banned-songs";
 import BannedChatterActions from "./banned-songs-actions";
+import { SpotifyBannedSongsTable } from "@/types/database";
 
-export const BannedSongsColumns: ColumnDef<BannedSongs>[] = [
+export const BannedSongsColumns: ColumnDef<SpotifyBannedSongsTable>[] = [
   {
     id: "Select",
     header: ({ table }) => (

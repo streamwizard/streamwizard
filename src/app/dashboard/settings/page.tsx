@@ -1,3 +1,4 @@
+import { auth } from "@/auth";
 import { IntegrationsConnectButton } from "@/components/buttons/integrations/spotify";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { createClient } from "@/lib/supabase/server";
@@ -9,7 +10,8 @@ interface Integration {
 }
 
 export default async function Page() {
-  const supabase = createClient();
+  const session = await auth();
+  const supabase = createClient(session?.supabaseAccessToken as string);
   const { data, error } = await supabase.from("user_integrations").select("spotify(account), twitch(account)").single();
 
   if (error || !data) {
@@ -18,8 +20,9 @@ export default async function Page() {
   }
 
   const integrations = data as unknown as Integration;
+
   return (
-    <Table>
+    <Table className="w-full">
       <TableCaption>A list of integrations.</TableCaption>
       <TableHeader>
         <TableRow>

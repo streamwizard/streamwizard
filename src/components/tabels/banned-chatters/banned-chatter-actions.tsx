@@ -1,12 +1,12 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import useBannedChatters from "@/hooks/useBannedChatter";
-import { BannedChatter } from "@/types/database/banned-chatter";
+import { SpotifyBannedChatterTable } from "@/types/database";
 import React from "react";
 
 
 interface props {
-  chatter: BannedChatter
+  chatter: SpotifyBannedChatterTable
 }
 
 export default function BannedChatterActions({ chatter }: props) {
