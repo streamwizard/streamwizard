@@ -5,6 +5,7 @@ import { env } from "./lib/env";
 import axios from "axios";
 import { TwitchEventSubscriptions } from "./lib/utils";
 import { GetEventSubSubscriptionsResponse } from "./types/API/twitch";
+import { supabaseAdmin } from "./lib/supabase/admin";
 
 const { SUPABASE_JWT_SECRET } = env;
 
@@ -23,19 +24,31 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         role: "authenticated",
       };
       session.supabaseAccessToken = jwt.sign(payload, signingSecret);
+      const { data } = await supabaseAdmin.from("users").select("*").eq("id", user.id).single();
+
+      session.user.role = data?.role || "user";
 
       return session;
     },
 
-    signIn: async ({ account }) => {
+    signIn: async ({ account, user }) => {
       const hasEvents = await checkTwitchSubscriptions(account!.providerAccountId);
 
       if (!hasEvents) {
-        return "/unauthorized?reason=missing_events";
+        return "/unauthorized?error=events";
       }
 
+      const { data } = await supabaseAdmin.from("users").select("*").eq("id", user.id!).single();
 
-      return true
+      if (!data) {
+        return "/unauthorized?error=not-registered";
+      }
+
+      if (data.role === "user") {
+        return "/unauthorized?beta_only=true";
+      }
+
+      return true;
     },
   },
 });

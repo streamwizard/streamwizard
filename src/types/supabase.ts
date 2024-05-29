@@ -1,4 +1,4 @@
- export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -306,6 +306,7 @@ export type Database = {
           account: string
           broadcaster_id: string
           id: string
+          is_live: boolean
           refresh_token: string
           user_id: string
         }
@@ -314,6 +315,7 @@ export type Database = {
           account: string
           broadcaster_id: string
           id?: string
+          is_live?: boolean
           refresh_token: string
           user_id: string
         }
@@ -322,6 +324,7 @@ export type Database = {
           account?: string
           broadcaster_id?: string
           id?: string
+          is_live?: boolean
           refresh_token?: string
           user_id?: string
         }
@@ -379,18 +382,21 @@ export type Database = {
           id: string
           image: string | null
           name: string | null
+          role: Database["public"]["Enums"]["roles"]
         }
         Insert: {
           email?: string | null
           id: string
           image?: string | null
           name?: string | null
+          role?: Database["public"]["Enums"]["roles"]
         }
         Update: {
           email?: string | null
           id?: string
           image?: string | null
           name?: string | null
+          role?: Database["public"]["Enums"]["roles"]
         }
         Relationships: [
           {
@@ -415,6 +421,7 @@ export type Database = {
       }
     }
     Enums: {
+      roles: "user" | "beta" | "admin"
       userlevel:
         | "everyone"
         | "follower"

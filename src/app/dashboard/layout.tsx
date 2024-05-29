@@ -6,14 +6,19 @@ import { Breadcrumb } from "@/components/nav/breadcrumb";
 import { DashboardNav } from "@/components/nav/dashboardNav";
 import Sidebar from "@/components/nav/sidebar";
 import { dashboardConfig } from "@/config/dashboard";
+import { auth } from "@/auth";
 
 export default async function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const session = await auth()
   const user = await getUser();
 
   if (!user) {
     redirect("/login");
     return null;
   }
+
+  // console.log(session);
+
 
   return (
     <div className="flex">

@@ -16,7 +16,7 @@ export default {
         params: {
           scope: TWITCH_SCOPES.join(" "),
         },
-      },
+      }, 
     }),
   ],
 

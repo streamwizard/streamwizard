@@ -156,7 +156,11 @@ export async function createChannelPoint(data: ChannelPointSchema) {
     revalidatePath("/dashboard/channelpoints");
 
     return res.data.data;
-  } catch (error) {
+  } catch (error: any) {
+    if (error.response.data.message === "CREATE_CUSTOM_REWARD_DUPLICATE_REWARD") {
+      throw new Error("channelpoint already exists");
+    }
+
     throw error;
   }
 }
