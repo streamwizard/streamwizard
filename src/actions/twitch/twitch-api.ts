@@ -6,6 +6,12 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 
+interface response<T> {
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
 export async function searchChatter(value: string, first: number = 10) {
   const session = await auth();
 
@@ -109,7 +115,7 @@ export async function getChannelPoints(): Promise<TwitchChannelPointsReward[] | 
 }
 
 // create a channel point
-export async function createChannelPoint(data: ChannelPointSchema) {
+export async function createChannelPoint(data: ChannelPointSchema): Promise<response<TwitchChannelPointsResponse>> {
   // get broadcaster_id
   const session = await auth();
 
@@ -118,7 +124,7 @@ export async function createChannelPoint(data: ChannelPointSchema) {
 
   if (DBerror) {
     console.error("Tokens not found");
-    return null;
+    return { error: "Tokens not found" };
   }
 
   try {
@@ -151,17 +157,20 @@ export async function createChannelPoint(data: ChannelPointSchema) {
         },
         broadcasterID: +tokens.broadcaster_id,
       });
+
+      return { error: "Error inserting channelpoint into the database" };
     }
 
     revalidatePath("/dashboard/channelpoints");
 
-    return res.data.data;
+    return { data: res.data, message: "Channelpoint created" };
   } catch (error: any) {
     if (error.response.data.message === "CREATE_CUSTOM_REWARD_DUPLICATE_REWARD") {
-      throw new Error("channelpoint already exists");
+      return { error: `Channelpoint with the title "${data.title}" already exist in your channel. ` };
     }
 
-    throw error;
+    console.error(error.response);
+    return { error: "failed to create channelpoint" };
   }
 }
 

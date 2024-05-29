@@ -41,14 +41,16 @@ export const ChannelPointsProvider = ({ children, initialChannelPoints }: Props)
     //   dispatch({ type: "ADD_SONG", payload: {} });
     // });
 
-    try {
-      await create(channelPoint);
-    } catch (error: any) {
-      toast.error(error.message);
+
+     const {error} = await create(channelPoint);
+
+    if (error) {
+      toast.error(error);
       return;
     }
+    
 
-    toast.success(`${channelPoint.title} has been banned from using song requests`);
+    toast.success(`${channelPoint.title} has been created`);
   };
 
   // Function to delete channelpoints
