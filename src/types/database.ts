@@ -15,6 +15,7 @@ export type UpdateSpotifySettingsTable = PublicSchema['spotify_settings']['Updat
 export type UpdateSpotifyBannedSongsTable = PublicSchema['spotify_banned_songs']['Update']
 export type UpdateSpotifyBannedChatterTable = PublicSchema['spotify_banned_chatters']['Update']
 export type UpdateTwitchIntegrationTable = PublicSchema['twitch_integration']['Update']
+export type UpdateCommandsTable = PublicSchema['commands']['Update']
 
 
 
@@ -27,3 +28,8 @@ export type InsertTwitchIntegrationTable = PublicSchema['twitch_integration']['I
 
 
 
+
+// enums 
+export type PublicEnums = Database['public']['Enums']
+
+export type Actions = PublicEnums['actions']

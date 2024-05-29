@@ -61,7 +61,7 @@ export const BannedChatterProvider = ({ children, initialBannedChatters, broadca
       return;
     }
 
-    toast.success(`${chatter.chatter_name} has been banned from using song requests`);
+    toast.success(`${chatter.chatter_name} has been banned`);
 
    
   };
@@ -85,7 +85,7 @@ export const BannedChatterProvider = ({ children, initialBannedChatters, broadca
       }
 
       if (affectedRows) {
-        toast.success(`Successfully deleted ${affectedRows} commands`);
+        toast.success(`${chatter[0].chatter_name} has been unbanned`);
       }
     });
   };

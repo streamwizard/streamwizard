@@ -60,7 +60,7 @@ export const ChannelPointsProvider = ({ children, initialChannelPoints }: Props)
     song_ids.forEach(async (id) => {
       try {
         await deleteChannelPoint(id);
-        toast.success("Song has been unbanned");
+        toast.success("reward has been deleted");
       } catch (error: any) {
         toast.error(error.message);
       }
@@ -79,12 +79,6 @@ export const ChannelPointsProvider = ({ children, initialChannelPoints }: Props)
     //   dispatch({ type: "UPDATE_SONG", payload: channelPoint });
     // });
 
-    try {
-      // await updateChannelPoint(channelPoint);
-    } catch (error: any) {
-      toast.error(error.message);
-      return;
-    }
 
     await update(channelPoint, channelpoint_id);
 

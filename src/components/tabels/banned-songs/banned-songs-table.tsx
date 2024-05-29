@@ -38,7 +38,7 @@ interface Props {
 export function BannedSongsTable({ columns }: Props) {
   const [sorting, setSorting] = React.useState<SortingState>([
     {
-      id: "chatter_name",
+      id: "song_name",
       desc: true,
     },
   ]);

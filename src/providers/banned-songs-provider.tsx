@@ -60,7 +60,7 @@ export const BannedSongsProvider = ({ children, initialBannedSongs, editor, user
       return;
     }
 
-    toast.success(`${song.song_name} has been banned from using song requests`);
+    toast.success(`${song.song_name} has been banned from being requested`);
   };
 
   // Function to delete a command

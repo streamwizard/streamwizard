@@ -54,15 +54,9 @@ export const ChannelPointsColumns: ColumnDef<TwitchChannelPointsReward>[] = [
     accessorKey: "prompt",
     header: () => <div className="">Prompt</div>,
     cell: ({ row }) => {
-      const prompt = row.original.prompt
+      const prompt = row.original.prompt;
 
-      return (
-        prompt ? (
-          <TruncatedText message={prompt} />
-        ) : (
-          <div className="font-medium capitalize">Not Set</div>
-        )
-      )
+      return prompt ? <TruncatedText message={prompt} /> : <div className="font-medium capitalize">Not Set</div>;
     },
   },
 
@@ -70,23 +64,31 @@ export const ChannelPointsColumns: ColumnDef<TwitchChannelPointsReward>[] = [
     accessorKey: "global_cooldown_setting",
     header: () => <div className="">Global Cooldown</div>,
     cell: ({ row }) => {
-      return <div className="font-medium capitalize">{row.original.global_cooldown_setting.global_cooldown_seconds} sec</div>;
+      const global_cooldown = row.original.global_cooldown_setting;
+      return (
+        <div className="font-medium capitalize">{global_cooldown.is_enabled ? global_cooldown.global_cooldown_seconds + " Sec" : "Not Set"}</div>
+      );
+    },
+  },
+
+  {
+    accessorKey: "max_per_stream_setting",
+    header: () => <div className="">Max Per Stream</div>,
+    cell: ({ row }) => {
+      const max_per_stream = row.original.max_per_stream_setting;
+      return <div className=" font-medium capitalize">{max_per_stream.is_enabled ? max_per_stream.max_per_stream : "Not Set"}</div>;
     },
   },
   {
     accessorKey: "max_per_user_per_stream_setting",
     header: () => <div className="">Max Per User Per Stream</div>,
     cell: ({ row }) => {
-      const max_per_user_per_stream = row.original.max_per_user_per_stream_setting.max_per_user_per_stream;
-      return <div className=" font-medium capitalize">{max_per_user_per_stream ? max_per_user_per_stream : "not set"}</div>;
-    },
-  },
-  {
-    accessorKey: "max_per_stream_setting",
-    header: () => <div className="">Max Per Stream</div>,
-    cell: ({ row }) => {
-      const max_per_stream = row.original.max_per_stream_setting.max_per_stream;
-      return <div className=" font-medium capitalize">{max_per_stream ? max_per_stream :  "Not Set"}</div>;
+      const max_per_user_per_stream = row.original.max_per_user_per_stream_setting;
+      return (
+        <div className=" font-medium capitalize">
+          {max_per_user_per_stream.is_enabled ? max_per_user_per_stream.max_per_user_per_stream : "not set"}
+        </div>
+      );
     },
   },
   {

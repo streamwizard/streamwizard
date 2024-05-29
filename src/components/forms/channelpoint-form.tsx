@@ -13,6 +13,8 @@ import { z } from "zod";
 import { Slider } from "../ui/slider";
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
+import { useEffect } from "react";
+import { actions } from "@/lib/constant";
 
 interface Props {
   setModal: (value: boolean) => void;
@@ -26,9 +28,9 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
     resolver: zodResolver(ChannelPointSchema),
     defaultValues: {
       title: channelpoint ? channelpoint.title : "",
-      cost: channelpoint ? channelpoint.cost : 0,
+      cost: channelpoint ? channelpoint.cost : 100,
       prompt: channelpoint ? channelpoint.prompt : "",
-      action: channelpoint ? channelpoint.action : "",
+      action: channelpoint ? channelpoint.action : "none",
       is_global_cooldown_enabled: channelpoint ? channelpoint.global_cooldown_setting.is_enabled : false,
       global_cooldown_seconds: channelpoint ? channelpoint.global_cooldown_setting.global_cooldown_seconds : 60,
       is_max_per_stream_enabled: channelpoint ? channelpoint.max_per_stream_setting.is_enabled : false,
@@ -50,15 +52,24 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
       await createChannelPoint(values);
     }
 
-    // setModal(false);
+    setModal(false);
   }
+
+  const handleAction = (value: string) => {
+    const action = actions.find((action) => action.value === value);
+
+    if (action?.user_input) {
+      form.setValue("is_user_input_required", true);
+    } else {
+      form.setValue("is_user_input_required", false);
+    }
+
+    form.setValue("action", value);
+  };
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="space-y-8"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="flex">
           <FormField
             control={form.control}
@@ -81,18 +92,18 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
               <FormItem className="mx-2">
                 <FormLabel>Action</FormLabel>
                 <FormControl>
-                  <Select onValueChange={(value) => field.onChange(value)} value={field.value}>
+                  <Select onValueChange={handleAction} defaultValue="none" value={field.value}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a action" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
                         <SelectLabel>Actions</SelectLabel>
-                        <SelectItem value="null">None</SelectItem>
-                        <SelectItem value="spotify.play">Play</SelectItem>
-                        <SelectItem value="spotify.pause">Pause</SelectItem>
-                        <SelectItem value="spotify.song_request">Song Request</SelectItem>
-                        <SelectItem value="spotify.skip">Skip</SelectItem>
+                        {actions.map((action) => (
+                          <SelectItem key={action.value} value={action.value}>
+                            {action.name}
+                          </SelectItem>
+                        ))}
                       </SelectGroup>
                     </SelectContent>
                   </Select>

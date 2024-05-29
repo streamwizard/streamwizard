@@ -3,13 +3,13 @@ import { createCommand, deleteCommands, updateCommand as update } from "@/action
 import { CommandSchemaType } from "@/schemas/command-schema";
 import React, { ReactNode, createContext, startTransition, useOptimistic } from "react";
 import { toast } from "sonner";
-import { CommandTable } from "@/types/database";
+import { CommandTable, InsertCommandTable, UpdateCommandsTable } from "@/types/database";
 
 // Define the type for the context
 export interface CommandContextType {
   commands: CommandTable[];
   addCommand: (command: CommandSchemaType) => void;
-  updateCommand: (command: CommandTable) => void;
+  updateCommand: (command: UpdateCommandsTable) => void;
   deleteCommand: (commands: CommandTable[]) => void;
 }
 

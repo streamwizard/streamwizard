@@ -11,7 +11,7 @@ export type Database = {
     Tables: {
       commands: {
         Row: {
-          action: string | null
+          action: Database["public"]["Enums"]["actions"]
           broadcaster_id: number
           command: string
           cooldown: number | null
@@ -25,7 +25,7 @@ export type Database = {
           userlevel: Database["public"]["Enums"]["userlevel"]
         }
         Insert: {
-          action?: string | null
+          action?: Database["public"]["Enums"]["actions"]
           broadcaster_id: number
           command: string
           cooldown?: number | null
@@ -39,7 +39,7 @@ export type Database = {
           userlevel?: Database["public"]["Enums"]["userlevel"]
         }
         Update: {
-          action?: string | null
+          action?: Database["public"]["Enums"]["actions"]
           broadcaster_id?: number
           command?: string
           cooldown?: number | null
@@ -270,21 +270,21 @@ export type Database = {
       }
       twitch_channelpoints: {
         Row: {
-          action: string | null
+          action: Database["public"]["Enums"]["actions"]
           broadcaster_id: string
           channelpoint_id: string
           id: number
           user_id: string
         }
         Insert: {
-          action?: string | null
+          action?: Database["public"]["Enums"]["actions"]
           broadcaster_id: string
           channelpoint_id: string
           id?: number
           user_id: string
         }
         Update: {
-          action?: string | null
+          action?: Database["public"]["Enums"]["actions"]
           broadcaster_id?: string
           channelpoint_id?: string
           id?: number
@@ -421,6 +421,14 @@ export type Database = {
       }
     }
     Enums: {
+      actions:
+        | "spotify.song_request"
+        | "spotify.add_banned_song"
+        | "spotify.remove_banned_song"
+        | "spotify.add_banned_chatter"
+        | "spotify.remove_banned_chatter"
+        | "spotify.skip"
+        | "none"
       roles: "user" | "beta" | "admin"
       userlevel:
         | "everyone"

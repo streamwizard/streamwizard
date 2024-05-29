@@ -12,6 +12,7 @@ import useCommands from "@/hooks/useCommands";
 import { CommandSchema } from "@/schemas/command-schema";
 import { Textarea } from "../ui/textarea";
 import { CommandTable } from "@/types/database";
+import { actions } from "@/lib/constant";
 
 interface Props {
   setModal: (value: boolean) => void;
@@ -25,7 +26,7 @@ export function CommandForm({ setModal, command }: Props) {
     resolver: zodResolver(CommandSchema),
     defaultValues: {
       command: command?.command || "",
-      action: command?.action || "null",
+      action: command?.action || "none",
       message: command?.message || "",
       userlevel: (command?.userlevel as any) || "everyone",
       cooldown: command?.cooldown || 0,
@@ -49,6 +50,7 @@ export function CommandForm({ setModal, command }: Props) {
 
     setModal(false);
   }
+
 
   return (
     <Form {...form}>
@@ -75,17 +77,18 @@ export function CommandForm({ setModal, command }: Props) {
               <FormItem className="mx-2">
                 <FormLabel>Action</FormLabel>
                 <FormControl>
-                  <Select onValueChange={(value) => field.onChange(value)} value={field.value}>
+                  <Select onValueChange={(e) => {field.onChange(e)}} defaultValue="none" value={field.value}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a action" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
                         <SelectLabel>Actions</SelectLabel>
-                        <SelectItem value="null">None</SelectItem>
-                        <SelectItem value="spotify.play">Play</SelectItem>
-                        <SelectItem value="spotify.pause">Pause</SelectItem>
-                        <SelectItem value="spotify.song_request">Song Request</SelectItem>
+                        {actions.map((action) => (
+                          <SelectItem key={action.value} value={action.value}>
+                            {action.name}
+                          </SelectItem>
+                        ))}
                       </SelectGroup>
                     </SelectContent>
                   </Select>
