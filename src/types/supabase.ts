@@ -11,7 +11,7 @@ export type Database = {
     Tables: {
       commands: {
         Row: {
-          action: Database["public"]["Enums"]["actions"]
+          action: string
           broadcaster_id: number
           command: string
           cooldown: number | null
@@ -22,10 +22,10 @@ export type Database = {
           updated_at: string | null
           updated_by: string | null
           user_id: string
-          userlevel: Database["public"]["Enums"]["userlevel"]
+          userlevel: string
         }
         Insert: {
-          action?: Database["public"]["Enums"]["actions"]
+          action: string
           broadcaster_id: number
           command: string
           cooldown?: number | null
@@ -36,10 +36,10 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           user_id: string
-          userlevel?: Database["public"]["Enums"]["userlevel"]
+          userlevel: string
         }
         Update: {
-          action?: Database["public"]["Enums"]["actions"]
+          action?: string
           broadcaster_id?: number
           command?: string
           cooldown?: number | null
@@ -50,7 +50,7 @@ export type Database = {
           updated_at?: string | null
           updated_by?: string | null
           user_id?: string
-          userlevel?: Database["public"]["Enums"]["userlevel"]
+          userlevel?: string
         }
         Relationships: [
           {
@@ -59,6 +59,47 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "twitch_integration"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      overlays: {
+        Row: {
+          created_at: string
+          elements: string | null
+          height: number
+          id: string
+          name: string
+          selectedElement: string | null
+          user_id: string
+          width: number
+        }
+        Insert: {
+          created_at?: string
+          elements?: string | null
+          height: number
+          id?: string
+          name: string
+          selectedElement?: string | null
+          user_id: string
+          width: number
+        }
+        Update: {
+          created_at?: string
+          elements?: string | null
+          height?: number
+          id?: string
+          name?: string
+          selectedElement?: string | null
+          user_id?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overlays_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -195,6 +236,7 @@ export type Database = {
           chatter_name: string
           created_at: string
           id: number
+          img_url: string | null
           song_id: string
           song_name: string
           user_id: string
@@ -207,6 +249,7 @@ export type Database = {
           chatter_name: string
           created_at?: string
           id?: number
+          img_url?: string | null
           song_id: string
           song_name: string
           user_id: string
@@ -219,6 +262,7 @@ export type Database = {
           chatter_name?: string
           created_at?: string
           id?: number
+          img_url?: string | null
           song_id?: string
           song_name?: string
           user_id?: string
@@ -403,6 +447,53 @@ export type Database = {
             foreignKeyName: "users_id_fkey"
             columns: ["id"]
             isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      workflows: {
+        Row: {
+          cronpath: string | null
+          description: string
+          discordtemplate: string | null
+          edges: string | null
+          flowpath: string | null
+          id: string
+          name: string
+          nodes: string | null
+          publish: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          cronpath?: string | null
+          description: string
+          discordtemplate?: string | null
+          edges?: string | null
+          flowpath?: string | null
+          id?: string
+          name: string
+          nodes?: string | null
+          publish?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          cronpath?: string | null
+          description?: string
+          discordtemplate?: string | null
+          edges?: string | null
+          flowpath?: string | null
+          id?: string
+          name?: string
+          nodes?: string | null
+          publish?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflows_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
