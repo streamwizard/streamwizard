@@ -4,7 +4,7 @@ import { EditorCanvasCardType } from "@/types/workflow";
 import { EditorState } from "@/providers/workflow-editor-provider";
 
 export const onDragStart = (event: any, nodeType: EditorCanvasCardType["type"], catagory: string) => {
-  event.dataTransfer.setData("application/reactflow", `${catagory}.${nodeType}`);
+  event.dataTransfer.setData("application/reactflow", `${catagory}:${nodeType}`);
   event.dataTransfer.effectAllowed = "move";
 };
 

@@ -12,6 +12,8 @@ export const onCreateNodesEdges = async (flowId: string, nodes: string, edges: s
 
   if (error) return error;
 
+  console.log(JSON.parse(nodes));
+
   return {
     message: "flow saved",
   };

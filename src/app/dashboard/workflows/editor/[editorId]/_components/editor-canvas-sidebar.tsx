@@ -1,81 +1,80 @@
 "use client";
-import { useNodeConnections } from "@/providers/connections-provider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import React, { useEffect } from "react";
-import { Separator } from "@/components/ui/separator";
-import { CONNECTIONS, EditorCanvasDefaultCard } from "@/lib/constant";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { onConnections, onDragStart } from "@/lib/editor-utils";
-import EditorCanvasIconHelper from "./editor-canvas-card-icon-hepler";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import RenderConnectionAccordion from "./render-connection-accordion";
-import RenderOutputAccordion from "./render-output-accordian";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { onDragStart } from "@/lib/editor-utils";
 import { useEditor } from "@/providers/workflow-editor-provider";
-import { EditorCanvasTypes, EditorNodeType } from "@/types/workflow";
-import { useFuzzieStore } from "@/store";
+import EditorCanvasIconHelper from "./editor-canvas-card-icon-hepler";
+import RenderOutputAccordion from "./render-output-accordian";
+import { EditorCanvasDefaultCard, NodeSettingsComponent } from "../../../_utils/const";
 
-type Props = {
-  nodes: any;
-};
-
-const EditorCanvasSidebar = ({ nodes }: Props) => {
+const EditorCanvasSidebar = () => {
   const { state } = useEditor();
-  const { nodeConnection } = useNodeConnections();
 
   return (
-    <aside>
-      <Tabs defaultValue="actions" className="h-screen overflow-scroll pb-24">
-        <TabsList className="bg-transparent">
-          <TabsTrigger value="actions">Actions</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-        </TabsList>
-        <Separator />
-        <TabsContent value="actions" className="flex flex-col gap-4 p-4">
-          {Object.entries(EditorCanvasDefaultCard).map(([provider, ProviderValues]) => (
-            <Accordion key={provider} type="multiple">
-              <AccordionItem value="Options" className="border-y-[1px] px-2">
-                <AccordionTrigger className="!no-underline">{provider}</AccordionTrigger>
-                <AccordionContent>
-                  {ProviderValues.Actions.map((action) => (
-                    <Card
-                      key={action.title}
-                      draggable
-                      onDragStart={(e) => onDragStart(e, action.type, provider)}
-                      className="flex flex-row items-center gap-4 cursor-pointer"
-                    >
-                      <EditorCanvasIconHelper type={action.type as EditorCanvasTypes} />
-                      <CardHeader>
-                        <CardTitle>{action.title}</CardTitle>
-                        <CardDescription>{action.description}</CardDescription>
-                      </CardHeader>
-                    </Card>
-                  ))}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          ))}
-        </TabsContent>
-        <TabsContent value="settings" className="-mt-6">
-          {/* <div className="px-2 py-4 text-center text-xl font-bold">{state.editor.selectedNode.data.title}</div> */}
-
-          <Accordion type="multiple">
+    <Tabs defaultValue="triggers">
+      <TabsList className="bg-transparent">
+        <TabsTrigger value="triggers">Triggers</TabsTrigger>
+        <TabsTrigger value="actions">Actions</TabsTrigger>
+        <TabsTrigger value="settings">Settings</TabsTrigger>
+      </TabsList>
+      <Separator />
+      <TabsContent value="triggers" className="flex flex-col gap-4 p-4">
+        {Object.entries(EditorCanvasDefaultCard).map(([provider, ProviderValues]) => (
+          <Accordion key={provider} type="multiple">
             <AccordionItem value="Options" className="border-y-[1px] px-2">
-              <AccordionTrigger className="!no-underline">Account</AccordionTrigger>
+              <AccordionTrigger className="!no-underline">{provider}</AccordionTrigger>
               <AccordionContent>
-                {CONNECTIONS.map((connection) => (
-                  <RenderConnectionAccordion key={connection.title} state={state} connection={connection} />
+                {ProviderValues.Triggers.map((Trigger) => (
+                  <Card
+                    key={Trigger.title}
+                    draggable
+                    onDragStart={(e) => onDragStart(e, Trigger.type, provider)}
+                    className="flex flex-row items-center gap-4 cursor-pointer"
+                  >
+                    <EditorCanvasIconHelper type={Trigger.type} />
+                    <CardHeader>
+                      <CardTitle>{Trigger.title}</CardTitle>
+                      <CardDescription>{Trigger.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
                 ))}
               </AccordionContent>
             </AccordionItem>
-            <AccordionItem value="Expected Output" className="px-2">
-              <AccordionTrigger className="!no-underline">Action</AccordionTrigger>
-              <RenderOutputAccordion state={state} nodeConnection={nodeConnection} />
+          </Accordion>
+        ))}
+      </TabsContent>
+      <TabsContent value="actions" className="flex flex-col gap-4 p-4">
+        {Object.entries(EditorCanvasDefaultCard).map(([provider, ProviderValues]) => (
+          <Accordion key={provider} type="multiple">
+            <AccordionItem value="Options" className="border-y-[1px] px-2">
+              <AccordionTrigger className="!no-underline">{provider}</AccordionTrigger>
+              <AccordionContent>
+                {ProviderValues.Actions.map((action) => (
+                  <Card
+                    key={action.title}
+                    draggable
+                    onDragStart={(e) => onDragStart(e, action.type, provider)}
+                    className="flex flex-row items-center gap-4 cursor-pointer"
+                  >
+                    <EditorCanvasIconHelper type={action.type} />
+                    <CardHeader>
+                      <CardTitle>{action.title}</CardTitle>
+                      <CardDescription>{action.description}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                ))}
+              </AccordionContent>
             </AccordionItem>
           </Accordion>
-        </TabsContent>
-      </Tabs>
-    </aside>
+        ))}
+      </TabsContent>
+      <TabsContent value="settings">
+        <RenderOutputAccordion SettingsComponent={NodeSettingsComponent[state.editor.selectedNode.data.type as keyof typeof NodeSettingsComponent]} />
+      </TabsContent>
+    </Tabs>
   );
 };
 

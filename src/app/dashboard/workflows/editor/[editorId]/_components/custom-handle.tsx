@@ -19,7 +19,7 @@ const CustomHandle = (props: Props) => {
         const sourcesFromHandleInState = state.editor.edges.filter(
           (edge) => edge.source === e.source
         ).length
-        const sourceNode = state.editor.elements.find(
+        const sourceNode = state.editor.nodes.find(
           (node) => node.id === e.source
         )
         //target

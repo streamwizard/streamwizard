@@ -6,7 +6,6 @@ import Payment from "@/components/icons/payment";
 import Settings from "@/components/icons/settings";
 import Workflows from "@/components/icons/workflows";
 import { Actions } from "@/types/database";
-import { Connection, EditorCanvasDefaultCardType } from "@/types/workflow";
 
 export const clients = [...new Array(10)].map((client, index) => ({
   href: `/${index + 1}.png`,
@@ -169,30 +168,4 @@ export const actions: IAction[] = [
   },
 ];
 
-export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
-  Twitch: {
-    Actions: [
-      {
-        title: "update channel points",
-        description: "update channel points",
-        completed: false,
-        current: false,
-        metadata: {},
-        type: "Action",
-      },
-    ],
-  },
-  Discord: {
-    Actions: []
-  },
-};
 
-export const CONNECTIONS: Connection[] = [
-  {
-    title: "Discord",
-    description: "Connect your discord to send notification and messages",
-    image: "/discord.png",
-    connectionKey: "discordNode",
-    accessTokenKey: "webhookURL",
-  },
-];

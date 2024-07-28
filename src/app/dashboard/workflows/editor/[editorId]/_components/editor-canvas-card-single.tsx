@@ -6,11 +6,11 @@ import EditorCanvasIconHelper from "./editor-canvas-card-icon-hepler";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { useEditor } from "@/providers/workflow-editor-provider";
-import { EditorCanvasCardType } from "@/types/workflow";
+import { Action, EditorCanvasCardType } from "@/types/workflow";
 import { Node, Position, useNodeId } from "@xyflow/react";
 import clsx from "clsx";
 
-const EditorCanvasCardSingle = ({ data }: { data: Node }) => {
+const EditorCanvasCardSingle = ({ data }: { data: Action }) => {
   const { dispatch, state } = useEditor();
   const nodeId = useNodeId();
   const logo = useMemo(() => {
@@ -23,7 +23,7 @@ const EditorCanvasCardSingle = ({ data }: { data: Node }) => {
   return (
     <ContextMenu>
       <ContextMenuTrigger>
-        {data.type !== "Trigger" && data.type !== "Google Drive" && <CustomHandle type="target" position={Position.Top} style={{ zIndex: 100 }} />}
+        {data.nodeType !== "Trigger"  && <CustomHandle type="target" position={Position.Top} style={{ zIndex: 100 }} />}
         <Card
           onClick={(e) => {
             e.stopPropagation();
@@ -52,7 +52,7 @@ const EditorCanvasCardSingle = ({ data }: { data: Node }) => {
             </div>
           </CardHeader>
           <Badge variant="secondary" className="absolute right-2 top-2">
-            {data.type}
+            {data.nodeType}
           </Badge>
           <div
             className={clsx("absolute left-3 top-4 h-2 w-2 rounded-full", {

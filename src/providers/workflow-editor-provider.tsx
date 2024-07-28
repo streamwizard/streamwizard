@@ -16,6 +16,27 @@ export type Editor = {
   selectedNode: Node;
 };
 
+// update metadata based on node id
+export const updateMetadata = (nodes: Node[], id: string, metadata: any): Node[] => {
+  console.log("function", nodes, id, metadata);
+  const updatedNodes = nodes.map((node) => {
+    if (node.id === id) {
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          metadata: {
+            test: "test",
+          },
+        },
+      };
+    }
+    return node;
+  });
+
+  return updatedNodes;
+};
+
 export type HistoryState = {
   history: Editor[];
   currentIndex: number;
@@ -105,6 +126,18 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
           selectedNode: action.payload.node,
         },
       };
+
+    case "UPDATE_METADATA":
+      if ("id" in action.payload) {
+        return {
+          ...state,
+          editor: {
+            ...state.editor,
+            nodes: updateMetadata(state.editor.nodes, action.payload.id, action.payload.metadata),
+          },
+        };
+      }
+      return state;
     default:
       return state;
   }

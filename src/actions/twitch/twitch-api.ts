@@ -87,27 +87,17 @@ export async function getChannelPoints(): Promise<TwitchChannelPointsReward[] | 
     return null;
   }
 
-  const ids: string | undefined = data.twitch_channelpoints.map((x) => x.channelpoint_id).join("&id=");
 
-  if (!ids) return null;
 
   try {
-    const res = await TwitchAPI.get<TwitchChannelPointsResponse>(`/channel_points/custom_rewards?broadcaster_id=${data.broadcaster_id}&id=${ids}`, {
+    const res = await TwitchAPI.get<TwitchChannelPointsResponse>(`/channel_points/custom_rewards?broadcaster_id=${data.broadcaster_id}`, {
       headers: {
         Authorization: `Bearer ${data.access_token}`,
       },
       broadcasterID: +data.broadcaster_id,
     });
 
-    const response: TwitchChannelPointsReward[] = res.data.data.map((x) => {
-      const action = data.twitch_channelpoints.find((y) => y.channelpoint_id === x.id);
-      return {
-        ...x,
-        action: action?.action ? action.action : undefined,
-      };
-    });
-
-    return response;
+    return res.data.data;
   } catch (error) {
     console.error(error);
     throw error;

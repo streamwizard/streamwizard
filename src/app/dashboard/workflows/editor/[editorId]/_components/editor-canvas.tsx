@@ -23,15 +23,17 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import TextUpdaterNode from "./customNodes/TextUpdaterNode";
-import { EditorCanvasCardType } from "@/types/workflow";
+import { Action, EditorCanvasCardType, Trigger } from "@/types/workflow";
 import { toast } from "sonner";
 import { v4 } from "uuid";
 import { useEditor } from "@/providers/workflow-editor-provider";
-import { EditorCanvasDefaultCard } from "@/lib/constant";
 import EditorCanvasCardSingle from "./editor-canvas-card-single";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import FlowInstance from "./flow-instance";
 import EditorCanvasSidebar from "./editor-canvas-sidebar";
+import { onGetNodesEdges } from "../../../_actions/workflow-connections";
+import { usePathname } from "next/navigation";
+import { EditorCanvasDefaultCard } from "../../../_utils/const";
 
 // const initialNodes: Node[] = [
 //   { id: "1", data: { label: "Node 1" }, position: { x: 5, y: 5 } },
@@ -56,8 +58,8 @@ function getActionByProviderAndType(providerName: string, actionType: string) {
   return EditorCanvasDefaultCard[providerName].Actions.find((action) => action.type === actionType);
 }
 
-function getTriggerByProviderAndName(providerName: string, triggerName: string, data: any) {
-  return data[providerName]?.triggers[triggerName];
+function getTriggerByProviderAndName(providerName: string, triggerName: string) {
+  return EditorCanvasDefaultCard[providerName]?.Triggers.find((trigger) => trigger.type === triggerName);
 }
 
 export default function Flow() {
@@ -69,7 +71,8 @@ export default function Flow() {
   const onConnect: OnConnect = useCallback((connection) => setEdges((eds) => addEdge(connection, eds)), [setEdges]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance>();
   const { dispatch, state } = useEditor();
-  const nodeTypes = useMemo(() => ({ textUpdater: TextUpdaterNode, Action: EditorCanvasCardSingle }), []);
+  const nodeTypes = useMemo(() => ({ textUpdater: TextUpdaterNode, Action: EditorCanvasCardSingle, Trigger: EditorCanvasCardSingle }), []);
+  const pathname = usePathname();
 
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
@@ -86,26 +89,31 @@ export default function Flow() {
       }
 
       // split the type to get the type of the node
-      const typeArr = type.split(".");
+      const typeArr = type.split(":");
 
       const Provider = typeArr.at(0);
       const NodeType = typeArr.at(1);
 
-      if(!Provider || !NodeType) return
+      if (!Provider || !NodeType) return;
 
-      // get the node obj
+      console.log("Provider", Provider);
+      console.log("NodeType", NodeType);
 
-      const nodeObj = getActionByProviderAndType(Provider, NodeType);
+      let nodeObj: Trigger | Action | undefined = getActionByProviderAndType(Provider, NodeType);
 
       if (!nodeObj) {
-        toast("Invalid action");
+        nodeObj = getTriggerByProviderAndName(Provider, NodeType);
+      }
+
+      if (!nodeObj) {
+        toast("Node not found");
+        console.error("Node not found");
         return;
       }
 
-
       const triggerAlreadyExists = state.editor.nodes.find((node) => node.type === "Trigger");
 
-      if (type === "Trigger" && triggerAlreadyExists) {
+      if (nodeObj?.nodeType === "Trigger" && triggerAlreadyExists) {
         toast("Only one trigger can be added to automations at the moment");
         console.log("Only one trigger can be added to automations at the moment");
         return;
@@ -119,14 +127,14 @@ export default function Flow() {
 
       const newNode: Node = {
         id: v4(),
-        type: "Action",
         position,
-        data: {
-          title: nodeObj.title,
-          description: nodeObj.description,
-          type: NodeType
-        },
+        type: nodeObj.nodeType,
+        data: nodeObj,
       };
+
+      console.log("newNode", newNode);
+
+      console.log(state.editor.nodes);
 
       setNodes((nds) => nds.concat(newNode));
     },
@@ -136,6 +144,21 @@ export default function Flow() {
   useEffect(() => {
     dispatch({ type: "LOAD_DATA", payload: { edges, nodes: nodes } });
   }, [nodes, edges]);
+
+  const onGetWorkFlow = async () => {
+    setIsWorkFlowLoading(true);
+    const response = await onGetNodesEdges(pathname.split("/").pop()!);
+    if (response) {
+      setEdges(JSON.parse(response.edges!));
+      setNodes(JSON.parse(response.nodes!));
+      setIsWorkFlowLoading(false);
+    }
+    setIsWorkFlowLoading(false);
+  };
+
+  useEffect(() => {
+    onGetWorkFlow();
+  }, []);
 
   return (
     <ResizablePanelGroup direction="horizontal">
@@ -209,8 +232,8 @@ export default function Flow() {
             </svg>
           </div>
         ) : (
-          <FlowInstance edges={edges} nodes={nodes}>
-            <EditorCanvasSidebar nodes={nodes} />
+          <FlowInstance edges={edges} nodes={state.editor.nodes}>
+            <EditorCanvasSidebar />
           </FlowInstance>
         )}
       </ResizablePanel>
