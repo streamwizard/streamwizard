@@ -1,6 +1,7 @@
 import { EditorCanvasDefaultCardType } from "@/types/workflow";
-import ChannelpointsCustomRewardRedemptionAddSettings from "../editor/[editorId]/_components/custom-settings/channel.channel_points_custom_reward_redemption.add";
+import ChannelpointsCustomRewardRedemptionAddSettings from "../editor/[editorId]/_components/custom-settings/triggers/channel.channel_points_custom_reward_redemption.add";
 import DefaultSettings from "../editor/[editorId]/_components/custom-settings/default";
+import CustomRewardUpdate from "../editor/[editorId]/_components/custom-settings/actions/custom_reward_update";
 
 export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
   Twitch: {
@@ -44,6 +45,7 @@ export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
 
 export const NodeSettingsComponent = {
   "channel.channel_points_custom_reward_redemption.add": ChannelpointsCustomRewardRedemptionAddSettings,
+  "custom_reward_update": CustomRewardUpdate,
 
   "default-settings": DefaultSettings,
 };

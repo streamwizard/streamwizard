@@ -232,9 +232,9 @@ export default function Flow() {
             </svg>
           </div>
         ) : (
-          <FlowInstance edges={edges} nodes={state.editor.nodes}>
+          // <FlowInstance edges={edges} nodes={state.editor.nodes}>
             <EditorCanvasSidebar />
-          </FlowInstance>
+          // </FlowInstance>
         )}
       </ResizablePanel>
     </ResizablePanelGroup>
