@@ -2,9 +2,8 @@ import { DashboardConfig } from "@/types";
 
 import { LayoutGrid, User2 } from "lucide-react";
 import { BsChatSquareText } from "react-icons/bs";
-import { FaCircle, FaMusic } from "react-icons/fa";
-import { GiSettingsKnobs } from "react-icons/gi";
-
+import { FaCircle } from "react-icons/fa";
+import { FaCodeFork } from "react-icons/fa6";
 export const dashboardConfig: DashboardConfig = {
   overview: {
     routes: [
@@ -30,31 +29,15 @@ export const dashboardConfig: DashboardConfig = {
         icon: FaCircle,
         beta: true,
       },
-    ],
-  },
-  song_request: {
-    title: "Song Request",
-    routes: [
       {
-        label: "Banned Chatters",
-        href: "/dashboard/banned-chatters/",
-        icon: User2,
-        beta: true,
-      },
-      {
-        label: "Banned Songs",
-        href: "/dashboard/banned-songs/",
-        icon: FaMusic,
-        beta: true,
-      },
-      {
-        label: "Settings",
-        href: "/dashboard/song-request-settings/",
-        icon: GiSettingsKnobs,
+        label: "Workflows",
+        href: "/dashboard/workflows/",
+        icon: FaCodeFork ,
         beta: true,
       },
     ],
   },
+
 
   community: {
     title: "Community",
