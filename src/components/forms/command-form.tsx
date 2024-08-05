@@ -51,54 +51,23 @@ export function CommandForm({ setModal, command }: Props) {
     setModal(false);
   }
 
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="flex">
-          <FormField
-            control={form.control}
-            name="command"
-            render={({ field }) => (
-              <FormItem className="mx-2">
-                <FormLabel>Command</FormLabel>
-                <FormControl>
-                  <Input placeholder="!song" {...field} />
-                </FormControl>
-                <FormDescription>This is your command trigger</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="action"
-            render={({ field }) => (
-              <FormItem className="mx-2">
-                <FormLabel>Action</FormLabel>
-                <FormControl>
-                  <Select onValueChange={(e) => {field.onChange(e)}} defaultValue="none" value={field.value}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a action" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Actions</SelectLabel>
-                        {actions.map((action) => (
-                          <SelectItem key={action.value} value={action.value}>
-                            {action.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormDescription>This is your command action</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="command"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Command</FormLabel>
+              <FormControl>
+                <Input placeholder="!song" {...field} />
+              </FormControl>
+              <FormDescription>This is your command trigger</FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
