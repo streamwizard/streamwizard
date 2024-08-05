@@ -17,8 +17,8 @@ const Page = async (props: Props) => {
       <div className="relative flex flex-col gap-4">
         <section className="flex flex-col m-2">
           {workflows ? (
-            workflows.map((flow) => (
-              <div className="my-2">
+            workflows.map((flow, index) => (
+              <div className="my-2" key={index}>
                 <WorkflowCard key={flow.id} {...flow} />
               </div>
             ))
