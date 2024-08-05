@@ -38,14 +38,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return "/unauthorized?error=events";
       }
 
-      const { data } = await supabaseAdmin.from("users").select("*").eq("id", user.id!).single();
+      if(!user.email) return "/unauthorized?error=email";
 
-      if (!data) {
-        return "/unauthorized?error=not-registered";
+      const { data, error } = await supabaseAdmin.from("whitelist").select("*").eq("email", user.email!).single();
+
+      if (error) {
+        return "/unauthorized?error=not-whitelisted";
       }
 
-      if (data.role === "user") {
-        return "/unauthorized?beta_only=true";
+      if (!data) {
+        return "/unauthorized?error=not-whitelisted";
       }
 
       return true;

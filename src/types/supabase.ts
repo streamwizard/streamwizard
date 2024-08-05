@@ -1,4 +1,4 @@
- export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -452,27 +452,42 @@ export type Database = {
           },
         ]
       }
+      whitelist: {
+        Row: {
+          email: string
+          id: number
+        }
+        Insert: {
+          email: string
+          id?: number
+        }
+        Update: {
+          email?: string
+          id?: number
+        }
+        Relationships: []
+      }
       workflow_triggers: {
         Row: {
           created_at: string
           event_id: string | null
           event_type: string | null
           id: string
-          workflow: string | null
+          workflow: string
         }
         Insert: {
           created_at?: string
           event_id?: string | null
           event_type?: string | null
           id?: string
-          workflow?: string | null
+          workflow: string
         }
         Update: {
           created_at?: string
           event_id?: string | null
           event_type?: string | null
           id?: string
-          workflow?: string | null
+          workflow?: string
         }
         Relationships: [
           {
