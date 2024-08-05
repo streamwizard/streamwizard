@@ -56,7 +56,7 @@ export const ChannelPointsColumns: ColumnDef<TwitchChannelPointsReward>[] = [
     cell: ({ row }) => {
       const prompt = row.original.prompt;
 
-      return prompt ? <TruncatedText message={prompt} /> : <div className="font-medium capitalize">Not Set</div>;
+      return prompt ? <div className="w-96"><TruncatedText message={prompt} /></div> : <div className="font-medium capitalize">Not Set</div>;
     },
   },
 

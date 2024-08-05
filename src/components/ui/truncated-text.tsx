@@ -30,8 +30,8 @@ export default function TruncatedText({ message }: Props) {
                 <p className="block overflow-hidden text-ellipsis whitespace-nowrap">{message}</p>
               </TooltipTrigger>
 
-              <TooltipContent sideOffset={4} className="bg-muted/50">
-                <p className="w-96	 break-words">{message}</p>
+              <TooltipContent sideOffset={4} className="bg-muted/90">
+                <p className="w-96	break-words">{message}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

@@ -48,7 +48,11 @@ export const CommandColumns: ColumnDef<CommandTable>[] = [
     accessorKey: "message",
     header: () => <div className="">Message</div>,
     cell: ({ row }) => {
-      return <TruncatedText message={row.getValue("message")} />;
+      return (
+        <div className="w-96">
+          <TruncatedText message={row.getValue("message")} />
+        </div>
+      );
     },
   },
   {
