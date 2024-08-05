@@ -1,4 +1,4 @@
-export type Json =
+ export type Json =
   | string
   | number
   | boolean
@@ -452,12 +452,46 @@ export type Database = {
           },
         ]
       }
+      workflow_triggers: {
+        Row: {
+          created_at: string
+          event_id: string | null
+          event_type: string | null
+          id: string
+          workflow: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_id?: string | null
+          event_type?: string | null
+          id?: string
+          workflow?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_id?: string | null
+          event_type?: string | null
+          id?: string
+          workflow?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_triggers_workflow_fkey"
+            columns: ["workflow"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflows: {
         Row: {
+          channel_id: string | null
           cronpath: string | null
           description: string
           discordtemplate: string | null
           edges: string | null
+          event_type: string | null
           flowpath: string | null
           id: string
           name: string
@@ -466,10 +500,12 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          channel_id?: string | null
           cronpath?: string | null
           description: string
           discordtemplate?: string | null
           edges?: string | null
+          event_type?: string | null
           flowpath?: string | null
           id?: string
           name: string
@@ -478,10 +514,12 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          channel_id?: string | null
           cronpath?: string | null
           description?: string
           discordtemplate?: string | null
           edges?: string | null
+          event_type?: string | null
           flowpath?: string | null
           id?: string
           name?: string

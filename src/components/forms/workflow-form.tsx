@@ -22,8 +22,8 @@ import { Input } from '../ui/input'
 import { Button } from '../ui/button'
 import { Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
-import { onCreateWorkflow } from '@/app/dashboard/workflows/_actions/workflow-connections'
 import { WorkflowFormSchema } from '@/schemas/workflow-schema'
+import { onCreateWorkflow } from '@/actions/workflows'
 
 type Props = {
   title?: string

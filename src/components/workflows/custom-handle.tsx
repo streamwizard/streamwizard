@@ -1,6 +1,6 @@
-import { useEditor } from '@/providers/workflow-editor-provider'
 import React, { CSSProperties } from 'react'
 import { Handle, HandleProps, useStore } from '@xyflow/react'
+import { useEditor } from '@/hooks/UseWorkflowEditor'
 
 type Props = HandleProps & { style?: CSSProperties }
 
@@ -28,7 +28,7 @@ const CustomHandle = (props: Props) => {
         ).length
 
         if (targetFromHandleInState === 1) return false
-        if (sourceNode?.type === 'Condition') return true
+        // if (sourceNode?.type === 'Condition') return true
         if (sourcesFromHandleInState < 1) return true
         return false
       }}

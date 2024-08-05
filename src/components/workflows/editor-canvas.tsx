@@ -1,46 +1,43 @@
 "use client";
 
-import { useState, useCallback, useMemo, DragEventHandler, DragEvent, useEffect } from "react";
+import { getWorkflowByID } from "@/actions/workflows";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { useEditor } from "@/hooks/UseWorkflowEditor";
+import { Action, EditorCanvasCardType, Trigger } from "@/types/workflow";
 import {
-  ReactFlow,
-  addEdge,
-  applyNodeChanges,
-  applyEdgeChanges,
-  type Node,
-  type Edge,
-  type FitViewOptions,
-  type OnConnect,
-  type OnNodesChange,
-  type OnEdgesChange,
-  type OnNodeDrag,
-  type NodeTypes,
-  type DefaultEdgeOptions,
-  MiniMap,
-  Controls,
   Background,
   BackgroundVariant,
+  Controls,
+  MiniMap,
+  ReactFlow,
   ReactFlowInstance,
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+  type DefaultEdgeOptions,
+  type Edge,
+  type FitViewOptions,
+  type Node,
+  type OnConnect,
+  type OnEdgesChange,
+  type OnNodeDrag,
+  type OnNodesChange
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import TextUpdaterNode from "./customNodes/TextUpdaterNode";
-import { Action, EditorCanvasCardType, Trigger } from "@/types/workflow";
+import { usePathname } from "next/navigation";
+import { DragEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { v4 } from "uuid";
-import { useEditor } from "@/providers/workflow-editor-provider";
+import TextUpdaterNode from "./customNodes/TextUpdaterNode";
 import EditorCanvasCardSingle from "./editor-canvas-card-single";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
-import FlowInstance from "./flow-instance";
 import EditorCanvasSidebar from "./editor-canvas-sidebar";
-import { onGetNodesEdges } from "../../../_actions/workflow-connections";
-import { usePathname } from "next/navigation";
-import { EditorCanvasDefaultCard } from "../../../_utils/const";
+import { EditorCanvasDefaultCard } from "@/lib/workflow-const";
 
 // const initialNodes: Node[] = [
 //   { id: "1", data: { label: "Node 1" }, position: { x: 5, y: 5 } },
 //   { id: "2", data: { label: "Node 2" }, position: { x: 5, y: 100 } },
 // ];
 
-const initialEdges: Edge[] = [{ id: "e1-2", source: "1", target: "2" }];
 
 const fitViewOptions: FitViewOptions = {
   padding: 0.2,
@@ -62,7 +59,7 @@ function getTriggerByProviderAndName(providerName: string, triggerName: string) 
   return EditorCanvasDefaultCard[providerName]?.Triggers.find((trigger) => trigger.type === triggerName);
 }
 
-export default function Flow() {
+export default function WorkflowEditorCanvas() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [isWorkFlowLoading, setIsWorkFlowLoading] = useState<boolean>(false);
@@ -129,7 +126,10 @@ export default function Flow() {
         id: v4(),
         position,
         type: nodeObj.nodeType,
-        data: nodeObj,
+        data: {
+          ...nodeObj,
+          id: v4(),
+        },
       };
 
       console.log("newNode", newNode);
@@ -142,13 +142,14 @@ export default function Flow() {
   );
 
   useEffect(() => {
+    // @ts-ignore
     dispatch({ type: "LOAD_DATA", payload: { edges, nodes: nodes } });
   }, [nodes, edges]);
 
   const onGetWorkFlow = async () => {
     setIsWorkFlowLoading(true);
-    const response = await onGetNodesEdges(pathname.split("/").pop()!);
-    if (response) {
+    const response = await getWorkflowByID(pathname.split("/").pop()!);
+    if (response && response.nodes && response.edges) {
       setEdges(JSON.parse(response.edges!));
       setNodes(JSON.parse(response.nodes!));
       setIsWorkFlowLoading(false);
@@ -211,7 +212,7 @@ export default function Flow() {
         </div>
       </ResizablePanel>
       <ResizableHandle />
-      <ResizablePanel defaultSize={40} className="relative sm:block">
+      <ResizablePanel defaultSize={30} className="relative sm:block">
         {isWorkFlowLoading ? (
           <div className="absolute flex h-full w-full items-center justify-center">
             <svg
@@ -232,9 +233,7 @@ export default function Flow() {
             </svg>
           </div>
         ) : (
-          // <FlowInstance edges={edges} nodes={state.editor.nodes}>
-            <EditorCanvasSidebar />
-          // </FlowInstance>
+          <EditorCanvasSidebar />
         )}
       </ResizablePanel>
     </ResizablePanelGroup>

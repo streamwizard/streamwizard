@@ -17,7 +17,7 @@ const WorkflowButton = (props: Props) => {
           <Workflowform />
         </Modal>
       }
-      <Button size={"icon"} onClick={() => setOpen(true)} >
+      <Button size={"icon"} onClick={() => setOpen(true)}>
         <Plus />
       </Button>
     </>

@@ -1,7 +1,37 @@
 "use server";
+
 import { auth } from "@/auth";
 import { createClient } from "@/lib/supabase/server";
-export const getGoogleListener = async () => {};
+
+// get all workflows
+export const onGetWorkflows = async () => {
+  const session = await auth();
+
+  const supabase = createClient(session?.supabaseAccessToken as string);
+  const { data, error } = await supabase.from("workflows").select("*");
+
+  if (error) {
+    throw error.message;
+  }
+
+  if (data) return data;
+};
+
+// get workflow by id
+export const getWorkflowByID = async (workflowId: string) => {
+  const session = await auth();
+  const supabase = createClient(session?.supabaseAccessToken as string);
+
+  const { data, error } = await supabase.from("workflows").select("nodes, edges").match({ id: workflowId }).single();
+
+  if (error) {
+    throw error.message;
+  }
+
+  if (data) {
+    return data;
+  }
+};
 
 export const onFlowPublish = async (workflowId: string, state: boolean) => {
   const session = await auth();
@@ -33,18 +63,7 @@ export const onCreateNodeTemplate = async (content: string, type: string, workfl
   }
 };
 
-export const onGetWorkflows = async () => {
-  const session = await auth();
 
-  const supabase = createClient(session?.supabaseAccessToken as string);
-  const { data, error } = await supabase.from("workflows").select("*");
-
-  if (error) {
-    throw error.message;
-  }
-
-  if (data) return data;
-};
 
 export const onCreateWorkflow = async (name: string, description: string) => {
   const session = await auth();
@@ -61,21 +80,5 @@ export const onCreateWorkflow = async (name: string, description: string) => {
     }
 
     return { message: "Workflow created" };
-  }
-};
-
-export const onGetNodesEdges = async (flowId: string) => {
-  const session = await auth();
-
-  const supabase = createClient(session?.supabaseAccessToken as string);
-
-  const { data, error } = await supabase.from("workflows").select("nodes, edges").match({ id: flowId }).single();
-
-  if (error) {
-    throw error.message;
-  }
-
-  if (data) {
-    return data;
   }
 };

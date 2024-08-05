@@ -1,9 +1,6 @@
-import React from 'react'
-import EditorCanvas from './_components/editor-canvas'
-import WorkFlowEditorProvider from '@/providers/workflow-editor-provider'
+import WorkflowEditorCanvas from '@/components/workflows/editor-canvas'
 import { WorkFlowConnectionsProvider } from '@/providers/connections-provider'
-import { auth } from '@/auth'
-import { createClient } from '@/lib/supabase/server'
+import WorkFlowEditorProvider from '@/providers/workflow/workflow-editor-provider'
 
 type Props = {}
 
@@ -22,7 +19,7 @@ export default async function Page({ params }: { params: { editorId: string } })
     <div className="h-full w-full absolute top-0 left-0">
       <WorkFlowEditorProvider  >
         <WorkFlowConnectionsProvider>
-          <EditorCanvas />
+          <WorkflowEditorCanvas />
         </WorkFlowConnectionsProvider>
       </WorkFlowEditorProvider>
     </div>
