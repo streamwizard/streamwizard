@@ -13,6 +13,7 @@ const initialEditorState: EditorState["editor"] = {
   nodes: [],
   selectedNode: {
     data: {
+      id: "",
       description: "",
       title: "",
       type: "none",

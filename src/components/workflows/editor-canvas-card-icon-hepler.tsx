@@ -14,9 +14,8 @@ import {
   Webhook,
   Zap,
 } from 'lucide-react'
-import { EditorCanvasTypes } from '@/types/workflow'
 
-type Props = { type: EditorCanvasTypes }
+type Props = { type: string }
 
 const EditorCanvasIconHelper = ({ type }: Props) => {
   switch (type) {

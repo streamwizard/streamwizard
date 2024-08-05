@@ -9,7 +9,7 @@ import { CommandTable, InsertCommandTable, UpdateCommandsTable } from "@/types/d
 export interface CommandContextType {
   commands: CommandTable[];
   addCommand: (command: CommandSchemaType) => void;
-  updateCommand: (command: UpdateCommandsTable) => void;
+  updateCommand: (command: CommandTable) => void;
   deleteCommand: (commands: CommandTable[]) => void;
 }
 

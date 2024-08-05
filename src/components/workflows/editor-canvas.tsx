@@ -3,6 +3,7 @@
 import { getWorkflowByID } from "@/actions/workflows";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useEditor } from "@/hooks/UseWorkflowEditor";
+import { EditorCanvasDefaultCard } from "@/lib/workflow-const";
 import { Action, EditorCanvasCardType, Trigger } from "@/types/workflow";
 import {
   Background,
@@ -28,10 +29,8 @@ import { usePathname } from "next/navigation";
 import { DragEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { v4 } from "uuid";
-import TextUpdaterNode from "./customNodes/TextUpdaterNode";
 import EditorCanvasCardSingle from "./editor-canvas-card-single";
 import EditorCanvasSidebar from "./editor-canvas-sidebar";
-import { EditorCanvasDefaultCard } from "@/lib/workflow-const";
 
 // const initialNodes: Node[] = [
 //   { id: "1", data: { label: "Node 1" }, position: { x: 5, y: 5 } },
@@ -68,7 +67,7 @@ export default function WorkflowEditorCanvas() {
   const onConnect: OnConnect = useCallback((connection) => setEdges((eds) => addEdge(connection, eds)), [setEdges]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance>();
   const { dispatch, state } = useEditor();
-  const nodeTypes = useMemo(() => ({ textUpdater: TextUpdaterNode, Action: EditorCanvasCardSingle, Trigger: EditorCanvasCardSingle }), []);
+  const nodeTypes = useMemo(() => ({ Action: EditorCanvasCardSingle, Trigger: EditorCanvasCardSingle }), []);
   const pathname = usePathname();
 
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {

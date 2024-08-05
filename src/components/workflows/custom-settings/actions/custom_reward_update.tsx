@@ -131,7 +131,7 @@ export default function CustomRewardUpdate({}: ICustomRewardUpdateProps) {
               <FormControl>
                 <Input placeholder="+1000" {...field} />
               </FormControl>
-              <FormDescription>Use "+" to increase and "-" to decrease</FormDescription>
+              <FormDescription>Use &quot;+&quot; to increase and &quot;-&quot; to decrease</FormDescription>
               <FormMessage />
             </FormItem>
           )}

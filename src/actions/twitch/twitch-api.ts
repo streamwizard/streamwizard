@@ -87,8 +87,6 @@ export async function getChannelPoints(): Promise<TwitchChannelPointsReward[] | 
     return null;
   }
 
-
-
   try {
     const res = await TwitchAPI.get<TwitchChannelPointsResponse>(`/channel_points/custom_rewards?broadcaster_id=${data.broadcaster_id}`, {
       headers: {
@@ -118,49 +116,19 @@ export async function createChannelPoint(data: ChannelPointSchema): Promise<resp
   }
 
   try {
-    let res = await TwitchAPI.post<TwitchChannelPointsResponse>(`/channel_points/custom_rewards?broadcaster_id=${tokens.broadcaster_id}`, data, {
+    let res = await TwitchAPI.post<response<TwitchChannelPointsResponse>>(`/channel_points/custom_rewards?broadcaster_id=${tokens.broadcaster_id}`, data, {
       headers: {
         Authorization: `Bearer ${tokens.access_token}`,
       },
       broadcasterID: +tokens.broadcaster_id,
     });
 
-    const newReward = res.data.data[0];
+    const newReward = res.data;
 
-    // add the data to the database
-    const { error } = await supabase.from("twitch_channelpoints").insert([
-      {
-        user_id: tokens.user_id,
-        channelpoint_id: newReward.id,
-        broadcaster_id: tokens.broadcaster_id,
-        action: data.action,
-      },
-    ]);
-
-    if (error) {
-      console.error(error);
-      console.error("Error inserting into the database");
-
-      await TwitchAPI.delete(`/channel_points/custom_rewards?broadcaster_id=${tokens.broadcaster_id}&id=${newReward.id}`, {
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-        },
-        broadcasterID: +tokens.broadcaster_id,
-      });
-
-      return { error: "Error inserting channelpoint into the database" };
-    }
-
-    revalidatePath("/dashboard/channelpoints");
-
-    return { data: res.data, message: "Channelpoint created" };
-  } catch (error: any) {
-    if (error.response.data.message === "CREATE_CUSTOM_REWARD_DUPLICATE_REWARD") {
-      return { error: `Channelpoint with the title "${data.title}" already exist in your channel. ` };
-    }
-
-    console.error(error.response);
-    return { error: "failed to create channelpoint" };
+    return newReward;
+  } catch (error) {
+    console.error(error);
+    throw error;
   }
 }
 
@@ -218,9 +186,6 @@ export async function updateChannelpoint(channelpoint: ChannelPointSchema, chann
         broadcasterID: +tokens.broadcaster_id,
       }
     );
-
-    // update the database
-    await supabase.from("twitch_channelpoints").update({ action: channelpoint.action }).eq("channelpoint_id", channelpoint_id);
 
     revalidatePath("/dashboard/channelpoints");
     return res.data.data;
