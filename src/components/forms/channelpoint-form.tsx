@@ -2,7 +2,6 @@
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage, FormSlider } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import useChannelPoints from "@/hooks/useChannelPoints";
 import { secondsToMinutes } from "@/lib/utils";
 import { ChannelPointSchema } from "@/schemas/channelpoint-schema";
@@ -13,8 +12,6 @@ import { z } from "zod";
 import { Slider } from "../ui/slider";
 import { Switch } from "../ui/switch";
 import { Textarea } from "../ui/textarea";
-import { useEffect } from "react";
-import { actions } from "@/lib/constant";
 
 interface Props {
   setModal: (value: boolean) => void;
@@ -30,13 +27,13 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
       title: channelpoint ? channelpoint.title : "",
       cost: channelpoint ? channelpoint.cost : 100,
       prompt: channelpoint ? channelpoint.prompt : "",
-      action: channelpoint ? channelpoint.action : "none",
       is_global_cooldown_enabled: channelpoint ? channelpoint.global_cooldown_setting.is_enabled : false,
       global_cooldown_seconds: channelpoint ? channelpoint.global_cooldown_setting.global_cooldown_seconds : 60,
       is_max_per_stream_enabled: channelpoint ? channelpoint.max_per_stream_setting.is_enabled : false,
       max_per_stream: channelpoint && channelpoint.max_per_stream_setting.is_enabled ? channelpoint.max_per_stream_setting.max_per_stream : 1,
       is_max_per_user_per_stream_enabled: channelpoint ? channelpoint.max_per_user_per_stream_setting.is_enabled : false,
       max_per_user_per_stream: channelpoint ? channelpoint.max_per_user_per_stream_setting.max_per_user_per_stream : 1,
+      is_user_input_required: channelpoint ? channelpoint.is_user_input_required : false,
     },
   });
 
@@ -55,27 +52,14 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
     setModal(false);
   }
 
-  const handleAction = (value: string) => {
-    const action = actions.find((action) => action.value === value);
-
-    if (action?.user_input) {
-      form.setValue("is_user_input_required", true);
-    } else {
-      form.setValue("is_user_input_required", false);
-    }
-
-    form.setValue("action", value);
-  };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="flex">
           <FormField
             control={form.control}
             name="title"
             render={({ field }) => (
-              <FormItem className="mx-2">
+              <FormItem >
                 <FormLabel>Title</FormLabel>
                 <FormControl>
                   <Input placeholder="sr" {...field} />
@@ -85,35 +69,6 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="action"
-            render={({ field }) => (
-              <FormItem className="mx-2">
-                <FormLabel>Action</FormLabel>
-                <FormControl>
-                  <Select onValueChange={handleAction} defaultValue="none" value={field.value}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a action" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Actions</SelectLabel>
-                        {actions.map((action) => (
-                          <SelectItem key={action.value} value={action.value}>
-                            {action.name}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormDescription>This is your channelpoint action</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
 
         <FormField control={form.control} name="cost" render={({ field }) => <FormSlider field={field} />} />
 
@@ -172,6 +127,28 @@ export default function ChannelpointForm({ setModal, channelpoint }: Props) {
                 <FormLabel>
                   <div className="flex justify-between">
                     <span>Max Per User Per Stream</span>
+                  </div>
+                </FormLabel>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={(value) => {
+                      field.onChange(value);
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="is_user_input_required"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  <div className="flex justify-between">
+                    <span>Is user input required?</span>
                   </div>
                 </FormLabel>
                 <FormControl>

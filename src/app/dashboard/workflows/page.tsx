@@ -1,6 +1,7 @@
 import WorkflowCard from "@/components/workflows/cards/wordflow-card";
 import { onGetWorkflows } from "@/actions/workflows";
 import WorkflowButton from "@/components/workflows/buttons/new-workflow-button";
+import { Divide } from "lucide-react";
 
 type Props = {};
 
@@ -16,7 +17,11 @@ const Page = async (props: Props) => {
       <div className="relative flex flex-col gap-4">
         <section className="flex flex-col m-2">
           {workflows ? (
-            workflows.map((flow) => <WorkflowCard key={flow.id} {...flow} />)
+            workflows.map((flow) => (
+              <div className="my-2">
+                <WorkflowCard key={flow.id} {...flow} />
+              </div>
+            ))
           ) : (
             <div className="mt-28 flex text-muted-foreground items-center justify-center">No Workflows</div>
           )}
