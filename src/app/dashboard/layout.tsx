@@ -38,9 +38,7 @@ export default async function Layout({ children }: Readonly<{ children: React.Re
             </div>
           </div>
         </ChannelPointsProvider>
-        ;
       </SessionProvider>
     </div>
   );
 }
-
