@@ -1,7 +1,7 @@
 import React from "react";
 
 type Props = {
-  SettingsComponent?: React.FC;
+  SettingsComponent: React.FC | null;
 };
 
 const RenderOutputAccordion = ({ SettingsComponent }: Props) => {

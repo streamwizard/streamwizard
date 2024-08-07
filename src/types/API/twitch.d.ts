@@ -82,7 +82,6 @@ interface TwitchChannelPointsReward {
   should_redemptions_skip_request_queue: boolean;
   redemptions_redeemed_current_stream?: number; // Optional field if live stream active
   cooldown_expires_at?: string; // Optional field if reward is in cooldown
-  action: Actions; // Optional field if custom action is set
 }
 
 interface TwitchChannelPointsImage {

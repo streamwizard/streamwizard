@@ -10,6 +10,7 @@ import { Node, Position, useNodeId } from "@xyflow/react";
 import clsx from "clsx";
 import { cn } from "@/lib/utils";
 import { useEditor } from "@/hooks/UseWorkflowEditor";
+import { useClickAway } from "@uidotdev/usehooks";
 
 const EditorCanvasCardSingle = ({ data }: { data: Action }) => {
   const { dispatch, state } = useEditor();
@@ -25,32 +26,14 @@ const EditorCanvasCardSingle = ({ data }: { data: Action }) => {
     }
   }, [state.editor.selectedNode, nodeId]);
 
-
-
   // TODO: Implement handleDelete
   const handleDelete = () => {};
-
-  // set the selected node
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const val = state.editor.nodes.find((n) => n.id === nodeId);
-
-
-    if (val)
-      dispatch({
-        type: "SELECTED_NODE",
-        payload: {
-          node: val,
-        },
-      });
-  };
 
   return (
     <ContextMenu>
       <ContextMenuTrigger>
         {data.nodeType !== "Trigger" && <CustomHandle type="target" position={Position.Top} style={{ zIndex: 100 }} />}
         <Card
-          onClick={handleClick}
           className={cn("relative max-w-[400px]", {
             "dark:border-muted-foreground/70": isSelcted === true,
           })}

@@ -3,28 +3,16 @@
 import { SaveWorkflow } from "@/app/dashboard/workflows/editor/[editorId]/_actions/workflow-connections";
 import type { EditorActions, EditorNodeType, EditorState, HistoryState, Metadata, Trigger, WorkflowEditor } from "@/types/workflow";
 import { usePathname } from "next/navigation";
-import { Dispatch, createContext, useContext, useReducer } from "react";
+import { Dispatch, createContext, useContext, useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
-import { updateMetadata, updateTrigger } from "./workflow-editor-actions";
+import { setSelectedNode, updateMetadata, updateTrigger } from "./workflow-editor-actions";
 
 // update metadata based on node id
 
 const initialEditorState: EditorState["editor"] = {
   nodes: [],
-  selectedNode: {
-    data: {
-      id: "",
-      description: "",
-      title: "",
-      type: "none",
-      event_id: "",
-      nodeType: "Action",
-    },
-    id: "",
-    position: { x: 0, y: 0 },
-    type: "Trigger",
-  },
   edges: [],
+  selectedNode: null,
 };
 
 const initialHistoryState: HistoryState = {
@@ -85,24 +73,20 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
         ...state,
         editor: {
           ...state.editor,
-          selectedNode: action.payload.node,
+          selectedNode: setSelectedNode(state.editor.nodes, action.payload.id),
         },
       };
 
     case "UPDATE_METADATA":
       if ("id" in action.payload) {
+        const new_nodes = updateMetadata(state.editor.nodes, action.payload.id, action.payload.metadata)
+
         return {
           ...state,
           editor: {
             ...state.editor,
-            nodes: updateMetadata(state.editor.nodes, action.payload.id, action.payload.metadata),
-            selectedNode: {
-              ...state.editor.selectedNode,
-              data: {
-                ...state.editor.selectedNode.data,
-                metaData: action.payload.metadata,
-              },
-            },
+            nodes: new_nodes,
+            selectedNode: setSelectedNode(new_nodes, action.payload.id),
           },
         };
       }
@@ -114,15 +98,10 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
         editor: {
           ...state.editor,
           nodes: updateTrigger(state.editor.nodes, action.payload.id, action.payload.event_id),
-          selectedNode: {
-            ...state.editor.selectedNode,
-            data: {
-              ...state.editor.selectedNode.data,
-              event_id: action.payload.event_id,
-            } as Trigger,
-          },
+          selectedNode: setSelectedNode(state.editor.nodes, action.payload.id),
         },
       };
+
     default:
       return state;
   }
@@ -137,10 +116,14 @@ export const WorkflowEditorContext = createContext<{
   handleSave: () => Promise<void>;
   state: EditorState;
   dispatch: Dispatch<EditorActions>;
+  sidebar: string;
+  setActiveSidebar: (value: "triggers" | "actions" | "settings") => void;
 }>({
   handleSave: () => Promise.resolve(),
   state: initialState,
   dispatch: () => undefined,
+  sidebar: "triggers",
+  setActiveSidebar: () => undefined,
 });
 
 type EditorProps = {
@@ -149,13 +132,25 @@ type EditorProps = {
 
 const WorkFlowEditorProvider = (props: EditorProps) => {
   const [state, dispatch] = useReducer(editorReducer, initialState);
+  const [sidebar, setSidebar] = useState("triggers");
   const pathname = usePathname();
 
   const handleSave = async () => {
     const flow = await SaveWorkflow(pathname.split("/").pop()!, state.editor.nodes, JSON.stringify(state.editor.edges));
-
     if (flow) toast.message(flow.message);
   };
+
+  const setActiveSidebar = (value: string) => {
+    setSidebar(value);
+  }
+
+
+  // useEffect(() => {
+  //   console.log(state.editor);
+  // }, [state.editor.selectedNode]);
+
+
+
 
   return (
     <WorkflowEditorContext.Provider
@@ -163,6 +158,8 @@ const WorkFlowEditorProvider = (props: EditorProps) => {
         state,
         dispatch,
         handleSave,
+        sidebar,
+        setActiveSidebar
       }}
     >
       {props.children}

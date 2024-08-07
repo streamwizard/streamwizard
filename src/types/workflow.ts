@@ -20,7 +20,7 @@ export type WorkflowEditor = {
     source: string;
     target: string;
   }[];
-  selectedNode: EditorNodeType;
+  selectedNode: EditorNodeType | null;
 };
 export type EditorState = {
   editor: WorkflowEditor;
@@ -54,7 +54,7 @@ export type EditorActions =
   | { type: "UPDATE_NODE"; payload: { nodes: EditorNodeType[] } }
   | { type: "REDO" }
   | { type: "UNDO" }
-  | { type: "SELECTED_NODE"; payload: { node: EditorNodeType } }
+  | { type: "SELECTED_NODE"; payload: { id: string | null } }
   | { type: "UPDATE_METADATA"; payload: { id: string; metadata: Metadata } }
   | { type: "UPDATE_TRIGGER"; payload: { id: string; event_id: string } };
 

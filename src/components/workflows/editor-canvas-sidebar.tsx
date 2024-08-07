@@ -9,14 +9,18 @@ import EditorCanvasIconHelper from "./editor-canvas-card-icon-hepler";
 import RenderOutputAccordion from "./render-output-accordian";
 import { EditorCanvasDefaultCard, NodeSettingsComponent } from "@/lib/workflow-const";
 
-
-
 export default function TabsDemo() {
-  const { state, handleSave } = useEditor(); 
+  const { state, handleSave, sidebar, setActiveSidebar } = useEditor();
+
+  const handleTabChange = (value: string) => {
+    setActiveSidebar(value as "triggers" | "actions" | "settings");
+  }
+
+
 
   return (
     <aside className="h-full relative">
-      <Tabs defaultValue="triggers" className="h-full bg-[#0A0A0A]">
+      <Tabs defaultValue="triggers" value={sidebar} onValueChange={handleTabChange} className="h-full bg-[#0A0A0A]">
         <div className="flex justify-between">
           <TabsList className="bg-transparent block">
             <TabsTrigger value="triggers">Triggers</TabsTrigger>
@@ -86,7 +90,11 @@ export default function TabsDemo() {
           <TabsContent value="settings">
             <div className="px-4 ">
               <RenderOutputAccordion
-                SettingsComponent={NodeSettingsComponent[state.editor.selectedNode.data.type as keyof typeof NodeSettingsComponent]}
+                SettingsComponent={
+                  NodeSettingsComponent[
+                    state.editor.selectedNode ? (state.editor.selectedNode.data.type as keyof typeof NodeSettingsComponent) : "default-settings"
+                  ]
+                }
               />
             </div>
           </TabsContent>

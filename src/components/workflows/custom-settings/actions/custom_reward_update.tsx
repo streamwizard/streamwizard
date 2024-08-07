@@ -60,28 +60,21 @@ const formSchema = z
 export default function CustomRewardUpdate({}: ICustomRewardUpdateProps) {
   const { state, dispatch } = useEditor();
   const [modal, setModal] = React.useState(false);
+  const { cost, reward_id } = state.editor.selectedNode?.data.metaData as any
 
-  useEffect(() => {
-    // set initial values
-    if (state.editor.selectedNode.data.metaData) {
-      const { cost, reward_id } = state.editor.selectedNode.data.metaData 
-      if (cost) form.setValue("cost", cost);
-      if (reward_id) form.setValue("id", reward_id);
-
-      console.log({ cost, reward_id });
-
-    }
-  }, [state.editor.selectedNode]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      cost: "+10",
-      id: "",
+      cost: cost || "",
+      id: reward_id || "",
     },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+
+    if(!state.editor.selectedNode) return;
+
     dispatch({
       type: "UPDATE_METADATA",
       payload: {
@@ -100,9 +93,10 @@ export default function CustomRewardUpdate({}: ICustomRewardUpdateProps) {
         <ChannelpointForm setModal={() => setModal(false)} />
       </Modal>
       <form
-        onChange={form.handleSubmit(onSubmit, (error) => {
-          console.log({ error });
-        })}
+        onChange={(e) => {
+          e.preventDefault();
+          form.handleSubmit(onSubmit)();
+        }}
         className="space-y-8 overflow-scroll"
       >
         <FormField
@@ -113,7 +107,7 @@ export default function CustomRewardUpdate({}: ICustomRewardUpdateProps) {
               <FormLabel>Custom Reward ID</FormLabel>
               <FormControl>
                 <>
-                <SelectChannelpoint value={form.watch("id")} onValueChange={field.onChange} />
+                <SelectChannelpoint value={form.watch("id")!} onValueChange={field.onChange} />
                 <Button type="button" variant="outline" onClick={() => setModal(true)}>New ChannelPoint</Button>
                 </>
               </FormControl>

@@ -4,12 +4,13 @@ import { getWorkflowByID } from "@/actions/workflows";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useEditor } from "@/hooks/UseWorkflowEditor";
 import { EditorCanvasDefaultCard } from "@/lib/workflow-const";
-import { Action, EditorCanvasCardType, Trigger } from "@/types/workflow";
+import { Action, EditorCanvasCardType, EditorNodeType, Trigger } from "@/types/workflow";
 import {
   Background,
   BackgroundVariant,
   Controls,
   MiniMap,
+  NodeMouseHandler,
   ReactFlow,
   ReactFlowInstance,
   addEdge,
@@ -22,7 +23,8 @@ import {
   type OnConnect,
   type OnEdgesChange,
   type OnNodeDrag,
-  type OnNodesChange
+  type OnNodesChange,
+  type OnNodesDelete,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { usePathname } from "next/navigation";
@@ -36,7 +38,6 @@ import EditorCanvasSidebar from "./editor-canvas-sidebar";
 //   { id: "1", data: { label: "Node 1" }, position: { x: 5, y: 5 } },
 //   { id: "2", data: { label: "Node 2" }, position: { x: 5, y: 100 } },
 // ];
-
 
 const fitViewOptions: FitViewOptions = {
   padding: 0.2,
@@ -66,7 +67,7 @@ export default function WorkflowEditorCanvas() {
   const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges]);
   const onConnect: OnConnect = useCallback((connection) => setEdges((eds) => addEdge(connection, eds)), [setEdges]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance>();
-  const { dispatch, state } = useEditor();
+  const { dispatch, state, setActiveSidebar } = useEditor();
   const nodeTypes = useMemo(() => ({ Action: EditorCanvasCardSingle, Trigger: EditorCanvasCardSingle }), []);
   const pathname = usePathname();
 
@@ -91,9 +92,6 @@ export default function WorkflowEditorCanvas() {
       const NodeType = typeArr.at(1);
 
       if (!Provider || !NodeType) return;
-
-      console.log("Provider", Provider);
-      console.log("NodeType", NodeType);
 
       let nodeObj: Trigger | Action | undefined = getActionByProviderAndType(Provider, NodeType);
 
@@ -121,21 +119,22 @@ export default function WorkflowEditorCanvas() {
         y: event.clientY,
       });
 
+      const id = v4();
+
       const newNode: Node = {
-        id: v4(),
+        id: id,
         position,
         type: nodeObj.nodeType,
         data: {
           ...nodeObj,
-          id: v4(),
+          id: id,
         },
       };
 
-      console.log("newNode", newNode);
-
-      console.log(state.editor.nodes);
 
       setNodes((nds) => nds.concat(newNode));
+
+      
     },
     [reactFlowInstance, state]
   );
@@ -143,7 +142,31 @@ export default function WorkflowEditorCanvas() {
   useEffect(() => {
     // @ts-ignore
     dispatch({ type: "LOAD_DATA", payload: { edges, nodes: nodes } });
+
+
+    console.log("nodes", nodes);
   }, [nodes, edges]);
+
+  // OnCanvasClick
+  const onCanvasClick = () => {
+    dispatch({ type: "SELECTED_NODE", payload: { id: null } });
+    setActiveSidebar("actions");
+  };
+
+  // handle delete
+  const handleDelete = () => {
+    if (state.editor.selectedNode) {
+      dispatch({ type: "SELECTED_NODE", payload: { id: null } });
+      setActiveSidebar("actions");
+    }
+  };
+
+  // onNodeClick
+  const onNodeClick = (e: any, node: Node) => {
+    e.preventDefault();
+    dispatch({ type: "SELECTED_NODE", payload: { id: node.id } });
+    setActiveSidebar("settings");
+  };
 
   const onGetWorkFlow = async () => {
     setIsWorkFlowLoading(true);
@@ -157,6 +180,7 @@ export default function WorkflowEditorCanvas() {
   };
 
   useEffect(() => {
+    console.log("WorkflowEditorCanvas");
     onGetWorkFlow();
   }, []);
 
@@ -188,7 +212,6 @@ export default function WorkflowEditorCanvas() {
               <ReactFlow
                 nodes={nodes}
                 edges={edges}
-                // edgeTypes={edgeTypes}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
@@ -201,6 +224,9 @@ export default function WorkflowEditorCanvas() {
                 onInit={setReactFlowInstance}
                 onDrop={onDrop}
                 onDragOver={onDragOver}
+                onPaneClick={onCanvasClick}
+                onNodesDelete={handleDelete}
+                onNodeClick={(e, node) => onNodeClick(e, node)}
               >
                 <MiniMap nodeStrokeWidth={3} zoomable pannable />
                 <Controls />

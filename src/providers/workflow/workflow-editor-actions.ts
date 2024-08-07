@@ -39,3 +39,10 @@ export const updateTrigger = (nodes: EditorNodeType[], id: string, event_id: str
   });
   return updatedNodes;
 };
+
+// set selected node
+export const setSelectedNode = (nodes: EditorNodeType[], id: string | null): EditorNodeType | null => {
+  const selectedNode = nodes.find((node) => node.id === id) || null;
+
+  return selectedNode;
+};
