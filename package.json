@@ -41,7 +41,7 @@
     "@vercel/analytics": "^1.2.2",
     "@xyflow/react": "^12.0.3",
     "axios": "^1.6.8",
-    "babel-plugin-react-compiler": "^0.0.0-experimental-696af53-20240625",
+    "babel-plugin-react-compiler": "^0.0.0-experimental-334f00b-20240725",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "cmdk": "^1.0.0",

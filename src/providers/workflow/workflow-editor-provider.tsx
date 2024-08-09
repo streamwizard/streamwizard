@@ -1,12 +1,12 @@
 "use client";
 
-import { SaveWorkflow } from "@/app/dashboard/workflows/editor/[editorId]/_actions/workflow-connections";
 import type { EditorActions, EditorState } from "@/types/workflow";
 import { addEdge, applyEdgeChanges, applyNodeChanges, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
 import { usePathname } from "next/navigation";
-import { createContext, Dispatch, useCallback, useReducer } from "react";
+import { createContext, Dispatch, use, useCallback, useEffect, useReducer } from "react";
 import { toast } from "sonner";
 import { setSelectedNode, updateMetadata } from "./workflow-editor-actions";
+import { SaveWorkflow } from "@/actions/workflows";
 
 // update metadata based on node id
 
@@ -85,7 +85,6 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
         const new_selected_node = setSelectedNode(new_nodes, action.payload.id);
 
         console.log("selected node: ", new_selected_node);
-       
 
         return {
           ...state,
@@ -97,8 +96,6 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
         };
       }
       return state;
-
-
 
     case "SET_SIDEBAR":
       return {
@@ -131,7 +128,10 @@ type EditorProps = {
 
 const WorkFlowEditorProvider = (props: EditorProps) => {
   const [state, dispatch] = useReducer(editorReducer, initialState);
-  const onNodesChange: OnNodesChange = useCallback((changes) => dispatch({ type: "UPDATE_NODES", payload: { nodes: changes } }), [dispatch]);
+  const onNodesChange: OnNodesChange = useCallback(
+    (changes) => dispatch({ type: "UPDATE_NODES", payload: { nodes: changes } }),
+    [state.editor.nodes]
+  );
   const onEdgesChange: OnEdgesChange = useCallback((changes) => dispatch({ type: "UPDATE_EDGES", payload: { edges: changes } }), [dispatch]);
   const onConnect: OnConnect = useCallback((connection) => dispatch({ type: "ON_CONNECT", payload: { connection } }), [dispatch]);
 
@@ -141,6 +141,10 @@ const WorkFlowEditorProvider = (props: EditorProps) => {
     const flow = await SaveWorkflow(pathname.split("/").pop()!, state.editor.nodes, JSON.stringify(state.editor.edges));
     if (flow) toast.message(flow.message);
   };
+
+  useEffect(() => {
+    console.log(state.editor.selectedNode);
+  }, [state.editor.selectedNode]);
 
   const values: WorkflowEditorContextType = {
     handleSave,

@@ -5,11 +5,8 @@ type Props = {
 };
 
 const RenderOutputAccordion = ({ SettingsComponent }: Props) => {
-  return <>{SettingsComponent ? <SettingsComponent /> : (
-    <div>
-      No settings available
-    </div>
-  )}</>;
+  return <>{SettingsComponent ? <SettingsComponent /> : <div>No settings available</div>}</>;
+  // return <></>
 };
 
 export default RenderOutputAccordion;

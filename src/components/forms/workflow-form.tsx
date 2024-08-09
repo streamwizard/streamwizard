@@ -47,9 +47,8 @@ const Workflowform = ({ subTitle, title }: Props) => {
     const workflow = await onCreateWorkflow(values.name, values.description)
     if (workflow) {
       toast.message(workflow.message)
-      router.refresh()
+      router.push(`/dashboard/workflows/editor/${workflow.id}`)
     }
-    // setClose()
   }
 
   return (

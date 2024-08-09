@@ -2,6 +2,8 @@
 
 import { auth } from "@/auth";
 import { createClient } from "@/lib/supabase/server";
+import { Trigger } from "@/types/workflow";
+import { Node } from "@xyflow/react";
 
 // get all workflows
 export const onGetWorkflows = async () => {
@@ -63,8 +65,6 @@ export const onCreateNodeTemplate = async (content: string, type: string, workfl
   }
 };
 
-
-
 export const onCreateWorkflow = async (name: string, description: string) => {
   const session = await auth();
 
@@ -72,13 +72,46 @@ export const onCreateWorkflow = async (name: string, description: string) => {
 
   if (session) {
     //create new workflow
-    const workflow = await supabase.from("workflows").insert({ user_id: session?.user.id, name, description });
+    const workflow = await supabase.from("workflows").insert({ user_id: session?.user.id, name, description }).select("*").single();
 
-    if (workflow.error) {
+    if (workflow.error || !workflow.data) {
       console.log(workflow.error);
       return { message: "Oops! try again" };
     }
 
-    return { message: "Workflow created" };
+    return { message: "Workflow created", id: workflow.data?.id };
   }
+};
+
+export const SaveWorkflow = async (flowId: string, nodes: Node[], edges: string) => {
+  const session = await auth();
+
+  const supabase = createClient(session?.supabaseAccessToken as string);
+
+  const action: string = JSON.stringify(nodes);
+
+  const trigger = nodes.filter((node) => node.type === "Trigger").at(0)?.data;
+
+  if (!trigger) return { error: "Trigger not found" };
+
+  const { data, error } = await supabase.from("workflows").update({ nodes: action, edges }).match({ id: flowId });
+
+  if (error) return error;
+
+  const event_id = (trigger as Trigger).metaData?.event_id;
+
+  // update the trigger event_id
+  const { data: triggerData, error: triggerError } = await supabase
+    .from("workflow_triggers")
+    .update({ event_id, event_type: (trigger as Trigger).type })
+    .match({ workflow: flowId });
+
+  if (triggerError) {
+    console.error(triggerError);
+    return triggerError;
+  }
+
+  return {
+    message: "flow saved",
+  };
 };

@@ -11,7 +11,7 @@ export default function SelectChannelpoint({ value, onValueChange }: Props) {
   const { channelPoints } = useTwitchProvider();
 
   return (
-    <Select onValueChange={onValueChange} value={value ? value :  channelPoints?.at(1)?.id}>
+    <Select onValueChange={onValueChange} value={value ? value :  ""}>
       <SelectTrigger className="w-1/2">
         <SelectValue placeholder="Select a channelpoint" />
       </SelectTrigger>
