@@ -55,6 +55,7 @@ const formSchema = z
 // );
 
 export default function CustomRewardUpdate() {
+  "use no memo";
   const { state, dispatch } = useEditor();
   const [modal, setModal] = React.useState(false);
   const { cost, reward_id } = state.editor.selectedNode?.data.metaData as any
@@ -70,15 +71,14 @@ export default function CustomRewardUpdate() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (!state.editor.selectedNode) return;
 
-    console.log("values", values);
 
     dispatch({
       type: "UPDATE_METADATA",
       payload: {
         id: state.editor.selectedNode.id,
         metadata: {
-          reward_id: values.id,
-          cost: values.cost,
+          reward_id: values.id!,
+          cost: values.cost!,
         },
       },
     });

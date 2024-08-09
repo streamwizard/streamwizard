@@ -33,9 +33,7 @@ const defaultEdgeOptions: DefaultEdgeOptions = {
   animated: true,
 };
 
-const onNodeDrag: OnNodeDrag = (_, node) => {
-  // console.log("drag event", node.data);
-};
+const onNodeDrag: OnNodeDrag = (_, node) => {};
 
 function getActionByProviderAndType(providerName: string, actionType: string) {
   return EditorCanvasDefaultCard[providerName].Actions.find((action) => action.type === actionType);
@@ -93,7 +91,6 @@ export default function WorkflowEditorCanvas() {
 
       if (nodeObj?.nodeType === "Trigger" && triggerAlreadyExists) {
         toast("Only one trigger can be added to automations at the moment");
-        console.log("Only one trigger can be added to automations at the moment");
         return;
       }
 
@@ -119,7 +116,6 @@ export default function WorkflowEditorCanvas() {
     },
     [reactFlowInstance, state]
   );
-
 
   // OnCanvasClick
   const onCanvasClick = () => {

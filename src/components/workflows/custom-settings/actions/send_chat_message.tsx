@@ -1,41 +1,37 @@
-import React, { use, useEffect } from "react";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox"; // Assuming you have a Checkbox component
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import SelectChannelpoint from "@/components/form-components/select-channelpoint";
-import { useEditor } from "@/hooks/UseWorkflowEditor";
 import SelectSenderID from "@/components/form-components/select-sender-id";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { useEditor } from "@/hooks/UseWorkflowEditor";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
-interface ICustomRewardUpdateProps {}
+
 
 const formSchema = z.object({
   chatter_id: z.string(),
-  message: z.string().max(400),
+  message: z.string().max(400).min(1, "Message is required"),
 });
 
+interface CustomMetaDataType {
+  chatter_id?: string;
+  message?: string;
+}
+
+
 export default function SendChatMessage() {
+  "use no memo"
   const { state, dispatch } = useEditor();
 
-  useEffect(() => {
-    // set initial values
-    if (state.editor.selectedNode.data.metaData) {
-      const { message, chatter_id } = state.editor.selectedNode.data.metaData;
-      if (chatter_id) form.setValue("chatter_id", chatter_id);
-      if (message) form.setValue("message", message);
+  const metaData = state.editor.selectedNode!.data.metaData as CustomMetaDataType;
+  
 
-      console.log({ message, chatter_id });
-    }
-  }, [state.editor.selectedNode]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      chatter_id: "956066753",
-      message: "",
+      chatter_id: metaData.chatter_id ?? "",
+      message: metaData.message ?? "",
     },
   });
 
@@ -43,7 +39,7 @@ export default function SendChatMessage() {
     dispatch({
       type: "UPDATE_METADATA",
       payload: {
-        id: state.editor.selectedNode.id,
+        id: state.editor.selectedNode!.id,
         metadata: {
           chatter_id: values.chatter_id,
           message: values.message,
@@ -56,7 +52,7 @@ export default function SendChatMessage() {
     <Form {...form}>
       <form
         onChange={form.handleSubmit(onSubmit, (error) => {
-          console.log({ error });
+          console.error({ error });
         })}
         className="space-y-8 overflow-scroll"
       >

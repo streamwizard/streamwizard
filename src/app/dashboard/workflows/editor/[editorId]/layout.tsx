@@ -1,3 +1,4 @@
+
 import { getChannelPoints } from "@/actions/twitch/twitch-api";
 import { TwitchProvider } from "@/providers/api-providers/twitch-provider";
 import WorkFlowEditorProvider from "@/providers/workflow/workflow-editor-provider";
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default async function WorkflowEditorLayout({ children }: Props) {
+  "use memo";
   const channelpoints = await getChannelPoints();
 
   return (

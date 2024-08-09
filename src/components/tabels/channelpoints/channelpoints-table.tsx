@@ -49,6 +49,7 @@ interface Props {
 }
 
 export function ChannelPointsTable({ columns }: Props) {
+  "use no memo";
   const [sorting, setSorting] = React.useState<SortingState>([
     {
       id: "title",

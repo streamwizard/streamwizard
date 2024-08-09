@@ -84,8 +84,6 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
         const new_nodes = updateMetadata(state.editor.nodes, action.payload.id, action.payload.metadata);
         const new_selected_node = setSelectedNode(new_nodes, action.payload.id);
 
-        console.log("selected node: ", new_selected_node);
-
         return {
           ...state,
           editor: {
@@ -142,9 +140,6 @@ const WorkFlowEditorProvider = (props: EditorProps) => {
     if (flow) toast.message(flow.message);
   };
 
-  useEffect(() => {
-    console.log(state.editor.selectedNode);
-  }, [state.editor.selectedNode]);
 
   const values: WorkflowEditorContextType = {
     handleSave,

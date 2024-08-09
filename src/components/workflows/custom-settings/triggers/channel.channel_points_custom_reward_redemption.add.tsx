@@ -5,6 +5,7 @@ import type { Trigger } from "@/types/workflow";
 
 export default function ChannelpointsCustomRewardRedemptionAddSettings() {
   const { state, dispatch } = useEditor();
+  
 
   const handleSelect = (value: string) => {
     dispatch({

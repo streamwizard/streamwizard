@@ -75,7 +75,7 @@ export const onCreateWorkflow = async (name: string, description: string) => {
     const workflow = await supabase.from("workflows").insert({ user_id: session?.user.id, name, description }).select("*").single();
 
     if (workflow.error || !workflow.data) {
-      console.log(workflow.error);
+      console.error(workflow.error);
       return { message: "Oops! try again" };
     }
 

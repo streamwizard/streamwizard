@@ -2,7 +2,7 @@
 const nextConfig = {
   experimental: {
     esmExternals: "loose",
-    reactCompiler: true,
+    reactCompiler: true,  
   },
 };
 
