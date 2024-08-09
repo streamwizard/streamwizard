@@ -1,15 +1,9 @@
 "use client";
-import React, { useEffect } from "react";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectScrollDownButton, SelectValue, SelectTrigger } from "../ui/select";
-import { getChannelPoints } from "@/actions/twitch/twitch-api";
-import { toast } from "sonner";
-import { TwitchChannelPointsReward } from "@/types/API/twitch";
-import { set } from "zod";
-import LoadingSpinner from "../global/loading";
 import { useTwitchProvider } from "@/hooks/useTwitchProvider";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "../ui/select";
 
 interface Props {
-  value: string;
+  value?: string | null
   onValueChange: (value: string) => void;
 }
 
@@ -17,7 +11,7 @@ export default function SelectChannelpoint({ value, onValueChange }: Props) {
   const { channelPoints } = useTwitchProvider();
 
   return (
-    <Select onValueChange={onValueChange} value={value}>
+    <Select onValueChange={onValueChange} value={value ? value :  channelPoints?.at(1)?.id}>
       <SelectTrigger className="w-1/2">
         <SelectValue placeholder="Select a channelpoint" />
       </SelectTrigger>

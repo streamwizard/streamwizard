@@ -7,12 +7,16 @@ import { EditorCanvasDefaultCardType } from "@/types/workflow";
 export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
   Twitch: {
     Actions: [
-      { 
+      {
         id: "",
         title: "Update channelpoint details",
         description: "Updates a custom reward.",
         type: "custom_reward_update",
         nodeType: "Action",
+        metaData: {
+          reward_id: "",
+          cost: "",
+        },
       },
       {
         id: "",
@@ -33,7 +37,7 @@ export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
         description: "A viewer has redeemed a custom channel points reward on the specified channel.",
         type: "channel.channel_points_custom_reward_redemption.add",
         nodeType: "Trigger",
-        event_id: null
+        event_id: null,
       },
     ],
   },
@@ -46,6 +50,6 @@ export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
 export const NodeSettingsComponent = {
   "channel.channel_points_custom_reward_redemption.add": ChannelpointsCustomRewardRedemptionAddSettings,
   custom_reward_update: CustomRewardUpdate,
-  "send_chat_message": SendChatMessage,
+  send_chat_message: SendChatMessage,
   "default-settings": DefaultSettings,
 };

@@ -1,6 +1,7 @@
-import type { EditorNodeType, Metadata } from "@/types/workflow";
+import type { Metadata } from "@/types/workflow";
+import { Node } from "@xyflow/react";
 
-export const updateMetadata = (nodes: EditorNodeType[], id: string, metadata: Metadata): EditorNodeType[] => {
+export const updateMetadata = (nodes: Node[], id: string, metadata: Metadata): Node[] => {
   const updatedNodes = nodes.map((node) => {
     if (node.id === id) {
       return {
@@ -8,7 +9,7 @@ export const updateMetadata = (nodes: EditorNodeType[], id: string, metadata: Me
         data: {
           ...node.data,
           metaData: {
-            ...node.data.metaData,
+            ...(node.data.metaData || {}),
             ...metadata,
           },
         },
@@ -21,10 +22,10 @@ export const updateMetadata = (nodes: EditorNodeType[], id: string, metadata: Me
 };
 
 // update trigger event ID
-export const updateTrigger = (nodes: EditorNodeType[], id: string, event_id: string): EditorNodeType[] => {
+export const updateTrigger = (nodes: Node[], id: string, event_id: string): Node[] => {
   const new_id = event_id.trim() === "" ? null : event_id;
 
-  const updatedNodes: EditorNodeType[] = nodes.map((node) => {
+  const updatedNodes: Node[] = nodes.map((node) => {
     if (node.id === id) {
       return {
         ...node,
@@ -41,7 +42,7 @@ export const updateTrigger = (nodes: EditorNodeType[], id: string, event_id: str
 };
 
 // set selected node
-export const setSelectedNode = (nodes: EditorNodeType[], id: string | null): EditorNodeType | null => {
+export const setSelectedNode = (nodes: Node[], id: string | null): Node | null => {
   const selectedNode = nodes.find((node) => node.id === id) || null;
 
   return selectedNode;

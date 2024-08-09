@@ -1,6 +1,5 @@
-import { ConnectionProviderProps } from "@/providers/connections-provider";
-import { Node } from "@xyflow/react";
-import React from "react";
+import type { Connection, Edge, EdgeChange, Node, NodeChange } from "@xyflow/react";
+import type React from "react";
 
 type TwitchTriggersTypes = "channel.channel_points_custom_reward_redemption.add";
 type TwitchActionsTypes = "custom_reward_update" | "send_chat_message";
@@ -9,27 +8,18 @@ type Actions = TwitchActionsTypes | "none";
 type Triggers = TwitchTriggersTypes | "none";
 
 type NodeTypes = "Action" | "Trigger";
-type NodeCards = "DefaultAction" | "DefaultTrigger";
 
-export type Metadata = Record<string, any>;
+export type Metadata = Record<string, string>;
 
 export type WorkflowEditor = {
-  nodes: EditorNodeType[];
-  edges: {
-    id: string;
-    source: string;
-    target: string;
-  }[];
-  selectedNode: EditorNodeType | null;
+  nodes: Node[];
+  edges: Edge[];
+  selectedNode: Node | null;
+  sidebar: "triggers" | "actions" | "settings";
 };
 export type EditorState = {
   editor: WorkflowEditor;
-  history: HistoryState;
-};
-
-export type HistoryState = {
-  history: WorkflowEditor[];
-  currentIndex: number;
+  // history for in the future
 };
 
 export type EditorCanvasCardType = {
@@ -39,25 +29,16 @@ export type EditorCanvasCardType = {
   type: Triggers | Actions;
 };
 
-export type EditorNodeType = {
-  id: string;
-  type: NodeTypes;
-  position: {
-    x: number;
-    y: number;
-  };
-  data: Trigger | Action;
-};
-
 export type EditorActions =
-  | { type: "LOAD_DATA"; payload: { nodes: EditorNodeType[]; edges: { id: string; source: string; target: string }[] } }
-  | { type: "UPDATE_NODE"; payload: { nodes: EditorNodeType[] } }
-  | { type: "REDO" }
-  | { type: "UNDO" }
+  | { type: "LOAD_DATA"; payload: { nodes: Node[]; edges: Edge[] } }
+  | { type: "UPDATE_NODE"; payload: { nodes: Node } }
   | { type: "SELECTED_NODE"; payload: { id: string | null } }
   | { type: "UPDATE_METADATA"; payload: { id: string; metadata: Metadata } }
-  | { type: "UPDATE_TRIGGER"; payload: { id: string; event_id: string } };
-
+  | { type: "UPDATE_NODES"; payload: { nodes: NodeChange<Node>[] } }
+  | { type: "UPDATE_EDGES"; payload: { edges: EdgeChange[] } }
+  | { type: "ON_CONNECT"; payload: { connection: Connection } }
+  | { type: "ADD_NODE"; payload: { node: Node } }
+  | { type: "SET_SIDEBAR"; payload: { sidebar: "triggers" | "actions" | "settings" } };
 
 export type EditorCanvasDefaultCardType = {
   [provider: string]: {
@@ -67,7 +48,7 @@ export type EditorCanvasDefaultCardType = {
 };
 
 export type Trigger = {
-  id: string
+  id: string;
   title: string;
   description: string;
   type: Triggers;
@@ -78,7 +59,7 @@ export type Trigger = {
 };
 
 export type Action = {
-  id: string
+  id: string;
   title: string;
   description: string;
   type: Actions;

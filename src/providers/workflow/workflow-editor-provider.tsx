@@ -1,11 +1,12 @@
 "use client";
 
 import { SaveWorkflow } from "@/app/dashboard/workflows/editor/[editorId]/_actions/workflow-connections";
-import type { EditorActions, EditorNodeType, EditorState, HistoryState, Metadata, Trigger, WorkflowEditor } from "@/types/workflow";
+import type { EditorActions, EditorState } from "@/types/workflow";
+import { addEdge, applyEdgeChanges, applyNodeChanges, OnConnect, OnEdgesChange, OnNodesChange } from "@xyflow/react";
 import { usePathname } from "next/navigation";
-import { Dispatch, createContext, useContext, useEffect, useReducer, useState } from "react";
+import { createContext, Dispatch, useCallback, useReducer } from "react";
 import { toast } from "sonner";
-import { setSelectedNode, updateMetadata, updateTrigger } from "./workflow-editor-actions";
+import { setSelectedNode, updateMetadata } from "./workflow-editor-actions";
 
 // update metadata based on node id
 
@@ -13,52 +14,15 @@ const initialEditorState: EditorState["editor"] = {
   nodes: [],
   edges: [],
   selectedNode: null,
-};
-
-const initialHistoryState: HistoryState = {
-  history: [initialEditorState],
-  currentIndex: 0,
+  sidebar: "triggers",
 };
 
 const initialState: EditorState = {
   editor: initialEditorState,
-  history: initialHistoryState,
 };
 
 const editorReducer = (state: EditorState = initialState, action: EditorActions): EditorState => {
   switch (action.type) {
-    case "REDO":
-      if (state.history.currentIndex < state.history.history.length - 1) {
-        const nextIndex = state.history.currentIndex + 1;
-        const nextEditorState = { ...state.history.history[nextIndex] };
-        const redoState = {
-          ...state,
-          editor: nextEditorState,
-          history: {
-            ...state.history,
-            currentIndex: nextIndex,
-          },
-        };
-        return redoState;
-      }
-      return state;
-
-    case "UNDO":
-      if (state.history.currentIndex > 0) {
-        const prevIndex = state.history.currentIndex - 1;
-        const prevEditorState = { ...state.history.history[prevIndex] };
-        const undoState = {
-          ...state,
-          editor: prevEditorState,
-          history: {
-            ...state.history,
-            currentIndex: prevIndex,
-          },
-        };
-        return undoState;
-      }
-      return state;
-
     case "LOAD_DATA":
       return {
         ...state,
@@ -66,6 +30,33 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
           ...state.editor,
           nodes: action.payload.nodes || initialEditorState.nodes,
           edges: action.payload.edges,
+        },
+      };
+
+    case "UPDATE_NODES":
+      return {
+        ...state,
+        editor: {
+          ...state.editor,
+          nodes: applyNodeChanges(action.payload.nodes, state.editor.nodes),
+        },
+      };
+
+    case "UPDATE_EDGES":
+      return {
+        ...state,
+        editor: {
+          ...state.editor,
+          edges: applyEdgeChanges(action.payload.edges, state.editor.edges),
+        },
+      };
+
+    case "ON_CONNECT":
+      return {
+        ...state,
+        editor: {
+          ...state.editor,
+          edges: addEdge(action.payload.connection, state.editor.edges),
         },
       };
     case "SELECTED_NODE":
@@ -77,28 +68,44 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
         },
       };
 
+    case "ADD_NODE":
+      return {
+        ...state,
+        editor: {
+          ...state.editor,
+          nodes: [...state.editor.nodes, action.payload.node],
+          selectedNode: action.payload.node,
+          sidebar: "settings",
+        },
+      };
+
     case "UPDATE_METADATA":
       if ("id" in action.payload) {
-        const new_nodes = updateMetadata(state.editor.nodes, action.payload.id, action.payload.metadata)
+        const new_nodes = updateMetadata(state.editor.nodes, action.payload.id, action.payload.metadata);
+        const new_selected_node = setSelectedNode(new_nodes, action.payload.id);
+
+        console.log("selected node: ", new_selected_node);
+       
 
         return {
           ...state,
           editor: {
             ...state.editor,
             nodes: new_nodes,
-            selectedNode: setSelectedNode(new_nodes, action.payload.id),
+            selectedNode: new_selected_node,
           },
         };
       }
       return state;
 
-    case "UPDATE_TRIGGER":
+
+
+    case "SET_SIDEBAR":
       return {
         ...state,
         editor: {
           ...state.editor,
-          nodes: updateTrigger(state.editor.nodes, action.payload.id, action.payload.event_id),
-          selectedNode: setSelectedNode(state.editor.nodes, action.payload.id),
+          sidebar: action.payload.sidebar,
         },
       };
 
@@ -107,24 +114,16 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
   }
 };
 
-export type EditorContextData = {
-  previewMode: boolean;
-  setPreviewMode: (previewMode: boolean) => void;
-};
-
-export const WorkflowEditorContext = createContext<{
+interface WorkflowEditorContextType {
   handleSave: () => Promise<void>;
   state: EditorState;
   dispatch: Dispatch<EditorActions>;
-  sidebar: string;
-  setActiveSidebar: (value: "triggers" | "actions" | "settings") => void;
-}>({
-  handleSave: () => Promise.resolve(),
-  state: initialState,
-  dispatch: () => undefined,
-  sidebar: "triggers",
-  setActiveSidebar: () => undefined,
-});
+  onNodesChange: OnNodesChange;
+  onEdgesChange: OnEdgesChange;
+  onConnect: OnConnect;
+}
+
+export const WorkflowEditorContext = createContext<WorkflowEditorContextType | null>(null);
 
 type EditorProps = {
   children: React.ReactNode;
@@ -132,7 +131,10 @@ type EditorProps = {
 
 const WorkFlowEditorProvider = (props: EditorProps) => {
   const [state, dispatch] = useReducer(editorReducer, initialState);
-  const [sidebar, setSidebar] = useState("triggers");
+  const onNodesChange: OnNodesChange = useCallback((changes) => dispatch({ type: "UPDATE_NODES", payload: { nodes: changes } }), [dispatch]);
+  const onEdgesChange: OnEdgesChange = useCallback((changes) => dispatch({ type: "UPDATE_EDGES", payload: { edges: changes } }), [dispatch]);
+  const onConnect: OnConnect = useCallback((connection) => dispatch({ type: "ON_CONNECT", payload: { connection } }), [dispatch]);
+
   const pathname = usePathname();
 
   const handleSave = async () => {
@@ -140,31 +142,16 @@ const WorkFlowEditorProvider = (props: EditorProps) => {
     if (flow) toast.message(flow.message);
   };
 
-  const setActiveSidebar = (value: string) => {
-    setSidebar(value);
-  }
+  const values: WorkflowEditorContextType = {
+    handleSave,
+    state,
+    dispatch,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+  };
 
-
-  // useEffect(() => {
-  //   console.log(state.editor);
-  // }, [state.editor.selectedNode]);
-
-
-
-
-  return (
-    <WorkflowEditorContext.Provider
-      value={{
-        state,
-        dispatch,
-        handleSave,
-        sidebar,
-        setActiveSidebar
-      }}
-    >
-      {props.children}
-    </WorkflowEditorContext.Provider>
-  );
+  return <WorkflowEditorContext.Provider value={values}>{props.children}</WorkflowEditorContext.Provider>;
 };
 
 export default WorkFlowEditorProvider;

@@ -1,17 +1,14 @@
-import React, { use, useEffect } from "react";
-import { z } from "zod";
+import SelectChannelpoint from "@/components/form-components/select-channelpoint";
+import ChannelpointForm from "@/components/forms/channelpoint-form";
+import Modal from "@/components/global/modal";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox"; // Assuming you have a Checkbox component
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import SelectChannelpoint from "@/components/form-components/select-channelpoint";
 import { useEditor } from "@/hooks/UseWorkflowEditor";
-import Modal from "@/components/global/modal";
-import ChannelpointForm from "@/components/forms/channelpoint-form";
-
-interface ICustomRewardUpdateProps {}
+import { zodResolver } from "@hookform/resolvers/zod";
+import React from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
 const formSchema = z
   .object({
@@ -57,23 +54,23 @@ const formSchema = z
 //   }
 // );
 
-export default function CustomRewardUpdate({}: ICustomRewardUpdateProps) {
+export default function CustomRewardUpdate() {
   const { state, dispatch } = useEditor();
   const [modal, setModal] = React.useState(false);
   const { cost, reward_id } = state.editor.selectedNode?.data.metaData as any
 
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      cost: cost || "",
+      cost: cost || "+100",
       id: reward_id || "",
     },
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    if (!state.editor.selectedNode) return;
 
-    if(!state.editor.selectedNode) return;
+    console.log("values", values);
 
     dispatch({
       type: "UPDATE_METADATA",
@@ -107,8 +104,10 @@ export default function CustomRewardUpdate({}: ICustomRewardUpdateProps) {
               <FormLabel>Custom Reward ID</FormLabel>
               <FormControl>
                 <>
-                <SelectChannelpoint value={form.watch("id")!} onValueChange={field.onChange} />
-                <Button type="button" variant="outline" onClick={() => setModal(true)}>New ChannelPoint</Button>
+                  <SelectChannelpoint value={form.watch("id")!} onValueChange={field.onChange} />
+                  <Button type="button" variant="outline" onClick={() => setModal(true)}>
+                    New ChannelPoint
+                  </Button>
                 </>
               </FormControl>
               <FormMessage />

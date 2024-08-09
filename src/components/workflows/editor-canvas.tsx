@@ -4,27 +4,18 @@ import { getWorkflowByID } from "@/actions/workflows";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { useEditor } from "@/hooks/UseWorkflowEditor";
 import { EditorCanvasDefaultCard } from "@/lib/workflow-const";
-import { Action, EditorCanvasCardType, EditorNodeType, Trigger } from "@/types/workflow";
+import { Action, EditorCanvasCardType, Trigger } from "@/types/workflow";
 import {
   Background,
   BackgroundVariant,
   Controls,
   MiniMap,
-  NodeMouseHandler,
   ReactFlow,
   ReactFlowInstance,
-  addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
   type DefaultEdgeOptions,
-  type Edge,
   type FitViewOptions,
   type Node,
-  type OnConnect,
-  type OnEdgesChange,
   type OnNodeDrag,
-  type OnNodesChange,
-  type OnNodesDelete,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { usePathname } from "next/navigation";
@@ -33,11 +24,6 @@ import { toast } from "sonner";
 import { v4 } from "uuid";
 import EditorCanvasCardSingle from "./editor-canvas-card-single";
 import EditorCanvasSidebar from "./editor-canvas-sidebar";
-
-// const initialNodes: Node[] = [
-//   { id: "1", data: { label: "Node 1" }, position: { x: 5, y: 5 } },
-//   { id: "2", data: { label: "Node 2" }, position: { x: 5, y: 100 } },
-// ];
 
 const fitViewOptions: FitViewOptions = {
   padding: 0.2,
@@ -60,14 +46,12 @@ function getTriggerByProviderAndName(providerName: string, triggerName: string) 
 }
 
 export default function WorkflowEditorCanvas() {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
+  const { dispatch, state, onConnect, onEdgesChange, onNodesChange } = useEditor();
+
+  const { edges, nodes } = state.editor;
+
   const [isWorkFlowLoading, setIsWorkFlowLoading] = useState<boolean>(false);
-  const onNodesChange: OnNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), [setNodes]);
-  const onEdgesChange: OnEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges]);
-  const onConnect: OnConnect = useCallback((connection) => setEdges((eds) => addEdge(connection, eds)), [setEdges]);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance>();
-  const { dispatch, state, setActiveSidebar } = useEditor();
   const nodeTypes = useMemo(() => ({ Action: EditorCanvasCardSingle, Trigger: EditorCanvasCardSingle }), []);
   const pathname = usePathname();
 
@@ -131,33 +115,22 @@ export default function WorkflowEditorCanvas() {
         },
       };
 
-
-      setNodes((nds) => nds.concat(newNode));
-
-      
+      dispatch({ type: "ADD_NODE", payload: { node: newNode } });
     },
     [reactFlowInstance, state]
   );
 
-  useEffect(() => {
-    // @ts-ignore
-    dispatch({ type: "LOAD_DATA", payload: { edges, nodes: nodes } });
-
-
-    console.log("nodes", nodes);
-  }, [nodes, edges]);
 
   // OnCanvasClick
   const onCanvasClick = () => {
     dispatch({ type: "SELECTED_NODE", payload: { id: null } });
-    setActiveSidebar("actions");
   };
 
   // handle delete
   const handleDelete = () => {
     if (state.editor.selectedNode) {
       dispatch({ type: "SELECTED_NODE", payload: { id: null } });
-      setActiveSidebar("actions");
+      dispatch({ type: "SET_SIDEBAR", payload: { sidebar: "settings" } });
     }
   };
 
@@ -165,22 +138,23 @@ export default function WorkflowEditorCanvas() {
   const onNodeClick = (e: any, node: Node) => {
     e.preventDefault();
     dispatch({ type: "SELECTED_NODE", payload: { id: node.id } });
-    setActiveSidebar("settings");
+    dispatch({ type: "SET_SIDEBAR", payload: { sidebar: "settings" } });
   };
 
   const onGetWorkFlow = async () => {
     setIsWorkFlowLoading(true);
     const response = await getWorkflowByID(pathname.split("/").pop()!);
     if (response && response.nodes && response.edges) {
-      setEdges(JSON.parse(response.edges!));
-      setNodes(JSON.parse(response.nodes!));
+      const nodes = JSON.parse(response.nodes!);
+      const edges = JSON.parse(response.edges!);
+      dispatch({ type: "LOAD_DATA", payload: { nodes, edges } });
+
       setIsWorkFlowLoading(false);
     }
     setIsWorkFlowLoading(false);
   };
 
   useEffect(() => {
-    console.log("WorkflowEditorCanvas");
     onGetWorkFlow();
   }, []);
 

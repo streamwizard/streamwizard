@@ -2,9 +2,10 @@
 
 import { auth } from "@/auth";
 import { createClient } from "@/lib/supabase/server";
-import { EditorNodeType, Trigger } from "@/types/workflow";
+import { Trigger } from "@/types/workflow";
+import { Node } from "@xyflow/react";
 
-export const SaveWorkflow = async (flowId: string, nodes: EditorNodeType[], edges: string) => {
+export const SaveWorkflow = async (flowId: string, nodes: Node[], edges: string) => {
   const session = await auth();
 
   const supabase = createClient(session?.supabaseAccessToken as string);
@@ -29,8 +30,6 @@ export const SaveWorkflow = async (flowId: string, nodes: EditorNodeType[], edge
     console.error(triggerError);
     return triggerError;
   }
-
-  console.log(triggerData);
 
   return {
     message: "flow saved",

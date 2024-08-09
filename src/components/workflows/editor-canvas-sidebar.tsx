@@ -8,19 +8,18 @@ import { onDragStart } from "@/lib/editor-utils";
 import EditorCanvasIconHelper from "./editor-canvas-card-icon-hepler";
 import RenderOutputAccordion from "./render-output-accordian";
 import { EditorCanvasDefaultCard, NodeSettingsComponent } from "@/lib/workflow-const";
+import { useEffect } from "react";
 
-export default function TabsDemo() {
-  const { state, handleSave, sidebar, setActiveSidebar } = useEditor();
+export default function WorkflowCanvasSidebar() {
+  const { state, handleSave, dispatch } = useEditor();
 
   const handleTabChange = (value: string) => {
-    setActiveSidebar(value as "triggers" | "actions" | "settings");
-  }
-
-
+    dispatch({ type: "SET_SIDEBAR", payload: { sidebar: value as "triggers" | "actions" | "settings" } });
+  };
 
   return (
     <aside className="h-full relative">
-      <Tabs defaultValue="triggers" value={sidebar} onValueChange={handleTabChange} className="h-full bg-[#0A0A0A]">
+      <Tabs defaultValue="triggers" value={state.editor.sidebar} onValueChange={handleTabChange} className="h-full bg-[#0A0A0A]">
         <div className="flex justify-between">
           <TabsList className="bg-transparent block">
             <TabsTrigger value="triggers">Triggers</TabsTrigger>

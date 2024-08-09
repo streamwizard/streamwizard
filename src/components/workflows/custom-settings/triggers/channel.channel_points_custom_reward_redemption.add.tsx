@@ -1,27 +1,28 @@
 "use client";
 import SelectChannelpoint from "@/components/form-components/select-channelpoint";
 import { useEditor } from "@/hooks/UseWorkflowEditor";
-import { Trigger } from "@/types/workflow";
+import type { Trigger } from "@/types/workflow";
+import { use } from "react";
 
 export default function ChannelpointsCustomRewardRedemptionAddSettings() {
   const { state, dispatch } = useEditor();
 
   const handleSelect = (value: string) => {
     dispatch({
-      type: "UPDATE_TRIGGER",
+      type: "UPDATE_METADATA",
       payload: {
-        id: state.editor.selectedNode.id,
-        event_id: value,
+        id: state.editor.selectedNode!.id,
+        metadata: {
+          event_id: value,
+        },
       },
     });
   };
 
-  
-
   return (
     <div>
       <h4>Select reward to listen to</h4>
-      <SelectChannelpoint value={(state.editor.selectedNode.data as Trigger).event_id} onValueChange={handleSelect} />{" "}
+      <SelectChannelpoint value={(state.editor.selectedNode?.data as Trigger)?.metaData?.event_id} onValueChange={handleSelect} />{" "}
     </div>
   );
 }
