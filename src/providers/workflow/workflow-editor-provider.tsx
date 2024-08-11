@@ -5,7 +5,7 @@ import { addEdge, applyEdgeChanges, applyNodeChanges, OnConnect, OnEdgesChange, 
 import { usePathname } from "next/navigation";
 import { createContext, Dispatch, use, useCallback, useEffect, useReducer } from "react";
 import { toast } from "sonner";
-import { setSelectedNode, updateMetadata } from "./workflow-editor-actions";
+import { setParentNodes, setSelectedNode, updateMetadata } from "./workflow-editor-actions";
 import { SaveWorkflow } from "@/actions/workflows";
 
 // update metadata based on node id
@@ -14,6 +14,7 @@ const initialEditorState: EditorState["editor"] = {
   nodes: [],
   edges: [],
   selectedNode: null,
+  parrentNodes: null,
   sidebar: "triggers",
 };
 
@@ -65,6 +66,7 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
         editor: {
           ...state.editor,
           selectedNode: setSelectedNode(state.editor.nodes, action.payload.id),
+          parrentNodes: setParentNodes(state.editor.nodes, state.editor.edges, action.payload.id!),
         },
       };
 
@@ -103,6 +105,7 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
           sidebar: action.payload.sidebar,
         },
       };
+ 
 
     default:
       return state;
@@ -139,6 +142,8 @@ const WorkFlowEditorProvider = (props: EditorProps) => {
     const flow = await SaveWorkflow(pathname.split("/").pop()!, state.editor.nodes, JSON.stringify(state.editor.edges));
     if (flow) toast.message(flow.message);
   };
+
+
 
 
   const values: WorkflowEditorContextType = {
