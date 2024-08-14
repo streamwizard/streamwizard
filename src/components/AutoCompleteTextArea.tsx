@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 
 interface AutoCompleteTextAreaProps {
   suggestions: string[];
@@ -11,34 +11,97 @@ interface AutoCompleteTextAreaProps {
 const AutoCompleteTextArea: React.FC<AutoCompleteTextAreaProps> = ({ suggestions, value, onChange }) => {
   const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState<number | null>(null);
-  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const [contentArray, setContentArray] = useState<(string | JSX.Element)[]>([]);
+  const divRef = useRef<HTMLDivElement>(null);
 
-  const handleChange = useCallback((event: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newText = event.target.value;
-    onChange(newText);
-    const match = newText.match(/\$\{([^}]+)\}$/);
-    if (match) {
-      const query = match[1].toLowerCase();
-      setFilteredSuggestions(suggestions.filter((s) => s.toLowerCase().includes(query)));
-    } else {
-      setFilteredSuggestions([]);
+  useEffect(() => {
+    const content = value.split(/\$\{([^}]+)\}/g).map((part, index) =>
+      index % 2 === 1 ? <span className="border border-blue-500 p-1" key={index}>${part}</span> : part
+    );
+    setContentArray(content);
+  }, [value]);
+
+  const getCaretPosition = (element: HTMLElement) => {
+    let caretOffset = 0;
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(element);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      caretOffset = preCaretRange.toString().length;
     }
-    setActiveSuggestionIndex(null);
+    return caretOffset;
+  };
+
+  const setCaretPosition = (element: HTMLElement, offset: number) => {
+    const selection = window.getSelection();
+    const range = document.createRange();
+    let charCount = 0;
+    let nodeFound = false;
+
+    function traverseNodes(node: Node) {
+      if (node.nodeType === 3) {
+        const nextCharCount = charCount + node.textContent!.length;
+        if (!nodeFound && offset >= charCount && offset <= nextCharCount) {
+          range.setStart(node, offset - charCount);
+          range.collapse(true);
+          nodeFound = true;
+        }
+        charCount = nextCharCount;
+      } else {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          traverseNodes(node.childNodes[i]);
+        }
+      }
+    }
+
+    traverseNodes(element);
+
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  };
+
+  const handleChange = useCallback(() => {
+    if (divRef.current) {
+      const caretPos = getCaretPosition(divRef.current);
+
+      const newText = divRef.current.innerText || "";
+      onChange(newText);
+
+      const match = newText.match(/\$\{([^}]+)\}$/);
+      if (match) {
+        const query = match[1].toLowerCase();
+        setFilteredSuggestions(suggestions.filter((s) => s.toLowerCase().includes(query)));
+      } else {
+        setFilteredSuggestions([]);
+      }
+      setActiveSuggestionIndex(null);
+
+      // Update the value and contentArray
+      onChange(newText);
+    }
   }, [onChange, suggestions]);
 
-  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    const { selectionStart, selectionEnd, value } = event.currentTarget;
+  const handleKeyDown = useCallback((event: React.KeyboardEvent<HTMLDivElement>) => {
+    const { selectionStart } = window.getSelection()?.getRangeAt(0) || {};
 
     switch (event.key) {
       case "{":
-        if (selectionStart > 0 && value[selectionStart - 1] === "$") {
+        if (selectionStart && selectionStart > 0 && (divRef.current?.innerText[selectionStart - 1] === "$")) {
           event.preventDefault();
-          const newText = `${value.slice(0, selectionStart)}{}${value.slice(selectionEnd)}`;
-          onChange(newText);
+          document.execCommand("insertText", false, "{}");
           setTimeout(() => {
-            if (textAreaRef.current) {
-              textAreaRef.current.selectionStart = textAreaRef.current.selectionEnd = selectionStart + 1;
-              textAreaRef.current.focus();
+            const range = document.createRange();
+            const sel = window.getSelection();
+            if (divRef.current && sel) {
+              range.setStart(divRef.current.childNodes[0], selectionStart + 1);
+              range.collapse(true);
+              sel.removeAllRanges();
+              sel.addRange(range);
+              divRef.current.focus();
             }
           }, 0);
         }
@@ -82,7 +145,7 @@ const AutoCompleteTextArea: React.FC<AutoCompleteTextAreaProps> = ({ suggestions
         setActiveSuggestionIndex(null);
         break;
     }
-  }, [activeSuggestionIndex, filteredSuggestions, onChange, suggestions]);
+  }, [activeSuggestionIndex, filteredSuggestions, onChange, suggestions, value]);
 
   const handleSuggestionClick = useCallback((suggestion: string) => {
     const newValue = value.replace(/\$\{[^}]*\}$/, `\${${suggestion}}`);
@@ -109,14 +172,17 @@ const AutoCompleteTextArea: React.FC<AutoCompleteTextAreaProps> = ({ suggestions
 
   return (
     <div className="relative">
-      <textarea
-        ref={textAreaRef}
-        value={value}
-        onChange={handleChange}
+      <div
+        ref={divRef}
+        contentEditable
+        onInput={handleChange}
         onKeyDown={handleKeyDown}
-        className="w-full p-2 border border-gray-300 rounded-md"
-        rows={5}
-      />
+        className="w-full p-2 border border-gray-300 rounded-md min-h-[100px] whitespace-pre-wrap"
+      >
+        {contentArray.map((item, index) => (
+          <React.Fragment key={index}>{item}</React.Fragment>
+        ))}
+      </div>
       {suggestionsList}
     </div>
   );
