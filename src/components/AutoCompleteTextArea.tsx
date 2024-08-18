@@ -5,42 +5,51 @@ import { createPluginFactory, createPlugins, Plate } from "@udecode/plate-common
 import { Editor } from "./plate-ui/editor";
 import { ELEMENT_CUSTOM_COMBOBOX_INPUT, NoteInputElement } from "./plate-ui/note-element";
 import { ELEMENT_TEST, MentionElement } from "./plate-ui/mention-element";
-import { ELEMENT_MENTION } from "@udecode/plate-mention";
 
 // Create the plugin
 const createCustomComboboxPlugin = createPluginFactory<TriggerComboboxPlugin>({
-  key: "customCombobox",
-  withOverrides: withTriggerCombobox,
+  isElement: true,
+  isInline: true,
+  isMarkableVoid: true,
+  // isVoid: true,
+  key: ELEMENT_TEST,
+
   options: {
-    trigger: "!", // Use '!' as the trigger character
-    triggerPreviousCharPattern: /^\s?$/, // Trigger after space or at start of line
     createComboboxInput: (trigger) => ({
-      type: ELEMENT_CUSTOM_COMBOBOX_INPUT,
       children: [{ text: "" }],
       trigger,
+      type: ELEMENT_CUSTOM_COMBOBOX_INPUT,
     }),
+    // createMentionNode: (item) => ({ value: item.text }),
+    trigger: "!",
+    triggerPreviousCharPattern: /^\s?$/,
+  },
+
+  handlers: {
+    
   },
 
   plugins: [
     {
-      key: ELEMENT_CUSTOM_COMBOBOX_INPUT,
       isElement: true,
       isInline: true,
       isVoid: true,
+      key: ELEMENT_CUSTOM_COMBOBOX_INPUT,
     },
   ],
+
+  withOverrides: withTriggerCombobox,
 });
 
-const createTestElementPlugin = createPluginFactory({
-  key: ELEMENT_TEST,
-  isElement: true,
-  isInline: true,
-  
+// const createTestElementPlugin = createPluginFactory({
+//   key: ELEMENT_TEST,
+//   isElement: true,
+//   isInline: true,
+//   isLeaf: true,
 
-});
+// });
 
-
-const plugins = createPlugins([createCustomComboboxPlugin(), createTestElementPlugin()], {
+const plugins = createPlugins([createCustomComboboxPlugin()], {
   components: {
     [ELEMENT_CUSTOM_COMBOBOX_INPUT]: NoteInputElement,
     [ELEMENT_TEST]: MentionElement,
