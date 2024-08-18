@@ -197,6 +197,11 @@ export default function WorkflowEditorCanvas() {
                 onPaneClick={onCanvasClick}
                 onNodesDelete={handleDelete}
                 onNodeClick={(e, node) => onNodeClick(e, node)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Backspace') {
+                    e.preventDefault(); // Prevent the default behavior (deleting nodes)
+                  }
+                }}
               >
                 <MiniMap nodeStrokeWidth={3} zoomable pannable />
                 <Controls />
