@@ -14,7 +14,7 @@ const initialEditorState: EditorState["editor"] = {
   nodes: [],
   edges: [],
   selectedNode: null,
-  parrentNodes: null,
+  parentNodes: null,
   sidebar: "triggers",
 };
 
@@ -66,7 +66,7 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
         editor: {
           ...state.editor,
           selectedNode: setSelectedNode(state.editor.nodes, action.payload.id),
-          parrentNodes: setParentNodes(state.editor.nodes, state.editor.edges, action.payload.id!),
+          parentNodes: setParentNodes(state.editor.nodes, state.editor.edges, action.payload.id!),
         },
       };
 

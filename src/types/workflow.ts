@@ -15,7 +15,7 @@ export type WorkflowEditor = {
   nodes: Node[];
   edges: Edge[];
   selectedNode: Node | null;
-  parrentNodes: Node[] | null;
+  parentNodes: Node[] | null;
   sidebar: "triggers" | "actions" | "settings";
 };
 export type EditorState = {

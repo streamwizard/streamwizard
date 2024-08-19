@@ -1,32 +1,56 @@
 "use client";
 
-import { TriggerComboboxPlugin, withTriggerCombobox } from "@udecode/plate-combobox";
+import { TriggerComboboxPlugin } from "@udecode/plate-combobox";
 import { createPluginFactory, createPlugins, Plate } from "@udecode/plate-common";
 import { Editor } from "./plate-ui/editor";
 import { ELEMENT_CUSTOM_COMBOBOX_INPUT, NoteInputElement } from "./plate-ui/note-element";
 import { ELEMENT_TEST, MentionElement } from "./plate-ui/mention-element";
 
-// Create the plugin
-const createCustomComboboxPlugin = createPluginFactory<TriggerComboboxPlugin>({
+import type { TElement, TNodeProps } from "@udecode/plate-common";
+import { withTriggerCombobox } from "./plate-ui/custom-plugin";
+
+export interface TMentionItemBase {
+  text: string;
+}
+
+export interface TMentionInputElement extends TElement {
+  trigger: string;
+}
+
+export interface TMentionElement extends TElement {
+  data: {
+    node_id: string;
+    label: string;
+    variable?: string;
+  };
+}
+
+export interface MentionPlugin<TItem extends TMentionItemBase = TMentionItemBase> extends TriggerComboboxPlugin {
+  createMentionNode?: (item: TItem, search: string) => TNodeProps<TMentionElement>;
+  insertSpaceAfterMention?: boolean;
+}
+
+const createCustomComboboxPlugin = createPluginFactory<MentionPlugin>({
   isElement: true,
   isInline: true,
-  isMarkableVoid: true,
-  // isVoid: true,
+  isVoid: true,
   key: ELEMENT_TEST,
 
   options: {
     createComboboxInput: (trigger) => ({
       children: [{ text: "" }],
       trigger,
+      closeOnSelect: false,
       type: ELEMENT_CUSTOM_COMBOBOX_INPUT,
     }),
-    // createMentionNode: (item) => ({ value: item.text }),
+
     trigger: "!",
     triggerPreviousCharPattern: /^\s?$/,
-  },
-
-  handlers: {
-    
+    insertSpaceAfterMention: true,
+    createMentionNode: (item) => ({
+      children: [{ text: item.text }],
+      value: item.text,
+    }),
   },
 
   plugins: [
@@ -39,15 +63,8 @@ const createCustomComboboxPlugin = createPluginFactory<TriggerComboboxPlugin>({
   ],
 
   withOverrides: withTriggerCombobox,
+
 });
-
-// const createTestElementPlugin = createPluginFactory({
-//   key: ELEMENT_TEST,
-//   isElement: true,
-//   isInline: true,
-//   isLeaf: true,
-
-// });
 
 const plugins = createPlugins([createCustomComboboxPlugin()], {
   components: {
@@ -55,6 +72,7 @@ const plugins = createPlugins([createCustomComboboxPlugin()], {
     [ELEMENT_TEST]: MentionElement,
   },
 });
+
 const initialValue = [
   {
     id: "1",

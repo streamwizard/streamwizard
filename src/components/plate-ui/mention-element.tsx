@@ -7,10 +7,9 @@ import { useFocused, useSelected } from "slate-react";
 export const MentionElement = withRef<
   typeof PlateElement,
   {
-    onClick?: (mentionNode: any) => void;
     prefix?: string;
   }
->(({ children, className, onClick, prefix, ...props }, ref) => {
+>(({ children, className, prefix, ...props }, ref) => {
   const element = useElement<TMentionElement>();
   const selected = useSelected();
   const focused = useFocused();
@@ -26,6 +25,8 @@ export const MentionElement = withRef<
       ref={ref}
       {...props}
     >
+      {prefix}
+      {element.data.label}
       {children}
     </PlateElement>
   );
