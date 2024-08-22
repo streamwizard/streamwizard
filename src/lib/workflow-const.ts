@@ -2,6 +2,7 @@ import CustomRewardUpdate from "@/components/workflows/custom-settings/actions/c
 import SendChatMessage from "@/components/workflows/custom-settings/actions/send_chat_message";
 import DefaultSettings from "@/components/workflows/custom-settings/default";
 import ChannelpointsCustomRewardRedemptionAddSettings from "@/components/workflows/custom-settings/triggers/channel.channel_points_custom_reward_redemption.add";
+import { SendChatMessageMetaData } from "@/schemas/workflow-node-settings";
 import { EditorCanvasDefaultCardType } from "@/types/workflow";
 
 export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
@@ -26,7 +27,8 @@ export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
         nodeType: "Action",
         metaData: {
           message: "Hello from StreamWizard 🧙",
-        },
+          sender_id: "956066753",
+        } as SendChatMessageMetaData,
       },
     ],
 

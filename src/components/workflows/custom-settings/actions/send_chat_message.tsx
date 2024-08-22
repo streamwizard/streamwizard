@@ -1,76 +1,35 @@
-import AutoCompleteTextArea from "@/components/AutoCompleteTextArea";
+import Editor from "@/components/AutoCompleteTextArea";
 import SelectSenderID from "@/components/form-components/select-sender-id";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useEditor } from "@/hooks/UseWorkflowEditor";
-import { getPlaceholderKeys } from "@/lib/placeholder-options";
+import { SendChatMessageMetaData, SendChatMessageSchema } from "@/schemas/workflow-node-settings";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
-interface Placeholder {
-  id: string;
-  label: string;
-  type: string;
-  options: string[];
-  uuid?: string;
-}
-
-const formSchema = z.object({
-  chatter_id: z.string(),
-  message: z.string().max(400).min(1, "Message is required"),
-});
-
-interface CustomMetaDataType {
-  chatter_id?: string;
-  message?: string;
-}
-
-export default function SendChatMessage() {
-  "use no memo";
+export default function SendChatMessage() { 
   const { state, dispatch } = useEditor();
-  const [placeholders, setPlaceholders] = useState<Placeholder[]>([]);
+  const { sender_id, message } = state.editor.selectedNode?.data.metaData as SendChatMessageMetaData;
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
+
+  const form = useForm<z.infer<typeof SendChatMessageSchema>>({
+    resolver: zodResolver(SendChatMessageSchema),
     defaultValues: {
-      chatter_id: "",
-      message: "",
+      sender_id: sender_id || "",
+      message: message || "+100",
     },
   });
 
-  useEffect(() => {
-    form.reset({
-      chatter_id: "",
-      message: (state.editor.selectedNode?.data?.metaData as CustomMetaDataType)?.message || "",
-    });
-  }, [state.editor.selectedNode?.id]);
+  function onSubmit(values: z.infer<typeof SendChatMessageSchema>) {
+    if (!state.editor.selectedNode) return;
 
-  useEffect(() => {
-    const X: Placeholder[] = state.editor.parentNodes?.map((node) => {
-      return {
-        id: node.id,
-        label: node.data.title as string,
-        type: node.data.type as string,
-        options: getPlaceholderKeys(node.data.type! as string),
-      };
-    }) || [];
-    
-    console.log(X);
-    setPlaceholders(X);
+    // console.log(values.message);
 
-  }, [state.editor.selectedNode]);
-
-  function onSubmit(values: z.infer<typeof formSchema>) {
-    console.log(values.message);
     dispatch({
       type: "UPDATE_METADATA",
       payload: {
-        id: state.editor.selectedNode?.id!,
-        metadata: {
-          chatter_id: values.chatter_id,
-          message: values.message,
-        },
+        id: state.editor.selectedNode.id,
+        metadata: values as SendChatMessageMetaData,
       },
     });
   }
@@ -78,34 +37,44 @@ export default function SendChatMessage() {
   return (
     <Form {...form}>
       <form
-        onChange={form.handleSubmit(onSubmit, (error) => {
-          console.error({ error });
-        })}
+        onChange={(e) => {
+          e.preventDefault();
+          form.handleSubmit(onSubmit)();
+        }}
         className="space-y-8 "
       >
         <FormField
           control={form.control}
-          name="chatter_id"
+          name="sender_id"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Who is sending the message?</FormLabel>
+              <FormLabel>Sender</FormLabel>
               <FormControl>
-                <SelectSenderID value={form.watch("chatter_id")} onValueChange={field.onChange} />
+                <>
+                  <SelectSenderID value={form.watch("sender_id")!} onValueChange={field.onChange} />
+                </>
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
-
         <FormField
           control={form.control}
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Message</FormLabel>
+              <FormLabel>Update Reward Cost</FormLabel>
               <FormControl>
-                <AutoCompleteTextArea placeholders={placeholders} onChange={field.onChange} />
+                <Editor
+                  triggerChar="@"
+                  initialValue={message}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    form.handleSubmit(onSubmit)(); // Trigger the form submission on every change
+                  }}
+                />
               </FormControl>
+              <FormDescription>Use &quot;+&quot; to increase and &quot;-&quot; to decrease</FormDescription>
               <FormMessage />
             </FormItem>
           )}

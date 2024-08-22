@@ -24,6 +24,7 @@ export default function SelectSenderID({ value, onValueChange }: Props) {
           <SelectLabel>Sender</SelectLabel>
           {/* <SelectItem value={data.user.channel_id}>{data.user.name}</SelectItem> */}
           <SelectItem value="956066753">StreamWizardBot</SelectItem>
+          <SelectItem value="956066751">Jochemwhite</SelectItem>
         </SelectGroup>
       </SelectContent>
     </Select>

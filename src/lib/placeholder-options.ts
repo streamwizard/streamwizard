@@ -26,4 +26,32 @@ const placeholderKeys = {
     "reward.prompt",
     "redeemed_at",
   ],
+
+  "custom_reward_update": [
+    "broadcaster_name",
+    "broadcaster_login",
+    "broadcaster_id",
+    "id",
+    "image",
+    "background_color",
+    "is_enabled",
+    "cost",
+    "title",
+    "prompt",
+    "is_user_input_required",
+    "max_per_stream_setting.is_enabled",
+    "max_per_stream_setting.max_per_stream",
+    "max_per_user_per_stream_setting.is_enabled",
+    "max_per_user_per_stream_setting.max_per_user_per_stream",
+    "global_cooldown_setting.is_enabled",
+    "global_cooldown_setting.global_cooldown_seconds",
+    "is_paused",
+    "is_in_stock",
+    "default_image.url_1x",
+    "default_image.url_2x",
+    "default_image.url_4x",
+    "should_redemptions_skip_request_queue",
+    "redemptions_redeemed_current_stream",
+    "cooldown_expires_at"
+  ]
 };
