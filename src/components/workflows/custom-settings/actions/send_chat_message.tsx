@@ -23,7 +23,6 @@ export default function SendChatMessage() {
   function onSubmit(values: z.infer<typeof SendChatMessageSchema>) {
     if (!state.editor.selectedNode) return;
 
-    // console.log(values.message);
 
     dispatch({
       type: "UPDATE_METADATA",

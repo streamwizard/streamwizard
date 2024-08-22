@@ -43,8 +43,10 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
     const handleInput = (e: Event) => {
       const target = e.target as HTMLDivElement;
       const text = target.innerHTML;
+  
+      // Check for the trigger character to open the menu
       const triggerIndex = text.lastIndexOf(triggerChar);
-
+  
       if (triggerIndex !== -1) {
         const query = extractQuery(text, triggerIndex);
         setQuery(query);
@@ -55,14 +57,23 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
         setFilteredPlaceholders([]);
         setOpen(false);
       }
+  
+      // Sanitize content by replacing spans with placeholderId and option
+      const sanitizedContent = sanitizeContent(target.innerHTML);
+  
+      // Call onChange with the updated content
+      if (onChange) {
+        onChange(sanitizedContent);
+      }
     };
-
+  
     const editor = editorRef.current;
     editor?.addEventListener("input", handleInput);
     return () => {
       editor?.removeEventListener("input", handleInput);
     };
   }, [triggerChar, placeholders]);
+  
 
   // Effect to filter placeholders based on the current query
   useEffect(() => {
@@ -112,6 +123,22 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
     }
   };
 
+  const sanitizeContent = (html: string) => {
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = html;
+  
+    const spans = tempDiv.querySelectorAll("span[data-node_id]");
+    spans.forEach((span) => {
+      const nodeId = span.getAttribute("data-node_id");
+      const option = span.getAttribute("data-option") || "";
+      if (nodeId) {
+        span.replaceWith(`{${nodeId}${option ? `.${option}` : ""}}`);
+      }
+    });
+  
+    return tempDiv.textContent || "";
+  };
+
   const replacePlaceholdersWithSpans = (text: string) => {
     return text.replace(/{([^}]+)}/g, (match, placeholderContent) => {
       // Replace &nbsp; with an empty string within the placeholder content
@@ -121,8 +148,6 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
 
       // Find the placeholder by label or ID
       const placeholder = placeholders.find((p) => p.label === label || p.node_id === label);
-
-      console.log(option);
 
       if (placeholder) {
         // Return a span element with correct attributes
@@ -229,6 +254,7 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
             },
           }));
 
+
           // Call onChange with the updated content (safely remove the placeholder content) and replace the label with the node_id
           if (onChange) {
             const sanitizedContent = editor.innerHTML
@@ -236,7 +262,6 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
               .replace(/<[^>]+>/g, "")
               .replace(`{${selectedPlaceholder.label}.${option}}`, `{${selectedPlaceholderNodeID}.${option}}`);
 
-            console.log(sanitizedContent);
             onChange(sanitizedContent);
           }
 
