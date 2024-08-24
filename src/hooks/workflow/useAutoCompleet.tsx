@@ -30,6 +30,7 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [filteredOptions, setFilteredOptions] = useState<string[]>([]);
   const [placeholdersState, setPlaceholdersState] = useState<{ [uuid: string]: Placeholder }>({});
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
 
   // Effect to initialize editor content and manage query state from initialValue
   useEffect(() => {
@@ -40,40 +41,15 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
 
   // Effect to handle input events in the editor
   useEffect(() => {
-    const handleInput = (e: Event) => {
-      const target = e.target as HTMLDivElement;
-      const text = target.innerHTML;
-  
-      // Check for the trigger character to open the menu
-      const triggerIndex = text.lastIndexOf(triggerChar);
-  
-      if (triggerIndex !== -1) {
-        const query = extractQuery(text, triggerIndex);
-        setQuery(query);
-        setFilteredPlaceholders(placeholders.filter((p) => p.label.toLowerCase().startsWith(query.toLowerCase())));
-        setOpen(true);
-      } else {
-        setQuery("");
-        setFilteredPlaceholders([]);
-        setOpen(false);
-      }
-  
-      // Sanitize content by replacing spans with placeholderId and option
-      const sanitizedContent = sanitizeContent(target.innerHTML);
-  
-      // Call onChange with the updated content
-      if (onChange) {
-        onChange(sanitizedContent);
-      }
-    };
-  
     const editor = editorRef.current;
-    editor?.addEventListener("input", handleInput);
-    return () => {
-      editor?.removeEventListener("input", handleInput);
-    };
-  }, [triggerChar, placeholders]);
+    editor?.addEventListener('input', handleInput);
+    editor?.addEventListener('keydown', handleKeyDown);
   
+    return () => {
+      editor?.removeEventListener('input', handleInput);
+      editor?.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [filteredPlaceholders, filteredOptions, highlightedIndex, selectedPlaceholder]);
 
   // Effect to filter placeholders based on the current query
   useEffect(() => {
@@ -85,6 +61,10 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
   useEffect(() => {
     setFilteredOptions(selectedPlaceholder ? selectedPlaceholder.options : []);
   }, [selectedPlaceholder]);
+
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [filteredPlaceholders, filteredOptions]);
 
   // Helper functions
   const extractQuery = (text: string, triggerIndex: number) => {
@@ -126,7 +106,7 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
   const sanitizeContent = (html: string) => {
     const tempDiv = document.createElement("div");
     tempDiv.innerHTML = html;
-  
+
     const spans = tempDiv.querySelectorAll("span[data-node_id]");
     spans.forEach((span) => {
       const nodeId = span.getAttribute("data-node_id");
@@ -135,9 +115,74 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
         span.replaceWith(`{${nodeId}${option ? `.${option}` : ""}}`);
       }
     });
-  
+
     return tempDiv.textContent || "";
   };
+
+  const handleInput = (e: Event) => {
+    const target = e.target as HTMLDivElement;
+    const text = target.innerHTML;
+
+    // Check for the trigger character to open the menu
+    const triggerIndex = text.lastIndexOf(triggerChar);
+
+    if (triggerIndex !== -1) {
+      const query = extractQuery(text, triggerIndex);
+      setQuery(query);
+      setFilteredPlaceholders(placeholders.filter((p) => p.label.toLowerCase().startsWith(query.toLowerCase())));
+      setOpen(true);
+    } else {
+      setQuery("");
+      setFilteredPlaceholders([]);
+      setOpen(false);
+    }
+
+    // Sanitize content by replacing spans with placeholderId and option
+    const sanitizedContent = sanitizeContent(target.innerHTML);
+
+    // Call onChange with the updated content
+    if (onChange) {
+      onChange(sanitizedContent);
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    let itemList: Placeholder[] | string[];
+  
+    if (selectedPlaceholder) {
+      // Options menu is open
+      itemList = filteredOptions;
+    } else {
+      // Placeholder menu is open
+      itemList = filteredPlaceholders;
+    }
+  
+    if (itemList.length > 0) {
+      if (e.key === 'ArrowDown') {
+        setHighlightedIndex((prevIndex) => (prevIndex + 1) % itemList.length);
+        e.preventDefault();
+      } else if (e.key === 'ArrowUp') {
+        setHighlightedIndex((prevIndex) =>
+          prevIndex === 0 ? itemList.length - 1 : prevIndex - 1
+        );
+        e.preventDefault();
+      } else if (e.key === 'Enter') {
+        if (highlightedIndex >= 0 && highlightedIndex < itemList.length) {
+          if (selectedPlaceholder) {
+            // Since selectedPlaceholder is not null, itemList is string[]
+            handleOptionClick(itemList[highlightedIndex] as string);
+          } else {
+            // Since selectedPlaceholder is null, itemList is Placeholder[]
+            handlePlaceholderClick(itemList[highlightedIndex] as Placeholder);
+          }
+          setHighlightedIndex(-1);
+        }
+        e.preventDefault();
+      }
+    }
+  };
+  
+
 
   const replacePlaceholdersWithSpans = (text: string) => {
     return text.replace(/{([^}]+)}/g, (match, placeholderContent) => {
@@ -254,13 +299,9 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
             },
           }));
 
-
           // Call onChange with the updated content (safely remove the placeholder content) and replace the label with the node_id
           if (onChange) {
-            const sanitizedContent = editor.innerHTML
-              .replace(/&nbsp;/g, " ")
-              .replace(/<[^>]+>/g, "")
-              .replace(`{${selectedPlaceholder.label}.${option}}`, `{${selectedPlaceholderNodeID}.${option}}`);
+            const sanitizedContent = sanitizeContent(editor.innerHTML);
 
             onChange(sanitizedContent);
           }
@@ -281,6 +322,7 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
     selectedPlaceholder,
     filteredOptions,
     selectedOption,
+    highlightedIndex,
     setQuery,
     setOpen,
     setFilteredPlaceholders,
