@@ -26,6 +26,17 @@ const placeholderKeys = {
     "reward.prompt",
     "redeemed_at",
   ],
+  "channel.ad_break.begin": [
+    "duration_seconds",
+    "started_at",
+    "is_automatic",
+    "broadcaster_user_id",
+    "broadcaster_user_login",
+    "broadcaster_user_name",
+    "requester_user_id",
+    "requester_user_login",
+    "requester_user_name"
+  ],
 
   "custom_reward_update": [
     "broadcaster_name",

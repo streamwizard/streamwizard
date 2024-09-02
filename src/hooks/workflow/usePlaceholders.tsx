@@ -27,13 +27,16 @@ export default function usePlaceholders() {
           node_id: node.id,
           label: node.data.title as string,
           type: node.data.type as string,
-          options: getPlaceholderKeys(node.data.type as string),
+          options: getPlaceholderKeys(node.data.type as string) || [],
         };
       });
 
-      setSelectedPlaceholder(placeholders);
+      // remove all the placeholders that have no options
+      const filteredPlaceholders = placeholders.filter((placeholder) => placeholder.options.length > 0);
+
+      setSelectedPlaceholder(filteredPlaceholders);
     }
-  }, []);
+  }, [parentNodes]);
 
   return { placeholders };
 }

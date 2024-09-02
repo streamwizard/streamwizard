@@ -105,6 +105,7 @@ export const menuOptions = [
 // twitch scopes
 export const TWITCH_SCOPES = [
   "openid",
+  "channel:read:ads",
   "user:read:email",
   "channel:read:editors",
   "channel:manage:redemptions",

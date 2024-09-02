@@ -7,6 +7,7 @@ import { createContext, Dispatch, use, useCallback, useEffect, useReducer } from
 import { toast } from "sonner";
 import { setParentNodes, setSelectedNode, updateMetadata } from "./workflow-editor-actions";
 import { SaveWorkflow } from "@/actions/workflows";
+import { stat } from "fs";
 
 // update metadata based on node id
 
@@ -30,7 +31,7 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
         editor: {
           ...state.editor,
           nodes: action.payload.nodes || initialEditorState.nodes,
-          edges: action.payload.edges,
+          edges: action.payload.edges || initialEditorState.edges,
         },
       };
 
@@ -105,7 +106,6 @@ const editorReducer = (state: EditorState = initialState, action: EditorActions)
           sidebar: action.payload.sidebar,
         },
       };
- 
 
     default:
       return state;
@@ -128,6 +128,7 @@ type EditorProps = {
 };
 
 const WorkFlowEditorProvider = (props: EditorProps) => {
+  const pathname = usePathname();
   const [state, dispatch] = useReducer(editorReducer, initialState);
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => dispatch({ type: "UPDATE_NODES", payload: { nodes: changes } }),
@@ -136,15 +137,21 @@ const WorkFlowEditorProvider = (props: EditorProps) => {
   const onEdgesChange: OnEdgesChange = useCallback((changes) => dispatch({ type: "UPDATE_EDGES", payload: { edges: changes } }), [dispatch]);
   const onConnect: OnConnect = useCallback((connection) => dispatch({ type: "ON_CONNECT", payload: { connection } }), [dispatch]);
 
-  const pathname = usePathname();
-
   const handleSave = async () => {
-    const flow = await SaveWorkflow(pathname.split("/").pop()!, state.editor.nodes, JSON.stringify(state.editor.edges));
-    if (flow) toast.message(flow.message);
+    console.log("handleSave");
+    const path = pathname.split("/").pop();
+    console.log(path);
+
+    const edges = JSON.stringify(state.editor.edges);
+
+    const nodes = JSON.stringify(state.editor.nodes);
+
+    toast.promise(SaveWorkflow(path!, nodes, edges), {
+      loading: "Saving workflow",
+      success: "Workflow saved",
+      error: "Failed to save workflow",
+    });
   };
-
- 
-
 
   const values: WorkflowEditorContextType = {
     handleSave,

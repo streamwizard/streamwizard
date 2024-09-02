@@ -60,7 +60,7 @@ const Editor: React.FC<EditorProps> = ({ triggerChar = "@", onChange, initialVal
           className="absolute border rounded-lg shadow-lg mt-2 bg-white dark:bg-gray-800 text-black dark:text-white z-50"
           style={{ top: selectedPlaceholderPosition.top, left: selectedPlaceholderPosition.left }}
         >
-          {filteredOptions.map((option, index) => (
+          { filteredOptions && filteredOptions.length > 0 && filteredOptions.map((option, index) => (
             <li
               key={option}
               className={`p-2 cursor-pointer ${

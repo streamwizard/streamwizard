@@ -69,5 +69,20 @@ export function TwitchEventSubscriptions(user_id: string) {
         // reward_id: "92af127c-7326-4483-a52b-b0da0be61c01", // optional; gets notifications for a specific reward
       },
     },
+    {
+      type: "channel.channel_points_custom_reward_redemption.add",
+      version: "1",
+      condition: {
+        broadcaster_user_id: user_id,
+        // reward_id: "92af127c-7326-4483-a52b-b0da0be61c01", // optional; gets notifications for a specific reward
+      },
+    },
+    {
+      type: "channel.ad_break.begin",
+      version: "1",
+      condition: {
+        broadcaster_user_id: user_id,
+      },
+    },
   ];
 }

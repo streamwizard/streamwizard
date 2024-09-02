@@ -23,7 +23,6 @@ export default function SendChatMessage() {
   function onSubmit(values: z.infer<typeof SendChatMessageSchema>) {
     if (!state.editor.selectedNode) return;
 
-    console.log(values.message);
 
     dispatch({
       type: "UPDATE_METADATA",
@@ -63,7 +62,7 @@ export default function SendChatMessage() {
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Update Reward Cost</FormLabel>
+              <FormLabel>Message</FormLabel>
               <FormControl>
                 <Editor
                   triggerChar="@"
@@ -74,7 +73,7 @@ export default function SendChatMessage() {
                   }}
                 />
               </FormControl>
-              <FormDescription>Use &quot;+&quot; to increase and &quot;-&quot; to decrease</FormDescription>
+              <FormDescription>Use &quot;@&quot; for variables</FormDescription>
               <FormMessage />
             </FormItem>
           )}

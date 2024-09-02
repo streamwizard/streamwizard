@@ -141,6 +141,9 @@ export default function WorkflowEditorCanvas() {
     setIsWorkFlowLoading(true);
     const response = await getWorkflowByID(pathname.split("/").pop()!);
     if (response && response.nodes && response.edges) {
+      console.log(response);
+
+
       const nodes = JSON.parse(response.nodes!);
       const edges = JSON.parse(response.edges!);
       dispatch({ type: "LOAD_DATA", payload: { nodes, edges } });

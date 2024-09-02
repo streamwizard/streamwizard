@@ -9,6 +9,7 @@ import EditorCanvasIconHelper from "./editor-canvas-card-icon-hepler";
 import RenderOutputAccordion from "./render-output-accordian";
 import { EditorCanvasDefaultCard, NodeSettingsComponent } from "@/lib/workflow-const";
 import { useEffect } from "react";
+import { Zap } from "lucide-react";
 
 export default function WorkflowCanvasSidebar() {
   const { state, handleSave, dispatch } = useEditor();
@@ -27,7 +28,7 @@ export default function WorkflowCanvasSidebar() {
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
           <div>
-            <Button className="text-white" onClick={handleSave}>
+            <Button type="button" className="text-white" onClick={() => handleSave()}>
               Save
             </Button>
           </div>
@@ -45,9 +46,9 @@ export default function WorkflowCanvasSidebar() {
                         key={Trigger.title}
                         draggable
                         onDragStart={(e) => onDragStart(e, Trigger.type, provider)}
-                        className="flex flex-row items-center gap-4 cursor-pointer"
+                        className="flex flex-row items-center p-4 my-4 cursor-pointer"
                       >
-                        <EditorCanvasIconHelper type={Trigger.type} />
+                        <div>{Trigger.icon ? <Trigger.icon size={30} /> : <Zap size={30} />}</div>
                         <CardHeader>
                           <CardTitle>{Trigger.title}</CardTitle>
                           <CardDescription>{Trigger.description}</CardDescription>
@@ -73,7 +74,7 @@ export default function WorkflowCanvasSidebar() {
                           onDragStart={(e) => onDragStart(e, action.type, provider)}
                           className="flex flex-row items-center p-4 my-4 cursor-pointer"
                         >
-                          <EditorCanvasIconHelper type={action.type} />
+                          <div>{action.icon ? <action.icon size={30} /> : <Zap size={30} />}</div>
                           <CardHeader>
                             <CardTitle>{action.title}</CardTitle>
                             <CardDescription>{action.description}</CardDescription>

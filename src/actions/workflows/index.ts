@@ -83,18 +83,19 @@ export const onCreateWorkflow = async (name: string, description: string) => {
   }
 };
 
-export const SaveWorkflow = async (flowId: string, nodes: Node[], edges: string) => {
+export const SaveWorkflow = async (flowId: string, nodes: string, edges: string) => {
+  console.log("SaveWorkflow");
+
   const session = await auth();
 
   const supabase = createClient(session?.supabaseAccessToken as string);
 
-  const action: string = JSON.stringify(nodes);
-
-  const trigger = nodes.filter((node) => node.type === "Trigger").at(0)?.data;
+  
+  const trigger = JSON.parse(nodes).filter((node: Node) => node.type === "Trigger").at(0)?.data;
 
   if (!trigger) return { error: "Trigger not found" };
 
-  const { data, error } = await supabase.from("workflows").update({ nodes: action, edges }).match({ id: flowId });
+  const { data, error } = await supabase.from("workflows").update({ nodes, edges }).match({ id: flowId });
 
   if (error) return error;
 

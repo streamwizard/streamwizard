@@ -1,24 +1,23 @@
 import { Badge } from "@/components/ui/badge";
-import { useMemo, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CustomHandle from "./custom-handle";
 import EditorCanvasIconHelper from "./editor-canvas-card-icon-hepler";
+import { MdOutlineMessage } from "react-icons/md";
 
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
-import { Action, EditorCanvasCardType } from "@/types/workflow";
-import { Node, Position, useNodeId } from "@xyflow/react";
-import clsx from "clsx";
-import { cn } from "@/lib/utils";
 import { useEditor } from "@/hooks/UseWorkflowEditor";
-import { useClickAway } from "@uidotdev/usehooks";
+import { cn } from "@/lib/utils";
+import { Action } from "@/types/workflow";
+import { Position, useNodeId } from "@xyflow/react";
+import clsx from "clsx";
+import { Zap } from "lucide-react";
 
 const EditorCanvasCardSingle = ({ data }: { data: Action }) => {
   const { dispatch, state } = useEditor();
   const [isSelcted, setIsSelected] = useState(false);
   const nodeId = useNodeId();
-  const logo = useMemo(() => {
-    return <EditorCanvasIconHelper type={data.type as any} />;
-  }, [data]);
+
 
   useEffect(() => {
     if (state.editor.selectedNode) {
@@ -39,7 +38,7 @@ const EditorCanvasCardSingle = ({ data }: { data: Action }) => {
           })}
         >
           <CardHeader className="flex flex-row items-center gap-4">
-            <div>{logo}</div>
+            <div>{data.icon ? <data.icon size={30}  /> : <Zap size={30} />}</div>
             <div>
               <CardTitle className="text-md">{data.title}</CardTitle>
               <CardDescription>

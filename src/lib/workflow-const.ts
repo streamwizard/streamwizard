@@ -4,6 +4,8 @@ import DefaultSettings from "@/components/workflows/custom-settings/default";
 import ChannelpointsCustomRewardRedemptionAddSettings from "@/components/workflows/custom-settings/triggers/channel.channel_points_custom_reward_redemption.add";
 import { SendChatMessageMetaData } from "@/schemas/workflow-node-settings";
 import { EditorCanvasDefaultCardType } from "@/types/workflow";
+import { MdControlPoint, MdOutlineMessage } from "react-icons/md";
+import { RiAdvertisementLine } from "react-icons/ri";
 
 export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
   Twitch: {
@@ -18,6 +20,7 @@ export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
           reward_id: "",
           cost: "",
         },
+        icon: MdControlPoint,
       },
       {
         id: "",
@@ -29,6 +32,7 @@ export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
           message: "Hello from StreamWizard 🧙",
           sender_id: "956066753",
         } as SendChatMessageMetaData,
+        icon: MdOutlineMessage,
       },
     ],
 
@@ -40,6 +44,16 @@ export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
         type: "channel.channel_points_custom_reward_redemption.add",
         nodeType: "Trigger",
         event_id: null,
+        icon: MdControlPoint,
+      },
+      {
+        id: "",
+        title: "Ad break begin",
+        description: "Triggers when a user runs a midroll commercial break, either manually or automatically via ads manager.",
+        type: "channel.ad_break.begin",
+        nodeType: "Trigger",
+        event_id: null,
+        icon: RiAdvertisementLine,
       },
     ],
   },

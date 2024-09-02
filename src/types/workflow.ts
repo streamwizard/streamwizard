@@ -1,7 +1,8 @@
 import type { Connection, Edge, EdgeChange, Node, NodeChange } from "@xyflow/react";
 import type React from "react";
+import { IconType } from "react-icons/lib";
 
-type TwitchTriggersTypes = "channel.channel_points_custom_reward_redemption.add";
+type TwitchTriggersTypes = "channel.channel_points_custom_reward_redemption.add" | "channel.ad_break.begin";
 type TwitchActionsTypes = "custom_reward_update" | "send_chat_message";
 
 type Actions = TwitchActionsTypes | "none";
@@ -57,6 +58,7 @@ export type Trigger = {
   nodeType: NodeTypes;
   metaData?: Metadata;
   settingsComponent?: React.FC;
+  icon?: IconType
 };
 
 export type Action = {
@@ -66,4 +68,5 @@ export type Action = {
   type: Actions;
   nodeType: NodeTypes;
   metaData?: Metadata;
+  icon?: IconType
 };

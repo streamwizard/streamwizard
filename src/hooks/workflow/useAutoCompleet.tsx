@@ -42,12 +42,12 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
   // Effect to handle input events in the editor
   useEffect(() => {
     const editor = editorRef.current;
-    editor?.addEventListener('input', handleInput);
-    editor?.addEventListener('keydown', handleKeyDown);
-  
+    editor?.addEventListener("input", handleInput);
+    editor?.addEventListener("keydown", handleKeyDown);
+
     return () => {
-      editor?.removeEventListener('input', handleInput);
-      editor?.removeEventListener('keydown', handleKeyDown);
+      editor?.removeEventListener("input", handleInput);
+      editor?.removeEventListener("keydown", handleKeyDown);
     };
   }, [filteredPlaceholders, filteredOptions, highlightedIndex, selectedPlaceholder]);
 
@@ -68,40 +68,106 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
 
   // Helper functions
   const extractQuery = (text: string, triggerIndex: number) => {
-    let query = text.substring(triggerIndex + 1).trim(); // Skip the triggerChar
-    const nextSpaceIndex = query.indexOf("");
-    if (nextSpaceIndex !== -1) query = query.substring(0, nextSpaceIndex).trim();
-    return query;
+    let query = text.substring(triggerIndex + 1); // Extract the text after the triggerChar
+    const spaceIndex = query.indexOf(" ");
+
+    if (spaceIndex !== -1) {
+      // If there is a space, return an empty string
+      return "";
+    }
+
+    return query.trim();
   };
 
   const updateEditorContent = (text: string) => {
+    if (!editorRef.current) return;
+
+    const editor = editorRef.current;
+    const selection = window.getSelection();
+    let caretPosition = 0;
+
+    // Save current caret position
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const preCaretRange = range.cloneRange();
+      preCaretRange.selectNodeContents(editor);
+      preCaretRange.setEnd(range.endContainer, range.endOffset);
+      caretPosition = preCaretRange.toString().length;
+    }
+
     // Replace placeholders with HTML spans
     const content = replacePlaceholdersWithSpans(text);
-    if (editorRef.current) {
-      editorRef.current.innerHTML = content;
 
-      // Set the cursor at the end of the content
-      const selection = window.getSelection();
+    // Update the editor content
+    editor.innerHTML = content;
+
+    // Restore caret position
+    const newPosition = restoreCaretPosition(editor, caretPosition);
+
+    // If restoreCaretPosition failed, fall back to placing caret at the end
+    if (newPosition === -1) {
       const range = document.createRange();
-      range.selectNodeContents(editorRef.current);
+      range.selectNodeContents(editor);
       range.collapse(false);
       selection?.removeAllRanges();
       selection?.addRange(range);
+    }
 
-      // Check for the trigger character to open the menu
-      const triggerIndex = text.lastIndexOf(triggerChar);
-      if (triggerIndex !== -1) {
-        const query = extractQuery(text, triggerIndex);
-        setQuery(query);
-        setFilteredPlaceholders(placeholders.filter((p) => p.label.toLowerCase().startsWith(query.toLowerCase())));
-        setOpen(true);
-      } else {
-        setQuery("");
-        setFilteredPlaceholders(placeholders);
-        setOpen(false);
-      }
+    // Check for the trigger character to open the menu
+    const triggerIndex = text.lastIndexOf(triggerChar);
+    if (triggerIndex !== -1) {
+      const query = extractQuery(text, triggerIndex);
+      setQuery(query);
+      setFilteredPlaceholders(placeholders.filter((p) => p.label.toLowerCase().startsWith(query.toLowerCase())));
+      setOpen(true);
+    } else {
+      setQuery("");
+      setFilteredPlaceholders(placeholders);
+      setOpen(false);
     }
   };
+
+  // Helper function to restore caret position
+function restoreCaretPosition(el: HTMLElement, position: number): number {
+  const range = document.createRange();
+  const sel = window.getSelection();
+  
+  let currentPosition = 0;
+  let startNode: Node | null = null;
+  let startOffset = 0;
+
+  function traverseNodes(node: Node): boolean {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const nodeLength = node.nodeValue?.length || 0;
+      if (currentPosition + nodeLength >= position) {
+        startNode = node;
+        startOffset = position - currentPosition;
+        return true;
+      } else {
+        currentPosition += nodeLength;
+      }
+    } else {
+      for (const childNode of Array.from(node.childNodes)) {
+        if (traverseNodes(childNode)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  traverseNodes(el);
+
+  if (startNode) {
+    range.setStart(startNode, startOffset);
+    range.collapse(true);
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    return startOffset;
+  }
+
+  return -1;
+}
 
   const sanitizeContent = (html: string) => {
     const tempDiv = document.createElement("div");
@@ -112,7 +178,7 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
       const nodeId = span.getAttribute("data-node_id");
       const option = span.getAttribute("data-option") || "";
       if (nodeId) {
-        span.replaceWith(`{${nodeId}${option ? `.${option}` : ""}}`);
+        span.replaceWith(`{${nodeId}${option ? `:${option}` : ""}}`);
       }
     });
 
@@ -121,16 +187,25 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
 
   const handleInput = (e: Event) => {
     const target = e.target as HTMLDivElement;
-    const text = target.innerHTML;
+    const text = target.innerText;
 
     // Check for the trigger character to open the menu
     const triggerIndex = text.lastIndexOf(triggerChar);
 
     if (triggerIndex !== -1) {
       const query = extractQuery(text, triggerIndex);
-      setQuery(query);
-      setFilteredPlaceholders(placeholders.filter((p) => p.label.toLowerCase().startsWith(query.toLowerCase())));
-      setOpen(true);
+
+      if (query.length === 0) {
+        // Close the placeholder list if there's a space
+
+        setQuery("");
+        setFilteredPlaceholders([]);
+        setOpen(false);
+      } else {
+        setQuery(query);
+        setFilteredPlaceholders(placeholders.filter((p) => p.label.toLowerCase().startsWith(query.toLowerCase())));
+        setOpen(true);
+      }
     } else {
       setQuery("");
       setFilteredPlaceholders([]);
@@ -148,7 +223,7 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
 
   const handleKeyDown = (e: KeyboardEvent) => {
     let itemList: Placeholder[] | string[];
-  
+
     if (selectedPlaceholder) {
       // Options menu is open
       itemList = filteredOptions;
@@ -156,17 +231,15 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
       // Placeholder menu is open
       itemList = filteredPlaceholders;
     }
-  
+
     if (itemList.length > 0) {
-      if (e.key === 'ArrowDown') {
+      if (e.key === "ArrowDown") {
         setHighlightedIndex((prevIndex) => (prevIndex + 1) % itemList.length);
         e.preventDefault();
-      } else if (e.key === 'ArrowUp') {
-        setHighlightedIndex((prevIndex) =>
-          prevIndex === 0 ? itemList.length - 1 : prevIndex - 1
-        );
+      } else if (e.key === "ArrowUp") {
+        setHighlightedIndex((prevIndex) => (prevIndex === 0 ? itemList.length - 1 : prevIndex - 1));
         e.preventDefault();
-      } else if (e.key === 'Enter') {
+      } else if (e.key === "Enter") {
         if (highlightedIndex >= 0 && highlightedIndex < itemList.length) {
           if (selectedPlaceholder) {
             // Since selectedPlaceholder is not null, itemList is string[]
@@ -181,15 +254,13 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
       }
     }
   };
-  
-
 
   const replacePlaceholdersWithSpans = (text: string) => {
     return text.replace(/{([^}]+)}/g, (match, placeholderContent) => {
       // Replace &nbsp; with an empty string within the placeholder content
 
       // Split the placeholderContent to get label and option
-      const [label, option] = placeholderContent.split(".");
+      const [label, option] = placeholderContent.split(":");
 
       // Find the placeholder by label or ID
       const placeholder = placeholders.find((p) => p.label === label || p.node_id === label);
@@ -200,7 +271,7 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
           placeholder.node_id
         }" data-type="${placeholder.type}" data-uuid="${placeholder.uuid || v4()}" contenteditable="false" data-option="${option || ""}">{${
           placeholder.label
-        }${option ? `.${option}` : ""}}</span>`;
+        }${option ? `:${option}` : ""}}</span>`;
       }
 
       // Return the original match if no placeholder found
@@ -241,6 +312,7 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
 
       const range = selection.getRangeAt(0);
       const triggerIndex = editor.innerHTML.lastIndexOf(triggerChar);
+      let carrotPosition = range.startOffset;
 
       const placeholderUUID = uuidv4();
       const placeholderHTML = `<span class="inline-block cursor-pointer rounded-md bg-muted px-1.5 py-0.5 align-baseline text-sm font-medium" data-node_id="${placeholder.node_id}" data-type="${placeholder.type}" data-uuid="${placeholderUUID}" contenteditable="false">${placeholder.label}</span>`;
@@ -251,15 +323,13 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
       const newRange = document.createRange();
       const newCaretPosition = editor.querySelector(`[data-uuid="${placeholderUUID}"]`)?.nextSibling;
 
+      // set the caret position to the end of the placeholder using the restore caret position function
       if (newCaretPosition) {
-        newRange.setStartAfter(newCaretPosition);
-      } else {
-        newRange.setStartAfter(editor.lastChild as Node);
+        // set the caret position to the end of the placeholder using the restore caret position function
+        restoreCaretPosition(editor, carrotPosition || -1);
       }
-      newRange.collapse(true);
-
-      selection.removeAllRanges();
-      selection.addRange(newRange);
+      
+   
 
       // Store the placeholder in state
       setPlaceholdersState((prev) => ({
@@ -288,7 +358,7 @@ const useAutoCompleteEditor = ({ triggerChar, initialValue, onChange }: UseEdito
         if (placeholderSpan) {
           // Update the placeholder span with the selected option
           placeholderSpan.setAttribute("data-option", option);
-          placeholderSpan.innerHTML = `{${selectedPlaceholder.label}.${option}}`;
+          placeholderSpan.innerHTML = `{${selectedPlaceholder.label}:${option}}`;
 
           // Update the state with the new option for this placeholder
           setPlaceholdersState((prev) => ({
