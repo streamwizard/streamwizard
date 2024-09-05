@@ -1,12 +1,9 @@
-import { Analytics } from "@vercel/analytics/react";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { Toaster } from "sonner";
-import ModalProvider from "@/providers/modal-provider";
+import { ModalProvider } from "@/components/ui/animated-modal";
 
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "StreamWizard", // Replace with a catchy title
@@ -18,7 +15,6 @@ export const metadata: Metadata = {
   },
 
   keywords: ["twitch", "music", "streaming", "interactive", "chat"],
-  
 };
 export default function RootLayout({
   children,

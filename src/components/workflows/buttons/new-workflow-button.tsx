@@ -1,8 +1,8 @@
 "use client";
 import Workflowform from "@/components/forms/workflow-form";
-import Modal from "@/components/global/modal";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Modal, ModalBody, ModalContent, ModalFooter, ModalTrigger } from "@/components/ui/animated-modal";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/utils";
 import React from "react";
 
 type Props = {};
@@ -12,14 +12,12 @@ const WorkflowButton = (props: Props) => {
 
   return (
     <>
-      {
-        <Modal setModal={(e) => setOpen(e)} open={open}>
+      <ModalTrigger className={cn(buttonVariants({ variant: "outline" }))}>New Workflow</ModalTrigger>
+      <ModalBody>
+        <ModalContent className="flex justify-center items-center">
           <Workflowform />
-        </Modal>
-      }
-      <Button size={"icon"} onClick={() => setOpen(true)}>
-        <Plus />
-      </Button>
+        </ModalContent>
+      </ModalBody>
     </>
   );
 };

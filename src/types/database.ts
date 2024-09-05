@@ -8,6 +8,9 @@ export type SpotifyBannedChatterTable = PublicSchema['spotify_banned_chatters'][
 export type SpotifySettingsTable = PublicSchema['spotify_settings']['Row']
 export type SpotifyBannedSongsTable = PublicSchema['spotify_banned_songs']['Row']
 export type TwitchIntegrationTable = PublicSchema['twitch_integration']['Row']
+export type WorkflowTable = PublicSchema['workflows']['Row']
+
+
 
 
 // UPDATE TABELS
@@ -16,6 +19,7 @@ export type UpdateSpotifyBannedSongsTable = PublicSchema['spotify_banned_songs']
 export type UpdateSpotifyBannedChatterTable = PublicSchema['spotify_banned_chatters']['Update']
 export type UpdateTwitchIntegrationTable = PublicSchema['twitch_integration']['Update']
 export type UpdateCommandsTable = PublicSchema['commands']['Update']
+export type UpdateWorkflowTable = PublicSchema['workflows']['Row']
 
 
 
@@ -25,6 +29,7 @@ export type InsertSpotifySettingsTable = PublicSchema['spotify_settings']['Inser
 export type InsertSpotifyBannedSongsTable = PublicSchema['spotify_banned_songs']['Insert']
 export type InserSpotifyBannedChatterTable = PublicSchema['spotify_banned_chatters']['Insert']
 export type InsertTwitchIntegrationTable = PublicSchema['twitch_integration']['Insert']
+export type InsertWorkflowTable = PublicSchema['workflows']['Insert']
 
 
 
