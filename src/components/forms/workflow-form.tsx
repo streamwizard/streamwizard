@@ -10,8 +10,9 @@ import { Button } from "../ui/button";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { WorkflowFormSchema } from "@/schemas/workflow-schema";
-import { onCreateWorkflow } from "@/actions/workflows";
+import { onCreateWorkflow, UpdateWorkflowDetails } from "@/actions/workflows";
 import { WorkflowTable } from "@/types/database";
+import { useModal } from "@/providers/modal-provider";
 
 type Props = {
   title?: string;
@@ -20,7 +21,10 @@ type Props = {
 };
 
 const Workflowform = ({ subTitle, title, workflow }: Props) => {
-  "use no memo"
+  "use no memo";
+  const {closeModal} = useModal()
+
+
   const form = useForm<z.infer<typeof WorkflowFormSchema>>({
     mode: "onChange",
     resolver: zodResolver(WorkflowFormSchema),
@@ -34,11 +38,20 @@ const Workflowform = ({ subTitle, title, workflow }: Props) => {
   const router = useRouter();
 
   const handleSubmit = async (values: z.infer<typeof WorkflowFormSchema>) => {
-    const workflow = await onCreateWorkflow(values.name, values.description);
     if (workflow) {
-      toast.message(workflow.message);
-      router.push(`/dashboard/workflows/editor/${workflow.id}`);
+      toast.promise(UpdateWorkflowDetails({ workflow_id: workflow.id, name: values.name, description: values.description }), {
+        loading: "Updating Details",
+        success: "Workflow Detials has been updated",
+        error: "Failed to update workflow details",
+      });
+    } else {
+      toast.promise(onCreateWorkflow(values.name, values.description), {
+        loading: "Creating workflow...",
+        success: `Workflow ${values.name} has been created`,
+        error: `Failed to create workflow`
+      })
     }
+    closeModal()
   };
 
   useEffect(() => {
@@ -48,7 +61,6 @@ const Workflowform = ({ subTitle, title, workflow }: Props) => {
     }
 
     return () => {
-      console.log("reset form")
       form.setValue("name", "");
       form.setValue("description", "");
     };

@@ -6,6 +6,7 @@ import { SendChatMessageMetaData } from "@/schemas/workflow-node-settings";
 import { EditorCanvasDefaultCardType } from "@/types/workflow";
 import { MdControlPoint, MdOutlineMessage } from "react-icons/md";
 import { RiAdvertisementLine } from "react-icons/ri";
+import { FaBullhorn } from "react-icons/fa";
 
 export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
   Twitch: {
@@ -24,6 +25,14 @@ export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
       },
       {
         id: "",
+        title: "Get Ad Schedule",
+        description: "This endpoint returns ad schedule related information, including snooze, when the last ad was run, when the next ad is scheduled, and if the channel is currently in pre-roll free time.",
+        type: "get_ad_schedule",
+        nodeType: "Action", 
+        icon: RiAdvertisementLine,
+      },
+      {
+        id: "",
         title: "Send Chat Message",
         description: "Sends a message to the broadcaster's chat room.",
         type: "send_chat_message",
@@ -33,6 +42,18 @@ export const EditorCanvasDefaultCard: EditorCanvasDefaultCardType = {
           sender_id: "956066753",
         } as SendChatMessageMetaData,
         icon: MdOutlineMessage,
+      },
+      {
+        id: "",
+        title: "Send Chat Announcement",
+        description: "Sends an announcement to the broadcaster’s chat room.",
+        type: "send_chat_announcement",
+        nodeType: "Action",
+        metaData: {
+          message: "Hello from StreamWizard 🧙",
+          sender_id: "956066753",
+        } as SendChatMessageMetaData,
+        icon: FaBullhorn ,
       },
     ],
 
@@ -67,5 +88,6 @@ export const NodeSettingsComponent = {
   "channel.channel_points_custom_reward_redemption.add": ChannelpointsCustomRewardRedemptionAddSettings,
   custom_reward_update: CustomRewardUpdate,
   send_chat_message: SendChatMessage,
+  "send_chat_announcement": SendChatMessage,
   "default-settings": DefaultSettings,
 };

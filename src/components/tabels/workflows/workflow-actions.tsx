@@ -1,6 +1,7 @@
 "use client";
-import type { CommandTable, WorkflowTable } from "@/types/database";
-import { CommandForm } from "@/components/forms/command-form";
+import { DeleteWorkflow } from "@/actions/workflows";
+import Workflowform from "@/components/forms/workflow-form";
+import { AlertDialogModal } from "@/components/global/alert";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,22 +11,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useModal } from "@/providers/modal-provider";
+import type { WorkflowTable } from "@/types/database";
 import { MoreHorizontal } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
-import { AlertDialogModal } from "@/components/global/alert";
-import { DeleteWorkflow } from "@/actions/workflows";
-import { ModalBody, Modal, ModalContent, ModalTrigger, ModalFooter, useModal } from "@/components/ui/animated-modal";
-import Workflowform from "@/components/forms/workflow-form";
 
 interface Props {
   workflow: WorkflowTable;
 }
 
 export default function WorkflowActions({ workflow }: Props) {
-
   const [alert, setAlert] = React.useState<boolean>(false);
-  const { setOpen, open } = useModal();
+  const { openModal } = useModal();
 
   const handleDelete = () => {
     toast.promise(DeleteWorkflow(workflow.id), {
@@ -37,16 +35,14 @@ export default function WorkflowActions({ workflow }: Props) {
 
   const toggleAlert = () => setAlert(!alert);
 
+  const EditWorkflowDetails = () => {
+    openModal(<Workflowform workflow={workflow} />);
+  };
+
   return (
     <>
       <AlertDialogModal continueFn={handleDelete} open={alert} toggleOpen={toggleAlert} />
-      {/* {open && (
-        <ModalBody>
-          <ModalContent className="flex justify-center items-center">
-            <Workflowform workflow={workflow} />
-          </ModalContent>
-        </ModalBody>
-      )} */}
+
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0 text-right">
@@ -55,14 +51,8 @@ export default function WorkflowActions({ workflow }: Props) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={() => {
-              setOpen(true);
-            }}
-          >
-            Edit workflow details
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setAlert(true)}>Delete Workflow</DropdownMenuItem>
+          <DropdownMenuItem onClick={EditWorkflowDetails}>Edit workflow details</DropdownMenuItem>
+          <DropdownMenuItem onClick={toggleAlert}>Delete Workflow</DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => {

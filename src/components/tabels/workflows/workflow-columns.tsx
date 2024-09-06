@@ -61,6 +61,7 @@ export const WorkflowColumns: ColumnDef<WorkflowTable>[] = [
     cell: ({ row }) => {
       return <div className=" font-medium capitalize">{new Date(row.getValue("created_at")).toLocaleDateString()}</div>;
     },
+    enableSorting: true
   },
   {
     id: "button",

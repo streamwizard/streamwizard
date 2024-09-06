@@ -1,9 +1,7 @@
-import WorkflowCard from "@/components/workflows/cards/wordflow-card";
 import { onGetWorkflows } from "@/actions/workflows";
-import WorkflowButton from "@/components/workflows/buttons/new-workflow-button";
-import { Divide } from "lucide-react";
-import { WorkflowTable } from "@/components/tabels/workflows/workflow-table";
 import { WorkflowColumns } from "@/components/tabels/workflows/workflow-columns";
+import { WorkflowTable } from "@/components/tabels/workflows/workflow-table";
+import WorkflowButton from "@/components/workflows/buttons/new-workflow-button";
 
 type Props = {};
 

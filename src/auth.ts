@@ -34,15 +34,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     signIn: async ({ account, user }) => {
       const hasEvents = await checkTwitchSubscriptions(account!.providerAccountId);
 
+      if (!account) return "/unauthorized";
+
+      await supabaseAdmin
+        .from("twitch_integration")
+        .update({
+          access_token: account?.access_token,
+          refresh_token: account?.refresh_token,
+        })
+        .eq("broadcaster_id", account.providerAccountId.toString());
+
       if (!hasEvents) {
         return "/unauthorized?error=events";
       }
 
-      if(!user.email) return "/unauthorized?error=email";
+      if (!user.email) return "/unauthorized?error=email";
 
       const { data, error } = await supabaseAdmin.from("whitelist").select("*").eq("email", user.email!).single();
 
       if (error) {
+        console.log(error);
         return "/unauthorized?error=not-whitelisted";
       }
 

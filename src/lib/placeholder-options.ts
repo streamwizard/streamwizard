@@ -1,9 +1,6 @@
-
 type PlaceholderTypeKeys = {
-  "channel.channel_points_custom_reward_redemption.add": string[]
+  "channel.channel_points_custom_reward_redemption.add": string[];
 };
-
-
 
 export function getPlaceholderKeys<T extends keyof PlaceholderTypeKeys>(type: string): string[] {
   return placeholderKeys[type as T];
@@ -35,10 +32,12 @@ const placeholderKeys = {
     "broadcaster_user_name",
     "requester_user_id",
     "requester_user_login",
-    "requester_user_name"
+    "requester_user_name",
   ],
 
-  "custom_reward_update": [
+  get_ad_schedule: ["next_ad_at", "last_ad_at", "duration", "preroll_free_time", "snooze_count", "snooze_refresh_at"],
+
+  custom_reward_update: [
     "broadcaster_name",
     "broadcaster_login",
     "broadcaster_id",
@@ -63,6 +62,6 @@ const placeholderKeys = {
     "default_image.url_4x",
     "should_redemptions_skip_request_queue",
     "redemptions_redeemed_current_stream",
-    "cooldown_expires_at"
-  ]
+    "cooldown_expires_at",
+  ],
 };

@@ -11,3 +11,4 @@ export function capitalizeFirstLetter(inputString: string) {
     return match.toUpperCase()
   });
 }
+

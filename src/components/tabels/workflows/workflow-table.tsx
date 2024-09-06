@@ -30,18 +30,16 @@ import {
 import { ChevronDown } from "lucide-react";
 import * as React from "react";
 
-
-
 interface Props {
   columns: ColumnDef<WorkflowTable, any>[];
-  workflow: WorkflowTable[]
+  workflow: WorkflowTable[];
 }
 
 export function WorkflowTable({ columns, workflow }: Props) {
   "use no memo";
   const [sorting, setSorting] = React.useState<SortingState>([
     {
-      id: "workflow",
+      id: "created_at",
       desc: true,
     },
   ]);

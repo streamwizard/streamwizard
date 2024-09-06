@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Trigger } from "@/types/workflow";
 import { Node } from "@xyflow/react";
+import { revalidatePath } from "next/cache";
 
 // get all workflows
 export const onGetWorkflows = async () => {
@@ -79,6 +80,8 @@ export const onCreateWorkflow = async (name: string, description: string) => {
       return { message: "Oops! try again" };
     }
 
+    revalidatePath("/dashboard/workflows");
+
     return { message: "Workflow created", id: workflow.data?.id };
   }
 };
@@ -115,6 +118,25 @@ export const SaveWorkflow = async (flowId: string, nodes: string, edges: string)
     message: "flow saved",
   };
 };
+export const UpdatePulbishStatus = async (workflow_id: string, status: boolean) => {
+  const session = await auth();
+
+  const supabase = createClient(session?.supabaseAccessToken as string);
+
+  // update the trigger event_id
+  const { data, error } = await supabase.from("workflows").update({ publish: status }).eq("id", workflow_id);
+
+  if (error) {
+    console.error(error);
+    return error;
+  }
+
+  revalidatePath("/dashboard/workflows");
+
+  return {
+    message: "flow saved",
+  };
+};
 
 // delete workflow
 export const DeleteWorkflow = async (workflow_id: string) => {
@@ -129,6 +151,42 @@ export const DeleteWorkflow = async (workflow_id: string) => {
       message: "Failed to remove workflow",
     };
   }
+
+  revalidatePath("/dashboard/workflows");
+
+  return {
+    message: "Workflow deleted",
+  };
+};
+
+// update  workflow details
+
+type WorkflowDetails = {
+  workflow_id: string;
+  name: string;
+  description: string;
+};
+
+export const UpdateWorkflowDetails = async ({ workflow_id, description, name }: WorkflowDetails) => {
+  const session = await auth();
+
+  const supabase = createClient(session?.supabaseAccessToken as string);
+
+  const { error } = await supabase
+    .from("workflows")
+    .update({
+      name,
+      description,
+    })
+    .eq("id", workflow_id);
+
+  if (error) {
+    return {
+      message: "Failed to remove workflow",
+    };
+  }
+
+  revalidatePath("/dashboard/workflows");
 
   return {
     message: "Workflow deleted",

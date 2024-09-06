@@ -3,7 +3,7 @@ import type React from "react";
 import { IconType } from "react-icons/lib";
 
 type TwitchTriggersTypes = "channel.channel_points_custom_reward_redemption.add" | "channel.ad_break.begin";
-type TwitchActionsTypes = "custom_reward_update" | "send_chat_message";
+type TwitchActionsTypes = "custom_reward_update" | "send_chat_message" | "get_ad_schedule" | "send_chat_announcement"
 
 type Actions = TwitchActionsTypes | "none";
 type Triggers = TwitchTriggersTypes | "none";
@@ -59,6 +59,7 @@ export type Trigger = {
   metaData?: Metadata;
   settingsComponent?: React.FC;
   icon?: IconType
+  placeholders?: string[]
 };
 
 export type Action = {
@@ -69,4 +70,5 @@ export type Action = {
   nodeType: NodeTypes;
   metaData?: Metadata;
   icon?: IconType
+  placeholders?: string[]
 };

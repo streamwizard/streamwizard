@@ -117,6 +117,7 @@ export const TWITCH_SCOPES = [
   "user:write:chat",
   "user:bot",
   "channel:bot",
+  "moderator:manage:announcements"
 ];
 
 interface IAction {
