@@ -1,3 +1,4 @@
+'use client'
 import { useState, useRef, useEffect } from "react";
 import usePlaceholders from "@/hooks/workflow/usePlaceholders";
 import { v4 as uuidv4, v4 } from "uuid";

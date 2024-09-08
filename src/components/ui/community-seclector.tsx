@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Check, ChevronsUpDown } from 'lucide-react'
-import { cn } from '@/utils/'
+import { cn } from '@/lib/utils'
 
 //TODO: replace this with real data
 const communities = [

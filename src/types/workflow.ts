@@ -2,15 +2,20 @@ import type { Connection, Edge, EdgeChange, Node, NodeChange } from "@xyflow/rea
 import type React from "react";
 import { IconType } from "react-icons/lib";
 
-type TwitchTriggersTypes = "channel.channel_points_custom_reward_redemption.add" | "channel.ad_break.begin";
+type TwitchTriggersTypes = "channel.channel_points_custom_reward_redemption.add" | "channel.ad_break.begin" | "channel.raid"
 type TwitchActionsTypes = "custom_reward_update" | "send_chat_message" | "get_ad_schedule" | "send_chat_announcement"
+ 
 
-type Actions = TwitchActionsTypes | "none";
-type Triggers = TwitchTriggersTypes | "none";
 
-type NodeTypes = "Action" | "Trigger";
+type Actions = TwitchActionsTypes 
+type Triggers = TwitchTriggersTypes 
+
+export type integrationTypes = Actions | Triggers
+
+export type NodeTypes = "Action" | "Trigger";
 
 export type Metadata = Record<string, string>;
+
 
 export type WorkflowEditor = {
   nodes: Node[];
@@ -44,8 +49,8 @@ export type EditorActions =
 
 export type EditorCanvasDefaultCardType = {
   [provider: string]: {
-    Actions: Action[];
-    Triggers: Trigger[];
+    actions: Action[];
+    triggers: Trigger[];
   };
 };
 
@@ -60,6 +65,7 @@ export type Trigger = {
   settingsComponent?: React.FC;
   icon?: IconType
   placeholders?: string[]
+  integration?: string
 };
 
 export type Action = {
@@ -71,4 +77,5 @@ export type Action = {
   metaData?: Metadata;
   icon?: IconType
   placeholders?: string[]
+  integration?: string
 };

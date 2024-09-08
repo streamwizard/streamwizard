@@ -117,57 +117,9 @@ export const TWITCH_SCOPES = [
   "user:write:chat",
   "user:bot",
   "channel:bot",
-  "moderator:manage:announcements"
+  "moderator:manage:announcements",
+  "moderator:manage:shoutouts"
 ];
 
-interface IAction {
-  name: string;
-  value: Actions;
-  user_input: boolean;
-}
-
-export const actions: IAction[] = [
-  {
-    name: "None",
-    user_input: false,
-    value: "none",
-  },
-
-  {
-    name: "Song Request",
-    value: "spotify.song_request",
-    user_input: true,
-  },
-
-  {
-    name: "Skip",
-    value: "spotify.skip",
-    user_input: false,
-  },
-
-  {
-    name: "Ban Chatter",
-    value: "spotify.add_banned_chatter",
-    user_input: true,
-  },
-
-  {
-    name: "Unban Chatter",
-    value: "spotify.remove_banned_chatter",
-    user_input: true,
-  },
-
-  {
-    name: "Ban Song",
-    value: "spotify.add_banned_song",
-    user_input: true,
-  },
-
-  {
-    name: "Unban Song",
-    value: "spotify.remove_banned_song",
-    user_input: true,
-  },
-];
 
 

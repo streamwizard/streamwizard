@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import { Fragment } from 'react'
-import { capitalizeFirstLetter, cn } from '@/utils/'
+import { capitalizeFirstLetter, cn } from '@/lib/utils'
 
 export function Breadcrumb() {
   const path = usePathname().replace('-', ' ')

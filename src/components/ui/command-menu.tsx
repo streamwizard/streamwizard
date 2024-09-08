@@ -13,7 +13,7 @@ import {
   CommandList,
 } from '@/components/ui/command'
 import { menuConfig } from '@/config/menu'
-import { cn } from '@/utils/'
+import { cn } from '@/lib/utils'
 
 export function CommandMenu() {
   const [open, setOpen] = React.useState(false)

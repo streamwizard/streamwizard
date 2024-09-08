@@ -1,10 +1,10 @@
 import { Badge } from "@/components/ui/badge";
 import { DashboardConfig } from "@/types";
-import { cn } from "@/utils/";
 import { Crown } from "lucide-react";
 import Link from "next/link";
 import { DashboardUserNav } from "./DashboardUserNav";
 import { Database } from "@/types/supabase";
+import { cn } from "@/lib/utils";
 
 interface Props {
   config: DashboardConfig;
@@ -12,8 +12,6 @@ interface Props {
 }
 
 export function SidebarNav({ config, user }: Props) {
-  
-
   return (
     <>
       <section className="flex flex-row, justify-between h-full w-full">

@@ -7,8 +7,8 @@ import { MdOutlineMessage } from "react-icons/md";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { useEditor } from "@/hooks/UseWorkflowEditor";
-import { cn } from "@/lib/utils";
-import { Action } from "@/types/workflow";
+import { cn, getNode } from "@/lib/utils";
+import { Action, integrationTypes, NodeTypes } from "@/types/workflow";
 import { Position, useNodeId } from "@xyflow/react";
 import clsx from "clsx";
 import { Zap } from "lucide-react";
@@ -18,7 +18,6 @@ const EditorCanvasCardSingle = ({ data }: { data: Action }) => {
   const [isSelcted, setIsSelected] = useState(false);
   const nodeId = useNodeId();
 
-
   useEffect(() => {
     if (state.editor.selectedNode) {
       setIsSelected(state.editor.selectedNode.id === nodeId);
@@ -27,6 +26,21 @@ const EditorCanvasCardSingle = ({ data }: { data: Action }) => {
 
   // TODO: Implement handleDelete
   const handleDelete = () => {};
+
+  const Icon = () => {
+    const nodeType = data.nodeType as NodeTypes;
+    const integration = data.integration as unknown as string;
+    const integrationType = data.type as integrationTypes;
+
+    const Node = getNode({
+      integration,
+      integrationType,
+      nodeType,
+    });
+
+
+    return Node?.icon ? <Node.icon size={30}  /> : <Zap size={30} />
+  };
 
   return (
     <ContextMenu>
@@ -38,7 +52,9 @@ const EditorCanvasCardSingle = ({ data }: { data: Action }) => {
           })}
         >
           <CardHeader className="flex flex-row items-center gap-4">
-            <div>{data.icon ? <data.icon size={30}  /> : <Zap size={30} />}</div>
+            <div>
+              <Icon />
+            </div>
             <div>
               <CardTitle className="text-md">{data.title}</CardTitle>
               <CardDescription>

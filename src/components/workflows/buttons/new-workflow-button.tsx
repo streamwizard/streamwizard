@@ -1,8 +1,8 @@
 "use client";
 import Workflowform from "@/components/forms/workflow-form";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useModal } from "@/providers/modal-provider";
-import { cn } from "@/utils";
 import React from "react";
 
 type Props = {};

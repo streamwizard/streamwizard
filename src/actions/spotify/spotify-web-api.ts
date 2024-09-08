@@ -1,6 +1,6 @@
 "use server";
 
-import { SpotifyWebAPi } from "@/config/axios/spotify-web-api";
+import { SpotifyWebAPi } from "@/lib/axios/spotify-web-api";
 import { SearchResponse } from "@/types/API/spotify-web-api";
 import { createClient } from "@/lib/supabase/server";
 import { auth } from "@/auth";

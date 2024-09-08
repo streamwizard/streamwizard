@@ -12,7 +12,6 @@ import useCommands from "@/hooks/useCommands";
 import { CommandSchema } from "@/schemas/command-schema";
 import { Textarea } from "../ui/textarea";
 import { CommandTable } from "@/types/database";
-import { actions } from "@/lib/constant";
 
 interface Props {
   setModal: (value: boolean) => void;

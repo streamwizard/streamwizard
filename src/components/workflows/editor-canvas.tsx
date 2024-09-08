@@ -36,11 +36,11 @@ const defaultEdgeOptions: DefaultEdgeOptions = {
 const onNodeDrag: OnNodeDrag = (_, node) => {};
 
 function getActionByProviderAndType(providerName: string, actionType: string) {
-  return EditorCanvasDefaultCard[providerName].Actions.find((action) => action.type === actionType);
+  return EditorCanvasDefaultCard[providerName].actions.find((action) => action.type === actionType);
 }
 
 function getTriggerByProviderAndName(providerName: string, triggerName: string) {
-  return EditorCanvasDefaultCard[providerName]?.Triggers.find((trigger) => trigger.type === triggerName);
+  return EditorCanvasDefaultCard[providerName]?.triggers.find((trigger) => trigger.type === triggerName);
 }
 
 export default function WorkflowEditorCanvas() {
@@ -70,15 +70,15 @@ export default function WorkflowEditorCanvas() {
       // split the type to get the type of the node
       const typeArr = type.split(":");
 
-      const Provider = typeArr.at(0);
+      const integration = typeArr.at(0);
       const NodeType = typeArr.at(1);
 
-      if (!Provider || !NodeType) return;
+      if (!integration || !NodeType) return;
 
-      let nodeObj: Trigger | Action | undefined = getActionByProviderAndType(Provider, NodeType);
+      let nodeObj: Trigger | Action | undefined = getActionByProviderAndType(integration, NodeType);
 
       if (!nodeObj) {
-        nodeObj = getTriggerByProviderAndName(Provider, NodeType);
+        nodeObj = getTriggerByProviderAndName(integration, NodeType);
       }
 
       if (!nodeObj) {
@@ -109,8 +109,14 @@ export default function WorkflowEditorCanvas() {
         data: {
           ...nodeObj,
           id: id,
+          integration: integration.toLowerCase(),
         },
       };
+
+      delete newNode.data.placeholders;
+      delete newNode.data.icon;
+
+      // console.log(newNode)
 
       dispatch({ type: "ADD_NODE", payload: { node: newNode } });
     },
@@ -141,9 +147,6 @@ export default function WorkflowEditorCanvas() {
     setIsWorkFlowLoading(true);
     const response = await getWorkflowByID(pathname.split("/").pop()!);
     if (response && response.nodes && response.edges) {
-      console.log(response);
-
-
       const nodes = JSON.parse(response.nodes!);
       const edges = JSON.parse(response.edges!);
       dispatch({ type: "LOAD_DATA", payload: { nodes, edges } });
@@ -201,7 +204,7 @@ export default function WorkflowEditorCanvas() {
                 onNodesDelete={handleDelete}
                 onNodeClick={(e, node) => onNodeClick(e, node)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Backspace') {
+                  if (e.key === "Backspace") {
                     e.preventDefault(); // Prevent the default behavior (deleting nodes)
                   }
                 }}

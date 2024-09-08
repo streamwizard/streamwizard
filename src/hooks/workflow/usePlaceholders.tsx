@@ -1,8 +1,8 @@
 "use client";
-import { use, useEffect, useState } from "react";
+import { getNode } from "@/lib/utils";
+import { integrationTypes, NodeTypes } from "@/types/workflow";
+import { useEffect, useState } from "react";
 import { useEditor } from "../UseWorkflowEditor";
-import { getPlaceholderKeys } from "@/lib/placeholder-options";
-import { v4 } from "uuid";
 
 interface Placeholder {
   node_id: string;
@@ -22,12 +22,24 @@ export default function usePlaceholders() {
 
   useEffect(() => {
     if (parentNodes) {
-      const placeholders: Placeholder[] = parentNodes.map((node) => {
+      const placeholders = parentNodes.map((node) => {
+        // console.log(node)
+
+        const nodeType = node.type as NodeTypes;
+        const integration = node.data.integration as string;
+        const integrationType = node.data.type as integrationTypes;
+
+        const Node = getNode({
+          integrationType,
+          nodeType,
+          integration,
+        });
+
         return {
           node_id: node.id,
           label: node.data.title as string,
           type: node.data.type as string,
-          options: getPlaceholderKeys(node.data.type as string) || [],
+          options: (Node?.placeholders as string[]) || [],
         };
       });
 

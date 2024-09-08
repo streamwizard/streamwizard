@@ -1,5 +1,5 @@
 "use server";
-import { TwitchAPI } from "@/config/axios/twitch-api";
+import { TwitchAPI } from "@/lib/axios/twitch-api";
 import { ChannelPointSchema } from "@/schemas/channelpoint-schema";
 import { ChannelSearchResults, TwitchChannelPointsResponse, TwitchChannelPointsReward, getTwitchUserResponse } from "@/types/API/twitch";
 import { createClient } from "@/lib/supabase/server";

@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from "@/utils";
+import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import React, { createContext, useState, useContext, useCallback, ReactNode, useEffect } from "react";
 import { MdClose } from "react-icons/md";

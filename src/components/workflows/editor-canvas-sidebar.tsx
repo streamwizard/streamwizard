@@ -4,12 +4,10 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEditor } from "@/hooks/UseWorkflowEditor";
-import { onDragStart } from "@/lib/editor-utils";
-import EditorCanvasIconHelper from "./editor-canvas-card-icon-hepler";
-import RenderOutputAccordion from "./render-output-accordian";
 import { EditorCanvasDefaultCard, NodeSettingsComponent } from "@/lib/workflow-const";
-import { useEffect } from "react";
 import { Zap } from "lucide-react";
+import RenderOutputAccordion from "./render-output-accordian";
+import { onDragStart } from "@/lib/utils";
 
 export default function WorkflowCanvasSidebar() {
   const { state, handleSave, dispatch } = useEditor();
@@ -36,14 +34,14 @@ export default function WorkflowCanvasSidebar() {
         <Separator />
         <div className="h-full overflow-scroll pb-14">
           <TabsContent value="triggers">
-            {Object.entries(EditorCanvasDefaultCard).map(([provider, ProviderValues]) => (
-              <Accordion key={provider} type="multiple">
+            {Object.entries(EditorCanvasDefaultCard).map(([provider, ProviderValues], index) => (
+              <Accordion key={index} type="multiple">
                 <AccordionItem value="Options" className="px-2">
                   <AccordionTrigger className="!no-underline">{provider}</AccordionTrigger>
                   <AccordionContent>
-                    {ProviderValues.Triggers.map((Trigger) => (
+                    {ProviderValues.triggers.map((Trigger, index) => (
                       <Card
-                        key={Trigger.title}
+                        key={index}
                         draggable
                         onDragStart={(e) => onDragStart(e, Trigger.type, provider)}
                         className="flex flex-row items-center p-4 my-4 cursor-pointer"
@@ -61,26 +59,24 @@ export default function WorkflowCanvasSidebar() {
             ))}
           </TabsContent>
           <TabsContent value="actions">
-            {Object.entries(EditorCanvasDefaultCard).map(([provider, ProviderValues]) => (
-              <Accordion key={provider} type="multiple">
+            {Object.entries(EditorCanvasDefaultCard).map(([provider, ProviderValues], index) => (
+              <Accordion key={index} type="multiple">
                 <AccordionItem value="Options" className="px-2">
                   <AccordionTrigger className="!no-underline">{provider}</AccordionTrigger>
                   <AccordionContent>
-                    {ProviderValues.Actions.map((action) => (
-                      <>
-                        <Card
-                          key={action.title}
-                          draggable
-                          onDragStart={(e) => onDragStart(e, action.type, provider)}
-                          className="flex flex-row items-center p-4 my-4 cursor-pointer"
-                        >
-                          <div>{action.icon ? <action.icon size={30} /> : <Zap size={30} />}</div>
-                          <CardHeader>
-                            <CardTitle>{action.title}</CardTitle>
-                            <CardDescription>{action.description}</CardDescription>
-                          </CardHeader>
-                        </Card>
-                      </>
+                    {ProviderValues.actions.map((action, index) => (
+                      <Card
+                        key={index}
+                        draggable
+                        onDragStart={(e) => onDragStart(e, action.type, provider)}
+                        className="flex flex-row items-center p-4 my-4 cursor-pointer"
+                      >
+                        <div>{action.icon ? <action.icon size={30} /> : <Zap size={30} />}</div>
+                        <CardHeader>
+                          <CardTitle>{action.title}</CardTitle>
+                          <CardDescription>{action.description}</CardDescription>
+                        </CardHeader>
+                      </Card>
                     ))}
                   </AccordionContent>
                 </AccordionItem>
