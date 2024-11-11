@@ -4,14 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
-  console.log("twitch callback called");
-
-  const { searchParams, origin } = new URL(request.url);
+  let { searchParams, origin } = new URL(request.url);
   const forwardedHost = request.headers.get("x-forwarded-host"); // original origin before load balancer
 
-  console.log(`forwardedHost: ${forwardedHost}`);
-
-  console.log(`origin in callback: ${origin}`);
+  if (forwardedHost) {
+    origin = `https://${forwardedHost}`;
+  }
 
   const code = searchParams.get("code");
   // if "next" is in param, use it as the redirect URL
@@ -56,8 +54,6 @@ export async function GET(request: Request) {
 
     if (!error) {
       const forwardedHost = request.headers.get("x-forwarded-host"); // original origin before load balancer
-
-      console.log(`forwardedHost: ${forwardedHost}`);
 
       const isLocalEnv = process.env.NODE_ENV === "development";
       if (isLocalEnv) {
