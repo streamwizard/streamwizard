@@ -13,6 +13,8 @@ export async function login() {
   const headersList = await headers();
   const origin = headersList.get("origin");
 
+  console.log(`orgin: ${origin}`);
+
   const { error, data } = await supabase.auth.signInWithOAuth({
     provider: "twitch",
     options: {
