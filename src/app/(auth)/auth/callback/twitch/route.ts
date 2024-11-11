@@ -2,14 +2,17 @@ import { NextResponse } from "next/server";
 // The client you created from the Server-Side Auth instructions
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { env } from "process";
 
 export async function GET(request: Request) {
   let { searchParams, origin } = new URL(request.url);
   const forwardedHost = request.headers.get("x-forwarded-host"); // original origin before load balancer
 
-  if (forwardedHost) {
+  if (forwardedHost && env.NODE_ENV !== "development") {
     origin = `https://${forwardedHost}`;
   }
+
+
 
   const code = searchParams.get("code");
   // if "next" is in param, use it as the redirect URL
@@ -28,14 +31,23 @@ export async function GET(request: Request) {
       .from("whitelist")
       .select("email")
       .eq("email", data.session?.user.email!)
-      .eq("whitelisted", true);
+      .eq("whitelisted", true)
+      .single();
 
-    if (whitelistError) {
-      console.log(whitelistError);
-      return NextResponse.redirect(`${origin}/unauthorized`);
-    }
 
-    if (!whitelistData || whitelistData.length === 0) {
+    console.log("whitelist data", whitelistData);
+
+    if (whitelistError || !whitelistData) {
+      if (whitelistError) {
+        console.error(whitelistError);
+      }
+
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error(error);
+      }
+
       return NextResponse.redirect(`${origin}/unauthorized`);
     }
 
