@@ -4,11 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
-
   console.log("twitch callback called");
 
-
   const { searchParams, origin } = new URL(request.url);
+  const forwardedHost = request.headers.get("x-forwarded-host"); // original origin before load balancer
+
+  console.log(`forwardedHost: ${forwardedHost}`);
 
   console.log(`origin in callback: ${origin}`);
 
@@ -24,12 +25,12 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
 
-
     // check if the user is in the whitelist
     const { data: whitelistData, error: whitelistError } = await supabaseAdmin
       .from("whitelist")
       .select("email")
-      .eq("email", data.session?.user.email!).eq("whitelisted", true)
+      .eq("email", data.session?.user.email!)
+      .eq("whitelisted", true);
 
     if (whitelistError) {
       console.log(whitelistError);
