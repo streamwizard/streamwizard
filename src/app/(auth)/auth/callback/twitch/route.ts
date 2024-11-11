@@ -4,6 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(request: Request) {
+
+  console.log("twitch callback called");
+
+
+
+
   const { searchParams, origin } = new URL(request.url);
 
   const code = searchParams.get("code");
