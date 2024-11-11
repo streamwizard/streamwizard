@@ -10,8 +10,10 @@ import React from "react";
 export default async function ClipsPage({ searchParams }: { searchParams: Promise<{ [key: string]: string | undefined }> }) {
   const supabase = await createClient();
 
+  const { data: user } = await supabase.auth.getUser();
+
   // Destructure and parse filter values from searchParams
-  const { game_id, creator_id, is_featured, end_date, start_date, search_query, page } = await searchParams;
+  const { game_id, creator_id, is_featured, end_date, start_date, search_query, page, broadcaster_id } = await searchParams;
 
   // Build the Supabase query with filters
   let query = supabase.from("clips").select("*", { count: "exact" }).limit(100).order("created_at_twitch", { ascending: false });
@@ -22,6 +24,9 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   if (start_date) query = query.gte("created_at_twitch", start_date);
   if (end_date) query = query.lte("created_at_twitch", end_date);
   if (search_query) query = query.ilike("title", `%${search_query}%`);
+
+  // if there is a broadcaster_id, add it to the query otherwise use the broadcaster_id from the user
+  query = broadcaster_id ? query.eq("broadcaster_id", broadcaster_id) : query.eq("user_id", user?.user?.id!) 
 
   // Set pagination parameters
   const pageIndex = page ? parseInt(page) : 1;

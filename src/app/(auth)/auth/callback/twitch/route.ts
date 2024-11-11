@@ -33,8 +33,6 @@ export async function GET(request: Request) {
       .eq("whitelisted", true)
       .single();
 
-    console.log("whitelist data", whitelistData);
-
     if (whitelistError || !whitelistData) {
       if (whitelistError) {
         console.error(whitelistError);
