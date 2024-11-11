@@ -69,7 +69,7 @@ export async function fetchAndFormatTwitchClips(accessToken: string, broadcaster
   // fetch the clips
   const res = await TwitchAPI.get<TwitchClipResponse>("/clips", {
     params: {
-      broadcaster_id: "121860548",
+      broadcaster_id: broadcasterId,
       first: batchSize,
       after: cursor,
     },
