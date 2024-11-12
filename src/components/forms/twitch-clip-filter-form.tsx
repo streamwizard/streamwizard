@@ -72,6 +72,7 @@ export default function TwitchClipSearchForm() {
   "use no memo";
   const router = useRouter();
   const searchParams = useSearchParams();
+  const broadcaster_id = searchParams.get("broadcaster_id");
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -85,6 +86,7 @@ export default function TwitchClipSearchForm() {
     },
   });
 
+  // Handle form submission
   function onSubmit(values: FormValues) {
     const params = new URLSearchParams();
     if (values.game_id) params.set("game_id", values.game_id);
@@ -93,8 +95,20 @@ export default function TwitchClipSearchForm() {
     if (values.end_date) params.set("end_date", values.end_date);
     if (values.isFeatured) params.set("is_featured", "true");
     if (values.searchQuery) params.set("search_query", values.searchQuery);
+    if (broadcaster_id) params.set("broadcaster_id", broadcaster_id!);
 
     router.push(`?${params.toString()}`);
+  }
+
+  // handle reset
+  function onReset() {
+    form.reset();
+    // if there is a broadcaster id save it in the search params
+    if (broadcaster_id) {
+      router.push(`?broadcaster_id=${broadcaster_id}`);
+      return;
+    }
+    router.push("?");
   }
 
   return (
@@ -167,10 +181,7 @@ export default function TwitchClipSearchForm() {
           <Button
             type="button"
             variant={"outline"}
-            onClick={() => {
-              form.reset();
-              router.push("?");
-            }}
+            onClick={onReset}
             className="w-full"
           >
             reset filters
