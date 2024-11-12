@@ -1,12 +1,12 @@
 import { DashboardConfig } from "@/types/sidebar";
 
-import { Clapperboard, LayoutGrid } from "lucide-react";
+import { AreaChart, Clapperboard, LayoutGrid } from "lucide-react";
 // import { BiMoviePlay } from "react-icons/bi";
 export const dashboardConfig: DashboardConfig = {
   overview: {
     routes: [
       {
-        label: "Overview",
+        label: "Clip Overview",
         href: "/dashboard/",
         icon: Clapperboard,
         beta: true,
@@ -31,7 +31,7 @@ export const dashboardConfig: DashboardConfig = {
   //     {
   //       label: 'Admin Panel',
   //       href: '/dashboard/admin',
-  //       icon: Lock,
+  //       icon: AreaChart,
   //     },
   //     {
   //       label: 'Analytics',
