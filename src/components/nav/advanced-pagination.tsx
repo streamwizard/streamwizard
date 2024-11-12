@@ -12,7 +12,6 @@ interface PaginationProps {
 
 export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: PaginationProps) {
   const [currentPage, setCurrentPage] = useState(initialPage)
-  const params = useSearchParams()
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -31,7 +30,7 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
     params.set('page', newPage.toString())
     
     // Push the new URL with updated page, keeping other params intact
-    router.push(`/dashboard/clips?${params.toString()}`)
+    router.push(`/dashboard/?${params.toString()}`)
   }
 
 
