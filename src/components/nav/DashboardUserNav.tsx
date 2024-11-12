@@ -40,16 +40,16 @@ export function DashboardUserNav({ username, profile_img }: { username: string; 
             <p className="truncate text-xs leading-none text-muted-foreground">powerd by streamwizard</p>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
+        {/* <DropdownMenuSeparator /> */}
+        {/* <DropdownMenuGroup>
           <Link href="/">
             <DropdownMenuItem className="cursor-pointer">
               <LinkIcon className="mr-2 h-3 w-3" />
               Home
             </DropdownMenuItem>
           </Link>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
+        </DropdownMenuGroup> */}
+        {/* <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem className="cursor-pointer" asChild>
             <Link href="/dashboard/settings">
@@ -63,8 +63,8 @@ export function DashboardUserNav({ username, profile_img }: { username: string; 
               Privacy
             </Link>
           </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
+        </DropdownMenuGroup> */}
+        {/* <DropdownMenuSeparator /> */}
         <DropdownMenuItem className="text-destructive hover:cursor-pointer focus:bg-destructive focus:text-destructive-foreground" onClick={signOut}>
           <LogOut className="mr-2 h-3 w-3" />
           Log out
