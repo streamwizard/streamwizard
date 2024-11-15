@@ -53,23 +53,23 @@ export async function SyncBroadcasterClips(): Promise<returnObject> {
   }
 
   // Update last sync time
-  // const { error: updateError } = await supabase.from("twitch_clip_syncs").upsert(
-  //   {
-  //     last_sync: currentTime.toISOString(),
-  //     user_id: userData.user.id,
-  //     sync_status: "syncing",
-  //     clip_count: 0,
-  //   },
-  //   {
-  //     onConflict: "user_id", // Specify the column to use for conflict resolution
-  //   }
-  // );
+  const { error: updateError } = await supabase.from("twitch_clip_syncs").upsert(
+    {
+      last_sync: currentTime.toISOString(),
+      user_id: userData.user.id,
+      sync_status: "syncing",
+      clip_count: 0,
+    },
+    {
+      onConflict: "user_id", // Specify the column to use for conflict resolution
+    }
+  );
 
-  // // throw a new error when there is an error updating the last sync
-  // if (updateError) {
-  //   console.error("Error updating last sync:", updateError);
-  //   throw new Error("Error updating sync status");
-  // }
+  // throw a new error when there is an error updating the last sync
+  if (updateError) {
+    console.error("Error updating last sync:", updateError);
+    throw new Error("Error updating sync status");
+  }
 
   // Sync clips
   try {
