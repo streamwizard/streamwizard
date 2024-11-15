@@ -3,7 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { syncTwitchClips } from "@/server/twitch/clips";
 import { revalidatePath } from "next/cache";
 
-export async function SyncBroadcasterClips() {
+interface returnObject {
+  message: string;
+  success: boolean;
+}
+
+export async function SyncBroadcasterClips(): Promise<returnObject> {
+
+  
   const supabase = await createClient();
 
   // Fetch the last sync timestamp
@@ -32,7 +39,10 @@ export async function SyncBroadcasterClips() {
     // Check if lastSync is older than one hour ago if so return a message to the user
     if (lastSync > oneHourAgo) {
       const timeRemaining = 60 - Math.floor((currentTime.getTime() - lastSync.getTime()) / (60 * 1000));
-      throw (`Sorry, you can sync again in ${timeRemaining} minutes.`);
+      return {
+        message: `Last sync was ${timeRemaining} minutes ago`,
+        success: false,
+      };
     }
   }
 
@@ -75,17 +85,19 @@ export async function SyncBroadcasterClips() {
       .eq("user_id", userData.user.id);
 
     if (updateError) {
-      console.error("Error updating sync status:", updateError);
       throw new Error("Error updating sync status");
     }
     revalidatePath("/dashboard/clips", "page");
-    return `Success syncing ${totalClips} clips. Next sync available in 60 minutes.`;
+
+    return {
+      message: `Success syncing ${totalClips} clips. Next sync available in 60 minutes.`,
+      success: true,
+    };
   } catch (error) {
     // Update sync status to failed
     const { error: updateError } = await supabase.from("twitch_clip_syncs").update({ sync_status: "failed" }).eq("user_id", userData.user.id);
 
     if (updateError) {
-      console.error("Error updating sync status:", updateError);
       throw new Error("Error updating sync status");
     }
 
