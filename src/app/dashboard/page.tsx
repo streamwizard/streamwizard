@@ -48,7 +48,6 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
     count = 0;
   }
 
-
   const maxPage = Math.ceil(count! / pageSize);
 
   return (
@@ -62,7 +61,10 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
             ))}
           </div>
 
-          <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
+          <div className="flex justify-between items-center">
+            <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
+            <p className="text-sm text-muted-foreground">Showing {data.length} of {count} clips</p>
+          </div>
         </>
       ) : (
         <div className="flex flex-col items-center justify-center h-[50vh] p-4 space-y-4">
