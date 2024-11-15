@@ -8,9 +8,7 @@ interface returnObject {
   success: boolean;
 }
 
-export async function SyncBroadcasterClips(): Promise<returnObject> {
-
-  
+export async function SyncBroadcasterClips(): Promise<returnObject> { 
   const supabase = await createClient();
 
   // Fetch the last sync timestamp
