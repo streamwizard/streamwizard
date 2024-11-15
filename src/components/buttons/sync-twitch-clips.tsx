@@ -6,25 +6,29 @@ import { toast } from "sonner";
 import LoadingSpinner from "../global/loading";
 import { Button } from "../ui/button";
 
-
-
 export default function SyncTwitchClipsButton() {
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
 
   const handleSyncTwitchClips = () => {
     setIsLoading(true);
-    toast.promise(SyncBroadcasterClips(), {
-      loading: "Syncing Twitch Clips",
-      success(data) {
-        return data;
-      },
-      error(error) {
-        return error?.message;
-      },
-      finally() {
-        setIsLoading(false);
-      },
-    });
+
+    toast.promise(
+      SyncBroadcasterClips().then((response) => {
+        if (!response.success) {
+          throw new Error(response.message);
+        }
+        return response.message;
+      }),
+      {
+        loading: "Syncing Twitch Clips",
+        success: (message) => message,
+        error: (error) => {
+          if (error.message) return error.message;
+          return `Error syncing Twitch Clips`;
+        },
+        finally: () => setIsLoading(false),
+      }
+    );
   };
 
   return (
