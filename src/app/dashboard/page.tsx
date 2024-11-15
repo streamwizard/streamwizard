@@ -26,7 +26,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   if (search_query) query = query.ilike("title", `%${search_query}%`);
 
   // if there is a broadcaster_id, add it to the query otherwise use the broadcaster_id from the user
-  query = broadcaster_id ? query.eq("broadcaster_id", broadcaster_id) : query.eq("user_id", user?.user?.id!) 
+  query = broadcaster_id ? query.eq("broadcaster_id", broadcaster_id) : query.eq("user_id", user?.user?.id!);
 
   // Set pagination parameters
   const pageIndex = page ? parseInt(page) : 1;
@@ -37,10 +37,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   // Add the range to the query
   query = query.range(from, to);
 
-  const res = await query;
-
-  const { data, error } = res;
-  let count = res.count;
+  let { data, error, count } = await query;
 
   if (error) {
     console.error(error);
@@ -50,6 +47,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   if (!count) {
     count = 0;
   }
+
 
   const maxPage = Math.ceil(count! / pageSize);
 

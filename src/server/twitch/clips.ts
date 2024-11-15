@@ -21,10 +21,19 @@ export async function syncTwitchClips() {
     throw new Error("Twitch integration not found for user");
   }
 
+  // delete all clips from the database
+  const { error: deleteError } = await supabase
+    .from("clips")
+    .delete()
+    .eq("user_id", integration.user_id)
+    .eq("broadcaster_id", integration.twitch_user_id);
+
+  if (deleteError) {
+    throw new Error(`Failed to delete clips: ${deleteError.message}`);
+  }
+
   // loop until there are no more clips
   while (hasMoreClips) {
-    console.log(`Syncing clips...`);
-
     const clipsResponse = await fetchAndFormatTwitchClips(integration.access_token, integration.twitch_user_id, cursor);
 
     if (!clipsResponse) {
