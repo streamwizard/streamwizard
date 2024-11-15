@@ -18,6 +18,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   // Build the Supabase query with filters
   let query = supabase.from("clips").select("*", { count: "exact" }).limit(100).order("created_at_twitch", { ascending: false });
 
+  // Apply filters
   if (game_id) query = query.eq("game_id", game_id);
   if (creator_id) query = query.eq("creator_id", creator_id);
   if (is_featured !== undefined) query = query.eq("is_featured", is_featured);
