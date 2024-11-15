@@ -32,7 +32,7 @@ export async function SyncBroadcasterClips() {
     // Check if lastSync is older than one hour ago if so return a message to the user
     if (lastSync > oneHourAgo) {
       const timeRemaining = 60 - Math.floor((currentTime.getTime() - lastSync.getTime()) / (60 * 1000));
-      throw new Error(`Sorry, you can sync again in ${timeRemaining} minutes.`);
+      throw (`Sorry, you can sync again in ${timeRemaining} minutes.`);
     }
   }
 
