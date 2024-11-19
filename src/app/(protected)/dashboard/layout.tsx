@@ -26,19 +26,17 @@ export default async function layout({
   }
 
   return (
-    <SessionProvider session={data.user}>
-      <div className="flex">
-        <Sidebar>
-          <SidebarNav config={dashboardConfig} user={data.user} />
-        </Sidebar>
-        <div className="w-full">
-          <DashboardNav />
-          <div className="h-[calc(100vh-60px)] overflow-x-hidden  pb-10">
-            <Breadcrumb />
-            <div className="mx-auto px-10">{children}</div>
-          </div>
+    <div className="flex">
+      <Sidebar>
+        <SidebarNav config={dashboardConfig} user={data.user} />
+      </Sidebar>
+      <div className="w-full">
+        <DashboardNav />
+        <div className="h-[calc(100vh-60px)] overflow-x-hidden ">
+          {/* <Breadcrumb /> */}
+          <div className="mx-auto p-5 h-full" >{children}</div>
         </div>
       </div>
-    </SessionProvider>
+    </div>
   );
 }
