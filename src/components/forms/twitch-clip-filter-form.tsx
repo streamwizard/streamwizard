@@ -92,7 +92,7 @@ export default function TwitchClipSearchForm() {
     },
   });
 
-
+  // listen for changes in the search params
   useEffect(() => {
     form.reset({
       game_id: searchParams.get("game_id") || "",
@@ -104,8 +104,6 @@ export default function TwitchClipSearchForm() {
       broadcaster_id: searchParams.get("broadcaster_id") || "",
     });
   }, [searchParams]);
-
-
 
   // Handle form submission
   function onSubmit(values: FormValues) {
