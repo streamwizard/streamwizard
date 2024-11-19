@@ -17,6 +17,7 @@ import TwitchCategorySearch from "../search-bars/twitch-category-search";
 import TwitchSearchBar from "../search-bars/twitch-channel-search";
 import SyncTwitchClipsButton from "../buttons/sync-twitch-clips";
 import { useSession } from "@/providers/session-provider";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   game_id: z.string().optional(),
@@ -90,6 +91,21 @@ export default function TwitchClipSearchForm() {
       broadcaster_id: searchParams.get("broadcaster_id") || "",
     },
   });
+
+
+  useEffect(() => {
+    form.reset({
+      game_id: searchParams.get("game_id") || "",
+      creator_id: searchParams.get("creator_id") || "",
+      start_date: searchParams.get("start_date") || "",
+      end_date: searchParams.get("end_date") || "",
+      isFeatured: searchParams.get("isFeatured") === "true",
+      searchQuery: searchParams.get("search_query") || "",
+      broadcaster_id: searchParams.get("broadcaster_id") || "",
+    });
+  }, [searchParams]);
+
+
 
   // Handle form submission
   function onSubmit(values: FormValues) {
