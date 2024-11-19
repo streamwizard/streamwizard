@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import TwitchCategorySearch from "../search-bars/twitch-category-search";
 import TwitchSearchBar from "../search-bars/twitch-channel-search";
 import SyncTwitchClipsButton from "../buttons/sync-twitch-clips";
+import { useSession } from "@/providers/session-provider";
 
 const formSchema = z.object({
   game_id: z.string().optional(),
@@ -24,6 +25,7 @@ const formSchema = z.object({
   end_date: z.string().optional(),
   isFeatured: z.boolean().default(false),
   searchQuery: z.string().optional(),
+  broadcaster_id: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -74,6 +76,8 @@ export default function TwitchClipSearchForm() {
   const searchParams = useSearchParams();
   const broadcaster_id = searchParams.get("broadcaster_id");
 
+  const { user_metadata } = useSession();
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -83,6 +87,7 @@ export default function TwitchClipSearchForm() {
       end_date: searchParams.get("end_date") || "",
       isFeatured: searchParams.get("isFeatured") === "true",
       searchQuery: searchParams.get("search_query") || "",
+      broadcaster_id: searchParams.get("broadcaster_id") || "",
     },
   });
 
@@ -95,7 +100,7 @@ export default function TwitchClipSearchForm() {
     if (values.end_date) params.set("end_date", values.end_date);
     if (values.isFeatured) params.set("is_featured", "true");
     if (values.searchQuery) params.set("search_query", values.searchQuery);
-    if (broadcaster_id) params.set("broadcaster_id", broadcaster_id!);
+    if (values.broadcaster_id) params.set("broadcaster_id", values.broadcaster_id);
 
     router.push(`?${params.toString()}`);
   }
@@ -103,7 +108,7 @@ export default function TwitchClipSearchForm() {
   // handle reset
   function onReset() {
     form.reset();
-    // if there is a broadcaster id save it in the search params
+    // if there is a broadcaster id leave it the search params
     if (broadcaster_id) {
       router.push(`?broadcaster_id=${broadcaster_id}`);
       return;
@@ -114,19 +119,39 @@ export default function TwitchClipSearchForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit, console.error)} className="space-y-8 w-full mx-auto p-4 flex flex-col justify-between items-end">
-        <FormField
-          control={form.control}
-          name="searchQuery"
-          render={({ field }) => (
-            <FormItem className="w-full">
-              <FormLabel>Search Query</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter search query" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="flex justify-between w-full gap-4">
+          <FormField
+            control={form.control}
+            name="searchQuery"
+            render={({ field }) => (
+              <FormItem className="w-full">
+                <FormLabel>Search Query</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter search query" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="broadcaster_id"
+            render={({ field }) => (
+              <FormItem className="w-full">
+                <FormLabel>Streamer</FormLabel>
+                <FormControl>
+                  <TwitchSearchBar
+                    placeholder="Enter Twitch Username"
+                    onSelect={(channel) => field.onChange(channel.id)}
+                    value={field.value}
+                    initalValue={field.value ? field.value : user_metadata?.sub}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
         <div className="flex gap-4 justify-between w-full items-end">
           <FormField
@@ -178,12 +203,7 @@ export default function TwitchClipSearchForm() {
         </Button>
 
         <div className="w-full flex gap-4 ">
-          <Button
-            type="button"
-            variant={"outline"}
-            onClick={onReset}
-            className="w-full"
-          >
+          <Button type="button" variant={"outline"} onClick={onReset} className="w-full">
             reset filters
           </Button>
           <SyncTwitchClipsButton />

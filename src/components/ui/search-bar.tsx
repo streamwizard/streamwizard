@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import ClickAwayListener from "react-click-away-listener";
 import LoadingSpinner from "../global/loading";
 import { Input } from "./input";
+import { cn } from "@/lib/utils";
 
 interface SearchBarProps {
   setResults: React.Dispatch<React.SetStateAction<any[]>>;
@@ -15,7 +16,8 @@ interface SearchBarProps {
   placeholder?: string;
   disabled?: boolean;
   DisplayValue: string;
-  setDisplayValue:  React.Dispatch<React.SetStateAction<string>>
+  setDisplayValue: React.Dispatch<React.SetStateAction<string>>;
+  image?: string | null;
 }
 
 export function SearchBar({
@@ -26,11 +28,11 @@ export function SearchBar({
   placeholder = "Search here",
   disabled,
   setDisplayValue,
-  DisplayValue
-
+  DisplayValue,
+  image,
 }: SearchBarProps) {
   const [isSearching, setIsSearching] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false); // New state to control fetch
+  const [isUpdating, setIsUpdating] = useState(true); // New state to control fetch
 
   const debouncedSearchTerm = useDebounce(DisplayValue, 300);
 
@@ -43,20 +45,17 @@ export function SearchBar({
   };
 
   useEffect(() => {
-    
-    
-    if (!isUpdating && debouncedSearchTerm && debouncedSearchTerm.length > 3) {
-      console.log("debouncedSearchTerm", debouncedSearchTerm);
+    if (!isUpdating && debouncedSearchTerm ) {
       fetchData();
     } else if (!debouncedSearchTerm) {
       setResults([]);
     }
 
-    // Reset isUpdating after searchTerm updates
-    setIsUpdating(false);
+
   }, [debouncedSearchTerm]);
 
   const handleChange = (value: string) => {
+    setIsUpdating(false);
     setDisplayValue(value);
   };
 
@@ -67,13 +66,8 @@ export function SearchBar({
   return (
     <div className="relative w-full">
       <div className="relative">
-        <Input
-          id="name"
-          disabled={disabled}
-          placeholder={placeholder}
-          onChange={(e) => handleChange(e.target.value)}
-          value={DisplayValue}
-        />
+        {image && <img src={image} className="absolute top-1.5 left-2 h-6 w-6 rounded-full" />}
+        <Input id="name" disabled={disabled} className={cn("transition-all ", image && "pl-10")} placeholder={placeholder} onChange={(e) => handleChange(e.target.value)} value={DisplayValue} />
         {isSearching && (
           <span className="absolute top-[2px] right-8 w-6 h-6 mx-auto mt-1">
             <LoadingSpinner />
@@ -91,11 +85,13 @@ export function SearchBar({
                 transition={{ type: "just", duration: 0.2 }}
                 className="w-full mt-4 bg-[#0D0D0D] border rounded"
               >
-                <Component setSearchTerm={(value) => {
-                  setIsUpdating(true); // Set isUpdating to skip fetching
-                  setDisplayValue(value); // Update input value without triggering fetch
-                  setResults([]); // Clear results after selection
-                }} />
+                <Component
+                  setSearchTerm={(value) => {
+                    setIsUpdating(true); // Set isUpdating to skip fetching
+                    setDisplayValue(value); // Update input value without triggering fetch
+                    setResults([]); // Clear results after selection
+                  }}
+                />
               </motion.div>
             </div>
           </ClickAwayListener>

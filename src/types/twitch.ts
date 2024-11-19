@@ -38,6 +38,10 @@ export interface getChannelFollowersResponse {
     cursor: string;
   };
 }
+
+export type GetUserResponse = {
+  data: TwitchUser[];
+};
 export interface TwitchUser {
   id: string;
   login: string;

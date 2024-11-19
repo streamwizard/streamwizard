@@ -1,5 +1,5 @@
 "use client";
-import { searchTwitchChannels } from "@/actions/twitch/twitch-api";
+import { searchTwitchChannels, LookupTwitchUser } from "@/actions/twitch/twitch-api";
 import { ChannelSearchResult } from "@/types/twitch";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -16,19 +16,49 @@ interface Props {
   disabled?: boolean;
   onSelect?: (channel: ChannelSearchResult) => void;
   value?: string;
+  initalValue?: string;
 }
 
-export default function TwitchSearchBar({ button_label = "Select", placeholder = "Jochemwhite", disabled = false, onSelect = () => {}, value }: Props) {
+export default function TwitchSearchBar({
+  button_label = "Select",
+  placeholder = "Jochemwhite",
+  disabled = false,
+  onSelect = () => {},
+  value,
+  initalValue,
+}: Props) {
   const [results, setResults] = useState<results[]>([]);
   const [displayValue, setDisplayValue] = useState("");
+  const [image, setImage] = useState<string | null>("");
 
   useEffect(() => {
     if (!value) {
       setDisplayValue("");
+      setImage(null);
     }
   }, [value]);
 
+  // if we have a initial value, look up the channel
+  useEffect(() => {
+    const lookup = async () => {
+      if (initalValue) {
+        const data = await LookupTwitchUser(initalValue);
+        if (data) {
+          setDisplayValue(data.display_name);
+          setImage(data.profile_image_url);
+        }
+      }
+    };
+    lookup();
+  }, [initalValue]);
+
   const search = async (searchTerm: string) => {
+    if (!searchTerm) {
+      setResults([]);
+      setDisplayValue("");
+      return;
+    }
+
     const data = await searchTwitchChannels(searchTerm, 100);
     if (data) {
       setResults(data);
@@ -65,6 +95,7 @@ export default function TwitchSearchBar({ button_label = "Select", placeholder =
       DisplayValue={displayValue}
       setDisplayValue={setDisplayValue}
       placeholder={placeholder}
+      image={image}
       Component={({ setSearchTerm }) => (
         <ul className="overflow-scroll h-48">
           {results.map((channel) => (
@@ -82,6 +113,7 @@ export default function TwitchSearchBar({ button_label = "Select", placeholder =
                   onSelect(channel);
                   setResults([]);
                   setSearchTerm(channel.display_name);
+                  setImage(channel.thumbnail_url);
                 }}
               >
                 {button_label}
