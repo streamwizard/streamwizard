@@ -58,11 +58,11 @@ export default function TwitchSearchBar({
       setDisplayValue("");
       return;
     }
-
-    const data = await searchTwitchChannels(searchTerm, 100);
+  
+    const data = await searchTwitchChannels(searchTerm, 10);
     if (data) {
       setResults(data);
-
+  
       const match = data.find((channel: ChannelSearchResult) => channel.display_name.toLowerCase() === searchTerm.toLowerCase());
       if (match) {
         const newResults: results[] = data.map((channel: ChannelSearchResult) => {
@@ -71,20 +71,25 @@ export default function TwitchSearchBar({
           }
           return channel;
         });
-
+  
         newResults.sort((a, b) => {
-          if (a.exactMatch) {
+          if (a.exactMatch && !b.exactMatch) {
             return -1;
+          }
+          if (!a.exactMatch && b.exactMatch) {
+            return 1;
           }
           return 0;
         });
-
+  
+        console.log(newResults)
         setResults(newResults);
       }
     } else {
       toast.error("Error searching for chatters.");
     }
   };
+  
 
   return (
     <SearchBar
