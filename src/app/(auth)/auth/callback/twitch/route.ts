@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { env } from "process";
+import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
 
 export async function GET(request: Request) {
   let { searchParams, origin } = new URL(request.url);
@@ -46,6 +47,8 @@ export async function GET(request: Request) {
 
       return NextResponse.redirect(`${origin}/unauthorized`);
     }
+    
+    await checkEventSubscriptions(data.session.user.user_metadata.sub);
 
     const { error: err } = await supabase
       .from("integrations_twitch")
@@ -59,6 +62,7 @@ export async function GET(request: Request) {
       console.log(err);
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
+
 
     if (!error) {
       if (isLocalEnv) {

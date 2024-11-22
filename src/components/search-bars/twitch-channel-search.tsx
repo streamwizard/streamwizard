@@ -82,7 +82,6 @@ export default function TwitchSearchBar({
           return 0;
         });
   
-        console.log(newResults)
         setResults(newResults);
       }
     } else {

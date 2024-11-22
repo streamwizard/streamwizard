@@ -1,7 +1,7 @@
 import { DashboardConfig } from "@/types/sidebar";
 
 import { AreaChart, Clapperboard, LayoutGrid, Bell, Globe, Lock, Settings, User, ToggleRight, Blocks } from "lucide-react";
-  // import { BiMoviePlay } from "react-icons/bi";
+// import { BiMoviePlay } from "react-icons/bi";
 export const dashboardConfig: DashboardConfig = {
   overview: {
     routes: [
@@ -43,20 +43,19 @@ export const dashboardConfig: DashboardConfig = {
 };
 
 export const SettingsNavItems = [
-  {
-    label: "User Settings",
-    href: "/dashboard/settings/user-settings",
-    icon: User
-  },
+  // {
+  //   label: "User Settings",
+  //   href: "/dashboard/settings/user-settings",
+  //   icon: User
+  // },
   {
     label: "Preferences",
     href: "/dashboard/settings/preferences",
-    icon: ToggleRight
+    icon: ToggleRight,
   },
-  {
-    label: "Intgerations",
-    href: "/dashboard/settings/intgerations",
-    icon: Blocks
-  },
-  
+  // {
+  //   label: "Intgerations",
+  //   href: "/dashboard/settings/intgerations",
+  //   icon: Blocks
+  // },
 ];

@@ -1,14 +1,25 @@
+'use server'
 import { createClient } from "@/lib/supabase/server";
+import { userPreferencesSchema } from "@/schemas/user-preferences";
+import { z } from "zod";
 
-export default async function updateUserPreferences(user_id: string, formData: FormData) {
+export async function updateUserPreferences(user_id: string, formData: z.infer<typeof userPreferencesSchema>) {
+  console.log(user_id)
+
+
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("user_preferences")
-    .update({
-      user_id,
-      sync_clips_on_end: false,
-    })
-    .eq("id", formData.get("user_id") as string)
+    .upsert(
+      {
+        user_id: user_id,
+        ...formData,
+      },
+      {
+        onConflict: "user_id",
+      }
+    )
+    .eq("user_id", user_id)
     .single();
 
   if (error) {
@@ -16,4 +27,19 @@ export default async function updateUserPreferences(user_id: string, formData: F
     return false;
   }
   return true;
+}
+
+export async function GetUserPreferences() {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.from("user_preferences").select("*").single();
+
+  if (error) {
+    if (error.code === "PGRST116") {
+      return null;
+    }
+    console.error(error);
+    throw error;
+  }
+  return data;
 }
