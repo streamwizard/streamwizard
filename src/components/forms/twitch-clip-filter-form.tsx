@@ -99,7 +99,7 @@ export default function TwitchClipSearchForm() {
       creator_id: searchParams.get("creator_id") || "",
       start_date: searchParams.get("start_date") || "",
       end_date: searchParams.get("end_date") || "",
-      isFeatured: searchParams.get("isFeatured") === "true",
+      isFeatured: searchParams.get("is_featured") === "true",
       searchQuery: searchParams.get("search_query") || "",
       broadcaster_id: searchParams.get("broadcaster_id") || "",
     });
