@@ -37,34 +37,33 @@ export function DashboardUserNav({ username, profile_img }: { username: string; 
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none capitalize">{username}</p>
-            <p className="truncate text-xs leading-none text-muted-foreground">powerd by streamwizard</p>
           </div>
         </DropdownMenuLabel>
-        {/* <DropdownMenuSeparator /> */}
-        {/* <DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuGroup>
           <Link href="/">
             <DropdownMenuItem className="cursor-pointer">
               <LinkIcon className="mr-2 h-3 w-3" />
               Home
             </DropdownMenuItem>
           </Link>
-        </DropdownMenuGroup> */}
-        {/* <DropdownMenuSeparator />
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem className="cursor-pointer" asChild>
-            <Link href="/dashboard/settings">
+            <Link href="/dashboard/settings/">
               <LinkIcon className="mr-2 h-3 w-3" />
               Settings
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem className="cursor-pointer" asChild>
+          {/* <DropdownMenuItem className="cursor-pointer" asChild>
             <Link href="/dashboard/user/privacy">
               <LinkIcon className="mr-2 h-3 w-3" />
               Privacy
             </Link>
-          </DropdownMenuItem>
-        </DropdownMenuGroup> */}
-        {/* <DropdownMenuSeparator /> */}
+          </DropdownMenuItem> */}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
         <DropdownMenuItem className="text-destructive hover:cursor-pointer focus:bg-destructive focus:text-destructive-foreground" onClick={signOut}>
           <LogOut className="mr-2 h-3 w-3" />
           Log out

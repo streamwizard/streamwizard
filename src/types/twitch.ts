@@ -1,131 +1,21 @@
-export interface ChannelSearchResults {
-  data: ChannelSearchResult[];
-}
+// General Pagination
+export type Pagination = {
+  cursor?: string; // Cursor value for pagination
+};
 
-export interface ChannelSearchResult {
-  broadcaster_language: string; // The ISO 639-1 two-letter language code of the language used by the broadcaster.
-  broadcaster_login: string; // The broadcaster’s login name.
-  display_name: string; // The broadcaster’s display name.
-  game_id: string; // The ID of the game that the broadcaster is playing or last played.
-  game_name: string; // The name of the game that the broadcaster is playing or last played.
-  id: string; // An ID that uniquely identifies the channel (this is the broadcaster’s ID).
-  is_live: boolean; // A Boolean value that determines whether the broadcaster is streaming live. Is true if the broadcaster is streaming live; otherwise, false.
-  tag_ids: string[]; // IMPORTANT: As of February 28, 2023, this field is deprecated and returns only an empty array. If you use this field, please update your code to use the tags field.
-  tags: string[]; // The tags applied to the channel.
-  thumbnail_url: string; // A URL to a thumbnail of the broadcaster’s profile image.
-  title: string; // The stream’s title. Is an empty string if the broadcaster didn’t set it.
-  started_at: string; // The UTC date and time (in RFC3339 format) of when the broadcaster started streaming. The string is empty if the broadcaster is not streaming live.
-}
+// Common Transport Details for Subscriptions
+export type TransportMethod = "webhook" | "websocket" | "conduit";
 
-export interface RefreshTokenResponse {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-  scope: string;
-  token_type: string;
-}
+export type TransportDetails = {
+  method: TransportMethod;
+  callback?: string; // Only for "webhook"
+  session_id?: string; // Only for "websocket"
+  connected_at?: string; // Only for "websocket"
+  conduit_id?: string; // Only for "conduit"
+};
 
-export interface ChannelFollowers {
-  followed_at: string;
-  user_id: string;
-  user_login: string;
-  user_name: string;
-}
-export interface getChannelFollowersResponse {
-  total: number;
-  data: ChannelFollowers[];
-  pagination: {
-    cursor: string;
-  };
-}
-export interface TwitchUser {
-  id: string;
-  login: string;
-  display_name: string;
-  type: "admin" | "global_mod" | "staff" | "";
-  broadcaster_type: "affiliate" | "partner" | "";
-  description: string;
-  profile_image_url: string;
-  offline_image_url: string;
-  view_count: number | null; // Considering deprecation, it could be `null` or not present.
-  email?: string; // Optional because it depends on the user access token's scope.
-  created_at: string; // In RFC3339 format.
-}
-
-export interface TwitchChannelPointsResponse {
-  data: TwitchChannelPointsReward[];
-}
-
-interface TwitchChannelPointsReward {
-  id: string;
-  title: string;
-  broadcaster_id: string;
-  broadcaster_login: string;
-  broadcaster_name: string;
-  prompt?: string; // Optional field if user input is required
-  cost: number;
-  image?: TwitchChannelPointsImage; // Optional field if custom images uploaded
-  default_image?: TwitchChannelPointsImage; // Optional field for default images
-  background_color: string;
-  is_enabled: boolean;
-  is_user_input_required: boolean;
-  max_per_stream_setting: TwitchChannelPointsMaxSetting;
-  max_per_user_per_stream_setting: max_per_user_per_stream_setting;
-  global_cooldown_setting: TwitchChannelPointsCooldownSetting;
-  is_paused: boolean;
-  is_in_stock: boolean;
-  should_redemptions_skip_request_queue: boolean;
-  redemptions_redeemed_current_stream?: number; // Optional field if live stream active
-  cooldown_expires_at?: string; // Optional field if reward is in cooldown
-}
-
-interface TwitchChannelPointsImage {
-  url_1x: string;
-  url_2x: string;
-  url_4x: string;
-}
-
-interface TwitchChannelPointsMaxSetting {
-  is_enabled: boolean;
-  max_per_stream?: number; // Optional field if limit applies
-}
-interface max_per_user_per_stream_setting {
-  is_enabled: boolean;
-  max_per_user_per_stream?: number; // Optional field if limit applies
-}
-
-interface TwitchChannelPointsCooldownSetting {
-  is_enabled: boolean;
-  global_cooldown_seconds?: number; // Optional field if cooldown active
-}
-
-export interface getConduitsResponse {
-  data: {
-    id: string;
-    shard_count: number;
-  }[];
-}
-
-export interface GetEventSubSubscriptionsResponse {
-  data: Subscription[];
-  total: number;
-  total_cost: number;
-  max_total_cost: number;
-  pagination: Pagination;
-}
-
-interface Subscription {
-  id: string;
-  status: SubscriptionStatus;
-  type: string;
-  version: string;
-  condition: Record<string, any>; // Assuming JSON object, use Record<string, any> for a general object type
-  created_at: string; // RFC3339 format
-  transport: Transport;
-  cost: number;
-}
-
-type SubscriptionStatus =
+// Event Subscriptions
+export type SubscriptionStatus =
   | "enabled"
   | "webhook_callback_verification_pending"
   | "webhook_callback_verification_failed"
@@ -143,25 +33,145 @@ type SubscriptionStatus =
   | "websocket_network_timeout"
   | "websocket_network_error";
 
-interface Transport {
-  method: "webhook" | "websocket" | "conduit";
-  callback?: string; // Included only if method is set to 'webhook'
-  session_id?: string; // Included only if method is set to 'websocket'
-  connected_at?: string; // Included only if method is set to 'websocket'
-  disconnected_at?: string; // Included only if method is set to 'websocket'
-  conduit_id?: string; // Included only if method is set to 'conduit'
-}
+export type EventSubSubscriptionType =
+  | "automod.message.hold"
+  | "automod.message.update"
+  | "channel.update"
+  | "channel.follow"
+  | "channel.subscribe"
+  | "channel.subscription.end"
+  | "stream.online"
+  | "stream.offline"
+  | "user.authorization.grant"
+  | "user.authorization.revoke"
+  | "user.update";
 
-interface Pagination {
-  cursor?: string; // The cursor value for pagination
-}
+export type Subscription = {
+  id: string;
+  status: SubscriptionStatus;
+  type: EventSubSubscriptionType;
+  version: string;
+  condition: Record<string, any>; // Dynamic JSON based on type
+  created_at: string; // RFC3339 format
+  transport: TransportDetails;
+  cost: number;
+};
 
-export interface TwitchClipResponse {
+export type GetEventSubSubscriptionsResponse = {
+  data: Subscription[];
+  total: number;
+  total_cost: number;
+  max_total_cost: number;
+  pagination: Pagination;
+};
+
+// Twitch Channel Data
+export type ChannelSearchResults = {
+  data: ChannelSearchResult[];
+};
+
+export type ChannelSearchResult = {
+  broadcaster_language: string;
+  broadcaster_login: string;
+  display_name: string;
+  game_id: string;
+  game_name: string;
+  id: string;
+  is_live: boolean;
+  tags: string[]; // Updated as `tag_ids` is deprecated
+  thumbnail_url: string;
+  title: string;
+};
+
+// Channel Followers
+export type ChannelFollowers = {
+  followed_at: string;
+  user_id: string;
+  user_login: string;
+  user_name: string;
+};
+
+export type GetChannelFollowersResponse = {
+  total: number;
+  data: ChannelFollowers[];
+  pagination: Pagination;
+};
+
+// Twitch User
+export type GetUserResponse = {
+  data: TwitchUser[];
+};
+
+export type TwitchUser = {
+  id: string;
+  login: string;
+  display_name: string;
+  type: "admin" | "global_mod" | "staff" | "";
+  broadcaster_type: "affiliate" | "partner" | "";
+  description: string;
+  profile_image_url: string;
+  offline_image_url: string;
+  view_count: number | null;
+  email?: string;
+  created_at: string; // In RFC3339 format
+};
+
+// Twitch Channel Points
+export type TwitchChannelPointsResponse = {
+  data: TwitchChannelPointsReward[];
+};
+
+export type TwitchChannelPointsReward = {
+  id: string;
+  title: string;
+  broadcaster_id: string;
+  broadcaster_login: string;
+  broadcaster_name: string;
+  prompt?: string;
+  cost: number;
+  image?: TwitchChannelPointsImage;
+  default_image?: TwitchChannelPointsImage;
+  background_color: string;
+  is_enabled: boolean;
+  is_user_input_required: boolean;
+  max_per_stream_setting: TwitchChannelPointsMaxSetting;
+  max_per_user_per_stream_setting: MaxPerUserPerStreamSetting;
+  global_cooldown_setting: TwitchChannelPointsCooldownSetting;
+  is_paused: boolean;
+  is_in_stock: boolean;
+  should_redemptions_skip_request_queue: boolean;
+  redemptions_redeemed_current_stream?: number;
+  cooldown_expires_at?: string;
+};
+
+export type TwitchChannelPointsImage = {
+  url_1x: string;
+  url_2x: string;
+  url_4x: string;
+};
+
+export type TwitchChannelPointsMaxSetting = {
+  is_enabled: boolean;
+  max_per_stream?: number;
+};
+
+export type MaxPerUserPerStreamSetting = {
+  is_enabled: boolean;
+  max_per_user_per_stream?: number;
+};
+
+export type TwitchChannelPointsCooldownSetting = {
+  is_enabled: boolean;
+  global_cooldown_seconds?: number;
+};
+
+// Twitch Clips
+export type TwitchClipResponse = {
   data: TwitchClip[];
   pagination: Pagination;
-}
+};
 
-export interface TwitchClip {
+export type TwitchClip = {
   id: string;
   url: string;
   embed_url: string;
@@ -179,14 +189,29 @@ export interface TwitchClip {
   duration: number;
   vod_offset: number | null;
   is_featured: boolean;
-}
+};
 
-export interface TwitchCategory {
+// Twitch Categories
+export type TwitchCategory = {
   id: string;
   name: string;
   box_art_url: string;
-}
+};
 
-export interface SearchCategories {
+export type SearchCategories = {
   data: TwitchCategory[];
-}
+};
+
+// Event Subscriptions Request
+export type CreateEventSubSubscriptionRequest = {
+  type: EventSubSubscriptionType; // The type of subscription to create.
+  version: string; // The version of the subscription type.
+  condition: Record<string, any>; // Subscription-specific parameter values.
+  transport: {
+    method: TransportMethod; // Transport method.
+    callback?: string; // HTTPS callback URL (required for webhook method).
+    secret?: string; // Secret for verifying webhook signatures.
+    session_id?: string; // WebSocket session ID (required for websocket method).
+    conduit_id?: string; // Conduit ID (required for conduit method).
+  };
+};

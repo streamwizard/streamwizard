@@ -7,6 +7,7 @@ export const env = createEnv({
 
     TWITCH_APP_TOKEN: z.string().min(1),
     TWITCH_CLIENT_SECRET: z.string().min(1),
+    TWITCH_WEBHOOK_SECRET: z.string().min(10),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().min(1),

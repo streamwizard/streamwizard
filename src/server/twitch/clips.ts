@@ -1,5 +1,5 @@
 import { TwitchAPI } from "@/lib/axios/twitch-api";
-import { createClient } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { TwitchClip, TwitchClipResponse } from "@/types/twitch";
 
 /**
@@ -8,23 +8,31 @@ import { TwitchClip, TwitchClipResponse } from "@/types/twitch";
  * @throws If there is no Twitch integration for the user.
  * @throws If inserting the clips into the database fails.
  */
-export async function syncTwitchClips() {
-  const supabase = await createClient();
-
+export async function syncTwitchClips(user_id: string) {
   let hasMoreClips = true;
   let cursor: string | undefined;
   let totalClips = 0;
 
-  const { data: integration, error } = await supabase.from("integrations_twitch").select("access_token, twitch_user_id, user_id").single();
+  const { data: integration, error } = await supabaseAdmin
+    .from("integrations_twitch")
+    .select("access_token, twitch_user_id, user_id")
+    .eq("user_id", user_id)
+    .single();
 
   if (error || !integration || !integration.access_token || !integration.twitch_user_id) {
+    console.error(error);
     throw new Error("Twitch integration not found for user");
+  }
+
+  // delete all clips from the database
+  const { error: deleteError } = await supabaseAdmin.from("clips").delete().eq("user_id", user_id).eq("broadcaster_id", integration.twitch_user_id);
+
+  if (deleteError) {
+    throw new Error(`Failed to delete clips: ${deleteError.message}`);
   }
 
   // loop until there are no more clips
   while (hasMoreClips) {
-    console.log(`Syncing clips...`);
-
     const clipsResponse = await fetchAndFormatTwitchClips(integration.access_token, integration.twitch_user_id, cursor);
 
     if (!clipsResponse) {
@@ -41,7 +49,7 @@ export async function syncTwitchClips() {
     const formattedClips = formatClipsForDB(clips, integration.user_id);
 
     // upsert the clips into the database
-    const { error: upsertError } = await supabase.from("clips").upsert(formattedClips, {
+    const { error: upsertError } = await supabaseAdmin.from("clips").upsert(formattedClips, {
       onConflict: "twitch_clip_id",
       ignoreDuplicates: false,
     });

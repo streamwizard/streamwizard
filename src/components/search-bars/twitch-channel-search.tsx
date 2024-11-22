@@ -1,5 +1,5 @@
 "use client";
-import { searchTwitchChannels } from "@/actions/twitch/twitch-api";
+import { searchTwitchChannels, LookupTwitchUser } from "@/actions/twitch/twitch-api";
 import { ChannelSearchResult } from "@/types/twitch";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -16,23 +16,53 @@ interface Props {
   disabled?: boolean;
   onSelect?: (channel: ChannelSearchResult) => void;
   value?: string;
+  initalValue?: string;
 }
 
-export default function TwitchSearchBar({ button_label = "Select", placeholder = "Jochemwhite", disabled = false, onSelect = () => {}, value }: Props) {
+export default function TwitchSearchBar({
+  button_label = "Select",
+  placeholder = "Jochemwhite",
+  disabled = false,
+  onSelect = () => {},
+  value,
+  initalValue,
+}: Props) {
   const [results, setResults] = useState<results[]>([]);
   const [displayValue, setDisplayValue] = useState("");
+  const [image, setImage] = useState<string | null>("");
 
   useEffect(() => {
     if (!value) {
       setDisplayValue("");
+      setImage(null);
     }
   }, [value]);
 
+  // if we have a initial value, look up the channel
+  useEffect(() => {
+    const lookup = async () => {
+      if (initalValue) {
+        const data = await LookupTwitchUser(initalValue);
+        if (data) {
+          setDisplayValue(data.display_name);
+          setImage(data.profile_image_url);
+        }
+      }
+    };
+    lookup();
+  }, [initalValue]);
+
   const search = async (searchTerm: string) => {
-    const data = await searchTwitchChannels(searchTerm, 100);
+    if (!searchTerm) {
+      setResults([]);
+      setDisplayValue("");
+      return;
+    }
+  
+    const data = await searchTwitchChannels(searchTerm, 10);
     if (data) {
       setResults(data);
-
+  
       const match = data.find((channel: ChannelSearchResult) => channel.display_name.toLowerCase() === searchTerm.toLowerCase());
       if (match) {
         const newResults: results[] = data.map((channel: ChannelSearchResult) => {
@@ -41,20 +71,24 @@ export default function TwitchSearchBar({ button_label = "Select", placeholder =
           }
           return channel;
         });
-
+  
         newResults.sort((a, b) => {
-          if (a.exactMatch) {
+          if (a.exactMatch && !b.exactMatch) {
             return -1;
+          }
+          if (!a.exactMatch && b.exactMatch) {
+            return 1;
           }
           return 0;
         });
-
+  
         setResults(newResults);
       }
     } else {
       toast.error("Error searching for chatters.");
     }
   };
+  
 
   return (
     <SearchBar
@@ -65,6 +99,7 @@ export default function TwitchSearchBar({ button_label = "Select", placeholder =
       DisplayValue={displayValue}
       setDisplayValue={setDisplayValue}
       placeholder={placeholder}
+      image={image}
       Component={({ setSearchTerm }) => (
         <ul className="overflow-scroll h-48">
           {results.map((channel) => (
@@ -82,6 +117,7 @@ export default function TwitchSearchBar({ button_label = "Select", placeholder =
                   onSelect(channel);
                   setResults([]);
                   setSearchTerm(channel.display_name);
+                  setImage(channel.thumbnail_url);
                 }}
               >
                 {button_label}

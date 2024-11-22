@@ -366,6 +366,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          created_at: string | null
+          id: string
+          sync_clips_on_end: boolean
+          theme: Database["public"]["Enums"]["theme_type"] | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          sync_clips_on_end?: boolean
+          theme?: Database["public"]["Enums"]["theme_type"] | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          sync_clips_on_end?: boolean
+          theme?: Database["public"]["Enums"]["theme_type"] | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           avatar_url: string | null
@@ -528,6 +555,7 @@ export type Database = {
         | "none"
       provider_type: "twitch" | "discord"
       roles: "user" | "beta" | "admin"
+      theme_type: "dark" | "light" | "system"
       userlevel:
         | "everyone"
         | "follower"

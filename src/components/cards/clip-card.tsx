@@ -19,7 +19,6 @@ import { toast } from "sonner";
 
 export default function TwitchClipCard({
   url,
-  broadcaster_name,
   creator_name,
   title,
   view_count,
@@ -27,7 +26,7 @@ export default function TwitchClipCard({
   thumbnail_url,
   duration,
   is_featured,
-  embed_url
+  embed_url,
 }: TwitchClipTable) {
   const { openModal } = useModal();
   const formatDuration = (seconds: number) => {
@@ -49,12 +48,12 @@ export default function TwitchClipCard({
   };
 
   const CopyClipURL = () => {
-    navigator.clipboard.writeText(embed_url!);
+    navigator.clipboard.writeText(url!);
     toast.success("Copied to clipboard");
   };
 
   return (
-    <Card className="w-full max-w-md overflow-hidden cursor-pointer" >
+    <Card className="w-full max-w-md overflow-hidden cursor-pointer">
       <CardHeader className="p-0">
         <div className="relative">
           <img src={thumbnail_url!} alt={title} className="w-full h-48 object-cover" onClick={OpenClip} />
@@ -67,7 +66,7 @@ export default function TwitchClipCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-4" >
+      <CardContent className="p-4">
         <CardTitle className="text-lg mb-2 line-clamp-2">{title}</CardTitle>
         <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-2">
           <User className="w-4 h-4" />

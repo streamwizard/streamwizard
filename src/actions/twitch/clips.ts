@@ -8,9 +8,7 @@ interface returnObject {
   success: boolean;
 }
 
-export async function SyncBroadcasterClips(): Promise<returnObject> {
-
-  
+export async function SyncBroadcasterClips(): Promise<returnObject> { 
   const supabase = await createClient();
 
   // Fetch the last sync timestamp
@@ -73,7 +71,7 @@ export async function SyncBroadcasterClips(): Promise<returnObject> {
 
   // Sync clips
   try {
-    const totalClips = await syncTwitchClips();
+    const totalClips = await syncTwitchClips(userData.user.id);
 
     // Update sync status to success and clip count
     const { error: updateError } = await supabase

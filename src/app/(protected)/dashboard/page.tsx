@@ -18,6 +18,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   // Build the Supabase query with filters
   let query = supabase.from("clips").select("*", { count: "exact" }).limit(100).order("created_at_twitch", { ascending: false });
 
+  // Apply filters
   if (game_id) query = query.eq("game_id", game_id);
   if (creator_id) query = query.eq("creator_id", creator_id);
   if (is_featured !== undefined) query = query.eq("is_featured", is_featured);
@@ -26,7 +27,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   if (search_query) query = query.ilike("title", `%${search_query}%`);
 
   // if there is a broadcaster_id, add it to the query otherwise use the broadcaster_id from the user
-  query = broadcaster_id ? query.eq("broadcaster_id", broadcaster_id) : query.eq("user_id", user?.user?.id!) 
+  query = broadcaster_id ? query.eq("broadcaster_id", broadcaster_id) : query.eq("user_id", user?.user?.id!);
 
   // Set pagination parameters
   const pageIndex = page ? parseInt(page) : 1;
@@ -37,10 +38,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   // Add the range to the query
   query = query.range(from, to);
 
-  const res = await query;
-
-  const { data, error } = res;
-  let count = res.count;
+  let { data, error, count } = await query;
 
   if (error) {
     console.error(error);
@@ -64,7 +62,10 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
             ))}
           </div>
 
-          <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
+          <div className="flex justify-between items-center">
+            <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
+            <p className="text-sm text-muted-foreground">Showing {data.length} of {count} clips</p>
+          </div>
         </>
       ) : (
         <div className="flex flex-col items-center justify-center h-[50vh] p-4 space-y-4">
