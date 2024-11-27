@@ -13,7 +13,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   const { data: user } = await supabase.auth.getUser();
 
   // Destructure and parse filter values from searchParams
-  const { game_id, creator_id, is_featured, end_date, start_date, search_query, page, broadcaster_id, order } = await searchParams;
+  const { game_id, creator_id, is_featured, end_date, start_date, search_query, page, broadcaster_id, sort, asc } = await searchParams;
 
   // Build the Supabase query with filters
   let query = supabase.from("clips").select("*", { count: "exact" }).limit(100);
@@ -26,23 +26,11 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   if (end_date) query = query.lte("created_at_twitch", end_date);
   if (search_query) query = query.ilike("title", `%${search_query}%`);
 
-  // determine the order of the clips
-  if (order) {
-    switch (order) {
-      case "newest":
-        query = query.order("created_at_twitch", { ascending: false });
-        break;
-      case "oldest":
-        query = query.order("created_at_twitch", { ascending: true });
-        break;
-      case "most_views":
-        query = query.order("view_count", { ascending: false });
-        break;
-      case "least_views":
-        query = query.order("view_count", { ascending: true });
-        break;
-      default:
-        query = query.order("created_at_twitch", { ascending: false });
+  if (sort) {
+    if (sort === "date") {
+      query = asc === "true" ? query.order("created_at_twitch", { ascending: true }) : query.order("created_at_twitch", { ascending: false });
+    } else if (sort === "views") {
+      query = asc === "true" ? query.order("view_count", { ascending: true }) : query.order("view_count", { ascending: false });
     }
   } else {
     query = query.order("created_at_twitch", { ascending: false });
@@ -59,7 +47,6 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
 
   // Add the range to the query
   query = query.range(from, to);
-
 
   let { data, error, count } = await query;
 
