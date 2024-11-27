@@ -13,10 +13,10 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   const { data: user } = await supabase.auth.getUser();
 
   // Destructure and parse filter values from searchParams
-  const { game_id, creator_id, is_featured, end_date, start_date, search_query, page, broadcaster_id } = await searchParams;
+  const { game_id, creator_id, is_featured, end_date, start_date, search_query, page, broadcaster_id, sort, asc } = await searchParams;
 
   // Build the Supabase query with filters
-  let query = supabase.from("clips").select("*", { count: "exact" }).limit(100).order("created_at_twitch", { ascending: false });
+  let query = supabase.from("clips").select("*", { count: "exact" }).limit(100);
 
   // Apply filters
   if (game_id) query = query.eq("game_id", game_id);
@@ -25,6 +25,16 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   if (start_date) query = query.gte("created_at_twitch", start_date);
   if (end_date) query = query.lte("created_at_twitch", end_date);
   if (search_query) query = query.ilike("title", `%${search_query}%`);
+
+  if (sort) {
+    if (sort === "date") {
+      query = asc === "true" ? query.order("created_at_twitch", { ascending: true }) : query.order("created_at_twitch", { ascending: false });
+    } else if (sort === "views") {
+      query = asc === "true" ? query.order("view_count", { ascending: true }) : query.order("view_count", { ascending: false });
+    }
+  } else {
+    query = query.order("created_at_twitch", { ascending: false });
+  }
 
   // if there is a broadcaster_id, add it to the query otherwise use the broadcaster_id from the user
   query = broadcaster_id ? query.eq("broadcaster_id", broadcaster_id) : query.eq("user_id", user?.user?.id!);
@@ -64,7 +74,9 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
 
           <div className="flex justify-between items-center">
             <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
-            <p className="text-sm text-muted-foreground">Showing {data.length} of {count} clips</p>
+            <p className="text-sm text-muted-foreground">
+              Showing {data.length} of {count} clips
+            </p>
           </div>
         </>
       ) : (

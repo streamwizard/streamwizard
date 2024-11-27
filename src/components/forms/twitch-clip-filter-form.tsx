@@ -1,23 +1,24 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm, ControllerRenderProps, FieldValues } from "react-hook-form";
-import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
+import { useSession } from "@/providers/session-provider";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect } from "react";
+import { ControllerRenderProps, FieldValues, useForm } from "react-hook-form";
+import * as z from "zod";
+import SyncTwitchClipsButton from "../buttons/sync-twitch-clips";
 import TwitchCategorySearch from "../search-bars/twitch-category-search";
 import TwitchSearchBar from "../search-bars/twitch-channel-search";
-import SyncTwitchClipsButton from "../buttons/sync-twitch-clips";
-import { useSession } from "@/providers/session-provider";
-import { useEffect } from "react";
 
 const formSchema = z.object({
   game_id: z.string().optional(),
@@ -27,6 +28,8 @@ const formSchema = z.object({
   isFeatured: z.boolean().default(false),
   searchQuery: z.string().optional(),
   broadcaster_id: z.string().optional(),
+  sort: z.enum(["date", "views"]).default("date"),
+  asc: z.boolean().default(false),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -89,6 +92,8 @@ export default function TwitchClipSearchForm() {
       isFeatured: searchParams.get("isFeatured") === "true",
       searchQuery: searchParams.get("search_query") || "",
       broadcaster_id: searchParams.get("broadcaster_id") || "",
+      sort: (searchParams.get("sort") as "date" | "views") || "date",
+      asc: searchParams.get("asc") === "true",
     },
   });
 
@@ -102,6 +107,8 @@ export default function TwitchClipSearchForm() {
       isFeatured: searchParams.get("is_featured") === "true",
       searchQuery: searchParams.get("search_query") || "",
       broadcaster_id: searchParams.get("broadcaster_id") || "",
+      sort: (searchParams.get("sort") as "date" | "views") || "date",
+      asc: searchParams.get("asc") === "true",
     });
   }, [searchParams]);
 
@@ -115,6 +122,8 @@ export default function TwitchClipSearchForm() {
     if (values.isFeatured) params.set("is_featured", "true");
     if (values.searchQuery) params.set("search_query", values.searchQuery);
     if (values.broadcaster_id) params.set("broadcaster_id", values.broadcaster_id);
+    if (values.sort) params.set("sort", values.sort);
+    if (values.asc) params.set("asc", "true");
 
     router.push(`?${params.toString()}`);
   }
@@ -207,6 +216,65 @@ export default function TwitchClipSearchForm() {
                 <div className="space-y-1 leading-none">
                   <FormLabel>Is Featured</FormLabel>
                 </div>
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="w-full flex justify-between">
+          <FormField
+            control={form.control}
+            name="sort"
+            render={({ field }) => (
+              <FormItem className="space-y-3 w-full">
+                <FormLabel>Sort on</FormLabel>
+                <FormControl>
+                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex w-full">
+                    <FormItem className="flex items-center space-x-1 space-y-0">
+                      <FormControl>
+                        <RadioGroupItem value="date" />
+                      </FormControl>
+                      <FormLabel className="font-normal">Date</FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center space-x-1 space-y-0">
+                      <FormControl>
+                        <RadioGroupItem value="views" />
+                      </FormControl>
+                      <FormLabel className="font-normal">Views</FormLabel>
+                    </FormItem>
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="asc"
+            render={({ field }) => (
+              <FormItem className="space-y-3 ">
+                <FormLabel>Order</FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    onValueChange={(value) => value === "ascending" ? field.onChange(true) : field.onChange(false)}
+                    value={field.value ? "ascending" : "descending"}
+                    className="flex"
+                  >
+                    <FormItem className="flex items-center space-x-1 space-y-0">
+                      <FormControl>
+                        <RadioGroupItem value="ascending" />
+                      </FormControl>
+                      <FormLabel className="font-normal">ascending</FormLabel>
+                    </FormItem>
+                    <FormItem className="flex items-center space-x-1 space-y-0">
+                      <FormControl>
+                        <RadioGroupItem value="descending" />
+                      </FormControl>
+                      <FormLabel className="font-normal">descending</FormLabel>
+                    </FormItem>
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
