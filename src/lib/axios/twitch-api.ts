@@ -9,9 +9,6 @@ interface TwitchAPIConfig extends InternalAxiosRequestConfig {
   _retry?: boolean;
 }
 
-  
-
-
 // Create the Axios instance
 const TwitchAPI: AxiosInstance = axios.create({
   baseURL: "https://api.twitch.tv/helix",
@@ -50,7 +47,6 @@ TwitchAPI.interceptors.request.use(
   },
   (error: AxiosError) => Promise.reject(error)
 );
-
 
 TwitchAPI.interceptors.response.use(
   (response: AxiosResponse) => response,
