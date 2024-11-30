@@ -4,14 +4,23 @@ import Link from "next/link";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { UserAuthForm } from "@/components/forms/login-form";
 import { Metadata } from "next";
-
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Login",
   description: "Login in to your account to access your dashboard.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // check if user is already logged in
+  const supabase = await createClient();
+  const { data: session } = await supabase.auth.getUser();
+
+  if (session) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className=" relative hidden  flex-col items-center h-screen justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
       <div className="relative  h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
