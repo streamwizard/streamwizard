@@ -16,6 +16,8 @@ import {
 import { useModal } from "@/providers/modal-provider";
 import TwitchClipModal from "../modals/twitch-clip-modal";
 import { toast } from "sonner";
+import { addClipToFavoritesFolder } from "@/actions/supabase/clips/clips";
+import { useSession } from "@/providers/session-provider";
 
 export default function TwitchClipCard({
   url,
@@ -27,7 +29,9 @@ export default function TwitchClipCard({
   duration,
   is_featured,
   embed_url,
+  id,
 }: TwitchClipTable) {
+  const { id: userId } = useSession();
   const { openModal } = useModal();
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -50,6 +54,20 @@ export default function TwitchClipCard({
   const CopyClipURL = () => {
     navigator.clipboard.writeText(url!);
     toast.success("Copied to clipboard");
+  };
+
+  const AddToFavorites = () => {
+    toast.promise(
+      addClipToFavoritesFolder({
+        clipId: id,
+        user_id: userId,
+      }),
+      {
+        loading: "Adding to favorites",
+        success: "Added to favorites",
+        error: "Failed to add to favorites",
+      }
+    );
   };
 
   return (
@@ -91,6 +109,7 @@ export default function TwitchClipCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={AddToFavorites}>Add to favorites</DropdownMenuItem>
               <Link href={url!} target="_blank">
                 <DropdownMenuItem onClick={() => navigator.clipboard.writeText(url!)}>View</DropdownMenuItem>
               </Link>

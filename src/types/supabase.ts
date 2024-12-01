@@ -9,6 +9,80 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      clip_folder_junction: {
+        Row: {
+          clip_id: number | null
+          created_at: string | null
+          folder_id: number | null
+          id: number
+          user_id: string | null
+        }
+        Insert: {
+          clip_id?: number | null
+          created_at?: string | null
+          folder_id?: number | null
+          id?: number
+          user_id?: string | null
+        }
+        Update: {
+          clip_id?: number | null
+          created_at?: string | null
+          folder_id?: number | null
+          id?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clip_folder_junction_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "clips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clip_folder_junction_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "clip_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clip_folders: {
+        Row: {
+          created_at: string | null
+          id: number
+          name: string
+          parent_folder_id: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          name: string
+          parent_folder_id?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          name?: string
+          parent_folder_id?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clip_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "clip_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clips: {
         Row: {
           broadcaster_id: string | null
@@ -520,6 +594,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_clip_to_folder: {
+        Args: {
+          p_clip_id: string
+          p_folder_id: string
+        }
+        Returns: undefined
+      }
       insert_discord_integration: {
         Args: {
           integration_id: string
@@ -540,6 +621,13 @@ export type Database = {
           integration_id: string
           provider_data: Json
           user_id: string
+        }
+        Returns: undefined
+      }
+      remove_clip_from_folder: {
+        Args: {
+          p_clip_id: string
+          p_folder_id: string
         }
         Returns: undefined
       }
