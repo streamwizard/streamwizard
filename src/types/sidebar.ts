@@ -17,11 +17,13 @@ export type SidebarNavItem = {
   new?: boolean
   beta? : boolean
   commingSoon?: boolean
+  subRoutes?: SidebarNavItem[]
 }
 
 export type DashboardSection = {
   title?: string
   routes: SidebarNavItem[]
+
 }
 
 export type DashboardConfig = {

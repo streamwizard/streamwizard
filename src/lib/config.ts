@@ -1,7 +1,6 @@
 import { DashboardConfig } from "@/types/sidebar";
 
-import { AreaChart, Clapperboard, LayoutGrid, Bell, Globe, Lock, Settings, User, ToggleRight, Blocks } from "lucide-react";
-// import { BiMoviePlay } from "react-icons/bi";
+import { Clapperboard, ToggleRight } from "lucide-react";
 export const dashboardConfig: DashboardConfig = {
   overview: {
     routes: [
@@ -10,6 +9,14 @@ export const dashboardConfig: DashboardConfig = {
         href: "/dashboard/",
         icon: Clapperboard,
         beta: true,
+        subRoutes: [
+          {
+            label: "Twitch",
+            href: "/dashboard/clips/favorites",
+            icon: Clapperboard,
+            beta: true,
+          },
+        ]
       },
     ],
   },

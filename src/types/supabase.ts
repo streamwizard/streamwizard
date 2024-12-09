@@ -51,6 +51,7 @@ export type Database = {
       clip_folders: {
         Row: {
           created_at: string | null
+          href: string
           id: number
           name: string
           parent_folder_id: number | null
@@ -59,6 +60,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          href: string
           id?: number
           name: string
           parent_folder_id?: number | null
@@ -67,6 +69,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          href?: string
           id?: number
           name?: string
           parent_folder_id?: number | null
@@ -85,18 +88,18 @@ export type Database = {
       }
       clips: {
         Row: {
-          broadcaster_id: string | null
+          broadcaster_id: string
           broadcaster_name: string
-          created_at: string | null
+          created_at: string
           created_at_twitch: string
-          creator_id: string | null
+          creator_id: string
           creator_name: string
           duration: number | null
           embed_url: string | null
           game_id: string | null
           game_name: string | null
           id: number
-          is_featured: boolean | null
+          is_featured: boolean
           language: string | null
           thumbnail_url: string | null
           title: string
@@ -108,18 +111,18 @@ export type Database = {
           vod_offset: number | null
         }
         Insert: {
-          broadcaster_id?: string | null
+          broadcaster_id: string
           broadcaster_name: string
-          created_at?: string | null
+          created_at?: string
           created_at_twitch: string
-          creator_id?: string | null
+          creator_id: string
           creator_name: string
           duration?: number | null
           embed_url?: string | null
           game_id?: string | null
           game_name?: string | null
           id?: number
-          is_featured?: boolean | null
+          is_featured?: boolean
           language?: string | null
           thumbnail_url?: string | null
           title: string
@@ -131,18 +134,18 @@ export type Database = {
           vod_offset?: number | null
         }
         Update: {
-          broadcaster_id?: string | null
+          broadcaster_id?: string
           broadcaster_name?: string
-          created_at?: string | null
+          created_at?: string
           created_at_twitch?: string
-          creator_id?: string | null
+          creator_id?: string
           creator_name?: string
           duration?: number | null
           embed_url?: string | null
           game_id?: string | null
           game_name?: string | null
           id?: number
-          is_featured?: boolean | null
+          is_featured?: boolean
           language?: string | null
           thumbnail_url?: string | null
           title?: string
@@ -600,6 +603,62 @@ export type Database = {
           p_folder_id: string
         }
         Returns: undefined
+      }
+      get_all_clips_with_folders: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: number
+          title: string
+          twitch_clip_id: string
+          creator_name: string
+          game_name: string
+          url: string
+          thumbnail_url: string
+          created_at: string
+          view_count: number
+          duration: number
+          broadcaster_name: string
+          created_at_twitch: string
+          user_id: string
+          embed_url: string
+          broadcaster_id: string
+          creator_id: string
+          video_id: string
+          game_id: string
+          language: string
+          vod_offset: number
+          is_featured: boolean
+          folders: Json
+        }[]
+      }
+      get_clips_by_folder: {
+        Args: {
+          folder_href: string
+        }
+        Returns: {
+          id: number
+          title: string
+          twitch_clip_id: string
+          creator_name: string
+          game_name: string
+          url: string
+          thumbnail_url: string
+          created_at: string
+          view_count: number
+          duration: number
+          broadcaster_name: string
+          created_at_twitch: string
+          user_id: string
+          embed_url: string
+          broadcaster_id: string
+          creator_id: string
+          video_id: string
+          game_id: string
+          language: string
+          vod_offset: number
+          is_featured: boolean
+          folders: Json
+        }[]
       }
       insert_discord_integration: {
         Args: {
