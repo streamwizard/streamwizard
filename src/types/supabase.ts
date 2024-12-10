@@ -11,21 +11,21 @@ export type Database = {
     Tables: {
       clip_folder_junction: {
         Row: {
-          clip_id: number | null
+          clip_id: string
           created_at: string | null
           folder_id: number | null
           id: number
           user_id: string | null
         }
         Insert: {
-          clip_id?: number | null
+          clip_id: string
           created_at?: string | null
           folder_id?: number | null
           id?: number
           user_id?: string | null
         }
         Update: {
-          clip_id?: number | null
+          clip_id?: string
           created_at?: string | null
           folder_id?: number | null
           id?: number
@@ -37,7 +37,7 @@ export type Database = {
             columns: ["clip_id"]
             isOneToOne: false
             referencedRelation: "clips"
-            referencedColumns: ["id"]
+            referencedColumns: ["twitch_clip_id"]
           },
           {
             foreignKeyName: "clip_folder_junction_folder_id_fkey"

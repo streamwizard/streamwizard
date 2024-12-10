@@ -35,6 +35,7 @@ export default function TwitchClipCard({
   embed_url,
   id,
   folders,
+  twitch_clip_id,
 }: clipsWithFolders) {
   const { openModal } = useModal();
   const { getAvailableFolders, getRemovableFolders, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
@@ -70,7 +71,7 @@ export default function TwitchClipCard({
     }
 
     return availableFolders.map((folder) => (
-      <DropdownMenuItem key={folder.id} onClick={() => AddToFolder({ folderName: folder.name, folderId: folder.id, clipId: id! })}>
+      <DropdownMenuItem key={folder.id} onClick={() => AddToFolder({ folderName: folder.name, folderId: folder.id, clipId: twitch_clip_id })}>
         {folder.name}
       </DropdownMenuItem>
     ));
@@ -84,7 +85,7 @@ export default function TwitchClipCard({
     }
 
     return removableFolders.map((folder) => (
-      <DropdownMenuItem key={folder.id} onClick={() => handleRemoveClipFromFolder(folder.id, id, folder.name)}>
+      <DropdownMenuItem key={folder.id} onClick={() => handleRemoveClipFromFolder(folder.id, twitch_clip_id, folder.name)}>
         {folder.name}
       </DropdownMenuItem>
     ));

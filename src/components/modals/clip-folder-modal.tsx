@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { createClipFolder } from "@/actions/supabase/clips/clips";
+import { createClipFolder, editClipFolder } from "@/actions/supabase/clips/clips";
 import { useSession } from "@/providers/session-provider";
 import { useModal } from "@/providers/modal-provider";
 
@@ -30,30 +30,53 @@ const formSchema = z.object({
 
 interface Props {
   user_id: string;
+  folder_id?: number;
+  folder_name?: string;
 }
 
-export function CLipFolderModal({ user_id }: Props) {
+export function CLipFolderModal({ user_id, folder_id, folder_name }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { closeModal } = useModal();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
+      name: folder_name || "",
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
-    toast.promise(createClipFolder(values.name, user_id), {
-      loading: "Creating folder...",
-      success: "Folder created successfully!",
-      error: "Failed to create folder.",
-      finally() {
-        setIsSubmitting(false);
-        closeModal();
-      },
-    });
+    if (folder_id) {
+      toast.promise(
+        async () => {
+          const res = await editClipFolder(folder_id, values.name, user_id);
+          if (!res.success) {
+            throw new Error(res.message);
+          }
+          return res.message;
+        },
+        {
+          loading: "Updating folder...",
+          success: "Folder updated successfully!",
+          error: "Failed to update folder.",
+          finally() {
+            setIsSubmitting(false);
+            closeModal();
+          },
+        }
+      );
+    } else {
+      toast.promise(createClipFolder(values.name, user_id), {
+        loading: "Creating folder...",
+        success: "Folder created successfully!",
+        error: "Failed to create folder.",
+        finally() {
+          setIsSubmitting(false);
+          closeModal();
+        },
+      });
+    }
   }
 
   return (
@@ -77,10 +100,10 @@ export function CLipFolderModal({ user_id }: Props) {
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating...
+              {folder_id ? "Updating..." : "Creating..."}
             </>
           ) : (
-            "Create Folder"
+            <>{folder_id ? "Rename Folder" : "Create Folder"}</>
           )}
         </Button>
       </form>

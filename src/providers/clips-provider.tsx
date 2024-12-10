@@ -8,14 +8,14 @@ import { useSession } from "./session-provider";
 type AddToFolderType = {
   folderName: string;
   folderId: number;
-  clipId: number;
+  clipId: string;
 };
 
 interface FolderContextType {
   folders: Database["public"]["Tables"]["clip_folders"]["Row"][];
   getAvailableFolders: (folderId: number[]) => Database["public"]["Tables"]["clip_folders"]["Row"][];
   getRemovableFolders: (folderId: number[]) => Database["public"]["Tables"]["clip_folders"]["Row"][];
-  handleRemoveClipFromFolder: (folderId: number, clipId: number, folderName: string) => void;
+  handleRemoveClipFromFolder: (folderId: number, clipId: string, folderName: string) => void;
   AddToFolder: ({ folderName, folderId, clipId }: AddToFolderType) => void;
 }
 
@@ -52,14 +52,14 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
         return res.message;
       },
       {
-        loading: "Adding to favorites",
-        success: "Added to favorites",
-        error: "Failed to add to favorites",
+        loading: `Adding to ${folderName}`,
+        success: `Added to ${folderName}`,
+        error: `Failed to add to ${folderName}`,
       }
     );
   };
 
-  const handleRemoveClipFromFolder = (folderId: number, clipId: number, folderName: string) => {
+  const handleRemoveClipFromFolder = (folderId: number, clipId: string, folderName: string) => {
     toast.promise(
       async () => {
         const res = await removeClipFromFolder(clipId, folderId, userId);
