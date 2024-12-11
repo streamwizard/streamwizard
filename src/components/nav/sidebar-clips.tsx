@@ -16,15 +16,13 @@ import { Button } from "../ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem } from "../ui/sidebar";
 
-import { useState } from "react";
-import ClipFolderDelete from "../alerts/clip-folder-delete";
+import ClipFolderDeleteModal from "../modals/clip-folder-delete-modal";
 
 interface Props {
   clipFolders: Database["public"]["Tables"]["clip_folders"]["Row"][];
 }
 
 export default function SidebarClips({ clipFolders }: Props) {
-  const [showAlert, setShowAlert] = useState(false);
   const { openModal } = useModal();
   const { id } = useSession();
 
@@ -36,22 +34,12 @@ export default function SidebarClips({ clipFolders }: Props) {
     openModal(<CLipFolderModal user_id={id} folder_id={folderId} folder_name={folderName} />);
   };
 
-  const deleteFolderButton = (folderId: number) => {
-    openModal(
-      <ClipFolderDelete
-        folderId={folderId}
-        open={true}
-        setOpen={setShowAlert}
-        userId={id}
-      />
-    )
+  const deleteFolderButton = (folderId: number, folderName: string) => {
+    openModal(<ClipFolderDeleteModal folderId={folderId} folderName={folderName} />);
   };
 
   return (
     <>
-      
-
-
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton asChild>
@@ -95,7 +83,7 @@ export default function SidebarClips({ clipFolders }: Props) {
                         <DropdownMenuLabel>Folder Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => EditFolderButton(folder.name, folder.id)}>Rename</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => deleteFolderButton(folder.id)}>Delete</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => deleteFolderButton(folder.id, folder.name)}>Delete</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </SidebarMenuSubItem>

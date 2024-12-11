@@ -84,6 +84,7 @@ export async function createClipFolder(folderName: string, user_id: string, pare
       .single();
 
     if (error) throw error;
+    revalidatePath("/dashboard/clips", "layout");
     return data;
   } catch (error) {
     console.error("Error creating folder:", error);
@@ -121,10 +122,10 @@ export async function editClipFolder(folderId: number, folderName: string, user_
 
 
 // delete a folder for clips
-export async function deleteClipFolder(folderId: number, user_id: string) {
+export async function deleteClipFolder(folderId: number) {
   const supabase = await createClient();
   try {
-    const { error } = await supabase.from("clip_folders").delete().eq("id", folderId).eq("user_id", user_id);
+    const { error } = await supabase.from("clip_folders").delete().eq("id", folderId)
     if (error) throw error;
     revalidatePath("/dashboard/clips", "layout");
     return {

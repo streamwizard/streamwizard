@@ -92,7 +92,7 @@ export default function TwitchClipCard({
   }
 
   return (
-    <Card className="w-full max-w-md overflow-hidden cursor-pointer">
+    <Card className="w-full max-w-md overflow-hidden cursor-pointer mx-">
       <CardHeader className="p-0">
         <div className="relative">
           <img src={thumbnail_url!} alt={title} className="w-full h-48 object-cover" onClick={OpenClip} />
