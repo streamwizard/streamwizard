@@ -9,7 +9,7 @@ import {
 import { useModal } from "@/providers/modal-provider";
 import { useSession } from "@/providers/session-provider";
 import { Database } from "@/types/supabase";
-import { Clapperboard, EllipsisVertical, Folder, Plus, Star } from "lucide-react";
+import { Clapperboard, EllipsisVertical, Folder, Plus, Star, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import { CLipFolderModal } from "../modals/clip-folder-modal";
 import { Button } from "../ui/button";
@@ -17,12 +17,16 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/colla
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem } from "../ui/sidebar";
 
 import ClipFolderDeleteModal from "../modals/clip-folder-delete-modal";
+import { useState } from "react";
+import { usePathname } from "next/navigation";
 
 interface Props {
   clipFolders: Database["public"]["Tables"]["clip_folders"]["Row"][];
 }
 
 export default function SidebarClips({ clipFolders }: Props) {
+  const [isOpen, setIsOpen] = useState<boolean>(true); // Manage collapsible state manually
+  const pathname = usePathname();
   const { openModal } = useModal();
   const { id } = useSession();
 
@@ -49,13 +53,17 @@ export default function SidebarClips({ clipFolders }: Props) {
             </Link>
           </SidebarMenuButton>
         </SidebarMenuItem>
-        <Collapsible defaultOpen className="group/collapsible">
+        <Collapsible
+          className="group/collapsible"
+          onOpenChange={setIsOpen} // Track open/close state
+          open={isOpen}
+        >
           <SidebarMenuItem>
             <div className="flex">
               <CollapsibleTrigger asChild>
                 <SidebarMenuButton className="flex justify-between">
                   <div className="flex items-center space-x-2">
-                    <Folder className="mr-2 h-4 w-4" />
+                    {isOpen ? <FolderOpen className="mr-2 h-4 w-4" /> : <Folder className="mr-2 h-4 w-4" />}
                     Folders
                   </div>
                 </SidebarMenuButton>
@@ -69,9 +77,9 @@ export default function SidebarClips({ clipFolders }: Props) {
               <SidebarMenuSub>
                 {clipFolders.map((folder) => (
                   <SidebarMenuSubItem key={folder.id} className="flex items-center">
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild isActive={pathname === `/dashboard/clips/${folder.href}`}>
                       <Link href={`/dashboard/clips/${folder.href}`} className="flex items-center space-x-2">
-                        <Star className="mr-2 h-4 w-4" />
+                        {pathname === `/dashboard/clips/${folder.href}` ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
                         {folder.name}
                       </Link>
                     </SidebarMenuButton>
