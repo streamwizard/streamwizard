@@ -1,8 +1,11 @@
 import TwitchClipCard from "@/components/cards/clip-card";
+import { EmptyFolder } from "@/components/cards/empty-folder";
+import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import buildClipQuery from "@/lib/utils/build-clip-query";
 import { ClipSearchParams } from "@/types/pages";
 import { Database } from "@/types/supabase";
+import { FolderX } from "lucide-react";
 
 type PageProps = {
   params: Promise<{ folder: string }>;
@@ -31,11 +34,20 @@ export default async function Page({ params, searchParams }: PageProps) {
   }
 
   return (
-    <div className="grid grid-cols-4 gap-4">
-      {data &&
-        data.map((clip) => (
-          <TwitchClipCard key={clip.id} {...clip} folders={clip.folders as Database["public"]["Tables"]["clip_folders"]["Row"][]} />
-        ))}
-    </div>
+    <>
+      {data && data.length > 0 ? (
+        <div className="grid grid-cols-4 gap-4">
+          {data.map((clip) => (
+            <TwitchClipCard key={clip.id} {...clip} folders={clip.folders as Database["public"]["Tables"]["clip_folders"]["Row"][]} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center p-6 text-center mt-32 space-y-4">
+          <FolderX className="w-16 h-16 text-muted-foreground " />
+          <p className="text-muted-foreground">This folder is empty</p>
+          <Button variant="outline">How do I add clips to a folder?</Button>
+        </div>
+      )}
+    </>
   );
 }

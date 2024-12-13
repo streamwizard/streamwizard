@@ -219,6 +219,39 @@ export type Database = {
           },
         ]
       }
+      dev_access_ips: {
+        Row: {
+          access_level: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          ip_address: string
+          is_active: boolean | null
+          owner: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_level?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ip_address: string
+          is_active?: boolean | null
+          owner: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_level?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ip_address?: string
+          is_active?: boolean | null
+          owner?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       integrations: {
         Row: {
           created_at: string
