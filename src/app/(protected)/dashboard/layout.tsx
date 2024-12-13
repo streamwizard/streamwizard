@@ -1,10 +1,8 @@
 import { DashboardNav } from "@/components/nav/dashboardNav";
-import Sidebar from "@/components/nav/sidebar";
-import { SidebarNav } from "@/components/nav/SidebarNav";
-import { Breadcrumb } from "@/components/ui/breadcrumb";
-import { dashboardConfig } from "@/lib/config";
+import { AppSidebar } from "@/components/nav/sidebar-app";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
-import { SessionProvider } from "@/providers/session-provider";
+import { ClipFolderProvider } from "@/providers/clips-provider";
 import { redirect } from "next/navigation";
 import React from "react";
 
@@ -25,18 +23,19 @@ export default async function layout({
     redirect("/login");
   }
 
+  const { data: folders } = await supabase.from("clip_folders").select("*");
+
   return (
-    <div className="flex">
-      <Sidebar>
-        <SidebarNav config={dashboardConfig} user={data.user} />
-      </Sidebar>
-      <div className="w-full">
-        <DashboardNav />
-        <div className="h-[calc(100vh-60px)] overflow-x-hidden ">
-          {/* <Breadcrumb /> */}
-          <div className="mx-auto p-5 h-full" >{children}</div>
+    <SidebarProvider>
+      <div className="flex w-full">
+        <AppSidebar user={data.user} folders={folders || []} />
+        <div className="w-full">
+          <DashboardNav />
+          <div className="h-[calc(100vh-60px)] overflow-x-hidden ">
+            <div className="mx-auto p-5 h-full">{children}</div>
+          </div>
         </div>
       </div>
-    </div>
+    </SidebarProvider>
   );
 }

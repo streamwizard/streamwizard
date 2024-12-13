@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
@@ -91,9 +91,7 @@ const Modal: React.FC<ModalProps> = ({ children, closeModal, isOpen }) => {
           />
 
           <motion.div
-            className={cn(
-              "md:max-w-[40%] bg-white dark:bg-neutral-950 border border-transparent dark:border-neutral-800 md:rounded-2xl relative z-50 flex flex-col flex-1 overflow-hidden p-4"
-            )}
+            className={cn("z-50 relative bg-background rounded-md shadow-md p-4")}
             initial={{ opacity: 0, scale: 0.5, rotateX: 40, y: 40 }}
             animate={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, rotateX: 10 }}

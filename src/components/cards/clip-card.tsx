@@ -1,21 +1,27 @@
 "use client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { TwitchClipTable } from "@/types/database";
-import { Calendar, Eye, MoreHorizontal, Star, User } from "lucide-react";
-import Link from "next/link";
-import { Button } from "../ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu";
+import { useClipFolders } from "@/providers/clips-provider";
 import { useModal } from "@/providers/modal-provider";
-import TwitchClipModal from "../modals/twitch-clip-modal";
+import { clipsWithFolders } from "@/types/database";
+import { Calendar, Eye, MoreHorizontal, Star, User } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
+import TwitchClipModal from "../modals/twitch-clip-modal";
+import { Button } from "../ui/button";
 
 export default function TwitchClipCard({
   url,
@@ -27,8 +33,13 @@ export default function TwitchClipCard({
   duration,
   is_featured,
   embed_url,
-}: TwitchClipTable) {
+  id,
+  folders,
+  twitch_clip_id,
+}: clipsWithFolders) {
   const { openModal } = useModal();
+  const { getAvailableFolders, getRemovableFolders, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
+
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
@@ -52,8 +63,36 @@ export default function TwitchClipCard({
     toast.success("Copied to clipboard");
   };
 
+  function AvailableFolders() {
+    const availableFolders = getAvailableFolders(folders.map((folder) => folder.id));
+
+    if (availableFolders.length === 0) {
+      return <DropdownMenuItem disabled>No folders available</DropdownMenuItem>;
+    }
+
+    return availableFolders.map((folder) => (
+      <DropdownMenuItem key={folder.id} onClick={() => AddToFolder({ folderName: folder.name, folderId: folder.id, clipId: twitch_clip_id })}>
+        {folder.name}
+      </DropdownMenuItem>
+    ));
+  }
+
+  function RemovableFolders() {
+    const removableFolders = getRemovableFolders(folders.map((folder) => folder.id));
+
+    if (removableFolders.length === 0) {
+      return <DropdownMenuItem disabled>No folders available</DropdownMenuItem>;
+    }
+
+    return removableFolders.map((folder) => (
+      <DropdownMenuItem key={folder.id} onClick={() => handleRemoveClipFromFolder(folder.id, twitch_clip_id, folder.name)}>
+        {folder.name}
+      </DropdownMenuItem>
+    ));
+  }
+
   return (
-    <Card className="w-full max-w-md overflow-hidden cursor-pointer">
+    <Card className="w-full max-w-md overflow-hidden cursor-pointer mx-">
       <CardHeader className="p-0">
         <div className="relative">
           <img src={thumbnail_url!} alt={title} className="w-full h-48 object-cover" onClick={OpenClip} />
@@ -90,11 +129,34 @@ export default function TwitchClipCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>Folders</DropdownMenuLabel>
+
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Add to folder</DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                      <AvailableFolders />
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem>Create new folder</DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>Remove from folder</DropdownMenuSubTrigger>
+                  <DropdownMenuPortal>
+                    <DropdownMenuSubContent>
+                      <RemovableFolders />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuPortal>
+                </DropdownMenuSub>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
               <Link href={url!} target="_blank">
                 <DropdownMenuItem onClick={() => navigator.clipboard.writeText(url!)}>View</DropdownMenuItem>
               </Link>
-              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={CopyClipURL}>Copy URL to clipboard</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

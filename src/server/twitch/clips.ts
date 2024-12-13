@@ -1,5 +1,6 @@
 import { TwitchAPI } from "@/lib/axios/twitch-api";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { TwitchClip, TwitchClipResponse } from "@/types/twitch";
 
 /**
@@ -115,3 +116,6 @@ export function formatClipsForDB(clips: TwitchClip[], userId: string) {
     user_id: userId,
   }));
 }
+
+
+
