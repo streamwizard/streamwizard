@@ -1,14 +1,9 @@
+import { ModalProvider } from "@/providers/modal-provider";
+import { ThemeProvider } from "@/providers/theme-provider";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import "./globals.css";
-import { ThemeProvider } from "@/providers/theme-provider";
 import { Toaster } from "sonner";
-import { ModalProvider } from "@/providers/modal-provider";
-import { env } from "@/lib/env";
-import { createClient } from "@/lib/supabase/server";
-import { headers } from "next/headers";
-import { redirect } from "next/navigation";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import "./globals.css";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -38,25 +33,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  if (env.NODE_ENV === "development") {
-    const clientIP = (await headers()).get("x-forwarded-for") || null;
-
-    console.log(clientIP);
-
-    if (!clientIP) return redirect(env.NEXT_PUBLIC_BASE_URL);
-
-    const { data, error } = await supabaseAdmin.from("dev_access_ips").select("*").eq("ip_address", clientIP).eq("is_active", true).single();
-
-    if (error) {
-      console.error(error);
-      // return redirect(env.NEXT_PUBLIC_BASE_URL);
-    }
-
-    if (!data) {
-      // return redirect(env.NEXT_PUBLIC_BASE_URL);
-    }
-  }
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
