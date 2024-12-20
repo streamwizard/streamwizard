@@ -1,9 +1,14 @@
-import { ModalProvider } from "@/providers/modal-provider";
-import { ThemeProvider } from "@/providers/theme-provider";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Toaster } from "sonner";
 import "./globals.css";
+import { ThemeProvider } from "@/providers/theme-provider";
+import { Toaster } from "sonner";
+import { ModalProvider } from "@/providers/modal-provider";
+import { env } from "@/lib/env";
+import { createClient } from "@/lib/supabase/server";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
