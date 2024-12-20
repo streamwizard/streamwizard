@@ -42,7 +42,6 @@ export default function TwitchClipSearchForm() {
   const searchParams = useSearchParams();
   const broadcaster_id = searchParams.get("broadcaster_id");
 
-
   const { user_metadata } = useSession();
 
   const form = useForm<FormValues>({
@@ -64,22 +63,24 @@ export default function TwitchClipSearchForm() {
     form.reset({
       game_id: searchParams.get("game_id") || "",
       creator_id: searchParams.get("creator_id") || "",
-      date: {
-      from: searchParams.get("start_date") ? new Date(searchParams.get("start_date")!) : undefined,
-      to: searchParams.get("end_date") ? new Date(searchParams.get("end_date")!) : undefined,
-      },
       isFeatured: searchParams.get("is_featured") === "true",
       searchQuery: searchParams.get("search_query") || "",
       broadcaster_id: searchParams.get("broadcaster_id") || "",
       sort: (searchParams.get("sort") as "date" | "views") || "date",
       asc: searchParams.get("asc") === "true",
+
+      date: searchParams.get("start_date")
+        ? {
+            from: searchParams.get("start_date") ? new Date(searchParams.get("start_date")!) : undefined,
+            to: searchParams.get("end_date") ? new Date(searchParams.get("end_date")!) : undefined,
+          }
+        : undefined,
     });
   }, [searchParams]);
 
   // Handle form submission
   function onSubmit(values: FormValues) {
     console.log(values);
-
 
     const params = new URLSearchParams();
     if (values.game_id) params.set("game_id", values.game_id);
@@ -105,7 +106,6 @@ export default function TwitchClipSearchForm() {
     }
     router.push("?");
   }
-
 
   useEffect(() => {
     console.log(form.watch());
@@ -175,7 +175,7 @@ export default function TwitchClipSearchForm() {
               </FormItem>
             )}
           />
-          <DatePickerWithPresets name="date" label="Date Range"  />
+          <DatePickerWithPresets name="date" label="Date Range" />
           <FormField
             control={form.control}
             name="isFeatured"
