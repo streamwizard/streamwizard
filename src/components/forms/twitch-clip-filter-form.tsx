@@ -1,30 +1,32 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { cn } from "@/lib/utils";
 import { useSession } from "@/providers/session-provider";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
-import { ControllerRenderProps, FieldValues, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
 import SyncTwitchClipsButton from "../buttons/sync-twitch-clips";
+import { DatePickerWithPresets } from "../date-picker";
 import TwitchCategorySearch from "../search-bars/twitch-category-search";
 import TwitchSearchBar from "../search-bars/twitch-channel-search";
 
 const formSchema = z.object({
   game_id: z.string().optional(),
   creator_id: z.string().optional(),
-  start_date: z.string().optional(),
-  end_date: z.string().optional(),
+
+  date: z
+    .object({
+      from: z.date(),
+      to: z.date().optional(),
+    })
+    .optional(),
+
   isFeatured: z.boolean().default(false),
   searchQuery: z.string().optional(),
   broadcaster_id: z.string().optional(),
@@ -32,53 +34,14 @@ const formSchema = z.object({
   asc: z.boolean().default(false),
 });
 
-type FormValues = z.infer<typeof formSchema>;
-
-interface DatePickerFormFieldProps {
-  control: any;
-  name: "start_date" | "end_date";
-  label: string;
-}
-
-function DatePickerFormField({ control, name, label }: DatePickerFormFieldProps) {
-  return (
-    <FormField
-      control={control}
-      name={name}
-      render={({ field }: { field: ControllerRenderProps<FieldValues, typeof name> }) => (
-        <FormItem className="flex flex-col justify-center">
-          <FormLabel>{label}</FormLabel>
-          <Popover>
-            <PopoverTrigger asChild>
-              <FormControl>
-                <Button variant={"outline"} className={cn("w-full pl-3 text-left font-normal space-y-0", !field.value && "text-muted-foreground")}>
-                  {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                </Button>
-              </FormControl>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={new Date(field.value)}
-                onSelect={(e) => field.onChange(e?.toISOString())}
-                disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
-  );
-}
+export type FormValues = z.infer<typeof formSchema>;
 
 export default function TwitchClipSearchForm() {
   "use no memo";
   const router = useRouter();
   const searchParams = useSearchParams();
   const broadcaster_id = searchParams.get("broadcaster_id");
+
 
   const { user_metadata } = useSession();
 
@@ -87,8 +50,7 @@ export default function TwitchClipSearchForm() {
     defaultValues: {
       game_id: searchParams.get("game_id") || "",
       creator_id: searchParams.get("creator_id") || "",
-      start_date: searchParams.get("start_date") || "",
-      end_date: searchParams.get("end_date") || "",
+      date: undefined,
       isFeatured: searchParams.get("isFeatured") === "true",
       searchQuery: searchParams.get("search_query") || "",
       broadcaster_id: searchParams.get("broadcaster_id") || "",
@@ -102,8 +64,10 @@ export default function TwitchClipSearchForm() {
     form.reset({
       game_id: searchParams.get("game_id") || "",
       creator_id: searchParams.get("creator_id") || "",
-      start_date: searchParams.get("start_date") || "",
-      end_date: searchParams.get("end_date") || "",
+      date: {
+      from: searchParams.get("start_date") ? new Date(searchParams.get("start_date")!) : undefined,
+      to: searchParams.get("end_date") ? new Date(searchParams.get("end_date")!) : undefined,
+      },
       isFeatured: searchParams.get("is_featured") === "true",
       searchQuery: searchParams.get("search_query") || "",
       broadcaster_id: searchParams.get("broadcaster_id") || "",
@@ -114,11 +78,14 @@ export default function TwitchClipSearchForm() {
 
   // Handle form submission
   function onSubmit(values: FormValues) {
+    console.log(values);
+
+
     const params = new URLSearchParams();
     if (values.game_id) params.set("game_id", values.game_id);
     if (values.creator_id) params.set("creator_id", values.creator_id);
-    if (values.start_date) params.set("start_date", values.start_date);
-    if (values.end_date) params.set("end_date", values.end_date);
+    if (values.date?.from) params.set("start_date", values.date.from.toISOString());
+    if (values.date?.to) params.set("end_date", values.date.to.toISOString());
     if (values.isFeatured) params.set("is_featured", "true");
     if (values.searchQuery) params.set("search_query", values.searchQuery);
     if (values.broadcaster_id) params.set("broadcaster_id", values.broadcaster_id);
@@ -138,6 +105,11 @@ export default function TwitchClipSearchForm() {
     }
     router.push("?");
   }
+
+
+  useEffect(() => {
+    console.log(form.watch());
+  }, [form.watch()]);
 
   return (
     <Form {...form}>
@@ -203,8 +175,7 @@ export default function TwitchClipSearchForm() {
               </FormItem>
             )}
           />
-          <DatePickerFormField control={form.control} name="start_date" label="Start Date" />
-          <DatePickerFormField control={form.control} name="end_date" label="End Date" />
+          <DatePickerWithPresets name="date" label="Date Range"  />
           <FormField
             control={form.control}
             name="isFeatured"
@@ -256,7 +227,7 @@ export default function TwitchClipSearchForm() {
                 <FormLabel>Order</FormLabel>
                 <FormControl>
                   <RadioGroup
-                    onValueChange={(value) => value === "ascending" ? field.onChange(true) : field.onChange(false)}
+                    onValueChange={(value) => (value === "ascending" ? field.onChange(true) : field.onChange(false))}
                     value={field.value ? "ascending" : "descending"}
                     className="flex"
                   >

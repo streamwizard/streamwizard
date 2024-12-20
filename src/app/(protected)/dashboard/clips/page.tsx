@@ -1,4 +1,5 @@
 import TwitchClipCard from "@/components/cards/clip-card";
+import { AdvancedPagination } from "@/components/nav/advanced-pagination";
 import { createClient } from "@/lib/supabase/server";
 import buildClipQuery from "@/lib/utils/build-clip-query";
 import { ClipSearchParams } from "@/types/pages";
@@ -22,12 +23,23 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
     return null;
   }
 
+  const pageIndex = parsedSearchParams.page ? parseInt(parsedSearchParams.page) : 1;
+
+  const maxPage = Math.ceil(count! / 100);
   return (
-    <div className="grid grid-cols-4 gap-4">
-      {data &&
-        data.map((clip) => (
-          <TwitchClipCard key={clip.id} {...clip} folders={clip.folders as Database["public"]["Tables"]["clip_folders"]["Row"][]} />
-        ))}
-    </div>
+    <>
+      <div className="grid grid-cols-4 gap-4">
+        {data &&
+          data.map((clip) => (
+            <TwitchClipCard key={clip.id} {...clip} folders={clip.folders as Database["public"]["Tables"]["clip_folders"]["Row"][]} />
+          ))}
+      </div>
+      <div className="flex justify-between items-center mt-10">
+        <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
+        <p className="text-sm text-muted-foreground">
+          Showing {data.length} of {count} clips
+        </p>
+      </div>
+    </>
   );
 }
