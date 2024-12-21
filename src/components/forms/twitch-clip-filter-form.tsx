@@ -80,8 +80,6 @@ export default function TwitchClipSearchForm() {
 
   // Handle form submission
   function onSubmit(values: FormValues) {
-    console.log(values);
-
     const params = new URLSearchParams();
     if (values.game_id) params.set("game_id", values.game_id);
     if (values.creator_id) params.set("creator_id", values.creator_id);
@@ -107,9 +105,7 @@ export default function TwitchClipSearchForm() {
     router.push("?");
   }
 
-  useEffect(() => {
-    console.log(form.watch());
-  }, [form.watch()]);
+
 
   return (
     <Form {...form}>
