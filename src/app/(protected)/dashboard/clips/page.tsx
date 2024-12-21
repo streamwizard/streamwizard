@@ -11,13 +11,13 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
 
   const { data: user } = await supabase.auth.getUser();
 
-  let query = supabase.rpc("get_all_clips_with_folders");
+  let query = supabase.rpc("get_all_clips_with_folders", {} , { count: "exact" });
 
   query = buildClipQuery(parsedSearchParams, query);
 
   query = parsedSearchParams.broadcaster_id ? query.eq("broadcaster_id", parsedSearchParams.broadcaster_id) : query.eq("user_id", user?.user?.id!);
 
-  const { data, error, count } = await query;
+  const { data, error, count,  } = await query;
   if (error) {
     console.error(error);
     return null;
@@ -26,6 +26,8 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   const pageIndex = parsedSearchParams.page ? parseInt(parsedSearchParams.page) : 1;
 
   const maxPage = Math.ceil(count! / 100);
+
+
   return (
     <>
       <div className="grid grid-cols-4 gap-4">
