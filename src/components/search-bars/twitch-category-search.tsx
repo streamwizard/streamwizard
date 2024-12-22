@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "../ui/button";
 import { SearchBar } from "../ui/search-bar";
 import { useSession } from "@/providers/session-provider";
-import { searchTwitchCategories } from "@/actions/twitch/twitch-api";
+import { LookupTwitchGame, searchTwitchCategories } from "@/actions/twitch/twitch-api";
 import { TwitchCategory } from "@/types/twitch";
 import { toast } from "sonner";
 
@@ -17,7 +17,7 @@ interface TwitchCategorySearchProps {
   disabled?: boolean;
   setValue: (game_id: string) => void;
   value?: string;
-  initalValue?: string;
+  initalValue?: string | null;
 }
 
 export default function TwitchCategorySearch({
@@ -38,14 +38,18 @@ export default function TwitchCategorySearch({
     }
   }, [value]);
 
-
-
   useEffect(() => {
-    
+    const fetchInitialGame = async () => {
+      if (initalValue) {
+        const res = await LookupTwitchGame(initalValue);
+        if (res) {
+          setDisplayValue(res.name);
+        }
+      }
+    };
 
+    fetchInitialGame();
   }, [initalValue]);
-
-
 
   const search = async (searchTerm: string) => {
     try {

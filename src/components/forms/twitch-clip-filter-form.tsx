@@ -152,7 +152,7 @@ export default function TwitchClipSearchForm() {
               <FormItem className="w-full">
                 <FormLabel>Twitch Category</FormLabel>
                 <FormControl>
-                  <TwitchCategorySearch placeholder="Enter Twitch category" setValue={(category) => field.onChange(category)} value={field.value} initalValue={field.value} />
+                  <TwitchCategorySearch placeholder="Enter Twitch category" setValue={(category) => field.onChange(category)} value={field.value} initalValue={searchParams.get("game_id")} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
