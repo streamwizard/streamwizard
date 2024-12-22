@@ -81,13 +81,13 @@ export default function TwitchClipSearchForm() {
   // Handle form submission
   function onSubmit(values: FormValues) {
     const params = new URLSearchParams();
-    if (values.game_id) params.set("game_id", values.game_id);
-    if (values.creator_id) params.set("creator_id", values.creator_id);
+    if (values.game_id && values.game_id.length >= 4) params.set("game_id", values.game_id);
+    if (values.creator_id && values.creator_id.length >= 4) params.set("creator_id", values.creator_id);
     if (values.date?.from) params.set("start_date", values.date.from.toISOString());
     if (values.date?.to) params.set("end_date", values.date.to.toISOString());
     if (values.isFeatured) params.set("is_featured", "true");
-    if (values.searchQuery) params.set("search_query", values.searchQuery);
-    if (values.broadcaster_id) params.set("broadcaster_id", values.broadcaster_id);
+    if (values.searchQuery && values.searchQuery.length >= 4) params.set("search_query", values.searchQuery);
+    if (values.broadcaster_id && values.broadcaster_id.length >= 4) params.set("broadcaster_id", values.broadcaster_id);
     if (values.sort) params.set("sort", values.sort);
     if (values.asc) params.set("asc", "true");
 
@@ -152,7 +152,7 @@ export default function TwitchClipSearchForm() {
               <FormItem className="w-full">
                 <FormLabel>Twitch Category</FormLabel>
                 <FormControl>
-                  <TwitchCategorySearch placeholder="Enter Twitch category" setValue={(category) => field.onChange(category)} value={field.value} />
+                  <TwitchCategorySearch placeholder="Enter Twitch category" setValue={(category) => field.onChange(category)} value={field.value} initalValue={field.value} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -165,7 +165,7 @@ export default function TwitchClipSearchForm() {
               <FormItem className="w-full">
                 <FormLabel>Clipped by</FormLabel>
                 <FormControl>
-                  <TwitchSearchBar placeholder="Enter Twitch Username" onSelect={(channel) => field.onChange(channel.id)} value={field.value} />
+                  <TwitchSearchBar placeholder="Enter Twitch Username" onSelect={(channel) => field.onChange(channel.id)} value={field.value} reset={() => field.onChange("")} initalValue={searchParams.get("creator_id")} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

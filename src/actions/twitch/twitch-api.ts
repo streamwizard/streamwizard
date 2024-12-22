@@ -73,3 +73,24 @@ export async function LookupTwitchUser(user_id: string) {
   });
   return response.data.data[0];
 }
+
+
+// look up games based on game ID 
+export async function LookupTwitchGame(game_id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("integrations_twitch").select("access_token, twitch_user_id").single();
+  if (error) {
+    console.error("Tokens not found");
+    return null;
+  }
+  const response = await TwitchAPI.get(`/games`, {
+    headers: {
+      Authorization: `Bearer ${data.access_token}`,
+    },
+    broadcasterID: data.twitch_user_id,
+    params: {
+      id: game_id,
+    },
+  });
+  return response.data.data[0];
+}

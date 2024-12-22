@@ -16,7 +16,8 @@ interface Props {
   disabled?: boolean;
   onSelect?: (channel: ChannelSearchResult) => void;
   value?: string;
-  initalValue?: string;
+  initalValue?: string | null;
+  reset?: () => void;
 }
 
 export default function TwitchSearchBar({
@@ -26,6 +27,7 @@ export default function TwitchSearchBar({
   onSelect = () => {},
   value,
   initalValue,
+  reset,
 }: Props) {
   const [results, setResults] = useState<results[]>([]);
   const [displayValue, setDisplayValue] = useState("");
@@ -34,9 +36,17 @@ export default function TwitchSearchBar({
   useEffect(() => {
     if (!value) {
       setDisplayValue("");
-      setImage(null);
+      setImage(null);      
     }
   }, [value]);
+
+
+  useEffect(() => {
+    if (!displayValue || displayValue.length < 3) {
+      setImage(null);  
+      reset && reset();
+    }
+  }, [displayValue]);
 
   // if we have a initial value, look up the channel
   useEffect(() => {

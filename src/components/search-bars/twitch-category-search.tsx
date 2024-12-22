@@ -17,6 +17,7 @@ interface TwitchCategorySearchProps {
   disabled?: boolean;
   setValue: (game_id: string) => void;
   value?: string;
+  initalValue?: string;
 }
 
 export default function TwitchCategorySearch({
@@ -25,6 +26,7 @@ export default function TwitchCategorySearch({
   disabled = false,
   setValue,
   value = "",
+  initalValue,
 }: TwitchCategorySearchProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [displayValue, setDisplayValue] = useState("");
@@ -35,6 +37,15 @@ export default function TwitchCategorySearch({
       setDisplayValue("");
     }
   }, [value]);
+
+
+
+  useEffect(() => {
+    
+
+  }, [initalValue]);
+
+
 
   const search = async (searchTerm: string) => {
     try {
