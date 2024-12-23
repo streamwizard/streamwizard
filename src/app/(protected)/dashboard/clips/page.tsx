@@ -11,7 +11,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
 
   const { data: user } = await supabase.auth.getUser();
 
-  let query = supabase.rpc("get_all_clips_with_folders", {} , { count: "exact" });
+  let query = supabase.rpc("get_all_clips_with_folders", {}, { count: "exact" });
 
   query = buildClipQuery(parsedSearchParams, query);
 
