@@ -26,27 +26,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
 
-    // check if the user is in the whitelist
-    const { data: whitelistData, error: whitelistError } = await supabaseAdmin
-      .from("whitelist")
-      .select("email")
-      .eq("email", data.session?.user.email!)
-      .eq("whitelisted", true)
-      .single();
-
-    if (whitelistError || !whitelistData) {
-      if (whitelistError) {
-        console.error(whitelistError);
-      }
-
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        console.error(error);
-      }
-
-      return NextResponse.redirect(`${origin}/unauthorized`);
-    }
+   
     
     await checkEventSubscriptions(data.session.user.user_metadata.sub);
 
