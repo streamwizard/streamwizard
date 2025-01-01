@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 // The client you created from the Server-Side Auth instructions
 import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import { env } from "process";
 import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
 
 export async function GET(request: Request) {
