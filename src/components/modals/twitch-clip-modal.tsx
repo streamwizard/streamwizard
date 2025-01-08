@@ -6,10 +6,10 @@ interface Props {
 
 export default function TwitchClipModal({ url }: Props) {
   // Ensure proper URL formatting
-  const formattedUrl = `${url}&parent=localhost&parent=streamwizard.org&autoplay=true`;
+  const formattedUrl = `${url}&parent=localhost&parent=streamwizard.org&parent=development.streamwizard.org&autoplay=true`;
 
   return (
-    <div className="w-full">
+    <div className="w-[960px]">
       <iframe
         src={formattedUrl}
         height="480"

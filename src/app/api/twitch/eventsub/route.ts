@@ -14,8 +14,6 @@ const TWITCH_SECRET = env.TWITCH_WEBHOOK_SECRET;
 function verifyTwitchSignature(messageId: string, timestamp: string, body: string, signature: string): boolean {
   if (!TWITCH_SECRET) throw new Error("TWITCH_WEBHOOK_SECRET not configured");
 
-
-
   const message = messageId + timestamp + body;
   const hmac = crypto.createHmac("sha256", TWITCH_SECRET).update(message).digest("hex");
 
@@ -30,6 +28,9 @@ export async function POST(request: NextRequest) {
     const timestamp = headers["twitch-eventsub-message-timestamp"] as string;
     const messageType = headers["twitch-eventsub-message-type"] as string;
     const signature = headers["twitch-eventsub-message-signature"] as string;
+
+
+    console.log("signature", signature);
 
     // Get raw body
     const rawBody = await request.text();

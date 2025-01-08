@@ -12,7 +12,7 @@ export default async function NeededEventSubscriptions(twitchUserId: string): Pr
       },
       transport: {
         method: "webhook",
-        callback: "https://streamwizard.org/api/twitch/eventsub/",
+        callback: "https://streamwizard.org/api/twitch/eventsub",
         secret: env.TWITCH_WEBHOOK_SECRET,
       },
     },

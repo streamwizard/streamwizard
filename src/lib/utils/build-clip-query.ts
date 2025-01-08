@@ -1,15 +1,8 @@
-import { createClient } from "@/lib/supabase/server";
+import { ClipSearchParams } from "@/types/pages";
 
-export async function fetchClips(searchParams: { [key: string]: string | undefined }) {
-  const supabase = await createClient();
-  const { data: user } = await supabase.auth.getUser();
+export default function buildClipQuery(params: ClipSearchParams, query: any) {
+  const { game_id, creator_id, is_featured, end_date, start_date, search_query, page, sort, asc } = params;
 
-  // Your existing query logic here
-  const { game_id, creator_id, is_featured, end_date, start_date, search_query, page, broadcaster_id, sort, asc } = searchParams;
-
-  let query = supabase.from("clips").select("*", { count: "exact" }).limit(100);
-
-  // Apply filters
   if (game_id) query = query.eq("game_id", game_id);
   if (creator_id) query = query.eq("creator_id", creator_id);
   if (is_featured !== undefined) query = query.eq("is_featured", is_featured);
@@ -27,9 +20,6 @@ export async function fetchClips(searchParams: { [key: string]: string | undefin
     query = query.order("created_at_twitch", { ascending: false });
   }
 
-  // if there is a broadcaster_id, add it to the query otherwise use the broadcaster_id from the user
-  query = broadcaster_id ? query.eq("broadcaster_id", broadcaster_id) : query.eq("user_id", user?.user?.id!);
-
   const pageIndex = page ? parseInt(page) : 1;
   const pageSize = 100;
   const from = (pageIndex - 1) * pageSize;
@@ -37,17 +27,5 @@ export async function fetchClips(searchParams: { [key: string]: string | undefin
 
   query = query.range(from, to);
 
-  let { data, error, count } = await query;
-
-  if (error) {
-    console.error(error);
-    return null;
-  }
-
-  return {
-    data,
-    count: count || 0,
-    pageIndex,
-    pageSize,
-  };
+  return query;
 }

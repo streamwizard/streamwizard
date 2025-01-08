@@ -215,3 +215,12 @@ export type CreateEventSubSubscriptionRequest = {
     conduit_id?: string; // Conduit ID (required for conduit method).
   };
 };
+
+export type GetGamesResponse = {
+  data: {
+    id: string;
+    name: string;
+    box_art_url: string;
+    igdb_id: string;
+  }[];
+};

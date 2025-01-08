@@ -9,20 +9,97 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      clip_folder_junction: {
+        Row: {
+          clip_id: string
+          created_at: string | null
+          folder_id: number | null
+          id: number
+          user_id: string | null
+        }
+        Insert: {
+          clip_id: string
+          created_at?: string | null
+          folder_id?: number | null
+          id?: number
+          user_id?: string | null
+        }
+        Update: {
+          clip_id?: string
+          created_at?: string | null
+          folder_id?: number | null
+          id?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clip_folder_junction_clip_id_fkey"
+            columns: ["clip_id"]
+            isOneToOne: false
+            referencedRelation: "clips"
+            referencedColumns: ["twitch_clip_id"]
+          },
+          {
+            foreignKeyName: "clip_folder_junction_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "clip_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clip_folders: {
+        Row: {
+          created_at: string | null
+          href: string
+          id: number
+          name: string
+          parent_folder_id: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          href: string
+          id?: number
+          name: string
+          parent_folder_id?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          href?: string
+          id?: number
+          name?: string
+          parent_folder_id?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clip_folders_parent_folder_id_fkey"
+            columns: ["parent_folder_id"]
+            isOneToOne: false
+            referencedRelation: "clip_folders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clips: {
         Row: {
-          broadcaster_id: string | null
+          broadcaster_id: string
           broadcaster_name: string
-          created_at: string | null
+          created_at: string
           created_at_twitch: string
-          creator_id: string | null
+          creator_id: string
           creator_name: string
           duration: number | null
           embed_url: string | null
           game_id: string | null
           game_name: string | null
           id: number
-          is_featured: boolean | null
+          is_featured: boolean
           language: string | null
           thumbnail_url: string | null
           title: string
@@ -34,18 +111,18 @@ export type Database = {
           vod_offset: number | null
         }
         Insert: {
-          broadcaster_id?: string | null
+          broadcaster_id: string
           broadcaster_name: string
-          created_at?: string | null
+          created_at?: string
           created_at_twitch: string
-          creator_id?: string | null
+          creator_id: string
           creator_name: string
           duration?: number | null
           embed_url?: string | null
           game_id?: string | null
           game_name?: string | null
           id?: number
-          is_featured?: boolean | null
+          is_featured?: boolean
           language?: string | null
           thumbnail_url?: string | null
           title: string
@@ -57,18 +134,18 @@ export type Database = {
           vod_offset?: number | null
         }
         Update: {
-          broadcaster_id?: string | null
+          broadcaster_id?: string
           broadcaster_name?: string
-          created_at?: string | null
+          created_at?: string
           created_at_twitch?: string
-          creator_id?: string | null
+          creator_id?: string
           creator_name?: string
           duration?: number | null
           embed_url?: string | null
           game_id?: string | null
           game_name?: string | null
           id?: number
-          is_featured?: boolean | null
+          is_featured?: boolean
           language?: string | null
           thumbnail_url?: string | null
           title?: string
@@ -141,6 +218,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dev_access_ips: {
+        Row: {
+          access_level: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          ip_address: string
+          is_active: boolean | null
+          owner: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_level?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ip_address: string
+          is_active?: boolean | null
+          owner: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_level?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ip_address?: string
+          is_active?: boolean | null
+          owner?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       integrations: {
         Row: {
@@ -520,6 +630,69 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_clip_to_folder: {
+        Args: {
+          p_clip_id: string
+          p_folder_id: string
+        }
+        Returns: undefined
+      }
+      get_all_clips_with_folders: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: number
+          title: string
+          twitch_clip_id: string
+          creator_name: string
+          game_name: string
+          url: string
+          thumbnail_url: string
+          created_at: string
+          view_count: number
+          duration: number
+          broadcaster_name: string
+          created_at_twitch: string
+          user_id: string
+          embed_url: string
+          broadcaster_id: string
+          creator_id: string
+          video_id: string
+          game_id: string
+          language: string
+          vod_offset: number
+          is_featured: boolean
+          folders: Json
+        }[]
+      }
+      get_clips_by_folder: {
+        Args: {
+          folder_href: string
+        }
+        Returns: {
+          id: number
+          title: string
+          twitch_clip_id: string
+          creator_name: string
+          game_name: string
+          url: string
+          thumbnail_url: string
+          created_at: string
+          view_count: number
+          duration: number
+          broadcaster_name: string
+          created_at_twitch: string
+          user_id: string
+          embed_url: string
+          broadcaster_id: string
+          creator_id: string
+          video_id: string
+          game_id: string
+          language: string
+          vod_offset: number
+          is_featured: boolean
+          folders: Json
+        }[]
+      }
       insert_discord_integration: {
         Args: {
           integration_id: string
@@ -540,6 +713,13 @@ export type Database = {
           integration_id: string
           provider_data: Json
           user_id: string
+        }
+        Returns: undefined
+      }
+      remove_clip_from_folder: {
+        Args: {
+          p_clip_id: string
+          p_folder_id: string
         }
         Returns: undefined
       }

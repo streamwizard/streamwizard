@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 
 interface PaginationProps {
   totalPages: number
@@ -13,6 +13,7 @@ interface PaginationProps {
 export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: PaginationProps) {
   const [currentPage, setCurrentPage] = useState(initialPage)
   const searchParams = useSearchParams()
+  const pathname = usePathname()
   const router = useRouter()
 
   const changePage = (page: number) => {
@@ -30,7 +31,7 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
     params.set('page', newPage.toString())
     
     // Push the new URL with updated page, keeping other params intact
-    router.push(`/dashboard/?${params.toString()}`)
+    router.push(`${pathname}?${params.toString()}`)
   }
 
 

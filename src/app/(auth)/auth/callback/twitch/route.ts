@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 // The client you created from the Server-Side Auth instructions
 import { createClient } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import { env } from "process";
 import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
 
 export async function GET(request: Request) {
@@ -26,27 +24,7 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
 
-    // check if the user is in the whitelist
-    const { data: whitelistData, error: whitelistError } = await supabaseAdmin
-      .from("whitelist")
-      .select("email")
-      .eq("email", data.session?.user.email!)
-      .eq("whitelisted", true)
-      .single();
-
-    if (whitelistError || !whitelistData) {
-      if (whitelistError) {
-        console.error(whitelistError);
-      }
-
-      const { error } = await supabase.auth.signOut();
-
-      if (error) {
-        console.error(error);
-      }
-
-      return NextResponse.redirect(`${origin}/unauthorized`);
-    }
+   
     
     await checkEventSubscriptions(data.session.user.user_metadata.sub);
 
@@ -63,6 +41,8 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
 
+
+    
 
     if (!error) {
       if (isLocalEnv) {

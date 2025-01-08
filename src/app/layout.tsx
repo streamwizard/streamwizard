@@ -1,9 +1,9 @@
-import type { Metadata } from "next";
-import localFont from "next/font/local";
-import "./globals.css";
-import { ThemeProvider } from "@/providers/theme-provider";
-import { Toaster } from "sonner";
 import { ModalProvider } from "@/providers/modal-provider";
+import { ThemeProvider } from "@/providers/theme-provider";
+import { Metadata } from "next";
+import localFont from "next/font/local";
+import { Toaster } from "sonner";
+import "./globals.css";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   keywords: ["twitch", "music", "streaming", "interactive", "chat"],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
