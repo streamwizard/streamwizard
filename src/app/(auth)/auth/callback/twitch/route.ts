@@ -42,6 +42,8 @@ export async function GET(request: Request) {
     }
 
 
+    
+
     if (!error) {
       if (isLocalEnv) {
         // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host

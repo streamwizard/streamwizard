@@ -1,6 +1,7 @@
 import { StreamOfflineObject } from "@/types/twitch-eventsub";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { syncTwitchClips } from "../../clips";
+import { env } from "@/lib/env";
 
 export default async function handleStreamOffline(event: StreamOfflineObject) {
   // get the user_ID based of the broadcaster_user_id
@@ -11,7 +12,7 @@ export default async function handleStreamOffline(event: StreamOfflineObject) {
     .eq("twitch_user_id", event.broadcaster_user_id)
     .single();
 
-  if (userError || !user) return;
+  if (userError || !user) throw new Error("User not found");
 
   const { user_id } = user;
 
@@ -39,13 +40,19 @@ export default async function handleStreamOffline(event: StreamOfflineObject) {
     const currentTime = new Date();
 
     // if we have a last sync timestamp
-    if (syncData?.last_sync) {
-      const lastSync = new Date(syncData.last_sync);
-      const thirtyMinutesAgo = new Date(currentTime.getTime() - 30 * 60 * 1000);
+    // if (syncData?.last_sync) {
+    //   const lastSync = new Date(syncData.last_sync);
+    //   const thirtyMinutesAgo = new Date(currentTime.getTime() - 30 * 60 * 1000);
 
-      // Check if lastSync is older than one hour ago if so return a message to the user
-      if (lastSync > thirtyMinutesAgo) return;
-    }
+    //   // Check if lastSync is older than one hour ago if so return a message to the user
+    //   if (lastSync > thirtyMinutesAgo) {
+    //     console.log("Last sync was less than 30 minutes ago");
+    //     return {
+    //       success: false,
+    //       message: "Last sync was less than 30 minutes ago",
+    //     };
+    //   }
+    // }
 
     // Update last sync time
     const { error: updateError } = await supabaseAdmin.from("twitch_clip_syncs").upsert(
@@ -77,6 +84,10 @@ export default async function handleStreamOffline(event: StreamOfflineObject) {
 
       if (updateError) {
         throw new Error("Error updating sync status");
+      }
+
+      if (env.NODE_ENV === "development") {
+        console.log(`Synced ${totalClips} clips for user ${user_id}`);
       }
 
       return {
