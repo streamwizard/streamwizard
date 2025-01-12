@@ -103,7 +103,7 @@ export default function Home() {
           </div>
 
           {/* Mock Interface */}
-          <div className="relative rounded-xl mt-[8rem] animate-fade-up  [--animation-delay:400ms] [perspective:2000px] after:absolute after:inset-0 after:z-50 after:[background:linear-gradient(to_top,hsl(var(--background))_30%,transparent)] before:absolute before:bottom-1/2 before:left-0 before:top-0 before:h-full before:w-full before:-z-10  before:[filter:blur(180px)] before:[background-image:linear-gradient(to_bottom,var(--color-one),var(--color-one),transparent_40%)]">
+          <div className="relative rounded-xl mt-[8rem] animate-fade-up  [--animation-delay:400ms] [perspective:2000px] after:absolute after:inset-0 after:z-50 after:[background:linear-gradient(to_top,hsl(var(--background))_30%,transparent)] before:absolute before:bottom-1/2 before:left-0 before:top-0 before:h-full before:w-full before:-z-10  before:[filter:blur(180px)] before:content-[''] e before:inset-0 before:bg-gradient-to-b before:from-purple-600 before:via-purple-600 before:to-transparent before:opacity-40">
             <div className="rounded-xl border border-white/10 bg-white bg-opacity-[0.01]">
               <Image src="/hero-dark.png" alt="StreamWizard Interface" width={1440} height={900} className="rounded-xl " />
             </div>
@@ -144,7 +144,7 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="[--color:var(--color-one)] pointer-events-none relative  mx-auto h-[50rem] overflow-hidden [mask-image:radial-gradient(ellipse_at_center_center,#000,transparent_50%)] -my-72 before:absolute before:inset-0 before:h-full before:w-full before:opacity-40 before:[background-image:radial-gradient(circle_at_bottom_center,var(--color),transparent_70%)] after:absolute after:-left-1/2 after:top-1/2 after:aspect-[1/0.7] after:w-[200%] after:rounded-[50%] after:border-t after:border-[hsl(var(--border))] after:bg-background" />
+      <div  className="[--color:theme(colors.purple.600)] pointer-events-none relative mx-auto h-[50rem] overflow-hidden [mask-image:radial-gradient(ellipse_at_center_center,#000,transparent_50%)] -my-72 before:absolute before:inset-0 before:h-full before:w-full before:opacity-40 before:[background-image:radial-gradient(circle_at_bottom_center,var(--color),transparent_70%)] after:absolute after:-left-1/2 after:top-1/2 after:aspect-[1/0.7] after:w-[200%] after:rounded-[50%] after:border-t after:border-[hsl(var(--border))] after:bg-background" />
       {/* Testimonials */}
       <section className="py-20 bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
