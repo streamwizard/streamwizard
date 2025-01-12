@@ -1,32 +1,27 @@
-'use client';
+"use client";
 import { login } from "@/actions/auth/login";
 import React from "react";
 import SocialIcon from "../global/icons";
 import LoadingSpinner from "../global/loading";
 import { Button } from "../ui/button";
+import { cn } from "@/lib/utils";
 
 interface TwitchLoginProps {
   redirect: string | null;
+  text?: string;
+  variant?: "default" | "outline" | "ghost" | "link";
+  size?: "default" | "sm" | "lg" | "icon" | null | undefined;
+  disabled?: boolean;
+  className?: string;
 }
 
-export default function TwitchLogin({ redirect }: TwitchLoginProps) {
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  async function handleLogin() {
-    login();
-  }
-
+export default function TwitchLogin({ redirect, text, disabled, size, variant, className }: TwitchLoginProps) {
   return (
-    <form action={handleLogin}>
-      <Button variant="outline" type="button" disabled={isLoading} onClick={handleLogin}>
-        {isLoading ? (
-          <LoadingSpinner />
-        ) : (
-          <span className="mr-2 h-4 w-4 flex justify-center items-center">
-            <SocialIcon icon="twitch" />
-          </span>
-        )}{" "}
-        Twitch
-      </Button>
-    </form>
+    <Button variant={variant} size={size} type="button" onClick={() => login()} disabled={disabled}>
+      <span className={cn(className, "mr-2 h-4 w-4 flex justify-center items-center ")} aria-hidden="true">
+        <SocialIcon icon="twitch" />
+      </span>
+      {text || "Twitch"}
+    </Button>
   );
 }
