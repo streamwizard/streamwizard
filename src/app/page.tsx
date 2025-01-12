@@ -154,7 +154,7 @@ export default function Home() {
               {testimonials.map((testimonial, i) => (
                 <CarouselItem key={i}>
                   <Card className="p-6 bg-card">
-                    <p className="text-lg mb-4">"{testimonial.quote}"</p>
+                    <p className="text-lg mb-4">{testimonial.quote}</p>
                     <p className="font-semibold">{testimonial.author}</p>
                     <p className="text-muted-foreground">{testimonial.role}</p>
                   </Card>
