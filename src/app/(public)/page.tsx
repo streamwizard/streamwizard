@@ -144,9 +144,9 @@ export default function Home() {
         </div>
       </section>
 
-      <div  className="[--color:theme(colors.purple.600)] pointer-events-none relative mx-auto h-[50rem] overflow-hidden [mask-image:radial-gradient(ellipse_at_center_center,#000,transparent_50%)] -my-72 before:absolute before:inset-0 before:h-full before:w-full before:opacity-40 before:[background-image:radial-gradient(circle_at_bottom_center,var(--color),transparent_70%)] after:absolute after:-left-1/2 after:top-1/2 after:aspect-[1/0.7] after:w-[200%] after:rounded-[50%] after:border-t after:border-[hsl(var(--border))] after:bg-background" />
+      <div className="[--color:theme(colors.purple.600)] pointer-events-none relative z-0 mx-auto h-[50rem] overflow-hidden [mask-image:radial-gradient(ellipse_at_center_center,#000,transparent_50%)] -my-80 md:-my-72 before:absolute before:inset-0 before:h-full before:w-full before:opacity-40 before:[background-image:radial-gradient(circle_at_bottom_center,var(--color),transparent_70%)] after:absolute after:-left-1/2 after:top-1/2 after:aspect-[1/0.7] after:w-[200%] after:rounded-[50%] after:border-t after:border-[hsl(var(--border))] after:bg-background hidden md:block" />
       {/* Testimonials */}
-      <section className="py-20 bg-card">
+      <section className="py-20 bg-card z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center mb-12">What Streamers Say</h2>
           <Carousel className="max-w-xl mx-auto">
@@ -161,8 +161,8 @@ export default function Home() {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious />
-            <CarouselNext />
+            <CarouselPrevious className="hidden" />
+            <CarouselNext className="hidden" />
           </Carousel>
         </div>
       </section>
@@ -188,12 +188,8 @@ export default function Home() {
               <p className="text-muted-foreground">Create professional streaming overlays</p>
             </Card>
           </div>
-          <Link
-            href={discordInviteLink}
-            target="_blank"
-            className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "mt-12 bg-slate-50 text-black")}
-          >
-            <FaDiscord className="w-6 h-6" />
+          <Link href={discordInviteLink} target="_blank" className={cn(buttonVariants({ size: "lg" }), "mt-12 bg-slate-50 text-black")}>
+            <FaDiscord className="w-6 h-6 fill-purple-600" />
             Join the Discord
             <ArrowRight className="ml-2" />
           </Link>
