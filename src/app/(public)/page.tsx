@@ -1,8 +1,8 @@
+import { TestimonialsSection } from "@/components/blocks/testimonials-with-marquee";
 import TwitchLogin from "@/components/buttons/TwitchLogin";
 import { BorderBeam } from "@/components/ui/border-beam";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import Particles from "@/components/ui/particles";
 import { discordInviteLink } from "@/lib/constant";
 import { cn } from "@/lib/utils";
@@ -45,24 +45,6 @@ export default function Home() {
     },
   ];
 
-  const testimonials = [
-    {
-      quote: "StreamWizard revolutionized how I manage my clips. It's a game-changer!",
-      author: "TwitchPro99",
-      role: "Variety Streamer",
-    },
-    {
-      quote: "The search functionality alone saved me hours of work. Absolutely worth it!",
-      author: "GameMaster42",
-      role: "Esports Streamer",
-    },
-    {
-      quote: "Finally, a tool that understands what streamers actually need.",
-      author: "StreamQueen",
-      role: "IRL Streamer",
-    },
-  ];
-
   const steps = [
     {
       icon: <Database className="w-6 h-6" />,
@@ -83,6 +65,35 @@ export default function Home() {
       icon: <Search className="w-6 h-6" />,
       title: "Search",
       description: "Find any clip instantly with powerful search",
+    },
+  ];
+
+  const testimonials = [
+    {
+      author: {
+        name: "Emma Thompson",
+        handle: "@emmaai",
+        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face",
+      },
+      text: "Using this AI platform has transformed how we handle data analysis. The speed and accuracy are unprecedented.",
+      href: "https://twitter.com/emmaai",
+    },
+    {
+      author: {
+        name: "David Park",
+        handle: "@davidtech",
+        avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+      },
+      text: "The API integration is flawless. We've reduced our development time by 60% since implementing this solution.",
+      href: "https://twitter.com/davidtech",
+    },
+    {
+      author: {
+        name: "Sofia Rodriguez",
+        handle: "@sofiaml",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
+      },
+      text: "Finally, an AI tool that actually understands context! The accuracy in natural language processing is impressive.",
     },
   ];
 
@@ -146,26 +157,11 @@ export default function Home() {
 
       <div className="[--color:theme(colors.purple.600)] pointer-events-none relative z-0 mx-auto h-[50rem] overflow-hidden [mask-image:radial-gradient(ellipse_at_center_center,#000,transparent_50%)] -my-80 md:-my-72 before:absolute before:inset-0 before:h-full before:w-full before:opacity-40 before:[background-image:radial-gradient(circle_at_bottom_center,var(--color),transparent_70%)] after:absolute after:-left-1/2 after:top-1/2 after:aspect-[1/0.7] after:w-[200%] after:rounded-[50%] after:border-t after:border-[hsl(var(--border))] after:bg-background hidden md:block" />
       {/* Testimonials */}
-      <section className="py-20 bg-card z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">What Streamers Say</h2>
-          <Carousel className="max-w-xl mx-auto">
-            <CarouselContent>
-              {testimonials.map((testimonial, i) => (
-                <CarouselItem key={i}>
-                  <Card className="p-6 bg-card">
-                    <p className="text-lg mb-4">{testimonial.quote}</p>
-                    <p className="font-semibold">{testimonial.author}</p>
-                    <p className="text-muted-foreground">{testimonial.role}</p>
-                  </Card>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="hidden" />
-            <CarouselNext className="hidden" />
-          </Carousel>
-        </div>
-      </section>
+      <TestimonialsSection
+        title="Stream. Search. Simplify."
+        description="Where stream moments meet next-level simplicity"
+        testimonials={testimonials}
+      />
 
       {/* Future Roadmap */}
       <section className="py-20">

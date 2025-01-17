@@ -1,4 +1,5 @@
-import {Footer} from "@/components/public/layout/footer";
+import { Footer } from "@/components/public/layout/footer";
+import Header from "@/components/public/layout/header";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -18,10 +19,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return(
+  return (
     <>
+      <Header />
       {children}
       <Footer />
     </>
-  )
+  );
 }
