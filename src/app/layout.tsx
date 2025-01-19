@@ -38,7 +38,7 @@ export default async function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <ModalProvider>
-            <Toaster position="bottom-right" theme="system" expand visibleToasts={5} />
+            <Toaster position="bottom-right" theme="dark" expand visibleToasts={5} />
             {children}
           </ModalProvider>
         </ThemeProvider>

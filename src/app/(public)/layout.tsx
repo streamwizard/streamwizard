@@ -5,7 +5,7 @@ import { Metadata } from "next";
 export const metadata: Metadata = {
   title: "StreamWizard",
   description:
-    "Elevate your Twitch streams by letting viewers request songs directly from your chat. StreamWizard fosters a more interactive and engaging experience for you and your chat.",
+    "StreamWizard helps you organize your Twitch clips effortlessly. Search by category, creator, title, date range, and more. Create custom folders to keep your clips perfectly organized.",
   authors: {
     name: "StreamWizard",
     url: "https://streamwizard.org",
