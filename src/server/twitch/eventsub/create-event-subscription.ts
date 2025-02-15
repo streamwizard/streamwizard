@@ -14,6 +14,8 @@ export default async function CreateEventSubSubscription(subscription: CreateEve
   
     return res.data;
   } catch (error) {
+    console.error('Failed to create event sub subscription for type:', subscription.type);
+
     if (axios.isAxiosError(error)) {
       console.error('Error message:', error.message);
       if (error.response) {

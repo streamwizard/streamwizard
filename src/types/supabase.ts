@@ -33,13 +33,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "clip_folder_junction_clip_id_fkey"
-            columns: ["clip_id"]
-            isOneToOne: false
-            referencedRelation: "clips"
-            referencedColumns: ["twitch_clip_id"]
-          },
-          {
             foreignKeyName: "clip_folder_junction_folder_id_fkey"
             columns: ["folder_id"]
             isOneToOne: false
@@ -413,6 +406,27 @@ export type Database = {
           },
         ]
       }
+      minecraft_twitch: {
+        Row: {
+          broadcaster_id: string
+          created_at: string
+          id: number
+          minecraft_uuid: string
+        }
+        Insert: {
+          broadcaster_id?: string
+          created_at?: string
+          id?: number
+          minecraft_uuid: string
+        }
+        Update: {
+          broadcaster_id?: string
+          created_at?: string
+          id?: number
+          minecraft_uuid?: string
+        }
+        Relationships: []
+      }
       overlays: {
         Row: {
           created_at: string
@@ -443,6 +457,30 @@ export type Database = {
           selectedElement?: string | null
           user_id?: string
           width?: number
+        }
+        Relationships: []
+      }
+      twitch_channelpoints: {
+        Row: {
+          action: string
+          broadcaster_id: string
+          created_at: string
+          id: number
+          reward_id: string
+        }
+        Insert: {
+          action: string
+          broadcaster_id: string
+          created_at?: string
+          id?: number
+          reward_id: string
+        }
+        Update: {
+          action?: string
+          broadcaster_id?: string
+          created_at?: string
+          id?: number
+          reward_id?: string
         }
         Relationships: []
       }
