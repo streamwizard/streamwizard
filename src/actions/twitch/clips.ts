@@ -1,14 +1,16 @@
 "use server";
+import { TwitchAPI } from "@/lib/axios/twitch-api";
 import { createClient } from "@/lib/supabase/server";
 import { syncTwitchClips } from "@/server/twitch/clips";
 import { revalidatePath } from "next/cache";
 
-interface returnObject {
+interface returnObject <T = any> {
   message: string;
   success: boolean;
+  data?: T;
 }
 
-export async function SyncBroadcasterClips(): Promise<returnObject> { 
+export async function SyncBroadcasterClips(): Promise<returnObject> {
   const supabase = await createClient();
 
   // Fetch the last sync timestamp
@@ -100,5 +102,54 @@ export async function SyncBroadcasterClips(): Promise<returnObject> {
     }
 
     throw error;
+  }
+}
+
+interface clipDownloadURL {
+  data: {
+    clip_id: string;
+    landscape_download_url: string | null;
+    portrait_download_url: string | null;
+  }[]
+}
+
+
+export async function GetClipDownloadURL(clipId: string, user_id: string): Promise<returnObject<clipDownloadURL>> {
+  console.log("Getting clip download URL for clipId:", clipId, "and user_id:", user_id);
+  const supabase = await createClient();
+  const { data: user, error: userError } = await supabase.from("integrations_twitch").select("twitch_user_id").eq("user_id", user_id).single();
+  if (userError || !user.twitch_user_id) {
+    throw new Error("Error fetching user");
+  }
+
+  console.log("User:", user);
+  try {
+    const res = await TwitchAPI.get<clipDownloadURL>(`/clips/downloads`, {
+      params: {
+        editor_id: user.twitch_user_id,
+        broadcaster_id: user.twitch_user_id,
+        clip_id: clipId,
+      },
+      broadcasterID: user.twitch_user_id,
+    });
+
+    if (res.status !== 200) {
+      console.error(res.data);
+      return {
+        message: "Error downloading clip",
+        success: false,
+      };
+    }
+
+    return {
+      message: "Clip downloaded successfully",
+      success: true,
+      data: res.data,
+    };
+  } catch (error) {
+    return {
+      message: "Error downloading clip",
+      success: false,
+    };
   }
 }

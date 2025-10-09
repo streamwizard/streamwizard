@@ -21,6 +21,9 @@ export const TWITCH_SCOPES = [
   "channel:manage:ads",
   "bits:read",
   "channel:manage:polls",
+  "editor:manage:clips",
+  "channel:manage:clips",
+
 ];
 
 export const discordInviteLink = "https://discord.gg/29Eq659egv";
