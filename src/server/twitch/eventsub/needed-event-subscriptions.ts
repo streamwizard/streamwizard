@@ -4,7 +4,7 @@ import { env } from "process";
 // Common transport configurations
 const CONDUIT_TRANSPORT = {
   method: "conduit" as const,
-  conduit_id: "874cdaa4-dd40-4092-8cad-b7691fa2d0dc"
+  conduit_id: "2781ae49-eba5-4f19-a4f0-c69d0d9a75e1"
 };
 
 const createWebhookTransport = () => ({
