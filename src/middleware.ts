@@ -4,23 +4,6 @@ import { updateSession } from "@/lib/supabase/middleware";
 import { env } from "./lib/env";
 import { supabaseAdmin } from "./lib/supabase/admin";
 export async function middleware(request: NextRequest) {
-  if (env.NODE_ENV === "test") {
-    const clientIP = (await headers()).get("x-forwarded-for") || null;
-
-    if (!clientIP) return NextResponse.redirect(env.NEXT_PUBLIC_BASE_URL);
-
-    const { data, error } = await supabaseAdmin.from("dev_access_ips").select("*").eq("ip_address", clientIP).eq("is_active", true).single();
-
-    if (error) {
-      console.error(error);
-      return NextResponse.redirect(env.NEXT_PUBLIC_BASE_URL);
-    }
-
-    if (!data) {
-      return NextResponse.redirect(env.NEXT_PUBLIC_BASE_URL);
-    }
-  }
-
   return await updateSession(request);
 }
 
