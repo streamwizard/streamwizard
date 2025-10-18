@@ -4,9 +4,6 @@ import crypto from "crypto";
 import { env } from "@/lib/env";
 import handleStreamOffline from "@/server/twitch/eventsub/events/handle-stream-offline";
 
-
-
-
 // Ensure TWITCH_WEBHOOK_SECRET is set in your .env
 const TWITCH_SECRET = env.TWITCH_WEBHOOK_SECRET;
 
@@ -29,12 +26,10 @@ export async function POST(request: NextRequest) {
     const messageType = headers["twitch-eventsub-message-type"] as string;
     const signature = headers["twitch-eventsub-message-signature"] as string;
 
-
     console.log("signature", signature);
 
     // Get raw body
     const rawBody = await request.text();
-
 
     // Verify signature
     if (!verifyTwitchSignature(messageId, timestamp, rawBody, signature)) {

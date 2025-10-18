@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.5"
+  }
   public: {
     Tables: {
       clip_folder_junction: {
@@ -32,13 +37,6 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "clip_folder_junction_clip_id_fkey"
-            columns: ["clip_id"]
-            isOneToOne: false
-            referencedRelation: "clips"
-            referencedColumns: ["twitch_clip_id"]
-          },
           {
             foreignKeyName: "clip_folder_junction_folder_id_fkey"
             columns: ["folder_id"]
@@ -168,87 +166,67 @@ export type Database = {
       }
       commands: {
         Row: {
-          action: string
-          broadcaster_id: number
-          command: string
-          cooldown: number | null
+          channel_id: string
           created_at: string
+          default_command_id: string
+          enabled: boolean
           id: string
-          message: string
-          status: boolean
-          updated_at: string | null
-          updated_by: string | null
-          user_id: string
-          userlevel: string
         }
         Insert: {
-          action: string
-          broadcaster_id: number
-          command: string
-          cooldown?: number | null
+          channel_id: string
           created_at?: string
+          default_command_id: string
+          enabled?: boolean
           id?: string
-          message: string
-          status?: boolean
-          updated_at?: string | null
-          updated_by?: string | null
-          user_id: string
-          userlevel: string
         }
         Update: {
-          action?: string
-          broadcaster_id?: number
-          command?: string
-          cooldown?: number | null
+          channel_id?: string
           created_at?: string
+          default_command_id?: string
+          enabled?: boolean
           id?: string
-          message?: string
-          status?: boolean
-          updated_at?: string | null
-          updated_by?: string | null
-          user_id?: string
-          userlevel?: string
         }
         Relationships: [
           {
-            foreignKeyName: "commands_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "command_settings_default_command_id_fkey"
+            columns: ["default_command_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "default_chat_commands"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commands_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "integrations_twitch"
+            referencedColumns: ["twitch_user_id"]
           },
         ]
       }
-      dev_access_ips: {
+      default_chat_commands: {
         Row: {
-          access_level: string | null
-          created_at: string | null
-          description: string | null
+          action: string | null
+          command: string
+          context: Json | null
+          created_at: string
           id: string
-          ip_address: string
-          is_active: boolean | null
-          owner: string
-          updated_at: string | null
+          message: string
         }
         Insert: {
-          access_level?: string | null
-          created_at?: string | null
-          description?: string | null
+          action?: string | null
+          command: string
+          context?: Json | null
+          created_at?: string
           id?: string
-          ip_address: string
-          is_active?: boolean | null
-          owner: string
-          updated_at?: string | null
+          message: string
         }
         Update: {
-          access_level?: string | null
-          created_at?: string | null
-          description?: string | null
+          action?: string | null
+          command?: string
+          context?: Json | null
+          created_at?: string
           id?: string
-          ip_address?: string
-          is_active?: boolean | null
-          owner?: string
-          updated_at?: string | null
+          message?: string
         }
         Relationships: []
       }
@@ -282,69 +260,6 @@ export type Database = {
             foreignKeyName: "integrations_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      integrations_discord: {
-        Row: {
-          access_token: string | null
-          avatar: string | null
-          created_at: string
-          discord_user_id: string
-          discord_username: string
-          email: string | null
-          id: string
-          refresh_token: string | null
-          roles: Json | null
-          server_id: string | null
-          token_expires_at: string | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          access_token?: string | null
-          avatar?: string | null
-          created_at?: string
-          discord_user_id: string
-          discord_username: string
-          email?: string | null
-          id: string
-          refresh_token?: string | null
-          roles?: Json | null
-          server_id?: string | null
-          token_expires_at?: string | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          access_token?: string | null
-          avatar?: string | null
-          created_at?: string
-          discord_user_id?: string
-          discord_username?: string
-          email?: string | null
-          id?: string
-          refresh_token?: string | null
-          roles?: Json | null
-          server_id?: string | null
-          token_expires_at?: string | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "integrations_discord_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "integrations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "integrations_discord_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -413,36 +328,30 @@ export type Database = {
           },
         ]
       }
-      overlays: {
+      twitch_app_token: {
         Row: {
+          access_token: string
           created_at: string
-          elements: string | null
-          height: number
+          expires_in: number
           id: string
-          name: string
-          selectedElement: string | null
-          user_id: string
-          width: number
+          token_type: string
+          updated_at: string
         }
         Insert: {
+          access_token: string
           created_at?: string
-          elements?: string | null
-          height: number
+          expires_in: number
           id?: string
-          name: string
-          selectedElement?: string | null
-          user_id: string
-          width: number
+          token_type: string
+          updated_at?: string
         }
         Update: {
+          access_token?: string
           created_at?: string
-          elements?: string | null
-          height?: number
+          expires_in?: number
           id?: string
-          name?: string
-          selectedElement?: string | null
-          user_id?: string
-          width?: number
+          token_type?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -533,195 +442,101 @@ export type Database = {
         }
         Relationships: []
       }
-      whitelist: {
-        Row: {
-          email: string
-          id: number
-          whitelisted: boolean
-        }
-        Insert: {
-          email: string
-          id?: number
-          whitelisted?: boolean
-        }
-        Update: {
-          email?: string
-          id?: number
-          whitelisted?: boolean
-        }
-        Relationships: []
-      }
-      workflow_triggers: {
-        Row: {
-          created_at: string
-          event_id: string | null
-          event_type: string | null
-          id: string
-          user_id: string
-          workflow: string
-        }
-        Insert: {
-          created_at?: string
-          event_id?: string | null
-          event_type?: string | null
-          id?: string
-          user_id: string
-          workflow: string
-        }
-        Update: {
-          created_at?: string
-          event_id?: string | null
-          event_type?: string | null
-          id?: string
-          user_id?: string
-          workflow?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "workflow_triggers_workflow_fkey"
-            columns: ["workflow"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      workflows: {
-        Row: {
-          broadcaster_id: string | null
-          created_at: string | null
-          cronpath: string | null
-          description: string
-          edges: string | null
-          id: string
-          name: string
-          nodes: string | null
-          publish: boolean | null
-          user_id: string | null
-        }
-        Insert: {
-          broadcaster_id?: string | null
-          created_at?: string | null
-          cronpath?: string | null
-          description: string
-          edges?: string | null
-          id?: string
-          name: string
-          nodes?: string | null
-          publish?: boolean | null
-          user_id?: string | null
-        }
-        Update: {
-          broadcaster_id?: string | null
-          created_at?: string | null
-          cronpath?: string | null
-          description?: string
-          edges?: string | null
-          id?: string
-          name?: string
-          nodes?: string | null
-          publish?: boolean | null
-          user_id?: string | null
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       add_clip_to_folder: {
-        Args: {
-          p_clip_id: string
-          p_folder_id: string
-        }
+        Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
       }
       get_all_clips_with_folders: {
         Args: Record<PropertyKey, never>
         Returns: {
+          broadcaster_id: string
+          broadcaster_name: string
+          created_at: string
+          created_at_twitch: string
+          creator_id: string
+          creator_name: string
+          duration: number
+          embed_url: string
+          folders: Json
+          game_id: string
+          game_name: string
           id: number
+          is_featured: boolean
+          language: string
+          thumbnail_url: string
           title: string
           twitch_clip_id: string
-          creator_name: string
-          game_name: string
           url: string
-          thumbnail_url: string
-          created_at: string
-          view_count: number
-          duration: number
-          broadcaster_name: string
-          created_at_twitch: string
           user_id: string
-          embed_url: string
-          broadcaster_id: string
-          creator_id: string
           video_id: string
-          game_id: string
-          language: string
+          view_count: number
           vod_offset: number
-          is_featured: boolean
-          folders: Json
         }[]
       }
       get_clips_by_folder: {
-        Args: {
-          folder_href: string
-        }
+        Args: { folder_href: string }
         Returns: {
+          broadcaster_id: string
+          broadcaster_name: string
+          created_at: string
+          created_at_twitch: string
+          creator_id: string
+          creator_name: string
+          duration: number
+          embed_url: string
+          folders: Json
+          game_id: string
+          game_name: string
           id: number
+          is_featured: boolean
+          language: string
+          thumbnail_url: string
           title: string
           twitch_clip_id: string
-          creator_name: string
-          game_name: string
           url: string
-          thumbnail_url: string
-          created_at: string
-          view_count: number
-          duration: number
-          broadcaster_name: string
-          created_at_twitch: string
           user_id: string
-          embed_url: string
-          broadcaster_id: string
-          creator_id: string
           video_id: string
-          game_id: string
-          language: string
+          view_count: number
           vod_offset: number
-          is_featured: boolean
-          folders: Json
         }[]
       }
       insert_discord_integration: {
-        Args: {
-          integration_id: string
-          provider_data: Json
-          user_id: string
-        }
+        Args: { integration_id: string; provider_data: Json; user_id: string }
         Returns: undefined
       }
       insert_integration: {
         Args: {
-          p_user_id: string
           p_provider_type: Database["public"]["Enums"]["provider_type"]
+          p_user_id: string
         }
         Returns: string
       }
       insert_twitch_integration: {
-        Args: {
-          integration_id: string
-          provider_data: Json
-          user_id: string
-        }
+        Args: { integration_id: string; provider_data: Json; user_id: string }
         Returns: undefined
       }
       remove_clip_from_folder: {
-        Args: {
-          p_clip_id: string
-          p_folder_id: string
-        }
+        Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
+      }
+      sync_all_default_commands: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          total_channels: number
+          total_commands_added: number
+        }[]
+      }
+      sync_default_commands_for_channels: {
+        Args: { target_channel_id?: string }
+        Returns: {
+          commands_added: number
+          returned_channel_id: string
+        }[]
       }
     }
     Enums: {
@@ -751,27 +566,33 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-        PublicSchema["Views"])
-    ? (PublicSchema["Tables"] &
-        PublicSchema["Views"])[PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -779,20 +600,24 @@ export type Tables<
     : never
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -800,20 +625,24 @@ export type TablesInsert<
     : never
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-    ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -821,29 +650,63 @@ export type TablesUpdate<
     : never
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
-    | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-    ? PublicSchema["Enums"][PublicEnumNameOrOptions]
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
-    | { schema: keyof Database },
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database
+    schema: keyof DatabaseWithoutInternals
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-    ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      actions: [
+        "spotify.song_request",
+        "spotify.add_banned_song",
+        "spotify.remove_banned_song",
+        "spotify.add_banned_chatter",
+        "spotify.remove_banned_chatter",
+        "spotify.skip",
+        "none",
+      ],
+      provider_type: ["twitch", "discord"],
+      roles: ["user", "beta", "admin"],
+      theme_type: ["dark", "light", "system"],
+      userlevel: [
+        "everyone",
+        "follower",
+        "vip",
+        "subscriber",
+        "moderator",
+        "super_moderator",
+        "broadcaster",
+      ],
+    },
+  },
+} as const

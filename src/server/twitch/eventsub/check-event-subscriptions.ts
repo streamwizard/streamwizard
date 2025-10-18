@@ -21,7 +21,6 @@ export default async function checkEventSubscriptions(twitchUserId: string) {
     }
   } catch (error) {
     console.error(error);
-    console.error("Error checking or creating event subscriptions:", error);
     // Handle the error (e.g., show a toast notification or retry the operation)
   }
 }

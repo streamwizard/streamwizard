@@ -21,6 +21,7 @@ import { Database } from "@/types/supabase";
 import Link from "next/link";
 import { discordInviteLink } from "@/lib/constant";
 import { FaDiscord } from "react-icons/fa";
+import SidebarCommands from "./sidebar-commands";
 
 // Menu items.
 const items = [
@@ -62,6 +63,12 @@ export function AppSidebar({ user, folders }: AppSidebarProps) {
           <SidebarGroupLabel>Clips</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarClips clipFolders={folders} />
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Commands</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarCommands />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>

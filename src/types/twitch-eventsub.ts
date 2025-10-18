@@ -16,6 +16,10 @@ type SubscriptionStatus =
   | "websocket_network_timeout"
   | "websocket_network_error";
 
+
+  
+
+
 type Subscription = {
   id: string;
   status: SubscriptionStatus;
