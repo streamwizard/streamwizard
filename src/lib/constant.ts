@@ -23,6 +23,7 @@ export const TWITCH_SCOPES = [
   "channel:manage:polls",
   "editor:manage:clips",
   "channel:manage:clips",
+  "channel:bot"
 
 ];
 
