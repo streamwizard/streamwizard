@@ -22,9 +22,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import TwitchClipModal from "../modals/twitch-clip-modal";
 import { Button } from "../ui/button";
-import { GetClipDownloadURL } from "@/actions/twitch/clips";
 import { useSession } from "@/providers/session-provider";
-import { useRouter } from "next/navigation";
 
 export default function TwitchClipCard({
   url,
@@ -36,6 +34,7 @@ export default function TwitchClipCard({
   duration,
   is_featured,
   embed_url,
+  broadcaster_id,
   id,
   folders,
   twitch_clip_id,
@@ -43,7 +42,6 @@ export default function TwitchClipCard({
   const { openModal } = useModal();
   const { id: userId } = useSession();
   const { getAvailableFolders, getRemovableFolders, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
-  const router = useRouter();
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -96,16 +94,50 @@ export default function TwitchClipCard({
     ));
   }
 
-  const DownloadLandscapeClip = async (layout: "landscape" | "portrait") => {
-    const res = await GetClipDownloadURL(twitch_clip_id, userId!);
-    if (!res.success) {
-      throw new Error(res.message);
-    }
+  const DownloadLandscapeClip = async (layout: "landscape" | "portrait", broadcaster_id: string) => {
+    const loadingToast = toast.loading(`Preparing ${layout} download...`);
+    
+    try {
+      // Use the API route to proxy the download through our server
+      const response = await fetch("/api/twitch/download-clip", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clipId: twitch_clip_id,
+          layout: layout,
+          broadcaster_id: broadcaster_id,
+        }),
+      });
 
-    if (layout === "landscape" && res.data!.data[0].landscape_download_url) {
-      window.open(res.data!.data[0].landscape_download_url!, "_blank");
-    } else if (layout === "portrait" && res.data!.data[0].portrait_download_url) {
-      window.open(res.data!.data[0].portrait_download_url!, "_blank");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to download clip");
+      }
+
+      // Get the video blob from the response
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      // Create a temporary anchor element to trigger download
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `${title || "clip"}-${layout}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      // Clean up the blob URL after a short delay
+      setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 100);
+      
+      toast.dismiss(loadingToast);
+      toast.success(`Downloading ${layout} clip...`);
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error(error instanceof Error ? error.message : "Failed to download clip");
     }
   };
 
@@ -175,8 +207,8 @@ export default function TwitchClipCard({
               <Link href={url!} target="_blank">
                 <DropdownMenuItem onClick={() => navigator.clipboard.writeText(url!)}>View</DropdownMenuItem>
               </Link>
-              <DropdownMenuItem onClick={() => DownloadLandscapeClip("landscape")}>Download Landscape</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => DownloadLandscapeClip("portrait")}>Download Portrait</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => DownloadLandscapeClip("landscape", broadcaster_id!)}>Download Landscape</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => DownloadLandscapeClip("portrait", broadcaster_id!)}>Download Portrait</DropdownMenuItem>
               <DropdownMenuItem onClick={CopyClipURL}>Copy URL to clipboard</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
