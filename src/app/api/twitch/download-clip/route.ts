@@ -58,7 +58,6 @@ export async function POST(request: NextRequest) {
     }
 
 
-    console.log("Video response:", videoResponse);
     // Get the video as a blob
     const videoBlob = await videoResponse.blob();
 
