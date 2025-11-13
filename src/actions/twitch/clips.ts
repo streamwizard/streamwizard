@@ -151,7 +151,7 @@ export async function GetClipDownloadURL(clipId: string, user_id: string, broadc
       data: res.data,
     };
   } catch (error) {
-    console.error(error.response.data);
+    console.error(error instanceof Error ? error.message : "Unknown error");
     return {
       message: "Error downloading clip",
       success: false,
