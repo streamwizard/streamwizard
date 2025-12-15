@@ -82,7 +82,7 @@ export function SearchBar({
                 initial={{ y: -400, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: -400, opacity: 0 }}
-                transition={{ type: "just", duration: 0.2 }}
+                transition={{ type: "spring", duration: 0.2 }}
                 className="w-full mt-4 bg-[#0D0D0D] border rounded"
               >
                 <Component

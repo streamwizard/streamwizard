@@ -1,6 +1,7 @@
 "use client";
-import { LinkIcon, LogOut, MoreHorizontal } from "lucide-react";
+import { LinkIcon, LogOut, Moon, MoreHorizontal, Sun } from "lucide-react";
 import Link from "next/link";
+import { useTheme } from "next-themes";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -10,11 +11,16 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { logout } from "@/actions/auth/logout";
 
 export function DashboardUserNav({ username, profile_img }: { username: string; profile_img: string }) {
+  const { setTheme, theme } = useTheme();
+  
   const signOut = async () => {
     await logout();
   };
@@ -56,12 +62,27 @@ export function DashboardUserNav({ username, profile_img }: { username: string; 
               Settings
             </Link>
           </DropdownMenuItem>
-          {/* <DropdownMenuItem className="cursor-pointer" asChild>
-            <Link href="/dashboard/user/privacy">
-              <LinkIcon className="mr-2 h-3 w-3" />
-              Privacy
-            </Link>
-          </DropdownMenuItem> */}
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className="cursor-pointer">
+              <Sun className="mr-2 h-3 w-3 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute mr-2 ml-0 h-3 w-3 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              <span className="ml-5">Theme</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer">
+                <Sun className="mr-2 h-3 w-3" />
+                Light
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer">
+                <Moon className="mr-2 h-3 w-3" />
+                Dark
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer">
+                <LinkIcon className="mr-2 h-3 w-3" />
+                System
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem className="text-destructive hover:cursor-pointer focus:bg-destructive focus:text-destructive-foreground" onClick={signOut}>

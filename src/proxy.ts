@@ -1,12 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { headers } from "next/headers";
-import { updateSession } from "@/lib/supabase/middleware";
+import { updateSession } from "@/lib/supabase/proxy";
 import { env } from "./lib/env";
 import { supabaseAdmin } from "./lib/supabase/admin";
-export async function middleware(request: NextRequest) {
-  return await updateSession(request);
-}
 
+
+export async function proxy(request: NextRequest) {
+  return await updateSession(request)
+}
 export const config = {
   matcher: [
     /*

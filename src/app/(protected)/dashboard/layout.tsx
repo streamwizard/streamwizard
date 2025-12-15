@@ -1,10 +1,8 @@
-import { DashboardNav } from "@/components/nav/dashboardNav";
 import { AppSidebar } from "@/components/nav/sidebar-app";
-import { SidebarProvider } from "@/components/ui/sidebar";
+import { SiteHeader } from "@/components/site-header";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
-import { ClipFolderProvider } from "@/providers/clips-provider";
 import { redirect } from "next/navigation";
-import React from "react";
 
 export default async function layout({
   children,
@@ -24,18 +22,13 @@ export default async function layout({
   }
 
   const { data: folders } = await supabase.from("clip_folders").select("*");
-
   return (
     <SidebarProvider>
-      <div className="flex w-full">
-        <AppSidebar user={data.user} folders={folders || []} />
-        <div className="w-full">
-          <DashboardNav />
-          <div className="h-[calc(100vh-60px)] overflow-x-hidden ">
-            <div className="mx-auto p-5 h-full">{children}</div>
-          </div>
-        </div>
-      </div>
+      <AppSidebar user={data.user} folders={folders || []} variant="inset" />
+      <SidebarInset>
+        <SiteHeader />
+        <div className="w-full p-5 mx-auto md:gap-6 md:py-6">{children}</div>
+      </SidebarInset>
     </SidebarProvider>
   );
 }

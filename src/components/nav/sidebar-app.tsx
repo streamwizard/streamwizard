@@ -32,14 +32,14 @@ const items = [
   },
 ];
 
-interface AppSidebarProps {
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User;
   folders: Database["public"]["Tables"]["clip_folders"]["Row"][];
 }
 
-export function AppSidebar({ user, folders }: AppSidebarProps) {
+export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
   return (
-    <Sidebar>
+    <Sidebar className="h-full" {...props}>
       <SidebarHeader>
         <div className="flex flex-row items-center gap-2 px-4 mt-4 justify-center">
           <Image
