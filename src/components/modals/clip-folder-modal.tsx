@@ -1,18 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2 } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { Loader2 } from "lucide-react";
 
+import { createClipFolder, editClipFolder } from "@/actions/supabase/clips/clips";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
-import { createClipFolder, editClipFolder } from "@/actions/supabase/clips/clips";
-import { useSession } from "@/providers/session-provider";
 import { useModal } from "@/providers/modal-provider";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z

@@ -1,13 +1,11 @@
 "use client";
-import React from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Bell } from "lucide-react";
+import React from "react";
 
 export default function Notifications() {
-  const [notifications, setNotifications] = React.useState([]);
+  const [notifications] = React.useState([]);
 
   return (
     <Popover>

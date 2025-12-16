@@ -1,22 +1,49 @@
 "use server";
-import { TwitchAPI } from "@/lib/axios/twitch-api";
 import { env } from "@/lib/env";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import axios from "axios";
-import { revalidatePath } from "next/cache";
 
-interface returnObject <T = any> {
+interface returnObject<T = unknown> {
   message: string;
   success: boolean;
   data?: T;
 }
 
-export async function SyncBroadcasterClips(): Promise<any> {
+export async function SyncBroadcasterClips(): Promise<{ message: string; success: boolean }> {
   const supabase = await createClient();
 
-  
-  
+  // get session token
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  try {
+    await axios.post(`https://api.streamwizard.org/api/clips/sync`, null, {
+      headers: {
+        Authorization: `Bearer ${session?.access_token}`,
+      },
+    });
+
+    return {
+      message: "Clips synced successfully",
+      success: true,
+    };
+  } catch (error: unknown) {
+    if (axios.isAxiosError<{ skipped: boolean; message: string; success: boolean }>(error)) {
+      const skipped = error.response?.data?.skipped;
+      if (skipped) {
+        return {
+          message: error.response?.data?.message || "Error syncing clips",
+          success: false,
+        };
+      }
+    }
+    return {
+      message: "Error syncing clips",
+      success: false,
+    };
+  }
 }
 
 interface clipDownloadURL {
@@ -24,12 +51,10 @@ interface clipDownloadURL {
     clip_id: string;
     landscape_download_url: string | null;
     portrait_download_url: string | null;
-  }[]
+  }[];
 }
 
-
 export async function GetClipDownloadURL(clipId: string, user_id: string, broadcaster_id: string): Promise<returnObject<clipDownloadURL>> {
-  const supabase = await createClient();
   const { data: user, error: userError } = await supabaseAdmin.from("twitch_app_token").select("access_token").single();
   if (userError || !user?.access_token) {
     throw new Error("Error fetching user");
@@ -39,7 +64,7 @@ export async function GetClipDownloadURL(clipId: string, user_id: string, broadc
     const res = await axios.get<clipDownloadURL>(`https://api.twitch.tv/helix/clips/downloads`, {
       headers: {
         "Client-ID": env.NEXT_PUBLIC_TWITCH_CLIENT_ID,
-        "Authorization": `Bearer ${env.TWITCH_APP_TOKEN}`,
+        Authorization: `Bearer ${env.TWITCH_APP_TOKEN}`,
       },
       params: {
         broadcaster_id: broadcaster_id,

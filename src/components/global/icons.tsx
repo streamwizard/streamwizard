@@ -1,4 +1,4 @@
-import React from "react";
+import React, { JSX } from "react";
 import { BsSpotify, BsTwitch } from "react-icons/bs";
 
 interface Props {

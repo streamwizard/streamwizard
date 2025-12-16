@@ -11,13 +11,17 @@ interface ClipFolderDeleteModalProps {
   folderName: string;
 }
 
-export default function ClipFolderDeleteModal({ folderId, folderName }: ClipFolderDeleteModalProps) {
+export default function ClipFolderDeleteModal({ folderId }: ClipFolderDeleteModalProps) {
   const { closeModal } = useModal();
 
   const handleDelete = () => {
     toast.promise(
       async () => {
         const res = await deleteClipFolder(folderId);
+        if (!res.success) {
+          throw new Error(res.message);
+        }
+        return res.message;
       },
       {
         loading: "Deleting folder...",
@@ -44,7 +48,9 @@ export default function ClipFolderDeleteModal({ folderId, folderName }: ClipFold
         <Button variant="outline" onClick={handleCancel}>
           Cancel
         </Button>
-        <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+        <Button variant="destructive" onClick={handleDelete}>
+          Delete
+        </Button>
       </div>
     </div>
   );

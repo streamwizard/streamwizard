@@ -1,7 +1,7 @@
 "use client";
 import { addClipToFolder, removeClipFromFolder } from "@/actions/supabase/clips/clips";
 import { Database } from "@/types/supabase";
-import React, { createContext, use, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSession } from "./session-provider";
 

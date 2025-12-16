@@ -1,13 +1,12 @@
 'use client'
 
 import { cn } from '@/lib/utils'
-import Image from 'next/image'
 import React, {
   createContext,
-  useState,
   useContext,
-  useRef,
   useEffect,
+  useRef,
+  useState,
 } from 'react'
 
 const MouseEnterContext = createContext<
@@ -35,12 +34,12 @@ export const CardContainer = ({
     containerRef.current.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`
   }
 
-  const handleMouseEnter = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseEnter = () => {
     setIsMouseEntered(true)
     if (!containerRef.current) return
   }
 
-  const handleMouseLeave = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleMouseLeave = () => {
     if (!containerRef.current) return
     setIsMouseEntered(false)
     containerRef.current.style.transform = `rotateY(0deg) rotateX(0deg)`
@@ -83,7 +82,7 @@ export const CardBody = ({
   return (
     <div
       className={cn(
-        'h-96 w-96 [transform-style:preserve-3d]  [&>*]:[transform-style:preserve-3d]',
+        'h-96 w-96 transform-3d  *:transform-3d',
         className
       )}
     >
@@ -118,17 +117,13 @@ export const CardItem = ({
   const [isMouseEntered] = useMouseEnter()
 
   useEffect(() => {
-    handleAnimations()
-  }, [isMouseEntered])
-
-  const handleAnimations = () => {
     if (!ref.current) return
     if (isMouseEntered) {
       ref.current.style.transform = `translateX(${translateX}px) translateY(${translateY}px) translateZ(${translateZ}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`
     } else {
       ref.current.style.transform = `translateX(0px) translateY(0px) translateZ(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg)`
     }
-  }
+  }, [isMouseEntered, translateX, translateY, translateZ, rotateX, rotateY, rotateZ])
 
   return (
     <Tag

@@ -17,9 +17,10 @@ interface DatePickerWithPresetsProps {
   name: string;
   label?: string;
   description?: string;
+  className?: string;
 }
 
-export function DatePickerWithPresets({ name, label, description }: DatePickerWithPresetsProps) {
+export function DatePickerWithPresets({ name, label, description, className }: DatePickerWithPresetsProps) {
   const { control } = useFormContext<FormValues>();
   const [month, setMonth] = React.useState<Date>(new Date());
 
@@ -80,7 +81,7 @@ export function DatePickerWithPresets({ name, label, description }: DatePickerWi
       control={control}
       name="date"
       render={({ field }) => (
-        <FormItem className="flex flex-col">
+        <FormItem className={cn("flex flex-col", className)}>
           {label && <FormLabel htmlFor={name}>{label}</FormLabel>}
           <Popover>
             <PopoverTrigger asChild>

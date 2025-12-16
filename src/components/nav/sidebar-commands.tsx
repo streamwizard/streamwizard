@@ -1,8 +1,7 @@
-import { Clapperboard, Command } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Command } from "lucide-react";
 import Link from "next/link";
-import { Collapsible } from "../ui/collapsible";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
-import { Badge } from "@/components/ui/badge"
 
 export default function SidebarCommands() {
   return (

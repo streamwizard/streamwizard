@@ -18,11 +18,11 @@ import { useClipFolders } from "@/providers/clips-provider";
 import { useModal } from "@/providers/modal-provider";
 import { clipsWithFolders } from "@/types/database";
 import { Calendar, Eye, MoreHorizontal, Star, User } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import TwitchClipModal from "../modals/twitch-clip-modal";
 import { Button } from "../ui/button";
-import { useSession } from "@/providers/session-provider";
 
 export default function TwitchClipCard({
   url,
@@ -35,12 +35,10 @@ export default function TwitchClipCard({
   is_featured,
   embed_url,
   broadcaster_id,
-  id,
   folders,
   twitch_clip_id,
 }: clipsWithFolders) {
   const { openModal } = useModal();
-  const { id: userId } = useSession();
   const { getAvailableFolders, getRemovableFolders, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
 
   const formatDuration = (seconds: number) => {
@@ -145,7 +143,7 @@ export default function TwitchClipCard({
     <Card className="w-full max-w-md overflow-hidden cursor-pointer mx-">
       <CardHeader className="p-0">
         <div className="relative">
-          <img src={thumbnail_url!} alt={title} className="w-full h-48 object-cover" onClick={OpenClip} />
+          <Image src={thumbnail_url!} alt={title} className="w-full h-48 object-cover" onClick={OpenClip} />
           <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground">{formatDuration(duration!)}</Badge>
           {is_featured && (
             <Badge className="absolute bottom-2 left-2 bg-yellow-500 text-yellow-950">

@@ -9,7 +9,7 @@ import {
 import { useModal } from "@/providers/modal-provider";
 import { useSession } from "@/providers/session-provider";
 import { Database } from "@/types/supabase";
-import { Clapperboard, EllipsisVertical, Folder, Plus, Star, FolderOpen } from "lucide-react";
+import { Clapperboard, EllipsisVertical, Folder, Plus, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import { CLipFolderModal } from "../modals/clip-folder-modal";
 import { Button } from "../ui/button";

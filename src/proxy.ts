@@ -1,8 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { headers } from "next/headers";
 import { updateSession } from "@/lib/supabase/proxy";
-import { env } from "./lib/env";
-import { supabaseAdmin } from "./lib/supabase/admin";
+import { type NextRequest } from "next/server";
 
 
 export async function proxy(request: NextRequest) {

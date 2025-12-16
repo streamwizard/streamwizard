@@ -6,22 +6,20 @@ import { Form, FormControl, FormField, FormItem, FormMessage } from "@/component
 import { cn } from "@/lib/utils";
 import { loginSchema } from "@/schemas/login";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import TwitchLogin from "../buttons/TwitchLogin";
 import LoadingSpinner from "../global/loading";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import TwitchLogin from "../buttons/TwitchLogin";
 
 interface UserAuthFormProps {
   redirect: string | null;
 }
 
 export function UserAuthForm({ redirect }: UserAuthFormProps) {
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
-  const router = useRouter();
+  const [isLoading] = React.useState<boolean>(false);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -31,7 +29,7 @@ export function UserAuthForm({ redirect }: UserAuthFormProps) {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof loginSchema>) {
+  async function onSubmit() {
     toast.info("Please use the Twitch login");
   }
 

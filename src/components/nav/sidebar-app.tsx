@@ -1,5 +1,4 @@
 "use client";
-import { Clapperboard } from "lucide-react";
 
 import {
   Sidebar,
@@ -12,25 +11,16 @@ import {
   SidebarMenu,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { discordInviteLink } from "@/lib/constant";
+import { Database } from "@/types/supabase";
 import { User } from "@supabase/supabase-js";
 import Image from "next/image";
+import Link from "next/link";
+import { FaDiscord } from "react-icons/fa";
 import { Separator } from "../ui/separator";
 import { DashboardUserNav } from "./DashboardUserNav";
 import SidebarClips from "./sidebar-clips";
-import { Database } from "@/types/supabase";
-import Link from "next/link";
-import { discordInviteLink } from "@/lib/constant";
-import { FaDiscord } from "react-icons/fa";
 import SidebarCommands from "./sidebar-commands";
-
-// Menu items.
-const items = [
-  {
-    title: "Clips",
-    url: "/dashboard/",
-    icon: Clapperboard,
-  },
-];
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User;

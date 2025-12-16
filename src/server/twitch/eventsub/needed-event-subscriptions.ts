@@ -9,7 +9,7 @@ const CONDUIT_TRANSPORT = {
 
 const createWebhookTransport = () => ({
   method: "webhook" as const,
-  callback: "https://streamwizard.org/api/twitch/eventsub",
+  callback: "https://api.streamwizard.org/webhooks/twitch/eventsub",
   secret: env.TWITCH_WEBHOOK_SECRET
 });
 
@@ -17,7 +17,7 @@ const createWebhookTransport = () => ({
 type SubscriptionConfig = {
   type: EventSubSubscriptionType;
   version: string;
-  condition: (userId: string) => Record<string, any>;
+  condition: (userId: string) => Record<string, unknown>;
 };
 
 // Configure all conduit subscriptions with their conditions

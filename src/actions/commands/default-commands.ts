@@ -1,14 +1,7 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
-const defaultCommandSchema = z.object({
-  command: z.string().min(1, "Command is required").max(50),
-  message: z.string().min(1, "Message is required").max(500),
-  action: z.string().optional().nullable(),
-  context: z.any().optional().nullable(),
-});
 
 async function getUserChannelId() {
   const supabase = await createClient();
@@ -118,7 +111,6 @@ export async function duplicateToCustomCommand(defaultCommandId: string) {
   // TODO: Implement duplication to custom commands table
   // This will create a custom command based on the default command
   // that the user can then fully edit, update, and delete
-  const supabase = await createClient();
   const channelId = await getUserChannelId();
   
   // Placeholder implementation

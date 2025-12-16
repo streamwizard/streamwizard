@@ -19,8 +19,8 @@ import {
 import { logout } from "@/actions/auth/logout";
 
 export function DashboardUserNav({ username, profile_img }: { username: string; profile_img: string }) {
-  const { setTheme, theme } = useTheme();
-  
+  const { setTheme } = useTheme();
+
   const signOut = async () => {
     await logout();
   };

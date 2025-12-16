@@ -7,6 +7,7 @@ import { useSession } from "@/providers/session-provider";
 import { LookupTwitchGame, searchTwitchCategories } from "@/actions/twitch/twitch-api";
 import { TwitchCategory } from "@/types/twitch";
 import { toast } from "sonner";
+import Image from "next/image";
 
 // Define SearchResult as a type extending TwitchCategory with an optional exactMatch
 type SearchResult = TwitchCategory & { exactMatch?: boolean };
@@ -34,7 +35,10 @@ export default function TwitchCategorySearch({
 
   useEffect(() => {
     if (!value) {
-      setDisplayValue("");
+      // Defer state updates to avoid synchronous setState in effect
+      Promise.resolve().then(() => {
+        setDisplayValue("");
+      });
     }
   }, [value]);
 
@@ -60,7 +64,7 @@ export default function TwitchCategorySearch({
           match && category.name.toLowerCase() === searchTerm.toLowerCase() ? { ...category, exactMatch: true } : category
         );
 
-        setResults(newResults.sort((a, b) => (a.exactMatch ? -1 : 0)));
+        setResults(newResults.sort((a) => (a.exactMatch ? -1 : 0)) as SearchResult[]);
       }
     } catch {
       toast.error("Error searching for categories.");
@@ -81,7 +85,13 @@ export default function TwitchCategorySearch({
           {results.map((category) => (
             <li key={category.id} className="flex items-center justify-between gap-4 p-4 border-b">
               <div className="flex items-center">
-                <img src={category.box_art_url} className="w-8 h-8 rounded-full" alt={category.name} />
+                <Image
+                  src={category.box_art_url}
+                  alt={category.name}
+                  width={32}
+                  height={32}
+                  className="w-8 h-8 rounded-full"
+                />
                 <span className="mx-4">{category.name}</span>
                 {category.exactMatch && <span className="text-xs text-red-500">Exact Match</span>}
               </div>

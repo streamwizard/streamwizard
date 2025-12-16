@@ -7,9 +7,9 @@ import { MdClose } from "react-icons/md";
 
 // Create a context for the modal
 interface ModalContextType {
-  openModal: (content: ReactNode, props?: Record<string, any>) => void;
+  openModal: (content: ReactNode, props?: Record<string, unknown>) => void;
   closeModal: () => void;
-  modalProps: Record<string, any>;
+  modalProps: Record<string, unknown>;
 }
 
 const ModalContext = createContext<ModalContextType | null>(null);
@@ -21,9 +21,9 @@ interface Props {
 // Modal Provider component
 export const ModalProvider = ({ children }: Props) => {
   const [modalContent, setModalContent] = useState<ReactNode | null>(null);
-  const [modalProps, setModalProps] = useState<Record<string, any>>({});
+  const [modalProps, setModalProps] = useState<Record<string, unknown>>({});
 
-  const openModal = useCallback((content: ReactNode, props: Record<string, any> = {}) => {
+  const openModal = useCallback((content: ReactNode, props: Record<string, unknown> = {}) => {
     setModalContent(content);
     setModalProps(props);
   }, []);
@@ -87,7 +87,7 @@ const Modal: React.FC<ModalProps> = ({ children, closeModal, isOpen }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1, backdropFilter: "blur(10px)" }}
             exit={{ opacity: 0, backdropFilter: "blur(0px)" }}
-            className="fixed inset-0 h-full w-full bg-black bg-opacity-50 z-50"
+            className="fixed inset-0 h-full w-full bg-background/70 z-50"
           />
 
           <motion.div
@@ -98,10 +98,11 @@ const Modal: React.FC<ModalProps> = ({ children, closeModal, isOpen }) => {
             transition={{ type: "tween", stiffness: 260, damping: 15 }}
             onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
           >
-            <button onClick={closeModal} className="absolute top-4 right-4 text-2xl" aria-label="Close modal">
+            <button onClick={closeModal} className="absolute top-4 right-4 text-2xl cursor-pointer" aria-label="Close modal">
               <MdClose />
             </button>
-            {children}
+
+            <div className="">{children}</div>
           </motion.div>
         </motion.div>
       )}

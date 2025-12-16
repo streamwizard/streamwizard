@@ -29,7 +29,7 @@ export async function addClipToFolder({ clipId, userId, folderId, folderName }: 
     }
 
     // Add clip to the folder
-    const { data, error } = await supabase.from("clip_folder_junction").insert({
+    const { error } = await supabase.from("clip_folder_junction").insert({
       clip_id: clipId,
       folder_id: folderId,
       user_id: userId,
@@ -50,12 +50,7 @@ export async function addClipToFolder({ clipId, userId, folderId, folderName }: 
 export async function removeClipFromFolder(clipId: string, folderId: number, userId: string) {
   const supabase = await createClient();
   try {
-    const { data, error } = await supabase
-      .from("clip_folder_junction")
-      .delete()
-      .eq("clip_id", clipId)
-      .eq("folder_id", folderId)
-      .eq("user_id", userId);
+    const { error } = await supabase.from("clip_folder_junction").delete().eq("clip_id", clipId).eq("folder_id", folderId).eq("user_id", userId);
     if (error) throw error;
     revalidatePath("/dashboard/clips", "layout");
     return { success: true, message: "Clip removed from folder" };
@@ -97,7 +92,7 @@ export async function editClipFolder(folderId: number, folderName: string, user_
   const supabase = await createClient();
 
   try {
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("clip_folders")
       .update({ name: folderName, href: encodeURIComponent(folderName) })
       .eq("id", folderId)
@@ -120,12 +115,11 @@ export async function editClipFolder(folderId: number, folderName: string, user_
   }
 }
 
-
 // delete a folder for clips
 export async function deleteClipFolder(folderId: number) {
   const supabase = await createClient();
   try {
-    const { error } = await supabase.from("clip_folders").delete().eq("id", folderId)
+    const { error } = await supabase.from("clip_folders").delete().eq("id", folderId);
     if (error) throw error;
     revalidatePath("/dashboard/clips", "layout");
     return {

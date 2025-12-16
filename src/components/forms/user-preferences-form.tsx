@@ -1,19 +1,18 @@
 "use client";
 
-import { userPreferencesSchema } from "@/schemas/user-preferences";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Button } from "../ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "../ui/form";
-import { Checkbox } from "../ui/checkbox";
-import { Clapperboard } from "lucide-react";
-import { Label } from "../ui/label";
-import { Switch } from "../ui/switch";
-import { Database } from "@/types/supabase";
-import { toast } from "sonner";
 import { updateUserPreferences } from "@/actions/supabase/user/settings";
 import { useSession } from "@/providers/session-provider";
+import { userPreferencesSchema } from "@/schemas/user-preferences";
+import { Database } from "@/types/supabase";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Clapperboard } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { Button } from "../ui/button";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
+import { Label } from "../ui/label";
+import { Switch } from "../ui/switch";
 
 interface UserPreferencesFormProps {
   UserPreferences: Database["public"]["Tables"]["user_preferences"]["Row"] | null;

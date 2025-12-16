@@ -1,5 +1,4 @@
 import TwitchClipCard from "@/components/cards/clip-card";
-import { EmptyFolder } from "@/components/cards/empty-folder";
 import { AdvancedPagination } from "@/components/nav/advanced-pagination";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
@@ -32,7 +31,7 @@ export default async function Page({ params, searchParams }: PageProps) {
     query = query.eq("broadcaster_id", parsedSearchParams.broadcaster_id);
   }
 
-  let { data, error, count } = await query;
+  const { data, error, count } = await query;
   if (error) {
     console.error(error);
     return null;

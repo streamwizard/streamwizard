@@ -141,7 +141,7 @@ export type Subscription = {
   status: SubscriptionStatus;
   type: EventSubSubscriptionType;
   version: string;
-  condition: Record<string, any>; // Dynamic JSON based on type
+  condition: Record<string, unknown>; // Dynamic JSON based on type
   created_at: string; // RFC3339 format
   transport: TransportDetails;
   cost: number;
@@ -296,7 +296,7 @@ export type SearchCategories = {
 export type CreateEventSubSubscriptionRequest = {
   type: EventSubSubscriptionType; // The type of subscription to create.
   version: string; // The version of the subscription type.
-  condition: Record<string, any>; // Subscription-specific parameter values.
+  condition: Record<string, unknown>; // Subscription-specific parameter values.
   transport: {
     method: TransportMethod; // Transport method.
     callback?: string; // HTTPS callback URL (required for webhook method).

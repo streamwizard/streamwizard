@@ -1,14 +1,11 @@
-'use server'
+"use server";
 import { createClient } from "@/lib/supabase/server";
 import { userPreferencesSchema } from "@/schemas/user-preferences";
 import { z } from "zod";
 
 export async function updateUserPreferences(user_id: string, formData: z.infer<typeof userPreferencesSchema>) {
-  console.log(user_id)
-
-
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("user_preferences")
     .upsert(
       {

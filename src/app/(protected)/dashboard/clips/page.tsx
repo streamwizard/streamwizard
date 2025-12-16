@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import buildClipQuery from "@/lib/utils/build-clip-query";
 import { ClipSearchParams } from "@/types/pages";
 import { Database } from "@/types/supabase";
+import { redirect } from "next/navigation";
 
 export default async function ClipsPage({ searchParams }: { searchParams: Promise<ClipSearchParams> }) {
   const supabase = await createClient();
@@ -11,11 +12,18 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
 
   const { data: user } = await supabase.auth.getUser();
 
+  if (!user?.user?.id || !user?.user) {
+    redirect("/login");
+  }
+
   let query = supabase.rpc("get_all_clips_with_folders", {}, { count: "exact" });
+
+  // create type of query
+  
 
   query = buildClipQuery(parsedSearchParams, query);
 
-  query = parsedSearchParams.broadcaster_id ? query.eq("broadcaster_id", parsedSearchParams.broadcaster_id) : query.eq("user_id", user?.user?.id!);
+  query = parsedSearchParams.broadcaster_id ? query.eq("broadcaster_id", parsedSearchParams.broadcaster_id) : query.eq("user_id", user.user.id);
 
   const { data, error, count,  } = await query;
   if (error) {

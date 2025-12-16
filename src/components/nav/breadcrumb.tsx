@@ -10,7 +10,7 @@ export function Breadcrumb() {
   const paths = path.split('/').filter((p) => p !== '')
   return paths ? (
     <section className="mx-auto flex select-none items-center px-10 py-8">
-      {paths.map((path: any, index: number) => (
+      {paths.map((path: string, index: number) => (
         <Fragment key={index}>
           <h2
             className={cn(

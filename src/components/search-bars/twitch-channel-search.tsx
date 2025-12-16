@@ -3,6 +3,7 @@ import { searchTwitchChannels, LookupTwitchUser } from "@/actions/twitch/twitch-
 import { ChannelSearchResult } from "@/types/twitch";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import Image from "next/image";
 import { Button } from "../ui/button";
 import { SearchBar } from "../ui/search-bar";
 
@@ -35,18 +36,25 @@ export default function TwitchSearchBar({
 
   useEffect(() => {
     if (!value) {
-      setDisplayValue("");
-      setImage(null);      
+      // Defer state updates to avoid synchronous setState in effect
+      Promise.resolve().then(() => {
+        setDisplayValue("");
+        setImage(null);
+      });
     }
   }, [value]);
 
-
   useEffect(() => {
     if (!displayValue || displayValue.length < 3) {
-      setImage(null);  
-      reset && reset();
+      // Defer state updates to avoid synchronous setState in effect
+      Promise.resolve().then(() => {
+        setImage(null);
+        if (reset) {
+          reset();
+        }
+      });
     }
-  }, [displayValue]);
+  }, [displayValue, reset]);
 
   // if we have a initial value, look up the channel
   useEffect(() => {
@@ -68,11 +76,11 @@ export default function TwitchSearchBar({
       setDisplayValue("");
       return;
     }
-  
+
     const data = await searchTwitchChannels(searchTerm, 10);
     if (data) {
       setResults(data);
-  
+
       const match = data.find((channel: ChannelSearchResult) => channel.display_name.toLowerCase() === searchTerm.toLowerCase());
       if (match) {
         const newResults: results[] = data.map((channel: ChannelSearchResult) => {
@@ -81,7 +89,7 @@ export default function TwitchSearchBar({
           }
           return channel;
         });
-  
+
         newResults.sort((a, b) => {
           if (a.exactMatch && !b.exactMatch) {
             return -1;
@@ -91,17 +99,16 @@ export default function TwitchSearchBar({
           }
           return 0;
         });
-  
+
         setResults(newResults);
       }
     } else {
       toast.error("Error searching for chatters.");
     }
   };
-  
 
   return (
-    <SearchBar
+    <SearchBar<results>
       results={results}
       setResults={setResults}
       searchFn={search}
@@ -115,7 +122,13 @@ export default function TwitchSearchBar({
           {results.map((channel) => (
             <li key={channel.id} className="flex items-center justify-between gap-4 p-4 border-b">
               <div className="flex items-center">
-                <img src={channel.thumbnail_url} className="w-8 h-8 rounded-full" />
+                <Image
+                  src={channel.thumbnail_url}
+                  alt={channel.display_name}
+                  width={32}
+                  height={32}
+                  className="w-8 h-8 rounded-full"
+                />
                 <span className="mx-4">{channel.display_name}</span>
                 {channel.exactMatch && <span className="text-xs text-red-500">Exact Match</span>}
               </div>

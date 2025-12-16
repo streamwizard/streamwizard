@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
 
 export async function GET(request: Request) {
-  let { searchParams, origin } = new URL(request.url);
+  let { origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const forwardedHost = request.headers.get("x-forwarded-host"); // original origin before load balancer
   const isLocalEnv = process.env.NODE_ENV === "development";
 
@@ -24,8 +25,6 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
 
-   
-    
     await checkEventSubscriptions(data.session.user.user_metadata.sub);
 
     const { error: err } = await supabase
@@ -40,9 +39,6 @@ export async function GET(request: Request) {
       console.log(err);
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
-
-
-    
 
     if (!error) {
       if (isLocalEnv) {

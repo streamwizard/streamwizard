@@ -2,7 +2,6 @@
 import { login } from "@/actions/auth/login";
 import React from "react";
 import SocialIcon from "../global/icons";
-import LoadingSpinner from "../global/loading";
 import { Button } from "../ui/button";
 import { cn } from "@/lib/utils";
 
@@ -15,7 +14,7 @@ interface TwitchLoginProps {
   className?: string;
 }
 
-export default function TwitchLogin({ redirect, text, disabled, size, variant, className }: TwitchLoginProps) {
+export default function TwitchLogin({ text, disabled, size, variant, className }: TwitchLoginProps) {
   return (
     <Button variant={variant} size={size} type="button" onClick={() => login()} disabled={disabled}>
       <span className={cn(className, "mr-2 h-4 w-4 flex justify-center items-center ")} aria-hidden="true">
