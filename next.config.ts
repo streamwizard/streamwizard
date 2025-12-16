@@ -1,10 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  compiler: {
-    reactCompiler: true,
-  },
   images: {
-    domains: ["static-cdn.jtvnw.net"],
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "static-cdn.jtvnw.net",
+      },
+    ],
   },
 };
 
