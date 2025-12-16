@@ -3,6 +3,9 @@ const nextConfig = {
   compiler: {
     reactCompiler: true,
   },
+  images: {
+    domains: ["static-cdn.jtvnw.net"],
+  },
 };
 
 

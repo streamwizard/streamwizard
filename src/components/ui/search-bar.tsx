@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, Dispatch, SetStateAction } from "react";
+import React, { useEffect, useState, useRef, Dispatch, SetStateAction } from "react";
 import { useDebounce } from "@uidotdev/usehooks";
 import { AnimatePresence, motion } from "framer-motion";
 import ClickAwayListener from "react-click-away-listener";
@@ -36,25 +36,38 @@ export function SearchBar<T = unknown>({
   const [isUpdating, setIsUpdating] = useState(true); // New state to control fetch
 
   const debouncedSearchTerm = useDebounce(DisplayValue, 300);
+  
+  // Use refs to store latest values without causing re-renders
+  const searchFnRef = useRef(searchFn);
+  const setResultsRef = useRef(setResults);
+  const prevDebouncedTermRef = useRef<string | undefined>(undefined);
+  
+  // Update refs when props change
+  useEffect(() => {
+    searchFnRef.current = searchFn;
+    setResultsRef.current = setResults;
+  }, [searchFn, setResults]);
 
-  const fetchData = useCallback(async () => {
-    if (isUpdating) return; // Skip fetch if updating input from item click
-
-    setIsSearching(true);
-    await searchFn(debouncedSearchTerm);
-    setIsSearching(false);
-  }, [isUpdating, debouncedSearchTerm, searchFn]);
-
+  // Effect for fetching data
   useEffect(() => {
     if (!isUpdating && debouncedSearchTerm) {
-      // Defer state updates to avoid synchronous setState in effect
-      Promise.resolve().then(() => {
-        fetchData();
+      setIsSearching(true);
+      searchFnRef.current(debouncedSearchTerm).finally(() => {
+        setIsSearching(false);
       });
-    } else if (!debouncedSearchTerm) {
-      setResults([]);
     }
-  }, [debouncedSearchTerm, isUpdating, fetchData, setResults]);
+  }, [debouncedSearchTerm, isUpdating]);
+
+  // Effect for clearing results when search term becomes empty
+  useEffect(() => {
+    const prevTerm = prevDebouncedTermRef.current;
+    prevDebouncedTermRef.current = debouncedSearchTerm;
+    
+    // Only clear if transitioning from non-empty to empty
+    if (prevTerm && !debouncedSearchTerm) {
+      setResultsRef.current([]);
+    }
+  }, [debouncedSearchTerm]);
 
   const handleChange = (value: string) => {
     setIsUpdating(false);

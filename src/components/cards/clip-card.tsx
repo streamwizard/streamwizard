@@ -143,7 +143,7 @@ export default function TwitchClipCard({
     <Card className="w-full max-w-md overflow-hidden cursor-pointer mx-">
       <CardHeader className="p-0">
         <div className="relative">
-          <Image src={thumbnail_url!} alt={title} className="w-full h-48 object-cover" onClick={OpenClip} />
+          <Image src={thumbnail_url!} alt={title} width={500} height={108} className="w-full h-48 object-cover" onClick={OpenClip} />
           <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground">{formatDuration(duration!)}</Badge>
           {is_featured && (
             <Badge className="absolute bottom-2 left-2 bg-yellow-500 text-yellow-950">
