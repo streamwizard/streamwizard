@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef, Dispatch, SetStateAction } from "react";
+import React, { useEffect, useState, useCallback, Dispatch, SetStateAction } from "react";
 import { useDebounce } from "@uidotdev/usehooks";
 import { AnimatePresence, motion } from "framer-motion";
 import ClickAwayListener from "react-click-away-listener";
@@ -9,10 +9,10 @@ import LoadingSpinner from "../global/loading";
 import { Input } from "./input";
 import { cn } from "@/lib/utils";
 
-interface SearchBarProps<T = unknown> {
-  setResults: React.Dispatch<React.SetStateAction<T[]>>;
+interface SearchBarProps {
+  setResults: React.Dispatch<React.SetStateAction<unknown[]>>;
   Component: React.FC<{ setSearchTerm: Dispatch<SetStateAction<string>> }>;
-  results: T[];
+  results: unknown[];
   searchFn: (searchTerm: string) => Promise<void>;
   placeholder?: string;
   disabled?: boolean;
@@ -21,7 +21,7 @@ interface SearchBarProps<T = unknown> {
   image?: string | null;
 }
 
-export function SearchBar<T = unknown>({
+export function SearchBar({
   setResults,
   Component,
   results,
@@ -31,43 +31,30 @@ export function SearchBar<T = unknown>({
   setDisplayValue,
   DisplayValue,
   image,
-}: SearchBarProps<T>) {
+}: SearchBarProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [isUpdating, setIsUpdating] = useState(true); // New state to control fetch
 
   const debouncedSearchTerm = useDebounce(DisplayValue, 300);
-  
-  // Use refs to store latest values without causing re-renders
-  const searchFnRef = useRef(searchFn);
-  const setResultsRef = useRef(setResults);
-  const prevDebouncedTermRef = useRef<string | undefined>(undefined);
-  
-  // Update refs when props change
-  useEffect(() => {
-    searchFnRef.current = searchFn;
-    setResultsRef.current = setResults;
-  }, [searchFn, setResults]);
 
-  // Effect for fetching data
+  const fetchData = useCallback(async () => {
+    if (isUpdating) return; // Skip fetch if updating input from item click
+
+    setIsSearching(true);
+    await searchFn(debouncedSearchTerm);
+    setIsSearching(false);
+  }, [isUpdating, debouncedSearchTerm, searchFn]);
+
   useEffect(() => {
     if (!isUpdating && debouncedSearchTerm) {
-      setIsSearching(true);
-      searchFnRef.current(debouncedSearchTerm).finally(() => {
-        setIsSearching(false);
+      // Defer state updates to avoid synchronous setState in effect
+      Promise.resolve().then(() => {
+        fetchData();
       });
+    } else if (!debouncedSearchTerm) {
+      setResults([]);
     }
-  }, [debouncedSearchTerm, isUpdating]);
-
-  // Effect for clearing results when search term becomes empty
-  useEffect(() => {
-    const prevTerm = prevDebouncedTermRef.current;
-    prevDebouncedTermRef.current = debouncedSearchTerm;
-    
-    // Only clear if transitioning from non-empty to empty
-    if (prevTerm && !debouncedSearchTerm) {
-      setResultsRef.current([]);
-    }
-  }, [debouncedSearchTerm]);
+  }, [debouncedSearchTerm, isUpdating, fetchData, setResults]);
 
   const handleChange = (value: string) => {
     setIsUpdating(false);
