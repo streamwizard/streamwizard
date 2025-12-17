@@ -123,7 +123,7 @@ export default function TwitchClipSearchForm() {
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid} className="w-full">
                     <FieldLabel htmlFor="searchQuery">Search Query</FieldLabel>
-                    <Input {...field} id="searchQuery" placeholder="Enter search query" aria-invalid={fieldState.invalid} autoComplete="off" />
+                    <Input {...field} value={field.value ?? ""} id="searchQuery" placeholder="Enter search query" aria-invalid={fieldState.invalid} autoComplete="off" />
                     {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
                   </Field>
                 )}

@@ -9,19 +9,19 @@ import LoadingSpinner from "../global/loading";
 import { Input } from "./input";
 import { cn } from "@/lib/utils";
 
-interface SearchBarProps {
-  setResults: React.Dispatch<React.SetStateAction<unknown[]>>;
+interface SearchBarProps<T = unknown> {
+  setResults: React.Dispatch<React.SetStateAction<T[]>>;
   Component: React.FC<{ setSearchTerm: Dispatch<SetStateAction<string>> }>;
-  results: unknown[];
+  results: T[];
   searchFn: (searchTerm: string) => Promise<void>;
   placeholder?: string;
   disabled?: boolean;
-  DisplayValue: string;
+  DisplayValue: string | undefined;
   setDisplayValue: React.Dispatch<React.SetStateAction<string>>;
   image?: string | null;
 }
 
-export function SearchBar({
+export function SearchBar<T = unknown>({
   setResults,
   Component,
   results,
@@ -31,7 +31,7 @@ export function SearchBar({
   setDisplayValue,
   DisplayValue,
   image,
-}: SearchBarProps) {
+}: SearchBarProps<T>) {
   const [isSearching, setIsSearching] = useState(false);
   const [isUpdating, setIsUpdating] = useState(true); // New state to control fetch
 
@@ -101,7 +101,7 @@ export function SearchBar({
           className={cn("transition-all ", image && "pl-10")}
           placeholder={placeholder}
           onChange={(e) => handleChange(e.target.value)}
-          value={DisplayValue}
+          value={DisplayValue ?? ""}
         />
         {isSearching && (
           <span className="absolute top-[2px] right-8 w-6 h-6 mx-auto mt-1">
@@ -112,25 +112,23 @@ export function SearchBar({
       <AnimatePresence>
         {results.length > 0 && (
           <ClickAwayListener onClickAway={handleClickAway}>
-            <>
-              <div className="absolute z-50 w-full overflow-hidden p-0!">
-                <motion.div
-                  initial={{ y: -400, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: -400, opacity: 0 }}
-                  transition={{ type: "spring", duration: 0.2 }}
-                  className="w-full mt-4 bg-[#0D0D0D] border rounded"
-                >
-                  <Component
-                    setSearchTerm={(value) => {
-                      setIsUpdating(true); // Set isUpdating to skip fetching
-                      setDisplayValue(value); // Update input value without triggering fetch
-                      setResults([]); // Clear results after selection
-                    }}
-                  />
-                </motion.div>
-              </div>
-            </>
+            <div className="absolute z-50 w-full overflow-hidden p-0!">
+              <motion.div
+                initial={{ y: -400, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -400, opacity: 0 }}
+                transition={{ type: "spring", duration: 0.2 }}
+                className="w-full mt-4 bg-[#0D0D0D] border rounded"
+              >
+                <Component
+                  setSearchTerm={(value) => {
+                    setIsUpdating(true); // Set isUpdating to skip fetching
+                    setDisplayValue(value); // Update input value without triggering fetch
+                    setResults([]); // Clear results after selection
+                  }}
+                />
+              </motion.div>
+            </div>
           </ClickAwayListener>
         )}
       </AnimatePresence>

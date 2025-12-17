@@ -72,7 +72,7 @@ export default function TwitchCategorySearch({
   };
 
   return (
-    <SearchBar
+    <SearchBar<SearchResult>
       results={results}
       setResults={setResults}
       searchFn={search}
