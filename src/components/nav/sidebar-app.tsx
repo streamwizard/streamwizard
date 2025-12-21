@@ -56,7 +56,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>Commands</SidebarGroupLabel>
+          <SidebarGroupLabel>Streamwizard SMP</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarCommands />
           </SidebarGroupContent>

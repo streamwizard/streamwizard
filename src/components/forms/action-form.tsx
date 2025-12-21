@@ -1,0 +1,268 @@
+"use client";
+
+import { createAction, updateAction } from "@/actions/smp";
+import {
+  ActionCategory,
+  CATEGORY_INFO,
+  formatActionString,
+  getDefaultMetadata,
+  getEvent,
+  getEventsForCategory,
+  getMetadataSchema,
+  parseActionString,
+} from "@/lib/actions/action-registry";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from "../ui/field";
+import { Input } from "../ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Textarea } from "../ui/textarea";
+import { EventMetadataFields } from "./event-metadata-fields";
+
+// Base action schema
+const actionSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name must be 100 characters or less"),
+  action: z.string().min(1, "Action is required"), // Stored as "category:event"
+  description: z.string().max(500, "Description must be 500 characters or less").optional().or(z.literal("")),
+  metadata: z.any(), // Will be validated dynamically based on action type
+});
+
+type ActionFormValues = z.infer<typeof actionSchema>;
+
+interface ActionFormProps {
+  id?: string;
+  defaultValues?: {
+    name?: string;
+    action?: string;
+    description?: string;
+    metadata?: unknown;
+  };
+}
+
+export function ActionForm({ id, defaultValues }: ActionFormProps) {
+  const router = useRouter();
+  
+  // Parse initial category and event from action string
+  const initialParsed = defaultValues?.action ? parseActionString(defaultValues.action) : null;
+  const [selectedCategory, setSelectedCategory] = useState<ActionCategory | null>(
+    initialParsed?.category || null
+  );
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(
+    initialParsed?.eventId || null
+  );
+
+  const form = useForm<ActionFormValues>({
+    resolver: zodResolver(actionSchema),
+    defaultValues: {
+      name: defaultValues?.name ?? "",
+      action: defaultValues?.action ?? "",
+      description: defaultValues?.description ?? "",
+      metadata: defaultValues?.metadata ?? {},
+    },
+  });
+
+  // Update action string when category or event changes
+  useEffect(() => {
+    if (selectedCategory && selectedEventId) {
+      const actionString = formatActionString(selectedCategory, selectedEventId);
+      const currentAction = form.getValues("action");
+      
+      // Only update if the action string has changed
+      if (currentAction !== actionString) {
+        form.setValue("action", actionString);
+        
+        // Only reset metadata if not initial load and not editing existing action
+        if (!defaultValues?.action || currentAction !== defaultValues.action) {
+          const defaultMetadata = getDefaultMetadata(selectedCategory, selectedEventId);
+          form.setValue("metadata", defaultMetadata);
+        }
+      }
+    }
+  }, [selectedCategory, selectedEventId, form, defaultValues?.action]);
+
+  // Handle category change
+  const handleCategoryChange = (value: string) => {
+    setSelectedCategory(value as ActionCategory);
+    setSelectedEventId(null); // Reset event when category changes
+    form.setValue("action", "");
+    form.setValue("metadata", {});
+  };
+
+  async function handleSubmit(values: ActionFormValues) {
+    // Parse and validate
+    const parsed = parseActionString(values.action);
+    if (!parsed) {
+      toast.error("Invalid action format");
+      return;
+    }
+
+    // Validate metadata based on action type
+    const metadataSchema = getMetadataSchema(parsed.category, parsed.eventId);
+    const metadataValidation = metadataSchema.safeParse(values.metadata);
+
+    if (!metadataValidation.success) {
+      toast.error("Please check the configuration fields");
+      console.error("Metadata validation errors:", metadataValidation.error);
+      return;
+    }
+
+    console.log("Form submitted:", values);
+
+    if (id) {
+      const res = await updateAction(id, values);
+      if (!res) {
+        toast.error("Failed to update action");
+        return;
+      }
+      toast.success("Action updated successfully");
+    } else {
+      const res = await createAction(values);
+      if (!res) {
+        toast.error("Failed to create action");
+        return;
+      }
+      toast.success("Action created successfully");
+    }
+    router.push("/dashboard/smp/admin/actions");
+  }
+
+  const availableEvents = selectedCategory ? getEventsForCategory(selectedCategory) : [];
+  const selectedEvent = selectedCategory && selectedEventId ? getEvent(selectedCategory, selectedEventId) : null;
+
+  return (
+    <form id="action-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      {/* Basic Information */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Action Information</CardTitle>
+          <CardDescription>Configure the basic details of this action</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <FieldGroup>
+            {/* Name */}
+            <Controller
+              name="name"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="action-name">Name *</FieldLabel>
+                  <Input {...field} id="action-name" aria-invalid={fieldState.invalid} placeholder="Enter action name" />
+                  <FieldDescription>A descriptive name for this action</FieldDescription>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+
+            {/* Category Selection */}
+            <Field>
+              <FieldLabel htmlFor="action-category">Category *</FieldLabel>
+              <Select value={selectedCategory || ""} onValueChange={handleCategoryChange}>
+                <SelectTrigger id="action-category">
+                  <SelectValue placeholder="Select a category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CATEGORY_INFO).map(([key, info]) => (
+                    <SelectItem key={key} value={key}>
+                      <div className="flex items-center gap-2">
+                        <span>{info.icon}</span>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{info.label}</span>
+                          <span className="text-xs text-muted-foreground">{info.description}</span>
+                        </div>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FieldDescription>
+                {selectedCategory && CATEGORY_INFO[selectedCategory]
+                  ? CATEGORY_INFO[selectedCategory].description
+                  : "Choose the category of action"}
+              </FieldDescription>
+            </Field>
+
+            {/* Event Selection - Only show when category is selected */}
+            {selectedCategory && (
+              <Field>
+                <FieldLabel htmlFor="action-event">Event *</FieldLabel>
+                <Select value={selectedEventId || ""} onValueChange={(value) => setSelectedEventId(value)}>
+                  <SelectTrigger id="action-event">
+                    <SelectValue placeholder="Select an event" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableEvents.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        <div className="flex flex-col">
+                          <span className="font-medium">{event.label}</span>
+                          <span className="text-xs text-muted-foreground">{event.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FieldDescription>
+                  {selectedEvent ? selectedEvent.description : "Choose the specific event to trigger"}
+                </FieldDescription>
+              </Field>
+            )}
+
+            {/* Description */}
+            <Controller
+              name="description"
+              control={form.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="action-description">Description (Optional)</FieldLabel>
+                  <Textarea
+                    {...field}
+                    id="action-description"
+                    aria-invalid={fieldState.invalid}
+                    placeholder="Describe what this action does"
+                    className="resize-none"
+                    rows={3}
+                  />
+                  <FieldDescription>A detailed description of this action (max 500 characters)</FieldDescription>
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+          </FieldGroup>
+        </CardContent>
+      </Card>
+
+      {/* Metadata Fields - Dynamic based on category and event */}
+      {selectedCategory && selectedEventId && selectedEvent && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{selectedEvent.label} Configuration</CardTitle>
+            <CardDescription>{selectedEvent.description}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <EventMetadataFields category={selectedCategory} eventId={selectedEventId} control={form.control} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Submit Buttons */}
+      <Card>
+        <CardFooter className="flex justify-end gap-4 pt-6">
+          <Button type="button" variant="outline" onClick={() => router.back()}>
+            Cancel
+          </Button>
+          <Button type="button" variant="outline" onClick={() => form.reset()}>
+            Reset
+          </Button>
+          <Button type="submit" form="action-form" disabled={!selectedCategory || !selectedEventId}>
+            {id ? "Update Action" : "Create Action"}
+          </Button>
+        </CardFooter>
+      </Card>
+    </form>
+  );
+}
