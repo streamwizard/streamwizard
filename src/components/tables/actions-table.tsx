@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { CATEGORY_INFO, getEventById, parseActionString } from "@/lib/actions/action-registry";
+import { CATEGORY_INFO, getEvent, parseActionString } from "@/lib/actions/action-registry";
 
 type Action = Database["public"]["Tables"]["smp_actions"]["Row"];
 
@@ -42,7 +42,7 @@ export function ActionsTable({ data }: ActionsTableProps) {
           {data.length > 0 ? (
             data.map((item) => {
               const parsed = parseActionString(item.action);
-              const event = parsed ? getEventById(parsed.eventId) : null;
+              const event = parsed ? getEvent(parsed.category, parsed.eventId) : null;
               const categoryInfo = parsed ? CATEGORY_INFO[parsed.category] : null;
 
               return (
@@ -54,7 +54,7 @@ export function ActionsTable({ data }: ActionsTableProps) {
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell>
                     <Badge variant="outline">
-                      {categoryInfo?.icon} {categoryInfo?.label || "Unknown"}
+                      {categoryInfo?.icon} {categoryInfo?.label || parsed?.category || "Unknown"}
                     </Badge>
                   </TableCell>
                   <TableCell>

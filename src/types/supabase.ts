@@ -457,6 +457,38 @@ export type Database = {
           },
         ]
       }
+      smp_triggers: {
+        Row: {
+          action_id: string | null
+          conditions: Json
+          created_at: string
+          event_type: string
+          id: string
+        }
+        Insert: {
+          action_id?: string | null
+          conditions?: Json
+          created_at?: string
+          event_type: string
+          id?: string
+        }
+        Update: {
+          action_id?: string | null
+          conditions?: Json
+          created_at?: string
+          event_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smp_triggers_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "smp_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       twitch_app_token: {
         Row: {
           access_token: string

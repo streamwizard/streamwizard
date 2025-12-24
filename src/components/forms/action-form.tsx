@@ -1,6 +1,11 @@
 "use client";
 
-import { createAction, updateAction } from "@/actions/smp";
+import {
+  createAction,
+  updateAction,
+  createTrigger,
+  deleteTriggersByActionId,
+} from "@/actions/smp";
 import {
   ActionCategory,
   CATEGORY_INFO,
@@ -24,6 +29,7 @@ import { Input } from "../ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import { EventMetadataFields } from "./event-metadata-fields";
+import { TriggerConfig, Trigger } from "./trigger-config";
 
 // Base action schema
 const actionSchema = z.object({
@@ -56,6 +62,7 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
   const [selectedEventId, setSelectedEventId] = useState<string | null>(
     initialParsed?.eventId || null
   );
+  const [triggers, setTriggers] = useState<Trigger[]>([]);
 
   const form = useForm<ActionFormValues>({
     resolver: zodResolver(actionSchema),
@@ -67,18 +74,31 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
     },
   });
 
+  // Update category and event when defaultValues.action changes (e.g., when editing)
+  // Only run when defaultValues.action actually changes, not when state changes
+  useEffect(() => {
+    if (defaultValues?.action) {
+      const parsed = parseActionString(defaultValues.action);
+      if (parsed) {
+        setSelectedCategory(parsed.category);
+        setSelectedEventId(parsed.eventId);
+      }
+    }
+  }, [defaultValues?.action]);
+
   // Update action string when category or event changes
   useEffect(() => {
     if (selectedCategory && selectedEventId) {
       const actionString = formatActionString(selectedCategory, selectedEventId);
       const currentAction = form.getValues("action");
+      const expectedAction = defaultValues?.action;
       
       // Only update if the action string has changed
       if (currentAction !== actionString) {
         form.setValue("action", actionString);
         
-        // Only reset metadata if not initial load and not editing existing action
-        if (!defaultValues?.action || currentAction !== defaultValues.action) {
+        // Only reset metadata if this is a user-initiated change (not matching defaultValues)
+        if (actionString !== expectedAction) {
           const defaultMetadata = getDefaultMetadata(selectedCategory, selectedEventId);
           form.setValue("metadata", defaultMetadata);
         }
@@ -112,23 +132,51 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
       return;
     }
 
-    console.log("Form submitted:", values);
+    // Transform form values to match database schema
+    // Convert empty strings to null for nullable fields
+    const dbData = {
+      name: values.name,
+      action: values.action,
+      description: values.description && values.description !== "" ? values.description : null,
+      metadata: values.metadata || null,
+    };
 
+    console.log("Form submitted:", dbData);
+
+    let actionId = id;
+    
     if (id) {
-      const res = await updateAction(id, values);
+      const res = await updateAction(id, dbData);
       if (!res) {
         toast.error("Failed to update action");
         return;
       }
       toast.success("Action updated successfully");
     } else {
-      const res = await createAction(values);
+      const res = await createAction(dbData);
       if (!res) {
         toast.error("Failed to create action");
         return;
       }
+      actionId = res.id;
       toast.success("Action created successfully");
     }
+
+    // Save triggers
+    if (actionId) {
+      // Delete existing triggers
+      await deleteTriggersByActionId(actionId);
+      
+      // Create new triggers
+      for (const trigger of triggers) {
+        await createTrigger({
+          action_id: actionId,
+          event_type: trigger.event_type,
+          conditions: trigger.conditions,
+        });
+      }
+    }
+
     router.push("/dashboard/smp/admin/actions");
   }
 
@@ -137,6 +185,9 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
 
   return (
     <form id="action-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+      {/* Trigger Configuration - At the top */}
+      <TriggerConfig actionId={id} onTriggersChange={setTriggers} />
+
       {/* Basic Information */}
       <Card>
         <CardHeader>
@@ -162,7 +213,7 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
             {/* Category Selection */}
             <Field>
               <FieldLabel htmlFor="action-category">Category *</FieldLabel>
-              <Select value={selectedCategory || ""} onValueChange={handleCategoryChange}>
+              <Select value={selectedCategory || undefined} onValueChange={handleCategoryChange}>
                 <SelectTrigger id="action-category">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
@@ -191,7 +242,7 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
             {selectedCategory && (
               <Field>
                 <FieldLabel htmlFor="action-event">Event *</FieldLabel>
-                <Select value={selectedEventId || ""} onValueChange={(value) => setSelectedEventId(value)}>
+                <Select value={selectedEventId || undefined} onValueChange={(value) => setSelectedEventId(value)}>
                   <SelectTrigger id="action-event">
                     <SelectValue placeholder="Select an event" />
                   </SelectTrigger>

@@ -87,16 +87,37 @@ export function ChannelPointsTemplateForm({ id, defaultValues }: ChannelPointsTe
   }, []);
 
   async function handleSubmit(values: ChannelPointsTemplateFormValues) {
-    console.log("Form submitted:", values);
+    // Transform form values to match database schema
+    // Convert empty strings to null for nullable fields
+    const dbData: Database["public"]["Tables"]["smp_channelpoints_templates"]["Insert"] = {
+      title: values.title,
+      cost: values.cost,
+      background_color: values.background_color && values.background_color !== "" ? values.background_color : null,
+      prompt: values.prompt && values.prompt !== "" ? values.prompt : null,
+      is_enabled: values.is_enabled,
+      is_user_input_required: values.is_user_input_required,
+      is_global_cooldown_enabled: values.is_global_cooldown_enabled,
+      global_cooldown_seconds: values.global_cooldown_seconds ?? null,
+      is_max_per_stream_enabled: values.is_max_per_stream_enabled,
+      max_per_stream: values.max_per_stream ?? null,
+      is_max_per_user_per_stream_enabled: values.is_max_per_user_per_stream_enabled,
+      max_per_user_per_stream: values.max_per_user_per_stream ?? null,
+      should_redemptions_skip_request_queue: values.should_redemptions_skip_request_queue,
+      action: values.action ?? null,
+    };
+
+    console.log("Form submitted:", dbData);
     if (id) {
-      const res = await updateChannelPointsTemplate(id, values);
+      // For updates, use Update type (all fields optional)
+      const updateData: Database["public"]["Tables"]["smp_channelpoints_templates"]["Update"] = dbData;
+      const res = await updateChannelPointsTemplate(id, updateData);
       if (!res) {
         toast.error("Failed to update channel points template");
         return;
       }
       toast.success("Channel points template updated successfully");
     } else {
-      const res = await createChannelPointsTemplate(values);
+      const res = await createChannelPointsTemplate(dbData);
       if (!res) {
         toast.error("Failed to create channel points template");
         return;
@@ -203,12 +224,16 @@ export function ChannelPointsTemplateForm({ id, defaultValues }: ChannelPointsTe
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
                   <FieldLabel htmlFor="channelpoints-action">Action (Optional)</FieldLabel>
-                  <Select value={field.value} onValueChange={field.onChange} disabled={loadingActions}>
+                  <Select 
+                    value={field.value ? field.value : "__none__"} 
+                    onValueChange={(value) => field.onChange(value === "__none__" ? undefined : value)} 
+                    disabled={loadingActions}
+                  >
                     <SelectTrigger id="channelpoints-action" aria-invalid={fieldState.invalid}>
                       <SelectValue placeholder={loadingActions ? "Loading actions..." : "Select an action"} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="__none__">None</SelectItem>
                       {actions.map((action) => (
                         <SelectItem key={action.id} value={action.id}>
                           {action.name}

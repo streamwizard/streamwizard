@@ -5,11 +5,8 @@ import { z } from "zod";
  */
 export const ACTION_CATEGORIES = {
   JUMPSCARES: "jumpscares",
-  SOUNDS: "sounds",
-  MESSAGES: "messages",
-  WEBHOOKS: "webhooks",
-  COMMANDS: "commands",
-  VARIABLES: "variables",
+  DISASTERS: "disasters",
+  EVENTS: "events",
 } as const;
 
 export type ActionCategory = (typeof ACTION_CATEGORIES)[keyof typeof ACTION_CATEGORIES];
@@ -27,33 +24,18 @@ export const CATEGORY_INFO: Record<
 > = {
   [ACTION_CATEGORIES.JUMPSCARES]: {
     label: "Jumpscares",
-    description: "Trigger jumpscare effects on screen",
+    description: "Terrifying jumpscare effects that trigger on player actions",
     icon: "👻",
   },
-  [ACTION_CATEGORIES.SOUNDS]: {
-    label: "Sounds",
-    description: "Play sound effects or audio files",
-    icon: "🔊",
+  [ACTION_CATEGORIES.DISASTERS]: {
+    label: "Disasters",
+    description: "Catastrophic events that affect the world around the player",
+    icon: "💥",
   },
-  [ACTION_CATEGORIES.MESSAGES]: {
-    label: "Messages",
-    description: "Send messages to chat or channels",
-    icon: "💬",
-  },
-  [ACTION_CATEGORIES.WEBHOOKS]: {
-    label: "Webhooks",
-    description: "Trigger external webhooks",
-    icon: "🔗",
-  },
-  [ACTION_CATEGORIES.COMMANDS]: {
-    label: "Commands",
-    description: "Execute system commands",
-    icon: "⚙️",
-  },
-  [ACTION_CATEGORIES.VARIABLES]: {
-    label: "Variables",
-    description: "Update variables and counters",
-    icon: "📊",
+  [ACTION_CATEGORIES.EVENTS]: {
+    label: "Events",
+    description: "Special events and celebrations",
+    icon: "🎉",
   },
 };
 
@@ -72,198 +54,191 @@ export interface ActionEvent {
  * Jumpscare Events
  */
 const JUMPSCARE_EVENTS: Record<string, ActionEvent> = {
+  DOOR_SCARE: {
+    id: "door_scare",
+    label: "Door Scare",
+    description: "A haunting presence awaits behind doors, causing terrifying manifestations upon interaction",
+    metadataSchema: z.object({
+      // No configurable metadata - uses default behavior
+    }),
+    defaultMetadata: {},
+  },
   WELCOME_HOME: {
     id: "welcome_home",
     label: "Welcome Home",
-    description: "Welcome home jumpscare effect",
+    description: "Curses a player - the next door they open will reveal a terrifying Herobrine-like surprise",
     metadataSchema: z.object({
-      duration: z.number().int().min(100).max(10000).default(3000),
-      intensity: z.enum(["low", "medium", "high"]).default("medium"),
-      soundEnabled: z.boolean().default(true),
-      imageUrl: z.string().optional().default(""),
+      // No configurable metadata - uses default behavior
+    }),
+    defaultMetadata: {},
+  },
+  ENDERMAN_JUMPSCARE: {
+    id: "EndermanJumpscare",
+    label: "Enderman Jumpscare",
+    description: "Unleashes an absolutely terrifying Enderman experience with multiple endermen",
+    metadataSchema: z.object({
+      // No configurable metadata - uses default behavior
+    }),
+    defaultMetadata: {},
+  },
+  FIREWORKS: {
+    id: "fireworks",
+    label: "Fireworks Jumpscare",
+    description: "A terrifying barrage of explosive fireworks around the player",
+    metadataSchema: z.object({
+      // No configurable metadata - uses default behavior
+    }),
+    defaultMetadata: {},
+  },
+  FAKE_DAMAGE: {
+    id: "fake_damage",
+    label: "Fake Damage",
+    description: "Temporarily reduces the player's health to scare them (without dying)",
+    metadataSchema: z.object({
+      damageAmount: z.number().min(1).max(20).default(5),
+      duration: z.number().int().min(10).max(200).default(100), // in ticks
     }),
     defaultMetadata: {
-      duration: 3000,
-      intensity: "medium",
-      soundEnabled: true,
-      imageUrl: "",
+      damageAmount: 5,
+      duration: 100,
     },
   },
-  FREDDY_FAZBEAR: {
-    id: "freddy_fazbear",
-    label: "Freddy Fazbear",
-    description: "Five Nights at Freddy's jumpscare",
+  SPINNING_PLAYER: {
+    id: "SpinningPlayer",
+    label: "Spinning Player",
+    description: "Spins the player around rapidly, disorienting them",
     metadataSchema: z.object({
-      duration: z.number().int().min(100).max(10000).default(2000),
-      soundEnabled: z.boolean().default(true),
-      screenShake: z.boolean().default(true),
+      rotations: z.number().int().min(1).max(10).default(4),
+      speed: z.number().int().min(1).max(10).default(2), // ticks between rotations
     }),
     defaultMetadata: {
-      duration: 2000,
-      soundEnabled: true,
-      screenShake: true,
-    },
-  },
-  CUSTOM: {
-    id: "custom_jumpscare",
-    label: "Custom Jumpscare",
-    description: "Create a custom jumpscare",
-    metadataSchema: z.object({
-      imageUrl: z.string().min(1, "Image URL is required").url("Must be a valid URL"),
-      soundUrl: z.string().url("Must be a valid URL").optional().default(""),
-      duration: z.number().int().min(100).max(10000).default(3000),
-      intensity: z.enum(["low", "medium", "high"]).default("medium"),
-      screenShake: z.boolean().default(false),
-    }),
-    defaultMetadata: {
-      imageUrl: "",
-      soundUrl: "",
-      duration: 3000,
-      intensity: "medium",
-      screenShake: false,
-    },
-  },
-};
-
-/**
- * Sound Events
- */
-const SOUND_EVENTS: Record<string, ActionEvent> = {
-  PLAY_AUDIO: {
-    id: "play_audio",
-    label: "Play Audio File",
-    description: "Play a sound effect or audio file",
-    metadataSchema: z.object({
-      audioUrl: z.string().min(1, "Audio URL is required").url("Must be a valid URL"),
-      volume: z.number().min(0).max(100).default(50),
-      loop: z.boolean().default(false),
-      fadeIn: z.number().int().min(0).max(5000).default(0),
-      fadeOut: z.number().int().min(0).max(5000).default(0),
-    }),
-    defaultMetadata: {
-      audioUrl: "",
-      volume: 50,
-      loop: false,
-      fadeIn: 0,
-      fadeOut: 0,
-    },
-  },
-  TEXT_TO_SPEECH: {
-    id: "text_to_speech",
-    label: "Text to Speech",
-    description: "Convert text to speech and play it",
-    metadataSchema: z.object({
-      text: z.string().min(1, "Text is required").max(500),
-      voice: z.enum(["male", "female", "robot"]).default("female"),
-      speed: z.number().min(0.5).max(2).default(1),
-      volume: z.number().min(0).max(100).default(50),
-    }),
-    defaultMetadata: {
-      text: "",
-      voice: "female",
-      speed: 1,
-      volume: 50,
+      rotations: 4,
+      speed: 2,
     },
   },
 };
 
 /**
- * Message Events
+ * Disaster Events
  */
-const MESSAGE_EVENTS: Record<string, ActionEvent> = {
-  SEND_CHAT_MESSAGE: {
-    id: "send_chat_message",
-    label: "Send Chat Message",
-    description: "Send a message to Twitch chat",
+const DISASTER_EVENTS: Record<string, ActionEvent> = {
+  SUPERNOVA: {
+    id: "supernova",
+    label: "Supernova",
+    description: "Creates a massive exploding star that destroys everything in its path",
     metadataSchema: z.object({
-      message: z.string().min(1, "Message is required").max(500),
-      delay: z.number().int().min(0).max(3600).default(0),
-      replyToRedemption: z.boolean().default(false),
+      level: z.number().int().min(1).max(10).default(1),
+      sizeMultiplier: z.number().min(0.1).max(5.0).default(1.0),
+      particleMultiplier: z.number().min(0.1).max(5.0).default(1.0),
+      fallSpeedMultiplier: z.number().min(0.1).max(5.0).default(1.0),
+      volume: z.number().min(0.0).max(2.0).default(1.0),
+      farParticles: z.boolean().default(true),
     }),
     defaultMetadata: {
-      message: "",
-      delay: 0,
-      replyToRedemption: false,
+      level: 1,
+      sizeMultiplier: 1.0,
+      particleMultiplier: 1.0,
+      fallSpeedMultiplier: 1.0,
+      volume: 1.0,
+      farParticles: true,
     },
   },
-  ANNOUNCEMENT: {
-    id: "announcement",
-    label: "Send Announcement",
-    description: "Send a highlighted announcement",
+  WINDSTORM: {
+    id: "windstorm",
+    label: "Wind Storm",
+    description: "Creates a customizable wind storm that follows the player and pushes nearby entities horizontally",
     metadataSchema: z.object({
-      message: z.string().min(1, "Message is required").max(500),
-      color: z.enum(["blue", "green", "orange", "purple"]).default("purple"),
+      level: z.number().int().min(1).max(10).default(5),
+      force: z.number().min(0.1).max(2.0).optional(),
+      intensity: z.number().min(0.1).max(2.0).optional(),
+      duration: z.number().int().min(1).max(60).default(15), // in seconds
+      ticks: z.number().int().min(20).max(1200).optional(), // alternative to duration
+      radius: z.number().min(5.0).max(50.0).default(20.0),
+      range: z.number().min(5.0).max(50.0).optional(), // alternative to radius
+      direction: z.enum(["north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest", "random"]).optional(),
+      angle: z.number().min(0).max(360).optional(), // alternative to direction
+      volume: z.number().min(0.0).max(2.0).default(1.0),
+      particles: z.number().min(0.1).max(3.0).optional(),
+      effects: z.enum(["minimal", "normal", "maximum"]).optional(),
+      targets: z.string().optional(), // "players", "mobs", "all"
+      excludeFlying: z.boolean().default(false),
+      maxVelocity: z.number().min(0.5).max(5.0).default(2.0),
+      distanceFalloff: z.boolean().default(true),
     }),
     defaultMetadata: {
-      message: "",
-      color: "purple",
-    },
-  },
-};
-
-/**
- * Webhook Events
- */
-const WEBHOOK_EVENTS: Record<string, ActionEvent> = {
-  TRIGGER_WEBHOOK: {
-    id: "trigger_webhook",
-    label: "Trigger Webhook",
-    description: "Send an HTTP request to a webhook",
-    metadataSchema: z.object({
-      webhookUrl: z.string().min(1, "Webhook URL is required").url("Must be a valid URL"),
-      method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]).default("POST"),
-      headers: z.string().optional().default(""),
-      body: z.string().optional().default(""),
-    }),
-    defaultMetadata: {
-      webhookUrl: "",
-      method: "POST",
-      headers: "",
-      body: "",
-    },
-  },
-};
-
-/**
- * Command Events
- */
-const COMMAND_EVENTS: Record<string, ActionEvent> = {
-  EXECUTE_COMMAND: {
-    id: "execute_command",
-    label: "Execute Command",
-    description: "Run a system command or script",
-    metadataSchema: z.object({
-      command: z.string().min(1, "Command is required"),
-      arguments: z.string().optional().default(""),
-      timeout: z.number().int().min(0).max(300).default(30),
-      runAsAdmin: z.boolean().default(false),
-    }),
-    defaultMetadata: {
-      command: "",
-      arguments: "",
-      timeout: 30,
-      runAsAdmin: false,
+      level: 5,
+      duration: 15,
+      radius: 20.0,
+      volume: 1.0,
+      excludeFlying: false,
+      maxVelocity: 2.0,
+      distanceFalloff: true,
     },
   },
 };
 
 /**
- * Variable Events
+ * Event Events
  */
-const VARIABLE_EVENTS: Record<string, ActionEvent> = {
-  UPDATE_VARIABLE: {
-    id: "update_variable",
-    label: "Update Variable",
-    description: "Update a variable or counter",
+const EVENT_EVENTS: Record<string, ActionEvent> = {
+  SPAWN_MOBS: {
+    id: "random_mob_spawn",
+    label: "Spawn Mobs",
+    description: "Spawns random passive mobs with custom names around the player, which despawn after 5 minutes",
     metadataSchema: z.object({
-      variableName: z.string().min(1, "Variable name is required"),
-      value: z.string(),
-      operation: z.enum(["set", "increment", "decrement", "append"]).default("set"),
+      amount: z.number().int().min(1).max(1000).default(100),
+      mobList: z.array(z.string()).min(1, "At least one mob type is required"),
+      viewerList: z.array(z.string()).optional().default([]),
     }),
     defaultMetadata: {
-      variableName: "",
-      value: "",
-      operation: "set",
+      amount: 100,
+      mobList: ["ZOMBIE"],
+      viewerList: [],
+    },
+  },
+  LAUNCH_PLAYER: {
+    id: "launce",
+    label: "Long Distance Launch",
+    description: "Teleports the player 500 blocks with a launch effect (no fall damage)",
+    metadataSchema: z.object({
+      horizontalSpeed: z.number().min(1.0).max(20.0).default(10.2),
+      verticalSpeed: z.number().min(0.5).max(10.0).default(2.5),
+      distance: z.number().int().min(50).max(2000).default(500),
+    }),
+    defaultMetadata: {
+      horizontalSpeed: 10.2,
+      verticalSpeed: 2.5,
+      distance: 500,
+    },
+  },
+  TWITCH_SUBSCRIPTION: {
+    id: "twitch_subscription",
+    label: "Twitch Subscription Alert",
+    description: "Celebration effect for Twitch subscriptions with fireworks, particles, and sounds",
+    metadataSchema: z.object({
+      subscriberName: z.string().min(1).max(100).default("Someone"),
+      tier: z.enum(["1", "2", "3", "prime"]).default("1"),
+      customTitle: z.string().max(100).optional(),
+      customSubtitle: z.string().max(100).optional(),
+      duration: z.number().int().min(1).max(10).default(5), // in seconds
+      fireworks: z.number().int().min(1).max(15).default(3),
+      intensity: z.enum(["low", "normal", "high", "extreme"]).default("normal"),
+      customMessage: z.string().max(500).optional(),
+      showChat: z.boolean().default(true),
+      showTitle: z.boolean().default(true),
+      broadcast: z.boolean().default(false),
+      volume: z.number().min(0.0).max(2.0).default(1.0),
+    }),
+    defaultMetadata: {
+      subscriberName: "Someone",
+      tier: "1",
+      duration: 5,
+      fireworks: 3,
+      intensity: "normal",
+      showChat: true,
+      showTitle: true,
+      broadcast: false,
+      volume: 1.0,
     },
   },
 };
@@ -273,11 +248,8 @@ const VARIABLE_EVENTS: Record<string, ActionEvent> = {
  */
 export const EVENTS_REGISTRY: Record<ActionCategory, Record<string, ActionEvent>> = {
   [ACTION_CATEGORIES.JUMPSCARES]: JUMPSCARE_EVENTS,
-  [ACTION_CATEGORIES.SOUNDS]: SOUND_EVENTS,
-  [ACTION_CATEGORIES.MESSAGES]: MESSAGE_EVENTS,
-  [ACTION_CATEGORIES.WEBHOOKS]: WEBHOOK_EVENTS,
-  [ACTION_CATEGORIES.COMMANDS]: COMMAND_EVENTS,
-  [ACTION_CATEGORIES.VARIABLES]: VARIABLE_EVENTS,
+  [ACTION_CATEGORIES.DISASTERS]: DISASTER_EVENTS,
+  [ACTION_CATEGORIES.EVENTS]: EVENT_EVENTS,
 };
 
 /**
@@ -289,7 +261,15 @@ export function getEventsForCategory(category: ActionCategory): ActionEvent[] {
 }
 
 export function getEvent(category: ActionCategory, eventId: string): ActionEvent | undefined {
-  return EVENTS_REGISTRY[category]?.[eventId.toUpperCase().replace(/-/g, "_")];
+  const events = EVENTS_REGISTRY[category];
+  if (!events) return undefined;
+  
+  // First try direct key lookup (uppercase with underscores)
+  const key = eventId.toUpperCase().replace(/-/g, "_");
+  if (events[key]) return events[key];
+  
+  // If not found, search by event id field (handles camelCase and other formats)
+  return Object.values(events).find((event) => event.id === eventId);
 }
 
 export function getEventById(eventId: string): ActionEvent | undefined {
