@@ -30,6 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "../ui/textarea";
 import { EventMetadataFields } from "./event-metadata-fields";
 import { TriggerConfig, Trigger } from "./trigger-config";
+import { TestTriggerModal } from "./test-trigger-modal";
 
 // Base action schema
 const actionSchema = z.object({
@@ -53,7 +54,7 @@ interface ActionFormProps {
 
 export function ActionForm({ id, defaultValues }: ActionFormProps) {
   const router = useRouter();
-  
+
   // Parse initial category and event from action string
   const initialParsed = defaultValues?.action ? parseActionString(defaultValues.action) : null;
   const [selectedCategory, setSelectedCategory] = useState<ActionCategory | null>(
@@ -63,6 +64,7 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
     initialParsed?.eventId || null
   );
   const [triggers, setTriggers] = useState<Trigger[]>([]);
+  const [testModalOpen, setTestModalOpen] = useState(false);
 
   const form = useForm<ActionFormValues>({
     resolver: zodResolver(actionSchema),
@@ -92,11 +94,11 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
       const actionString = formatActionString(selectedCategory, selectedEventId);
       const currentAction = form.getValues("action");
       const expectedAction = defaultValues?.action;
-      
+
       // Only update if the action string has changed
       if (currentAction !== actionString) {
         form.setValue("action", actionString);
-        
+
         // Only reset metadata if this is a user-initiated change (not matching defaultValues)
         if (actionString !== expectedAction) {
           const defaultMetadata = getDefaultMetadata(selectedCategory, selectedEventId);
@@ -141,10 +143,9 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
       metadata: values.metadata || null,
     };
 
-    console.log("Form submitted:", dbData);
 
     let actionId = id;
-    
+
     if (id) {
       const res = await updateAction(id, dbData);
       if (!res) {
@@ -166,7 +167,7 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
     if (actionId) {
       // Delete existing triggers
       await deleteTriggersByActionId(actionId);
-      
+
       // Create new triggers
       for (const trigger of triggers) {
         await createTrigger({
@@ -180,10 +181,12 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
     router.push("/dashboard/smp/admin/actions");
   }
 
+
   const availableEvents = selectedCategory ? getEventsForCategory(selectedCategory) : [];
   const selectedEvent = selectedCategory && selectedEventId ? getEvent(selectedCategory, selectedEventId) : null;
 
   return (
+    <>
     <form id="action-form" onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
       {/* Trigger Configuration - At the top */}
       <TriggerConfig actionId={id} onTriggersChange={setTriggers} />
@@ -219,14 +222,9 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(CATEGORY_INFO).map(([key, info]) => (
-                    <SelectItem key={key} value={key}>
-                      <div className="flex items-center gap-2">
-                        <span>{info.icon}</span>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{info.label}</span>
-                          <span className="text-xs text-muted-foreground">{info.description}</span>
-                        </div>
-                      </div>
+                    <SelectItem key={key} value={key} className="flex flex-col items-start">
+                      <span className="font-medium">{info.label}</span>
+                      <span className="text-xs text-muted-foreground">{info.description}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -248,11 +246,9 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
                   </SelectTrigger>
                   <SelectContent>
                     {availableEvents.map((event) => (
-                      <SelectItem key={event.id} value={event.id}>
-                        <div className="flex flex-col">
-                          <span className="font-medium">{event.label}</span>
-                          <span className="text-xs text-muted-foreground">{event.description}</span>
-                        </div>
+                      <SelectItem key={event.id} value={event.id} className="flex flex-col items-start">
+                        <span className="font-medium">{event.label}</span>
+                        <span className="text-xs text-muted-foreground">{event.description}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -295,25 +291,52 @@ export function ActionForm({ id, defaultValues }: ActionFormProps) {
             <CardDescription>{selectedEvent.description}</CardDescription>
           </CardHeader>
           <CardContent>
-            <EventMetadataFields category={selectedCategory} eventId={selectedEventId} control={form.control} />
+            <EventMetadataFields 
+              category={selectedCategory} 
+              eventId={selectedEventId} 
+              control={form.control}
+              triggerEventType={triggers.length > 0 ? triggers[0].event_type : undefined}
+            />
           </CardContent>
         </Card>
       )}
 
       {/* Submit Buttons */}
       <Card>
-        <CardFooter className="flex justify-end gap-4 pt-6">
-          <Button type="button" variant="outline" onClick={() => router.back()}>
-            Cancel
+        <CardFooter className="flex justify-between pt-6">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setTestModalOpen(true)}
+            disabled={!selectedCategory || !selectedEventId}
+          >
+            Test Trigger
           </Button>
-          <Button type="button" variant="outline" onClick={() => form.reset()}>
-            Reset
-          </Button>
-          <Button type="submit" form="action-form" disabled={!selectedCategory || !selectedEventId}>
-            {id ? "Update Action" : "Create Action"}
-          </Button>
+          <div className="flex gap-4">
+            <Button type="button" variant="outline" onClick={() => router.back()}>
+              Cancel
+            </Button>
+            <Button type="button" variant="outline" onClick={() => form.reset()}>
+              Reset
+            </Button>
+            <Button type="submit" form="action-form" disabled={!selectedCategory || !selectedEventId}>
+              {id ? "Update Action" : "Create Action"}
+            </Button>
+          </div>
         </CardFooter>
       </Card>
+
     </form>
+
+    {/* Test Trigger Modal - Outside form to prevent nested form submission */}
+    <TestTriggerModal
+      open={testModalOpen}
+      onOpenChange={setTestModalOpen}
+      action={form.getValues("action")}
+      metadata={form.getValues("metadata") || {}}
+      triggers={triggers}
+      selectedEvent={selectedEvent}
+    />
+  </>
   );
 }

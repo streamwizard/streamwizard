@@ -25,7 +25,7 @@ export default function TwitchSearchBar({
   button_label = "Select",
   placeholder = "Jochemwhite",
   disabled = false,
-  onSelect = () => {},
+  onSelect = () => { },
   value,
   initalValue,
   reset,

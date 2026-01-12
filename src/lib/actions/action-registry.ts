@@ -4,9 +4,9 @@ import { z } from "zod";
  * Action Categories - Top level groupings
  */
 export const ACTION_CATEGORIES = {
-  JUMPSCARES: "jumpscares",
-  DISASTERS: "disasters",
-  EVENTS: "events",
+  JUMPSCARES: "jumpscare",
+  DISASTERS: "disaster",
+  EVENTS: "event",
 } as const;
 
 export type ActionCategory = (typeof ACTION_CATEGORIES)[keyof typeof ACTION_CATEGORIES];
@@ -73,7 +73,7 @@ const JUMPSCARE_EVENTS: Record<string, ActionEvent> = {
     defaultMetadata: {},
   },
   ENDERMAN_JUMPSCARE: {
-    id: "EndermanJumpscare",
+    id: "enderman_jumpscare",
     label: "Enderman Jumpscare",
     description: "Unleashes an absolutely terrifying Enderman experience with multiple endermen",
     metadataSchema: z.object({
@@ -104,7 +104,7 @@ const JUMPSCARE_EVENTS: Record<string, ActionEvent> = {
     },
   },
   SPINNING_PLAYER: {
-    id: "SpinningPlayer",
+    id: "spinning_player",
     label: "Spinning Player",
     description: "Spins the player around rapidly, disorienting them",
     metadataSchema: z.object({
@@ -211,34 +211,44 @@ const EVENT_EVENTS: Record<string, ActionEvent> = {
       distance: 500,
     },
   },
-  TWITCH_SUBSCRIPTION: {
-    id: "twitch_subscription",
-    label: "Twitch Subscription Alert",
-    description: "Celebration effect for Twitch subscriptions with fireworks, particles, and sounds",
+  CELEBRATION_ALERT: {
+    id: "celebration_alert",
+    label: "Celebration Alert",
+    description: "Customizable celebration effect with fireworks, particles, and sounds for any triggered event",
     metadataSchema: z.object({
-      subscriberName: z.string().min(1).max(100).default("Someone"),
-      tier: z.enum(["1", "2", "3", "prime"]).default("1"),
-      customTitle: z.string().max(100).optional(),
-      customSubtitle: z.string().max(100).optional(),
-      duration: z.number().int().min(1).max(10).default(5), // in seconds
-      fireworks: z.number().int().min(1).max(15).default(3),
-      intensity: z.enum(["low", "normal", "high", "extreme"]).default("normal"),
-      customMessage: z.string().max(500).optional(),
-      showChat: z.boolean().default(true),
-      showTitle: z.boolean().default(true),
-      broadcast: z.boolean().default(false),
+      // Visual Effects
+      color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(), // Hex color for fireworks (RGB or RRGGBB format)
+      enable_fireworks: z.boolean().default(true),
+      fireworks: z.number().int().min(1).max(10).default(3),
+      
+      // Audio Control
+      enable_sounds: z.boolean().default(true),
       volume: z.number().min(0.0).max(2.0).default(1.0),
+      
+      // Effect Intensity
+      intensity: z.enum(["low", "normal", "high", "extreme"]).default("normal"),
+      duration: z.number().int().min(1).max(10).default(5), // in seconds
+      
+      // Display Options
+      show_chat: z.boolean().default(true),
+      show_title: z.boolean().default(true),
+      broadcast: z.boolean().default(false),
+      
+      // Custom Text (overrides defaults)
+      title: z.string().max(100).optional(),
+      subtitle: z.string().max(100).optional(),
+      message: z.string().max(500).optional(),
     }),
     defaultMetadata: {
-      subscriberName: "Someone",
-      tier: "1",
-      duration: 5,
+      enable_fireworks: true,
       fireworks: 3,
-      intensity: "normal",
-      showChat: true,
-      showTitle: true,
-      broadcast: false,
+      enable_sounds: true,
       volume: 1.0,
+      intensity: "normal",
+      duration: 5,
+      show_chat: true,
+      show_title: true,
+      broadcast: false,
     },
   },
 };

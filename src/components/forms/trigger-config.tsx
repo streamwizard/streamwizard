@@ -154,30 +154,32 @@ export function TriggerConfig({ actionId, onTriggersChange }: TriggerConfigProps
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Twitch Event Triggers</CardTitle>
-            <CardDescription>Configure when this action should be triggered by Twitch events</CardDescription>
+            <CardTitle>Twitch Event Trigger</CardTitle>
+            <CardDescription>Configure when this action should be triggered by a Twitch event</CardDescription>
           </div>
-          <Button type="button" variant="outline" size="sm" onClick={addTrigger}>
-            <IconPlus className="h-4 w-4 mr-2" />
-            Add Trigger
-          </Button>
+          {triggers.length === 0 && (
+            <Button type="button" variant="outline" size="sm" onClick={addTrigger}>
+              <IconPlus className="h-4 w-4 mr-2" />
+              Add Trigger
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent>
         {loadingTriggers ? (
-          <p className="text-sm text-muted-foreground">Loading triggers...</p>
+          <p className="text-sm text-muted-foreground">Loading trigger...</p>
         ) : triggers.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-sm text-muted-foreground mb-4">No triggers configured</p>
+            <p className="text-sm text-muted-foreground mb-4">No trigger configured</p>
             <p className="text-xs text-muted-foreground">Add a trigger to automatically execute this action when a Twitch event occurs</p>
           </div>
         ) : (
-          <FieldGroup className="space-y-4">
+          <div>
             {triggers.map((trigger, index) => {
               const eventInfo = TRIGGER_EVENT_INFO[trigger.event_type];
               return (
-                <Card key={index} className="border">
-                  <CardContent className="pt-6">
+                <div key={index}>
+                  <FieldGroup>
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <Field>
@@ -197,7 +199,7 @@ export function TriggerConfig({ actionId, onTriggersChange }: TriggerConfigProps
                           <FieldDescription>{eventInfo.description}</FieldDescription>
                         </Field>
                       </div>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeTrigger(index)} className="ml-4">
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeTrigger(index)} className="ml-4" title="Remove trigger">
                         <IconTrash className="h-4 w-4" />
                       </Button>
                     </div>
@@ -312,11 +314,11 @@ export function TriggerConfig({ actionId, onTriggersChange }: TriggerConfigProps
                         })}
                       </div>
                     )}
-                  </CardContent>
-                </Card>
+                  </FieldGroup>
+                </div>
               );
             })}
-          </FieldGroup>
+          </div>
         )}
       </CardContent>
     </Card>

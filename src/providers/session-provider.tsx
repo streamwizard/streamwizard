@@ -13,6 +13,7 @@ interface Props {
 // session Provider component
 export const SessionProvider = ({ children, session }: Props) => {
 
+
   return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
 };
 
