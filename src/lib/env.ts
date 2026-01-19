@@ -10,6 +10,7 @@ export const env = createEnv({
     TWITCH_WEBHOOK_SECRET: z.string().min(10),
 
     NODE_ENV: z.enum(["development", "test", "production"]),
+    TOKEN_ENCRYPTION_KEY: z.string().length(64, "Encryption key must be 64 hex characters (32 bytes)"),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().min(1),

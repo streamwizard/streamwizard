@@ -2,6 +2,7 @@
 
 import { env } from "@/lib/env";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { encryptToken, decryptToken } from "@/server/crypto";
 import axios from "axios";
 
 export const TwitchAppAPI = axios.create({
@@ -40,14 +41,28 @@ export async function getTwitchAppToken(): Promise<string> {
     return access_token;
   }
 
-  return data.access_token;
+  // Check for encrypted token values
+  if (!data.access_token_ciphertext || !data.access_token_iv || !data.access_token_tag) {
+    throw new Error("Encrypted token data is missing from database");
+  }
+
+  // Decrypt the token before returning
+  return decryptToken(data.access_token_ciphertext, data.access_token_iv, data.access_token_tag);
 }
 
 // update the app token in supabase
 export async function updateTwitchAppToken(accessToken: string, expiresIn: number): Promise<void> {
+  // Encrypt the token before storing
+  const encrypted = encryptToken(accessToken);
+
   const { error } = await supabaseAdmin
     .from("twitch_app_token")
-    .update({ access_token: accessToken, expires_in: expiresIn })
+    .update({
+      access_token_ciphertext: encrypted.ciphertext,
+      access_token_iv: encrypted.iv,
+      access_token_tag: encrypted.authTag,
+      expires_in: expiresIn
+    })
     .eq("id", "d8a84af6-eb48-4569-ba8c-ae8835e5a3b2")
     .single();
 
