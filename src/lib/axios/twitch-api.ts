@@ -1,7 +1,7 @@
 "use server";
 import { env } from "../env";
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig, AxiosInstance } from "axios";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { encryptToken, decryptToken } from "@/server/crypto";
 
 // Custom interface extending InternalAxiosRequestConfig
@@ -26,8 +26,11 @@ TwitchAPI.interceptors.request.use(
       throw new Error("Missing required broadcasterID in request config");
     }
 
+
+    const supabase = await createClient();
+
     // Fetch encrypted access token
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await supabase
       .from("integrations_twitch")
       .select("access_token_ciphertext, access_token_iv, access_token_tag")
       .eq("twitch_user_id", config.broadcasterID)
@@ -65,7 +68,9 @@ TwitchAPI.interceptors.response.use(
         throw new Error("Missing channelID in retry request");
       }
 
-      const { data, error: DBerror } = await supabaseAdmin
+      const supabase = await createClient();
+
+      const { data, error: DBerror } = await supabase
         .from("integrations_twitch")
         .select("refresh_token_ciphertext, refresh_token_iv, refresh_token_tag")
         .eq("twitch_user_id", channelID)
@@ -118,7 +123,8 @@ async function RefreshToken(refreshToken: string, broadcaster_id: string): Promi
     const encryptedAccessToken = encryptToken(data.access_token);
     const encryptedRefreshToken = encryptToken(data.refresh_token);
 
-    const { error } = await supabaseAdmin
+    const supabase = await createClient();
+    const { error } = await supabase
       .from("integrations_twitch")
       .update({
         access_token_ciphertext: encryptedAccessToken.ciphertext,

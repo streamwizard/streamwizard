@@ -6,10 +6,10 @@ import { ChannelSearchResults, GetGamesResponse, GetUserResponse, SearchCategori
 export async function searchTwitchChannels(value: string, first: number = 10) {
   const supabase = await createClient();
 
-  const { data, error: DBerror } = await supabase.from("integrations_twitch").select("access_token, twitch_user_id").single();
+  const { data, error: DBerror } = await supabase.from("integrations_twitch").select("twitch_user_id").single();
 
   if (DBerror) {
-    console.error("Tokens not found");
+    console.error("Twitch user ID not found");
     return null;
   }
 
@@ -19,10 +19,6 @@ export async function searchTwitchChannels(value: string, first: number = 10) {
         query: value,
         first: first,
       },
-      headers: {
-        Authorization: `Bearer ${data.access_token}`,
-      },
-
       broadcasterID: data.twitch_user_id,
     });
     return res.data.data;
@@ -33,20 +29,10 @@ export async function searchTwitchChannels(value: string, first: number = 10) {
 }
 
 export async function searchTwitchCategories(broadcaster_id: string, query: string, first: number = 10) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from("integrations_twitch").select("access_token, twitch_user_id").single();
-  if (error) {
-    console.error("Tokens not found");
-    return null;
-  }
-
   const response = await TwitchAPI.get<SearchCategories>("/search/categories", {
     params: {
       first: first,
       query: query,
-    },
-    headers: {
-      Authorization: `Bearer ${data.access_token}`,
     },
     broadcasterID: broadcaster_id,
   });
@@ -56,15 +42,12 @@ export async function searchTwitchCategories(broadcaster_id: string, query: stri
 // look up a user based on their id
 export async function LookupTwitchUser(user_id: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("integrations_twitch").select("access_token, twitch_user_id").single();
+  const { data, error } = await supabase.from("integrations_twitch").select("twitch_user_id").single();
   if (error) {
-    console.error("Tokens not found");
+    console.error("Twitch user ID not found");
     return null;
   }
   const response = await TwitchAPI.get<GetUserResponse>(`/users`, {
-    headers: {
-      Authorization: `Bearer ${data.access_token}`,
-    },
     broadcasterID: data.twitch_user_id,
     params: {
       id: user_id,
@@ -76,21 +59,19 @@ export async function LookupTwitchUser(user_id: string) {
 // look up games based on game ID
 export async function LookupTwitchGame(game_id: string) {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("integrations_twitch").select("access_token, twitch_user_id").single();
+  const { data, error } = await supabase.from("integrations_twitch").select("twitch_user_id").single();
   if (error) {
-    console.error("Tokens not found");
+    console.error("Twitch user ID not found");
     return null;
   }
   const { data: res, status } = await TwitchAPI.get<GetGamesResponse>(`/games`, {
-    headers: {
-      Authorization: `Bearer ${data.access_token}`,
-    },
+
     broadcasterID: data.twitch_user_id,
     params: {
       id: game_id,
     },
   });
-  
+
   if (status !== 200) {
     console.error("Error fetching game data");
     return null;
