@@ -9,7 +9,8 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuItem
+  SidebarMenuButton,
+  SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@/types/supabase";
@@ -21,6 +22,7 @@ import { Separator } from "../ui/separator";
 import { DashboardUserNav } from "./DashboardUserNav";
 import SidebarClips from "./sidebar-clips";
 import SidebarCommands from "./sidebar-commands";
+import { Clapperboard, FileVideoCamera } from "lucide-react";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User;
@@ -52,7 +54,16 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupLabel>Clips</SidebarGroupLabel>
           <SidebarGroupContent>
-
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/dashboard/videos">
+                    <FileVideoCamera className="mr-2 h-4 w-4" />
+                    Videos
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
             <SidebarClips clipFolders={folders} />
           </SidebarGroupContent>
         </SidebarGroup>
