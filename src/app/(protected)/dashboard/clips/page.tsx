@@ -16,16 +16,16 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
     redirect("/login");
   }
 
-  let query = supabase.rpc("get_all_clips_with_folders", {}, { count: "exact" });
+  let query = supabase.rpc("get_all_clips_with_folders", undefined, { count: "exact" });
 
   // create type of query
-  
+
 
   query = buildClipQuery(parsedSearchParams, query);
 
   query = parsedSearchParams.broadcaster_id ? query.eq("broadcaster_id", parsedSearchParams.broadcaster_id) : query.eq("user_id", user.user.id);
 
-  const { data, error, count,  } = await query;
+  const { data, error, count, } = await query;
   if (error) {
     console.error(error);
     return null;
