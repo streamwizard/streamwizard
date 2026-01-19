@@ -9,6 +9,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { discordInviteLink } from "@/lib/constant";
@@ -21,6 +22,7 @@ import { Separator } from "../ui/separator";
 import { DashboardUserNav } from "./DashboardUserNav";
 import SidebarClips from "./sidebar-clips";
 import SidebarCommands from "./sidebar-commands";
+import { Clapperboard, FileVideoCamera } from "lucide-react";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User;
@@ -52,6 +54,16 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupLabel>Clips</SidebarGroupLabel>
           <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/dashboard/videos">
+                    <FileVideoCamera className="mr-2 h-4 w-4" />
+                    Videos
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
             <SidebarClips clipFolders={folders} />
           </SidebarGroupContent>
         </SidebarGroup>
@@ -80,7 +92,10 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <DashboardUserNav profile_img={user.user_metadata.avatar_url} username={user.user_metadata.full_name} />
+              <DashboardUserNav
+                profile_img={user.user_metadata.avatar_url}
+                username={user.user_metadata.full_name}
+              />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>

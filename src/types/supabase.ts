@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      broadcaster_live_status: {
+        Row: {
+          broadcaster_id: string
+          broadcaster_name: string
+          category_id: string | null
+          category_name: string | null
+          created_at: string
+          id: string
+          is_live: boolean
+          stream_ended_at: string | null
+          stream_id: string | null
+          stream_started_at: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          broadcaster_id: string
+          broadcaster_name: string
+          category_id?: string | null
+          category_name?: string | null
+          created_at?: string
+          id?: string
+          is_live?: boolean
+          stream_ended_at?: string | null
+          stream_id?: string | null
+          stream_started_at?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          broadcaster_id?: string
+          broadcaster_name?: string
+          category_id?: string | null
+          category_name?: string | null
+          created_at?: string
+          id?: string
+          is_live?: boolean
+          stream_ended_at?: string | null
+          stream_id?: string | null
+          stream_started_at?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "broadcaster_live_status_broadcaster_id_fkey"
+            columns: ["broadcaster_id"]
+            isOneToOne: true
+            referencedRelation: "integrations_twitch"
+            referencedColumns: ["twitch_user_id"]
+          },
+        ]
+      }
       clip_folder_junction: {
         Row: {
           clip_id: string
@@ -168,32 +221,28 @@ export type Database = {
         Row: {
           channel_id: string
           created_at: string
-          default_command_id: string
+          custom_command_id: string | null
+          default_command_id: string | null
           enabled: boolean
           id: string
         }
         Insert: {
           channel_id: string
           created_at?: string
-          default_command_id: string
+          custom_command_id?: string | null
+          default_command_id?: string | null
           enabled?: boolean
           id?: string
         }
         Update: {
           channel_id?: string
           created_at?: string
-          default_command_id?: string
+          custom_command_id?: string | null
+          default_command_id?: string | null
           enabled?: boolean
           id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "command_settings_default_command_id_fkey"
-            columns: ["default_command_id"]
-            isOneToOne: false
-            referencedRelation: "default_chat_commands"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "commands_channel_id_fkey"
             columns: ["channel_id"]
@@ -201,7 +250,48 @@ export type Database = {
             referencedRelation: "integrations_twitch"
             referencedColumns: ["twitch_user_id"]
           },
+          {
+            foreignKeyName: "commands_custom_command_id_fkey"
+            columns: ["custom_command_id"]
+            isOneToOne: false
+            referencedRelation: "custom_commands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commands_default_command_id_fkey"
+            columns: ["default_command_id"]
+            isOneToOne: false
+            referencedRelation: "default_chat_commands"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      custom_commands: {
+        Row: {
+          action: string | null
+          command: string
+          context: Json | null
+          created_at: string
+          id: string
+          message: string | null
+        }
+        Insert: {
+          action?: string | null
+          command: string
+          context?: Json | null
+          created_at?: string
+          id?: string
+          message?: string | null
+        }
+        Update: {
+          action?: string | null
+          command?: string
+          context?: Json | null
+          created_at?: string
+          id?: string
+          message?: string | null
+        }
+        Relationships: []
       }
       default_chat_commands: {
         Row: {
@@ -268,6 +358,9 @@ export type Database = {
       integrations_twitch: {
         Row: {
           access_token: string | null
+          access_token_ciphertext: string | null
+          access_token_iv: string | null
+          access_token_tag: string | null
           broadcaster_type: string | null
           created_at: string
           description: string | null
@@ -275,6 +368,9 @@ export type Database = {
           id: string
           profile_image_url: string | null
           refresh_token: string | null
+          refresh_token_ciphertext: string | null
+          refresh_token_iv: string | null
+          refresh_token_tag: string | null
           token_expires_at: string | null
           twitch_user_id: string
           twitch_username: string
@@ -283,6 +379,9 @@ export type Database = {
         }
         Insert: {
           access_token?: string | null
+          access_token_ciphertext?: string | null
+          access_token_iv?: string | null
+          access_token_tag?: string | null
           broadcaster_type?: string | null
           created_at?: string
           description?: string | null
@@ -290,6 +389,9 @@ export type Database = {
           id: string
           profile_image_url?: string | null
           refresh_token?: string | null
+          refresh_token_ciphertext?: string | null
+          refresh_token_iv?: string | null
+          refresh_token_tag?: string | null
           token_expires_at?: string | null
           twitch_user_id: string
           twitch_username: string
@@ -298,6 +400,9 @@ export type Database = {
         }
         Update: {
           access_token?: string | null
+          access_token_ciphertext?: string | null
+          access_token_iv?: string | null
+          access_token_tag?: string | null
           broadcaster_type?: string | null
           created_at?: string
           description?: string | null
@@ -305,6 +410,9 @@ export type Database = {
           id?: string
           profile_image_url?: string | null
           refresh_token?: string | null
+          refresh_token_ciphertext?: string | null
+          refresh_token_iv?: string | null
+          refresh_token_tag?: string | null
           token_expires_at?: string | null
           twitch_user_id?: string
           twitch_username?: string
@@ -328,9 +436,225 @@ export type Database = {
           },
         ]
       }
+      smp_actions: {
+        Row: {
+          action: string
+          created_at: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          name: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          name: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string
+        }
+        Relationships: []
+      }
+      smp_channelpoints_templates: {
+        Row: {
+          action: string | null
+          background_color: string | null
+          cost: number
+          created_at: string
+          global_cooldown_seconds: number | null
+          id: string
+          is_enabled: boolean | null
+          is_global_cooldown_enabled: boolean | null
+          is_max_per_stream_enabled: boolean | null
+          is_max_per_user_per_stream_enabled: boolean | null
+          is_user_input_required: boolean | null
+          max_per_stream: number | null
+          max_per_user_per_stream: number | null
+          prompt: string | null
+          should_redemptions_skip_request_queue: boolean | null
+          title: string
+        }
+        Insert: {
+          action?: string | null
+          background_color?: string | null
+          cost: number
+          created_at?: string
+          global_cooldown_seconds?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          is_global_cooldown_enabled?: boolean | null
+          is_max_per_stream_enabled?: boolean | null
+          is_max_per_user_per_stream_enabled?: boolean | null
+          is_user_input_required?: boolean | null
+          max_per_stream?: number | null
+          max_per_user_per_stream?: number | null
+          prompt?: string | null
+          should_redemptions_skip_request_queue?: boolean | null
+          title: string
+        }
+        Update: {
+          action?: string | null
+          background_color?: string | null
+          cost?: number
+          created_at?: string
+          global_cooldown_seconds?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          is_global_cooldown_enabled?: boolean | null
+          is_max_per_stream_enabled?: boolean | null
+          is_max_per_user_per_stream_enabled?: boolean | null
+          is_user_input_required?: boolean | null
+          max_per_stream?: number | null
+          max_per_user_per_stream?: number | null
+          prompt?: string | null
+          should_redemptions_skip_request_queue?: boolean | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smp_channelpoints_templates_action_fkey"
+            columns: ["action"]
+            isOneToOne: false
+            referencedRelation: "smp_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smp_triggers: {
+        Row: {
+          action_id: string | null
+          conditions: Json
+          created_at: string
+          event_type: string
+          id: string
+        }
+        Insert: {
+          action_id?: string | null
+          conditions?: Json
+          created_at?: string
+          event_type: string
+          id?: string
+        }
+        Update: {
+          action_id?: string | null
+          conditions?: Json
+          created_at?: string
+          event_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smp_triggers_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "smp_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stream_events: {
+        Row: {
+          broadcaster_id: string
+          created_at: string
+          event_data: Json
+          event_type: string
+          id: string
+          metadata: Json | null
+          offset_seconds: number
+          provider: string
+          status: string
+          stream_id: string
+          updated_at: string
+        }
+        Insert: {
+          broadcaster_id: string
+          created_at?: string
+          event_data?: Json
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          offset_seconds?: number
+          provider: string
+          status?: string
+          stream_id: string
+          updated_at?: string
+        }
+        Update: {
+          broadcaster_id?: string
+          created_at?: string
+          event_data?: Json
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          offset_seconds?: number
+          provider?: string
+          status?: string
+          stream_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_events_broadcaster_id_fkey"
+            columns: ["broadcaster_id"]
+            isOneToOne: false
+            referencedRelation: "integrations_twitch"
+            referencedColumns: ["twitch_user_id"]
+          },
+        ]
+      }
+      system_events: {
+        Row: {
+          broadcaster_id: string | null
+          created_at: string
+          error_message: string | null
+          event_data: Json
+          event_type: string
+          id: string
+          metadata: Json | null
+          provider: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          broadcaster_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_data?: Json
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          provider: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          broadcaster_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          event_data?: Json
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          provider?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       twitch_app_token: {
         Row: {
           access_token: string
+          access_token_ciphertext: string | null
+          access_token_iv: string | null
+          access_token_tag: string | null
           created_at: string
           expires_in: number
           id: string
@@ -339,6 +663,9 @@ export type Database = {
         }
         Insert: {
           access_token: string
+          access_token_ciphertext?: string | null
+          access_token_iv?: string | null
+          access_token_tag?: string | null
           created_at?: string
           expires_in: number
           id?: string
@@ -347,6 +674,9 @@ export type Database = {
         }
         Update: {
           access_token?: string
+          access_token_ciphertext?: string | null
+          access_token_iv?: string | null
+          access_token_tag?: string | null
           created_at?: string
           expires_in?: number
           id?: string
@@ -361,7 +691,7 @@ export type Database = {
           created_at: string | null
           id: number
           last_sync: string
-          sync_status: string
+          sync_status: Database["public"]["Enums"]["clip_sync_status"]
           updated_at: string | null
           user_id: string
         }
@@ -370,7 +700,7 @@ export type Database = {
           created_at?: string | null
           id?: number
           last_sync: string
-          sync_status: string
+          sync_status: Database["public"]["Enums"]["clip_sync_status"]
           updated_at?: string | null
           user_id: string
         }
@@ -379,7 +709,7 @@ export type Database = {
           created_at?: string | null
           id?: number
           last_sync?: string
-          sync_status?: string
+          sync_status?: Database["public"]["Enums"]["clip_sync_status"]
           updated_at?: string | null
           user_id?: string
         }
@@ -411,6 +741,35 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {
@@ -451,8 +810,12 @@ export type Database = {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
       }
+      check_user_role: {
+        Args: { p_role: string; p_user_id: string }
+        Returns: boolean
+      }
       get_all_clips_with_folders: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           broadcaster_id: string
           broadcaster_name: string
@@ -505,6 +868,7 @@ export type Database = {
           vod_offset: number
         }[]
       }
+      get_user_twitch_ids: { Args: never; Returns: string[] }
       insert_discord_integration: {
         Args: { integration_id: string; provider_data: Json; user_id: string }
         Returns: undefined
@@ -525,7 +889,7 @@ export type Database = {
         Returns: undefined
       }
       sync_all_default_commands: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           total_channels: number
           total_commands_added: number
@@ -538,6 +902,7 @@ export type Database = {
           returned_channel_id: string
         }[]
       }
+      user_owns_channel: { Args: { channel_id: string }; Returns: boolean }
     }
     Enums: {
       actions:
@@ -548,6 +913,7 @@ export type Database = {
         | "spotify.remove_banned_chatter"
         | "spotify.skip"
         | "none"
+      clip_sync_status: "completed" | "failed" | "syncing"
       provider_type: "twitch" | "discord"
       roles: "user" | "beta" | "admin"
       theme_type: "dark" | "light" | "system"
@@ -695,6 +1061,7 @@ export const Constants = {
         "spotify.skip",
         "none",
       ],
+      clip_sync_status: ["completed", "failed", "syncing"],
       provider_type: ["twitch", "discord"],
       roles: ["user", "beta", "admin"],
       theme_type: ["dark", "light", "system"],
