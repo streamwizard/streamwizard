@@ -34,107 +34,107 @@ export type SubscriptionStatus =
   | "websocket_network_error";
 
 export type EventSubSubscriptionType =
-// Automod Topics
-| "automod.message.hold"
-| "automod.message.update"
-| "automod.settings.update"
-| "automod.terms.update"
+  // Automod Topics
+  | "automod.message.hold"
+  | "automod.message.update"
+  | "automod.settings.update"
+  | "automod.terms.update"
 
-// Channel Topics
-| "channel.update"
-| "channel.follow"
-| "channel.ad_break.begin"
-| "channel.chat.clear"
-| "channel.chat.clear_user_messages"
-| "channel.chat.message"
-| "channel.chat.message_delete"
-| "channel.chat.notification"
-| "channel.chat_settings.update"
-| "channel.chat.user_message_hold"
-| "channel.chat.user_message_update"
-| "channel.shared_chat.begin"
-| "channel.shared_chat.update"
-| "channel.shared_chat.end"
-| "channel.subscribe"
-| "channel.subscription.end"
-| "channel.subscription.gift"
-| "channel.subscription.message"
-| "channel.cheer"
-| "channel.raid"
-| "channel.ban"
-| "channel.unban"
-| "channel.unban_request.create"
-| "channel.unban_request.resolve"
-| "channel.moderate"
-| "channel.moderator.add"
-| "channel.moderator.remove"
+  // Channel Topics
+  | "channel.update"
+  | "channel.follow"
+  | "channel.ad_break.begin"
+  | "channel.chat.clear"
+  | "channel.chat.clear_user_messages"
+  | "channel.chat.message"
+  | "channel.chat.message_delete"
+  | "channel.chat.notification"
+  | "channel.chat_settings.update"
+  | "channel.chat.user_message_hold"
+  | "channel.chat.user_message_update"
+  | "channel.shared_chat.begin"
+  | "channel.shared_chat.update"
+  | "channel.shared_chat.end"
+  | "channel.subscribe"
+  | "channel.subscription.end"
+  | "channel.subscription.gift"
+  | "channel.subscription.message"
+  | "channel.cheer"
+  | "channel.raid"
+  | "channel.ban"
+  | "channel.unban"
+  | "channel.unban_request.create"
+  | "channel.unban_request.resolve"
+  | "channel.moderate"
+  | "channel.moderator.add"
+  | "channel.moderator.remove"
 
-// Guest Star Topics (BETA)
-| "channel.guest_star_session.begin"
-| "channel.guest_star_session.end"
-| "channel.guest_star_guest.update"
-| "channel.guest_star_settings.update"
+  // Guest Star Topics (BETA)
+  | "channel.guest_star_session.begin"
+  | "channel.guest_star_session.end"
+  | "channel.guest_star_guest.update"
+  | "channel.guest_star_settings.update"
 
-// Channel Points Topics
-| "channel.channel_points_automatic_reward_redemption.add"
-| "channel.channel_points_custom_reward.add"
-| "channel.channel_points_custom_reward.update"
-| "channel.channel_points_custom_reward.remove"
-| "channel.channel_points_custom_reward_redemption.add"
-| "channel.channel_points_custom_reward_redemption.update"
+  // Channel Points Topics
+  | "channel.channel_points_automatic_reward_redemption.add"
+  | "channel.channel_points_custom_reward.add"
+  | "channel.channel_points_custom_reward.update"
+  | "channel.channel_points_custom_reward.remove"
+  | "channel.channel_points_custom_reward_redemption.add"
+  | "channel.channel_points_custom_reward_redemption.update"
 
-// Poll/Prediction Topics
-| "channel.poll.begin"
-| "channel.poll.progress"
-| "channel.poll.end"
-| "channel.prediction.begin"
-| "channel.prediction.progress"
-| "channel.prediction.lock"
-| "channel.prediction.end"
+  // Poll/Prediction Topics
+  | "channel.poll.begin"
+  | "channel.poll.progress"
+  | "channel.poll.end"
+  | "channel.prediction.begin"
+  | "channel.prediction.progress"
+  | "channel.prediction.lock"
+  | "channel.prediction.end"
 
-// Moderation & Safety Topics
-| "channel.suspicious_user.message"
-| "channel.suspicious_user.update"
-| "channel.vip.add"
-| "channel.vip.remove"
-| "channel.warning.acknowledge"
-| "channel.warning.send"
+  // Moderation & Safety Topics
+  | "channel.suspicious_user.message"
+  | "channel.suspicious_user.update"
+  | "channel.vip.add"
+  | "channel.vip.remove"
+  | "channel.warning.acknowledge"
+  | "channel.warning.send"
 
-// Charity Topics
-| "channel.charity_campaign.donate"
-| "channel.charity_campaign.start"
-| "channel.charity_campaign.progress"
-| "channel.charity_campaign.stop"
+  // Charity Topics
+  | "channel.charity_campaign.donate"
+  | "channel.charity_campaign.start"
+  | "channel.charity_campaign.progress"
+  | "channel.charity_campaign.stop"
 
-// Infrastructure Topics
-| "conduit.shard.disabled"
+  // Infrastructure Topics
+  | "conduit.shard.disabled"
 
-// Drops & Extensions
-| "drop.entitlement.grant"
-| "extension.bits_transaction.create"
+  // Drops & Extensions
+  | "drop.entitlement.grant"
+  | "extension.bits_transaction.create"
 
-// Authorization & User Topics
-| "user.authorization.grant"
-| "user.authorization.revoke"
-| "user.update"
-| "user.whisper.message"
+  // Authorization & User Topics
+  | "user.authorization.grant"
+  | "user.authorization.revoke"
+  | "user.update"
+  | "user.whisper.message"
 
-// Stream Status Topics
-| "stream.online"
-| "stream.offline"
+  // Stream Status Topics
+  | "stream.online"
+  | "stream.offline"
 
-// Hype Train Topics
-| "channel.hype_train.begin"
-| "channel.hype_train.progress"
-| "channel.hype_train.end"
+  // Hype Train Topics
+  | "channel.hype_train.begin"
+  | "channel.hype_train.progress"
+  | "channel.hype_train.end"
 
-// Shield Mode Topics
-| "channel.shield_mode.begin"
-| "channel.shield_mode.end"
+  // Shield Mode Topics
+  | "channel.shield_mode.begin"
+  | "channel.shield_mode.end"
 
-// Shoutout Topics
-| "channel.shoutout.create"
-| "channel.shoutout.receive";
+  // Shoutout Topics
+  | "channel.shoutout.create"
+  | "channel.shoutout.receive";
 
 export type Subscription = {
   id: string;
@@ -312,5 +312,49 @@ export type GetGamesResponse = {
     name: string;
     box_art_url: string;
     igdb_id: string;
+  }[];
+};
+
+// Twitch Videos (VODs)
+export type TwitchVideoType = "upload" | "archive" | "highlight";
+
+export type TwitchVideoMutedSegment = {
+  duration: number;
+  offset: number;
+};
+
+export type TwitchVideo = {
+  id: string;
+  stream_id: string | null;
+  user_id: string;
+  user_login: string;
+  user_name: string;
+  title: string;
+  description: string;
+  created_at: string;
+  published_at: string;
+  url: string;
+  thumbnail_url: string;
+  viewable: "public" | "private";
+  view_count: number;
+  language: string;
+  type: TwitchVideoType;
+  duration: string;
+  muted_segments: TwitchVideoMutedSegment[] | null;
+};
+
+export type GetVideosResponse = {
+  data: TwitchVideo[];
+  pagination: Pagination;
+};
+
+export type DeleteVideosResponse = {
+  data: string[];
+};
+
+export type CreateClipResponse = {
+  data: {
+    id: string;
+    edit_url: string;
   }[];
 };
