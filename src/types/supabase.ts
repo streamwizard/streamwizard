@@ -357,7 +357,6 @@ export type Database = {
       }
       integrations_twitch: {
         Row: {
-          access_token: string | null
           access_token_ciphertext: string | null
           access_token_iv: string | null
           access_token_tag: string | null
@@ -367,7 +366,6 @@ export type Database = {
           email: string | null
           id: string
           profile_image_url: string | null
-          refresh_token: string | null
           refresh_token_ciphertext: string | null
           refresh_token_iv: string | null
           refresh_token_tag: string | null
@@ -378,7 +376,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          access_token?: string | null
           access_token_ciphertext?: string | null
           access_token_iv?: string | null
           access_token_tag?: string | null
@@ -388,7 +385,6 @@ export type Database = {
           email?: string | null
           id: string
           profile_image_url?: string | null
-          refresh_token?: string | null
           refresh_token_ciphertext?: string | null
           refresh_token_iv?: string | null
           refresh_token_tag?: string | null
@@ -399,7 +395,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          access_token?: string | null
           access_token_ciphertext?: string | null
           access_token_iv?: string | null
           access_token_tag?: string | null
@@ -409,7 +404,6 @@ export type Database = {
           email?: string | null
           id?: string
           profile_image_url?: string | null
-          refresh_token?: string | null
           refresh_token_ciphertext?: string | null
           refresh_token_iv?: string | null
           refresh_token_tag?: string | null
@@ -603,6 +597,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "stream_events_broadcaster_id_fkey"
+            columns: ["broadcaster_id"]
+            isOneToOne: false
+            referencedRelation: "integrations_twitch"
+            referencedColumns: ["twitch_user_id"]
+          },
+        ]
+      }
+      stream_viewer_counts: {
+        Row: {
+          broadcaster_id: string
+          created_at: string
+          game_id: string | null
+          game_name: string | null
+          id: string
+          offset_seconds: number
+          recorded_at: string
+          stream_id: string
+          title: string | null
+          viewer_count: number
+        }
+        Insert: {
+          broadcaster_id: string
+          created_at?: string
+          game_id?: string | null
+          game_name?: string | null
+          id?: string
+          offset_seconds: number
+          recorded_at?: string
+          stream_id: string
+          title?: string | null
+          viewer_count: number
+        }
+        Update: {
+          broadcaster_id?: string
+          created_at?: string
+          game_id?: string | null
+          game_name?: string | null
+          id?: string
+          offset_seconds?: number
+          recorded_at?: string
+          stream_id?: string
+          title?: string | null
+          viewer_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_broadcaster"
             columns: ["broadcaster_id"]
             isOneToOne: false
             referencedRelation: "integrations_twitch"

@@ -1,217 +1,172 @@
 "use server";
 
+/**
+ * Server Actions for Twitch Helix API
+ * All API calls are made server-side to protect credentials
+ */
+
 import { TwitchAPI } from "@/lib/axios/twitch-api";
 import { createClient } from "@/lib/supabase/server";
-import {
+import type {
+  TwitchVideo,
+  GetVideosResponse,
   CreateClipResponse,
   DeleteVideosResponse,
-  GetVideosResponse,
-  TwitchVideo,
-  TwitchVideoType,
+  GetGamesResponse,
 } from "@/types/twitch";
-import { AxiosError } from "axios";
+import type { GetVideosResult, DeleteVideosResult, CreateClipResult } from "@/types/twitch video";
+import type { GetStreamEventsResult } from "@/types/stream-events";
 
-interface ActionResponse<T = unknown> {
-  success: boolean;
-  message: string;
-  data?: T;
-}
+// =============================================================================
+// Helper Functions
+// =============================================================================
 
 /**
- * Get videos for the authenticated user
+ * Get the broadcaster ID from Supabase
+ * @returns The broadcaster's Twitch user ID
  */
-export async function getVideos(options?: {
-  cursor?: string;
-  first?: number;
-  type?: TwitchVideoType;
-}): Promise<ActionResponse<{ videos: TwitchVideo[]; cursor?: string }>> {
+async function getBroadcasterId(): Promise<string> {
   const supabase = await createClient();
+  const { data, error } = await supabase.from("integrations_twitch").select("twitch_user_id").single();
 
-  const { data: integration, error: dbError } = await supabase
-    .from("integrations_twitch")
-    .select("twitch_user_id")
-    .single();
-
-  if (dbError || !integration?.twitch_user_id) {
-    return {
-      success: false,
-      message: "Twitch integration not found",
-    };
+  if (error || !data?.twitch_user_id) {
+    throw new Error("Failed to fetch broadcaster ID from database");
   }
 
+  return data.twitch_user_id;
+}
+
+// =============================================================================
+// Get Videos
+// =============================================================================
+
+/**
+ * Fetch VODs for the configured user
+ *
+ * @param cursor - Optional pagination cursor for fetching next page
+ * @returns GetVideosResult with videos array and next cursor
+ *
+ * API: GET https://api.twitch.tv/helix/videos
+ * Docs: https://dev.twitch.tv/docs/api/reference/#get-videos
+ */
+export async function getVideos(cursor?: string): Promise<GetVideosResult> {
   try {
+    const broadcasterId = await getBroadcasterId();
+
     const response = await TwitchAPI.get<GetVideosResponse>("/videos", {
+      broadcasterID: broadcasterId,
       params: {
-        user_id: integration.twitch_user_id,
-        type: options?.type ?? "archive",
-        first: options?.first ?? 20,
-        after: options?.cursor,
+        user_id: broadcasterId,
+        type: "archive", // Only fetch VODs (archives), not highlights or uploads
+        first: 20, // 20 items per page
+        ...(cursor && { after: cursor }),
       },
-      broadcasterID: integration.twitch_user_id,
     });
 
     return {
       success: true,
-      message: "Videos fetched successfully",
-      data: {
-        videos: response.data.data,
-        cursor: response.data.pagination?.cursor,
-      },
+      videos: response.data.data,
+      cursor: response.data.pagination?.cursor,
     };
   } catch (error) {
     console.error("Error fetching videos:", error);
-    const message =
-      error instanceof AxiosError
-        ? error.response?.data?.message || error.message
-        : "Failed to fetch videos";
     return {
       success: false,
-      message,
+      error: error instanceof Error ? error.message : "Unknown error fetching videos",
     };
   }
 }
 
+// =============================================================================
+// Delete Videos
+// =============================================================================
+
 /**
- * Delete videos by ID
- * Max 5 IDs per request as per Twitch API limits
+ * Delete one or more videos
+ *
+ * @param videoIds - Array of video IDs to delete (max 5 per request)
+ * @returns DeleteVideosResult with success status and deleted IDs
+ *
+ * API: DELETE https://api.twitch.tv/helix/videos
+ * Docs: https://dev.twitch.tv/docs/api/reference/#delete-videos
+ *
+ * Requires scope: channel:manage:videos
+ * Note: If any deletion fails, no videos are deleted (atomic operation)
  */
-export async function deleteVideos(
-  videoIds: string[]
-): Promise<ActionResponse<{ deletedIds: string[] }>> {
-  if (videoIds.length === 0) {
-    return {
-      success: false,
-      message: "No video IDs provided",
-    };
-  }
-
-  if (videoIds.length > 5) {
-    return {
-      success: false,
-      message: "Maximum 5 videos can be deleted at once",
-    };
-  }
-
-  const supabase = await createClient();
-
-  const { data: integration, error: dbError } = await supabase
-    .from("integrations_twitch")
-    .select("twitch_user_id")
-    .single();
-
-  if (dbError || !integration?.twitch_user_id) {
-    return {
-      success: false,
-      message: "Twitch integration not found",
-    };
-  }
-
+export async function deleteVideos(videoIds: string[]): Promise<DeleteVideosResult> {
   try {
-    // Build query params with multiple id parameters
+    // Validate input
+    if (!videoIds || videoIds.length === 0) {
+      return {
+        success: false,
+        error: "No video IDs provided",
+      };
+    }
+
+    if (videoIds.length > 5) {
+      return {
+        success: false,
+        error: "Maximum 5 videos can be deleted per request",
+      };
+    }
+
+    const broadcasterId = await getBroadcasterId();
+
+    // Build query string with multiple id parameters
     const params = new URLSearchParams();
     videoIds.forEach((id) => params.append("id", id));
 
-    const response = await TwitchAPI.delete<DeleteVideosResponse>(
-      `/videos?${params.toString()}`,
-      {
-        broadcasterID: integration.twitch_user_id,
-      }
-    );
+    const response = await TwitchAPI.delete<DeleteVideosResponse>(`/videos?${params}`, {
+      broadcasterID: broadcasterId,
+    });
 
     return {
       success: true,
-      message: `Successfully deleted ${response.data.data.length} video(s)`,
-      data: {
-        deletedIds: response.data.data,
-      },
+      deletedIds: response.data.data,
     };
   } catch (error) {
     console.error("Error deleting videos:", error);
-    const message =
-      error instanceof AxiosError
-        ? error.response?.data?.message || error.message
-        : "Failed to delete videos";
     return {
       success: false,
-      message,
+      error: error instanceof Error ? error.message : "Unknown error deleting videos",
     };
   }
 }
 
+// =============================================================================
+// Create Clip
+// =============================================================================
+
 /**
- * Create a clip from a VOD using the Twitch API
- * POST /helix/videos/clips
- * 
- * @param vodId - The VOD ID to create clip from
- * @param vodOffset - Where the clip ends (clip starts at vodOffset - duration)
- * @param duration - Clip duration in seconds (5-60, default 30)
- * @param title - Optional clip title
+ * Create a clip from a live stream or VOD
+ *
+ * @param vodId - The VOD ID to create a clip from (optional, for VOD clips)
+ * @returns CreateClipResult with edit URL and clip ID
+ *
+ * API: POST https://api.twitch.tv/helix/clips
+ * Docs: https://dev.twitch.tv/docs/api/reference/#create-clip
+ *
+ * Requires scope: clips:edit
+ *
+ * Note: The Twitch API creates clips from the current live position or
+ * requires the broadcaster to be live. For VOD clips, users typically
+ * need to use the Twitch website directly or the broadcaster must be live.
  */
-export async function createClipFromVod(options: {
-  vodId: string;
-  vodOffset: number;
-  duration?: number;
-  title?: string;
-}): Promise<ActionResponse<{ id: string; editUrl: string }>> {
-  const { vodId, vodOffset, duration = 30, title } = options;
-
-  // Validate duration (5-60 seconds)
-  if (duration < 5 || duration > 60) {
-    return {
-      success: false,
-      message: "Duration must be between 5 and 60 seconds",
-    };
-  }
-
-  // vod_offset must be >= duration
-  if (vodOffset < duration) {
-    return {
-      success: false,
-      message: "VOD offset must be greater than or equal to clip duration",
-    };
-  }
-
-  const supabase = await createClient();
-
-  const { data: integration, error: dbError } = await supabase
-    .from("integrations_twitch")
-    .select("twitch_user_id")
-    .single();
-
-  if (dbError || !integration?.twitch_user_id) {
-    return {
-      success: false,
-      message: "Twitch integration not found",
-    };
-  }
-
+export async function createClip(): Promise<CreateClipResult> {
   try {
-    // Build query params for the VOD clips endpoint
-    const params: Record<string, string | number> = {
-      broadcaster_id: integration.twitch_user_id,
-      editor_id: integration.twitch_user_id,
-      vod_id: vodId,
-      vod_offset: vodOffset,
-      duration: duration,
-    };
+    const broadcasterId = await getBroadcasterId();
 
-    if (title) {
-      params.title = title;
-    }
+    const response = await TwitchAPI.post<CreateClipResponse>("/clips", {
+      broadcasterID: broadcasterId,
+      params: {
+        broadcaster_id: broadcasterId,
+      },
+    });
 
-    const response = await TwitchAPI.post<CreateClipResponse>(
-      "/videos/clips",
-      null,
-      {
-        params,
-        broadcasterID: integration.twitch_user_id,
-      }
-    );
-
-    if (response.data.data.length === 0) {
+    if (!response.data.data || response.data.data.length === 0) {
       return {
         success: false,
-        message: "No clip was created",
+        error: "No clip data returned from API",
       };
     }
 
@@ -219,22 +174,94 @@ export async function createClipFromVod(options: {
 
     return {
       success: true,
-      message: "Clip created successfully",
-      data: {
-        id: clip.id,
-        editUrl: clip.edit_url,
-      },
+      editUrl: clip.edit_url,
+      clipId: clip.id,
     };
   } catch (error) {
     console.error("Error creating clip:", error);
-    const message =
-      error instanceof AxiosError
-        ? error.response?.data?.message || error.message
-        : "Failed to create clip";
     return {
       success: false,
-      message,
+      error: error instanceof Error ? error.message : "Unknown error creating clip",
     };
   }
 }
 
+// =============================================================================
+// Get Single Video (for video details)
+// =============================================================================
+
+/**
+ * Fetch a single video by ID
+ *
+ * @param videoId - The video ID to fetch
+ * @returns The video object or null if not found
+ */
+export async function getVideo(videoId: string): Promise<TwitchVideo | null> {
+  try {
+    const broadcasterId = await getBroadcasterId();
+
+    const response = await TwitchAPI.get<GetVideosResponse>("/videos", {
+      broadcasterID: broadcasterId,
+      params: {
+        id: videoId,
+      },
+    });
+
+    if (!response.data.data || response.data.data.length === 0) {
+      return null;
+    }
+
+    return response.data.data[0];
+  } catch (error) {
+    console.error("Error fetching video:", error);
+    return null;
+  }
+}
+
+// =============================================================================
+// Get Stream Events from Supabase
+// =============================================================================
+
+/**
+ * Fetch stream events from Supabase by stream_id
+ *
+ * @param streamId - The stream ID to fetch events for (from TwitchVideo.stream_id)
+ * @returns GetStreamEventsResult with events array
+ */
+export async function getStreamEvents(streamId: string): Promise<GetStreamEventsResult> {
+  try {
+    if (!streamId) {
+      return {
+        success: false,
+        error: "No stream ID provided",
+      };
+    }
+
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+      .from("stream_events")
+      .select("*")
+      .eq("stream_id", streamId)
+      .order("offset_seconds", { ascending: true });
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+
+    return {
+      success: true,
+      events: data,
+    };
+  } catch (error) {
+    console.error("Error fetching stream events:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error fetching stream events",
+    };
+  }
+}
