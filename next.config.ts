@@ -1,7 +1,7 @@
 import { withSentryConfig } from "@sentry/nextjs";
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // reactCompiler: true,
+  reactCompiler: true,
   images: {
     remotePatterns: [
       {
@@ -15,9 +15,6 @@ const nextConfig = {
     ],
   },
 };
-
-
-
 
 export default nextConfig;
 /*

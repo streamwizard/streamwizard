@@ -147,12 +147,7 @@ export function VodsPageClient({ initialVideos, initialCursor }: VodsPageClientP
           {hasSelection && (
             <>
               <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setDeleteDialogOpen(true)}
-                disabled={selectedIds.size > 5}
-              >
+              <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)} disabled={selectedIds.size > 5}>
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Selected
               </Button>
@@ -167,16 +162,7 @@ export function VodsPageClient({ initialVideos, initialCursor }: VodsPageClientP
       </div>
 
       {/* Table */}
-      {isPending ? (
-        <VodsTableSkeleton rows={5} />
-      ) : (
-        <VodsTable
-          videos={videos}
-          selectedIds={selectedIds}
-          onSelectionChange={setSelectedIds}
-          onVideoClick={handleVideoClick}
-        />
-      )}
+      {isPending ? <VodsTableSkeleton rows={5} /> : <VodsTable videos={videos} selectedIds={selectedIds} onSelectionChange={setSelectedIds} onVideoClick={handleVideoClick} />}
 
       {/* Pagination */}
       {videos.length > 0 && (
@@ -193,20 +179,10 @@ export function VodsPageClient({ initialVideos, initialCursor }: VodsPageClientP
       )}
 
       {/* Video Details Dialog */}
-      <VideoDetailsDialog
-        video={selectedVideo}
-        open={detailsOpen}
-        onOpenChange={setDetailsOpen}
-        onCreateClip={handleCreateClip}
-      />
+      <VideoDetailsDialog video={selectedVideo} open={detailsOpen} onOpenChange={setDetailsOpen} onCreateClip={handleCreateClip} />
 
       {/* Delete Confirmation Dialog */}
-      <DeleteConfirmDialog
-        videos={selectedVideos}
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        onConfirm={handleDeleteConfirm}
-      />
+      <DeleteConfirmDialog videos={selectedVideos} open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={handleDeleteConfirm} />
     </div>
   );
 }

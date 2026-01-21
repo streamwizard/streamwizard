@@ -76,11 +76,7 @@ export function VodsTable({ videos, selectedIds, onSelectionChange, onVideoClick
       <TableHeader>
         <TableRow>
           <TableHead className="w-[50px]">
-            <Checkbox
-              checked={allSelected ? true : someSelected ? "indeterminate" : false}
-              onCheckedChange={handleSelectAll}
-              aria-label="Select all videos"
-            />
+            <Checkbox checked={allSelected ? true : someSelected ? "indeterminate" : false} onCheckedChange={handleSelectAll} aria-label="Select all videos" />
           </TableHead>
           <TableHead className="w-[140px]">Thumbnail</TableHead>
           <TableHead>Title</TableHead>
@@ -97,18 +93,9 @@ export function VodsTable({ videos, selectedIds, onSelectionChange, onVideoClick
           const isSelected = selectedIds.has(video.id);
 
           return (
-            <TableRow
-              key={video.id}
-              data-state={isSelected ? "selected" : undefined}
-              className="cursor-pointer"
-              onClick={() => onVideoClick(video)}
-            >
+            <TableRow key={video.id} data-state={isSelected ? "selected" : undefined} className="cursor-pointer" onClick={() => onVideoClick(video)}>
               <TableCell onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={(checked) => handleSelectVideo(video.id, checked)}
-                  aria-label={`Select ${video.title}`}
-                />
+                <Checkbox checked={isSelected} onCheckedChange={(checked) => handleSelectVideo(video.id, checked)} aria-label={`Select ${video.title}`} />
               </TableCell>
               <TableCell>
                 <div className="h-[72px] w-[128px] overflow-hidden rounded bg-muted">
@@ -122,7 +109,14 @@ export function VodsTable({ videos, selectedIds, onSelectionChange, onVideoClick
                 </div>
               </TableCell>
               <TableCell>
-                <span className="line-clamp-2 font-medium">{video.title}</span>
+                <span className="line-clamp-2 font-medium">
+                  {video.title}{" "}
+                  {video.is_live && (
+                    <Badge variant="destructive" className="ml-2">
+                      Live
+                    </Badge>
+                  )}
+                </span>
               </TableCell>
               <TableCell className="text-muted-foreground">{video.duration}</TableCell>
               <TableCell className="text-muted-foreground">{formatViewCount(video.view_count)}</TableCell>

@@ -7,13 +7,7 @@
 
 import { TwitchAPI } from "@/lib/axios/twitch-api";
 import { createClient } from "@/lib/supabase/server";
-import type {
-  TwitchVideo,
-  GetVideosResponse,
-  CreateClipResponse,
-  DeleteVideosResponse,
-  GetGamesResponse,
-} from "@/types/twitch";
+import type { TwitchVideo, GetVideosResponse, CreateClipResponse, DeleteVideosResponse, GetGamesResponse } from "@/types/twitch";
 import type { GetVideosResult, DeleteVideosResult, CreateClipResult } from "@/types/twitch video";
 import type { GetStreamEventsResult } from "@/types/stream-events";
 
@@ -36,6 +30,18 @@ async function getBroadcasterId(): Promise<string> {
   return data.twitch_user_id;
 }
 
+async function getCurrentStreamDetails(broadcaster_id: string): Promise<string | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.from("broadcaster_live_status").select("is_live, stream_id").eq("broadcaster_id", broadcaster_id).single();
+
+  if (error) return null;
+
+  if (!data.is_live) return null;
+
+  return data.stream_id;
+}
+
 // =============================================================================
 // Get Videos
 // =============================================================================
@@ -49,9 +55,11 @@ async function getBroadcasterId(): Promise<string> {
  * API: GET https://api.twitch.tv/helix/videos
  * Docs: https://dev.twitch.tv/docs/api/reference/#get-videos
  */
+
 export async function getVideos(cursor?: string): Promise<GetVideosResult> {
   try {
     const broadcasterId = await getBroadcasterId();
+    const streamId = await getCurrentStreamDetails(broadcasterId);
 
     const response = await TwitchAPI.get<GetVideosResponse>("/videos", {
       broadcasterID: broadcasterId,
@@ -63,9 +71,16 @@ export async function getVideos(cursor?: string): Promise<GetVideosResult> {
       },
     });
 
+    const videos = response.data.data.map((video) => {
+      return {
+        ...video,
+        is_live: streamId === video.stream_id,
+      };
+    });
+
     return {
       success: true,
-      videos: response.data.data,
+      videos: videos,
       cursor: response.data.pagination?.cursor,
     };
   } catch (error) {
@@ -239,11 +254,7 @@ export async function getStreamEvents(streamId: string): Promise<GetStreamEvents
 
     const supabase = await createClient();
 
-    const { data, error } = await supabase
-      .from("stream_events")
-      .select("*")
-      .eq("stream_id", streamId)
-      .order("offset_seconds", { ascending: true });
+    const { data, error } = await supabase.from("stream_events").select("*").eq("stream_id", streamId).order("offset_seconds", { ascending: true });
 
     if (error) {
       console.error("Supabase error:", error);

@@ -8,12 +8,15 @@ import type { Database } from "@/types/supabase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { TwitchPlayerComponent, useTwitchPlayer, type TwitchPlayer } from "@/components/vods/twitch-player";
 import { VideoTimeline, type TimelineEvent } from "./video-timeline";
 import { StreamEventsPanel } from "./stream-events-panel";
 import { EventTypeFilter } from "./event-type-filter";
 import { useEventFilters } from "@/hooks/use-event-filters";
-import { ExternalLink, Eye, Globe, Calendar, Scissors, Play, Pause, Volume2, VolumeX } from "lucide-react";
+import { ExternalLink, Eye, Globe, Calendar, Scissors, Play, Pause, Volume2, VolumeX, X } from "lucide-react";
 
 type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
 
@@ -62,6 +65,14 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
   // Event type filters
   const { selectedTypes, toggleType, selectAll, deselectAll } = useEventFilters();
 
+  // Clip creation state
+  const [isCreatingClip, setIsCreatingClip] = useState(false);
+  const [clipTitle, setClipTitle] = useState("");
+  const [clipStartTime, setClipStartTime] = useState(0);
+  const [clipEndTime, setClipEndTime] = useState(30);
+  const [featureClip, setFeatureClip] = useState(false);
+  const [addToStory, setAddToStory] = useState(false);
+
   // Filter events based on selected types
   const filteredEvents = useMemo(() => {
     return events.filter((event) => selectedTypes.has(event.event_type as StreamEventType));
@@ -96,6 +107,13 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
       setCurrentTime(0);
       setIsPlayerReady(false);
       setEvents([]);
+      // Reset clip creation state
+      setIsCreatingClip(false);
+      setClipTitle("");
+      setClipStartTime(0);
+      setClipEndTime(30);
+      setFeatureClip(false);
+      setAddToStory(false);
       if (timeUpdateRef.current) {
         clearInterval(timeUpdateRef.current);
       }
@@ -178,6 +196,44 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
     setIsMuted(newMuted);
   }, [isMuted, controls]);
 
+  // Clip creation handlers
+  const handleClipSelectionChange = useCallback((start: number, end: number) => {
+    setClipStartTime(start);
+    setClipEndTime(end);
+  }, []);
+
+  const toggleClipCreation = useCallback(() => {
+    if (!isCreatingClip && video) {
+      // Initialize clip selection around current time
+      const totalDuration = parseDuration(video.duration);
+      const start = Math.max(0, currentTime - 15);
+      const end = Math.min(totalDuration, currentTime + 15);
+      setClipStartTime(start);
+      setClipEndTime(end);
+    }
+    setIsCreatingClip((prev) => !prev);
+  }, [isCreatingClip, currentTime, video]);
+
+  const handleCancelClip = useCallback(() => {
+    setIsCreatingClip(false);
+    setClipTitle("");
+    setFeatureClip(false);
+    setAddToStory(false);
+  }, []);
+
+  const handleSaveClip = useCallback(() => {
+    // TODO: Implement actual clip saving via Twitch API
+    console.log("Saving clip:", {
+      title: clipTitle,
+      startTime: clipStartTime,
+      endTime: clipEndTime,
+      featureClip,
+      addToStory,
+    });
+    // For now, just close the clip creation mode
+    handleCancelClip();
+  }, [clipTitle, clipStartTime, clipEndTime, featureClip, addToStory, handleCancelClip]);
+
   if (!video) return null;
 
   const createdDate = new Date(video.created_at).toLocaleDateString("en-US", {
@@ -208,15 +264,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
                 )}
               </DialogDescription>
             </div>
-            {events.length > 0 && (
-              <EventTypeFilter
-                events={events}
-                selectedTypes={selectedTypes}
-                onToggleType={toggleType}
-                onSelectAll={selectAll}
-                onDeselectAll={deselectAll}
-              />
-            )}
+            {events.length > 0 && <EventTypeFilter events={events} selectedTypes={selectedTypes} onToggleType={toggleType} onSelectAll={selectAll} onDeselectAll={deselectAll} />}
           </div>
         </DialogHeader>
 
@@ -259,6 +307,9 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
                 onSeek={handleSeek}
                 onEventClick={handleTimelineEventClick}
                 disabled={!isPlayerReady}
+                isClipMode={isCreatingClip}
+                clipSelection={isCreatingClip ? { startTime: clipStartTime, endTime: clipEndTime } : undefined}
+                onClipSelectionChange={handleClipSelectionChange}
               />
             </div>
 
@@ -279,35 +330,81 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
             </div>
 
             {/* Description (if present) */}
-            {video.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2 mt-4">{video.description}</p>
-            )}
+            {video.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-4">{video.description}</p>}
 
             {/* Actions */}
-            <div className="flex gap-2 pt-4 mt-4 border-t">
-              <Button asChild variant="default">
-                <a href={video.url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Watch on Twitch
-                </a>
-              </Button>
-              {onCreateClip && (
-                <Button variant="outline" onClick={() => onCreateClip(video)}>
-                  <Scissors className="mr-2 h-4 w-4" />
-                  Create Clip
+            <div className="pt-4 mt-4 border-t space-y-4">
+              {/* Action buttons row */}
+              <div className="flex gap-2">
+                <Button asChild variant="default">
+                  <a href={video.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Watch on Twitch
+                  </a>
                 </Button>
+                <Button variant={isCreatingClip ? "secondary" : "outline"} onClick={toggleClipCreation} disabled={!isPlayerReady}>
+                  {isCreatingClip ? (
+                    <>
+                      <X className="mr-2 h-4 w-4" />
+                      Cancel Clip
+                    </>
+                  ) : (
+                    <>
+                      <Scissors className="mr-2 h-4 w-4" />
+                      Create Clip
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Clip Creation Form (timeline is above) */}
+              {isCreatingClip && (
+                <div className="space-y-4 p-4 rounded-lg bg-muted/50 border">
+                  {/* Clip Title */}
+                  <div className="space-y-2">
+                    <Label htmlFor="clip-title" className="text-sm font-medium">
+                      Clip Title
+                    </Label>
+                    <Input id="clip-title" placeholder="Add a title (required)" value={clipTitle} onChange={(e) => setClipTitle(e.target.value)} className="bg-background" />
+                    <p className="text-xs text-muted-foreground">Clips with unique titles get more views. Help {video.user_name} get discovered by adding a title.</p>
+                  </div>
+
+                  {/* Checkboxes */}
+                  <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="feature-clip" checked={featureClip} onCheckedChange={(checked) => setFeatureClip(checked === true)} />
+                      <Label htmlFor="feature-clip" className="text-sm cursor-pointer">
+                        Feature Clip
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Checkbox id="add-to-story" checked={addToStory} onCheckedChange={(checked) => setAddToStory(checked === true)} />
+                      <Label htmlFor="add-to-story" className="text-sm cursor-pointer">
+                        Add to Story
+                      </Label>
+                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-purple-600 text-white">
+                        NEW
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Save/Cancel buttons */}
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" onClick={handleCancelClip}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSaveClip} disabled={!clipTitle.trim()} className="bg-purple-600 hover:bg-purple-700">
+                      Save Clip
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
           </div>
 
           {/* Right side: Events panel */}
           <div className="w-80 h-full shrink-0 border-l bg-muted/30">
-            <StreamEventsPanel
-              events={filteredEvents}
-              isLoading={isLoadingEvents}
-              onEventClick={handleEventClick}
-              currentTime={currentTime}
-            />
+            <StreamEventsPanel events={filteredEvents} isLoading={isLoadingEvents} onEventClick={handleEventClick} currentTime={currentTime} />
           </div>
         </div>
       </DialogContent>
