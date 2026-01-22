@@ -242,6 +242,45 @@ export function VideoTimeline({
     };
   }, [dragging, handleDrag]);
 
+  // Wheel event handler for Shift + scroll zoom
+  useEffect(() => {
+    if (!trackRef.current) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Only zoom if Shift is held
+      if (!e.shiftKey) return;
+
+      e.preventDefault();
+
+      // Determine zoom direction: negative deltaY = scroll up = zoom in
+      const zoomIn = e.deltaY < 0;
+      const zoomFactor = 1.2; // Adjust this for more/less aggressive zooming
+
+      const newZoom = zoomIn ? Math.min(zoomLevel * zoomFactor, 20) : Math.max(zoomLevel / zoomFactor, 1);
+
+      setZoomLevel(newZoom);
+
+      // Keep the center of the view stable
+      // Use clip center if in clip mode, otherwise use current playback position
+      const centerPoint = clipSelection ? (clipSelection.startTime + clipSelection.endTime) / 2 : currentTime;
+
+      const newVisibleDuration = totalSeconds / newZoom;
+      const newOffset = Math.max(0, centerPoint - newVisibleDuration / 2);
+      setViewOffset(Math.min(newOffset, totalSeconds - newVisibleDuration));
+
+      if (newZoom === 1) {
+        setViewOffset(0);
+      }
+    };
+
+    const element = trackRef.current;
+    element.addEventListener("wheel", handleWheel, { passive: false });
+
+    return () => {
+      element.removeEventListener("wheel", handleWheel);
+    };
+  }, [zoomLevel, clipSelection, totalSeconds, currentTime]);
+
   // Handle click on timeline
   const handleTimelineClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -271,27 +310,29 @@ export function VideoTimeline({
     const newZoom = Math.min(zoomLevel * 1.5, 20);
     setZoomLevel(newZoom);
     // Keep the center of the view stable
-    if (clipSelection) {
-      const clipCenter = (clipSelection.startTime + clipSelection.endTime) / 2;
-      const newVisibleDuration = totalSeconds / newZoom;
-      const newOffset = Math.max(0, clipCenter - newVisibleDuration / 2);
-      setViewOffset(Math.min(newOffset, totalSeconds - newVisibleDuration));
-    }
-  }, [zoomLevel, clipSelection, totalSeconds]);
+    // Use clip center if in clip mode, otherwise use current playback position
+    const centerPoint = clipSelection ? (clipSelection.startTime + clipSelection.endTime) / 2 : currentTime;
+
+    const newVisibleDuration = totalSeconds / newZoom;
+    const newOffset = Math.max(0, centerPoint - newVisibleDuration / 2);
+    setViewOffset(Math.min(newOffset, totalSeconds - newVisibleDuration));
+  }, [zoomLevel, clipSelection, totalSeconds, currentTime]);
 
   const handleZoomOut = useCallback(() => {
     const newZoom = Math.max(zoomLevel / 1.5, 1);
     setZoomLevel(newZoom);
     // Keep the center of the view stable
-    if (clipSelection) {
-      const clipCenter = (clipSelection.startTime + clipSelection.endTime) / 2;
-      const newVisibleDuration = totalSeconds / newZoom;
-      const newOffset = Math.max(0, clipCenter - newVisibleDuration / 2);
-      setViewOffset(Math.min(newOffset, totalSeconds - newVisibleDuration));
-    } else {
+    // Use clip center if in clip mode, otherwise use current playback position
+    const centerPoint = clipSelection ? (clipSelection.startTime + clipSelection.endTime) / 2 : currentTime;
+
+    const newVisibleDuration = totalSeconds / newZoom;
+    const newOffset = Math.max(0, centerPoint - newVisibleDuration / 2);
+    setViewOffset(Math.min(newOffset, totalSeconds - newVisibleDuration));
+
+    if (newZoom === 1) {
       setViewOffset(0);
     }
-  }, [zoomLevel, clipSelection, totalSeconds]);
+  }, [zoomLevel, clipSelection, totalSeconds, currentTime]);
 
   const clipDuration = clipSelection ? clipSelection.endTime - clipSelection.startTime : 0;
 
@@ -300,18 +341,16 @@ export function VideoTimeline({
 
   return (
     <div className="w-full space-y-2">
-      {/* Zoom controls (only in clip mode) */}
-      {isClipMode && (
-        <div className="flex items-center justify-end gap-2 mb-2">
-          <span className="text-xs text-muted-foreground">Zoom: {zoomLevel.toFixed(1)}x</span>
-          <Button variant="outline" size="icon" className="h-6 w-6" onClick={handleZoomOut} disabled={zoomLevel <= 1}>
-            <ZoomOut className="h-3 w-3" />
-          </Button>
-          <Button variant="outline" size="icon" className="h-6 w-6" onClick={handleZoomIn} disabled={zoomLevel >= 20}>
-            <ZoomIn className="h-3 w-3" />
-          </Button>
-        </div>
-      )}
+      {/* Zoom controls */}
+      <div className="flex items-center justify-end gap-2 mb-2">
+        <span className="text-xs text-muted-foreground">Zoom: {zoomLevel.toFixed(1)}x</span>
+        <Button variant="outline" size="icon" className="h-6 w-6" onClick={handleZoomOut} disabled={zoomLevel <= 1}>
+          <ZoomOut className="h-3 w-3" />
+        </Button>
+        <Button variant="outline" size="icon" className="h-6 w-6" onClick={handleZoomIn} disabled={zoomLevel >= 20}>
+          <ZoomIn className="h-3 w-3" />
+        </Button>
+      </div>
 
       {/* Timeline bar - always h-8 */}
       <div ref={trackRef} className={`relative h-8 w-full rounded-md overflow-hidden bg-muted ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} onClick={handleTimelineClick}>
@@ -336,6 +375,42 @@ export function VideoTimeline({
 
             {/* After selection (darker) */}
             {clipEndPercent < 100 && <div className="absolute top-0 bottom-0 right-0 bg-black/50" style={{ width: `${Math.max(0, 100 - clipEndPercent)}%` }} />}
+
+            {/* Middle draggable area - allows moving the entire selection */}
+            {clipStartPercent >= -10 && clipEndPercent <= 110 && (
+              <div
+                className={`absolute top-0 bottom-0 bg-purple-500/20 border-t-2 border-b-2 border-purple-500/50 ${
+                  disabled ? "" : "cursor-grab hover:bg-purple-500/30"
+                } ${dragging === "middle" ? "cursor-grabbing bg-purple-500/40" : ""}`}
+                style={{
+                  left: `${Math.max(0, clipStartPercent)}%`,
+                  width: `${Math.min(100, clipEndPercent) - Math.max(0, clipStartPercent)}%`,
+                }}
+                onMouseDown={(e) => {
+                  if (!disabled && clipSelection) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragging("middle");
+                    setDragStartInfo({
+                      clientX: e.clientX,
+                      startTime: clipSelection.startTime,
+                      endTime: clipSelection.endTime,
+                    });
+                  }
+                }}
+                onTouchStart={(e) => {
+                  if (!disabled && clipSelection && e.touches.length > 0) {
+                    e.preventDefault();
+                    setDragging("middle");
+                    setDragStartInfo({
+                      clientX: e.touches[0].clientX,
+                      startTime: clipSelection.startTime,
+                      endTime: clipSelection.endTime,
+                    });
+                  }
+                }}
+              />
+            )}
 
             {/* Start handle */}
             {clipStartPercent >= 0 && clipStartPercent <= 100 && (
