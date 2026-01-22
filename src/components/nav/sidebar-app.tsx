@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem
-} from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@/types/supabase";
 import { User } from "@supabase/supabase-js";
@@ -21,6 +11,7 @@ import { Separator } from "../ui/separator";
 import { DashboardUserNav } from "./DashboardUserNav";
 import SidebarClips from "./sidebar-clips";
 import SidebarCommands from "./sidebar-commands";
+import SidebarModeration from "./sidebar-moderation";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User;
@@ -52,7 +43,6 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
         <SidebarGroup>
           <SidebarGroupLabel>Clips</SidebarGroupLabel>
           <SidebarGroupContent>
-
             <SidebarClips clipFolders={folders} />
           </SidebarGroupContent>
         </SidebarGroup>
@@ -60,6 +50,12 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
           <SidebarGroupLabel>Commands</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarCommands />
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel>Moderation</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarModeration />
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
@@ -81,10 +77,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
               </Link>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <DashboardUserNav
-                profile_img={user.user_metadata.avatar_url}
-                username={user.user_metadata.full_name}
-              />
+              <DashboardUserNav profile_img={user.user_metadata.avatar_url} username={user.user_metadata.full_name} />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
