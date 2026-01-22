@@ -13,6 +13,7 @@ export const TWITCH_SCOPES = [
   "moderator:read:followers",
   "moderator:read:chatters",
   "moderator:manage:automod_settings",
+  "moderator:manage:banned_users",
   "channel:read:subscriptions",
   "channel:manage:redemptions",
   "channel:manage:raids",

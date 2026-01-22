@@ -22,11 +22,10 @@ export default function SidebarModeration() {
           <CollapsibleContent>
             <SidebarMenuSub>
               <SidebarMenuSubItem>
-                <SidebarMenuSubButton>
-                  <span>Banned Users</span>
-                  <Badge variant="secondary" className="ml-auto">
-                    Soon
-                  </Badge>
+                <SidebarMenuSubButton asChild>
+                  <Link href="/dashboard/moderation/banned-users">
+                    <span>Banned Users</span>
+                  </Link>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
               <SidebarMenuSubItem>
