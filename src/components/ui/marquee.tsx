@@ -1,38 +1,39 @@
-import { cn } from "@/lib/utils";
-import { ComponentPropsWithoutRef } from "react";
+import { ComponentPropsWithoutRef } from "react"
+
+import { cn } from "@/lib/utils"
 
 interface MarqueeProps extends ComponentPropsWithoutRef<"div"> {
   /**
    * Optional CSS class name to apply custom styles
    */
-  className?: string;
+  className?: string
   /**
    * Whether to reverse the animation direction
    * @default false
    */
-  reverse?: boolean;
+  reverse?: boolean
   /**
    * Whether to pause the animation on hover
    * @default false
    */
-  pauseOnHover?: boolean;
+  pauseOnHover?: boolean
   /**
    * Content to be displayed in the marquee
    */
-  children: React.ReactNode;
+  children: React.ReactNode
   /**
    * Whether to animate vertically instead of horizontally
    * @default false
    */
-  vertical?: boolean;
+  vertical?: boolean
   /**
    * Number of times to repeat the content
    * @default 4
    */
-  repeat?: number;
+  repeat?: number
 }
 
-export default function Marquee({
+export function Marquee({
   className,
   reverse = false,
   pauseOnHover = false,
@@ -45,12 +46,12 @@ export default function Marquee({
     <div
       {...props}
       className={cn(
-        "group flex overflow-hidden p-2 [--duration:40s] [--gap:1rem] gap-(--gap)",
+        "group flex [gap:var(--gap)] overflow-hidden p-2 [--duration:40s] [--gap:1rem]",
         {
           "flex-row": !vertical,
           "flex-col": vertical,
         },
-        className,
+        className
       )}
     >
       {Array(repeat)
@@ -58,16 +59,16 @@ export default function Marquee({
         .map((_, i) => (
           <div
             key={i}
-            className={cn("flex shrink-0 justify-around gap-(--gap)", {
+            className={cn("flex shrink-0 justify-around [gap:var(--gap)]", {
               "animate-marquee flex-row": !vertical,
               "animate-marquee-vertical flex-col": vertical,
-              "group-hover:paused": pauseOnHover,
-              "direction-reverse": reverse,
+              "group-hover:[animation-play-state:paused]": pauseOnHover,
+              "[animation-direction:reverse]": reverse,
             })}
           >
             {children}
           </div>
         ))}
     </div>
-  );
+  )
 }

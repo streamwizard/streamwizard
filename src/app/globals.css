@@ -122,6 +122,26 @@
       height: 0;
     }
   }
+
+  --animate-marquee: marquee var(--duration) infinite linear;
+
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
 }
 
 :root {
@@ -204,3 +224,108 @@
     @apply bg-background text-foreground;
   }
 }
+
+@utility hero-mock-interface {
+  position: relative;
+  border-radius: var(--radius-xl);
+  margin-top: 4rem;
+  perspective: 2000px;
+  z-index: 10;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    border-radius: inherit;
+    background: linear-gradient(to top, var(--background) 10%, transparent 60%);
+    pointer-events: none;
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: -5rem;
+    z-index: -10;
+    filter: blur(120px);
+    background: radial-gradient(
+      circle at center,
+      color-mix(in srgb, var(--color-three), transparent 70%),
+      transparent 70%
+    );
+    opacity: 0.5;
+  }
+}
+
+@utility hero-horizon {
+  position: relative;
+  z-index: 0;
+  margin-top: -30rem;
+  height: 50rem;
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse at center center, #000, transparent 80%);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(
+      circle at bottom center,
+      var(--color-three),
+      transparent 70%
+    );
+    opacity: 0.2;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    left: -50%;
+    top: 50%;
+    aspect-ratio: 1 / 0.7;
+    width: 200%;
+    border-radius: 50%;
+    border-top: 1px solid color-mix(in srgb, var(--color-three), transparent 50%);
+    background: var(--background);
+  }
+}
+
+@utility hero-logo-cloud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  margin-top: 8rem;
+  padding-bottom: 4rem;
+  position: relative;
+  z-index: 5;
+
+  & p {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    opacity: 0.8;
+  }
+
+  & .logos {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 3rem;
+    opacity: 0.7;
+
+    & svg,
+    & span {
+      height: 1.5rem;
+      transition: all 0.3s ease;
+
+      &:hover {
+        opacity: 1;
+      }
+    }
+  }
+}
+
