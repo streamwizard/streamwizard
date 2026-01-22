@@ -12,6 +12,7 @@ export const TWITCH_SCOPES = [
   "moderator:manage:shield_mode",
   "moderator:read:followers",
   "moderator:read:chatters",
+  "moderator:manage:automod_settings",
   "channel:read:subscriptions",
   "channel:manage:redemptions",
   "channel:manage:raids",
@@ -23,8 +24,7 @@ export const TWITCH_SCOPES = [
   "channel:manage:polls",
   "editor:manage:clips",
   "channel:manage:clips",
-  "channel:bot"
-
+  "channel:bot",
 ];
 
 export const discordInviteLink = "https://discord.gg/29Eq659egv";

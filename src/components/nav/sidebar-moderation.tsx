@@ -4,6 +4,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Badge } from "@/components/ui/badge";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@/components/ui/sidebar";
 import { Users, MessageSquare, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 export default function SidebarModeration() {
   return (
@@ -78,11 +79,10 @@ export default function SidebarModeration() {
           <CollapsibleContent>
             <SidebarMenuSub>
               <SidebarMenuSubItem>
-                <SidebarMenuSubButton>
-                  <span>AutoMod</span>
-                  <Badge variant="secondary" className="ml-auto">
-                    Soon
-                  </Badge>
+                <SidebarMenuSubButton asChild>
+                  <Link href="/dashboard/moderation/automod">
+                    <span>AutoMod</span>
+                  </Link>
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
               <SidebarMenuSubItem>
