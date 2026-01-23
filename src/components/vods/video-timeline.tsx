@@ -28,6 +28,14 @@ interface ClipSelection {
   endTime: number;
 }
 
+/** Represents a muted segment in the video */
+export interface MutedSegment {
+  /** Duration of the muted segment in seconds */
+  duration: number;
+  /** Offset in seconds from the start of the video */
+  offset: number;
+}
+
 interface VideoTimelineProps {
   /** Total duration of the video in Twitch format (e.g., "1h30m0s") or seconds */
   duration: string | number;
@@ -35,6 +43,8 @@ interface VideoTimelineProps {
   currentTime: number;
   /** List of events to display on the timeline */
   events?: TimelineEvent[];
+  /** Muted segments to display on the timeline */
+  mutedSegments?: MutedSegment[] | null;
   /** Called when user clicks on the timeline to seek */
   onSeek: (seconds: number) => void;
   /** Called when user clicks on an event */
@@ -66,6 +76,7 @@ export function VideoTimeline({
   duration,
   currentTime,
   events = [],
+  mutedSegments,
   onSeek,
   onEventClick,
   disabled = false,
@@ -414,6 +425,34 @@ export function VideoTimeline({
           <div className="absolute left-0 top-0 h-full bg-purple-600/60 transition-all duration-100" style={{ width: `${Math.max(0, Math.min(progressPercent, 100))}%` }} />
         )}
 
+        {/* Muted segments - red indicators */}
+        {mutedSegments?.map((segment, index) => {
+          const segmentStart = segment.offset;
+          const segmentEnd = segment.offset + segment.duration;
+          const startPercent = secondsToPercent(segmentStart);
+          const endPercent = secondsToPercent(segmentEnd);
+
+          // Only render if at least partially visible
+          if (endPercent < 0 || startPercent > 100) return null;
+
+          const clampedStart = Math.max(0, startPercent);
+          const clampedEnd = Math.min(100, endPercent);
+          const width = clampedEnd - clampedStart;
+
+          return (
+            <div
+              key={`muted-${index}`}
+              className="absolute top-0 bottom-0 bg-red-500/40 border-l border-r border-red-600/60"
+              style={{
+                left: `${clampedStart}%`,
+                width: `${width}%`,
+                backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(239, 68, 68, 0.2) 4px, rgba(239, 68, 68, 0.2) 8px)",
+              }}
+              title={`Muted: ${formatDuration(segment.offset)} - ${formatDuration(segmentEnd)}`}
+            />
+          );
+        })}
+
         {/* Playhead */}
         {progressPercent >= 0 && progressPercent <= 100 && (
           <div
@@ -555,23 +594,58 @@ export function VideoTimeline({
         )}
       </div>
 
-      {/* Event legend (only show if there are events and not in clip mode) */}
-      {!isClipMode && events.length > 0 && (
-        <div className="flex flex-wrap gap-3 pt-2 text-xs">
-          {Object.entries(getEventTypeInfo).map(([type, color]) => {
-            const count = events.filter((e) => e.type === type).length;
-            if (count === 0) return null;
-            return (
-              <div key={type} className="flex items-center gap-1">
-                <div className={`h-3 w-3 rounded-full ${color}`} />
-                <span className="capitalize text-muted-foreground">
-                  {type} ({count})
-                </span>
-              </div>
-            );
-          })}
+      {/* Legend - shows what each element represents */}
+      <div className="flex flex-wrap gap-3 pt-2 text-xs border-t mt-2 pt-3">
+        {/* Progress & Playhead */}
+        <div className="flex items-center gap-1">
+          <div className="h-3 w-4 bg-purple-600/60 rounded-sm" />
+          <span className="text-muted-foreground">Progress</span>
         </div>
-      )}
+        <div className="flex items-center gap-1">
+          <div className="h-3 w-1 bg-white rounded-sm shadow" />
+          <span className="text-muted-foreground">Playhead</span>
+        </div>
+
+        {/* Muted segments (if any) */}
+        {mutedSegments && mutedSegments.length > 0 && (
+          <div className="flex items-center gap-1">
+            <div
+              className="h-3 w-4 bg-red-500/40 border border-red-600/60 rounded-sm"
+              style={{
+                backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(239, 68, 68, 0.2) 2px, rgba(239, 68, 68, 0.2) 4px)",
+              }}
+            />
+            <span className="text-muted-foreground">Muted ({mutedSegments.length})</span>
+          </div>
+        )}
+
+        {/* Clip selection (when in clip mode) */}
+        {isClipMode && (
+          <div className="flex items-center gap-1">
+            <div className="h-3 w-4 bg-purple-500/20 border border-purple-500/50 rounded-sm" />
+            <span className="text-muted-foreground">Clip Selection</span>
+          </div>
+        )}
+
+        {/* Event markers */}
+        {events.length > 0 && (
+          <>
+            <div className="h-3 w-px bg-border" />
+            {Object.entries(getEventTypeInfo).map(([type, info]) => {
+              const count = events.filter((e) => e.type === type).length;
+              if (count === 0) return null;
+              return (
+                <div key={type} className="flex items-center gap-1">
+                  <div className={`h-3 w-3 rounded-full ${info.color} ring-1 ring-white`} />
+                  <span className="capitalize text-muted-foreground">
+                    {type} ({count})
+                  </span>
+                </div>
+              );
+            })}
+          </>
+        )}
+      </div>
     </div>
   );
 }

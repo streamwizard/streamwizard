@@ -2,14 +2,13 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { TwitchVideo, parseDuration } from "@/types/twitch video";
-import { getStreamEvents } from "@/actions/twitch/vods";
+import { getStreamEvents, createClipFromVOD } from "@/actions/twitch/vods";
 import { getEventDisplayData, StreamEventType } from "@/types/stream-events";
 import type { Database } from "@/types/supabase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { TwitchPlayerComponent, useTwitchPlayer, type TwitchPlayer } from "@/components/vods/twitch-player";
 import { VideoTimeline, type TimelineEvent } from "./video-timeline";
@@ -49,7 +48,7 @@ function toTimelineEvent(event: StreamEvent): TimelineEvent {
 /**
  * Modal dialog with interactive Twitch player, timeline, and events panel
  */
-export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: VideoDetailsDialogProps) {
+export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDialogProps) {
   const { setPlayer, controls } = useTwitchPlayer();
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
@@ -70,8 +69,6 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
   const [clipTitle, setClipTitle] = useState("");
   const [clipStartTime, setClipStartTime] = useState(0);
   const [clipEndTime, setClipEndTime] = useState(30);
-  const [featureClip, setFeatureClip] = useState(false);
-  const [addToStory, setAddToStory] = useState(false);
 
   // Filter events based on selected types
   const filteredEvents = useMemo(() => {
@@ -112,8 +109,6 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
       setClipTitle("");
       setClipStartTime(0);
       setClipEndTime(30);
-      setFeatureClip(false);
-      setAddToStory(false);
       if (timeUpdateRef.current) {
         clearInterval(timeUpdateRef.current);
       }
@@ -237,22 +232,46 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
   const handleCancelClip = useCallback(() => {
     setIsCreatingClip(false);
     setClipTitle("");
-    setFeatureClip(false);
-    setAddToStory(false);
   }, []);
 
-  const handleSaveClip = useCallback(() => {
-    // TODO: Implement actual clip saving via Twitch API
-    console.log("Saving clip:", {
-      title: clipTitle,
-      startTime: clipStartTime,
-      endTime: clipEndTime,
-      featureClip,
-      addToStory,
-    });
-    // For now, just close the clip creation mode
-    handleCancelClip();
-  }, [clipTitle, clipStartTime, clipEndTime, featureClip, addToStory, handleCancelClip]);
+  const handleSaveClip = useCallback(async () => {
+    if (!video?.id || !clipTitle.trim()) return;
+
+    // Calculate duration and vod_offset
+    // Note: vod_offset is where the clip ENDS
+    // The clip will start at (vod_offset - duration) and end at vod_offset
+    const duration = clipEndTime - clipStartTime;
+    const vod_offset = clipEndTime;
+
+    try {
+      const result = await createClipFromVOD({
+        vodId: video.id,
+        vod_offset: vod_offset,
+        duration: duration,
+        title: clipTitle,
+      });
+
+      if (result.success) {
+        // Success! You could show a toast notification here
+        console.log("Clip created successfully:", result.clipId);
+        console.log("Edit URL:", result.editUrl);
+
+        // Optionally open the edit URL
+        if (result.editUrl) {
+          window.open(result.editUrl, "_blank");
+        }
+
+        handleCancelClip();
+      } else {
+        // Error creating clip
+        console.error("Failed to create clip:", result.error);
+        alert(`Failed to create clip: ${result.error}`);
+      }
+    } catch (error) {
+      console.error("Error creating clip:", error);
+      alert("An unexpected error occurred while creating the clip");
+    }
+  }, [video, clipTitle, clipStartTime, clipEndTime, handleCancelClip]);
 
   if (!video) return null;
 
@@ -336,6 +355,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
                 isClipMode={isCreatingClip}
                 clipSelection={isCreatingClip ? { startTime: clipStartTime, endTime: clipEndTime } : undefined}
                 onClipSelectionChange={handleClipSelectionChange}
+                mutedSegments={video.muted_segments}
               />
             </div>
 
@@ -393,25 +413,6 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
                     </Label>
                     <Input id="clip-title" placeholder="Add a title (required)" value={clipTitle} onChange={(e) => setClipTitle(e.target.value)} className="bg-background" />
                     <p className="text-xs text-muted-foreground">Clips with unique titles get more views. Help {video.user_name} get discovered by adding a title.</p>
-                  </div>
-
-                  {/* Checkboxes */}
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2">
-                      <Checkbox id="feature-clip" checked={featureClip} onCheckedChange={(checked) => setFeatureClip(checked === true)} />
-                      <Label htmlFor="feature-clip" className="text-sm cursor-pointer">
-                        Feature Clip
-                      </Label>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Checkbox id="add-to-story" checked={addToStory} onCheckedChange={(checked) => setAddToStory(checked === true)} />
-                      <Label htmlFor="add-to-story" className="text-sm cursor-pointer">
-                        Add to Story
-                      </Label>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-purple-600 text-white">
-                        NEW
-                      </Badge>
-                    </div>
                   </div>
 
                   {/* Save/Cancel buttons */}

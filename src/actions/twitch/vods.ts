@@ -152,30 +152,59 @@ export async function deleteVideos(videoIds: string[]): Promise<DeleteVideosResu
 // Create Clip
 // =============================================================================
 
+interface CreateClipFromVODProps {
+  vodId: string;
+  vod_offset: number;
+  duration: number;
+  title?: string;
+}
+
 /**
- * Create a clip from a live stream or VOD
+ * Create a clip from a broadcaster's VOD
  *
- * @param vodId - The VOD ID to create a clip from (optional, for VOD clips)
- * @returns CreateClipResult with edit URL and clip ID
+ * The clip will start at (vod_offset - duration) and end at vod_offset.
+ * Duration must be between 5-60 seconds, and vod_offset must be >= duration.
  *
- * API: POST https://api.twitch.tv/helix/clips
- * Docs: https://dev.twitch.tv/docs/api/reference/#create-clip
- *
- * Requires scope: clips:edit
- *
- * Note: The Twitch API creates clips from the current live position or
- * requires the broadcaster to be live. For VOD clips, users typically
- * need to use the Twitch website directly or the broadcaster must be live.
+ * API: POST https://api.twitch.tv/helix/videos/clips (BETA)
+ * Requires scope: editor:manage:clips or channel:manage:clips
  */
-export async function createClip(): Promise<CreateClipResult> {
+export async function createClipFromVOD({ vodId, vod_offset, duration, title }: CreateClipFromVODProps): Promise<CreateClipResult> {
   try {
     const broadcasterId = await getBroadcasterId();
 
-    const response = await TwitchAPI.post<CreateClipResponse>("/clips", {
-      broadcasterID: broadcasterId,
+    if (!broadcasterId) {
+      return {
+        success: false,
+        error: "Failed to get broadcaster ID",
+      };
+    }
+
+    // Validate duration (5-60 seconds)
+    if (duration < 5 || duration > 60) {
+      return {
+        success: false,
+        error: "Duration must be between 5 and 60 seconds",
+      };
+    }
+
+    // Validate vod_offset must be >= duration
+    if (vod_offset < duration) {
+      return {
+        success: false,
+        error: `vod_offset (${vod_offset}) must be greater than or equal to duration (${duration})`,
+      };
+    }
+
+    const response = await TwitchAPI.post<CreateClipResponse>("/videos/clips", {
       params: {
+        editor_id: broadcasterId,
         broadcaster_id: broadcasterId,
+        vod_id: vodId,
+        vod_offset: vod_offset,
+        duration: duration,
+        title: title || "Clip from VOD",
       },
+      broadcasterID: broadcasterId,
     });
 
     if (!response.data.data || response.data.data.length === 0) {
@@ -193,10 +222,10 @@ export async function createClip(): Promise<CreateClipResult> {
       clipId: clip.id,
     };
   } catch (error) {
-    console.error("Error creating clip:", error);
+    console.error("Error creating clip from VOD:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error creating clip",
+      error: error instanceof Error ? error.message : "Unknown error creating clip from VOD",
     };
   }
 }
