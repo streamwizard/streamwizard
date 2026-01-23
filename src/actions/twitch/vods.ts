@@ -195,7 +195,7 @@ export async function createClipFromVOD({ vodId, vod_offset, duration, title }: 
       };
     }
 
-    const response = await TwitchAPI.post<CreateClipResponse>("/videos/clips", {
+    const response = await TwitchAPI.post<CreateClipResponse>("/videos/clips", null, {
       params: {
         editor_id: broadcasterId,
         broadcaster_id: broadcasterId,
