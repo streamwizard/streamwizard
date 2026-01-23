@@ -16,7 +16,7 @@ import { VideoTimeline, type TimelineEvent } from "./video-timeline";
 import { StreamEventsPanel } from "./stream-events-panel";
 import { EventTypeFilter } from "./event-type-filter";
 import { useEventFilters } from "@/hooks/use-event-filters";
-import { ExternalLink, Eye, Globe, Calendar, Scissors, Play, Pause, Volume2, VolumeX, X } from "lucide-react";
+import { ExternalLink, Eye, Globe, Calendar, Scissors, Play, Pause, Volume2, VolumeX, X, SkipBack } from "lucide-react";
 
 type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
 
@@ -141,6 +141,26 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
       }
     };
   }, [isPlaying, isPlayerReady, controls]);
+
+  // Clip mode looping: when playback reaches clip end, loop back to clip start
+  useEffect(() => {
+    if (!isCreatingClip || !isPlaying || !isPlayerReady) return;
+
+    // Check if current time has passed the clip end
+    if (currentTime >= clipEndTime) {
+      // Seek back to clip start to create a loop
+      controls.seek(clipStartTime);
+      setCurrentTime(clipStartTime);
+    }
+  }, [isCreatingClip, isPlaying, isPlayerReady, currentTime, clipStartTime, clipEndTime, controls]);
+
+  // When entering clip mode, seek to clip start
+  useEffect(() => {
+    if (isCreatingClip && isPlayerReady) {
+      controls.seek(clipStartTime);
+      setCurrentTime(clipStartTime);
+    }
+  }, [isCreatingClip, isPlayerReady]); // Only trigger on mode change, not on clipStartTime changes
 
   const handlePlayerReady = useCallback(
     (player: TwitchPlayer) => {
@@ -296,6 +316,12 @@ export function VideoDetailsDialog({ video, open, onOpenChange, onCreateClip }: 
               <Button variant="outline" size="icon" onClick={toggleMute} disabled={!isPlayerReady}>
                 {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </Button>
+              {isCreatingClip && (
+                <Button variant="outline" size="sm" onClick={() => handleSeek(clipStartTime)} disabled={!isPlayerReady} title="Jump to clip start">
+                  <SkipBack className="h-4 w-4 mr-1" />
+                  Clip Start
+                </Button>
+              )}
             </div>
 
             {/* Custom Timeline */}

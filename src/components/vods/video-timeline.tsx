@@ -78,6 +78,10 @@ export function VideoTimeline({
   const trackRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<"start" | "end" | "middle" | null>(null);
   const [dragStartInfo, setDragStartInfo] = useState<{ clientX: number; startTime: number; endTime: number } | null>(null);
+  // Track when we just finished dragging to prevent click from firing
+  const justFinishedDraggingRef = useRef(false);
+  // Track if actual movement occurred during drag (to distinguish click from drag)
+  const hasDraggedRef = useRef(false);
 
   // Zoom state for clip mode - represents the visible time window
   const [zoomLevel, setZoomLevel] = useState(1); // 1 = full view, higher = more zoom
@@ -203,10 +207,20 @@ export function VideoTimeline({
     if (!dragging) return;
 
     const handleMouseMove = (e: MouseEvent) => {
+      hasDraggedRef.current = true;
       handleDrag(e.clientX);
     };
 
     const handleMouseUp = () => {
+      // Only block the click if we actually moved during the drag
+      if (hasDraggedRef.current) {
+        justFinishedDraggingRef.current = true;
+        // Reset the flag after a brief delay (click event fires after mouseup)
+        setTimeout(() => {
+          justFinishedDraggingRef.current = false;
+        }, 0);
+      }
+      hasDraggedRef.current = false;
       setDragging(null);
     };
 
@@ -230,7 +244,13 @@ export function VideoTimeline({
     };
 
     const handleTouchEnd = () => {
+      // Set flag before clearing dragging state to prevent click from firing
+      justFinishedDraggingRef.current = true;
       setDragging(null);
+      // Reset the flag after a brief delay
+      setTimeout(() => {
+        justFinishedDraggingRef.current = false;
+      }, 0);
     };
 
     document.addEventListener("touchmove", handleTouchMove);
@@ -284,7 +304,10 @@ export function VideoTimeline({
   // Handle click on timeline
   const handleTimelineClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (disabled || totalSeconds === 0 || dragging) return;
+      // Prevent click from firing if we just finished dragging
+      if (disabled || totalSeconds === 0 || dragging || justFinishedDraggingRef.current) {
+        return;
+      }
 
       const seekTime = getSecondsFromPosition(e.clientX);
       onSeek(Math.max(0, Math.min(totalSeconds, seekTime)));
@@ -350,6 +373,38 @@ export function VideoTimeline({
         <Button variant="outline" size="icon" className="h-6 w-6" onClick={handleZoomIn} disabled={zoomLevel >= 20}>
           <ZoomIn className="h-3 w-3" />
         </Button>
+      </div>
+
+      {/* Timestamp ruler above timeline */}
+      <div className="relative w-full h-5 mb-1">
+        {useMemo(() => {
+          // Calculate appropriate interval based on visible duration
+          // We want approximately 16 timestamps visible at any time
+          const targetTimestampCount = 16;
+          const rawInterval = visibleDuration / targetTimestampCount;
+
+          // Round to nice intervals: 1s, 5s, 10s, 15s, 30s, 1m, 2m, 5m, 10m, 15m, 30m, 1h, etc.
+          const niceIntervals = [1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400];
+          let interval = niceIntervals.find((i) => i >= rawInterval) || niceIntervals[niceIntervals.length - 1];
+
+          // Generate timestamps
+          const timestamps: { time: number; percent: number }[] = [];
+          const firstTimestamp = Math.ceil(viewStart / interval) * interval;
+
+          for (let time = firstTimestamp; time <= viewEnd; time += interval) {
+            const percent = secondsToPercent(time);
+            if (percent >= 0 && percent <= 100) {
+              timestamps.push({ time, percent });
+            }
+          }
+
+          return timestamps.map(({ time, percent }) => (
+            <div key={time} className="absolute top-0 flex flex-col items-center" style={{ left: `${percent}%`, transform: "translateX(-50%)" }}>
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">{formatDuration(Math.floor(time))}</span>
+              <div className="w-px h-1 bg-muted-foreground/40" />
+            </div>
+          ));
+        }, [viewStart, viewEnd, visibleDuration, secondsToPercent])}
       </div>
 
       {/* Timeline bar - always h-8 */}
