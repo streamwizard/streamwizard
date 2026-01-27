@@ -87,8 +87,14 @@ export function VideoTimeline({
   maxClipDuration = 60,
 }: VideoTimelineProps) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState<"start" | "end" | "middle" | null>(null);
-  const [dragStartInfo, setDragStartInfo] = useState<{ clientX: number; startTime: number; endTime: number } | null>(null);
+  const [dragging, setDragging] = useState<"start" | "end" | "middle" | null>(
+    null,
+  );
+  const [dragStartInfo, setDragStartInfo] = useState<{
+    clientX: number;
+    startTime: number;
+    endTime: number;
+  } | null>(null);
   // Track when we just finished dragging to prevent click from firing
   const justFinishedDraggingRef = useRef(false);
   // Track if actual movement occurred during drag (to distinguish click from drag)
@@ -148,15 +154,22 @@ export function VideoTimeline({
   const progressPercent = secondsToPercent(currentTime);
 
   // Clip selection percentages (clamped to visible range)
-  const clipStartPercent = clipSelection ? secondsToPercent(clipSelection.startTime) : 0;
-  const clipEndPercent = clipSelection ? secondsToPercent(clipSelection.endTime) : 100;
+  const clipStartPercent = clipSelection
+    ? secondsToPercent(clipSelection.startTime)
+    : 0;
+  const clipEndPercent = clipSelection
+    ? secondsToPercent(clipSelection.endTime)
+    : 100;
 
   // Handle mouse/touch position to seconds
   const getSecondsFromPosition = useCallback(
     (clientX: number): number => {
       if (!trackRef.current) return 0;
       const rect = trackRef.current.getBoundingClientRect();
-      const percent = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+      const percent = Math.max(
+        0,
+        Math.min(100, ((clientX - rect.left) / rect.width) * 100),
+      );
       return Math.floor(percentToSeconds(percent));
     },
     [percentToSeconds],
@@ -165,7 +178,8 @@ export function VideoTimeline({
   // Handle clip handle drag
   const handleDrag = useCallback(
     (clientX: number) => {
-      if (!dragging || disabled || !clipSelection || !onClipSelectionChange) return;
+      if (!dragging || disabled || !clipSelection || !onClipSelectionChange)
+        return;
 
       if (dragging === "middle" && dragStartInfo) {
         // Move the entire selection
@@ -202,15 +216,32 @@ export function VideoTimeline({
           onClipSelectionChange(newStart, clipSelection.endTime);
         } else if (dragging === "end") {
           // Ensure end doesn't go before start + minDuration
-          const minEnd = Math.min(totalSeconds, clipSelection.startTime + minClipDuration);
+          const minEnd = Math.min(
+            totalSeconds,
+            clipSelection.startTime + minClipDuration,
+          );
           // Ensure we don't exceed maxDuration from start
-          const maxEnd = Math.min(totalSeconds, clipSelection.startTime + maxClipDuration);
+          const maxEnd = Math.min(
+            totalSeconds,
+            clipSelection.startTime + maxClipDuration,
+          );
           const newEnd = Math.max(minEnd, Math.min(maxEnd, seconds));
           onClipSelectionChange(clipSelection.startTime, newEnd);
         }
       }
     },
-    [dragging, disabled, clipSelection, onClipSelectionChange, getSecondsFromPosition, minClipDuration, maxClipDuration, totalSeconds, dragStartInfo, visibleDuration],
+    [
+      dragging,
+      disabled,
+      clipSelection,
+      onClipSelectionChange,
+      getSecondsFromPosition,
+      minClipDuration,
+      maxClipDuration,
+      totalSeconds,
+      dragStartInfo,
+      visibleDuration,
+    ],
   );
 
   // Mouse event handlers for clip dragging
@@ -287,13 +318,17 @@ export function VideoTimeline({
       const zoomIn = e.deltaY < 0;
       const zoomFactor = 1.2; // Adjust this for more/less aggressive zooming
 
-      const newZoom = zoomIn ? Math.min(zoomLevel * zoomFactor, 20) : Math.max(zoomLevel / zoomFactor, 1);
+      const newZoom = zoomIn
+        ? Math.min(zoomLevel * zoomFactor, 20)
+        : Math.max(zoomLevel / zoomFactor, 1);
 
       setZoomLevel(newZoom);
 
       // Keep the center of the view stable
       // Use clip center if in clip mode, otherwise use current playback position
-      const centerPoint = clipSelection ? (clipSelection.startTime + clipSelection.endTime) / 2 : currentTime;
+      const centerPoint = clipSelection
+        ? (clipSelection.startTime + clipSelection.endTime) / 2
+        : currentTime;
 
       const newVisibleDuration = totalSeconds / newZoom;
       const newOffset = Math.max(0, centerPoint - newVisibleDuration / 2);
@@ -316,7 +351,12 @@ export function VideoTimeline({
   const handleTimelineClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       // Prevent click from firing if we just finished dragging
-      if (disabled || totalSeconds === 0 || dragging || justFinishedDraggingRef.current) {
+      if (
+        disabled ||
+        totalSeconds === 0 ||
+        dragging ||
+        justFinishedDraggingRef.current
+      ) {
         return;
       }
 
@@ -345,7 +385,9 @@ export function VideoTimeline({
     setZoomLevel(newZoom);
     // Keep the center of the view stable
     // Use clip center if in clip mode, otherwise use current playback position
-    const centerPoint = clipSelection ? (clipSelection.startTime + clipSelection.endTime) / 2 : currentTime;
+    const centerPoint = clipSelection
+      ? (clipSelection.startTime + clipSelection.endTime) / 2
+      : currentTime;
 
     const newVisibleDuration = totalSeconds / newZoom;
     const newOffset = Math.max(0, centerPoint - newVisibleDuration / 2);
@@ -357,7 +399,9 @@ export function VideoTimeline({
     setZoomLevel(newZoom);
     // Keep the center of the view stable
     // Use clip center if in clip mode, otherwise use current playback position
-    const centerPoint = clipSelection ? (clipSelection.startTime + clipSelection.endTime) / 2 : currentTime;
+    const centerPoint = clipSelection
+      ? (clipSelection.startTime + clipSelection.endTime) / 2
+      : currentTime;
 
     const newVisibleDuration = totalSeconds / newZoom;
     const newOffset = Math.max(0, centerPoint - newVisibleDuration / 2);
@@ -368,20 +412,38 @@ export function VideoTimeline({
     }
   }, [zoomLevel, clipSelection, totalSeconds, currentTime]);
 
-  const clipDuration = clipSelection ? clipSelection.endTime - clipSelection.startTime : 0;
+  const clipDuration = clipSelection
+    ? clipSelection.endTime - clipSelection.startTime
+    : 0;
 
   // Filter events to only show those in visible range
-  const visibleEvents = events.filter((event) => event.offset >= viewStart && event.offset <= viewEnd);
+  const visibleEvents = events.filter(
+    (event) => event.offset >= viewStart && event.offset <= viewEnd,
+  );
 
   return (
     <div className="w-full space-y-2">
       {/* Zoom controls */}
       <div className="flex items-center justify-end gap-2 mb-2">
-        <span className="text-xs text-muted-foreground">Zoom: {zoomLevel.toFixed(1)}x</span>
-        <Button variant="outline" size="icon" className="h-6 w-6" onClick={handleZoomOut} disabled={zoomLevel <= 1}>
+        <span className="text-xs text-muted-foreground">
+          Zoom: {zoomLevel.toFixed(1)}x
+        </span>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-6 w-6"
+          onClick={handleZoomOut}
+          disabled={zoomLevel <= 1}
+        >
           <ZoomOut className="h-3 w-3" />
         </Button>
-        <Button variant="outline" size="icon" className="h-6 w-6" onClick={handleZoomIn} disabled={zoomLevel >= 20}>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-6 w-6"
+          onClick={handleZoomIn}
+          disabled={zoomLevel >= 20}
+        >
           <ZoomIn className="h-3 w-3" />
         </Button>
       </div>
@@ -395,8 +457,13 @@ export function VideoTimeline({
           const rawInterval = visibleDuration / targetTimestampCount;
 
           // Round to nice intervals: 1s, 5s, 10s, 15s, 30s, 1m, 2m, 5m, 10m, 15m, 30m, 1h, etc.
-          const niceIntervals = [1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600, 43200, 86400];
-          let interval = niceIntervals.find((i) => i >= rawInterval) || niceIntervals[niceIntervals.length - 1];
+          const niceIntervals = [
+            1, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 10800,
+            21600, 43200, 86400,
+          ];
+          let interval =
+            niceIntervals.find((i) => i >= rawInterval) ||
+            niceIntervals[niceIntervals.length - 1];
 
           // Generate timestamps
           const timestamps: { time: number; percent: number }[] = [];
@@ -410,8 +477,14 @@ export function VideoTimeline({
           }
 
           return timestamps.map(({ time, percent }) => (
-            <div key={time} className="absolute top-0 flex flex-col items-center" style={{ left: `${percent}%`, transform: "translateX(-50%)" }}>
-              <span className="text-[10px] text-muted-foreground whitespace-nowrap">{formatDuration(Math.floor(time))}</span>
+            <div
+              key={time}
+              className="absolute top-0 flex flex-col items-center"
+              style={{ left: `${percent}%`, transform: "translateX(-50%)" }}
+            >
+              <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                {formatDuration(Math.floor(time))}
+              </span>
               <div className="w-px h-1 bg-muted-foreground/40" />
             </div>
           ));
@@ -419,10 +492,17 @@ export function VideoTimeline({
       </div>
 
       {/* Timeline bar - always h-8 */}
-      <div ref={trackRef} className={`relative h-8 w-full rounded-md overflow-hidden bg-muted ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} onClick={handleTimelineClick}>
+      <div
+        ref={trackRef}
+        className={`relative h-8 w-full rounded-md overflow-hidden bg-muted ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`}
+        onClick={handleTimelineClick}
+      >
         {/* Progress bar */}
         {progressPercent >= 0 && progressPercent <= 100 && (
-          <div className="absolute left-0 top-0 h-full bg-purple-600/60 transition-all duration-100" style={{ width: `${Math.max(0, Math.min(progressPercent, 100))}%` }} />
+          <div
+            className="absolute left-0 top-0 h-full bg-purple-600/60 transition-all duration-100"
+            style={{ width: `${Math.max(0, Math.min(progressPercent, 100))}%` }}
+          />
         )}
 
         {/* Muted segments - red indicators */}
@@ -446,7 +526,8 @@ export function VideoTimeline({
               style={{
                 left: `${clampedStart}%`,
                 width: `${width}%`,
-                backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(239, 68, 68, 0.2) 4px, rgba(239, 68, 68, 0.2) 8px)",
+                backgroundImage:
+                  "repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(239, 68, 68, 0.2) 4px, rgba(239, 68, 68, 0.2) 8px)",
               }}
               title={`Muted: ${formatDuration(segment.offset)} - ${formatDuration(segmentEnd)}`}
             />
@@ -465,10 +546,20 @@ export function VideoTimeline({
         {isClipMode && clipSelection && (
           <>
             {/* Before selection (darker) */}
-            {clipStartPercent > 0 && <div className="absolute top-0 bottom-0 left-0 bg-black/50" style={{ width: `${Math.max(0, clipStartPercent)}%` }} />}
+            {clipStartPercent > 0 && (
+              <div
+                className="absolute top-0 bottom-0 left-0 bg-black/50"
+                style={{ width: `${Math.max(0, clipStartPercent)}%` }}
+              />
+            )}
 
             {/* After selection (darker) */}
-            {clipEndPercent < 100 && <div className="absolute top-0 bottom-0 right-0 bg-black/50" style={{ width: `${Math.max(0, 100 - clipEndPercent)}%` }} />}
+            {clipEndPercent < 100 && (
+              <div
+                className="absolute top-0 bottom-0 right-0 bg-black/50"
+                style={{ width: `${Math.max(0, 100 - clipEndPercent)}%` }}
+              />
+            )}
 
             {/* Middle draggable area - allows moving the entire selection */}
             {clipStartPercent >= -10 && clipEndPercent <= 110 && (
@@ -581,7 +672,8 @@ export function VideoTimeline({
           <>
             <span>{formatDuration(clipSelection.startTime)}</span>
             <span className="text-purple-400">
-              Clip: {formatDuration(clipDuration)} ({minClipDuration}s - {maxClipDuration}s)
+              Clip: {formatDuration(clipDuration)} ({minClipDuration}s -{" "}
+              {maxClipDuration}s)
             </span>
             <span>{formatDuration(clipSelection.endTime)}</span>
           </>
@@ -612,10 +704,13 @@ export function VideoTimeline({
             <div
               className="h-3 w-4 bg-red-500/40 border border-red-600/60 rounded-sm"
               style={{
-                backgroundImage: "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(239, 68, 68, 0.2) 2px, rgba(239, 68, 68, 0.2) 4px)",
+                backgroundImage:
+                  "repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(239, 68, 68, 0.2) 2px, rgba(239, 68, 68, 0.2) 4px)",
               }}
             />
-            <span className="text-muted-foreground">Muted ({mutedSegments.length})</span>
+            <span className="text-muted-foreground">
+              Muted ({mutedSegments.length})
+            </span>
           </div>
         )}
 
@@ -636,7 +731,9 @@ export function VideoTimeline({
               if (count === 0) return null;
               return (
                 <div key={type} className="flex items-center gap-1">
-                  <div className={`h-3 w-3 rounded-full ${info.color} ring-1 ring-white`} />
+                  <div
+                    className={`h-3 w-3 rounded-full ${info.color} ring-1 ring-white`}
+                  />
                   <span className="capitalize text-muted-foreground">
                     {type} ({count})
                   </span>
