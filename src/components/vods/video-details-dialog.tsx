@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useCallback, useEffect, useRef, useMemo } from "react";
 import { TwitchVideo, parseDuration } from "@/types/twitch video";
-import { getStreamEvents, createClipFromVOD } from "@/actions/twitch/vods";
 import { getEventDisplayData, StreamEventType } from "@/types/stream-events";
 import type { Database } from "@/types/supabase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -10,11 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TwitchPlayerComponent, useTwitchPlayer, type TwitchPlayer } from "@/components/vods/twitch-player";
+import { TwitchPlayerComponent, type TwitchPlayer } from "@/components/vods/twitch-player";
 import { VideoTimeline, type TimelineEvent } from "./video-timeline";
 import { StreamEventsPanel } from "./stream-events-panel";
 import { EventTypeFilter } from "./event-type-filter";
 import { useEventFilters } from "@/hooks/use-event-filters";
+import { useVideoDialogStore } from "@/stores/video-dialog-store";
 import { ExternalLink, Eye, Globe, Calendar, Scissors, Play, Pause, Volume2, VolumeX, X, SkipBack } from "lucide-react";
 
 type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
@@ -30,7 +30,6 @@ interface VideoDetailsDialogProps {
  * Convert StreamEvent to TimelineEvent for the timeline component
  */
 function toTimelineEvent(event: StreamEvent): TimelineEvent {
-  // Extract display data using the helper function
   const displayData = getEventDisplayData(event);
   const offset = event.offset_seconds || 0;
   const userName = displayData.userName || event.event_type;
@@ -49,26 +48,42 @@ function toTimelineEvent(event: StreamEvent): TimelineEvent {
  * Modal dialog with interactive Twitch player, timeline, and events panel
  */
 export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDialogProps) {
-  const { setPlayer, controls } = useTwitchPlayer();
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [isPlayerReady, setIsPlayerReady] = useState(false);
-  const [playerKey, setPlayerKey] = useState(0);
-  const timeUpdateRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  // Get state and actions from the store
+  const {
+    isPlaying,
+    isMuted,
+    currentTime,
+    isPlayerReady,
+    playerKey,
+    events,
+    isLoadingEvents,
+    isCreatingClip,
+    clipTitle,
+    clipStartTime,
+    clipEndTime,
+    setPlayer,
+    setPlayerReady,
+    setIsPlaying,
+    setCurrentTime,
+    incrementPlayerKey,
+    togglePlay,
+    toggleMute,
+    seek,
+    fetchEvents,
+    setEvents,
+    startClipCreation,
+    cancelClipCreation,
+    setClipTitle,
+    setClipSelection,
+    saveClip,
+    seekToClipStart,
+    resetState,
+  } = useVideoDialogStore();
 
-  // Stream events state
-  const [events, setEvents] = useState<StreamEvent[]>([]);
-  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const timeUpdateRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   // Event type filters
   const { selectedTypes, toggleType, selectAll, deselectAll } = useEventFilters();
-
-  // Clip creation state
-  const [isCreatingClip, setIsCreatingClip] = useState(false);
-  const [clipTitle, setClipTitle] = useState("");
-  const [clipStartTime, setClipStartTime] = useState(0);
-  const [clipEndTime, setClipEndTime] = useState(30);
 
   // Filter events based on selected types
   const filteredEvents = useMemo(() => {
@@ -79,47 +94,29 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
   useEffect(() => {
     if (open && video) {
       // Increment key to force a fresh player instance
-      setPlayerKey((prev) => prev + 1);
+      incrementPlayerKey();
 
       // Fetch events if we have a stream_id
       if (video.stream_id) {
-        setIsLoadingEvents(true);
-        getStreamEvents(video.stream_id)
-          .then((result) => {
-            if (result.success && result.events) {
-              setEvents(result.events);
-            } else {
-              setEvents([]);
-            }
-          })
-          .finally(() => {
-            setIsLoadingEvents(false);
-          });
+        fetchEvents(video.stream_id);
       } else {
         setEvents([]);
       }
     } else {
-      setIsPlaying(false);
-      setIsMuted(true);
-      setCurrentTime(0);
-      setIsPlayerReady(false);
-      setEvents([]);
-      // Reset clip creation state
-      setIsCreatingClip(false);
-      setClipTitle("");
-      setClipStartTime(0);
-      setClipEndTime(30);
+      resetState();
       if (timeUpdateRef.current) {
         clearInterval(timeUpdateRef.current);
       }
     }
-  }, [open, video]);
+  }, [open, video, incrementPlayerKey, fetchEvents, setEvents, resetState]);
 
   // Poll for current time while playing
   useEffect(() => {
-    if (isPlaying && isPlayerReady) {
+    const { player } = useVideoDialogStore.getState();
+
+    if (isPlaying && isPlayerReady && player) {
       timeUpdateRef.current = setInterval(() => {
-        const time = controls.getCurrentTime();
+        const time = player.getCurrentTime();
         if (time !== undefined) {
           setCurrentTime(time);
         }
@@ -135,143 +132,70 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
         clearInterval(timeUpdateRef.current);
       }
     };
-  }, [isPlaying, isPlayerReady, controls]);
+  }, [isPlaying, isPlayerReady, setCurrentTime]);
 
   // Clip mode looping: when playback reaches clip end, loop back to clip start
   useEffect(() => {
     if (!isCreatingClip || !isPlaying || !isPlayerReady) return;
 
-    // Check if current time has passed the clip end
     if (currentTime >= clipEndTime) {
-      // Seek back to clip start to create a loop
-      controls.seek(clipStartTime);
-      setCurrentTime(clipStartTime);
+      seek(clipStartTime);
     }
-  }, [isCreatingClip, isPlaying, isPlayerReady, currentTime, clipStartTime, clipEndTime, controls]);
+  }, [isCreatingClip, isPlaying, isPlayerReady, currentTime, clipStartTime, clipEndTime, seek]);
 
   // When entering clip mode, seek to clip start
   useEffect(() => {
     if (isCreatingClip && isPlayerReady) {
-      controls.seek(clipStartTime);
-      setCurrentTime(clipStartTime);
+      seek(clipStartTime);
     }
-  }, [isCreatingClip, isPlayerReady]); // Only trigger on mode change, not on clipStartTime changes
+  }, [isCreatingClip, isPlayerReady]); // Only trigger on mode change
 
   const handlePlayerReady = useCallback(
     (player: TwitchPlayer) => {
       setPlayer(player);
-      setIsPlayerReady(true);
+      setPlayerReady(true);
     },
-    [setPlayer],
+    [setPlayer, setPlayerReady],
   );
 
   const handlePlay = useCallback(() => {
     setIsPlaying(true);
-  }, []);
+  }, [setIsPlaying]);
 
   const handlePause = useCallback(() => {
     setIsPlaying(false);
-  }, []);
-
-  const handleSeek = useCallback(
-    (seconds: number) => {
-      controls.seek(seconds);
-      setCurrentTime(seconds);
-    },
-    [controls],
-  );
-
-  const handleEventClick = useCallback(
-    (event: StreamEvent) => {
-      // Seek to event position (offset_seconds is a direct property of the event)
-      const offset = event.offset_seconds || 0;
-      handleSeek(offset);
-    },
-    [handleSeek],
-  );
+  }, [setIsPlaying]);
 
   const handleTimelineEventClick = useCallback(
     (event: TimelineEvent) => {
-      handleSeek(event.offset);
+      seek(event.offset);
     },
-    [handleSeek],
+    [seek],
   );
 
-  const togglePlay = useCallback(() => {
-    if (isPlaying) {
-      controls.pause();
+  const handleToggleClipCreation = useCallback(() => {
+    if (isCreatingClip) {
+      cancelClipCreation();
     } else {
-      controls.play();
+      startClipCreation();
     }
-  }, [isPlaying, controls]);
-
-  const toggleMute = useCallback(() => {
-    const newMuted = !isMuted;
-    controls.setMuted(newMuted);
-    setIsMuted(newMuted);
-  }, [isMuted, controls]);
-
-  // Clip creation handlers
-  const handleClipSelectionChange = useCallback((start: number, end: number) => {
-    setClipStartTime(start);
-    setClipEndTime(end);
-  }, []);
-
-  const toggleClipCreation = useCallback(() => {
-    if (!isCreatingClip && video) {
-      // Initialize clip selection around current time
-      const totalDuration = parseDuration(video.duration);
-      const start = Math.max(0, currentTime - 15);
-      const end = Math.min(totalDuration, currentTime + 15);
-      setClipStartTime(start);
-      setClipEndTime(end);
-    }
-    setIsCreatingClip((prev) => !prev);
-  }, [isCreatingClip, currentTime, video]);
-
-  const handleCancelClip = useCallback(() => {
-    setIsCreatingClip(false);
-    setClipTitle("");
-  }, []);
+  }, [isCreatingClip, cancelClipCreation, startClipCreation]);
 
   const handleSaveClip = useCallback(async () => {
-    if (!video?.id || !clipTitle.trim()) return;
+    const result = await saveClip();
 
-    // Calculate duration and vod_offset
-    // Note: vod_offset is where the clip ENDS
-    // The clip will start at (vod_offset - duration) and end at vod_offset
-    const duration = clipEndTime - clipStartTime;
-    const vod_offset = clipEndTime;
+    if (result.success) {
+      console.log("Clip created successfully:", result.clipId);
+      console.log("Edit URL:", result.editUrl);
 
-    try {
-      const result = await createClipFromVOD({
-        vodId: video.id,
-        vod_offset: vod_offset,
-        duration: duration,
-        title: clipTitle,
-      });
-
-      if (result.success) {
-        // Success! You could show a toast notification here
-        console.log("Clip created successfully:", result.clipId);
-        console.log("Edit URL:", result.editUrl);
-
-        // Optionally open the edit URL
-        if (result.editUrl) {
-          window.open(result.editUrl, "_blank");
-        }
-
-        handleCancelClip();
-      } else {
-        // Error creating clip
-        console.error("Failed to create clip:", result.error);
-        alert(`Failed to create clip: ${result.error}`);
+      if (result.editUrl) {
+        window.open(result.editUrl, "_blank");
       }
-    } catch (error) {
-      console.error("Error creating clip:", error);
-      alert("An unexpected error occurred while creating the clip");
+    } else {
+      console.error("Failed to create clip:", result.error);
+      alert(`Failed to create clip: ${result.error}`);
     }
-  }, [video, clipTitle, clipStartTime, clipEndTime, handleCancelClip]);
+  }, [saveClip]);
 
   if (!video) return null;
 
@@ -336,7 +260,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
                 {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
               </Button>
               {isCreatingClip && (
-                <Button variant="outline" size="sm" onClick={() => handleSeek(clipStartTime)} disabled={!isPlayerReady} title="Jump to clip start">
+                <Button variant="outline" size="sm" onClick={seekToClipStart} disabled={!isPlayerReady} title="Jump to clip start">
                   <SkipBack className="h-4 w-4 mr-1" />
                   Clip Start
                 </Button>
@@ -349,12 +273,12 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
                 duration={durationSeconds}
                 currentTime={currentTime}
                 events={timelineEvents}
-                onSeek={handleSeek}
+                onSeek={seek}
                 onEventClick={handleTimelineEventClick}
                 disabled={!isPlayerReady}
                 isClipMode={isCreatingClip}
                 clipSelection={isCreatingClip ? { startTime: clipStartTime, endTime: clipEndTime } : undefined}
-                onClipSelectionChange={handleClipSelectionChange}
+                onClipSelectionChange={setClipSelection}
                 mutedSegments={video.muted_segments}
               />
             </div>
@@ -388,7 +312,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
                     Watch on Twitch
                   </a>
                 </Button>
-                <Button variant={isCreatingClip ? "secondary" : "outline"} onClick={toggleClipCreation} disabled={!isPlayerReady}>
+                <Button variant={isCreatingClip ? "secondary" : "outline"} onClick={handleToggleClipCreation} disabled={!isPlayerReady}>
                   {isCreatingClip ? (
                     <>
                       <X className="mr-2 h-4 w-4" />
@@ -417,7 +341,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
 
                   {/* Save/Cancel buttons */}
                   <div className="flex justify-end gap-2">
-                    <Button variant="ghost" onClick={handleCancelClip}>
+                    <Button variant="ghost" onClick={cancelClipCreation}>
                       Cancel
                     </Button>
                     <Button onClick={handleSaveClip} disabled={!clipTitle.trim()} className="bg-purple-600 hover:bg-purple-700">
@@ -431,7 +355,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
 
           {/* Right side: Events panel */}
           <div className="w-80 h-full shrink-0 border-l bg-muted/30">
-            <StreamEventsPanel events={filteredEvents} isLoading={isLoadingEvents} onEventClick={handleEventClick} currentTime={currentTime} />
+            <StreamEventsPanel events={filteredEvents} />
           </div>
         </div>
       </DialogContent>
