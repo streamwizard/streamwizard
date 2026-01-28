@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { parseDuration } from "@/types/twitch video";
 import { useVideoDialogStore } from "@/stores/video-dialog-store";
 import { secondsToPercent as toPercent, getSecondsFromPosition } from "./timeline-utils";
@@ -11,7 +11,7 @@ import { ClipSelection } from "./clip-selection";
 import { EventMarkers } from "./event-markers";
 import { TimelineDisplay } from "./timeline-display";
 import { TimelineLegend } from "./timeline-legend";
-import type { VideoTimelineProps } from "./types";
+import type { VideoTimelineProps, ClipSelection as ClipSelectionType } from "./types";
 
 // Re-export types for consumers
 export type { TimelineEvent, ClipSelection as ClipSelectionType, MutedSegment, VideoTimelineProps } from "./types";
@@ -52,6 +52,11 @@ export function VideoTimeline({
   const initializeZoomForClip = useVideoDialogStore((s) => s.initializeZoomForClip);
   const resetZoom = useVideoDialogStore((s) => s.resetZoom);
 
+  // Local state for drag position - prevents re-renders via Zustand during drag
+  // This is updated via refs and DOM manipulation, only committed on drag end
+  const [localClipSelection, setLocalClipSelection] = useState<ClipSelectionType | null>(null);
+  const pendingSelectionRef = useRef<ClipSelectionType | null>(null);
+
   // Track when we just finished dragging to prevent click from firing
   const justFinishedDraggingRef = useRef(false);
   // Track if actual movement occurred during drag (to distinguish click from drag)
@@ -70,10 +75,6 @@ export function VideoTimeline({
     return toPercent(seconds, viewStart, visibleDuration);
   };
 
-  const percentToSeconds = (percent: number): number => {
-    return viewStart + (percent / 100) * visibleDuration;
-  };
-
   // Reset zoom when clip mode changes
   useEffect(() => {
     if (isClipMode && clipSelection) {
@@ -81,12 +82,27 @@ export function VideoTimeline({
     } else {
       resetZoom();
     }
-    console.log("isClipMode", isClipMode);
   }, [isClipMode]); // Only trigger on mode change
 
-  // Handle clip handle drag
+  // Sync local selection when dragging starts
+  useEffect(() => {
+    if (dragging && clipSelection) {
+      setLocalClipSelection({ ...clipSelection });
+      pendingSelectionRef.current = { ...clipSelection };
+    } else if (!dragging) {
+      setLocalClipSelection(null);
+      pendingSelectionRef.current = null;
+    }
+  }, [dragging, clipSelection]);
+
+  // Handle clip handle drag - updates local state only (no Zustand = no re-render)
   const handleDrag = (clientX: number) => {
     if (!dragging || disabled || !clipSelection || !onClipSelectionChange) return;
+
+    const currentSelection = pendingSelectionRef.current || clipSelection;
+
+    let newStart = currentSelection.startTime;
+    let newEnd = currentSelection.endTime;
 
     if (dragging === "middle" && dragStartInfo) {
       // Move the entire selection
@@ -97,8 +113,8 @@ export function VideoTimeline({
       const deltaSeconds = (deltaPercent / 100) * visibleDuration;
 
       const clipDuration = dragStartInfo.endTime - dragStartInfo.startTime;
-      let newStart = dragStartInfo.startTime + deltaSeconds;
-      let newEnd = dragStartInfo.endTime + deltaSeconds;
+      newStart = dragStartInfo.startTime + deltaSeconds;
+      newEnd = dragStartInfo.endTime + deltaSeconds;
 
       // Clamp to valid range
       if (newStart < 0) {
@@ -109,27 +125,30 @@ export function VideoTimeline({
         newEnd = totalSeconds;
         newStart = totalSeconds - clipDuration;
       }
-
-      onClipSelectionChange(Math.floor(newStart), Math.floor(newEnd));
     } else {
       const seconds = getSecondsFromPosition(clientX, trackRef.current, viewStart, visibleDuration);
 
       if (dragging === "start") {
         // Ensure start doesn't go past end - minDuration
-        const maxStart = Math.max(0, clipSelection.endTime - minClipDuration);
+        const maxStart = Math.max(0, currentSelection.endTime - minClipDuration);
         // Ensure we don't exceed maxDuration from end
-        const minStart = Math.max(0, clipSelection.endTime - maxClipDuration);
-        const newStart = Math.max(minStart, Math.min(maxStart, seconds));
-        onClipSelectionChange(newStart, clipSelection.endTime);
+        const minStart = Math.max(0, currentSelection.endTime - maxClipDuration);
+        newStart = Math.max(minStart, Math.min(maxStart, seconds));
+        newEnd = currentSelection.endTime;
       } else if (dragging === "end") {
         // Ensure end doesn't go before start + minDuration
-        const minEnd = Math.min(totalSeconds, clipSelection.startTime + minClipDuration);
+        const minEnd = Math.min(totalSeconds, currentSelection.startTime + minClipDuration);
         // Ensure we don't exceed maxDuration from start
-        const maxEnd = Math.min(totalSeconds, clipSelection.startTime + maxClipDuration);
-        const newEnd = Math.max(minEnd, Math.min(maxEnd, seconds));
-        onClipSelectionChange(clipSelection.startTime, newEnd);
+        const maxEnd = Math.min(totalSeconds, currentSelection.startTime + maxClipDuration);
+        newEnd = Math.max(minEnd, Math.min(maxEnd, seconds));
+        newStart = currentSelection.startTime;
       }
     }
+
+    // Update ref and local state (minimal re-render, not going through Zustand)
+    const newSelection = { startTime: Math.floor(newStart), endTime: Math.floor(newEnd) };
+    pendingSelectionRef.current = newSelection;
+    setLocalClipSelection(newSelection);
   };
 
   // Mouse event handlers for clip dragging
@@ -142,10 +161,14 @@ export function VideoTimeline({
     };
 
     const handleMouseUp = () => {
+      // Commit the final position to Zustand
+      if (pendingSelectionRef.current && onClipSelectionChange) {
+        onClipSelectionChange(pendingSelectionRef.current.startTime, pendingSelectionRef.current.endTime);
+      }
+
       // Only block the click if we actually moved during the drag
       if (hasDraggedRef.current) {
         justFinishedDraggingRef.current = true;
-        // Reset the flag after a brief delay (click event fires after mouseup)
         setTimeout(() => {
           justFinishedDraggingRef.current = false;
         }, 0);
@@ -174,10 +197,13 @@ export function VideoTimeline({
     };
 
     const handleTouchEnd = () => {
-      // Set flag before clearing dragging state to prevent click from firing
+      // Commit the final position to Zustand
+      if (pendingSelectionRef.current && onClipSelectionChange) {
+        onClipSelectionChange(pendingSelectionRef.current.startTime, pendingSelectionRef.current.endTime);
+      }
+
       justFinishedDraggingRef.current = true;
       setDragging(null);
-      // Reset the flag after a brief delay
       setTimeout(() => {
         justFinishedDraggingRef.current = false;
       }, 0);
@@ -211,7 +237,8 @@ export function VideoTimeline({
       setZoomLevel(newZoom);
 
       // Keep the center of the view stable
-      const centerPoint = clipSelection ? (clipSelection.startTime + clipSelection.endTime) / 2 : currentTime;
+      const sel = activeClipSelection;
+      const centerPoint = sel ? (sel.startTime + sel.endTime) / 2 : currentTime;
 
       const newVisibleDuration = totalSeconds / newZoom;
       const newOffset = Math.max(0, centerPoint - newVisibleDuration / 2);
@@ -224,7 +251,7 @@ export function VideoTimeline({
     return () => {
       element.removeEventListener("wheel", handleWheel);
     };
-  }, [zoomLevel, clipSelection, totalSeconds, currentTime, setZoomLevel, setViewOffset]);
+  }, [zoomLevel, clipSelection, localClipSelection, totalSeconds, currentTime, setZoomLevel, setViewOffset]);
 
   // Handle click on timeline
   const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -237,16 +264,19 @@ export function VideoTimeline({
     onSeek(Math.max(0, Math.min(totalSeconds, seekTime)));
   };
 
+  // Use local selection during drag, otherwise use prop
+  const activeClipSelection = localClipSelection || clipSelection;
+
   // Calculate progress and clip percentages
   const progressPercent = secondsToPercent(currentTime);
-  const clipStartPercent = clipSelection ? secondsToPercent(clipSelection.startTime) : 0;
-  const clipEndPercent = clipSelection ? secondsToPercent(clipSelection.endTime) : 100;
+  const clipStartPercent = activeClipSelection ? secondsToPercent(activeClipSelection.startTime) : 0;
+  const clipEndPercent = activeClipSelection ? secondsToPercent(activeClipSelection.endTime) : 100;
 
   // Filter events to only show those in visible range
   const visibleEvents = events.filter((event) => event.offset >= viewStart && event.offset <= viewEnd);
 
   // Calculate clip center for zoom controls
-  const clipCenterPoint = clipSelection ? (clipSelection.startTime + clipSelection.endTime) / 2 : undefined;
+  const clipCenterPoint = activeClipSelection ? (activeClipSelection.startTime + activeClipSelection.endTime) / 2 : undefined;
 
   return (
     <div className="w-full space-y-2">
@@ -275,7 +305,7 @@ export function VideoTimeline({
         )}
 
         {/* Clip mode overlay */}
-        {isClipMode && clipSelection && <ClipSelection clipSelection={clipSelection} clipStartPercent={clipStartPercent} clipEndPercent={clipEndPercent} disabled={disabled} />}
+        {isClipMode && activeClipSelection && <ClipSelection clipSelection={activeClipSelection} clipStartPercent={clipStartPercent} clipEndPercent={clipEndPercent} disabled={disabled} />}
 
         {/* Event markers */}
         <EventMarkers events={visibleEvents} secondsToPercent={secondsToPercent} onSeek={onSeek} onEventClick={onEventClick} disabled={disabled} />
@@ -284,7 +314,7 @@ export function VideoTimeline({
       {/* Time display */}
       <TimelineDisplay
         isClipMode={isClipMode}
-        clipSelection={clipSelection}
+        clipSelection={activeClipSelection}
         viewStart={viewStart}
         viewEnd={viewEnd}
         currentTime={currentTime}
