@@ -4,6 +4,7 @@ import { createClipFromVOD, getStreamEvents } from "@/actions/twitch/vods";
 import type { TwitchPlayer } from "@/components/vods/twitch-player";
 import type { Database } from "@/types/supabase";
 import { TwitchVideo, parseDuration } from "@/types/twitch video";
+import { setWeek } from "date-fns";
 import { create } from "zustand";
 
 type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
@@ -71,6 +72,7 @@ export interface VideoDialogActions {
   setEvents: (events: StreamEvent[]) => void;
   setIsLoadingEvents: (loading: boolean) => void;
   fetchEvents: (streamId: string) => Promise<void>;
+  seekToEvent: (eventId: string) => void;
 
   // Clip creation actions
   startClipCreation: () => void;
@@ -209,6 +211,14 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
     }
   },
 
+  seekToEvent: (eventId: string) => {
+    const { events, seek } = get();
+    const event = events.find((e) => e.id === eventId);
+    if (event) {
+      seek(event.offset_seconds as number);
+    }
+  },
+
   // Clip creation actions
   startClipCreation: () => {
     const { video, currentTime, isPlayerReady, seek } = get();
@@ -242,10 +252,13 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
   setClipEndTime: (time) => set({ clipEndTime: time }),
 
   setClipSelection: (start, end) => {
+    const { seek } = get();
     set({
       clipStartTime: start,
       clipEndTime: end,
     });
+
+    seek(start);
   },
 
   saveClip: async () => {

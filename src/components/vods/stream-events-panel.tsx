@@ -14,11 +14,10 @@ import { useVideoDialogStore } from "@/stores/video-dialog-store";
  * Events are still passed as props for filtering flexibility.
  */
 export function StreamEventsPanel({ events }: { events: StreamEvent[] }) {
-  const { isLoadingEvents, currentTime, seek } = useVideoDialogStore();
+  const { isLoadingEvents, currentTime, seekToEvent } = useVideoDialogStore();
 
   const handleEventClick = (event: StreamEvent) => {
-    const offset = event.offset_seconds || 0;
-    seek(offset);
+    seekToEvent(event.id);
   };
 
   if (isLoadingEvents) {

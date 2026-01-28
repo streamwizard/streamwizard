@@ -3,11 +3,11 @@
 import { formatDuration } from "@/types/twitch video";
 import { getEventTypeInfo } from "@/types/stream-events";
 import type { TimelineEvent } from "./types";
+import { useVideoDialogStore } from "@/stores/video-dialog-store";
 
 interface EventMarkersProps {
   events: TimelineEvent[];
   secondsToPercent: (seconds: number) => number;
-  onSeek: (seconds: number) => void;
   onEventClick?: (event: TimelineEvent) => void;
   disabled?: boolean;
 }
@@ -15,14 +15,15 @@ interface EventMarkersProps {
 /**
  * Renders event marker dots on the timeline
  */
-export function EventMarkers({ events, secondsToPercent, onSeek, onEventClick, disabled }: EventMarkersProps) {
+export function EventMarkers({ events, secondsToPercent, onEventClick, disabled }: EventMarkersProps) {
+  const { seekToEvent } = useVideoDialogStore();
+
   const handleEventClick = (e: React.MouseEvent, event: TimelineEvent) => {
     e.stopPropagation();
     if (disabled) return;
 
     // Seek to event position
-    onSeek(event.offset);
-    onEventClick?.(event);
+    seekToEvent(event.id);
   };
 
   return (

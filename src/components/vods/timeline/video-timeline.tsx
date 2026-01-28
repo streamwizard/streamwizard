@@ -30,8 +30,6 @@ export function VideoTimeline({
   currentTime,
   events = [],
   mutedSegments,
-  onSeek,
-  onEventClick,
   disabled = false,
   isClipMode = false,
   clipSelection,
@@ -40,6 +38,7 @@ export function VideoTimeline({
   maxClipDuration = 60,
 }: VideoTimelineProps) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const { seek } = useVideoDialogStore();
 
   // Get timeline state and actions from store
   const zoomLevel = useVideoDialogStore((s) => s.zoomLevel);
@@ -261,7 +260,7 @@ export function VideoTimeline({
     }
 
     const seekTime = getSecondsFromPosition(e.clientX, trackRef.current, viewStart, visibleDuration);
-    onSeek(Math.max(0, Math.min(totalSeconds, seekTime)));
+    seek(Math.max(0, Math.min(totalSeconds, seekTime)));
   };
 
   // Use local selection during drag, otherwise use prop
@@ -308,7 +307,7 @@ export function VideoTimeline({
         {isClipMode && activeClipSelection && <ClipSelection clipSelection={activeClipSelection} clipStartPercent={clipStartPercent} clipEndPercent={clipEndPercent} disabled={disabled} />}
 
         {/* Event markers */}
-        <EventMarkers events={visibleEvents} secondsToPercent={secondsToPercent} onSeek={onSeek} onEventClick={onEventClick} disabled={disabled} />
+        <EventMarkers events={visibleEvents} secondsToPercent={secondsToPercent} disabled={disabled} />
       </div>
 
       {/* Time display */}
