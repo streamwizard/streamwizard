@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef } from "react";
 import { TwitchVideo, parseDuration } from "@/types/twitch video";
 import { getEventDisplayData, StreamEventType } from "@/types/stream-events";
 import type { Database } from "@/types/supabase";
@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TwitchPlayerComponent, type TwitchPlayer } from "@/components/vods/twitch-player";
-import { VideoTimeline, type TimelineEvent } from "./video-timeline";
+import { VideoTimeline, type TimelineEvent } from "./timeline";
 import { StreamEventsPanel } from "./stream-events-panel";
 import { EventTypeFilter } from "./event-type-filter";
 import { useEventFilters } from "@/hooks/use-event-filters";
@@ -56,11 +56,12 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
     isPlayerReady,
     playerKey,
     events,
-    isLoadingEvents,
     isCreatingClip,
     clipTitle,
     clipStartTime,
     clipEndTime,
+    isSubmittingClip,
+    setVideo,
     setPlayer,
     setPlayerReady,
     setIsPlaying,
@@ -85,16 +86,17 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
   // Event type filters
   const { selectedTypes, toggleType, selectAll, deselectAll } = useEventFilters();
 
-  // Filter events based on selected types
-  const filteredEvents = useMemo(() => {
-    return events.filter((event) => selectedTypes.has(event.event_type as StreamEventType));
-  }, [events, selectedTypes]);
+  // Filter events based on selected types (no useMemo needed with React Compiler)
+  const filteredEvents = events.filter((event) => selectedTypes.has(event.event_type as StreamEventType));
 
   // Reset state and fetch events when dialog opens/closes
   useEffect(() => {
     if (open && video) {
       // Increment key to force a fresh player instance
       incrementPlayerKey();
+
+      // Set video in store
+      setVideo(video);
 
       // Fetch events if we have a stream_id
       if (video.stream_id) {
@@ -108,7 +110,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
         clearInterval(timeUpdateRef.current);
       }
     }
-  }, [open, video, incrementPlayerKey, fetchEvents, setEvents, resetState]);
+  }, [open, video]);
 
   // Poll for current time while playing
   useEffect(() => {
@@ -132,7 +134,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
         clearInterval(timeUpdateRef.current);
       }
     };
-  }, [isPlaying, isPlayerReady, setCurrentTime]);
+  }, [isPlaying, isPlayerReady]);
 
   // Clip mode looping: when playback reaches clip end, loop back to clip start
   useEffect(() => {
@@ -141,7 +143,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
     if (currentTime >= clipEndTime) {
       seek(clipStartTime);
     }
-  }, [isCreatingClip, isPlaying, isPlayerReady, currentTime, clipStartTime, clipEndTime, seek]);
+  }, [isCreatingClip, isPlaying, isPlayerReady, currentTime, clipStartTime, clipEndTime]);
 
   // When entering clip mode, seek to clip start
   useEffect(() => {
@@ -150,38 +152,33 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
     }
   }, [isCreatingClip, isPlayerReady]); // Only trigger on mode change
 
-  const handlePlayerReady = useCallback(
-    (player: TwitchPlayer) => {
-      setPlayer(player);
-      setPlayerReady(true);
-    },
-    [setPlayer, setPlayerReady],
-  );
+  // Plain function handlers (no useCallback needed with React Compiler)
+  const handlePlayerReady = (player: TwitchPlayer) => {
+    setPlayer(player);
+    setPlayerReady(true);
+  };
 
-  const handlePlay = useCallback(() => {
+  const handlePlay = () => {
     setIsPlaying(true);
-  }, [setIsPlaying]);
+  };
 
-  const handlePause = useCallback(() => {
+  const handlePause = () => {
     setIsPlaying(false);
-  }, [setIsPlaying]);
+  };
 
-  const handleTimelineEventClick = useCallback(
-    (event: TimelineEvent) => {
-      seek(event.offset);
-    },
-    [seek],
-  );
+  const handleTimelineEventClick = (event: TimelineEvent) => {
+    seek(event.offset);
+  };
 
-  const handleToggleClipCreation = useCallback(() => {
+  const handleToggleClipCreation = () => {
     if (isCreatingClip) {
       cancelClipCreation();
     } else {
       startClipCreation();
     }
-  }, [isCreatingClip, cancelClipCreation, startClipCreation]);
+  };
 
-  const handleSaveClip = useCallback(async () => {
+  const handleSaveClip = async () => {
     const result = await saveClip();
 
     if (result.success) {
@@ -195,7 +192,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
       console.error("Failed to create clip:", result.error);
       alert(`Failed to create clip: ${result.error}`);
     }
-  }, [saveClip]);
+  };
 
   if (!video) return null;
 
@@ -344,7 +341,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
                     <Button variant="ghost" onClick={cancelClipCreation}>
                       Cancel
                     </Button>
-                    <Button onClick={handleSaveClip} disabled={!clipTitle.trim()} className="bg-purple-600 hover:bg-purple-700">
+                    <Button onClick={handleSaveClip} disabled={!clipTitle.trim() || isSubmittingClip} className="bg-purple-600 hover:bg-purple-700">
                       Save Clip
                     </Button>
                   </div>

@@ -1,10 +1,10 @@
 "use client";
 
-import { create } from "zustand";
-import { TwitchVideo, parseDuration } from "@/types/twitch video";
-import { getStreamEvents, createClipFromVOD } from "@/actions/twitch/vods";
-import type { Database } from "@/types/supabase";
+import { createClipFromVOD, getStreamEvents } from "@/actions/twitch/vods";
 import type { TwitchPlayer } from "@/components/vods/twitch-player";
+import type { Database } from "@/types/supabase";
+import { TwitchVideo, parseDuration } from "@/types/twitch video";
+import { create } from "zustand";
 
 type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
 
@@ -21,7 +21,6 @@ export interface DragStartInfo {
 export interface VideoDialogState {
   // Dialog state
   video: TwitchVideo | null;
-  isOpen: boolean;
 
   // Player state
   player: TwitchPlayer | null;
@@ -51,9 +50,7 @@ export interface VideoDialogState {
 
 export interface VideoDialogActions {
   // Dialog actions
-  openDialog: (video: TwitchVideo) => void;
-  closeDialog: () => void;
-  setOpen: (open: boolean) => void;
+  setVideo: (video: TwitchVideo | null) => void;
 
   // Player actions
   setPlayer: (player: TwitchPlayer | null) => void;
@@ -104,7 +101,6 @@ export type VideoDialogStore = VideoDialogState & VideoDialogActions;
 const initialState: VideoDialogState = {
   // Dialog state
   video: null,
-  isOpen: false,
 
   // Player state
   player: null,
@@ -134,32 +130,8 @@ const initialState: VideoDialogState = {
 
 export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
   ...initialState,
-
   // Dialog actions
-  openDialog: (video) => {
-    set({
-      video,
-      isOpen: true,
-      playerKey: get().playerKey + 1,
-    });
-
-    // Fetch events if stream_id exists
-    if (video.stream_id) {
-      get().fetchEvents(video.stream_id);
-    }
-  },
-
-  closeDialog: () => {
-    get().resetState();
-  },
-
-  setOpen: (open) => {
-    if (!open) {
-      get().resetState();
-    } else {
-      set({ isOpen: open });
-    }
-  },
+  setVideo: (video) => set({ video }),
 
   // Player actions
   setPlayer: (player) => set({ player }),
@@ -407,7 +379,6 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
 
 // Selector hooks for commonly used derived state
 export const useVideoDialogVideo = () => useVideoDialogStore((state) => state.video);
-export const useVideoDialogIsOpen = () => useVideoDialogStore((state) => state.isOpen);
 export const useVideoDialogPlayerReady = () => useVideoDialogStore((state) => state.isPlayerReady);
 export const useVideoDialogIsPlaying = () => useVideoDialogStore((state) => state.isPlaying);
 export const useVideoDialogIsMuted = () => useVideoDialogStore((state) => state.isMuted);

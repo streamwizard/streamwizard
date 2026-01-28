@@ -40,6 +40,7 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@redux-devtools/extension": "^3.3.0",
     "@sentry/nextjs": "^10.34.0",
     "@supabase/ssr": "0.8.0",
     "@supabase/supabase-js": "~2.87.3",
