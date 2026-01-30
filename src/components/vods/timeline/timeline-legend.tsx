@@ -12,6 +12,7 @@ interface TimelineLegendProps {
 /**
  * Legend section showing what each timeline element represents
  */
+
 export function TimelineLegend({ mutedSegments, isClipMode, events }: TimelineLegendProps) {
   return (
     <div className="flex flex-wrap gap-3 pt-2 text-xs border-t mt-2 pt-3">

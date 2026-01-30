@@ -4,7 +4,6 @@ import { createClipFromVOD, getStreamEvents } from "@/actions/twitch/vods";
 import type { TwitchPlayer } from "@/components/vods/twitch-player";
 import type { Database } from "@/types/supabase";
 import { TwitchVideo, parseDuration } from "@/types/twitch video";
-import { setWeek } from "date-fns";
 import { create } from "zustand";
 
 type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
@@ -33,6 +32,8 @@ export interface VideoDialogState {
 
   // Stream events state
   events: StreamEvent[];
+  filteredEvents: StreamEvent[];
+  selectedEventTypes: Set<string>;
   isLoadingEvents: boolean;
 
   // Clip creation state
@@ -70,9 +71,13 @@ export interface VideoDialogActions {
 
   // Event actions
   setEvents: (events: StreamEvent[]) => void;
+  setFilteredEvents: (events: StreamEvent[]) => void;
   setIsLoadingEvents: (loading: boolean) => void;
   fetchEvents: (streamId: string) => Promise<void>;
   seekToEvent: (eventId: string) => void;
+  toggleEventType: (type: string) => void;
+  selectAllEventTypes: () => void;
+  deselectAllEventTypes: () => void;
 
   // Clip creation actions
   startClipCreation: () => void;
@@ -114,6 +119,22 @@ const initialState: VideoDialogState = {
 
   // Stream events state
   events: [],
+  filteredEvents: [],
+  selectedEventTypes: new Set<string>([
+    "channel.follow",
+    "channel.subscribe",
+    "channel.subscription.message",
+    "channel.subscription.gift",
+    "channel.raid",
+    "channel.cheer",
+    "channel.ban",
+    "channel.unban",
+    "channel.shoutout.create",
+    "channel.shoutout.receive",
+    "channel.channel_points_custom_reward_redemption.add",
+    "channel.moderator.add",
+    "channel.moderator.remove",
+  ]),
   isLoadingEvents: false,
 
   // Clip creation state
@@ -191,6 +212,7 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
 
   // Event actions
   setEvents: (events) => set({ events }),
+  setFilteredEvents: (events) => set({ filteredEvents: events }),
 
   setIsLoadingEvents: (loading) => set({ isLoadingEvents: loading }),
 
@@ -199,13 +221,15 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
     try {
       const result = await getStreamEvents(streamId);
       if (result.success && result.events) {
-        set({ events: result.events });
+        const { selectedEventTypes } = get();
+        const filtered = result.events.filter((event) => selectedEventTypes.has(event.event_type));
+        set({ events: result.events, filteredEvents: filtered });
       } else {
-        set({ events: [] });
+        set({ events: [], filteredEvents: [] });
       }
     } catch (error) {
       console.error("Failed to fetch stream events:", error);
-      set({ events: [] });
+      set({ events: [], filteredEvents: [] });
     } finally {
       set({ isLoadingEvents: false });
     }
@@ -217,6 +241,45 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
     if (event) {
       seek(event.offset_seconds as number);
     }
+  },
+
+  toggleEventType: (type: string) => {
+    const { selectedEventTypes, events } = get();
+    const next = new Set(selectedEventTypes);
+    if (next.has(type)) {
+      next.delete(type);
+    } else {
+      next.add(type);
+    }
+    // Update filtered events
+    const filtered = events.filter((event) => next.has(event.event_type));
+    set({ selectedEventTypes: next, filteredEvents: filtered });
+  },
+
+  selectAllEventTypes: () => {
+    const { events } = get();
+    const allTypes = new Set<string>([
+      "channel.follow",
+      "channel.subscribe",
+      "channel.subscription.message",
+      "channel.subscription.gift",
+      "channel.raid",
+      "channel.cheer",
+      "channel.ban",
+      "channel.unban",
+      "channel.shoutout.create",
+      "channel.shoutout.receive",
+      "channel.channel_points_custom_reward_redemption.add",
+      "channel.moderator.add",
+      "channel.moderator.remove",
+    ]);
+    // Update filtered events to include all
+    const filtered = events.filter((event) => allTypes.has(event.event_type));
+    set({ selectedEventTypes: allTypes, filteredEvents: filtered });
+  },
+
+  deselectAllEventTypes: () => {
+    set({ selectedEventTypes: new Set<string>(), filteredEvents: [] });
   },
 
   // Clip creation actions

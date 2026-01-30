@@ -1,49 +1,37 @@
 "use client";
 
-import { StreamEvent, StreamEventType, getEventTypeInfo } from "@/types/stream-events";
+import { StreamEventType, getEventTypeInfo } from "@/types/stream-events";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Filter } from "lucide-react";
-import { useMemo } from "react";
-
-interface EventTypeFilterProps {
-  events: StreamEvent[];
-  selectedTypes: Set<StreamEventType>;
-  onToggleType: (type: StreamEventType) => void;
-  onSelectAll: () => void;
-  onDeselectAll: () => void;
-}
+import { useVideoDialogStore } from "@/stores/video-dialog-store";
 
 /**
  * Filter component for selecting which event types to display
+ * Uses the video dialog store for state management
  */
-export function EventTypeFilter({
-  events,
-  selectedTypes,
-  onToggleType,
-  onSelectAll,
-  onDeselectAll,
-}: EventTypeFilterProps) {
-  // Get unique event types with counts
-  const eventTypeCounts = useMemo(() => {
-    const counts = new Map<StreamEventType, number>();
-    events.forEach((event) => {
-      const type = event.event_type as StreamEventType;
-      counts.set(type, (counts.get(type) || 0) + 1);
-    });
-    return counts;
-  }, [events]);
+export function EventTypeFilter() {
+  const events = useVideoDialogStore((s) => s.events);
+  const selectedEventTypes = useVideoDialogStore((s) => s.selectedEventTypes);
+  const toggleEventType = useVideoDialogStore((s) => s.toggleEventType);
+  const selectAllEventTypes = useVideoDialogStore((s) => s.selectAllEventTypes);
+  const deselectAllEventTypes = useVideoDialogStore((s) => s.deselectAllEventTypes);
+
+  // Get unique event types with counts (no useMemo needed with React Compiler)
+  const eventTypeCounts = new Map<StreamEventType, number>();
+  events.forEach((event) => {
+    const type = event.event_type as StreamEventType;
+    eventTypeCounts.set(type, (eventTypeCounts.get(type) || 0) + 1);
+  });
 
   // Sort event types by count (most common first)
-  const sortedEventTypes = useMemo(() => {
-    return Array.from(eventTypeCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([type]) => type);
-  }, [eventTypeCounts]);
+  const sortedEventTypes = Array.from(eventTypeCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([type]) => type);
 
-  const selectedCount = selectedTypes.size;
+  const selectedCount = selectedEventTypes.size;
   const totalCount = eventTypeCounts.size;
   const allSelected = selectedCount === totalCount;
   const noneSelected = selectedCount === 0;
@@ -66,17 +54,15 @@ export function EventTypeFilter({
           {/* Header */}
           <div className="space-y-2">
             <h4 className="font-medium text-sm">Event Type Filters</h4>
-            <p className="text-xs text-muted-foreground">
-              Select which events to show in the timeline and events panel
-            </p>
+            <p className="text-xs text-muted-foreground">Select which events to show in the timeline and events panel</p>
           </div>
 
           {/* Quick actions */}
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onSelectAll} disabled={allSelected} className="flex-1">
+            <Button variant="outline" size="sm" onClick={selectAllEventTypes} disabled={allSelected} className="flex-1">
               Select All
             </Button>
-            <Button variant="outline" size="sm" onClick={onDeselectAll} disabled={noneSelected} className="flex-1">
+            <Button variant="outline" size="sm" onClick={deselectAllEventTypes} disabled={noneSelected} className="flex-1">
               Clear All
             </Button>
           </div>
@@ -86,11 +72,11 @@ export function EventTypeFilter({
             {sortedEventTypes.map((type) => {
               const info = getEventTypeInfo(type);
               const count = eventTypeCounts.get(type) || 0;
-              const isChecked = selectedTypes.has(type);
+              const isChecked = selectedEventTypes.has(type);
 
               return (
                 <label key={type} className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 cursor-pointer">
-                  <Checkbox checked={isChecked} onCheckedChange={() => onToggleType(type)} />
+                  <Checkbox checked={isChecked} onCheckedChange={() => toggleEventType(type)} />
                   <div className={`h-6 w-6 rounded-full ${info.color} flex items-center justify-center flex-shrink-0`}>
                     <info.icon className="h-3 w-3 text-white" />
                   </div>

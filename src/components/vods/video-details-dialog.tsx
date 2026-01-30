@@ -13,7 +13,6 @@ import { TwitchPlayerComponent, type TwitchPlayer } from "@/components/vods/twit
 import { VideoTimeline, type TimelineEvent } from "./timeline";
 import { StreamEventsPanel } from "./stream-events-panel";
 import { EventTypeFilter } from "./event-type-filter";
-import { useEventFilters } from "@/hooks/use-event-filters";
 import { useVideoDialogStore } from "@/stores/video-dialog-store";
 import { ExternalLink, Eye, Globe, Calendar, Scissors, Play, Pause, Volume2, VolumeX, X, SkipBack } from "lucide-react";
 
@@ -56,6 +55,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
     isPlayerReady,
     playerKey,
     events,
+    filteredEvents,
     isCreatingClip,
     clipTitle,
     clipStartTime,
@@ -82,12 +82,6 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
   } = useVideoDialogStore();
 
   const timeUpdateRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
-
-  // Event type filters
-  const { selectedTypes, toggleType, selectAll, deselectAll } = useEventFilters();
-
-  // Filter events based on selected types (no useMemo needed with React Compiler)
-  const filteredEvents = events.filter((event) => selectedTypes.has(event.event_type as StreamEventType));
 
   // Reset state and fetch events when dialog opens/closes
   useEffect(() => {
@@ -224,7 +218,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
                 )}
               </DialogDescription>
             </div>
-            {events.length > 0 && <EventTypeFilter events={events} selectedTypes={selectedTypes} onToggleType={toggleType} onSelectAll={selectAll} onDeselectAll={deselectAll} />}
+            {events.length > 0 && <EventTypeFilter />}
           </div>
         </DialogHeader>
 
@@ -269,7 +263,6 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
               <VideoTimeline
                 duration={durationSeconds}
                 currentTime={currentTime}
-                events={timelineEvents}
                 onSeek={seek}
                 onEventClick={handleTimelineEventClick}
                 disabled={!isPlayerReady}
@@ -352,7 +345,7 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
 
           {/* Right side: Events panel */}
           <div className="w-80 h-full shrink-0 border-l bg-muted/30">
-            <StreamEventsPanel events={filteredEvents} />
+            <StreamEventsPanel />
           </div>
         </div>
       </DialogContent>

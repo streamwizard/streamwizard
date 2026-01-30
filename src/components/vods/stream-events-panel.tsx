@@ -13,8 +13,9 @@ import { useVideoDialogStore } from "@/stores/video-dialog-store";
  * Now uses the video dialog store for currentTime and event handling.
  * Events are still passed as props for filtering flexibility.
  */
-export function StreamEventsPanel({ events }: { events: StreamEvent[] }) {
-  const { isLoadingEvents, currentTime, seekToEvent } = useVideoDialogStore();
+
+export function StreamEventsPanel() {
+  const { isLoadingEvents, currentTime, seekToEvent, filteredEvents } = useVideoDialogStore();
 
   const handleEventClick = (event: StreamEvent) => {
     seekToEvent(event.id);
@@ -37,10 +38,10 @@ export function StreamEventsPanel({ events }: { events: StreamEvent[] }) {
     );
   }
 
-  if (events.length === 0) {
+  if (filteredEvents.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <p className="text-center text-sm text-muted-foreground">No events recorded for this stream</p>
+        <p className="text-center text-sm text-muted-foreground">No events recorded for this stream or no filters are selected</p>
       </div>
     );
   }
@@ -51,13 +52,13 @@ export function StreamEventsPanel({ events }: { events: StreamEvent[] }) {
         <h3 className="text-sm font-semibold">
           Stream Events
           <Badge variant="secondary" className="ml-2">
-            {events.length}
+            {filteredEvents.length}
           </Badge>
         </h3>
       </div>
       <div className="flex-1 overflow-y-auto">
         <div className="space-y-1 p-2">
-          {events.map((event) => {
+          {filteredEvents.map((event) => {
             const info = getEventTypeInfo(event.event_type as StreamEventType);
             const subtitle = getEventSubtitle(event);
             const displayData = getEventDisplayData(event);
