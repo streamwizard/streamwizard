@@ -39,9 +39,9 @@ export interface VideoTimelineProps {
   events?: TimelineEvent[];
   /** Muted segments to display on the timeline */
   mutedSegments?: MutedSegment[] | null;
-  /** Called when user clicks on the timeline to seek */
-  onSeek: (seconds: number) => void;
-  /** Called when user clicks on an event */
+  /** Called when user clicks on the timeline to seek (optional - uses store if not provided) */
+  onSeek?: (seconds: number) => void;
+  /** Called when user clicks on an event (optional - uses store if not provided) */
   onEventClick?: (event: TimelineEvent) => void;
   /** Whether the timeline is interactive */
   disabled?: boolean;

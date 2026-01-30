@@ -28,6 +28,7 @@ export type { TimelineEvent, ClipSelection as ClipSelectionType, MutedSegment, V
 export function VideoTimeline({
   duration,
   currentTime,
+  events: eventsProp,
   mutedSegments,
   disabled = false,
   isClipMode = false,
@@ -37,7 +38,10 @@ export function VideoTimeline({
   maxClipDuration = 60,
 }: VideoTimelineProps) {
   const trackRef = useRef<HTMLDivElement>(null);
-  const { seek, setZoomLevel, viewOffset, zoomLevel, dragging, dragStartInfo, setViewOffset, setDragging, initializeZoomForClip, resetZoom, events } = useVideoDialogStore();
+  // Use events from store if not provided via props
+  const storeEvents = useVideoDialogStore((state) => state.timelineEvents);
+  const events = eventsProp ?? storeEvents;
+  const { seek, setZoomLevel, viewOffset, zoomLevel, dragging, dragStartInfo, setViewOffset, setDragging, initializeZoomForClip, resetZoom } = useVideoDialogStore();
 
   // Local state for drag position - prevents re-renders via Zustand during drag
   // This is updated via refs and DOM manipulation, only committed on drag end

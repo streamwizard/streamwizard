@@ -8,14 +8,13 @@ import { useVideoDialogStore } from "@/stores/video-dialog-store";
 interface EventMarkersProps {
   events: TimelineEvent[];
   secondsToPercent: (seconds: number) => number;
-  onEventClick?: (event: TimelineEvent) => void;
   disabled?: boolean;
 }
 
 /**
  * Renders event marker dots on the timeline
  */
-export function EventMarkers({ events, secondsToPercent, onEventClick, disabled }: EventMarkersProps) {
+export function EventMarkers({ events, secondsToPercent, disabled }: EventMarkersProps) {
   const { seekToEvent } = useVideoDialogStore();
 
   const handleEventClick = (e: React.MouseEvent, event: TimelineEvent) => {

@@ -2,45 +2,23 @@
 
 import { useEffect, useRef } from "react";
 import { TwitchVideo, parseDuration } from "@/types/twitch video";
-import { getEventDisplayData, StreamEventType } from "@/types/stream-events";
-import type { Database } from "@/types/supabase";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TwitchPlayerComponent, type TwitchPlayer } from "@/components/vods/twitch-player";
-import { VideoTimeline, type TimelineEvent } from "./timeline";
+import { VideoTimeline } from "./timeline";
 import { StreamEventsPanel } from "./stream-events-panel";
 import { EventTypeFilter } from "./event-type-filter";
 import { useVideoDialogStore } from "@/stores/video-dialog-store";
 import { ExternalLink, Eye, Globe, Calendar, Scissors, Play, Pause, Volume2, VolumeX, X, SkipBack } from "lucide-react";
-
-type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
 
 interface VideoDetailsDialogProps {
   video: TwitchVideo | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreateClip?: (video: TwitchVideo) => void;
-}
-
-/**
- * Convert StreamEvent to TimelineEvent for the timeline component
- */
-function toTimelineEvent(event: StreamEvent): TimelineEvent {
-  const displayData = getEventDisplayData(event);
-  const offset = event.offset_seconds || 0;
-  const userName = displayData.userName || event.event_type;
-  const message = displayData.message;
-
-  return {
-    id: event.id,
-    offset,
-    type: event.event_type as StreamEventType,
-    label: userName,
-    details: message,
-  };
 }
 
 /**
@@ -55,7 +33,6 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
     isPlayerReady,
     playerKey,
     events,
-    filteredEvents,
     isCreatingClip,
     clipTitle,
     clipStartTime,
@@ -160,10 +137,6 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
     setIsPlaying(false);
   };
 
-  const handleTimelineEventClick = (event: TimelineEvent) => {
-    seek(event.offset);
-  };
-
   const handleToggleClipCreation = () => {
     if (isCreatingClip) {
       cancelClipCreation();
@@ -197,7 +170,6 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
   });
 
   const durationSeconds = parseDuration(video.duration);
-  const timelineEvents = filteredEvents.map(toTimelineEvent);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -263,8 +235,6 @@ export function VideoDetailsDialog({ video, open, onOpenChange }: VideoDetailsDi
               <VideoTimeline
                 duration={durationSeconds}
                 currentTime={currentTime}
-                onSeek={seek}
-                onEventClick={handleTimelineEventClick}
                 disabled={!isPlayerReady}
                 isClipMode={isCreatingClip}
                 clipSelection={isCreatingClip ? { startTime: clipStartTime, endTime: clipEndTime } : undefined}

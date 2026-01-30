@@ -2,11 +2,31 @@
 
 import { createClipFromVOD, getStreamEvents } from "@/actions/twitch/vods";
 import type { TwitchPlayer } from "@/components/vods/twitch-player";
+import type { TimelineEvent } from "@/components/vods/timeline/types";
 import type { Database } from "@/types/supabase";
+import { getEventDisplayData, StreamEventType } from "@/types/stream-events";
 import { TwitchVideo, parseDuration } from "@/types/twitch video";
 import { create } from "zustand";
 
 type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
+
+/**
+ * Convert StreamEvent (database format) to TimelineEvent (UI format)
+ */
+function toTimelineEvent(event: StreamEvent): TimelineEvent {
+  const displayData = getEventDisplayData(event);
+  const offset = event.offset_seconds || 0;
+  const userName = displayData.userName || event.event_type;
+  const message = displayData.message;
+
+  return {
+    id: event.id,
+    offset,
+    type: event.event_type as StreamEventType,
+    label: displayData.,
+    details: message,
+  };
+}
 
 /** Drag handle type for clip selection */
 export type DragHandle = "start" | "end" | "middle" | null;
@@ -33,6 +53,7 @@ export interface VideoDialogState {
   // Stream events state
   events: StreamEvent[];
   filteredEvents: StreamEvent[];
+  timelineEvents: TimelineEvent[];
   selectedEventTypes: Set<string>;
   isLoadingEvents: boolean;
 
@@ -120,6 +141,7 @@ const initialState: VideoDialogState = {
   // Stream events state
   events: [],
   filteredEvents: [],
+  timelineEvents: [],
   selectedEventTypes: new Set<string>([
     "channel.follow",
     "channel.subscribe",
@@ -213,9 +235,7 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
   // Event actions
   setEvents: (events) => set({ events }),
   setFilteredEvents: (events) => set({ filteredEvents: events }),
-
   setIsLoadingEvents: (loading) => set({ isLoadingEvents: loading }),
-
   fetchEvents: async (streamId) => {
     set({ isLoadingEvents: true });
     try {
@@ -223,13 +243,14 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
       if (result.success && result.events) {
         const { selectedEventTypes } = get();
         const filtered = result.events.filter((event) => selectedEventTypes.has(event.event_type));
-        set({ events: result.events, filteredEvents: filtered });
+        const timeline = filtered.map(toTimelineEvent);
+        set({ events: result.events, filteredEvents: filtered, timelineEvents: timeline });
       } else {
-        set({ events: [], filteredEvents: [] });
+        set({ events: [], filteredEvents: [], timelineEvents: [] });
       }
     } catch (error) {
       console.error("Failed to fetch stream events:", error);
-      set({ events: [], filteredEvents: [] });
+      set({ events: [], filteredEvents: [], timelineEvents: [] });
     } finally {
       set({ isLoadingEvents: false });
     }
@@ -251,9 +272,10 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
     } else {
       next.add(type);
     }
-    // Update filtered events
+    // Update filtered events and timeline events
     const filtered = events.filter((event) => next.has(event.event_type));
-    set({ selectedEventTypes: next, filteredEvents: filtered });
+    const timeline = filtered.map(toTimelineEvent);
+    set({ selectedEventTypes: next, filteredEvents: filtered, timelineEvents: timeline });
   },
 
   selectAllEventTypes: () => {
@@ -273,13 +295,14 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
       "channel.moderator.add",
       "channel.moderator.remove",
     ]);
-    // Update filtered events to include all
+    // Update filtered events and timeline events to include all
     const filtered = events.filter((event) => allTypes.has(event.event_type));
-    set({ selectedEventTypes: allTypes, filteredEvents: filtered });
+    const timeline = filtered.map(toTimelineEvent);
+    set({ selectedEventTypes: allTypes, filteredEvents: filtered, timelineEvents: timeline });
   },
 
   deselectAllEventTypes: () => {
-    set({ selectedEventTypes: new Set<string>(), filteredEvents: [] });
+    set({ selectedEventTypes: new Set<string>(), filteredEvents: [], timelineEvents: [] });
   },
 
   // Clip creation actions
