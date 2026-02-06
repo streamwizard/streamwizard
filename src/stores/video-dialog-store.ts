@@ -4,7 +4,8 @@ import { createClipFromVOD, getStreamEvents } from "@/actions/twitch/vods";
 import type { TwitchPlayer } from "@/components/vods/twitch-player";
 import type { TimelineEvent } from "@/components/vods/timeline/types";
 import type { Database } from "@/types/supabase";
-import { getEventDisplayData, StreamEventType } from "@/types/stream-events";
+import { StreamEventType } from "@/types/stream-events";
+import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
 import { TwitchVideo, parseDuration } from "@/types/twitch video";
 import { create } from "zustand";
 
@@ -14,17 +15,15 @@ type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
  * Convert StreamEvent (database format) to TimelineEvent (UI format)
  */
 function toTimelineEvent(event: StreamEvent): TimelineEvent {
-  const displayData = getEventDisplayData(event);
+  const displayInfo = getStreamEventDisplayInfo(event);
   const offset = event.offset_seconds || 0;
-  const userName = displayData.userName || event.event_type;
-  const message = displayData.message;
 
   return {
     id: event.id,
     offset,
     type: event.event_type as StreamEventType,
-    label: displayData.,
-    details: message,
+    label: displayInfo.label,
+    details: displayInfo.message,
   };
 }
 

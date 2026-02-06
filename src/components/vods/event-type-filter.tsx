@@ -1,6 +1,7 @@
 "use client";
 
-import { StreamEventType, getEventTypeInfo } from "@/types/stream-events";
+import { StreamEventType } from "@/types/stream-events";
+import { getEventTypeInfo } from "@/lib/utils/stream-events";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";

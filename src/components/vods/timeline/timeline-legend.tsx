@@ -1,6 +1,7 @@
 "use client";
 
-import { getEventTypeInfo } from "@/types/stream-events";
+import { StreamEventType } from "@/types/stream-events";
+import { getEventTypeInfo } from "@/lib/utils/stream-events";
 import type { TimelineEvent, MutedSegment } from "./types";
 
 interface TimelineLegendProps {

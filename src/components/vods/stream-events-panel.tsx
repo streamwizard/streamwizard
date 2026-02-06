@@ -1,6 +1,7 @@
 "use client";
 
-import { StreamEvent, getEventTypeInfo, getEventSubtitle, getEventDisplayData, StreamEventType } from "@/types/stream-events";
+import { StreamEvent } from "@/types/stream-events";
+import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
 import { formatDuration } from "@/types/twitch video";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,9 +60,7 @@ export function StreamEventsPanel() {
       <div className="flex-1 overflow-y-auto">
         <div className="space-y-1 p-2">
           {filteredEvents.map((event) => {
-            const info = getEventTypeInfo(event.event_type as StreamEventType);
-            const subtitle = getEventSubtitle(event);
-            const displayData = getEventDisplayData(event);
+            const info = getStreamEventDisplayInfo(event);
             const offsetSeconds = (event.offset_seconds as number) || 0;
             const isPast = currentTime >= offsetSeconds;
 
@@ -79,10 +78,10 @@ export function StreamEventsPanel() {
                       <span className="font-medium text-sm">{info.label}</span>
                       <span className="text-xs text-muted-foreground">{formatDuration(offsetSeconds)}</span>
                     </div>
-                    {subtitle && <p className="text-xs text-muted-foreground/80 truncate">{subtitle}</p>}
-                    {displayData.userName && <p className="text-sm text-muted-foreground truncate">{displayData.userName}</p>}
-                    {displayData.message && <p className="text-xs text-muted-foreground truncate mt-0.5">{displayData.message}</p>}
-                    {displayData.amount && <p className="text-xs font-medium text-green-500 mt-0.5">{displayData.amount}</p>}
+                    {info.subtitle && <p className="text-xs text-muted-foreground/80 truncate">{info.subtitle}</p>}
+                    {info.userName && <p className="text-sm text-muted-foreground truncate">{info.userName}</p>}
+                    {info.message && <p className="text-xs text-muted-foreground truncate mt-0.5">{info.message}</p>}
+                    {info.amount && <p className="text-xs font-medium text-green-500 mt-0.5">{info.amount}</p>}
                   </div>
                 </div>
               </button>
