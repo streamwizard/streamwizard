@@ -65,8 +65,8 @@ export async function getVideos(cursor?: string): Promise<GetVideosResult> {
       broadcasterID: broadcasterId,
       params: {
         user_id: broadcasterId,
-        type: "archive", // Only fetch VODs (archives), not highlights or uploads
-        first: 20, // 20 items per page
+        type: "archive",
+        first: 100,
         ...(cursor && { after: cursor }),
       },
     });

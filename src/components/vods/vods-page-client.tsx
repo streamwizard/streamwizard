@@ -152,7 +152,11 @@ export function VodsPageClient({ initialVideos, initialCursor }: VodsPageClientP
       </div>
 
       {/* Table */}
-      {isPending ? <VodsTableSkeleton rows={5} /> : <VodsTable videos={videos} selectedIds={selectedIds} onSelectionChange={setSelectedIds} onVideoClick={handleVideoClick} />}
+      {isPending ? (
+        <VodsTableSkeleton rows={5} />
+      ) : (
+        <VodsTable videos={videos} selectedIds={selectedIds} onSelectionChange={setSelectedIds} onVideoClick={handleVideoClick} onRefresh={handleRefresh} />
+      )}
 
       {/* Pagination */}
       {videos.length > 0 && (

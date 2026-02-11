@@ -6,18 +6,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
 import { Video } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface VodsTableProps {
   videos: TwitchVideo[];
   selectedIds: Set<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
   onVideoClick: (video: TwitchVideo) => void;
+  onRefresh: () => void;
 }
 
 /**
  * Table component for displaying VODs with selection and click handling
  */
-export function VodsTable({ videos, selectedIds, onSelectionChange, onVideoClick }: VodsTableProps) {
+export function VodsTable({ videos, selectedIds, onSelectionChange, onVideoClick, onRefresh }: VodsTableProps) {
   const allSelected = videos.length > 0 && videos.every((v) => selectedIds.has(v.id));
   const someSelected = videos.some((v) => selectedIds.has(v.id)) && !allSelected;
 
@@ -66,6 +68,9 @@ export function VodsTable({ videos, selectedIds, onSelectionChange, onVideoClick
           </EmptyMedia>
           <EmptyTitle>No VODs found</EmptyTitle>
           <EmptyDescription>There are no archived videos for this channel.</EmptyDescription>
+          <Button variant="outline" size="sm" onClick={onRefresh}>
+            Go Back
+          </Button>
         </EmptyHeader>
       </Empty>
     );
