@@ -2,7 +2,7 @@
 
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useVideoDialogStore } from "@/stores/video-dialog-store";
+import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 
 interface ZoomControlsProps {
   clipCenterPoint?: number;
@@ -13,9 +13,9 @@ interface ZoomControlsProps {
  * Zoom controls for the timeline
  */
 export function ZoomControls({ clipCenterPoint, currentTime }: ZoomControlsProps) {
-  const zoomLevel = useVideoDialogStore((s) => s.zoomLevel);
-  const zoomIn = useVideoDialogStore((s) => s.zoomIn);
-  const zoomOut = useVideoDialogStore((s) => s.zoomOut);
+  const zoomLevel = useVideoPlayerStore((s) => s.zoomLevel);
+  const zoomIn = useVideoPlayerStore((s) => s.zoomIn);
+  const zoomOut = useVideoPlayerStore((s) => s.zoomOut);
 
   const centerPoint = clipCenterPoint ?? currentTime;
 

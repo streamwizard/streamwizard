@@ -1,7 +1,7 @@
 "use client";
 
 import { GripVertical } from "lucide-react";
-import { useVideoDialogStore } from "@/stores/video-dialog-store";
+import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import type { ClipSelection as ClipSelectionType } from "./types";
 
 interface ClipSelectionProps {
@@ -15,9 +15,9 @@ interface ClipSelectionProps {
  * Clip selection overlay with draggable handles
  */
 export function ClipSelection({ clipSelection, clipStartPercent, clipEndPercent, disabled }: ClipSelectionProps) {
-  const dragging = useVideoDialogStore((s) => s.dragging);
-  const setDragging = useVideoDialogStore((s) => s.setDragging);
-  const setDragStartInfo = useVideoDialogStore((s) => s.setDragStartInfo);
+  const dragging = useVideoPlayerStore((s) => s.dragging);
+  const setDragging = useVideoPlayerStore((s) => s.setDragging);
+  const setDragStartInfo = useVideoPlayerStore((s) => s.setDragStartInfo);
 
   const handleMiddleMouseDown = (e: React.MouseEvent) => {
     if (!disabled) {

@@ -37,7 +37,7 @@ export interface DragStartInfo {
   endTime: number;
 }
 
-export interface VideoDialogState {
+export interface VideoPlayerState {
   // Dialog state
   video: TwitchVideo | null;
 
@@ -70,7 +70,7 @@ export interface VideoDialogState {
   dragStartInfo: DragStartInfo | null;
 }
 
-export interface VideoDialogActions {
+export interface VideoPlayerActions {
   // Dialog actions
   setVideo: (video: TwitchVideo | null) => void;
 
@@ -123,9 +123,9 @@ export interface VideoDialogActions {
   resetZoom: () => void;
 }
 
-export type VideoDialogStore = VideoDialogState & VideoDialogActions;
+export type VideoPlayerStore = VideoPlayerState & VideoPlayerActions;
 
-const initialState: VideoDialogState = {
+const initialState: VideoPlayerState = {
   // Dialog state
   video: null,
 
@@ -172,7 +172,7 @@ const initialState: VideoDialogState = {
   dragStartInfo: null,
 };
 
-export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
+export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
   ...initialState,
   // Dialog actions
   setVideo: (video) => set({ video }),
@@ -476,16 +476,16 @@ export const useVideoDialogStore = create<VideoDialogStore>((set, get) => ({
 }));
 
 // Selector hooks for commonly used derived state
-export const useVideoDialogVideo = () => useVideoDialogStore((state) => state.video);
-export const useVideoDialogPlayerReady = () => useVideoDialogStore((state) => state.isPlayerReady);
-export const useVideoDialogIsPlaying = () => useVideoDialogStore((state) => state.isPlaying);
-export const useVideoDialogIsMuted = () => useVideoDialogStore((state) => state.isMuted);
-export const useVideoDialogCurrentTime = () => useVideoDialogStore((state) => state.currentTime);
-export const useVideoDialogEvents = () => useVideoDialogStore((state) => state.events);
-export const useVideoDialogIsLoadingEvents = () => useVideoDialogStore((state) => state.isLoadingEvents);
-export const useVideoDialogIsCreatingClip = () => useVideoDialogStore((state) => state.isCreatingClip);
-export const useVideoDialogClipSelection = () =>
-  useVideoDialogStore((state) => ({
+export const useVideoPlayerVideo = () => useVideoPlayerStore((state) => state.video);
+export const useVideoPlayerReady = () => useVideoPlayerStore((state) => state.isPlayerReady);
+export const useVideoPlayerIsPlaying = () => useVideoPlayerStore((state) => state.isPlaying);
+export const useVideoPlayerIsMuted = () => useVideoPlayerStore((state) => state.isMuted);
+export const useVideoPlayerCurrentTime = () => useVideoPlayerStore((state) => state.currentTime);
+export const useVideoPlayerEvents = () => useVideoPlayerStore((state) => state.events);
+export const useVideoPlayerIsLoadingEvents = () => useVideoPlayerStore((state) => state.isLoadingEvents);
+export const useVideoPlayerIsCreatingClip = () => useVideoPlayerStore((state) => state.isCreatingClip);
+export const useVideoPlayerClipSelection = () =>
+  useVideoPlayerStore((state) => ({
     startTime: state.clipStartTime,
     endTime: state.clipEndTime,
   }));

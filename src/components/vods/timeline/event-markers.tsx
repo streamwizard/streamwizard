@@ -3,7 +3,7 @@
 import { formatDuration } from "@/types/twitch video";
 import { getEventTypeInfo } from "@/lib/utils/stream-events";
 import type { TimelineEvent } from "./types";
-import { useVideoDialogStore } from "@/stores/video-dialog-store";
+import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 
 interface EventMarkersProps {
   events: TimelineEvent[];
@@ -15,7 +15,7 @@ interface EventMarkersProps {
  * Renders event marker dots on the timeline
  */
 export function EventMarkers({ events, secondsToPercent, disabled }: EventMarkersProps) {
-  const { seekToEvent } = useVideoDialogStore();
+  const { seekToEvent } = useVideoPlayerStore();
 
   const handleEventClick = (e: React.MouseEvent, event: TimelineEvent) => {
     e.stopPropagation();

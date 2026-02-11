@@ -5,11 +5,11 @@ import { TwitchVideo } from "@/types/twitch";
 import { getVideos, deleteVideos } from "@/actions/twitch/vods";
 import { VodsTable } from "./vods-table";
 import { VodsTableSkeleton } from "./vods-table-skeleton";
-import { VideoDetailsDialog } from "./video-details-dialog";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Trash2, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface VodsPageClientProps {
   initialVideos: TwitchVideo[];
@@ -20,6 +20,8 @@ interface VodsPageClientProps {
  * Client component for the VODs page with all state management
  */
 export function VodsPageClient({ initialVideos, initialCursor }: VodsPageClientProps) {
+  const router = useRouter();
+
   // Video data state
   const [videos, setVideos] = useState<TwitchVideo[]>(initialVideos);
   const [cursor, setCursor] = useState<string | undefined>(initialCursor);
@@ -29,10 +31,6 @@ export function VodsPageClient({ initialVideos, initialCursor }: VodsPageClientP
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Dialog state
-  const [selectedVideo, setSelectedVideo] = useState<TwitchVideo | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [clipDialogOpen, setClipDialogOpen] = useState(false);
-  const [clipVideo, setClipVideo] = useState<TwitchVideo | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Loading states
@@ -42,17 +40,9 @@ export function VodsPageClient({ initialVideos, initialCursor }: VodsPageClientP
   // Get selected videos for delete dialog
   const selectedVideos = videos.filter((v) => selectedIds.has(v.id));
 
-  // Handle video row click
+  // Handle video row click — navigates to the detail page
   const handleVideoClick = (video: TwitchVideo) => {
-    setSelectedVideo(video);
-    setDetailsOpen(true);
-  };
-
-  // Handle create clip from details dialog
-  const handleCreateClip = (video: TwitchVideo) => {
-    setDetailsOpen(false);
-    setClipVideo(video);
-    setClipDialogOpen(true);
+    router.push(`/dashboard/vods/${video.id}`);
   };
 
   // Handle refresh
@@ -177,9 +167,6 @@ export function VodsPageClient({ initialVideos, initialCursor }: VodsPageClientP
           </Button>
         </div>
       )}
-
-      {/* Video Details Dialog */}
-      <VideoDetailsDialog video={selectedVideo} open={detailsOpen} onOpenChange={setDetailsOpen} onCreateClip={handleCreateClip} />
 
       {/* Delete Confirmation Dialog */}
       <DeleteConfirmDialog videos={selectedVideos} open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen} onConfirm={handleDeleteConfirm} />

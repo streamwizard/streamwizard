@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState } from "react";
 import { parseDuration } from "@/types/twitch video";
-import { useVideoDialogStore } from "@/stores/video-dialog-store";
+import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import { secondsToPercent as toPercent, getSecondsFromPosition } from "./timeline-utils";
 import { ZoomControls } from "./zoom-controls";
 import { TimelineRuler } from "./timeline-ruler";
@@ -39,9 +39,9 @@ export function VideoTimeline({
 }: VideoTimelineProps) {
   const trackRef = useRef<HTMLDivElement>(null);
   // Use events from store if not provided via props
-  const storeEvents = useVideoDialogStore((state) => state.timelineEvents);
+  const storeEvents = useVideoPlayerStore((state) => state.timelineEvents);
   const events = eventsProp ?? storeEvents;
-  const { seek, setZoomLevel, viewOffset, zoomLevel, dragging, dragStartInfo, setViewOffset, setDragging, initializeZoomForClip, resetZoom } = useVideoDialogStore();
+  const { seek, setZoomLevel, viewOffset, zoomLevel, dragging, dragStartInfo, setViewOffset, setDragging, initializeZoomForClip, resetZoom } = useVideoPlayerStore();
 
   // Local state for drag position - prevents re-renders via Zustand during drag
   // This is updated via refs and DOM manipulation, only committed on drag end

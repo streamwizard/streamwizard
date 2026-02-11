@@ -5,7 +5,7 @@ import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
 import { formatDuration } from "@/types/twitch video";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useVideoDialogStore } from "@/stores/video-dialog-store";
+import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 
 /**
  * Panel displaying stream events in a scrollable list
@@ -16,7 +16,7 @@ import { useVideoDialogStore } from "@/stores/video-dialog-store";
  */
 
 export function StreamEventsPanel() {
-  const { isLoadingEvents, currentTime, seekToEvent, filteredEvents } = useVideoDialogStore();
+  const { isLoadingEvents, currentTime, seekToEvent, filteredEvents } = useVideoPlayerStore();
 
   const handleEventClick = (event: StreamEvent) => {
     seekToEvent(event.id);
@@ -28,7 +28,7 @@ export function StreamEventsPanel() {
         <h3 className="text-sm font-semibold text-muted-foreground">Stream Events</h3>
         {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="flex items-center gap-3">
-            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-8 w-8 rounded-full " />
             <div className="flex-1 space-y-1">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-3 w-32" />
@@ -48,7 +48,7 @@ export function StreamEventsPanel() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="flex flex-col overflow-hidden  ">
       <div className="border-b px-4 py-3 shrink-0">
         <h3 className="text-sm font-semibold">
           Stream Events

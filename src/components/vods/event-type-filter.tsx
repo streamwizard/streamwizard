@@ -7,18 +7,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { Filter } from "lucide-react";
-import { useVideoDialogStore } from "@/stores/video-dialog-store";
+import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 
 /**
  * Filter component for selecting which event types to display
  * Uses the video dialog store for state management
  */
 export function EventTypeFilter() {
-  const events = useVideoDialogStore((s) => s.events);
-  const selectedEventTypes = useVideoDialogStore((s) => s.selectedEventTypes);
-  const toggleEventType = useVideoDialogStore((s) => s.toggleEventType);
-  const selectAllEventTypes = useVideoDialogStore((s) => s.selectAllEventTypes);
-  const deselectAllEventTypes = useVideoDialogStore((s) => s.deselectAllEventTypes);
+  const events = useVideoPlayerStore((s) => s.events);
+  const selectedEventTypes = useVideoPlayerStore((s) => s.selectedEventTypes);
+  const toggleEventType = useVideoPlayerStore((s) => s.toggleEventType);
+  const selectAllEventTypes = useVideoPlayerStore((s) => s.selectAllEventTypes);
+  const deselectAllEventTypes = useVideoPlayerStore((s) => s.deselectAllEventTypes);
 
   // Get unique event types with counts (no useMemo needed with React Compiler)
   const eventTypeCounts = new Map<StreamEventType, number>();
