@@ -6,10 +6,13 @@ import { formatDuration } from "@/types/twitch video";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { EventContextMenu } from "@/components/vods/event-context-menu";
 
 /**
  * Panel displaying stream events in a scrollable list
  * Events are clickable to seek to that point in the video
+ * Right-click opens a context menu with type-specific actions
  *
  * Now uses the video dialog store for currentTime and event handling.
  * Events are still passed as props for filtering flexibility.
@@ -48,7 +51,7 @@ export function StreamEventsPanel() {
   }
 
   return (
-    <div className="flex flex-col overflow-hidden  ">
+    <div className="flex flex-col h-full">
       <div className="border-b px-4 py-3 shrink-0">
         <h3 className="text-sm font-semibold">
           Stream Events
@@ -57,7 +60,7 @@ export function StreamEventsPanel() {
           </Badge>
         </h3>
       </div>
-      <div className="flex-1 overflow-y-auto">
+      <ScrollArea className="flex-1 min-h-0 overflow-hidden">
         <div className="space-y-1 p-2">
           {filteredEvents.map((event) => {
             const info = getStreamEventDisplayInfo(event);
@@ -65,30 +68,32 @@ export function StreamEventsPanel() {
             const isPast = currentTime >= offsetSeconds;
 
             return (
-              <button key={event.id} onClick={() => handleEventClick(event)} className={`w-full rounded-lg p-3 text-left transition-colors hover:bg-muted/50 ${isPast ? "opacity-60" : ""}`}>
-                <div className="flex items-start gap-3">
-                  {/* Event icon */}
-                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${info.color} text-white`}>
-                    <info.icon className="h-4 w-4" />
-                  </div>
-
-                  {/* Event details */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{info.label}</span>
-                      <span className="text-xs text-muted-foreground">{formatDuration(offsetSeconds)}</span>
+              <EventContextMenu key={event.id} event={event}>
+                <button onClick={() => handleEventClick(event)} className={`w-full rounded-lg p-3 text-left transition-colors hover:bg-muted/50 ${isPast ? "opacity-60" : ""}`}>
+                  <div className="flex items-start gap-3">
+                    {/* Event icon */}
+                    <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${info.color} text-white`}>
+                      <info.icon className="h-4 w-4" />
                     </div>
-                    {info.subtitle && <p className="text-xs text-muted-foreground/80 truncate">{info.subtitle}</p>}
-                    {info.userName && <p className="text-sm text-muted-foreground truncate">{info.userName}</p>}
-                    {info.message && <p className="text-xs text-muted-foreground truncate mt-0.5">{info.message}</p>}
-                    {info.amount && <p className="text-xs font-medium text-green-500 mt-0.5">{info.amount}</p>}
+
+                    {/* Event details */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-sm">{info.label}</span>
+                        <span className="text-xs text-muted-foreground">{formatDuration(offsetSeconds)}</span>
+                      </div>
+                      {info.subtitle && <p className="text-xs text-muted-foreground/80 truncate">{info.subtitle}</p>}
+                      {info.userName && <p className="text-sm text-muted-foreground truncate">{info.userName}</p>}
+                      {info.message && <p className="text-xs text-muted-foreground truncate mt-0.5">{info.message}</p>}
+                      {info.amount && <p className="text-xs font-medium text-green-500 mt-0.5">{info.amount}</p>}
+                    </div>
                   </div>
-                </div>
-              </button>
+                </button>
+              </EventContextMenu>
             );
           })}
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { LucideIcon, Tv, UserPlus, MessageSquare, Zap, Swords, Ban, Gift, Bell, Settings, Users, Megaphone, AlertCircle, CheckCircle2, HandMetal } from "lucide-react";
+import { LucideIcon, Tv, UserPlus, MessageSquare, Zap, Swords, Ban, Gift, Bell, Settings, Users, Megaphone, AlertCircle, CheckCircle2, HandMetal, Scissors, Flag } from "lucide-react";
 import { StreamEvent, StreamEventType } from "@/types/stream-events";
 
 /**
@@ -60,6 +60,8 @@ const EVENT_TYPE_CONFIG: Record<StreamEventType, { label: string; color: string;
   "channel.channel_points_custom_reward.remove": { label: "Reward Removed", color: "bg-cyan-600", icon: HandMetal },
   "channel.channel_points_custom_reward_redemption.update": { label: "Redemption Updated", color: "bg-cyan-600", icon: HandMetal },
   "channel.shoutout.receive": { label: "Shoutout Received", color: "bg-fuchsia-600", icon: Megaphone },
+  clip: { label: "Clip", color: "bg-teal-500", icon: Scissors },
+  marker: { label: "Marker", color: "bg-yellow-500", icon: Flag },
 };
 
 /**
@@ -162,6 +164,22 @@ export function getStreamEventDisplayInfo(event: StreamEvent): StreamEventDispla
     case "channel.moderator.remove": {
       const modName = data.user_name as string | undefined;
       result.subtitle = modName || null;
+      break;
+    }
+
+    case "clip": {
+      const title = data.title as string | undefined;
+      const creatorName = data.creator_name as string | undefined;
+      const viewCount = data.view_count as number | undefined;
+      result.subtitle = title || null;
+      if (creatorName) result.userName = creatorName;
+      if (viewCount !== undefined) result.amount = `${viewCount} views`;
+      break;
+    }
+
+    case "marker": {
+      const description = data.description as string | undefined;
+      result.subtitle = description || null;
       break;
     }
   }

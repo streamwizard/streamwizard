@@ -47,7 +47,13 @@ export type StreamEventType =
 
   // Shoutout Topics
   | "channel.shoutout.create"
-  | "channel.shoutout.receive";
+  | "channel.shoutout.receive"
+
+  // Clips
+  | "clip"
+
+  // Stream Markers
+  | "marker";
 
 /**
  * A stream event stored in Supabase (matches stream_events table schema)
@@ -55,10 +61,16 @@ export type StreamEventType =
 export type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
 
 /**
- * Result of fetching stream events
+ * A clip stored in Supabase (matches clips table schema)
  */
-export interface GetStreamEventsResult {
+export type Clip = Database["public"]["Tables"]["clips"]["Row"];
+
+/**
+ * Result of fetching stream data (events + clips) via get_stream_data RPC
+ */
+export interface GetStreamDataResult {
   success: boolean;
   events?: StreamEvent[];
+  clips?: Clip[];
   error?: string;
 }

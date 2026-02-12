@@ -215,6 +215,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "clips_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "vods"
+            referencedColumns: ["video_id"]
+          },
         ]
       }
       commands: {
@@ -602,6 +609,13 @@ export type Database = {
             referencedRelation: "integrations_twitch"
             referencedColumns: ["twitch_user_id"]
           },
+          {
+            foreignKeyName: "stream_events_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "vods"
+            referencedColumns: ["stream_id"]
+          },
         ]
       }
       stream_viewer_counts: {
@@ -648,6 +662,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "integrations_twitch"
             referencedColumns: ["twitch_user_id"]
+          },
+          {
+            foreignKeyName: "stream_viewer_counts_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "vods"
+            referencedColumns: ["stream_id"]
           },
         ]
       }
@@ -842,6 +863,41 @@ export type Database = {
         }
         Relationships: []
       }
+      vods: {
+        Row: {
+          broadcaster_id: string
+          created_at: string
+          id: string
+          started_at: string | null
+          stream_id: string | null
+          video_id: string
+        }
+        Insert: {
+          broadcaster_id: string
+          created_at?: string
+          id?: string
+          started_at?: string | null
+          stream_id?: string | null
+          video_id: string
+        }
+        Update: {
+          broadcaster_id?: string
+          created_at?: string
+          id?: string
+          started_at?: string | null
+          stream_id?: string | null
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vods_broadcaster_id_fkey"
+            columns: ["broadcaster_id"]
+            isOneToOne: false
+            referencedRelation: "integrations_twitch"
+            referencedColumns: ["twitch_user_id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -909,6 +965,7 @@ export type Database = {
           vod_offset: number
         }[]
       }
+      get_stream_data: { Args: { p_video_id: string }; Returns: Json }
       get_user_twitch_ids: { Args: never; Returns: string[] }
       insert_discord_integration: {
         Args: { integration_id: string; provider_data: Json; user_id: string }

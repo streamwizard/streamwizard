@@ -122,6 +122,63 @@ export interface DeleteVideosResponse {
 }
 
 // =============================================================================
+// Stream Marker Types (GET /helix/streams/markers)
+// =============================================================================
+
+/**
+ * A single stream marker
+ */
+export interface TwitchStreamMarker {
+  /** Marker ID */
+  id: string;
+  /** UTC date and time (RFC3339) when the marker was created */
+  created_at: string;
+  /** Description the user gave the marker */
+  description: string;
+  /** Offset in seconds from the beginning of the stream */
+  position_seconds: number;
+  /** URL that opens the video in Twitch Highlighter */
+  url: string;
+}
+
+/**
+ * Response from GET /helix/streams/markers
+ */
+export interface TwitchStreamMarkersResponse {
+  data: {
+    user_id: string;
+    user_name: string;
+    user_login: string;
+    videos: {
+      video_id: string;
+      markers: TwitchStreamMarker[];
+    }[];
+  }[];
+  pagination: TwitchPagination;
+}
+
+/**
+ * Result of fetching stream markers
+ */
+export interface GetStreamMarkersResult {
+  success: boolean;
+  markers?: TwitchStreamMarker[];
+  error?: string;
+}
+
+/**
+ * Response from POST /helix/streams/markers (Create Stream Marker)
+ */
+export interface CreateStreamMarkerResponse {
+  data: {
+    id: string;
+    created_at: string;
+    position_seconds: number;
+    description: string;
+  }[];
+}
+
+// =============================================================================
 // App-specific Types
 // =============================================================================
 
@@ -160,10 +217,8 @@ export interface CreateClipFromVodParams {
  * Result of creating a clip
  */
 export interface CreateClipResult {
-  success: boolean;
   editUrl?: string;
   clipId?: string;
-  error?: string;
 }
 
 /**

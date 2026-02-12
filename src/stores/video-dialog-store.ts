@@ -1,13 +1,14 @@
 "use client";
 
-import { createClipFromVOD, getStreamEvents } from "@/actions/twitch/vods";
+import { getStreamData, createClipFromVOD, getStreamMarkers, createStreamMarker } from "@/actions/twitch/vods";
 import type { TwitchPlayer } from "@/components/vods/twitch-player";
 import type { TimelineEvent } from "@/components/vods/timeline/types";
 import type { Database } from "@/types/supabase";
-import { StreamEventType } from "@/types/stream-events";
+import { StreamEventType, type Clip } from "@/types/stream-events";
 import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
-import { TwitchVideo, parseDuration } from "@/types/twitch video";
+import { TwitchVideo, parseDuration, type TwitchStreamMarker } from "@/types/twitch video";
 import { create } from "zustand";
+import { toast } from "sonner";
 
 type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
 
@@ -24,6 +25,53 @@ function toTimelineEvent(event: StreamEvent): TimelineEvent {
     type: event.event_type as StreamEventType,
     label: displayInfo.label,
     details: displayInfo.message,
+  };
+}
+
+/**
+ * Convert a Clip to a pseudo-StreamEvent so it can be displayed in the events panel
+ */
+function clipToStreamEvent(clip: Clip): StreamEvent {
+  return {
+    id: `clip-${clip.id}`,
+    created_at: clip.created_at_twitch,
+    updated_at: clip.created_at_twitch,
+    event_type: "clip",
+    provider: "twitch",
+    broadcaster_id: clip.broadcaster_id,
+    stream_id: clip.video_id ?? "",
+    event_data: {
+      title: clip.title,
+      creator_name: clip.creator_name,
+      url: clip.url,
+      view_count: clip.view_count,
+      duration: clip.duration,
+    },
+    metadata: null,
+    status: "completed",
+    offset_seconds: clip.vod_offset ?? 0,
+  };
+}
+
+/**
+ * Convert a TwitchStreamMarker to a pseudo-StreamEvent
+ */
+function markerToStreamEvent(marker: TwitchStreamMarker): StreamEvent {
+  return {
+    id: `marker-${marker.id}`,
+    created_at: marker.created_at,
+    updated_at: marker.created_at,
+    event_type: "marker",
+    provider: "twitch",
+    broadcaster_id: "",
+    stream_id: "",
+    event_data: {
+      description: marker.description,
+      url: marker.url,
+    },
+    metadata: null,
+    status: "completed",
+    offset_seconds: marker.position_seconds,
   };
 }
 
@@ -49,8 +97,9 @@ export interface VideoPlayerState {
   isPlayerReady: boolean;
   playerKey: number;
 
-  // Stream events state
+  // Stream events & clips state
   events: StreamEvent[];
+  clips: Clip[];
   filteredEvents: StreamEvent[];
   timelineEvents: TimelineEvent[];
   selectedEventTypes: Set<string>;
@@ -93,20 +142,23 @@ export interface VideoPlayerActions {
   setEvents: (events: StreamEvent[]) => void;
   setFilteredEvents: (events: StreamEvent[]) => void;
   setIsLoadingEvents: (loading: boolean) => void;
-  fetchEvents: (streamId: string) => Promise<void>;
+  fetchEvents: (videoId: string) => Promise<void>;
   seekToEvent: (eventId: string) => void;
   toggleEventType: (type: string) => void;
   selectAllEventTypes: () => void;
   deselectAllEventTypes: () => void;
 
   // Clip creation actions
-  startClipCreation: () => void;
+  startClipCreation: (atOffset?: number) => void;
   cancelClipCreation: () => void;
   setClipTitle: (title: string) => void;
   setClipStartTime: (time: number) => void;
   setClipEndTime: (time: number) => void;
   setClipSelection: (start: number, end: number) => void;
   saveClip: () => Promise<{ success: boolean; error?: string; editUrl?: string; clipId?: string }>;
+
+  // Marker actions
+  createMarker: (description?: string) => Promise<void>;
 
   // Utility actions
   seekToClipStart: () => void;
@@ -137,8 +189,9 @@ const initialState: VideoPlayerState = {
   isPlayerReady: false,
   playerKey: 0,
 
-  // Stream events state
+  // Stream events & clips state
   events: [],
+  clips: [],
   filteredEvents: [],
   timelineEvents: [],
   selectedEventTypes: new Set<string>([
@@ -155,6 +208,8 @@ const initialState: VideoPlayerState = {
     "channel.channel_points_custom_reward_redemption.add",
     "channel.moderator.add",
     "channel.moderator.remove",
+    "clip",
+    "marker",
   ]),
   isLoadingEvents: false,
 
@@ -235,21 +290,28 @@ export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
   setEvents: (events) => set({ events }),
   setFilteredEvents: (events) => set({ filteredEvents: events }),
   setIsLoadingEvents: (loading) => set({ isLoadingEvents: loading }),
-  fetchEvents: async (streamId) => {
+  fetchEvents: async (videoId) => {
     set({ isLoadingEvents: true });
     try {
-      const result = await getStreamEvents(streamId);
-      if (result.success && result.events) {
-        const { selectedEventTypes } = get();
-        const filtered = result.events.filter((event) => selectedEventTypes.has(event.event_type));
-        const timeline = filtered.map(toTimelineEvent);
-        set({ events: result.events, filteredEvents: filtered, timelineEvents: timeline });
-      } else {
-        set({ events: [], filteredEvents: [], timelineEvents: [] });
-      }
+      // Fetch stream data and markers in parallel
+      const [streamDataResult, markersResult] = await Promise.all([getStreamData(videoId), getStreamMarkers(videoId)]);
+
+      const rawEvents = streamDataResult.success ? (streamDataResult.events ?? []) : [];
+      const clips = streamDataResult.success ? (streamDataResult.clips ?? []) : [];
+      const markers = markersResult.success ? (markersResult.markers ?? []) : [];
+
+      // Convert clips and markers to pseudo-StreamEvents and merge with real events
+      const clipEvents = clips.map(clipToStreamEvent);
+      const markerEvents = markers.map(markerToStreamEvent);
+      const allEvents = [...rawEvents, ...clipEvents, ...markerEvents].sort((a, b) => (a.offset_seconds ?? 0) - (b.offset_seconds ?? 0));
+
+      const { selectedEventTypes } = get();
+      const filtered = allEvents.filter((event: StreamEvent) => selectedEventTypes.has(event.event_type));
+      const timeline = filtered.map(toTimelineEvent);
+      set({ events: allEvents, clips, filteredEvents: filtered, timelineEvents: timeline });
     } catch (error) {
-      console.error("Failed to fetch stream events:", error);
-      set({ events: [], filteredEvents: [], timelineEvents: [] });
+      console.error("Failed to fetch stream data:", error);
+      set({ events: [], clips: [], filteredEvents: [], timelineEvents: [] });
     } finally {
       set({ isLoadingEvents: false });
     }
@@ -293,6 +355,8 @@ export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
       "channel.channel_points_custom_reward_redemption.add",
       "channel.moderator.add",
       "channel.moderator.remove",
+      "clip",
+      "marker",
     ]);
     // Update filtered events and timeline events to include all
     const filtered = events.filter((event) => allTypes.has(event.event_type));
@@ -305,13 +369,14 @@ export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
   },
 
   // Clip creation actions
-  startClipCreation: () => {
+  startClipCreation: (atOffset?: number) => {
     const { video, currentTime, isPlayerReady, seek } = get();
     if (!video || !isPlayerReady) return;
 
     const totalDuration = parseDuration(video.duration);
-    const start = Math.max(0, currentTime - 15);
-    const end = Math.min(totalDuration, currentTime + 15);
+    const center = atOffset ?? currentTime;
+    const start = Math.max(0, center - 15);
+    const end = Math.min(totalDuration, center + 15);
 
     set({
       isCreatingClip: true,
@@ -355,7 +420,7 @@ export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
 
     set({ isSubmittingClip: true });
 
-    try {
+    const clipPromise = (async () => {
       // Calculate duration and vod_offset
       // Note: vod_offset is where the clip ENDS
       // The clip will start at (vod_offset - duration) and end at vod_offset
@@ -369,29 +434,72 @@ export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
         title: clipTitle,
       });
 
-      if (result.success) {
-        // Reset clip creation state on success
+      if (result.success && result.data) {
+        // Reset clip creation state on success and refetch events
         get().cancelClipCreation();
+        const videoId = video.id;
+        // Refetch events in background so the new clip appears
+        get().fetchEvents(videoId);
         return {
-          success: true,
-          editUrl: result.editUrl,
-          clipId: result.clipId,
+          success: true as const,
+          editUrl: result.data.editUrl,
+          clipId: result.data.clipId,
         };
       } else {
-        return {
-          success: false,
-          error: result.error || "Failed to create clip",
-        };
+        throw new Error(result.error || "Failed to create clip");
       }
+    })();
+
+    toast.promise(clipPromise, {
+      loading: "Creating clip...",
+      success: (data) => ({
+        message: "Clip created successfully!",
+        action: data.editUrl
+          ? {
+              label: "View Clip",
+              onClick: () => window.open(data.editUrl, "_blank"),
+            }
+          : undefined,
+        description: "It may take a few seconds for the clip to be available.",
+      }),
+      error: (err) => err.message || "An unexpected error occurred while creating the clip",
+    });
+
+    try {
+      return await clipPromise;
     } catch (error) {
       console.error("Error creating clip:", error);
       return {
-        success: false,
-        error: "An unexpected error occurred while creating the clip",
+        success: false as const,
+        error: error instanceof Error ? error.message : "An unexpected error occurred while creating the clip",
       };
     } finally {
       set({ isSubmittingClip: false });
     }
+  },
+
+  createMarker: async (description?: string) => {
+    const { video, fetchEvents } = get();
+    if (!video) return;
+
+    const markerPromise = (async () => {
+      const result = await createStreamMarker(description);
+      if (result.success && result.data) {
+        // Refetch events so the new marker appears on the timeline
+        fetchEvents(video.id);
+        return result.data;
+      } else {
+        throw new Error(result.error || "Failed to create marker");
+      }
+    })();
+
+    toast.promise(markerPromise, {
+      loading: "Creating marker...",
+      success: "Marker created successfully!",
+      error: (err) => err.message || "An unexpected error occurred while creating the marker",
+    });
+
+    await markerPromise;
   },
 
   // Utility actions

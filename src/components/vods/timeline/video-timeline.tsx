@@ -11,6 +11,7 @@ import { ClipSelection } from "./clip-selection";
 import { EventMarkers } from "./event-markers";
 import { TimelineDisplay } from "./timeline-display";
 import { TimelineLegend } from "./timeline-legend";
+import { TimelineContextMenu } from "./timeline-context-menu";
 import type { VideoTimelineProps, ClipSelection as ClipSelectionType } from "./types";
 
 // Re-export types for consumers
@@ -277,30 +278,32 @@ export function VideoTimeline({
       {/* Timestamp ruler above timeline */}
       <TimelineRuler viewStart={viewStart} viewEnd={viewEnd} visibleDuration={visibleDuration} />
 
-      {/* Timeline bar - always h-8 */}
-      <div ref={trackRef} className={`relative h-8 w-full rounded-md overflow-hidden bg-muted ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} onClick={handleTimelineClick}>
-        {/* Progress bar */}
-        {progressPercent >= 0 && progressPercent <= 100 && (
-          <div className="absolute left-0 top-0 h-full bg-purple-600/60 transition-all duration-100" style={{ width: `${Math.max(0, Math.min(progressPercent, 100))}%` }} />
-        )}
+      {/* Timeline bar - always h-8, with context menu */}
+      <TimelineContextMenu trackRef={trackRef} viewStart={viewStart} visibleDuration={visibleDuration} disabled={disabled}>
+        <div ref={trackRef} className={`relative h-8 w-full rounded-md overflow-hidden bg-muted ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} onClick={handleTimelineClick}>
+          {/* Progress bar */}
+          {progressPercent >= 0 && progressPercent <= 100 && (
+            <div className="absolute left-0 top-0 h-full bg-purple-600/60 transition-all duration-100" style={{ width: `${Math.max(0, Math.min(progressPercent, 100))}%` }} />
+          )}
 
-        {/* Muted segments */}
-        <MutedSegments segments={mutedSegments} secondsToPercent={secondsToPercent} />
+          {/* Muted segments */}
+          <MutedSegments segments={mutedSegments} secondsToPercent={secondsToPercent} />
 
-        {/* Playhead */}
-        {progressPercent >= 0 && progressPercent <= 100 && (
-          <div
-            className="absolute top-1/2 h-6 w-1 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-white shadow-md transition-all duration-100"
-            style={{ left: `${Math.max(0, Math.min(progressPercent, 100))}%` }}
-          />
-        )}
+          {/* Playhead */}
+          {progressPercent >= 0 && progressPercent <= 100 && (
+            <div
+              className="absolute top-1/2 h-6 w-1 -translate-x-1/2 -translate-y-1/2 rounded-sm bg-white shadow-md transition-all duration-100"
+              style={{ left: `${Math.max(0, Math.min(progressPercent, 100))}%` }}
+            />
+          )}
 
-        {/* Clip mode overlay */}
-        {isClipMode && activeClipSelection && <ClipSelection clipSelection={activeClipSelection} clipStartPercent={clipStartPercent} clipEndPercent={clipEndPercent} disabled={disabled} />}
+          {/* Clip mode overlay */}
+          {isClipMode && activeClipSelection && <ClipSelection clipSelection={activeClipSelection} clipStartPercent={clipStartPercent} clipEndPercent={clipEndPercent} disabled={disabled} />}
 
-        {/* Event markers */}
-        <EventMarkers events={visibleEvents} secondsToPercent={secondsToPercent} disabled={disabled} />
-      </div>
+          {/* Event markers */}
+          <EventMarkers events={visibleEvents} secondsToPercent={secondsToPercent} disabled={disabled} />
+        </div>
+      </TimelineContextMenu>
 
       {/* Time display */}
       <TimelineDisplay

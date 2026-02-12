@@ -8,8 +8,9 @@
 import { TwitchAPI } from "@/lib/axios/twitch-api";
 import { createClient } from "@/lib/supabase/server";
 import type { TwitchVideo, GetVideosResponse, CreateClipResponse, DeleteVideosResponse, GetGamesResponse } from "@/types/twitch";
-import type { GetVideosResult, DeleteVideosResult, CreateClipResult } from "@/types/twitch video";
-import type { GetStreamEventsResult } from "@/types/stream-events";
+import type { GetVideosResult, DeleteVideosResult, CreateClipResult, TwitchStreamMarkersResponse, GetStreamMarkersResult, CreateStreamMarkerResponse } from "@/types/twitch video";
+import type { GetStreamDataResult } from "@/types/stream-events";
+import { ActionResponse } from "@/types/actions";
 
 // =============================================================================
 // Helper Functions
@@ -149,7 +150,7 @@ export async function deleteVideos(videoIds: string[]): Promise<DeleteVideosResu
 }
 
 // =============================================================================
-// Create Clip
+// Create Clip From vod
 // =============================================================================
 
 interface CreateClipFromVODProps {
@@ -168,7 +169,7 @@ interface CreateClipFromVODProps {
  * API: POST https://api.twitch.tv/helix/videos/clips (BETA)
  * Requires scope: editor:manage:clips or channel:manage:clips
  */
-export async function createClipFromVOD({ vodId, vod_offset, duration, title }: CreateClipFromVODProps): Promise<CreateClipResult> {
+export async function createClipFromVOD({ vodId, vod_offset, duration, title }: CreateClipFromVODProps): Promise<ActionResponse<CreateClipResult>> {
   try {
     const broadcasterId = await getBroadcasterId();
 
@@ -218,8 +219,10 @@ export async function createClipFromVOD({ vodId, vod_offset, duration, title }: 
 
     return {
       success: true,
-      editUrl: clip.edit_url,
-      clipId: clip.id,
+      data: {
+        editUrl: clip.edit_url,
+        clipId: clip.id,
+      },
     };
   } catch (error) {
     console.error("Error creating clip from VOD:", error);
@@ -263,27 +266,30 @@ export async function getVideo(videoId: string): Promise<TwitchVideo | null> {
 }
 
 // =============================================================================
-// Get Stream Events from Supabase
+// Get Stream Data (Events + Clips) from Supabase
 // =============================================================================
 
 /**
- * Fetch stream events from Supabase by stream_id
+ * Fetch stream events and clips from Supabase by video_id
+ * Uses the get_stream_data RPC function which joins through the vods table
  *
- * @param streamId - The stream ID to fetch events for (from TwitchVideo.stream_id)
- * @returns GetStreamEventsResult with events array
+ * @param videoId - The Twitch video ID (VOD ID)
+ * @returns GetStreamDataResult with events and clips arrays
  */
-export async function getStreamEvents(streamId: string): Promise<GetStreamEventsResult> {
+export async function getStreamData(videoId: string): Promise<GetStreamDataResult> {
   try {
-    if (!streamId) {
+    if (!videoId) {
       return {
         success: false,
-        error: "No stream ID provided",
+        error: "No video ID provided",
       };
     }
 
     const supabase = await createClient();
 
-    const { data, error } = await supabase.from("stream_events").select("*").eq("stream_id", streamId).order("offset_seconds", { ascending: true });
+    const { data, error } = await supabase.rpc("get_stream_data", {
+      p_video_id: videoId,
+    });
 
     if (error) {
       console.error("Supabase error:", error);
@@ -293,15 +299,147 @@ export async function getStreamEvents(streamId: string): Promise<GetStreamEvents
       };
     }
 
+    const result = data as { stream_events: any[]; clips: any[] };
+
     return {
       success: true,
-      events: data,
+      events: result.stream_events ?? [],
+      clips: result.clips ?? [],
     };
   } catch (error) {
-    console.error("Error fetching stream events:", error);
+    console.error("Error fetching stream data:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error fetching stream events",
+      error: error instanceof Error ? error.message : "Unknown error fetching stream data",
+    };
+  }
+}
+
+// =============================================================================
+// Get Stream Markers from Twitch
+// =============================================================================
+
+/**
+ * Fetch stream markers for a specific VOD from the Twitch API
+ *
+ * @param videoId - The Twitch video ID (VOD ID)
+ * @returns GetStreamMarkersResult with markers array
+ *
+ * API: GET https://api.twitch.tv/helix/streams/markers
+ * Docs: https://dev.twitch.tv/docs/api/reference/#get-stream-markers
+ *
+ * Requires scope: user:read:broadcast or channel:manage:broadcast
+ */
+export async function getStreamMarkers(videoId: string): Promise<GetStreamMarkersResult> {
+  try {
+    if (!videoId) {
+      return {
+        success: false,
+        error: "No video ID provided",
+      };
+    }
+
+    const broadcasterId = await getBroadcasterId();
+
+    const allMarkers: TwitchStreamMarkersResponse["data"][0]["videos"][0]["markers"] = [];
+    let cursor: string | undefined;
+
+    // Paginate through all markers
+    do {
+      const response = await TwitchAPI.get<TwitchStreamMarkersResponse>("/streams/markers", {
+        broadcasterID: broadcasterId,
+        params: {
+          video_id: videoId,
+          first: 100,
+          ...(cursor && { after: cursor }),
+        },
+      });
+
+      const data = response.data.data;
+      if (data && data.length > 0) {
+        for (const user of data) {
+          for (const video of user.videos) {
+            allMarkers.push(...video.markers);
+          }
+        }
+      }
+
+      cursor = response.data.pagination?.cursor;
+    } while (cursor);
+
+    return {
+      success: true,
+      markers: allMarkers,
+    };
+  } catch (error) {
+    console.error("Error fetching stream markers:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error fetching stream markers",
+    };
+  }
+}
+
+// =============================================================================
+// Create Stream Marker
+// =============================================================================
+
+/**
+ * Create a stream marker on a live stream
+ *
+ * @param description - Optional short description (max 140 characters)
+ * @returns ActionResponse with marker data
+ *
+ * API: POST https://api.twitch.tv/helix/streams/markers
+ * Docs: https://dev.twitch.tv/docs/api/reference/#create-stream-marker
+ *
+ * Requires scope: channel:manage:broadcast
+ * Note: The stream must be live and have VOD enabled
+ */
+export async function createStreamMarker(description?: string): Promise<ActionResponse<{ id: string; position_seconds: number; description: string }>> {
+  try {
+    const broadcasterId = await getBroadcasterId();
+
+    if (description && description.length > 140) {
+      return {
+        success: false,
+        error: "Description must be 140 characters or less",
+      };
+    }
+
+    const response = await TwitchAPI.post<CreateStreamMarkerResponse>(
+      "/streams/markers",
+      {
+        user_id: broadcasterId,
+        ...(description && { description }),
+      },
+      {
+        broadcasterID: broadcasterId,
+      },
+    );
+
+    if (!response.data.data || response.data.data.length === 0) {
+      return {
+        success: false,
+        error: "No marker data returned from API",
+      };
+    }
+
+    const marker = response.data.data[0];
+
+    return {
+      success: true,
+      data: {
+        id: marker.id,
+        position_seconds: marker.position_seconds,
+        description: marker.description,
+      },
+    };
+  } catch (error) {
+    console.error("Error creating stream marker:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error creating stream marker",
     };
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TwitchVideo, parseDuration } from "@/types/twitch video";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,7 +45,6 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
     toggleMute,
     seek,
     fetchEvents,
-    setEvents,
     startClipCreation,
     cancelClipCreation,
     setClipTitle,
@@ -56,17 +55,30 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
   } = useVideoPlayerStore();
 
   const timeUpdateRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const [leftPanelHeight, setLeftPanelHeight] = useState<number | undefined>(undefined);
+
+  // Measure left panel height and sync to right panel
+  useEffect(() => {
+    const el = leftPanelRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setLeftPanelHeight(entry.contentRect.height);
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Initialize store on mount and reset on unmount
   useEffect(() => {
     incrementPlayerKey();
     setVideo(video);
 
-    if (video.stream_id) {
-      fetchEvents(video.stream_id);
-    } else {
-      setEvents([]);
-    }
+    // Fetch stream events and clips via video ID
+    fetchEvents(video.id);
 
     return () => {
       resetState();
@@ -138,19 +150,7 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
   };
 
   const handleSaveClip = async () => {
-    const result = await saveClip();
-
-    if (result.success) {
-      console.log("Clip created successfully:", result.clipId);
-      console.log("Edit URL:", result.editUrl);
-
-      if (result.editUrl) {
-        window.open(result.editUrl, "_blank");
-      }
-    } else {
-      console.error("Failed to create clip:", result.error);
-      alert(`Failed to create clip: ${result.error}`);
-    }
+    await saveClip();
   };
 
   const createdDate = new Date(video.created_at).toLocaleDateString("en-US", {
@@ -192,7 +192,7 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
       {/* Two-column layout: Video player left, Events right */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left side: Video player and controls */}
-        <div className="flex-1 flex flex-col min-w-0 p-4 pt-0 overflow-y-auto">
+        <div ref={leftPanelRef} className="flex-1 flex flex-col min-w-0 p-4 pt-0 overflow-y-auto">
           {/* Interactive Twitch Player */}
           <div className="relative aspect-video w-full max-h-[50vh] overflow-hidden rounded-lg bg-black shrink-0">
             <TwitchPlayerComponent
@@ -309,7 +309,7 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
         </div>
 
         {/* Right side: Events panel */}
-        <div className="w-80 h-full shrink-0 border-l rounded-lg bg-muted/30">
+        <div className="w-80 shrink-0 overflow-hidden border-l rounded-lg bg-muted/30" style={{ maxHeight: leftPanelHeight }}>
           <StreamEventsPanel />
         </div>
       </div>

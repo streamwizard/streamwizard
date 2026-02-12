@@ -358,3 +358,8 @@ export type CreateClipResponse = {
     edit_url: string;
   }[];
 };
+
+export type GetClipResponse = {
+  data: TwitchClip[];
+  pagination?: Pagination;
+};
