@@ -1,6 +1,12 @@
 "use client";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,7 +45,12 @@ export default function TwitchClipCard({
   twitch_clip_id,
 }: clipsWithFolders) {
   const { openModal } = useModal();
-  const { getAvailableFolders, getRemovableFolders, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
+  const {
+    getAvailableFolders,
+    getRemovableFolders,
+    AddToFolder,
+    handleRemoveClipFromFolder,
+  } = useClipFolders();
 
   const formatDuration = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -65,36 +76,57 @@ export default function TwitchClipCard({
   };
 
   function AvailableFolders() {
-    const availableFolders = getAvailableFolders(folders.map((folder) => folder.id));
+    const availableFolders = getAvailableFolders(
+      folders.map((folder) => folder.id),
+    );
 
     if (availableFolders.length === 0) {
       return <DropdownMenuItem disabled>No folders available</DropdownMenuItem>;
     }
 
     return availableFolders.map((folder) => (
-      <DropdownMenuItem key={folder.id} onClick={() => AddToFolder({ folderName: folder.name, folderId: folder.id, clipId: twitch_clip_id })}>
+      <DropdownMenuItem
+        key={folder.id}
+        onClick={() =>
+          AddToFolder({
+            folderName: folder.name,
+            folderId: folder.id,
+            clipId: twitch_clip_id,
+          })
+        }
+      >
         {folder.name}
       </DropdownMenuItem>
     ));
   }
 
   function RemovableFolders() {
-    const removableFolders = getRemovableFolders(folders.map((folder) => folder.id));
+    const removableFolders = getRemovableFolders(
+      folders.map((folder) => folder.id),
+    );
 
     if (removableFolders.length === 0) {
       return <DropdownMenuItem disabled>No folders available</DropdownMenuItem>;
     }
 
     return removableFolders.map((folder) => (
-      <DropdownMenuItem key={folder.id} onClick={() => handleRemoveClipFromFolder(folder.id, twitch_clip_id, folder.name)}>
+      <DropdownMenuItem
+        key={folder.id}
+        onClick={() =>
+          handleRemoveClipFromFolder(folder.id, twitch_clip_id, folder.name)
+        }
+      >
         {folder.name}
       </DropdownMenuItem>
     ));
   }
 
-  const DownloadLandscapeClip = async (layout: "landscape" | "portrait", broadcaster_id: string) => {
+  const DownloadLandscapeClip = async (
+    layout: "landscape" | "portrait",
+    broadcaster_id: string,
+  ) => {
     const loadingToast = toast.loading(`Preparing ${layout} download...`);
-    
+
     try {
       // Use the API route to proxy the download through our server
       const response = await fetch("/api/twitch/download-clip", {
@@ -130,12 +162,14 @@ export default function TwitchClipCard({
       setTimeout(() => {
         window.URL.revokeObjectURL(blobUrl);
       }, 100);
-      
+
       toast.dismiss(loadingToast);
       toast.success(`Downloading ${layout} clip...`);
     } catch (error) {
       toast.dismiss(loadingToast);
-      toast.error(error instanceof Error ? error.message : "Failed to download clip");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to download clip",
+      );
     }
   };
 
@@ -143,8 +177,17 @@ export default function TwitchClipCard({
     <Card className="w-full max-w-md overflow-hidden cursor-pointer mx-">
       <CardHeader className="p-0">
         <div className="relative">
-          <Image src={thumbnail_url!} alt={title} width={500} height={108} className="w-full h-48 object-cover" onClick={OpenClip} />
-          <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground">{formatDuration(duration!)}</Badge>
+          <Image
+            src={thumbnail_url!}
+            alt={title}
+            width={500}
+            height={108}
+            className="w-full h-48 object-cover"
+            onClick={OpenClip}
+          />
+          <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground">
+            {formatDuration(duration!)}
+          </Badge>
           {is_featured && (
             <Badge className="absolute bottom-2 left-2 bg-yellow-500 text-yellow-950">
               <Star className="w-3 h-3 mr-1" />
@@ -191,7 +234,9 @@ export default function TwitchClipCard({
                   </DropdownMenuPortal>
                 </DropdownMenuSub>
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>Remove from folder</DropdownMenuSubTrigger>
+                  <DropdownMenuSubTrigger>
+                    Remove from folder
+                  </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
                     <DropdownMenuSubContent>
                       <RemovableFolders />
@@ -203,11 +248,29 @@ export default function TwitchClipCard({
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
               <Link href={url!} target="_blank">
-                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(url!)}>View</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => navigator.clipboard.writeText(url!)}
+                >
+                  View
+                </DropdownMenuItem>
               </Link>
-              <DropdownMenuItem onClick={() => DownloadLandscapeClip("landscape", broadcaster_id!)}>Download Landscape</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => DownloadLandscapeClip("portrait", broadcaster_id!)}>Download Portrait</DropdownMenuItem>
-              <DropdownMenuItem onClick={CopyClipURL}>Copy URL to clipboard</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  DownloadLandscapeClip("landscape", broadcaster_id!)
+                }
+              >
+                Download Landscape
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  DownloadLandscapeClip("portrait", broadcaster_id!)
+                }
+              >
+                Download Portrait
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={CopyClipURL}>
+                Copy URL to clipboard
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

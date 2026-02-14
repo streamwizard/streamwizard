@@ -1,18 +1,22 @@
 "use client";
 
 import { StreamEvent, StreamEventType } from "@/types/stream-events";
-import { LucideIcon, Scissors, ExternalLink, Copy, Flag, Crosshair } from "lucide-react";
+import {
+  LucideIcon,
+  Scissors,
+  ExternalLink,
+  Copy,
+  Flag,
+  Crosshair,
+} from "lucide-react";
 import { toast } from "sonner";
 
 /**
  * A single context menu action for an event
  */
 export interface EventAction {
-  /** Display label */
   label: string;
-  /** Lucide icon component */
   icon: LucideIcon;
-  /** Handler function — receives the event and a helpers object */
   handler: (event: StreamEvent, helpers: EventActionHelpers) => void;
 }
 
@@ -54,13 +58,6 @@ const clipActions: EventAction[] = [
       }
     },
   },
-  {
-    label: "Create Clip Here",
-    icon: Scissors,
-    handler: (event, { startClipCreation }) => {
-      startClipCreation(event.offset_seconds ?? 0);
-    },
-  },
 ];
 
 const markerActions: EventAction[] = [
@@ -69,17 +66,6 @@ const markerActions: EventAction[] = [
     icon: Scissors,
     handler: (event, { startClipCreation }) => {
       startClipCreation(event.offset_seconds ?? 0);
-    },
-  },
-  {
-    label: "Open in Highlighter",
-    icon: Flag,
-    handler: (event) => {
-      const data = event.event_data as Record<string, unknown> | null;
-      const url = data?.url as string | undefined;
-      if (url) {
-        window.open(url, "_blank");
-      }
     },
   },
 ];

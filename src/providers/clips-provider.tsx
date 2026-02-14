@@ -40,11 +40,13 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
     return ClipFolders.filter((folder) => excludedFolderIds.includes(folder.id));
   };
 
+
+
+
   // Add a clip to a folder
   const AddToFolder = ({ folderName, folderId, clipId }: AddToFolderType) => {
     toast.promise(
       async () => {
-        console.log({ folderId, folderName });
         const res = await addClipToFolder({ clipId, userId, folderId, folderName });
         if (!res.success) {
           throw new Error(res.message);

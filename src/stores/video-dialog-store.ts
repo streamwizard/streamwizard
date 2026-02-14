@@ -46,6 +46,9 @@ function clipToStreamEvent(clip: Clip): StreamEvent {
       url: clip.url,
       view_count: clip.view_count,
       duration: clip.duration,
+      id: clip.id.toString(),
+      twitch_clip_id: clip.twitch_clip_id,
+      folder_ids: clip.folder_ids,
     },
     metadata: null,
     status: "completed",
@@ -117,6 +120,7 @@ export interface VideoPlayerState {
   viewOffset: number;
   dragging: DragHandle;
   dragStartInfo: DragStartInfo | null;
+  isSeekDisabled: boolean;
 }
 
 export interface VideoPlayerActions {
@@ -173,6 +177,7 @@ export interface VideoPlayerActions {
   setDragStartInfo: (info: DragStartInfo | null) => void;
   initializeZoomForClip: () => void;
   resetZoom: () => void;
+  setIsSeekDisabled: (disabled: boolean) => void;
 }
 
 export type VideoPlayerStore = VideoPlayerState & VideoPlayerActions;
@@ -225,6 +230,7 @@ const initialState: VideoPlayerState = {
   viewOffset: 0,
   dragging: null,
   dragStartInfo: null,
+  isSeekDisabled: false,
 };
 
 export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
@@ -518,6 +524,8 @@ export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
 
   // Timeline actions
   setZoomLevel: (zoom) => set({ zoomLevel: zoom }),
+
+  setIsSeekDisabled: (disabled) => set({ isSeekDisabled: disabled }),
 
   setViewOffset: (offset) => set({ viewOffset: offset }),
 

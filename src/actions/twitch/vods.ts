@@ -7,8 +7,21 @@
 
 import { TwitchAPI } from "@/lib/axios/twitch-api";
 import { createClient } from "@/lib/supabase/server";
-import type { TwitchVideo, GetVideosResponse, CreateClipResponse, DeleteVideosResponse, GetGamesResponse } from "@/types/twitch";
-import type { GetVideosResult, DeleteVideosResult, CreateClipResult, TwitchStreamMarkersResponse, GetStreamMarkersResult, CreateStreamMarkerResponse } from "@/types/twitch video";
+import type {
+  TwitchVideo,
+  GetVideosResponse,
+  CreateClipResponse,
+  DeleteVideosResponse,
+  GetGamesResponse,
+} from "@/types/twitch";
+import type {
+  GetVideosResult,
+  DeleteVideosResult,
+  CreateClipResult,
+  TwitchStreamMarkersResponse,
+  GetStreamMarkersResult,
+  CreateStreamMarkerResponse,
+} from "@/types/twitch video";
 import type { GetStreamDataResult } from "@/types/stream-events";
 import { ActionResponse } from "@/types/actions";
 
@@ -22,7 +35,10 @@ import { ActionResponse } from "@/types/actions";
  */
 async function getBroadcasterId(): Promise<string> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("integrations_twitch").select("twitch_user_id").single();
+  const { data, error } = await supabase
+    .from("integrations_twitch")
+    .select("twitch_user_id")
+    .single();
 
   if (error || !data?.twitch_user_id) {
     throw new Error("Failed to fetch broadcaster ID from database");
@@ -31,10 +47,16 @@ async function getBroadcasterId(): Promise<string> {
   return data.twitch_user_id;
 }
 
-async function getCurrentStreamDetails(broadcaster_id: string): Promise<string | null> {
+async function getCurrentStreamDetails(
+  broadcaster_id: string,
+): Promise<string | null> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.from("broadcaster_live_status").select("is_live, stream_id").eq("broadcaster_id", broadcaster_id).single();
+  const { data, error } = await supabase
+    .from("broadcaster_live_status")
+    .select("is_live, stream_id")
+    .eq("broadcaster_id", broadcaster_id)
+    .single();
 
   if (error) return null;
 
@@ -88,7 +110,10 @@ export async function getVideos(cursor?: string): Promise<GetVideosResult> {
     console.error("Error fetching videos:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error fetching videos",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error fetching videos",
     };
   }
 }
@@ -109,7 +134,9 @@ export async function getVideos(cursor?: string): Promise<GetVideosResult> {
  * Requires scope: channel:manage:videos
  * Note: If any deletion fails, no videos are deleted (atomic operation)
  */
-export async function deleteVideos(videoIds: string[]): Promise<DeleteVideosResult> {
+export async function deleteVideos(
+  videoIds: string[],
+): Promise<DeleteVideosResult> {
   try {
     // Validate input
     if (!videoIds || videoIds.length === 0) {
@@ -132,9 +159,12 @@ export async function deleteVideos(videoIds: string[]): Promise<DeleteVideosResu
     const params = new URLSearchParams();
     videoIds.forEach((id) => params.append("id", id));
 
-    const response = await TwitchAPI.delete<DeleteVideosResponse>(`/videos?${params}`, {
-      broadcasterID: broadcasterId,
-    });
+    const response = await TwitchAPI.delete<DeleteVideosResponse>(
+      `/videos?${params}`,
+      {
+        broadcasterID: broadcasterId,
+      },
+    );
 
     return {
       success: true,
@@ -144,7 +174,10 @@ export async function deleteVideos(videoIds: string[]): Promise<DeleteVideosResu
     console.error("Error deleting videos:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error deleting videos",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error deleting videos",
     };
   }
 }
@@ -169,7 +202,12 @@ interface CreateClipFromVODProps {
  * API: POST https://api.twitch.tv/helix/videos/clips (BETA)
  * Requires scope: editor:manage:clips or channel:manage:clips
  */
-export async function createClipFromVOD({ vodId, vod_offset, duration, title }: CreateClipFromVODProps): Promise<ActionResponse<CreateClipResult>> {
+export async function createClipFromVOD({
+  vodId,
+  vod_offset,
+  duration,
+  title,
+}: CreateClipFromVODProps): Promise<ActionResponse<CreateClipResult>> {
   try {
     const broadcasterId = await getBroadcasterId();
 
@@ -196,17 +234,21 @@ export async function createClipFromVOD({ vodId, vod_offset, duration, title }: 
       };
     }
 
-    const response = await TwitchAPI.post<CreateClipResponse>("/videos/clips", null, {
-      params: {
-        editor_id: broadcasterId,
-        broadcaster_id: broadcasterId,
-        vod_id: vodId,
-        vod_offset: vod_offset,
-        duration: duration,
-        title: title || "Clip from VOD",
+    const response = await TwitchAPI.post<CreateClipResponse>(
+      "/videos/clips",
+      null,
+      {
+        params: {
+          editor_id: broadcasterId,
+          broadcaster_id: broadcasterId,
+          vod_id: vodId,
+          vod_offset: vod_offset,
+          duration: duration,
+          title: title || "Clip from VOD",
+        },
+        broadcasterID: broadcasterId,
       },
-      broadcasterID: broadcasterId,
-    });
+    );
 
     if (!response.data.data || response.data.data.length === 0) {
       return {
@@ -228,7 +270,10 @@ export async function createClipFromVOD({ vodId, vod_offset, duration, title }: 
     console.error("Error creating clip from VOD:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error creating clip from VOD",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error creating clip from VOD",
     };
   }
 }
@@ -276,7 +321,9 @@ export async function getVideo(videoId: string): Promise<TwitchVideo | null> {
  * @param videoId - The Twitch video ID (VOD ID)
  * @returns GetStreamDataResult with events and clips arrays
  */
-export async function getStreamData(videoId: string): Promise<GetStreamDataResult> {
+export async function getStreamData(
+  videoId: string,
+): Promise<GetStreamDataResult> {
   try {
     if (!videoId) {
       return {
@@ -301,6 +348,9 @@ export async function getStreamData(videoId: string): Promise<GetStreamDataResul
 
     const result = data as { stream_events: any[]; clips: any[] };
 
+
+    
+
     return {
       success: true,
       events: result.stream_events ?? [],
@@ -310,7 +360,10 @@ export async function getStreamData(videoId: string): Promise<GetStreamDataResul
     console.error("Error fetching stream data:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error fetching stream data",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error fetching stream data",
     };
   }
 }
@@ -330,7 +383,9 @@ export async function getStreamData(videoId: string): Promise<GetStreamDataResul
  *
  * Requires scope: user:read:broadcast or channel:manage:broadcast
  */
-export async function getStreamMarkers(videoId: string): Promise<GetStreamMarkersResult> {
+export async function getStreamMarkers(
+  videoId: string,
+): Promise<GetStreamMarkersResult> {
   try {
     if (!videoId) {
       return {
@@ -341,19 +396,23 @@ export async function getStreamMarkers(videoId: string): Promise<GetStreamMarker
 
     const broadcasterId = await getBroadcasterId();
 
-    const allMarkers: TwitchStreamMarkersResponse["data"][0]["videos"][0]["markers"] = [];
+    const allMarkers: TwitchStreamMarkersResponse["data"][0]["videos"][0]["markers"] =
+      [];
     let cursor: string | undefined;
 
     // Paginate through all markers
     do {
-      const response = await TwitchAPI.get<TwitchStreamMarkersResponse>("/streams/markers", {
-        broadcasterID: broadcasterId,
-        params: {
-          video_id: videoId,
-          first: 100,
-          ...(cursor && { after: cursor }),
+      const response = await TwitchAPI.get<TwitchStreamMarkersResponse>(
+        "/streams/markers",
+        {
+          broadcasterID: broadcasterId,
+          params: {
+            video_id: videoId,
+            first: 100,
+            ...(cursor && { after: cursor }),
+          },
         },
-      });
+      );
 
       const data = response.data.data;
       if (data && data.length > 0) {
@@ -375,7 +434,10 @@ export async function getStreamMarkers(videoId: string): Promise<GetStreamMarker
     console.error("Error fetching stream markers:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error fetching stream markers",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error fetching stream markers",
     };
   }
 }
@@ -396,7 +458,11 @@ export async function getStreamMarkers(videoId: string): Promise<GetStreamMarker
  * Requires scope: channel:manage:broadcast
  * Note: The stream must be live and have VOD enabled
  */
-export async function createStreamMarker(description?: string): Promise<ActionResponse<{ id: string; position_seconds: number; description: string }>> {
+export async function createStreamMarker(
+  description?: string,
+): Promise<
+  ActionResponse<{ id: string; position_seconds: number; description: string }>
+> {
   try {
     const broadcasterId = await getBroadcasterId();
 
@@ -439,7 +505,10 @@ export async function createStreamMarker(description?: string): Promise<ActionRe
     console.error("Error creating stream marker:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error creating stream marker",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error creating stream marker",
     };
   }
 }

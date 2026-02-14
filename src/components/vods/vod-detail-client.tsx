@@ -6,12 +6,28 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TwitchPlayerComponent, type TwitchPlayer } from "@/components/vods/twitch-player";
+import {
+  TwitchPlayerComponent,
+  type TwitchPlayer,
+} from "@/components/vods/twitch-player";
 import { VideoTimeline } from "./timeline";
 import { StreamEventsPanel } from "./stream-events-panel";
 import { EventTypeFilter } from "./event-type-filter";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
-import { ExternalLink, Eye, Globe, Calendar, Scissors, Play, Pause, Volume2, VolumeX, X, SkipBack, ArrowLeft } from "lucide-react";
+import {
+  ExternalLink,
+  Eye,
+  Globe,
+  Calendar,
+  Scissors,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  X,
+  SkipBack,
+  ArrowLeft,
+} from "lucide-react";
 import Link from "next/link";
 
 interface VodDetailClientProps {
@@ -54,9 +70,13 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
     resetState,
   } = useVideoPlayerStore();
 
-  const timeUpdateRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const timeUpdateRef = useRef<ReturnType<typeof setInterval> | undefined>(
+    undefined,
+  );
   const leftPanelRef = useRef<HTMLDivElement>(null);
-  const [leftPanelHeight, setLeftPanelHeight] = useState<number | undefined>(undefined);
+  const [leftPanelHeight, setLeftPanelHeight] = useState<number | undefined>(
+    undefined,
+  );
 
   // Measure left panel height and sync to right panel
   useEffect(() => {
@@ -77,15 +97,17 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
     incrementPlayerKey();
     setVideo(video);
 
-    // Fetch stream events and clips via video ID
-    fetchEvents(video.id);
-
     return () => {
       resetState();
       if (timeUpdateRef.current) {
         clearInterval(timeUpdateRef.current);
       }
     };
+  }, []);
+
+  // Fetch stream events and clips via video ID
+  useEffect(() => {
+    fetchEvents(video.id);
   }, [video]);
 
   // Poll for current time while playing
@@ -119,7 +141,14 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
     if (currentTime >= clipEndTime) {
       seek(clipStartTime);
     }
-  }, [isCreatingClip, isPlaying, isPlayerReady, currentTime, clipStartTime, clipEndTime]);
+  }, [
+    isCreatingClip,
+    isPlaying,
+    isPlayerReady,
+    currentTime,
+    clipStartTime,
+    clipEndTime,
+  ]);
 
   // When entering clip mode, seek to clip start
   useEffect(() => {
@@ -172,7 +201,9 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
             </Link>
           </Button>
           <div className="min-w-0">
-            <h1 className="text-xl font-semibold line-clamp-1">{video.title}</h1>
+            <h1 className="text-xl font-semibold line-clamp-1">
+              {video.title}
+            </h1>
             <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
               <span>{video.user_name}</span>
               <Badge variant="secondary" className="capitalize">
@@ -192,7 +223,10 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
       {/* Two-column layout: Video player left, Events right */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left side: Video player and controls */}
-        <div ref={leftPanelRef} className="flex-1 flex flex-col min-w-0 p-4 pt-0 overflow-y-auto">
+        <div
+          ref={leftPanelRef}
+          className="flex-1 flex flex-col min-w-0 p-4 pt-0 overflow-y-auto"
+        >
           {/* Interactive Twitch Player */}
           <div className="relative aspect-video w-full max-h-[50vh] overflow-hidden rounded-lg bg-black shrink-0">
             <TwitchPlayerComponent
@@ -211,14 +245,38 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
 
           {/* Custom Controls */}
           <div className="flex items-center gap-2 mt-4">
-            <Button variant="outline" size="icon" onClick={togglePlay} disabled={!isPlayerReady}>
-              {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={togglePlay}
+              disabled={!isPlayerReady}
+            >
+              {isPlaying ? (
+                <Pause className="h-4 w-4" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
             </Button>
-            <Button variant="outline" size="icon" onClick={toggleMute} disabled={!isPlayerReady}>
-              {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleMute}
+              disabled={!isPlayerReady}
+            >
+              {isMuted ? (
+                <VolumeX className="h-4 w-4" />
+              ) : (
+                <Volume2 className="h-4 w-4" />
+              )}
             </Button>
             {isCreatingClip && (
-              <Button variant="outline" size="sm" onClick={seekToClipStart} disabled={!isPlayerReady} title="Jump to clip start">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={seekToClipStart}
+                disabled={!isPlayerReady}
+                title="Jump to clip start"
+              >
                 <SkipBack className="h-4 w-4 mr-1" />
                 Clip Start
               </Button>
@@ -232,7 +290,11 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
               currentTime={currentTime}
               disabled={!isPlayerReady}
               isClipMode={isCreatingClip}
-              clipSelection={isCreatingClip ? { startTime: clipStartTime, endTime: clipEndTime } : undefined}
+              clipSelection={
+                isCreatingClip
+                  ? { startTime: clipStartTime, endTime: clipEndTime }
+                  : undefined
+              }
               onClipSelectionChange={setClipSelection}
               mutedSegments={video.muted_segments}
             />
@@ -255,7 +317,11 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
           </div>
 
           {/* Description (if present) */}
-          {video.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-4">{video.description}</p>}
+          {video.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2 mt-4">
+              {video.description}
+            </p>
+          )}
 
           {/* Actions */}
           <div className="pt-4 mt-4 border-t space-y-4">
@@ -267,7 +333,11 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
                   Watch on Twitch
                 </a>
               </Button>
-              <Button variant={isCreatingClip ? "secondary" : "outline"} onClick={handleToggleClipCreation} disabled={!isPlayerReady}>
+              <Button
+                variant={isCreatingClip ? "secondary" : "outline"}
+                onClick={handleToggleClipCreation}
+                disabled={!isPlayerReady}
+              >
                 {isCreatingClip ? (
                   <>
                     <X className="mr-2 h-4 w-4" />
@@ -290,8 +360,17 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
                   <Label htmlFor="clip-title" className="text-sm font-medium">
                     Clip Title
                   </Label>
-                  <Input id="clip-title" placeholder="Add a title (required)" value={clipTitle} onChange={(e) => setClipTitle(e.target.value)} className="bg-background" />
-                  <p className="text-xs text-muted-foreground">Clips with unique titles get more views. Help {video.user_name} get discovered by adding a title.</p>
+                  <Input
+                    id="clip-title"
+                    placeholder="Add a title (required)"
+                    value={clipTitle}
+                    onChange={(e) => setClipTitle(e.target.value)}
+                    className="bg-background"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Clips with unique titles get more views. Help{" "}
+                    {video.user_name} get discovered by adding a title.
+                  </p>
                 </div>
 
                 {/* Save/Cancel buttons */}
@@ -299,7 +378,11 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
                   <Button variant="ghost" onClick={cancelClipCreation}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSaveClip} disabled={!clipTitle.trim() || isSubmittingClip} className="bg-purple-600 hover:bg-purple-700">
+                  <Button
+                    onClick={handleSaveClip}
+                    disabled={!clipTitle.trim() || isSubmittingClip}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
                     Save Clip
                   </Button>
                 </div>
@@ -309,7 +392,10 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
         </div>
 
         {/* Right side: Events panel */}
-        <div className="w-80 shrink-0 overflow-hidden border-l rounded-lg bg-muted/30" style={{ maxHeight: leftPanelHeight }}>
+        <div
+          className="w-80 shrink-0 overflow-hidden border-l rounded-lg bg-muted/30"
+          style={{ maxHeight: leftPanelHeight }}
+        >
           <StreamEventsPanel />
         </div>
       </div>

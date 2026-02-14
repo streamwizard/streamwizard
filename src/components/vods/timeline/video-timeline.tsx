@@ -42,7 +42,7 @@ export function VideoTimeline({
   // Use events from store if not provided via props
   const storeEvents = useVideoPlayerStore((state) => state.timelineEvents);
   const events = eventsProp ?? storeEvents;
-  const { seek, setZoomLevel, viewOffset, zoomLevel, dragging, dragStartInfo, setViewOffset, setDragging, initializeZoomForClip, resetZoom } = useVideoPlayerStore();
+  const { seek, setZoomLevel, viewOffset, zoomLevel, dragging, dragStartInfo, setViewOffset, setDragging, initializeZoomForClip, resetZoom, isSeekDisabled } = useVideoPlayerStore();
 
   // Local state for drag position - prevents re-renders via Zustand during drag
   // This is updated via refs and DOM manipulation, only committed on drag end
@@ -248,7 +248,7 @@ export function VideoTimeline({
   // Handle click on timeline
   const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Prevent click from firing if we just finished dragging
-    if (disabled || totalSeconds === 0 || dragging || justFinishedDraggingRef.current) {
+    if (disabled || totalSeconds === 0 || dragging || justFinishedDraggingRef.current || isSeekDisabled) {
       return;
     }
 

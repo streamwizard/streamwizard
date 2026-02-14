@@ -25,7 +25,7 @@ export function StreamEventsPanel() {
     seekToEvent(event.id);
   };
 
-  if (isLoadingEvents) {
+  if (isLoadingEvents && filteredEvents.length === 0) {
     return (
       <div className="space-y-3 p-4">
         <h3 className="text-sm font-semibold text-muted-foreground">Stream Events</h3>

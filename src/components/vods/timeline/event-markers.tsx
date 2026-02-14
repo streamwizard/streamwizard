@@ -5,6 +5,7 @@ import { getEventTypeInfo } from "@/lib/utils/stream-events";
 import type { TimelineEvent } from "./types";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import { EventContextMenu } from "@/components/vods/event-context-menu";
+import { useState } from "react";
 
 interface EventMarkersProps {
   events: TimelineEvent[];
@@ -20,7 +21,7 @@ export function EventMarkers({ events, secondsToPercent, disabled }: EventMarker
 
   const handleEventClick = (e: React.MouseEvent, event: TimelineEvent) => {
     e.stopPropagation();
-    if (disabled) return;
+    if (disabled ) return;
 
     // Seek to event position
     seekToEvent(event.id);

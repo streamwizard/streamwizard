@@ -6,7 +6,7 @@ import { useModal } from "@/providers/modal-provider";
 import { CreateMarkerModal } from "@/components/modals/create-marker-modal";
 import { Scissors, Flag } from "lucide-react";
 import { formatDuration } from "@/types/twitch video";
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { getSecondsFromPosition } from "./timeline-utils";
 
 interface TimelineContextMenuProps {
@@ -27,9 +27,26 @@ interface TimelineContextMenuProps {
  * The offset is calculated from where the user right-clicked, NOT the current seeker position.
  */
 export function TimelineContextMenu({ children, trackRef, viewStart, visibleDuration, disabled = false }: TimelineContextMenuProps) {
-  const startClipCreation = useVideoPlayerStore((s) => s.startClipCreation);
+  const { setIsSeekDisabled, startClipCreation } = useVideoPlayerStore();
   const { openModal } = useModal();
   const [contextOffset, setContextOffset] = useState(0);
+
+  // When the menu closes, delay re-enabling seek so the closing click
+  // doesn't propagate through to the timeline's onClick handler.
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (open) {
+        setIsSeekDisabled(true);
+      } else {
+        // Use requestAnimationFrame to let the click event finish propagating
+        // before we re-enable seeking
+        requestAnimationFrame(() => {
+          setIsSeekDisabled(false);
+        });
+      }
+    },
+    [setIsSeekDisabled],
+  );
 
   const handleContextMenu = (e: React.MouseEvent) => {
     // Calculate the time offset from the right-click position on the timeline
@@ -49,7 +66,7 @@ export function TimelineContextMenu({ children, trackRef, viewStart, visibleDura
   };
 
   return (
-    <ContextMenu>
+    <ContextMenu onOpenChange={handleOpenChange}>
       <ContextMenuTrigger asChild onContextMenu={handleContextMenu}>
         {children}
       </ContextMenuTrigger>
@@ -59,10 +76,6 @@ export function TimelineContextMenu({ children, trackRef, viewStart, visibleDura
         <ContextMenuItem onClick={handleCreateClip} disabled={disabled}>
           <Scissors className="h-4 w-4 text-purple-500" />
           Create Clip Here
-        </ContextMenuItem>
-        <ContextMenuItem onClick={handleAddMarker} disabled={disabled}>
-          <Flag className="h-4 w-4 text-orange-500" />
-          Add Marker
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

@@ -28,6 +28,7 @@ export async function addClipToFolder({ clipId, userId, folderId, folderName }: 
       folderId = data[0].id;
     }
 
+
     // Add clip to the folder
     const { error } = await supabase.from("clip_folder_junction").insert({
       clip_id: clipId,
@@ -36,7 +37,7 @@ export async function addClipToFolder({ clipId, userId, folderId, folderName }: 
     });
 
     if (error) throw error;
-    revalidatePath("/dashboard/clips", "layout");
+    revalidatePath("/dashboard/", "layout");
     return { success: true, message: `Clip added to ${folderName}` };
   } catch (error) {
     console.error("Error adding clip to Favorites:", error);
@@ -52,7 +53,7 @@ export async function removeClipFromFolder(clipId: string, folderId: number, use
   try {
     const { error } = await supabase.from("clip_folder_junction").delete().eq("clip_id", clipId).eq("folder_id", folderId).eq("user_id", userId);
     if (error) throw error;
-    revalidatePath("/dashboard/clips", "layout");
+    revalidatePath("/dashboard/", "layout");
     return { success: true, message: "Clip removed from folder" };
   } catch (error) {
     console.error("Error removing clip from Favorites:", error);

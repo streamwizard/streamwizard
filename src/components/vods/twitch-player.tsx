@@ -233,6 +233,7 @@ export function TwitchPlayerComponent({
   ]);
 
   useEffect(() => {
+    console.log("is scripted loaded")
     if (isScriptLoaded) {
       initPlayer();
     }
@@ -240,6 +241,7 @@ export function TwitchPlayerComponent({
 
   // Check if Twitch script is already loaded (from previous mount)
   useEffect(() => {
+    console.log("set is script loaded")
     if (typeof window !== "undefined" && window.Twitch && !isScriptLoaded) {
       setIsScriptLoaded(true);
     }

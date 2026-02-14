@@ -63,7 +63,9 @@ export type StreamEvent = Database["public"]["Tables"]["stream_events"]["Row"];
 /**
  * A clip stored in Supabase (matches clips table schema)
  */
-export type Clip = Database["public"]["Tables"]["clips"]["Row"];
+export type Clip = Database["public"]["Tables"]["clips"]["Row"] & {
+  folder_ids: number[];
+};
 
 /**
  * Result of fetching stream data (events + clips) via get_stream_data RPC
