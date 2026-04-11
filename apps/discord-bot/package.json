@@ -1,0 +1,23 @@
+{
+  "name": "discord-bot",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run ./src/index.ts",
+    "check-types": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@repo/env": "workspace:*",
+    "@repo/supabase": "workspace:*",
+    "@supabase/supabase-js": "^2.83.0",
+    "discord.js": "^14.25.1"
+  }
+}
