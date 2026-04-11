@@ -65,6 +65,10 @@ const envSchema = z.object({
   INFLUXDB_TOKEN: z.string().optional(),
   INFLUXDB_ORG: z.string().optional(),
   INFLUXDB_BUCKET: z.string().optional(),
+
+  // Discord Bot
+  DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
+  DISCORD_CLIENT_ID: z.string().min(1, "DISCORD_CLIENT_ID is required"),
 });
 
 /**

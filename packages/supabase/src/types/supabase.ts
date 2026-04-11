@@ -327,6 +327,45 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback: {
+        Row: {
+          category: Database["public"]["Enums"]["feedback_category"]
+          created_at: string
+          description: string
+          discord: string | null
+          id: string
+          priority: Database["public"]["Enums"]["feedback_priority"]
+          status: Database["public"]["Enums"]["feedback_status"]
+          title: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["feedback_category"]
+          created_at?: string
+          description: string
+          discord?: string | null
+          id?: string
+          priority: Database["public"]["Enums"]["feedback_priority"]
+          status?: Database["public"]["Enums"]["feedback_status"]
+          title: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["feedback_category"]
+          created_at?: string
+          description?: string
+          discord?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["feedback_priority"]
+          status?: Database["public"]["Enums"]["feedback_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       integrations: {
         Row: {
           created_at: string
@@ -1090,6 +1129,9 @@ export type Database = {
         | "spotify.skip"
         | "none"
       clip_sync_status: "completed" | "failed" | "syncing"
+      feedback_category: "bug" | "feature" | "general"
+      feedback_priority: "low" | "medium" | "high" | "critical"
+      feedback_status: "open" | "in_progress" | "resolved" | "closed"
       provider_type: "twitch" | "discord"
       roles: "user" | "beta" | "admin"
       theme_type: "dark" | "light" | "system"
@@ -1238,6 +1280,9 @@ export const Constants = {
         "none",
       ],
       clip_sync_status: ["completed", "failed", "syncing"],
+      feedback_category: ["bug", "feature", "general"],
+      feedback_priority: ["low", "medium", "high", "critical"],
+      feedback_status: ["open", "in_progress", "resolved", "closed"],
       provider_type: ["twitch", "discord"],
       roles: ["user", "beta", "admin"],
       theme_type: ["dark", "light", "system"],
