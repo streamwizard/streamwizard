@@ -1,35 +1,69 @@
 import { z } from "zod";
-import { resolve, dirname } from "path";
+import { resolve, dirname, join } from "path";
 import { existsSync, readFileSync } from "fs";
 import { fileURLToPath } from "url";
 
-// Load .env file from monorepo root
-const loadEnvFile = () => {
-  // Get the directory of this file
+const parseEnvContent = (envContent: string) => {
+  envContent.split("\n").forEach((line) => {
+    const trimmedLine = line.trim();
+
+    // Skip empty lines and comments
+    if (!trimmedLine || trimmedLine.startsWith("#")) return;
+
+    const normalizedLine = trimmedLine.startsWith("export ")
+      ? trimmedLine.slice(7)
+      : trimmedLine;
+
+    const [key, ...valueParts] = normalizedLine.split("=");
+    if (key && valueParts.length > 0) {
+      const rawValue = valueParts.join("=").trim();
+      const value = rawValue.replace(/^["']|["']$/g, "");
+      const envKey = key.trim();
+
+      // Only set if not already set (allows override)
+      if (!process.env[envKey]) {
+        process.env[envKey] = value;
+      }
+    }
+  });
+};
+
+const findEnvPath = () => {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
+  const maxDepth = 8;
+  const startDirectories = [process.cwd(), __dirname];
+  const fileNames = [".env.local", ".env"];
 
-  // Try to find the .env file in the monorepo root
-  // Go up from packages/env/src to the root
-  const envPath = resolve(__dirname, "../../../.env");
+  for (const startDirectory of startDirectories) {
+    let currentDirectory = startDirectory;
 
-  if (existsSync(envPath)) {
-    const envContent = readFileSync(envPath, "utf-8");
-
-    // Parse and set environment variables
-    envContent.split("\n").forEach((line) => {
-      // Skip empty lines and comments
-      if (!line || line.trim().startsWith("#")) return;
-
-      const [key, ...valueParts] = line.split("=");
-      if (key && valueParts.length > 0) {
-        const value = valueParts.join("=").trim();
-        // Only set if not already set (allows override)
-        if (!process.env[key.trim()]) {
-          process.env[key.trim()] = value;
+    for (let depth = 0; depth <= maxDepth; depth++) {
+      for (const fileName of fileNames) {
+        const candidatePath = join(currentDirectory, fileName);
+        if (existsSync(candidatePath)) {
+          return candidatePath;
         }
       }
-    });
+
+      const parentDirectory = resolve(currentDirectory, "..");
+      if (parentDirectory === currentDirectory) {
+        break;
+      }
+      currentDirectory = parentDirectory;
+    }
+  }
+
+  return null;
+};
+
+// Load env file by searching upward from cwd and package path.
+const loadEnvFile = () => {
+  const envPath = findEnvPath();
+
+  if (envPath) {
+    const envContent = readFileSync(envPath, "utf-8");
+    parseEnvContent(envContent);
   }
 };
 
@@ -58,17 +92,17 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 
   // Minecraft WebSocket
-  MINECRAFT_WS_AUTH_TOKEN: z.string().min(1, "MINECRAFT_WS_AUTH_TOKEN is required"),
+  // MINECRAFT_WS_AUTH_TOKEN: z.string().min(1, "MINECRAFT_WS_AUTH_TOKEN is required"),
 
-  // InfluxDB Configuration (optional - metrics disabled if not set)
-  INFLUXDB_URL: z.string().url().optional(),
-  INFLUXDB_TOKEN: z.string().optional(),
-  INFLUXDB_ORG: z.string().optional(),
-  INFLUXDB_BUCKET: z.string().optional(),
+  // // InfluxDB Configuration (optional - metrics disabled if not set)
+  // INFLUXDB_URL: z.string().url().optional(),
+  // INFLUXDB_TOKEN: z.string().optional(),
+  // INFLUXDB_ORG: z.string().optional(),
+  // INFLUXDB_BUCKET: z.string().optional(),
 
-  // Discord Bot
-  DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
-  DISCORD_CLIENT_ID: z.string().min(1, "DISCORD_CLIENT_ID is required"),
+  // // Discord Bot
+  // DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
+  // DISCORD_CLIENT_ID: z.string().min(1, "DISCORD_CLIENT_ID is required"),
 });
 
 /**
