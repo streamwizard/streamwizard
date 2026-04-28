@@ -1,10 +1,21 @@
 FROM oven/bun:1.3.5-alpine
 
-# This Dockerfile expects the build context to be the repository root.
+# This Dockerfile expects the Docker build context to be the repository root.
+# Dokploy settings:
+# - Docker File: apps/streamwizard-bot/Dockerfile
+# - Docker Context Path: .
 WORKDIR /app
 
+# Copy manifests first so dependency install can be cached.
+COPY package.json bun.lock ./
+COPY apps/streamwizard-bot/package.json apps/streamwizard-bot/package.json
+COPY packages ./packages
+
+# Install only this app workspace and its transitive workspace dependencies.
+RUN bun install --frozen-lockfile --production --filter @repo/streamwizard-bot
+
+# Copy the rest of the repository after dependencies are installed.
 COPY . .
-RUN bun install --frozen-lockfile --production
 
 WORKDIR /app/apps/streamwizard-bot
 CMD ["bun", "run", "start"]
