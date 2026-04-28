@@ -1,10 +1,21 @@
 FROM oven/bun:1.3.5-alpine
 
-# This Dockerfile expects the build context to be the repository root.
+# This Dockerfile expects the Docker build context to be the repository root.
+# Dokploy settings:
+# - Docker File: apps/clip-sync/Dockerfile
+# - Docker Context Path: .
 WORKDIR /app
 
+# Copy manifests first so dependency install can be cached.
+COPY package.json bun.lock ./
+COPY apps/clip-sync/package.json apps/clip-sync/package.json
+COPY packages ./packages
+
+# Install only this app workspace and its transitive workspace dependencies.
+RUN bun install --frozen-lockfile --production --filter @repo/clip-sync
+
+# Copy the rest of the repository after dependencies are installed.
 COPY . .
-RUN bun install --frozen-lockfile --production
 
 WORKDIR /app/apps/clip-sync
 CMD ["bun", "run", "start"]
