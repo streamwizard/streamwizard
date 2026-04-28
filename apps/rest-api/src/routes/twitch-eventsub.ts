@@ -1,12 +1,22 @@
 import { type Context } from "hono";
-import { MESSAGE_TYPE_VERIFICATION, MESSAGE_TYPE_NOTIFICATION, MESSAGE_TYPE_REVOCATION } from "../utils/twitch-eventsub";
-import type { EventSubVerificationPayload, EventSubNotificationPayload, EventSubRevocationPayload } from "@repo/types";
+import {
+  MESSAGE_TYPE_VERIFICATION,
+  MESSAGE_TYPE_NOTIFICATION,
+  MESSAGE_TYPE_REVOCATION,
+} from "../utils/twitch-eventsub";
+import type {
+  EventSubVerificationPayload,
+  EventSubNotificationPayload,
+  EventSubRevocationPayload,
+} from "@repo/types";
 import handleEventsub from "../functions/handle-eventsub";
-
 
 export async function handleTwitchEventSub(c: Context) {
   // Get verified notification and message type from context (set by middleware)
-  const notification = c.get("twitchNotification") as EventSubVerificationPayload | EventSubNotificationPayload | EventSubRevocationPayload;
+  const notification = c.get("twitchNotification") as
+    | EventSubVerificationPayload
+    | EventSubNotificationPayload
+    | EventSubRevocationPayload;
   const messageType = c.get("twitchMessageType") as string;
 
   if (!notification || !messageType) {
@@ -15,7 +25,7 @@ export async function handleTwitchEventSub(c: Context) {
         error: "Internal error",
         message: "Notification data not found in context",
       },
-      500
+      500,
     );
   }
 
@@ -42,7 +52,10 @@ export async function handleTwitchEventSub(c: Context) {
  * When subscribing to an event, Twitch sends a challenge that must be
  * returned in the response body with status 200.
  */
-function handleVerification(c: Context, notification: EventSubVerificationPayload) {
+function handleVerification(
+  c: Context,
+  notification: EventSubVerificationPayload,
+) {
   const challenge = notification.challenge;
 
   if (!challenge || typeof challenge !== "string") {
@@ -51,14 +64,9 @@ function handleVerification(c: Context, notification: EventSubVerificationPayloa
         error: "Invalid challenge",
         message: "Challenge field is missing or invalid",
       },
-      400
+      400,
     );
   }
-
-  console.log("EventSub verification challenge received", {
-    subscriptionId: notification.subscription.id,
-    subscriptionType: notification.subscription.type,
-  });
 
   // Return the challenge as plain text with 200 status
   return c.text(challenge, 200);
@@ -70,7 +78,10 @@ function handleVerification(c: Context, notification: EventSubVerificationPayloa
  * Process actual events from Twitch (e.g., channel.follow, stream.online, etc.)
  * Must respond quickly (within a few seconds) or Twitch will revoke the subscription.
  */
-async function handleNotification(c: Context, notification: EventSubNotificationPayload) {
+async function handleNotification(
+  c: Context,
+  notification: EventSubNotificationPayload,
+) {
   await handleEventsub(notification);
   return c.body(null, 204);
 }
