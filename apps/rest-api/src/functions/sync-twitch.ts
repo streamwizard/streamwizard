@@ -124,7 +124,7 @@ export async function syncTwitchClips(user_id: string, TwitchAPI: TwitchApi) {
       }
 
       // format the clips for the database
-      const formattedClips = formatClipsForDB(clips, integration.user_id);
+      const formattedClips = await formatClipsForDB(clips, integration.user_id);
 
       // upsert the clips into the database
       const { error: upsertError } = await supabase.from("clips").upsert(formattedClips, {
@@ -196,8 +196,25 @@ export type TwitchClip = {
   is_featured: boolean;
 };
 
+async function getExistingVodVideoIds(videoIds: string[]): Promise<Set<string>> {
+  if (!videoIds.length) {
+    return new Set();
+  }
+
+  const { data, error } = await supabase.from("vods").select("video_id").in("video_id", videoIds);
+
+  if (error) {
+    throw new Error(`Failed to fetch VOD references: ${error.message}`);
+  }
+
+  return new Set((data ?? []).map((vod) => vod.video_id));
+}
+
 // format the clips for the database
-export function formatClipsForDB(clips: TwitchClip[], userId: string): Database["public"]["Tables"]["clips"]["Insert"][] {
+export async function formatClipsForDB(clips: TwitchClip[], userId: string): Promise<Database["public"]["Tables"]["clips"]["Insert"][]> {
+  const uniqueVideoIds = [...new Set(clips.map((clip) => clip.video_id).filter((videoId): videoId is string => !!videoId))];
+  const existingVodVideoIds = await getExistingVodVideoIds(uniqueVideoIds);
+
   return clips.map((clip) => ({
     twitch_clip_id: clip.id,
     url: clip.url,
@@ -206,7 +223,8 @@ export function formatClipsForDB(clips: TwitchClip[], userId: string): Database[
     broadcaster_name: clip.broadcaster_name,
     creator_id: clip.creator_id,
     creator_name: clip.creator_name,
-    video_id: clip.video_id || null,
+    // Keep FK integrity: only persist video_id when the referenced VOD exists.
+    video_id: clip.video_id && existingVodVideoIds.has(clip.video_id) ? clip.video_id : null,
     game_id: clip.game_id,
     language: clip.language,
     title: clip.title,
