@@ -69,7 +69,6 @@ export async function handleChatMessage(message: ChannelChatMessageEvent, twitch
     };
     const resolvedMessage = await resolveVariables(returnMessage, { twitchApi }, historyResults);
 
-    console.log("🔑 Resolved message:", resolvedMessage);
 
     // send the message to the broadcaster chat
     if (returnMessage) {
