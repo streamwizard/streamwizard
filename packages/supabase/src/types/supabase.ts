@@ -615,6 +615,48 @@ export type Database = {
           },
         ]
       }
+      smp_players: {
+        Row: {
+          broadcaster_id: string | null
+          created_at: string
+          id: string
+          is_online: boolean
+          minecraft_player_uuid: string | null
+          user_id: string
+        }
+        Insert: {
+          broadcaster_id?: string | null
+          created_at?: string
+          id?: string
+          is_online?: boolean
+          minecraft_player_uuid?: string | null
+          user_id?: string
+        }
+        Update: {
+          broadcaster_id?: string | null
+          created_at?: string
+          id?: string
+          is_online?: boolean
+          minecraft_player_uuid?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smp_players_broadcaster_id_fkey"
+            columns: ["broadcaster_id"]
+            isOneToOne: false
+            referencedRelation: "integrations_twitch"
+            referencedColumns: ["twitch_user_id"]
+          },
+          {
+            foreignKeyName: "smp_players_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       smp_triggers: {
         Row: {
           action_id: string | null

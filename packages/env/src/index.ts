@@ -92,7 +92,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 
   // Minecraft WebSocket
-  // MINECRAFT_WS_AUTH_TOKEN: z.string().min(1, "MINECRAFT_WS_AUTH_TOKEN is required"),
+  MINECRAFT_WS_AUTH_TOKEN: z.string().min(1, "MINECRAFT_WS_AUTH_TOKEN is required"),
 
   // // InfluxDB Configuration (optional - metrics disabled if not set)
   // INFLUXDB_URL: z.string().url().optional(),

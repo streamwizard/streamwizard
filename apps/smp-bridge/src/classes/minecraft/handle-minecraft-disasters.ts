@@ -14,11 +14,11 @@ export class MinecraftDisasters extends MinecraftAction {
     });
   }
 
-  public async Windstorm() {
+  public async Windstorm(metadata: WindStormMetadata) {
     await this.execute("disaster.windstorm", {
-      force: 0.1,
-      duration: 10,
-      level: 1,
-    } as WindStormMetadata);
+      force: metadata.force,
+      duration: metadata.duration,
+      level: metadata.level,
+    });
   }
 }

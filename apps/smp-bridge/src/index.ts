@@ -1,17 +1,34 @@
 // src/index.ts
 import { minecraftWebSocketServer } from "./services/minecraftWebsocketServer";
 import { handlers } from "./handlers/eventHandler";
+import type { SmpBridgeHandlerContext } from "./handlers/eventHandler";
 import { TwitchEventSubReceiver } from "@repo/twitch-eventsub";
+import type { MinecraftMessageType } from "@/types/minecraft-incomming-websocket-messages";
 import customLogger from "@/lib/logger";
 
 const localhost = "ws://127.0.0.1:8080/ws";
 const production = "wss://eventsub.wss.twitch.tv/ws";
+const MINECRAFT_EVENT_TYPES: MinecraftMessageType[] = ["player.join", "player.quit", "player.death"];
+const minecraftWsContext = {} as SmpBridgeHandlerContext;
+
+const registerMinecraftWebSocketHandlers = () => {
+    for (const eventType of MINECRAFT_EVENT_TYPES) {
+        minecraftWebSocketServer.registerClientHandler(eventType, async (message) => {
+            await handlers.processMinecraftEvent(eventType, message, minecraftWsContext);
+
+            return {
+                handled: true,
+                eventType,
+            };
+        });
+    }
+};
 
 async function main() {
     try {
         const EventSubReceiver = new TwitchEventSubReceiver(handlers, {
             wsUrl: production,
-            conduitId: "b4044568-68e1-4667-b7e1-d3bac6076117",
+            conduitId: "6a9dfc09-7807-4f9d-830e-25f6ab00ed1f",
         });
 
         // Handle graceful shutdown
@@ -28,6 +45,7 @@ async function main() {
             process.exit(0);
         });
 
+        registerMinecraftWebSocketHandlers();
         minecraftWebSocketServer.start();
         await EventSubReceiver.connect();
     } catch (error) {
