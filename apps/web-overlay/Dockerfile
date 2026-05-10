@@ -1,76 +1,82 @@
 # ============================================
-# Stage 1: Dependencies Installation Stage
+# Stage 1: Dependencies
 # ============================================
-
-# This Dockerfile.bun is specifically configured for projects using Bun
-# For npm/pnpm or yarn, refer to the Dockerfile instead
-
 FROM oven/bun:1 AS dependencies
 
-# Set working directory
 WORKDIR /app
 
-# Copy package-related files first to leverage Docker's caching mechanism
-COPY package.json bun.lock* ./
+# Root workspace config
+COPY package.json bun.lock* turbo.json ./
 
-# Install project dependencies with frozen lockfile for reproducible builds
+# All workspace package.json files so Bun can resolve workspace:* deps
+COPY packages/env/package.json             ./packages/env/
+COPY packages/eslint-config/package.json   ./packages/eslint-config/
+COPY packages/logger/package.json          ./packages/logger/
+COPY packages/metrics/package.json         ./packages/metrics/
+COPY packages/schemas/package.json         ./packages/schemas/
+COPY packages/supabase/package.json        ./packages/supabase/
+COPY packages/twitch-api/package.json      ./packages/twitch-api/
+COPY packages/twitch-eventsub/package.json ./packages/twitch-eventsub/
+COPY packages/types/package.json           ./packages/types/
+COPY packages/typescript-config/package.json ./packages/typescript-config/
+COPY packages/ui/package.json              ./packages/ui/
+
+# App package.json files
+COPY apps/web-streamwizard/package.json ./apps/web-streamwizard/
+COPY apps/clip-sync/package.json        ./apps/clip-sync/
+COPY apps/discord-bot/package.json      ./apps/discord-bot/
+COPY apps/rest-api/package.json         ./apps/rest-api/
+COPY apps/smp-bridge/package.json       ./apps/smp-bridge/
+COPY apps/streamwizard-bot/package.json ./apps/streamwizard-bot/
+COPY apps/web-overlay/package.json      ./apps/web-overlay/
+
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-    bun install --no-save --frozen-lockfile
+    bun install --frozen-lockfile
 
 # ============================================
-# Stage 2: Build Next.js application in standalone mode
+# Stage 2: Build
 # ============================================
-
 FROM oven/bun:1 AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy project dependencies from dependencies stage
-COPY --from=dependencies /app/node_modules ./node_modules
-
-# Copy application source code
+# Copy all source files first
 COPY . .
 
+# Seed root node_modules from the deps stage so bun install is fast (no re-download)
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Run install to materialise workspace-local node_modules (e.g. packages/ui/node_modules,
+# apps/web-overlay/node_modules) that were not captured by the root copy above.
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
+
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-# ENV NEXT_TELEMETRY_DISABLED=1
-
-# Build Next.js application
+# Run next build from the app directory so bun resolves binaries from the local node_modules
+WORKDIR /app/apps/web-overlay
 RUN bun run build
 
 # ============================================
-# Stage 3: Run Next.js application
+# Stage 3: Runner
 # ============================================
-
 FROM oven/bun:1 AS runner
 
-# Set working directory
 WORKDIR /app
 
-# Set production environment variables
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the run time.
-# ENV NEXT_TELEMETRY_DISABLED=1
+# In a monorepo build the standalone output nests under apps/web-overlay/
+COPY --from=builder --chown=bun:bun /app/apps/web-overlay/public ./apps/web-overlay/public
+COPY --from=builder --chown=bun:bun /app/apps/web-overlay/.next/standalone ./
+COPY --from=builder --chown=bun:bun /app/apps/web-overlay/.next/static ./apps/web-overlay/.next/static
 
-# Copy production assets
-COPY --from=builder --chown=bun:bun /app/public ./public
-COPY --from=builder --chown=bun:bun /app/.next/standalone ./
-COPY --from=builder --chown=bun:bun /app/.next/static ./.next/static
-
-# Switch to non-root user for security best practices
 USER bun
 
-# Expose port 3000 to allow HTTP traffic
 EXPOSE 3000
 
-# Start Next.js standalone server with Bun
-CMD ["bun", "server.js"]
+CMD ["bun", "apps/web-overlay/server.js"]

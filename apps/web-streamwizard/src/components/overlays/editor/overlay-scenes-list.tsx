@@ -27,7 +27,6 @@ import { Switch } from "@repo/ui";
 import {
   Copy,
   Edit,
-  ExternalLink,
   Layers,
   MoreVertical,
   Plus,
@@ -191,16 +190,6 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                         Duplicate
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => {
-                          const url = `https://overlay.streamwizard.org/${scene.slug}`;
-                          navigator.clipboard.writeText(url);
-                          toast.success("Overlay URL copied");
-                        }}
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        Copy URL
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
                         onClick={() => handleDelete(scene.id)}
                         className="text-destructive focus:text-destructive"
                       >
@@ -224,12 +213,27 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                       {scene.is_active ? "Active" : "Inactive"}
                     </span>
                   </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/dashboard/overlays/${scene.id}/edit`}>
-                      <Edit className="mr-2 h-3 w-3" />
-                      Edit
-                    </Link>
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = `https://overlay.streamwizard.org/${scene.slug}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success("Overlay URL copied");
+                      }}
+                      title="Copy OBS browser source URL"
+                    >
+                      <Copy className="mr-2 h-3 w-3" />
+                      Copy URL
+                    </Button>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/dashboard/overlays/${scene.id}/edit`}>
+                        <Edit className="mr-2 h-3 w-3" />
+                        Edit
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
