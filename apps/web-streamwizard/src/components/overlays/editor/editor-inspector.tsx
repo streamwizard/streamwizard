@@ -11,7 +11,7 @@ import {
 } from "@repo/ui";
 import { Separator } from "@repo/ui";
 import { Slider } from "@repo/ui";
-import { Database } from "@/types/supabase";
+import { Database } from "@repo/supabase";
 import {
   AlignHorizontalJustifyCenter,
   AlignHorizontalJustifyEnd,

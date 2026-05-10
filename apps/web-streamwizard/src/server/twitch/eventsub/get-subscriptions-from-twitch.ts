@@ -1,8 +1,7 @@
-  import { GetEventSubSubscriptionsResponse } from "@/types/twitch";
-import { TwitchAppAPI } from "@/server/axios/twitch-app-token";
+import { TwitchApi } from "@repo/twitch-api";
 
 export default async function getSubscriptionFromTwitch(twitchUserId: string) {
-  const res = await TwitchAppAPI.get<GetEventSubSubscriptionsResponse>(`/eventsub/subscriptions?user_id=${twitchUserId}`);
-
-  return res.data.data;
+  const api = new TwitchApi(null);
+  const res = await api.eventsub.getSubscriptions(twitchUserId);
+  return res.data;
 }

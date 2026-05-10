@@ -178,8 +178,8 @@ export function DatePickerWithPresets({ name, label, description, className }: D
                     numberOfMonths={2}
                     disabled={disabledDays}
                     defaultMonth={new Date()}
-                    fromDate={subYears(new Date(), 10)}
-                    toDate={new Date()}
+                    startMonth={subYears(new Date(), 10)}
+                    endMonth={new Date()}
                     className="p-0"
                   />
                 </div>

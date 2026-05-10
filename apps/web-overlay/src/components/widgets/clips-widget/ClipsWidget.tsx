@@ -231,7 +231,8 @@ function resolveHref(url: string): string {
 }
 
 export function ClipsWidget({ scene, item }: OverlayWidgetProps) {
-  const config = item.config;
+  if (!scene) return null;
+  const config = item.config as unknown as Json;
   const sceneUserId = scene.user_id;
 
   const ui = useMemo(() => parseOverlayClipWidgetUi(config), [config]);

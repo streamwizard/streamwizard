@@ -1,7 +1,8 @@
-import type { OverlayItemRow, OverlaySceneRow } from "@/app/actions/overlay";
+import type { OverlayItem } from "@repo/ui/overlay";
+import type { OverlaySceneRow } from "@/app/actions/overlay";
 
-/** Props passed to every registered overlay widget (scene + one layer item). */
+/** Props passed to every registered overlay widget. `scene` is optional — only clips widget needs it. */
 export type OverlayWidgetProps = {
-  scene: OverlaySceneRow;
-  item: OverlayItemRow;
+  item: OverlayItem;
+  scene?: OverlaySceneRow;
 };

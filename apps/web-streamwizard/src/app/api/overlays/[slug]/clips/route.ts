@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@repo/supabase/next/admin";
 import { buildOverlayClipQuery } from "@/components/overlays/clip-query-builder";
 import { clipsWidgetConfigSchema } from "@/schemas/overlay";
 import {

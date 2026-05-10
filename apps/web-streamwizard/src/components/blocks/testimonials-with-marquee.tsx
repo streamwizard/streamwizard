@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { TestimonialCard } from "../cards/testimonial-card";
 import { Marquee } from "@repo/ui";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@repo/supabase/next/server";
 
 interface TestimonialsSectionProps {
   className?: string;

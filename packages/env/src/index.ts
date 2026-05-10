@@ -32,29 +32,24 @@ const findEnvPath = () => {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = dirname(__filename);
   const maxDepth = 8;
-  const startDirectories = [process.cwd(), __dirname];
   const fileNames = [".env.local", ".env"];
 
-  for (const startDirectory of startDirectories) {
-    let currentDirectory = startDirectory;
-
-    for (let depth = 0; depth <= maxDepth; depth++) {
-      for (const fileName of fileNames) {
-        const candidatePath = join(currentDirectory, fileName);
-        if (existsSync(candidatePath)) {
-          return candidatePath;
-        }
+  const searchFrom = (startDir: string) => {
+    let dir = startDir;
+    for (let i = 0; i <= maxDepth; i++) {
+      for (const f of fileNames) {
+        if (existsSync(join(dir, f))) return join(dir, f);
       }
-
-      const parentDirectory = resolve(currentDirectory, "..");
-      if (parentDirectory === currentDirectory) {
-        break;
-      }
-      currentDirectory = parentDirectory;
+      const parent = resolve(dir, "..");
+      if (parent === dir) break;
+      dir = parent;
     }
-  }
+    return null;
+  };
 
-  return null;
+  // /*turbopackIgnore: true*/ prevents Turbopack from tracing process.cwd() across
+  // the whole project tree when building Next.js apps.
+  return searchFrom(join(/*turbopackIgnore: true*/ process.cwd(), ".")) ?? searchFrom(__dirname) ?? null;
 };
 
 // Load env file by searching upward from cwd and package path.
@@ -67,8 +62,26 @@ const loadEnvFile = () => {
   }
 };
 
-// Load environment variables before validation
-loadEnvFile();
+// Next.js loads .env.local automatically before any module runs.
+// Only use the filesystem fallback in standalone Node.js contexts (e.g. bot services).
+if (!process.env.SUPABASE_URL && !process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  loadEnvFile();
+}
+
+// Fallbacks for Next.js NEXT_PUBLIC_* naming conventions so shared packages
+// work in both Next.js apps and standalone backend services.
+if (!process.env.TWITCH_CLIENT_ID && process.env.NEXT_PUBLIC_TWITCH_CLIENT_ID) {
+  process.env.TWITCH_CLIENT_ID = process.env.NEXT_PUBLIC_TWITCH_CLIENT_ID;
+}
+if (!process.env.SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  process.env.SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+}
+if (!process.env.SUPABASE_ANON_KEY && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  process.env.SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+}
+if (!process.env.SUPABASE_SECRET_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  process.env.SUPABASE_SECRET_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+}
 
 /**
  * Environment variables schema
@@ -91,14 +104,14 @@ const envSchema = z.object({
   // Environment
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
 
-  // Minecraft WebSocket
-  MINECRAFT_WS_AUTH_TOKEN: z.string().min(1, "MINECRAFT_WS_AUTH_TOKEN is required"),
+  // Minecraft WebSocket (only required by the bot service)
+  MINECRAFT_WS_AUTH_TOKEN: z.string().optional(),
 
-  // // InfluxDB Configuration (optional - metrics disabled if not set)
-  // INFLUXDB_URL: z.string().url().optional(),
-  // INFLUXDB_TOKEN: z.string().optional(),
-  // INFLUXDB_ORG: z.string().optional(),
-  // INFLUXDB_BUCKET: z.string().optional(),
+  // InfluxDB Configuration (optional - metrics disabled if not set)
+  INFLUXDB_URL: z.string().url().optional(),
+  INFLUXDB_TOKEN: z.string().optional(),
+  INFLUXDB_ORG: z.string().optional(),
+  INFLUXDB_BUCKET: z.string().optional(),
 
   // // Discord Bot
   // DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),

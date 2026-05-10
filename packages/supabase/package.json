@@ -8,14 +8,60 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./next/server": {
+      "types": "./src/next/server.ts",
+      "default": "./src/next/server.ts"
+    },
+    "./next/client": {
+      "types": "./src/next/client.ts",
+      "default": "./src/next/client.ts"
+    },
+    "./next/admin": {
+      "types": "./src/next/admin.ts",
+      "default": "./src/next/admin.ts"
+    },
+    "./next/proxy": {
+      "types": "./src/next/proxy.ts",
+      "default": "./src/next/proxy.ts"
+    },
+    "./queries/clips": {
+      "types": "./src/queries/clips.ts",
+      "default": "./src/queries/clips.ts"
+    },
+    "./queries/overlays": {
+      "types": "./src/queries/overlays.ts",
+      "default": "./src/queries/overlays.ts"
+    },
+    "./queries/user": {
+      "types": "./src/queries/user.ts",
+      "default": "./src/queries/user.ts"
+    },
+    "./queries/vods": {
+      "types": "./src/queries/vods.ts",
+      "default": "./src/queries/vods.ts"
+    },
+    "./queries/commands": {
+      "types": "./src/queries/commands.ts",
+      "default": "./src/queries/commands.ts"
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "gen-types": "supabase gen types typescript --project-id jgxdrljoqployiyjedst --schema public > src/types/supabase.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.90.1",
+    "@supabase/ssr": "^0.8.0",
     "@repo/env": "workspace:*"
+  },
+  "peerDependencies": {
+    "next": ">=15.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

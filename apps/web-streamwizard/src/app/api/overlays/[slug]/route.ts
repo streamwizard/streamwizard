@@ -1,4 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@repo/supabase/next/admin";
 import { overlayItemFromDbRow, toPublicOverlayApiItems } from "@/types/overlays";
 import { NextRequest, NextResponse } from "next/server";
 

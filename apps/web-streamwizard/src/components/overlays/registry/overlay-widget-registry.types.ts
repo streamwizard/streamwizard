@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { Database } from "@/types/supabase";
+import type { Database } from "@repo/supabase";
 import type {
   ChildOverlayItemType,
   DisplayFieldKey,

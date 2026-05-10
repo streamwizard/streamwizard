@@ -1,7 +1,7 @@
 import { getOverlayScenes } from "@/actions/overlays";
 import { OverlayScenesList } from "@/components/overlays/editor/overlay-scenes-list";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@repo/supabase/next/server";
 
 export default async function OverlaysPage() {
   const supabase = await createClient();

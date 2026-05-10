@@ -2,7 +2,7 @@
 
 import { buildOverlayClipQuery } from "@/components/overlays/clip-query-builder";
 import type { ClipsWidgetConfig } from "@/types/overlays";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@repo/supabase/next/server";
 
 export interface PreviewClip {
   id: number;

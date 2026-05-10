@@ -3,6 +3,8 @@ import { VodsPageClient } from "@/components/vods/vods-page-client";
 import { VodsTableSkeleton } from "@/components/vods/vods-table-skeleton";
 import { Suspense } from "react";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "VODs - Twitch Videos",
   description: "View and manage your Twitch VODs",

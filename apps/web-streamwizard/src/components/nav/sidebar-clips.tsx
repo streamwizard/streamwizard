@@ -8,7 +8,7 @@ import {
 } from "@repo/ui";
 import { useModal } from "@/providers/modal-provider";
 import { useSession } from "@/providers/session-provider";
-import { Database } from "@/types/supabase";
+import { Database } from "@repo/supabase";
 import { Clapperboard, EllipsisVertical, Folder, Plus, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import { CLipFolderModal } from "../modals/clip-folder-modal";

@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@repo/supabase/next/server";
 import { SessionProvider } from "@/providers/session-provider";
 import { redirect } from "next/navigation";
 import React from "react";

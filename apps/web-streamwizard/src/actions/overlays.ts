@@ -12,8 +12,16 @@ import type {
   OverlaySceneWithItems,
 } from "@/types/overlays";
 import { overlayItemFromDbRow } from "@/types/overlays";
-import { createClient } from "@/lib/supabase/server";
-import type { Database, Json } from "@/types/supabase";
+import { createClient } from "@repo/supabase/next/server";
+import type { Database, Json } from "@repo/supabase";
+import {
+  getOverlayScenes as _getOverlayScenes,
+  getOverlayScene as _getOverlayScene,
+  createOverlayScene as _createOverlayScene,
+  updateOverlayScene as _updateOverlayScene,
+  deleteOverlayScene as _deleteOverlayScene,
+  deleteOverlayItem as _deleteOverlayItem,
+} from "@repo/supabase/queries/overlays";
 import { revalidatePath } from "next/cache";
 
 function generateSlug(name: string): string {
@@ -42,12 +50,7 @@ export async function getOverlayScenes() {
   const { data: user } = await supabase.auth.getUser();
   if (!user?.user) return { data: null, error: "Unauthorized" };
 
-  const { data, error } = await supabase
-    .from("overlay_scenes")
-    .select("*")
-    .eq("user_id", user.user.id)
-    .order("updated_at", { ascending: false });
-
+  const { data, error } = await _getOverlayScenes(supabase, user.user.id);
   if (error) return { data: null, error: error.message };
   return { data, error: null };
 }
@@ -57,22 +60,8 @@ export async function getOverlayScene(id: string) {
   const { data: user } = await supabase.auth.getUser();
   if (!user?.user) return { data: null, error: "Unauthorized" };
 
-  const { data: scene, error: sceneError } = await supabase
-    .from("overlay_scenes")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.user.id)
-    .single();
-
-  if (sceneError) return { data: null, error: sceneError.message };
-
-  const { data: items, error: itemsError } = await supabase
-    .from("overlay_items")
-    .select("*")
-    .eq("scene_id", id)
-    .order("z_index", { ascending: true });
-
-  if (itemsError) return { data: null, error: itemsError.message };
+  const { scene, items, error } = await _getOverlayScene(supabase, id, user.user.id);
+  if (error) return { data: null, error: error.message };
 
   return {
     data: {
@@ -97,17 +86,13 @@ export async function createOverlayScene(formData: {
 
   const slug = generateSlug(parsed.data.name);
 
-  const { data, error } = await supabase
-    .from("overlay_scenes")
-    .insert({
-      user_id: user.user.id,
-      name: parsed.data.name,
-      slug,
-      width: parsed.data.width ?? 1920,
-      height: parsed.data.height ?? 1080,
-    })
-    .select()
-    .single();
+  const { data, error } = await _createOverlayScene(supabase, {
+    user_id: user.user.id,
+    name: parsed.data.name,
+    slug,
+    width: parsed.data.width ?? 1920,
+    height: parsed.data.height ?? 1080,
+  });
 
   if (error) return { data: null, error: error.message };
 
@@ -131,14 +116,7 @@ export async function updateOverlayScene(formData: {
 
   const { id, ...updates } = parsed.data;
 
-  const { data, error } = await supabase
-    .from("overlay_scenes")
-    .update(updates)
-    .eq("id", id)
-    .eq("user_id", user.user.id)
-    .select()
-    .single();
-
+  const { data, error } = await _updateOverlayScene(supabase, id, user.user.id, updates);
   if (error) return { data: null, error: error.message };
 
   revalidatePath("/dashboard/overlays");
@@ -150,12 +128,7 @@ export async function deleteOverlayScene(id: string) {
   const { data: user } = await supabase.auth.getUser();
   if (!user?.user) return { success: false, error: "Unauthorized" };
 
-  const { error } = await supabase
-    .from("overlay_scenes")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.user.id);
-
+  const { error } = await _deleteOverlayScene(supabase, id, user.user.id);
   if (error) return { success: false, error: error.message };
 
   revalidatePath("/dashboard/overlays");
@@ -329,9 +302,7 @@ function resolveClipFieldParentRefs(
 
 export async function deleteOverlayItem(id: string) {
   const supabase = await createClient();
-
-  const { error } = await supabase.from("overlay_items").delete().eq("id", id);
-
+  const { error } = await _deleteOverlayItem(supabase, id);
   if (error) return { success: false, error: error.message };
   return { success: true, error: null };
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GetClipDownloadURL } from "@/actions/twitch/clips";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@repo/supabase/next/server";
 
 export async function POST(request: NextRequest) {
   try {

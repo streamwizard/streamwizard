@@ -20,9 +20,10 @@ export interface Vod {
   duration: string;
 }
 
-export interface GetVodsOptions {
-  userId?: string;
-  gameId?: string;
+export interface GetVodsParams {
+  user_id?: string;
+  game_id?: string;
+  id?: string | string[];
   first?: number;
   after?: string;
   before?: string;
@@ -37,18 +38,26 @@ export class TwitchVodsClient extends TwitchApiBaseClient {
     super(broadcaster_id);
   }
 
-  async getVods(options: GetVodsOptions): Promise<{ data: Vod[]; pagination: { cursor?: string } }> {
-    const response = await this.clientApi().get("/videos", { params: options });
-    return response.data.data;
+  async getVods(params: GetVodsParams): Promise<{ data: Vod[]; pagination?: { cursor?: string } }> {
+    const response = await this.clientApi().get("/videos", { params });
+    return response.data;
   }
 
-  async getVodById(vodId: string): Promise<Vod> {
+  async getVodById(vodId: string): Promise<Vod | undefined> {
     const response = await this.clientApi().get("/videos", { params: { id: vodId } });
-    return response.data.data[0];
+    return response.data.data?.[0];
   }
 
   async getVodByBroadcasterId(broadcasterId: string): Promise<GetVodsResponse> {
     const response = await this.clientApi().get<GetVodsResponse>("/videos", { params: { user_id: broadcasterId } });
     return response.data;
+  }
+
+  async deleteVods(videoIds: string[]): Promise<string[]> {
+    if (!videoIds.length) return [];
+    const params = new URLSearchParams();
+    videoIds.forEach((id) => params.append("id", id));
+    const response = await this.clientApi().delete(`/videos?${params}`);
+    return response.data.data ?? [];
   }
 }
