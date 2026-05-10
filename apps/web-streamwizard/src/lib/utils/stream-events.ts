@@ -84,8 +84,16 @@ export function getStreamEventDisplayInfo(event: StreamEvent): StreamEventDispla
   const userName = (data.user_name as string) || (data.from_broadcaster_user_name as string) || (data.to_broadcaster_user_name as string) || (data.chatter_user_name as string);
   if (userName) result.userName = userName;
 
-  // Extract message from common fields
-  const message = (data.message as string) || (data.user_input as string) || (data.reason as string);
+  // Extract message from common fields.
+  // Twitch EventSub returns message as {text, emotes} for subscription events — extract .text.
+  const rawMessage = data.message;
+  const messageText =
+    typeof rawMessage === "string"
+      ? rawMessage
+      : typeof rawMessage === "object" && rawMessage !== null && typeof (rawMessage as Record<string, unknown>).text === "string"
+      ? ((rawMessage as Record<string, unknown>).text as string)
+      : null;
+  const message = messageText || (data.user_input as string) || (data.reason as string);
   if (message) result.message = message;
 
   // Extract subtitle and amount based on event type
