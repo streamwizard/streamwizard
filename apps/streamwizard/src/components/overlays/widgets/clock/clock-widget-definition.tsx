@@ -1,0 +1,34 @@
+"use client";
+
+import type { OverlayItem } from "@/types/overlays";
+import { DEFAULT_CLOCK_WIDGET_ITEM_CONFIG } from "@/types/overlays";
+import type { CreateRootItemContext } from "../../registry/overlay-widget-registry.types";
+
+export const CLOCK_WIDGET_DEFAULT_SIZE = { w: 400, h: 100 } as const;
+
+export function createClockWidgetRootItems(
+  ctx: CreateRootItemContext
+): OverlayItem[] {
+  const id = ctx.nextId();
+  const { w, h } = CLOCK_WIDGET_DEFAULT_SIZE;
+  const n =
+    ctx.scene.items.filter((i) => i.type === "clock_widget").length + 1;
+  return [
+    {
+      id,
+      scene_id: ctx.scene.id,
+      type: "clock_widget",
+      x: Math.round(ctx.scene.width / 2 - w / 2),
+      y: Math.round(ctx.scene.height / 2 - h / 2),
+      w,
+      h,
+      z_index: ctx.maxZ + 1,
+      rotation: 0,
+      opacity: 1,
+      is_visible: true,
+      is_locked: false,
+      label: `Clock ${n}`,
+      config: { ...DEFAULT_CLOCK_WIDGET_ITEM_CONFIG },
+    },
+  ];
+}
