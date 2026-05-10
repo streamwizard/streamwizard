@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@repo/ui";
 import { cn } from "@/lib/utils";
 import { loginSchema } from "@/schemas/login";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -10,9 +10,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import TwitchLogin from "../buttons/TwitchLogin";
-import LoadingSpinner from "../global/loading";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
+import { Button, Input, LoadingSpinner } from "@repo/ui";
 
 interface UserAuthFormProps {
   redirect: string | null;

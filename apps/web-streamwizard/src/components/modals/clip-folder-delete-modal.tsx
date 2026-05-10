@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Button } from "../ui/button";
+import { Button } from "@repo/ui";
 import { useModal } from "@/providers/modal-provider";
 import { toast } from "sonner";
 import { deleteClipFolder } from "@/actions/supabase/clips/clips";

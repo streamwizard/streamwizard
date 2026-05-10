@@ -1,11 +1,11 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Form } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@repo/ui";
+import { Checkbox } from "@repo/ui";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui";
+import { Form } from "@repo/ui";
+import { Input } from "@repo/ui";
+import { RadioGroup, RadioGroupItem } from "@repo/ui";
 import { useSession } from "@/providers/session-provider";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter, useSearchParams } from "next/navigation";

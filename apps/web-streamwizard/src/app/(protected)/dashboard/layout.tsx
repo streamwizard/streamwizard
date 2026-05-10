@@ -1,6 +1,6 @@
 import { AppSidebar } from "@/components/nav/sidebar-app";
 import { SiteHeader } from "@/components/site-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@repo/ui";
 import { createClient } from "@/lib/supabase/server";
 import { ClipFolderProvider } from "@/providers/clips-provider";
 import { redirect } from "next/navigation";

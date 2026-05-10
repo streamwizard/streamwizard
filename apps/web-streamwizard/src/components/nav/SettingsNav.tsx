@@ -1,7 +1,7 @@
 import React from "react";
 import { SettingsNavItems } from "@/lib/config";
-import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
-import { Button } from "../ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@repo/ui";
+import { Button } from "@repo/ui";
 import Link from "next/link";
 
 export default function SettingsNav() {

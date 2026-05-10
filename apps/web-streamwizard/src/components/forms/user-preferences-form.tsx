@@ -9,10 +9,10 @@ import { Clapperboard } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "../ui/button";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "../ui/form";
-import { Label } from "../ui/label";
-import { Switch } from "../ui/switch";
+import { Button } from "@repo/ui";
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@repo/ui";
+import { Label } from "@repo/ui";
+import { Switch } from "@repo/ui";
 
 interface UserPreferencesFormProps {
   UserPreferences: Database["public"]["Tables"]["user_preferences"]["Row"] | null;

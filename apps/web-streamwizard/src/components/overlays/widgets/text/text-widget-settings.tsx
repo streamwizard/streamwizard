@@ -5,9 +5,9 @@ import {
   GoogleFontSelect,
   TextAlignSelect,
 } from "@/components/overlays/inspector-fields";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@repo/ui";
+import { Slider } from "@repo/ui";
+import { Textarea } from "@repo/ui";
 import {
   asTextWidgetConfig,
   resolvedTextWidgetFontFamily,

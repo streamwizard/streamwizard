@@ -5,18 +5,18 @@ import {
   GoogleFontSelect,
   TextAlignSelect,
 } from "@/components/overlays/inspector-fields";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@repo/ui";
+import { Label } from "@repo/ui";
+import { RadioGroup, RadioGroupItem } from "@repo/ui";
+import { Slider } from "@repo/ui";
+import { Switch } from "@repo/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@repo/ui";
 import type {
   ClockDateStyle,
   ClockLayoutMode,

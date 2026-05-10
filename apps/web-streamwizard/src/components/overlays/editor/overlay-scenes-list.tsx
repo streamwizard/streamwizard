@@ -1,29 +1,29 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@repo/ui";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@repo/ui";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@repo/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+} from "@repo/ui";
+import { Input } from "@repo/ui";
+import { Label } from "@repo/ui";
+import { Switch } from "@repo/ui";
 import {
   Copy,
   Edit,

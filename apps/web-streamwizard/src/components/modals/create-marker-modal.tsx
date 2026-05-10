@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@repo/ui";
+import { Input } from "@repo/ui";
+import { Label } from "@repo/ui";
 import { useModal } from "@/providers/modal-provider";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import { Flag, Loader2 } from "lucide-react";

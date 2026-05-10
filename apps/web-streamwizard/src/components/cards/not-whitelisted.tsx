@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@repo/ui";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@repo/ui";
 import { discordInviteLink } from "@/lib/constant";
 
 export default function NotWhitelisted() {

@@ -1,7 +1,7 @@
 "use client";
 
 import { ZoomIn, ZoomOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@repo/ui";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 
 interface ZoomControlsProps {

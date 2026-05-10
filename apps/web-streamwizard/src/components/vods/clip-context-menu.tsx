@@ -1,4 +1,4 @@
-import { ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger } from "@/components/ui/context-menu";
+import { ContextMenuItem, ContextMenuSeparator, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger } from "@repo/ui";
 import { useClipFolders } from "@/providers/clips-provider";
 import { Clip } from "@/types/stream-events";
 import { FolderMinus, FolderPlus } from "lucide-react";

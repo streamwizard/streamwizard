@@ -3,8 +3,7 @@ import { SyncBroadcasterClips } from "@/actions/twitch/clips";
 import { RefreshCcw } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
-import LoadingSpinner from "../global/loading";
-import { Button } from "../ui/button";
+import { Button, LoadingSpinner } from "@repo/ui";
 
 export default function SyncTwitchClipsButton() {
   const [isLoading, setIsLoading] = React.useState<boolean>(false);

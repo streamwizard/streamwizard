@@ -1,8 +1,6 @@
 import Image from "next/image";
 import TwitchLogin from "../buttons/TwitchLogin";
-import Particles from "../ui/particles";
-import { BorderBeam } from "../ui/border-beam";
-import HorizonStage from "../ui/CurvedSection";
+import { Particles, BorderBeam, CurvedSection as HorizonStage } from "@repo/ui";
 import { Database, Filter, Layers, Search } from "lucide-react";
 
 const steps = [

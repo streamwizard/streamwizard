@@ -7,9 +7,9 @@ import { useForm } from "react-hook-form";
 import * as z from "zod";
 
 import { createClipFolder, editClipFolder } from "@/actions/supabase/clips/clips";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Button } from "@repo/ui";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@repo/ui";
+import { Input } from "@repo/ui";
 import { useModal } from "@/providers/modal-provider";
 import { toast } from "sonner";
 

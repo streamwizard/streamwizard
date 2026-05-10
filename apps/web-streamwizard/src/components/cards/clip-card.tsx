@@ -1,6 +1,6 @@
 "use client";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@repo/ui";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@repo/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@repo/ui";
 import { useClipFolders } from "@/providers/clips-provider";
 import { useModal } from "@/providers/modal-provider";
 import { clipsWithFolders } from "@/types/database";
@@ -22,7 +22,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import TwitchClipModal from "../modals/twitch-clip-modal";
-import { Button } from "../ui/button";
+import { Button } from "@repo/ui";
 
 export default function TwitchClipCard({
   url,

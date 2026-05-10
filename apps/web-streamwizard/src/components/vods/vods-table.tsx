@@ -1,12 +1,12 @@
 "use client";
 
 import { TwitchVideo, formatThumbnailUrl } from "@/types/twitch video";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@/components/ui/empty";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { Checkbox } from "@repo/ui";
+import { Badge } from "@repo/ui";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription } from "@repo/ui";
 import { Video } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@repo/ui";
 
 interface VodsTableProps {
   videos: TwitchVideo[];

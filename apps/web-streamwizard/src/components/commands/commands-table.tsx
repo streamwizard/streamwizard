@@ -8,10 +8,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+} from "@repo/ui";
+import { Switch } from "@repo/ui";
+import { Button } from "@repo/ui";
+import { Badge } from "@repo/ui";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import { toggleDefaultCommand, duplicateToCustomCommand } from "@/actions/commands/default-commands";

@@ -1,13 +1,13 @@
 "use client";
 
-import { Label } from "@/components/ui/label";
+import { Label } from "@repo/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@repo/ui";
 import { cn } from "@/lib/utils";
 
 export type OverlayFontWeight = 400 | 500 | 600 | 700;

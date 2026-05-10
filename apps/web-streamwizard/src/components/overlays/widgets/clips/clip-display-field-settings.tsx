@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@repo/ui";
 import { ChevronLeft } from "lucide-react";
 import { asClipDisplayFieldConfig } from "@/types/overlays";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";

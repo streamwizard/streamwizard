@@ -4,8 +4,8 @@ import { ChannelSearchResult } from "@/types/twitch";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Image from "next/image";
-import { Button } from "../ui/button";
-import { SearchBar } from "../ui/search-bar";
+import { Button } from "@repo/ui";
+import { SearchBar } from "@repo/ui";
 
 interface results extends ChannelSearchResult {
   exactMatch?: boolean;

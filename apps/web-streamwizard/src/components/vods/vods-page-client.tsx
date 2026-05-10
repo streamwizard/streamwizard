@@ -6,7 +6,7 @@ import { getVideos, deleteVideos } from "@/actions/twitch/vods";
 import { VodsTable } from "./vods-table";
 import { VodsTableSkeleton } from "./vods-table-skeleton";
 import { DeleteConfirmDialog } from "./delete-confirm-dialog";
-import { Button } from "@/components/ui/button";
+import { Button } from "@repo/ui";
 import { toast } from "sonner";
 import { Trash2, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";

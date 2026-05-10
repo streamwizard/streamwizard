@@ -5,16 +5,16 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@repo/ui";
 import { useModal } from "@/providers/modal-provider";
 import { useSession } from "@/providers/session-provider";
 import { Database } from "@/types/supabase";
 import { Clapperboard, EllipsisVertical, Folder, Plus, FolderOpen } from "lucide-react";
 import Link from "next/link";
 import { CLipFolderModal } from "../modals/clip-folder-modal";
-import { Button } from "../ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "../ui/collapsible";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem } from "../ui/sidebar";
+import { Button } from "@repo/ui";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem } from "@repo/ui";
 
 import ClipFolderDeleteModal from "../modals/clip-folder-delete-modal";
 import { useState } from "react";

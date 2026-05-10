@@ -5,10 +5,10 @@ import {
   GoogleFontSelect,
   TextAlignSelect,
 } from "@/components/overlays/inspector-fields";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Slider } from "@/components/ui/slider";
+import { Input } from "@repo/ui";
+import { Label } from "@repo/ui";
+import { RadioGroup, RadioGroupItem } from "@repo/ui";
+import { Slider } from "@repo/ui";
 import {
   normalizeTimerWidgetConfig,
   resolvedTextWidgetFontFamily,

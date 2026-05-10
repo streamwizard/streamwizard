@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@repo/ui";
+import { Input } from "@repo/ui";
+import { Label } from "@repo/ui";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
+} from "@repo/ui";
+import { Separator } from "@repo/ui";
+import { Slider } from "@repo/ui";
 import { Database } from "@/types/supabase";
 import {
   AlignHorizontalJustifyCenter,

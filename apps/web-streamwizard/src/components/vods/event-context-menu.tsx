@@ -1,6 +1,6 @@
 "use client";
 
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuTrigger } from "@repo/ui";
 import { getEventActions, type EventActionHelpers } from "@/lib/utils/event-actions";
 import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
 import { useClipFolders } from "@/providers/clips-provider";
