@@ -47,6 +47,8 @@ COPY . .
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# Ensure workspace binaries (next, etc.) are on PATH when Turbo spawns subprocesses
+ENV PATH="/app/node_modules/.bin:${PATH}"
 
 # Build only the web-streamwizard app via Turborepo
 RUN bun x turbo run build --filter=@repo/web-streamwizard
