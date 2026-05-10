@@ -4,6 +4,7 @@ import { Button } from "@repo/ui";
 import { Database } from "@repo/supabase";
 import {
   ArrowLeft,
+  Copy,
   Info,
   LayoutGrid,
   Pause,
@@ -204,6 +205,20 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
           >
             <LayoutGrid className="mr-2 h-3 w-3" />
             Widgets
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const url = `https://overlay.streamwizard.org/${scene.slug}`;
+              navigator.clipboard.writeText(url);
+              toast.success("Overlay URL copied");
+            }}
+            title="Copy OBS browser source URL"
+          >
+            <Copy className="mr-2 h-3 w-3" />
+            Copy URL
           </Button>
 
           <div className="flex items-center gap-1 border rounded-md px-1">

@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/overlay/:overlayId",
+        source: "/:overlayId",
         headers: [
           {
             key: "Content-Security-Policy",
