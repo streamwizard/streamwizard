@@ -14,7 +14,7 @@ import {
 import { Separator } from "@repo/ui";
 import { Slider } from "@repo/ui";
 import { Switch } from "@repo/ui";
-import { Database } from "@/types/supabase";
+import { Database } from "@repo/supabase";
 import { X } from "lucide-react";
 import {
   DEFAULT_CLIPS_WIDGET_ITEM_CONFIG,

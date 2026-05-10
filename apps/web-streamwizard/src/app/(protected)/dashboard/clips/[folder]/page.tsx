@@ -1,10 +1,10 @@
 import TwitchClipCard from "@/components/cards/clip-card";
 import { AdvancedPagination } from "@/components/nav/advanced-pagination";
 import { Button } from "@repo/ui";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@repo/supabase/next/server";
 import buildClipQuery from "@/lib/utils/build-clip-query";
 import { ClipSearchParams } from "@/types/pages";
-import { Database } from "@/types/supabase";
+import { Database } from "@repo/supabase";
 import { FolderX } from "lucide-react";
 
 type PageProps = {

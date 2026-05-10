@@ -1,7 +1,8 @@
 "use server";
-import { env } from "@/lib/env";
-import { createClient } from "@/lib/supabase/server";
-import { getTwitchAppToken } from "@/server/axios/twitch-app-token";
+import { createClient } from "@repo/supabase/next/server";
+import { getClipBroadcasterId } from "@repo/supabase/queries/clips";
+import { getBroadcasterId } from "@repo/supabase/queries/user";
+import { TwitchApi } from "@repo/twitch-api";
 import axios from "axios";
 import { revalidatePath } from "next/cache";
 
@@ -14,7 +15,6 @@ interface returnObject<T = unknown> {
 export async function SyncBroadcasterClips(): Promise<{ message: string; success: boolean }> {
   const supabase = await createClient();
 
-  // get session token
   const {
     data: { session },
   } = await supabase.auth.getSession();
@@ -48,7 +48,7 @@ export async function SyncBroadcasterClips(): Promise<{ message: string; success
   }
 }
 
-interface clipDownloadURL {
+interface ClipDownloadURLData {
   data: {
     clip_id: string;
     landscape_download_url: string | null;
@@ -56,47 +56,11 @@ interface clipDownloadURL {
   }[];
 }
 
-export async function GetClipDownloadURL(clipId: string, user_id: string): Promise<returnObject<clipDownloadURL>> {
+export async function GetClipDownloadURL(clipId: string, user_id: string): Promise<returnObject<ClipDownloadURLData>> {
   const supabase = await createClient();
-  const appToken = await getTwitchAppToken();
 
   try {
-    // Primary lookup: clip owned by current user
-    const { data: ownedRows, error: ownedError } = await supabase
-      .from("clips")
-      .select("broadcaster_id")
-      .eq("twitch_clip_id", clipId)
-      .eq("user_id", user_id)
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    let broadcasterId = ownedRows?.[0]?.broadcaster_id ?? null;
-
-    // Fallback for legacy data mismatches: use clip id only
-    if (!broadcasterId) {
-      const { data: anyRows, error: anyError } = await supabase
-        .from("clips")
-        .select("broadcaster_id")
-        .eq("twitch_clip_id", clipId)
-        .order("created_at", { ascending: false })
-        .limit(1);
-
-      if (anyError) {
-        return {
-          message: `Clip lookup failed: ${anyError.message}`,
-          success: false,
-        };
-      }
-
-      broadcasterId = anyRows?.[0]?.broadcaster_id ?? null;
-    }
-
-    if (ownedError && !broadcasterId) {
-      return {
-        message: `Clip lookup failed: ${ownedError.message}`,
-        success: false,
-      };
-    }
+    const broadcasterId = await getClipBroadcasterId(supabase, clipId, user_id);
 
     if (!broadcasterId) {
       return {
@@ -105,31 +69,17 @@ export async function GetClipDownloadURL(clipId: string, user_id: string): Promi
       };
     }
 
-    const res = await axios.get<clipDownloadURL>(`https://api.twitch.tv/helix/clips/downloads`, {
-      headers: {
-        "Client-ID": env.NEXT_PUBLIC_TWITCH_CLIENT_ID,
-        Authorization: `Bearer ${appToken}`,
-      },
-      params: {
-        broadcaster_id: broadcasterId,
-        editor_id: broadcasterId,
-        clip_id: clipId,
-      },
+    const api = new TwitchApi(broadcasterId);
+    const result = await api.clips.getClipDownloadUrl({
+      broadcaster_id: broadcasterId,
+      editor_id: broadcasterId,
+      clip_id: clipId,
     });
-
-    if (res.status !== 200) { 
-      console.error(res.data);
-      return {
-        message: "Error downloading clip",
-        success: false,
-      };
-    }
-
 
     return {
       message: "Clip downloaded successfully",
       success: true,
-      data: res.data,
+      data: result as ClipDownloadURLData,
     };
   } catch (error) {
     if (axios.isAxiosError(error)) {

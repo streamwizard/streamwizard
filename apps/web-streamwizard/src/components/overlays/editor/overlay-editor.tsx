@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui";
-import { Database } from "@/types/supabase";
+import { Database } from "@repo/supabase";
 import {
   ArrowLeft,
   Info,

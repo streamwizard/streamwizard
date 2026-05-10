@@ -101,7 +101,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     defaultSize: { ...TIMER_WIDGET_DEFAULT_SIZE },
     createRootItems: createTimerWidgetRootItems,
     CanvasContent: TimerWidgetCanvas,
-    SettingsPanel: TimerWidgetSettings,S
+    SettingsPanel: TimerWidgetSettings,
   },
   clock_widget: {
     type: "clock_widget",

@@ -1,23 +1,33 @@
 "use client";
 
-import type { OverlayItemRow } from "@/app/actions/overlay";
 import type { ComponentType } from "react";
+import type { OverlayItem } from "@repo/ui/overlay";
 import type { OverlayWidgetProps } from "@/components/widgets/types";
-import { readGoogleFontFamilyFromConfig } from "@/components/widgets/font-from-config";
+import {
+  TextWidgetRenderer,
+  TimerWidgetRenderer,
+  ClockWidgetRenderer,
+  asTextWidgetConfig,
+  asClockWidgetConfig,
+  resolvedTextWidgetFontFamily,
+} from "@repo/ui/overlay";
 import { ClipsWidget } from "@/components/widgets/clips-widget/ClipsWidget";
-import { TextWidget } from "@/components/widgets/text-widget/TextWidget";
-import { TimerWidget } from "@/components/widgets/timer-widget/TimerWidget";
 
 export type OverlayWidgetRegistration = {
   /** Must match `overlay_items.type` from Supabase. */
   id: string;
   Component: ComponentType<OverlayWidgetProps>;
   /** Fonts to load via Google Fonts CSS (optional). */
-  collectFontFamilies?: (item: OverlayItemRow) => string[];
+  collectFontFamilies?: (item: OverlayItem) => string[];
 };
 
-function fontsFromTextConfig(item: OverlayItemRow): string[] {
-  const ff = readGoogleFontFamilyFromConfig(item.config);
+function fontsFromTextConfig(item: OverlayItem): string[] {
+  const ff = resolvedTextWidgetFontFamily(asTextWidgetConfig(item.config));
+  return ff ? [ff] : [];
+}
+
+function fontsFromClockConfig(item: OverlayItem): string[] {
+  const ff = resolvedTextWidgetFontFamily(asClockWidgetConfig(item.config));
   return ff ? [ff] : [];
 }
 
@@ -30,13 +40,18 @@ function fontsFromTextConfig(item: OverlayItemRow): string[] {
 export const overlayWidgetRegistry: OverlayWidgetRegistration[] = [
   {
     id: "text_widget",
-    Component: TextWidget,
+    Component: TextWidgetRenderer,
     collectFontFamilies: fontsFromTextConfig,
   },
   {
     id: "timer_widget",
-    Component: TimerWidget,
+    Component: TimerWidgetRenderer,
     collectFontFamilies: fontsFromTextConfig,
+  },
+  {
+    id: "clock_widget",
+    Component: ClockWidgetRenderer,
+    collectFontFamilies: fontsFromClockConfig,
   },
   {
     id: "clips_widget",
@@ -55,7 +70,7 @@ export function getOverlayWidgetRegistration(
 }
 
 export function collectOverlayGoogleFontFamilies(
-  items: OverlayItemRow[]
+  items: OverlayItem[]
 ): string[] {
   const set = new Set<string>();
   for (const item of items) {

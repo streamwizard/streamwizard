@@ -1,10 +1,11 @@
-import { TwitchAppAPI } from "@/server/axios/twitch-app-token";
-import { CreateEventSubSubscriptionRequest } from "@/types/twitch";
+import { TwitchApi } from "@repo/twitch-api";
+import type { CreateEventSubSubscriptionRequest } from "@/types/twitch";
 import axios from "axios";
 
 export default async function CreateEventSubSubscription(subscription: CreateEventSubSubscriptionRequest) {
   try {
-    const res = await TwitchAppAPI.post("/eventsub/subscriptions", subscription);
+    const api = new TwitchApi(null);
+    const res = await api.eventsub.createSubscription(subscription, "");
     return res.data;
   } catch (error) {
     console.error("Failed to create event sub subscription for type:", subscription.type);
@@ -21,5 +22,3 @@ export default async function CreateEventSubSubscription(subscription: CreateEve
     }
   }
 }
-
-// get the app token from supabase

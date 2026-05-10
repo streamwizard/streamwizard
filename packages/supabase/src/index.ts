@@ -4,6 +4,8 @@ import type { Database } from "./types/supabase";
 import { env } from "@repo/env";
 import { encryptToken, decryptToken } from "./crypto";
 
+export type { Database, Json } from "./types/supabase";
+
 export const supabase = createClient<Database>(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
 
 type TwitchIntegration = Database["public"]["Tables"]["integrations_twitch"]["Row"];
@@ -54,6 +56,7 @@ export async function updateChannelAccessToken(newToken: RefreshTwitchTokenRespo
       refresh_token_iv: encryptedRefreshToken.iv,
       refresh_token_tag: encryptedRefreshToken.authTag,
       token_expires_at: new Date(Date.now() + newToken.expires_in * 1000).toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .eq("twitch_user_id", channelId)
     .single();
@@ -109,7 +112,6 @@ export async function updateTwitchAppToken(accessToken: string, expiresIn: numbe
 }
 // Re-export types
 export type { RefreshTwitchTokenResponse } from "./types/twitch-api";
-export type { Database } from "./types/supabase";
 
 export async function createFeedback(feedback: Database["public"]["Tables"]["feedback"]["Insert"]) {
   const { data, error } = await supabase.from("feedback").insert(feedback).single();

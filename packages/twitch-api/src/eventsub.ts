@@ -68,8 +68,10 @@ export class TwitchEventSubClient extends TwitchApiBaseClient {
     await this.appApi().delete(`/eventsub/subscriptions?id=${subscriptionId}`);
   }
 
-  async getSubscriptions(channelId: string): Promise<{ data: EventSubSubscription[] }> {
-    const response = await this.appApi().get("/eventsub/subscriptions");
+  async getSubscriptions(channelId?: string): Promise<{ data: EventSubSubscription[] }> {
+    const response = await this.appApi().get("/eventsub/subscriptions", {
+      params: channelId ? { user_id: channelId } : undefined,
+    });
     return response.data;
   }
 

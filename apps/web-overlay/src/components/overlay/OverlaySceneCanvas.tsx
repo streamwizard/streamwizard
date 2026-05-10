@@ -1,19 +1,20 @@
 "use client";
 
 import type { OverlayItemRow, OverlaySceneRow } from "@/app/actions/overlay";
+import type { OverlayItem } from "@repo/ui/overlay";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 import {
   collectOverlayGoogleFontFamilies,
   getOverlayWidgetRegistration,
 } from "@/components/widgets/registry";
-import { useGoogleFonts } from "@/components/overlay/google-fonts";
+import { overlayItemFromDbRow, useGoogleFonts } from "@repo/ui/overlay";
 
 function OverlayLayerWrapper({
   item,
   children,
 }: {
-  item: OverlayItemRow;
+  item: OverlayItem;
   children: ReactNode;
 }) {
   const opacity =
@@ -49,9 +50,10 @@ export function OverlaySceneCanvas({
   scene: OverlaySceneRow;
   items: OverlayItemRow[];
 }) {
+  const typedItems = useMemo(() => items.map(overlayItemFromDbRow), [items]);
   const fonts = useMemo(
-    () => collectOverlayGoogleFontFamilies(items),
-    [items]
+    () => collectOverlayGoogleFontFamilies(typedItems),
+    [typedItems]
   );
   useGoogleFonts(fonts);
 
@@ -65,7 +67,7 @@ export function OverlaySceneCanvas({
         background: "transparent",
       }}
     >
-      {items.map((item) => {
+      {typedItems.map((item) => {
         const reg = getOverlayWidgetRegistration(item.type);
         if (!reg) return null;
         const Widget = reg.Component;

@@ -7,6 +7,10 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./overlay": {
+      "types": "./src/overlay-exports.ts",
+      "default": "./src/overlay-exports.ts"
+    },
     "./components/*": {
       "types": "./src/components/*.tsx",
       "default": "./src/components/*.tsx"
@@ -49,6 +53,7 @@
     "@repo/typescript-config": "workspace:*",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "next": "16.2.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "tailwindcss": "^4.2.1",

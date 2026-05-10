@@ -6,12 +6,16 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "bun x turbo run check-types"
+    "check-types": "bun x turbo run check-types",
+    "gen-types": "supabase gen types typescript --project-id jgxdrljoqployiyjedst --schema public > packages/supabase/src/types/supabase.ts"
   },
   "devDependencies": {
     "prettier": "^3.7.4",
     "turbo": "^2.7.4",
     "typescript": "5.9.2"
+  },
+  "overrides": {
+    "next": "^16.2.6"
   },
   "engines": {
     "node": ">=18"

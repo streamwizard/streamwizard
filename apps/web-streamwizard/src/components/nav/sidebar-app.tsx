@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
 } from "@repo/ui";
 import { discordInviteLink } from "@/lib/constant";
-import { Database } from "@/types/supabase";
+import { Database } from "@repo/supabase";
 import { User } from "@supabase/supabase-js";
 import { FileVideoCamera, Layers } from "lucide-react";
 import Image from "next/image";

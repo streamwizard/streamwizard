@@ -1,4 +1,4 @@
-import { Database } from "./supabase";
+import type { Database } from "@repo/supabase";
 
 /**
  * Stream Event Types from Supabase

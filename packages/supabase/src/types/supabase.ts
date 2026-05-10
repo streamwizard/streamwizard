@@ -476,6 +476,107 @@ export type Database = {
           },
         ]
       }
+      overlay_items: {
+        Row: {
+          config: Json
+          created_at: string
+          h: number
+          id: string
+          is_locked: boolean
+          is_visible: boolean
+          label: string
+          opacity: number
+          rotation: number
+          scene_id: string
+          type: string
+          updated_at: string
+          w: number
+          x: number
+          y: number
+          z_index: number
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          h?: number
+          id?: string
+          is_locked?: boolean
+          is_visible?: boolean
+          label?: string
+          opacity?: number
+          rotation?: number
+          scene_id: string
+          type?: string
+          updated_at?: string
+          w?: number
+          x?: number
+          y?: number
+          z_index?: number
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          h?: number
+          id?: string
+          is_locked?: boolean
+          is_visible?: boolean
+          label?: string
+          opacity?: number
+          rotation?: number
+          scene_id?: string
+          type?: string
+          updated_at?: string
+          w?: number
+          x?: number
+          y?: number
+          z_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overlay_items_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "overlay_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      overlay_scenes: {
+        Row: {
+          created_at: string
+          height: number
+          id: string
+          is_active: boolean
+          name: string
+          slug: string
+          updated_at: string
+          user_id: string
+          width: number
+        }
+        Insert: {
+          created_at?: string
+          height?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+          user_id: string
+          width?: number
+        }
+        Update: {
+          created_at?: string
+          height?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+          user_id?: string
+          width?: number
+        }
+        Relationships: []
+      }
       pending_clips: {
         Row: {
           broadcaster_id: string
@@ -531,6 +632,7 @@ export type Database = {
           id: string
           metadata: Json | null
           name: string
+          trigger: string | null
         }
         Insert: {
           action: string
@@ -539,6 +641,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           name: string
+          trigger?: string | null
         }
         Update: {
           action?: string
@@ -547,6 +650,7 @@ export type Database = {
           id?: string
           metadata?: Json | null
           name?: string
+          trigger?: string | null
         }
         Relationships: []
       }

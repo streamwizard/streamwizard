@@ -1,6 +1,6 @@
 import { getOverlayScene } from "@/actions/overlays";
 import { OverlayEditor } from "@/components/overlays/editor/overlay-editor";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@repo/supabase/next/server";
 import { redirect } from "next/navigation";
 
 interface Props {

@@ -1,9 +1,9 @@
 import TwitchClipCard from "@/components/cards/clip-card";
 import { AdvancedPagination } from "@/components/nav/advanced-pagination";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@repo/supabase/next/server";
 import buildClipQuery from "@/lib/utils/build-clip-query";
 import { ClipSearchParams } from "@/types/pages";
-import { Database } from "@/types/supabase";
+import { Database } from "@repo/supabase";
 import { redirect } from "next/navigation";
 
 export default async function ClipsPage({ searchParams }: { searchParams: Promise<ClipSearchParams> }) {

@@ -3,7 +3,7 @@
 import { getStreamData, createClipFromVOD, getStreamMarkers, createStreamMarker } from "@/actions/twitch/vods";
 import type { TwitchPlayer } from "@/components/vods/twitch-player";
 import type { TimelineEvent, TimelineSegment, TimelineSegmentType } from "@/components/vods/timeline/types";
-import type { Database } from "@/types/supabase";
+import type { Database } from "@repo/supabase";
 import { StreamEventType, type Clip } from "@/types/stream-events";
 import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
 import { TwitchVideo, parseDuration, type TwitchStreamMarker } from "@/types/twitch video";

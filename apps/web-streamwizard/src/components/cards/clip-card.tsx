@@ -65,7 +65,7 @@ export default function TwitchClipCard({
   };
 
   function AvailableFolders() {
-    const availableFolders = getAvailableFolders(folders.map((folder) => folder.id));
+    const availableFolders = getAvailableFolders(folders.map((folder: { id: number }) => folder.id));
 
     if (availableFolders.length === 0) {
       return <DropdownMenuItem disabled>No folders available</DropdownMenuItem>;
@@ -88,7 +88,7 @@ export default function TwitchClipCard({
   }
 
   function RemovableFolders() {
-    const removableFolders = getRemovableFolders(folders.map((folder) => folder.id));
+    const removableFolders = getRemovableFolders(folders.map((folder: { id: number }) => folder.id));
 
     if (removableFolders.length === 0) {
       return <DropdownMenuItem disabled>No folders available</DropdownMenuItem>;

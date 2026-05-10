@@ -3,7 +3,7 @@
 import { updateUserPreferences } from "@/actions/supabase/user/settings";
 import { useSession } from "@/providers/session-provider";
 import { userPreferencesSchema } from "@/schemas/user-preferences";
-import { Database } from "@/types/supabase";
+import { Database } from "@repo/supabase";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Clapperboard } from "lucide-react";
 import { useForm } from "react-hook-form";
