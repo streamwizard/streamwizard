@@ -1,6 +1,6 @@
 "use client";
 
-import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuSeparator, ContextMenuTrigger } from "@repo/ui";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import { useModal } from "@/providers/modal-provider";
 import { CreateMarkerModal } from "@/components/modals/create-marker-modal";

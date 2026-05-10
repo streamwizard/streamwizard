@@ -1,6 +1,6 @@
 // import { UserPreferencesForm } from "@/components/forms/user-preferences-form";
 import { UserPreferencesForm } from "@/components/forms/user-preferences-form";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
 import { GetUserPreferences } from "@/actions/supabase/user/settings";
 
 export default async function page() {

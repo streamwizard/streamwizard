@@ -1,19 +1,19 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@repo/ui";
+import { Checkbox } from "@repo/ui";
+import { Input } from "@repo/ui";
+import { Label } from "@repo/ui";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
+} from "@repo/ui";
+import { Separator } from "@repo/ui";
+import { Slider } from "@repo/ui";
+import { Switch } from "@repo/ui";
 import { Database } from "@/types/supabase";
 import { X } from "lucide-react";
 import {

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Button } from "../ui/button";
-import { SearchBar } from "../ui/search-bar";
+import { Button } from "@repo/ui";
+import { SearchBar } from "@repo/ui";
 import { useSession } from "@/providers/session-provider";
 import { LookupTwitchGame, searchTwitchCategories } from "@/actions/twitch/twitch-api";
 import { TwitchCategory } from "@/types/twitch";

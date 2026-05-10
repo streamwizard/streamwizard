@@ -1,7 +1,7 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@repo/ui";
 import { Command } from "lucide-react";
 import Link from "next/link";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@repo/ui";
 
 export default function SidebarCommands() {
   return (

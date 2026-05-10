@@ -1,6 +1,6 @@
 import Image from "next/image";
 import React, { ReactNode } from "react";
-import { Separator } from "../ui/separator";
+import { Separator } from "@repo/ui";
 
 interface Props {
   children: ReactNode;

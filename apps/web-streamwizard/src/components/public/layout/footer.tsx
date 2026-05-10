@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { discordInviteLink } from "@/lib/constant";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@repo/ui";
 import { FaDiscord } from "react-icons/fa";
 
 const navigation = {

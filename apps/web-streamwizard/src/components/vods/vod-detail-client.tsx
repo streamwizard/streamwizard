@@ -2,10 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TwitchVideo, parseDuration } from "@/types/twitch video";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@repo/ui";
+import { Badge } from "@repo/ui";
+import { Input } from "@repo/ui";
+import { Label } from "@repo/ui";
 import { TwitchPlayerComponent, type TwitchPlayer } from "@/components/vods/twitch-player";
 import { VideoTimeline } from "./timeline";
 import { StreamEventsPanel } from "./stream-events-panel";

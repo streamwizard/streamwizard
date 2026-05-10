@@ -11,8 +11,8 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Spinner } from "@/components/ui/spinner";
+} from "@repo/ui";
+import { Spinner } from "@repo/ui";
 
 interface DeleteConfirmDialogProps {
     videos: TwitchVideo[];

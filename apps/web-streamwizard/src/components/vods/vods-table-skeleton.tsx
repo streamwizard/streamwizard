@@ -1,7 +1,7 @@
 "use client";
 
-import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Skeleton } from "@repo/ui";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 
 interface VodsTableSkeletonProps {
   rows?: number;

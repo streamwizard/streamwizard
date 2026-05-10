@@ -11,7 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
+} from "@repo/ui";
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@/types/supabase";
 import { User } from "@supabase/supabase-js";
@@ -19,7 +19,7 @@ import { FileVideoCamera, Layers } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FaDiscord } from "react-icons/fa";
-import { Separator } from "../ui/separator";
+import { Separator } from "@repo/ui";
 import { DashboardUserNav } from "./DashboardUserNav";
 import SidebarClips from "./sidebar-clips";
 import SidebarCommands from "./sidebar-commands";

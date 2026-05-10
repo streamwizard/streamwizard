@@ -2,10 +2,10 @@
 
 import { StreamEventType } from "@/types/stream-events";
 import { getEventTypeInfo } from "@/lib/utils/stream-events";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@repo/ui";
+import { Checkbox } from "@repo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
+import { Badge } from "@repo/ui";
 import { Filter } from "lucide-react";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 

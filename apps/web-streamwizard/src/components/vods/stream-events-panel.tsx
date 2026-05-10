@@ -3,10 +3,10 @@
 import { StreamEvent } from "@/types/stream-events";
 import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
 import { formatDuration } from "@/types/twitch video";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@repo/ui";
+import { Skeleton } from "@repo/ui";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@repo/ui";
 import { EventContextMenu } from "@/components/vods/event-context-menu";
 
 /**

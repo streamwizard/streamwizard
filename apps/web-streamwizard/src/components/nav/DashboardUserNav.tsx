@@ -3,7 +3,7 @@ import { LinkIcon, LogOut, Moon, MoreHorizontal, Sun } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,7 +15,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@repo/ui";
 import { logout } from "@/actions/auth/logout";
 
 export function DashboardUserNav({ username, profile_img }: { username: string; profile_img: string }) {

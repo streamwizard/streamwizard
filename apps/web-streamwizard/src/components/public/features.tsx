@@ -2,9 +2,9 @@ import { CalendarIcon, FileTextIcon } from "@radix-ui/react-icons";
 import { BellIcon, DownloadIcon, SearchIcon, Share2Icon, VideoIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Calendar } from "@/components/ui/calendar";
-import { BentoCard, BentoGrid } from "@/components/ui/bento-grid";
-import { Marquee } from "@/components/ui/marquee";
+import { Calendar } from "@repo/ui";
+import { BentoCard, BentoGrid } from "@repo/ui";
+import { Marquee } from "@repo/ui";
 
 const files = [
   {

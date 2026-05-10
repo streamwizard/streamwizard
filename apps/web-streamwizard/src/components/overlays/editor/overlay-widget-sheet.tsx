@@ -1,13 +1,13 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@repo/ui";
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+} from "@repo/ui";
 import type { RootOverlayItemType } from "@/types/overlays";
 import { LayoutGrid, Plus } from "lucide-react";
 import { groupLibraryWidgetsByCategory } from "../registry/overlay-widget-registry";

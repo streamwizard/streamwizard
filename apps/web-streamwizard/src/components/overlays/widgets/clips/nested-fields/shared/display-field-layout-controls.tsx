@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+import { Button } from "@repo/ui";
+import { Input } from "@repo/ui";
+import { Label } from "@repo/ui";
+import { Slider } from "@repo/ui";
 import type { ClipDisplayFieldLayout } from "@/types/overlays";
 
 export interface DisplayFieldLayoutControlsProps {

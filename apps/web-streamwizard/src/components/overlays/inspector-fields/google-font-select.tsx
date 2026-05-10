@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDebounce } from "@uidotdev/usehooks";
 import { Check, ChevronsUpDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@repo/ui";
 import {
   Command,
   CommandEmpty,
@@ -11,13 +11,13 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { Label } from "@/components/ui/label";
+} from "@repo/ui";
+import { Label } from "@repo/ui";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@repo/ui";
 import {
   FEATURED_GOOGLE_FONT_FAMILIES,
   FALLBACK_GOOGLE_FONT_FAMILIES,

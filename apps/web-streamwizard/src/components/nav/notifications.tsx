@@ -1,6 +1,6 @@
 "use client";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@repo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
 import { Bell } from "lucide-react";
 import React from "react";
 
