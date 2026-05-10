@@ -40,18 +40,19 @@ FROM oven/bun:1 AS builder
 
 WORKDIR /app
 
+# Copy root node_modules and app-level node_modules (next lives here, not root)
 COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/apps/web-streamwizard/node_modules ./apps/web-streamwizard/node_modules
 
 # Copy all source files
 COPY . .
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# Ensure workspace binaries (next, etc.) are on PATH when Turbo spawns subprocesses
-ENV PATH="/app/node_modules/.bin:${PATH}"
 
-# Build only the web-streamwizard app via Turborepo
-RUN bun x turbo run build --filter=@repo/web-streamwizard
+# Run next build from the app directory so bun resolves binaries from the local node_modules
+WORKDIR /app/apps/web-streamwizard
+RUN bun run build
 
 # ============================================
 # Stage 3: Runner
