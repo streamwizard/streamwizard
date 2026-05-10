@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "bun run --hot src/index.ts",
     "start": "bun run ./src/index.ts",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "eventsub:conduit:sync": "bun run ./src/scripts/sync-conduit-subscriptions.ts"
   },
   "dependencies": {
     "@repo/env": "workspace:*",

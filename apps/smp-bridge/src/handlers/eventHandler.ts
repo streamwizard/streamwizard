@@ -1,11 +1,11 @@
-import type { EventSubNotificationPayload, EventSubSubscriptionType, WebSocketNotificationMessage } from "@repo/types";
+import type { EventSubSubscriptionType, WebSocketNotificationMessage } from "@repo/types";
 import { z } from "zod";
 import { TwitchApi } from "@repo/twitch-api";
 import { registerTwitchHandlers } from "./twitch";
 import { registerMinecraftHandlers } from "./minecraft";
 import { MinecraftMessageType } from "@/types/minecraft-incomming-websocket-messages";
 import { MinecraftActions } from "@/classes/minecraft/handle-minecraft-actions";
-import { streamEventsLogger } from "@repo/logger";
+import { processSmpActionsForTwitchEvent } from "./eventsub/processSmpActionsForTwitchEvent";
 
 /**
  * Context passed to all event handlers in smp-bridge
@@ -78,10 +78,6 @@ export class HandlerRegistry {
     data: WebSocketNotificationMessage,
   ): Promise<void> {
     const handler = this.twitchHandlers.get(eventType);
-    if (!handler) {
-      console.log("No Twitch handler found for event type:", eventType);
-      return;
-    }
 
     const broadcasterId = extractReceivingBroadcasterId(data.payload.event);
 
@@ -99,6 +95,22 @@ export class HandlerRegistry {
       twitchApi,
       minecraftActions,
     };
+
+    try {
+      await processSmpActionsForTwitchEvent(
+        eventType,
+        data.payload.event as Record<string, unknown>,
+        broadcasterId,
+        context,
+      );
+    } catch (error) {
+      console.log("Error processing smp_actions flow:", error);
+    }
+
+    if (!handler) {
+      console.log("No Twitch handler found for event type:", eventType);
+      return;
+    }
 
     await handler(data.payload.event ?? data.payload, context);
   }

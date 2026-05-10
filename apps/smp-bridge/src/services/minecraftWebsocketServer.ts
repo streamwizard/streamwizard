@@ -161,7 +161,6 @@ export class MinecraftWebSocketServer {
 
   private async handleMessage(ws: ServerWebSocket<ClientData>, message: any): Promise<void> {
     const connectionId = ws.data.connectionId;
-    let eventId: string | null = null;
 
     try {
       // Validate message structure
@@ -173,14 +172,15 @@ export class MinecraftWebSocketServer {
         throw new Error("Missing or invalid 'event_type' field");
       }
 
-      const handler = this.getClientHandler(message.event_type);
+      const eventType = message.event_type;
+      const handler = this.getClientHandler(eventType);
       if (!handler) {
         customLogger.warn("⚠️ No handler for event type", {
           connectionId,
-          eventType: message.event_type,
+          eventType,
         });
 
-        this.sendError(ws, `No handler for type: ${message.event_type}`);
+        this.sendError(ws, `No handler for type: ${eventType}`);
         return;
       }
 
