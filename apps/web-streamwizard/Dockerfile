@@ -70,13 +70,13 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Standalone output is at apps/web-streamwizard/.next/standalone when building from monorepo root
-COPY --from=builder --chown=bun:bun /app/apps/web-streamwizard/public ./public
+# In a monorepo build the standalone output nests under apps/web-streamwizard/
+COPY --from=builder --chown=bun:bun /app/apps/web-streamwizard/public ./apps/web-streamwizard/public
 COPY --from=builder --chown=bun:bun /app/apps/web-streamwizard/.next/standalone ./
-COPY --from=builder --chown=bun:bun /app/apps/web-streamwizard/.next/static ./.next/static
+COPY --from=builder --chown=bun:bun /app/apps/web-streamwizard/.next/static ./apps/web-streamwizard/.next/static
 
 USER bun
 
 EXPOSE 3000
 
-CMD ["bun", "server.js"]
+CMD ["bun", "apps/web-streamwizard/server.js"]
