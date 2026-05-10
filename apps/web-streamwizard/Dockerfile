@@ -40,12 +40,16 @@ FROM oven/bun:1 AS builder
 
 WORKDIR /app
 
-# Copy root node_modules and app-level node_modules (next lives here, not root)
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY --from=dependencies /app/apps/web-streamwizard/node_modules ./apps/web-streamwizard/node_modules
-
-# Copy all source files
+# Copy all source files first
 COPY . .
+
+# Seed root node_modules from the deps stage so bun install is fast (no re-download)
+COPY --from=dependencies /app/node_modules ./node_modules
+
+# Run install to materialise workspace-local node_modules (e.g. packages/ui/node_modules,
+# apps/web-streamwizard/node_modules) that were not captured by the root copy above.
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
