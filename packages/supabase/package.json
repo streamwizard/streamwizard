@@ -44,6 +44,10 @@
     "./queries/commands": {
       "types": "./src/queries/commands.ts",
       "default": "./src/queries/commands.ts"
+    },
+    "./queries/stream-analytics": {
+      "types": "./src/queries/stream-analytics.ts",
+      "default": "./src/queries/stream-analytics.ts"
     }
   },
   "scripts": {

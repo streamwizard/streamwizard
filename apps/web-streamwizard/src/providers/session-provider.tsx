@@ -3,7 +3,7 @@
 import { User } from "@supabase/supabase-js";
 import React, { createContext, useContext } from "react";
 
-const SessionContext = createContext<User | null>(null);
+export const SessionContext = createContext<User | null>(null);
 
 interface Props {
   children: React.ReactNode;
