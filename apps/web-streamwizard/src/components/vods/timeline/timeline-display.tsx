@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDuration } from "@/types/twitch video";
+import { formatDuration } from "@/types/twitch-video";
 import type { ClipSelection } from "./types";
 
 interface TimelineDisplayProps {

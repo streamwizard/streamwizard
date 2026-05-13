@@ -20,7 +20,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FaDiscord } from "react-icons/fa";
 import { Separator } from "@repo/ui";
-import { DashboardUserNav } from "./DashboardUserNav";
+import { DashboardUserNav } from "./dashboard-user-nav";
 import SidebarClips from "./sidebar-clips";
 import SidebarCommands from "./sidebar-commands";
 

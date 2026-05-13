@@ -1,15 +1,15 @@
 import { CreateEventSubSubscriptionRequest, EventSubSubscriptionType } from "@/types/twitch";
-import { env } from "process";
+import { env } from "@repo/env/next";
 
 // Common transport configurations
 const CONDUIT_TRANSPORT = {
   method: "conduit" as const,
-  conduit_id: "6a9dfc09-7807-4f9d-830e-25f6ab00ed1f",
+  conduit_id: env.TWITCH_CONDUIT_ID,
 };
 
 const createWebhookTransport = () => ({
   method: "webhook" as const,
-  callback: "https://api.streamwizard.org/webhooks/twitch/eventsub",
+  callback: `${env.STREAMWIZARD_API_URL}/webhooks/twitch/eventsub`,
   secret: env.TWITCH_WEBHOOK_SECRET,
 });
 

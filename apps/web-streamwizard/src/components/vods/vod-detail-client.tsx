@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TwitchVideo, parseDuration } from "@/types/twitch video";
+import { TwitchVideo, parseDuration } from "@/types/twitch-video";
 import { Button } from "@repo/ui";
 import { Badge } from "@repo/ui";
 import { Input } from "@repo/ui";

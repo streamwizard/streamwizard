@@ -4,6 +4,7 @@ import { SidebarInset, SidebarProvider } from "@repo/ui";
 import { createClient } from "@repo/supabase/next/server";
 import { ClipFolderProvider } from "@/providers/clips-provider";
 import { redirect } from "next/navigation";
+import { getClipFolders } from "@repo/supabase/queries/clips";
 
 export default async function layout({
   children,
@@ -22,7 +23,7 @@ export default async function layout({
     redirect("/login");
   }
 
-  const { data: folders } = await supabase.from("clip_folders").select("*");
+  const { data: folders } = await getClipFolders(supabase, data.user.id);
   return (
     <SidebarProvider>
       <ClipFolderProvider ClipFolders={folders || []}>

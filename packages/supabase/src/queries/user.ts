@@ -37,6 +37,29 @@ export async function getUserPreferences(client: DBClient) {
   return data;
 }
 
+export async function getTwitchIntegrationByUserId(client: DBClient, userId: string) {
+  return client
+    .from("integrations_twitch")
+    .select("twitch_user_id")
+    .eq("user_id", userId)
+    .single();
+}
+
+export async function updateTwitchTokens(
+  client: DBClient,
+  userId: string,
+  tokens: {
+    access_token_ciphertext: string;
+    access_token_iv: string;
+    access_token_tag: string;
+    refresh_token_ciphertext: string;
+    refresh_token_iv: string;
+    refresh_token_tag: string;
+  }
+) {
+  return client.from("integrations_twitch").update(tokens).eq("user_id", userId);
+}
+
 export async function updateUserPreferences(
   client: DBClient,
   userId: string,

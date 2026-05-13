@@ -14,7 +14,8 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
-import type { ViewerCountBucket, ClipData, RawEvent } from "./types";
+import type { ViewerCountBucket, ClipData, RawEvent } from "@/actions/supabase/analytics/stream-analytics";
+import { formatOffset } from "@/lib/format";
 
 function formatNumber(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -22,12 +23,7 @@ function formatNumber(n: number): string {
   return n.toString();
 }
 
-function formatOffset(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  return `${h}:${String(m).padStart(2, "0")}`;
-}
-
+// Linear interpolation between the two nearest viewer-count buckets surrounding offsetSeconds.
 function interpolateViewers(buckets: ViewerCountBucket[], offsetSeconds: number): number {
   if (buckets.length === 0) return 0;
   const before = [...buckets].reverse().find((b) => b.bucket <= offsetSeconds);

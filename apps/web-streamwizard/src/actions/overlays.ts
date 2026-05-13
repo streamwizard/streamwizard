@@ -12,8 +12,8 @@ import type {
   OverlaySceneWithItems,
 } from "@/types/overlays";
 import { overlayItemFromDbRow } from "@/types/overlays";
-import { createClient } from "@repo/supabase/next/server";
 import type { Database, Json } from "@repo/supabase";
+import { getAuthContext } from "@/lib/auth";
 import {
   getOverlayScenes as _getOverlayScenes,
   getOverlayScene as _getOverlayScene,
@@ -21,6 +21,15 @@ import {
   updateOverlayScene as _updateOverlayScene,
   deleteOverlayScene as _deleteOverlayScene,
   deleteOverlayItem as _deleteOverlayItem,
+  getOverlaySceneRow,
+  getAllOverlayItemsByScene,
+  insertOverlayItemsReturningIds,
+  insertOverlayItems,
+  deleteOverlayItemsByIds,
+  updateOverlayItemData,
+  updateOverlayItemReturning,
+  insertOverlayItemReturning,
+  getOverlayItems,
 } from "@repo/supabase/queries/overlays";
 import { revalidatePath } from "next/cache";
 
@@ -46,21 +55,19 @@ function isPersistedOverlayItemId(id: string | undefined): boolean {
 }
 
 export async function getOverlayScenes() {
-  const supabase = await createClient();
-  const { data: user } = await supabase.auth.getUser();
-  if (!user?.user) return { data: null, error: "Unauthorized" };
+  let supabase, user;
+  try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
 
-  const { data, error } = await _getOverlayScenes(supabase, user.user.id);
+  const { data, error } = await _getOverlayScenes(supabase, user.id);
   if (error) return { data: null, error: error.message };
   return { data, error: null };
 }
 
 export async function getOverlayScene(id: string) {
-  const supabase = await createClient();
-  const { data: user } = await supabase.auth.getUser();
-  if (!user?.user) return { data: null, error: "Unauthorized" };
+  let supabase, user;
+  try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
 
-  const { scene, items, error } = await _getOverlayScene(supabase, id, user.user.id);
+  const { scene, items, error } = await _getOverlayScene(supabase, id, user.id);
   if (error) return { data: null, error: error.message };
 
   return {
@@ -77,9 +84,8 @@ export async function createOverlayScene(formData: {
   width?: number;
   height?: number;
 }) {
-  const supabase = await createClient();
-  const { data: user } = await supabase.auth.getUser();
-  if (!user?.user) return { data: null, error: "Unauthorized" };
+  let supabase, user;
+  try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
 
   const parsed = createSceneSchema.safeParse(formData);
   if (!parsed.success) return { data: null, error: parsed.error.message };
@@ -87,7 +93,7 @@ export async function createOverlayScene(formData: {
   const slug = generateSlug(parsed.data.name);
 
   const { data, error } = await _createOverlayScene(supabase, {
-    user_id: user.user.id,
+    user_id: user.id,
     name: parsed.data.name,
     slug,
     width: parsed.data.width ?? 1920,
@@ -107,16 +113,15 @@ export async function updateOverlayScene(formData: {
   height?: number;
   is_active?: boolean;
 }) {
-  const supabase = await createClient();
-  const { data: user } = await supabase.auth.getUser();
-  if (!user?.user) return { data: null, error: "Unauthorized" };
+  let supabase, user;
+  try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
 
   const parsed = updateSceneSchema.safeParse(formData);
   if (!parsed.success) return { data: null, error: parsed.error.message };
 
   const { id, ...updates } = parsed.data;
 
-  const { data, error } = await _updateOverlayScene(supabase, id, user.user.id, updates);
+  const { data, error } = await _updateOverlayScene(supabase, id, user.id, updates);
   if (error) return { data: null, error: error.message };
 
   revalidatePath("/dashboard/overlays");
@@ -124,11 +129,10 @@ export async function updateOverlayScene(formData: {
 }
 
 export async function deleteOverlayScene(id: string) {
-  const supabase = await createClient();
-  const { data: user } = await supabase.auth.getUser();
-  if (!user?.user) return { success: false, error: "Unauthorized" };
+  let supabase, user;
+  try { ({ supabase, user } = await getAuthContext()); } catch { return { success: false, error: "Unauthorized" }; }
 
-  const { error } = await _deleteOverlayScene(supabase, id, user.user.id);
+  const { error } = await _deleteOverlayScene(supabase, id, user.id);
   if (error) return { success: false, error: error.message };
 
   revalidatePath("/dashboard/overlays");
@@ -136,56 +140,41 @@ export async function deleteOverlayScene(id: string) {
 }
 
 export async function duplicateOverlayScene(id: string) {
-  const supabase = await createClient();
-  const { data: user } = await supabase.auth.getUser();
-  if (!user?.user) return { data: null, error: "Unauthorized" };
+  let supabase, user;
+  try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
 
-  const { data: original, error: fetchError } = await supabase
-    .from("overlay_scenes")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.user.id)
-    .single();
+  const { data: original, error: fetchError } = await getOverlaySceneRow(supabase, id, user.id);
 
   if (fetchError || !original)
     return { data: null, error: fetchError?.message ?? "Not found" };
 
   const slug = generateSlug(original.name + " copy");
 
-  const { data: newScene, error: createError } = await supabase
-    .from("overlay_scenes")
-    .insert({
-      user_id: user.user.id,
-      name: original.name + " (Copy)",
-      slug,
-      width: original.width,
-      height: original.height,
-    })
-    .select()
-    .single();
+  const { data: newScene, error: createError } = await _createOverlayScene(supabase, {
+    user_id: user.id,
+    name: original.name + " (Copy)",
+    slug,
+    width: original.width,
+    height: original.height,
+  });
 
   if (createError || !newScene)
     return { data: null, error: createError?.message ?? "Failed to create" };
 
-  const { data: originalItems } = await supabase
-    .from("overlay_items")
-    .select("*")
-    .eq("scene_id", id);
+  const { data: originalItems } = await getAllOverlayItemsByScene(supabase, id);
 
   if (originalItems?.length) {
     const roots = originalItems.filter((row) => row.type !== "clip_display_field");
     const children = originalItems.filter((row) => row.type === "clip_display_field");
     const oldIdToNew = new Map<string, string>();
 
-    const { data: insertedRoots, error: rootErr } = await supabase
-      .from("overlay_items")
-      .insert(
-        roots.map(({ id: _i, created_at: _c, updated_at: _u, scene_id: _s, ...rest }) => ({
-          ...rest,
-          scene_id: newScene.id,
-        }))
-      )
-      .select("id");
+    const { data: insertedRoots, error: rootErr } = await insertOverlayItemsReturningIds(
+      supabase,
+      roots.map(({ id: _i, created_at: _c, updated_at: _u, scene_id: _s, ...rest }) => ({
+        ...rest,
+        scene_id: newScene.id,
+      }))
+    );
 
     if (rootErr || !insertedRoots) {
       return { data: null, error: rootErr?.message ?? "Failed to copy items" };
@@ -210,7 +199,7 @@ export async function duplicateOverlayScene(id: string) {
         .filter((row) => row !== null);
 
       if (childRows.length > 0) {
-        const { error: childErr } = await supabase.from("overlay_items").insert(childRows);
+        const { error: childErr } = await insertOverlayItems(supabase, childRows);
         if (childErr) return { data: null, error: childErr.message };
       }
     }
@@ -236,39 +225,13 @@ export async function saveOverlayItem(item: {
   label: string;
   config: OverlayItemConfig;
 }) {
-  const supabase = await createClient();
+  let supabase;
+  try { ({ supabase } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
   const parsed = overlayItemSchema.safeParse(item);
   if (!parsed.success) return { data: null, error: parsed.error.message };
 
   if (item.id) {
-    const { data, error } = await supabase
-      .from("overlay_items")
-      .update({
-        type: parsed.data.type,
-        x: parsed.data.x,
-        y: parsed.data.y,
-        w: parsed.data.w,
-        h: parsed.data.h,
-        z_index: parsed.data.z_index,
-        rotation: parsed.data.rotation,
-        opacity: parsed.data.opacity,
-        is_visible: parsed.data.is_visible,
-        is_locked: parsed.data.is_locked,
-        label: parsed.data.label,
-        config: parsed.data.config as unknown as Json,
-      })
-      .eq("id", item.id)
-      .select()
-      .single();
-
-    if (error) return { data: null, error: error.message };
-    return { data, error: null };
-  }
-
-  const { data, error } = await supabase
-    .from("overlay_items")
-    .insert({
-      scene_id: parsed.data.scene_id,
+    const { data, error } = await updateOverlayItemReturning(supabase, item.id, {
       type: parsed.data.type,
       x: parsed.data.x,
       y: parsed.data.y,
@@ -281,9 +244,27 @@ export async function saveOverlayItem(item: {
       is_locked: parsed.data.is_locked,
       label: parsed.data.label,
       config: parsed.data.config as unknown as Json,
-    })
-    .select()
-    .single();
+    });
+
+    if (error) return { data: null, error: error.message };
+    return { data, error: null };
+  }
+
+  const { data, error } = await insertOverlayItemReturning(supabase, {
+    scene_id: parsed.data.scene_id,
+    type: parsed.data.type,
+    x: parsed.data.x,
+    y: parsed.data.y,
+    w: parsed.data.w,
+    h: parsed.data.h,
+    z_index: parsed.data.z_index,
+    rotation: parsed.data.rotation,
+    opacity: parsed.data.opacity,
+    is_visible: parsed.data.is_visible,
+    is_locked: parsed.data.is_locked,
+    label: parsed.data.label,
+    config: parsed.data.config as unknown as Json,
+  });
 
   if (error) return { data: null, error: error.message };
   return { data, error: null };
@@ -301,7 +282,8 @@ function resolveClipFieldParentRefs(
 }
 
 export async function deleteOverlayItem(id: string) {
-  const supabase = await createClient();
+  let supabase;
+  try { ({ supabase } = await getAuthContext()); } catch { return { success: false, error: "Unauthorized" }; }
   const { error } = await _deleteOverlayItem(supabase, id);
   if (error) return { success: false, error: error.message };
   return { success: true, error: null };
@@ -331,31 +313,22 @@ export async function saveAllOverlayItems(
   error: string | null;
   data: OverlaySceneWithItems | null;
 }> {
-  const supabase = await createClient();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth?.user) {
-    return { success: false, error: "Unauthorized", data: null };
-  }
+  let supabase;
+  try { ({ supabase } = await getAuthContext()); } catch { return { success: false, error: "Unauthorized", data: null }; }
 
   const idMap = new Map<string, string>();
   const existingItems = items.filter((i) => isPersistedOverlayItemId(i.id));
   const newItems = items.filter((i) => !isPersistedOverlayItemId(i.id));
   const keepIds = existingItems.map((i) => i.id!);
 
-  const { data: dbItems } = await supabase
-    .from("overlay_items")
-    .select("id")
-    .eq("scene_id", sceneId);
+  const { data: dbItems } = await getOverlayItems(supabase, sceneId);
 
   const idsToDelete = (dbItems ?? [])
     .map((row) => row.id)
     .filter((id) => !keepIds.includes(id));
 
   if (idsToDelete.length > 0) {
-    const { error: delErr } = await supabase
-      .from("overlay_items")
-      .delete()
-      .in("id", idsToDelete);
+    const { error: delErr } = await deleteOverlayItemsByIds(supabase, idsToDelete);
     if (delErr) return { success: false, error: delErr.message, data: null };
   }
 
@@ -368,23 +341,20 @@ export async function saveAllOverlayItems(
     if (!parsed.success) {
       return { success: false, error: parsed.error.message, data: null };
     }
-    const { error } = await supabase
-      .from("overlay_items")
-      .update({
-        type: parsed.data.type,
-        x: parsed.data.x,
-        y: parsed.data.y,
-        w: parsed.data.w,
-        h: parsed.data.h,
-        z_index: parsed.data.z_index,
-        rotation: parsed.data.rotation,
-        opacity: parsed.data.opacity,
-        is_visible: parsed.data.is_visible,
-        is_locked: parsed.data.is_locked,
-        label: parsed.data.label,
-        config: parsed.data.config as unknown as Json,
-      })
-      .eq("id", item.id!);
+    const { error } = await updateOverlayItemData(supabase, item.id!, {
+      type: parsed.data.type,
+      x: parsed.data.x,
+      y: parsed.data.y,
+      w: parsed.data.w,
+      h: parsed.data.h,
+      z_index: parsed.data.z_index,
+      rotation: parsed.data.rotation,
+      opacity: parsed.data.opacity,
+      is_visible: parsed.data.is_visible,
+      is_locked: parsed.data.is_locked,
+      label: parsed.data.label,
+      config: parsed.data.config as unknown as Json,
+    });
     if (error) return { success: false, error: error.message, data: null };
   }
 
@@ -421,10 +391,7 @@ export async function saveAllOverlayItems(
       });
     }
 
-    const { data: insertedRoots, error: insErr } = await supabase
-      .from("overlay_items")
-      .insert(insertPayloads)
-      .select("id");
+    const { data: insertedRoots, error: insErr } = await insertOverlayItemsReturningIds(supabase, insertPayloads);
 
     if (insErr) return { success: false, error: insErr.message, data: null };
     if (!insertedRoots || insertedRoots.length !== newRoots.length) {
@@ -472,7 +439,7 @@ export async function saveAllOverlayItems(
       });
     }
 
-    const { error: chErr } = await supabase.from("overlay_items").insert(childPayloads);
+    const { error: chErr } = await insertOverlayItems(supabase, childPayloads);
     if (chErr) return { success: false, error: chErr.message, data: null };
   }
 

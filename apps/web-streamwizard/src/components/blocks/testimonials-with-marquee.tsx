@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 import { TestimonialCard } from "../cards/testimonial-card";
 import { Marquee } from "@repo/ui";
 import { createClient } from "@repo/supabase/next/server";
+import { getActiveTestimonials } from "@repo/supabase/queries/public";
 
 interface TestimonialsSectionProps {
   className?: string;
@@ -10,7 +11,7 @@ interface TestimonialsSectionProps {
 export async function TestimonialsSection({ className }: TestimonialsSectionProps) {
   const supabase = await createClient();
 
-  const { data: testimonials, error } = await supabase.from("testimonials").select("*").eq("active", true);
+  const { data: testimonials, error } = await getActiveTestimonials(supabase);
 
   if (error) {
     console.error("Error fetching testimonials:", error);

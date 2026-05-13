@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { formatDate } from "@/lib/format";
 import { Database } from "@repo/supabase";
 import {
   Table,
@@ -56,10 +57,6 @@ export function CommandsTable({ commands }: CommandsTableProps) {
     if (!action) return "secondary";
     if (action.includes("spotify")) return "default";
     return "outline";
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
   };
 
   return (

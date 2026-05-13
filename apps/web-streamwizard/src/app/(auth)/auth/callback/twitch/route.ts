@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@repo/supabase/next/server";
 import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
 import { encryptToken } from "@/server/crypto";
+import { updateTwitchTokens } from "@repo/supabase/queries/user";
 
 export async function GET(request: Request) {
   let { origin } = new URL(request.url);
@@ -35,17 +36,14 @@ export async function GET(request: Request) {
     const encryptedRefreshToken = encryptToken(data.session.provider_refresh_token);
 
 
-    const { error: err } = await supabase
-      .from("integrations_twitch")
-      .update({
-        access_token_ciphertext: encryptedAccessToken.ciphertext,
-        access_token_iv: encryptedAccessToken.iv,
-        access_token_tag: encryptedAccessToken.authTag,
-        refresh_token_ciphertext: encryptedRefreshToken.ciphertext,
-        refresh_token_iv: encryptedRefreshToken.iv,
-        refresh_token_tag: encryptedRefreshToken.authTag,
-      })
-      .eq("user_id", data.session.user.id);
+    const { error: err } = await updateTwitchTokens(supabase, data.session.user.id, {
+      access_token_ciphertext: encryptedAccessToken.ciphertext,
+      access_token_iv: encryptedAccessToken.iv,
+      access_token_tag: encryptedAccessToken.authTag,
+      refresh_token_ciphertext: encryptedRefreshToken.ciphertext,
+      refresh_token_iv: encryptedRefreshToken.iv,
+      refresh_token_tag: encryptedRefreshToken.authTag,
+    });
 
     if (err) {
       console.log(err);

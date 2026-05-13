@@ -6,7 +6,7 @@ import type { TimelineEvent, TimelineSegment, TimelineSegmentType } from "@/comp
 import type { Database } from "@repo/supabase";
 import { StreamEventType, type Clip } from "@/types/stream-events";
 import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
-import { TwitchVideo, parseDuration, type TwitchStreamMarker } from "@/types/twitch video";
+import { TwitchVideo, parseDuration, type TwitchStreamMarker } from "@/types/twitch-video";
 import { create } from "zustand";
 import { toast } from "sonner";
 

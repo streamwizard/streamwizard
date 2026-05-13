@@ -33,7 +33,7 @@ interface Props {
   folder_name?: string;
 }
 
-export function CLipFolderModal({ user_id, folder_id, folder_name }: Props) {
+export function ClipFolderModal({ user_id, folder_id, folder_name }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { closeModal } = useModal();
 

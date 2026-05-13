@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDuration } from "@/types/twitch video";
+import { formatDuration } from "@/types/twitch-video";
 import { getEventTypeInfo } from "@/lib/utils/stream-events";
 import type { TimelineEvent } from "./types";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";

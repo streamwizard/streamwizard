@@ -7,6 +7,7 @@ import {
   getStreamEvents,
   getPreviousStreamForBroadcaster,
 } from "@repo/supabase/queries/stream-analytics";
+import { SUB_EVENT_TYPES } from "@/lib/utils/stream-events";
 
 export interface StreamStatValues {
   peakViewers: number;
@@ -21,8 +22,8 @@ export interface StatsRowData {
   previous: StreamStatValues | null;
 }
 
-const SUB_TYPES = ["channel.subscribe", "channel.subscription.message", "channel.subscription.gift"];
 
+// Fetches viewer counts and events for a stream, then derives peak/avg viewers, follow/sub counts, and duration.
 async function computeStats(
   supabase: Awaited<ReturnType<typeof createClient>>,
   streamId: string,
@@ -39,7 +40,7 @@ async function computeStats(
     ? Math.round(viewerRows.reduce((s, r) => s + r.viewer_count, 0) / viewerRows.length)
     : 0;
   const follows = eventRows.filter((e) => e.event_type === "channel.follow").length;
-  const subs = eventRows.filter((e) => SUB_TYPES.includes(e.event_type)).length;
+  const subs = eventRows.filter((e) => SUB_EVENT_TYPES.includes(e.event_type)).length;
 
   let durationSeconds: number | null = null;
   if (startedAt && endedAt) {

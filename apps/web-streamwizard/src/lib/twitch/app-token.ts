@@ -1,4 +1,4 @@
-import { env } from "@/lib/env";
+import { env } from "@repo/env/next";
 import axios from "axios";
 
 interface TwitchAppTokenResponse {
@@ -21,7 +21,7 @@ export async function getTwitchAppToken(): Promise<string> {
       null,
       {
         params: {
-          client_id: env.NEXT_PUBLIC_TWITCH_CLIENT_ID,
+          client_id: env.TWITCH_CLIENT_ID,
           client_secret: env.TWITCH_CLIENT_SECRET,
           grant_type: "client_credentials",
         },

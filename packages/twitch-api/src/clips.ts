@@ -12,6 +12,7 @@ export class TwitchClipsClient extends TwitchApiBaseClient {
     super(broadcaster_id);
   }
 
+  /** Retrieve clips for a broadcaster, game, or by clip ID. */
   async getClips(options: Helix.GetClipsParams): Promise<Helix.GetClipsResponse> {
     const response = await this.appApi().get<Helix.GetClipsResponse>("/clips", {
       params: options,
@@ -19,6 +20,7 @@ export class TwitchClipsClient extends TwitchApiBaseClient {
     return response.data;
   }
 
+  /** Create a clip from the broadcaster's live stream. Requires `clips:edit` scope. */
   async createClip(params: Omit<Helix.CreateClipParams, "broadcaster_id"> = {}): Promise<Helix.CreateClipResponse> {
     const response = await this.clientApi().post<Helix.CreateClipResponse>("/clips", null, {
       params: {
@@ -29,6 +31,7 @@ export class TwitchClipsClient extends TwitchApiBaseClient {
     return response.data;
   }
 
+  /** Create a clip from a VOD segment. Requires `clips:edit` scope. */
   async createClipFromVod(
     params: Omit<Helix.CreateClipFromVodParams, "broadcaster_id" | "editor_id">
   ): Promise<Helix.CreateClipFromVodResponse> {
@@ -42,6 +45,7 @@ export class TwitchClipsClient extends TwitchApiBaseClient {
     return response.data;
   }
 
+  /** Retrieve download URLs (landscape and portrait) for a clip. */
   async getClipDownloadUrl(params: {
     broadcaster_id: string;
     editor_id: string;
