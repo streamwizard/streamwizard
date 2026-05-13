@@ -103,7 +103,6 @@ export async function updateTwitchAppToken(accessToken: string, expiresIn: numbe
       access_token_tag: encryptedToken.authTag,
       expires_in: expiresIn,
     })
-    .eq("id", "d8a84af6-eb48-4569-ba8c-ae8835e5a3b2")
     .single();
 
   if (error) {

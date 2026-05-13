@@ -1,13 +1,6 @@
 import type { ActivityEvent } from "@/actions/supabase/analytics/activity-feed";
-import { EVENT_CONFIG } from "./eventConfig";
-
-function formatOffset(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-}
+import { EVENT_CONFIG } from "@/lib/event-config";
+import { formatOffset } from "@/lib/format";
 
 function formatTimestamp(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" });

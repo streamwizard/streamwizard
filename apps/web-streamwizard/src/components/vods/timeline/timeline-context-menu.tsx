@@ -5,7 +5,7 @@ import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import { useModal } from "@/providers/modal-provider";
 import { CreateMarkerModal } from "@/components/modals/create-marker-modal";
 import { Scissors, Flag } from "lucide-react";
-import { formatDuration } from "@/types/twitch video";
+import { formatDuration } from "@/types/twitch-video";
 import { useCallback, useState, type ReactNode } from "react";
 import { getSecondsFromPosition } from "./timeline-utils";
 

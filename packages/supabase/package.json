@@ -48,6 +48,10 @@
     "./queries/stream-analytics": {
       "types": "./src/queries/stream-analytics.ts",
       "default": "./src/queries/stream-analytics.ts"
+    },
+    "./queries/public": {
+      "types": "./src/queries/public.ts",
+      "default": "./src/queries/public.ts"
     }
   },
   "scripts": {
@@ -55,7 +59,7 @@
     "gen-types": "supabase gen types typescript --project-id jgxdrljoqployiyjedst --schema public > src/types/supabase.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.90.1",
+    "@supabase/supabase-js": "^2.105.1",
     "@supabase/ssr": "^0.8.0",
     "@repo/env": "workspace:*"
   },

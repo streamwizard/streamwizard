@@ -1,13 +1,7 @@
 import { Clock, Eye, Star, UserPlus, Users } from "lucide-react";
 import { getStatsRowData } from "@/actions/supabase/analytics/stream-stats";
 import { StatCard } from "./StatCard";
-
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
+import { formatDuration } from "@/lib/format";
 
 function numTrend(current: number, previous: number | null) {
   if (previous === null) return undefined;

@@ -113,6 +113,10 @@ const envSchema = z.object({
   INFLUXDB_ORG: z.string().optional(),
   INFLUXDB_BUCKET: z.string().optional(),
 
+  // Web app / StreamWizard API (optional for backend-only services)
+  STREAMWIZARD_API_URL: z.string().url().optional(),
+  TWITCH_CONDUIT_ID: z.string().optional(),
+
   // // Discord Bot
   // DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
   // DISCORD_CLIENT_ID: z.string().min(1, "DISCORD_CLIENT_ID is required"),

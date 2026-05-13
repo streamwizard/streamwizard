@@ -1,16 +1,6 @@
 import { TrendingDown, TrendingUp } from "lucide-react";
 import type { RecentStream } from "@/actions/supabase/analytics/recent-streams";
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function formatDuration(seconds: number): string {
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
-}
+import { formatDuration, formatDate } from "@/lib/format";
 
 interface RecentStreamRowProps {
   stream: RecentStream;

@@ -4,6 +4,7 @@ import { createClient } from "@repo/supabase/next/server";
 import { getClipBroadcasterId } from "@repo/supabase/queries/clips";
 import { getBroadcasterId } from "@repo/supabase/queries/user";
 import axios from "axios";
+import { env } from "@repo/env";
 import { revalidatePath } from "next/cache";
 
 interface returnObject<T = unknown> {
@@ -30,7 +31,7 @@ export async function SyncBroadcasterClips(): Promise<{ message: string; success
   } = await supabase.auth.getSession();
 
   try {
-    await axios.post(`https://api.streamwizard.org/api/clips/sync`, null, {
+    await axios.post(`${env.STREAMWIZARD_API_URL}/api/clips/sync`, null, {
       headers: {
         Authorization: `Bearer ${session?.access_token}`,
       },

@@ -7,7 +7,7 @@ import { useClipFolders } from "@/providers/clips-provider";
 import { useModal } from "@/providers/modal-provider";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import { Clip, StreamEvent } from "@/types/stream-events";
-import { formatDuration } from "@/types/twitch video";
+import { formatDuration } from "@/types/twitch-video";
 import type { ReactNode } from "react";
 import { ClipContextMenu } from "./clip-context-menu";
 

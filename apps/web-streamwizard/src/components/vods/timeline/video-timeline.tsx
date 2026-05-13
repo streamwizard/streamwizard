@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { parseDuration } from "@/types/twitch video";
+import { parseDuration } from "@/types/twitch-video";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import { secondsToPercent as toPercent, getSecondsFromPosition } from "./timeline-utils";
 import { ZoomControls } from "./zoom-controls";

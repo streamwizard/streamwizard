@@ -8,13 +8,18 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./next": {
+      "types": "./src/next.ts",
+      "default": "./src/next.ts"
     }
   },
   "scripts": {
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "zod": "^4.3.5"
+    "@t3-oss/env-nextjs": "^0.13.10",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

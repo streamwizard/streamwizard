@@ -9,6 +9,7 @@ import {
   getClipsByVideoId,
   getBroadcasterProfile,
 } from "@repo/supabase/queries/stream-analytics";
+import { SUB_EVENT_TYPES } from "@/lib/utils/stream-events";
 
 export interface StreamSummary {
   title: string | null;
@@ -91,6 +92,7 @@ function bucketLabel(bucket: number): string {
   return `${h}:${String(m).padStart(2, "0")}`;
 }
 
+// Collapses consecutive viewer-count rows with the same game+title into segments, tracking when each segment ends.
 function buildTitleCategoryHistory(
   rows: Array<{ offset_seconds: number; game_id: string | null; game_name: string | null; title: string | null }>
 ): TitleCategorySegment[] {
@@ -151,7 +153,6 @@ export async function getStreamAnalytics(broadcasterId: string): Promise<StreamA
     is_featured: c.is_featured,
   }));
 
-  const SUB_TYPES = ["channel.subscribe", "channel.subscription.message", "channel.subscription.gift"];
   const FOLLOW_TYPE = "channel.follow";
   const POINTS_TYPE = "channel.channel_points_custom_reward_redemption.add";
 
@@ -161,7 +162,7 @@ export async function getStreamAnalytics(broadcasterId: string): Promise<StreamA
     viewerRows.length > 0
       ? Math.round(viewerRows.reduce((s, r) => s + r.viewer_count, 0) / viewerRows.length)
       : 0;
-  const totalSubs = eventRows.filter((e) => SUB_TYPES.includes(e.event_type)).length;
+  const totalSubs = eventRows.filter((e) => SUB_EVENT_TYPES.includes(e.event_type)).length;
   const totalFollows = eventRows.filter((e) => e.event_type === FOLLOW_TYPE).length;
   const totalChannelPoints = eventRows
     .filter((e) => e.event_type === POINTS_TYPE)
@@ -205,7 +206,7 @@ export async function getStreamAnalytics(broadcasterId: string): Promise<StreamA
   for (const row of eventRows) {
     const bucket = Math.floor(row.offset_seconds / 300) * 300;
     const existing = eventByBucket.get(bucket) ?? { subs: 0, follows: 0, channelPoints: 0 };
-    if (SUB_TYPES.includes(row.event_type)) existing.subs++;
+    if (SUB_EVENT_TYPES.includes(row.event_type)) existing.subs++;
     if (row.event_type === FOLLOW_TYPE) existing.follows++;
     if (row.event_type === POINTS_TYPE) {
       const d = row.event_data as Record<string, unknown>;
@@ -220,7 +221,7 @@ export async function getStreamAnalytics(broadcasterId: string): Promise<StreamA
     .map(([bucket, data]) => ({ bucket, ...data }));
 
   const subEvents: RawEvent[] = eventRows
-    .filter((e) => SUB_TYPES.includes(e.event_type))
+    .filter((e) => SUB_EVENT_TYPES.includes(e.event_type))
     .map((e) => ({ offsetSeconds: e.offset_seconds }));
 
   const followEvents: RawEvent[] = eventRows

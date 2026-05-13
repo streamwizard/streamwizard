@@ -1,6 +1,7 @@
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { overlayItemFromDbRow, toPublicOverlayApiItems } from "@/types/overlays";
 import { NextRequest, NextResponse } from "next/server";
+import { getActiveOverlaySceneBySlug, getAllOverlayItemsByScene } from "@repo/supabase/queries/overlays";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -20,12 +21,7 @@ export async function GET(
     const { slug } = await params;
     const supabase = createAdminClient();
 
-    const { data: scene, error: sceneError } = await supabase
-      .from("overlay_scenes")
-      .select("*")
-      .eq("slug", slug)
-      .eq("is_active", true)
-      .single();
+    const { data: scene, error: sceneError } = await getActiveOverlaySceneBySlug(supabase, slug);
 
     if (sceneError || !scene) {
       return NextResponse.json(
@@ -34,11 +30,7 @@ export async function GET(
       );
     }
 
-    const { data: items, error: itemsError } = await supabase
-      .from("overlay_items")
-      .select("*")
-      .eq("scene_id", scene.id)
-      .order("z_index", { ascending: true });
+    const { data: items, error: itemsError } = await getAllOverlayItemsByScene(supabase, scene.id);
 
     if (itemsError) {
       return NextResponse.json(

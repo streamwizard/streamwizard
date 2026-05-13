@@ -12,7 +12,7 @@
  */
 
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import { env } from "@/lib/env";
+import { env } from "@repo/env";
 
 export interface EncryptedToken {
     ciphertext: string; // base64

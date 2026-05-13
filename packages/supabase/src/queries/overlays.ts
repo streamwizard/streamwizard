@@ -67,3 +67,75 @@ export async function deleteOverlayItem(client: DBClient, id: string) {
 export async function getOverlayItems(client: DBClient, sceneId: string) {
   return client.from("overlay_items").select("id").eq("scene_id", sceneId);
 }
+
+export async function getActiveOverlaySceneBySlug(client: DBClient, slug: string) {
+  return client
+    .from("overlay_scenes")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .single();
+}
+
+export async function getOverlaySceneRow(client: DBClient, id: string, userId: string) {
+  return client
+    .from("overlay_scenes")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .single();
+}
+
+export async function getAllOverlayItemsByScene(client: DBClient, sceneId: string) {
+  return client.from("overlay_items").select("*").eq("scene_id", sceneId);
+}
+
+export async function getOverlayItemById(client: DBClient, itemId: string, sceneId: string) {
+  return client
+    .from("overlay_items")
+    .select("*")
+    .eq("id", itemId)
+    .eq("scene_id", sceneId)
+    .single();
+}
+
+export async function deleteOverlayItemsByIds(client: DBClient, ids: string[]) {
+  return client.from("overlay_items").delete().in("id", ids);
+}
+
+export async function updateOverlayItemData(
+  client: DBClient,
+  id: string,
+  data: Database["public"]["Tables"]["overlay_items"]["Update"]
+) {
+  return client.from("overlay_items").update(data).eq("id", id);
+}
+
+export async function updateOverlayItemReturning(
+  client: DBClient,
+  id: string,
+  data: Database["public"]["Tables"]["overlay_items"]["Update"]
+) {
+  return client.from("overlay_items").update(data).eq("id", id).select().single();
+}
+
+export async function insertOverlayItemReturning(
+  client: DBClient,
+  data: Database["public"]["Tables"]["overlay_items"]["Insert"]
+) {
+  return client.from("overlay_items").insert(data).select().single();
+}
+
+export async function insertOverlayItemsReturningIds(
+  client: DBClient,
+  items: Database["public"]["Tables"]["overlay_items"]["Insert"][]
+) {
+  return client.from("overlay_items").insert(items).select("id");
+}
+
+export async function insertOverlayItems(
+  client: DBClient,
+  items: Database["public"]["Tables"]["overlay_items"]["Insert"][]
+) {
+  return client.from("overlay_items").insert(items);
+}

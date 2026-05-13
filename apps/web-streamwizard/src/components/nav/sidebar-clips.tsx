@@ -11,7 +11,7 @@ import { useSession } from "@/providers/session-provider";
 import { Database } from "@repo/supabase";
 import { Clapperboard, EllipsisVertical, Folder, Plus, FolderOpen } from "lucide-react";
 import Link from "next/link";
-import { CLipFolderModal } from "../modals/clip-folder-modal";
+import { ClipFolderModal } from "../modals/clip-folder-modal";
 import { Button } from "@repo/ui";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem } from "@repo/ui";
@@ -31,11 +31,11 @@ export default function SidebarClips({ clipFolders }: Props) {
   const { id } = useSession();
 
   const createFolderButton = () => {
-    openModal(<CLipFolderModal user_id={id} />);
+    openModal(<ClipFolderModal user_id={id} />);
   };
 
   const EditFolderButton = (folderName: string, folderId: number) => {
-    openModal(<CLipFolderModal user_id={id} folder_id={folderId} folder_name={folderName} />);
+    openModal(<ClipFolderModal user_id={id} folder_id={folderId} folder_name={folderName} />);
   };
 
   const deleteFolderButton = (folderId: number, folderName: string) => {

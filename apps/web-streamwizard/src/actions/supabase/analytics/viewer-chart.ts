@@ -9,6 +9,7 @@ import {
   getClipsByVideoId,
 } from "@repo/supabase/queries/stream-analytics";
 import type { ViewerCountBucket, RawEvent, ClipData } from "@/actions/supabase/analytics/stream-analytics";
+import { SUB_EVENT_TYPES } from "@/lib/utils/stream-events";
 
 export interface ViewerChartData {
   viewerBuckets: ViewerCountBucket[];
@@ -17,7 +18,6 @@ export interface ViewerChartData {
   clips: ClipData[];
 }
 
-const SUB_TYPES = ["channel.subscribe", "channel.subscription.message", "channel.subscription.gift"];
 
 export const getViewerChartData = cache(
   async (streamId: string, broadcasterId: string): Promise<ViewerChartData> => {
@@ -48,7 +48,7 @@ export const getViewerChartData = cache(
       }));
 
     const subEvents: RawEvent[] = eventRows
-      .filter((e) => SUB_TYPES.includes(e.event_type))
+      .filter((e) => SUB_EVENT_TYPES.includes(e.event_type))
       .map((e) => ({ offsetSeconds: e.offset_seconds }));
 
     const followEvents: RawEvent[] = eventRows

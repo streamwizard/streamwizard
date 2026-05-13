@@ -1,4 +1,4 @@
-import SettingsNav from "@/components/nav/SettingsNav";
+import SettingsNav from "@/components/nav/settings-nav";
 
 export default async function layout({ children }: { children: React.ReactNode }) {
   return (

@@ -1,6 +1,3 @@
-export type ActionResponse<T> = {
-  success: boolean;
-  error?: string;
-  data?: T;
-  status?: number;
-};
+export type ActionResponse<T = void> =
+  | { success: true; data: T }
+  | { success: false; error: string };

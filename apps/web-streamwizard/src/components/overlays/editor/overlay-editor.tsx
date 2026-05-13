@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays";
+import { env } from "@repo/env/next";
 import type {
   OverlayItemConfig,
   OverlaySceneWithItems,
@@ -211,7 +212,7 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
             variant="outline"
             size="sm"
             onClick={() => {
-              const url = `https://overlay.streamwizard.org/${scene.slug}`;
+              const url = `${env.NEXT_PUBLIC_OVERLAY_URL}/${scene.slug}`;
               navigator.clipboard.writeText(url);
               toast.success("Overlay URL copied");
             }}

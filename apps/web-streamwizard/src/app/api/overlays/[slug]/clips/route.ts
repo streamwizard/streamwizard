@@ -1,5 +1,4 @@
 import { createAdminClient } from "@repo/supabase/next/admin";
-import { buildOverlayClipQuery } from "@/components/overlays/clip-query-builder";
 import { clipsWidgetConfigSchema } from "@/schemas/overlay";
 import {
   asClipDisplayFieldConfig,
@@ -9,6 +8,9 @@ import {
   overlayItemFromDbRow,
 } from "@/types/overlays";
 import { NextRequest, NextResponse } from "next/server";
+import { getActiveOverlaySceneBySlug, getOverlayItemById, getAllOverlayItemsByScene } from "@repo/supabase/queries/overlays";
+import { getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
+import { getClipFolderJunctions, getOverlayClips } from "@repo/supabase/queries/clips";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -37,12 +39,7 @@ export async function GET(
 
     const supabase = createAdminClient();
 
-    const { data: scene, error: sceneError } = await supabase
-      .from("overlay_scenes")
-      .select("*")
-      .eq("slug", slug)
-      .eq("is_active", true)
-      .single();
+    const { data: scene, error: sceneError } = await getActiveOverlaySceneBySlug(supabase, slug);
 
     if (sceneError || !scene) {
       return NextResponse.json(
@@ -51,12 +48,7 @@ export async function GET(
       );
     }
 
-    const { data: itemRow, error: itemError } = await supabase
-      .from("overlay_items")
-      .select("*")
-      .eq("id", itemId)
-      .eq("scene_id", scene.id)
-      .single();
+    const { data: itemRow, error: itemError } = await getOverlayItemById(supabase, itemId, scene.id);
 
     if (itemError || !itemRow) {
       return NextResponse.json(
@@ -65,10 +57,7 @@ export async function GET(
       );
     }
 
-    const { data: sceneItemsRows, error: sceneItemsError } = await supabase
-      .from("overlay_items")
-      .select("*")
-      .eq("scene_id", scene.id);
+    const { data: sceneItemsRows, error: sceneItemsError } = await getAllOverlayItemsByScene(supabase, scene.id);
 
     if (sceneItemsError) {
       return NextResponse.json(
@@ -105,37 +94,16 @@ export async function GET(
 
     const validConfig = parsed.data as ClipsWidgetConfig;
 
-    const { data: twitchIntegration } = await supabase
-      .from("integrations_twitch")
-      .select("twitch_user_id")
-      .eq("user_id", scene.user_id)
-      .single();
-
+    const { data: twitchIntegration } = await getTwitchIntegrationByUserId(supabase, scene.user_id);
     const twitchUserId = twitchIntegration?.twitch_user_id ?? null;
 
-    let query = supabase
-      .from("clips")
-      .select(
-        "id, twitch_clip_id, title, url, embed_url, thumbnail_url, duration, broadcaster_name, creator_name, game_id, game_name, view_count, created_at_twitch, is_featured"
-      );
-
-    query = buildOverlayClipQuery(validConfig, query);
-
-    // For non-folder mode, scope by Twitch broadcaster identity rather than app user_id.
-    if (validConfig.folderIds.length === 0 && twitchUserId) {
-      query = query.eq("broadcaster_id", twitchUserId);
-    }
+    let clipTwitchIds: string[] | undefined;
 
     if (validConfig.folderIds.length > 0) {
-      const { data: junctions } = await supabase
-        .from("clip_folder_junction")
-        .select("clip_id")
-        .eq("user_id", scene.user_id)
-        .in("folder_id", validConfig.folderIds);
+      const { data: junctions } = await getClipFolderJunctions(supabase, scene.user_id, validConfig.folderIds);
 
       if (junctions && junctions.length > 0) {
-        const clipIds = [...new Set(junctions.map((j) => j.clip_id))];
-        query = query.in("twitch_clip_id", clipIds);
+        clipTwitchIds = [...new Set(junctions.map((j) => j.clip_id))];
       } else {
         return NextResponse.json(
           { clips: [] },
@@ -144,7 +112,22 @@ export async function GET(
       }
     }
 
-    const { data: clips, error: clipsError } = await query;
+    const { data: clips, error: clipsError } = await getOverlayClips(
+      supabase,
+      "id, twitch_clip_id, title, url, embed_url, thumbnail_url, duration, broadcaster_name, creator_name, game_id, game_name, view_count, created_at_twitch, is_featured",
+      {
+        gameIds: validConfig.gameIds,
+        creatorIds: validConfig.creatorIds,
+        isFeaturedOnly: validConfig.isFeaturedOnly,
+        minViewCount: validConfig.minViewCount,
+        timeWindow: validConfig.timeWindow,
+        customDateRange: validConfig.customDateRange,
+        sort: validConfig.sort,
+        maxClips: validConfig.maxClips,
+        broadcasterTwitchId: validConfig.folderIds.length === 0 ? twitchUserId : null,
+        clipTwitchIds,
+      }
+    );
 
     if (clipsError) {
       console.error("Error fetching clips for overlay:", clipsError);
