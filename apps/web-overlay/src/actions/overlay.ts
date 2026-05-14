@@ -1,26 +1,28 @@
 "use server";
 
-import type { Json } from "@/types/supabase";
-import type { Tables } from "@/types/supabase";
+import {
+  getActiveOverlaySceneBySlugMaybe,
+  getAllOverlayItemsByScene,
+  getOverlaySceneByIdForEmbed,
+} from "@repo/supabase/queries/overlays";
+import type { Json } from "@repo/supabase";
+import type { OverlayItemRow, OverlaySceneRow } from "@/types/overlays";
 import {
   isOverlaySceneUuid,
   safeDecodeOverlaySegment,
 } from "@/lib/overlay-route-params";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin } from "@repo/supabase/next/admin";
 import {
   CLIP_DISPLAY_FIELD_KEYS,
   type ClipDisplayFieldKey,
 } from "@/lib/overlay-field-keys";
 
-export type OverlaySceneRow = Tables<"overlay_scenes">;
-export type OverlayItemRow = Tables<"overlay_items">;
-
-export type LoadOverlayErrorCode =
+type LoadOverlayErrorCode =
   | "MISSING_LOOKUP"
   | "SCENE_NOT_FOUND"
   | "DATABASE_ERROR";
 
-export type LoadOverlayResult =
+type LoadOverlayResult =
   | { ok: true; scene: OverlaySceneRow; items: OverlayItemRow[] }
   | { ok: false; code: LoadOverlayErrorCode; message: string };
 
@@ -31,7 +33,7 @@ function asRecord(j: Json): Record<string, unknown> {
 }
 
 function mergeDisplayChildrenIntoClipsWidgets(
-  items: OverlayItemRow[]
+  items: OverlayItemRow[],
 ): OverlayItemRow[] {
   const clipsParents = new Map<string, OverlayItemRow>();
   for (const it of items) {
@@ -75,10 +77,8 @@ function mergeDisplayChildrenIntoClipsWidgets(
     const children = childrenByParent.get(item.id) ?? [];
 
     children.sort((a, b) => {
-      const ao =
-        typeof a.cfg.stackOrder === "number" ? a.cfg.stackOrder : 0;
-      const bo =
-        typeof b.cfg.stackOrder === "number" ? b.cfg.stackOrder : 0;
+      const ao = typeof a.cfg.stackOrder === "number" ? a.cfg.stackOrder : 0;
+      const bo = typeof b.cfg.stackOrder === "number" ? b.cfg.stackOrder : 0;
       return ao - bo;
     });
 
@@ -89,8 +89,7 @@ function mergeDisplayChildrenIntoClipsWidgets(
         { x: number; y: number; w: number; h: number; fontSize: number }
       >
     > = {};
-    const displayFieldLocks: Partial<Record<ClipDisplayFieldKey, boolean>> =
-      {};
+    const displayFieldLocks: Partial<Record<ClipDisplayFieldKey, boolean>> = {};
 
     const existingFields = asRecord(base.displayFields as Json);
     const existingLayouts = asRecord(base.displayFieldLayouts as Json);
@@ -103,19 +102,14 @@ function mergeDisplayChildrenIntoClipsWidgets(
 
     for (const key of CLIP_DISPLAY_FIELD_KEYS) {
       const ly = existingLayouts[key];
-      if (
-        ly &&
-        typeof ly === "object" &&
-        !Array.isArray(ly)
-      ) {
+      if (ly && typeof ly === "object" && !Array.isArray(ly)) {
         const o = ly as Record<string, unknown>;
         displayFieldLayouts[key] = {
           x: typeof o.x === "number" ? o.x : 0,
           y: typeof o.y === "number" ? o.y : 0,
           w: typeof o.w === "number" ? o.w : 100,
           h: typeof o.h === "number" ? o.h : 100,
-          fontSize:
-            typeof o.fontSize === "number" ? o.fontSize : 14,
+          fontSize: typeof o.fontSize === "number" ? o.fontSize : 14,
         };
       }
     }
@@ -136,15 +130,18 @@ function mergeDisplayChildrenIntoClipsWidgets(
       displayFields[key] = true;
 
       const layoutRaw = cfg.layout;
-      if (layoutRaw && typeof layoutRaw === "object" && !Array.isArray(layoutRaw)) {
+      if (
+        layoutRaw &&
+        typeof layoutRaw === "object" &&
+        !Array.isArray(layoutRaw)
+      ) {
         const ly = layoutRaw as Record<string, unknown>;
         displayFieldLayouts[key] = {
           x: typeof ly.x === "number" ? ly.x : 0,
           y: typeof ly.y === "number" ? ly.y : 0,
           w: typeof ly.w === "number" ? ly.w : 100,
           h: typeof ly.h === "number" ? ly.h : 100,
-          fontSize:
-            typeof ly.fontSize === "number" ? ly.fontSize : 14,
+          fontSize: typeof ly.fontSize === "number" ? ly.fontSize : 14,
         };
       }
 
@@ -157,7 +154,7 @@ function mergeDisplayChildrenIntoClipsWidgets(
     const parentOrderRaw = base.displayFieldOrder;
     if (orderFromChildren.length > 0) {
       const rest = CLIP_DISPLAY_FIELD_KEYS.filter(
-        (k) => !orderFromChildren.includes(k)
+        (k) => !orderFromChildren.includes(k),
       );
       displayFieldOrder = [...orderFromChildren, ...rest];
     } else if (Array.isArray(parentOrderRaw)) {
@@ -209,8 +206,7 @@ export async function loadOverlayBySlugOrId(args: {
     return {
       ok: false,
       code: "MISSING_LOOKUP",
-      message:
-        "Provide a scene slug or scene UUID to load an overlay scene.",
+      message: "Provide a scene slug or scene UUID to load an overlay scene.",
     };
   }
 
@@ -218,20 +214,17 @@ export async function loadOverlayBySlugOrId(args: {
   let sceneErr: Error | null = null;
 
   if (slug) {
-    const { data, error } = await supabaseAdmin
-      .from("overlay_scenes")
-      .select("*")
-      .eq("slug", slug)
-      .eq("is_active", true)
-      .maybeSingle();
+    const { data, error } = await getActiveOverlaySceneBySlugMaybe(
+      supabaseAdmin,
+      slug,
+    );
     if (error) sceneErr = new Error(error.message);
     else scene = data;
   } else if (sceneId) {
-    const { data, error } = await supabaseAdmin
-      .from("overlay_scenes")
-      .select("*")
-      .eq("id", sceneId)
-      .maybeSingle();
+    const { data, error } = await getOverlaySceneByIdForEmbed(
+      supabaseAdmin,
+      sceneId,
+    );
     if (error) sceneErr = new Error(error.message);
     else scene = data;
   }
@@ -254,11 +247,10 @@ export async function loadOverlayBySlugOrId(args: {
     };
   }
 
-  const { data: rawItems, error: itemsError } = await supabaseAdmin
-    .from("overlay_items")
-    .select("*")
-    .eq("scene_id", scene.id)
-    .order("z_index", { ascending: true });
+  const { data: rawItems, error: itemsError } = await getAllOverlayItemsByScene(
+    supabaseAdmin,
+    scene.id,
+  );
 
   if (itemsError) {
     return {
@@ -268,7 +260,9 @@ export async function loadOverlayBySlugOrId(args: {
     };
   }
 
-  const visibleFirst = (rawItems ?? []).filter((row) => row.is_visible !== false);
+  const visibleFirst = (rawItems ?? []).filter(
+    (row) => row.is_visible !== false,
+  );
   const items = mergeDisplayChildrenIntoClipsWidgets(visibleFirst);
 
   return { ok: true, scene, items };
@@ -279,7 +273,7 @@ export async function loadOverlayBySlugOrId(args: {
  * anything else is treated as an active scene slug.
  */
 export async function loadOverlaySceneByOverlayId(
-  overlayId: string
+  overlayId: string,
 ): Promise<LoadOverlayResult> {
   const raw = overlayId.trim();
   if (!raw) {

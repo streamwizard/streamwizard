@@ -81,6 +81,14 @@ export async function getClipFolderJunctions(client: DBClient, userId: string, f
     .in("folder_id", folderIds);
 }
 
+/** Columns streamed by OBS overlay playlists (dedupe by `twitch_clip_id` in the app layer). */
+export const OVERLAY_PLAYLIST_CLIP_COLUMNS =
+  "id, twitch_clip_id, broadcaster_id, title, creator_name, game_name, created_at_twitch, view_count, duration";
+
+export function createOverlayPlaylistClipQuery(client: DBClient) {
+  return client.from("clips").select(OVERLAY_PLAYLIST_CLIP_COLUMNS);
+}
+
 export interface OverlayClipFilter {
   gameIds: string[];
   creatorIds: string[];

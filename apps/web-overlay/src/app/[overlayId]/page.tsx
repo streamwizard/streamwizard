@@ -1,4 +1,4 @@
-import { loadOverlaySceneByOverlayId } from "@/app/actions/overlay";
+import { loadOverlaySceneByOverlayId } from "@/actions/overlay";
 import { OverlaySceneCanvas } from "@/components/overlay/OverlaySceneCanvas";
 import { notFound } from "next/navigation";
 

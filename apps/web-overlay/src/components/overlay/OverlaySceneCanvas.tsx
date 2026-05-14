@@ -1,6 +1,6 @@
 "use client";
 
-import type { OverlayItemRow, OverlaySceneRow } from "@/app/actions/overlay";
+import type { OverlayItemRow, OverlaySceneRow } from "@/types/overlays";
 import type { OverlayItem } from "@repo/ui/overlay";
 import type { ReactNode } from "react";
 import { useMemo } from "react";

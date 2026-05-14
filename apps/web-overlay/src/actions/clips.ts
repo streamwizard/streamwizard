@@ -1,10 +1,15 @@
 "use server";
 
-import type { Json } from "@/types/supabase";
+import {
+  createOverlayPlaylistClipQuery,
+  getClipFolderJunctions,
+} from "@repo/supabase/queries/clips";
+import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
+import type { Json } from "@repo/supabase";
 import type { ClipsWidgetConfig } from "@/types/overlays";
 import { parseClipsWidgetConfig } from "@/lib/clips-widget-config";
 import { buildOverlayClipQuery } from "@/lib/overlay-clip-query-builder";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { supabaseAdmin } from "@repo/supabase/next/admin";
 
 /** Minimal clip identity for Twitch Helix downloads (broadcaster id from clips row). */
 export type PlaylistClip = {
@@ -31,40 +36,24 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-async function getOwnerTwitchBroadcasterId(
-  ownerUserId: string
-): Promise<string | null> {
-  const { data, error } = await supabaseAdmin
-    .from("integrations_twitch")
-    .select("twitch_user_id")
-    .eq("user_id", ownerUserId)
-    .maybeSingle();
-
-  if (error || !data?.twitch_user_id?.trim()) return null;
-  return data.twitch_user_id.trim();
-}
-
 async function getTwitchClipIdsInFolders(
   ownerUserId: string,
   folderIds: number[]
 ): Promise<{ ok: true; ids: string[] } | { ok: false }> {
-  const { data, error } = await supabaseAdmin
-    .from("clip_folder_junction")
-    .select("clip_id")
-    .eq("user_id", ownerUserId)
-    .in("folder_id", folderIds);
+  const { data, error } = await getClipFolderJunctions(
+    supabaseAdmin,
+    ownerUserId,
+    folderIds
+  );
 
   if (error) return { ok: false };
 
-  const ids = [
-    ...new Set((data ?? []).map((r) => r.clip_id).filter(Boolean)),
-  ] as string[];
+  const junctionRows = (data ?? []) as { clip_id: string }[];
+
+  const ids = [...new Set(junctionRows.map((r) => r.clip_id).filter(Boolean))];
 
   return { ok: true, ids };
 }
-
-const CLIP_SELECT =
-  "id, twitch_clip_id, broadcaster_id, title, creator_name, game_name, created_at_twitch, view_count, duration";
 
 /** Fetch extra rows before dedupe so duplicate twitch_clip_id rows do not collapse the playlist. */
 function sqlFetchLimit(config: ClipsWidgetConfig): number {
@@ -123,7 +112,7 @@ export async function loadOverlayClipPlaylistForWidget(
 ): Promise<OverlayClipForDisplay[]> {
   const c = parseClipsWidgetConfig(config);
 
-  let query = supabaseAdmin.from("clips").select(CLIP_SELECT);
+  let query = createOverlayPlaylistClipQuery(supabaseAdmin);
 
   const folderMode = c.folderIds.length > 0;
   query = folderMode
@@ -136,7 +125,10 @@ export async function loadOverlayClipPlaylistForWidget(
     if (junction.ids.length === 0) return [];
     query = query.in("twitch_clip_id", junction.ids);
   } else {
-    const twitchUserId = await getOwnerTwitchBroadcasterId(sceneUserId);
+    const twitchUserId = await getTwitchUserIdByUserIdMaybe(
+      supabaseAdmin,
+      sceneUserId
+    );
     if (!twitchUserId) return [];
     query = query.eq("broadcaster_id", twitchUserId);
   }

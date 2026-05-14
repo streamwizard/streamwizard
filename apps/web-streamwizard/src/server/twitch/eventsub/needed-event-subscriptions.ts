@@ -1,18 +1,6 @@
 import { CreateEventSubSubscriptionRequest, EventSubSubscriptionType } from "@/types/twitch";
 import { env } from "@repo/env/next";
 
-// Common transport configurations
-const CONDUIT_TRANSPORT = {
-  method: "conduit" as const,
-  conduit_id: env.TWITCH_CONDUIT_ID,
-};
-
-const createWebhookTransport = () => ({
-  method: "webhook" as const,
-  callback: `${env.STREAMWIZARD_API_URL}/webhooks/twitch/eventsub`,
-  secret: env.TWITCH_WEBHOOK_SECRET,
-});
-
 // Type for subscription configuration
 type SubscriptionConfig = {
   type: EventSubSubscriptionType;
@@ -144,12 +132,32 @@ const webhookSubscriptions: SubscriptionConfig[] = [
 ];
 
 export default async function NeededEventSubscriptions(twitchUserId: string): Promise<CreateEventSubSubscriptionRequest[]> {
+  const conduitId = env.TWITCH_CONDUIT_ID;
+  const apiUrl = env.STREAMWIZARD_API_URL;
+
+  if (!conduitId || !apiUrl) {
+    throw new Error(
+      "TWITCH_CONDUIT_ID and STREAMWIZARD_API_URL must be set in the environment for EventSub subscription setup.",
+    );
+  }
+
+  const conduitTransport = {
+    method: "conduit" as const,
+    conduit_id: conduitId,
+  };
+
+  const createWebhookTransport = () => ({
+    method: "webhook" as const,
+    callback: `${apiUrl}/webhooks/twitch/eventsub`,
+    secret: env.TWITCH_WEBHOOK_SECRET,
+  });
+
   // Generate conduit subscriptions with conditions
   const conduitRequests = conduitSubscriptions.map(({ type, version, condition }) => ({
     type,
     version,
     condition: condition(twitchUserId),
-    transport: CONDUIT_TRANSPORT,
+    transport: conduitTransport,
   }));
 
   // Generate webhook subscriptions with conditions
