@@ -11,6 +11,10 @@
       "types": "./src/overlay-exports.ts",
       "default": "./src/overlay-exports.ts"
     },
+    "./overlay-schemas": {
+      "types": "./src/overlay-schemas.ts",
+      "default": "./src/overlay-schemas.ts"
+    },
     "./components/*": {
       "types": "./src/components/*.tsx",
       "default": "./src/components/*.tsx"

@@ -1,5 +1,5 @@
 import type { Database } from "@repo/supabase";
-import type { ClipsWidgetConfig as ParsedClipsWidgetConfig } from "@/lib/clips-widget-config";
+import type { ClipsWidgetItemConfig } from "@repo/ui/overlay";
 
 /** Supabase overlay scene / item rows (do not export from `"use server"` files — Turbopack action bridge). */
 export type OverlaySceneRow = Database["public"]["Tables"]["overlay_scenes"]["Row"];
@@ -14,4 +14,4 @@ export type TimeWindowPreset =
   | "all"
   | "custom";
 
-export type ClipsWidgetConfig = ParsedClipsWidgetConfig;
+export type ClipsWidgetConfig = ClipsWidgetItemConfig;

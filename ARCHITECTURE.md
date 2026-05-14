@@ -175,3 +175,42 @@ Overlays are composed of **scenes** (`overlay_scenes`) containing **items** (`ov
 - **First-party OBS app** — `apps/web-overlay` renders the canvas server-side via Server Actions; it relies on query modules (above) plus `src/lib/overlay-*` helpers for route parsing and widget config normalization.
 
 Both paths use an admin/service-role Supabase client; no end-user authentication is required for OBS playback endpoints.
+
+### Widget Architecture — Container / Renderer split
+
+```
+packages/ui           → Pure Renderer + base definitions (visual output only, no data fetching)
+apps/web-overlay      → Data Container (fetches via server action, passes to Renderer)
+apps/web-streamwizard → Editor registration (CanvasContent, SettingsPanel, createRootItems)
+```
+
+**`packages/ui`** is the single source of truth for widget rendering:
+
+| File | Purpose |
+|------|---------|
+| `src/components/overlay/types.ts` | All shared types (`OverlayItem`, `OverlayScene`, `ClipDataRow`, …) |
+| `src/overlay-schemas.ts` | All Zod config schemas (`textWidgetItemConfigSchema`, etc.) |
+| `src/components/overlay/OverlaySceneCanvas.tsx` | Shared canvas — renders any scene; text/timer/clock built-in |
+| `src/components/overlay/widgets/<name>/` | `*WidgetRenderer.tsx` + `*-widget-definition.ts` per widget |
+| `src/overlay-exports.ts` | Single barrel re-export (`@repo/ui/overlay`) |
+
+**`OverlaySceneCanvas`** accepts an optional `widgets` prop for app-specific extensions (e.g. `ClipsWidgetContainer`). Core widgets (text, timer, clock) are registered internally — no app config needed.
+
+**`apps/web-overlay`** has one file per data-fetching widget (`ClipsWidgetContainer`) and registers them in `app/[overlayId]/page.tsx`:
+
+```ts
+const OVERLAY_WIDGETS = [{ id: "clips_widget", Component: ClipsWidgetContainer }];
+// ...
+<OverlaySceneCanvas scene={result.scene} items={result.items.map(overlayItemFromDbRow)} widgets={OVERLAY_WIDGETS} />
+```
+
+**Canvas scaling:** The editor scales the entire scene with `transform: scale(zoom)` on the canvas wrapper. Individual renderers receive `zoom` only for internal hit-test / drag-handle calculations — they must NOT apply their own scale transform.
+
+### Adding a new widget
+
+1. **`packages/ui`** — create `*WidgetRenderer.tsx` (pure renderer) and `*-widget-definition.ts` (`defaultSize`, `createDefaultConfig`, `collectFontFamilies`). Export from `overlay-exports.ts`.
+2. **`packages/ui/src/overlay-schemas.ts`** — add the Zod config schema and include it in `overlayItemSchema`.
+3. **`apps/web-streamwizard`** — add the type to `OverlayItemType`, create a `*WidgetSettings.tsx` settings panel, and register an entry in `OVERLAY_WIDGET_REGISTRY` (`overlay-widget-registry.tsx`).
+4. **`apps/web-overlay`** — only needed if the widget requires data fetching: create a `*WidgetContainer.tsx` and add `{ id: "…", Component: … }` to `OVERLAY_WIDGETS` in `page.tsx`.
+
+Widgets that are purely static (text, timer, clock) require no changes in `web-overlay` — the canvas picks them up automatically.

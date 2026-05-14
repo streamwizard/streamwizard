@@ -38,6 +38,18 @@
         "typescript": "^5",
       },
     },
+    "apps/irl-ws-server": {
+      "name": "@repo/irl-ws-server",
+      "version": "0.0.0",
+      "dependencies": {
+        "@supabase/supabase-js": "^2.105.1",
+      },
+      "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
+        "@types/bun": "^1.3.6",
+        "typescript": "5.9.2",
+      },
+    },
     "apps/rest-api": {
       "name": "@repo/rest-api",
       "version": "0.0.0",
@@ -806,6 +818,8 @@
     "@repo/env": ["@repo/env@workspace:packages/env"],
 
     "@repo/eslint-config": ["@repo/eslint-config@workspace:packages/eslint-config"],
+
+    "@repo/irl-ws-server": ["@repo/irl-ws-server@workspace:apps/irl-ws-server"],
 
     "@repo/logger": ["@repo/logger@workspace:packages/logger"],
 

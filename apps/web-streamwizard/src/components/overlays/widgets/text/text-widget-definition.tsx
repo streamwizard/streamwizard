@@ -1,10 +1,10 @@
 "use client";
 
 import type { OverlayItem } from "@/types/overlays";
-import { DEFAULT_TEXT_WIDGET_ITEM_CONFIG } from "@/types/overlays";
+import { DEFAULT_TEXT_WIDGET_ITEM_CONFIG, TEXT_WIDGET_DEFAULT_SIZE } from "@repo/ui/overlay";
 import type { CreateRootItemContext } from "../../registry/overlay-widget-registry.types";
 
-export const TEXT_WIDGET_DEFAULT_SIZE = { w: 320, h: 120 } as const;
+export { TEXT_WIDGET_DEFAULT_SIZE } from "@repo/ui/overlay";
 
 export function createTextWidgetRootItems(
   ctx: CreateRootItemContext
