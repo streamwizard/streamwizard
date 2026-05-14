@@ -3,15 +3,15 @@
 import {
   loadOverlayClipPlaylistForWidget,
   type OverlayClipForDisplay,
-} from "@/app/actions/clips";
-import { getClipDownloadUrl } from "@/app/actions/twitch";
+} from "@/actions/clips";
+import { getClipDownloadUrl } from "@/actions/twitch";
 import type { OverlayWidgetProps } from "@/components/widgets/types";
 import {
   CLIP_DISPLAY_FIELD_KEYS,
   type ClipDisplayFieldKey,
 } from "@/lib/overlay-field-keys";
 import { parseClipsWidgetConfig } from "@/lib/clips-widget-config";
-import type { Json } from "@/types/supabase";
+import type { Json } from "@repo/supabase";
 import type { CSSProperties, RefObject } from "react";
 import {
   useCallback,

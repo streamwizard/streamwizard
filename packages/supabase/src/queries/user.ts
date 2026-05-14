@@ -45,6 +45,20 @@ export async function getTwitchIntegrationByUserId(client: DBClient, userId: str
     .single();
 }
 
+export async function getTwitchUserIdByUserIdMaybe(
+  client: DBClient,
+  userId: string
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("integrations_twitch")
+    .select("twitch_user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data?.twitch_user_id?.trim()) return null;
+  return data.twitch_user_id.trim();
+}
+
 export async function updateTwitchTokens(
   client: DBClient,
   userId: string,

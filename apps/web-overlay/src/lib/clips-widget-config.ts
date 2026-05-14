@@ -1,4 +1,4 @@
-import type { Json } from "@/types/supabase";
+import type { Json } from "@repo/supabase";
 import { z } from "zod";
 
 const TIME_WINDOWS = [

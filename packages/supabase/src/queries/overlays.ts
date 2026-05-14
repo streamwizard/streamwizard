@@ -87,7 +87,26 @@ export async function getOverlaySceneRow(client: DBClient, id: string, userId: s
 }
 
 export async function getAllOverlayItemsByScene(client: DBClient, sceneId: string) {
-  return client.from("overlay_items").select("*").eq("scene_id", sceneId);
+  return client
+    .from("overlay_items")
+    .select("*")
+    .eq("scene_id", sceneId)
+    .order("z_index", { ascending: true });
+}
+
+/** Embed / OBS: load scene by UUID without enforcing `user_id`; any `is_active` state */
+export async function getOverlaySceneByIdForEmbed(client: DBClient, sceneId: string) {
+  return client.from("overlay_scenes").select("*").eq("id", sceneId).maybeSingle();
+}
+
+/** Same filters as getActiveOverlaySceneBySlug but `.maybeSingle()` — missing slug is not an error row */
+export async function getActiveOverlaySceneBySlugMaybe(client: DBClient, slug: string) {
+  return client
+    .from("overlay_scenes")
+    .select("*")
+    .eq("slug", slug)
+    .eq("is_active", true)
+    .maybeSingle();
 }
 
 export async function getOverlayItemById(client: DBClient, itemId: string, sceneId: string) {
