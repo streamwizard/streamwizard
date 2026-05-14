@@ -1,5 +1,6 @@
 import { TwitchApi } from "@repo/twitch-api";
 import { supabase } from "@repo/supabase";
+import { getEnabledCommandsByChannel } from "@repo/supabase/queries/commands";
 import type { ChannelChatMessageEvent } from "@repo/schemas";
 import { resolveVariables } from "../../functions/resolveVariables";
 
@@ -17,17 +18,10 @@ export async function handleChatMessage(message: ChannelChatMessageEvent, twitch
   let returnMessage: string = "";
   let action: string | null = null;
   if (command.startsWith("!")) {
-    // Get all enabled commands for this channel, fetching both custom and default command details
-    const { data, error } = await supabase
-      .from("commands")
-      .select(`
-        custom_commands(id, message, action, command),
-        default_chat_commands(id, message, action, command)
-      `)
-      .eq("enabled", true)
-      .eq("channel_id", message.broadcaster_user_id);
-
-    if (error) {
+    let data: Awaited<ReturnType<typeof getEnabledCommandsByChannel>>;
+    try {
+      data = await getEnabledCommandsByChannel(supabase, message.broadcaster_user_id);
+    } catch (error) {
       console.error(error);
       return;
     }

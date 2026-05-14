@@ -1,4 +1,6 @@
 import { supabase } from "@repo/supabase";
+import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
+import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/user";
 import type { TwitchApi } from "@repo/twitch-api";
 import type { StreamOfflineEvent } from "@repo/schemas";
 import { syncTwitch } from "../sync-twitch";
@@ -10,19 +12,11 @@ export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: 
   viewerCountPoller.stopPolling(event.broadcaster_user_id);
 
   // update the database with the stream offline event
-  const { error } = await supabase
-    .from("broadcaster_live_status")
-    .upsert(
-      {
-        broadcaster_id: event.broadcaster_user_id,
-        is_live: false,
-        broadcaster_name: event.broadcaster_user_name,
-      },
-      { onConflict: "broadcaster_id" },
-    )
-    .single();
-
-  if (error) throw error;
+  await upsertBroadcasterLiveStatus(supabase, {
+    broadcaster_id: event.broadcaster_user_id,
+    is_live: false,
+    broadcaster_name: event.broadcaster_user_name,
+  });
 
   // log the stream offline event
   await streamEventsLogger.logTwitchEvent({
@@ -32,22 +26,14 @@ export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: 
     metadata: null,
   });
 
-  const { data: user, error: userError } = await supabase
-    .from("integrations_twitch")
-    .select("user_id")
-    .eq("twitch_user_id", event.broadcaster_user_id)
-    .single();
+  const { data: user, error: userError } = await getTwitchIntegrationByBroadcasterId(supabase, event.broadcaster_user_id);
 
   if (userError || !user) throw new Error("User not found");
 
   // check the user preferences if they want to sync twitch clips when the stream goes offline
-  const { data: preferences, error: preferencesError } = await supabase
-    .from("user_preferences")
-    .select("sync_clips_on_end")
-    .eq("user_id", user.user_id)
-    .single();
+  const preferences = await getUserPreferencesByUserId(supabase, user.user_id);
 
-  if (preferencesError || !preferences) throw new Error("Preferences not found");
+  if (!preferences) throw new Error("Preferences not found");
 
   if (!preferences.sync_clips_on_end) return;
 

@@ -79,11 +79,15 @@ Existing query files:
 | File | Tables covered |
 |------|---------------|
 | `queries/clips.ts` | `clips`, `clip_folders`, `clip_folder_junction` |
-| `queries/commands.ts` | `commands` |
+| `queries/commands.ts` | `commands`, `default_chat_commands`, `custom_commands` |
+| `queries/live-status.ts` | `broadcaster_live_status` |
 | `queries/overlays.ts` | `overlay_scenes`, `overlay_items` |
 | `queries/public.ts` | `testimonials` |
 | `queries/stream-analytics.ts` | `streams`, `stream_events`, `viewer_counts` |
+| `queries/smp.ts` | `smp_players`, `smp_actions` |
+| `queries/sync.ts` | `twitch_clip_syncs` |
 | `queries/user.ts` | `integrations_twitch`, `user_preferences` |
+| `queries/viewer-counts.ts` | `stream_viewer_counts` |
 | `queries/vods.ts` | `vods`, `pending_clips` |
 
 **Overlay-specific helpers:** `queries/overlays.ts` includes slug/UUID/embed loaders (`getActiveOverlaySceneBySlugMaybe`, `getOverlaySceneByIdForEmbed`) and ordered item lists (`getAllOverlayItemsByScene` sorts by `z_index`). `queries/clips.ts` exposes `createOverlayPlaylistClipQuery` for OBS clip playlists.
@@ -93,6 +97,33 @@ Existing query files:
 - Pages and layouts are **Server Components** by default.
 - Interactive UI (editors, modals, forms) uses `"use client"` components.
 - Server Actions bridge the gap: client components call them to mutate data without an explicit API layer.
+
+## Backend Apps
+
+### REST API (`apps/rest-api`)
+
+Hono-based REST API that handles Twitch EventSub webhooks and clip sync operations.
+
+- **Supabase**: Uses `supabase` singleton from `@repo/supabase` (service-role client). All DB access goes through `@repo/supabase/queries/*`.
+- **Twitch API**: Constructs `new TwitchApi(broadcasterId)` per-request, same as dashboard.
+- **EventSub handlers**: `src/handlers/eventHandler.ts` dispatches to typed handlers in `src/functions/twitch-eventsub-events/`. Each handler receives the event payload and a `TwitchApi` instance.
+- **Clip sync**: `src/functions/sync-twitch.ts` is the canonical sync function used by both the HTTP route (`src/routes/clips-sync.ts`) and the stream-offline event handler.
+
+### Clip Sync Worker (`apps/clip-sync`)
+
+Long-running worker with two loops:
+- `hourly-sync`: Polls all broadcaster integrations and syncs recent clips via `@repo/twitch-api`.
+- `pending-clips`: Polls `pending_clips` rows (clips being processed by Twitch), retries until ready, then upserts into `clips`.
+
+Both functions use `supabase` from `@repo/supabase` and query functions from `@repo/supabase/queries/*`.
+
+### SMP Bridge (`apps/smp-bridge`)
+
+Bridges Twitch EventSub events to a Minecraft server. Uses `supabase` from `@repo/supabase` for reading SMP action configurations (`@repo/supabase/queries/smp`) and tracking player online status.
+
+### Twitch Chat Bot (`apps/streamwizard-bot`)
+
+Connects to Twitch chat via EventSub and responds to commands. Uses `supabase` from `@repo/supabase` for command lookups (via `@repo/supabase/queries/commands`) and `@repo/twitch-api` for chat messages.
 
 ## Package Dependencies
 
@@ -109,6 +140,27 @@ apps/web-overlay
   ├── @repo/supabase      — **`@repo/supabase/next/admin`** (`supabaseAdmin`) + **`queries/*`** for overlay reads; `TwitchApi` also uses the root module for app tokens
   ├── @repo/twitch-api    — **`TwitchApi`** for Helix (same usage pattern as dashboard `actions/twitch/clips.ts`)
   ├── @repo/ui            — Overlay widget definitions + shared overlay types path
+
+apps/rest-api
+  ├── @repo/supabase      — `supabase` singleton (service role) + **`queries/*`** for all DB access
+  ├── @repo/twitch-api    — **`TwitchApi`** per-request for EventSub handlers
+  ├── @repo/env           — Root env schema for backend config
+  └── @repo/schemas       — Zod schemas for EventSub payloads
+
+apps/clip-sync
+  ├── @repo/supabase      — `supabase` singleton + **`queries/clips`**, **`queries/vods`**, **`queries/user`**
+  ├── @repo/twitch-api    — **`TwitchApi`** for clip/video fetching
+  └── @repo/env           — Root env schema
+
+apps/streamwizard-bot
+  ├── @repo/supabase      — `supabase` singleton + **`queries/commands`**
+  ├── @repo/twitch-api    — **`TwitchApi`** for chat messages
+  └── @repo/schemas       — EventSub event types
+
+apps/smp-bridge
+  ├── @repo/supabase      — `supabase` singleton + **`queries/smp`**
+  ├── @repo/twitch-api    — **`TwitchApi`** for Helix lookups
+  └── @repo/types         — EventSub subscription types
 ```
 
 Next.js dashboard code imports **`env`** from **`@repo/env/next`** where the server/client distinction matters, and **`@repo/env`** when matching the canonical schema used by shared packages.

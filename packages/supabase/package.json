@@ -52,6 +52,22 @@
     "./queries/public": {
       "types": "./src/queries/public.ts",
       "default": "./src/queries/public.ts"
+    },
+    "./queries/sync": {
+      "types": "./src/queries/sync.ts",
+      "default": "./src/queries/sync.ts"
+    },
+    "./queries/live-status": {
+      "types": "./src/queries/live-status.ts",
+      "default": "./src/queries/live-status.ts"
+    },
+    "./queries/viewer-counts": {
+      "types": "./src/queries/viewer-counts.ts",
+      "default": "./src/queries/viewer-counts.ts"
+    },
+    "./queries/smp": {
+      "types": "./src/queries/smp.ts",
+      "default": "./src/queries/smp.ts"
     }
   },
   "scripts": {
