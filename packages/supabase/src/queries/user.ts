@@ -74,6 +74,33 @@ export async function updateTwitchTokens(
   return client.from("integrations_twitch").update(tokens).eq("user_id", userId);
 }
 
+export async function getTwitchIntegrationWithTokenByUserId(client: DBClient, userId: string) {
+  return client
+    .from("integrations_twitch")
+    .select("twitch_user_id, access_token_ciphertext")
+    .eq("user_id", userId)
+    .single();
+}
+
+export async function getAllTwitchIntegrations(client: DBClient) {
+  const { data, error } = await client.from("integrations_twitch").select("twitch_user_id, user_id");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getTwitchIntegrationByBroadcasterId(client: DBClient, broadcasterId: string) {
+  return client.from("integrations_twitch").select("user_id").eq("twitch_user_id", broadcasterId).single();
+}
+
+export async function getUserPreferencesByUserId(client: DBClient, userId: string) {
+  const { data, error } = await client.from("user_preferences").select("*").eq("user_id", userId).single();
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw error;
+  }
+  return data;
+}
+
 export async function updateUserPreferences(
   client: DBClient,
   userId: string,

@@ -2,6 +2,7 @@ import type { EventSubNotificationPayload, EventSubSubscriptionType } from "@rep
 import { z } from "zod";
 import { TwitchApi } from "@repo/twitch-api";
 import { supabase } from "@repo/supabase";
+import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/user";
 import { registerTwitchHandlers } from "./twitch";
 
 /**
@@ -70,11 +71,7 @@ export class HandlerRegistry {
     }
 
     // Check if the broadcaster is known to the database
-    const { data: broadcaster, error: broadcasterError } = await supabase
-      .from("integrations_twitch")
-      .select("user_id")
-      .eq("twitch_user_id", broadcasterId)
-      .single();
+    const { data: broadcaster, error: broadcasterError } = await getTwitchIntegrationByBroadcasterId(supabase, broadcasterId);
 
     if (broadcasterError || !broadcaster) {
       console.log("Broadcaster not found in database");

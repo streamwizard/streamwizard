@@ -1,4 +1,6 @@
 import { supabase } from "@repo/supabase";
+import { insertVod } from "@repo/supabase/queries/vods";
+import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
 import { TwitchApi } from "@repo/twitch-api";
 import type { StreamOnlineEvent } from "@repo/schemas";
 import { streamEventsLogger } from "@repo/logger";
@@ -24,34 +26,24 @@ export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: Tw
     return;
   }
 
-  const { error: videoError } = await supabase.from("vods").insert({
+  await insertVod(supabase, {
     broadcaster_id: stream.user_id,
     video_id: video_id,
     stream_id: stream.id,
     started_at: stream.started_at,
   });
 
-  if (videoError) {
-    console.error("Error inserting vod", { videoError });
-    throw videoError;
-  }
-
   // update the database with the stream online event
-  const { error } = await supabase.from("broadcaster_live_status").upsert(
-    {
-      broadcaster_id: stream.user_id,
-      broadcaster_name: stream.user_name,
-      is_live: true,
-      stream_started_at: stream.started_at,
-      title: stream.title,
-      stream_id: stream.id,
-      category_id: stream.game_id,
-      category_name: stream.game_name,
-    },
-    {
-      onConflict: "broadcaster_id",
-    },
-  );
+  await upsertBroadcasterLiveStatus(supabase, {
+    broadcaster_id: stream.user_id,
+    broadcaster_name: stream.user_name,
+    is_live: true,
+    stream_started_at: stream.started_at,
+    title: stream.title,
+    stream_id: stream.id,
+    category_id: stream.game_id,
+    category_name: stream.game_name,
+  });
 
   await streamEventsLogger.logTwitchEvent({
     broadcaster_id: stream.user_id,
@@ -59,11 +51,6 @@ export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: Tw
     event_data: event,
     metadata: null,
   });
-
-  if (error) {
-    console.error("Error updating broadcaster live status", { error });
-    throw error;
-  }
 
   // Start polling viewer counts for this stream
   viewerCountPoller.startPolling(stream.user_id, stream.id);

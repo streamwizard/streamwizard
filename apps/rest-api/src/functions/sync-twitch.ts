@@ -1,4 +1,8 @@
 import { supabase, Database } from "@repo/supabase";
+import { getTwitchIntegrationByBroadcasterId, getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
+import { getClipSync, upsertClipSync, startClipSync, updateClipSyncStatus } from "@repo/supabase/queries/sync";
+import { upsertClips } from "@repo/supabase/queries/clips";
+import { getVodsByVideoIds } from "@repo/supabase/queries/vods";
 import type { TwitchApi } from "@repo/twitch-api";
 
 /**
@@ -12,14 +16,14 @@ import type { TwitchApi } from "@repo/twitch-api";
  */
 export async function syncTwitch(broadcaster_id: string, TwitchAPI: TwitchApi, options: { skipRecentCheck?: boolean } = {}): Promise<number | null> {
   // Look up the user from the broadcaster_id
-  const { data: user, error: userError } = await supabase.from("integrations_twitch").select("user_id").eq("twitch_user_id", broadcaster_id).single();
+  const { data: user, error: userError } = await getTwitchIntegrationByBroadcasterId(supabase, broadcaster_id);
 
   if (userError || !user) {
     throw new Error(`User not found for broadcaster_id: ${broadcaster_id}`);
   }
 
   // Check if the last sync was more than an hour ago (unless skipRecentCheck is true)
-  const { data: lastSync } = await supabase.from("twitch_clip_syncs").select("last_sync, sync_status").eq("user_id", user.user_id).single();
+  const lastSync = await getClipSync(supabase, user.user_id);
 
   const now = new Date();
   if (!options.skipRecentCheck && lastSync && lastSync.last_sync) {
@@ -35,30 +39,9 @@ export async function syncTwitch(broadcaster_id: string, TwitchAPI: TwitchApi, o
 
   // Create a new sync or update existing one
   if (lastSync) {
-    const { error: syncError } = await supabase
-      .from("twitch_clip_syncs")
-      .update({
-        last_sync: now.toISOString(),
-        sync_status: "syncing",
-      })
-      .eq("user_id", user.user_id);
-
-    if (syncError) {
-      console.error("Failed to start sync:", syncError);
-      throw new Error(`Failed to start sync: ${syncError.message}`);
-    }
+    await startClipSync(supabase, user.user_id, now.toISOString());
   } else {
-    const { error: syncError } = await supabase.from("twitch_clip_syncs").insert({
-      user_id: user.user_id,
-      last_sync: now.toISOString(),
-      sync_status: "syncing",
-      clip_count: 0,
-    });
-
-    if (syncError) {
-      console.error("Failed to start sync:", syncError);
-      throw new Error(`Failed to start sync: ${syncError.message}`);
-    }
+    await upsertClipSync(supabase, user.user_id, now.toISOString());
   }
 
   try {
@@ -66,13 +49,13 @@ export async function syncTwitch(broadcaster_id: string, TwitchAPI: TwitchApi, o
     const totalClips = await syncTwitchClips(user.user_id, TwitchAPI);
 
     // Mark as completed
-    await supabase.from("twitch_clip_syncs").update({ sync_status: "completed", clip_count: totalClips }).eq("user_id", user.user_id);
+    await updateClipSyncStatus(supabase, user.user_id, "completed", totalClips);
 
     return totalClips;
   } catch (error) {
     console.error("Sync failed:", error);
     // Mark as failed
-    await supabase.from("twitch_clip_syncs").update({ sync_status: "failed" }).eq("user_id", user.user_id);
+    await updateClipSyncStatus(supabase, user.user_id, "failed");
     throw error;
   }
 }
@@ -85,14 +68,14 @@ export async function syncTwitchClips(user_id: string, TwitchAPI: TwitchApi) {
   const MAX_ITERATIONS = 1000; // Safety limit: max 100,000 clips (1000 * 100)
   const seenCursors = new Set<string | undefined>(); // Track cursors to detect infinite loops
 
-  const { data: integration, error } = await supabase.from("integrations_twitch").select("twitch_user_id, user_id").eq("user_id", user_id).single();
+  const { data: integration, error } = await getTwitchIntegrationByUserId(supabase, user_id);
 
   if (error || !integration || !integration.twitch_user_id) {
     console.error(error);
     throw new Error("Twitch integration not found for user");
   }
 
-  console.log("Starting sync for user:", integration.user_id);
+  console.log("Starting sync for user:", user_id);
   // loop until there are no more clips
   while (hasMoreClips) {
     // Safety check: prevent infinite loops
@@ -124,17 +107,10 @@ export async function syncTwitchClips(user_id: string, TwitchAPI: TwitchApi) {
       }
 
       // format the clips for the database
-      const formattedClips = await formatClipsForDB(clips, integration.user_id);
+      const formattedClips = await formatClipsForDB(clips, user_id);
 
       // upsert the clips into the database
-      const { error: upsertError } = await supabase.from("clips").upsert(formattedClips, {
-        onConflict: "twitch_clip_id",
-        ignoreDuplicates: false,
-      });
-
-      if (upsertError) {
-        throw new Error(`Failed to insert clips: ${upsertError.message}`);
-      }
+      await upsertClips(supabase, formattedClips);
 
       // increment the total number of clips
       totalClips += clips.length;
@@ -152,7 +128,7 @@ export async function syncTwitchClips(user_id: string, TwitchAPI: TwitchApi) {
   // Clear the Set to free memory
   seenCursors.clear();
 
-  console.log("Sync completed for user:", integration.user_id);
+  console.log("Sync completed for user:", user_id);
 
   // return the total number of clips
   return totalClips;
@@ -201,13 +177,7 @@ async function getExistingVodVideoIds(videoIds: string[]): Promise<Set<string>> 
     return new Set();
   }
 
-  const { data, error } = await supabase.from("vods").select("video_id").in("video_id", videoIds);
-
-  if (error) {
-    throw new Error(`Failed to fetch VOD references: ${error.message}`);
-  }
-
-  return new Set((data ?? []).map((vod) => vod.video_id));
+  return getVodsByVideoIds(supabase, videoIds);
 }
 
 // format the clips for the database

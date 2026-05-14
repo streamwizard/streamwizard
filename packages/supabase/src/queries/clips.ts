@@ -144,6 +144,11 @@ export async function getOverlayClips(client: DBClient, selectFields: string, fi
   return query;
 }
 
+export async function upsertClips(client: DBClient, clips: Database["public"]["Tables"]["clips"]["Insert"][]) {
+  const { error } = await client.from("clips").upsert(clips, { onConflict: "twitch_clip_id", ignoreDuplicates: false });
+  if (error) throw error;
+}
+
 export async function getClipBroadcasterId(client: DBClient, clipId: string, userId: string): Promise<string | null> {
   const { data: ownedRows } = await client
     .from("clips")

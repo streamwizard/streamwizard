@@ -1,5 +1,7 @@
 import { type Context } from "hono";
 import { supabase } from "@repo/supabase";
+import { getTwitchIntegrationWithTokenByUserId } from "@repo/supabase/queries/user";
+import { getClipSync } from "@repo/supabase/queries/sync";
 import { TwitchApi } from "@repo/twitch-api";
 import { syncTwitch } from "../functions/sync-twitch";
 
@@ -42,11 +44,7 @@ export async function syncClipsHandler(c: Context) {
     }
 
     // Look up the user's Twitch integration to get their broadcaster_id
-    const { data: integration, error: integrationError } = await supabase
-      .from("integrations_twitch")
-      .select("twitch_user_id, access_token_ciphertext")
-      .eq("user_id", userId)
-      .single();
+    const { data: integration, error: integrationError } = await getTwitchIntegrationWithTokenByUserId(supabase, userId);
 
     if (integrationError || !integration) {
       return c.json(
@@ -127,13 +125,9 @@ export async function syncStatusHandler(c: Context) {
     const userId = user.id;
 
     // Get sync status from database
-    const { data: syncStatus, error } = await supabase
-      .from("twitch_clip_syncs")
-      .select("sync_status, last_sync, clip_count")
-      .eq("user_id", userId)
-      .single();
+    const syncStatus = await getClipSync(supabase, userId);
 
-    if (error || !syncStatus) {
+    if (!syncStatus) {
       return c.json(
         {
           message: "No sync history found",
