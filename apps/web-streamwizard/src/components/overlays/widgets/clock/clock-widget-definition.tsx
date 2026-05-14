@@ -1,10 +1,10 @@
 "use client";
 
 import type { OverlayItem } from "@/types/overlays";
-import { DEFAULT_CLOCK_WIDGET_ITEM_CONFIG } from "@/types/overlays";
+import { DEFAULT_CLOCK_WIDGET_ITEM_CONFIG, CLOCK_WIDGET_DEFAULT_SIZE } from "@repo/ui/overlay";
 import type { CreateRootItemContext } from "../../registry/overlay-widget-registry.types";
 
-export const CLOCK_WIDGET_DEFAULT_SIZE = { w: 400, h: 100 } as const;
+export { CLOCK_WIDGET_DEFAULT_SIZE } from "@repo/ui/overlay";
 
 export function createClockWidgetRootItems(
   ctx: CreateRootItemContext

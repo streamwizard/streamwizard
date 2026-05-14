@@ -13,9 +13,9 @@ import {
 } from "@/lib/overlay-route-params";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import {
-  CLIP_DISPLAY_FIELD_KEYS,
-  type ClipDisplayFieldKey,
-} from "@/lib/overlay-field-keys";
+  DISPLAY_FIELD_KEYS,
+  type DisplayFieldKey,
+} from "@repo/ui/overlay";
 
 type LoadOverlayErrorCode =
   | "MISSING_LOOKUP"
@@ -82,25 +82,25 @@ function mergeDisplayChildrenIntoClipsWidgets(
       return ao - bo;
     });
 
-    const displayFields: Partial<Record<ClipDisplayFieldKey, boolean>> = {};
+    const displayFields: Partial<Record<DisplayFieldKey, boolean>> = {};
     const displayFieldLayouts: Partial<
       Record<
-        ClipDisplayFieldKey,
+        DisplayFieldKey,
         { x: number; y: number; w: number; h: number; fontSize: number }
       >
     > = {};
-    const displayFieldLocks: Partial<Record<ClipDisplayFieldKey, boolean>> = {};
+    const displayFieldLocks: Partial<Record<DisplayFieldKey, boolean>> = {};
 
     const existingFields = asRecord(base.displayFields as Json);
     const existingLayouts = asRecord(base.displayFieldLayouts as Json);
     const existingLocks = asRecord(base.displayFieldLocks as Json);
 
-    for (const key of CLIP_DISPLAY_FIELD_KEYS) {
+    for (const key of DISPLAY_FIELD_KEYS) {
       const v = existingFields[key];
       displayFields[key] = typeof v === "boolean" ? v : false;
     }
 
-    for (const key of CLIP_DISPLAY_FIELD_KEYS) {
+    for (const key of DISPLAY_FIELD_KEYS) {
       const ly = existingLayouts[key];
       if (ly && typeof ly === "object" && !Array.isArray(ly)) {
         const o = ly as Record<string, unknown>;
@@ -114,19 +114,19 @@ function mergeDisplayChildrenIntoClipsWidgets(
       }
     }
 
-    for (const key of CLIP_DISPLAY_FIELD_KEYS) {
+    for (const key of DISPLAY_FIELD_KEYS) {
       const lk = existingLocks[key];
       displayFieldLocks[key] = lk === true;
     }
 
-    const orderFromChildren: ClipDisplayFieldKey[] = [];
+    const orderFromChildren: DisplayFieldKey[] = [];
 
     for (const { cfg } of children) {
       const fk = cfg.fieldKey;
       if (typeof fk !== "string") continue;
-      if (!(CLIP_DISPLAY_FIELD_KEYS as readonly string[]).includes(fk))
+      if (!(DISPLAY_FIELD_KEYS as readonly string[]).includes(fk))
         continue;
-      const key = fk as ClipDisplayFieldKey;
+      const key = fk as DisplayFieldKey;
       displayFields[key] = true;
 
       const layoutRaw = cfg.layout;
@@ -149,11 +149,11 @@ function mergeDisplayChildrenIntoClipsWidgets(
       orderFromChildren.push(key);
     }
 
-    let displayFieldOrder: ClipDisplayFieldKey[];
+    let displayFieldOrder: DisplayFieldKey[];
 
     const parentOrderRaw = base.displayFieldOrder;
     if (orderFromChildren.length > 0) {
-      const rest = CLIP_DISPLAY_FIELD_KEYS.filter(
+      const rest = DISPLAY_FIELD_KEYS.filter(
         (k) => !orderFromChildren.includes(k),
       );
       displayFieldOrder = [...orderFromChildren, ...rest];
@@ -162,16 +162,16 @@ function mergeDisplayChildrenIntoClipsWidgets(
       for (const entry of parentOrderRaw) {
         if (
           typeof entry === "string" &&
-          (CLIP_DISPLAY_FIELD_KEYS as readonly string[]).includes(entry)
+          (DISPLAY_FIELD_KEYS as readonly string[]).includes(entry)
         ) {
-          displayFieldOrder.push(entry as ClipDisplayFieldKey);
+          displayFieldOrder.push(entry as DisplayFieldKey);
         }
       }
-      for (const k of CLIP_DISPLAY_FIELD_KEYS) {
+      for (const k of DISPLAY_FIELD_KEYS) {
         if (!displayFieldOrder.includes(k)) displayFieldOrder.push(k);
       }
     } else {
-      displayFieldOrder = [...CLIP_DISPLAY_FIELD_KEYS];
+      displayFieldOrder = [...DISPLAY_FIELD_KEYS];
     }
 
     const mergedConfig = {

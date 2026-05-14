@@ -1,10 +1,10 @@
 "use client";
 
 import type { OverlayItem } from "@/types/overlays";
-import { createDefaultTimerWidgetConfig } from "@/types/overlays";
+import { createDefaultTimerWidgetConfig, TIMER_WIDGET_DEFAULT_SIZE } from "@repo/ui/overlay";
 import type { CreateRootItemContext } from "../../registry/overlay-widget-registry.types";
 
-export const TIMER_WIDGET_DEFAULT_SIZE = { w: 420, h: 100 } as const;
+export { TIMER_WIDGET_DEFAULT_SIZE } from "@repo/ui/overlay";
 
 export function createTimerWidgetRootItems(
   ctx: CreateRootItemContext

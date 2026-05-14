@@ -26,20 +26,33 @@ import {
   createTextWidgetRootItems,
   TEXT_WIDGET_DEFAULT_SIZE,
 } from "../widgets/text/text-widget-definition";
-import { TextWidgetCanvas } from "../widgets/text/text-widget-canvas";
 import { TextWidgetSettings } from "../widgets/text/text-widget-settings";
 import {
   createTimerWidgetRootItems,
   TIMER_WIDGET_DEFAULT_SIZE,
 } from "../widgets/timer/timer-widget-definition";
-import { TimerWidgetCanvas } from "../widgets/timer/timer-widget-canvas";
 import { TimerWidgetSettings } from "../widgets/timer/timer-widget-settings";
 import {
   CLOCK_WIDGET_DEFAULT_SIZE,
   createClockWidgetRootItems,
 } from "../widgets/clock/clock-widget-definition";
-import { ClockWidgetCanvas } from "../widgets/clock/clock-widget-canvas";
 import { ClockWidgetSettings } from "../widgets/clock/clock-widget-settings";
+import {
+  IRL_FIELD_WIDGET_DEFAULT_SIZE,
+  createIrlSpeedWidgetRootItems,
+  createIrlHeadingWidgetRootItems,
+  createIrlAltitudeWidgetRootItems,
+  createIrlLatitudeWidgetRootItems,
+  createIrlLongitudeWidgetRootItems,
+  createIrlAccuracyWidgetRootItems,
+} from "../widgets/irl/irl-field-widget-definition";
+import { IrlFieldWidgetSettings } from "../widgets/irl/irl-field-widget-settings";
+import {
+  TextWidgetRenderer,
+  TimerWidgetRenderer,
+  ClockWidgetRenderer,
+  IrlFieldWidgetRenderer,
+} from "@repo/ui/overlay";
 import type {
   OverlayChildResolvedDefinition,
   OverlayRootWidgetDefinition,
@@ -85,7 +98,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     },
     defaultSize: { ...TEXT_WIDGET_DEFAULT_SIZE },
     createRootItems: createTextWidgetRootItems,
-    CanvasContent: TextWidgetCanvas,
+    CanvasContent: TextWidgetRenderer,
     SettingsPanel: TextWidgetSettings,
   },
   timer_widget: {
@@ -100,7 +113,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     },
     defaultSize: { ...TIMER_WIDGET_DEFAULT_SIZE },
     createRootItems: createTimerWidgetRootItems,
-    CanvasContent: TimerWidgetCanvas,
+    CanvasContent: TimerWidgetRenderer,
     SettingsPanel: TimerWidgetSettings,
   },
   clock_widget: {
@@ -115,8 +128,74 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     },
     defaultSize: { ...CLOCK_WIDGET_DEFAULT_SIZE },
     createRootItems: createClockWidgetRootItems,
-    CanvasContent: ClockWidgetCanvas,
+    CanvasContent: ClockWidgetRenderer,
     SettingsPanel: ClockWidgetSettings,
+  },
+  irl_speed_widget: {
+    type: "irl_speed_widget",
+    layerScope: "root",
+    showInLibrary: true,
+    category: "other",
+    library: { title: "IRL · Speed", description: "Live GPS speed from an IRL stream." },
+    defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
+    createRootItems: createIrlSpeedWidgetRootItems,
+    CanvasContent: IrlFieldWidgetRenderer,
+    SettingsPanel: IrlFieldWidgetSettings,
+  },
+  irl_heading_widget: {
+    type: "irl_heading_widget",
+    layerScope: "root",
+    showInLibrary: true,
+    category: "other",
+    library: { title: "IRL · Heading", description: "Live GPS heading direction from an IRL stream." },
+    defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
+    createRootItems: createIrlHeadingWidgetRootItems,
+    CanvasContent: IrlFieldWidgetRenderer,
+    SettingsPanel: IrlFieldWidgetSettings,
+  },
+  irl_altitude_widget: {
+    type: "irl_altitude_widget",
+    layerScope: "root",
+    showInLibrary: true,
+    category: "other",
+    library: { title: "IRL · Altitude", description: "Live GPS altitude from an IRL stream." },
+    defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
+    createRootItems: createIrlAltitudeWidgetRootItems,
+    CanvasContent: IrlFieldWidgetRenderer,
+    SettingsPanel: IrlFieldWidgetSettings,
+  },
+  irl_latitude_widget: {
+    type: "irl_latitude_widget",
+    layerScope: "root",
+    showInLibrary: true,
+    category: "other",
+    library: { title: "IRL · Latitude", description: "Live GPS latitude from an IRL stream." },
+    defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
+    createRootItems: createIrlLatitudeWidgetRootItems,
+    CanvasContent: IrlFieldWidgetRenderer,
+    SettingsPanel: IrlFieldWidgetSettings,
+  },
+  irl_longitude_widget: {
+    type: "irl_longitude_widget",
+    layerScope: "root",
+    showInLibrary: true,
+    category: "other",
+    library: { title: "IRL · Longitude", description: "Live GPS longitude from an IRL stream." },
+    defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
+    createRootItems: createIrlLongitudeWidgetRootItems,
+    CanvasContent: IrlFieldWidgetRenderer,
+    SettingsPanel: IrlFieldWidgetSettings,
+  },
+  irl_accuracy_widget: {
+    type: "irl_accuracy_widget",
+    layerScope: "root",
+    showInLibrary: true,
+    category: "other",
+    library: { title: "IRL · Accuracy", description: "Live GPS accuracy from an IRL stream." },
+    defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
+    createRootItems: createIrlAccuracyWidgetRootItems,
+    CanvasContent: IrlFieldWidgetRenderer,
+    SettingsPanel: IrlFieldWidgetSettings,
   },
 };
 

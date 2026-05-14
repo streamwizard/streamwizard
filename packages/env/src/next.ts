@@ -66,6 +66,7 @@ export const env = createEnv({
     NEXT_PUBLIC_BASE_URL: urlOrDefault(z.string().url(), "http://localhost:3000"),
     NEXT_PUBLIC_TWITCH_CLIENT_ID: z.string().min(1),
     NEXT_PUBLIC_OVERLAY_URL: urlOrDefault(z.string().url(), "http://localhost:3001"),
+    NEXT_PUBLIC_IRL_WS_URL: urlOrDefault(z.string().url(), "ws://localhost:3009"),
   },
   experimental__runtimeEnv: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -73,5 +74,6 @@ export const env = createEnv({
     NEXT_PUBLIC_TWITCH_CLIENT_ID: process.env.NEXT_PUBLIC_TWITCH_CLIENT_ID,
     NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
     NEXT_PUBLIC_OVERLAY_URL: process.env.NEXT_PUBLIC_OVERLAY_URL,
+    NEXT_PUBLIC_IRL_WS_URL: process.env.NEXT_PUBLIC_IRL_WS_URL,
   },
 });

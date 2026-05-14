@@ -6,8 +6,7 @@ import {
 } from "@repo/supabase/queries/clips";
 import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import type { Json } from "@repo/supabase";
-import type { ClipsWidgetConfig } from "@/types/overlays";
-import { parseClipsWidgetConfig } from "@/lib/clips-widget-config";
+import { slimClipsWidgetItemConfig, type ClipsWidgetItemConfig } from "@repo/ui/overlay";
 import { buildOverlayClipQuery } from "@/lib/overlay-clip-query-builder";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 
@@ -56,7 +55,7 @@ async function getTwitchClipIdsInFolders(
 }
 
 /** Fetch extra rows before dedupe so duplicate twitch_clip_id rows do not collapse the playlist. */
-function sqlFetchLimit(config: ClipsWidgetConfig): number {
+function sqlFetchLimit(config: ClipsWidgetItemConfig): number {
   const maxClips = config.maxClips;
   return Math.min(500, Math.max(maxClips * 50, maxClips));
 }
@@ -110,7 +109,7 @@ export async function loadOverlayClipPlaylistForWidget(
   sceneUserId: string,
   config: Json
 ): Promise<OverlayClipForDisplay[]> {
-  const c = parseClipsWidgetConfig(config);
+  const c = slimClipsWidgetItemConfig(config);
 
   let query = createOverlayPlaylistClipQuery(supabaseAdmin);
 

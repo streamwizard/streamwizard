@@ -9,6 +9,7 @@ import type {
   OverlaySceneWithItems,
   RootOverlayItemType,
 } from "@/types/overlays";
+import type { WidgetBaseDefinition } from "@repo/ui/overlay";
 
 export type WidgetCategory = "media" | "alerts" | "layout" | "other";
 
@@ -67,9 +68,11 @@ export interface OverlayChildFieldDeclaration {
   CanvasContent?: ComponentType<OverlayCanvasProps>;
 }
 
-/** Root entry in `OVERLAY_WIDGET_REGISTRY` only. */
-export interface OverlayRootWidgetDefinition {
-  type: RootOverlayItemType;
+/**
+ * Root entry in `OVERLAY_WIDGET_REGISTRY` only.
+ * Extends the shared `WidgetBaseDefinition` with editor-specific capabilities.
+ */
+export interface OverlayRootWidgetDefinition extends WidgetBaseDefinition {
   layerScope: "root";
   showInLibrary: boolean;
   category?: WidgetCategory;
@@ -80,10 +83,7 @@ export interface OverlayRootWidgetDefinition {
 
   createRootItems?: (ctx: CreateRootItemContext) => OverlayItem[];
 
-  defaultSize?: { w: number; h: number };
-
   newLabel?: (scene: OverlaySceneWithItems) => string;
-  newConfig?: () => OverlayItemConfig;
 
   getChildItems?: (items: OverlayItem[], parentId: string) => OverlayItem[];
 
