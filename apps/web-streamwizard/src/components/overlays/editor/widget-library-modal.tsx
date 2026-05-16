@@ -328,7 +328,7 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
                   className="group relative flex flex-col rounded-xl border border-border bg-card overflow-hidden hover:border-primary/50 hover:shadow-md transition-all duration-200"
                 >
                   {/* Banner */}
-                  <div className="relative h-28 bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-pink-500/10 flex items-center justify-center shrink-0">
+                  <div className="relative h-28 bg-linear-to-br from-indigo-500/20 via-purple-500/10 to-pink-500/10 flex items-center justify-center shrink-0">
                     <div className="rounded-xl bg-background/60 backdrop-blur-sm p-3 ring-1 ring-white/10">
                       <Code2 className="h-7 w-7 text-indigo-400" />
                     </div>
