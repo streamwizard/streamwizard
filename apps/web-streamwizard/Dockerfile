@@ -29,6 +29,7 @@ COPY apps/rest-api/package.json         ./apps/rest-api/
 COPY apps/smp-bridge/package.json       ./apps/smp-bridge/
 COPY apps/streamwizard-bot/package.json ./apps/streamwizard-bot/
 COPY apps/web-overlay/package.json      ./apps/web-overlay/
+COPY apps/ws-server/package.json        ./apps/ws-server/
 
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile
