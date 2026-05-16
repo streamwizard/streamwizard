@@ -8,8 +8,8 @@ const turbopackRoot = path.resolve(__dirname, "../..");
  * Hydrate `process.env` from the repo root `.env*` (same semantics as `packages/env/src/index.ts`).
  * Bun and some workspaces do not resolve `@next/env` from `next.config.js`; keep this loader dependency-free.
  */
-function loadDotenvFilesIntoProcessEnv(fromDir) {
-  const parseEnvContent = (envContent) => {
+function loadDotenvFilesIntoProcessEnv(fromDir: string) {
+  const parseEnvContent = (envContent: string) => {
     envContent.split("\n").forEach((line) => {
       const trimmedLine = line.trim();
 
@@ -77,7 +77,3 @@ const nextConfig = {
 module.exports = nextConfig;
 
 
-// next.config.js
-module.exports = {
-  allowedDevOrigins: ['10.10.10.*'],
-}
