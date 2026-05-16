@@ -9,7 +9,7 @@ import {
   SheetTitle,
 } from "@repo/ui";
 import type { RootOverlayItemType } from "@/types/overlays";
-import { LayoutGrid, Plus } from "lucide-react";
+import { BookOpen, LayoutGrid, Plus } from "lucide-react";
 import { groupLibraryWidgetsByCategory } from "../registry/overlay-widget-registry";
 import type { WidgetCategory } from "../registry/overlay-widget-registry.types";
 
@@ -24,12 +24,14 @@ interface OverlayWidgetSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onAddWidget: (type: RootOverlayItemType) => void;
+  onOpenLibrary: () => void;
 }
 
 export function OverlayWidgetSheet({
   open,
   onOpenChange,
   onAddWidget,
+  onOpenLibrary,
 }: OverlayWidgetSheetProps) {
   const byCategory = groupLibraryWidgetsByCategory();
 
@@ -45,6 +47,18 @@ export function OverlayWidgetSheet({
             Add root widgets to the scene. Nested items can be managed from the
             layers panel.
           </SheetDescription>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full mt-1"
+            onClick={() => {
+              onOpenChange(false);
+              onOpenLibrary();
+            }}
+          >
+            <BookOpen className="mr-2 h-3.5 w-3.5" />
+            Open Library
+          </Button>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-6">

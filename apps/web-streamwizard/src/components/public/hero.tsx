@@ -1,5 +1,5 @@
 import Image from "next/image";
-import TwitchLogin from "../buttons/TwitchLogin";
+import TwitchLogin from "../buttons/twitch-login";
 import { Particles, BorderBeam, CurvedSection as HorizonStage } from "@repo/ui";
 import { Database, Filter, Layers, Search } from "lucide-react";
 

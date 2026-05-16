@@ -21,10 +21,9 @@ export interface EncryptedToken {
  * // Store encrypted.ciphertext, encrypted.iv, encrypted.authTag in database
  */
 export function encryptToken(plaintext: string): EncryptedToken {
-    // Generate a random 12-byte IV (96 bits, recommended for GCM)
-    const iv = randomBytes(12);
+    if (!env.TOKEN_ENCRYPTION_KEY) throw new Error("TOKEN_ENCRYPTION_KEY is not set");
 
-    // Convert hex key to buffer
+    const iv = randomBytes(12);
     const key = Buffer.from(env.TOKEN_ENCRYPTION_KEY, "hex");
 
     // Create cipher with AES-256-GCM
@@ -62,7 +61,8 @@ export function encryptToken(plaintext: string): EncryptedToken {
  * );
  */
 export function decryptToken(ciphertext: string, iv: string, authTag: string): string {
-    // Convert hex key to buffer
+    if (!env.TOKEN_ENCRYPTION_KEY) throw new Error("TOKEN_ENCRYPTION_KEY is not set");
+
     const key = Buffer.from(env.TOKEN_ENCRYPTION_KEY, "hex");
 
     // Convert base64 inputs to buffers

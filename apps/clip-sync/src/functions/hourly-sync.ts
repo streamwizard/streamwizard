@@ -1,13 +1,12 @@
 import { supabase } from "@repo/supabase";
+import { getAllTwitchIntegrations } from "@repo/supabase/queries/user";
+import { upsertClips } from "@repo/supabase/queries/clips";
 import { TwitchApi } from "@repo/twitch-api";
 
 const SYNC_INTERVAL_MS = 60 * 60 * 1000;
 
 async function getBroadcasters() {
-  const { data, error } = await supabase.from("integrations_twitch").select("twitch_user_id, user_id");
-
-  if (error) throw error;
-  return data ?? [];
+  return getAllTwitchIntegrations(supabase);
 }
 
 async function syncClipsForBroadcaster(broadcasterId: string, userId: string, twitchApi: TwitchApi) {
@@ -23,7 +22,8 @@ async function syncClipsForBroadcaster(broadcasterId: string, userId: string, tw
     return 0;
   }
 
-  const { error } = await supabase.from("clips").upsert(
+  await upsertClips(
+    supabase,
     res.data.map((clip) => ({
       twitch_clip_id: clip.id,
       broadcaster_id: clip.broadcaster_id,
@@ -43,10 +43,7 @@ async function syncClipsForBroadcaster(broadcasterId: string, userId: string, tw
       language: clip.language,
       user_id: userId,
     })),
-    { onConflict: "twitch_clip_id" },
   );
-
-  if (error) throw error;
   console.log(`[hourly-sync] [${broadcasterId}] Synced ${res.data.length} clips`);
   return res.data.length;
 }

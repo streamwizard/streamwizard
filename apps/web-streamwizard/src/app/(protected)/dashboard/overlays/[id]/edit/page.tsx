@@ -2,6 +2,7 @@ import { getOverlayScene } from "@/actions/overlays";
 import { OverlayEditor } from "@/components/overlays/editor/overlay-editor";
 import { createClient } from "@repo/supabase/next/server";
 import { redirect } from "next/navigation";
+import { getClipFolders } from "@repo/supabase/queries/clips";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -20,7 +21,7 @@ export default async function OverlayEditorPage({ params }: Props) {
     redirect("/dashboard/overlays");
   }
 
-  const { data: folders } = await supabase.from("clip_folders").select("*");
+  const { data: folders } = await getClipFolders(supabase, user.user.id);
 
   return (
     <OverlayEditor

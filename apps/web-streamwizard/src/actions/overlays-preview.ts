@@ -1,8 +1,9 @@
 "use server";
 
-import { buildOverlayClipQuery } from "@/components/overlays/clip-query-builder";
 import type { ClipsWidgetConfig } from "@/types/overlays";
-import { createClient } from "@repo/supabase/next/server";
+import { getAuthContext } from "@/lib/auth";
+import { getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
+import { getClipFolderJunctions, getOverlayClips } from "@repo/supabase/queries/clips";
 
 export interface PreviewClip {
   id: number;
@@ -22,50 +23,44 @@ export async function getPreviewClips(config: ClipsWidgetConfig): Promise<{
   clips: PreviewClip[];
   error: string | null;
 }> {
-  const supabase = await createClient();
-  const { data: user } = await supabase.auth.getUser();
-  if (!user?.user) return { clips: [], error: "Unauthorized" };
+  let supabase, user;
+  try { ({ supabase, user } = await getAuthContext()); } catch { return { clips: [], error: "Unauthorized" }; }
 
-  const { data: twitchIntegration } = await supabase
-    .from("integrations_twitch")
-    .select("twitch_user_id")
-    .eq("user_id", user.user.id)
-    .single();
-
+  const { data: twitchIntegration } = await getTwitchIntegrationByUserId(supabase, user.id);
   const twitchUserId = twitchIntegration?.twitch_user_id ?? null;
 
-  let query = supabase
-    .from("clips")
-    .select(
-      "id, twitch_clip_id, title, broadcaster_id, broadcaster_name, creator_name, game_name, view_count, duration, created_at_twitch, thumbnail_url"
-    );
-
-  query = buildOverlayClipQuery(config, query);
-
-  if (config.folderIds.length === 0 && twitchUserId) {
-    query = query.eq("broadcaster_id", twitchUserId);
-  }
+  let clipTwitchIds: string[] | undefined;
 
   if (config.folderIds.length > 0) {
-    const { data: junctions } = await supabase
-      .from("clip_folder_junction")
-      .select("clip_id")
-      .eq("user_id", user.user.id)
-      .in("folder_id", config.folderIds);
+    const { data: junctions } = await getClipFolderJunctions(supabase, user.id, config.folderIds);
 
     if (junctions && junctions.length > 0) {
-      const clipIds = [...new Set(junctions.map((j) => j.clip_id))];
-      query = query.in("twitch_clip_id", clipIds);
+      clipTwitchIds = [...new Set(junctions.map((j) => j.clip_id))];
     } else {
       return { clips: [], error: null };
     }
   }
 
-  const { data: clips, error } = await query;
+  const { data: clips, error } = await getOverlayClips(
+    supabase,
+    "id, twitch_clip_id, title, broadcaster_id, broadcaster_name, creator_name, game_name, view_count, duration, created_at_twitch, thumbnail_url",
+    {
+      gameIds: config.gameIds,
+      creatorIds: config.creatorIds,
+      isFeaturedOnly: config.isFeaturedOnly,
+      minViewCount: config.minViewCount,
+      timeWindow: config.timeWindow,
+      customDateRange: config.customDateRange,
+      sort: config.sort,
+      maxClips: config.maxClips,
+      broadcasterTwitchId: config.folderIds.length === 0 ? twitchUserId : null,
+      clipTwitchIds,
+    }
+  );
 
   if (error) return { clips: [], error: error.message };
 
-  let result = (clips ?? []) as PreviewClip[];
+  let result = (clips ?? []) as unknown as PreviewClip[];
 
   if (config.sort === "random") {
     result = result.sort(() => Math.random() - 0.5);

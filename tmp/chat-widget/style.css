@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: transparent;
+}
+
+.message {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  border-radius: 8px;
+  padding: 6px 10px;
+  max-width: 100%;
+  word-break: break-word;
+  opacity: 0;
+}
+
+.username {
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.text {
+  font-size: 14px;
+  color: #fff;
+  line-height: 1.4;
+}

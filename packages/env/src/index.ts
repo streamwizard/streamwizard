@@ -88,17 +88,17 @@ if (!process.env.SUPABASE_SECRET_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY) {
  * These are validated at runtime and must be present for the app to start
  */
 const envSchema = z.object({
-  // Twitch API Configuration
-  TWITCH_CLIENT_ID: z.string().min(1, "TWITCH_CLIENT_ID is required"),
-  TWITCH_CLIENT_SECRET: z.string().min(1, "TWITCH_CLIENT_SECRET is required"),
-  TWITCH_WEBHOOK_SECRET: z.string().min(1, "TWITCH_WEBHOOK_SECRET is required"),
+  // Twitch API Configuration (required by services that call Twitch Helix / EventSub)
+  TWITCH_CLIENT_ID: z.string().min(1).optional(),
+  TWITCH_CLIENT_SECRET: z.string().min(1).optional(),
+  TWITCH_WEBHOOK_SECRET: z.string().min(1).optional(),
 
-  // Encryption Configuration
-  TOKEN_ENCRYPTION_KEY: z.string().min(1, "TOKEN_ENCRYPTION_KEY is required"),
+  // Encryption Configuration (required by services that store/refresh Twitch tokens)
+  TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
 
   // Supabase Configuration
   SUPABASE_URL: z.string().url("SUPABASE_URL must be a valid URL"),
-  SUPABASE_ANON_KEY: z.string().min(1, "SUPABASE_ANON_KEY is required"),
+  SUPABASE_ANON_KEY: z.string().min(1).optional(), // required by Next.js apps, not backend workers
   SUPABASE_SECRET_KEY: z.string().min(1, "SUPABASE_SECRET_KEY is required"),
 
   // Environment
@@ -112,6 +112,13 @@ const envSchema = z.object({
   INFLUXDB_TOKEN: z.string().optional(),
   INFLUXDB_ORG: z.string().optional(),
   INFLUXDB_BUCKET: z.string().optional(),
+
+  // Web app / StreamWizard API (optional for backend-only services)
+  STREAMWIZARD_API_URL: z.string().url().optional(),
+  TWITCH_CONDUIT_ID: z.string().optional(),
+
+  // Overlay WebSocket server (required by streamwizard-bot to push events)
+  OVERLAY_WS_URL: z.string().url().optional(),
 
   // // Discord Bot
   // DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),

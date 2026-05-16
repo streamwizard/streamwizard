@@ -15,12 +15,12 @@ import {
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@repo/supabase";
 import { User } from "@supabase/supabase-js";
-import { FileVideoCamera, Layers } from "lucide-react";
+import { BarChart2, FileVideoCamera, Layers, MapPin } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FaDiscord } from "react-icons/fa";
 import { Separator } from "@repo/ui";
-import { DashboardUserNav } from "./DashboardUserNav";
+import { DashboardUserNav } from "./dashboard-user-nav";
 import SidebarClips from "./sidebar-clips";
 import SidebarCommands from "./sidebar-commands";
 
@@ -39,10 +39,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
             width={100}
             height={100}
             alt="Logo"
-            style={{
-              maxWidth: "100%",
-              height: "auto",
-            }}
+            style={{ width: 100, height: "auto" }}
             priority
           />
         </div>
@@ -51,6 +48,22 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
         </span>
       </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel>Overview</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/dashboard">
+                    <BarChart2 className="mr-2 h-4 w-4" />
+                    Stream Analytics
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Clips</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -76,6 +89,14 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
                   <Link href="/dashboard/overlays">
                     <Layers className="mr-2 h-4 w-4" />
                     Overlay Editor
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/dashboard/irl">
+                    <MapPin className="mr-2 h-4 w-4" />
+                    IRL Collector
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

@@ -1,15 +1,26 @@
 "use server";
+import { TwitchApi } from "@repo/twitch-api";
 import { createClient } from "@repo/supabase/next/server";
 import { getClipBroadcasterId } from "@repo/supabase/queries/clips";
 import { getBroadcasterId } from "@repo/supabase/queries/user";
-import { TwitchApi } from "@repo/twitch-api";
 import axios from "axios";
+import { env } from "@repo/env";
 import { revalidatePath } from "next/cache";
 
 interface returnObject<T = unknown> {
   message: string;
   success: boolean;
   data?: T;
+}
+
+export async function createTwitchClip(
+  broadcasterId: string
+): Promise<{ editUrl: string }> {
+  const api = new TwitchApi(broadcasterId);
+  const result = await api.clips.createClip();
+  const clip = result.data?.[0];
+  if (!clip) throw new Error("Failed to create clip");
+  return { editUrl: clip.edit_url };
 }
 
 export async function SyncBroadcasterClips(): Promise<{ message: string; success: boolean }> {
@@ -20,7 +31,7 @@ export async function SyncBroadcasterClips(): Promise<{ message: string; success
   } = await supabase.auth.getSession();
 
   try {
-    await axios.post(`https://api.streamwizard.org/api/clips/sync`, null, {
+    await axios.post(`${env.STREAMWIZARD_API_URL}/api/clips/sync`, null, {
       headers: {
         Authorization: `Bearer ${session?.access_token}`,
       },

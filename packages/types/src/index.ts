@@ -6,4 +6,6 @@
 
 export * from './eventsub';
 export * from './helix';
+export * from './irl';
+export * from './overlay-ws';
 export * as Helix from './helix';

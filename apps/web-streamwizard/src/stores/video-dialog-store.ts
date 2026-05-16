@@ -6,7 +6,7 @@ import type { TimelineEvent, TimelineSegment, TimelineSegmentType } from "@/comp
 import type { Database } from "@repo/supabase";
 import { StreamEventType, type Clip } from "@/types/stream-events";
 import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
-import { TwitchVideo, parseDuration, type TwitchStreamMarker } from "@/types/twitch video";
+import { TwitchVideo, parseDuration, type TwitchStreamMarker } from "@/types/twitch-video";
 import { create } from "zustand";
 import { toast } from "sonner";
 
@@ -502,7 +502,7 @@ export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
           clipId: result.data.clipId,
         };
       } else {
-        throw new Error(result.error || "Failed to create clip");
+        throw new Error(!result.success ? result.error : "Failed to create clip");
       }
     })();
 
@@ -545,7 +545,7 @@ export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
         fetchEvents(video.id);
         return result.data;
       } else {
-        throw new Error(result.error || "Failed to create marker");
+        throw new Error(!result.success ? result.error : "Failed to create marker");
       }
     })();
 

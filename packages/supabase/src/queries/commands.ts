@@ -27,6 +27,19 @@ export async function getDefaultCommandsWithStatus(client: DBClient, channelId: 
   }));
 }
 
+export async function getEnabledCommandsByChannel(client: DBClient, channelId: string) {
+  const { data, error } = await client
+    .from("commands")
+    .select(`
+      custom_commands(id, message, action, command),
+      default_chat_commands(id, message, action, command)
+    `)
+    .eq("enabled", true)
+    .eq("channel_id", channelId);
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function toggleDefaultCommand(client: DBClient, channelId: string, defaultCommandId: string, enabled: boolean) {
   const { data: existing } = await client
     .from("commands")

@@ -1,6 +1,7 @@
 "use client";
 
-import { TwitchVideo, formatThumbnailUrl } from "@/types/twitch video";
+import { TwitchVideo, formatThumbnailUrl } from "@/types/twitch-video";
+import { formatDate } from "@/lib/format";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { Checkbox } from "@repo/ui";
 import { Badge } from "@repo/ui";
@@ -39,14 +40,6 @@ export function VodsTable({ videos, selectedIds, onSelectionChange, onVideoClick
       newSelection.delete(videoId);
     }
     onSelectionChange(newSelection);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
   };
 
   const formatViewCount = (count: number) => {

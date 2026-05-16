@@ -44,6 +44,38 @@
     "./queries/commands": {
       "types": "./src/queries/commands.ts",
       "default": "./src/queries/commands.ts"
+    },
+    "./queries/stream-analytics": {
+      "types": "./src/queries/stream-analytics.ts",
+      "default": "./src/queries/stream-analytics.ts"
+    },
+    "./queries/public": {
+      "types": "./src/queries/public.ts",
+      "default": "./src/queries/public.ts"
+    },
+    "./queries/sync": {
+      "types": "./src/queries/sync.ts",
+      "default": "./src/queries/sync.ts"
+    },
+    "./queries/live-status": {
+      "types": "./src/queries/live-status.ts",
+      "default": "./src/queries/live-status.ts"
+    },
+    "./queries/viewer-counts": {
+      "types": "./src/queries/viewer-counts.ts",
+      "default": "./src/queries/viewer-counts.ts"
+    },
+    "./queries/smp": {
+      "types": "./src/queries/smp.ts",
+      "default": "./src/queries/smp.ts"
+    },
+    "./queries/irl": {
+      "types": "./src/queries/irl.ts",
+      "default": "./src/queries/irl.ts"
+    },
+    "./crypto": {
+      "types": "./src/crypto.ts",
+      "default": "./src/crypto.ts"
     }
   },
   "scripts": {
@@ -51,7 +83,7 @@
     "gen-types": "supabase gen types typescript --project-id jgxdrljoqployiyjedst --schema public > src/types/supabase.ts"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.90.1",
+    "@supabase/supabase-js": "^2.105.1",
     "@supabase/ssr": "^0.8.0",
     "@repo/env": "workspace:*"
   },

@@ -42,6 +42,7 @@ import {
   duplicateOverlayScene,
   updateOverlayScene,
 } from "@/actions/overlays";
+import { env } from "@repo/env/next";
 
 interface OverlayScene {
   id: string;
@@ -218,7 +219,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        const url = `https://overlay.streamwizard.org/${scene.slug}`;
+                        const url = `${env.NEXT_PUBLIC_OVERLAY_URL}/${scene.slug}`;
                         navigator.clipboard.writeText(url);
                         toast.success("Overlay URL copied");
                       }}

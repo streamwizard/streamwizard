@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDuration } from "@/types/twitch video";
+import { formatDuration } from "@/types/twitch-video";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";
 import type { TimelineSegmentType } from "./types";
 

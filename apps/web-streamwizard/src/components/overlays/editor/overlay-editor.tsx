@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays";
+import { env } from "@repo/env/next";
 import type {
   OverlayItemConfig,
   OverlaySceneWithItems,
@@ -27,6 +28,7 @@ import { EditorCanvas } from "./editor-canvas";
 import { EditorLayers } from "./editor-layers";
 import { EditorInspector } from "./editor-inspector";
 import { OverlayWidgetSheet } from "./overlay-widget-sheet";
+import { WidgetLibraryModal } from "./widget-library-modal";
 import { useOverlayStore } from "./use-overlay-store";
 
 interface OverlayEditorProps {
@@ -42,6 +44,7 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
     setScene,
     setZoom,
     addItem,
+    addCustomWidget,
     markClean,
     editorClipPreviewPaused,
     setEditorClipPreviewPaused,
@@ -52,6 +55,7 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
   } = useOverlayStore();
   const [isSaving, setIsSaving] = useState(false);
   const [widgetSheetOpen, setWidgetSheetOpen] = useState(false);
+  const [widgetLibraryOpen, setWidgetLibraryOpen] = useState(false);
 
   useEffect(() => {
     setScene(initialScene);
@@ -211,7 +215,7 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
             variant="outline"
             size="sm"
             onClick={() => {
-              const url = `https://overlay.streamwizard.org/${scene.slug}`;
+              const url = `${env.NEXT_PUBLIC_OVERLAY_URL}/${scene.slug}`;
               navigator.clipboard.writeText(url);
               toast.success("Overlay URL copied");
             }}
@@ -288,6 +292,13 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
         open={widgetSheetOpen}
         onOpenChange={setWidgetSheetOpen}
         onAddWidget={(type) => addItem(type)}
+        onOpenLibrary={() => setWidgetLibraryOpen(true)}
+      />
+
+      <WidgetLibraryModal
+        open={widgetLibraryOpen}
+        onOpenChange={setWidgetLibraryOpen}
+        onAddToCanvas={(widgetId) => addCustomWidget(widgetId)}
       />
     </div>
   );
