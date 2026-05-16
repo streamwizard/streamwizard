@@ -80,7 +80,7 @@ Existing query files:
 |------|---------------|
 | `queries/clips.ts` | `clips`, `clip_folders`, `clip_folder_junction` |
 | `queries/commands.ts` | `commands`, `default_chat_commands`, `custom_commands` |
-| `queries/live-status.ts` | `broadcaster_live_status` |
+| `queries/live-status.ts` | `broadcaster_live_status` — upsert + `getLiveStreamIdByBroadcasterId` |
 | `queries/overlays.ts` | `overlay_scenes`, `overlay_items` |
 | `queries/public.ts` | `testimonials` |
 | `queries/stream-analytics.ts` | `streams`, `stream_events`, `viewer_counts` |
@@ -157,6 +157,11 @@ apps/streamwizard-bot
   ├── @repo/twitch-api    — **`TwitchApi`** for chat messages
   └── @repo/schemas       — EventSub event types
 
+apps/ws-server
+  ├── @repo/env           — Root env schema (validates `SUPABASE_SECRET_KEY`, etc.)
+  ├── @repo/supabase      — `supabase` singleton + **`queries/overlays`**, **`queries/user`**, **`queries/live-status`**, **`queries/irl`**
+  └── @repo/types         — `BotBroadcastMessage`, `OverlayEventType`
+
 apps/smp-bridge
   ├── @repo/supabase      — `supabase` singleton + **`queries/smp`**
   ├── @repo/twitch-api    — **`TwitchApi`** for Helix lookups
@@ -214,3 +219,58 @@ const OVERLAY_WIDGETS = [{ id: "clips_widget", Component: ClipsWidgetContainer }
 4. **`apps/web-overlay`** — only needed if the widget requires data fetching: create a `*WidgetContainer.tsx` and add `{ id: "…", Component: … }` to `OVERLAY_WIDGETS` in `page.tsx`.
 
 Widgets that are purely static (text, timer, clock) require no changes in `web-overlay` — the canvas picks them up automatically.
+
+---
+
+## Overlay WebSocket Server (`apps/ws-server`)
+
+The WS server is a **unified overlay event bus** — not just an IRL GPS relay. All real-time overlay data flows through a single Bun WebSocket server.
+
+### Three roles
+
+| Role | Auth | Description |
+|------|------|-------------|
+| `publisher` | Supabase JWT *or* `irl_collector_tokens` row | Phone/device sending GPS payloads. One per user room. |
+| `subscriber` | `overlay_scenes.subscriber_token` | OBS overlay WebSocket. Many per user room. |
+| `bot` | `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>` | `streamwizard-bot` — persistent connection, fans out Twitch events to subscribers. |
+
+### Connection URL
+
+```
+ws://<host>/ws?role=<publisher|subscriber|bot>&token=<token>&channels=<comma-separated-event-types>
+```
+
+`channels` is optional for subscribers. Omitting it (or leaving it empty) means *receive all event types*.
+
+### Event type strings
+
+```ts
+// Twitch EventSub types (pass-through, e.g.):
+"channel.follow" | "channel.subscribe" | "channel.subscription.gift"
+"channel.subscription.message" | "channel.raid" | "channel.cheer"
+
+// Internal StreamWizard events:
+"streamwizard.geo"    // GPS payload from phone publisher
+"streamwizard.status" // Publisher connection status: { status: "offline" }
+```
+
+All valid types are expressed as `OverlayEventType = EventSubSubscriptionType | StreamWizardEventType` in `packages/types/src/overlay-ws.ts`.
+
+### Wire format
+
+**Subscriber receives:**
+```json
+{ "type": "channel.follow", "payload": { "user_name": "...", "user_login": "...", "followed_at": "..." } }
+{ "type": "streamwizard.geo", "payload": { "latitude": 0, "longitude": 0, ... } }
+```
+
+**Bot sends (inbound to server):**
+```json
+{ "userId": "<supabase-user-id>", "type": "channel.follow", "payload": { ... } }
+```
+
+### Bot integration
+
+`streamwizard-bot` maintains a single persistent WebSocket to the overlay server (`overlay-ws-client.ts`). After every non-`channel.chat.message` event, `processTwitchEvent` in `handlers/eventHandler.ts` calls `broadcastOverlayEvent`, which resolves the Twitch broadcaster ID → Supabase user ID (via an in-memory cache backed by `getTwitchIntegrationByBroadcasterId`), then calls `overlayWsClient.send()`. Individual handlers no longer call `broadcastOverlayEvent` themselves.
+
+The bot only connects if `OVERLAY_WS_URL` is set in the environment.

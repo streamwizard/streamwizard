@@ -172,6 +172,11 @@ export const irlFieldWidgetConfigSchema = overlayTextStyleSchema.extend({
   mockData: z.boolean().default(false),
 });
 
+export const customWidgetItemConfigSchema = z.object({
+  widget_id: z.string().default(""),
+  instance_id: z.string().default(""),
+});
+
 export const overlayItemConfigSchema = z.union([
   clipsWidgetItemConfigSchema,
   clipDisplayFieldItemConfigSchema,
@@ -179,6 +184,7 @@ export const overlayItemConfigSchema = z.union([
   timerWidgetItemConfigSchema,
   clockWidgetItemConfigSchema,
   irlFieldWidgetConfigSchema,
+  customWidgetItemConfigSchema,
 ]);
 
 export const overlayItemSchema = z.discriminatedUnion("type", [
@@ -268,6 +274,7 @@ export const overlayItemSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("irl_latitude_widget"), x: z.number().min(0), y: z.number().min(0), w: z.number().min(50), h: z.number().min(50), z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: irlFieldWidgetConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("irl_longitude_widget"), x: z.number().min(0), y: z.number().min(0), w: z.number().min(50), h: z.number().min(50), z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: irlFieldWidgetConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("irl_accuracy_widget"), x: z.number().min(0), y: z.number().min(0), w: z.number().min(50), h: z.number().min(50), z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: irlFieldWidgetConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("custom_widget"), x: z.number().min(0), y: z.number().min(0), w: z.number().min(50), h: z.number().min(50), z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: customWidgetItemConfigSchema }),
 ]);
 
 export const createSceneSchema = z.object({

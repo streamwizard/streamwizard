@@ -48,6 +48,12 @@ import {
 } from "../widgets/irl/irl-field-widget-definition";
 import { IrlFieldWidgetSettings } from "../widgets/irl/irl-field-widget-settings";
 import {
+  CUSTOM_WIDGET_DEFAULT_SIZE,
+  createCustomWidgetRootItems,
+} from "../widgets/custom/custom-widget-definition";
+import { CustomWidgetSettings } from "../widgets/custom/custom-widget-settings";
+import { CustomWidgetCanvas } from "../widgets/custom/custom-widget-canvas";
+import {
   TextWidgetRenderer,
   TimerWidgetRenderer,
   ClockWidgetRenderer,
@@ -196,6 +202,20 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     createRootItems: createIrlAccuracyWidgetRootItems,
     CanvasContent: IrlFieldWidgetRenderer,
     SettingsPanel: IrlFieldWidgetSettings,
+  },
+  custom_widget: {
+    type: "custom_widget",
+    layerScope: "root",
+    showInLibrary: false,
+    category: "other",
+    library: {
+      title: "Custom Widget",
+      description: "Build your own widget with HTML, JavaScript, and Tailwind CSS.",
+    },
+    defaultSize: { ...CUSTOM_WIDGET_DEFAULT_SIZE },
+    createRootItems: createCustomWidgetRootItems,
+    CanvasContent: CustomWidgetCanvas,
+    SettingsPanel: CustomWidgetSettings,
   },
 };
 

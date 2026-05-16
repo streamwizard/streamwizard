@@ -74,9 +74,9 @@ function formatValue(
 
 export function IrlFieldWidgetRenderer({ item, scene, zoom = 1 }: IrlFieldWidgetRendererProps) {
   const cfg = resolveConfig(item.config);
-  const userId = scene?.user_id ?? "";
+  const subscriberToken = scene?.subscriber_token ?? "";
   const field = FIELD_FROM_TYPE[item.type as IrlFieldWidgetType] ?? "speed";
-  const { geo, status } = useIrlGeoData(userId, cfg.mockData);
+  const { geo, status } = useIrlGeoData(subscriberToken, cfg.mockData);
 
   const textAlign = cfg.align as CSSProperties["textAlign"];
   const fontSize = cfg.fontSize * zoom;

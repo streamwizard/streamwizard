@@ -158,3 +158,21 @@ export async function insertOverlayItems(
 ) {
   return client.from("overlay_items").insert(items);
 }
+
+export async function getOverlaySceneBySubscriberToken(client: DBClient, token: string) {
+  return client
+    .from("overlay_scenes")
+    .select("user_id")
+    .eq("subscriber_token", token)
+    .maybeSingle();
+}
+
+export async function getLatestSubscriberToken(client: DBClient, userId: string) {
+  return client
+    .from("overlay_scenes")
+    .select("subscriber_token")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+}

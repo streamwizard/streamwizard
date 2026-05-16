@@ -28,6 +28,7 @@ import { EditorCanvas } from "./editor-canvas";
 import { EditorLayers } from "./editor-layers";
 import { EditorInspector } from "./editor-inspector";
 import { OverlayWidgetSheet } from "./overlay-widget-sheet";
+import { WidgetLibraryModal } from "./widget-library-modal";
 import { useOverlayStore } from "./use-overlay-store";
 
 interface OverlayEditorProps {
@@ -43,6 +44,7 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
     setScene,
     setZoom,
     addItem,
+    addCustomWidget,
     markClean,
     editorClipPreviewPaused,
     setEditorClipPreviewPaused,
@@ -53,6 +55,7 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
   } = useOverlayStore();
   const [isSaving, setIsSaving] = useState(false);
   const [widgetSheetOpen, setWidgetSheetOpen] = useState(false);
+  const [widgetLibraryOpen, setWidgetLibraryOpen] = useState(false);
 
   useEffect(() => {
     setScene(initialScene);
@@ -289,6 +292,13 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
         open={widgetSheetOpen}
         onOpenChange={setWidgetSheetOpen}
         onAddWidget={(type) => addItem(type)}
+        onOpenLibrary={() => setWidgetLibraryOpen(true)}
+      />
+
+      <WidgetLibraryModal
+        open={widgetLibraryOpen}
+        onOpenChange={setWidgetLibraryOpen}
+        onAddToCanvas={(widgetId) => addCustomWidget(widgetId)}
       />
     </div>
   );

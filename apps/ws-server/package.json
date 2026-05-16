@@ -1,5 +1,5 @@
 {
-  "name": "@repo/irl-ws-server",
+  "name": "@repo/ws-server",
   "version": "0.0.0",
   "private": true,
   "scripts": {
@@ -8,7 +8,9 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.105.1"
+    "@repo/env": "workspace:*",
+    "@repo/supabase": "workspace:*",
+    "@repo/types": "workspace:*"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

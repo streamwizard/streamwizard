@@ -1,7 +1,8 @@
 // Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
 declare const process: { env: Record<string, string | undefined> };
 
-import type { GeoPayload, IrlSocketMessage } from "../../types";
+import type { GeoPayload } from "../../types";
+import type { OverlaySocketMessage } from "@repo/types";
 
 export type IrlConnectionStatus = "connecting" | "connected" | "offline" | "disconnected";
 export type IrlGeoListener = (geo: GeoPayload | null, status: IrlConnectionStatus) => void;
@@ -23,11 +24,11 @@ function broadcast(room: RoomState) {
   }
 }
 
-function connect(userId: string, wsUrl: string, room: RoomState) {
+function connect(subscriberToken: string, wsUrl: string, room: RoomState) {
   room.status = "connecting";
   broadcast(room);
 
-  const ws = new WebSocket(`${wsUrl}/ws?role=subscriber&userId=${encodeURIComponent(userId)}`);
+  const ws = new WebSocket(`${wsUrl}/ws?role=subscriber&token=${encodeURIComponent(subscriberToken)}`);
   room.ws = ws;
 
   ws.onopen = () => {
@@ -38,13 +39,14 @@ function connect(userId: string, wsUrl: string, room: RoomState) {
 
   ws.onmessage = (event) => {
     try {
-      const msg = JSON.parse(event.data as string) as IrlSocketMessage;
-      if (msg.type === "geo") {
-        room.geo = msg.payload;
-        room.status = "connected";
-        broadcast(room);
-      } else if (msg.type === "status" && msg.payload.status === "offline") {
-        room.status = "offline";
+      const msg = JSON.parse(event.data as string) as OverlaySocketMessage;
+      if (msg.type === "streamwizard.geo") {
+        if (msg.status === "offline") {
+          room.status = "offline";
+        } else {
+          room.geo = msg.payload;
+          room.status = "connected";
+        }
         broadcast(room);
       }
     } catch {
@@ -53,13 +55,13 @@ function connect(userId: string, wsUrl: string, room: RoomState) {
   };
 
   ws.onclose = () => {
-    if (!rooms.has(userId)) return; // already cleaned up
+    if (!rooms.has(subscriberToken)) return; // already cleaned up
     room.ws = null;
     room.status = "disconnected";
     broadcast(room);
     const delay = Math.min(room.retryDelay, 30000);
     room.retryDelay = Math.min(delay * 2, 30000);
-    room.retryTimer = setTimeout(() => connect(userId, wsUrl, room), delay);
+    room.retryTimer = setTimeout(() => connect(subscriberToken, wsUrl, room), delay);
   };
 
   ws.onerror = () => {
@@ -68,11 +70,11 @@ function connect(userId: string, wsUrl: string, room: RoomState) {
 }
 
 export function subscribeToIrlData(
-  userId: string,
+  subscriberToken: string,
   wsUrl: string,
   listener: IrlGeoListener
 ): () => void {
-  let room = rooms.get(userId);
+  let room = rooms.get(subscriberToken);
   if (!room) {
     room = {
       geo: null,
@@ -82,8 +84,8 @@ export function subscribeToIrlData(
       retryTimer: null,
       retryDelay: 1000,
     };
-    rooms.set(userId, room);
-    connect(userId, wsUrl, room);
+    rooms.set(subscriberToken, room);
+    connect(subscriberToken, wsUrl, room);
   }
 
   room.listeners.add(listener);
@@ -91,13 +93,13 @@ export function subscribeToIrlData(
   listener(room.geo, room.status);
 
   return () => {
-    const r = rooms.get(userId);
+    const r = rooms.get(subscriberToken);
     if (!r) return;
     r.listeners.delete(listener);
     if (r.listeners.size === 0) {
       if (r.retryTimer) clearTimeout(r.retryTimer);
       r.ws?.close();
-      rooms.delete(userId);
+      rooms.delete(subscriberToken);
     }
   };
 }

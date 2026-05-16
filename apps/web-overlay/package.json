@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev-local": "next dev -H 0.0.0.0 --experimental-https"
   },
   "dependencies": {
     "@repo/env": "workspace:*",

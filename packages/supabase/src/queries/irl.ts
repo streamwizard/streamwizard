@@ -52,6 +52,26 @@ export async function insertIrlGeoTrack(client: DBClient, data: IrlGeoTrackInser
     .insert(data as never);
 }
 
+export async function getIrlCollectorTokenUserId(
+  client: DBClient,
+  token: string
+): Promise<string | null> {
+  const { data } = await client
+    .from("irl_collector_tokens" as never)
+    .select("user_id")
+    .eq("token", token)
+    .eq("is_active", true)
+    .maybeSingle() as { data: { user_id: string } | null };
+  return data?.user_id ?? null;
+}
+
+export async function touchIrlCollectorToken(client: DBClient, token: string): Promise<void> {
+  await client
+    .from("irl_collector_tokens" as never)
+    .update({ last_used_at: new Date().toISOString() } as never)
+    .eq("token", token);
+}
+
 export async function getIrlSessionsByUser(
   client: DBClient,
   userId: string

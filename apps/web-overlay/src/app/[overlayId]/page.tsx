@@ -1,9 +1,13 @@
 import { loadOverlaySceneByOverlayId } from "@/actions/overlay";
 import { OverlaySceneCanvas, overlayItemFromDbRow } from "@repo/ui/overlay";
 import { ClipsWidgetContainer } from "@/components/widgets/clips-widget/ClipsWidgetContainer";
+import { CustomWidgetContainer } from "@/components/widgets/custom-widget/CustomWidgetContainer";
 import { notFound } from "next/navigation";
 
-const OVERLAY_WIDGETS = [{ id: "clips_widget", Component: ClipsWidgetContainer }];
+const OVERLAY_WIDGETS = [
+  { id: "clips_widget", Component: ClipsWidgetContainer },
+  { id: "custom_widget", Component: CustomWidgetContainer },
+];
 
 export default async function OverlayByIdPage({
   params,
@@ -53,7 +57,7 @@ export default async function OverlayByIdPage({
     <div
       style={{
         minHeight: "100vh",
-        background: "#000",
+        background: "transparent",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "flex-start",

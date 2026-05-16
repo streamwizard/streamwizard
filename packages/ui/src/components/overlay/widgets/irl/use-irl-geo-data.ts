@@ -19,7 +19,7 @@ const MOCK_GEO: GeoPayload = {
 };
 
 export function useIrlGeoData(
-  userId: string,
+  subscriberToken: string,
   mockData: boolean
 ): { geo: GeoPayload | null; status: IrlConnectionStatus } {
   const [state, setState] = useState<{ geo: GeoPayload | null; status: IrlConnectionStatus }>(() => ({
@@ -32,13 +32,13 @@ export function useIrlGeoData(
       setState({ geo: MOCK_GEO, status: "connected" });
       return;
     }
-    if (!userId) {
+    if (!subscriberToken) {
       setState({ geo: null, status: "connecting" });
       return;
     }
     const wsUrl = process.env.NEXT_PUBLIC_IRL_WS_URL ?? "ws://localhost:3009";
-    return subscribeToIrlData(userId, wsUrl, (geo, status) => setState({ geo, status }));
-  }, [userId, mockData]);
+    return subscribeToIrlData(subscriberToken, wsUrl, (geo, status) => setState({ geo, status }));
+  }, [subscriberToken, mockData]);
 
   return state;
 }

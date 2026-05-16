@@ -3,6 +3,7 @@ import type { EventSubSubscriptionType, WebSocketNotificationMessage } from "@re
 import { z } from "zod";
 import { registerTwitchHandlers } from "./twitch";
 import { streamEventsLogger } from "@repo/logger";
+import { broadcastOverlayEvent } from "../functions/broadcastOverlayEvent";
 
 /**
  * Context passed to all event handlers in smp-bridge
@@ -76,8 +77,10 @@ export class HandlerRegistry {
         event_data: data.payload.event,
         metadata: data.metadata,
       });
-    }
 
+    }
+    
+    await broadcastOverlayEvent(broadcasterId, eventType, data.payload.event);
     const twitchApi = new TwitchApi(broadcasterId);
 
     const context: HandlerContext = {

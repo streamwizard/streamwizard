@@ -60,7 +60,7 @@ export async function getPreviewClips(config: ClipsWidgetConfig): Promise<{
 
   if (error) return { clips: [], error: error.message };
 
-  let result = (clips ?? []) as PreviewClip[];
+  let result = (clips ?? []) as unknown as PreviewClip[];
 
   if (config.sort === "random") {
     result = result.sort(() => Math.random() - 0.5);

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 // The client you created from the Server-Side Auth instructions
 import { createClient } from "@repo/supabase/next/server";
 import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
-import { encryptToken } from "@/server/crypto";
+import { encryptToken } from "@repo/supabase/crypto";
 import { updateTwitchTokens } from "@repo/supabase/queries/user";
 
 export async function GET(request: Request) {

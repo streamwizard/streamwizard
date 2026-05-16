@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createBrowserClient } from "@repo/supabase/next/client";
 
 type Status = "acquiring" | "connecting" | "connected" | "disconnected";
 
@@ -15,6 +14,9 @@ interface GeoPayload {
   timestamp: number;
 }
 
+
+
+
 export default function IrlCollectorPage() {
   const [status, setStatus] = useState<Status>("acquiring");
   const wsRef = useRef<WebSocket | null>(null);
@@ -24,29 +26,28 @@ export default function IrlCollectorPage() {
   const latestGeoRef = useRef<GeoPayload | null>(null);
 
   useEffect(() => {
-    const supabase = createBrowserClient();
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
 
-    async function getFreshToken(): Promise<{ userId: string; token: string } | null> {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) return null;
-      return { userId: data.session.user.id, token: data.session.access_token };
+    if (!token) {
+      setStatus("disconnected");
+      return;
     }
 
-    function connect(userId: string, token: string) {
-      const wsUrl = process.env.NEXT_PUBLIC_IRL_WS_URL ?? "ws://localhost:3009";
+    function connect() {
+      const wsUrl = process.env.NEXT_PUBLIC_IRL_WS_URL ?? "ws://10.10.10.73:8000";
       setStatus("connecting");
 
       const ws = new WebSocket(
-        `${wsUrl}/ws?role=publisher&userId=${encodeURIComponent(userId)}&token=${encodeURIComponent(token)}`
+        `${wsUrl}/ws?role=publisher&token=${encodeURIComponent(token!)}`
       );
       wsRef.current = ws;
 
       ws.onopen = () => {
         retryDelay.current = 1000;
         setStatus("connected");
-        // Send buffered geo immediately if available
         if (latestGeoRef.current) {
-          ws.send(JSON.stringify(latestGeoRef.current));
+          ws.send(JSON.stringify({ type: "geo", payload: latestGeoRef.current }));
         }
       };
 
@@ -54,10 +55,7 @@ export default function IrlCollectorPage() {
         setStatus("disconnected");
         const delay = retryDelay.current;
         retryDelay.current = Math.min(delay * 2, 30_000);
-        retryRef.current = setTimeout(async () => {
-          const creds = await getFreshToken();
-          if (creds) connect(creds.userId, creds.token);
-        }, delay);
+        retryRef.current = setTimeout(connect, delay);
       };
 
       ws.onerror = () => {
@@ -65,39 +63,27 @@ export default function IrlCollectorPage() {
       };
     }
 
-    async function init() {
-      const creds = await getFreshToken();
-      if (!creds) {
-        setStatus("disconnected");
-        return;
-      }
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const geo: GeoPayload = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          altitude: pos.coords.altitude,
+          speed: pos.coords.speed,
+          heading: pos.coords.heading,
+          accuracy: pos.coords.accuracy,
+          timestamp: pos.timestamp,
+        };
+        latestGeoRef.current = geo;
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: "geo", payload: geo }));
+        }
+      },
+      (err) => console.warn("[geolocation]", err.message),
+      { enableHighAccuracy: true }
+    );
 
-      const { userId, token } = creds;
-
-      watchIdRef.current = navigator.geolocation.watchPosition(
-        (pos) => {
-          const geo: GeoPayload = {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            altitude: pos.coords.altitude,
-            speed: pos.coords.speed,
-            heading: pos.coords.heading,
-            accuracy: pos.coords.accuracy,
-            timestamp: pos.timestamp,
-          };
-          latestGeoRef.current = geo;
-          if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify(geo));
-          }
-        },
-        (err) => console.warn("[geolocation]", err.message),
-        { enableHighAccuracy: true }
-      );
-
-      connect(userId, token);
-    }
-
-    init();
+    connect();
 
     return () => {
       if (retryRef.current) clearTimeout(retryRef.current);

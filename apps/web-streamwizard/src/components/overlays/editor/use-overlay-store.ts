@@ -30,6 +30,7 @@ interface OverlayEditorState {
   markClean: () => void;
 
   addItem: (type: RootOverlayItemType) => void;
+  addCustomWidget: (widgetId: string) => void;
   updateItem: (id: string, updates: Partial<OverlayItem>) => void;
   removeItem: (id: string) => void;
   duplicateItem: (id: string) => void;
@@ -98,16 +99,33 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     if (!def?.createRootItems) return;
 
     const maxZ = scene.items.reduce((max, item) => Math.max(max, item.z_index), 0);
-    const newItems = def.createRootItems({
-      scene,
-      nextId: nextTempId,
-      maxZ,
-    });
+    const newItems = def.createRootItems({ scene, nextId: nextTempId, maxZ });
     if (newItems.length === 0) return;
 
     set({
       scene: { ...scene, items: [...scene.items, ...newItems] },
       selectedItemId: newItems[0]!.id,
+      isDirty: true,
+    });
+  },
+
+  addCustomWidget: (widgetId) => {
+    const { scene } = get();
+    if (!scene) return;
+
+    const def = OVERLAY_WIDGET_REGISTRY["custom_widget"];
+    if (!def?.createRootItems) return;
+
+    const maxZ = scene.items.reduce((max, item) => Math.max(max, item.z_index), 0);
+    const newItems = def.createRootItems({ scene, nextId: nextTempId, maxZ });
+    if (newItems.length === 0) return;
+
+    // Patch the widget_id into the config immediately so the canvas renders it right away
+    const item = { ...newItems[0]!, config: { ...newItems[0]!.config, widget_id: widgetId } };
+
+    set({
+      scene: { ...scene, items: [...scene.items, item] },
+      selectedItemId: item.id,
       isDirty: true,
     });
   },

@@ -22,6 +22,7 @@ export const OVERLAY_ITEM_TYPES = [
   "text_widget",
   "timer_widget",
   "clock_widget",
+  "custom_widget",
   ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 export type OverlayItemType = (typeof OVERLAY_ITEM_TYPES)[number];
@@ -32,6 +33,7 @@ export const ROOT_OVERLAY_ITEM_TYPES = [
   "text_widget",
   "timer_widget",
   "clock_widget",
+  "custom_widget",
   ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 export type RootOverlayItemType = (typeof ROOT_OVERLAY_ITEM_TYPES)[number];
@@ -190,9 +192,21 @@ export interface GeoPayload {
   timestamp: number;
 }
 
+/** @deprecated Use OverlaySocketMessage from @repo/types instead. */
 export type IrlSocketMessage =
-  | { type: "geo"; payload: GeoPayload }
-  | { type: "status"; payload: { status: "offline" } };
+  | { type: "streamwizard.geo"; payload: GeoPayload }
+  | { type: "streamwizard.status"; payload: { status: "offline" } };
+
+/** Config for a custom user-authored widget placed on an overlay scene. */
+export interface CustomWidgetItemConfig {
+  widget_id: string;
+  instance_id: string;
+}
+
+export const DEFAULT_CUSTOM_WIDGET_ITEM_CONFIG: CustomWidgetItemConfig = {
+  widget_id: "",
+  instance_id: "",
+};
 
 export type OverlayItemConfig =
   | ClipsWidgetItemConfig
@@ -200,7 +214,8 @@ export type OverlayItemConfig =
   | TextWidgetItemConfig
   | TimerWidgetItemConfig
   | ClockWidgetItemConfig
-  | IrlFieldWidgetItemConfig;
+  | IrlFieldWidgetItemConfig
+  | CustomWidgetItemConfig;
 
 /**
  * Flattened shape used by the clip preview, API, and query builder: parent row + display field children merged.
@@ -234,6 +249,7 @@ export interface OverlayScene {
   user_id: string;
   name: string;
   slug: string;
+  subscriber_token: string;
   width: number;
   height: number;
   is_active: boolean;
@@ -423,6 +439,12 @@ export function asClockWidgetConfig(
   config: OverlayItemConfig
 ): ClockWidgetItemConfig {
   return config as ClockWidgetItemConfig;
+}
+
+export function asCustomWidgetConfig(
+  config: OverlayItemConfig
+): CustomWidgetItemConfig {
+  return config as CustomWidgetItemConfig;
 }
 
 /** Runtime-safe family for editors / renderers (older rows may omit `fontFamily`). */

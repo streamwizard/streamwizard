@@ -75,3 +75,9 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['10.10.10.*'],
+}
