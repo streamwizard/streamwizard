@@ -11,13 +11,15 @@
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "generate:widget-declarations": "bun run scripts/generate-widget-declarations.ts"
   },
   "dependencies": {
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "zod-to-ts": "^2.0.0"
   }
 }

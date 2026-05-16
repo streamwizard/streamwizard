@@ -48,7 +48,7 @@ export const getViewerChartData = cache(
       }));
 
     const subEvents: RawEvent[] = eventRows
-      .filter((e) => SUB_EVENT_TYPES.includes(e.event_type))
+      .filter((e) => (SUB_EVENT_TYPES as readonly string[]).includes(e.event_type))
       .map((e) => ({ offsetSeconds: e.offset_seconds }));
 
     const followEvents: RawEvent[] = eventRows

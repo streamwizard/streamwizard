@@ -1,4 +1,5 @@
 export * from "./components/overlay/types";
+export type { OverlayEventType, OverlaySocketMessage, BotBroadcastMessage, StreamWizardEventType } from "@repo/types";
 export * from "./components/overlay/widget-definition";
 export { formatCountdownMs } from "./components/overlay/lib/format-countdown";
 export { formatClockWidgetDisplay } from "./components/overlay/lib/format-clock-widget";
@@ -29,6 +30,14 @@ export {
 export type { IrlFieldWidgetRendererProps } from "./components/overlay/widgets/irl/IrlFieldWidgetRenderer";
 export { useIrlGeoData } from "./components/overlay/widgets/irl/use-irl-geo-data";
 export type { IrlConnectionStatus, IrlGeoListener } from "./components/overlay/widgets/irl/irl-ws-store";
+export { subscribeToIrlData } from "./components/overlay/widgets/irl/irl-ws-store";
+export {
+  resolveWidgetTemplate,
+  buildWidgetSrcdoc,
+  mergeFieldValues,
+  type WidgetFieldDef,
+  type WidgetFieldSchema,
+} from "./components/overlay/lib/resolve-widget-template";
 export {
   OverlaySceneCanvas,
   type OverlayWidgetProps,

@@ -40,7 +40,7 @@ async function computeStats(
     ? Math.round(viewerRows.reduce((s, r) => s + r.viewer_count, 0) / viewerRows.length)
     : 0;
   const follows = eventRows.filter((e) => e.event_type === "channel.follow").length;
-  const subs = eventRows.filter((e) => SUB_EVENT_TYPES.includes(e.event_type)).length;
+  const subs = eventRows.filter((e) => (SUB_EVENT_TYPES as readonly string[]).includes(e.event_type)).length;
 
   let durationSeconds: number | null = null;
   if (startedAt && endedAt) {

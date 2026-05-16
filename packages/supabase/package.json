@@ -68,6 +68,14 @@
     "./queries/smp": {
       "types": "./src/queries/smp.ts",
       "default": "./src/queries/smp.ts"
+    },
+    "./queries/irl": {
+      "types": "./src/queries/irl.ts",
+      "default": "./src/queries/irl.ts"
+    },
+    "./crypto": {
+      "types": "./src/crypto.ts",
+      "default": "./src/crypto.ts"
     }
   },
   "scripts": {

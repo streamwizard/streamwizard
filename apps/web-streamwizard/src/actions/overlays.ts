@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "crypto";
 import {
   createSceneSchema,
   overlayItemSchema,
@@ -454,4 +455,20 @@ export async function saveAllOverlayItems(
     };
   }
   return { success: true, error: null, data: reloaded.data };
+}
+
+export async function resetSceneSubscriberToken(sceneId: string): Promise<{ error: string | null }> {
+  let supabase, user;
+  try { ({ supabase, user } = await getAuthContext()); } catch { return { error: "Unauthorized" }; }
+
+  const newToken = randomBytes(32).toString("hex");
+  const { error } = await supabase
+    .from("overlay_scenes")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .update({ subscriber_token: newToken } as any)
+    .eq("id", sceneId)
+    .eq("user_id", user.id);
+
+  revalidatePath("/dashboard/overlays");
+  return { error: error?.message ?? null };
 }
