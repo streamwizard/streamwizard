@@ -1,30 +1,21 @@
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
+import type { NextConfig } from "next";
 
 /** Monorepo root (primary lockfile) — clears Turbopack multi-lockfile root warning */
 const turbopackRoot = path.resolve(__dirname, "../..");
 
-/**
- * Hydrate `process.env` from the repo root `.env*` (same semantics as `packages/env/src/index.ts`).
- * Bun and some workspaces do not resolve `@next/env` from `next.config.js`; keep this loader dependency-free.
- */
 function loadDotenvFilesIntoProcessEnv(fromDir: string) {
   const parseEnvContent = (envContent: string) => {
     envContent.split("\n").forEach((line) => {
       const trimmedLine = line.trim();
-
       if (!trimmedLine || trimmedLine.startsWith("#")) return;
-
-      const normalizedLine = trimmedLine.startsWith("export ")
-        ? trimmedLine.slice(7)
-        : trimmedLine;
-
+      const normalizedLine = trimmedLine.startsWith("export ") ? trimmedLine.slice(7) : trimmedLine;
       const [key, ...valueParts] = normalizedLine.split("=");
       if (key && valueParts.length > 0) {
         const rawValue = valueParts.join("=").trim();
         const value = rawValue.replace(/^["']|["']$/g, "");
         const envKey = key.trim();
-
         if (!process.env[envKey]) {
           process.env[envKey] = value;
         }
@@ -52,8 +43,7 @@ const overlaySceneFontsCsp = [
   "connect-src 'self'",
 ].join("; ");
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   turbopack: {
     root: turbopackRoot,
   },
@@ -74,6 +64,4 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
-
-
+export default nextConfig;
