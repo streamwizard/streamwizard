@@ -6,16 +6,20 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "dev-local": "next dev -H 0.0.0.0 --experimental-https"
   },
   "dependencies": {
+    "@repo/env": "workspace:*",
+    "@repo/supabase": "workspace:*",
+    "@repo/twitch-api": "workspace:*",
     "@repo/ui": "workspace:*",
     "@supabase/supabase-js": "^2.105.1",
-    "@t3-oss/env-nextjs": "^0.13.11",
+    "axios": "^1.13.5",
     "next": "16.2.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "zod": "^4.4.2"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

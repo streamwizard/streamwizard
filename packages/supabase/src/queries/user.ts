@@ -37,6 +37,70 @@ export async function getUserPreferences(client: DBClient) {
   return data;
 }
 
+export async function getTwitchIntegrationByUserId(client: DBClient, userId: string) {
+  return client
+    .from("integrations_twitch")
+    .select("twitch_user_id")
+    .eq("user_id", userId)
+    .single();
+}
+
+export async function getTwitchUserIdByUserIdMaybe(
+  client: DBClient,
+  userId: string
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("integrations_twitch")
+    .select("twitch_user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data?.twitch_user_id?.trim()) return null;
+  return data.twitch_user_id.trim();
+}
+
+export async function updateTwitchTokens(
+  client: DBClient,
+  userId: string,
+  tokens: {
+    access_token_ciphertext: string;
+    access_token_iv: string;
+    access_token_tag: string;
+    refresh_token_ciphertext: string;
+    refresh_token_iv: string;
+    refresh_token_tag: string;
+  }
+) {
+  return client.from("integrations_twitch").update(tokens).eq("user_id", userId);
+}
+
+export async function getTwitchIntegrationWithTokenByUserId(client: DBClient, userId: string) {
+  return client
+    .from("integrations_twitch")
+    .select("twitch_user_id, access_token_ciphertext")
+    .eq("user_id", userId)
+    .single();
+}
+
+export async function getAllTwitchIntegrations(client: DBClient) {
+  const { data, error } = await client.from("integrations_twitch").select("twitch_user_id, user_id");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function getTwitchIntegrationByBroadcasterId(client: DBClient, broadcasterId: string) {
+  return client.from("integrations_twitch").select("user_id").eq("twitch_user_id", broadcasterId).single();
+}
+
+export async function getUserPreferencesByUserId(client: DBClient, userId: string) {
+  const { data, error } = await client.from("user_preferences").select("*").eq("user_id", userId).single();
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw error;
+  }
+  return data;
+}
+
 export async function updateUserPreferences(
   client: DBClient,
   userId: string,

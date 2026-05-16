@@ -8,6 +8,10 @@
     "dev": {
       "cache": false
     },
+    "start": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
     "check-types": {
       "dependsOn": ["^check-types"]
     },

@@ -476,6 +476,97 @@ export type Database = {
           },
         ]
       }
+      irl_collector_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          last_used_at: string | null
+          name: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string | null
+          name?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "irl_collector_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      irl_geo_track: {
+        Row: {
+          accuracy: number | null
+          altitude: number | null
+          heading: number | null
+          id: string
+          inserted_at: string
+          latitude: number
+          longitude: number
+          recorded_at: string
+          session_id: string
+          speed: number | null
+          stream_id: string | null
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          altitude?: number | null
+          heading?: number | null
+          id?: string
+          inserted_at?: string
+          latitude: number
+          longitude: number
+          recorded_at: string
+          session_id: string
+          speed?: number | null
+          stream_id?: string | null
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          altitude?: number | null
+          heading?: number | null
+          id?: string
+          inserted_at?: string
+          latitude?: number
+          longitude?: number
+          recorded_at?: string
+          session_id?: string
+          speed?: number | null
+          stream_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "irl_geo_track_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "vods"
+            referencedColumns: ["stream_id"]
+          },
+        ]
+      }
       overlay_items: {
         Row: {
           config: Json
@@ -549,6 +640,7 @@ export type Database = {
           is_active: boolean
           name: string
           slug: string
+          subscriber_token: string
           updated_at: string
           user_id: string
           width: number
@@ -560,6 +652,7 @@ export type Database = {
           is_active?: boolean
           name: string
           slug: string
+          subscriber_token?: string
           updated_at?: string
           user_id: string
           width?: number
@@ -571,11 +664,57 @@ export type Database = {
           is_active?: boolean
           name?: string
           slug?: string
+          subscriber_token?: string
           updated_at?: string
           user_id?: string
           width?: number
         }
         Relationships: []
+      }
+      overlay_widget_instances: {
+        Row: {
+          created_at: string
+          field_values: Json
+          id: string
+          overlay_item_id: string
+          updated_at: string
+          user_id: string
+          widget_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_values?: Json
+          id?: string
+          overlay_item_id: string
+          updated_at?: string
+          user_id: string
+          widget_id: string
+        }
+        Update: {
+          created_at?: string
+          field_values?: Json
+          id?: string
+          overlay_item_id?: string
+          updated_at?: string
+          user_id?: string
+          widget_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overlay_widget_instances_overlay_item_id_fkey"
+            columns: ["overlay_item_id"]
+            isOneToOne: false
+            referencedRelation: "overlay_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overlay_widget_instances_widget_id_fkey"
+            columns: ["widget_id"]
+            isOneToOne: false
+            referencedRelation: "widgets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pending_clips: {
         Row: {
@@ -1160,6 +1299,98 @@ export type Database = {
           },
         ]
       }
+      widget_library_entries: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          installs: number
+          is_approved: boolean
+          likes: number
+          tags: string[]
+          title: string
+          user_id: string
+          widget_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          installs?: number
+          is_approved?: boolean
+          likes?: number
+          tags?: string[]
+          title: string
+          user_id: string
+          widget_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          installs?: number
+          is_approved?: boolean
+          likes?: number
+          tags?: string[]
+          title?: string
+          user_id?: string
+          widget_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "widget_library_entries_widget_id_fkey"
+            columns: ["widget_id"]
+            isOneToOne: false
+            referencedRelation: "widgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      widgets: {
+        Row: {
+          created_at: string
+          description: string
+          extra_css: string
+          fields: Json
+          html: string
+          id: string
+          js: string
+          name: string
+          preview_url: string | null
+          tags: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          extra_css?: string
+          fields?: Json
+          html?: string
+          id?: string
+          js?: string
+          name: string
+          preview_url?: string | null
+          tags?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          extra_css?: string
+          fields?: Json
+          html?: string
+          id?: string
+          js?: string
+          name?: string
+          preview_url?: string | null
+          tags?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1229,6 +1460,10 @@ export type Database = {
       }
       get_stream_data: { Args: { p_video_id: string }; Returns: Json }
       get_user_twitch_ids: { Args: never; Returns: string[] }
+      increment_widget_installs: {
+        Args: { entry_id: string }
+        Returns: undefined
+      }
       insert_discord_integration: {
         Args: { integration_id: string; provider_data: Json; user_id: string }
         Returns: undefined

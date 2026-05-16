@@ -1,10 +1,20 @@
 export type GoogleFontFamily = string;
 export const DEFAULT_GOOGLE_FONT_FAMILY: GoogleFontFamily = "Inter";
 
-function isValidGoogleFontFamilyName(v: string): boolean {
+export function isValidGoogleFontFamilyName(v: string): boolean {
   const t = v.trim();
   return t.length > 0 && t.length <= 200 && !/[<>]/.test(t);
 }
+
+export const IRL_FIELD_WIDGET_TYPES = [
+  "irl_speed_widget",
+  "irl_heading_widget",
+  "irl_altitude_widget",
+  "irl_latitude_widget",
+  "irl_longitude_widget",
+  "irl_accuracy_widget",
+] as const;
+export type IrlFieldWidgetType = (typeof IRL_FIELD_WIDGET_TYPES)[number];
 
 export const OVERLAY_ITEM_TYPES = [
   "clips_widget",
@@ -12,6 +22,8 @@ export const OVERLAY_ITEM_TYPES = [
   "text_widget",
   "timer_widget",
   "clock_widget",
+  "custom_widget",
+  ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 export type OverlayItemType = (typeof OVERLAY_ITEM_TYPES)[number];
 
@@ -21,6 +33,8 @@ export const ROOT_OVERLAY_ITEM_TYPES = [
   "text_widget",
   "timer_widget",
   "clock_widget",
+  "custom_widget",
+  ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 export type RootOverlayItemType = (typeof ROOT_OVERLAY_ITEM_TYPES)[number];
 
@@ -150,12 +164,58 @@ export interface ClockWidgetItemConfig extends OverlayTextStyle {
   layout: ClockLayoutMode;
 }
 
+/** Persisted on `overlay_items` rows with any `irl_*_widget` type. */
+export interface IrlFieldWidgetItemConfig extends OverlayTextStyle {
+  /** Only meaningful when `item.type === "irl_speed_widget"`. */
+  unit: "kmh" | "mph";
+  mockData: boolean;
+}
+
+export const DEFAULT_IRL_FIELD_WIDGET_ITEM_CONFIG: IrlFieldWidgetItemConfig = {
+  unit: "kmh",
+  mockData: false,
+  fontSize: 28,
+  color: "#ffffff",
+  align: "left",
+  fontWeight: 600,
+  fontFamily: DEFAULT_GOOGLE_FONT_FAMILY,
+};
+
+/** Raw GPS data sent from the phone over WebSocket. */
+export interface GeoPayload {
+  latitude: number;
+  longitude: number;
+  altitude: number | null;
+  speed: number | null;
+  heading: number | null;
+  accuracy: number;
+  timestamp: number;
+}
+
+/** @deprecated Use OverlaySocketMessage from @repo/types instead. */
+export type IrlSocketMessage =
+  | { type: "streamwizard.geo"; payload: GeoPayload }
+  | { type: "streamwizard.status"; payload: { status: "offline" } };
+
+/** Config for a custom user-authored widget placed on an overlay scene. */
+export interface CustomWidgetItemConfig {
+  widget_id: string;
+  instance_id: string;
+}
+
+export const DEFAULT_CUSTOM_WIDGET_ITEM_CONFIG: CustomWidgetItemConfig = {
+  widget_id: "",
+  instance_id: "",
+};
+
 export type OverlayItemConfig =
   | ClipsWidgetItemConfig
   | ClipDisplayFieldItemConfig
   | TextWidgetItemConfig
   | TimerWidgetItemConfig
-  | ClockWidgetItemConfig;
+  | ClockWidgetItemConfig
+  | IrlFieldWidgetItemConfig
+  | CustomWidgetItemConfig;
 
 /**
  * Flattened shape used by the clip preview, API, and query builder: parent row + display field children merged.
@@ -189,6 +249,7 @@ export interface OverlayScene {
   user_id: string;
   name: string;
   slug: string;
+  subscriber_token: string;
   width: number;
   height: number;
   is_active: boolean;
@@ -378,6 +439,12 @@ export function asClockWidgetConfig(
   config: OverlayItemConfig
 ): ClockWidgetItemConfig {
   return config as ClockWidgetItemConfig;
+}
+
+export function asCustomWidgetConfig(
+  config: OverlayItemConfig
+): CustomWidgetItemConfig {
+  return config as CustomWidgetItemConfig;
 }
 
 /** Runtime-safe family for editors / renderers (older rows may omit `fontFamily`). */
@@ -615,6 +682,21 @@ export function resolvedDisplayFieldLocks(
     ...DEFAULT_CLIPS_WIDGET_CONFIG.displayFieldLocks,
     ...config.displayFieldLocks,
   };
+}
+
+/**
+ * Normalized clip data passed to `ClipsWidgetRenderer`.
+ * The renderer never fetches clips — containers map their data source to this shape.
+ */
+export interface ClipDataRow {
+  clipId: string;
+  broadcasterId: string;
+  title: string;
+  creatorName: string;
+  gameName: string | null;
+  createdAtTwitch: string;
+  viewCount: number | null;
+  durationSec: number | null;
 }
 
 /** DB row shape from `overlay_items` before typing `type` / `config`. */

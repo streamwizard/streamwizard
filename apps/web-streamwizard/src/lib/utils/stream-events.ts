@@ -1,4 +1,10 @@
 import { LucideIcon, Tv, UserPlus, MessageSquare, Zap, Swords, Ban, Gift, Bell, Settings, Users, Megaphone, AlertCircle, CheckCircle2, HandMetal, Scissors, Flag } from "lucide-react";
+
+export const SUB_EVENT_TYPES = [
+  "channel.subscribe",
+  "channel.subscription.message",
+  "channel.subscription.gift",
+] as const;
 import { StreamEvent, StreamEventType } from "@/types/stream-events";
 
 /**

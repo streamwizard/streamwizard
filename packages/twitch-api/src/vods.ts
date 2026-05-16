@@ -38,21 +38,25 @@ export class TwitchVodsClient extends TwitchApiBaseClient {
     super(broadcaster_id);
   }
 
+  /** Retrieve VODs (videos) filtered by user, game, or ID. */
   async getVods(params: GetVodsParams): Promise<{ data: Vod[]; pagination?: { cursor?: string } }> {
     const response = await this.clientApi().get("/videos", { params });
     return response.data;
   }
 
+  /** Retrieve a single VOD by its numeric video ID. */
   async getVodById(vodId: string): Promise<Vod | undefined> {
     const response = await this.clientApi().get("/videos", { params: { id: vodId } });
     return response.data.data?.[0];
   }
 
+  /** Retrieve the most recent VODs for a broadcaster. */
   async getVodByBroadcasterId(broadcasterId: string): Promise<GetVodsResponse> {
     const response = await this.clientApi().get<GetVodsResponse>("/videos", { params: { user_id: broadcasterId } });
     return response.data;
   }
 
+  /** Delete one or more VODs by ID. Requires `channel:manage:videos` scope. */
   async deleteVods(videoIds: string[]): Promise<string[]> {
     if (!videoIds.length) return [];
     const params = new URLSearchParams();

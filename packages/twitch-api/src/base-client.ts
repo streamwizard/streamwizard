@@ -132,7 +132,7 @@ export abstract class TwitchApiBaseClient {
 
         config.headers["Client-Id"] = env.TWITCH_CLIENT_ID;
         config.headers["Content-Type"] = "application/json";
-        config.headers["Authorization"] = `Bearer ${access_token}`;
+        config.headers["Authorization"] = `Bearer ${token}`;
         return config;
       },
       (error) => {

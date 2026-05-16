@@ -4,10 +4,11 @@ import type { OverlayItem } from "@/types/overlays";
 import {
   createClipDisplayFieldChildItems,
   DEFAULT_CLIPS_WIDGET_ITEM_CONFIG,
-} from "@/types/overlays";
+  CLIPS_WIDGET_DEFAULT_SIZE,
+} from "@repo/ui/overlay";
 import type { CreateRootItemContext } from "../../registry/overlay-widget-registry.types";
 
-export const CLIPS_WIDGET_DEFAULT_SIZE = { w: 400, h: 300 } as const;
+export { CLIPS_WIDGET_DEFAULT_SIZE } from "@repo/ui/overlay";
 
 export function createClipsWidgetRootItems(
   ctx: CreateRootItemContext

@@ -1,4 +1,5 @@
 import { supabase } from "@repo/supabase";
+import { insertViewerCount } from "@repo/supabase/queries/viewer-counts";
 import { TwitchApi } from "@repo/twitch-api";
 
 /**
@@ -91,7 +92,7 @@ class ViewerCountPoller {
       const offsetSeconds = Math.floor((now.getTime() - streamStartedAt.getTime()) / 1000);
 
       // Insert viewer count record
-      const { error } = await supabase.from("stream_viewer_counts").insert({
+      await insertViewerCount(supabase, {
         stream_id: streamId,
         broadcaster_id: broadcasterId,
         viewer_count: stream.viewer_count,
@@ -101,11 +102,6 @@ class ViewerCountPoller {
         offset_seconds: offsetSeconds,
         recorded_at: now.toISOString(),
       });
-
-      if (error) {
-        console.error(`[ViewerCountPoller] Error inserting viewer count:`, error);
-        return;
-      }
 
       console.log(
         `[ViewerCountPoller] Recorded ${stream.viewer_count} viewers for ${broadcasterId} ` +

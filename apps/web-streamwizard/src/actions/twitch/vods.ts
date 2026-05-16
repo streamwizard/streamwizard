@@ -5,7 +5,7 @@ import { createClient } from "@repo/supabase/next/server";
 import { getBroadcasterId as _getBroadcasterId } from "@repo/supabase/queries/user";
 import { getCurrentStreamDetails as _getCurrentStreamDetails, getStreamData as _getStreamData, createPendingClip } from "@repo/supabase/queries/vods";
 import type { TwitchVideo, GetVideosResponse } from "@/types/twitch";
-import type { GetVideosResult, DeleteVideosResult, CreateClipResult, TwitchStreamMarkersResponse, GetStreamMarkersResult, CreateStreamMarkerResponse } from "@/types/twitch video";
+import type { GetVideosResult, DeleteVideosResult, CreateClipResult, TwitchStreamMarkersResponse, GetStreamMarkersResult, CreateStreamMarkerResponse } from "@/types/twitch-video";
 import type { GetStreamDataResult, StreamEvent, Clip } from "@/types/stream-events";
 import { ActionResponse } from "@/types/actions";
 

@@ -1,0 +1,20 @@
+{
+  "name": "@repo/ws-server",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "bun run --hot src/index.ts",
+    "start": "bun run ./src/index.ts",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@repo/env": "workspace:*",
+    "@repo/supabase": "workspace:*",
+    "@repo/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/bun": "^1.3.6",
+    "typescript": "5.9.2"
+  }
+}

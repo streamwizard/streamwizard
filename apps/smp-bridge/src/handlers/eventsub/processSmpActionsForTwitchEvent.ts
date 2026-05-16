@@ -1,4 +1,5 @@
 import { supabase } from "@repo/supabase";
+import { getSmpActionsByTrigger } from "@repo/supabase/queries/smp";
 import type { EventSubSubscriptionType } from "@repo/types";
 import customLogger from "@/lib/logger";
 import type { SmpBridgeHandlerContext } from "../eventHandler";
@@ -136,21 +137,17 @@ export async function processSmpActionsForTwitchEvent(
   context: SmpBridgeHandlerContext,
 ): Promise<void> {
   console.log("Processing SMP actions for Twitch event:", eventType);
-  const { data, error } = await supabase
-    .from("smp_actions")
-    .select("id, name, action, metadata")
-    .eq("trigger", eventType);
-
-  if (error) {
+  let actionRows: SmpActionRow[];
+  try {
+    actionRows = (await getSmpActionsByTrigger(supabase, eventType)) as SmpActionRow[];
+  } catch (error) {
     customLogger.error(
-      `Failed to load smp_actions for '${eventType}': ${error.message}`,
+      `Failed to load smp_actions for '${eventType}': ${error instanceof Error ? error.message : String(error)}`,
     );
     return;
   }
 
-  if (!data || data.length === 0) return;
-
-  const actionRows = data as SmpActionRow[];
+  if (!actionRows.length) return;
 
   console.log("Matching rows:", actionRows);
 
