@@ -1,0 +1,29 @@
+# Git
+.git
+.gitignore
+
+# Docs
+*.md
+docs
+LICENSE
+
+# Node / Bun
+node_modules
+**/node_modules
+
+# Next.js build output
+**/.next
+**/out
+
+# Turbo cache
+.turbo
+**/.turbo
+
+# Local env files
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Misc
+tmp
+.DS_Store
