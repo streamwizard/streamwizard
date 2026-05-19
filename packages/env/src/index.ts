@@ -128,7 +128,7 @@ const envSchema = z.object(
     TWITCH_CONDUIT_ID: z.string().optional(),
 
     // Overlay WebSocket server (required by streamwizard-bot to push events)
-    WS_SERVER_URL: z.string().url().optional(),
+    WS_SERVER_URL: z.string(),
 
     // // Discord Bot
     // DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
