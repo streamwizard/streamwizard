@@ -9,4 +9,13 @@ export function createAdminClient() {
   );
 }
 
-export const supabaseAdmin = createAdminClient();
+let _supabaseAdmin: ReturnType<typeof createAdminClient> | undefined;
+
+export const supabaseAdmin = new Proxy({} as ReturnType<typeof createAdminClient>, {
+  get(_, prop, receiver) {
+    if (!_supabaseAdmin) {
+      _supabaseAdmin = createAdminClient();
+    }
+    return Reflect.get(_supabaseAdmin, prop, receiver);
+  },
+});
