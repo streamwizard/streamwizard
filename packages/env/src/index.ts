@@ -49,7 +49,11 @@ const findEnvPath = () => {
 
   // /*turbopackIgnore: true*/ prevents Turbopack from tracing process.cwd() across
   // the whole project tree when building Next.js apps.
-  return searchFrom(join(/*turbopackIgnore: true*/ process.cwd(), ".")) ?? searchFrom(__dirname) ?? null;
+  return (
+    searchFrom(join(/*turbopackIgnore: true*/ process.cwd(), ".")) ??
+    searchFrom(__dirname) ??
+    null
+  );
 };
 
 // Load env file by searching upward from cwd and package path.
@@ -76,7 +80,10 @@ if (!process.env.TWITCH_CLIENT_ID && process.env.NEXT_PUBLIC_TWITCH_CLIENT_ID) {
 if (!process.env.SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_URL) {
   process.env.SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 }
-if (!process.env.SUPABASE_ANON_KEY && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+if (
+  !process.env.SUPABASE_ANON_KEY &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+) {
   process.env.SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 }
 if (!process.env.SUPABASE_SECRET_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -87,43 +94,47 @@ if (!process.env.SUPABASE_SECRET_KEY && process.env.SUPABASE_SERVICE_ROLE_KEY) {
  * Environment variables schema
  * These are validated at runtime and must be present for the app to start
  */
-const envSchema = z.object({
-  // Twitch API Configuration (required by services that call Twitch Helix / EventSub)
-  TWITCH_CLIENT_ID: z.string().min(1).optional(),
-  TWITCH_CLIENT_SECRET: z.string().min(1).optional(),
-  TWITCH_WEBHOOK_SECRET: z.string().min(1).optional(),
+const envSchema = z.object(
+  {
+    // Twitch API Configuration (required by services that call Twitch Helix / EventSub)
+    TWITCH_CLIENT_ID: z.string().min(1).optional(),
+    TWITCH_CLIENT_SECRET: z.string().min(1).optional(),
+    TWITCH_WEBHOOK_SECRET: z.string().min(1).optional(),
 
-  // Encryption Configuration (required by services that store/refresh Twitch tokens)
-  TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
+    // Encryption Configuration (required by services that store/refresh Twitch tokens)
+    TOKEN_ENCRYPTION_KEY: z.string().min(1).optional(),
 
-  // Supabase Configuration
-  SUPABASE_URL: z.string().url("SUPABASE_URL must be a valid URL"),
-  SUPABASE_ANON_KEY: z.string().min(1).optional(), // required by Next.js apps, not backend workers
-  SUPABASE_SECRET_KEY: z.string().min(1, "SUPABASE_SECRET_KEY is required"),
+    // Supabase Configuration
+    SUPABASE_URL: z.string().url("SUPABASE_URL must be a valid URL"),
+    SUPABASE_ANON_KEY: z.string().min(1).optional(), // required by Next.js apps, not backend workers
+    SUPABASE_SECRET_KEY: z.string().min(1, "SUPABASE_SECRET_KEY is required"),
 
-  // Environment
-  NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
+    // Environment
+    NODE_ENV: z
+      .enum(["development", "production", "test"])
+      .default("development"),
 
-  // Minecraft WebSocket (only required by the bot service)
-  MINECRAFT_WS_AUTH_TOKEN: z.string().optional(),
+    // Minecraft WebSocket (only required by the bot service)
+    MINECRAFT_WS_AUTH_TOKEN: z.string().optional(),
 
-  // InfluxDB Configuration (optional - metrics disabled if not set)
-  INFLUXDB_URL: z.string().url().optional(),
-  INFLUXDB_TOKEN: z.string().optional(),
-  INFLUXDB_ORG: z.string().optional(),
-  INFLUXDB_BUCKET: z.string().optional(),
+    // InfluxDB Configuration (optional - metrics disabled if not set)
+    INFLUXDB_URL: z.string().url().optional(),
+    INFLUXDB_TOKEN: z.string().optional(),
+    INFLUXDB_ORG: z.string().optional(),
+    INFLUXDB_BUCKET: z.string().optional(),
 
-  // Web app / StreamWizard API (optional for backend-only services)
-  STREAMWIZARD_API_URL: z.string().url().optional(),
-  TWITCH_CONDUIT_ID: z.string().optional(),
+    // Web app / StreamWizard API (optional for backend-only services)
+    STREAMWIZARD_API_URL: z.string().url().optional(),
+    TWITCH_CONDUIT_ID: z.string().optional(),
 
-  // Overlay WebSocket server (required by streamwizard-bot to push events)
-  OVERLAY_WS_URL: z.string().url().optional(),
+    // Overlay WebSocket server (required by streamwizard-bot to push events)
+    OVERLAY_WS_URL: z.string().url().optional(),
 
-  // // Discord Bot
-  // DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
-  // DISCORD_CLIENT_ID: z.string().min(1, "DISCORD_CLIENT_ID is required"),
-});
+    // // Discord Bot
+    // DISCORD_TOKEN: z.string().min(1, "DISCORD_TOKEN is required"),
+    // DISCORD_CLIENT_ID: z.string().min(1, "DISCORD_CLIENT_ID is required"),
+  },
+);
 
 /**
  * Validates and parses environment variables
