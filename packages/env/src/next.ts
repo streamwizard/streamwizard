@@ -76,4 +76,5 @@ export const env = createEnv({
     NEXT_PUBLIC_OVERLAY_URL: process.env.NEXT_PUBLIC_OVERLAY_URL,
     NEXT_PUBLIC_IRL_WS_URL: process.env.NEXT_PUBLIC_IRL_WS_URL,
   },
+  skipValidation: true
 });
