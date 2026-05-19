@@ -141,6 +141,10 @@ const envSchema = z.object(
  * Throws an error with detailed message if validation fails
  */
 function validateEnv() {
+  if (process.env.SKIP_ENV_VALIDATION === "true") {
+    return {} as z.infer<typeof envSchema>;
+  }
+
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {

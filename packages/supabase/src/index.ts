@@ -6,7 +6,16 @@ import { encryptToken, decryptToken } from "./crypto";
 
 export type { Database, Json } from "./types/supabase";
 
-export const supabase = createClient<Database>(env.SUPABASE_URL, env.SUPABASE_SECRET_KEY);
+let _supabase: ReturnType<typeof createClient<Database>> | undefined;
+
+export const supabase = new Proxy({} as ReturnType<typeof createClient<Database>>, {
+  get(_, prop, receiver) {
+    if (!_supabase) {
+      _supabase = createClient<Database>(env.SUPABASE_URL!, env.SUPABASE_SECRET_KEY!);
+    }
+    return Reflect.get(_supabase, prop, receiver);
+  },
+});
 
 type TwitchIntegration = Database["public"]["Tables"]["integrations_twitch"]["Row"];
 
