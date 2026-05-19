@@ -66,7 +66,7 @@ export const env = createEnv({
     NEXT_PUBLIC_BASE_URL: urlOrDefault(z.string().url(), "http://localhost:3000"),
     NEXT_PUBLIC_TWITCH_CLIENT_ID: z.string().min(1),
     NEXT_PUBLIC_OVERLAY_URL: urlOrDefault(z.string().url(), "http://localhost:3001"),
-    NEXT_PUBLIC_WS_SERVER_URL: urlOrDefault(z.string().url(), "ws://localhost:3009"),
+    NEXT_PUBLIC_WS_SERVER_URL: z.string(),
   },
   experimental__runtimeEnv: {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

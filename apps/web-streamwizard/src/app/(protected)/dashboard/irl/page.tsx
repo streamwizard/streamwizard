@@ -3,12 +3,11 @@ import { IrlTokensClient } from "./irl-tokens-client";
 import { IrlLiveMap } from "@/components/irl/irl-live-map";
 import { IrlSetupGuide } from "./irl-setup-guide";
 import { MapPin } from "lucide-react";
+import { env } from "@repo/env/next";
 
 export default async function IrlPage() {
-  const [{ data: tokens, error }, { data: subscriberToken }] = await Promise.all([
-    listIrlTokens(),
-    getIrlSubscriberToken(),
-  ]);
+  const [{ data: tokens, error }, { data: subscriberToken }] =
+    await Promise.all([listIrlTokens(), getIrlSubscriberToken()]);
 
   const hasDevices = (tokens ?? []).length > 0;
 
@@ -19,7 +18,8 @@ export default async function IrlPage() {
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">IRL Collector</h1>
           <p className="text-muted-foreground text-sm">
-            Stream your real-time GPS location to your OBS overlays while broadcasting on the go.
+            Stream your real-time GPS location to your OBS overlays while
+            broadcasting on the go.
           </p>
         </div>
       </div>
@@ -49,13 +49,15 @@ export default async function IrlPage() {
           {subscriberToken ? (
             <IrlLiveMap
               subscriberToken={subscriberToken}
-              wsUrl={process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "ws://localhost:8000"}
+              wsUrl={env.NEXT_PUBLIC_WS_SERVER_URL ?? "ws://localhost:8000"}
               mapHeight="h-[320px]"
             />
           ) : (
             <div className="rounded-xl border border-dashed bg-muted/30 flex flex-col items-center justify-center gap-2 h-[320px] text-center">
               <MapPin className="h-6 w-6 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">Create an overlay to enable the live map.</p>
+              <p className="text-sm text-muted-foreground">
+                Create an overlay to enable the live map.
+              </p>
             </div>
           )}
         </div>
