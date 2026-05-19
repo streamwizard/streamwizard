@@ -5,7 +5,7 @@ import { env } from "@repo/env";
 import { overlayWsClient } from "./overlay-ws-client";
 
 const production = "wss://eventsub.wss.twitch.tv/ws";
-const websocketUrl = "ws://localhost:8000";
+const websocketUrl = env.WS_SERVER_URL;
 
 async function main() {
   try {
