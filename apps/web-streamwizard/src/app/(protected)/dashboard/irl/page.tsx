@@ -49,7 +49,7 @@ export default async function IrlPage() {
           {subscriberToken ? (
             <IrlLiveMap
               subscriberToken={subscriberToken}
-              wsUrl={process.env.NEXT_PUBLIC_IRL_WS_URL ?? "ws://localhost:8000"}
+              wsUrl={process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "ws://localhost:8000"}
               mapHeight="h-[320px]"
             />
           ) : (
