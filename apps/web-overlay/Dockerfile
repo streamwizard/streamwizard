@@ -55,6 +55,15 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
+# Skip env validation during build — secrets are only needed at runtime.
+ARG SKIP_ENV_VALIDATION=true
+ENV SKIP_ENV_VALIDATION=$SKIP_ENV_VALIDATION
+
+# Build-time public env vars — Next.js bakes NEXT_PUBLIC_* into the client bundle.
+# Must be passed as --build-arg in Dokploy (Build Arguments section).
+ARG NEXT_PUBLIC_WS_SERVER_URL
+ENV NEXT_PUBLIC_WS_SERVER_URL=$NEXT_PUBLIC_WS_SERVER_URL
+
 # Run next build from the app directory so bun resolves binaries from the local node_modules
 WORKDIR /app/apps/web-overlay
 RUN bun run build
