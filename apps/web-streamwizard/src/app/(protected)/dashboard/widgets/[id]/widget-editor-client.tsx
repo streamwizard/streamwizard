@@ -259,7 +259,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     }
 
     setWsStatus("connecting");
-    const ws = new WebSocket(`${env.NEXT_PUBLIC_IRL_WS_URL}/ws?role=subscriber&token=${encodeURIComponent(token)}`);
+    const ws = new WebSocket(`${env.NEXT_PUBLIC_WS_SERVER_URL}/ws?role=subscriber&token=${encodeURIComponent(token)}`);
     wsRef.current = ws;
 
     ws.onopen = () => setWsStatus("connected");
