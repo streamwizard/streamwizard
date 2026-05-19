@@ -36,7 +36,7 @@ export function useIrlGeoData(
       setState({ geo: null, status: "connecting" });
       return;
     }
-    const wsUrl = process.env.NEXT_PUBLIC_IRL_WS_URL ?? "ws://localhost:3009";
+    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "ws://localhost:3009";
     return subscribeToIrlData(subscriberToken, wsUrl, (geo, status) => setState({ geo, status }));
   }, [subscriberToken, mockData]);
 

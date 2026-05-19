@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { env } from "@repo/env/next";
 
 type Status = "acquiring" | "connecting" | "connected" | "disconnected";
 
@@ -35,7 +36,7 @@ export default function IrlCollectorPage() {
     }
 
     function connect() {
-      const wsUrl = process.env.NEXT_PUBLIC_IRL_WS_URL ?? "ws://10.10.10.73:8000";
+      const wsUrl = env.NEXT_PUBLIC_WS_SERVER_URL ?? "ws://10.10.10.73:8000";
       setStatus("connecting");
 
       const ws = new WebSocket(
