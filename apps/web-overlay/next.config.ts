@@ -32,15 +32,17 @@ function loadDotenvFilesIntoProcessEnv(fromDir: string) {
 
 loadDotenvFilesIntoProcessEnv(turbopackRoot);
 
+const wsServerUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
+
 /** OBS-friendly fonts CSP for the overlay scene viewer (optional hardening). */
 const overlaySceneFontsCsp = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob:",
   "media-src 'self' blob: data:",
-  "connect-src 'self'",
+  `connect-src 'self'${wsServerUrl ? ` ${wsServerUrl}` : ""}`,
 ].join("; ");
 
 const nextConfig: NextConfig = {

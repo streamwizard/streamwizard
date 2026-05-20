@@ -5,8 +5,15 @@ declare const process: { env: Record<string, string | undefined> };
 
 import { useEffect, useState } from "react";
 import type { GeoPayload } from "../../types";
-import type { IrlConnectionStatus } from "./irl-ws-store";
-import { subscribeToIrlData } from "./irl-ws-store";
+import { subscribeToWsRoom } from "../../lib/ws-store";
+
+export type IrlConnectionStatus = "connecting" | "connected" | "offline" | "disconnected";
+
+type IrlMessage =
+  | { type: "ws:open" }
+  | { type: "ws:close" }
+  | { type: "streamwizard.geo"; status: "connected"; payload: GeoPayload }
+  | { type: "streamwizard.geo"; status: "offline" };
 
 const MOCK_GEO: GeoPayload = {
   latitude: 52.37403,
@@ -37,7 +44,20 @@ export function useIrlGeoData(
       return;
     }
     const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "ws://localhost:3009";
-    return subscribeToIrlData(subscriberToken, wsUrl, (geo, status) => setState({ geo, status }));
+    return subscribeToWsRoom(subscriberToken, wsUrl, (raw) => {
+      const msg = raw as IrlMessage;
+      if (msg.type === "ws:open") {
+        setState((s) => ({ ...s, status: "connected" }));
+      } else if (msg.type === "ws:close") {
+        setState((s) => ({ ...s, status: "disconnected" }));
+      } else if (msg.type === "streamwizard.geo") {
+        if (msg.status === "offline") {
+          setState((s) => ({ ...s, status: "offline" }));
+        } else {
+          setState({ geo: msg.payload, status: "connected" });
+        }
+      }
+    });
   }, [subscriberToken, mockData]);
 
   return state;
