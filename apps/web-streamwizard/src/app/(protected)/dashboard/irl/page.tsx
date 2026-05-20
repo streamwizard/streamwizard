@@ -3,7 +3,6 @@ import { IrlTokensClient } from "./irl-tokens-client";
 import { IrlLiveMap } from "@/components/irl/irl-live-map";
 import { IrlSetupGuide } from "./irl-setup-guide";
 import { MapPin } from "lucide-react";
-import { env } from "@repo/env/next";
 
 export default async function IrlPage() {
   const [{ data: tokens, error }, { data: subscriberToken }] =
@@ -49,7 +48,6 @@ export default async function IrlPage() {
           {subscriberToken ? (
             <IrlLiveMap
               subscriberToken={subscriberToken}
-              wsUrl={env.NEXT_PUBLIC_WS_SERVER_URL ?? "ws://localhost:8000"}
               mapHeight="h-[320px]"
             />
           ) : (

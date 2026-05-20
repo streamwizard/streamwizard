@@ -1,16 +1,16 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { asCustomWidgetConfig } from "@/types/overlays";
 import type { CustomWidgetItemConfig } from "@/types/overlays";
 import type { OverlayCanvasProps } from "../../registry/overlay-widget-registry.types";
 import { getWidget, getOrCreateWidgetInstance } from "@/actions/widgets";
-import { buildWidgetSrcdoc, mergeFieldValues } from "@repo/ui/overlay";
+import { CustomWidgetIframe, buildWidgetSrcdoc, mergeFieldValues } from "@repo/ui/overlay";
 
-function CustomWidgetCanvasInner({ item }: OverlayCanvasProps) {
+function CustomWidgetCanvasInner({ item, scene }: OverlayCanvasProps) {
   const cfg = asCustomWidgetConfig(item.config);
   const [srcdoc, setSrcdoc] = useState<string | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [fieldData, setFieldData] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     if (!cfg.widget_id) return;
@@ -26,7 +26,8 @@ function CustomWidgetCanvasInner({ item }: OverlayCanvasProps) {
       }
 
       const merged = mergeFieldValues(widget.fields, fieldValues);
-      setSrcdoc(buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, widget.fields, merged));
+      setFieldData(merged);
+      setSrcdoc(buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, widget.fields, fieldValues));
     }
 
     load();
@@ -51,12 +52,12 @@ function CustomWidgetCanvasInner({ item }: OverlayCanvasProps) {
   }
 
   return (
-    <iframe
-      ref={iframeRef}
-      srcDoc={srcdoc}
-      sandbox="allow-scripts"
-      className="w-full h-full border-0"
-      style={{ pointerEvents: "none", background: "transparent", colorScheme: "normal" }}
+    <CustomWidgetIframe
+      srcdoc={srcdoc}
+      fieldData={fieldData}
+      subscriberToken={scene.subscriber_token}
+      className="w-full h-full"
+      style={{ pointerEvents: "none" }}
       title="custom widget preview"
     />
   );

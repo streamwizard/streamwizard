@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { subscribeToIrlData, type IrlConnectionStatus, type GeoPayload } from "@repo/ui/overlay";
+import { useIrlGeoData, type IrlConnectionStatus, type GeoPayload } from "@repo/ui/overlay";
 import { MapMarker, MarkerContent, MapControls } from "@/components/ui/map";
 
 const Map = dynamic(() => import("@/components/ui/map").then((m) => m.Map), { ssr: false });
@@ -11,21 +10,11 @@ import { cn } from "@/lib/utils";
 
 interface Props {
   subscriberToken: string;
-  wsUrl: string;
   mapHeight?: string;
 }
 
-export function IrlLiveMap({ subscriberToken, wsUrl, mapHeight = "h-[380px]" }: Props) {
-  const [geo, setGeo] = useState<GeoPayload | null>(null);
-  const [status, setStatus] = useState<IrlConnectionStatus>("connecting");
-
-  useEffect(() => {
-    const unsub = subscribeToIrlData(subscriberToken, wsUrl, (g: GeoPayload | null, s: IrlConnectionStatus) => {
-      setGeo(g);
-      setStatus(s);
-    });
-    return unsub;
-  }, [subscriberToken, wsUrl]);
+export function IrlLiveMap({ subscriberToken, mapHeight = "h-[380px]" }: Props) {
+  const { geo, status } = useIrlGeoData(subscriberToken, false);
 
   const isLive = status === "connected" && geo !== null;
 

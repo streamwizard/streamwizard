@@ -8,8 +8,8 @@ import type { Widget } from "@/actions/widgets";
 import { updateWidget, publishWidgetToLibrary, getActiveSubscriberToken } from "@/actions/widgets";
 import { env } from "@repo/env/next";
 import { WIDGET_EDITOR_DECLARATIONS } from "@repo/schemas";
-import { buildWidgetSrcdoc, mergeFieldValues } from "@repo/ui/overlay";
-import type { WidgetFieldSchema } from "@repo/ui/overlay";
+import { buildWidgetSrcdoc, mergeFieldValues, CustomWidgetIframe } from "@repo/ui/overlay";
+import type { WidgetFieldSchema, CustomWidgetIframeHandle } from "@repo/ui/overlay";
 import { Button } from "@repo/ui";
 import { Input } from "@repo/ui";
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui";
@@ -211,7 +211,18 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   const [publishDesc, setPublishDesc] = useState(widget.description ?? "");
   const [publishTags, setPublishTags] = useState(widget.tags?.join(", ") ?? "");
   const [isPublishing, startPublish] = useTransition();
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const widgetRef = useRef<CustomWidgetIframeHandle>(null);
+  const hotReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [srcdoc, setSrcdoc] = useState(() => {
+    const fields = coerceFields(widget.fields as WidgetFieldSchema);
+    const defaults = mergeFieldValues(fields, {});
+    return buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, fields, defaults);
+  });
+  const [fieldData, setFieldData] = useState<Record<string, unknown>>(() => {
+    const fields = coerceFields(widget.fields as WidgetFieldSchema);
+    return mergeFieldValues(fields, {});
+  });
+  const [refreshKey, setRefreshKey] = useState(0);
   const [wsEnabled, setWsEnabled] = useState(false);
   const [wsStatus, setWsStatus] = useState<WsStatus>("disconnected");
   const wsRef = useRef<WebSocket | null>(null);
@@ -222,25 +233,6 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     getActiveSubscriberToken().then(({ token }) => {
       subscriberTokenRef.current = token;
     });
-  }, []);
-
-  function sendWidgetLoad() {
-    const fields = parsedFields() ?? (widget.fields as WidgetFieldSchema);
-    const defaults = mergeFieldValues(fields, {});
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: "onWidgetLoad", payload: { fieldData: defaults, channel: { user_id: "" }, session: {} } },
-      "*"
-    );
-  }
-
-  // Set initial preview once — after that only Save/Refresh update it
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    iframe.srcdoc = buildPreview();
-    iframe.addEventListener("load", sendWidgetLoad);
-    return () => iframe.removeEventListener("load", sendWidgetLoad);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Manage WS lifecycle based on the toggle
@@ -267,9 +259,8 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data as string) as { type: string; payload: unknown };
-        iframeRef.current?.contentWindow?.postMessage(
-          { type: "onEventReceived", payload: { listener: msg.type, event: msg.payload } },
-          "*"
+        widgetRef.current?.postMessage(
+          { type: "onEventReceived", payload: { listener: msg.type, event: msg.payload } }
         );
       } catch {
         // ignore malformed messages
@@ -296,16 +287,15 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   }
 
   function fireTestEvent(listener: string, event: Record<string, unknown>) {
-    iframeRef.current?.contentWindow?.postMessage(
-      { type: "onEventReceived", payload: { listener, event } },
-      "*"
-    );
+    widgetRef.current?.postMessage({ type: "onEventReceived", payload: { listener, event } });
   }
 
-  function buildPreview(): string {
+  function refreshPreview() {
     const fields = parsedFields() ?? (widget.fields as WidgetFieldSchema);
     const defaults = mergeFieldValues(fields, {});
-    return buildWidgetSrcdoc(htmlRef.current, jsRef.current, cssRef.current, fields, defaults);
+    setFieldData(defaults);
+    setSrcdoc(buildWidgetSrcdoc(htmlRef.current, jsRef.current, cssRef.current, fields, defaults));
+    setRefreshKey((k) => k + 1);
   }
 
   function handleSave() {
@@ -314,10 +304,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     startSave(async () => {
       await updateWidget(widget.id, { name, html: htmlRef.current, js: jsRef.current, extra_css: cssRef.current, fields });
       setIsDirty(false);
-      if (iframeRef.current) {
-        iframeRef.current.srcdoc = buildPreview();
-        iframeRef.current.addEventListener("load", sendWidgetLoad, { once: true });
-      }
+      refreshPreview();
     });
   }
 
@@ -381,13 +368,19 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   function handleEditorChange(v: string | undefined) {
     const val = v ?? "";
     if (!isDirty) setIsDirty(true);
+
+    let validChange = true;
     if (activeTab === "html") htmlRef.current = val;
     else if (activeTab === "js") jsRef.current = val;
     else if (activeTab === "css") cssRef.current = val;
     else {
       fieldsJsonRef.current = val;
-      try { JSON.parse(val); setFieldsError(null); } catch { setFieldsError("Invalid JSON"); }
+      try { JSON.parse(val); setFieldsError(null); } catch { setFieldsError("Invalid JSON"); validChange = false; }
     }
+
+    if (!validChange) return;
+    if (hotReloadTimer.current) clearTimeout(hotReloadTimer.current);
+    hotReloadTimer.current = setTimeout(refreshPreview, 600);
   }
 
   return (
@@ -536,12 +529,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
               size="sm"
               variant="ghost"
               className="h-6 text-xs"
-              onClick={() => {
-                if (iframeRef.current) {
-                  iframeRef.current.srcdoc = buildPreview();
-                  iframeRef.current.addEventListener("load", sendWidgetLoad, { once: true });
-                }
-              }}
+              onClick={refreshPreview}
             >
               Refresh
             </Button>
@@ -584,11 +572,12 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
             </Button>
           </div>
 
-          <iframe
-            ref={iframeRef}
-            sandbox="allow-scripts"
-            className="flex-1 w-full border-0"
-            style={{ background: "transparent", colorScheme: "normal" }}
+          <CustomWidgetIframe
+            key={refreshKey}
+            ref={widgetRef}
+            srcdoc={srcdoc}
+            fieldData={fieldData}
+            className="flex-1 w-full"
             title="Widget preview"
           />
         </div>
