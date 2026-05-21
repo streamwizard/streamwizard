@@ -3,7 +3,7 @@ import { createServerClient, parseCookieHeader } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { setCookie } from "hono/cookie";
-import { env } from "@repo/env";
+import { env } from "../lib/env";
 import type { Database } from "@repo/supabase";
 
 declare module "hono" {
@@ -43,14 +43,14 @@ export const getSupabase = (c: Context) => {
 export const supabaseMiddleware = (): MiddlewareHandler => {
   return async (c, next) => {
     const supabaseUrl = env.SUPABASE_URL;
-    const supabaseAnonKey = env.SUPABASE_ANON_KEY;
+    const supabaseAnonKey = env.SUPABASE_PUBLIC_KEY;
 
     if (!supabaseUrl) {
       throw new Error("SUPABASE_URL missing!");
     }
 
     if (!supabaseAnonKey) {
-      throw new Error("SUPABASE_ANON_KEY missing!");
+      throw new Error("SUPABASE_PUBLIC_KEY missing!");
     }
 
     // Create SSR client with cookie handling

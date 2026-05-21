@@ -6,7 +6,6 @@ import {
   updateTwitchAppToken,
   type RefreshTwitchTokenResponse,
 } from "@repo/supabase";
-import { env } from "@repo/env";
 import { trackTwitchApiRequest, normalizeEndpoint } from "@repo/metrics";
 import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import axios from "axios";
@@ -38,7 +37,7 @@ export abstract class TwitchApiBaseClient {
         // Maybe we should redis cache for caching the token?
         const token = await getChannelAccessToken(this.broadcaster_id);
 
-        config.headers["Client-Id"] = env.TWITCH_CLIENT_ID;
+        config.headers["Client-Id"] = process.env.TWITCH_CLIENT_ID;
         config.headers["Content-Type"] = "application/json";
         config.headers["Authorization"] = `Bearer ${token}`;
 
@@ -130,7 +129,7 @@ export abstract class TwitchApiBaseClient {
           token = newToken as string;
         }
 
-        config.headers["Client-Id"] = env.TWITCH_CLIENT_ID;
+        config.headers["Client-Id"] = process.env.TWITCH_CLIENT_ID;
         config.headers["Content-Type"] = "application/json";
         config.headers["Authorization"] = `Bearer ${token}`;
         return config;
@@ -212,8 +211,8 @@ export abstract class TwitchApiBaseClient {
       // refresh the token
       const response = await axios.post<RefreshTwitchTokenResponse>("https://id.twitch.tv/oauth2/token", null, {
         params: {
-          client_id: env.TWITCH_CLIENT_ID,
-          client_secret: env.TWITCH_CLIENT_SECRET,
+          client_id: process.env.TWITCH_CLIENT_ID,
+          client_secret: process.env.TWITCH_CLIENT_SECRET,
           grant_type: "refresh_token",
           refresh_token: refreshToken,
         },
@@ -231,8 +230,8 @@ export abstract class TwitchApiBaseClient {
     try {
       const response = await axios.post("https://id.twitch.tv/oauth2/token", null, {
         params: {
-          client_id: env.TWITCH_CLIENT_ID,
-          client_secret: env.TWITCH_CLIENT_SECRET,
+          client_id: process.env.TWITCH_CLIENT_ID,
+          client_secret: process.env.TWITCH_CLIENT_SECRET,
           grant_type: "client_credentials",
         },
       });

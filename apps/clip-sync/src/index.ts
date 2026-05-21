@@ -1,3 +1,4 @@
+import "./lib/env";
 import { TwitchApi } from "@repo/twitch-api";
 import { runPendingClipsWorker } from "./functions/pending-clips";
 import { runHourlySync } from "./functions/hourly-sync";

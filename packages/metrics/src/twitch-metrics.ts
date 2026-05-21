@@ -1,5 +1,4 @@
 import { InfluxDB, Point, WriteApi } from "@influxdata/influxdb-client";
-import { env } from "@repo/env";
 
 /**
  * Twitch API metrics tracker using InfluxDB.
@@ -34,7 +33,7 @@ function initializeClient(): void {
   if (isConfigured) return;
   isConfigured = true;
 
-  const { INFLUXDB_URL, INFLUXDB_TOKEN, INFLUXDB_ORG, INFLUXDB_BUCKET } = env;
+  const { INFLUXDB_URL, INFLUXDB_TOKEN, INFLUXDB_ORG, INFLUXDB_BUCKET } = process.env;
 
   // Skip if not configured
   if (!INFLUXDB_URL || !INFLUXDB_TOKEN || !INFLUXDB_ORG || !INFLUXDB_BUCKET) {
@@ -151,6 +150,6 @@ export async function closeMetrics(): Promise<void> {
  * Check if metrics are enabled (InfluxDB is configured).
  */
 export function isMetricsEnabled(): boolean {
-  const { INFLUXDB_URL, INFLUXDB_TOKEN, INFLUXDB_ORG, INFLUXDB_BUCKET } = env;
+  const { INFLUXDB_URL, INFLUXDB_TOKEN, INFLUXDB_ORG, INFLUXDB_BUCKET } = process.env;
   return !!(INFLUXDB_URL && INFLUXDB_TOKEN && INFLUXDB_ORG && INFLUXDB_BUCKET);
 }

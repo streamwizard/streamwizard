@@ -1,7 +1,6 @@
 import type { RefreshTwitchTokenResponse } from "./types/twitch-api";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types/supabase";
-import { env } from "@repo/env";
 import { encryptToken, decryptToken } from "./crypto";
 
 export type { Database, Json } from "./types/supabase";
@@ -11,7 +10,7 @@ let _supabase: ReturnType<typeof createClient<Database>> | undefined;
 export const supabase = new Proxy({} as ReturnType<typeof createClient<Database>>, {
   get(_, prop, receiver) {
     if (!_supabase) {
-      _supabase = createClient<Database>(env.SUPABASE_URL!, env.SUPABASE_SECRET_KEY!);
+      _supabase = createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_SECRET_KEY!);
     }
     return Reflect.get(_supabase, prop, receiver);
   },

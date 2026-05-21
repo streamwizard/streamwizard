@@ -1,7 +1,7 @@
 import type { ServerWebSocket } from "bun";
 import type { MinecraftRedemptionData } from "@/types/minecraft-outgoing-websocket-messages";
 import customLogger from "@/lib/logger";
-import { env } from "@repo/env";
+import { env } from "../lib/env";
 
 interface ClientData {
   createdAt: number;

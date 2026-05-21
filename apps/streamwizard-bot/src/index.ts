@@ -1,7 +1,7 @@
 // src/index.ts
 import { handlers } from "./handlers/eventHandler";
 import { TwitchEventSubReceiver } from "@repo/twitch-eventsub";
-import { env } from "@repo/env";
+import { env } from "./lib/env";
 import { overlayWsClient } from "./overlay-ws-client";
 
 const production = "wss://eventsub.wss.twitch.tv/ws";

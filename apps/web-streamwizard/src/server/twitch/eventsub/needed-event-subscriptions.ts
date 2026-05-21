@@ -1,5 +1,5 @@
 import { CreateEventSubSubscriptionRequest, EventSubSubscriptionType } from "@/types/twitch";
-import { env } from "@repo/env/next";
+import { env } from "@/lib/env";
 
 // Type for subscription configuration
 type SubscriptionConfig = {

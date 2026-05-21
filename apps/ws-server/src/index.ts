@@ -1,3 +1,4 @@
+import "./lib/env";
 import { handleUpgrade } from "./handlers/auth";
 import { websocketHandlers } from "./handlers/ws";
 import { rooms } from "./rooms";
