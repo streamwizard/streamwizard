@@ -9,7 +9,6 @@ WORKDIR /app
 COPY package.json bun.lock* turbo.json ./
 
 # All workspace package.json files so Bun can resolve workspace:* deps
-COPY packages/env/package.json             ./packages/env/
 COPY packages/eslint-config/package.json   ./packages/eslint-config/
 COPY packages/logger/package.json          ./packages/logger/
 COPY packages/metrics/package.json         ./packages/metrics/
@@ -41,32 +40,28 @@ FROM oven/bun:1.3.12 AS builder
 
 WORKDIR /app
 
-# Copy all source files first
 COPY . .
-
-# Seed root node_modules from the deps stage so bun install is fast (no re-download)
 COPY --from=dependencies /app/node_modules ./node_modules
 
-# Run install to materialise workspace-local node_modules (e.g. packages/ui/node_modules,
-# apps/web-overlay/node_modules) that were not captured by the root copy above.
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --frozen-lockfile
 
+# Install Doppler CLI via official package repo (also installs ca-certificates)
+RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg && \
+    curl -sLf --retry 3 --tlsv1.2 --proto "=https" 'https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key' | gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/doppler-archive-keyring.gpg] https://packages.doppler.com/public/cli/deb/debian any-version main" | tee /etc/apt/sources.list.d/doppler-cli.list && \
+    apt-get update && \
+    apt-get -y install doppler && \
+    rm -rf /var/lib/apt/lists/*
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV SKIP_ENV_VALIDATION=true
 
-# Skip env validation during build — secrets are only needed at runtime.
-ARG SKIP_ENV_VALIDATION=true
-ENV SKIP_ENV_VALIDATION=$SKIP_ENV_VALIDATION
+ARG DOPPLER_TOKEN
 
-# Build-time public env vars — Next.js bakes NEXT_PUBLIC_* into the client bundle.
-# Must be passed as --build-arg in Dokploy (Build Arguments section).
-ARG NEXT_PUBLIC_WS_SERVER_URL
-ENV NEXT_PUBLIC_WS_SERVER_URL=$NEXT_PUBLIC_WS_SERVER_URL
-
-# Run next build from the app directory so bun resolves binaries from the local node_modules
 WORKDIR /app/apps/web-overlay
-RUN bun run build
+RUN doppler run --token "$DOPPLER_TOKEN" -- bun run build
 
 # ============================================
 # Stage 3: Runner
@@ -80,7 +75,14 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# In a monorepo build the standalone output nests under apps/web-overlay/
+# Install Doppler CLI via official package repo
+RUN apt-get update && apt-get install -y apt-transport-https ca-certificates curl gnupg && \
+    curl -sLf --retry 3 --tlsv1.2 --proto "=https" 'https://packages.doppler.com/public/cli/gpg.DE2A7741A397C129.key' | gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg && \
+    echo "deb [signed-by=/usr/share/keyrings/doppler-archive-keyring.gpg] https://packages.doppler.com/public/cli/deb/debian any-version main" | tee /etc/apt/sources.list.d/doppler-cli.list && \
+    apt-get update && \
+    apt-get -y install doppler && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY --from=builder --chown=bun:bun /app/apps/web-overlay/public ./apps/web-overlay/public
 COPY --from=builder --chown=bun:bun /app/apps/web-overlay/.next/standalone ./
 COPY --from=builder --chown=bun:bun /app/apps/web-overlay/.next/static ./apps/web-overlay/.next/static
@@ -89,4 +91,6 @@ USER bun
 
 EXPOSE 3000
 
+# DOPPLER_TOKEN must be set in Dokploy's Environment Variables section at runtime
+ENTRYPOINT ["doppler", "run", "--"]
 CMD ["bun", "apps/web-overlay/server.js"]
