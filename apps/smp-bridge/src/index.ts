@@ -1,4 +1,5 @@
 // src/index.ts
+import "./lib/env";
 import { minecraftWebSocketServer } from "./services/minecraftWebsocketServer";
 import { handlers } from "./handlers/eventHandler";
 import type { SmpBridgeHandlerContext } from "./handlers/eventHandler";

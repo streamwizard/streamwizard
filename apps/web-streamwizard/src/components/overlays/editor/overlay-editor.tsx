@@ -19,7 +19,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays";
-import { env } from "@repo/env/next";
+import { env } from "@/lib/env";
 import type {
   OverlayItemConfig,
   OverlaySceneWithItems,

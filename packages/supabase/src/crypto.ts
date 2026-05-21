@@ -1,5 +1,4 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
-import { env } from "@repo/env";
 
 /**
  * Encrypted token structure
@@ -21,10 +20,10 @@ export interface EncryptedToken {
  * // Store encrypted.ciphertext, encrypted.iv, encrypted.authTag in database
  */
 export function encryptToken(plaintext: string): EncryptedToken {
-    if (!env.TOKEN_ENCRYPTION_KEY) throw new Error("TOKEN_ENCRYPTION_KEY is not set");
+    if (!process.env.TOKEN_ENCRYPTION_KEY) throw new Error("TOKEN_ENCRYPTION_KEY is not set");
 
     const iv = randomBytes(12);
-    const key = Buffer.from(env.TOKEN_ENCRYPTION_KEY, "hex");
+    const key = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY, "hex");
 
     // Create cipher with AES-256-GCM
     const cipher = createCipheriv("aes-256-gcm", key, iv);
@@ -61,9 +60,9 @@ export function encryptToken(plaintext: string): EncryptedToken {
  * );
  */
 export function decryptToken(ciphertext: string, iv: string, authTag: string): string {
-    if (!env.TOKEN_ENCRYPTION_KEY) throw new Error("TOKEN_ENCRYPTION_KEY is not set");
+    if (!process.env.TOKEN_ENCRYPTION_KEY) throw new Error("TOKEN_ENCRYPTION_KEY is not set");
 
-    const key = Buffer.from(env.TOKEN_ENCRYPTION_KEY, "hex");
+    const key = Buffer.from(process.env.TOKEN_ENCRYPTION_KEY, "hex");
 
     // Convert base64 inputs to buffers
     const ivBuffer = Buffer.from(iv, "base64");

@@ -1,4 +1,4 @@
-import { env } from "@repo/env";
+import { env } from "./lib/env";
 import { client } from "./client";
 import { handleCommand } from "./commands/index.ts";
 import { handleModal } from "./modals/index.ts";

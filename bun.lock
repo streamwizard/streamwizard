@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "twitch-tools",
+      "dependencies": {
+        "server-only": "^0.0.1",
+      },
       "devDependencies": {
         "prettier": "^3.7.4",
         "turbo": "^2.7.4",
@@ -26,7 +29,6 @@
     "apps/discord-bot": {
       "name": "discord-bot",
       "dependencies": {
-        "@repo/env": "workspace:*",
         "@repo/supabase": "workspace:*",
         "@supabase/supabase-js": "^2.105.1",
         "discord.js": "^14.25.1",
@@ -42,7 +44,6 @@
       "name": "@repo/rest-api",
       "version": "0.0.0",
       "dependencies": {
-        "@repo/env": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/schemas": "workspace:*",
         "@repo/supabase": "workspace:*",
@@ -63,7 +64,6 @@
       "name": "@repo/smp-bridge",
       "version": "0.0.0",
       "dependencies": {
-        "@repo/env": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/schemas": "workspace:*",
         "@repo/supabase": "workspace:*",
@@ -83,7 +83,6 @@
       "name": "@repo/streamwizard-bot",
       "version": "0.0.0",
       "dependencies": {
-        "@repo/env": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/schemas": "workspace:*",
         "@repo/supabase": "workspace:*",
@@ -104,11 +103,11 @@
       "name": "@repo/web-overlay",
       "version": "0.1.0",
       "dependencies": {
-        "@repo/env": "workspace:*",
         "@repo/supabase": "workspace:*",
         "@repo/twitch-api": "workspace:*",
         "@repo/ui": "workspace:*",
         "@supabase/supabase-js": "^2.105.1",
+        "@t3-oss/env-nextjs": "^0.13.11",
         "axios": "^1.13.5",
         "next": "16.2.6",
         "react": "19.2.4",
@@ -167,7 +166,6 @@
         "@radix-ui/react-toggle-group": "^1.1.11",
         "@radix-ui/react-tooltip": "^1.2.8",
         "@redux-devtools/extension": "^3.3.0",
-        "@repo/env": "workspace:*",
         "@repo/schemas": "workspace:*",
         "@repo/supabase": "workspace:*",
         "@repo/twitch-api": "workspace:*",
@@ -229,7 +227,6 @@
       "name": "@repo/ws-server",
       "version": "0.0.0",
       "dependencies": {
-        "@repo/env": "workspace:*",
         "@repo/supabase": "workspace:*",
         "@repo/types": "workspace:*",
       },
@@ -237,19 +234,6 @@
         "@repo/typescript-config": "workspace:*",
         "@types/bun": "^1.3.6",
         "typescript": "5.9.2",
-      },
-    },
-    "packages/env": {
-      "name": "@repo/env",
-      "version": "0.0.0",
-      "dependencies": {
-        "@t3-oss/env-nextjs": "^0.13.10",
-        "zod": "^4.4.3",
-      },
-      "devDependencies": {
-        "@repo/typescript-config": "workspace:*",
-        "@types/node": "^25.0.8",
-        "typescript": "^5.7.3",
       },
     },
     "packages/eslint-config": {
@@ -273,7 +257,6 @@
       "name": "@repo/logger",
       "version": "0.0.0",
       "dependencies": {
-        "@repo/env": "workspace:*",
         "@repo/supabase": "workspace:*",
         "@repo/twitch-api": "workspace:*",
         "axios": "^1.13.5",
@@ -291,7 +274,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@influxdata/influxdb-client": "^1.35.0",
-        "@repo/env": "workspace:*",
       },
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",
@@ -314,7 +296,6 @@
       "name": "@repo/supabase",
       "version": "0.0.0",
       "dependencies": {
-        "@repo/env": "workspace:*",
         "@supabase/ssr": "^0.8.0",
         "@supabase/supabase-js": "^2.105.1",
       },
@@ -334,7 +315,6 @@
       "name": "@repo/twitch-api",
       "version": "0.0.0",
       "dependencies": {
-        "@repo/env": "workspace:*",
         "@repo/metrics": "workspace:*",
         "@repo/supabase": "workspace:*",
         "axios": "^1.13.5",
@@ -351,7 +331,6 @@
       "name": "@repo/twitch-eventsub",
       "version": "0.0.0",
       "dependencies": {
-        "@repo/env": "workspace:*",
         "@repo/supabase": "workspace:*",
         "@repo/twitch-api": "workspace:*",
         "@repo/types": "workspace:*",
@@ -887,8 +866,6 @@
     "@reduxjs/toolkit": ["@reduxjs/toolkit@2.11.2", "", { "dependencies": { "@standard-schema/spec": "^1.0.0", "@standard-schema/utils": "^0.3.0", "immer": "^11.0.0", "redux": "^5.0.1", "redux-thunk": "^3.1.0", "reselect": "^5.1.0" }, "peerDependencies": { "react": "^16.9.0 || ^17.0.0 || ^18 || ^19", "react-redux": "^7.2.1 || ^8.1.3 || ^9.0.0" }, "optionalPeers": ["react", "react-redux"] }, "sha512-Kd6kAHTA6/nUpp8mySPqj3en3dm0tdMIgbttnQ1xFMVpufoj+ADi8pXLBsd4xzTRHQa7t/Jv8W5UnCuW4kuWMQ=="],
 
     "@repo/clip-sync": ["@repo/clip-sync@workspace:apps/clip-sync"],
-
-    "@repo/env": ["@repo/env@workspace:packages/env"],
 
     "@repo/eslint-config": ["@repo/eslint-config@workspace:packages/eslint-config"],
 
@@ -1984,6 +1961,8 @@
 
     "semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 
+    "server-only": ["server-only@0.0.1", "", {}, "sha512-qepMx2JxAa5jjfzxG79yPPq+8BuFToHd1hm7kI+Z4zAq1ftQiP7HcxMhDDItrbtwVeLg/cY2JnKnrcFkmiswNA=="],
+
     "set-function-length": ["set-function-length@1.2.2", "", { "dependencies": { "define-data-property": "^1.1.4", "es-errors": "^1.3.0", "function-bind": "^1.1.2", "get-intrinsic": "^1.2.4", "gopd": "^1.0.1", "has-property-descriptors": "^1.0.2" } }, "sha512-pgRc4hJ4/sNjWCSS9AmnS40x3bNMDTknHgL5UaMBTMyJnU90EgWh1Rz+MC9eFu4BuN/UwZjKQuY/1v3rM7HMfg=="],
 
     "set-function-name": ["set-function-name@2.0.2", "", { "dependencies": { "define-data-property": "^1.1.4", "es-errors": "^1.3.0", "functions-have-names": "^1.2.3", "has-property-descriptors": "^1.0.2" } }, "sha512-7PGFlmtwsEADb0WYyvCMa1t+yke6daIG4Wirafur5kcf+MhUnPms1UeR0CKQdTZD81yESwMHbtn+TR+dMviakQ=="],
@@ -2280,8 +2259,6 @@
 
     "@reduxjs/toolkit/immer": ["immer@11.1.8", "", {}, "sha512-/tbkHMW7y10Lx6i1crLjD4/OhNkRG+Fo7byZHtah0547nIeXYcpIXaUh0IAQY6gO5459qpGGYapcEOHtFXkIuA=="],
 
-    "@repo/env/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
-
     "@repo/eslint-config/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "@repo/logger/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
@@ -2339,8 +2316,6 @@
     "ajv-formats/ajv": ["ajv@8.20.0", "", { "dependencies": { "fast-deep-equal": "^3.1.3", "fast-uri": "^3.0.1", "json-schema-traverse": "^1.0.0", "require-from-string": "^2.0.2" } }, "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA=="],
 
     "ajv-keywords/ajv": ["ajv@8.20.0", "", { "dependencies": { "fast-deep-equal": "^3.1.3", "fast-uri": "^3.0.1", "json-schema-traverse": "^1.0.0", "require-from-string": "^2.0.2" } }, "sha512-Thbli+OlOj+iMPYFBVBfJ3OmCAnaSyNn4M1vz9T6Gka5Jt9ba/HIR56joy65tY6kx/FCF5VXNB819Y7/GUrBGA=="],
-
-    "discord-bot/@types/bun": ["@types/bun@1.3.13", "", { "dependencies": { "bun-types": "1.3.13" } }, "sha512-9fqXWk5YIHGGnUau9TEi+qdlTYDAnOj+xLCmSTwXfAIqXr2x4tytJb43E9uCvt09zJURKXwAtkoH4nLQfzeTXw=="],
 
     "eslint-config-next/@next/eslint-plugin-next": ["@next/eslint-plugin-next@16.2.6", "", { "dependencies": { "fast-glob": "3.3.1" } }, "sha512-Z8l6o4JWKUl755x4R+wogD86KPeU+Ckw4K+SYG4kHeOJtRenDeK+OSbGcqZpDtbwn9DsJVdir2UxmwXuinUbUw=="],
 
@@ -2477,8 +2452,6 @@
     "ajv-formats/ajv/json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
 
     "ajv-keywords/ajv/json-schema-traverse": ["json-schema-traverse@1.0.0", "", {}, "sha512-NM8/P9n3XjXhIZn1lLhkFaACTOURQXjWhV4BA/RnOv8xvgqtqpAX9IO4mRQxSx1Rlo4tqzeqb0sOlruaOy3dug=="],
-
-    "discord-bot/@types/bun/bun-types": ["bun-types@1.3.13", "", { "dependencies": { "@types/node": "*" } }, "sha512-QXKeHLlOLqQX9LgYaHJfzdBaV21T63HhFJnvuRCcjZiaUDpbs5ED1MgxbMra71CsryN/1dAoXuJJJwIv/2drVA=="],
 
     "glob/minimatch/brace-expansion": ["brace-expansion@5.0.6", "", { "dependencies": { "balanced-match": "^4.0.2" } }, "sha512-kLpxurY4Z4r9sgMsyG0Z9uzsBlgiU/EFKhj/h91/8yHu0edo7XuixOIH3VcJ8kkxs6/jPzoI6U9Vj3WqbMQ94g=="],
 

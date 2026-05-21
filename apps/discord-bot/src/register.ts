@@ -1,4 +1,4 @@
-import { env } from "@repo/env";
+import { env } from "./lib/env";
 import { ApplicationCommandOptionType, REST, Routes } from "discord.js";
 
 const commands = [

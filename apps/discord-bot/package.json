@@ -7,7 +7,7 @@
     "@types/bun": "latest"
   },
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
+    "dev": "doppler run --config dev_discord_bot -- bun run --hot src/index.ts",
     "start": "bun run ./src/index.ts",
     "check-types": "tsc --noEmit"
   },
@@ -15,7 +15,6 @@
     "typescript": "^5"
   },
   "dependencies": {
-    "@repo/env": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@supabase/supabase-js": "^2.105.1",
     "discord.js": "^14.25.1"

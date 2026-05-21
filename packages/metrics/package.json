@@ -14,8 +14,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@influxdata/influxdb-client": "^1.35.0",
-    "@repo/env": "workspace:*"
+    "@influxdata/influxdb-client": "^1.35.0"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

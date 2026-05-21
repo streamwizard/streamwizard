@@ -84,8 +84,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",
-    "@supabase/ssr": "^0.8.0",
-    "@repo/env": "workspace:*"
+    "@supabase/ssr": "^0.8.0"
   },
   "peerDependencies": {
     "next": ">=15.0.0"

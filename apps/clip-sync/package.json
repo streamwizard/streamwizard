@@ -4,6 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
+    "dev": "doppler run --config dev_clip_sync -- bun run --hot src/index.ts",
     "start": "bun run ./src/index.ts"
   },
   "dependencies": {
