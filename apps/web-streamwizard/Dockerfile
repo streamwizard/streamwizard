@@ -9,7 +9,6 @@ WORKDIR /app
 COPY package.json bun.lock* turbo.json ./
 
 # All workspace package.json files so Bun can resolve workspace:* deps
-COPY packages/env/package.json             ./packages/env/
 COPY packages/eslint-config/package.json   ./packages/eslint-config/
 COPY packages/logger/package.json          ./packages/logger/
 COPY packages/metrics/package.json         ./packages/metrics/
