@@ -1,4 +1,4 @@
-import { env } from "@repo/env/next";
+import { env } from "@/lib/env";
 import axios from "axios";
 
 interface TwitchAppTokenResponse {

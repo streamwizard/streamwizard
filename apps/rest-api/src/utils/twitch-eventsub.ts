@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { env } from "@repo/env";
+import { env } from "../lib/env";
 
 /**
  * Twitch EventSub Webhook Constants

@@ -4,7 +4,7 @@ import { createClient } from "@repo/supabase/next/server";
 import { getClipBroadcasterId } from "@repo/supabase/queries/clips";
 import { getBroadcasterId } from "@repo/supabase/queries/user";
 import axios from "axios";
-import { env } from "@repo/env";
+import { env } from "@/lib/env";
 import { revalidatePath } from "next/cache";
 
 interface returnObject<T = unknown> {

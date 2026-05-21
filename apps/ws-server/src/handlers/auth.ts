@@ -1,4 +1,4 @@
-import { env } from "@repo/env";
+import { env } from "../lib/env";
 import { supabase } from "@repo/supabase";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
 import { getLiveStreamIdByBroadcasterId } from "@repo/supabase/queries/live-status";

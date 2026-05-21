@@ -3,13 +3,12 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "bun run --hot src/index.ts",
+    "dev": "doppler run --config dev_streamwizard_bot -- bun run --hot src/index.ts",
     "start": "bun run ./src/index.ts",
     "check-types": "tsc --noEmit",
     "eventsub:conduit:sync": "bun run ./src/scripts/sync-conduit-subscriptions.ts"
   },
   "dependencies": {
-    "@repo/env": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/twitch-api": "workspace:*",

@@ -21,7 +21,6 @@
   "dependencies": {
     "@repo/types": "workspace:*",
     "@repo/twitch-api": "workspace:*",
-    "@repo/supabase": "workspace:*",
-    "@repo/env": "workspace:*"
+    "@repo/supabase": "workspace:*"
   }
 }

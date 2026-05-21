@@ -36,13 +36,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { env } from "@/lib/env";
 import {
   createOverlayScene,
   deleteOverlayScene,
   duplicateOverlayScene,
   updateOverlayScene,
 } from "@/actions/overlays";
-import { env } from "@repo/env/next";
 
 interface OverlayScene {
   id: string;
