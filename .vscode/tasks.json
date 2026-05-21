@@ -1,0 +1,19 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "docker-build: web-streamwizard",
+      "type": "shell",
+      "command": "docker build --pull --rm -f apps/web-streamwizard/Dockerfile -t streamwizardbackend:latest .",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
