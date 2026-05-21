@@ -1,3 +1,4 @@
+import "./src/lib/env";
 import fs from "fs";
 import path from "path";
 import type { NextConfig } from "next";
@@ -32,7 +33,7 @@ function loadDotenvFilesIntoProcessEnv(fromDir: string) {
 
 loadDotenvFilesIntoProcessEnv(turbopackRoot);
 
-const wsServerUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
+const wsServerUrl = process.env.WS_SERVER_URL ?? "";
 
 /** OBS-friendly fonts CSP for the overlay scene viewer (optional hardening). */
 const overlaySceneFontsCsp = [
@@ -46,6 +47,12 @@ const overlaySceneFontsCsp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.SUPABASE_URL ?? "",
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_PUBLIC_KEY ?? "",
+    NEXT_PUBLIC_WS_SERVER_URL: wsServerUrl,
+  },
+  transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core"],
   turbopack: {
     root: turbopackRoot,
   },

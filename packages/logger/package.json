@@ -23,7 +23,6 @@
     "axios": "^1.13.5",
     "zod": "^4.4.3",
     "@repo/supabase": "workspace:*",
-    "@repo/env": "workspace:*",
     "@repo/twitch-api": "workspace:*"
   }
 }

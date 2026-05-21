@@ -6,7 +6,7 @@ import type { OnMount, Monaco } from "@monaco-editor/react";
 import { useRouter } from "next/navigation";
 import type { Widget } from "@/actions/widgets";
 import { updateWidget, publishWidgetToLibrary, getActiveSubscriberToken } from "@/actions/widgets";
-import { env } from "@repo/env/next";
+import { env } from "@/lib/env";
 import { WIDGET_EDITOR_DECLARATIONS } from "@repo/schemas";
 import { buildWidgetSrcdoc, mergeFieldValues, CustomWidgetIframe } from "@repo/ui/overlay";
 import type { WidgetFieldSchema, CustomWidgetIframeHandle } from "@repo/ui/overlay";
