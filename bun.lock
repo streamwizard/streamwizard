@@ -229,6 +229,7 @@
       "dependencies": {
         "@repo/supabase": "workspace:*",
         "@repo/types": "workspace:*",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",
