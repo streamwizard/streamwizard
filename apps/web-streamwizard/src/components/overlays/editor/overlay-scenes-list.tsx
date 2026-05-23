@@ -54,7 +54,7 @@ interface OverlayScene {
   width: number;
   height: number;
   is_active: boolean;
-  render_mode?: "obs" | "phone";
+  render_mode?: string;
   created_at: string;
   updated_at: string;
 }
