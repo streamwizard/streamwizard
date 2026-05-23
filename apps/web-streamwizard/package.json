@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "doppler run --config dev_web_streamwizard -- next dev",
-    "build": "next build",
+    "build": "doppler run --config dev_web_streamwizard -- sh -c 'export NODE_ENV=production && bunx next build'",
     "start": "next start",
     "lint": "next lint"
   },
