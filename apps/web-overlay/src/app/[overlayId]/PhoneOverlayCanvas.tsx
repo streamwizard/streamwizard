@@ -2,11 +2,8 @@
 
 import { useEffect, useRef, useState, useMemo } from "react";
 import { env } from "@/lib/env";
-import {
-  OverlaySceneCanvas,
-  IrlGeoProvider,
-  overlayItemFromDbRow,
-} from "@repo/ui/overlay";
+import { OverlaySceneCanvas, overlayItemFromDbRow } from "@repo/ui/overlay";
+import { IrlGeoProvider } from "@repo/ui/components/overlay/hooks/use-irl-geo-context";
 import { ClipsWidgetContainer } from "@/components/widgets/clips-widget/ClipsWidgetContainer";
 import { CustomWidgetContainer } from "@/components/widgets/custom-widget/CustomWidgetContainer";
 

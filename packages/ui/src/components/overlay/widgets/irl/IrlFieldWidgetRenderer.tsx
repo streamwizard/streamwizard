@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import type { IrlFieldWidgetItemConfig, IrlFieldWidgetType, OverlayItem, OverlayScene } from "../../types";
 import { DEFAULT_IRL_FIELD_WIDGET_ITEM_CONFIG, IRL_FIELD_WIDGET_TYPES } from "../../types";
 import { useIrlGeoData } from "./use-irl-geo-data";
+import { useIrlGeoContext } from "../../hooks/use-irl-geo-context";
 
 export interface IrlFieldWidgetRendererProps {
   item: OverlayItem;
@@ -77,7 +78,14 @@ export function IrlFieldWidgetRenderer({ item, scene, zoom = 1 }: IrlFieldWidget
   const cfg = resolveConfig(item.config);
   const subscriberToken = scene?.subscriber_token ?? "";
   const field = FIELD_FROM_TYPE[item.type as IrlFieldWidgetType] ?? "speed";
-  const { geo, status } = useIrlGeoData(subscriberToken, cfg.mockData);
+  const contextGeo = useIrlGeoContext();
+  const { geo: wsGeo, status: wsStatus } = useIrlGeoData(subscriberToken, cfg.mockData);
+
+  // Phone mode: context geo overrides WebSocket geo
+  const geo = contextGeo !== undefined ? contextGeo : wsGeo;
+  const status = contextGeo !== undefined
+    ? (contextGeo ? "connected" : "connecting")
+    : wsStatus;
 
   const textAlign = cfg.align as CSSProperties["textAlign"];
   const fontSize = cfg.fontSize * zoom;
