@@ -1,12 +1,14 @@
 import { supabase } from "@repo/supabase";
 import { insertIrlGeoTrack } from "@repo/supabase/queries/irl";
 import type { BotBroadcastMessage, PublisherMessage } from "@repo/types";
+import { trackWsConnection, trackWsMessage } from "@repo/metrics";
 import { rooms, broadcastToRoom } from "../rooms";
 import type { ConnectionData, ServerWebSocket } from "../types";
 
 export const websocketHandlers = {
   open(ws: ServerWebSocket<ConnectionData>): void {
     const { role, userId } = ws.data;
+    trackWsConnection(role, "open");
 
     if (role === "publisher") {
       const room = rooms.get(userId);
@@ -42,6 +44,7 @@ export const websocketHandlers = {
         console.warn("[bot] malformed message");
         return;
       }
+      trackWsMessage("bot", msg.type ?? "unknown");
       const room = rooms.get(msg.userId);
       if (!room) return;
       broadcastToRoom(room, msg.type, msg.payload);
@@ -57,6 +60,7 @@ export const websocketHandlers = {
       console.warn(`[publisher] malformed message from userId=${userId}`);
       return;
     }
+    trackWsMessage("publisher", msg.type ?? "unknown");
 
     const room = rooms.get(userId);
     if (!room) return;
@@ -86,6 +90,7 @@ export const websocketHandlers = {
 
   close(ws: ServerWebSocket<ConnectionData>): void {
     const { role, userId } = ws.data;
+    trackWsConnection(role, "close");
 
     if (role === "bot") {
       console.log("[bot] disconnected");

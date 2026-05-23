@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { withMetrics } from "./with-metrics";
 
 type DBClient = SupabaseClient<Database>;
 
@@ -46,11 +47,11 @@ export async function getIrlGeoTrackBySession(client: DBClient, sessionId: strin
     .order("recorded_at", { ascending: true });
 }
 
-export async function insertIrlGeoTrack(client: DBClient, data: IrlGeoTrackInsert) {
-  return client
-    .from("irl_geo_track" as never)
-    .insert(data as never);
-}
+export const insertIrlGeoTrack = withMetrics(
+  "irl_geo_track",
+  "insert",
+  async (client: DBClient, data: IrlGeoTrackInsert) => client.from("irl_geo_track" as never).insert(data as never),
+);
 
 export async function getIrlCollectorTokenUserId(
   client: DBClient,

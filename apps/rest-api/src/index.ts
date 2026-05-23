@@ -1,5 +1,6 @@
 import "./lib/env";
 import { Hono } from "hono";
+import { metricsMiddleware, isMetricsEnabled } from "@repo/metrics";
 import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
 import { rawBodyMiddleware } from "./middleware/raw-body";
@@ -14,6 +15,7 @@ const app = new Hono();
 // SECURITY MIDDLEWARE (Applied in order)
 // ============================================
 
+app.use("*", metricsMiddleware("rest-api"));
 app.use("*", securityMiddleware.requestId());
 
 // 2. HTTPS enforcement (production only)
@@ -79,4 +81,5 @@ Bun.serve({
   port: 8000,
 });
 
-console.log(`Server is running on port ${8000}`);
+console.log(`[rest-api] listening on port ${8000}`);
+console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

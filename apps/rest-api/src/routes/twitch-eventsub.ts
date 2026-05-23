@@ -9,6 +9,7 @@ import type {
   EventSubNotificationPayload,
   EventSubRevocationPayload,
 } from "@repo/types";
+import { trackEventSubReceived, trackEventSubRevocation } from "@repo/metrics";
 import handleEventsub from "../functions/handle-eventsub";
 
 export async function handleTwitchEventSub(c: Context) {
@@ -83,6 +84,7 @@ async function handleNotification(
   notification: EventSubNotificationPayload,
 ) {
   await handleEventsub(notification);
+  trackEventSubReceived(notification.subscription.type, true);
   return c.body(null, 204);
 }
 
@@ -105,12 +107,7 @@ function handleRevocation(c: Context, notification: EventSubRevocationPayload) {
     condition: subscription.condition,
   });
 
-  // TODO: Handle revocation
-  // Examples:
-  // - Update database to mark subscription as revoked
-  // - Clean up related data
-  // - Notify administrators
-  // - Attempt to resubscribe if appropriate
+  trackEventSubRevocation(subscription.type);
 
   return c.body(null, 204);
 }
