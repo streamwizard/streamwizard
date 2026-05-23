@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "doppler run --config dev_web_overlay -- next dev --port 3001 --experimental-https",
-    "build": "doppler run --config dev_web_overlay -- sh -c 'export NODE_ENV=production && bunx next build'",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "dev-local": "next dev -H 0.0.0.0 "
