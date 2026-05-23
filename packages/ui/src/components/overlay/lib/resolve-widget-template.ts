@@ -40,13 +40,21 @@ export function buildWidgetSrcdoc(
   js: string,
   extraCss: string,
   fields: WidgetFieldSchema,
-  fieldValues: Record<string, unknown>
+  fieldValues: Record<string, unknown>,
+  overlayOrigin?: string
 ): string {
   const { resolvedHtml, resolvedCss } = resolveWidgetTemplate(html, extraCss, fields, fieldValues);
+  const stateUrl = overlayOrigin ? JSON.stringify(`${overlayOrigin}/api/widgets/state`) : "null";
+  const connectSrc = [
+    overlayOrigin,
+    "https://api.open-meteo.com",
+    "https://nominatim.openstreetmap.org",
+  ].filter(Boolean).join(" ");
   return `<!DOCTYPE html>
 <html style="background:transparent!important;background-color:transparent!important;color-scheme:normal">
 <head>
   <meta name="color-scheme" content="normal">
+  <meta http-equiv="Content-Security-Policy" content="connect-src ${connectSrc}">
   <script src="https://cdn.tailwindcss.com"><\/script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"><\/script>
@@ -65,6 +73,7 @@ export function buildWidgetSrcdoc(
   <script>
     document.documentElement.style.background = 'transparent';
     document.body.style.background = 'transparent';
+    window.StreamWizard = { stateUrl: ${stateUrl} };
     window.addEventListener('message', function(e) {
       if (e.data.type === 'onWidgetLoad') window.dispatchEvent(new CustomEvent('onWidgetLoad', { detail: e.data.payload }));
       if (e.data.type === 'onEventReceived') window.dispatchEvent(new CustomEvent('onEventReceived', { detail: e.data.payload }));
