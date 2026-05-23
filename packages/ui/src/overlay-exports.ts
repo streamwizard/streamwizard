@@ -53,10 +53,6 @@ export {
   type IrlConnectionStatus,
 } from "./components/overlay/widgets/irl/use-irl-geo-data";
 export {
-  IrlGeoProvider,
-  useIrlGeoContext,
-} from "./components/overlay/hooks/use-irl-geo-context";
-export {
   subscribeToWsRoom,
   type WsEventListener,
 } from "./components/overlay/lib/ws-store";
