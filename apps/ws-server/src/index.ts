@@ -2,6 +2,7 @@ import "./lib/env";
 import { handleUpgrade } from "./handlers/auth";
 import { websocketHandlers } from "./handlers/ws";
 import { rooms } from "./rooms";
+import { isMetricsEnabled } from "@repo/metrics";
 import type { ConnectionData } from "./types";
 
 const PORT = Number(process.env.PORT ?? 8000);
@@ -23,3 +24,4 @@ setInterval(() => {
 }, 30_000);
 
 console.log(`[ws-server] listening on port ${server.port}`);
+console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

@@ -1,8 +1,8 @@
-// src/index.ts
 import { handlers } from "./handlers/eventHandler";
 import { TwitchEventSubReceiver } from "@repo/twitch-eventsub";
 import { env } from "./lib/env";
 import { overlayWsClient } from "./overlay-ws-client";
+import { isMetricsEnabled } from "@repo/metrics";
 
 const production = "wss://eventsub.wss.twitch.tv/ws";
 const websocketUrl = env.WS_SERVER_URL;
@@ -30,6 +30,7 @@ async function main() {
       process.exit(0);
     });
 
+    console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
     await EventSubReceiver.connect();
   } catch (error) {
     console.error("❌ Failed to start receiver:", error);

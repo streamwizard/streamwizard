@@ -9,6 +9,7 @@
     "eventsub:conduit:sync": "bun run ./src/scripts/sync-conduit-subscriptions.ts"
   },
   "dependencies": {
+    "@repo/metrics": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/twitch-api": "workspace:*",
