@@ -504,15 +504,7 @@ export type Database = {
           token?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "irl_collector_tokens_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       irl_geo_track: {
         Row: {
@@ -639,6 +631,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          render_mode: string
           slug: string
           subscriber_token: string
           updated_at: string
@@ -651,6 +644,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          render_mode?: string
           slug: string
           subscriber_token?: string
           updated_at?: string
@@ -663,6 +657,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          render_mode?: string
           slug?: string
           subscriber_token?: string
           updated_at?: string
@@ -680,6 +675,7 @@ export type Database = {
           updated_at: string
           user_id: string
           widget_id: string
+          widget_state: Json
         }
         Insert: {
           created_at?: string
@@ -689,6 +685,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           widget_id: string
+          widget_state?: Json
         }
         Update: {
           created_at?: string
@@ -698,6 +695,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           widget_id?: string
+          widget_state?: Json
         }
         Relationships: [
           {

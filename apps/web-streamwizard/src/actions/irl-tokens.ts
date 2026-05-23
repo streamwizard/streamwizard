@@ -5,7 +5,6 @@ import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
 import type { Database } from "@repo/supabase";
-
 export type IrlCollectorToken = Database["public"]["Tables"]["irl_collector_tokens"]["Row"];
 
 export async function createIrlToken(name: string): Promise<{ data: { token_url: string } | null; error: string | null }> {
@@ -89,3 +88,5 @@ export async function deleteIrlToken(id: string): Promise<{ error: string | null
   revalidatePath("/dashboard/irl");
   return { error: error?.message ?? null };
 }
+
+

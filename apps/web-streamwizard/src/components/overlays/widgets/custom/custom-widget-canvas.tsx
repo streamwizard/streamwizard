@@ -6,6 +6,7 @@ import type { CustomWidgetItemConfig } from "@/types/overlays";
 import type { OverlayCanvasProps } from "../../registry/overlay-widget-registry.types";
 import { getWidget, getOrCreateWidgetInstance } from "@/actions/widgets";
 import { CustomWidgetIframe, buildWidgetSrcdoc, mergeFieldValues } from "@repo/ui/overlay";
+import { env } from "@/lib/env";
 
 function CustomWidgetCanvasInner({ item, scene }: OverlayCanvasProps) {
   const cfg = asCustomWidgetConfig(item.config);
@@ -27,7 +28,7 @@ function CustomWidgetCanvasInner({ item, scene }: OverlayCanvasProps) {
 
       const merged = mergeFieldValues(widget.fields, fieldValues);
       setFieldData(merged);
-      setSrcdoc(buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, widget.fields, fieldValues));
+      setSrcdoc(buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, widget.fields, fieldValues, env.NEXT_PUBLIC_OVERLAY_URL));
     }
 
     load();
@@ -56,6 +57,7 @@ function CustomWidgetCanvasInner({ item, scene }: OverlayCanvasProps) {
       srcdoc={srcdoc}
       fieldData={fieldData}
       subscriberToken={scene.subscriber_token}
+      overlayItemId={item.id}
       className="w-full h-full"
       style={{ pointerEvents: "none" }}
       title="custom widget preview"
