@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { OverlayWidgetProps } from "@repo/ui/overlay";
 import { CustomWidgetIframe, buildWidgetSrcdoc, mergeFieldValues } from "@repo/ui/overlay";
 import { loadCustomWidgetData } from "@/actions/custom-widget";
+import { env } from "@/lib/env";
 
 interface CustomWidgetConfig {
   widget_id: string;
@@ -21,10 +22,14 @@ export function CustomWidgetContainer({ scene, item }: OverlayWidgetProps) {
     let cancelled = false;
 
     loadCustomWidgetData(cfg.widget_id, scene.user_id, cfg.instance_id || undefined).then(
-      ({ data }) => {
-        if (cancelled || !data) return;
+      ({ data, error }) => {
+        if (cancelled) return;
+        if (!data) {
+          console.error("[CustomWidget] failed to load widget", cfg.widget_id, error);
+          return;
+        }
         setFieldData(mergeFieldValues(data.fields, data.field_values));
-        setSrcdoc(buildWidgetSrcdoc(data.html, data.js, data.extra_css, data.fields, data.field_values));
+        setSrcdoc(buildWidgetSrcdoc(data.html, data.js, data.extra_css, data.fields, data.field_values, env.NEXT_PUBLIC_OVERLAY_URL));
       }
     );
 
@@ -39,6 +44,7 @@ export function CustomWidgetContainer({ scene, item }: OverlayWidgetProps) {
       fieldData={fieldData}
       userId={scene.user_id}
       subscriberToken={scene.subscriber_token}
+      overlayItemId={item.id}
       style={{ width: "100%", height: "100%" }}
       title="custom-widget"
     />

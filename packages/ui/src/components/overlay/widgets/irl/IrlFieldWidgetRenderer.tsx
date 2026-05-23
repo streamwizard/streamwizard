@@ -55,12 +55,13 @@ function formatValue(
 ): string | null {
   switch (field) {
     case "speed": {
-      if (geo.speed === null) return null;
+      const unit = cfg.unit === "mph" ? "mph" : "km/h";
+      if (geo.speed === null) return `0.0 ${unit}`;
       const v = cfg.unit === "mph" ? mpsToMph(geo.speed) : mpsToKmh(geo.speed);
-      return `${v.toFixed(1)} ${cfg.unit === "mph" ? "mph" : "km/h"}`;
+      return `${v.toFixed(1)} ${unit}`;
     }
     case "heading":
-      return geo.heading !== null ? formatHeading(geo.heading) : null;
+      return geo.heading !== null ? formatHeading(geo.heading) : "—";
     case "altitude":
       return geo.altitude !== null ? `${Math.round(geo.altitude)} m` : null;
     case "latitude":

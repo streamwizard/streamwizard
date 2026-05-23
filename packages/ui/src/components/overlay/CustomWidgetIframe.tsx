@@ -5,6 +5,7 @@ declare const process: { env: Record<string, string | undefined> };
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { subscribeToWsRoom } from "./lib/ws-store";
+import { useIrlGeoContext } from "./hooks/use-irl-geo-context";
 
 export interface CustomWidgetIframeHandle {
   postMessage: (msg: unknown) => void;
@@ -15,13 +16,14 @@ export interface CustomWidgetIframeProps {
   fieldData: Record<string, unknown>;
   userId?: string;
   subscriberToken?: string;
+  overlayItemId?: string;
   style?: React.CSSProperties;
   className?: string;
   title?: string;
 }
 
 export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWidgetIframeProps>(
-  function CustomWidgetIframe({ srcdoc, fieldData, userId = "", subscriberToken, style, className, title = "custom widget" }, ref) {
+  function CustomWidgetIframe({ srcdoc, fieldData, userId = "", subscriberToken, overlayItemId, style, className, title = "custom widget" }, ref) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const fieldDataRef = useRef(fieldData);
     fieldDataRef.current = fieldData;
@@ -41,7 +43,7 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
             payload: {
               fieldData: fieldDataRef.current,
               channel: { user_id: userId },
-              session: {},
+              session: { subscriberToken, overlayItemId },
             },
           },
           "*"
@@ -71,6 +73,17 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
         );
       });
     }, [subscriberToken]);
+
+    // In phone mode, forward local GPS into the iframe using the same event
+    // format as WS events so widget authors don't need separate handling.
+    const contextGeo = useIrlGeoContext();
+    useEffect(() => {
+      if (contextGeo === undefined) return; // OBS mode — WS handles geo
+      iframeRef.current?.contentWindow?.postMessage(
+        { type: "onEventReceived", payload: { listener: "streamwizard.geo", event: contextGeo } },
+        "*"
+      );
+    }, [contextGeo]);
 
     return (
       <iframe

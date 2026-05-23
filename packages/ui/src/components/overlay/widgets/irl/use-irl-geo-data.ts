@@ -6,6 +6,7 @@ declare const process: { env: Record<string, string | undefined> };
 import { useEffect, useState } from "react";
 import type { GeoPayload } from "../../types";
 import { subscribeToWsRoom } from "../../lib/ws-store";
+import { useIrlGeoContext } from "../../hooks/use-irl-geo-context";
 
 export type IrlConnectionStatus = "connecting" | "connected" | "offline" | "disconnected";
 
@@ -29,12 +30,17 @@ export function useIrlGeoData(
   subscriberToken: string,
   mockData: boolean
 ): { geo: GeoPayload | null; status: IrlConnectionStatus } {
+  const contextGeo = useIrlGeoContext();
+
   const [state, setState] = useState<{ geo: GeoPayload | null; status: IrlConnectionStatus }>(() => ({
     geo: mockData ? MOCK_GEO : null,
     status: mockData ? "connected" : "connecting",
   }));
 
   useEffect(() => {
+    // When a local geo context is provided (phone render mode), skip the WebSocket.
+    if (contextGeo !== undefined) return;
+
     if (mockData) {
       setState({ geo: MOCK_GEO, status: "connected" });
       return;
@@ -58,7 +64,12 @@ export function useIrlGeoData(
         }
       }
     });
-  }, [subscriberToken, mockData]);
+  }, [subscriberToken, mockData, contextGeo]);
+
+  // Context geo takes priority (phone render mode).
+  if (contextGeo !== undefined) {
+    return { geo: contextGeo, status: contextGeo ? "connected" : "connecting" };
+  }
 
   return state;
 }

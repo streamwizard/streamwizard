@@ -12,33 +12,28 @@ export default async function IrlPage() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">IRL Collector</h1>
           <p className="text-muted-foreground text-sm">
-            Stream your real-time GPS location to your OBS overlays while
-            broadcasting on the go.
+            Manage collector devices that send GPS data to your phone overlays.
           </p>
         </div>
       </div>
 
-      {/* Main grid: devices left (big), map right (small) */}
       <div className="grid grid-cols-1 xl:grid-cols-[1fr_360px] gap-6 items-start">
-        {/* Left — Device management */}
         <div className="space-y-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Your devices
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Each device gets its own collector URL.
+              Each device gets its own collector token. Add the token to your phone overlay URL as <code className="text-xs">?token=…</code>
             </p>
           </div>
           <IrlTokensClient tokens={tokens ?? []} error={error} />
         </div>
 
-        {/* Right — Live map */}
         <div className="space-y-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -61,7 +56,6 @@ export default async function IrlPage() {
         </div>
       </div>
 
-      {/* How it works — collapsed by default when user has devices */}
       <IrlSetupGuide defaultOpen={!hasDevices} />
     </div>
   );
