@@ -1,3 +1,4 @@
+import { Sentry } from "./sentry";
 import "./lib/env";
 import { TwitchApi } from "@repo/twitch-api";
 import { runPendingClipsWorker } from "./functions/pending-clips";
@@ -20,6 +21,9 @@ async function main() {
     console.log("All workers stopped");
     process.exit(0);
   });
+
+  process.on("uncaughtException", (err) => { Sentry.captureException(err); });
+  process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 
   console.log("Starting workers...");
 

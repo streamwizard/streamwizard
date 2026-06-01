@@ -4,10 +4,12 @@ import type { OverlayEventType } from "@repo/types";
 export type ServerWebSocket<T = any> = import("bun").ServerWebSocket<T>;
 
 export interface ConnectionData {
-  role: "publisher" | "subscriber" | "bot";
+  role: "publisher" | "subscriber" | "bot" | "monitor";
   userId: string;
   session_id?: string;
-  channels: Set<OverlayEventType>; // empty = receive all event types
+  channels: Set<OverlayEventType>;
+  connectedAt: number;
+  connId: string;
 }
 
 export interface RoomData {

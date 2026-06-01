@@ -4,7 +4,8 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot --filter=@repo/ws-server",
+    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot --filter=@repo/ws-server --filter=@repo/web-monitor",
+    "dev:monitor": "turbo run dev --filter=@repo/web-monitor",
     "doppler:sync": "bash scripts/sync-doppler-shared.sh",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

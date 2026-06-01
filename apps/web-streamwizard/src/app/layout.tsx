@@ -1,7 +1,10 @@
+import { CookieBanner } from "@/components/cookie-banner";
 import { ModalProvider } from "@/providers/modal-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { PHProvider, PostHogPageView } from "@repo/posthog";
 import { Metadata } from "next";
 import localFont from "next/font/local";
+import { Suspense } from "react";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -36,12 +39,18 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          <ModalProvider>
-            <Toaster position="bottom-right" theme="dark" expand visibleToasts={5} />
-            {children}
-          </ModalProvider>
-        </ThemeProvider>
+        <PHProvider>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+            <ModalProvider>
+              <Suspense>
+                <PostHogPageView />
+              </Suspense>
+              <Toaster position="bottom-right" theme="dark" expand visibleToasts={5} />
+              <CookieBanner />
+              {children}
+            </ModalProvider>
+          </ThemeProvider>
+        </PHProvider>
       </body>
     </html>
   );
