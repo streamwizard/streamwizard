@@ -15,7 +15,7 @@ async function main() {
 
     const EventSubReceiver = new TwitchEventSubReceiver(handlers, {
       wsUrl: production,
-      conduitId: "6a9dfc09-7807-4f9d-830e-25f6ab00ed1f",
+      conduitId: env.TWITCH_CONDUIT_ID,
     });
 
     process.on("SIGINT", async () => {
