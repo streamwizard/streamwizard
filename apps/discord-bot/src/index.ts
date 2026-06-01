@@ -1,3 +1,6 @@
+import { Sentry } from "./sentry";
+process.on("uncaughtException", (err) => { Sentry.captureException(err); });
+process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import { env } from "./lib/env";
 import { client } from "./client";
 import { handleCommand } from "./commands/index.ts";

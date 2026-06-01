@@ -1,4 +1,7 @@
 // src/index.ts
+import { Sentry } from "./sentry";
+process.on("uncaughtException", (err) => { Sentry.captureException(err); });
+process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import "./lib/env";
 import { minecraftWebSocketServer } from "./services/minecraftWebsocketServer";
 import { handlers } from "./handlers/eventHandler";

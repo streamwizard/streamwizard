@@ -13,6 +13,10 @@ const schema = z.object({
   TWITCH_CLIENT_ID: z.string().min(1),
   TWITCH_CLIENT_SECRET: z.string().min(1),
   TWITCH_WEBHOOK_SECRET: z.string().min(1),
+
+  // Sentry
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_RELEASE: z.string().optional(),
 })
 
 export const env = schema.parse(process.env)

@@ -4,12 +4,14 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config dev_clip_sync -- bun run --hot src/index.ts",
-    "start": "bun run ./src/index.ts"
+    "dev": "doppler run --config dev_clip_sync -- bun --preload ./src/sentry.ts --hot src/index.ts",
+    "start": "bun --preload ./src/sentry.ts src/index.ts"
   },
   "dependencies": {
+    "@repo/sentry": "workspace:*",
     "@repo/supabase": "workspace:*",
-    "@repo/twitch-api": "workspace:*"
+    "@repo/twitch-api": "workspace:*",
+    "@sentry/bun": "^10"
   },
   "devDependencies": {
     "@types/bun": "latest"

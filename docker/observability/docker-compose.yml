@@ -18,55 +18,9 @@ services:
     networks:
       - observability
 
-  grafana-db:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_DB: grafana
-      POSTGRES_USER: ${GRAFANA_DB_USER}
-      POSTGRES_PASSWORD: ${GRAFANA_DB_PASSWORD}
-    volumes:
-      - grafana-db-data:/var/lib/postgresql/data
-    networks:
-      - observability
-
-  grafana:
-    image: grafana/grafana:latest
-    restart: unless-stopped
-    ports:
-      - "3002:3000"
-    depends_on:
-      - grafana-db
-      - influxdb
-    environment:
-      # Postgres backend so dashboards survive container restarts
-      GF_DATABASE_TYPE: postgres
-      GF_DATABASE_HOST: grafana-db:5432
-      GF_DATABASE_NAME: grafana
-      GF_DATABASE_USER: ${GRAFANA_DB_USER}
-      GF_DATABASE_PASSWORD: ${GRAFANA_DB_PASSWORD}
-      GF_DATABASE_SSL_MODE: disable
-
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
-      GF_SECURITY_SECRET_KEY: ${GRAFANA_SECRET_KEY}
-
-      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL}
-
-      # Disable telemetry
-      GF_ANALYTICS_REPORTING_ENABLED: "false"
-      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
-    volumes:
-      - grafana-plugins:/var/lib/grafana/plugins
-    networks:
-      - observability
-
-
 volumes:
   influxdb-data:
   influxdb-config:
-  grafana-db-data:
-  grafana-plugins:
 
 networks:
   observability:

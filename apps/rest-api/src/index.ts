@@ -1,5 +1,9 @@
+import { Sentry } from "./sentry";
+process.on("uncaughtException", (err) => { Sentry.captureException(err); });
+process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import "./lib/env";
 import { Hono } from "hono";
+import { sentry } from "@sentry/hono/bun";
 import { metricsMiddleware, isMetricsEnabled } from "@repo/metrics";
 import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
@@ -14,6 +18,11 @@ const app = new Hono();
 // ============================================
 // SECURITY MIDDLEWARE (Applied in order)
 // ============================================
+
+// Sentry must be first — sets up tracing and Hono's onError capture
+if (process.env.SENTRY_DSN) {
+  app.use("*", sentry(app));
+}
 
 app.use("*", metricsMiddleware("rest-api"));
 app.use("*", securityMiddleware.requestId());

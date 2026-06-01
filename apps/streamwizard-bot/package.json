@@ -3,19 +3,21 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config dev_streamwizard_bot -- bun run --hot src/index.ts",
-    "start": "bun run ./src/index.ts",
+    "dev": "doppler run --config dev_streamwizard_bot -- bun --preload ./src/sentry.ts --hot src/index.ts",
+    "start": "bun --preload ./src/sentry.ts src/index.ts",
     "check-types": "tsc --noEmit",
     "eventsub:conduit:sync": "bun run ./src/scripts/sync-conduit-subscriptions.ts"
   },
   "dependencies": {
     "@repo/metrics": "workspace:*",
     "@repo/schemas": "workspace:*",
+    "@repo/sentry": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/twitch-eventsub": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/types": "workspace:*",
+    "@sentry/bun": "^10",
     "date-fns": "^4.1.0",
     "lovely-logs": "^2.7.2",
     "zod": "^4.4.3"

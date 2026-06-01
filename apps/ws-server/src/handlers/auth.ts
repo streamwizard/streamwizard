@@ -5,11 +5,16 @@ import { getLiveStreamIdByBroadcasterId } from "@repo/supabase/queries/live-stat
 import { getIrlCollectorTokenUserId, touchIrlCollectorToken } from "@repo/supabase/queries/irl";
 import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import type { OverlayEventType } from "@repo/types";
+import { trackWsAuthFailure } from "@repo/metrics";
 import { isRateLimited } from "../rate-limit";
 import { rooms } from "../rooms";
 import type { ConnectionData } from "../types";
 
 type BunServer = import("bun").Server<ConnectionData>;
+
+const VALID_ROLES = new Set(["publisher", "subscriber", "bot", "monitor"]);
+
+let nextConnId = 1;
 
 async function findCurrentStreamId(userId: string): Promise<string | null> {
   try {
@@ -30,27 +35,55 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
 
   const role = url.searchParams.get("role");
 
-  if (role !== "publisher" && role !== "subscriber" && role !== "bot") {
+  if (!role || !VALID_ROLES.has(role)) {
+    trackWsAuthFailure("unknown", "invalid_role");
     return new Response("Bad Request: missing or invalid role", { status: 400 });
+  }
+
+  // --- Monitor ---
+  if (role === "monitor") {
+    if (!env.MONITOR_SECRET) {
+      return new Response("Monitor not configured", { status: 404 });
+    }
+    const token = url.searchParams.get("token");
+    if (token !== env.MONITOR_SECRET) {
+      trackWsAuthFailure("unknown", "invalid_token");
+      return new Response("Unauthorized", { status: 401 });
+    }
+    const upgraded = server.upgrade(req, {
+      data: { role: "monitor" as const, userId: "_monitor", channels: new Set<OverlayEventType>(), connectedAt: Date.now(), connId: `c-${nextConnId++}` },
+    });
+    if (!upgraded) {
+      trackWsAuthFailure("unknown", "upgrade_failed");
+      return new Response("Upgrade Failed", { status: 500 });
+    }
+    return undefined;
   }
 
   // --- Bot ---
   if (role === "bot") {
     const key = req.headers.get("authorization")?.replace("Bearer ", "");
     if (key !== env.SUPABASE_SECRET_KEY) {
+      trackWsAuthFailure("bot", "invalid_bot_key");
       return new Response("Unauthorized", { status: 401 });
     }
     const upgraded = server.upgrade(req, {
-      data: { role: "bot", userId: "_bot", channels: new Set<OverlayEventType>() },
+      data: { role: "bot", userId: "_bot", channels: new Set<OverlayEventType>(), connectedAt: Date.now(), connId: `c-${nextConnId++}` },
     });
-    if (!upgraded) return new Response("Upgrade Failed", { status: 500 });
+    if (!upgraded) {
+      trackWsAuthFailure("bot", "upgrade_failed");
+      return new Response("Upgrade Failed", { status: 500 });
+    }
     return undefined;
   }
 
   // --- Publisher ---
   if (role === "publisher") {
     const token = url.searchParams.get("token");
-    if (!token) return new Response("Unauthorized: missing token", { status: 401 });
+    if (!token) {
+      trackWsAuthFailure("publisher", "missing_token");
+      return new Response("Unauthorized: missing token", { status: 401 });
+    }
 
     let resolvedUserId: string | null = null;
 
@@ -67,6 +100,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     }
 
     if (!resolvedUserId) {
+      trackWsAuthFailure("publisher", "invalid_token");
       return new Response("Unauthorized: invalid token", { status: 401 });
     }
 
@@ -74,9 +108,12 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     const stream_id = await findCurrentStreamId(resolvedUserId);
 
     const upgraded = server.upgrade(req, {
-      data: { role: "publisher", userId: resolvedUserId, session_id, channels: new Set<OverlayEventType>() },
+      data: { role: "publisher", userId: resolvedUserId, session_id, channels: new Set<OverlayEventType>(), connectedAt: Date.now(), connId: `c-${nextConnId++}` },
     });
-    if (!upgraded) return new Response("Upgrade Failed", { status: 500 });
+    if (!upgraded) {
+      trackWsAuthFailure("publisher", "upgrade_failed");
+      return new Response("Upgrade Failed", { status: 500 });
+    }
 
     console.log(`[publisher] connected userId=${resolvedUserId} session=${session_id} stream=${stream_id ?? "none"}`);
 
@@ -94,16 +131,19 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
   // --- Subscriber ---
   const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "unknown";
   if (isRateLimited(ip)) {
+    trackWsAuthFailure("subscriber", "rate_limited");
     return new Response("Too Many Requests", { status: 429 });
   }
 
   const subscriberToken = url.searchParams.get("token");
   if (!subscriberToken) {
+    trackWsAuthFailure("subscriber", "missing_token");
     return new Response("Unauthorized: missing token", { status: 401 });
   }
 
   const { data: scene } = await getOverlaySceneBySubscriberToken(supabase, subscriberToken);
   if (!scene) {
+    trackWsAuthFailure("subscriber", "invalid_token");
     return new Response("Unauthorized: invalid token", { status: 401 });
   }
 
@@ -113,8 +153,11 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     : new Set<OverlayEventType>();
 
   const upgraded = server.upgrade(req, {
-    data: { role: "subscriber", userId: scene.user_id, channels },
+    data: { role: "subscriber", userId: scene.user_id, channels, connectedAt: Date.now(), connId: `c-${nextConnId++}` },
   });
-  if (!upgraded) return new Response("Upgrade Failed", { status: 500 });
+  if (!upgraded) {
+    trackWsAuthFailure("subscriber", "upgrade_failed");
+    return new Response("Upgrade Failed", { status: 500 });
+  }
   return undefined;
 }
