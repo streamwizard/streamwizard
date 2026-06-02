@@ -69,7 +69,7 @@ app.post(
 app.use(
   "/api/*",
   cors({
-    origin: ["http://localhost:3000", "https://streamwizard.org"], // Add your frontend URLs
+    origin: ["http://localhost:3000", "https://streamwizard.org", "https://staging.streamwizard.org"], // Add your frontend URLs
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
