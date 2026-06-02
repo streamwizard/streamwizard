@@ -276,6 +276,6 @@ PRs with failing checks won't be merged.
 ## 10. Get help
 
 - **Stuck on setup or have a question?** [Join the Discord](https://discord.gg/29Eq659egv) — fastest way to get help
-- **General discussion or ideas?** [Discord](https://discord.gg/29Eq659egv) — not GitHub Discussions
+- **General discussion or ideas?** [Discord](https://discord.gg/29Eq659egv)
 - **Not sure what to work on?** Ask in Discord or look for issues tagged `good first issue`
 - **Found a bug?** [Open an issue](https://github.com/streamwizard/streamwizard-backend/issues)
