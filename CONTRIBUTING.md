@@ -1,38 +1,37 @@
 # Contributing to StreamWizard
 
-First of all — thank you for wanting to help! This guide is written for everyone, including people who have never contributed to an open source project before. Take it step by step and don't hesitate to ask questions by opening a [GitHub Discussion](https://github.com/streamwizard/streamwizard-backend/discussions).
+Never opened a PR before? Never forked a repo? That's fine — this guide covers everything from zero. Read it top to bottom once, then use it as a reference.
+
+Got stuck? [Join the Discord](https://discord.gg/29Eq659egv) and ask. No question is too basic.
 
 ---
 
 ## Table of Contents
 
-1. [Before You Start](#1-before-you-start)
-2. [Understanding the Project](#2-understanding-the-project)
-3. [Setting Up Your Environment](#3-setting-up-your-environment)
-4. [Setting Up Supabase](#4-setting-up-supabase)
-5. [Forking the Repository](#5-forking-the-repository)
-6. [Making Your Changes](#6-making-your-changes)
-7. [Opening a Pull Request](#7-opening-a-pull-request)
-8. [The Review Process](#8-the-review-process)
-9. [Branch Rules](#9-branch-rules)
-10. [Code Style](#10-code-style)
-11. [Need Help?](#11-need-help)
+1. [What you need installed](#1-what-you-need-installed)
+2. [How the project is structured](#2-how-the-project-is-structured)
+3. [Fork and clone the repo](#3-fork-and-clone-the-repo)
+4. [Set up your local database](#4-set-up-your-local-database)
+5. [Make your changes](#5-make-your-changes)
+6. [Open a Pull Request](#6-open-a-pull-request)
+7. [The review process](#7-the-review-process)
+8. [Branch rules](#8-branch-rules)
+9. [Code style](#9-code-style)
+10. [Get help](#10-get-help)
 
 ---
 
-## 1. Before You Start
+## 1. What you need installed
 
-Make sure you have the following installed on your computer:
-
-| Tool | Why you need it | Install guide |
-|------|----------------|---------------|
-| [Git](https://git-scm.com/) | Tracks changes to code | [git-scm.com/downloads](https://git-scm.com/downloads) |
-| [Bun](https://bun.sh/) | Runs the project (like Node.js but faster) | [bun.sh/docs/installation](https://bun.sh/docs/installation) |
+| Tool | What it does | Install |
+|------|-------------|---------|
+| [Git](https://git-scm.com/) | Tracks code changes | [git-scm.com/downloads](https://git-scm.com/downloads) |
+| [Bun](https://bun.sh/) | Runs the project | [bun.sh/docs/installation](https://bun.sh/docs/installation) |
 | [Supabase CLI](https://supabase.com/docs/guides/cli) | Manages the local database | [supabase.com/docs/guides/cli](https://supabase.com/docs/guides/cli) |
-| [Docker](https://www.docker.com/) | Required by the Supabase CLI locally | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
-| A [GitHub account](https://github.com/signup) | To submit your changes | [github.com/signup](https://github.com/signup) |
+| [Docker](https://www.docker.com/) | Required by Supabase CLI | [docs.docker.com/get-docker](https://docs.docker.com/get-docker/) |
+| A [GitHub account](https://github.com/signup) | To submit changes | [github.com/signup](https://github.com/signup) |
 
-To check if something is installed, open your terminal and run:
+Check what's already installed by running these in your terminal:
 
 ```bash
 git --version
@@ -41,28 +40,28 @@ supabase --version
 docker --version
 ```
 
-If you see a version number, you're good. If you get an error, follow the install guide for that tool.
+Version number = good. Error = install it.
 
 ---
 
-## 2. Understanding the Project
+## 2. How the project is structured
 
-StreamWizard is a **monorepo** — one repository that contains multiple apps and shared packages. Here's the structure:
+StreamWizard is a **monorepo** — one repo, multiple apps and shared packages. You probably only need to touch one of these.
 
 ```
 streamwizard-backend/
 ├── apps/
-│   ├── rest-api/          # The main API (Hono framework)
+│   ├── rest-api/          # Main API (Hono)
 │   ├── streamwizard-bot/  # Processes Twitch events
 │   ├── ws-server/         # WebSocket server
 │   ├── smp-bridge/        # Twitch ↔ Minecraft integration
 │   ├── discord-bot/       # Discord bot
 │   ├── clip-sync/         # Syncs Twitch clips
 │   ├── web-streamwizard/  # Main web app
-│   ├── web-overlay/       # Twitch overlay app
+│   ├── web-overlay/       # Twitch overlay
 │   └── web-monitor/       # Monitoring dashboard
 └── packages/
-    ├── supabase/          # Database client and types
+    ├── supabase/          # Database client and generated types
     ├── twitch-api/        # Twitch API client
     ├── types/             # Shared TypeScript types
     ├── schemas/           # Zod validation schemas
@@ -74,28 +73,26 @@ The monorepo is managed with [Turborepo](https://turbo.build/), which lets you r
 
 ---
 
-## 3. Setting Up Your Environment
+## 3. Fork and clone the repo
 
-### Step 1 — Fork and clone the repo
+**Forking** creates your own copy of the repo on GitHub. You make changes there, then propose them back here.
 
-> **What is forking?** Forking creates your own personal copy of the repository on GitHub. You make changes there, then propose them back to the original project.
+### Step 1 — Fork
 
 1. Go to [github.com/streamwizard/streamwizard-backend](https://github.com/streamwizard/streamwizard-backend)
-2. Click the **Fork** button in the top-right corner
+2. Click **Fork** in the top-right
 3. Click **Create fork**
 
-Now clone your fork to your computer:
+### Step 2 — Clone your fork
 
 ```bash
 git clone https://github.com/YOUR-USERNAME/streamwizard-backend.git
 cd streamwizard-backend
 ```
 
-Replace `YOUR-USERNAME` with your GitHub username.
+### Step 3 — Add the original repo as upstream
 
-### Step 2 — Add the original repo as upstream
-
-This lets you pull in future updates from the main project:
+This lets you pull in updates from the main project later:
 
 ```bash
 git remote add upstream https://github.com/streamwizard/streamwizard-backend.git
@@ -107,33 +104,31 @@ Verify it worked:
 git remote -v
 ```
 
-You should see both `origin` (your fork) and `upstream` (the original).
+You should see `origin` (your fork) and `upstream` (the original).
 
-### Step 3 — Install dependencies
+### Step 4 — Install dependencies
 
 ```bash
 bun install
 ```
 
-### Step 4 — Set up environment variables
+### Step 5 — Environment variables
 
-The project uses [Doppler](https://www.doppler.com/) for secrets management in production, but for local development you use a `.env` file.
-
-Copy the example env file:
+The project uses [Doppler](https://www.doppler.com/) for secrets in production. Locally, you use a `.env` file.
 
 ```bash
 cp .env.example .env
 ```
 
-> If there is no `.env.example`, ask in the [Discussions](https://github.com/streamwizard/streamwizard-backend/discussions) and someone will help you figure out which variables you need for the part you're working on. You don't need all variables — only the ones relevant to your change.
+You don't need every variable — only the ones relevant to what you're working on. Not sure which ones? Ask in [Discord](https://discord.gg/29Eq659egv).
 
 ---
 
-## 4. Setting Up Supabase
+## 4. Set up your local database
 
-StreamWizard uses [Supabase](https://supabase.com/) as its database. For local development you run a **local Supabase instance** using Docker — this means you never touch the real production or staging database.
+StreamWizard uses [Supabase](https://supabase.com/) for its database. For local development you run a **local Supabase instance** — you never touch staging or production.
 
-### Step 1 — Start the local Supabase stack
+### Step 1 — Start the local stack
 
 Make sure Docker is running, then:
 
@@ -141,82 +136,50 @@ Make sure Docker is running, then:
 supabase start
 ```
 
-This will download and start a local Postgres database, auth server, and Supabase Studio. It may take a few minutes the first time.
-
-When it's done you'll see output like:
+First run takes a few minutes. When it's ready you'll see:
 
 ```
-API URL: http://127.0.0.1:54321
-DB URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+API URL:    http://127.0.0.1:54321
+DB URL:     postgresql://postgres:postgres@127.0.0.1:54322/postgres
 Studio URL: http://127.0.0.1:54323
 ```
 
-### Step 2 — Apply migrations
-
-Apply all existing database migrations to your local database:
+### Step 2 — Apply existing migrations
 
 ```bash
 supabase db push --local
 ```
 
-### Step 3 — Access Supabase Studio
+### Step 3 — Open Supabase Studio
 
-Open [http://127.0.0.1:54323](http://127.0.0.1:54323) in your browser to see and interact with your local database through a visual interface — just like the real Supabase dashboard.
+Go to [http://127.0.0.1:54323](http://127.0.0.1:54323) — it's a visual interface for your local database. Use it to explore tables, run queries, and test changes.
 
 ### Step 4 — Making database changes
 
-If your contribution requires a database change (new table, new column, etc.):
+If your change needs a new table, column, or function:
 
-1. Make the change in Supabase Studio locally first to test it
+1. Make the change in Supabase Studio locally and verify it works
 2. Generate a migration file:
 
 ```bash
 supabase db diff -f your_migration_name
 ```
 
-This creates a new file in `supabase/migrations/` that captures your change. **Always commit this file** — it's how the change gets applied to staging and production automatically.
+This creates a file in `supabase/migrations/`. **Commit it** — that's how the change gets applied to staging and production automatically through the CI pipeline.
 
-### Step 5 — Stop the local stack
-
-When you're done working:
+### Step 5 — Stop when done
 
 ```bash
 supabase stop
 ```
 
-> **Important:** Never point your local development at the staging or production Supabase URL. Always use the local instance.
-
 ---
 
-## 5. Forking the Repository
+## 5. Make your changes
 
-You already forked in Step 3, but here's a recap of the full mental model:
+### Step 1 — Sync with staging
 
-```
-Original repo (streamwizard/streamwizard-backend)
-        ↓  fork
-Your fork (YOUR-USERNAME/streamwizard-backend)
-        ↓  clone
-Your computer
-```
-
-When you're ready to submit changes, the flow goes back up:
-
-```
-Your computer
-        ↓  push
-Your fork (YOUR-USERNAME/streamwizard-backend)
-        ↓  Pull Request
-Original repo → staging branch
-```
-
----
-
-## 6. Making Your Changes
-
-### Step 1 — Sync with the latest staging branch
-
-Before starting any work, make sure your local copy is up to date:
+Before touching any code, pull in the latest changes:
 
 ```bash
 git fetch upstream
@@ -224,33 +187,31 @@ git checkout staging
 git merge upstream/staging
 ```
 
-### Step 2 — Create a feature branch
+### Step 2 — Create a branch
 
-Never work directly on `staging` or `main`. Always create a new branch for your change:
+Never work directly on `staging` or `main`. Create a branch:
 
 ```bash
 git checkout -b feature/your-feature-name
 ```
 
-Use a descriptive name, for example:
+Good branch names:
 - `feature/add-clip-sorting`
 - `fix/ws-server-reconnect`
 - `docs/update-readme`
 
-### Step 3 — Make your changes
-
-Edit the code, test your changes locally, then commit:
+### Step 3 — Commit your changes
 
 ```bash
 git add .
 git commit -m "feat: add clip sorting by view count"
 ```
 
-Try to follow this commit message format:
-- `feat:` for new features
-- `fix:` for bug fixes
-- `docs:` for documentation changes
-- `chore:` for maintenance tasks
+Commit message prefixes:
+- `feat:` — new feature
+- `fix:` — bug fix
+- `docs:` — documentation only
+- `chore:` — maintenance, dependencies
 
 ### Step 4 — Push to your fork
 
@@ -260,70 +221,61 @@ git push origin feature/your-feature-name
 
 ---
 
-## 7. Opening a Pull Request
-
-> **What is a Pull Request (PR)?** A PR is a proposal to merge your changes into the project. It lets the maintainer review your code before it goes live.
+## 6. Open a Pull Request
 
 1. Go to your fork on GitHub: `github.com/YOUR-USERNAME/streamwizard-backend`
-2. You'll see a banner saying **"Compare & pull request"** — click it
-3. **Important:** Make sure the base repository is `streamwizard/streamwizard-backend` and the base branch is **`staging`** — not `main`
+2. Click **Compare & pull request**
+3. **Set the base branch to `staging` — not `main`**
 
-    > If you accidentally target `main`, close the PR and open a new one targeting `staging`.
+   > PRs against `main` won't be accepted. Always target `staging`.
 
-4. Fill in the PR template:
-   - **Title**: Short description of what you changed
-   - **Description**: What does this change do? Why is it needed? Include screenshots if it's a UI change.
-   - **Testing**: Describe how you tested it locally
+4. Fill in the PR description:
+   - What does this change do?
+   - Why is it needed?
+   - How did you test it? Include screenshots for UI changes.
 
 5. Click **Create pull request**
 
 ---
 
-## 8. The Review Process
+## 7. The review process
 
-Once your PR is open:
-
-1. A maintainer will review your code and may leave comments asking for changes
-2. Make the requested changes on your branch and push again — the PR updates automatically
-3. Once approved, the maintainer will merge your PR into `staging`
+1. A maintainer reviews your code and may leave comments
+2. Make changes on your branch and push — the PR updates automatically
+3. Once approved, it gets merged into `staging`
 4. The staging database migration pipeline runs automatically
-5. After verification on staging, changes are promoted to `main` and production
+5. After verification on staging, changes go to `main` and hit production
 
-Be patient — reviews can take a few days. If you haven't heard back in a week, feel free to leave a comment on the PR.
+Reviews can take a few days. If you haven't heard back in a week, leave a comment on the PR.
 
 ---
 
-## 9. Branch Rules
+## 8. Branch rules
 
 | Branch | Purpose | Who can PR here |
 |--------|---------|-----------------|
-| `main` | Production — what real users see | Maintainers only (from `staging`) |
-| `staging` | Staging — tested before going live | Anyone via a fork |
-
-**Never open a PR directly against `main`.** All contributions go through `staging` first.
+| `staging` | Pre-production — tested before going live | Anyone via a fork |
+| `main` | Production — what real users see | Maintainers only |
 
 ---
 
-## 10. Code Style
+## 9. Code style
 
-The project uses [Prettier](https://prettier.io/) for formatting and [ESLint](https://eslint.org/) for linting.
-
-Before committing, run:
+Run these before opening a PR:
 
 ```bash
-bun format   # auto-formats your code
-bun lint     # checks for code issues
-bun check-types  # checks TypeScript types
+bun format       # auto-formats your code
+bun lint         # checks for issues
+bun check-types  # validates TypeScript types
 ```
 
-Fix any errors before opening a PR — PRs with failing checks will not be merged.
+PRs with failing checks won't be merged.
 
 ---
 
-## 11. Need Help?
+## 10. Get help
 
-- **Something not working?** Open a [GitHub Discussion](https://github.com/streamwizard/streamwizard-backend/discussions)
-- **Found a bug?** Open a [GitHub Issue](https://github.com/streamwizard/streamwizard-backend/issues)
-- **Not sure where to start?** Look for issues labeled `good first issue`
-
-No question is too basic. Everyone starts somewhere.
+- **Stuck on setup or have a question?** [Join the Discord](https://discord.gg/29Eq659egv) — it's the fastest way to get help
+- **Found a bug?** [Open an issue](https://github.com/streamwizard/streamwizard-backend/issues)
+- **Not sure what to work on?** Look for issues tagged `good first issue`
+- **General discussion?** [GitHub Discussions](https://github.com/streamwizard/streamwizard-backend/discussions)
