@@ -255,7 +255,10 @@ Reviews can take a few days. If you haven't heard back in a week, leave a commen
 | Branch | Purpose | Who can PR here |
 |--------|---------|-----------------|
 | `staging` | Pre-production — tested before going live | Anyone via a fork |
-| `main` | Production — what real users see | Maintainers only |
+| `main` | Verified — triggers database migrations | Maintainers only |
+| `prod` | Production — what real users see | Automated only |
+
+The `prod` branch is never touched manually. When migrations on `main` succeed, it gets updated automatically and Dokploy deploys from there.
 
 ---
 
