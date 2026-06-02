@@ -14,8 +14,8 @@ const navigation = {
     { name: "Discord", href: discordInviteLink }
   ],
   legal: [
-    { name: "Terms", href: "/terms" },
-    { name: "Privacy", href: "/privacy" }
+    { name: "Terms of Service", href: "/terms-of-service" },
+    { name: "Privacy Policy", href: "/privacy-policy" }
   ]
 };
 

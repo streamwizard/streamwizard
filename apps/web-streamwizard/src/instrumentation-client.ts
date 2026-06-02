@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/nextjs";
 import { getSentryOptions, createSupabaseIntegration } from "@repo/sentry";
 import { initPostHog } from "@repo/posthog";
+import posthog from "posthog-js";
 
 Sentry.init({
   ...getSentryOptions({ dsn: process.env.NEXT_PUBLIC_SENTRY_DSN!, service: "web-streamwizard" }),
@@ -14,14 +15,14 @@ Sentry.init({
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
-// Only init PostHog if the user has already accepted — no storage written before consent
+// Re-hydrate PostHog on page load when the user has previously accepted consent.
+// initPostHog sets opt_out_capturing_by_default:true, so we must also call
+// opt_in_capturing() to restore the active state — without it tracking stays dead.
 if (process.env.NEXT_PUBLIC_POSTHOG_KEY && localStorage.getItem("sw_cookie_consent") === "accepted") {
-  console.log("[posthog] consent found — initializing");
   initPostHog({
     key: process.env.NEXT_PUBLIC_POSTHOG_KEY,
     host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
   });
-} else {
-  console.log("[posthog] no consent yet — skipping init");
+  posthog.opt_in_capturing();
 }
 
