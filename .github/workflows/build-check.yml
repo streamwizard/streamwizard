@@ -1,0 +1,38 @@
+name: Build Check
+
+on:
+  workflow_run:
+    workflows: ["Deploy Production Database Migrations"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    strategy:
+      fail-fast: true
+      matrix:
+        app:
+          - name: rest-api
+            dockerfile: apps/rest-api/Dockerfile
+          - name: streamwizard-bot
+            dockerfile: apps/streamwizard-bot/Dockerfile
+          - name: ws-server
+            dockerfile: apps/ws-server/Dockerfile
+          - name: web-streamwizard
+            dockerfile: apps/web-streamwizard/Dockerfile
+          - name: web-overlay
+            dockerfile: apps/web-overlay/Dockerfile
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Build ${{ matrix.app.name }}
+        run: |
+          docker build -f ${{ matrix.app.dockerfile }} . --no-cache
