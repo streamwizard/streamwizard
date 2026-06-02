@@ -3,16 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config dev_rest_api -- bun run --hot src/index.ts",
-    "start": "bun run ./src/index.ts",
+    "dev": "doppler run --config dev_rest_api -- bun --preload ./src/sentry.ts --hot src/index.ts",
+    "start": "bun --preload ./src/sentry.ts src/index.ts",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/metrics": "workspace:*",
     "@repo/schemas": "workspace:*",
+    "@repo/sentry": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/types": "workspace:*",
     "@repo/logger": "workspace:*",
+    "@sentry/bun": "^10",
+    "@sentry/hono": "^10",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.105.1",
     "hono": "^4.11.4",

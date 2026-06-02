@@ -16,6 +16,10 @@ const schema = z.object({
 
   // Minecraft
   MINECRAFT_WS_AUTH_TOKEN: z.string().min(1),
+
+  // Sentry
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_RELEASE: z.string().optional(),
 })
 
 export const env = schema.parse(process.env)

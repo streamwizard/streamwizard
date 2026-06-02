@@ -3,13 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config dev_ws_server -- bun run --hot src/index.ts",
-    "start": "bun run ./src/index.ts",
+    "dev": "doppler run --config dev_ws_server -- bun --preload ./src/sentry.ts --hot src/index.ts",
+    "start": "bun --preload ./src/sentry.ts src/index.ts",
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/metrics": "workspace:*",
+    "@repo/sentry": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/types": "workspace:*",
+    "@sentry/bun": "^10",
     "zod": "^4.4.3"
   },
   "devDependencies": {

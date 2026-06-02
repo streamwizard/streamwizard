@@ -83,6 +83,7 @@
     "gen-types": "supabase gen types typescript --project-id jgxdrljoqployiyjedst --schema public > src/types/supabase.ts"
   },
   "dependencies": {
+    "@repo/metrics": "workspace:*",
     "@supabase/supabase-js": "^2.105.1",
     "@supabase/ssr": "^0.8.0"
   },

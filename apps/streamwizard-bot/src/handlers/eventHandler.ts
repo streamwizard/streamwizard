@@ -4,6 +4,7 @@ import { z } from "zod";
 import { registerTwitchHandlers } from "./twitch";
 import { streamEventsLogger } from "@repo/logger";
 import { broadcastOverlayEvent } from "../functions/broadcastOverlayEvent";
+import { trackEventSubReceived } from "@repo/metrics";
 
 /**
  * Context passed to all event handlers in smp-bridge
@@ -62,6 +63,7 @@ export class HandlerRegistry {
     data: WebSocketNotificationMessage,
   ): Promise<void> {
     const handler = this.twitchHandlers.get(eventType);
+    trackEventSubReceived(eventType, !!handler);
 
     const broadcasterId = extractReceivingBroadcasterId(data.payload.event);
 

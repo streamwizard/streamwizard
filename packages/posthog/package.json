@@ -1,0 +1,29 @@
+{
+  "name": "@repo/posthog",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@posthog/react": "^1.2.3",
+    "posthog-js": "^1.258.1"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/react": "^19.2.14",
+    "typescript": "^5.9.3"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": ">=18"
+  }
+}

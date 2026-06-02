@@ -1,7 +1,8 @@
 "use client";
 
 import { User } from "@supabase/supabase-js";
-import React, { createContext, useContext } from "react";
+import posthog from "posthog-js";
+import React, { createContext, useContext, useEffect } from "react";
 
 export const SessionContext = createContext<User | null>(null);
 
@@ -12,6 +13,18 @@ interface Props {
 
 // session Provider component
 export const SessionProvider = ({ children, session }: Props) => {
+  useEffect(() => {
+    if (session) {
+      posthog.identify(session.id, {
+        email: session.email,
+        name: session.user_metadata.full_name,
+        twitch_id: session.user_metadata.sub,
+        avatar_url: session.user_metadata.avatar_url,
+      });
+    } else {
+      posthog.reset();
+    }
+  }, [session]);
 
   return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
 };

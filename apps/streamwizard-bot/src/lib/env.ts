@@ -16,6 +16,10 @@ const schema = z.object({
 
   // Internal
   WS_SERVER_URL: z.string().url(),
+
+  // Sentry
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_RELEASE: z.string().optional(),
 })
 
 export const env = schema.parse(process.env)

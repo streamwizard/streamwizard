@@ -8,6 +8,13 @@ const schema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_SECRET_KEY: z.string().min(1),
   TOKEN_ENCRYPTION_KEY: z.string().min(1),
+
+  // Monitor (optional — live WS inspector)
+  MONITOR_SECRET: z.string().min(1).optional(),
+
+  // Sentry
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_RELEASE: z.string().optional(),
 })
 
 export const env = schema.parse(process.env)
