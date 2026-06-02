@@ -23,7 +23,7 @@ jobs:
 
       - name: Push Migrations to Staging Supabase
         run: |
-          doppler run --command="supabase db push --db-url postgresql://postgres:\$SUPABASE_DB_PASSWORD@db.\$SUPABASE_PROJECT_ID.supabase.co:5432/postgres"
+          doppler run --command="supabase db push --db-url \$SUPABASE_DB_URL"
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
