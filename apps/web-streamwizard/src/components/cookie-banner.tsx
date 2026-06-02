@@ -32,10 +32,12 @@ const content = {
 type Tab = keyof typeof content;
 
 export function CookieBanner() {
+  const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [tab, setTab] = useState<Tab>("normal");
 
   useEffect(() => {
+    setMounted(true);
     if (!localStorage.getItem(CONSENT_KEY)) {
       setVisible(true);
     }
@@ -61,7 +63,7 @@ export function CookieBanner() {
     toast(content[tab].declineToast.title, { description: content[tab].declineToast.description });
   }
 
-  if (!visible) return null;
+  if (!mounted || !visible) return null;
 
   const c = content[tab];
 
@@ -106,7 +108,7 @@ export function CookieBanner() {
           </div>
 
           <p className="mt-3 text-center text-[10px] text-muted-foreground/60">
-            <Link href="/privacy" className="underline underline-offset-2 hover:text-muted-foreground transition-colors">
+            <Link href="/privacy-policy" className="underline underline-offset-2 hover:text-muted-foreground transition-colors">
               Privacy policy
             </Link>
             {" · "}
