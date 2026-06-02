@@ -23,7 +23,7 @@ jobs:
 
       - name: Push Migrations to Production Supabase
         run: |
-          doppler run --command="supabase db push --project-ref \$SUPABASE_PROJECT_ID --password \$SUPABASE_DB_PASSWORD"
+          doppler run --command="supabase db push --db-url \$SUPABASE_DB_URL"
         env:
-          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}         
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
