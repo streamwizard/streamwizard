@@ -1398,6 +1398,10 @@ export type Database = {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
       }
+      delete_user_data: {
+        Args: Record<string, never>
+        Returns: undefined
+      }
       check_user_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: boolean

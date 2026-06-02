@@ -2,6 +2,7 @@ import "./src/lib/env";
 import fs from "fs";
 import path from "path";
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 /** Monorepo root (primary lockfile) — clears Turbopack multi-lockfile root warning */
 const turbopackRoot = path.resolve(__dirname, "../..");
@@ -51,6 +52,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.SUPABASE_URL ?? "",
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_PUBLIC_KEY ?? "",
     NEXT_PUBLIC_WS_SERVER_URL: wsServerUrl,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN ?? "",
   },
   transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core"],
   allowedDevOrigins: ["10.10.10.73"],
@@ -74,4 +76,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  disableLogger: true,
+});

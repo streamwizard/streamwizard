@@ -2,6 +2,7 @@
 import { Context, Next } from "hono";
 import { createHash } from "crypto";
 import { supabase } from "@repo/supabase";
+import { Sentry } from "../../sentry";
 
 /**
  * Security Event Metadata Interface
@@ -90,6 +91,8 @@ export function safeErrorHandler() {
         path: c.req.path,
         method: c.req.method,
       });
+
+      Sentry.captureException(error, { extra: { requestId, path: c.req.path, method: c.req.method } });
 
       // Log to audit logs
       await logSecurityEvent("api_error", {

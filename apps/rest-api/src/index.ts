@@ -1,5 +1,10 @@
+import { Sentry } from "./sentry";
+process.on("uncaughtException", (err) => { Sentry.captureException(err); });
+process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import "./lib/env";
 import { Hono } from "hono";
+import { sentry } from "@sentry/hono/bun";
+import { metricsMiddleware, isMetricsEnabled } from "@repo/metrics";
 import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
 import { rawBodyMiddleware } from "./middleware/raw-body";
@@ -14,6 +19,12 @@ const app = new Hono();
 // SECURITY MIDDLEWARE (Applied in order)
 // ============================================
 
+// Sentry must be first — sets up tracing and Hono's onError capture
+if (process.env.SENTRY_DSN) {
+  app.use("*", sentry(app));
+}
+
+app.use("*", metricsMiddleware("rest-api"));
 app.use("*", securityMiddleware.requestId());
 
 // 2. HTTPS enforcement (production only)
@@ -58,7 +69,7 @@ app.post(
 app.use(
   "/api/*",
   cors({
-    origin: ["http://localhost:3000", "https://streamwizard.org"], // Add your frontend URLs
+    origin: ["http://localhost:3000", "https://streamwizard.org", "https://staging.streamwizard.org"], // Add your frontend URLs
     credentials: true,
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
@@ -79,4 +90,5 @@ Bun.serve({
   port: 8000,
 });
 
-console.log(`Server is running on port ${8000}`);
+console.log(`[rest-api] listening on port ${8000}`);
+console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

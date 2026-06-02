@@ -1,31 +1,28 @@
-// This file configures the initialization of Sentry on the client.
-// The added config here will be used whenever a users loads a page in their browser.
-// https://docs.sentry.io/platforms/javascript/guides/nextjs/
-
 import * as Sentry from "@sentry/nextjs";
+import { getSentryOptions, createSupabaseIntegration } from "@repo/sentry";
+import { initPostHog } from "@repo/posthog";
+import posthog from "posthog-js";
 
 Sentry.init({
-  dsn: "https://0551aed405ee8aeae47e0dead4cc0984@o4507334924894208.ingest.de.sentry.io/4508514337882192",
-
-  // Add optional integrations for additional features
-  integrations: [Sentry.replayIntegration()],
-
-  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
-  tracesSampleRate: 1,
-  // Enable logs to be sent to Sentry
-  enableLogs: true,
-
-  // Define how likely Replay events are sampled.
-  // This sets the sample rate to be 10%. You may want this to be 100% while
-  // in development and sample at a lower rate in production
+  ...getSentryOptions({ dsn: process.env.NEXT_PUBLIC_SENTRY_DSN!, service: "web-streamwizard" }),
+  integrations: [
+    Sentry.replayIntegration(),
+    createSupabaseIntegration(Sentry),
+  ],
   replaysSessionSampleRate: 0.1,
-
-  // Define how likely Replay events are sampled when an error occurs.
   replaysOnErrorSampleRate: 1.0,
-
-  // Enable sending user PII (Personally Identifiable Information)
-  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
-  sendDefaultPii: true,
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+
+// Re-hydrate PostHog on page load when the user has previously accepted consent.
+// initPostHog sets opt_out_capturing_by_default:true, so we must also call
+// opt_in_capturing() to restore the active state — without it tracking stays dead.
+if (process.env.NEXT_PUBLIC_POSTHOG_KEY && localStorage.getItem("sw_cookie_consent") === "accepted") {
+  initPostHog({
+    key: process.env.NEXT_PUBLIC_POSTHOG_KEY,
+    host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
+  });
+  posthog.opt_in_capturing();
+}
+

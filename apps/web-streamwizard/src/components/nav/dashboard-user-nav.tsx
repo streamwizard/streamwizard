@@ -17,11 +17,13 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui";
 import { logout } from "@/actions/auth/logout";
+import { resetUser } from "@repo/posthog";
 
 export function DashboardUserNav({ username, profile_img }: { username: string; profile_img: string }) {
   const { setTheme } = useTheme();
 
   const signOut = async () => {
+    resetUser(); // unlink PostHog identity before session is destroyed
     await logout();
   };
 
