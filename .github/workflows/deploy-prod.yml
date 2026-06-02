@@ -23,11 +23,11 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
-      - name: Merge main into prod
+      - name: Merge main into production
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin prod
-          git checkout prod
+          git fetch origin production
+          git checkout production
           git merge origin/main --ff-only
-          git push origin prod
+          git push origin production
