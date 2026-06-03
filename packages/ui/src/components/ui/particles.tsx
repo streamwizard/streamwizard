@@ -68,7 +68,7 @@ const Particles: React.FC<ParticlesProps> = ({
   const mouse = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const canvasSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
   const rafID = useRef<number | null>(null);
-  const resizeTimeout = useRef<NodeJS.Timeout | undefined>(undefined);
+  const resizeTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const animateRef = useRef<(() => void) | undefined>(undefined);
   const [mousePosition, setMousePosition] = useState<MousePosition>({ x: 0, y: 0 });
   
