@@ -4,7 +4,8 @@
 -- ============================================================
 
 -- Fixed UUIDs so local dev is reproducible
--- Test user: test@streamwizard.local / password: password123
+-- Test user simulates a Twitch OAuth login (Twitch user ID: 123456789)
+-- To actually authenticate locally, configure real Twitch OAuth credentials
 
 DO $$
 DECLARE
@@ -13,6 +14,9 @@ DECLARE
 BEGIN
 
   -- ── Auth user ──────────────────────────────────────────────
+  -- Simulates a user created via Twitch OAuth.
+  -- To actually log in locally you still need real Twitch OAuth credentials.
+  -- This record exists so FK constraints are satisfied for local DB development.
   INSERT INTO auth.users (
     id,
     email,
@@ -27,10 +31,10 @@ BEGIN
   ) VALUES (
     v_user_id,
     'test@streamwizard.local',
-    crypt('password123', gen_salt('bf')),
+    '',
     now(),
-    '{"provider":"email","providers":["email"]}',
-    '{"name":"Test Broadcaster","avatar_url":"https://static-cdn.jtvnw.net/user-default-pictures-uv/75305d54-c7cc-40d1-bb9c-91fbe85943c7-profile_image-70x70.png"}',
+    '{"provider":"twitch","providers":["twitch"]}',
+    '{"name":"Test Broadcaster","avatar_url":"https://static-cdn.jtvnw.net/user-default-pictures-uv/75305d54-c7cc-40d1-bb9c-91fbe85943c7-profile_image-70x70.png","provider_id":"123456789"}',
     now(),
     now(),
     'authenticated',
