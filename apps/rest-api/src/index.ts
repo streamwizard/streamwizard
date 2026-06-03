@@ -21,7 +21,7 @@ const app = new Hono();
 
 // Sentry must be first — sets up tracing and Hono's onError capture
 if (process.env.SENTRY_DSN) {
-  app.use("*", sentry(app));
+  app.use("*", sentry(app, {}));
 }
 
 app.use("*", metricsMiddleware("rest-api"));
