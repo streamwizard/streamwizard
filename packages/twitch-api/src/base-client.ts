@@ -116,16 +116,22 @@ export abstract class TwitchApiBaseClient {
   protected appInterceptor(api: AxiosInstance): void {
     api.interceptors.request.use(
       async (config: InternalAxiosRequestConfig) => {
-        const { access_token, expires_in, updated_at } = await getTwitchAppToken();
+        let token: string;
 
-        let token: string = access_token;
-
-        // check if token is expired
-        if (this.checkTokenExpiry(updated_at, expires_in)) {
-          const newToken = await this.refreshAppToken();
-          if (!newToken) {
-            return Promise.reject(new Error("Failed to refresh app token"));
+        try {
+          const { access_token, expires_in, updated_at } = await getTwitchAppToken();
+          if (this.checkTokenExpiry(updated_at, expires_in)) {
+            const newToken = await this.refreshAppToken();
+            if (!newToken) return Promise.reject(new Error("Failed to refresh app token"));
+            token = newToken as string;
+          } else {
+            token = access_token;
           }
+        } catch {
+          // No token in DB yet — bootstrap by fetching a fresh one from Twitch
+          console.log("⚡ No app token in database, bootstrapping...");
+          const newToken = await this.refreshAppToken();
+          if (!newToken) return Promise.reject(new Error("Failed to bootstrap app token"));
           token = newToken as string;
         }
 

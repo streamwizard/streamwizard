@@ -27,23 +27,31 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
 
-    if (!data.session?.provider_token || !data.session?.provider_refresh_token) {
+    if (
+      !data.session?.provider_token ||
+      !data.session?.provider_refresh_token
+    ) {
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
 
     // Encrypt tokens before storing
     const encryptedAccessToken = encryptToken(data.session.provider_token);
-    const encryptedRefreshToken = encryptToken(data.session.provider_refresh_token);
+    const encryptedRefreshToken = encryptToken(
+      data.session.provider_refresh_token,
+    );
 
-
-    const { error: err } = await updateTwitchTokens(supabase, data.session.user.id, {
-      access_token_ciphertext: encryptedAccessToken.ciphertext,
-      access_token_iv: encryptedAccessToken.iv,
-      access_token_tag: encryptedAccessToken.authTag,
-      refresh_token_ciphertext: encryptedRefreshToken.ciphertext,
-      refresh_token_iv: encryptedRefreshToken.iv,
-      refresh_token_tag: encryptedRefreshToken.authTag,
-    });
+    const { error: err } = await updateTwitchTokens(
+      supabase,
+      data.session.user.id,
+      {
+        access_token_ciphertext: encryptedAccessToken.ciphertext,
+        access_token_iv: encryptedAccessToken.iv,
+        access_token_tag: encryptedAccessToken.authTag,
+        refresh_token_ciphertext: encryptedRefreshToken.ciphertext,
+        refresh_token_iv: encryptedRefreshToken.iv,
+        refresh_token_tag: encryptedRefreshToken.authTag,
+      },
+    );
 
     if (err) {
       console.log(err);
