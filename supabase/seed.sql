@@ -13,10 +13,6 @@ INSERT INTO public.default_chat_commands (command, message, action) VALUES
   ('!clip',      'Clip created! Check the clips section on your dashboard.', 'none'),
   ('!uptime',    'The stream has been live for {uptime}.', 'none'),
   ('!followage', '{user} has been following for {followage}.', 'none'),
-  ('!sr',        '{user} requested: {song}', 'spotify.song_request'),
-  ('!skip',      'Song skipped by {user}.', 'spotify.skip'),
-  ('!bansong',   'Song banned by {user}.', 'spotify.add_banned_song'),
-  ('!unbansong', 'Song unbanned by {user}.', 'spotify.remove_banned_song')
 ON CONFLICT DO NOTHING;
 
 -- ── SMP Actions ───────────────────────────────────────────────
