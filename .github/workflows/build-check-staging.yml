@@ -8,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: staging
     strategy:
       fail-fast: true
       matrix:
@@ -29,4 +30,4 @@ jobs:
 
       - name: Build ${{ matrix.app.name }}
         run: |
-          docker build -f ${{ matrix.app.dockerfile }} .
+          docker build --build-arg DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN }} -f ${{ matrix.app.dockerfile }} .
