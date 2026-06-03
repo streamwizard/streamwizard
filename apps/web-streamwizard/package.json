@@ -52,7 +52,7 @@
     "@repo/supabase": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/ui": "workspace:*",
-    "@sentry/nextjs": "^9",
+    "@sentry/nextjs": "^10",
     "@supabase/ssr": "0.8.0",
     "@supabase/supabase-js": "^2.105.1",
     "@t3-oss/env-nextjs": "^0.13.10",

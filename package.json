@@ -18,7 +18,8 @@
     "typescript": "5.9.2"
   },
   "overrides": {
-    "next": "^16.2.6"
+    "next": "^16.2.6",
+    "@sentry/core": "10.56.0"
   },
   "engines": {
     "node": ">=18"
