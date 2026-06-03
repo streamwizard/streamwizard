@@ -14,6 +14,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@sentry/core": "^10",
     "@supabase/sentry-js-integration": "^0.3.0",
     "@supabase/supabase-js": "^2.105.1"
   },

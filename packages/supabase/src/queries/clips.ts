@@ -18,6 +18,7 @@ export async function addClipToFolder(client: DBClient, { clipId, userId, folder
       .select();
 
     if (error) throw error;
+    if (!data[0]) throw new Error("Insert returned no rows");
     folderId = data[0].id;
   }
 
