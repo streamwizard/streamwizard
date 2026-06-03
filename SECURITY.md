@@ -12,7 +12,9 @@ If you discover a security vulnerability in StreamWizard, please report it respo
 
 ### How to Report
 
-Send an email to **security@streamwizard.org** with:
+Please report it privately by opening a ticket in our Discord server: https://discord.gg/29Eq659egv
+
+Include the following:
 
 - A description of the vulnerability
 - Steps to reproduce the issue
