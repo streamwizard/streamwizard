@@ -8,19 +8,19 @@ export const registerTwitchHandlers = (handlers: HandlerRegistry) => {
   // stream offline event
   handlers.registerTwitchHandler(
     "stream.offline",
-    async (event, context) => {
+    async (event: TwitchSchema.StreamOfflineEvent, context) => {
       handleStreamOffline(event, context.twitchApi);
     },
-    TwitchSchema.StreamOfflineSchema,
+    TwitchSchema.StreamOfflineEventSchema,
   );
 
   // stream online event
   handlers.registerTwitchHandler(
     "stream.online",
-    async (event, context) => {
+    async (event: TwitchSchema.StreamOnlineEvent, context) => {
       handleStreamOnline(event, context.twitchApi);
     },
-    TwitchSchema.StreamOnlineSchema,
+    TwitchSchema.StreamOnlineEventSchema,
   );
 
   // channel update event
