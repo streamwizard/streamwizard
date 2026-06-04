@@ -14,7 +14,7 @@ jobs:
     environment: staging
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install Doppler CLI
         uses: dopplerhq/cli-action@v4
