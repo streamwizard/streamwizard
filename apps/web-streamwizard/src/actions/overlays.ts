@@ -84,6 +84,7 @@ export async function createOverlayScene(formData: {
   name: string;
   width?: number;
   height?: number;
+  render_mode?: "obs" | "phone";
 }) {
   let supabase, user;
   try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
@@ -93,13 +94,18 @@ export async function createOverlayScene(formData: {
 
   const slug = generateSlug(parsed.data.name);
 
-  const { data, error } = await _createOverlayScene(supabase, {
-    user_id: user.id,
-    name: parsed.data.name,
-    slug,
-    width: parsed.data.width ?? 1920,
-    height: parsed.data.height ?? 1080,
-  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.from("overlay_scenes") as any)
+    .insert({
+      user_id: user.id,
+      name: parsed.data.name,
+      slug,
+      width: parsed.data.width ?? 1920,
+      height: parsed.data.height ?? 1080,
+      render_mode: formData.render_mode ?? "obs",
+    })
+    .select()
+    .single();
 
   if (error) return { data: null, error: error.message };
 
