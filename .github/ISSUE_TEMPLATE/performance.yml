@@ -1,0 +1,107 @@
+name: Performance Report
+description: Slow, laggy, or eating RAM like it's Twitch chat during a raid. Report it.
+title: "[Perf]: "
+labels: ["performance", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fast tools feel invisible. If StreamWizard is making itself known in the wrong way — use this.
+
+        You can also report performance issues from Discord using the StreamWizard bot — `/perf` in the [StreamWizard Discord](https://discord.gg/29Eq659egv).
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where's the slowdown?
+      options:
+        - web-streamwizard (main web app)
+        - web-overlay (Twitch overlay)
+        - web-monitor (monitoring dashboard)
+        - rest-api (slow endpoints)
+        - streamwizard-bot (event processing)
+        - ws-server (WebSocket latency)
+        - Database / queries
+        - Other / unsure
+    validations:
+      required: true
+
+  - type: dropdown
+    id: symptom
+    attributes:
+      label: What does it feel like?
+      options:
+        - Slow response / high latency
+        - High CPU usage
+        - High memory usage
+        - UI lag or dropped frames
+        - Slow page load
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What did you notice?
+      description: Numbers help. "It's slow" helps less.
+      placeholder: "e.g. The overlay lags ~2 seconds behind chat events. Chat is moving at 100mph, overlay is stuck in traffic."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: How do we reproduce it?
+      placeholder: |
+        1. Open '...'
+        2. Do '...'
+        3. Watch it struggle
+    validations:
+      required: true
+
+  - type: textarea
+    id: baseline
+    attributes:
+      label: Expected vs actual
+      description: What did you expect, and what did you actually get?
+      placeholder: "Expected: overlay updates within ~100ms. Actual: 2–3 second delay."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - macOS
+        - Linux
+        - Other
+
+  - type: input
+    id: bun_version
+    attributes:
+      label: Bun version
+      placeholder: "run: bun --version"
+
+  - type: input
+    id: sw_version
+    attributes:
+      label: StreamWizard version / commit
+      placeholder: "e.g. v1.2.0 or a commit hash"
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Profiler output or logs
+      description: If you've got data, paste it here. Raw numbers beat gut feelings.
+      render: shell
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Quick checks
+      options:
+        - label: I searched existing issues and this hasn't been reported before.
+          required: true
