@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.12
+FROM oven/bun:1.3.14
 
 # This Dockerfile expects the Docker build context to be the repository root.
 # Dokploy settings:
