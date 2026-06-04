@@ -15,7 +15,7 @@ import {
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@repo/supabase";
 import { User } from "@supabase/supabase-js";
-import { BarChart2, FileVideoCamera, Layers, MapPin } from "lucide-react";
+import { BarChart2, FileVideoCamera, Layers } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FaDiscord } from "react-icons/fa";
@@ -92,14 +92,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/irl">
-                    <MapPin className="mr-2 h-4 w-4" />
-                    IRL Collector
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

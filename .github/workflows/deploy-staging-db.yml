@@ -26,6 +26,6 @@ jobs:
 
       - name: Push Migrations to Staging Supabase
         run: |
-          doppler run --command="supabase db push --db-url \$SUPABASE_DB_URL"
+          doppler run --command="supabase db push --db-url \$SUPABASE_DB_URL --yes"
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}

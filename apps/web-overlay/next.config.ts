@@ -44,7 +44,7 @@ const overlaySceneFontsCsp = [
   "font-src 'self' data: https://fonts.gstatic.com",
   "img-src 'self' data: blob:",
   "media-src 'self' blob: data:",
-  `connect-src 'self'${wsServerUrl ? ` ${wsServerUrl}` : ""}`,
+  `connect-src 'self' https://api.open-meteo.com https://nominatim.openstreetmap.org${wsServerUrl ? ` ${wsServerUrl}` : ""}`,
 ].join("; ");
 
 const nextConfig: NextConfig = {
@@ -55,6 +55,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN ?? "",
   },
   transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core"],
+  allowedDevOrigins: ["10.10.10.73"],
   turbopack: {
     root: turbopackRoot,
   },
