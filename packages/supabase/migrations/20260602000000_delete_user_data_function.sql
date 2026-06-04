@@ -14,6 +14,11 @@ BEGIN
     RETURN NULL;
   END IF;
 
+  -- Prevent any caller from deleting another user's data.
+  IF v_user_id IS DISTINCT FROM auth.uid() THEN
+    RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501';
+  END IF;
+
   DELETE FROM public.clip_folder_junction WHERE user_id = v_user_id;
   DELETE FROM public.pending_clips WHERE broadcaster_id = p_twitch_user_id;
   DELETE FROM public.twitch_clip_syncs WHERE user_id = v_user_id;

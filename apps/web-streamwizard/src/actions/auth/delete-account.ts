@@ -20,9 +20,11 @@ export async function deleteAccount() {
   // UI — they must do that manually from Twitch Settings → Connections.
   try {
     const accessToken = await getChannelAccessToken(broadcasterId);
-    await axios.post("https://id.twitch.tv/oauth2/revoke", null, {
-      params: { client_id: process.env.TWITCH_CLIENT_ID, token: accessToken },
-    });
+    await axios.post(
+      "https://id.twitch.tv/oauth2/revoke",
+      new URLSearchParams({ client_id: process.env.TWITCH_CLIENT_ID!, token: accessToken }),
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+    );
   } catch {
     // Non-fatal: token may already be expired; proceed with deletion.
   }
