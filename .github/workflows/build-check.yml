@@ -1,0 +1,35 @@
+name: Build Check
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: production
+    strategy:
+      fail-fast: true
+      matrix:
+        app:
+          - name: rest-api
+            dockerfile: apps/rest-api/Dockerfile
+          - name: streamwizard-bot
+            dockerfile: apps/streamwizard-bot/Dockerfile
+          - name: ws-server
+            dockerfile: apps/ws-server/Dockerfile
+          - name: web-streamwizard
+            dockerfile: apps/web-streamwizard/Dockerfile
+          - name: web-overlay
+            dockerfile: apps/web-overlay/Dockerfile
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Build ${{ matrix.app.name }}
+        run: |
+          docker build --build-arg DOPPLER_TOKEN=${{ secrets.DOPPLER_TOKEN }} -f ${{ matrix.app.dockerfile }} .

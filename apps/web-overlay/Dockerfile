@@ -9,23 +9,23 @@ WORKDIR /app
 COPY package.json bun.lock* turbo.json ./
 
 # All workspace package.json files so Bun can resolve workspace:* deps
-COPY packages/eslint-config/package.json   ./packages/eslint-config/
-COPY packages/logger/package.json          ./packages/logger/
-COPY packages/metrics/package.json         ./packages/metrics/
-COPY packages/schemas/package.json         ./packages/schemas/
-COPY packages/supabase/package.json        ./packages/supabase/
-COPY packages/twitch-api/package.json      ./packages/twitch-api/
-COPY packages/twitch-eventsub/package.json ./packages/twitch-eventsub/
-COPY packages/types/package.json           ./packages/types/
+COPY packages/eslint-config/package.json     ./packages/eslint-config/
+COPY packages/logger/package.json            ./packages/logger/
+COPY packages/metrics/package.json           ./packages/metrics/
+COPY packages/posthog/package.json           ./packages/posthog/
+COPY packages/schemas/package.json           ./packages/schemas/
+COPY packages/sentry/package.json            ./packages/sentry/
+COPY packages/supabase/package.json          ./packages/supabase/
+COPY packages/twitch-api/package.json        ./packages/twitch-api/
+COPY packages/twitch-eventsub/package.json   ./packages/twitch-eventsub/
+COPY packages/types/package.json             ./packages/types/
 COPY packages/typescript-config/package.json ./packages/typescript-config/
-COPY packages/ui/package.json              ./packages/ui/
+COPY packages/ui/package.json                ./packages/ui/
 
 # App package.json files
+COPY apps/web-monitor/package.json      ./apps/web-monitor/
 COPY apps/web-streamwizard/package.json ./apps/web-streamwizard/
-COPY apps/clip-sync/package.json        ./apps/clip-sync/
-COPY apps/discord-bot/package.json      ./apps/discord-bot/
 COPY apps/rest-api/package.json         ./apps/rest-api/
-COPY apps/smp-bridge/package.json       ./apps/smp-bridge/
 COPY apps/streamwizard-bot/package.json ./apps/streamwizard-bot/
 COPY apps/web-overlay/package.json      ./apps/web-overlay/
 COPY apps/ws-server/package.json        ./apps/ws-server/

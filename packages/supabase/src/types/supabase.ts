@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -1088,6 +1108,7 @@ export type Database = {
           href: string
           id: string
           profile_img: string
+          user_id: string | null
           username: string
         }
         Insert: {
@@ -1097,6 +1118,7 @@ export type Database = {
           href: string
           id?: string
           profile_img: string
+          user_id?: string | null
           username: string
         }
         Update: {
@@ -1106,42 +1128,40 @@ export type Database = {
           href?: string
           id?: string
           profile_img?: string
+          user_id?: string | null
           username?: string
         }
         Relationships: []
       }
       twitch_app_token: {
         Row: {
-          access_token: string
           access_token_ciphertext: string | null
           access_token_iv: string | null
           access_token_tag: string | null
           created_at: string
           expires_in: number
           id: string
-          token_type: string
+          singleton: string
           updated_at: string
         }
         Insert: {
-          access_token: string
           access_token_ciphertext?: string | null
           access_token_iv?: string | null
           access_token_tag?: string | null
           created_at?: string
           expires_in: number
           id?: string
-          token_type: string
+          singleton?: string
           updated_at?: string
         }
         Update: {
-          access_token?: string
           access_token_ciphertext?: string | null
           access_token_iv?: string | null
           access_token_tag?: string | null
           created_at?: string
           expires_in?: number
           id?: string
-          token_type?: string
+          singleton?: string
           updated_at?: string
         }
         Relationships: []
@@ -1398,14 +1418,11 @@ export type Database = {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
       }
-      delete_user_data: {
-        Args: Record<string, never>
-        Returns: undefined
-      }
       check_user_role: {
         Args: { p_role: string; p_user_id: string }
         Returns: boolean
       }
+      delete_user_data: { Args: { p_twitch_user_id: string }; Returns: string }
       get_all_clips_with_folders: {
         Args: never
         Returns: {
@@ -1651,6 +1668,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       actions: [

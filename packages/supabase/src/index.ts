@@ -100,18 +100,20 @@ export async function getTwitchAppToken(): Promise<{ access_token: string; expir
 
 // update twitch app token in supabase
 export async function updateTwitchAppToken(accessToken: string, expiresIn: number): Promise<void> {
-  // Encrypt the access token
   const encryptedToken = encryptToken(accessToken);
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("twitch_app_token")
-    .update({
-      access_token_ciphertext: encryptedToken.ciphertext,
-      access_token_iv: encryptedToken.iv,
-      access_token_tag: encryptedToken.authTag,
-      expires_in: expiresIn,
-    })
-    .single();
+    .upsert(
+      {
+        singleton: "singleton",
+        access_token_ciphertext: encryptedToken.ciphertext,
+        access_token_iv: encryptedToken.iv,
+        access_token_tag: encryptedToken.authTag,
+        expires_in: expiresIn,
+      },
+      { onConflict: "singleton" }
+    );
 
   if (error) {
     throw error;
