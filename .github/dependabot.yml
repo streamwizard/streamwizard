@@ -4,6 +4,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "staging"
     labels:
       - "dependencies"
 
@@ -11,6 +12,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "staging"
     labels:
       - "dependencies"
 
@@ -18,6 +20,7 @@ updates:
     directory: "/apps/rest-api"
     schedule:
       interval: "weekly"
+    target-branch: "staging"
     labels:
       - "dependencies"
 
@@ -25,6 +28,7 @@ updates:
     directory: "/apps/streamwizard-bot"
     schedule:
       interval: "weekly"
+    target-branch: "staging"
     labels:
       - "dependencies"
 
@@ -32,6 +36,7 @@ updates:
     directory: "/apps/ws-server"
     schedule:
       interval: "weekly"
+    target-branch: "staging"
     labels:
       - "dependencies"
 
@@ -39,6 +44,7 @@ updates:
     directory: "/apps/web-streamwizard"
     schedule:
       interval: "weekly"
+    target-branch: "staging"
     labels:
       - "dependencies"
 
@@ -46,5 +52,6 @@ updates:
     directory: "/apps/web-overlay"
     schedule:
       interval: "weekly"
+    target-branch: "staging"
     labels:
       - "dependencies"

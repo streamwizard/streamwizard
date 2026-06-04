@@ -5,6 +5,13 @@ on:
     branches:
       - staging
       - main
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "package.json"
+      - "bun.lockb"
+      - "turbo.json"
+      - "tsconfig*.json"
 
 jobs:
   check:
