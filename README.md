@@ -79,6 +79,15 @@ This repository houses the core backend services and shared logic for Twitch int
 - `bun format`: Formats code using Prettier.
 - `bun check-types`: Validates TypeScript types across all packages.
 
+## 🐛 Reporting issues
+
+Found a bug? Something's slow? Docs are wrong? You have two options — pick whichever is less annoying:
+
+- **GitHub** — [open an issue](https://github.com/streamwizard/streamwizard/issues) using one of the templates
+- **Discord** — use the StreamWizard bot in the [community server](https://discord.gg/29Eq659egv). `/bug`, `/feature`, `/docs`, and `/perf` create the GitHub issue for you without leaving Discord
+
+Both routes end up in the same place.
+
 ## 📄 License
 
 This project is licensed under the MIT License.

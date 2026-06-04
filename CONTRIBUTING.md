@@ -281,4 +281,4 @@ PRs with failing checks won't be merged.
 - **Stuck on setup or have a question?** [Join the Discord](https://discord.gg/29Eq659egv) — fastest way to get help
 - **General discussion or ideas?** [Discord](https://discord.gg/29Eq659egv)
 - **Not sure what to work on?** Ask in Discord or look for issues tagged `good first issue`
-- **Found a bug?** [Open an issue](https://github.com/streamwizard/streamwizard-backend/issues)
+- **Found a bug or have a feature request?** Open an issue on [GitHub](https://github.com/streamwizard/streamwizard/issues) — or use the StreamWizard Discord bot directly. `/bug`, `/feature`, `/docs`, and `/perf` all create a GitHub issue without leaving Discord.

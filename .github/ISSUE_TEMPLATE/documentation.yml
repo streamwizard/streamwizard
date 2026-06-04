@@ -1,0 +1,57 @@
+name: Documentation Issue
+description: The docs said one thing. Reality said another. Let's fix that.
+title: "[Docs]: "
+labels: ["documentation", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bad docs waste more time than bad code. If something's wrong, missing, or just confusing — tell us.
+
+        You can also file docs issues from Discord using the StreamWizard bot — `/docs` in the [StreamWizard Discord](https://discord.gg/29Eq659egv).
+
+  - type: input
+    id: location
+    attributes:
+      label: Where is it?
+      description: Link to the file, page, or section. "The docs" is not a location.
+      placeholder: "e.g. CONTRIBUTING.md > Section 4, or https://..."
+    validations:
+      required: true
+
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: What's wrong with it?
+      options:
+        - Missing information
+        - Outdated / no longer accurate
+        - Unclear or confusing
+        - Broken link
+        - Incorrect code example
+        - Typo or formatting
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What's the problem?
+      description: What's wrong and why does it matter?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: How should it read instead?
+      description: If you already know the fix, paste it here. PRs very welcome.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Quick checks
+      options:
+        - label: I checked the latest version of the docs and the issue is still there.
+          required: true
