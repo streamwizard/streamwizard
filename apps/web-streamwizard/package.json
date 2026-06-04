@@ -44,7 +44,7 @@
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
-    "@redux-devtools/extension": "^3.3.0",
+    "@redux-devtools/extension": "^4.0.0",
     "@repo/posthog": "workspace:*",
     "posthog-js": "^1.258.1",
     "@repo/schemas": "workspace:*",
