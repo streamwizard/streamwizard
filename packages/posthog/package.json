@@ -20,7 +20,7 @@
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
     "@types/react": "^19.2.14",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "peerDependencies": {
     "next": ">=15",
