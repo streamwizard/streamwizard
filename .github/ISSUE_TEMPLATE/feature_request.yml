@@ -1,0 +1,75 @@
+name: Feature Request
+description: Got an idea? Tell us. No promises, but we're listening.
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The best features come from people who actually use the thing. So — what's missing?
+
+        You can also submit feature requests from Discord using the StreamWizard bot — `/feature` in the [StreamWizard Discord](https://discord.gg/29Eq659egv). Same result, fewer tabs.
+        Want to talk it through before filing? Discord is faster.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of StreamWizard?
+      options:
+        - web-streamwizard (main web app)
+        - web-overlay (Twitch overlay)
+        - web-monitor (monitoring dashboard)
+        - rest-api
+        - streamwizard-bot
+        - ws-server
+        - Database / Supabase
+        - Multiple areas
+        - Other / unsure
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What do you want?
+      description: One clear paragraph. Lead with the thing, not the backstory.
+      placeholder: "I want StreamWizard to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What are you doing right now that's annoying, slow, or impossible?
+      placeholder: "Right now I have to... / There's no way to..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: How should it work?
+      description: Be specific. Vague requests get vague responses.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Other approaches, or the workaround you're using today.
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Anything else?
+      description: Screenshots, mockups, links — whatever helps paint the picture.
+
+  - type: checkboxes
+    id: preflight
+    attributes:
+      label: Quick checks
+      options:
+        - label: I searched existing issues and this hasn't been requested before.
+          required: true
