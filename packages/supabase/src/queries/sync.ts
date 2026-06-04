@@ -30,8 +30,8 @@ export async function startClipSync(client: DBClient, userId: string, lastSync: 
   if (error) throw error;
 }
 
-export async function updateClipSyncStatus(client: DBClient, userId: string, status: string, clipCount?: number) {
-  const patch: Record<string, unknown> = { sync_status: status };
+export async function updateClipSyncStatus(client: DBClient, userId: string, status: Database["public"]["Enums"]["clip_sync_status"], clipCount?: number) {
+  const patch: Database["public"]["Tables"]["twitch_clip_syncs"]["Update"] = { sync_status: status };
   if (clipCount !== undefined) patch.clip_count = clipCount;
   const { error } = await client.from("twitch_clip_syncs").update(patch).eq("user_id", userId);
   if (error) throw error;
