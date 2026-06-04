@@ -3,7 +3,6 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { Json } from "@repo/supabase";
 
 const ALLOWED_ORIGINS = new Set([
-  "null",                                    // srcdoc iframes always send Origin: null
   process.env.NEXT_PUBLIC_OVERLAY_URL,       // prod overlay URL
   process.env.NEXT_PUBLIC_BASE_URL,          // streamwizard dashboard (editor preview)
 ].filter(Boolean));
@@ -24,9 +23,6 @@ export function OPTIONS(req: NextRequest) {
 
 async function resolveInstance(token: string, itemId: string) {
   // Step 1: resolve subscriber_token → scene_id
-
-  console.log('[state-test] resolveInstance token:', token, 'itemId:', itemId);
-
 
   const { data: scene } = await supabaseAdmin
     .from("overlay_scenes")
