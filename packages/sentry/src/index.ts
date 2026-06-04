@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseIntegration } from "@supabase/sentry-js-integration";
-import type { Event } from "@sentry/core";
+import type { ErrorEvent, Event } from "@sentry/core";
 
 export interface SentryConfig {
   dsn: string;
@@ -20,7 +20,7 @@ function redactString(value: string): string {
   return PII_PATTERNS.reduce((s, re) => s.replace(re, "[REDACTED]"), value);
 }
 
-function scrubEvent(event: Event): Event {
+function scrubEvent<T extends Event>(event: T): T {
   if (event.exception?.values) {
     for (const ex of event.exception.values) {
       if (ex.value) ex.value = redactString(ex.value);
@@ -52,7 +52,7 @@ export function getSentryOptions(config: SentryConfig) {
     initialScope: {
       tags: { service: config.service },
     },
-    beforeSend: (event: Event) => scrubEvent(event),
+    beforeSend: (event: ErrorEvent) => scrubEvent(event),
   };
 }
 
