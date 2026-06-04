@@ -1,7 +1,7 @@
 # ============================================
 # Stage 1: Dependencies
 # ============================================
-FROM oven/bun:1.3.12 AS dependencies
+FROM oven/bun:1.3.14 AS dependencies
 
 WORKDIR /app
 
@@ -36,7 +36,7 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 # ============================================
 # Stage 2: Build
 # ============================================
-FROM oven/bun:1.3.12 AS builder
+FROM oven/bun:1.3.14 AS builder
 
 WORKDIR /app
 
@@ -66,7 +66,7 @@ RUN doppler run --token "$DOPPLER_TOKEN" -- bun run build
 # ============================================
 # Stage 3: Runner
 # ============================================
-FROM oven/bun:1.3.12 AS runner
+FROM oven/bun:1.3.14 AS runner
 
 WORKDIR /app
 
