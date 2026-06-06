@@ -1,40 +1,52 @@
 "use server";
 
-import { createAdminClient } from "@repo/supabase/next/admin";
-import { createClient } from "@repo/supabase/next/server";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { getAuthContext } from "@/lib/auth";
+import { getChannelAccessToken } from "@repo/supabase";
+import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { TwitchApi } from "@repo/twitch-api";
+import { redirect } from "next/navigation";
+import axios from "axios";
 
-export type DeleteAccountResult = { error: string | null };
-
-/**
- * Permanently deletes the signed-in user's application data and auth record.
- * Third-party processors (PostHog, Sentry) require separate admin erasure — see docs/compliance-workflows.md.
- */
-export async function deleteAccount(): Promise<DeleteAccountResult> {
-  let userId: string;
-
+export async function deleteAccount() {
+  let user, supabase, broadcasterId: string;
   try {
-    ({ user: { id: userId } } = await getAuthContext());
+    ({ user, supabase, broadcasterId } = await getAuthContext());
   } catch {
-    return { error: "You must be signed in to delete your account." };
+    return { success: false, error: "Unauthorized" };
   }
 
-  const supabase = await createClient();
-  const { error: rpcError } = await supabase.rpc("delete_user_data");
-
-  if (rpcError) {
-    return { error: rpcError.message };
+  // Revoke the Twitch access token so it is immediately invalidated.
+  // This cannot remove the app from the user's Twitch authorized connections
+  // UI — they must do that manually from Twitch Settings → Connections.
+  try {
+    const accessToken = await getChannelAccessToken(broadcasterId);
+    await axios.post(
+      "https://id.twitch.tv/oauth2/revoke",
+      new URLSearchParams({ client_id: process.env.TWITCH_CLIENT_ID!, token: accessToken }),
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
+    );
+  } catch {
+    // Non-fatal: token may already be expired; proceed with deletion.
   }
 
-  const admin = createAdminClient();
-  const { error: authError } = await admin.auth.admin.deleteUser(userId);
-
-  if (authError) {
-    return { error: authError.message };
+  // Delete all EventSub subscriptions for this broadcaster. Twitch changes
+  // their status to authorization_revoked but does NOT delete them — they
+  // keep counting against quota until explicitly removed.
+  try {
+    const eventsub = new TwitchApi().eventsub;
+    const { data: subscriptions } = await eventsub.getSubscriptions(broadcasterId);
+    await Promise.all(subscriptions.map((sub) => eventsub.deleteSubscription(sub.id, broadcasterId)));
+  } catch {
+    // Non-fatal: proceed with data deletion even if cleanup fails.
   }
 
-  revalidatePath("/", "layout");
-  redirect("/?account_deleted=1");
+  const { error: rpcError } = await supabase.rpc("delete_user_data", {
+    p_twitch_user_id: broadcasterId,
+  });
+  if (rpcError) return { success: false, error: rpcError.message };
+
+  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+  if (authError) return { success: false, error: authError.message };
+
+  redirect("/");
 }
