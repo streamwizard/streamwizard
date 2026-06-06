@@ -11,6 +11,8 @@ export const handleUserAuthorizationRevoke = async (event: UserAuthorizationRevo
   // User not found — already deleted or never registered
   if (!userId) return;
 
+  // deleteUser removes the account and invalidates all active sessions
   const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+
   if (authError) throw authError;
 };
