@@ -51,16 +51,12 @@ app.get("/", (c) => {
 });
 
 // Twitch EventSub Webhook Handler
-// Disabled in development: webhooks require HTTPS which is not available locally.
-// EventSub WebSocket transport (packages/twitch-eventsub) remains active in all environments.
-if (process.env.NODE_ENV !== "development") {
-  app.post(
-    "/webhooks/twitch/eventsub",
-    rawBodyMiddleware(),
-    twitchEventSubVerification(),
-    handleTwitchEventSub,
-  );
-}
+app.post(
+  "/webhooks/twitch/eventsub",
+  rawBodyMiddleware(),
+  twitchEventSubVerification(),
+  handleTwitchEventSub,
+);
 
 // ============================================
 // API ROUTES (User-facing)
@@ -88,8 +84,8 @@ app.get("/api/clips/sync-status", supabaseAuth(), syncStatusHandler);
 
 Bun.serve({
   fetch: app.fetch,
-  port: 8000,
+  port: Number(process.env.PORT ?? 8080),
 });
 
-console.log(`[rest-api] listening on port ${8000}`);
+console.log(`[rest-api] listening on port ${process.env.PORT ?? 8080}`);
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
