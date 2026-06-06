@@ -11,6 +11,7 @@ import type {
 } from "@repo/types";
 import { trackEventSubReceived, trackEventSubRevocation } from "@repo/metrics";
 import handleEventsub from "../functions/handle-eventsub";
+import { TwitchApi } from "@repo/twitch-api";
 
 export async function handleTwitchEventSub(c: Context) {
   // Get verified notification and message type from context (set by middleware)
@@ -105,6 +106,13 @@ function handleRevocation(c: Context, notification: EventSubRevocationPayload) {
     subscriptionType: subscription.type,
     status: subscription.status,
     condition: subscription.condition,
+  });
+
+  // Delete the revoked subscription so it stops counting against quota.
+  // Twitch marks it authorization_revoked but never deletes it automatically.
+  // Fire-and-forget — respond 204 immediately so Twitch doesn't time out.
+  new TwitchApi().eventsub.deleteSubscription(subscription.id, "").catch((err) => {
+    console.error("Failed to delete revoked subscription", subscription.id, err);
   });
 
   trackEventSubRevocation(subscription.type);

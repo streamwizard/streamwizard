@@ -1,6 +1,6 @@
 import { DashboardConfig } from "@/types/sidebar";
 
-import { Clapperboard, ToggleRight, User } from "lucide-react";
+import { Clapperboard, ToggleRight, User, UserX } from "lucide-react";
 export const dashboardConfig: DashboardConfig = {
   overview: {
     routes: [
@@ -59,6 +59,11 @@ export const SettingsNavItems = [
     label: "Preferences",
     href: "/dashboard/settings/preferences",
     icon: ToggleRight,
+  },
+  {
+    label: "Account",
+    href: "/dashboard/settings",
+    icon: UserX,
   },
   // {
   //   label: "Intgerations",
