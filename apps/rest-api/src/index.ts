@@ -51,15 +51,16 @@ app.get("/", (c) => {
 });
 
 // Twitch EventSub Webhook Handler
-// This endpoint receives webhook callbacks from Twitch EventSub
-// Raw body middleware preserves the body for signature verification
-// Verification middleware validates headers and HMAC signature
-app.post(
-  "/webhooks/twitch/eventsub",
-  rawBodyMiddleware(),
-  twitchEventSubVerification(),
-  handleTwitchEventSub,
-);
+// Disabled in development: webhooks require HTTPS which is not available locally.
+// EventSub WebSocket transport (packages/twitch-eventsub) remains active in all environments.
+if (process.env.NODE_ENV !== "development") {
+  app.post(
+    "/webhooks/twitch/eventsub",
+    rawBodyMiddleware(),
+    twitchEventSubVerification(),
+    handleTwitchEventSub,
+  );
+}
 
 // ============================================
 // API ROUTES (User-facing)
