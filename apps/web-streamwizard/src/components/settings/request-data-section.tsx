@@ -76,7 +76,7 @@ export function RequestDataSection() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={isPending}>Nah, I trust you</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => {
                   e.preventDefault();
@@ -84,7 +84,7 @@ export function RequestDataSection() {
                 }}
                 disabled={isPending}
               >
-                Yes, download my data
+                Drop the loot
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
