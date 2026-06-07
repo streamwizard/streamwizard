@@ -41,9 +41,8 @@ export function DeleteAccountSection() {
       <CardHeader>
         <CardTitle className="text-destructive">Delete account</CardTitle>
         <CardDescription>
-          Permanently remove your StreamWizard account, encrypted Twitch tokens, overlays, clips,
-          and preferences. This cannot be undone. Application data is purged from active systems and
-          backups within 3 months, as described in our Privacy Policy.
+          The nuclear option. Wipes your account, tokens, overlays, clips, commands — everything.
+          Yes, even the clips you were definitely going to organize someday. No coming back from this one.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -57,21 +56,23 @@ export function DeleteAccountSection() {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+              <AlertDialogTitle>This is permanent. Like, really permanent.</AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="space-y-3 text-sm text-muted-foreground">
                   <p>
-                    Everything goes — clips, overlays, stream history, integrations. No recovery, no
-                    undo. Just gone.
+                    Everything goes — clips, overlays, stream history, integrations. Yes, even the
+                    847 clips you were definitely going to sort through one day. No recovery, no undo,
+                    no "wait actually—".
                   </p>
                   <p>
-                    We{"'"}ll scrub your data from our systems immediately. Encrypted backups may
-                    hold onto it for up to 3 months (it{"'"}s a legal thing), then it{"'"}s purged
-                    for good on a rolling schedule.
+                    We{"'"}ll scrub your data immediately. Encrypted backups may hang around for up
+                    to 3 months (lawyers, you know how it is), then they{"'"}re gone on a rolling
+                    schedule. We{"'"}re not being clingy — it{"'"}s just how backups work.
                   </p>
                   <p>
-                    We{"'"}ll auto-revoke our Twitch access. To also kick us out of your authorized
-                    apps, visit <strong>Twitch Settings → Connections</strong> after deletion.
+                    We{"'"}ll auto-revoke our Twitch access. To fully kick us out of your authorized
+                    apps — like banning a mod who went rogue — visit{" "}
+                    <strong>Twitch Settings → Connections</strong> after deletion.
                   </p>
                 </div>
               </AlertDialogDescription>
