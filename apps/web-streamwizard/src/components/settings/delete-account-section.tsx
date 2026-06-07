@@ -87,7 +87,7 @@ export function DeleteAccountSection() {
                 disabled={isPending}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                {isPending ? "Deleting…" : "Yes, delete everything"}
+                {isPending ? "Deleting…" : "Fine. We didn't want you anyway."}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
