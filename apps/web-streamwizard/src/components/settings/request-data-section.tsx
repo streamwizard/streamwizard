@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { requestUserData } from "@/actions/auth/request-data";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -76,7 +77,7 @@ export function RequestDataSection() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isPending}>Nah, I trust you</AlertDialogCancel>
+              <AlertDialogCancel disabled={isPending} onClick={() => toast("Bold move. GDPR exists for a reason, just saying.")}>Nah, I trust you</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => {
                   e.preventDefault();
