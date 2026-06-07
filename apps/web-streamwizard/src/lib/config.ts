@@ -1,6 +1,6 @@
 import { DashboardConfig } from "@/types/sidebar";
 
-import { Clapperboard, ToggleRight, User } from "lucide-react";
+import { Clapperboard, ToggleRight, User, UserX } from "lucide-react";
 export const dashboardConfig: DashboardConfig = {
   overview: {
     routes: [

@@ -12,7 +12,7 @@ INSERT INTO public.default_chat_commands (command, message, action) VALUES
   ('!commands',  'Check out all available commands at streamwizard.org/commands', 'none'),
   ('!clip',      'Clip created! Check the clips section on your dashboard.', 'none'),
   ('!uptime',    'The stream has been live for {uptime}.', 'none'),
-  ('!followage', '{user} has been following for {followage}.', 'none'),
+  ('!followage', '{user} has been following for {followage}.', 'none')
 ON CONFLICT DO NOTHING;
 
 -- ── SMP Actions ───────────────────────────────────────────────
