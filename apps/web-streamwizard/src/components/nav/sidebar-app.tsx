@@ -39,7 +39,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
             width={100}
             height={100}
             alt="Logo"
-            style={{ width: 100, height: "auto" }}
+            style={{ width: 100, height: 100 }}
             priority
           />
         </div>
