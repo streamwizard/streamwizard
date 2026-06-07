@@ -1,5 +1,9 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Development Notes
+
+**EventSub webhook subscriptions are disabled in development** (`NODE_ENV=development`). When `checkEventSubscriptions` runs on login, only conduit (WebSocket) subscriptions are registered. Webhook subscriptions (`stream.online`, `stream.offline`, `channel.update` via webhook) are skipped because Twitch requires HTTPS for webhook delivery.
+
 ## Getting Started
 
 First, run the development server:

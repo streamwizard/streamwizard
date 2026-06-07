@@ -51,9 +51,6 @@ app.get("/", (c) => {
 });
 
 // Twitch EventSub Webhook Handler
-// This endpoint receives webhook callbacks from Twitch EventSub
-// Raw body middleware preserves the body for signature verification
-// Verification middleware validates headers and HMAC signature
 app.post(
   "/webhooks/twitch/eventsub",
   rawBodyMiddleware(),
@@ -87,8 +84,8 @@ app.get("/api/clips/sync-status", supabaseAuth(), syncStatusHandler);
 
 Bun.serve({
   fetch: app.fetch,
-  port: 8000,
+  port: Number(process.env.PORT ?? 8080),
 });
 
-console.log(`[rest-api] listening on port ${8000}`);
+console.log(`[rest-api] listening on port ${process.env.PORT ?? 8080}`);
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

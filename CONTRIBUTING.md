@@ -12,12 +12,13 @@ Got stuck? [Join the Discord](https://discord.gg/29Eq659egv) and ask. No questio
 2. [How the project is structured](#2-how-the-project-is-structured)
 3. [Fork and clone the repo](#3-fork-and-clone-the-repo)
 4. [Set up your local database](#4-set-up-your-local-database)
-5. [Make your changes](#5-make-your-changes)
-6. [Open a Pull Request](#6-open-a-pull-request)
-7. [The review process](#7-the-review-process)
-8. [Branch rules](#8-branch-rules)
-9. [Code style](#9-code-style)
-10. [Get help](#10-get-help)
+5. [Known development differences](#5-known-development-differences)
+6. [Make your changes](#6-make-your-changes)  
+7. [Open a Pull Request](#7-open-a-pull-request)
+8. [The review process](#8-the-review-process)
+9. [Branch rules](#9-branch-rules)
+10. [Code style](#10-code-style)
+11. [Get help](#11-get-help)
 
 ---
 
@@ -175,7 +176,22 @@ supabase stop
 
 ---
 
-## 5. Make your changes
+## 5. Known development differences
+
+Some features behave differently in `NODE_ENV=development` to avoid errors that only make sense in production.
+
+### EventSub webhooks disabled
+
+Twitch requires HTTPS for webhook delivery. In a local dev environment (HTTP), the webhook subscription registration and the webhook endpoint are both disabled:
+
+- **`apps/web-streamwizard`** — on login, only conduit (WebSocket) subscriptions are registered. Webhook subscriptions (`stream.online`, `stream.offline`, `channel.update`) are skipped.
+- **`apps/rest-api`** — the `POST /webhooks/twitch/eventsub` route is not registered.
+
+EventSub WebSocket transport works normally in dev — Twitch events delivered via conduit are unaffected.
+
+---
+
+## 7. Make your changes
 
 ### Step 1 — Sync with staging
 
@@ -221,7 +237,7 @@ git push origin feature/your-feature-name
 
 ---
 
-## 6. Open a Pull Request
+## 8. Open a Pull Request
 
 1. Go to your fork on GitHub: `github.com/YOUR-USERNAME/streamwizard-backend`
 2. Click **Compare & pull request**
@@ -238,7 +254,7 @@ git push origin feature/your-feature-name
 
 ---
 
-## 7. The review process
+## 9. The review process
 
 1. A maintainer reviews your code and may leave comments
 2. Make changes on your branch and push — the PR updates automatically
@@ -250,7 +266,7 @@ Reviews can take a few days. If you haven't heard back in a week, leave a commen
 
 ---
 
-## 8. Branch rules
+## 10. Branch rules
 
 | Branch | Purpose | Who can PR here |
 |--------|---------|-----------------|
@@ -262,7 +278,7 @@ The `production` branch is never touched manually. When migrations on `main` suc
 
 ---
 
-## 9. Code style
+## 11. Code style
 
 Run these before opening a PR:
 
@@ -276,7 +292,7 @@ PRs with failing checks won't be merged.
 
 ---
 
-## 10. Get help
+## 12. Get help
 
 - **Stuck on setup or have a question?** [Join the Discord](https://discord.gg/29Eq659egv) — fastest way to get help
 - **General discussion or ideas?** [Discord](https://discord.gg/29Eq659egv)

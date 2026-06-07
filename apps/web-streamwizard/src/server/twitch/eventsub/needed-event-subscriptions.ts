@@ -146,12 +146,6 @@ export default async function NeededEventSubscriptions(twitchUserId: string): Pr
     conduit_id: conduitId,
   };
 
-  const createWebhookTransport = () => ({
-    method: "webhook" as const,
-    callback: `${apiUrl}/webhooks/twitch/eventsub`,
-    secret: env.TWITCH_WEBHOOK_SECRET,
-  });
-
   // Generate conduit subscriptions with conditions
   const conduitRequests = conduitSubscriptions.map(({ type, version, condition }) => ({
     type,
@@ -160,7 +154,17 @@ export default async function NeededEventSubscriptions(twitchUserId: string): Pr
     transport: conduitTransport,
   }));
 
-  // Generate webhook subscriptions with conditions
+  // Webhook subscriptions require HTTPS — skip in development
+  if (env.NODE_ENV === "development") {
+    return conduitRequests;
+  }
+
+  const createWebhookTransport = () => ({
+    method: "webhook" as const,
+    callback: `${apiUrl}/webhooks/twitch/eventsub`,
+    secret: env.TWITCH_WEBHOOK_SECRET,
+  });
+
   const webhookRequests = webhookSubscriptions.map(({ type, version, condition }) => ({
     type,
     version,
