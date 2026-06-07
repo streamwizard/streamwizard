@@ -46,5 +46,4 @@ const nextConfig = {
 export default withSentryConfig(nextConfig, {
   silent: !process.env.CI,
   widenClientFileUpload: true,
-  disableLogger: true,
 });
