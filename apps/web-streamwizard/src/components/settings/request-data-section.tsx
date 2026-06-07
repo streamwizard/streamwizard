@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { requestUserData } from "@/actions/auth/request-data";
 import { toast } from "sonner";
 import {
@@ -23,32 +23,33 @@ import {
 
 export function RequestDataSection() {
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const anchorRef = useRef<HTMLAnchorElement>(null);
 
   const handleRequest = () => {
-    setError(null);
     setOpen(false);
-    startTransition(async () => {
+    setIsPending(true);
+
+    const download = async () => {
       const result = await requestUserData();
-      if (result.error || !result.data) {
-        setError(result.error ?? "Failed to retrieve your data. Please try again.");
-        return;
-      }
+      if (result.error || !result.data) throw new Error(result.error ?? "Failed to retrieve your data. Please try again.");
 
       const blob = new Blob([JSON.stringify(result.data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-
       const anchor = anchorRef.current;
       if (anchor) {
         anchor.href = url;
         anchor.download = `streamwizard-data-${new Date().toISOString().split("T")[0]}.json`;
         anchor.click();
       }
-
       URL.revokeObjectURL(url);
-      toast.success("There it is. All your dirty little secrets, in a neat little file.");
+    };
+
+    toast.promise(download(), {
+      loading: "Digging through your data…",
+      success: "There it is. All your dirty little secrets, in a neat little file.",
+      error: (err: Error) => err.message,
+      finally: () => setIsPending(false),
     });
   };
 
@@ -62,7 +63,6 @@ export function RequestDataSection() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error && <p className="text-sm text-destructive">{error}</p>}
         <a ref={anchorRef} className="hidden" aria-hidden />
 
         <AlertDialog open={open} onOpenChange={setOpen}>
@@ -78,7 +78,12 @@ export function RequestDataSection() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isPending} onClick={() => toast("Bold move. GDPR exists for a reason, just saying.")}>Nah, I trust you</AlertDialogCancel>
+              <AlertDialogCancel
+                disabled={isPending}
+                onClick={() => toast("Bold move. GDPR exists for a reason, just saying.")}
+              >
+                Nah, I trust you
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => {
                   e.preventDefault();
