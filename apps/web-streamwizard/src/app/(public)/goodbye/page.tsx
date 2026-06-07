@@ -23,6 +23,7 @@ export default function GoodbyePage() {
             width={480}
             height={270}
             unoptimized
+            priority
             className="rounded-xl"
           />
         </div>
