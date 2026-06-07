@@ -73,6 +73,10 @@
       "types": "./src/queries/irl.ts",
       "default": "./src/queries/irl.ts"
     },
+"./types/supabase": {
+      "types": "./src/types/supabase.ts",
+      "default": "./src/types/supabase.ts"
+    },
     "./crypto": {
       "types": "./src/crypto.ts",
       "default": "./src/crypto.ts"
