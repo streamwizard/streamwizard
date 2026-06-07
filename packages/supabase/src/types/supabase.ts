@@ -7,116 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  analytics: {
-    Tables: {
-      followers: {
-        Row: {
-          broadcaster_user_id: string | null
-          broadcaster_user_login: string | null
-          broadcaster_user_name: string | null
-          followed_at: string | null
-          stream_id: string | null
-          user_id: string | null
-          user_login: string | null
-          user_name: string | null
-        }
-        Insert: {
-          broadcaster_user_id?: string | null
-          broadcaster_user_login?: string | null
-          broadcaster_user_name?: string | null
-          followed_at?: string | null
-          stream_id?: string | null
-          user_id?: string | null
-          user_login?: string | null
-          user_name?: string | null
-        }
-        Update: {
-          broadcaster_user_id?: string | null
-          broadcaster_user_login?: string | null
-          broadcaster_user_name?: string | null
-          followed_at?: string | null
-          stream_id?: string | null
-          user_id?: string | null
-          user_login?: string | null
-          user_name?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "followers_stream_id_fkey"
-            columns: ["stream_id"]
-            referencedRelation: "streams"
-            referencedColumns: ["stream_id"]
-          },
-        ]
-      }
-      streams: {
-        Row: {
-          broadcaster_id: string
-          category: string | null
-          created_at: string | null
-          end_time: string | null
-          start_time: string
-          stream_id: string
-          title: string
-        }
-        Insert: {
-          broadcaster_id: string
-          category?: string | null
-          created_at?: string | null
-          end_time?: string | null
-          start_time: string
-          stream_id: string
-          title: string
-        }
-        Update: {
-          broadcaster_id?: string
-          category?: string | null
-          created_at?: string | null
-          end_time?: string | null
-          start_time?: string
-          stream_id?: string
-          title?: string
-        }
-        Relationships: []
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      [_ in never]: never
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
   }
   pgbouncer: {
     Tables: {
@@ -2305,15 +2199,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  analytics: {
-    Enums: {},
-  },
-  graphql_public: {
-    Enums: {},
-  },
-  pgbouncer: {
-    Enums: {},
-  },
   public: {
     Enums: {
       clip_sync_status: ["completed", "failed", "syncing"],
@@ -2346,3 +2231,4 @@ export const Constants = {
     },
   },
 } as const
+
