@@ -60,11 +60,6 @@ export const SettingsNavItems = [
     href: "/dashboard/settings/preferences",
     icon: ToggleRight,
   },
-  {
-    label: "Account",
-    href: "/dashboard/settings",
-    icon: UserX,
-  },
   // {
   //   label: "Intgerations",
   //   href: "/dashboard/settings/intgerations",

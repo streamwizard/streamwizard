@@ -2,15 +2,33 @@
 
 import { useRef, useState, useTransition } from "react";
 import { requestUserData } from "@/actions/auth/request-data";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@repo/ui";
 
 export function RequestDataSection() {
+  const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const anchorRef = useRef<HTMLAnchorElement>(null);
 
   const handleRequest = () => {
     setError(null);
+    setOpen(false);
     startTransition(async () => {
       const result = await requestUserData();
       if (result.error || !result.data) {
@@ -44,9 +62,33 @@ export function RequestDataSection() {
       <CardContent className="space-y-4">
         {error && <p className="text-sm text-destructive">{error}</p>}
         <a ref={anchorRef} className="hidden" aria-hidden />
-        <Button onClick={handleRequest} disabled={isPending}>
-          {isPending ? "Preparing download…" : "Download my data"}
-        </Button>
+
+        <AlertDialog open={open} onOpenChange={setOpen}>
+          <AlertDialogTrigger asChild>
+            <Button disabled={isPending}>{isPending ? "Preparing download…" : "Download my data"}</Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Download your data?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will generate a JSON file containing all personal data StreamWizard holds about
+                you. The file will download to your device automatically.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleRequest();
+                }}
+                disabled={isPending}
+              >
+                Yes, download my data
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   );
