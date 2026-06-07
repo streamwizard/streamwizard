@@ -73,11 +73,7 @@
       "types": "./src/queries/irl.ts",
       "default": "./src/queries/irl.ts"
     },
-    "./queries/account-deletion": {
-      "types": "./src/queries/account-deletion.ts",
-      "default": "./src/queries/account-deletion.ts"
-    },
-    "./types/supabase": {
+"./types/supabase": {
       "types": "./src/types/supabase.ts",
       "default": "./src/types/supabase.ts"
     },
