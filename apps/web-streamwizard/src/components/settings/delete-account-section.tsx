@@ -79,7 +79,7 @@ export function DeleteAccountSection() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isPending} onClick={() => toast("Smart. We would've missed you anyway.")}>Actually, I{"'"}m staying</AlertDialogCancel>
+              <AlertDialogCancel disabled={isPending} onClick={() => toast("We lied. We would've missed you.")}>Actually, I{"'"}m staying</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => {
                   e.preventDefault();
