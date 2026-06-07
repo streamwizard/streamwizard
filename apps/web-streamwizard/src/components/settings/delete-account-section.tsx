@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { deleteAccount } from "@/actions/auth/delete-account";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,7 +79,7 @@ export function DeleteAccountSection() {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel disabled={isPending}>Actually, I{"'"}m staying</AlertDialogCancel>
+              <AlertDialogCancel disabled={isPending} onClick={() => toast("Smart. We would've missed you anyway.")}>Actually, I{"'"}m staying</AlertDialogCancel>
               <AlertDialogAction
                 onClick={(e) => {
                   e.preventDefault();
