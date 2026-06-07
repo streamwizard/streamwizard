@@ -25,6 +25,12 @@ This service handles:
 - `POST /api/clips/sync`: Manual trigger for clip synchronization.
 - `GET /api/viewer-counts/:streamId`: (Planned) Fetch viewer history for a specific stream.
 
+## ⚠️ Development Notes
+
+**EventSub webhooks are disabled in development** (`NODE_ENV=development`). Twitch requires HTTPS for webhook delivery, which is not available in a local HTTP environment. The `POST /webhooks/twitch/eventsub` route is not registered when running locally.
+
+EventSub **WebSocket** transport (`packages/twitch-eventsub`) is unaffected and works in all environments.
+
 ## 🚀 Running Locally
 
 From the root directory:
