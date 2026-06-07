@@ -74,6 +74,7 @@ export function DeleteAccountSection() {
                     apps — like banning a mod who went rogue — visit{" "}
                     <strong>Twitch Settings → Connections</strong> after deletion.
                   </p>
+                  <p className="italic">Fine. We didn{"'"}t even want you anyway.</p>
                 </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
