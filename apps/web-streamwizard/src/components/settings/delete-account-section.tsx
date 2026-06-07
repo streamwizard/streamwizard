@@ -57,11 +57,23 @@ export function DeleteAccountSection() {
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete your account permanently?</AlertDialogTitle>
-              <AlertDialogDescription>
-                You will be signed out immediately and lose access to all StreamWizard data tied to
-                this Twitch login. Analytics and error data in PostHog and Sentry may take additional
-                manual steps to fully erase.
+              <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+              <AlertDialogDescription asChild>
+                <div className="space-y-3 text-sm text-muted-foreground">
+                  <p>
+                    Everything goes — clips, overlays, stream history, integrations. No recovery, no
+                    undo. Just gone.
+                  </p>
+                  <p>
+                    We{"'"}ll scrub your data from our systems immediately. Encrypted backups may
+                    hold onto it for up to 3 months (it{"'"}s a legal thing), then it{"'"}s purged
+                    for good on a rolling schedule.
+                  </p>
+                  <p>
+                    We{"'"}ll auto-revoke our Twitch access. To also kick us out of your authorized
+                    apps, visit <strong>Twitch Settings → Connections</strong> after deletion.
+                  </p>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
