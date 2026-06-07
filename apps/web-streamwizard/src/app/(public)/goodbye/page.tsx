@@ -25,6 +25,7 @@ export default function GoodbyePage() {
             unoptimized
             priority
             className="rounded-xl"
+            style={{ width: "100%", height: "auto" }}
           />
         </div>
 
