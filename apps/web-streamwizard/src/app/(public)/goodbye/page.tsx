@@ -24,6 +24,7 @@ export default function GoodbyePage() {
             height={270}
             unoptimized
             className="rounded-xl"
+            style={{ width: "100%", height: "auto" }}
           />
         </div>
 

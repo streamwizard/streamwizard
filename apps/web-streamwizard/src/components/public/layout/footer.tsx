@@ -29,12 +29,13 @@ export function Footer() {
           {/* Branding Section */}
           <div className="space-y-4 md:w-1/3">
             <div className="flex items-center ">
-              <Image 
-                src="/logo.png" 
-                alt="StreamWizard Logo" 
-                width={40} 
-                height={40} 
+              <Image
+                src="/logo.png"
+                alt="StreamWizard Logo"
+                width={40}
+                height={40}
                 className="rounded-xl"
+                style={{ width: 40, height: 40 }}
               />
               <span className="text-xl font-medium ml-4">StreamWizard</span>
             </div>
