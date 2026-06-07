@@ -48,6 +48,7 @@ export function RequestDataSection() {
       }
 
       URL.revokeObjectURL(url);
+      toast.success("There it is. All your dirty little secrets, in a neat little file.");
     });
   };
 
