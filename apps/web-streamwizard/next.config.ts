@@ -10,7 +10,8 @@ function buildCsp(): string {
   const directives: string[] = [
     "default-src 'self'",
     // Next.js App Router inlines hydration scripts; unsafe-inline is required unless nonces are wired up
-    "script-src 'self' 'unsafe-inline'",
+    // player.twitch.tv is needed for the Twitch embedded player script
+    "script-src 'self' 'unsafe-inline' https://player.twitch.tv",
     // Next.js inlines critical styles; Google Fonts stylesheet is fetched at runtime
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     // Google Fonts actual font files
@@ -26,7 +27,8 @@ function buildCsp(): string {
     ]
       .filter(Boolean)
       .join(" "),
-    "frame-src 'none'",
+    // Twitch embedded player and clips use iframes served from these origins
+    "frame-src https://player.twitch.tv https://clips.twitch.tv",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
