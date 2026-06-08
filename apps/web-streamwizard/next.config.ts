@@ -9,9 +9,12 @@ function buildCsp(): string {
 
   const directives: string[] = [
     "default-src 'self'",
-    // Next.js App Router inlines hydration scripts; unsafe-inline is required unless nonces are wired up
-    // player.twitch.tv is needed for the Twitch embedded player script
-    "script-src 'self' 'unsafe-inline' https://player.twitch.tv",
+    // Next.js App Router requires unsafe-inline for hydration scripts.
+    // Monaco Editor requires unsafe-eval for its language service workers.
+    // player.twitch.tv is needed for the Twitch embedded player script.
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://player.twitch.tv",
+    // Monaco Editor spawns language workers via blob: URLs
+    "worker-src blob:",
     // Next.js inlines critical styles; Google Fonts stylesheet is fetched at runtime
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     // Google Fonts actual font files
