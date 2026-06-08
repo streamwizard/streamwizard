@@ -10,10 +10,10 @@ export async function GET(request: Request) {
   const { searchParams } = requestUrl;
   const isLocalEnv = process.env.NODE_ENV === "development";
 
-  // Use the configured site URL in production to prevent x-forwarded-host spoofing
+  // Use the configured base URL in production to prevent x-forwarded-host spoofing
   const origin = isLocalEnv
     ? requestUrl.origin
-    : (process.env.NEXT_PUBLIC_SITE_URL ?? requestUrl.origin);
+    : (process.env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
 
   const code = searchParams.get("code");
   // Sanitize next to a relative path only to prevent open redirect
