@@ -14,14 +14,15 @@
   },
   "devDependencies": {
     "prettier": "^3.7.4",
-    "turbo": "^2.7.4",
+    "turbo": "^2.9.15",
     "typescript": "5.9.2"
   },
   "overrides": {
     "next": "^16.2.6",
     "@sentry/core": "10.56.0",
     "@sentry/bun": "10.56.0",
-    "@sentry/hono": "10.56.0"
+    "@sentry/hono": "10.56.0",
+    "dompurify": "^3.4.7"
   },
   "engines": {
     "node": ">=18"

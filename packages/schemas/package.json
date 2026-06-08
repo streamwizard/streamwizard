@@ -1,6 +1,8 @@
 {
   "name": "@repo/schemas",
   "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "main": "./index.ts",
   "types": "./index.ts",
