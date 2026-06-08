@@ -9,24 +9,32 @@ function buildCsp(): string {
 
   const directives: string[] = [
     "default-src 'self'",
-    // Next.js App Router inlines hydration scripts; unsafe-inline is required unless nonces are wired up
-    "script-src 'self' 'unsafe-inline'",
-    // Next.js inlines critical styles; Google Fonts stylesheet is fetched at runtime
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    // Next.js App Router requires unsafe-inline for hydration scripts.
+    // Monaco Editor requires unsafe-eval for its language service workers and
+    // loads its core files from jsdelivr CDN (no custom loader is configured).
+    // player.twitch.tv is needed for the Twitch embedded player script.
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://player.twitch.tv https://cdn.jsdelivr.net",
+    // Monaco Editor spawns language workers via blob: URLs
+    "worker-src blob:",
+    // Next.js inlines critical styles; Google Fonts and Monaco (via jsdelivr) load external stylesheets
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     // Google Fonts actual font files
     "font-src 'self' https://fonts.gstatic.com",
     // Twitch CDN images + data URIs used by the UI
     "img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv",
-    // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them
+    // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them.
+    // Monaco fetches worker scripts and additional resources from jsdelivr CDN.
     [
       "connect-src 'self'",
       supabaseUrl,
       supabaseWs,
       wsServerUrl,
+      "https://cdn.jsdelivr.net",
     ]
       .filter(Boolean)
       .join(" "),
-    "frame-src 'none'",
+    // Twitch embedded player and clips use iframes served from these origins
+    "frame-src https://player.twitch.tv https://clips.twitch.tv",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
