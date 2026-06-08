@@ -36,10 +36,10 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
         <div className="flex flex-row items-center gap-2 px-4 mt-4 justify-center">
           <Image
             src="/logo.png"
-            width={100}
-            height={100}
+            width={160}
+            height={160}
             alt="Logo"
-            style={{ width: 100, height: 100 }}
+            style={{ width: 160, height: 160 }}
             priority
           />
         </div>
