@@ -1,6 +1,8 @@
 {
   "name": "@repo/supabase",
   "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -73,7 +75,7 @@
       "types": "./src/queries/irl.ts",
       "default": "./src/queries/irl.ts"
     },
-"./types/supabase": {
+    "./types/supabase": {
       "types": "./src/types/supabase.ts",
       "default": "./src/types/supabase.ts"
     },

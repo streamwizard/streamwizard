@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "crypto";
 import { env } from "../lib/env";
 import { supabase } from "@repo/supabase";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
@@ -46,7 +47,10 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       return new Response("Monitor not configured", { status: 404 });
     }
     const token = url.searchParams.get("token");
-    if (token !== env.MONITOR_SECRET) {
+    const tokenBuf = Buffer.from(token ?? "");
+    const secretBuf = Buffer.from(env.MONITOR_SECRET);
+    const valid = tokenBuf.length === secretBuf.length && timingSafeEqual(tokenBuf, secretBuf);
+    if (!valid) {
       trackWsAuthFailure("unknown", "invalid_token");
       return new Response("Unauthorized", { status: 401 });
     }
