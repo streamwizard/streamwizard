@@ -13,7 +13,7 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-4">
           <Link href="/" className="text-2xl font-bold flex items-center gap-2" >
-            <Image alt="StreamWizard" src="/logo.png" width={40} height={40} style={{ width: 40, height: 40 }} /> <span>StreamWizard</span>
+            <Image alt="StreamWizard" src="/logo.png" width={80} height={80} style={{ width: 80, height: 80 }} /> <span>StreamWizard</span>
           </Link>
           <div>
             <Button className="bg-secondary text-white hover:bg-slate-700" onClick={() => login()}>Log in</Button>
