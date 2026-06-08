@@ -15,14 +15,10 @@ Sentry.init({
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 
-// Re-hydrate PostHog on page load when the user has previously accepted consent.
-// initPostHog sets opt_out_capturing_by_default:true, so we must also call
-// opt_in_capturing() to restore the active state — without it tracking stays dead.
-if (process.env.NEXT_PUBLIC_POSTHOG_KEY && localStorage.getItem("sw_cookie_consent") === "accepted") {
+if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
   initPostHog({
     key: process.env.NEXT_PUBLIC_POSTHOG_KEY,
     host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
   });
-  posthog.opt_in_capturing();
 }
 
