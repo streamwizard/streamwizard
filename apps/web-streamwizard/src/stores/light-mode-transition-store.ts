@@ -7,7 +7,7 @@ interface LightModeTransitionState {
   reset: () => void;
 }
 
-export const useLightModeTransitionStore = create<LightModeTransitionState>((set, get) => ({
+export const useThemeTransitionStore = create<LightModeTransitionState>((set, get) => ({
   isPlaying: false,
   hasTriggered: false,
   trigger: () => {
