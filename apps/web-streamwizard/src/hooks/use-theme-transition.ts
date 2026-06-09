@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import { useThemeTransitionStore } from "@/stores/light-mode-transition-store";
 import { useSessionStore } from "@/stores/session-store";
@@ -8,6 +9,13 @@ export function useThemeTransition() {
   const { resolvedTheme, setTheme } = useTheme();
   const { isPlaying, trigger } = useThemeTransitionStore();
   const animationsEnabled = useSessionStore((s) => s.preferences.memes_enabled);
+  const darkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (darkTimerRef.current !== null) clearTimeout(darkTimerRef.current);
+    };
+  }, []);
 
   function switchToLight() {
     if (resolvedTheme === "light") return;
@@ -34,7 +42,9 @@ export function useThemeTransition() {
     audio.volume = 0.05;
     audio.play().catch(() => {});
 
-    setTimeout(() => {
+    if (darkTimerRef.current !== null) clearTimeout(darkTimerRef.current);
+    darkTimerRef.current = setTimeout(() => {
+      darkTimerRef.current = null;
       withTransition(() => setTheme("dark"));
     }, 4000);
   }
