@@ -3,6 +3,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@repo/ui";
 import { createClient } from "@repo/supabase/next/server";
 import { ClipFolderProvider } from "@/providers/clips-provider";
+import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
 import { redirect } from "next/navigation";
 import { getClipFolders } from "@repo/supabase/queries/clips";
 
@@ -24,8 +25,14 @@ export default async function layout({
   }
 
   const { data: folders } = await getClipFolders(supabase, data.user.id);
+  const { count: clipCount } = await supabase
+    .from("clips")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", data.user.id);
+
   return (
     <SidebarProvider>
+      <OnboardingModal hasClips={(clipCount ?? 0) > 0} />
       <ClipFolderProvider ClipFolders={folders || []}>
         <AppSidebar user={data.user} folders={folders || []} variant="inset" />
         <SidebarInset>

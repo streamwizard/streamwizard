@@ -1,4 +1,5 @@
 import { CookieBanner } from "@/components/cookie-banner";
+import { LightModeOverlay } from "@/components/global/light-mode-overlay";
 import { ModalProvider } from "@/providers/modal-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { PHProvider, PostHogPageView } from "@repo/posthog";
@@ -42,6 +43,7 @@ export default function RootLayout({
         <PHProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
             <ModalProvider>
+              <LightModeOverlay />
               <Suspense>
                 <PostHogPageView />
               </Suspense>
