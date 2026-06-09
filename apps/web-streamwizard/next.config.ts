@@ -22,6 +22,8 @@ function buildCsp(): string {
     "font-src 'self' https://fonts.gstatic.com",
     // Twitch CDN images + data URIs used by the UI
     "img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv",
+    // R2 CDN for video assets (light mode transition WebM, future overlay assets)
+    `media-src 'self' https://cdn.streamwizard.org https://cdn-staging.streamwizard.org`,
     // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them.
     // Monaco fetches worker scripts and additional resources from jsdelivr CDN.
     [
