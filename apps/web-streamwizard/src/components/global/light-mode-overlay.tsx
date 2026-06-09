@@ -38,7 +38,7 @@ export function LightModeOverlay() {
         src={`${process.env.NEXT_PUBLIC_CDN_URL}/public/animations/lightmode-transfer.a3be503ecf4b.webm`}
         autoPlay
         playsInline
-        onPlay={(e) => { e.currentTarget.volume = 0.5; }}
+        onPlay={(e) => { e.currentTarget.volume = 0.25; }}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
         onError={handleError}
