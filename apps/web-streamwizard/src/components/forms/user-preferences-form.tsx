@@ -25,7 +25,7 @@ export function UserPreferencesForm({ UserPreferences }: UserPreferencesFormProp
   const form = useForm<z.infer<typeof userPreferencesSchema>>({
     resolver: zodResolver(userPreferencesSchema),
     defaultValues: {
-      sync_clips_on_end: UserPreferences?.sync_clips_on_end ?? false,
+      sync_clips_on_end: UserPreferences?.sync_clips_on_end ?? true,
       memes_enabled: UserPreferences?.memes_enabled ?? true,
     },
   });
@@ -85,7 +85,7 @@ export function UserPreferencesForm({ UserPreferences }: UserPreferencesFormProp
                       <div className="flex items-center space-x-4">
                         <Sparkles className="h-5 w-5 text-muted-foreground" />
                         <Label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          Enable memes (theme switch animations).
+                          Enable memes
                         </Label>
                       </div>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
