@@ -22,7 +22,17 @@ export function useLightModeTransition() {
   }
 
   function switchToDark() {
-    withTransition(() => setTheme("dark"));
+    if (resolvedTheme === "dark") return;
+
+    const audio = new Audio(
+      `${process.env.NEXT_PUBLIC_CDN_URL}/public/animations/darkmode-transfer.e012277a6b60.webm`
+    );
+    audio.volume = 0.25;
+    audio.play().catch(() => {});
+
+    setTimeout(() => {
+      withTransition(() => setTheme("dark"));
+    }, 3500);
   }
 
   function switchToSystem() {
