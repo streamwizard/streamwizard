@@ -7,7 +7,7 @@ import { useSessionStore } from "@/stores/session-store";
 export function useThemeTransition() {
   const { resolvedTheme, setTheme } = useTheme();
   const { isPlaying, trigger } = useThemeTransitionStore();
-  const animationsEnabled = useSessionStore((s) => s.preferences.theme_animations_enabled);
+  const animationsEnabled = useSessionStore((s) => s.preferences.memes_enabled);
 
   function switchToLight() {
     if (resolvedTheme === "light") return;
