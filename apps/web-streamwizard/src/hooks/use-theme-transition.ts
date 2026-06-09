@@ -14,7 +14,7 @@ export function useThemeTransition() {
   }
 
   function withTransition(callback: () => void) {
-    if (!document.startViewTransition) {
+    if (!document.startViewTransition || document.visibilityState === "hidden") {
       callback();
       return;
     }
@@ -27,12 +27,12 @@ export function useThemeTransition() {
     const audio = new Audio(
       `${process.env.NEXT_PUBLIC_CDN_URL}/public/animations/darkmode-transfer.e012277a6b60.webm`
     );
-    audio.volume = 0.25;
+    audio.volume = 0.05;
     audio.play().catch(() => {});
 
     setTimeout(() => {
       withTransition(() => setTheme("dark"));
-    }, 3500);
+    }, 4000);
   }
 
   function switchToSystem() {
