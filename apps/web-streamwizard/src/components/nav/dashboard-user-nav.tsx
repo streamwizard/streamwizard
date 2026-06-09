@@ -1,7 +1,7 @@
 "use client";
 import { LinkIcon, LogOut, Moon, MoreHorizontal, Sun } from "lucide-react";
 import Link from "next/link";
-import { useLightModeTransition } from "@/hooks/use-light-mode-transition";
+import { useThemeTransition } from "@/hooks/use-theme-transition";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui";
 import {
@@ -20,7 +20,7 @@ import { logout } from "@/actions/auth/logout";
 import { resetUser } from "@repo/posthog";
 
 export function DashboardUserNav({ username, profile_img }: { username: string; profile_img: string }) {
-  const { switchToLight, switchToDark, switchToSystem } = useLightModeTransition();
+  const { switchToLight, switchToDark, switchToSystem } = useThemeTransition();
 
   const signOut = async () => {
     resetUser(); // unlink PostHog identity before session is destroyed

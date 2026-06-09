@@ -1,11 +1,11 @@
 "use client";
 
 import { useTheme } from "next-themes";
-import { useLightModeTransitionStore } from "@/stores/light-mode-transition-store";
+import { useThemeTransitionStore } from "@/stores/light-mode-transition-store";
 
-export function useLightModeTransition() {
+export function useThemeTransition() {
   const { resolvedTheme, setTheme } = useTheme();
-  const { isPlaying, trigger } = useLightModeTransitionStore();
+  const { isPlaying, trigger } = useThemeTransitionStore();
 
   function switchToLight() {
     if (resolvedTheme === "light") return;
