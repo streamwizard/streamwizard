@@ -63,9 +63,10 @@ export function OnboardingModal({ hasClips }: { hasClips: boolean }) {
 
   async function handleFinish() {
     setSaving(true);
-    await completeOnboarding(values);
-    setPreferences({ ...preferences, ...values, onboarding_completed: true });
+    const ok = await completeOnboarding(values);
     setSaving(false);
+    if (!ok) return;
+    setPreferences({ ...preferences, ...values, onboarding_completed: true });
   }
 
   const isLast = step === allSteps.length - 1;
