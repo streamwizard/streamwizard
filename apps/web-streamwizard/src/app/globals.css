@@ -1,4 +1,17 @@
 @import "tailwindcss";
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.4s;
+  animation-timing-function: ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
+  }
+}
 @source "../../../../packages/ui/src";
 
 @plugin "tailwindcss-animate";
