@@ -4,7 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
 export interface SessionPreferences {
-  theme_animations_enabled: boolean;
+  memes_enabled: boolean;
   sync_clips_on_end: boolean;
 }
 
@@ -14,7 +14,7 @@ export interface Session {
 }
 
 const defaultPreferences: SessionPreferences = {
-  theme_animations_enabled: true,
+  memes_enabled: true,
   sync_clips_on_end: false,
 };
 
@@ -29,7 +29,7 @@ export async function getSession(): Promise<Session> {
   return {
     user: data.user,
     preferences: {
-      theme_animations_enabled: prefs?.theme_animations_enabled ?? defaultPreferences.theme_animations_enabled,
+      memes_enabled: prefs?.memes_enabled ?? defaultPreferences.memes_enabled,
       sync_clips_on_end: prefs?.sync_clips_on_end ?? defaultPreferences.sync_clips_on_end,
     },
   };

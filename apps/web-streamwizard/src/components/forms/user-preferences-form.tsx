@@ -26,7 +26,7 @@ export function UserPreferencesForm({ UserPreferences }: UserPreferencesFormProp
     resolver: zodResolver(userPreferencesSchema),
     defaultValues: {
       sync_clips_on_end: UserPreferences?.sync_clips_on_end ?? false,
-      theme_animations_enabled: UserPreferences?.theme_animations_enabled ?? true,
+      memes_enabled: UserPreferences?.memes_enabled ?? true,
     },
   });
 
@@ -35,8 +35,8 @@ export function UserPreferencesForm({ UserPreferences }: UserPreferencesFormProp
     toast.promise(updateUserPreferences(id, values), {
       loading: "Updating preferences...",
       success: () => {
-        if (values.theme_animations_enabled !== undefined)
-          setPreference("theme_animations_enabled", values.theme_animations_enabled);
+        if (values.memes_enabled !== undefined)
+          setPreference("memes_enabled", values.memes_enabled);
         if (values.sync_clips_on_end !== undefined)
           setPreference("sync_clips_on_end", values.sync_clips_on_end);
         return "Preferences updated successfully!";
@@ -76,7 +76,7 @@ export function UserPreferencesForm({ UserPreferences }: UserPreferencesFormProp
               )}
             />
             <FormField
-              name="theme_animations_enabled"
+              name="memes_enabled"
               control={form.control}
               render={({ field }) => (
                 <FormItem className="flex flex-col items-start gap-3 space-y-0 w-full">
@@ -85,7 +85,7 @@ export function UserPreferencesForm({ UserPreferences }: UserPreferencesFormProp
                       <div className="flex items-center space-x-4">
                         <Sparkles className="h-5 w-5 text-muted-foreground" />
                         <Label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                          Play animations when switching themes.
+                          Enable memes (theme switch animations).
                         </Label>
                       </div>
                       <Switch checked={field.value} onCheckedChange={field.onChange} />
