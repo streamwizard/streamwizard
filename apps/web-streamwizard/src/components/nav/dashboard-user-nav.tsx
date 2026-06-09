@@ -20,7 +20,7 @@ import { logout } from "@/actions/auth/logout";
 import { resetUser } from "@repo/posthog";
 
 export function DashboardUserNav({ username, profile_img }: { username: string; profile_img: string }) {
-  const { switchToLight, setTheme } = useLightModeTransition();
+  const { switchToLight, switchToDark, switchToSystem } = useLightModeTransition();
 
   const signOut = async () => {
     resetUser(); // unlink PostHog identity before session is destroyed
@@ -75,11 +75,11 @@ export function DashboardUserNav({ username, profile_img }: { username: string; 
                 <Sun className="mr-2 h-3 w-3" />
                 Light
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => switchToDark()} className="cursor-pointer">
                 <Moon className="mr-2 h-3 w-3" />
                 Dark
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => switchToSystem()} className="cursor-pointer">
                 <LinkIcon className="mr-2 h-3 w-3" />
                 System
               </DropdownMenuItem>
