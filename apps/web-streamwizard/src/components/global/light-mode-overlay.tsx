@@ -2,11 +2,11 @@
 
 import { useRef } from "react";
 import { useTheme } from "next-themes";
-import { useLightModeTransitionStore } from "@/stores/light-mode-transition-store";
+import { useThemeTransitionStore } from "@/stores/light-mode-transition-store";
 
 export function LightModeOverlay() {
   const { setTheme } = useTheme();
-  const { isPlaying, reset } = useLightModeTransitionStore();
+  const { isPlaying, reset } = useThemeTransitionStore();
   const hasSwitchedRef = useRef(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 

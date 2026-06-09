@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Moon, Sun } from "lucide-react";
-import { useLightModeTransition } from "@/hooks/use-light-mode-transition";
+import { useThemeTransition } from "@/hooks/use-theme-transition";
 
 import { Button } from "@repo/ui";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@repo/ui";
 
 export function ThemeToggle() {
-  const { switchToLight, switchToDark, switchToSystem } = useLightModeTransition();
+  const { switchToLight, switchToDark, switchToSystem } = useThemeTransition();
 
   return (
     <DropdownMenu>
