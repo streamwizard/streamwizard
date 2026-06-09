@@ -13,18 +13,20 @@ export function useLightModeTransition() {
     trigger();
   }
 
+  function withTransition(callback: () => void) {
+    if (!document.startViewTransition) {
+      callback();
+      return;
+    }
+    document.startViewTransition(callback);
+  }
+
   function switchToDark() {
-    const root = document.documentElement;
-    root.classList.add("theme-transitioning");
-    setTheme("dark");
-    setTimeout(() => root.classList.remove("theme-transitioning"), 400);
+    withTransition(() => setTheme("dark"));
   }
 
   function switchToSystem() {
-    const root = document.documentElement;
-    root.classList.add("theme-transitioning");
-    setTheme("system");
-    setTimeout(() => root.classList.remove("theme-transitioning"), 400);
+    withTransition(() => setTheme("system"));
   }
 
   return { switchToLight, switchToDark, switchToSystem };
