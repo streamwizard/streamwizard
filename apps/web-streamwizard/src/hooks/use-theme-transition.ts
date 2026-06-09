@@ -2,14 +2,17 @@
 
 import { useTheme } from "next-themes";
 import { useThemeTransitionStore } from "@/stores/light-mode-transition-store";
+import { useSessionStore } from "@/stores/session-store";
 
 export function useThemeTransition() {
   const { resolvedTheme, setTheme } = useTheme();
   const { isPlaying, trigger } = useThemeTransitionStore();
+  const animationsEnabled = useSessionStore((s) => s.preferences.theme_animations_enabled);
 
   function switchToLight() {
     if (resolvedTheme === "light") return;
     if (isPlaying) return;
+    if (!animationsEnabled) { setTheme("light"); return; }
     trigger();
   }
 
@@ -23,6 +26,7 @@ export function useThemeTransition() {
 
   function switchToDark() {
     if (resolvedTheme === "dark") return;
+    if (!animationsEnabled) { withTransition(() => setTheme("dark")); return; }
 
     const audio = new Audio(
       `${process.env.NEXT_PUBLIC_CDN_URL}/public/animations/darkmode-transfer.e012277a6b60.webm`
