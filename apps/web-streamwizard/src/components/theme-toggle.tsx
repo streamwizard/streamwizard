@@ -13,7 +13,7 @@ import {
 } from "@repo/ui";
 
 export function ThemeToggle() {
-  const { switchToLight, setTheme } = useLightModeTransition();
+  const { switchToLight, switchToDark, switchToSystem } = useLightModeTransition();
 
   return (
     <DropdownMenu>
@@ -28,10 +28,10 @@ export function ThemeToggle() {
         <DropdownMenuItem onClick={() => switchToLight()}>
           Light
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <DropdownMenuItem onClick={() => switchToDark()}>
           Dark
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
+        <DropdownMenuItem onClick={() => switchToSystem()}>
           System
         </DropdownMenuItem>
       </DropdownMenuContent>

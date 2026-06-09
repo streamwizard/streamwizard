@@ -1,4 +1,10 @@
 @import "tailwindcss";
+
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease !important;
+}
 @source "../../../../packages/ui/src";
 
 @plugin "tailwindcss-animate";
