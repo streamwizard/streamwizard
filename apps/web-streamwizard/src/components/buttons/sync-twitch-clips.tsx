@@ -14,17 +14,20 @@ export default function SyncTwitchClipsButton() {
     toast.promise(
       SyncBroadcasterClips().then((response) => {
         if (!response.success) {
-          throw new Error(response.message);
+          const readyAt = response.lastSync
+            ? new Date(new Date(response.lastSync).getTime() + 60 * 60 * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+            : null;
+          const msg = response.skipped && readyAt
+            ? `${response.message} You can sync again at ${readyAt}.`
+            : response.message;
+          throw new Error(msg);
         }
         return response.message;
       }),
       {
         loading: "Syncing Twitch Clips",
         success: (message) => message,
-        error: (error) => {
-          if (error.message) return error.message;
-          return `Error syncing Twitch Clips`;
-        },
+        error: (error) => error.message || "Error syncing Twitch Clips",
         finally: () => setIsLoading(false),
       }
     );

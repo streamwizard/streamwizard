@@ -10,7 +10,8 @@ interface SessionStoreState {
 export const useSessionStore = create<SessionStoreState>((set) => ({
   preferences: {
     memes_enabled: true,
-    sync_clips_on_end: false,
+    sync_clips_on_end: true,
+    onboarding_completed: false,
   },
   setPreferences: (preferences) => set({ preferences }),
   setPreference: (key, value) =>

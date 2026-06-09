@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 export interface SessionPreferences {
   memes_enabled: boolean;
   sync_clips_on_end: boolean;
+  onboarding_completed: boolean;
 }
 
 export interface Session {
@@ -15,7 +16,8 @@ export interface Session {
 
 const defaultPreferences: SessionPreferences = {
   memes_enabled: true,
-  sync_clips_on_end: false,
+  sync_clips_on_end: true,
+  onboarding_completed: false,
 };
 
 export async function getSession(): Promise<Session> {
@@ -31,6 +33,7 @@ export async function getSession(): Promise<Session> {
     preferences: {
       memes_enabled: prefs?.memes_enabled ?? defaultPreferences.memes_enabled,
       sync_clips_on_end: prefs?.sync_clips_on_end ?? defaultPreferences.sync_clips_on_end,
+      onboarding_completed: prefs?.onboarding_completed ?? defaultPreferences.onboarding_completed,
     },
   };
 }
