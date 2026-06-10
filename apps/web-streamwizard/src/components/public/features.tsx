@@ -75,12 +75,12 @@ const features = [
 export function FeaturesSection() {
   return (
     <section className="py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="container px-4 mx-auto">
         <h2 className="text-3xl font-bold text-center mb-4">What StreamWizard does</h2>
         <p className="text-muted-foreground text-center mb-12 max-w-xl mx-auto">
           Clip management that doesn&apos;t treat you like an enterprise customer.
         </p>
-        <BentoGrid className="container mx-auto grid-cols-1 md:grid-cols-3">
+        <BentoGrid className="mx-auto grid-cols-1 md:grid-cols-3">
           {features.map((feature, idx) => (
             <BentoCard key={idx} {...feature} />
           ))}

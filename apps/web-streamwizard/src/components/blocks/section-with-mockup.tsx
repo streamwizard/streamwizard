@@ -46,7 +46,7 @@ const SectionWithMockup: React.FC<SectionWithMockupProps> = ({
         />
       </div>
 
-      <div className="container w-full px-6 md:px-10 relative z-10 mx-auto max-w-7xl">
+      <div className="container px-4 mx-auto relative z-10">
         <motion.div
           className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-16 w-full items-center"
           variants={containerVariants}

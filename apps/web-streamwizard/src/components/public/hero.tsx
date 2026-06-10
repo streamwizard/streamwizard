@@ -32,7 +32,7 @@ const steps = [
 export default function Hero() {
   return (
     <section className="relative pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="container px-4 mx-auto relative z-10">
         <div className="text-center">
           {/* Open source badge */}
           <Link
@@ -64,7 +64,7 @@ export default function Hero() {
       </div>
 
       <HorizonStage className="mt-16 min-h-[1000px] lg:min-h-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 lg:mb-16">
+        <div className="container px-4 mx-auto lg:mb-16">
           <h2 className="text-3xl font-bold text-center mb-8">How It Works</h2>
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             {steps.map((step, i) => (
