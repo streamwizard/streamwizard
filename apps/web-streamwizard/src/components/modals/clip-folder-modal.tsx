@@ -31,9 +31,11 @@ interface Props {
   user_id: string;
   folder_id?: number;
   folder_name?: string;
+  parent_folder_id?: number;
+  parent_folder_name?: string;
 }
 
-export function ClipFolderModal({ user_id, folder_id, folder_name }: Props) {
+export function ClipFolderModal({ user_id, folder_id, folder_name, parent_folder_id, parent_folder_name }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { closeModal } = useModal();
 
@@ -66,7 +68,7 @@ export function ClipFolderModal({ user_id, folder_id, folder_name }: Props) {
         }
       );
     } else {
-      toast.promise(createClipFolder(values.name, user_id), {
+      toast.promise(createClipFolder(values.name, user_id, parent_folder_id), {
         loading: "Creating folder...",
         success: "Folder created successfully!",
         error: "Failed to create folder.",
@@ -86,11 +88,17 @@ export function ClipFolderModal({ user_id, folder_id, folder_name }: Props) {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Folder Name</FormLabel>
+              <FormLabel>{folder_id ? "Folder Name" : parent_folder_name ? "Subfolder Name" : "Folder Name"}</FormLabel>
               <FormControl>
-                <Input placeholder="My New Folder" {...field} />
+                <Input placeholder={parent_folder_name ? `Inside ${parent_folder_name}` : "My New Folder"} {...field} />
               </FormControl>
-              <FormDescription>Enter a name for your new folder.</FormDescription>
+              <FormDescription>
+                {folder_id
+                  ? "Enter a new name for this folder."
+                  : parent_folder_name
+                    ? `This subfolder will be created inside "${parent_folder_name}".`
+                    : "Enter a name for your new folder."}
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -102,7 +110,7 @@ export function ClipFolderModal({ user_id, folder_id, folder_name }: Props) {
               {folder_id ? "Updating..." : "Creating..."}
             </>
           ) : (
-            <>{folder_id ? "Rename Folder" : "Create Folder"}</>
+            <>{folder_id ? "Rename Folder" : parent_folder_name ? "Create Subfolder" : "Create Folder"}</>
           )}
         </Button>
       </form>

@@ -1,5 +1,6 @@
 "use client";
 import { addClipToFolder, removeClipFromFolder } from "@/actions/supabase/clips/clips";
+import { getFolderDisplayName } from "@/lib/utils/clip-folders";
 import { Database } from "@repo/supabase";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -15,6 +16,7 @@ interface FolderContextType {
   folders: Database["public"]["Tables"]["clip_folders"]["Row"][];
   getAvailableFolders: (folderId: number[]) => Database["public"]["Tables"]["clip_folders"]["Row"][];
   getRemovableFolders: (folderId: number[]) => Database["public"]["Tables"]["clip_folders"]["Row"][];
+  getFolderLabel: (folderId: number) => string;
   handleRemoveClipFromFolder: (folderId: number, clipId: string, folderName: string) => void;
   AddToFolder: ({ folderName, folderId, clipId }: AddToFolderType) => void;
 }
@@ -32,7 +34,14 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
 
   // Get folders excluding the specified folder ID
   const getAvailableFolders = (excludedFolderIds: number[]) => {
-    return folders.filter((folder) => !excludedFolderIds.includes(folder.id));
+    return folders
+      .filter((folder) => !excludedFolderIds.includes(folder.id))
+      .sort((a, b) => getFolderDisplayName(a, folders).localeCompare(getFolderDisplayName(b, folders)));
+  };
+
+  const getFolderLabel = (folderId: number) => {
+    const folder = folders.find((item) => item.id === folderId);
+    return folder ? getFolderDisplayName(folder, folders) : "";
   };
 
   // Get clips eligible for removal excluding specified folder IDs
@@ -83,7 +92,7 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
   }, [ClipFolders]);
 
   return (
-    <FolderContext.Provider value={{ folders, getAvailableFolders, getRemovableFolders, AddToFolder, handleRemoveClipFromFolder }}>
+    <FolderContext.Provider value={{ folders, getAvailableFolders, getRemovableFolders, getFolderLabel, AddToFolder, handleRemoveClipFromFolder }}>
       {children}
     </FolderContext.Provider>
   );

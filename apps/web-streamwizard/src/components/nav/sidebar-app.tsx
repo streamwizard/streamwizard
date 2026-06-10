@@ -77,8 +77,8 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarClips clipFolders={folders} />
             </SidebarMenu>
-            <SidebarClips clipFolders={folders} />
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
