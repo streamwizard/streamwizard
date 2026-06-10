@@ -57,7 +57,7 @@ export default function Hero() {
 
         <div className="relative rounded-xl mt-16 z-10 after:content-[''] after:absolute after:inset-0 after:z-50 after:rounded-[inherit] after:bg-[linear-gradient(to_top,var(--background)_10%,transparent_60%)] after:pointer-events-none before:content-[''] before:absolute before:[-inset:5rem] before:-z-10 before:filter-[blur(120px)] before:bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--color-three),transparent_70%),transparent_70%)] before:opacity-50 animate-fade-up [--animation-delay:400ms]">
           <div className="rounded-xl aspect-video relative">
-            <Image src="/img/landing-page/hero-dark.png" alt="StreamWizard Interface" fill className="rounded-xl object-cover" priority />
+            <Image src="/img/landing-page/hero-dark.png" alt="StreamWizard Interface" fill sizes="(max-width: 768px) 100vw, 90vw" className="rounded-xl object-cover" priority />
           </div>
           <BorderBeam size={250} duration={12} delay={9} />
         </div>
