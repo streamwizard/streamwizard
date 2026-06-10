@@ -261,7 +261,11 @@ export default function TwitchClipSearchForm() {
             </div>
           </FieldGroup>
 
-          <Button type="submit" form="twitch-clip-filter-form" className="w-full">
+          <Button
+            type="submit"
+            form="twitch-clip-filter-form"
+            className="w-full border border-[#374151] !bg-[#374151] !text-white shadow-sm hover:!bg-[#eef0f4] hover:!text-foreground dark:border-transparent dark:!bg-primary dark:!text-primary-foreground dark:shadow-none dark:hover:!bg-primary/90 dark:hover:!text-primary-foreground"
+          >
             Search
           </Button>
 
