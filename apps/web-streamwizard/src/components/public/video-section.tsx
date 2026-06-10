@@ -20,6 +20,7 @@ export default function VideoSection() {
       features={data.features}
       primaryImageSrc={data.primaryImageSrc}
       secondaryImageSrc={data.secondaryImageSrc}
+      priority
     />
   );
 }
