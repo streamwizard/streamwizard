@@ -1,19 +1,25 @@
-// Ensure this import path is correct for your project structure
 import SectionWithMockup from "@/components/blocks/section-with-mockup";
-// Data for the first section (default layout)
-const exampleData1 = {
-  title: <>Find the best moments from your streams,</>,
-  description: (
-    <>
-      Never miss your best moments again. StreamWizard automatically records all stream events, including follows, subscriptions, raids, and Twitch markers, so you can quickly navigate through your
-      stream and find the highlights. Twitch markers appear directly in StreamWizard, allowing you to instantly create clips and share your best moments with your community.
-    </>
-  ),
+
+const data = {
+  title: "Find your best moments.",
+  description: "Every follow, sub, raid, and Twitch marker is logged automatically. Jump straight to the highlight — no scrubbing required.",
+  features: [
+    "Twitch markers sync directly to your timeline",
+    "Create and share clips with one click",
+    "All stream events logged automatically",
+  ],
   primaryImageSrc: "/img/landing-page/video-player.png",
   secondaryImageSrc: "/img/landing-page/video-player-bg.png",
 };
 
-// Changed from 'export default function ...' to 'export function ...'
 export default function VideoSection() {
-  return <SectionWithMockup title={exampleData1.title} description={exampleData1.description} primaryImageSrc={exampleData1.primaryImageSrc} secondaryImageSrc={exampleData1.secondaryImageSrc} />;
+  return (
+    <SectionWithMockup
+      title={data.title}
+      description={data.description}
+      features={data.features}
+      primaryImageSrc={data.primaryImageSrc}
+      secondaryImageSrc={data.secondaryImageSrc}
+    />
+  );
 }
