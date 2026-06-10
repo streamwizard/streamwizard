@@ -87,6 +87,7 @@
   --radius-4xl: calc(var(--radius) + 16px);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
@@ -161,40 +162,41 @@
 :root {
   --header-height: 3.5rem;
   --radius: 0.625rem;
+  --background: #eef0f4;
+  --foreground: oklch(0.24 0.02 260);
+  --surface: var(--sidebar);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --card-foreground: oklch(0.24 0.02 260);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.24 0.02 260);
+  --primary: #eef0f4;
+  --primary-foreground: oklch(0.28 0.025 260);
+  --secondary: oklch(1 0 0);
+  --secondary-foreground: oklch(0.3 0.025 260);
+  --muted: oklch(0.955 0.012 260);
+  --muted-foreground: oklch(0.46 0.025 260);
+  --accent: oklch(0.975 0.01 260);
+  --accent-foreground: oklch(0.3 0.03 260);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: oklch(0.88 0.014 260);
+  --input: oklch(1 0 0);
+  --ring: oklch(0.55 0.02 260);
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-3: oklch(0.45 0.02 260);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #eef0f4;
+  --sidebar-foreground: oklch(0.28 0.025 260);
+  --sidebar-primary: oklch(0.28 0.025 260);
+  --sidebar-primary-foreground: oklch(0.28 0.025 260);
+  --sidebar-accent: #e4e7ed;
+  --sidebar-accent-foreground: oklch(0.28 0.025 260);
+  --sidebar-border: #d5dae3;
+  --sidebar-ring: oklch(0.55 0.02 260);
   --color-one: #ffbd7a;
   --color-two: #fe8bbb;
   --color-three: #9e7aff;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
 }
 
 .dark {
@@ -239,6 +241,40 @@
     @apply bg-background text-foreground;
     font-family: var(--font-geist-sans), sans-serif;
   }
+
+  /* Light mode canvas + elevated surfaces */
+  :root:not(.dark) [data-slot="sidebar-container"] {
+    background-color: transparent;
+  }
+
+  :root:not(.dark) [data-slot="sidebar-inner"] {
+    box-shadow:
+      0 0 0 1px var(--sidebar-border),
+      0 4px 8px oklch(0.35 0.02 260 / 0.1),
+      0 16px 40px oklch(0.35 0.02 260 / 0.12),
+      6px 0 28px oklch(0.35 0.02 260 / 0.08);
+  }
+
+  :root:not(.dark) [data-slot="sidebar-group"] + [data-slot="sidebar-group"] {
+    margin-top: 0.75rem;
+  }
+
+  :root:not(.dark) [data-slot="sidebar-group-label"] {
+    color: var(--muted-foreground);
+    font-weight: 600;
+    font-size: 0.6875rem;
+    letter-spacing: 0.03em;
+    padding: 0 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  :root:not(.dark) [data-slot="card"] {
+    background-color: var(--card);
+    box-shadow:
+      0 0 0 1px oklch(0.86 0.014 260 / 0.55),
+      0 2px 6px oklch(0.4 0.02 260 / 0.08);
+  }
+
   code, pre, kbd, samp {
     font-family: var(--font-geist-mono), monospace;
   }
@@ -288,4 +324,26 @@
       }
     }
   }
+}
+
+/* Match main panel to sidebar; beat Tailwind bg-background / shadow-sm on SidebarInset */
+:root:not(.dark) [data-slot="sidebar-wrapper"],
+:root:not(.dark) [data-slot="sidebar-inset"] {
+  background-color: var(--sidebar) !important;
+  box-shadow: none !important;
+}
+
+/* Beat Tailwind bg-transparent on form controls inside the main panel */
+:root:not(.dark) [data-slot="sidebar-inset"] input[data-slot="input"],
+:root:not(.dark) [data-slot="sidebar-inset"] textarea[data-slot="textarea"],
+:root:not(.dark) [data-slot="sidebar-inset"] [data-slot="select-trigger"],
+:root:not(.dark) [data-slot="sidebar-inset"] [data-slot="native-select"],
+:root:not(.dark) [data-slot="sidebar-inset"] [data-slot="checkbox"],
+:root:not(.dark) [data-slot="sidebar-inset"] [data-slot="radio-group-item"],
+:root:not(.dark) [data-slot="sidebar-inset"] [data-slot="button"][data-variant="outline"],
+:root:not(.dark) [data-slot="sidebar-inset"] [data-slot="button"][data-variant="secondary"] {
+  background-color: var(--card) !important;
+  box-shadow:
+    0 0 0 1px oklch(0.84 0.016 260 / 0.55),
+    0 1px 3px oklch(0.4 0.02 260 / 0.06) !important;
 }
