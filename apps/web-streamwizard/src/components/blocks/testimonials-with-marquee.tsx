@@ -23,7 +23,7 @@ export async function TestimonialsSection({ className }: TestimonialsSectionProp
   return (
     <section className={cn("py-20 overflow-hidden", className)}>
       {/* Section header */}
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center mb-12">
+      <div className="container px-4 mx-auto text-center mb-12">
         <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300 mb-4">
           Loved by streamers
         </div>
