@@ -70,7 +70,7 @@ const SectionWithMockup: React.FC<SectionWithMockupProps> = ({ title, descriptio
                   }}
                 >
                   {/* Primary Image */}
-                  <Image src={primaryImageSrc} alt="StreamWizard Interface" width={1440} height={900} className="rounded-xl " />
+                  <Image src={primaryImageSrc} alt="StreamWizard Interface" width={1440} height={900} className="rounded-xl w-full h-auto" />
                 </div>
               </div>
             </motion.div>
