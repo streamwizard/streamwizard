@@ -11,7 +11,7 @@ export async function getLatestStreamForBroadcaster(client: DBClient, broadcaste
     .not("stream_id", "is", null)
     .order("stream_started_at", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (error) console.error("[stream-analytics] getLatestStreamForBroadcaster:", error.message);
   return data ?? null;
@@ -30,7 +30,7 @@ export async function getPreviousStreamForBroadcaster(
     .neq("stream_id", currentStreamId)
     .order("stream_started_at", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   if (error) return null;
   return data ?? null;

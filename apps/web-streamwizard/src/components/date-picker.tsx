@@ -81,7 +81,7 @@ export function DatePickerWithPresets({ name, label, description, className }: D
       control={control}
       name="date"
       render={({ field }) => (
-        <FormItem className={cn("flex flex-col", className)}>
+        <FormItem className={cn("flex w-full flex-col gap-3", className)}>
           {label && <FormLabel htmlFor={name}>{label}</FormLabel>}
           <Popover>
             <PopoverTrigger asChild>
@@ -89,7 +89,10 @@ export function DatePickerWithPresets({ name, label, description, className }: D
                 <Button
                   id={name}
                   variant={"outline"}
-                  className={cn("w-full justify-start text-left font-normal", field.value?.from === undefined && "text-muted-foreground")}
+                  className={cn(
+                    "h-9 w-full justify-start text-left font-normal",
+                    field.value?.from === undefined && "text-muted-foreground",
+                  )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {field.value && field.value.from && field.value.to

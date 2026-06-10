@@ -16,209 +16,276 @@ import {
 } from "@repo/ui";
 import { useClipFolders } from "@/providers/clips-provider";
 import { useModal } from "@/providers/modal-provider";
+import type { ClipView } from "@/lib/utils/clip-view";
 import { clipsWithFolders } from "@/types/database";
-import { Calendar, Eye, MoreHorizontal, Star, User } from "lucide-react";
+import { Calendar, Eye, Gamepad2, MoreHorizontal, Star, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import TwitchClipModal from "../modals/twitch-clip-modal";
 import { Button } from "@repo/ui";
+import { formatClipDuration, formatDate } from "@/lib/format";
+import { downloadClip } from "@/lib/utils/download-clip";
+import { cn } from "@/lib/utils";
+import { useCallback } from "react";
 
-export default function TwitchClipCard({
-  url,
-  creator_name,
-  title,
-  view_count,
-  created_at_twitch,
-  thumbnail_url,
-  duration,
-  is_featured,
-  embed_url,
-  broadcaster_id,
-  folders,
-  twitch_clip_id,
-}: clipsWithFolders) {
+let suppressClipOpenUntil = 0;
+
+function suppressClipOpen() {
+  suppressClipOpenUntil = Date.now() + 400;
+}
+
+function shouldSuppressClipOpen() {
+  if (Date.now() < suppressClipOpenUntil) {
+    suppressClipOpenUntil = 0;
+    return true;
+  }
+  return false;
+}
+
+const menuSurfaceHandlers = {
+  onPointerDown: (event: React.PointerEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    suppressClipOpen();
+  },
+  onClick: (event: React.MouseEvent) => {
+    event.stopPropagation();
+  },
+};
+
+type TwitchClipCardProps = clipsWithFolders & {
+  view?: ClipView;
+};
+
+export function useClipCardActions(clip: clipsWithFolders) {
   const { openModal } = useModal();
-  const { getAvailableFolders, getRemovableFolders, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
-
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
 
   const OpenClip = () => {
-    openModal(<TwitchClipModal url={embed_url!} />);
+    openModal(<TwitchClipModal url={clip.embed_url!} clip={clip} />);
   };
 
-  const CopyClipURL = () => {
-    navigator.clipboard.writeText(url!);
+  return { OpenClip };
+}
+
+export function ClipCardActions({ clip }: { clip: clipsWithFolders }) {
+  const { getAvailableFolders, getRemovableFolders, getFolderLabel, AddToFolder, handleRemoveClipFromFolder } =
+    useClipFolders();
+
+  const copyClipUrl = () => {
+    navigator.clipboard.writeText(clip.url!);
     toast.success("Copied to clipboard");
   };
 
-  function AvailableFolders() {
-    const availableFolders = getAvailableFolders(folders.map((folder: { id: number }) => folder.id));
+  const downloadClipLayout = (layout: "landscape" | "portrait") =>
+    downloadClip({
+      clipId: clip.twitch_clip_id,
+      layout,
+      broadcaster_id: clip.broadcaster_id!,
+      title: clip.title,
+    });
 
-    if (availableFolders.length === 0) {
-      return <DropdownMenuItem disabled>No folders available</DropdownMenuItem>;
-    }
-
-    return availableFolders.map((folder) => (
-      <DropdownMenuItem
-        key={folder.id}
-        onClick={() =>
-          AddToFolder({
-            folderName: folder.name,
-            folderId: folder.id,
-            clipId: twitch_clip_id,
-          })
-        }
-      >
-        {folder.name}
-      </DropdownMenuItem>
-    ));
-  }
-
-  function RemovableFolders() {
-    const removableFolders = getRemovableFolders(folders.map((folder: { id: number }) => folder.id));
-
-    if (removableFolders.length === 0) {
-      return <DropdownMenuItem disabled>No folders available</DropdownMenuItem>;
-    }
-
-    return removableFolders.map((folder) => (
-      <DropdownMenuItem key={folder.id} onClick={() => handleRemoveClipFromFolder(folder.id, twitch_clip_id, folder.name)}>
-        {folder.name}
-      </DropdownMenuItem>
-    ));
-  }
-
-  const DownloadLandscapeClip = async (layout: "landscape" | "portrait", broadcaster_id: string) => {
-    const loadingToast = toast.loading(`Preparing ${layout} download...`);
-
-    try {
-      // Use the API route to proxy the download through our server
-      const response = await fetch("/api/twitch/download-clip", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clipId: twitch_clip_id,
-          layout: layout,
-          broadcaster_id: broadcaster_id,
-        }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to download clip");
-      }
-
-      // Get the video blob from the response
-      const blob = await response.blob();
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      // Create a temporary anchor element to trigger download
-      const link = document.createElement("a");
-      link.href = blobUrl;
-      link.download = `${title || "clip"}-${layout}.mp4`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      // Clean up the blob URL after a short delay
-      setTimeout(() => {
-        window.URL.revokeObjectURL(blobUrl);
-      }, 100);
-
-      toast.dismiss(loadingToast);
-      toast.success(`Downloading ${layout} clip...`);
-    } catch (error) {
-      toast.dismiss(loadingToast);
-      toast.error(error instanceof Error ? error.message : "Failed to download clip");
-    }
-  };
+  const folderIds = clip.folders.map((folder: { id: number }) => folder.id);
+  const availableFolders = getAvailableFolders(folderIds);
+  const removableFolders = getRemovableFolders(folderIds);
 
   return (
-    <Card className="w-full max-w-md overflow-hidden cursor-pointer mx-">
-      <CardHeader className="p-0">
-        <div className="relative">
-          <Image src={thumbnail_url!} alt={title} width={500} height={108} className="w-full h-48 object-cover" onClick={OpenClip} />
-          <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground">{formatDuration(duration!)}</Badge>
-          {is_featured && (
-            <Badge className="absolute bottom-2 left-2 bg-yellow-500 text-yellow-950">
-              <Star className="w-3 h-3 mr-1" />
-              Featured
-            </Badge>
-          )}
+    <DropdownMenu
+      modal
+      onOpenChange={(open) => {
+        if (!open) suppressClipOpen();
+      }}
+    >
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className="h-8 w-8 p-0"
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" {...menuSurfaceHandlers}>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Folders</DropdownMenuLabel>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Add to folder</DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent {...menuSurfaceHandlers}>
+                {availableFolders.length === 0 ? (
+                  <DropdownMenuItem disabled>No folders available</DropdownMenuItem>
+                ) : (
+                  availableFolders.map((folder) => (
+                    <DropdownMenuItem
+                      key={folder.id}
+                      onClick={() =>
+                        AddToFolder({
+                          folderName: getFolderLabel(folder.id),
+                          folderId: folder.id,
+                          clipId: clip.twitch_clip_id,
+                        })
+                      }
+                    >
+                      {getFolderLabel(folder.id)}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>Remove from folder</DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent {...menuSurfaceHandlers}>
+                {removableFolders.length === 0 ? (
+                  <DropdownMenuItem disabled>No folders available</DropdownMenuItem>
+                ) : (
+                  removableFolders.map((folder) => (
+                    <DropdownMenuItem
+                      key={folder.id}
+                      onClick={() =>
+                        handleRemoveClipFromFolder(folder.id, clip.twitch_clip_id, getFolderLabel(folder.id))
+                      }
+                    >
+                      {getFolderLabel(folder.id)}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <Link href={clip.url!} target="_blank">
+          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(clip.url!)}>View</DropdownMenuItem>
+        </Link>
+        <DropdownMenuItem onClick={() => downloadClipLayout("landscape")}>Download Landscape</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => downloadClipLayout("portrait")}>Download Portrait</DropdownMenuItem>
+        <DropdownMenuItem onClick={copyClipUrl}>Copy URL to clipboard</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ClipThumbnail({
+  clip,
+  className,
+  imageClassName,
+}: {
+  clip: clipsWithFolders;
+  className?: string;
+  imageClassName?: string;
+}) {
+  return (
+    <div className={cn("relative shrink-0", className)}>
+      <div className="relative overflow-hidden rounded-lg">
+        <Image
+          src={clip.thumbnail_url!}
+          alt={clip.title}
+          width={500}
+          height={108}
+          className={cn("w-full object-cover", imageClassName)}
+        />
+        <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground">
+          {formatClipDuration(clip.duration!)}
+        </Badge>
+        {clip.is_featured && (
+          <Badge className="absolute bottom-2 left-2 bg-yellow-500 text-yellow-950">
+            <Star className="w-3 h-3 mr-1" />
+            Featured
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ClipMetaRow({ clip }: { clip: clipsWithFolders }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+      <div className="flex items-center gap-1">
+        <User className="size-4" />
+        <span>{clip.creator_name}</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <Eye className="size-4" />
+        <span>{clip.view_count!.toLocaleString()} views</span>
+      </div>
+      <div className="flex items-center gap-1">
+        <Calendar className="size-4" />
+        <span>{formatDate(clip.created_at_twitch!)}</span>
+      </div>
+      {clip.game_name && (
+        <div className="flex items-center gap-1">
+          <Gamepad2 className="size-4" />
+          <span>{clip.game_name}</span>
         </div>
+      )}
+    </div>
+  );
+}
+
+export default function TwitchClipCard({ view = "grid", ...clip }: TwitchClipCardProps) {
+  const { OpenClip } = useClipCardActions(clip);
+
+  const handleCardClick = useCallback(() => {
+    if (shouldSuppressClipOpen()) return;
+    OpenClip();
+  }, [OpenClip]);
+
+  const cardClassName =
+    "w-full overflow-hidden cursor-pointer transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-lg";
+
+  if (view === "list") {
+    return (
+      <Card className={cn(cardClassName, "max-w-none")} onClick={handleCardClick}>
+        <div className="flex items-stretch">
+          <ClipThumbnail
+            clip={clip}
+            className="w-44 sm:w-52"
+            imageClassName="h-full min-h-28 sm:min-h-32"
+          />
+          <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 p-4">
+            <div className="space-y-2">
+              <CardTitle className="text-base line-clamp-2">{clip.title}</CardTitle>
+              <ClipMetaRow clip={clip} />
+            </div>
+            <div className="flex justify-start">
+              <ClipCardActions clip={clip} />
+            </div>
+          </div>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className={cn(cardClassName, "max-w-md gap-4 pb-4")} onClick={handleCardClick}>
+      <CardHeader className="p-0">
+        <ClipThumbnail clip={clip} className="px-3 pt-3" imageClassName="h-48" />
       </CardHeader>
-      <CardContent className="p-4">
-        <CardTitle className="text-lg mb-2 line-clamp-2">{title}</CardTitle>
-        <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-2">
-          <User className="w-4 h-4" />
-          <span>{creator_name}</span>
+      <CardContent className="px-4 pb-0 pt-4">
+        <CardTitle className="mb-2 line-clamp-2 text-lg">{clip.title}</CardTitle>
+        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+          <User className="h-4 w-4" />
+          <span>{clip.creator_name}</span>
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex justify-between text-sm text-muted-foreground">
-        <div className="flex items-center">
-          <Eye className="w-4 h-4 mr-1" />
-          {view_count!.toLocaleString()} views
-        </div>
-        <div className="flex flex-col justify-center">
+      <CardFooter className="flex flex-col items-stretch gap-2 px-4 pb-2 pt-3 text-sm text-muted-foreground">
+        <div className="flex w-full items-center justify-between">
           <div className="flex items-center">
-            <Calendar className="w-4 h-4 mr-1" />
-            {formatDate(created_at_twitch!)}
+            <Eye className="mr-1 h-4 w-4" />
+            {clip.view_count!.toLocaleString()} views
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0 text-right">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuGroup>
-                <DropdownMenuLabel>Folders</DropdownMenuLabel>
-
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>Add to folder</DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent>
-                      <AvailableFolders />
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem>Create new folder</DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>Remove from folder</DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent>
-                      <RemovableFolders />
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-
-              <Link href={url!} target="_blank">
-                <DropdownMenuItem onClick={() => navigator.clipboard.writeText(url!)}>View</DropdownMenuItem>
-              </Link>
-              <DropdownMenuItem onClick={() => DownloadLandscapeClip("landscape", broadcaster_id!)}>Download Landscape</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => DownloadLandscapeClip("portrait", broadcaster_id!)}>Download Portrait</DropdownMenuItem>
-              <DropdownMenuItem onClick={CopyClipURL}>Copy URL to clipboard</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center">
+            <Calendar className="mr-1 h-4 w-4" />
+            {formatDate(clip.created_at_twitch!)}
+          </div>
+        </div>
+        <div className="-ml-2 mt-1 flex justify-start">
+              <ClipCardActions clip={clip} />
         </div>
       </CardFooter>
     </Card>

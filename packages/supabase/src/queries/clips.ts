@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { buildFolderHref } from "./clip-folder-utils";
+
+export { buildFolderHref, folderHrefToUrlPath, urlPathToFolderHref } from "./clip-folder-utils";
 
 type DBClient = SupabaseClient<Database>;
 
@@ -45,9 +48,28 @@ export async function removeClipFromFolder(client: DBClient, clipId: string, fol
 }
 
 export async function createClipFolder(client: DBClient, folderName: string, userId: string, parentFolderId?: number) {
+  let parentHref: string | null = null;
+
+  if (parentFolderId) {
+    const { data: parent, error: parentError } = await client
+      .from("clip_folders")
+      .select("href")
+      .eq("id", parentFolderId)
+      .eq("user_id", userId)
+      .single();
+
+    if (parentError || !parent) throw new Error("Parent folder not found");
+    parentHref = parent.href;
+  }
+
   const { data, error } = await client
     .from("clip_folders")
-    .insert({ name: folderName, parent_folder_id: parentFolderId, user_id: userId, href: encodeURIComponent(folderName) })
+    .insert({
+      name: folderName,
+      parent_folder_id: parentFolderId ?? null,
+      user_id: userId,
+      href: buildFolderHref(folderName, parentHref),
+    })
     .select()
     .single();
 
@@ -56,16 +78,73 @@ export async function createClipFolder(client: DBClient, folderName: string, use
 }
 
 export async function editClipFolder(client: DBClient, folderId: number, folderName: string, userId: string) {
+  const { data: folder, error: folderError } = await client
+    .from("clip_folders")
+    .select("href, parent_folder_id")
+    .eq("id", folderId)
+    .eq("user_id", userId)
+    .single();
+
+  if (folderError || !folder) throw new Error("Folder not found");
+
+  let parentHref: string | null = null;
+  if (folder.parent_folder_id) {
+    const { data: parent, error: parentError } = await client
+      .from("clip_folders")
+      .select("href")
+      .eq("id", folder.parent_folder_id)
+      .eq("user_id", userId)
+      .single();
+
+    if (parentError || !parent) throw new Error("Parent folder not found");
+    parentHref = parent.href;
+  }
+
+  const oldHref = folder.href;
+  const newHref = buildFolderHref(folderName, parentHref);
+
   const { error } = await client
     .from("clip_folders")
-    .update({ name: folderName, href: encodeURIComponent(folderName) })
+    .update({ name: folderName, href: newHref })
     .eq("id", folderId)
     .eq("user_id", userId);
 
   if (error) throw error;
+
+  if (oldHref !== newHref) {
+    const { data: descendants, error: descendantsError } = await client
+      .from("clip_folders")
+      .select("id, href")
+      .eq("user_id", userId)
+      .like("href", `${oldHref}/%`);
+
+    if (descendantsError) throw descendantsError;
+
+    for (const descendant of descendants ?? []) {
+      const updatedHref = `${newHref}${descendant.href.slice(oldHref.length)}`;
+      const { error: updateError } = await client
+        .from("clip_folders")
+        .update({ href: updatedHref })
+        .eq("id", descendant.id)
+        .eq("user_id", userId);
+
+      if (updateError) throw updateError;
+    }
+  }
 }
 
 export async function deleteClipFolder(client: DBClient, folderId: number) {
+  const { data: children, error: childrenError } = await client
+    .from("clip_folders")
+    .select("id")
+    .eq("parent_folder_id", folderId);
+
+  if (childrenError) throw childrenError;
+
+  for (const child of children ?? []) {
+    await deleteClipFolder(client, child.id);
+  }
+
   const { error } = await client.from("clip_folders").delete().eq("id", folderId);
   if (error) throw error;
 }

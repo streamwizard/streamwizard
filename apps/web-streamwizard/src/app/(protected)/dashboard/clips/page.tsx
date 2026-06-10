@@ -1,9 +1,10 @@
-import TwitchClipCard from "@/components/cards/clip-card";
-import { AdvancedPagination } from "@/components/nav/advanced-pagination";
+import { ClipsDisplay } from "@/components/clips/clips-display";
+import { ClipsPaginationBar } from "@/components/nav/clips-pagination-bar";
 import { createClient } from "@repo/supabase/next/server";
 import buildClipQuery from "@/lib/utils/build-clip-query";
+import { parseClipPageSize } from "@/lib/utils/clip-pagination";
+import { parseClipView } from "@/lib/utils/clip-view";
 import { ClipSearchParams } from "@/types/pages";
-import { Database } from "@repo/supabase";
 import { redirect } from "next/navigation";
 
 export default async function ClipsPage({ searchParams }: { searchParams: Promise<ClipSearchParams> }) {
@@ -31,25 +32,27 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
     return null;
   }
 
-  const pageIndex = parsedSearchParams.page ? parseInt(parsedSearchParams.page) : 1;
+  const pageIndex = parsedSearchParams.page ? parseInt(parsedSearchParams.page, 10) : 1;
+  const pageSize = parseClipPageSize(parsedSearchParams.per_page);
+  const clipView = parseClipView(parsedSearchParams.view);
+  const totalCount = count ?? 0;
+  const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
 
-  const maxPage = Math.ceil(count! / 100);
-
+  const paginationProps = {
+    totalPages: maxPage,
+    currentPage: pageIndex,
+    pageSize,
+    totalCount,
+    showingCount: data?.length ?? 0,
+  };
 
   return (
     <>
-      <div className="grid grid-cols-4 gap-4">
-        {data &&
-          data.map((clip) => (
-            <TwitchClipCard key={clip.id} {...clip} folders={clip.folders as Database["public"]["Tables"]["clip_folders"]["Row"][]} />
-          ))}
-      </div>
-      <div className="flex justify-between items-center mt-10">
-        <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
-        <p className="text-sm text-muted-foreground">
-          Showing {data.length} of {count} clips
-        </p>
-      </div>
+      {totalCount > 0 && <ClipsPaginationBar {...paginationProps} placement="top" />}
+      {data && data.length > 0 ? (
+        <ClipsDisplay clips={data} view={clipView} />
+      ) : null}
+      {totalCount > 0 && <ClipsPaginationBar {...paginationProps} placement="bottom" />}
     </>
   );
 }
