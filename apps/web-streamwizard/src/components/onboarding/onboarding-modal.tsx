@@ -7,6 +7,7 @@ import { completeOnboarding } from "@/actions/supabase/user/settings";
 import { MemesStep } from "./steps/memes-step";
 import { SyncClipsStep } from "./steps/sync-clips-step";
 import { SyncNowStep } from "./steps/sync-now-step";
+import { DiscordStep } from "./steps/discord-step";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui";
 import { Button } from "@repo/ui";
 
@@ -41,6 +42,10 @@ function buildSteps(hasClips: boolean): StepConfig[] {
     {
       id: "sync-now",
       component: () => <SyncNowStep hasClips={hasClips} />,
+    },
+    {
+      id: "discord",
+      component: () => <DiscordStep />,
     },
   ];
 }
