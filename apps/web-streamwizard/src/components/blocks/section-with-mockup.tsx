@@ -12,6 +12,7 @@ interface SectionWithMockupProps {
   secondaryImageSrc: string;
   reverseLayout?: boolean;
   features?: string[];
+  priority?: boolean;
 }
 
 const SectionWithMockup: React.FC<SectionWithMockupProps> = ({
@@ -20,6 +21,7 @@ const SectionWithMockup: React.FC<SectionWithMockupProps> = ({
   primaryImageSrc,
   reverseLayout = false,
   features,
+  priority = false,
 }) => {
   const containerVariants: Variants = {
     hidden: {},
@@ -91,6 +93,8 @@ const SectionWithMockup: React.FC<SectionWithMockupProps> = ({
                 width={1440}
                 height={900}
                 className="w-full h-auto"
+                priority={priority}
+                loading={priority ? "eager" : undefined}
               />
             </div>
           </motion.div>

@@ -76,8 +76,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  tunnelRoute: "/monitoring",
-});
+export default process.env.NODE_ENV === "development"
+  ? nextConfig
+  : withSentryConfig(nextConfig, {
+      silent: !process.env.CI,
+      widenClientFileUpload: true,
+      tunnelRoute: "/monitoring",
+    });

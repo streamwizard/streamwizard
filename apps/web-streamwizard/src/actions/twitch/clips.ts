@@ -53,6 +53,9 @@ export async function SyncBroadcasterClips(): Promise<{ message: string; success
           lastSync: data.lastSync,
         };
       }
+      console.error("[SyncBroadcasterClips] API error:", error.response?.status, JSON.stringify(error.response?.data ?? {}));
+    } else {
+      console.error("[SyncBroadcasterClips] Unexpected error:", error instanceof Error ? error.message : error);
     }
     return {
       message: "Error syncing clips",
