@@ -68,15 +68,24 @@ export function ClipFolderModal({ user_id, folder_id, folder_name, parent_folder
         }
       );
     } else {
-      toast.promise(createClipFolder(values.name, user_id, parent_folder_id), {
-        loading: "Creating folder...",
-        success: "Folder created successfully!",
-        error: "Failed to create folder.",
-        finally() {
-          setIsSubmitting(false);
-          closeModal();
+      toast.promise(
+        async () => {
+          const res = await createClipFolder(values.name, user_id, parent_folder_id);
+          if (!res.success) {
+            throw new Error(res.message);
+          }
+          return res.message;
         },
-      });
+        {
+          loading: "Creating folder...",
+          success: "Folder created successfully!",
+          error: (error) => (error instanceof Error ? error.message : "Failed to create folder."),
+          finally() {
+            setIsSubmitting(false);
+            closeModal();
+          },
+        }
+      );
     }
   }
 

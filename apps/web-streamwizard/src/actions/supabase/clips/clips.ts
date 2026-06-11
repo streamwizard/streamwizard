@@ -46,10 +46,10 @@ export async function createClipFolder(folderName: string, user_id: string, pare
   try {
     const data = await _createClipFolder(supabase, folderName, user_id, parentFolderId);
     revalidatePath("/dashboard/clips", "layout");
-    return data;
+    return { success: true, message: "Folder created successfully", data };
   } catch (error) {
     console.error("Error creating folder:", error);
-    return null;
+    return { success: false, message: error instanceof Error ? error.message : "An unknown error occurred" };
   }
 }
 
