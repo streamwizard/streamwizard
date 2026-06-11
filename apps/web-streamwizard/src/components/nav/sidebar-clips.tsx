@@ -145,6 +145,16 @@ function FolderTreeNode({
           {isActive ? <FolderOpen className="size-3.5 shrink-0" /> : <Folder className="size-3.5 shrink-0" />}
           <span className="truncate">{folder.name}</span>
         </Link>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="size-6 shrink-0 opacity-0 transition-opacity group-hover/folder-row:opacity-100 focus-visible:opacity-100"
+          onClick={() => onCreateSubfolder(folder)}
+        >
+          <Plus className="size-3.5" />
+          <span className="sr-only">New subfolder in {folder.name}</span>
+        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
