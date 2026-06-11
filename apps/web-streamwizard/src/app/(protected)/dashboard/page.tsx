@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { Activity, Clapperboard, Radio, Users } from "lucide-react";
 import { Skeleton } from "@repo/ui";
 import { createClient } from "@repo/supabase/next/server";
 import {
@@ -7,13 +8,14 @@ import {
   getBroadcasterProfile,
   getVodByStreamId,
 } from "@repo/supabase/queries/stream-analytics";
+import { getUserPreferences } from "@repo/supabase/queries/user";
 import { BroadcasterProfileStrip } from "@/components/stream-analytics/broadcaster-profile-strip";
 import { StatsRow } from "@/components/stream/StatsRow";
+import { RecentClipsSection } from "@/components/stream/RecentClipsSection";
 import { ViewerChartSection } from "@/components/stream/ViewerChartSection";
 import { ActivityFeedSection } from "@/components/stream/ActivityFeed";
 import { RecentStreams } from "@/components/stream/RecentStreams";
 import { StreamInfoPanel } from "@/components/stream/StreamInfoPanel";
-import { QuickActions } from "@/components/stream/QuickActions";
 import type { BroadcasterProfile } from "@/actions/supabase/analytics/stream-analytics";
 
 export const dynamic = "force-dynamic";
@@ -53,15 +55,58 @@ export default async function DashboardPage() {
 
   const broadcasterId = data.user.user_metadata.sub as string;
 
-  const stream = await getLatestStreamForBroadcaster(supabase, broadcasterId);
+  const [stream, prefs] = await Promise.all([
+    getLatestStreamForBroadcaster(supabase, broadcasterId),
+    getUserPreferences(supabase),
+  ]);
 
   if (!stream?.stream_id) {
     return (
-      <div className="flex min-h-[400px] flex-col items-center justify-center rounded-xl border border-dashed text-center">
-        <p className="text-lg font-semibold">No stream data yet</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Analytics will appear here after your first recorded broadcast.
-        </p>
+      <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center gap-8">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02]">
+            <div className="absolute inset-x-0 top-0 h-px rounded-t-2xl bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+            <Radio className="h-7 w-7 text-purple-400" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <h2 className="text-xl font-semibold tracking-tight">Nothing here yet.</h2>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Go stream something. We'll track your viewers, clips, and chat — then show it all here when you're done.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
+          {[
+            {
+              icon: Users,
+              label: "Viewer stats",
+              description: "Peak viewers, avg viewers, and a chart of how your stream went — minute by minute.",
+            },
+            {
+              icon: Clapperboard,
+              label: "Clips",
+              description: "Every clip from your stream, synced automatically. Sort, tag, download.",
+            },
+            {
+              icon: Activity,
+              label: "Activity feed",
+              description: "Follows, subs, raids, channel points — all in one feed, in order.",
+            },
+          ].map(({ icon: Icon, label, description }) => (
+            <div
+              key={label}
+              className="relative rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 text-left"
+            >
+              <div className="absolute inset-x-0 top-0 h-px rounded-t-2xl bg-gradient-to-r from-transparent via-purple-500/20 to-transparent" />
+              <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-lg border border-purple-500/20 bg-purple-500/10">
+                <Icon className="h-4 w-4 text-purple-400" />
+              </div>
+              <p className="text-sm font-medium">{label}</p>
+              <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{description}</p>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -81,6 +126,7 @@ export default async function DashboardPage() {
 
   const hasVod = !!vod?.video_id;
   const isLive = stream.is_live;
+  const showStats = prefs?.show_stream_stats ?? true;
 
   return (
     <div className="space-y-6">
@@ -104,16 +150,18 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      <Suspense fallback={<StatsRowSkeleton />}>
-        <StatsRow
-          streamId={stream.stream_id}
-          broadcasterId={broadcasterId}
-          startedAt={stream.stream_started_at}
-          endedAt={stream.stream_ended_at}
-        />
-      </Suspense>
+      {showStats && (
+        <Suspense fallback={<StatsRowSkeleton />}>
+          <StatsRow
+            streamId={stream.stream_id}
+            broadcasterId={broadcasterId}
+            startedAt={stream.stream_started_at}
+            endedAt={stream.stream_ended_at}
+          />
+        </Suspense>
+      )}
 
-      <div className="grid gap-4" style={{ gridTemplateColumns: "65% 35%" }}>
+      <div className="grid gap-4 lg:grid-cols-[65%_35%]">
         <div className="flex min-w-0 flex-col gap-4">
           <Suspense fallback={<ChartSkeleton />}>
             <ViewerChartSection streamId={stream.stream_id} broadcasterId={broadcasterId} />
@@ -142,15 +190,12 @@ export default async function DashboardPage() {
             currentCategory={stream.category_name}
             currentGameId={stream.category_id}
           />
-          <QuickActions
-            broadcasterId={broadcasterId}
-            streamId={stream.stream_id}
-            hasVod={hasVod}
-            broadcasterUsername={broadcasterProfile?.username ?? ""}
-            streamTitle={stream.title ?? "My Stream"}
-          />
         </div>
       </div>
+
+      <Suspense fallback={<ListSkeleton />}>
+        <RecentClipsSection broadcasterId={broadcasterId} compact />
+      </Suspense>
     </div>
   );
 }

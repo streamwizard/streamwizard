@@ -12,6 +12,7 @@ export const useSessionStore = create<SessionStoreState>((set) => ({
     memes_enabled: true,
     sync_clips_on_end: true,
     onboarding_completed: false,
+    show_stream_stats: true,
   },
   setPreferences: (preferences) => set({ preferences }),
   setPreference: (key, value) =>

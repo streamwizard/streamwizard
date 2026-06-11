@@ -32,7 +32,7 @@ export default async function layout({
 
   return (
     <SidebarProvider>
-      <OnboardingModal hasClips={(clipCount ?? 0) > 0} />
+      <OnboardingModal clipCount={clipCount ?? 0} />
       <ClipFolderProvider ClipFolders={folders || []}>
         <AppSidebar user={data.user} folders={folders || []} variant="inset" />
         <SidebarInset>
