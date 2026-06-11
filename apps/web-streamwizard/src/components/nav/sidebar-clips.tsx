@@ -14,7 +14,7 @@ import Link from "next/link";
 import { ClipFolderModal } from "../modals/clip-folder-modal";
 import { Button } from "@repo/ui";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem } from "@repo/ui";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubItem, useSidebar } from "@repo/ui";
 
 import ClipFolderDeleteModal from "../modals/clip-folder-delete-modal";
 import { useState } from "react";
@@ -25,10 +25,12 @@ interface Props {
 }
 
 export default function SidebarClips({ clipFolders }: Props) {
-  const [isOpen, setIsOpen] = useState<boolean>(true); // Manage collapsible state manually
+  const [isOpen, setIsOpen] = useState<boolean>(true);
   const pathname = usePathname();
   const { openModal } = useModal();
   const { id } = useSession();
+  const { setOpenMobile, isMobile } = useSidebar();
+  const closeMobile = () => { if (isMobile) setOpenMobile(false); };
 
   const createFolderButton = () => {
     openModal(<ClipFolderModal user_id={id} />);
@@ -47,7 +49,7 @@ export default function SidebarClips({ clipFolders }: Props) {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton asChild>
-            <Link href="/dashboard/clips">
+            <Link href="/dashboard/clips" onClick={closeMobile}>
               <Clapperboard className="mr-2 h-4 w-4" />
               Clips
             </Link>
@@ -78,7 +80,7 @@ export default function SidebarClips({ clipFolders }: Props) {
                 {clipFolders.map((folder) => (
                   <SidebarMenuSubItem key={folder.id} className="flex items-center">
                     <SidebarMenuButton asChild isActive={pathname === `/dashboard/clips/${folder.href}`}>
-                      <Link href={`/dashboard/clips/${folder.href}`} className="flex items-center space-x-2">
+                      <Link href={`/dashboard/clips/${folder.href}`} className="flex items-center space-x-2" onClick={closeMobile}>
                         {pathname === `/dashboard/clips/${folder.href}` ? <FolderOpen className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
                         {folder.name}
                       </Link>
