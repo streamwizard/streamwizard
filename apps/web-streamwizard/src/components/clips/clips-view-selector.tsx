@@ -35,7 +35,7 @@ export function ClipsViewSelector() {
       onValueChange={changeView}
     >
       {VIEW_OPTIONS.map(({ value, label, icon: Icon }) => (
-        <ToggleGroupItem key={value} value={value} aria-label={`${label} view`} className="gap-1.5 px-3">
+        <ToggleGroupItem key={value} value={value} aria-label={`${label} view`} className="cursor-pointer gap-1.5 px-3">
           <Icon className="size-4" />
           <span className="hidden sm:inline">{label}</span>
         </ToggleGroupItem>
