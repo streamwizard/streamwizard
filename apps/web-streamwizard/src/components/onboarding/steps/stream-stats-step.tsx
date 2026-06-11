@@ -1,21 +1,22 @@
 "use client";
 
-import { Clapperboard } from "lucide-react";
+import { BarChart2 } from "lucide-react";
 import { Switch } from "@repo/ui";
 import { Label } from "@repo/ui";
 
-interface SyncClipsStepProps {
+interface StreamStatsStepProps {
   value: boolean;
   onChange: (value: boolean) => void;
 }
 
-export function SyncClipsStep({ value, onChange }: SyncClipsStepProps) {
+export function StreamStatsStep({ value, onChange }: StreamStatsStepProps) {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h2 className="text-xl font-semibold">Auto-sync after streams?</h2>
+        <h2 className="text-xl font-semibold">Show stream stats?</h2>
         <p className="text-sm text-muted-foreground">
-          When your stream ends, we pull in your new clips automatically. No manual sync, no forgetting. Just there when you open StreamWizard.
+          Peak viewers can mess with your head mid-grind. Turn this off and we'll show your last
+          stream's clips instead. Change it any time in Settings.
         </p>
       </div>
       <div className="relative rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
@@ -23,9 +24,9 @@ export function SyncClipsStep({ value, onChange }: SyncClipsStepProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 border border-purple-500/20">
-              <Clapperboard className="h-4 w-4 text-purple-400" />
+              <BarChart2 className="h-4 w-4 text-purple-400" />
             </span>
-            <Label className="text-sm font-medium">Sync clips on stream end</Label>
+            <Label className="text-sm font-medium">Show stream stats</Label>
           </div>
           <Switch checked={value} onCheckedChange={onChange} />
         </div>

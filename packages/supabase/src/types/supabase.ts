@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
+  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -34,27 +39,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      account_deletion_feedback: {
-        Row: {
-          additional_comments: string | null
-          created_at: string
-          id: string
-          reason: Database["public"]["Enums"]["deletion_reason"]
-        }
-        Insert: {
-          additional_comments?: string | null
-          created_at?: string
-          id?: string
-          reason: Database["public"]["Enums"]["deletion_reason"]
-        }
-        Update: {
-          additional_comments?: string | null
-          created_at?: string
-          id?: string
-          reason?: Database["public"]["Enums"]["deletion_reason"]
-        }
-        Relationships: []
-      }
       broadcaster_live_status: {
         Row: {
           broadcaster_id: string
@@ -1223,6 +1207,7 @@ export type Database = {
           id: string
           memes_enabled: boolean
           onboarding_completed: boolean
+          show_stream_stats: boolean
           sync_clips_on_end: boolean
           theme: Database["public"]["Enums"]["theme_type"] | null
           updated_at: string | null
@@ -1233,6 +1218,7 @@ export type Database = {
           id?: string
           memes_enabled?: boolean
           onboarding_completed?: boolean
+          show_stream_stats?: boolean
           sync_clips_on_end?: boolean
           theme?: Database["public"]["Enums"]["theme_type"] | null
           updated_at?: string | null
@@ -1243,6 +1229,7 @@ export type Database = {
           id?: string
           memes_enabled?: boolean
           onboarding_completed?: boolean
+          show_stream_stats?: boolean
           sync_clips_on_end?: boolean
           theme?: Database["public"]["Enums"]["theme_type"] | null
           updated_at?: string | null
@@ -1547,12 +1534,15 @@ export type Database = {
       user_owns_channel: { Args: { channel_id: string }; Returns: boolean }
     }
     Enums: {
+      actions:
+        | "spotify.song_request"
+        | "spotify.add_banned_song"
+        | "spotify.remove_banned_song"
+        | "spotify.add_banned_chatter"
+        | "spotify.remove_banned_chatter"
+        | "spotify.skip"
+        | "none"
       clip_sync_status: "completed" | "failed" | "syncing"
-      deletion_reason:
-        | "too_expensive"
-        | "missing_features"
-        | "switching_to_another_tool"
-        | "just_taking_a_break"
       feedback_category: "bug" | "feature" | "general"
       feedback_priority: "low" | "medium" | "high" | "critical"
       feedback_status: "open" | "in_progress" | "resolved" | "closed"
@@ -1697,13 +1687,16 @@ export const Constants = {
   },
   public: {
     Enums: {
-      clip_sync_status: ["completed", "failed", "syncing"],
-      deletion_reason: [
-        "too_expensive",
-        "missing_features",
-        "switching_to_another_tool",
-        "just_taking_a_break",
+      actions: [
+        "spotify.song_request",
+        "spotify.add_banned_song",
+        "spotify.remove_banned_song",
+        "spotify.add_banned_chatter",
+        "spotify.remove_banned_chatter",
+        "spotify.skip",
+        "none",
       ],
+      clip_sync_status: ["completed", "failed", "syncing"],
       feedback_category: ["bug", "feature", "general"],
       feedback_priority: ["low", "medium", "high", "critical"],
       feedback_status: ["open", "in_progress", "resolved", "closed"],
