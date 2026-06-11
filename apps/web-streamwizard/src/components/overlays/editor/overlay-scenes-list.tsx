@@ -126,7 +126,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
+      <div className="hidden md:flex justify-end">
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -244,7 +244,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
+                      <DropdownMenuItem asChild className="hidden md:flex">
                         <Link href={`/dashboard/overlays/${scene.id}/edit`}>
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
@@ -292,7 +292,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                       <Copy className="mr-2 h-3 w-3" />
                       Copy URL
                     </Button>
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm" asChild className="hidden md:inline-flex">
                       <Link href={`/dashboard/overlays/${scene.id}/edit`}>
                         <Edit className="mr-2 h-3 w-3" />
                         Edit

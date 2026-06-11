@@ -22,13 +22,13 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Dashboard — Stream Analytics",
-  description: "Live monitoring and post-stream overview",
+  description: "Your stream, broken down. Viewers, clips, activity — all of it.",
 };
 
 function StatsRowSkeleton() {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-      {Array.from({ length: 5 }).map((_, i) => (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      {Array.from({ length: 6 }).map((_, i) => (
         <Skeleton key={i} className="h-24 rounded-xl" />
       ))}
     </div>
@@ -62,7 +62,7 @@ export default async function DashboardPage() {
 
   if (!stream?.stream_id) {
     return (
-      <div className="flex min-h-[calc(100vh-8rem)] flex-col items-center justify-center gap-8">
+      <div className="flex min-h-[calc(100dvh-8rem)] flex-col items-center justify-center gap-8">
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="relative flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.02]">
             <div className="absolute inset-x-0 top-0 h-px rounded-t-2xl bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
           <div className="flex flex-col gap-2">
             <h2 className="text-xl font-semibold tracking-tight">Nothing here yet.</h2>
             <p className="max-w-sm text-sm text-muted-foreground">
-              Go stream something. We'll track your viewers, clips, and chat — then show it all here when you're done.
+              Go stream something. Viewers, clips, chat activity — we'll track it all while you're live.
             </p>
           </div>
         </div>
@@ -81,17 +81,17 @@ export default async function DashboardPage() {
             {
               icon: Users,
               label: "Viewer stats",
-              description: "Peak viewers, avg viewers, and a chart of how your stream went — minute by minute.",
+              description: "Peak and average viewers, plus a minute-by-minute chart. Find out exactly when your audience peaked — and when they left.",
             },
             {
               icon: Clapperboard,
               label: "Clips",
-              description: "Every clip from your stream, synced automatically. Sort, tag, download.",
+              description: "Every clip from your stream, pulled in automatically. Sort them, tag them — no more hunting through Twitch.",
             },
             {
               icon: Activity,
               label: "Activity feed",
-              description: "Follows, subs, raids, channel points — all in one feed, in order.",
+              description: "Follows, subs, raids, channel points — everything that happened, in the order it happened. One feed, not five Twitch tabs.",
             },
           ].map(({ icon: Icon, label, description }) => (
             <div
@@ -130,15 +130,15 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Stream Analytics</h1>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Stream Analytics</h1>
           <p className="mt-0.5 text-sm text-muted-foreground">
-            Overview for your most recent broadcast
+            Everything from your last broadcast.
           </p>
         </div>
         {broadcasterProfile && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:shrink-0">
             <BroadcasterProfileStrip profile={broadcasterProfile} />
             {isLive && (
               <span className="flex items-center gap-1.5 rounded-full bg-green-500/15 px-2.5 py-1 text-xs font-semibold text-green-400">

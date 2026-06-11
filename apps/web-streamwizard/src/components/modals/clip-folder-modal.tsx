@@ -80,7 +80,7 @@ export function ClipFolderModal({ user_id, folder_id, folder_name }: Props) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-[960px]">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-full sm:w-[480px]">
         <FormField
           control={form.control}
           name="name"

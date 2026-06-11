@@ -37,7 +37,7 @@ export default async function layout({
         <AppSidebar user={data.user} folders={folders || []} variant="inset" />
         <SidebarInset>
           <SiteHeader />
-          <div className="w-full p-5 mx-auto md:gap-6 md:py-6">{children}</div>
+          <div className="w-full p-3 sm:p-5 mx-auto md:gap-6 md:py-6">{children}</div>
         </SidebarInset>
       </ClipFolderProvider>
     </SidebarProvider>

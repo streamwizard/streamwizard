@@ -15,6 +15,7 @@ export interface StreamStatValues {
   durationSeconds: number | null;
   follows: number;
   subs: number;
+  adTimeSeconds: number;
 }
 
 export interface StatsRowData {
@@ -42,6 +43,14 @@ async function computeStats(
   const follows = eventRows.filter((e) => e.event_type === "channel.follow").length;
   const subs = eventRows.filter((e) => (SUB_EVENT_TYPES as readonly string[]).includes(e.event_type)).length;
 
+  const adTimeSeconds = eventRows
+    .filter((e) => e.event_type === "channel.ad_break_begin" || e.event_type === "channel.ad_break.begin")
+    .reduce((sum, e) => {
+      const data = e.event_data as Record<string, unknown> | null;
+      const dur = typeof data?.duration_seconds === "number" ? data.duration_seconds : 0;
+      return sum + dur;
+    }, 0);
+
   let durationSeconds: number | null = null;
   if (startedAt && endedAt) {
     durationSeconds = Math.floor(
@@ -49,7 +58,7 @@ async function computeStats(
     );
   }
 
-  return { peakViewers, avgViewers, durationSeconds, follows, subs };
+  return { peakViewers, avgViewers, durationSeconds, follows, subs, adTimeSeconds };
 }
 
 export const getStatsRowData = cache(

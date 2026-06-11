@@ -46,18 +46,18 @@ async function ClipsGrid({ searchParams }: { searchParams: ClipSearchParams }) {
 
   return (
     <>
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
         <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
         <p className="text-sm text-muted-foreground">
           Showing {data.length} of {count} clips
         </p>
       </div>
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {data.map((clip) => (
           <TwitchClipCard key={clip.id} {...clip} folders={clip.folders as Database["public"]["Tables"]["clip_folders"]["Row"][]} />
         ))}
       </div>
-      <div className="flex justify-between items-center mt-10">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-10">
         <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
         <p className="text-sm text-muted-foreground">
           Showing {data.length} of {count} clips

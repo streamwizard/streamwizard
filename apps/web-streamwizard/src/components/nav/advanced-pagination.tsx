@@ -37,7 +37,7 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
 
   const renderPageNumbers = () => {
     const pageNumbers = []
-    const maxVisiblePages = 10
+    const maxVisiblePages = 5
     let startPage, endPage
 
     if (totalPages <= maxVisiblePages) {
@@ -59,7 +59,7 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
 
     if (startPage > 1) {
       pageNumbers.push(
-        <Button key={1} variant="outline" onClick={() => changePage(1)} className="w-10 h-10">
+        <Button key={1} variant="outline" onClick={() => changePage(1)} className="h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm">
           1
         </Button>
       )
@@ -74,7 +74,7 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
           key={i}
           variant={i === currentPage ? "default" : "outline"}
           onClick={() => changePage(i)}
-          className="w-10 h-10"
+          className="h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm"
         >
           {i}
         </Button>
@@ -86,7 +86,7 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
         pageNumbers.push(<span key="ellipsis2" className="px-2">...</span>)
       }
       pageNumbers.push(
-        <Button key={totalPages} variant="outline" onClick={() => changePage(totalPages)} className="w-10 h-10">
+        <Button key={totalPages} variant="outline" onClick={() => changePage(totalPages)} className="h-8 w-8 sm:h-10 sm:w-10 text-xs sm:text-sm">
           {totalPages}
         </Button>
       )
@@ -97,26 +97,30 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
 
   return (
     <div className="flex flex-col items-center space-y-2">
-      <div className="flex items-center justify-center space-x-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => changePage(currentPage - 1)}
-          disabled={currentPage === 1}
-          aria-label="Previous page"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </Button>
-        {renderPageNumbers()}
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => changePage(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          aria-label="Next page"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Button>
+      <div className="flex items-center justify-center overflow-x-auto max-w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="flex items-center space-x-1 sm:space-x-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => changePage(currentPage - 1)}
+            disabled={currentPage === 1}
+            aria-label="Previous page"
+            className="h-8 w-8 sm:h-10 sm:w-10 shrink-0"
+          >
+            <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          </Button>
+          {renderPageNumbers()}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => changePage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            aria-label="Next page"
+            className="h-8 w-8 sm:h-10 sm:w-10 shrink-0"
+          >
+            <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          </Button>
+        </div>
       </div>
       <span className="text-sm text-muted-foreground">
         Page {currentPage} of {totalPages}

@@ -22,7 +22,7 @@ export function StatCard({ icon: Icon, label, value, trend }: StatCardProps) {
         <Icon className="h-3.5 w-3.5 shrink-0" />
         {label}
       </div>
-      <p className="font-mono text-2xl font-bold tabular-nums tracking-tight">{value}</p>
+      <p className="font-mono text-xl font-bold tabular-nums tracking-tight sm:text-2xl">{value}</p>
       {trend && (
         <div
           className={
