@@ -14,7 +14,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, Star } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-const DETAILS_GRID =
+export const DETAILS_GRID =
   "grid grid-cols-[64px_minmax(200px,2.5fr)_minmax(110px,1fr)_minmax(110px,1fr)_80px_104px_72px_36px] items-center gap-x-3";
 
 const SORT_COLUMNS: { key: ClipSortKey; label: string }[] = [
