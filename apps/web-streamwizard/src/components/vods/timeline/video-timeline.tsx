@@ -53,6 +53,20 @@ export function VideoTimeline({
   // Track if actual movement occurred during drag (to distinguish click from drag)
   const hasDraggedRef = useRef(false);
 
+  // Pan state — separate from clip-handle dragging
+  const isPanningRef = useRef(false);
+  const panStartXRef = useRef(0);
+  const panStartOffsetRef = useRef(0);
+  const hasPannedRef = useRef(false);
+  const [isPanning, setIsPanning] = useState(false);
+
+  // Pinch-to-zoom state (two-finger gesture on touch devices)
+  const isPinchingRef = useRef(false);
+  const pinchStartDistRef = useRef(0);
+  const pinchStartZoomRef = useRef(1);
+  const pinchAnchorTimeRef = useRef(0);
+  const pinchAnchorFractionRef = useRef(0.5);
+
   // Parse duration to seconds if it's a string
   const totalSeconds = typeof duration === "number" ? duration : parseDuration(duration);
 
@@ -60,6 +74,16 @@ export function VideoTimeline({
   const visibleDuration = totalSeconds / zoomLevel;
   const viewStart = viewOffset;
   const viewEnd = Math.min(viewOffset + visibleDuration, totalSeconds);
+
+  // Stable refs for latest values so pan/pinch effect doesn't need them as deps
+  const visibleDurationRef = useRef(visibleDuration);
+  visibleDurationRef.current = visibleDuration;
+  const totalSecondsRef = useRef(totalSeconds);
+  totalSecondsRef.current = totalSeconds;
+  const viewOffsetRef = useRef(viewOffset);
+  viewOffsetRef.current = viewOffset;
+  const zoomLevelRef = useRef(zoomLevel);
+  zoomLevelRef.current = zoomLevel;
 
   // Helper functions (no hooks needed with React Compiler)
   const secondsToPercent = (seconds: number): number => {
@@ -244,6 +268,144 @@ export function VideoTimeline({
     };
   }, [zoomLevel, clipSelection, localClipSelection, totalSeconds, currentTime, setZoomLevel, setViewOffset]);
 
+  // Global listeners while panning — active only when isPanning is true
+  useEffect(() => {
+    if (!isPanning) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isPanningRef.current || !trackRef.current) return;
+      const deltaX = e.clientX - panStartXRef.current;
+      if (Math.abs(deltaX) > 3) hasPannedRef.current = true;
+      const rect = trackRef.current.getBoundingClientRect();
+      const deltaSeconds = -(deltaX / rect.width) * visibleDurationRef.current;
+      const maxOffset = Math.max(0, totalSecondsRef.current - visibleDurationRef.current);
+      setViewOffset(Math.max(0, Math.min(panStartOffsetRef.current + deltaSeconds, maxOffset)));
+    };
+
+    const handleMouseUp = () => {
+      if (hasPannedRef.current) {
+        justFinishedDraggingRef.current = true;
+        setTimeout(() => {
+          justFinishedDraggingRef.current = false;
+        }, 0);
+      }
+      isPanningRef.current = false;
+      hasPannedRef.current = false;
+      setIsPanning(false);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!trackRef.current) return;
+
+      // Two-finger pinch → zoom, anchored on the point between the fingers
+      if (isPinchingRef.current && e.touches.length >= 2) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        if (pinchStartDistRef.current <= 0) return;
+
+        const newZoom = Math.max(1, Math.min((pinchStartZoomRef.current * dist) / pinchStartDistRef.current, 20));
+        setZoomLevel(newZoom);
+
+        const newVisibleDuration = totalSecondsRef.current / newZoom;
+        const maxOffset = Math.max(0, totalSecondsRef.current - newVisibleDuration);
+        const newOffset = pinchAnchorTimeRef.current - pinchAnchorFractionRef.current * newVisibleDuration;
+        setViewOffset(newZoom === 1 ? 0 : Math.max(0, Math.min(newOffset, maxOffset)));
+        return;
+      }
+
+      // Single-finger pan
+      if (!isPanningRef.current || e.touches.length === 0) return;
+      e.preventDefault();
+      const deltaX = e.touches[0].clientX - panStartXRef.current;
+      if (Math.abs(deltaX) > 3) hasPannedRef.current = true;
+      const rect = trackRef.current.getBoundingClientRect();
+      const deltaSeconds = -(deltaX / rect.width) * visibleDurationRef.current;
+      const maxOffset = Math.max(0, totalSecondsRef.current - visibleDurationRef.current);
+      setViewOffset(Math.max(0, Math.min(panStartOffsetRef.current + deltaSeconds, maxOffset)));
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      // Fingers dropped below two: end the pinch. If one finger remains and we're
+      // zoomed in, hand off to panning so the gesture continues smoothly.
+      if (isPinchingRef.current && e.touches.length < 2) {
+        isPinchingRef.current = false;
+        if (e.touches.length === 1 && zoomLevelRef.current > 1) {
+          isPanningRef.current = true;
+          panStartXRef.current = e.touches[0].clientX;
+          panStartOffsetRef.current = viewOffsetRef.current;
+        }
+      }
+
+      if (e.touches.length > 0) return;
+
+      if (hasPannedRef.current) {
+        justFinishedDraggingRef.current = true;
+        setTimeout(() => {
+          justFinishedDraggingRef.current = false;
+        }, 0);
+      }
+      isPanningRef.current = false;
+      isPinchingRef.current = false;
+      hasPannedRef.current = false;
+      setIsPanning(false);
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("touchmove", handleTouchMove, { passive: false });
+    document.addEventListener("touchend", handleTouchEnd);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("touchmove", handleTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, [isPanning, setViewOffset, setZoomLevel]);
+
+  const handleTrackMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || disabled || zoomLevel <= 1) return;
+    isPanningRef.current = true;
+    panStartXRef.current = e.clientX;
+    panStartOffsetRef.current = viewOffset;
+    hasPannedRef.current = false;
+    setIsPanning(true);
+  };
+
+  const handleTrackTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (disabled || e.touches.length === 0) return;
+
+    // Two fingers → pinch to zoom (allowed at any zoom level, incl. 1x)
+    if (e.touches.length >= 2 && trackRef.current) {
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      const midX = (t1.clientX + t2.clientX) / 2;
+      const rect = trackRef.current.getBoundingClientRect();
+      const fraction = Math.max(0, Math.min(1, (midX - rect.left) / rect.width));
+
+      isPinchingRef.current = true;
+      isPanningRef.current = false;
+      pinchStartDistRef.current = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      pinchStartZoomRef.current = zoomLevel;
+      pinchAnchorFractionRef.current = fraction;
+      pinchAnchorTimeRef.current = viewOffset + fraction * visibleDuration;
+      hasPannedRef.current = true; // suppress the seek-click after a pinch
+      setIsPanning(true);
+      return;
+    }
+
+    // Single finger → pan (only meaningful when zoomed in)
+    if (zoomLevel <= 1) return;
+    isPanningRef.current = true;
+    isPinchingRef.current = false;
+    panStartXRef.current = e.touches[0].clientX;
+    panStartOffsetRef.current = viewOffset;
+    hasPannedRef.current = false;
+    setIsPanning(true);
+  };
+
   // Handle click on timeline
   const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Prevent click from firing if we just finished dragging
@@ -279,7 +441,21 @@ export function VideoTimeline({
 
       {/* Timeline bar - always h-8, with context menu */}
       <TimelineContextMenu trackRef={trackRef} viewStart={viewStart} visibleDuration={visibleDuration} disabled={disabled}>
-        <div ref={trackRef} className={`relative h-8 w-full rounded-md overflow-hidden bg-muted ${disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"}`} onClick={handleTimelineClick}>
+        <div
+          ref={trackRef}
+          className={`relative h-8 w-full rounded-md overflow-hidden bg-muted touch-none ${
+            disabled
+              ? "cursor-not-allowed opacity-50"
+              : isPanning
+              ? "cursor-grabbing"
+              : zoomLevel > 1
+              ? "cursor-grab"
+              : "cursor-pointer"
+          }`}
+          onClick={handleTimelineClick}
+          onMouseDown={handleTrackMouseDown}
+          onTouchStart={handleTrackTouchStart}
+        >
           {/* Progress bar */}
           {progressPercent >= 0 && progressPercent <= 100 && (
             <div className="absolute left-0 top-0 h-full bg-purple-600/60 transition-all duration-100" style={{ width: `${Math.max(0, Math.min(progressPercent, 100))}%` }} />

@@ -1,4 +1,5 @@
 import "./src/lib/env";
+import path from "path";
 import { withSentryConfig } from "@sentry/nextjs";
 
 function buildCsp(): string {
@@ -21,7 +22,7 @@ function buildCsp(): string {
     // Google Fonts actual font files
     "font-src 'self' https://fonts.gstatic.com",
     // Twitch CDN images + data URIs used by the UI
-    "img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv",
+    "img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv https://clips-media-assets2.twitch.tv",
     // R2 CDN for video assets (light mode transition WebM, future overlay assets)
     `media-src 'self' ${process.env.NEXT_PUBLIC_CDN_URL}`,
     // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them.
@@ -49,6 +50,9 @@ function buildCsp(): string {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
+  turbopack: {
+    root: path.resolve(__dirname, "../.."),
+  },
   output: "standalone",
   skipTrailingSlashRedirect: true,
   async headers() {
@@ -100,12 +104,18 @@ const nextConfig = {
         protocol: "https",
         hostname: "vod-secure.twitch.tv",
       },
+      {
+        protocol: "https",
+        hostname: "clips-media-assets2.twitch.tv",
+      },
     ],
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  tunnelRoute: "/monitoring",
-});
+export default process.env.NODE_ENV === "development"
+  ? nextConfig
+  : withSentryConfig(nextConfig, {
+      silent: !process.env.CI,
+      widenClientFileUpload: true,
+      tunnelRoute: "/monitoring",
+    });

@@ -2,22 +2,23 @@
 
 import { useState } from "react";
 import { SyncBroadcasterClips } from "@/actions/twitch/clips";
-import { RefreshCcw, Check } from "lucide-react";
+import { RefreshCcw, Check, Clapperboard, AlertCircle } from "lucide-react";
 import { Button, LoadingSpinner } from "@repo/ui";
 
 interface SyncNowStepProps {
-  hasClips: boolean;
+  clipCount: number;
 }
 
-type Feedback = { type: "info" | "error"; message: string; readyAt?: string } | null;
+type SyncState = "idle" | "syncing" | "done" | "skipped" | "error";
 
-export function SyncNowStep({ hasClips }: SyncNowStepProps) {
-  const [state, setState] = useState<"idle" | "syncing" | "done">("idle");
-  const [feedback, setFeedback] = useState<Feedback>(null);
+export function SyncNowStep({ clipCount }: SyncNowStepProps) {
+  const hasClips = clipCount > 0;
+  const [state, setState] = useState<SyncState>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSync() {
     setState("syncing");
-    setFeedback(null);
+    setErrorMessage(null);
 
     const response = await SyncBroadcasterClips();
 
@@ -26,94 +27,96 @@ export function SyncNowStep({ hasClips }: SyncNowStepProps) {
       return;
     }
 
-    setState("idle");
-
     if (response.skipped) {
-      const readyAt = response.lastSync
-        ? new Date(new Date(response.lastSync).getTime() + 60 * 60 * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-        : undefined;
-      setFeedback({ type: "info", message: "Already synced recently.", readyAt });
-    } else {
-      setFeedback({ type: "error", message: response.message || "Error syncing clips" });
+      setState("skipped");
+      return;
     }
+
+    setErrorMessage(response.message || "Something broke. Try again?");
+    setState("error");
   }
 
-  if (state === "done") {
-    return (
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-xl font-semibold">Done.</h2>
-          <p className="text-sm text-muted-foreground">
-            Your clips are in. Slightly less chaotic now.
-          </p>
-        </div>
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Check className="h-4 w-4 text-primary shrink-0" />
-          Clips synced
-        </div>
-      </div>
-    );
-  }
+  const isSyncing = state === "syncing";
+  const hasSynced = state === "done" || state === "skipped";
 
-  if (hasClips) {
-    return (
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-xl font-semibold">You've got clips.</h2>
-          <p className="text-sm text-muted-foreground">
-            We already have your clips — but if you streamed recently and want to pull in the latest ones now, go for it.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Button variant="outline" onClick={handleSync} disabled={state === "syncing"}>
-            {state === "syncing" ? (
-              <>
-                <LoadingSpinner />
-                Syncing...
-              </>
-            ) : (
-              <>
-                <RefreshCcw className="mr-2 h-4 w-4" />
-                Sync latest clips
-              </>
-            )}
-          </Button>
-          {feedback && (
-            <p className={`text-xs ${feedback.type === "error" ? "text-destructive" : "text-muted-foreground"}`}>
-              {feedback.message}{feedback.readyAt ? ` You can sync again at ${feedback.readyAt}.` : ""}
-            </p>
-          )}
-        </div>
-      </div>
-    );
+  let heading: string;
+  let description: string;
+  if (hasSynced) {
+    heading = "All caught up.";
+    description = "Your clips are in StreamWizard, ready to sort. You can pull in more any time.";
+  } else if (hasClips) {
+    heading = "We already have some clips of you.";
+    description = "No idea how, but we do. Want to pull in the latest ones while you're here?";
+  } else {
+    heading = "No clips yet.";
+    description = "Grab your Twitch clips now, or skip it — if you turned on auto-sync, they'll come in automatically after your next stream.";
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h2 className="text-xl font-semibold">No clips yet.</h2>
-        <p className="text-sm text-muted-foreground">
-          We haven't pulled in your Twitch clips yet. Do it now or hit "Let's go" and grab them later from the dashboard.
-        </p>
+        <h2 className="text-xl font-semibold">{heading}</h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      <div className="flex flex-col gap-2">
-        <Button onClick={handleSync} disabled={state === "syncing"}>
-          {state === "syncing" ? (
+
+      {hasClips && (
+        <div className="relative rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+          <div className="absolute inset-x-0 top-0 h-px rounded-t-xl bg-gradient-to-r from-transparent via-purple-500/30 to-transparent" />
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-purple-500/10 border border-purple-500/20">
+              <Clapperboard className="h-4 w-4 text-purple-400" />
+            </span>
+            <div>
+              <p className="text-sm font-medium">{clipCount.toLocaleString()} clips synced</p>
+              <p className="text-xs text-muted-foreground">from your Twitch account</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3">
+        <Button
+          variant={hasClips ? "outline" : "default"}
+          onClick={handleSync}
+          disabled={isSyncing}
+          className="w-full sm:w-auto"
+        >
+          {isSyncing ? (
             <>
               <LoadingSpinner />
-              Pulling in your clips...
+              {hasClips ? "Syncing..." : "Pulling in your clips..."}
+            </>
+          ) : state === "error" ? (
+            <>
+              <RefreshCcw className="mr-2 h-4 w-4" />
+              Try again
             </>
           ) : (
             <>
               <RefreshCcw className="mr-2 h-4 w-4" />
-              Grab my clips
+              {hasClips ? "Sync latest clips" : "Grab my clips"}
             </>
           )}
         </Button>
-        {feedback && (
-          <div className={`text-xs ${feedback.type === "error" ? "text-destructive" : "text-muted-foreground"}`}>
-            <p>{feedback.message}</p>
-            {feedback.readyAt && <p>You can sync again at {feedback.readyAt}.</p>}
+
+        {state === "done" && (
+          <div className="flex items-center gap-2 text-sm text-primary">
+            <Check className="h-4 w-4 shrink-0" />
+            {hasClips ? "Latest clips pulled in." : "Your clips are in. Slightly less chaotic now."}
+          </div>
+        )}
+
+        {state === "skipped" && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Check className="h-4 w-4 shrink-0 text-primary" />
+            Already up to date. Nothing new to pull in.
+          </div>
+        )}
+
+        {state === "error" && (
+          <div className="flex items-center gap-2 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {errorMessage}
           </div>
         )}
       </div>

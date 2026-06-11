@@ -16,7 +16,7 @@ export function RecentStreamRow({ stream, maxPeak, prevPeak }: RecentStreamRowPr
   return (
     <div className="flex items-center gap-3 rounded-md px-2 py-2 hover:bg-muted/50">
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <p className="truncate text-sm font-medium leading-snug">
             {stream.title ?? "Untitled stream"}
           </p>

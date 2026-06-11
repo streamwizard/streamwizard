@@ -33,13 +33,13 @@ export default async function layout({
 
   return (
     <SidebarProvider>
-      <OnboardingModal hasClips={(clipCount ?? 0) > 0} />
+      <OnboardingModal clipCount={clipCount ?? 0} />
       <ClipFolderProvider ClipFolders={folders || []}>
         <ModalProvider>
           <AppSidebar user={data.user} folders={folders || []} variant="inset" />
           <SidebarInset>
             <SiteHeader />
-            <div className="w-full p-5 mx-auto md:gap-6 md:py-6">{children}</div>
+            <div className="w-full p-3 sm:p-5 mx-auto md:gap-6 md:py-6">{children}</div>
           </SidebarInset>
         </ModalProvider>
       </ClipFolderProvider>

@@ -2,7 +2,16 @@
   "mcpServers": {
     "doppler": {
       "command": "bunx",
-      "args": ["@dopplerhq/mcp-server"]
+      "args": [
+        "@dopplerhq/mcp-server"
+      ]
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
     }
   }
 }
