@@ -1,7 +1,9 @@
 "use client";
 
+import { AddToFolderItems } from "@/components/clips/add-to-folder-menu";
 import { ClipFolderModal } from "@/components/modals/clip-folder-modal";
 import { formatClipDuration, formatDate } from "@/lib/format";
+import { buildClipFolderTree, type ClipFolderNode } from "@/lib/utils/clip-folders";
 import { downloadClip } from "@/lib/utils/download-clip";
 import { useClipFolders } from "@/providers/clips-provider";
 import { useModal } from "@/providers/modal-provider";
@@ -62,13 +64,15 @@ function InfoCell({ icon, label, value }: { icon: React.ReactNode; label: string
 function ClipDialogBody({ clip }: { clip: clipsWithFolders }) {
   const { id: userId } = useSession();
   const { openModal } = useModal();
-  const { getAvailableFolders, getRemovableFolders, getFolderLabel, AddToFolder, handleRemoveClipFromFolder } =
-    useClipFolders();
+  const { folders, getRemovableFolders, getFolderLabel, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
   const [isDownloading, setIsDownloading] = useState(false);
 
   const folderIds = clip.folders.map((folder) => folder.id);
-  const availableFolders = getAvailableFolders(folderIds);
   const removableFolders = getRemovableFolders(folderIds);
+  const folderTree = buildClipFolderTree(folders);
+
+  const handleAddToFolder = (folder: ClipFolderNode) =>
+    AddToFolder({ folderName: getFolderLabel(folder.id), folderId: folder.id, clipId: clip.twitch_clip_id });
 
   const embedUrl = clip.embed_url
     ? `${clip.embed_url}&parent=localhost&parent=streamwizard.org&parent=staging.streamwizard.org&autoplay=true`
@@ -151,23 +155,10 @@ function ClipDialogBody({ clip }: { clip: clipsWithFolders }) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-              {availableFolders.length === 0 ? (
-                <DropdownMenuItem disabled>No folders available</DropdownMenuItem>
+              {folderTree.length === 0 ? (
+                <DropdownMenuItem disabled>No folders yet</DropdownMenuItem>
               ) : (
-                availableFolders.map((folder) => (
-                  <DropdownMenuItem
-                    key={folder.id}
-                    onClick={() =>
-                      AddToFolder({
-                        folderName: getFolderLabel(folder.id),
-                        folderId: folder.id,
-                        clipId: clip.twitch_clip_id,
-                      })
-                    }
-                  >
-                    {getFolderLabel(folder.id)}
-                  </DropdownMenuItem>
-                ))
+                <AddToFolderItems nodes={folderTree} assignedIds={folderIds} onAdd={handleAddToFolder} />
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => openModal(<ClipFolderModal user_id={userId} />)}>

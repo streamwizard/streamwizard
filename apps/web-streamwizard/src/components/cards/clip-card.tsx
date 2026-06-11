@@ -16,6 +16,7 @@ import {
 } from "@repo/ui";
 import { useClipFolders } from "@/providers/clips-provider";
 import { useClipDialog } from "@/providers/clip-dialog-provider";
+import { AddToFolderItems } from "@/components/clips/add-to-folder-menu";
 import { clipsWithFolders } from "@/types/database";
 import { Calendar, Eye, MoreHorizontal, Star, User } from "lucide-react";
 import Image from "next/image";
@@ -23,6 +24,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@repo/ui";
 import { formatClipDuration, formatDate } from "@/lib/format";
+import { buildClipFolderTree, type ClipFolderNode } from "@/lib/utils/clip-folders";
 import { downloadClip } from "@/lib/utils/download-clip";
 import { cn } from "@/lib/utils";
 import { useCallback } from "react";
@@ -63,8 +65,7 @@ export function useClipCardActions(clip: clipsWithFolders) {
 }
 
 export function ClipCardActions({ clip }: { clip: clipsWithFolders }) {
-  const { getAvailableFolders, getRemovableFolders, getFolderLabel, AddToFolder, handleRemoveClipFromFolder } =
-    useClipFolders();
+  const { folders, getRemovableFolders, getFolderLabel, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
 
   const copyClipUrl = () => {
     navigator.clipboard.writeText(clip.url!);
@@ -80,8 +81,11 @@ export function ClipCardActions({ clip }: { clip: clipsWithFolders }) {
     });
 
   const folderIds = clip.folders.map((folder: { id: number }) => folder.id);
-  const availableFolders = getAvailableFolders(folderIds);
   const removableFolders = getRemovableFolders(folderIds);
+  const folderTree = buildClipFolderTree(folders);
+
+  const handleAddToFolder = (folder: ClipFolderNode) =>
+    AddToFolder({ folderName: getFolderLabel(folder.id), folderId: folder.id, clipId: clip.twitch_clip_id });
 
   return (
     <DropdownMenu
@@ -107,23 +111,15 @@ export function ClipCardActions({ clip }: { clip: clipsWithFolders }) {
             <DropdownMenuSubTrigger>Add to folder</DropdownMenuSubTrigger>
             <DropdownMenuPortal>
               <DropdownMenuSubContent {...menuSurfaceHandlers}>
-                {availableFolders.length === 0 ? (
-                  <DropdownMenuItem disabled>No folders available</DropdownMenuItem>
+                {folderTree.length === 0 ? (
+                  <DropdownMenuItem disabled>No folders yet</DropdownMenuItem>
                 ) : (
-                  availableFolders.map((folder) => (
-                    <DropdownMenuItem
-                      key={folder.id}
-                      onClick={() =>
-                        AddToFolder({
-                          folderName: getFolderLabel(folder.id),
-                          folderId: folder.id,
-                          clipId: clip.twitch_clip_id,
-                        })
-                      }
-                    >
-                      {getFolderLabel(folder.id)}
-                    </DropdownMenuItem>
-                  ))
+                  <AddToFolderItems
+                    nodes={folderTree}
+                    assignedIds={folderIds}
+                    onAdd={handleAddToFolder}
+                    surfaceProps={menuSurfaceHandlers}
+                  />
                 )}
               </DropdownMenuSubContent>
             </DropdownMenuPortal>
