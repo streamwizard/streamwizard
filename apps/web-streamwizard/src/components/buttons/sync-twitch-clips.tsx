@@ -34,16 +34,20 @@ export default function SyncTwitchClipsButton() {
   };
 
   return (
-    <Button type="button" variant="outline" className="w-full" onClick={handleSyncTwitchClips} disabled={isLoading}>
+    <Button
+      type="button"
+      variant="outline"
+      className="flex-1 gap-2 sm:w-auto sm:flex-none"
+      onClick={handleSyncTwitchClips}
+      disabled={isLoading}
+    >
       {isLoading ? (
-        <span>
+        <>
           <LoadingSpinner />
           <span className="sr-only">Syncing Twitch Clips</span>
-        </span>
+        </>
       ) : (
-        <span className="mr-2 h-4 w-4 flex justify-center items-center">
-          <RefreshCcw />
-        </span>
+        <RefreshCcw className="h-4 w-4 shrink-0" />
       )}
       Sync
     </Button>
