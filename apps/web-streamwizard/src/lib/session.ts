@@ -7,6 +7,7 @@ export interface SessionPreferences {
   memes_enabled: boolean;
   sync_clips_on_end: boolean;
   onboarding_completed: boolean;
+  show_stream_stats: boolean;
 }
 
 export interface Session {
@@ -18,6 +19,7 @@ const defaultPreferences: SessionPreferences = {
   memes_enabled: true,
   sync_clips_on_end: true,
   onboarding_completed: false,
+  show_stream_stats: true,
 };
 
 export async function getSession(): Promise<Session> {
@@ -34,6 +36,7 @@ export async function getSession(): Promise<Session> {
       memes_enabled: prefs?.memes_enabled ?? defaultPreferences.memes_enabled,
       sync_clips_on_end: prefs?.sync_clips_on_end ?? defaultPreferences.sync_clips_on_end,
       onboarding_completed: prefs?.onboarding_completed ?? defaultPreferences.onboarding_completed,
+      show_stream_stats: prefs?.show_stream_stats ?? defaultPreferences.show_stream_stats,
     },
   };
 }
