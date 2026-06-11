@@ -4,6 +4,7 @@ import { createClient } from "@repo/supabase/next/server";
 import buildClipQuery from "@/lib/utils/build-clip-query";
 import { parseClipPageSize } from "@/lib/utils/clip-pagination";
 import { parseClipView } from "@/lib/utils/clip-view";
+import { normalizeClipsWithFolders } from "@/types/database";
 import { ClipSearchParams } from "@/types/pages";
 import { redirect } from "next/navigation";
 
@@ -18,9 +19,6 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
   }
 
   let query = supabase.rpc("get_all_clips_with_folders", undefined, { count: "exact" });
-
-  // create type of query
-
 
   query = buildClipQuery(parsedSearchParams, query);
 
@@ -50,7 +48,7 @@ export default async function ClipsPage({ searchParams }: { searchParams: Promis
     <>
       {totalCount > 0 && <ClipsPaginationBar {...paginationProps} placement="top" />}
       {data && data.length > 0 ? (
-        <ClipsDisplay clips={data} view={clipView} />
+        <ClipsDisplay clips={normalizeClipsWithFolders(data)} view={clipView} />
       ) : null}
       {totalCount > 0 && <ClipsPaginationBar {...paginationProps} placement="bottom" />}
     </>

@@ -7,6 +7,7 @@ import { parseClipPageSize } from "@/lib/utils/clip-pagination";
 import { parseClipView } from "@/lib/utils/clip-view";
 import { getFolderBreadcrumb, getFolderUrl } from "@/lib/utils/clip-folders";
 import { urlPathToFolderHref } from "@repo/supabase/queries/clips";
+import { normalizeClipsWithFolders } from "@/types/database";
 import { ClipSearchParams } from "@/types/pages";
 import { FolderX } from "lucide-react";
 import Link from "next/link";
@@ -83,7 +84,7 @@ export default async function Page({ params, searchParams }: PageProps) {
       {data && data.length > 0 ? (
         <div>
           <ClipsPaginationBar {...paginationProps} placement="top" />
-          <ClipsDisplay clips={data} view={clipView} />
+          <ClipsDisplay clips={normalizeClipsWithFolders(data)} view={clipView} />
           <ClipsPaginationBar {...paginationProps} placement="bottom" />
         </div>
       ) : (
