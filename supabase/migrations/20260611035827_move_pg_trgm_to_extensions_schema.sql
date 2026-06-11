@@ -1,0 +1,12 @@
+-- Move pg_trgm out of the public schema into the dedicated extensions schema
+-- (where pgcrypto, uuid-ossp, pg_net, etc. already live). Fixes advisor
+-- 0014_extension_in_public.
+--
+-- Safe here because:
+--  * The only trigram object is the GIN index clips_title_trgm_idx
+--    (clips.title gin_trgm_ops); it references the opclass by OID, so it keeps
+--    working and stays valid after the move.
+--  * The app only uses ILIKE (a built-in pg_catalog operator), not the pg_trgm
+--    `%` operator or similarity()/word_similarity(), so no unqualified-name
+--    resolution depends on pg_trgm's schema.
+ALTER EXTENSION pg_trgm SET SCHEMA extensions;
