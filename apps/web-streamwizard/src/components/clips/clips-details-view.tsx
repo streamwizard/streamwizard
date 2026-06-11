@@ -76,7 +76,7 @@ function ClipDetailsRow({ clip }: { clip: clipsWithFolders }) {
       <button
         type="button"
         onClick={OpenClip}
-        className="relative h-10 w-16 shrink-0 overflow-hidden rounded border border-border bg-muted"
+        className="relative h-10 w-16 shrink-0 cursor-pointer overflow-hidden rounded border border-border bg-muted"
         aria-label={`Play clip: ${clip.title}`}
       >
         <Image
@@ -94,7 +94,7 @@ function ClipDetailsRow({ clip }: { clip: clipsWithFolders }) {
       <button
         type="button"
         onClick={OpenClip}
-        className="min-w-0 truncate text-left text-sm font-medium hover:underline"
+        className="min-w-0 cursor-pointer truncate text-left text-sm font-medium hover:underline"
         title={clip.title ?? undefined}
       >
         {clip.title}
