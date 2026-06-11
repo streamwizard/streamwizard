@@ -191,7 +191,7 @@ export default function SidebarClips({ clipFolders }: Props) {
   const pathname = usePathname();
   const { openModal } = useModal();
   const { id } = useSession();
-  const activeFolderHref = getActiveFolderHref(pathname);
+  const activeFolderHref = getActiveFolderHref(pathname, clipFolders);
   const folderTree = buildClipFolderTree(clipFolders);
   const isClipsActive = pathname === "/dashboard/clips";
 

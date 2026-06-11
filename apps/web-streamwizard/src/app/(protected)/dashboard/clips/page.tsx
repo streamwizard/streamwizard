@@ -8,6 +8,8 @@ import { normalizeClipsWithFolders } from "@/types/database";
 import { ClipSearchParams } from "@/types/pages";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default async function ClipsPage({ searchParams }: { searchParams: Promise<ClipSearchParams> }) {
   const supabase = await createClient();
   const parsedSearchParams = await searchParams;

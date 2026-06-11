@@ -217,7 +217,7 @@ export function ClipModalFolderSection({ clip }: ClipModalFolderSectionProps) {
               className="h-10 w-full justify-start gap-2 border-dashed bg-background/60 px-3 hover:bg-accent/40"
             >
               <FolderPlus className="size-4 text-muted-foreground" />
-              <span className="text-muted-foreground">Add to folder or subfolder…</span>
+              <span className="truncate text-muted-foreground">Add to folder or subfolder…</span>
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="w-[min(100vw-3rem,22rem)] p-0">

@@ -5,8 +5,7 @@ import { createClient } from "@repo/supabase/next/server";
 import buildClipQuery from "@/lib/utils/build-clip-query";
 import { parseClipPageSize } from "@/lib/utils/clip-pagination";
 import { parseClipView } from "@/lib/utils/clip-view";
-import { getFolderBreadcrumb, getFolderUrl } from "@/lib/utils/clip-folders";
-import { urlPathToFolderHref } from "@repo/supabase/queries/clips";
+import { findFolderByUrlSegments, getFolderBreadcrumb, getFolderUrl } from "@/lib/utils/clip-folders";
 import { normalizeClipsWithFolders } from "@/types/database";
 import { ClipSearchParams } from "@/types/pages";
 import { FolderX } from "lucide-react";
@@ -17,9 +16,10 @@ type PageProps = {
   searchParams: Promise<ClipSearchParams>;
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function Page({ params, searchParams }: PageProps) {
   const folderSegments = (await params).folder;
-  const folderSlug = urlPathToFolderHref(folderSegments.join("/"));
   const parsedSearchParams = await searchParams;
   const supabase = await createClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -27,12 +27,25 @@ export default async function Page({ params, searchParams }: PageProps) {
   const { data: folders } = auth.user
     ? await supabase.from("clip_folders").select("*").eq("user_id", auth.user.id)
     : { data: null };
-  const currentFolder = folders?.find((folder) => folder.href === folderSlug);
+  const currentFolder = folders ? findFolderByUrlSegments(folderSegments, folders) : undefined;
+  const folderHref = currentFolder?.href;
+
+  if (!folderHref) {
+    return (
+      <div className="mt-32 flex flex-col items-center justify-center space-y-4 p-6 text-center">
+        <FolderX className="h-16 w-16 text-muted-foreground" />
+        <p className="text-muted-foreground">Folder not found</p>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard/clips">Back to all clips</Link>
+        </Button>
+      </div>
+    );
+  }
 
   let query = supabase.rpc(
     "get_clips_by_folder",
     {
-      folder_href: folderSlug,
+      folder_href: folderHref,
     },
     { count: "exact" }
   );

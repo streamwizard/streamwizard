@@ -39,12 +39,42 @@ export function getFolderUrl(href: string): string {
   return `/dashboard/clips/${folderHrefToUrlPath(href)}`;
 }
 
-export function getActiveFolderHref(pathname: string): string | null {
+/** Resolve a folder from URL segments, tolerating legacy href values that omit parent paths. */
+export function findFolderByUrlSegments(
+  segments: string[],
+  folders: ClipFolderRow[]
+): ClipFolderRow | undefined {
+  if (segments.length === 0) return undefined;
+
+  const hrefFromUrl = urlPathToFolderHref(segments.join("/"));
+  const byHref = folders.find((folder) => folder.href === hrefFromUrl);
+  if (byHref) return byHref;
+
+  const pathNames = segments.map((segment) => {
+    try {
+      return decodeURIComponent(segment);
+    } catch {
+      return segment;
+    }
+  });
+
+  return folders.find((folder) => {
+    const names = getFolderBreadcrumb(folder, folders).map((item) => item.name);
+    return names.length === pathNames.length && names.every((name, index) => name === pathNames[index]);
+  });
+}
+
+export function getActiveFolderHref(pathname: string, folders?: ClipFolderRow[]): string | null {
   const prefix = "/dashboard/clips/";
   if (!pathname.startsWith(prefix)) return null;
 
   const rest = pathname.slice(prefix.length);
   if (!rest) return null;
+
+  if (folders?.length) {
+    const segments = rest.split("/").filter(Boolean);
+    return findFolderByUrlSegments(segments, folders)?.href ?? urlPathToFolderHref(rest);
+  }
 
   return urlPathToFolderHref(rest);
 }
