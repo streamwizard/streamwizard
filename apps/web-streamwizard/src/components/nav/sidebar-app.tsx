@@ -11,6 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@repo/ui";
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@repo/supabase";
@@ -31,6 +32,10 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 }
 
 export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
+  const { setOpenMobile, isMobile } = useSidebar();
+  const closeMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
   const pathname = usePathname();
 
   return (
@@ -55,7 +60,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === "/dashboard"}>
-                  <Link href="/dashboard">
+                  <Link href="/dashboard" onClick={closeMobile}>
                     <BarChart2 className="mr-2 h-4 w-4" />
                     Stream Analytics
                   </Link>
@@ -71,14 +76,14 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/vods")}>
-                  <Link href="/dashboard/vods">
+                  <Link href="/dashboard/vods" onClick={closeMobile}>
                     <FileVideoCamera className="mr-2 h-4 w-4" />
                     Vods
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarClips clipFolders={folders} />
             </SidebarMenu>
+            <SidebarClips clipFolders={folders} />
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
@@ -86,8 +91,13 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/overlays") || pathname.startsWith("/dashboard/widgets")}>
-                  <Link href="/dashboard/overlays">
+                <SidebarMenuButton
+                  asChild
+                  isActive={
+                    pathname.startsWith("/dashboard/overlays") || pathname.startsWith("/dashboard/widgets")
+                  }
+                >
+                  <Link href="/dashboard/overlays" onClick={closeMobile}>
                     <Layers className="mr-2 h-4 w-4" />
                     Overlay Editor
                   </Link>

@@ -21,7 +21,7 @@ const app = new Hono();
 // ============================================
 
 // Sentry must be first — sets up tracing and Hono's onError capture
-if (process.env.SENTRY_DSN) {
+if (process.env.SENTRY_DSN && process.env.NODE_ENV !== "development") {
   app.use("*", sentry(app, {
     ...getSentryOptions({ dsn: process.env.SENTRY_DSN, service: "rest-api" }),
     integrations: [createSupabaseIntegration(Sentry)],

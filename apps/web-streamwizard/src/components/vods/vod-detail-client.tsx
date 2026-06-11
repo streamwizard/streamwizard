@@ -58,8 +58,18 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
   const timeUpdateRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [leftPanelHeight, setLeftPanelHeight] = useState<number | undefined>(undefined);
+  const [isDesktop, setIsDesktop] = useState(false);
 
-  // Measure left panel height and sync to right panel
+  // Track desktop breakpoint for conditional height sync
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    setIsDesktop(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsDesktop(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // Measure left panel height and sync to right panel (desktop only)
   useEffect(() => {
     const el = leftPanelRef.current;
     if (!el) return;
@@ -168,7 +178,7 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
   return (
     <div className="flex h-full flex-col">
       {/* Page Header */}
-      <div className="flex items-start justify-between gap-4 p-4 pb-2 shrink-0">
+      <div className="flex items-start justify-between gap-4 p-4 pb-2 shrink-0 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/dashboard/vods">
@@ -193,10 +203,10 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
         {events.length > 0 && <EventTypeFilter />}
       </div>
 
-      {/* Two-column layout: Video player left, Events right */}
-      <div className="flex-1 flex overflow-hidden">
+      {/* Two-column layout: Video player left, Events right (stacked on mobile) */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
         {/* Left side: Video player and controls */}
-        <div ref={leftPanelRef} className="flex-1 flex flex-col min-w-0 p-4 pt-0 overflow-y-auto">
+        <div ref={leftPanelRef} className="flex-1 flex flex-col min-w-0 p-4 pt-0 lg:overflow-y-auto">
           {/* Interactive Twitch Player */}
           <div className="relative aspect-video w-full max-h-[50vh] overflow-hidden rounded-lg bg-black shrink-0">
             <TwitchPlayerComponent
@@ -242,7 +252,7 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
           </div>
 
           {/* Video Stats */}
-          <div className="grid grid-cols-3 gap-4 text-sm mt-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm mt-4">
             <div className="flex items-center gap-2">
               <Eye className="h-4 w-4 text-muted-foreground" />
               <span>{video.view_count.toLocaleString()} views</span>
@@ -263,7 +273,7 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
           {/* Actions */}
           <div className="pt-4 mt-4 border-t space-y-4">
             {/* Action buttons row */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button asChild variant="default">
                 <a href={video.url} target="_blank" rel="noopener noreferrer">
                   <ExternalLink className="mr-2 h-4 w-4" />
@@ -311,8 +321,11 @@ export function VodDetailClient({ video }: VodDetailClientProps) {
           </div>
         </div>
 
-        {/* Right side: Events panel */}
-        <div className="w-80 shrink-0 overflow-hidden border-l rounded-lg bg-muted/30" style={{ maxHeight: leftPanelHeight }}>
+        {/* Right side: Events panel (full-width below on mobile, sidebar on desktop) */}
+        <div
+          className="w-full lg:w-80 shrink-0 overflow-hidden border-t lg:border-t-0 lg:border-l rounded-lg bg-muted/30 min-h-[300px] lg:min-h-0"
+          style={isDesktop && leftPanelHeight !== undefined ? { maxHeight: leftPanelHeight } : undefined}
+        >
           <StreamEventsPanel />
         </div>
       </div>

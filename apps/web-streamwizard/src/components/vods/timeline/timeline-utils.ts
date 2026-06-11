@@ -26,10 +26,8 @@ export function getSecondsFromPosition(clientX: number, trackElement: HTMLElemen
 /**
  * Calculate nice timestamp intervals and positions for the ruler
  */
-export function calculateTimestamps(viewStart: number, viewEnd: number, visibleDuration: number): { time: number; percent: number }[] {
+export function calculateTimestamps(viewStart: number, viewEnd: number, visibleDuration: number, targetTimestampCount = 16): { time: number; percent: number }[] {
   // Calculate appropriate interval based on visible duration
-  // We want approximately 16 timestamps visible at any time
-  const targetTimestampCount = 16;
   const rawInterval = visibleDuration / targetTimestampCount;
 
   // Round to nice intervals: 1s, 5s, 10s, 15s, 30s, 1m, 2m, 5m, 10m, 15m, 30m, 1h, etc.

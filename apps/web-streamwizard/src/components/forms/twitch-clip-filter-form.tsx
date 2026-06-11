@@ -1,341 +1,307 @@
 "use client";
 
-import { Badge } from "@repo/ui";
-import { Button } from "@repo/ui";
-import { Checkbox } from "@repo/ui";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
-import { Field, FieldError, FieldGroup, FieldLabel } from "@repo/ui";
-import { Form } from "@repo/ui";
-import { Input } from "@repo/ui";
-import { RadioGroup, RadioGroupItem } from "@repo/ui";
+import {
+  Badge,
+  Button,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+  Field,
+  FieldGroup,
+  FieldLabel,
+  Input,
+  Switch,
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@repo/ui";
 import { useSession } from "@/providers/session-provider";
-import { cn } from "@/lib/utils";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
+import { LookupTwitchGame, LookupTwitchUser } from "@/actions/twitch/twitch-api";
+import { SlidersHorizontal, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { Controller, useForm } from "react-hook-form";
-import * as z from "zod";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import SyncTwitchClipsButton from "../buttons/sync-twitch-clips";
 import { DatePickerWithPresets } from "../date-picker";
 import TwitchCategorySearch from "../search-bars/twitch-category-search";
 import TwitchSearchBar from "../search-bars/twitch-channel-search";
 
-const FILTER_EXPANDED_KEY = "streamwizard:clips-filter-expanded";
-
-const formSchema = z.object({
-  game_id: z.string().optional(),
-  creator_id: z.string().optional(),
-
-  date: z
-    .object({
-      from: z.date(),
-      to: z.date().optional(),
-    })
-    .optional(),
-
-  isFeatured: z.boolean().optional(),
-  searchQuery: z.string().optional(),
-  broadcaster_id: z.string().optional(),
-  sort: z.enum(["date", "views"]).optional(),
-  asc: z.boolean().optional(),
-});
-
-export type FormValues = z.infer<typeof formSchema>;
-
-function countActiveFilters(searchParams: URLSearchParams) {
-  let count = 0;
-  if (searchParams.get("search_query")) count++;
-  if (searchParams.get("game_id")) count++;
-  if (searchParams.get("creator_id")) count++;
-  if (searchParams.get("start_date") || searchParams.get("end_date")) count++;
-  if (searchParams.get("is_featured") === "true") count++;
-  if (searchParams.get("sort") === "views") count++;
-  if (searchParams.get("asc") === "true") count++;
-  return count;
-}
-
 export default function TwitchClipSearchForm() {
-  "use no memo";
   const router = useRouter();
   const searchParams = useSearchParams();
-  const broadcaster_id = searchParams.get("broadcaster_id");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const { user_metadata } = useSession();
-  const [isExpanded, setIsExpanded] = useState(true);
 
-  const activeFilterCount = useMemo(() => countActiveFilters(searchParams), [searchParams]);
+  // Display names for ID-based filters — kept in state so chips show readable labels
+  const [broadcasterName, setBroadcasterName] = useState("");
+  const [creatorName, setCreatorName] = useState("");
+  const [gameName, setGameName] = useState("");
+
+  const broadcasterId = searchParams.get("broadcaster_id");
+  const creatorId = searchParams.get("creator_id");
+  const gameId = searchParams.get("game_id");
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(FILTER_EXPANDED_KEY);
-      if (stored !== null) {
-        setIsExpanded(stored === "true");
+    if (!broadcasterId) { setBroadcasterName(""); return; }
+    LookupTwitchUser(broadcasterId).then((d) => d && setBroadcasterName(d.display_name));
+  }, [broadcasterId]);
+
+  useEffect(() => {
+    if (!creatorId) { setCreatorName(""); return; }
+    LookupTwitchUser(creatorId).then((d) => d && setCreatorName(d.display_name));
+  }, [creatorId]);
+
+  useEffect(() => {
+    if (!gameId) { setGameName(""); return; }
+    LookupTwitchGame(gameId).then((d) => d && setGameName(d.name));
+  }, [gameId]);
+
+  // The URL is the single source of truth. Every control commits its value
+  // here the moment it's complete — no Apply button, no form state to sync.
+  const updateParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [key, val] of Object.entries(updates)) {
+        if (val === null || val === "") params.delete(key);
+        else params.set(key, val);
       }
-    } catch {
-      // ignore read errors
-    }
-  }, []);
-
-  const handleExpandedChange = (open: boolean) => {
-    setIsExpanded(open);
-    try {
-      localStorage.setItem(FILTER_EXPANDED_KEY, String(open));
-    } catch {
-      // ignore write errors
-    }
-  };
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      game_id: searchParams.get("game_id") || undefined,
-      creator_id: searchParams.get("creator_id") || undefined,
-      date: undefined,
-      isFeatured: searchParams.get("isFeatured") === "true" || false,
-      searchQuery: searchParams.get("search_query") || undefined,
-      broadcaster_id: searchParams.get("broadcaster_id") || undefined,
-      sort: (searchParams.get("sort") as "date" | "views") || "date",
-      asc: searchParams.get("asc") === "true" || false,
+      const next = params.toString();
+      if (next !== searchParams.toString()) router.push(`?${next}`);
     },
-  });
+    [router, searchParams]
+  );
 
-  useEffect(() => {
-    form.reset({
-      game_id: searchParams.get("game_id") || undefined,
-      creator_id: searchParams.get("creator_id") || undefined,
-      isFeatured: searchParams.get("is_featured") === "true" || false,
-      searchQuery: searchParams.get("search_query") || undefined,
-      broadcaster_id: searchParams.get("broadcaster_id") || undefined,
-      sort: (searchParams.get("sort") as "date" | "views") || "date",
-      asc: searchParams.get("asc") === "true" || false,
+  // Free-text search is the only debounced field
+  const [searchText, setSearchText] = useState(searchParams.get("search_query") ?? "");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
 
-      date: searchParams.get("start_date")
-        ? {
-            from: searchParams.get("start_date") ? new Date(searchParams.get("start_date")!) : undefined,
-            to: searchParams.get("end_date") ? new Date(searchParams.get("end_date")!) : undefined,
-          }
-        : undefined,
-    });
-  }, [searchParams, form]);
+  function commitSearch(value: string) {
+    updateParams({ search_query: value.length >= 3 ? value : null });
+  }
 
-  function onSubmit(values: FormValues) {
-    const params = new URLSearchParams();
-    if (values.game_id && values.game_id.length >= 4) params.set("game_id", values.game_id);
-    if (values.creator_id && values.creator_id.length >= 4) params.set("creator_id", values.creator_id);
-    if (values.date?.from) params.set("start_date", values.date.from.toISOString());
-    if (values.date?.to) params.set("end_date", values.date.to.toISOString());
-    if (values.isFeatured) params.set("is_featured", "true");
-    if (values.searchQuery && values.searchQuery.length >= 4) params.set("search_query", values.searchQuery);
-    if (values.broadcaster_id && values.broadcaster_id.length >= 4) params.set("broadcaster_id", values.broadcaster_id);
-    if (values.sort) params.set("sort", values.sort);
-    else params.set("sort", "date");
-    if (values.asc) params.set("asc", "true");
+  function onSearchChange(value: string) {
+    setSearchText(value);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => commitSearch(value), 500);
+  }
 
+  const dateValue = useMemo(() => {
+    const start = searchParams.get("start_date");
+    if (!start) return undefined;
+    const end = searchParams.get("end_date");
+    return { from: new Date(start), to: end ? new Date(end) : undefined };
+  }, [searchParams]);
+
+  function onReset() {
+    clearTimeout(debounceRef.current);
+    setSearchText("");
+    const broadcaster_id = searchParams.get("broadcaster_id");
+    router.push(broadcaster_id ? `?broadcaster_id=${broadcaster_id}` : "?");
+  }
+
+  function clearFilter(key: string) {
+    const params = new URLSearchParams(searchParams.toString());
+    if (key === "date") {
+      params.delete("start_date");
+      params.delete("end_date");
+    } else {
+      params.delete(key);
+    }
+    if (key === "search_query") setSearchText("");
     router.push(`?${params.toString()}`);
   }
 
-  function onReset() {
-    form.reset();
-    if (broadcaster_id) {
-      router.push(`?broadcaster_id=${broadcaster_id}`);
-      return;
-    }
-    router.push("?");
-  }
+  const activeChips = [
+    gameId ? { key: "game_id", label: gameName ? `Category: ${gameName}` : "Category" } : null,
+    broadcasterId ? { key: "broadcaster_id", label: broadcasterName ? `Streamer: ${broadcasterName}` : "Streamer" } : null,
+    creatorId ? { key: "creator_id", label: creatorName ? `Clipped by: ${creatorName}` : "Clipped by" } : null,
+    searchParams.get("search_query") ? { key: "search_query", label: `"${searchParams.get("search_query")}"` } : null,
+    searchParams.get("start_date")
+      ? {
+          key: "date",
+          label: `${new Date(searchParams.get("start_date")!).toLocaleDateString()}${
+            searchParams.get("end_date") ? ` → ${new Date(searchParams.get("end_date")!).toLocaleDateString()}` : ""
+          }`,
+        }
+      : null,
+    searchParams.get("is_featured") === "true" ? { key: "is_featured", label: "Featured only" } : null,
+    searchParams.get("sort") === "views" ? { key: "sort", label: "Sort: Views" } : null,
+    searchParams.get("asc") === "true" ? { key: "asc", label: "↑ Ascending" } : null,
+  ].filter(Boolean) as { key: string; label: string }[];
+
+  const advancedActiveCount = activeChips.length;
 
   return (
-    <div className="w-full mb-6">
-      <Collapsible open={isExpanded} onOpenChange={handleExpandedChange} className="w-full">
-        <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
-          <CollapsibleTrigger asChild>
-            <button
-              type="button"
-              className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/40"
-            >
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-                  <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+    <div className="w-full py-4 space-y-3">
+      {/* Active filters bar — only visible when filters are applied */}
+      {activeChips.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-1.5 items-center flex-1 min-w-0">
+            {activeChips.map((chip) => (
+              <Badge key={chip.key} variant="secondary" className="gap-1 pr-1 text-xs h-7">
+                {chip.label}
+                <button
+                  type="button"
+                  onClick={() => clearFilter(chip.key)}
+                  className="ml-1 rounded-full hover:bg-muted-foreground/20 p-1 sm:p-0.5 cursor-pointer"
+                  aria-label={`Remove ${chip.label} filter`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onReset}
+            className="text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
+          >
+            Clear all
+          </Button>
+        </div>
+      )}
+
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen} className="space-y-3">
+        {/* Inputs row — stacks on mobile, inline on sm+ */}
+        <div className="flex flex-wrap gap-3 items-end w-full">
+          <Field className="w-full sm:flex-1 sm:min-w-[200px]">
+            <FieldLabel htmlFor="searchQuery">Search</FieldLabel>
+            <Input
+              id="searchQuery"
+              value={searchText}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  clearTimeout(debounceRef.current);
+                  commitSearch(searchText);
+                }
+              }}
+              placeholder="Search clips..."
+              autoComplete="off"
+            />
+          </Field>
+
+          <Field className="w-full sm:flex-1 sm:min-w-[200px]">
+            <FieldLabel htmlFor="game_id">Category</FieldLabel>
+            <TwitchCategorySearch
+              placeholder="Enter Twitch category"
+              setValue={(game_id) => updateParams({ game_id })}
+              value={searchParams.get("game_id") ?? ""}
+              initalValue={searchParams.get("game_id")}
+            />
+          </Field>
+
+          {/* Buttons — full-width row on mobile, inline on sm+ */}
+          <div className="flex gap-2 w-full sm:w-auto sm:self-end">
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="outline" className="flex-1 sm:flex-none gap-2 cursor-pointer">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {advancedActiveCount > 0 && (
+                  <Badge className="h-5 min-w-5 rounded-full px-1 flex items-center justify-center text-xs">{advancedActiveCount}</Badge>
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <div className="flex-1 sm:flex-none">
+              <SyncTwitchClipsButton />
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced filters panel */}
+        <CollapsibleContent className="mt-3">
+          <FieldGroup className="border rounded-lg p-3 sm:p-4 space-y-4 bg-card">
+            <div className="flex flex-wrap gap-4 items-end">
+              <Field className="w-full sm:flex-1 sm:min-w-[200px]">
+                <FieldLabel htmlFor="broadcaster_id">Streamer</FieldLabel>
+                <TwitchSearchBar
+                  placeholder="Enter Twitch Username"
+                  onSelect={(channel) => updateParams({ broadcaster_id: channel.id })}
+                  value={searchParams.get("broadcaster_id") ?? undefined}
+                  initalValue={searchParams.get("broadcaster_id") || user_metadata?.sub}
+                />
+              </Field>
+
+              <Field className="w-full sm:flex-1 sm:min-w-[200px]">
+                <FieldLabel htmlFor="creator_id">Clipped by</FieldLabel>
+                <TwitchSearchBar
+                  placeholder="Enter Twitch Username"
+                  onSelect={(channel) => updateParams({ creator_id: channel.id })}
+                  value={searchParams.get("creator_id") ?? undefined}
+                  initalValue={searchParams.get("creator_id")}
+                />
+              </Field>
+
+              <DatePickerWithPresets
+                label="Date Range"
+                className="w-full sm:flex-1 sm:min-w-[200px]"
+                value={dateValue}
+                onChange={(range) =>
+                  updateParams({
+                    start_date: range?.from ? range.from.toISOString() : null,
+                    end_date: range?.to ? range.to.toISOString() : null,
+                  })
+                }
+              />
+            </div>
+
+            <div className="flex flex-col gap-3 pt-2 border-t border-border/50">
+              {/* Featured toggle — full width, larger touch target */}
+              <label htmlFor="isFeatured" className="flex items-center gap-3 py-1 cursor-pointer">
+                <Switch
+                  id="isFeatured"
+                  checked={searchParams.get("is_featured") === "true"}
+                  onCheckedChange={(checked) => updateParams({ is_featured: checked ? "true" : null })}
+                />
+                <span className="text-sm font-normal">Featured only</span>
+              </label>
+
+              {/* Sort + Order always side by side in a 2-col grid */}
+              <div className="grid grid-cols-2 sm:flex sm:items-center sm:gap-4 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sort by</span>
+                  <ToggleGroup
+                    type="single"
+                    variant="outline"
+                    value={searchParams.get("sort") === "views" ? "views" : "date"}
+                    onValueChange={(v) => v && updateParams({ sort: v === "views" ? "views" : null })}
+                    className="w-full"
+                  >
+                    <ToggleGroupItem value="date" aria-label="Sort by date" className="flex-1 cursor-pointer h-9">
+                      Date
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="views" aria-label="Sort by views" className="flex-1 cursor-pointer h-9">
+                      Views
+                    </ToggleGroupItem>
+                  </ToggleGroup>
                 </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold">Clip filters</span>
-                    {!isExpanded && activeFilterCount > 0 && (
-                      <Badge variant="secondary" className="h-5 px-2 text-xs font-normal">
-                        {activeFilterCount} active
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {isExpanded ? "Search and narrow your clips" : "Click to expand filters"}
-                  </p>
+
+                <div className="hidden sm:block w-px h-8 bg-border self-end mb-0.5" aria-hidden="true" />
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Order</span>
+                  <ToggleGroup
+                    type="single"
+                    variant="outline"
+                    value={searchParams.get("asc") === "true" ? "asc" : "desc"}
+                    onValueChange={(v) => v && updateParams({ asc: v === "asc" ? "true" : null })}
+                    className="w-full"
+                  >
+                    <ToggleGroupItem value="asc" aria-label="Ascending" className="flex-1 cursor-pointer h-9">
+                      ↑ Asc
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="desc" aria-label="Descending" className="cursor-pointer flex-1 h-9">
+                      ↓ Desc
+                    </ToggleGroupItem>
+                  </ToggleGroup>
                 </div>
               </div>
-              <ChevronDown
-                className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200", isExpanded && "rotate-180")}
-              />
-            </button>
-          </CollapsibleTrigger>
-
-          <CollapsibleContent className="outline-none data-[state=closed]:animate-out data-[state=open]:animate-in data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2">
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit, console.error)}
-                id="twitch-clip-filter-form"
-                className="flex flex-col gap-5 border-t px-5 pb-5 pt-4"
-              >
-                <FieldGroup className="gap-5">
-                  <div className="grid w-full gap-4 md:grid-cols-2">
-                    <Controller
-                      control={form.control}
-                      name="searchQuery"
-                      render={({ field, fieldState }) => (
-                        <Field data-invalid={fieldState.invalid}>
-                          <FieldLabel htmlFor="searchQuery">Search Query</FieldLabel>
-                          <Input {...field} value={field.value ?? ""} id="searchQuery" placeholder="Enter search query" aria-invalid={fieldState.invalid} autoComplete="off" />
-                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                        </Field>
-                      )}
-                    />
-                    <Controller
-                      control={form.control}
-                      name="broadcaster_id"
-                      render={({ field, fieldState }) => (
-                        <Field data-invalid={fieldState.invalid}>
-                          <FieldLabel htmlFor="broadcaster_id">Streamer</FieldLabel>
-                          <TwitchSearchBar
-                            placeholder="Enter Twitch Username"
-                            onSelect={(channel) => field.onChange(channel.id)}
-                            value={field.value}
-                            initalValue={field.value ? field.value : user_metadata?.sub}
-                          />
-                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                        </Field>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid w-full items-end gap-4 md:grid-cols-2 xl:grid-cols-4">
-                    <Controller
-                      control={form.control}
-                      name="game_id"
-                      render={({ field, fieldState }) => (
-                        <Field data-invalid={fieldState.invalid}>
-                          <FieldLabel htmlFor="game_id">Twitch Category</FieldLabel>
-                          <TwitchCategorySearch
-                            placeholder="Enter Twitch category"
-                            setValue={(category) => field.onChange(category)}
-                            value={field.value}
-                            initalValue={searchParams.get("game_id")}
-                          />
-                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                        </Field>
-                      )}
-                    />
-                    <Controller
-                      control={form.control}
-                      name="creator_id"
-                      render={({ field, fieldState }) => (
-                        <Field data-invalid={fieldState.invalid}>
-                          <FieldLabel htmlFor="creator_id">Clipped by</FieldLabel>
-                          <TwitchSearchBar
-                            placeholder="Enter Twitch Username"
-                            onSelect={(channel) => field.onChange(channel.id)}
-                            value={field.value}
-                            reset={() => field.onChange("")}
-                            initalValue={searchParams.get("creator_id")}
-                          />
-                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                        </Field>
-                      )}
-                    />
-                    <DatePickerWithPresets name="date" label="Date Range" className="w-full" />
-                    <Controller
-                      control={form.control}
-                      name="isFeatured"
-                      render={({ field, fieldState }) => (
-                        <Field data-invalid={fieldState.invalid} className="w-full">
-                          <FieldLabel htmlFor="isFeatured">Is Featured</FieldLabel>
-                          <div className="flex h-9 items-center rounded-md border bg-muted/20 px-3 shadow-xs">
-                            <Checkbox id="isFeatured" checked={field.value} onCheckedChange={field.onChange} aria-invalid={fieldState.invalid} />
-                          </div>
-                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                        </Field>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid w-full gap-4 md:grid-cols-2">
-                    <Controller
-                      control={form.control}
-                      name="sort"
-                      render={({ field, fieldState }) => (
-                        <Field data-invalid={fieldState.invalid} className="space-y-3 rounded-lg border bg-muted/20 p-4">
-                          <FieldLabel>Sort on</FieldLabel>
-                          <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-wrap gap-4" aria-invalid={fieldState.invalid}>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="date" id="sort-date" />
-                              <FieldLabel htmlFor="sort-date" className="font-normal">
-                                Date
-                              </FieldLabel>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="views" id="sort-views" />
-                              <FieldLabel htmlFor="sort-views" className="font-normal">
-                                Views
-                              </FieldLabel>
-                            </div>
-                          </RadioGroup>
-                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                        </Field>
-                      )}
-                    />
-                    <Controller
-                      control={form.control}
-                      name="asc"
-                      render={({ field, fieldState }) => (
-                        <Field data-invalid={fieldState.invalid} className="space-y-3 rounded-lg border bg-muted/20 p-4">
-                          <FieldLabel>Order</FieldLabel>
-                          <RadioGroup
-                            onValueChange={(value) => (value === "ascending" ? field.onChange(true) : field.onChange(false))}
-                            value={field.value ? "ascending" : "descending"}
-                            className="flex flex-wrap gap-4"
-                            aria-invalid={fieldState.invalid}
-                          >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="ascending" id="order-asc" />
-                              <FieldLabel htmlFor="order-asc" className="font-normal">
-                                Ascending
-                              </FieldLabel>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="descending" id="order-desc" />
-                              <FieldLabel htmlFor="order-desc" className="font-normal">
-                                Descending
-                              </FieldLabel>
-                            </div>
-                          </RadioGroup>
-                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                        </Field>
-                      )}
-                    />
-                  </div>
-                </FieldGroup>
-
-                <div className="flex w-full flex-col gap-3 sm:flex-row">
-                  <Button
-                    type="submit"
-                    className="flex-1 border border-[#374151] !bg-[#374151] !text-white shadow-sm hover:!bg-[#eef0f4] hover:!text-foreground dark:border-transparent dark:!bg-primary dark:!text-primary-foreground dark:shadow-none dark:hover:!bg-primary/90 dark:hover:!text-primary-foreground"
-                  >
-                    Search
-                  </Button>
-                  <Button type="button" variant="outline" onClick={onReset} className="flex-1">
-                    Reset Filters
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          </CollapsibleContent>
-        </div>
+            </div>
+          </FieldGroup>
+        </CollapsibleContent>
       </Collapsible>
     </div>
   );
