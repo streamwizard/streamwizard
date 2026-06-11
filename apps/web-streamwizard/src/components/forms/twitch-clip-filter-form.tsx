@@ -15,6 +15,7 @@ import {
   ToggleGroupItem,
 } from "@repo/ui";
 import { useSession } from "@/providers/session-provider";
+import SyncTwitchClipsButton from "@/components/buttons/sync-twitch-clips";
 import { LookupTwitchGame, LookupTwitchUser } from "@/actions/twitch/twitch-api";
 import { SlidersHorizontal, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -193,9 +194,9 @@ export default function TwitchClipSearchForm() {
             />
           </Field>
 
-          <div className="flex w-full sm:w-auto sm:self-end">
+          <div className="flex w-full gap-2 sm:w-auto sm:self-end">
             <CollapsibleTrigger asChild>
-              <Button type="button" variant="outline" className="w-full sm:w-auto gap-2 cursor-pointer">
+              <Button type="button" variant="outline" className="flex-1 sm:w-auto gap-2 cursor-pointer">
                 <SlidersHorizontal className="h-4 w-4" />
                 Filters
                 {advancedActiveCount > 0 && (
@@ -203,6 +204,7 @@ export default function TwitchClipSearchForm() {
                 )}
               </Button>
             </CollapsibleTrigger>
+            <SyncTwitchClipsButton />
           </div>
         </div>
 
