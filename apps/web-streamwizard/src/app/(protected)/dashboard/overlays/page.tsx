@@ -27,6 +27,9 @@ export default async function OverlaysPage() {
           Create and manage your stream overlays. Add them as browser sources in OBS.
         </p>
       </div>
+      <div className="md:hidden rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-400">
+        Overlays need a bigger screen to build. Switch to desktop to create or edit them. You can still turn them on and off here. Mobile support is on the way.
+      </div>
       <OverlayScenesList scenes={scenes ?? []} />
     </div>
   );

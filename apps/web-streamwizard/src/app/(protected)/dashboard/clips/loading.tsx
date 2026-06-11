@@ -3,8 +3,8 @@ import { Skeleton } from "@repo/ui";
 
 export default function Loading() {
   return (
-    <div className="grid grid-cols-4 gap-4 mb-4">
-      {Array.from({ length: 20 }).map((_, index) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
+      {Array.from({ length: 8 }).map((_, index) => (
         <Card className="w-full max-w-md overflow-hidden" key={index}>
           <CardHeader className="p-0">
             <div className="relative">

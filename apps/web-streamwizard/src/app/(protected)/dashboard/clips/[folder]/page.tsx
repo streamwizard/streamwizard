@@ -67,7 +67,7 @@ async function FolderClipsGrid({ folderSlug, searchParams }: { folderSlug: strin
           Showing {data.length} of {count} clips
         </p>
       </div>
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {data.map((clip) => (
           <TwitchClipCard key={clip.id} {...clip} folders={clip.folders as Database["public"]["Tables"]["clip_folders"]["Row"][]} />
         ))}
