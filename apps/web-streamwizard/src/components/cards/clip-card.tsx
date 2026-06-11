@@ -15,14 +15,12 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui";
 import { useClipFolders } from "@/providers/clips-provider";
-import { useModal } from "@/providers/modal-provider";
-import type { ClipView } from "@/lib/utils/clip-view";
+import { useClipDialog } from "@/providers/clip-dialog-provider";
 import { clipsWithFolders } from "@/types/database";
-import { Calendar, Eye, Gamepad2, MoreHorizontal, Star, User } from "lucide-react";
+import { Calendar, Eye, MoreHorizontal, Star, User } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
-import TwitchClipModal from "../modals/twitch-clip-modal";
 import { Button } from "@repo/ui";
 import { formatClipDuration, formatDate } from "@/lib/format";
 import { downloadClip } from "@/lib/utils/download-clip";
@@ -54,15 +52,11 @@ const menuSurfaceHandlers = {
   },
 };
 
-type TwitchClipCardProps = clipsWithFolders & {
-  view?: ClipView;
-};
-
 export function useClipCardActions(clip: clipsWithFolders) {
-  const { openModal } = useModal();
+  const { openClip } = useClipDialog();
 
   const OpenClip = () => {
-    openModal(<TwitchClipModal url={clip.embed_url!} clip={clip} />);
+    openClip(clip);
   };
 
   return { OpenClip };
@@ -202,32 +196,7 @@ function ClipThumbnail({
   );
 }
 
-function ClipMetaRow({ clip }: { clip: clipsWithFolders }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-      <div className="flex items-center gap-1">
-        <User className="size-4" />
-        <span>{clip.creator_name}</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <Eye className="size-4" />
-        <span>{clip.view_count!.toLocaleString()} views</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <Calendar className="size-4" />
-        <span>{formatDate(clip.created_at_twitch!)}</span>
-      </div>
-      {clip.game_name && (
-        <div className="flex items-center gap-1">
-          <Gamepad2 className="size-4" />
-          <span>{clip.game_name}</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-export default function TwitchClipCard({ view = "grid", ...clip }: TwitchClipCardProps) {
+export default function TwitchClipCard(clip: clipsWithFolders) {
   const { OpenClip } = useClipCardActions(clip);
 
   const handleCardClick = useCallback(() => {
@@ -237,29 +206,6 @@ export default function TwitchClipCard({ view = "grid", ...clip }: TwitchClipCar
 
   const cardClassName =
     "w-full overflow-hidden cursor-pointer transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-lg";
-
-  if (view === "list") {
-    return (
-      <Card className={cn(cardClassName, "max-w-none")} onClick={handleCardClick}>
-        <div className="flex items-stretch">
-          <ClipThumbnail
-            clip={clip}
-            className="w-44 sm:w-52"
-            imageClassName="h-full min-h-28 sm:min-h-32"
-          />
-          <div className="flex min-w-0 flex-1 flex-col justify-between gap-3 p-4">
-            <div className="space-y-2">
-              <CardTitle className="text-base line-clamp-2">{clip.title}</CardTitle>
-              <ClipMetaRow clip={clip} />
-            </div>
-            <div className="flex justify-start">
-              <ClipCardActions clip={clip} />
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
-  }
 
   return (
     <Card className={cn(cardClassName, "max-w-md gap-4 pb-4")} onClick={handleCardClick}>

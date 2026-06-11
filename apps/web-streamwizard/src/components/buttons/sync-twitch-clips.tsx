@@ -3,7 +3,7 @@ import { SyncBroadcasterClips } from "@/actions/twitch/clips";
 import { RefreshCcw } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
-import { Button } from "@repo/ui";
+import { Button, LoadingSpinner } from "@repo/ui";
 
 export default function SyncTwitchClipsButton() {
   const [isLoading, setIsLoading] = React.useState<boolean>(false);
@@ -34,14 +34,18 @@ export default function SyncTwitchClipsButton() {
   };
 
   return (
-    <Button
-      type="button"
-      className="gap-2 border border-[#374151] !bg-[#374151] !text-white shadow-sm hover:!bg-[#eef0f4] hover:!text-foreground dark:border-transparent dark:!bg-primary dark:!text-primary-foreground dark:shadow-none dark:hover:!bg-primary/90 dark:hover:!text-primary-foreground"
-      onClick={handleSyncTwitchClips}
-      disabled={isLoading}
-    >
-      <RefreshCcw className={`h-4 w-4 shrink-0 ${isLoading ? "animate-spin" : ""}`} />
-      {isLoading ? "Syncing with Twitch…" : "Sync with Twitch"}
+    <Button type="button" variant="outline" className="w-full" onClick={handleSyncTwitchClips} disabled={isLoading}>
+      {isLoading ? (
+        <span>
+          <LoadingSpinner />
+          <span className="sr-only">Syncing Twitch Clips</span>
+        </span>
+      ) : (
+        <span className="mr-2 h-4 w-4 flex justify-center items-center">
+          <RefreshCcw />
+        </span>
+      )}
+      Sync
     </Button>
   );
 }

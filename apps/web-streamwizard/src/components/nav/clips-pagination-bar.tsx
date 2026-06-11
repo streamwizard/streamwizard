@@ -49,8 +49,7 @@ export function ClipsPaginationBar({
   return (
     <div
       className={cn(
-        "rounded-lg border border-border bg-card/50 px-3 py-2",
-        placement === "top" ? "mb-4" : "mt-6"
+        placement === "top" ? "mb-4" : "mt-6 border-t border-border/60 pt-4"
       )}
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
