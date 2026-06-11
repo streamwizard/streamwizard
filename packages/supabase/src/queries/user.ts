@@ -109,8 +109,7 @@ export async function updateUserPreferences(
   const { error } = await client
     .from("user_preferences")
     .upsert({ user_id: userId, ...formData }, { onConflict: "user_id" })
-    .eq("user_id", userId)
-    .single();
+    .eq("user_id", userId);
 
   if (error) throw error;
 }
