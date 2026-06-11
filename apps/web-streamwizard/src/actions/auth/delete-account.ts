@@ -2,19 +2,19 @@
 
 import { getAuthContext } from "@/lib/auth";
 import { getChannelAccessToken } from "@repo/supabase";
-import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { createAdminClient, supabaseAdmin } from "@repo/supabase/next/admin";
 import { TwitchApi } from "@repo/twitch-api";
 import { redirect } from "next/navigation";
 import axios from "axios";
 
 export async function deleteAccount() {
-  let user, supabase, broadcasterId: string;
+  let user, broadcasterId: string;
   try {
-    ({ user, supabase, broadcasterId } = await getAuthContext());
+    ({ user, broadcasterId } = await getAuthContext());
   } catch {
     return { success: false, error: "Unauthorized" };
   }
-
+  const supabase = createAdminClient();
   // Revoke the Twitch access token so it is immediately invalidated.
   // This cannot remove the app from the user's Twitch authorized connections
   // UI — they must do that manually from Twitch Settings → Connections.
@@ -22,7 +22,10 @@ export async function deleteAccount() {
     const accessToken = await getChannelAccessToken(broadcasterId);
     await axios.post(
       "https://id.twitch.tv/oauth2/revoke",
-      new URLSearchParams({ client_id: process.env.TWITCH_CLIENT_ID!, token: accessToken }),
+      new URLSearchParams({
+        client_id: process.env.TWITCH_CLIENT_ID!,
+        token: accessToken,
+      }),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
     );
   } catch {
@@ -34,8 +37,13 @@ export async function deleteAccount() {
   // keep counting against quota until explicitly removed.
   try {
     const eventsub = new TwitchApi().eventsub;
-    const { data: subscriptions } = await eventsub.getSubscriptions(broadcasterId);
-    await Promise.all(subscriptions.map((sub) => eventsub.deleteSubscription(sub.id, broadcasterId)));
+    const { data: subscriptions } =
+      await eventsub.getSubscriptions(broadcasterId);
+    await Promise.all(
+      subscriptions.map((sub) =>
+        eventsub.deleteSubscription(sub.id, broadcasterId),
+      ),
+    );
   } catch {
     // Non-fatal: proceed with data deletion even if cleanup fails.
   }
@@ -45,8 +53,10 @@ export async function deleteAccount() {
   });
   if (rpcError) return { success: false, error: rpcError.message };
 
-  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
+    user.id,
+  );
   if (authError) return { success: false, error: authError.message };
 
-  redirect("/");
+  redirect("/goodbye");
 }
