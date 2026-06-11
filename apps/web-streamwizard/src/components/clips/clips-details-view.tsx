@@ -67,9 +67,10 @@ function ClipDetailsRow({ clip }: { clip: clipsWithFolders }) {
 
   return (
     <div
+      onClick={OpenClip}
       className={cn(
         DETAILS_GRID,
-        "group border-b border-border/50 px-3 py-2 last:border-b-0 transition-colors hover:bg-accent/30"
+        "group cursor-pointer border-b border-border/50 px-3 py-2 last:border-b-0 transition-colors hover:bg-accent/30"
       )}
     >
       <button
@@ -115,7 +116,10 @@ function ClipDetailsRow({ clip }: { clip: clipsWithFolders }) {
         {clip.duration != null ? formatClipDuration(clip.duration) : "—"}
       </span>
 
-      <div className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="flex justify-end opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+      >
         <ClipCardActions clip={clip} />
       </div>
     </div>
