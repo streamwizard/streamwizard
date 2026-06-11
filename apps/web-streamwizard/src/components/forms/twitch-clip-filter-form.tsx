@@ -138,12 +138,12 @@ export default function TwitchClipSearchForm() {
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex flex-wrap gap-1.5 items-center flex-1 min-w-0">
             {activeChips.map((chip) => (
-              <Badge key={chip.key} variant="secondary" className="gap-1 pr-1 text-xs">
+              <Badge key={chip.key} variant="secondary" className="gap-1 pr-1 text-xs h-7">
                 {chip.label}
                 <button
                   type="button"
                   onClick={() => clearFilter(chip.key)}
-                  className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5 cursor-pointer"
+                  className="ml-1 rounded-full hover:bg-muted-foreground/20 p-1 sm:p-0.5 cursor-pointer"
                   aria-label={`Remove ${chip.label} filter`}
                 >
                   <X className="h-3 w-3" />
@@ -164,9 +164,9 @@ export default function TwitchClipSearchForm() {
       )}
 
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen} className="space-y-3">
-        {/* Inputs row — search, category, filters toggle, sync all in one line */}
-        <div className="flex gap-3 items-end w-full">
-          <Field className="flex-1 min-w-0">
+        {/* Inputs row — stacks on mobile, inline on sm+ */}
+        <div className="flex flex-wrap gap-3 items-end w-full">
+          <Field className="w-full sm:flex-1 sm:min-w-[200px]">
             <FieldLabel htmlFor="searchQuery">Search</FieldLabel>
             <Input
               id="searchQuery"
@@ -184,7 +184,7 @@ export default function TwitchClipSearchForm() {
             />
           </Field>
 
-          <Field className="flex-1 min-w-0">
+          <Field className="w-full sm:flex-1 sm:min-w-[200px]">
             <FieldLabel htmlFor="game_id">Category</FieldLabel>
             <TwitchCategorySearch
               placeholder="Enter Twitch category"
@@ -194,26 +194,28 @@ export default function TwitchClipSearchForm() {
             />
           </Field>
 
-          <CollapsibleTrigger asChild>
-            <Button type="button" variant="outline" className="gap-2 shrink-0 cursor-pointer self-end">
-              <SlidersHorizontal className="h-4 w-4" />
-              Filters
-              {advancedActiveCount > 0 && (
-                <Badge className="h-5 min-w-5 rounded-full px-1 flex items-center justify-center text-xs">{advancedActiveCount}</Badge>
-              )}
-            </Button>
-          </CollapsibleTrigger>
-
-          <div className="shrink-0 self-end">
-            <SyncTwitchClipsButton />
+          {/* Buttons — full-width row on mobile, inline on sm+ */}
+          <div className="flex gap-2 w-full sm:w-auto sm:self-end">
+            <CollapsibleTrigger asChild>
+              <Button type="button" variant="outline" className="flex-1 sm:flex-none gap-2 cursor-pointer">
+                <SlidersHorizontal className="h-4 w-4" />
+                Filters
+                {advancedActiveCount > 0 && (
+                  <Badge className="h-5 min-w-5 rounded-full px-1 flex items-center justify-center text-xs">{advancedActiveCount}</Badge>
+                )}
+              </Button>
+            </CollapsibleTrigger>
+            <div className="flex-1 sm:flex-none">
+              <SyncTwitchClipsButton />
+            </div>
           </div>
         </div>
 
         {/* Advanced filters panel */}
         <CollapsibleContent className="mt-3">
-          <FieldGroup className="border rounded-lg p-4 space-y-4 bg-card">
-            <div className="flex gap-4 items-end">
-              <Field className="flex-1">
+          <FieldGroup className="border rounded-lg p-3 sm:p-4 space-y-4 bg-card">
+            <div className="flex flex-wrap gap-4 items-end">
+              <Field className="w-full sm:flex-1 sm:min-w-[200px]">
                 <FieldLabel htmlFor="broadcaster_id">Streamer</FieldLabel>
                 <TwitchSearchBar
                   placeholder="Enter Twitch Username"
@@ -223,7 +225,7 @@ export default function TwitchClipSearchForm() {
                 />
               </Field>
 
-              <Field className="flex-1">
+              <Field className="w-full sm:flex-1 sm:min-w-[200px]">
                 <FieldLabel htmlFor="creator_id">Clipped by</FieldLabel>
                 <TwitchSearchBar
                   placeholder="Enter Twitch Username"
@@ -235,7 +237,7 @@ export default function TwitchClipSearchForm() {
 
               <DatePickerWithPresets
                 label="Date Range"
-                className="flex-1"
+                className="w-full sm:flex-1 sm:min-w-[200px]"
                 value={dateValue}
                 onChange={(range) =>
                   updateParams({
@@ -246,50 +248,52 @@ export default function TwitchClipSearchForm() {
               />
             </div>
 
-            <div className="flex items-center justify-between gap-4 flex-wrap pt-1 border-t border-border/50">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-3 pt-2 border-t border-border/50">
+              {/* Featured toggle — full width, larger touch target */}
+              <label htmlFor="isFeatured" className="flex items-center gap-3 py-1 cursor-pointer">
                 <Switch
                   id="isFeatured"
                   checked={searchParams.get("is_featured") === "true"}
                   onCheckedChange={(checked) => updateParams({ is_featured: checked ? "true" : null })}
                 />
-                <FieldLabel htmlFor="isFeatured" className="font-normal cursor-pointer text-sm">
-                  Featured only
-                </FieldLabel>
-              </div>
+                <span className="text-sm font-normal">Featured only</span>
+              </label>
 
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <FieldLabel className="shrink-0 text-xs font-medium text-muted-foreground uppercase tracking-wide">Sort by</FieldLabel>
+              {/* Sort + Order always side by side in a 2-col grid */}
+              <div className="grid grid-cols-2 sm:flex sm:items-center sm:gap-4 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Sort by</span>
                   <ToggleGroup
                     type="single"
                     variant="outline"
                     value={searchParams.get("sort") === "views" ? "views" : "date"}
                     onValueChange={(v) => v && updateParams({ sort: v === "views" ? "views" : null })}
+                    className="w-full"
                   >
-                    <ToggleGroupItem value="date" aria-label="Sort by date" className="cursor-pointer">
+                    <ToggleGroupItem value="date" aria-label="Sort by date" className="flex-1 cursor-pointer h-9">
                       Date
                     </ToggleGroupItem>
-                    <ToggleGroupItem value="views" aria-label="Sort by views" className="cursor-pointer">
+                    <ToggleGroupItem value="views" aria-label="Sort by views" className="flex-1 cursor-pointer h-9">
                       Views
                     </ToggleGroupItem>
                   </ToggleGroup>
                 </div>
 
-                <div className="w-px h-5 bg-border" aria-hidden="true" />
+                <div className="hidden sm:block w-px h-8 bg-border self-end mb-0.5" aria-hidden="true" />
 
-                <div className="flex items-center gap-2">
-                  <FieldLabel className="shrink-0 text-xs font-medium text-muted-foreground uppercase tracking-wide">Order</FieldLabel>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Order</span>
                   <ToggleGroup
                     type="single"
                     variant="outline"
                     value={searchParams.get("asc") === "true" ? "asc" : "desc"}
                     onValueChange={(v) => v && updateParams({ asc: v === "asc" ? "true" : null })}
+                    className="w-full"
                   >
-                    <ToggleGroupItem value="asc" aria-label="Ascending" className="cursor-pointer">
+                    <ToggleGroupItem value="asc" aria-label="Ascending" className="flex-1 cursor-pointer h-9">
                       ↑ Asc
                     </ToggleGroupItem>
-                    <ToggleGroupItem value="desc" aria-label="Descending" className="cursor-pointer">
+                    <ToggleGroupItem value="desc" aria-label="Descending" className="cursor-pointer flex-1 h-9">
                       ↓ Desc
                     </ToggleGroupItem>
                   </ToggleGroup>

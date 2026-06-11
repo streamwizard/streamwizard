@@ -11,6 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@repo/ui";
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@repo/supabase";
@@ -30,6 +31,9 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 }
 
 export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
+  const { setOpenMobile, isMobile } = useSidebar();
+  const closeMobile = () => { if (isMobile) setOpenMobile(false); };
+
   return (
     <Sidebar className="h-full" {...props}>
       <SidebarHeader>
@@ -54,7 +58,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link href="/dashboard">
+                  <Link href="/dashboard" onClick={closeMobile}>
                     <BarChart2 className="mr-2 h-4 w-4" />
                     Stream Analytics
                   </Link>
@@ -70,7 +74,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link href="/dashboard/vods">
+                  <Link href="/dashboard/vods" onClick={closeMobile}>
                     <FileVideoCamera className="mr-2 h-4 w-4" />
                     Vods
                   </Link>
@@ -86,7 +90,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link href="/dashboard/overlays">
+                  <Link href="/dashboard/overlays" onClick={closeMobile}>
                     <Layers className="mr-2 h-4 w-4" />
                     Overlay Editor
                   </Link>
