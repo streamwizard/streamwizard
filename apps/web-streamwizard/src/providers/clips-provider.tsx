@@ -2,6 +2,7 @@
 import { addClipToFolder, removeClipFromFolder } from "@/actions/supabase/clips/clips";
 import { getFolderDisplayName } from "@/lib/utils/clip-folders";
 import { Database } from "@repo/supabase";
+import { useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSession } from "./session-provider";
@@ -31,6 +32,7 @@ interface Props {
 export function ClipFolderProvider({ children, ClipFolders }: Props) {
   const [folders, setFolders] = useState<Database["public"]["Tables"]["clip_folders"]["Row"][]>(ClipFolders);
   const { id: userId } = useSession();
+  const router = useRouter();
 
   // Get folders excluding the specified folder ID
   const getAvailableFolders = (excludedFolderIds: number[]) => {
@@ -46,7 +48,7 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
 
   // Get clips eligible for removal excluding specified folder IDs
   const getRemovableFolders = (excludedFolderIds: number[]) => {
-    return ClipFolders.filter((folder) => excludedFolderIds.includes(folder.id));
+    return folders.filter((folder) => excludedFolderIds.includes(folder.id));
   };
 
 
@@ -66,6 +68,7 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
         loading: `Adding to ${folderName}`,
         success: `Added to ${folderName}`,
         error: `Failed to add to ${folderName}`,
+        finally: () => router.refresh(),
       }
     );
   };
@@ -83,6 +86,7 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
         loading: `Removing from ${folderName}`,
         success: `Removed from ${folderName}`,
         error: `Failed to remove from ${folderName}`,
+        finally: () => router.refresh(),
       }
     );
   };

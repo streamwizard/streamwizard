@@ -19,7 +19,6 @@ import { LookupTwitchGame, LookupTwitchUser } from "@/actions/twitch/twitch-api"
 import { SlidersHorizontal, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import SyncTwitchClipsButton from "../buttons/sync-twitch-clips";
 import { DatePickerWithPresets } from "../date-picker";
 import TwitchCategorySearch from "../search-bars/twitch-category-search";
 import TwitchSearchBar from "../search-bars/twitch-channel-search";
@@ -194,10 +193,9 @@ export default function TwitchClipSearchForm() {
             />
           </Field>
 
-          {/* Buttons — full-width row on mobile, inline on sm+ */}
-          <div className="flex gap-2 w-full sm:w-auto sm:self-end">
+          <div className="flex w-full sm:w-auto sm:self-end">
             <CollapsibleTrigger asChild>
-              <Button type="button" variant="outline" className="flex-1 sm:flex-none gap-2 cursor-pointer">
+              <Button type="button" variant="outline" className="w-full sm:w-auto gap-2 cursor-pointer">
                 <SlidersHorizontal className="h-4 w-4" />
                 Filters
                 {advancedActiveCount > 0 && (
@@ -205,9 +203,6 @@ export default function TwitchClipSearchForm() {
                 )}
               </Button>
             </CollapsibleTrigger>
-            <div className="flex-1 sm:flex-none">
-              <SyncTwitchClipsButton />
-            </div>
           </div>
         </div>
 

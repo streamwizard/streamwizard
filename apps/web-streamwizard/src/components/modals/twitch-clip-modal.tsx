@@ -124,17 +124,22 @@ export default function TwitchClipModal({ url, clip }: TwitchClipModalProps) {
   const formattedUrl = `${url}&parent=localhost&parent=streamwizard.org&parent=staging.streamwizard.org&autoplay=true`;
 
   return (
-    <div className="mt-6 max-h-[calc(100vh-5rem)] w-[960px] max-w-[calc(100vw-3rem)] overflow-y-auto pr-1">
-      <iframe src={formattedUrl} height="480" width="100%" allowFullScreen className="rounded-md border border-border" title="Twitch clip preview" />
+    <div className="mt-6 min-w-0 max-w-full overflow-x-hidden">
+      <iframe
+        src={formattedUrl}
+        allowFullScreen
+        className="aspect-video w-full rounded-md border border-border"
+        title="Twitch clip preview"
+      />
 
       {clip ? (
-        <div className="mt-4 space-y-5 border-t border-border pt-4">
+        <div className="mt-4 min-w-0 space-y-5 border-t border-border pt-4">
           <ClipModalDetails clip={clip} />
           <div
             className={
               clip.broadcaster_id
-                ? "grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch"
-                : "grid grid-cols-1 gap-4"
+                ? "grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch"
+                : "grid min-w-0 grid-cols-1 gap-4"
             }
           >
             <ClipModalFolderSection clip={clip} />
