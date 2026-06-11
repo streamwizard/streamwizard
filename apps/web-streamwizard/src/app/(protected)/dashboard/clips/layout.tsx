@@ -1,4 +1,3 @@
-import ScrollToTopButton from "@/components/buttons/scroll-to-top";
 import { ClipsViewSelector } from "@/components/clips/clips-view-selector";
 import TwitchClipSearchForm from "@/components/forms/twitch-clip-filter-form";
 import { ClipDialogProvider } from "@/providers/clip-dialog-provider";
@@ -14,7 +13,6 @@ export default function layout({ children }: { children: React.ReactNode }) {
       </div>
       <TwitchClipSearchForm />
       {children}
-      <ScrollToTopButton />
     </ClipDialogProvider>
   );
 }
