@@ -91,7 +91,9 @@ const Modal: React.FC<ModalProps> = ({ children, closeModal, isOpen }) => {
           />
 
           <motion.div
-            className={cn("z-50 relative bg-background rounded-md shadow-md p-4 w-[95vw] md:w-[900px] max-w-[95vw] max-h-[90vh] overflow-y-auto")}
+            className={cn(
+              "z-50 relative max-h-[90vh] w-[95vw] max-w-[95vw] overflow-x-hidden overflow-y-auto rounded-md bg-background p-4 shadow-md md:w-[900px]"
+            )}
             initial={{ opacity: 0, scale: 0.5, rotateX: 40, y: 40 }}
             animate={{ opacity: 1, scale: 1, rotateX: 0, y: 0 }}
             exit={{ opacity: 0, scale: 0.8, rotateX: 10 }}
@@ -102,7 +104,7 @@ const Modal: React.FC<ModalProps> = ({ children, closeModal, isOpen }) => {
               <MdClose />
             </button>
 
-            <div className="">{children}</div>
+            <div className="min-w-0">{children}</div>
           </motion.div>
         </motion.div>
       )}

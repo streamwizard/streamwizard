@@ -1,68 +1,58 @@
-import { Suspense } from "react";
-import TwitchClipCard from "@/components/cards/clip-card";
-import { AdvancedPagination } from "@/components/nav/advanced-pagination";
-import TwitchClipSearchForm from "@/components/forms/twitch-clip-filter-form";
+import { ClipsDisplay } from "@/components/clips/clips-display";
+import { ClipsPaginationBar } from "@/components/nav/clips-pagination-bar";
 import { createClient } from "@repo/supabase/next/server";
 import buildClipQuery from "@/lib/utils/build-clip-query";
+import { parseClipPageSize } from "@/lib/utils/clip-pagination";
+import { parseClipView } from "@/lib/utils/clip-view";
+import { normalizeClipsWithFolders } from "@/types/database";
 import { ClipSearchParams } from "@/types/pages";
-import { Database } from "@repo/supabase";
 import { redirect } from "next/navigation";
-import Loading from "./loading";
+
+export const dynamic = "force-dynamic";
 
 export default async function ClipsPage({ searchParams }: { searchParams: Promise<ClipSearchParams> }) {
-  const parsedSearchParams = await searchParams;
-  const searchParamsKey = new URLSearchParams(parsedSearchParams as Record<string, string>).toString();
-
-  return (
-    <>
-      <TwitchClipSearchForm />
-      <Suspense key={searchParamsKey} fallback={<Loading />}>
-        <ClipsGrid searchParams={parsedSearchParams} />
-      </Suspense>
-    </>
-  );
-}
-
-async function ClipsGrid({ searchParams }: { searchParams: ClipSearchParams }) {
   const supabase = await createClient();
+  const parsedSearchParams = await searchParams;
 
   const { data: user } = await supabase.auth.getUser();
-  if (!user?.user?.id || !user?.user) redirect("/login");
+
+  if (!user?.user?.id || !user?.user) {
+    redirect("/login");
+  }
 
   let query = supabase.rpc("get_all_clips_with_folders", undefined, { count: "exact" });
-  query = buildClipQuery(searchParams, query);
-  query = searchParams.broadcaster_id
-    ? query.eq("broadcaster_id", searchParams.broadcaster_id)
-    : query.eq("user_id", user.user.id);
 
-  const { data, error, count } = await query;
+  query = buildClipQuery(parsedSearchParams, query);
+
+  query = parsedSearchParams.broadcaster_id ? query.eq("broadcaster_id", parsedSearchParams.broadcaster_id) : query.eq("user_id", user.user.id);
+
+  const { data, error, count, } = await query;
   if (error) {
     console.error(error);
     return null;
   }
 
-  const pageIndex = searchParams.page ? parseInt(searchParams.page) : 1;
-  const maxPage = Math.ceil(count! / 100);
+  const pageIndex = parsedSearchParams.page ? parseInt(parsedSearchParams.page, 10) : 1;
+  const pageSize = parseClipPageSize(parsedSearchParams.per_page);
+  const clipView = parseClipView(parsedSearchParams.view);
+  const totalCount = count ?? 0;
+  const maxPage = Math.max(1, Math.ceil(totalCount / pageSize));
+
+  const paginationProps = {
+    totalPages: maxPage,
+    currentPage: pageIndex,
+    pageSize,
+    totalCount,
+    showingCount: data?.length ?? 0,
+  };
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
-        <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
-        <p className="text-sm text-muted-foreground">
-          Showing {data.length} of {count} clips
-        </p>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {data.map((clip) => (
-          <TwitchClipCard key={clip.id} {...clip} folders={clip.folders as Database["public"]["Tables"]["clip_folders"]["Row"][]} />
-        ))}
-      </div>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mt-10">
-        <AdvancedPagination totalPages={maxPage} initialPage={pageIndex} />
-        <p className="text-sm text-muted-foreground">
-          Showing {data.length} of {count} clips
-        </p>
-      </div>
+      {totalCount > 0 && <ClipsPaginationBar {...paginationProps} placement="top" />}
+      {data && data.length > 0 ? (
+        <ClipsDisplay clips={normalizeClipsWithFolders(data)} view={clipView} />
+      ) : null}
+      {totalCount > 0 && <ClipsPaginationBar {...paginationProps} placement="bottom" />}
     </>
   );
 }
