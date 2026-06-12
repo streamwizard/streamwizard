@@ -1,9 +1,9 @@
 -- Mock seed data for local development
--- User: jochemwhite | broadcaster_id: 122604941 | user_id: 1b864b26-15ed-44fa-a58d-8fae601d3de9
+-- User: jochemwhite | broadcaster_id: 122604941 | user_id: 2621291a-d53f-4050-850d-8f5dda8c95df
 
 DO $$
 DECLARE
-  v_user_id        uuid := '1b864b26-15ed-44fa-a58d-8fae601d3de9';
+  v_user_id        uuid := '2621291a-d53f-4050-850d-8f5dda8c95df';
   v_integration_id uuid := 'b8fcef0b-4f79-4014-81e7-f98b619ba904';
   v_broadcaster    text := '122604941';
   v_stream1_id    text        := 'mock_stream_48291730';
