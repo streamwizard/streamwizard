@@ -23,7 +23,18 @@
           },
           {
             "group": "Using StreamWizard",
-            "pages": ["clips", "dashboard"]
+            "pages": [
+              "dashboard",
+              {
+                "group": "Clips",
+                "pages": [
+                  "clips/overview",
+                  "clips/filtering",
+                  "clips/folders"
+                ]
+              },
+              "settings"
+            ]
           }
         ]
       }
