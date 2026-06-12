@@ -30,7 +30,7 @@ export function DashboardUserNav({ username, profile_img }: { username: string; 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <div className="items flex h-8 w-full select-none items-center justify-between rounded-md pl-3 pr-3 text-sm text-muted-foreground transition hover:cursor-pointer hover:bg-border/50">
+        <div className="items flex h-8 w-full select-none items-center justify-between rounded-md pl-3 pr-3 text-sm text-sidebar-foreground/80 transition hover:cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
           <div className="flex flex-row items-center gap-2.5">
             <Avatar className="h-6 w-6 truncate border border-border">
               <AvatarImage src={profile_img} alt={`@${username}`} />

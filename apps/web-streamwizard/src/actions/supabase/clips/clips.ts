@@ -21,7 +21,7 @@ export async function addClipToFolder({ clipId, userId, folderId, folderName }: 
   const supabase = await createClient();
   try {
     const result = await _addClipToFolder(supabase, { clipId, userId, folderId, folderName });
-    revalidatePath("/dashboard/", "layout");
+    revalidatePath("/dashboard/clips", "layout");
     return result;
   } catch (error) {
     console.error("Error adding clip to Favorites:", error);
@@ -33,7 +33,7 @@ export async function removeClipFromFolder(clipId: string, folderId: number, use
   const supabase = await createClient();
   try {
     const result = await _removeClipFromFolder(supabase, clipId, folderId, userId);
-    revalidatePath("/dashboard/", "layout");
+    revalidatePath("/dashboard/clips", "layout");
     return result;
   } catch (error) {
     console.error("Error removing clip from Favorites:", error);
@@ -46,10 +46,10 @@ export async function createClipFolder(folderName: string, user_id: string, pare
   try {
     const data = await _createClipFolder(supabase, folderName, user_id, parentFolderId);
     revalidatePath("/dashboard/clips", "layout");
-    return data;
+    return { success: true, message: "Folder created successfully", data };
   } catch (error) {
     console.error("Error creating folder:", error);
-    return null;
+    return { success: false, message: error instanceof Error ? error.message : "An unknown error occurred" };
   }
 }
 

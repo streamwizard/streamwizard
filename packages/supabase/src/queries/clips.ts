@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { buildFolderHref } from "./clip-folder-utils";
+
+export { buildFolderHref, folderHrefToUrlPath, urlPathToFolderHref } from "./clip-folder-utils";
 
 type DBClient = SupabaseClient<Database>;
 
@@ -44,10 +47,54 @@ export async function removeClipFromFolder(client: DBClient, clipId: string, fol
   return { success: true, message: "Clip removed from folder" };
 }
 
+/**
+ * Folder hrefs are derived from name + parent, so two folders sharing a name
+ * under the same parent would collide on href and make one unreachable.
+ * Guard against that here (siblings only — same name under different parents is fine).
+ */
+async function siblingFolderNameExists(
+  client: DBClient,
+  userId: string,
+  name: string,
+  parentFolderId: number | null,
+  excludeFolderId?: number
+): Promise<boolean> {
+  let query = client.from("clip_folders").select("id").eq("user_id", userId).eq("name", name);
+  query = parentFolderId == null ? query.is("parent_folder_id", null) : query.eq("parent_folder_id", parentFolderId);
+  if (excludeFolderId != null) query = query.neq("id", excludeFolderId);
+
+  const { data, error } = await query.limit(1);
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
+}
+
 export async function createClipFolder(client: DBClient, folderName: string, userId: string, parentFolderId?: number) {
+  let parentHref: string | null = null;
+
+  if (parentFolderId) {
+    const { data: parent, error: parentError } = await client
+      .from("clip_folders")
+      .select("href")
+      .eq("id", parentFolderId)
+      .eq("user_id", userId)
+      .single();
+
+    if (parentError || !parent) throw new Error("Parent folder not found");
+    parentHref = parent.href;
+  }
+
+  if (await siblingFolderNameExists(client, userId, folderName, parentFolderId ?? null)) {
+    throw new Error("A folder with this name already exists here.");
+  }
+
   const { data, error } = await client
     .from("clip_folders")
-    .insert({ name: folderName, parent_folder_id: parentFolderId, user_id: userId, href: encodeURIComponent(folderName) })
+    .insert({
+      name: folderName,
+      parent_folder_id: parentFolderId ?? null,
+      user_id: userId,
+      href: buildFolderHref(folderName, parentHref),
+    })
     .select()
     .single();
 
@@ -56,16 +103,83 @@ export async function createClipFolder(client: DBClient, folderName: string, use
 }
 
 export async function editClipFolder(client: DBClient, folderId: number, folderName: string, userId: string) {
+  const { data: folder, error: folderError } = await client
+    .from("clip_folders")
+    .select("href, parent_folder_id")
+    .eq("id", folderId)
+    .eq("user_id", userId)
+    .single();
+
+  if (folderError || !folder) throw new Error("Folder not found");
+
+  if (await siblingFolderNameExists(client, userId, folderName, folder.parent_folder_id, folderId)) {
+    throw new Error("A folder with this name already exists here.");
+  }
+
+  let parentHref: string | null = null;
+  if (folder.parent_folder_id) {
+    const { data: parent, error: parentError } = await client
+      .from("clip_folders")
+      .select("href")
+      .eq("id", folder.parent_folder_id)
+      .eq("user_id", userId)
+      .single();
+
+    if (parentError || !parent) throw new Error("Parent folder not found");
+    parentHref = parent.href;
+  }
+
+  const oldHref = folder.href;
+  const newHref = buildFolderHref(folderName, parentHref);
+
   const { error } = await client
     .from("clip_folders")
-    .update({ name: folderName, href: encodeURIComponent(folderName) })
+    .update({ name: folderName, href: newHref })
     .eq("id", folderId)
     .eq("user_id", userId);
 
   if (error) throw error;
+
+  if (oldHref !== newHref) {
+    // Reparent descendant hrefs. We filter in JS rather than with `.like()`:
+    // hrefs are encodeURIComponent'd, so names with spaces contain "%20" and
+    // the "%"/"_" characters would act as LIKE wildcards and match unrelated
+    // folders. A strict prefix match on `${oldHref}/` is exact and safe.
+    const { data: allFolders, error: descendantsError } = await client
+      .from("clip_folders")
+      .select("id, href")
+      .eq("user_id", userId);
+
+    if (descendantsError) throw descendantsError;
+
+    const prefix = `${oldHref}/`;
+    const descendants = (allFolders ?? []).filter((item) => item.href.startsWith(prefix));
+
+    for (const descendant of descendants) {
+      const updatedHref = `${newHref}${descendant.href.slice(oldHref.length)}`;
+      const { error: updateError } = await client
+        .from("clip_folders")
+        .update({ href: updatedHref })
+        .eq("id", descendant.id)
+        .eq("user_id", userId);
+
+      if (updateError) throw updateError;
+    }
+  }
 }
 
 export async function deleteClipFolder(client: DBClient, folderId: number) {
+  const { data: children, error: childrenError } = await client
+    .from("clip_folders")
+    .select("id")
+    .eq("parent_folder_id", folderId);
+
+  if (childrenError) throw childrenError;
+
+  for (const child of children ?? []) {
+    await deleteClipFolder(client, child.id);
+  }
+
   const { error } = await client.from("clip_folders").delete().eq("id", folderId);
   if (error) throw error;
 }

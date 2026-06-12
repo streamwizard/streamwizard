@@ -1,3 +1,5 @@
+import { parseClipPageSize } from "@/lib/utils/clip-pagination";
+import { CLIP_SORT_COLUMNS, parseClipSortKey } from "@/lib/utils/clip-sort";
 import { ClipSearchParams } from "@/types/pages";
 
 export default function buildClipQuery<T>(params: ClipSearchParams, query: T): T {
@@ -23,17 +25,16 @@ export default function buildClipQuery<T>(params: ClipSearchParams, query: T): T
   if (search_query) result = q.ilike("title", `%${search_query}%`) as T;
 
   if (sort) {
-    if (sort === "date") {
-      result = (asc === "true" ? q.order("created_at_twitch", { ascending: true }) : q.order("created_at_twitch", { ascending: false })) as T;
-    } else if (sort === "views") {
-      result = (asc === "true" ? q.order("view_count", { ascending: true }) : q.order("view_count", { ascending: false })) as T;
-    }
+    const sortKey = parseClipSortKey(sort);
+    const sortColumn = CLIP_SORT_COLUMNS[sortKey];
+    const ascending = asc === "true";
+    result = q.order(sortColumn, { ascending }) as T;
   } else {
     result = q.order("created_at_twitch", { ascending: false }) as T;
   }
 
-  const pageIndex = page ? parseInt(page) : 1;
-  const pageSize = 100;
+  const pageIndex = page ? parseInt(page, 10) : 1;
+  const pageSize = parseClipPageSize(params.per_page);
   const from = (pageIndex - 1) * pageSize;
   const to = from + pageSize - 1;
 
