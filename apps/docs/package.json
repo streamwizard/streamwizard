@@ -1,0 +1,15 @@
+{
+  "name": "@repo/docs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "mint dev --port 3004",
+    "check-links": "mint broken-links"
+  },
+  "engines": {
+    "node": ">=18 <25"
+  },
+  "devDependencies": {
+    "mint": "latest"
+  }
+}

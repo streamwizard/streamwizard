@@ -9,6 +9,7 @@ import {
   getVodByStreamId,
 } from "@repo/supabase/queries/stream-analytics";
 import { getUserPreferences } from "@repo/supabase/queries/user";
+import { ClipDialogProvider } from "@/providers/clip-dialog-provider";
 import { BroadcasterProfileStrip } from "@/components/stream-analytics/broadcaster-profile-strip";
 import { StatsRow } from "@/components/stream/StatsRow";
 import { RecentClipsSection } from "@/components/stream/RecentClipsSection";
@@ -193,9 +194,11 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <Suspense fallback={<ListSkeleton />}>
-        <RecentClipsSection broadcasterId={broadcasterId} compact />
-      </Suspense>
+      <ClipDialogProvider>
+        <Suspense fallback={<ListSkeleton />}>
+          <RecentClipsSection broadcasterId={broadcasterId} compact />
+        </Suspense>
+      </ClipDialogProvider>
     </div>
   );
 }
