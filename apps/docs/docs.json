@@ -1,0 +1,46 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "StreamWizard",
+  "colors": {
+    "primary": "#9e7aff",
+    "light": "#b89dff",
+    "dark": "#7c5cff"
+  },
+  "favicon": "/favicon.png",
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["index", "onboarding"]
+          },
+          {
+            "group": "Using StreamWizard",
+            "pages": ["clips", "dashboard"]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Dashboard",
+        "href": "https://streamwizard.org/dashboard"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "x": "https://x.com/streamwizard",
+      "discord": "https://discord.gg/streamwizard"
+    }
+  }
+}

@@ -40,3 +40,6 @@ yarn-error.log*
 
 # Wrangler local dev state
 .wrangler/
+
+# Mintlify local cache
+.mintlify/

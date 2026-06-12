@@ -1,6 +1,6 @@
-# StreamWizard — Tone of Voice
+# StreamWizard Tone of Voice
 
-Use this file whenever you're writing copy for StreamWizard: marketing pages, landing pages, onboarding flows, empty states, error messages, buttons, tooltips — anything user-facing.
+Use this file whenever you're writing copy for StreamWizard: marketing pages, landing pages, onboarding flows, empty states, error messages, buttons, tooltips. Anything user-facing.
 
 ---
 
@@ -12,7 +12,7 @@ Streamers. People who live in Twitch chat, know what PogChamp means, have 847 un
 
 ## The personality in one line
 
-> A fellow streamer who built a useful tool — not a brand trying to be relatable.
+> A fellow streamer who built a useful tool, not a brand trying to be relatable.
 
 ---
 
@@ -30,7 +30,7 @@ Vague copy is lazy copy. Use real numbers, real scenarios, real streamer problem
 - ❌ "Manage your content efficiently."
 - ✅ "No more scrolling through 847 untagged clips to find that one moment."
 
-**Be a bit funny — but never at the cost of clarity.**
+**Be a bit funny, but never at the cost of clarity.**
 The joke should make the meaning land harder, not replace it. If you have to choose between funny and clear, pick clear.
 
 - ❌ "We did a thing with your stream data lol"
@@ -54,14 +54,14 @@ Short. Punchy. Ends with confidence, not a question mark.
 ```
 Your stream, organized.
 Less chaos. More PogChamp.
-Clips, chat, analytics — finally in one place.
+Clips, chat, and analytics. Finally in one place.
 ```
 
 ### Feature descriptions
 One sentence on what it does. One sentence on why it matters.
 ```
-Clip folders. Sort your highlights by game, date, or vibe — 
-not by whatever random order Twitch dumped them in.
+Clip folders. Sort your highlights by game, date, or vibe.
+Not by whatever random order Twitch dumped them in.
 ```
 
 ### Buttons / CTAs
@@ -82,7 +82,7 @@ No clips yet. Go stream something embarrassing. We'll be here.
 Short. Honest. Tell them what broke and what to do next. No apologizing.
 ```
 Something broke on our end. Try again?
-Couldn't load your clips — check your Twitch connection.
+Couldn't load your clips. Check your Twitch connection.
 ```
 
 ### Success / confirmations
@@ -101,7 +101,7 @@ No, we're not saving your embarrassing moments. Probably.
 
 ---
 
-## Quick reference — do / don't
+## Quick reference: do / don't
 
 | ✅ Do | ❌ Don't |
 |---|---|
@@ -116,6 +116,7 @@ No, we're not saving your embarrassing moments. Probably.
 ## What to avoid
 
 - **Exclamation marks on everything.** One per page max, earned not sprayed.
+- **Em dashes.** They read as AI-written. Use a period, comma, colon, or parentheses instead. Two short sentences almost always beat one long one with a dash in the middle.
 - **Passive voice.** "Clips are organized by StreamWizard" → "StreamWizard organizes your clips."
 - **Over-explaining.** If the UI is clear, the copy doesn't need to re-explain it.
 - **Hedging.** "Sort of like a clip manager but also more than that" → just say what it is.
