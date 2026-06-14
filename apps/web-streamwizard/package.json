@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config dev_web_streamwizard -- next dev",
+    "dev": "doppler run --config dev_web_streamwizard -- next dev --port 3000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -60,7 +60,7 @@
     "@tailwindcss/postcss": "^4.2.1",
     "@tanstack/react-table": "^8.21.3",
     "@uidotdev/usehooks": "^2.4.1",
-    "axios": "^1.13.5",
+    "axios": "^1.16.1",
     "babel-plugin-react-compiler": "^1.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

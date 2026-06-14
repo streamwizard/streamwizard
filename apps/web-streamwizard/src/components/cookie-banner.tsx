@@ -1,18 +1,15 @@
 "use client";
 
-import { initPostHog } from "@repo/posthog";
 import Link from "next/link";
 import posthog from "posthog-js";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-const CONSENT_KEY = "sw_cookie_consent";
-
 const content = {
   normal: {
     title: "🍪 We use cookies",
     sub: "Unlike your Twitch chat, we ask before we watch.",
-    body: "We use PostHog to track page views and clicks — no ads, no selling your data, just us figuring out why nobody clicks that button. Session replay is included, but we promise not to clip your embarrassing moments.",
+    body: "We use PostHog to track page views and clicks — no ads, no selling your data, just us figuring out why nobody clicks that button.",
     accept: "PogChamp, let's go ✅",
     decline: "Nah, I'm lurking",
     acceptToast: { title: "PogChamp! 🎉", description: "You're now being watched. Just kidding. Kind of." },
@@ -21,7 +18,7 @@ const content = {
   genz: {
     title: "🍪 this website got cookies fr",
     sub: "powered by posthog bc we need to know when the ui is fighting for its life ☕️",
-    body: "we track clicks + navigation + anonymous usage stuff so we can keep improving things instead of shipping pure chaos 💀\n\nyes there's session replay. no there's not a dude watching u scroll at 2am like netflix.\n\nalso we do NOT sell ur data. that's loser behavior ngl.",
+    body: "we track clicks + navigation + anonymous usage stuff so we can keep improving things instead of shipping pure chaos 💀\n\nalso we do NOT sell ur data. that's loser behavior ngl.",
     accept: "it's giving consent ✅ slayyyyyyyyy",
     decline: "nah fam i'm ghosting 👻",
     acceptToast: { title: "slay! you're based 🔥", description: "tracking activated. we see u. in a chill way tho." },
@@ -38,26 +35,17 @@ export function CookieBanner() {
 
   useEffect(() => {
     setMounted(true);
-    if (!localStorage.getItem(CONSENT_KEY)) {
-      setVisible(true);
-    }
+    setVisible(posthog.get_explicit_consent_status() === "pending");
   }, []);
 
   function accept() {
-    localStorage.setItem(CONSENT_KEY, "accepted");
-    if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-      initPostHog({
-        key: process.env.NEXT_PUBLIC_POSTHOG_KEY,
-        host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
-      });
-    }
     posthog.opt_in_capturing();
+    posthog.capture("$pageview", { $current_url: window.location.href });
     setVisible(false);
     toast(content[tab].acceptToast.title, { description: content[tab].acceptToast.description });
   }
 
   function decline() {
-    localStorage.setItem(CONSENT_KEY, "declined");
     posthog.opt_out_capturing();
     setVisible(false);
     toast(content[tab].declineToast.title, { description: content[tab].declineToast.description });

@@ -6,18 +6,22 @@ import { encryptToken } from "@repo/supabase/crypto";
 import { updateTwitchTokens } from "@repo/supabase/queries/user";
 
 export async function GET(request: Request) {
-  let { origin } = new URL(request.url);
-  const { searchParams } = new URL(request.url);
-  const forwardedHost = request.headers.get("x-forwarded-host"); // original origin before load balancer
+  const requestUrl = new URL(request.url);
+  const { searchParams } = requestUrl;
   const isLocalEnv = process.env.NODE_ENV === "development";
 
-  if (forwardedHost && !isLocalEnv) {
-    origin = `https://${forwardedHost}`;
-  }
+  // Use the configured base URL in production to prevent x-forwarded-host spoofing
+  const origin = isLocalEnv
+    ? requestUrl.origin
+    : (process.env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
 
   const code = searchParams.get("code");
-  // if "next" is in param, use it as the redirect URL
-  const next = searchParams.get("next") ?? "/dashboard";
+  // Sanitize next to a relative path only to prevent open redirect
+  const rawNext = searchParams.get("next") ?? "/dashboard";
+  const next =
+    rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes("://")
+      ? rawNext
+      : "/dashboard";
 
   if (code) {
     const supabase = await createClient();
@@ -60,12 +64,7 @@ export async function GET(request: Request) {
 
     await checkEventSubscriptions(data.session.user.user_metadata.sub);
     if (!error) {
-      if (isLocalEnv) {
-        // we can be sure that there is no load balancer in between, so no need to watch for X-Forwarded-Host
-        return NextResponse.redirect(`${origin}${next}`);
-      } else {
-        return NextResponse.redirect(`${origin}${next}`);
-      }
+      return NextResponse.redirect(`${origin}${next}`);
     }
   }
 

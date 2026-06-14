@@ -7,12 +7,12 @@ export default async function page() {
   const userPreferences = await GetUserPreferences();
 
   return (
-    <Card className="w-full flex flex-col justify-between">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle>User Preferences</CardTitle>
         <CardDescription>Update your user preferences</CardDescription>
       </CardHeader>
-      <CardContent className="h-full w-full">
+      <CardContent className="w-full">
         <UserPreferencesForm UserPreferences={userPreferences} />
       </CardContent>
     </Card>

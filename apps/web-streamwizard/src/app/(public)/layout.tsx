@@ -1,5 +1,6 @@
 import { Footer } from "@/components/public/layout/footer";
 import Header from "@/components/public/layout/header";
+import { ScrollToTop } from "@/components/buttons/scroll-to-top";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -24,6 +25,7 @@ export default async function RootLayout({
       <Header />
       <main>{children}</main>
       <Footer />
+      <ScrollToTop />
     </>
   );
 }

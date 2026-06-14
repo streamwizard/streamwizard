@@ -14,13 +14,13 @@ export function BroadcasterProfileStrip({ profile }: BroadcasterProfileStripProp
   const badgeStyle = profile.broadcasterType ? BADGE_STYLES[profile.broadcasterType] : null;
 
   return (
-    <div className="flex items-center gap-3">
-      <Avatar className="h-10 w-10">
+    <div className="flex items-center gap-2 sm:gap-3">
+      <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
         <AvatarImage src={profile.profileImageUrl ?? undefined} alt={profile.username} />
         <AvatarFallback>{profile.username.slice(0, 2).toUpperCase()}</AvatarFallback>
       </Avatar>
-      <div className="flex items-center gap-2">
-        <span className="text-lg font-semibold">{profile.username}</span>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <span className="text-base font-semibold sm:text-lg">{profile.username}</span>
         {badgeStyle && (
           <Badge className={badgeStyle}>
             {profile.broadcasterType === "partner" ? "Partner" : "Affiliate"}

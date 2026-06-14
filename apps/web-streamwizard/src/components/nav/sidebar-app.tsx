@@ -11,13 +11,15 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@repo/ui";
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@repo/supabase";
 import { User } from "@supabase/supabase-js";
 import { BarChart2, FileVideoCamera, Layers } from "lucide-react";
-import Image from "next/image";
+import { StreamWizardLogo } from "@/components/brand/streamwizard-logo";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { FaDiscord } from "react-icons/fa";
 import { Separator } from "@repo/ui";
 import { DashboardUserNav } from "./dashboard-user-nav";
@@ -30,16 +32,20 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 }
 
 export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
+  const { setOpenMobile, isMobile } = useSidebar();
+  const closeMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+  const pathname = usePathname();
+
   return (
     <Sidebar className="h-full" {...props}>
       <SidebarHeader>
         <div className="flex flex-row items-center gap-2 px-4 mt-4 justify-center">
-          <Image
-            src="/logo.png"
-            width={100}
-            height={100}
-            alt="Logo"
-            style={{ width: 100, height: 100 }}
+          <StreamWizardLogo
+            width={160}
+            height={160}
+            style={{ width: 160, height: 160 }}
             priority
           />
         </div>
@@ -53,8 +59,8 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard">
+                <SidebarMenuButton asChild isActive={pathname === "/dashboard"}>
+                  <Link href="/dashboard" onClick={closeMobile}>
                     <BarChart2 className="mr-2 h-4 w-4" />
                     Stream Analytics
                   </Link>
@@ -69,8 +75,8 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/vods">
+                <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/vods")}>
+                  <Link href="/dashboard/vods" onClick={closeMobile}>
                     <FileVideoCamera className="mr-2 h-4 w-4" />
                     Vods
                   </Link>
@@ -85,8 +91,13 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/overlays">
+                <SidebarMenuButton
+                  asChild
+                  isActive={
+                    pathname.startsWith("/dashboard/overlays") || pathname.startsWith("/dashboard/widgets")
+                  }
+                >
+                  <Link href="/dashboard/overlays" onClick={closeMobile}>
                     <Layers className="mr-2 h-4 w-4" />
                     Overlay Editor
                   </Link>
@@ -110,7 +121,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
               <Link
                 href={discordInviteLink}
                 target="_blank"
-                className="items flex h-8 w-full select-none items-center justify-between rounded-md pl-3 pr-3 text-sm text-muted-foreground transition hover:cursor-pointer hover:bg-border/50 "
+                className="items flex h-8 w-full select-none items-center justify-between rounded-md pl-3 pr-3 text-sm text-sidebar-foreground/80 transition hover:cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
                 <div className="flex flex-row items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full ">

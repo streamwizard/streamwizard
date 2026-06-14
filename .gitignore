@@ -37,3 +37,9 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Wrangler local dev state
+.wrangler/
+
+# Mintlify local cache
+.mintlify/
