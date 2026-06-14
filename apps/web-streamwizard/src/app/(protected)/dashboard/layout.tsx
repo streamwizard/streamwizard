@@ -4,6 +4,7 @@ import { SidebarInset, SidebarProvider } from "@repo/ui";
 import { createClient } from "@repo/supabase/next/server";
 import { ClipFolderProvider } from "@/providers/clips-provider";
 import { ModalProvider } from "@/providers/modal-provider";
+import { ClipFolderDialogProvider } from "@/providers/clip-folder-dialog-provider";
 import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
 import { redirect } from "next/navigation";
 import { getClipFolders } from "@repo/supabase/queries/clips";
@@ -36,11 +37,13 @@ export default async function layout({
       <OnboardingModal clipCount={clipCount ?? 0} />
       <ClipFolderProvider ClipFolders={folders || []}>
         <ModalProvider>
-          <AppSidebar user={data.user} folders={folders || []} variant="inset" />
-          <SidebarInset>
-            <SiteHeader />
-            <div className="w-full p-3 sm:p-5 mx-auto md:gap-6 md:py-6">{children}</div>
-          </SidebarInset>
+          <ClipFolderDialogProvider>
+            <AppSidebar user={data.user} folders={folders || []} variant="inset" />
+            <SidebarInset>
+              <SiteHeader />
+              <div className="w-full p-3 sm:p-5 mx-auto md:gap-6 md:py-6">{children}</div>
+            </SidebarInset>
+          </ClipFolderDialogProvider>
         </ModalProvider>
       </ClipFolderProvider>
     </SidebarProvider>

@@ -1,13 +1,11 @@
 "use client";
 
 import { AddToFolderItems } from "@/components/clips/add-to-folder-menu";
-import { ClipFolderModal } from "@/components/modals/clip-folder-modal";
 import { formatClipDuration, formatDate } from "@/lib/format";
 import { buildClipFolderTree, type ClipFolderNode } from "@/lib/utils/clip-folders";
 import { downloadClip } from "@/lib/utils/download-clip";
 import { useClipFolders } from "@/providers/clips-provider";
-import { useModal } from "@/providers/modal-provider";
-import { useSession } from "@/providers/session-provider";
+import { useClipFolderDialog } from "@/providers/clip-folder-dialog-provider";
 import { clipsWithFolders } from "@/types/database";
 import {
   Badge,
@@ -62,8 +60,7 @@ function InfoCell({ icon, label, value }: { icon: React.ReactNode; label: string
 }
 
 function ClipDialogBody({ clip }: { clip: clipsWithFolders }) {
-  const { id: userId } = useSession();
-  const { openModal } = useModal();
+  const { openCreateFolder } = useClipFolderDialog();
   const { folders, getRemovableFolders, getFolderLabel, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -161,7 +158,7 @@ function ClipDialogBody({ clip }: { clip: clipsWithFolders }) {
                 <AddToFolderItems nodes={folderTree} assignedIds={folderIds} onAdd={handleAddToFolder} />
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => openModal(<ClipFolderModal user_id={userId} />)}>
+              <DropdownMenuItem onClick={() => openCreateFolder()}>
                 Create new folder
               </DropdownMenuItem>
             </DropdownMenuContent>
