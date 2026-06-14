@@ -20,7 +20,7 @@ export function useThemeTransition() {
   function switchToLight() {
     if (resolvedTheme === "light") return;
     if (isPlaying) return;
-    if (!animationsEnabled) { setTheme("light"); return; }
+    if (!animationsEnabled) { withTransition(() => setTheme("light")); return; }
     trigger();
   }
 
