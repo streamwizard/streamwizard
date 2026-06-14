@@ -73,7 +73,7 @@ function ClipDialogBody({ clip }: { clip: clipsWithFolders }) {
     AddToFolder({ folderName: getFolderLabel(folder.id), folderId: folder.id, clipId: clip.twitch_clip_id });
   };
 
-  const handleRemoveFromFolder = (folderId: number) => {
+  const handleRemoveFromFolder = (folderId: string) => {
     setAssignedFolderIds((prev) => prev.filter((id) => id !== folderId));
     handleRemoveClipFromFolder(folderId, clip.twitch_clip_id, getFolderLabel(folderId));
   };
