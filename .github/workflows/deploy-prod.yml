@@ -8,12 +8,13 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
+permissions: {}
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - name: Checkout code
@@ -29,5 +30,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git fetch origin production
           git checkout production
-          git merge origin/main --ff-only
+          # Use --no-ff so the deploy still succeeds when production has its own
+          # commits (e.g. older staging merges) and can't be fast-forwarded.
+          git merge origin/main --no-ff -m "Deploy: merge main into production"
           git push origin production

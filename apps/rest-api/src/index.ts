@@ -4,6 +4,7 @@ process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); 
 import "./lib/env";
 import { Hono } from "hono";
 import { sentry } from "@sentry/hono/bun";
+import { getSentryOptions, createSupabaseIntegration } from "@repo/sentry";
 import { metricsMiddleware, isMetricsEnabled } from "@repo/metrics";
 import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
@@ -20,8 +21,14 @@ const app = new Hono();
 // ============================================
 
 // Sentry must be first — sets up tracing and Hono's onError capture
-if (process.env.SENTRY_DSN) {
-  app.use("*", sentry(app, {}));
+if (process.env.SENTRY_DSN && process.env.NODE_ENV !== "development") {
+  app.use("*", sentry(app, {
+    ...getSentryOptions({ dsn: process.env.SENTRY_DSN, service: "rest-api" }),
+    integrations: [createSupabaseIntegration(Sentry)],
+  }));
+  console.log("[sentry] active");
+} else {
+  console.log("[sentry] inactive (no SENTRY_DSN)");
 }
 
 app.use("*", metricsMiddleware("rest-api"));
@@ -51,9 +58,6 @@ app.get("/", (c) => {
 });
 
 // Twitch EventSub Webhook Handler
-// This endpoint receives webhook callbacks from Twitch EventSub
-// Raw body middleware preserves the body for signature verification
-// Verification middleware validates headers and HMAC signature
 app.post(
   "/webhooks/twitch/eventsub",
   rawBodyMiddleware(),
@@ -87,8 +91,8 @@ app.get("/api/clips/sync-status", supabaseAuth(), syncStatusHandler);
 
 Bun.serve({
   fetch: app.fetch,
-  port: 8000,
+  port: Number(process.env.PORT ?? 8080),
 });
 
-console.log(`[rest-api] listening on port ${8000}`);
+console.log(`[rest-api] listening on port ${process.env.PORT ?? 8080}`);
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

@@ -14,7 +14,7 @@ import type { TwitchApi } from "@repo/twitch-api";
  * @param options.skipRecentCheck - Skip the 1-hour check for recent syncs (default: false)
  * @returns The total number of clips synced, or null if sync was skipped
  */
-export async function syncTwitch(broadcaster_id: string, TwitchAPI: TwitchApi, options: { skipRecentCheck?: boolean } = {}): Promise<number | null> {
+export async function syncTwitch(broadcaster_id: string, TwitchAPI: TwitchApi, options: { skipRecentCheck?: boolean } = {}): Promise<{ clipsCount: number } | { skipped: true; lastSync: string }| null> {
   // Look up the user from the broadcaster_id
   const { data: user, error: userError } = await getTwitchIntegrationByBroadcasterId(supabase, broadcaster_id);
 
@@ -33,7 +33,7 @@ export async function syncTwitch(broadcaster_id: string, TwitchAPI: TwitchApi, o
 
     if (diffHours < 1 && lastSync.sync_status === "completed") {
       console.log("last sync was less than an hour ago, skipping sync");
-      return null;
+      return { skipped: true, lastSync: lastSync.last_sync };
     }
   }
 
@@ -51,7 +51,7 @@ export async function syncTwitch(broadcaster_id: string, TwitchAPI: TwitchApi, o
     // Mark as completed
     await updateClipSyncStatus(supabase, user.user_id, "completed", totalClips);
 
-    return totalClips;
+    return { clipsCount: totalClips };
   } catch (error) {
     console.error("Sync failed:", error);
     // Mark as failed
