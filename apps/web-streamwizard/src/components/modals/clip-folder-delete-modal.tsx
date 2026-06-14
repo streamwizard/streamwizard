@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { deleteClipFolder } from "@/actions/supabase/clips/clips";
 
 interface ClipFolderDeleteModalProps {
-  folderId: number;
+  folderId: string;
   folderName: string;
   hasSubfolders?: boolean;
 }

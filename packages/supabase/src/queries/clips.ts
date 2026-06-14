@@ -9,7 +9,7 @@ type DBClient = SupabaseClient<Database>;
 interface ClipFolder {
   clipId: string;
   userId: string;
-  folderId?: number;
+  folderId?: string;
   folderName: string;
 }
 
@@ -35,7 +35,7 @@ export async function addClipToFolder(client: DBClient, { clipId, userId, folder
   return { success: true, message: `Clip added to ${folderName}` };
 }
 
-export async function removeClipFromFolder(client: DBClient, clipId: string, folderId: number, userId: string) {
+export async function removeClipFromFolder(client: DBClient, clipId: string, folderId: string, userId: string) {
   const { error } = await client
     .from("clip_folder_junction")
     .delete()
@@ -56,8 +56,8 @@ async function siblingFolderNameExists(
   client: DBClient,
   userId: string,
   name: string,
-  parentFolderId: number | null,
-  excludeFolderId?: number
+  parentFolderId: string | null,
+  excludeFolderId?: string
 ): Promise<boolean> {
   let query = client.from("clip_folders").select("id").eq("user_id", userId).eq("name", name);
   query = parentFolderId == null ? query.is("parent_folder_id", null) : query.eq("parent_folder_id", parentFolderId);
@@ -68,7 +68,7 @@ async function siblingFolderNameExists(
   return (data?.length ?? 0) > 0;
 }
 
-export async function createClipFolder(client: DBClient, folderName: string, userId: string, parentFolderId?: number) {
+export async function createClipFolder(client: DBClient, folderName: string, userId: string, parentFolderId?: string) {
   let parentHref: string | null = null;
 
   if (parentFolderId) {
@@ -102,7 +102,7 @@ export async function createClipFolder(client: DBClient, folderName: string, use
   return data;
 }
 
-export async function editClipFolder(client: DBClient, folderId: number, folderName: string, userId: string) {
+export async function editClipFolder(client: DBClient, folderId: string, folderName: string, userId: string) {
   const { data: folder, error: folderError } = await client
     .from("clip_folders")
     .select("href, parent_folder_id")
@@ -168,7 +168,7 @@ export async function editClipFolder(client: DBClient, folderId: number, folderN
   }
 }
 
-export async function deleteClipFolder(client: DBClient, folderId: number) {
+export async function deleteClipFolder(client: DBClient, folderId: string) {
   const { data: children, error: childrenError } = await client
     .from("clip_folders")
     .select("id")
@@ -188,7 +188,7 @@ export async function getClipFolders(client: DBClient, userId: string) {
   return client.from("clip_folders").select("*").eq("user_id", userId);
 }
 
-export async function getClipFolderJunctions(client: DBClient, userId: string, folderIds: number[]) {
+export async function getClipFolderJunctions(client: DBClient, userId: string, folderIds: string[]) {
   return client
     .from("clip_folder_junction")
     .select("clip_id")

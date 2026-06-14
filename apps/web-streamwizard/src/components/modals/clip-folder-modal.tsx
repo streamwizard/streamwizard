@@ -29,9 +29,9 @@ const formSchema = z.object({
 
 interface Props {
   user_id: string;
-  folder_id?: number;
+  folder_id?: string;
   folder_name?: string;
-  parent_folder_id?: number;
+  parent_folder_id?: string;
   parent_folder_name?: string;
 }
 

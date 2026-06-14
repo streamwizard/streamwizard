@@ -17,7 +17,7 @@ export type PlaylistClip = {
 };
 
 export type OverlayClipForDisplay = PlaylistClip & {
-  id: number;
+  id: string;
   title: string;
   creator_name: string;
   game_name: string | null;
@@ -37,7 +37,7 @@ function shuffle<T>(arr: T[]): T[] {
 
 async function getTwitchClipIdsInFolders(
   ownerUserId: string,
-  folderIds: number[]
+  folderIds: string[]
 ): Promise<{ ok: true; ids: string[] } | { ok: false }> {
   const { data, error } = await getClipFolderJunctions(
     supabaseAdmin,
@@ -62,7 +62,7 @@ function sqlFetchLimit(config: ClipsWidgetItemConfig): number {
 
 function dedupeAndSliceClips(
   rows: Array<{
-    id: number;
+    id: string;
     twitch_clip_id: string;
     broadcaster_id: string;
     title: string;
