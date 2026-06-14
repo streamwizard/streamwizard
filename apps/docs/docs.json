@@ -37,6 +37,15 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "Contribute",
+        "groups": [
+          {
+            "group": "For developers",
+            "pages": ["contributing/first-contribution"]
+          }
+        ]
       }
     ]
   },
