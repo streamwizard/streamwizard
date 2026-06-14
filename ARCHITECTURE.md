@@ -118,18 +118,6 @@ There are two transport types:
 - **Conduit** — WebSocket-based, always registered.
 - **Webhook** — HTTP callback to `rest-api`, skipped when `NODE_ENV=development` because Twitch requires HTTPS. Covers `stream.online`, `stream.offline`, and `channel.update`.
 
-### Clip Sync Worker (`apps/clip-sync`)
-
-Long-running worker with two loops:
-- `hourly-sync`: Polls all broadcaster integrations and syncs recent clips via `@repo/twitch-api`.
-- `pending-clips`: Polls `pending_clips` rows (clips being processed by Twitch), retries until ready, then upserts into `clips`.
-
-Both functions use `supabase` from `@repo/supabase` and query functions from `@repo/supabase/queries/*`.
-
-### SMP Bridge (`apps/smp-bridge`)
-
-Bridges Twitch EventSub events to a Minecraft server. Uses `supabase` from `@repo/supabase` for reading SMP action configurations (`@repo/supabase/queries/smp`) and tracking player online status.
-
 ### Twitch Chat Bot (`apps/streamwizard-bot`)
 
 Connects to Twitch chat via EventSub and responds to commands. Uses `supabase` from `@repo/supabase` for command lookups (via `@repo/supabase/queries/commands`) and `@repo/twitch-api` for chat messages.
@@ -156,11 +144,6 @@ apps/rest-api
   ├── @repo/env           — Root env schema for backend config
   └── @repo/schemas       — Zod schemas for EventSub payloads
 
-apps/clip-sync
-  ├── @repo/supabase      — `supabase` singleton + **`queries/clips`**, **`queries/vods`**, **`queries/user`**
-  ├── @repo/twitch-api    — **`TwitchApi`** for clip/video fetching
-  └── @repo/env           — Root env schema
-
 apps/streamwizard-bot
   ├── @repo/supabase      — `supabase` singleton + **`queries/commands`**
   ├── @repo/twitch-api    — **`TwitchApi`** for chat messages
@@ -170,11 +153,6 @@ apps/ws-server
   ├── @repo/env           — Root env schema (validates `SUPABASE_SECRET_KEY`, etc.)
   ├── @repo/supabase      — `supabase` singleton + **`queries/overlays`**, **`queries/user`**, **`queries/live-status`**, **`queries/irl`**
   └── @repo/types         — `BotBroadcastMessage`, `OverlayEventType`
-
-apps/smp-bridge
-  ├── @repo/supabase      — `supabase` singleton + **`queries/smp`**
-  ├── @repo/twitch-api    — **`TwitchApi`** for Helix lookups
-  └── @repo/types         — EventSub subscription types
 ```
 
 Next.js dashboard code imports **`env`** from **`@repo/env/next`** where the server/client distinction matters, and **`@repo/env`** when matching the canonical schema used by shared packages.

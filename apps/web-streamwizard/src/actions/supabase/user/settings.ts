@@ -19,3 +19,16 @@ export async function GetUserPreferences() {
   const supabase = await createClient();
   return _getUserPreferences(supabase);
 }
+
+export async function completeOnboarding(preferences: z.infer<typeof userPreferencesSchema>) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) return false;
+  try {
+    await _updateUserPreferences(supabase, user.id, { ...preferences, onboarding_completed: true });
+    return true;
+  } catch (error) {
+    console.error(error);
+    return false;
+  }
+}

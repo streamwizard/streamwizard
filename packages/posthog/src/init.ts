@@ -9,10 +9,19 @@ export function initPostHog({ key, host = "https://eu.i.posthog.com" }: PostHogC
   posthog.init(key, {
     api_host: "/ingest",
     ui_host: host.replace("i.posthog.com", "posthog.com"),
-    defaults: "2026-01-30",
+    defaults: "2026-05-30",
     capture_pageview: false,
     capture_pageleave: true,
     person_profiles: "identified_only",
-    opt_out_capturing_by_default: true, // no tracking until cookie consent
+    cookieless_mode: "on_reject",
+    disable_session_recording: true,
+    disable_surveys: true,
+    disable_web_experiments: true,
+    disable_conversations: true,
+    autocapture: false,
+    capture_performance: { web_vitals: true },
+    advanced_disable_feature_flags: true,
+    advanced_disable_flags: true,
+    request_batching: false,
   });
 }

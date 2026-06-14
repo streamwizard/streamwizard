@@ -4,7 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot --filter=@repo/ws-server --filter=@repo/rest-api",
+    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot --filter=@repo/ws-server --filter=@repo/rest-api --filter=@repo/docs",
     "dev:monitor": "turbo run dev --filter=@repo/web-monitor",
     "doppler:sync": "bash scripts/sync-doppler-shared.sh",
     "lint": "turbo run lint",
@@ -14,14 +14,16 @@
   },
   "devDependencies": {
     "prettier": "^3.7.4",
-    "turbo": "^2.7.4",
+    "shadcn": "^4.11.0",
+    "turbo": "^2.9.15",
     "typescript": "5.9.2"
   },
   "overrides": {
     "next": "^16.2.6",
     "@sentry/core": "10.56.0",
     "@sentry/bun": "10.56.0",
-    "@sentry/hono": "10.56.0"
+    "@sentry/hono": "10.56.0",
+    "dompurify": "^3.4.7"
   },
   "engines": {
     "node": ">=18"

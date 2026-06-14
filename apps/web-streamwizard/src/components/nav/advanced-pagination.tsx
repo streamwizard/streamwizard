@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from "@repo/ui"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
@@ -11,13 +11,18 @@ interface PaginationProps {
 }
 
 export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: PaginationProps) {
+  const safeTotalPages = Math.max(1, totalPages)
   const [currentPage, setCurrentPage] = useState(initialPage)
   const searchParams = useSearchParams()
   const pathname = usePathname()
   const router = useRouter()
 
+  useEffect(() => {
+    setCurrentPage(initialPage)
+  }, [initialPage])
+
   const changePage = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
+    if (page >= 1 && page <= safeTotalPages) {
       setCurrentPage(page)
       updatePage(page)
     }
@@ -37,20 +42,20 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
 
   const renderPageNumbers = () => {
     const pageNumbers = []
-    const maxVisiblePages = 10
+    const maxVisiblePages = 4
     let startPage, endPage
 
-    if (totalPages <= maxVisiblePages) {
+    if (safeTotalPages <= maxVisiblePages) {
       startPage = 1
-      endPage = totalPages
+      endPage = safeTotalPages
     } else {
       const middlePage = Math.floor(maxVisiblePages / 2)
       if (currentPage <= middlePage) {
         startPage = 1
         endPage = maxVisiblePages
-      } else if (currentPage + middlePage >= totalPages) {
-        startPage = totalPages - maxVisiblePages + 1
-        endPage = totalPages
+      } else if (currentPage + middlePage >= safeTotalPages) {
+        startPage = safeTotalPages - maxVisiblePages + 1
+        endPage = safeTotalPages
       } else {
         startPage = currentPage - middlePage
         endPage = currentPage + middlePage
@@ -59,12 +64,12 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
 
     if (startPage > 1) {
       pageNumbers.push(
-        <Button key={1} variant="outline" onClick={() => changePage(1)} className="w-10 h-10">
+        <Button key={1} variant="outline" size="sm" onClick={() => changePage(1)} className="h-8 min-w-8 px-2 text-xs">
           1
         </Button>
       )
       if (startPage > 2) {
-        pageNumbers.push(<span key="ellipsis1" className="px-2">...</span>)
+        pageNumbers.push(<span key="ellipsis1" className="px-1 text-xs text-muted-foreground">...</span>)
       }
     }
 
@@ -74,20 +79,21 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
           key={i}
           variant={i === currentPage ? "default" : "outline"}
           onClick={() => changePage(i)}
-          className="w-10 h-10"
+          size="sm"
+          className="h-8 min-w-8 px-2 text-xs"
         >
           {i}
         </Button>
       )
     }
 
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        pageNumbers.push(<span key="ellipsis2" className="px-2">...</span>)
+    if (endPage < safeTotalPages) {
+      if (endPage < safeTotalPages - 1) {
+        pageNumbers.push(<span key="ellipsis2" className="px-1 text-xs text-muted-foreground">...</span>)
       }
       pageNumbers.push(
-        <Button key={totalPages} variant="outline" onClick={() => changePage(totalPages)} className="w-10 h-10">
-          {totalPages}
+        <Button key={safeTotalPages} variant="outline" size="sm" onClick={() => changePage(safeTotalPages)} className="h-8 min-w-8 px-2 text-xs">
+          {safeTotalPages}
         </Button>
       )
     }
@@ -96,31 +102,26 @@ export function AdvancedPagination({ totalPages = 100, initialPage = 1, }: Pagin
   }
 
   return (
-    <div className="flex flex-col items-center space-y-2">
-      <div className="flex items-center justify-center space-x-2">
+    <div className="flex items-center justify-center gap-1">
         <Button
           variant="outline"
-          size="icon"
+          size="icon-sm"
           onClick={() => changePage(currentPage - 1)}
           disabled={currentPage === 1}
           aria-label="Previous page"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="size-3.5" />
         </Button>
         {renderPageNumbers()}
         <Button
           variant="outline"
-          size="icon"
+          size="icon-sm"
           onClick={() => changePage(currentPage + 1)}
-          disabled={currentPage === totalPages}
+          disabled={currentPage === safeTotalPages}
           aria-label="Next page"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="size-3.5" />
         </Button>
-      </div>
-      <span className="text-sm text-muted-foreground">
-        Page {currentPage} of {totalPages}
-      </span>
     </div>
   )
 }
