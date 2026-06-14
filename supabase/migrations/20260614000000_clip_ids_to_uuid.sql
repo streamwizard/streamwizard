@@ -20,6 +20,24 @@
 -- Migrations run in a single transaction => all-or-nothing.
 
 -- ---------------------------------------------------------------------------
+-- 0. Safety net: snapshot the affected tables BEFORE touching them, with their
+--    original integer ids. The whole migration is transactional, so on any
+--    failure (including the row-count assertion in section 8) these snapshots
+--    roll back with everything else. On success they persist so the data is
+--    recoverable if something downstream goes wrong.
+--    Drop them once you've verified prod:
+--      DROP TABLE public._clip_uuid_migration_backup_junction;
+--      DROP TABLE public._clip_uuid_migration_backup_folders;
+-- ---------------------------------------------------------------------------
+
+DROP TABLE IF EXISTS "public"."_clip_uuid_migration_backup_junction";
+DROP TABLE IF EXISTS "public"."_clip_uuid_migration_backup_folders";
+CREATE TABLE "public"."_clip_uuid_migration_backup_junction" AS
+    SELECT * FROM "public"."clip_folder_junction";
+CREATE TABLE "public"."_clip_uuid_migration_backup_folders" AS
+    SELECT * FROM "public"."clip_folders";
+
+-- ---------------------------------------------------------------------------
 -- 1. Add new uuid columns and backfill mappings (nothing destructive yet)
 -- ---------------------------------------------------------------------------
 
@@ -310,3 +328,44 @@ GRANT ALL ON FUNCTION "public"."get_all_clips_with_folders"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."get_clips_by_folder"("folder_href" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_clips_by_folder"("folder_href" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_clips_by_folder"("folder_href" "text") TO "service_role";
+
+-- ---------------------------------------------------------------------------
+-- 8. Integrity assertions: this migration is a pure 1:1 id remap, so row counts
+--    must be identical before/after. If they aren't, raise and roll the whole
+--    transaction back (nothing is applied). Compares against the section-0
+--    snapshots taken at the start.
+-- ---------------------------------------------------------------------------
+
+DO $$
+DECLARE
+    v_before bigint;
+    v_after  bigint;
+BEGIN
+    -- clip_folder_junction total rows
+    SELECT count(*) INTO v_before FROM "public"."_clip_uuid_migration_backup_junction";
+    SELECT count(*) INTO v_after  FROM "public"."clip_folder_junction";
+    IF v_before <> v_after THEN
+        RAISE EXCEPTION 'clip_folder_junction row count changed during migration (before=%, after=%)', v_before, v_after;
+    END IF;
+
+    -- clip_folder_junction rows that had a folder_id must still have one (remap, not null-out)
+    SELECT count(*) INTO v_before FROM "public"."_clip_uuid_migration_backup_junction" WHERE "folder_id" IS NOT NULL;
+    SELECT count(*) INTO v_after  FROM "public"."clip_folder_junction" WHERE "folder_id" IS NOT NULL;
+    IF v_before <> v_after THEN
+        RAISE EXCEPTION 'clip_folder_junction.folder_id non-null count changed (before=%, after=%)', v_before, v_after;
+    END IF;
+
+    -- clip_folders total rows
+    SELECT count(*) INTO v_before FROM "public"."_clip_uuid_migration_backup_folders";
+    SELECT count(*) INTO v_after  FROM "public"."clip_folders";
+    IF v_before <> v_after THEN
+        RAISE EXCEPTION 'clip_folders row count changed during migration (before=%, after=%)', v_before, v_after;
+    END IF;
+
+    -- clip_folders rows that had a parent must still have one
+    SELECT count(*) INTO v_before FROM "public"."_clip_uuid_migration_backup_folders" WHERE "parent_folder_id" IS NOT NULL;
+    SELECT count(*) INTO v_after  FROM "public"."clip_folders" WHERE "parent_folder_id" IS NOT NULL;
+    IF v_before <> v_after THEN
+        RAISE EXCEPTION 'clip_folders.parent_folder_id non-null count changed (before=%, after=%)', v_before, v_after;
+    END IF;
+END $$;
