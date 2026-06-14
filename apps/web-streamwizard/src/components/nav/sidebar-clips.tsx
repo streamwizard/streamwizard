@@ -6,8 +6,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@repo/ui";
-import { useModal } from "@/providers/modal-provider";
-import { useSession } from "@/providers/session-provider";
+import { useClipFolderDialog } from "@/providers/clip-folder-dialog-provider";
 import { Database } from "@repo/supabase";
 import {
   buildClipFolderTree,
@@ -18,7 +17,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Clapperboard, ChevronRight, EllipsisVertical, Folder, FolderOpen, Plus } from "lucide-react";
 import Link from "next/link";
-import { ClipFolderModal } from "../modals/clip-folder-modal";
 import { Button } from "@repo/ui";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
 import {
@@ -28,7 +26,6 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@repo/ui";
-import ClipFolderDeleteModal from "../modals/clip-folder-delete-modal";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -199,8 +196,7 @@ function FolderTreeNode({
 export default function SidebarClips({ clipFolders }: Props) {
   const [isOpen, setIsOpen] = useState<boolean>(true);
   const pathname = usePathname();
-  const { openModal } = useModal();
-  const { id } = useSession();
+  const { openCreateFolder, openRenameFolder, openDeleteFolder } = useClipFolderDialog();
   const activeFolderHref = getActiveFolderHref(pathname, clipFolders);
   const folderTree = buildClipFolderTree(clipFolders);
   const isClipsActive = pathname === "/dashboard/clips";
@@ -212,23 +208,15 @@ export default function SidebarClips({ clipFolders }: Props) {
   }, [activeFolderHref]);
 
   const createFolderButton = (parentFolder?: ClipFolderNode) => {
-    openModal(
-      <ClipFolderModal
-        user_id={id}
-        parent_folder_id={parentFolder?.id}
-        parent_folder_name={parentFolder?.name}
-      />
-    );
+    openCreateFolder(parentFolder?.id, parentFolder?.name);
   };
 
   const editFolderButton = (folder: ClipFolderNode) => {
-    openModal(<ClipFolderModal user_id={id} folder_id={folder.id} folder_name={folder.name} />);
+    openRenameFolder(folder.id, folder.name);
   };
 
   const deleteFolderButton = (folder: ClipFolderNode) => {
-    openModal(
-      <ClipFolderDeleteModal folderId={folder.id} folderName={folder.name} hasSubfolders={folder.children.length > 0} />
-    );
+    openDeleteFolder(folder.id, folder.name, folder.children.length > 0);
   };
 
   const folderHandlers: FolderTreeHandlers = {
