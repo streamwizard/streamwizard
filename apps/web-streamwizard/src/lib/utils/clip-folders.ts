@@ -8,7 +8,7 @@ export type ClipFolderNode = ClipFolderRow & {
 };
 
 export function buildClipFolderTree(folders: ClipFolderRow[]): ClipFolderNode[] {
-  const nodes = new Map<number, ClipFolderNode>();
+  const nodes = new Map<string, ClipFolderNode>();
 
   for (const folder of folders) {
     nodes.set(folder.id, { ...folder, children: [] });

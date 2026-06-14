@@ -13,7 +13,7 @@ import { revalidatePath } from "next/cache";
 interface ClipFolder {
   clipId: string;
   userId: string;
-  folderId?: number;
+  folderId?: string;
   folderName: string;
 }
 
@@ -29,7 +29,7 @@ export async function addClipToFolder({ clipId, userId, folderId, folderName }: 
   }
 }
 
-export async function removeClipFromFolder(clipId: string, folderId: number, userId: string) {
+export async function removeClipFromFolder(clipId: string, folderId: string, userId: string) {
   const supabase = await createClient();
   try {
     const result = await _removeClipFromFolder(supabase, clipId, folderId, userId);
@@ -41,7 +41,7 @@ export async function removeClipFromFolder(clipId: string, folderId: number, use
   }
 }
 
-export async function createClipFolder(folderName: string, user_id: string, parentFolderId?: number) {
+export async function createClipFolder(folderName: string, user_id: string, parentFolderId?: string) {
   const supabase = await createClient();
   try {
     const data = await _createClipFolder(supabase, folderName, user_id, parentFolderId);
@@ -53,7 +53,7 @@ export async function createClipFolder(folderName: string, user_id: string, pare
   }
 }
 
-export async function editClipFolder(folderId: number, folderName: string, user_id: string) {
+export async function editClipFolder(folderId: string, folderName: string, user_id: string) {
   const supabase = await createClient();
   try {
     await _editClipFolder(supabase, folderId, folderName, user_id);
@@ -65,7 +65,7 @@ export async function editClipFolder(folderId: number, folderName: string, user_
   }
 }
 
-export async function deleteClipFolder(folderId: number) {
+export async function deleteClipFolder(folderId: string) {
   const supabase = await createClient();
   try {
     await _deleteClipFolder(supabase, folderId);

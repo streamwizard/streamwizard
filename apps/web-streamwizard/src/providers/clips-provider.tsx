@@ -9,16 +9,16 @@ import { useSession } from "./session-provider";
 
 type AddToFolderType = {
   folderName: string;
-  folderId: number;
+  folderId: string;
   clipId: string;
 };
 
 interface FolderContextType {
   folders: Database["public"]["Tables"]["clip_folders"]["Row"][];
-  getAvailableFolders: (folderId: number[]) => Database["public"]["Tables"]["clip_folders"]["Row"][];
-  getRemovableFolders: (folderId: number[]) => Database["public"]["Tables"]["clip_folders"]["Row"][];
-  getFolderLabel: (folderId: number) => string;
-  handleRemoveClipFromFolder: (folderId: number, clipId: string, folderName: string) => void;
+  getAvailableFolders: (folderId: string[]) => Database["public"]["Tables"]["clip_folders"]["Row"][];
+  getRemovableFolders: (folderId: string[]) => Database["public"]["Tables"]["clip_folders"]["Row"][];
+  getFolderLabel: (folderId: string) => string;
+  handleRemoveClipFromFolder: (folderId: string, clipId: string, folderName: string) => void;
   AddToFolder: ({ folderName, folderId, clipId }: AddToFolderType) => void;
 }
 
@@ -35,19 +35,19 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
   const router = useRouter();
 
   // Get folders excluding the specified folder ID
-  const getAvailableFolders = (excludedFolderIds: number[]) => {
+  const getAvailableFolders = (excludedFolderIds: string[]) => {
     return folders
       .filter((folder) => !excludedFolderIds.includes(folder.id))
       .sort((a, b) => getFolderDisplayName(a, folders).localeCompare(getFolderDisplayName(b, folders)));
   };
 
-  const getFolderLabel = (folderId: number) => {
+  const getFolderLabel = (folderId: string) => {
     const folder = folders.find((item) => item.id === folderId);
     return folder ? getFolderDisplayName(folder, folders) : "";
   };
 
   // Get clips eligible for removal excluding specified folder IDs
-  const getRemovableFolders = (excludedFolderIds: number[]) => {
+  const getRemovableFolders = (excludedFolderIds: string[]) => {
     return folders.filter((folder) => excludedFolderIds.includes(folder.id));
   };
 
@@ -73,7 +73,7 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
     );
   };
 
-  const handleRemoveClipFromFolder = (folderId: number, clipId: string, folderName: string) => {
+  const handleRemoveClipFromFolder = (folderId: string, clipId: string, folderName: string) => {
     toast.promise(
       async () => {
         const res = await removeClipFromFolder(clipId, folderId, userId);

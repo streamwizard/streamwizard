@@ -15,7 +15,7 @@ type AddToFolderItemsProps = {
   /** Folder tree to render (build with buildClipFolderTree). */
   nodes: ClipFolderNode[];
   /** Folder ids the clip already belongs to — their add action is disabled. */
-  assignedIds: number[];
+  assignedIds: string[];
   onAdd: (folder: ClipFolderNode) => void;
   /**
    * Extra props spread onto every DropdownMenuSubContent. The clip card uses
