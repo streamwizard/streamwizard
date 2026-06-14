@@ -40,14 +40,14 @@ type FolderNameValues = z.infer<typeof folderNameSchema>;
 
 type DialogState =
   | { mode: null }
-  | { mode: "create"; parentFolderId?: number; parentFolderName?: string }
-  | { mode: "rename"; folderId: number; folderName: string }
-  | { mode: "delete"; folderId: number; folderName: string; hasSubfolders: boolean };
+  | { mode: "create"; parentFolderId?: string; parentFolderName?: string }
+  | { mode: "rename"; folderId: string; folderName: string }
+  | { mode: "delete"; folderId: string; folderName: string; hasSubfolders: boolean };
 
 type ClipFolderDialogContextType = {
-  openCreateFolder: (parentFolderId?: number, parentFolderName?: string) => void;
-  openRenameFolder: (folderId: number, folderName: string) => void;
-  openDeleteFolder: (folderId: number, folderName: string, hasSubfolders?: boolean) => void;
+  openCreateFolder: (parentFolderId?: string, parentFolderName?: string) => void;
+  openRenameFolder: (folderId: string, folderName: string) => void;
+  openDeleteFolder: (folderId: string, folderName: string, hasSubfolders?: boolean) => void;
 };
 
 const ClipFolderDialogContext = createContext<ClipFolderDialogContextType | null>(null);
@@ -56,15 +56,15 @@ export function ClipFolderDialogProvider({ children }: { children: ReactNode }) 
   const [state, setState] = useState<DialogState>({ mode: null });
   const { id: userId } = useSession();
 
-  const openCreateFolder = useCallback((parentFolderId?: number, parentFolderName?: string) => {
+  const openCreateFolder = useCallback((parentFolderId?: string, parentFolderName?: string) => {
     setState({ mode: "create", parentFolderId, parentFolderName });
   }, []);
 
-  const openRenameFolder = useCallback((folderId: number, folderName: string) => {
+  const openRenameFolder = useCallback((folderId: string, folderName: string) => {
     setState({ mode: "rename", folderId, folderName });
   }, []);
 
-  const openDeleteFolder = useCallback((folderId: number, folderName: string, hasSubfolders = false) => {
+  const openDeleteFolder = useCallback((folderId: string, folderName: string, hasSubfolders = false) => {
     setState({ mode: "delete", folderId, folderName, hasSubfolders });
   }, []);
 

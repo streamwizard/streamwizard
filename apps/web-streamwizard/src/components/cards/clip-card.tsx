@@ -80,7 +80,7 @@ export function ClipCardActions({ clip }: { clip: clipsWithFolders }) {
       title: clip.title,
     });
 
-  const folderIds = clip.folders.map((folder: { id: number }) => folder.id);
+  const folderIds = clip.folders.map((folder: { id: string }) => folder.id);
   const removableFolders = getRemovableFolders(folderIds);
   const folderTree = buildClipFolderTree(folders);
 
