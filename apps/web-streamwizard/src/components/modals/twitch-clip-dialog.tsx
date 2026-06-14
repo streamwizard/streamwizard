@@ -1,13 +1,11 @@
 "use client";
 
 import { AddToFolderItems } from "@/components/clips/add-to-folder-menu";
-import { ClipFolderModal } from "@/components/modals/clip-folder-modal";
 import { formatClipDuration, formatDate } from "@/lib/format";
 import { buildClipFolderTree, type ClipFolderNode } from "@/lib/utils/clip-folders";
 import { downloadClip } from "@/lib/utils/download-clip";
 import { useClipFolders } from "@/providers/clips-provider";
-import { useModal } from "@/providers/modal-provider";
-import { useSession } from "@/providers/session-provider";
+import { useClipFolderDialog } from "@/providers/clip-folder-dialog-provider";
 import { clipsWithFolders } from "@/types/database";
 import {
   Badge,
@@ -62,17 +60,23 @@ function InfoCell({ icon, label, value }: { icon: React.ReactNode; label: string
 }
 
 function ClipDialogBody({ clip }: { clip: clipsWithFolders }) {
-  const { id: userId } = useSession();
-  const { openModal } = useModal();
+  const { openCreateFolder } = useClipFolderDialog();
   const { folders, getRemovableFolders, getFolderLabel, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [assignedFolderIds, setAssignedFolderIds] = useState(() => clip.folders.map((f) => f.id));
 
-  const folderIds = clip.folders.map((folder) => folder.id);
-  const removableFolders = getRemovableFolders(folderIds);
+  const removableFolders = getRemovableFolders(assignedFolderIds);
   const folderTree = buildClipFolderTree(folders);
 
-  const handleAddToFolder = (folder: ClipFolderNode) =>
+  const handleAddToFolder = (folder: ClipFolderNode) => {
+    setAssignedFolderIds((prev) => [...prev, folder.id]);
     AddToFolder({ folderName: getFolderLabel(folder.id), folderId: folder.id, clipId: clip.twitch_clip_id });
+  };
+
+  const handleRemoveFromFolder = (folderId: number) => {
+    setAssignedFolderIds((prev) => prev.filter((id) => id !== folderId));
+    handleRemoveClipFromFolder(folderId, clip.twitch_clip_id, getFolderLabel(folderId));
+  };
 
   const embedUrl = clip.embed_url
     ? `${clip.embed_url}&parent=localhost&parent=streamwizard.org&parent=staging.streamwizard.org&autoplay=true`
@@ -158,10 +162,10 @@ function ClipDialogBody({ clip }: { clip: clipsWithFolders }) {
               {folderTree.length === 0 ? (
                 <DropdownMenuItem disabled>No folders yet</DropdownMenuItem>
               ) : (
-                <AddToFolderItems nodes={folderTree} assignedIds={folderIds} onAdd={handleAddToFolder} />
+                <AddToFolderItems nodes={folderTree} assignedIds={assignedFolderIds} onAdd={handleAddToFolder} />
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => openModal(<ClipFolderModal user_id={userId} />)}>
+              <DropdownMenuItem onClick={() => openCreateFolder()}>
                 Create new folder
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -180,7 +184,7 @@ function ClipDialogBody({ clip }: { clip: clipsWithFolders }) {
                 {removableFolders.map((folder) => (
                   <DropdownMenuItem
                     key={folder.id}
-                    onClick={() => handleRemoveClipFromFolder(folder.id, clip.twitch_clip_id, getFolderLabel(folder.id))}
+                    onClick={() => handleRemoveFromFolder(folder.id)}
                   >
                     {getFolderLabel(folder.id)}
                   </DropdownMenuItem>
