@@ -13,10 +13,12 @@ RUN apt-get update && apt-get install -y apt-transport-https ca-certificates cur
     apt-get update && apt-get -y install doppler && \
     rm -rf /var/lib/apt/lists/*
 
-COPY . .
+COPY --chown=bun:bun . .
 RUN bun install --frozen-lockfile --production
 
 WORKDIR /app/apps/rest-api
+
+USER bun
 
 # DOPPLER_TOKEN must be set in Dokploy's Environment Variables section at runtime
 ENTRYPOINT ["doppler", "run", "--"]

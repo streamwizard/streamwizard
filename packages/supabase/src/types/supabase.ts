@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       broadcaster_live_status: {
@@ -91,22 +66,22 @@ export type Database = {
         Row: {
           clip_id: string
           created_at: string | null
-          folder_id: number | null
-          id: number
+          folder_id: string | null
+          id: string
           user_id: string | null
         }
         Insert: {
           clip_id: string
           created_at?: string | null
-          folder_id?: number | null
-          id?: number
+          folder_id?: string | null
+          id?: string
           user_id?: string | null
         }
         Update: {
           clip_id?: string
           created_at?: string | null
-          folder_id?: number | null
-          id?: number
+          folder_id?: string | null
+          id?: string
           user_id?: string | null
         }
         Relationships: [
@@ -123,27 +98,27 @@ export type Database = {
         Row: {
           created_at: string | null
           href: string
-          id: number
+          id: string
           name: string
-          parent_folder_id: number | null
+          parent_folder_id: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
           created_at?: string | null
           href: string
-          id?: number
+          id?: string
           name: string
-          parent_folder_id?: number | null
+          parent_folder_id?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
           created_at?: string | null
           href?: string
-          id?: number
+          id?: string
           name?: string
-          parent_folder_id?: number | null
+          parent_folder_id?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -169,7 +144,7 @@ export type Database = {
           embed_url: string | null
           game_id: string | null
           game_name: string | null
-          id: number
+          id: string
           is_featured: boolean
           language: string | null
           thumbnail_url: string | null
@@ -192,7 +167,7 @@ export type Database = {
           embed_url?: string | null
           game_id?: string | null
           game_name?: string | null
-          id?: number
+          id?: string
           is_featured?: boolean
           language?: string | null
           thumbnail_url?: string | null
@@ -215,7 +190,7 @@ export type Database = {
           embed_url?: string | null
           game_id?: string | null
           game_name?: string | null
-          id?: number
+          id?: string
           is_featured?: boolean
           language?: string | null
           thumbnail_url?: string | null
@@ -1170,7 +1145,7 @@ export type Database = {
         Row: {
           clip_count: number
           created_at: string | null
-          id: number
+          id: string
           last_sync: string
           sync_status: Database["public"]["Enums"]["clip_sync_status"]
           updated_at: string | null
@@ -1179,7 +1154,7 @@ export type Database = {
         Insert: {
           clip_count: number
           created_at?: string | null
-          id?: number
+          id?: string
           last_sync: string
           sync_status: Database["public"]["Enums"]["clip_sync_status"]
           updated_at?: string | null
@@ -1188,7 +1163,7 @@ export type Database = {
         Update: {
           clip_count?: number
           created_at?: string | null
-          id?: number
+          id?: string
           last_sync?: string
           sync_status?: Database["public"]["Enums"]["clip_sync_status"]
           updated_at?: string | null
@@ -1200,6 +1175,9 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          memes_enabled: boolean
+          onboarding_completed: boolean
+          show_stream_stats: boolean
           sync_clips_on_end: boolean
           theme: Database["public"]["Enums"]["theme_type"] | null
           updated_at: string | null
@@ -1208,6 +1186,9 @@ export type Database = {
         Insert: {
           created_at?: string | null
           id?: string
+          memes_enabled?: boolean
+          onboarding_completed?: boolean
+          show_stream_stats?: boolean
           sync_clips_on_end?: boolean
           theme?: Database["public"]["Enums"]["theme_type"] | null
           updated_at?: string | null
@@ -1216,6 +1197,9 @@ export type Database = {
         Update: {
           created_at?: string | null
           id?: string
+          memes_enabled?: boolean
+          onboarding_completed?: boolean
+          show_stream_stats?: boolean
           sync_clips_on_end?: boolean
           theme?: Database["public"]["Enums"]["theme_type"] | null
           updated_at?: string | null
@@ -1418,10 +1402,9 @@ export type Database = {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
       }
-      check_user_role: {
-        Args: { p_role: string; p_user_id: string }
-        Returns: boolean
-      }
+      check_user_role:
+        | { Args: { p_role: string }; Returns: boolean }
+        | { Args: { p_role: string; p_user_id: string }; Returns: boolean }
       delete_user_data: { Args: { p_twitch_user_id: string }; Returns: string }
       get_all_clips_with_folders: {
         Args: never
@@ -1437,7 +1420,7 @@ export type Database = {
           folders: Json
           game_id: string
           game_name: string
-          id: number
+          id: string
           is_featured: boolean
           language: string
           thumbnail_url: string
@@ -1464,7 +1447,7 @@ export type Database = {
           folders: Json
           game_id: string
           game_name: string
-          id: number
+          id: string
           is_featured: boolean
           language: string
           thumbnail_url: string
@@ -1520,14 +1503,6 @@ export type Database = {
       user_owns_channel: { Args: { channel_id: string }; Returns: boolean }
     }
     Enums: {
-      actions:
-        | "spotify.song_request"
-        | "spotify.add_banned_song"
-        | "spotify.remove_banned_song"
-        | "spotify.add_banned_chatter"
-        | "spotify.remove_banned_chatter"
-        | "spotify.skip"
-        | "none"
       clip_sync_status: "completed" | "failed" | "syncing"
       feedback_category: "bug" | "feature" | "general"
       feedback_priority: "low" | "medium" | "high" | "critical"
@@ -1668,20 +1643,8 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
-      actions: [
-        "spotify.song_request",
-        "spotify.add_banned_song",
-        "spotify.remove_banned_song",
-        "spotify.add_banned_chatter",
-        "spotify.remove_banned_chatter",
-        "spotify.skip",
-        "none",
-      ],
       clip_sync_status: ["completed", "failed", "syncing"],
       feedback_category: ["bug", "feature", "general"],
       feedback_priority: ["low", "medium", "high", "critical"],
@@ -1701,3 +1664,4 @@ export const Constants = {
     },
   },
 } as const
+

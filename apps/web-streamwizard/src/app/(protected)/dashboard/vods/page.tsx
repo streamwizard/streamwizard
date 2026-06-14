@@ -41,15 +41,13 @@ async function VodsContent() {
  */
 export default function VodsPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto max-w-7xl px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
+    <div className="mx-auto w-full max-w-7xl">
+      <div className="rounded-xl border border-border bg-card/50 p-6 shadow-sm">
+        <div className="mb-6">
           <h1 className="text-3xl font-bold tracking-tight">VODs</h1>
           <p className="mt-2 text-muted-foreground">View and manage your archived Twitch broadcasts</p>
         </div>
 
-        {/* Content */}
         <Suspense fallback={<VodsTableSkeleton rows={10} />}>
           <VodsContent />
         </Suspense>

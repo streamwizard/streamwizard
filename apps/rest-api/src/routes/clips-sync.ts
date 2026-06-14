@@ -74,22 +74,24 @@ export async function syncClipsHandler(c: Context) {
     const totalClips = await syncTwitch(integration.twitch_user_id, TwitchAPI, { skipRecentCheck });
 
     // Check if sync was skipped
-    if (totalClips === null) {
+    if (totalClips === null || (typeof totalClips === "object" && "skipped" in totalClips)) {
+      const lastSync = totalClips && "lastSync" in totalClips ? totalClips.lastSync : null;
       return c.json(
         {
-          success: true,
+          success: false,
           skipped: true,
+          lastSync,
           message: "Sync skipped. Last sync was less than an hour ago.",
         },
-        429, // Too Many Requests
+        429,
       );
     }
 
     return c.json(
       {
         success: true,
-        clipsCount: totalClips,
-        message: `Successfully synced ${totalClips} clips`,
+        clipsCount: totalClips.clipsCount,
+        message: `Successfully synced ${totalClips.clipsCount} clips`,
       },
       200,
     );

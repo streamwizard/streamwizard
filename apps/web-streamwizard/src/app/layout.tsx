@@ -1,5 +1,5 @@
 import { CookieBanner } from "@/components/cookie-banner";
-import { ModalProvider } from "@/providers/modal-provider";
+import { LightModeOverlay } from "@/components/global/light-mode-overlay";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { PHProvider, PostHogPageView } from "@repo/posthog";
 import { Metadata } from "next";
@@ -41,14 +41,13 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <PHProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-            <ModalProvider>
-              <Suspense>
-                <PostHogPageView />
-              </Suspense>
-              <Toaster position="bottom-right" theme="dark" expand visibleToasts={5} />
-              <CookieBanner />
-              {children}
-            </ModalProvider>
+            <LightModeOverlay />
+            <Suspense>
+              <PostHogPageView />
+            </Suspense>
+            <Toaster position="bottom-right" theme="dark" expand visibleToasts={5} />
+            <CookieBanner />
+            {children}
           </ThemeProvider>
         </PHProvider>
       </body>

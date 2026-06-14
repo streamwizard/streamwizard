@@ -1,0 +1,104 @@
+---
+title: "Your first contribution"
+description: "Never forked a repo or opened a pull request? Start here. Forks, branches, and PRs in plain terms, plus the whole flow from zero."
+---
+
+New to this? Maybe you've never forked a repo or opened a pull request, and the
+words alone feel intimidating. They sound scarier than they are. This page
+explains the pieces in plain terms, then walks the whole flow from zero.
+
+Stuck at any point? [Join the Discord](https://discord.gg/streamwizard) and ask.
+No question is too basic.
+
+## The three words you need to know
+
+### Fork
+
+A fork is your own copy of the StreamWizard repo, living under your GitHub
+account. You can't edit the main project directly, and you wouldn't want to.
+Instead you fork it, make your changes in your copy, then ask us to pull them in.
+Your fork is your sandbox. Break whatever you want in there.
+
+### Branch
+
+A branch is a separate workspace for one change. Inside your fork you create a
+branch, do your work, and leave the main line untouched. One branch per thing
+you're working on. Fixing a typo and adding a feature? That's two branches. It
+keeps each change clean and easy to review.
+
+### Pull request (PR)
+
+A pull request is you saying "here's what I changed, please merge it in." It's a
+request to pull your branch into the StreamWizard project. We review it, maybe
+leave some comments, and once it looks good, we merge it. That's the whole idea.
+The name is more formal than the thing.
+
+## The flow, start to finish
+
+<Steps>
+  <Step title="Fork the repo">
+    On the [StreamWizard GitHub page](https://github.com/streamwizard/streamwizard),
+    click **Fork**. You now have your own copy under your account.
+  </Step>
+  <Step title="Clone it to your machine">
+    Download your fork so you can work on it locally:
+
+    ```bash
+    git clone https://github.com/YOUR-USERNAME/streamwizard.git
+    ```
+  </Step>
+  <Step title="Create a branch">
+    Make a branch for your change. Never work on `staging` or `main` directly:
+
+    ```bash
+    git checkout -b fix/the-thing-you-are-fixing
+    ```
+  </Step>
+  <Step title="Make your changes">
+    Edit, test, repeat. Commit as you go so each step is saved:
+
+    ```bash
+    git add .
+    git commit -m "fix: describe what you changed"
+    ```
+  </Step>
+  <Step title="Push to your fork">
+    Send your branch back up to your fork on GitHub:
+
+    ```bash
+    git push origin fix/the-thing-you-are-fixing
+    ```
+  </Step>
+  <Step title="Open a pull request">
+    On GitHub, open a PR from your branch. Set the base branch to `staging` (more
+    on that below). Describe what you changed, why it's needed, and how you
+    tested it. Screenshots help for anything visual.
+  </Step>
+  <Step title="Review and merge">
+    A maintainer reviews it and may leave comments. Push any requested changes to
+    the same branch and the PR updates itself. Once it's approved, we merge it.
+  </Step>
+</Steps>
+
+After that, your change rides the normal release train: `staging` first for
+testing, then `production`, where real streamers see it.
+
+## One rule that trips people up
+
+<Warning>
+  Always point your PR at the **staging** branch, never **main** or
+  **production**. PRs against `main` won't be accepted. When you open a PR,
+  GitHub picks a base branch for you, so double-check it says `staging` before
+  you submit.
+</Warning>
+
+## Ready for the details?
+
+This page is the map. The full
+[CONTRIBUTING guide](https://github.com/streamwizard/streamwizard/blob/main/CONTRIBUTING.md)
+is the terrain: what to install, how to run the local database, branch naming,
+commit prefixes, and the checks to run before you push.
+
+Not sure what to work on? Look for issues tagged **good first issue** on
+[GitHub](https://github.com/streamwizard/streamwizard/issues), or ask in
+[Discord](https://discord.gg/streamwizard) what needs doing.

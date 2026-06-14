@@ -7,6 +7,8 @@ export type ClipSearchParams = {
   start_date?: string;
   search_query?: string;
   page?: string;
+  per_page?: string;
+  view?: string;
   broadcaster_id?: string;
   sort?: string;
   asc?: string;

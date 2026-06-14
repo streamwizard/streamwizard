@@ -23,6 +23,7 @@ COPY packages/typescript-config/package.json ./packages/typescript-config/
 COPY packages/ui/package.json                ./packages/ui/
 
 # App package.json files
+COPY apps/docs/package.json             ./apps/docs/
 COPY apps/web-monitor/package.json      ./apps/web-monitor/
 COPY apps/web-streamwizard/package.json ./apps/web-streamwizard/
 COPY apps/rest-api/package.json         ./apps/rest-api/

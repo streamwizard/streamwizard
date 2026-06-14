@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# web-overlay
 
-## Getting Started
+The OBS browser source. This is what your viewers see on stream — overlay scenes rendered server-side so you don't drop frames during a raid. Built on the Next.js App Router.
 
-First, run the development server:
+## What it does
+
+Takes the scenes you build in the dashboard (`web-streamwizard`) and renders them as a live canvas OBS can point a browser source at. Clip playlists, text, timers, IRL GPS widgets — all of it.
+
+## How it's wired
+
+- **`app/[overlayId]/page.tsx`** — the server-rendered canvas. `overlayId` is either an active overlay **slug** or a scene **UUID** (the UUID path skips the `is_active` check, for embed tooling).
+- **Server Actions** (`app/actions/*`) — trusted reads via the service-role Supabase client (`@repo/supabase/next/admin`) and the shared `queries/*`. No end-user auth — OBS just loads a URL.
+- **`app/api/video/route.ts`** — a same-origin proxy for clip video URLs so widgets can play them without CORS drama.
+- **Widgets** — pure renderers live in `@repo/ui`; this app supplies the data containers (e.g. `ClipsWidgetContainer`) and registers them in `page.tsx`.
+
+The widget container/renderer split and the overlay data rules are documented in the root [`ARCHITECTURE.md`](../../ARCHITECTURE.md).
+
+> **Heads up:** this app runs a pinned, modified build of Next.js — see [`AGENTS.md`](./AGENTS.md). Check the bundled docs in `node_modules/next/dist/docs/` before assuming an API behaves the way the public docs say.
+
+## Running locally
+
+From the repo root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun dev --filter=@repo/web-overlay
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Runs on [https://localhost:3001](https://localhost:3001) — it serves over **HTTPS** (`--experimental-https`) because OBS browser sources expect a secure origin.

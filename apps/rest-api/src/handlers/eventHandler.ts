@@ -116,5 +116,11 @@ function extractReceivingBroadcasterId(event: Record<string, unknown>): string |
     if (d0?.broadcaster_user_id) return d0.broadcaster_user_id as string;
   }
 
+  // Fallback for user-scoped events (e.g. user.authorization.revoke) where
+  // there is no broadcaster_user_id — the user_id IS their broadcaster ID
+  if (typeof event.user_id === "string" && event.user_id) {
+    return event.user_id;
+  }
+
   return null;
 }

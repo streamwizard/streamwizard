@@ -48,7 +48,7 @@ export function UserAuthForm({ redirect }: UserAuthFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       {/* <FormLabel>Title</FormLabel> */}
-                      <FormControl className="w-96">
+                      <FormControl className="w-full">
                         <Input
                           id="email"
                           placeholder="user@example.net"
@@ -72,7 +72,7 @@ export function UserAuthForm({ redirect }: UserAuthFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       {/* <FormLabel>Title</FormLabel> */}
-                      <FormControl className="w-96">
+                      <FormControl className="w-full">
                         <Input
                           id="password"
                           placeholder="********"
