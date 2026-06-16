@@ -4,7 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot --filter=@repo/ws-server --filter=@repo/rest-api --filter=@repo/docs",
+    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot --filter=@repo/discord-bot --filter=@repo/ws-server --filter=@repo/rest-api --filter=@repo/docs",
     "dev:monitor": "turbo run dev --filter=@repo/web-monitor",
     "doppler:sync": "bash scripts/sync-doppler-shared.sh",
     "lint": "turbo run lint",
