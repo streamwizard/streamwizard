@@ -75,6 +75,10 @@
       "types": "./src/queries/irl.ts",
       "default": "./src/queries/irl.ts"
     },
+    "./queries/discord": {
+      "types": "./src/queries/discord.ts",
+      "default": "./src/queries/discord.ts"
+    },
     "./types/supabase": {
       "types": "./src/types/supabase.ts",
       "default": "./src/types/supabase.ts"

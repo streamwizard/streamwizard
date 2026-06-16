@@ -122,6 +122,12 @@ There are two transport types:
 
 Connects to Twitch chat via EventSub and responds to commands. Uses `supabase` from `@repo/supabase` for command lookups (via `@repo/supabase/queries/commands`) and `@repo/twitch-api` for chat messages.
 
+### Discord Bot (`apps/discord-bot`)
+
+A standalone Discord bot (Bun + discord.js v14). Commands (`src/commands/`) and gateway event listeners (`src/events/`) are auto-discovered by `src/handlers/` at startup — adding a file is enough, no manual registration. Slash commands still need to be pushed to Discord via `bun run deploy-commands` after they change. See the app's own `README.md` for the extension pattern.
+
+Per-command role permissions are configured per-guild via `/permissions set command:<name> role:<@role>`, stored in the `discord_command_permissions` table, and cached in-memory for 5 minutes (`src/lib/permissions.ts`). A command with no rows is open to everyone. `/permissions` itself can only be run by the server owner (checked against `guild.ownerId` in code, since Discord has no "owner" permission flag to delegate to), so there's no bootstrap step.
+
 ## Package Dependencies
 
 ```
@@ -153,6 +159,10 @@ apps/ws-server
   ├── @repo/env           — Root env schema (validates `SUPABASE_SECRET_KEY`, etc.)
   ├── @repo/supabase      — `supabase` singleton + **`queries/overlays`**, **`queries/user`**, **`queries/live-status`**, **`queries/irl`**
   └── @repo/types         — `BotBroadcastMessage`, `OverlayEventType`
+
+apps/discord-bot
+  ├── @repo/sentry        — `getSentryOptions` for error tracking
+  └── @repo/supabase      — `supabase` singleton + **`queries/discord`** for the role-permission mapping
 ```
 
 Next.js dashboard code imports **`env`** from **`@repo/env/next`** where the server/client distinction matters, and **`@repo/env`** when matching the canonical schema used by shared packages.

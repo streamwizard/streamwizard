@@ -9,6 +9,60 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      _clip_uuid_migration_backup_folders: {
+        Row: {
+          created_at: string | null
+          href: string | null
+          id: number | null
+          name: string | null
+          parent_folder_id: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          href?: string | null
+          id?: number | null
+          name?: string | null
+          parent_folder_id?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          href?: string | null
+          id?: number | null
+          name?: string | null
+          parent_folder_id?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      _clip_uuid_migration_backup_junction: {
+        Row: {
+          clip_id: string | null
+          created_at: string | null
+          folder_id: number | null
+          id: number | null
+          user_id: string | null
+        }
+        Insert: {
+          clip_id?: string | null
+          created_at?: string | null
+          folder_id?: number | null
+          id?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          clip_id?: string | null
+          created_at?: string | null
+          folder_id?: number | null
+          id?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       broadcaster_live_status: {
         Row: {
           broadcaster_id: string
@@ -319,6 +373,57 @@ export type Database = {
           created_at?: string
           id?: string
           message?: string
+        }
+        Relationships: []
+      }
+      discord_command_permissions: {
+        Row: {
+          command_name: string
+          created_at: string
+          guild_id: string
+          id: string
+          role_id: string
+        }
+        Insert: {
+          command_name: string
+          created_at?: string
+          guild_id: string
+          id?: string
+          role_id: string
+        }
+        Update: {
+          command_name?: string
+          created_at?: string
+          guild_id?: string
+          id?: string
+          role_id?: string
+        }
+        Relationships: []
+      }
+      discord_guild_settings: {
+        Row: {
+          created_at: string
+          guild_id: string
+          id: string
+          updated_at: string
+          welcome_channel_id: string | null
+          welcome_enabled: boolean
+        }
+        Insert: {
+          created_at?: string
+          guild_id: string
+          id?: string
+          updated_at?: string
+          welcome_channel_id?: string | null
+          welcome_enabled?: boolean
+        }
+        Update: {
+          created_at?: string
+          guild_id?: string
+          id?: string
+          updated_at?: string
+          welcome_channel_id?: string | null
+          welcome_enabled?: boolean
         }
         Relationships: []
       }
