@@ -9,6 +9,60 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      _clip_uuid_migration_backup_folders: {
+        Row: {
+          created_at: string | null
+          href: string | null
+          id: number | null
+          name: string | null
+          parent_folder_id: number | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          href?: string | null
+          id?: number | null
+          name?: string | null
+          parent_folder_id?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          href?: string | null
+          id?: number | null
+          name?: string | null
+          parent_folder_id?: number | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      _clip_uuid_migration_backup_junction: {
+        Row: {
+          clip_id: string | null
+          created_at: string | null
+          folder_id: number | null
+          id: number | null
+          user_id: string | null
+        }
+        Insert: {
+          clip_id?: string | null
+          created_at?: string | null
+          folder_id?: number | null
+          id?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          clip_id?: string | null
+          created_at?: string | null
+          folder_id?: number | null
+          id?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       broadcaster_live_status: {
         Row: {
           broadcaster_id: string
@@ -322,6 +376,194 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_command_permissions: {
+        Row: {
+          command_name: string
+          created_at: string
+          guild_id: string
+          id: string
+          role_id: string
+        }
+        Insert: {
+          command_name: string
+          created_at?: string
+          guild_id: string
+          id?: string
+          role_id: string
+        }
+        Update: {
+          command_name?: string
+          created_at?: string
+          guild_id?: string
+          id?: string
+          role_id?: string
+        }
+        Relationships: []
+      }
+      discord_guild_members: {
+        Row: {
+          guild_id: string
+          id: string
+          join_number: number
+          joined_at: string
+          user_id: string
+        }
+        Insert: {
+          guild_id: string
+          id?: string
+          join_number: number
+          joined_at?: string
+          user_id: string
+        }
+        Update: {
+          guild_id?: string
+          id?: string
+          join_number?: number
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      discord_guild_settings: {
+        Row: {
+          created_at: string
+          guild_id: string
+          id: string
+          updated_at: string
+          welcome_channel_id: string | null
+          welcome_enabled: boolean
+        }
+        Insert: {
+          created_at?: string
+          guild_id: string
+          id?: string
+          updated_at?: string
+          welcome_channel_id?: string | null
+          welcome_enabled?: boolean
+        }
+        Update: {
+          created_at?: string
+          guild_id?: string
+          id?: string
+          updated_at?: string
+          welcome_channel_id?: string | null
+          welcome_enabled?: boolean
+        }
+        Relationships: []
+      }
+      discord_ticket_settings: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          enabled: boolean
+          guild_id: string
+          id: string
+          log_channel_id: string | null
+          panel_channel_id: string | null
+          panel_message_id: string | null
+          staff_role_id: string | null
+          ticket_counter: number
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          guild_id: string
+          id?: string
+          log_channel_id?: string | null
+          panel_channel_id?: string | null
+          panel_message_id?: string | null
+          staff_role_id?: string | null
+          ticket_counter?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          enabled?: boolean
+          guild_id?: string
+          id?: string
+          log_channel_id?: string | null
+          panel_channel_id?: string | null
+          panel_message_id?: string | null
+          staff_role_id?: string | null
+          ticket_counter?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      discord_tickets: {
+        Row: {
+          category: Database["public"]["Enums"]["discord_ticket_category"]
+          channel_id: string
+          claimed_at: string | null
+          claimed_by_discord_user_id: string | null
+          closed_at: string | null
+          closed_by_discord_user_id: string | null
+          created_at: string
+          description: string
+          github_issue_number: number | null
+          github_issue_url: string | null
+          guild_id: string
+          id: string
+          opener_discord_user_id: string
+          opener_user_id: string | null
+          status: Database["public"]["Enums"]["discord_ticket_status"]
+          subject: string
+          ticket_number: number
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["discord_ticket_category"]
+          channel_id: string
+          claimed_at?: string | null
+          claimed_by_discord_user_id?: string | null
+          closed_at?: string | null
+          closed_by_discord_user_id?: string | null
+          created_at?: string
+          description: string
+          github_issue_number?: number | null
+          github_issue_url?: string | null
+          guild_id: string
+          id?: string
+          opener_discord_user_id: string
+          opener_user_id?: string | null
+          status?: Database["public"]["Enums"]["discord_ticket_status"]
+          subject: string
+          ticket_number: number
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["discord_ticket_category"]
+          channel_id?: string
+          claimed_at?: string | null
+          claimed_by_discord_user_id?: string | null
+          closed_at?: string | null
+          closed_by_discord_user_id?: string | null
+          created_at?: string
+          description?: string
+          github_issue_number?: number | null
+          github_issue_url?: string | null
+          guild_id?: string
+          id?: string
+          opener_discord_user_id?: string
+          opener_user_id?: string | null
+          status?: Database["public"]["Enums"]["discord_ticket_status"]
+          subject?: string
+          ticket_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_tickets_opener_user_id_fkey"
+            columns: ["opener_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback: {
         Row: {
           category: Database["public"]["Enums"]["feedback_category"]
@@ -365,24 +607,18 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          is_active: boolean | null
-          type: Database["public"]["Enums"]["provider_type"]
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          is_active?: boolean | null
-          type: Database["public"]["Enums"]["provider_type"]
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          is_active?: boolean | null
-          type?: Database["public"]["Enums"]["provider_type"]
           updated_at?: string
           user_id?: string
         }
@@ -393,6 +629,74 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      integrations_discord: {
+        Row: {
+          access_token_ciphertext: string | null
+          access_token_iv: string | null
+          access_token_tag: string | null
+          avatar: string | null
+          created_at: string
+          discord_user_id: string
+          discord_username: string
+          email: string | null
+          id: string
+          refresh_token_ciphertext: string | null
+          refresh_token_iv: string | null
+          refresh_token_tag: string | null
+          roles: Json
+          server_id: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token_ciphertext?: string | null
+          access_token_iv?: string | null
+          access_token_tag?: string | null
+          avatar?: string | null
+          created_at?: string
+          discord_user_id: string
+          discord_username: string
+          email?: string | null
+          id?: string
+          refresh_token_ciphertext?: string | null
+          refresh_token_iv?: string | null
+          refresh_token_tag?: string | null
+          roles?: Json
+          server_id?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token_ciphertext?: string | null
+          access_token_iv?: string | null
+          access_token_tag?: string | null
+          avatar?: string | null
+          created_at?: string
+          discord_user_id?: string
+          discord_username?: string
+          email?: string | null
+          id?: string
+          refresh_token_ciphertext?: string | null
+          refresh_token_iv?: string | null
+          refresh_token_tag?: string | null
+          roles?: Json
+          server_id?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrations_discord_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "integrations"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -424,7 +728,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           email?: string | null
-          id: string
+          id?: string
           profile_image_url?: string | null
           refresh_token_ciphertext?: string | null
           refresh_token_iv?: string | null
@@ -456,18 +760,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "integrations_twitch_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "integrations"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "integrations_twitch_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
+            isOneToOne: true
+            referencedRelation: "integrations"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1467,21 +1764,29 @@ export type Database = {
         Returns: undefined
       }
       insert_discord_integration: {
-        Args: { integration_id: string; provider_data: Json; user_id: string }
+        Args: { p_user_id: string; provider_data: Json }
         Returns: undefined
       }
-      insert_integration: {
-        Args: {
-          p_provider_type: Database["public"]["Enums"]["provider_type"]
-          p_user_id: string
-        }
-        Returns: string
-      }
+      insert_integration: { Args: { p_user_id: string }; Returns: undefined }
       insert_twitch_integration: {
-        Args: { integration_id: string; provider_data: Json; user_id: string }
+        Args: { p_user_id: string; provider_data: Json }
         Returns: undefined
       }
       jwt_broadcaster_id: { Args: never; Returns: string }
+      link_discord_integration: {
+        Args: {
+          p_avatar: string
+          p_discord_user_id: string
+          p_discord_username: string
+          p_email: string
+        }
+        Returns: undefined
+      }
+      next_ticket_number: { Args: { p_guild_id: string }; Returns: number }
+      record_guild_member_join: {
+        Args: { p_guild_id: string; p_member_count: number; p_user_id: string }
+        Returns: number
+      }
       remove_clip_from_folder: {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
@@ -1504,6 +1809,8 @@ export type Database = {
     }
     Enums: {
       clip_sync_status: "completed" | "failed" | "syncing"
+      discord_ticket_category: "bug" | "feature" | "support" | "other"
+      discord_ticket_status: "open" | "closed"
       feedback_category: "bug" | "feature" | "general"
       feedback_priority: "low" | "medium" | "high" | "critical"
       feedback_status: "open" | "in_progress" | "resolved" | "closed"
@@ -1646,6 +1953,8 @@ export const Constants = {
   public: {
     Enums: {
       clip_sync_status: ["completed", "failed", "syncing"],
+      discord_ticket_category: ["bug", "feature", "support", "other"],
+      discord_ticket_status: ["open", "closed"],
       feedback_category: ["bug", "feature", "general"],
       feedback_priority: ["low", "medium", "high", "critical"],
       feedback_status: ["open", "in_progress", "resolved", "closed"],

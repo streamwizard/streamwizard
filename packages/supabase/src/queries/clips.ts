@@ -264,6 +264,26 @@ export async function upsertClips(client: DBClient, clips: Database["public"]["T
   if (error) throw error;
 }
 
+export async function getLatestClipByUserId(client: DBClient, userId: string) {
+  return client
+    .from("clips")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at_twitch", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+}
+
+export async function getMostViewedClipByUserId(client: DBClient, userId: string) {
+  return client
+    .from("clips")
+    .select("*")
+    .eq("user_id", userId)
+    .order("view_count", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+}
+
 export async function getClipBroadcasterId(client: DBClient, clipId: string, userId: string): Promise<string | null> {
   const { data: ownedRows } = await client
     .from("clips")
