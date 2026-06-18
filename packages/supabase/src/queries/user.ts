@@ -92,6 +92,102 @@ export async function getTwitchIntegrationByBroadcasterId(client: DBClient, broa
   return client.from("integrations_twitch").select("user_id").eq("twitch_user_id", broadcasterId).single();
 }
 
+export async function getDiscordIntegrationByUserId(client: DBClient, userId: string) {
+  return client
+    .from("integrations_discord")
+    .select("discord_user_id, discord_username")
+    .eq("user_id", userId)
+    .single();
+}
+
+// Returns the encrypted refresh token + username for a user's Discord
+// integration, used to refresh the token and revoke the Linked Role on
+// disconnect. Returns null when there is no integration or no stored token.
+export async function getDiscordRefreshTokenByUserId(client: DBClient, userId: string) {
+  const { data, error } = await client
+    .from("integrations_discord")
+    .select(
+      "discord_username, refresh_token_ciphertext, refresh_token_iv, refresh_token_tag"
+    )
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (
+    error ||
+    !data?.refresh_token_ciphertext ||
+    !data?.refresh_token_iv ||
+    !data?.refresh_token_tag
+  ) {
+    return null;
+  }
+
+  return {
+    discord_username: data.discord_username,
+    refresh_token_ciphertext: data.refresh_token_ciphertext,
+    refresh_token_iv: data.refresh_token_iv,
+    refresh_token_tag: data.refresh_token_tag,
+  };
+}
+
+export async function getDiscordUserIdByUserIdMaybe(
+  client: DBClient,
+  userId: string
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("integrations_discord")
+    .select("discord_user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !data?.discord_user_id?.trim()) return null;
+  return data.discord_user_id.trim();
+}
+
+export async function updateDiscordTokens(
+  client: DBClient,
+  userId: string,
+  tokens: {
+    access_token_ciphertext: string;
+    access_token_iv: string;
+    access_token_tag: string;
+    refresh_token_ciphertext: string;
+    refresh_token_iv: string;
+    refresh_token_tag: string;
+  }
+) {
+  return client.from("integrations_discord").update(tokens).eq("user_id", userId);
+}
+
+export async function getAllDiscordIntegrations(client: DBClient) {
+  const { data, error } = await client.from("integrations_discord").select("discord_user_id, user_id");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function linkDiscordIntegration(
+  client: DBClient,
+  profile: {
+    discord_user_id: string;
+    discord_username: string;
+    avatar: string | null;
+    email: string | null;
+  }
+) {
+  const { error } = await client.rpc("link_discord_integration", {
+    p_discord_user_id: profile.discord_user_id,
+    p_discord_username: profile.discord_username,
+    p_avatar: profile.avatar ?? "",
+    p_email: profile.email ?? "",
+  });
+
+  if (error) throw error;
+}
+
+export async function deleteDiscordIntegration(client: DBClient, userId: string) {
+  const { error } = await client.from("integrations_discord").delete().eq("user_id", userId);
+  if (error) throw error;
+}
+
 export async function getUserPreferencesByUserId(client: DBClient, userId: string) {
   const { data, error } = await client.from("user_preferences").select("*").eq("user_id", userId).single();
   if (error) {
