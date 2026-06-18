@@ -1,5 +1,5 @@
 import { MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import { buildWelcomeMessage, getGuildWelcomeSettings, getJoinNumber, resolveWelcomeChannel } from "../lib/welcome";
+import { buildWelcomeMessage, getConnectionInfo, getGuildWelcomeSettings, getJoinNumber, resolveWelcomeChannel } from "../lib/welcome";
 import type { Command } from "../types/discord";
 
 export default {
@@ -29,8 +29,8 @@ export default {
       return;
     }
 
-    const joinNumber = await getJoinNumber(member);
-    await channel.send(buildWelcomeMessage(member, joinNumber));
+    const [joinNumber, connection] = await Promise.all([getJoinNumber(member), getConnectionInfo(member)]);
+    await channel.send(buildWelcomeMessage(member, joinNumber, connection));
 
     const disabledNote = settings?.welcome_enabled === false ? "\n⚠️ Welcome messages are currently disabled, so this won't fire on real joins." : "";
     await interaction.reply({
