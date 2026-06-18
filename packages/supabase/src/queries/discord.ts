@@ -64,3 +64,16 @@ export async function setWelcomeEnabled(client: DBClient, guildId: string, enabl
 
   if (error) throw error;
 }
+
+// Atomically assigns (or returns the existing) join number for a member.
+// Idempotent: calling it again for the same guild/user returns their original number.
+export async function recordGuildMemberJoin(client: DBClient, guildId: string, userId: string): Promise<number> {
+  const { data, error } = await client.rpc("record_guild_member_join", { p_guild_id: guildId, p_user_id: userId });
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getDiscordIntegrationByDiscordUserId(client: DBClient, discordUserId: string) {
+  return client.from("integrations_discord").select("user_id, discord_username").eq("discord_user_id", discordUserId).maybeSingle();
+}

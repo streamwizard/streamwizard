@@ -11,7 +11,9 @@ export const metadata: Metadata = {
   description: "Login in to your account to access your dashboard.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
+
   return (
     <div className="relative grid min-h-screen flex-col items-center justify-center lg:max-w-none lg:grid-cols-2 lg:px-0">
       <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
@@ -57,7 +59,7 @@ export default function LoginPage() {
               </Link> */}
             </p>
           </div>
-          <UserAuthForm redirect={null} />
+          <UserAuthForm redirect={next ?? null} />
           <p className="px-8 text-center text-sm text-muted-foreground">
             By clicking continue, you agree to our
             <Link href="/terms-of-service" className="underline underline-offset-4 hover:text-primary">

@@ -2,6 +2,7 @@ import { Events, MessageFlags } from "discord.js";
 import type { BotEvent } from "../types/discord";
 import { Sentry } from "../sentry";
 import { canRunCommand } from "../lib/permissions";
+import { handleTicketInteraction } from "../lib/tickets";
 
 export default {
   name: Events.InteractionCreate,
@@ -14,6 +15,13 @@ export default {
         Sentry.captureException(error);
         console.error(`[commands] Error in autocomplete for "${interaction.commandName}":`, error);
       }
+      return;
+    }
+
+    // Ticket buttons and modal submits route to their own handler (which does its
+    // own error handling). Dispatched purely by customId, so they survive restarts.
+    if ((interaction.isButton() || interaction.isModalSubmit()) && interaction.customId.startsWith("ticket:")) {
+      await handleTicketInteraction(interaction);
       return;
     }
 
