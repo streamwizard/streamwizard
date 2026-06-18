@@ -14,9 +14,9 @@ interface TwitchLoginProps {
   className?: string;
 }
 
-export default function TwitchLogin({ text, disabled, size, variant, className }: TwitchLoginProps) {
+export default function TwitchLogin({ redirect, text, disabled, size, variant, className }: TwitchLoginProps) {
   return (
-    <Button variant={variant} size={size} type="button" onClick={() => login()} disabled={disabled}>
+    <Button variant={variant} size={size} type="button" onClick={() => login(redirect)} disabled={disabled}>
       <span className={cn(className, "mr-2 h-4 w-4 flex justify-center items-center ")} aria-hidden="true">
         <SocialIcon icon="twitch" />
       </span>

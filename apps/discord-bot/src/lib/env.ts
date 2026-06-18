@@ -14,6 +14,8 @@ const schema = z.object({
   // Omit in staging/production to register commands globally.
   DISCORD_GUILD_ID: z.string().min(1).optional(),
 
+  NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
+
   // Sentry
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_RELEASE: z.string().optional(),

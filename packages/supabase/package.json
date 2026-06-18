@@ -79,6 +79,10 @@
       "types": "./src/queries/discord.ts",
       "default": "./src/queries/discord.ts"
     },
+    "./queries/tickets": {
+      "types": "./src/queries/tickets.ts",
+      "default": "./src/queries/tickets.ts"
+    },
     "./types/supabase": {
       "types": "./src/types/supabase.ts",
       "default": "./src/types/supabase.ts"
