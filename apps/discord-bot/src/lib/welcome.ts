@@ -1,15 +1,31 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder } from "discord.js";
 import type { Guild, GuildMember, TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { getGuildSettings, recordGuildMemberJoin } from "@repo/supabase/queries/discord";
+import {
+  getDiscordIntegrationByDiscordUserId,
+  getGuildSettings,
+  getPublicTwitchIntegrationByDiscordUserId,
+  recordGuildMemberJoin,
+} from "@repo/supabase/queries/discord";
+import type { PublicTwitchIntegration } from "@repo/supabase/queries/discord";
 import { Sentry } from "../sentry";
 import { env } from "./env";
 
-const LINK_URL = `${env.WEB_APP_URL}/dashboard/settings/integrations`;
+const LINK_URL = `${env.NEXT_PUBLIC_BASE_URL}/dashboard/settings/integrations`;
+
+const BROADCASTER_TYPE_LABEL: Record<string, string> = {
+  partner: "Twitch Partner",
+  affiliate: "Twitch Affiliate",
+};
+
+export type ConnectionInfo = {
+  isConnected: boolean;
+  twitch: PublicTwitchIntegration | null;
+};
 
 export async function getJoinNumber(member: GuildMember): Promise<number | null> {
   try {
-    return await recordGuildMemberJoin(supabase, member.guild.id, member.id);
+    return await recordGuildMemberJoin(supabase, member.guild.id, member.id, member.guild.memberCount);
   } catch (error) {
     Sentry.captureException(error);
     console.error(`[welcome] Failed to record join number for "${member.user.tag}" in "${member.guild.name}":`, error);
@@ -17,17 +33,59 @@ export async function getJoinNumber(member: GuildMember): Promise<number | null>
   }
 }
 
-export function buildWelcomeMessage(member: GuildMember, joinNumber: number | null) {
+export async function getConnectionInfo(member: GuildMember): Promise<ConnectionInfo> {
+  try {
+    const { data, error } = await getDiscordIntegrationByDiscordUserId(supabase, member.id);
+    if (error) throw error;
+    if (!data) return { isConnected: false, twitch: null };
+
+    const twitch = await getPublicTwitchIntegrationByDiscordUserId(supabase, member.id);
+    return { isConnected: true, twitch };
+  } catch (error) {
+    Sentry.captureException(error);
+    console.error(`[welcome] Failed to check connection status for "${member.user.tag}":`, error);
+    return { isConnected: false, twitch: null };
+  }
+}
+
+export function buildWelcomeMessage(member: GuildMember, joinNumber: number | null, connection: ConnectionInfo) {
+  const { isConnected, twitch } = connection;
+
   const embed = new EmbedBuilder()
     .setTitle(`${member.guild.name} just got better, ${member.user.username}`)
-    .setDescription(`Hey ${member}, glad you're here. Connect your StreamWizard account and we'll start sorting your clips and chat.`)
     .setColor(0x5865f2)
     .setThumbnail(member.user.displayAvatarURL())
-    .setFooter({ text: "No clips yet? We'll fix that.", iconURL: member.user.displayAvatarURL() })
     .setTimestamp();
+
+  if (isConnected && twitch) {
+    embed
+      .setDescription(
+        `Hey ${member}, welcome in! Your StreamWizard account is linked to **${twitch.twitch_username}** on Twitch, so your roles are good to go.`
+      )
+      .setFooter({ text: "Glad you're here.", iconURL: member.user.displayAvatarURL() });
+
+    const broadcasterLabel = twitch.broadcaster_type ? BROADCASTER_TYPE_LABEL[twitch.broadcaster_type] : undefined;
+    embed.addFields({
+      name: "Twitch",
+      value: `[twitch.tv/${twitch.twitch_username}](https://twitch.tv/${twitch.twitch_username})${broadcasterLabel ? ` · ${broadcasterLabel}` : ""}`,
+      inline: true,
+    });
+  } else if (isConnected) {
+    embed
+      .setDescription(`Hey ${member}, welcome in. Your StreamWizard account is connected, so your roles are good to go.`)
+      .setFooter({ text: "Glad you're here.", iconURL: member.user.displayAvatarURL() });
+  } else {
+    embed
+      .setDescription(`Hey ${member}, welcome in. Connect your StreamWizard account and we'll get your roles set up.`)
+      .setFooter({ text: "Not connected yet? We'll fix that.", iconURL: member.user.displayAvatarURL() });
+  }
 
   if (joinNumber !== null) {
     embed.addFields({ name: "You're member", value: `#${joinNumber}`, inline: true });
+  }
+
+  if (isConnected) {
+    return { embeds: [embed] };
   }
 
   const button = new ButtonBuilder().setLabel("Connect your account").setStyle(ButtonStyle.Link).setURL(LINK_URL);

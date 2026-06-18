@@ -429,7 +429,6 @@ export type Database = {
           created_at: string
           guild_id: string
           id: string
-          member_count: number
           updated_at: string
           welcome_channel_id: string | null
           welcome_enabled: boolean
@@ -438,7 +437,6 @@ export type Database = {
           created_at?: string
           guild_id: string
           id?: string
-          member_count?: number
           updated_at?: string
           welcome_channel_id?: string | null
           welcome_enabled?: boolean
@@ -447,7 +445,6 @@ export type Database = {
           created_at?: string
           guild_id?: string
           id?: string
-          member_count?: number
           updated_at?: string
           welcome_channel_id?: string | null
           welcome_enabled?: boolean
@@ -1787,7 +1784,7 @@ export type Database = {
       }
       next_ticket_number: { Args: { p_guild_id: string }; Returns: number }
       record_guild_member_join: {
-        Args: { p_guild_id: string; p_user_id: string }
+        Args: { p_guild_id: string; p_member_count: number; p_user_id: string }
         Returns: number
       }
       remove_clip_from_folder: {
