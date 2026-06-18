@@ -27,17 +27,26 @@ export function DiscordIntegrationSection({ discordUsername }: { discordUsername
       </CardHeader>
       <CardContent>
         {isConnected ? (
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm">
-              Connected as <strong>{discordUsername}</strong>
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-sm">
+                Connected as <strong>{discordUsername}</strong>
+              </p>
+              <Button
+                variant="outline"
+                disabled={isPending}
+                onClick={() => startTransition(() => unlinkDiscord())}
+              >
+                {isPending ? "Disconnecting…" : "Disconnect"}
+              </Button>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Role not showing up?{" "}
+              <a href="/auth/link/discord" className="font-medium underline underline-offset-4">
+                Re-verify
+              </a>{" "}
+              to refresh it.
             </p>
-            <Button
-              variant="outline"
-              disabled={isPending}
-              onClick={() => startTransition(() => unlinkDiscord())}
-            >
-              {isPending ? "Disconnecting…" : "Disconnect"}
-            </Button>
           </div>
         ) : (
           <Button disabled={isPending} onClick={() => startTransition(() => linkDiscord())}>
