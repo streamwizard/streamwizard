@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     provider: "discord",
     options: {
       redirectTo: `${origin}/auth/callback/discord`,
-      scopes: "identify",
+      scopes: "identify role_connections.write",
     },
   });
 

@@ -70,10 +70,14 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/auth/auth-code-error`);
     }
 
+    // Best-effort: the account link already succeeded above, so a failed push
+    // shouldn't break the flow — but report it so we notice if the scope or
+    // role-connection setup regresses.
     try {
-      await setDiscordRoleConnection(data.session.provider_token, identityData.full_name);
+      await setDiscordRoleConnection(data.session.provider_token, identityData.full_name, true);
     } catch (roleErr) {
-      console.log(roleErr);
+      const { captureException } = await import("@sentry/nextjs");
+      captureException(roleErr);
     }
 
     return NextResponse.redirect(`${origin}${next}`);
