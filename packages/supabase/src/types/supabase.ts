@@ -376,6 +376,66 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_activity_ignored_channels: {
+        Row: {
+          channel_id: string
+          created_at: string
+          guild_id: string
+          id: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          guild_id: string
+          id?: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          guild_id?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      discord_activity_settings: {
+        Row: {
+          created_at: string
+          guild_id: string
+          id: string
+          track_messages: boolean
+          track_reactions: boolean
+          track_voice: boolean
+          tracking_enabled: boolean
+          updated_at: string
+          voice_ignore_afk: boolean
+          voice_require_others: boolean
+        }
+        Insert: {
+          created_at?: string
+          guild_id: string
+          id?: string
+          track_messages?: boolean
+          track_reactions?: boolean
+          track_voice?: boolean
+          tracking_enabled?: boolean
+          updated_at?: string
+          voice_ignore_afk?: boolean
+          voice_require_others?: boolean
+        }
+        Update: {
+          created_at?: string
+          guild_id?: string
+          id?: string
+          track_messages?: boolean
+          track_reactions?: boolean
+          track_voice?: boolean
+          tracking_enabled?: boolean
+          updated_at?: string
+          voice_ignore_afk?: boolean
+          voice_require_others?: boolean
+        }
+        Relationships: []
+      }
       discord_command_permissions: {
         Row: {
           command_name: string
@@ -397,6 +457,39 @@ export type Database = {
           guild_id?: string
           id?: string
           role_id?: string
+        }
+        Relationships: []
+      }
+      discord_daily_activity: {
+        Row: {
+          activity_date: string
+          guild_id: string
+          id: string
+          messages_sent: number
+          reactions_added: number
+          reactions_received: number
+          user_id: string
+          voice_seconds: number
+        }
+        Insert: {
+          activity_date: string
+          guild_id: string
+          id?: string
+          messages_sent?: number
+          reactions_added?: number
+          reactions_received?: number
+          user_id: string
+          voice_seconds?: number
+        }
+        Update: {
+          activity_date?: string
+          guild_id?: string
+          id?: string
+          messages_sent?: number
+          reactions_added?: number
+          reactions_received?: number
+          user_id?: string
+          voice_seconds?: number
         }
         Relationships: []
       }
@@ -430,6 +523,7 @@ export type Database = {
           guild_id: string
           id: string
           updated_at: string
+          verified_role_id: string | null
           welcome_channel_id: string | null
           welcome_enabled: boolean
         }
@@ -438,6 +532,7 @@ export type Database = {
           guild_id: string
           id?: string
           updated_at?: string
+          verified_role_id?: string | null
           welcome_channel_id?: string | null
           welcome_enabled?: boolean
         }
@@ -446,6 +541,7 @@ export type Database = {
           guild_id?: string
           id?: string
           updated_at?: string
+          verified_role_id?: string | null
           welcome_channel_id?: string | null
           welcome_enabled?: boolean
         }
@@ -563,6 +659,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      discord_voice_sessions: {
+        Row: {
+          channel_id: string
+          duration_seconds: number | null
+          guild_id: string
+          id: string
+          joined_at: string
+          left_at: string | null
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          duration_seconds?: number | null
+          guild_id: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          duration_seconds?: number | null
+          guild_id?: string
+          id?: string
+          joined_at?: string
+          left_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       feedback: {
         Row: {
@@ -1759,6 +1885,18 @@ export type Database = {
       }
       get_stream_data: { Args: { p_video_id: string }; Returns: Json }
       get_user_twitch_ids: { Args: never; Returns: string[] }
+      increment_daily_activity: {
+        Args: {
+          p_date: string
+          p_guild_id: string
+          p_messages: number
+          p_reactions_added: number
+          p_reactions_received: number
+          p_user_id: string
+          p_voice_seconds: number
+        }
+        Returns: undefined
+      }
       increment_widget_installs: {
         Args: { entry_id: string }
         Returns: undefined

@@ -2,10 +2,14 @@
 
 import { getAuthContext } from "@/lib/auth";
 import { getChannelAccessToken } from "@repo/supabase";
+import { getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
+import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { createAdminClient, supabaseAdmin } from "@repo/supabase/next/admin";
 import { TwitchApi } from "@repo/twitch-api";
 import { redirect } from "next/navigation";
 import axios from "axios";
+import { removeRole } from "@/server/discord/roles";
+import { env } from "@/lib/env";
 
 export async function deleteAccount() {
   let user, broadcasterId: string;
@@ -46,6 +50,21 @@ export async function deleteAccount() {
     );
   } catch {
     // Non-fatal: proceed with data deletion even if cleanup fails.
+  }
+
+  // Best-effort: revoke the Verified Member role directly via the bot before
+  // wiping the integration row, since deleting the account doesn't remove
+  // the user from the Discord server itself. A failure here must not block
+  // account deletion.
+  try {
+    const { data: integration } = await getDiscordIntegrationByUserId(supabase, user.id);
+    const settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
+    if (integration?.discord_user_id && settings?.verified_role_id) {
+      await removeRole(integration.discord_user_id, settings.verified_role_id);
+    }
+  } catch (revokeErr) {
+    const { captureException } = await import("@sentry/nextjs");
+    captureException(revokeErr);
   }
 
   const { error: rpcError } = await supabase.rpc("delete_user_data", {

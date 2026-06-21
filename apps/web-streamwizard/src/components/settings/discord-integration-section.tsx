@@ -1,13 +1,57 @@
 "use client";
 
-import { useTransition } from "react";
-import { linkDiscord, unlinkDiscord } from "@/actions/auth/link-discord";
-import { Badge, Button, Card, CardContent, CardHeader } from "@repo/ui";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { linkDiscord, reassignDiscordRole, unlinkDiscord } from "@/actions/auth/link-discord";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@repo/ui";
 import { IntegrationIcon } from "@/components/settings/integration-icon";
+import { discordInviteLink } from "@/lib/constant";
 
-export function DiscordIntegrationSection({ discordUsername }: { discordUsername: string | null }) {
+const ROLE_STATUS_COPY = {
+  pending_membership: {
+    title: "Hold up, you're not in the server",
+    description:
+      "Your account's linked and ready, but we can't hand out roles to ghosts. Pop into the StreamWizard Discord and your role shows up the second you do.",
+  },
+  failed: {
+    title: "Your role tripped on the way over",
+    description: "Your account's linked, we just fumbled the role grant. Hit Re-verify and we'll try again, no hard feelings.",
+  },
+  unlink_blocked: {
+    title: "Discord's the only way in right now",
+    description:
+      "We can't disconnect this, it's the only login you've got. Add an email or password to your account first, then come back and we'll cut the cord.",
+  },
+} as const;
+
+export function DiscordIntegrationSection({
+  discordUsername,
+  roleStatus = null,
+}: {
+  discordUsername: string | null;
+  roleStatus?: "pending_membership" | "failed" | "unlink_blocked" | null;
+}) {
   const [isPending, startTransition] = useTransition();
+  const [dialogOpen, setDialogOpen] = useState(Boolean(roleStatus));
+  const router = useRouter();
   const isConnected = Boolean(discordUsername);
+
+  const closeDialog = () => {
+    setDialogOpen(false);
+    router.replace("/dashboard/settings/integrations");
+  };
 
   return (
     <Card>
@@ -42,9 +86,14 @@ export function DiscordIntegrationSection({ discordUsername }: { discordUsername
             </div>
             <p className="text-sm text-muted-foreground">
               Role not showing up?{" "}
-              <a href="/auth/link/discord" className="font-medium underline underline-offset-4">
+              <button
+                type="button"
+                disabled={isPending}
+                className="font-medium underline underline-offset-4 disabled:opacity-50"
+                onClick={() => startTransition(() => reassignDiscordRole())}
+              >
                 Re-verify
-              </a>{" "}
+              </button>{" "}
               to refresh it.
             </p>
           </div>
@@ -54,6 +103,33 @@ export function DiscordIntegrationSection({ discordUsername }: { discordUsername
           </Button>
         )}
       </CardContent>
+
+      {roleStatus ? (
+        <Dialog open={dialogOpen} onOpenChange={(open) => (open ? setDialogOpen(true) : closeDialog())}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{ROLE_STATUS_COPY[roleStatus].title}</DialogTitle>
+              <DialogDescription>{ROLE_STATUS_COPY[roleStatus].description}</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              {roleStatus === "pending_membership" ? (
+                <Button asChild>
+                  <a href={discordInviteLink} target="_blank" rel="noopener noreferrer">
+                    Join the server
+                  </a>
+                </Button>
+              ) : roleStatus === "failed" ? (
+                <Button disabled={isPending} onClick={() => startTransition(() => reassignDiscordRole())}>
+                  Re-verify
+                </Button>
+              ) : null}
+              <Button variant="outline" onClick={closeDialog}>
+                Got it
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
     </Card>
   );
 }
