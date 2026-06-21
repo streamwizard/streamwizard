@@ -38,4 +38,5 @@ export const TWITCH_SCOPES = [
 ] as const;
 
 export const discordInviteLink = "https://discord.gg/29Eq659egv";
+export const discordDocsLink = "https://docs.streamwizard.org/discord";
 export const githubLink = "https://github.com/streamwizard/streamwizard-backend";

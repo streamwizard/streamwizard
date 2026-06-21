@@ -100,35 +100,6 @@ export async function getDiscordIntegrationByUserId(client: DBClient, userId: st
     .single();
 }
 
-// Returns the encrypted refresh token + username for a user's Discord
-// integration, used to refresh the token and revoke the Linked Role on
-// disconnect. Returns null when there is no integration or no stored token.
-export async function getDiscordRefreshTokenByUserId(client: DBClient, userId: string) {
-  const { data, error } = await client
-    .from("integrations_discord")
-    .select(
-      "discord_username, refresh_token_ciphertext, refresh_token_iv, refresh_token_tag"
-    )
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (
-    error ||
-    !data?.refresh_token_ciphertext ||
-    !data?.refresh_token_iv ||
-    !data?.refresh_token_tag
-  ) {
-    return null;
-  }
-
-  return {
-    discord_username: data.discord_username,
-    refresh_token_ciphertext: data.refresh_token_ciphertext,
-    refresh_token_iv: data.refresh_token_iv,
-    refresh_token_tag: data.refresh_token_tag,
-  };
-}
-
 export async function getDiscordUserIdByUserIdMaybe(
   client: DBClient,
   userId: string
@@ -141,21 +112,6 @@ export async function getDiscordUserIdByUserIdMaybe(
 
   if (error || !data?.discord_user_id?.trim()) return null;
   return data.discord_user_id.trim();
-}
-
-export async function updateDiscordTokens(
-  client: DBClient,
-  userId: string,
-  tokens: {
-    access_token_ciphertext: string;
-    access_token_iv: string;
-    access_token_tag: string;
-    refresh_token_ciphertext: string;
-    refresh_token_iv: string;
-    refresh_token_tag: string;
-  }
-) {
-  return client.from("integrations_discord").update(tokens).eq("user_id", userId);
 }
 
 export async function getAllDiscordIntegrations(client: DBClient) {

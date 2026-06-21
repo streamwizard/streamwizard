@@ -1,11 +1,19 @@
-import { Client, Collection, GatewayIntentBits } from "discord.js";
+import { Client, Collection, GatewayIntentBits, Partials } from "discord.js";
 
-// Start with the minimal intent set. Add more (e.g. GuildMessages +
-// MessageContent) only when a feature actually needs them — each one
-// requires re-approval in the Discord developer portal for verified bots.
-// GuildMembers is privileged and required for the GuildMemberAdd welcome message.
+// GuildMembers is privileged (welcome messages). GuildMessages,
+// GuildMessageReactions and GuildVoiceStates are NOT privileged and power the
+// activity tracker (message/reaction/voice counts). We deliberately omit
+// MessageContent — we only count messages, never read their text. Partials let
+// reaction events fire on uncached messages.
 export const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildVoiceStates,
+  ],
+  partials: [Partials.Message, Partials.Reaction, Partials.Channel],
 });
 
 client.commands = new Collection();

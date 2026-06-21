@@ -3,8 +3,13 @@ import { getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
 import { DiscordIntegrationSection } from "@/components/settings/discord-integration-section";
 import { TwitchIntegrationSection } from "@/components/settings/twitch-integration-section";
 
-export default async function IntegrationsSettingsPage() {
+export default async function IntegrationsSettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ discordRole?: string }>;
+}) {
   const { supabase, user } = await getAuthContext();
+  const { discordRole } = await searchParams;
 
   const { data: twitch } = await supabase
     .from("integrations_twitch")
@@ -21,7 +26,14 @@ export default async function IntegrationsSettingsPage() {
       </div>
 
       <TwitchIntegrationSection twitchUsername={twitch?.twitch_username ?? null} />
-      <DiscordIntegrationSection discordUsername={discord?.discord_username ?? null} />
+      <DiscordIntegrationSection
+        discordUsername={discord?.discord_username ?? null}
+        roleStatus={
+          discordRole === "pending_membership" || discordRole === "failed" || discordRole === "unlink_blocked"
+            ? discordRole
+            : null
+        }
+      />
     </div>
   );
 }

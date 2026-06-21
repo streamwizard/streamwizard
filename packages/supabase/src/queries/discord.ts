@@ -57,6 +57,14 @@ export async function setWelcomeChannel(client: DBClient, guildId: string, chann
   if (error) throw error;
 }
 
+export async function setVerifiedRoleId(client: DBClient, guildId: string, roleId: string): Promise<void> {
+  const { error } = await client
+    .from("discord_guild_settings")
+    .upsert({ guild_id: guildId, verified_role_id: roleId }, { onConflict: "guild_id" });
+
+  if (error) throw error;
+}
+
 export async function setWelcomeEnabled(client: DBClient, guildId: string, enabled: boolean): Promise<void> {
   const { error } = await client
     .from("discord_guild_settings")

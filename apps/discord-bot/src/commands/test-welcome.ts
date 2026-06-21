@@ -23,7 +23,7 @@ export default {
 
     if (!channel) {
       await interaction.reply({
-        content: "No usable welcome channel is configured. Set one with `/setup welcome-channel` or set a system channel.",
+        content: "No usable welcome channel is configured. Run `/setup` to set one, or set a system channel.",
         flags: MessageFlags.Ephemeral,
       });
       return;
