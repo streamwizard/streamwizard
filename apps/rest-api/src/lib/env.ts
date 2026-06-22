@@ -14,6 +14,11 @@ const schema = z.object({
   TWITCH_CLIENT_SECRET: z.string().min(1),
   TWITCH_WEBHOOK_SECRET: z.string().min(1),
 
+  // GitHub (ticket → issue sync webhook)
+  GITHUB_WEBHOOK_SECRET: z.string().min(1),
+  GITHUB_ISSUES_REPO: z.string().min(1), // "owner/repo"
+  DISCORD_BOT_TOKEN: z.string().min(1),
+
   // Sentry
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_RELEASE: z.string().optional(),

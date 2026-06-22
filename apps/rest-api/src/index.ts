@@ -10,9 +10,11 @@ import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
 import { rawBodyMiddleware } from "./middleware/raw-body";
 import { twitchEventSubVerification } from "./middleware/twitch-eventsub";
+import { githubWebhookVerification } from "./middleware/github-webhook";
 import { supabaseMiddleware, supabaseAuth } from "./middleware/auth";
 import { handleTwitchEventSub } from "./routes/twitch-eventsub";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
+import { handleGithubWebhook } from "./handlers/github";
 
 const app = new Hono();
 
@@ -63,6 +65,15 @@ app.post(
   rawBodyMiddleware(),
   twitchEventSubVerification(),
   handleTwitchEventSub,
+);
+
+// GitHub Webhook Handler (currently: ticket → issue sync; dispatches on event type
+// in handleGithubWebhook, so future GitHub App features can share this endpoint)
+app.post(
+  "/webhooks/github",
+  rawBodyMiddleware(),
+  githubWebhookVerification(),
+  handleGithubWebhook,
 );
 
 // ============================================

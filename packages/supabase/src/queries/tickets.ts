@@ -120,3 +120,30 @@ export async function setTicketGithubIssue(client: DBClient, channelId: string, 
 
   if (error) throw error;
 }
+
+// The GitHub issues repo is a single fixed repo (env-configured), so the issue
+// number alone is enough to find the ticket it belongs to.
+export async function getTicketByGithubIssue(client: DBClient, issueNumber: number): Promise<DiscordTicket | null> {
+  const { data, error } = await client.from("discord_tickets").select("*").eq("github_issue_number", issueNumber).maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+// Applies a GitHub issue status change to the ticket. Closing sets
+// scheduled_deletion_at (a Supabase cron job deletes the channel once that
+// time passes); reopening clears it so the channel survives.
+export async function syncTicketStatusFromGithub(
+  client: DBClient,
+  channelId: string,
+  status: "open" | "closed",
+  scheduledDeletionAt: string | null
+): Promise<void> {
+  const { error } = await client
+    .from("discord_tickets")
+    .update({ status, scheduled_deletion_at: scheduledDeletionAt })
+    .eq("channel_id", channelId);
+
+  if (error) throw error;
+}
+
