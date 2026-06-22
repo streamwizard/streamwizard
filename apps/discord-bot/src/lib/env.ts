@@ -16,6 +16,12 @@ const schema = z.object({
 
   NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
 
+  // GitHub App (ticket → issue sync)
+  GITHUB_APP_ID: z.string().min(1),
+  GITHUB_APP_PRIVATE_KEY: z.string().min(1),
+  GITHUB_APP_INSTALLATION_ID: z.string().min(1),
+  GITHUB_ISSUES_REPO: z.string().min(1), // "owner/repo"
+
   // Sentry
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_RELEASE: z.string().optional(),

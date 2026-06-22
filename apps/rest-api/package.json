@@ -8,6 +8,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/github-api": "workspace:*",
     "@repo/metrics": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",

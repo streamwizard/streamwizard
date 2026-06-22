@@ -9,6 +9,7 @@
     "deploy-commands": "doppler run --config dev_discord_bot -- bun run src/scripts/deploy-commands.ts"
   },
   "dependencies": {
+    "@repo/github-api": "workspace:*",
     "@repo/sentry": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@sentry/bun": "^10",
