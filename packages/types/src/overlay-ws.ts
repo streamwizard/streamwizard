@@ -94,14 +94,30 @@ import type {
 export type { OverlayGeoPayload, OverlayStatusPayload };
 
 export type StreamWizardEventType =
-  | "streamwizard.geo";
+  | "streamwizard.geo"
+  | "streamwizard.ingest_stats";
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
+
+export interface IngestStatsPayload {
+  session_id: string;
+  protocol: "rtmp" | "srt" | "srtla";
+  kbps?: number;
+  mbps_recv_rate?: number;
+  mbps_bandwidth?: number;
+  rtt_ms?: number;
+  pkt_recv_loss?: number;
+  pkt_recv_drop?: number;
+  pkt_recv_retrans?: number;
+  pkt_recv_loss_total?: number;
+  byte_recv_total?: number;
+}
 
 export type OverlaySocketMessage =
   // StreamWizard internal
   | { type: "streamwizard.geo"; status: "connected"; payload: OverlayGeoPayload }
   | { type: "streamwizard.geo"; status: "offline" }
+  | { type: "streamwizard.ingest_stats"; payload: IngestStatsPayload }
   // Channel
   | { type: "channel.update";                                             payload: ChannelUpdateEvent }
   | { type: "channel.follow";                                             payload: ChannelFollowEvent }
