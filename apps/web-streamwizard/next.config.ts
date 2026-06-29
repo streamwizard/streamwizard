@@ -33,6 +33,17 @@ function buildCsp(): string {
       supabaseWs,
       wsServerUrl,
       "https://cdn.jsdelivr.net",
+      // Cloud OBS noVNC viewer and obs-websocket controls — connect directly
+      // to the stream-server's OBS container (TODO: hardcoded test IP).
+      "ws://10.10.10.185:6080",
+      "ws://10.10.10.185:4455",
+      // Admin node metrics panel connects directly to obs-instance-manager's
+      // /admin/metrics/stream on the node host, and the admin nodes page
+      // also POSTs directly to its REST API to create test instances
+      // (TODO: hardcoded test IP).
+      "ws://10.10.10.185:3000",
+      "http://10.10.10.185:3000",
+
     ]
       .filter(Boolean)
       .join(" "),
@@ -41,8 +52,14 @@ function buildCsp(): string {
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "upgrade-insecure-requests",
   ];
+
+  // upgrade-insecure-requests would force the Cloud OBS noVNC ws:// connection
+  // to wss://, which the plain-ws websockify on the OBS container can't speak.
+  // TODO: drop this guard once the OBS container is fronted by TLS.
+  if (process.env.NODE_ENV === "production") {
+    directives.push("upgrade-insecure-requests");
+  }
 
   return directives.join("; ");
 }
@@ -50,6 +67,9 @@ function buildCsp(): string {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
+  // Allows accessing the dev server (and its HMR websocket) from the LAN IP
+  // in addition to localhost/127.0.0.1, e.g. when testing from another device.
+  allowedDevOrigins: ["127.0.0.1", "10.10.10.73"],
   turbopack: {
     root: path.resolve(__dirname, "../.."),
   },

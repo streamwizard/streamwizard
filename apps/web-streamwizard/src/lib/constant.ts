@@ -35,7 +35,11 @@ export const TWITCH_SCOPES = [
   // Clips (clip management & sync)
   "editor:manage:clips",
   "channel:manage:clips",
+
+  // channel
+  "channel:read:stream_key",
 ] as const;
 
 export const discordInviteLink = "https://discord.gg/29Eq659egv";
-export const githubLink = "https://github.com/streamwizard/streamwizard-backend";
+export const githubLink =
+  "https://github.com/streamwizard/streamwizard-backend";
