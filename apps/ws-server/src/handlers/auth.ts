@@ -145,8 +145,20 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     return new Response("Unauthorized: missing token", { status: 401 });
   }
 
-  const { data: scene } = await getOverlaySceneBySubscriberToken(supabase, subscriberToken);
-  if (!scene) {
+  let subscriberUserId: string | null = null;
+
+  // Path A: Supabase JWT — a logged-in dashboard user subscribing to their own room
+  // (e.g. live ingest stats), not tied to any particular overlay scene.
+  const { data: { user: subscriberUser } } = await supabase.auth.getUser(subscriberToken);
+  if (subscriberUser) subscriberUserId = subscriberUser.id;
+
+  // Path B: overlay subscriber token (browser-source overlays, widget preview).
+  if (!subscriberUserId) {
+    const { data: scene } = await getOverlaySceneBySubscriberToken(supabase, subscriberToken);
+    if (scene) subscriberUserId = scene.user_id;
+  }
+
+  if (!subscriberUserId) {
     trackWsAuthFailure("subscriber", "invalid_token");
     return new Response("Unauthorized: invalid token", { status: 401 });
   }
@@ -157,7 +169,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     : new Set<OverlayEventType>();
 
   const upgraded = server.upgrade(req, {
-    data: { role: "subscriber", userId: scene.user_id, channels, connectedAt: Date.now(), connId: `c-${nextConnId++}` },
+    data: { role: "subscriber", userId: subscriberUserId, channels, connectedAt: Date.now(), connId: `c-${nextConnId++}` },
   });
   if (!upgraded) {
     trackWsAuthFailure("subscriber", "upgrade_failed");

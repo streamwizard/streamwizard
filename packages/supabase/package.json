@@ -75,6 +75,14 @@
       "types": "./src/queries/irl.ts",
       "default": "./src/queries/irl.ts"
     },
+    "./queries/ingest": {
+      "types": "./src/queries/ingest.ts",
+      "default": "./src/queries/ingest.ts"
+    },
+    "./queries/obs-nodes": {
+      "types": "./src/queries/obs-nodes.ts",
+      "default": "./src/queries/obs-nodes.ts"
+    },
     "./queries/discord": {
       "types": "./src/queries/discord.ts",
       "default": "./src/queries/discord.ts"

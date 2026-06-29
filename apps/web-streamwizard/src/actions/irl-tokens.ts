@@ -27,7 +27,7 @@ export async function createIrlToken(name: string): Promise<{ data: { token_url:
   const baseUrl = process.env.NEXT_PUBLIC_OVERLAY_URL ?? "";
   const token_url = `${baseUrl}/irl/collector?token=${encodeURIComponent(token)}`;
 
-  revalidatePath("/dashboard/irl");
+  revalidatePath("/dashboard/irl/ingest");
   return { data: { token_url }, error: null };
 }
 
@@ -85,7 +85,7 @@ export async function deleteIrlToken(id: string): Promise<{ error: string | null
     .eq("id", id)
     .eq("user_id", user.id);
 
-  revalidatePath("/dashboard/irl");
+  revalidatePath("/dashboard/irl/ingest");
   return { error: error?.message ?? null };
 }
 
