@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, RefreshCw, Trash2 } from "lucide-react";
+import { Copy, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { FaDiscord } from "react-icons/fa";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +29,7 @@ import {
   createIngestKey,
   deleteIngestKey,
   rotateIngestKey,
+  sendIngestKeyDiscordDM,
 } from "@/actions/ingest-keys";
 
 function copy(value: string, what: string) {
@@ -56,13 +58,16 @@ function ingestUrls(host: string, key: string) {
 export function IngestKeysSection({
   initialKeys,
   ingestHost,
+  canInteract = true,
 }: {
   initialKeys: IngestStreamKey[];
   ingestHost: string;
+  canInteract?: boolean;
 }) {
   const [keys, setKeys] = useState<IngestStreamKey[]>(initialKeys);
   const [label, setLabel] = useState("");
   const [isPending, setIsPending] = useState(false);
+  const [sendingDmId, setSendingDmId] = useState<string | null>(null);
 
   const activeKey = keys[0];
 
@@ -97,6 +102,17 @@ export function IngestKeysSection({
     }
     setKeys((prev) => prev.filter((k) => k.id !== id));
     toast.success("Key deleted.");
+  };
+
+  const handleSendDm = async (id: string) => {
+    setSendingDmId(id);
+    const { error } = await sendIngestKeyDiscordDM(id);
+    setSendingDmId(null);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    toast.success("Sent. Check your Discord DMs.");
   };
 
   return (
@@ -145,7 +161,7 @@ export function IngestKeysSection({
                 onChange={(e) => setLabel(e.target.value)}
                 disabled={isPending}
               />
-              <Button onClick={handleCreate} disabled={isPending}>
+              <Button onClick={handleCreate} disabled={!canInteract || isPending}>
                 {isPending ? "Creating…" : "Create key"}
               </Button>
             </div>
@@ -181,12 +197,25 @@ export function IngestKeysSection({
                   <Button size="icon" variant="ghost" onClick={() => copy(key.stream_key, "Stream key")}>
                     <Copy className="h-4 w-4" />
                   </Button>
-                  <Button size="icon" variant="ghost" onClick={() => handleRotate(key.id)}>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    disabled={!canInteract || sendingDmId === key.id}
+                    onClick={() => handleSendDm(key.id)}
+                    title="Send to Discord"
+                  >
+                    {sendingDmId === key.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FaDiscord className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button size="icon" variant="ghost" disabled={!canInteract} onClick={() => handleRotate(key.id)}>
                     <RefreshCw className="h-4 w-4" />
                   </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button size="icon" variant="ghost">
+                      <Button size="icon" variant="ghost" disabled={!canInteract}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </AlertDialogTrigger>

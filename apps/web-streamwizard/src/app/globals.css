@@ -33,6 +33,7 @@
   --animate-border-beam: border-beam calc(var(--duration) * 1s) infinite linear;
   --animate-marquee: marquee var(--duration) infinite linear;
   --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
+  --animate-shimmer: shimmer 1.8s infinite;
 }
 
 @keyframes accordion-down {
@@ -74,6 +75,12 @@
   }
   to {
     transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(200%);
   }
 }
 

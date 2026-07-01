@@ -8,7 +8,7 @@ import type { Database } from "@repo/supabase";
 
 export type IngestOutputKey = Database["public"]["Tables"]["ingest_output_keys"]["Row"];
 
-const INGEST_SETTINGS_PATH = "/dashboard/irl/ingest";
+const INGEST_SETTINGS_PATH = "/dashboard/irl/obs";
 
 // The credential an OBS Media Source presents (as its SRT streamid) to pull a
 // stream from the ingest output listener. Paired to an incoming key (key_id);

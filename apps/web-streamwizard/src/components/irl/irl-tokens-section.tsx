@@ -33,7 +33,13 @@ function copy(value: string, what: string) {
   toast.success(`${what} copied`);
 }
 
-export function IrlTokensSection({ initialTokens }: { initialTokens: IrlCollectorToken[] }) {
+export function IrlTokensSection({
+  initialTokens,
+  canInteract = true,
+}: {
+  initialTokens: IrlCollectorToken[];
+  canInteract?: boolean;
+}) {
   const [tokens, setTokens] = useState<IrlCollectorToken[]>(initialTokens);
   const [name, setName] = useState("");
   const [isPending, setIsPending] = useState(false);
@@ -95,7 +101,7 @@ export function IrlTokensSection({ initialTokens }: { initialTokens: IrlCollecto
                 onChange={(e) => setName(e.target.value)}
                 disabled={isPending}
               />
-              <Button onClick={handleCreate} disabled={isPending}>
+              <Button onClick={handleCreate} disabled={!canInteract || isPending}>
                 {isPending ? "Creating…" : "Create link"}
               </Button>
             </div>
@@ -125,7 +131,7 @@ export function IrlTokensSection({ initialTokens }: { initialTokens: IrlCollecto
                 </div>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button size="icon" variant="ghost">
+                    <Button size="icon" variant="ghost" disabled={!canInteract}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </AlertDialogTrigger>

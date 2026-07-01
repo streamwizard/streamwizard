@@ -15,38 +15,15 @@ const EVENT_SUBSCRIPTIONS = (1 << 0) | (1 << 2) | (1 << 6) | (1 << 9);
 
 export type ObsConnectionStatus = "closed" | "connecting" | "open";
 
-export interface ObsLogEntry {
-  id: string;
-  timestamp: Date;
-  direction: "in";
-  op: number;
-  opName: string;
-  data: unknown;
-}
-
-const OP_NAMES: Record<number, string> = {
-  0: "Hello",
-  1: "Identify",
-  2: "Identified",
-  5: "Event",
-  6: "Request",
-  7: "RequestResponse",
-};
-
-const MAX_LOG_ENTRIES = 200;
-
-// The source-profiler emits its SourceStats tree as a high-frequency VendorEvent.
-// It's large and arrives many times a second, so it must never enter the bounded
-// message log (see the message handler for why).
-function isProfilerTelemetry(message: { op: number; d?: unknown }): boolean {
-  if (message.op !== OP_EVENT) return false;
-  const d = message.d as { eventType?: string; eventData?: { vendorName?: string } } | undefined;
-  return d?.eventType === "VendorEvent" && d.eventData?.vendorName === "source-profiler";
-}
-
 export interface Scene {
   sceneName: string;
   sceneIndex: number;
+}
+
+export interface SceneItem {
+  sceneItemId: number;
+  sourceUuid: string;
+  sourceName: string;
 }
 
 export interface SourceStatNode {
@@ -106,38 +83,30 @@ interface UseObsWebSocketOptions {
   password: string | null;
 }
 
+const RETRY_DELAY_MS = 3_000;
+const MAX_AUTO_RETRIES = 30; // ~90 seconds of waiting
+
 export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) {
   const socketRef = useRef<WebSocket | null>(null);
   const connectingRef = useRef(false);
-  const pendingRef = useRef<Map<string, (data: unknown) => void>>(new Map());
+  const pendingRef = useRef<Map<string, { resolve: (data: unknown) => void; reject: (err: Error) => void }>>(new Map());
   const statsIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryCountRef = useRef(0);
   // Map of `${sceneName}:${uuid}` → sceneItemId (integer) for SetSceneItemEnabled
   const sceneItemMapRef = useRef<Map<string, number>>(new Map());
 
   const [status, setStatus] = useState<ObsConnectionStatus>("closed");
+  const [isAutoRetrying, setIsAutoRetrying] = useState(false);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
   const [scenes, setScenes] = useState<Scene[]>([]);
+  const [sceneItems, setSceneItems] = useState<Record<string, SceneItem[]>>({});
   const [currentScene, setCurrentScene] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
   const [togglingStream, setTogglingStream] = useState(false);
   const [sourceStats, setSourceStats] = useState<SourceStatsPayload | null>(null);
   const [obsStats, setObsStats] = useState<ObsStats | null>(null);
-  const [logEntries, setLogEntries] = useState<ObsLogEntry[]>([]);
-
-  const appendLog = useCallback((op: number, data: unknown) => {
-    const entry: ObsLogEntry = {
-      id: crypto.randomUUID(),
-      timestamp: new Date(),
-      direction: "in",
-      op,
-      opName: OP_NAMES[op] ?? `Op${op}`,
-      data,
-    };
-    setLogEntries((prev) => {
-      const next = [entry, ...prev];
-      return next.length > MAX_LOG_ENTRIES ? next.slice(0, MAX_LOG_ENTRIES) : next;
-    });
-  }, []);
 
   // Scenes filtered to exclude names starting with - or _
   const filteredScenes = scenes.filter((s) => !/^[-_]/.test(s.sceneName));
@@ -149,7 +118,10 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
   const request = useCallback(<T = unknown>(requestType: string, requestData?: unknown): Promise<T> => {
     return new Promise((resolve, reject) => {
       const requestId = crypto.randomUUID();
-      pendingRef.current.set(requestId, (responseData) => resolve(responseData as T));
+      pendingRef.current.set(requestId, {
+        resolve: (data) => resolve(data as T),
+        reject,
+      });
       send(OP_REQUEST, { requestType, requestId, requestData });
       setTimeout(() => {
         if (pendingRef.current.has(requestId)) {
@@ -168,13 +140,15 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
 
     // Build sceneItemId lookup for each scene so we can call SetSceneItemEnabled
     const map = new Map<string, number>();
+    const itemsByScene: Record<string, SceneItem[]> = {};
     await Promise.all(
       sorted.map(async (scene) => {
         try {
-          const items = await request<{ sceneItems: { sourceUuid: string; sceneItemId: number }[] }>(
+          const items = await request<{ sceneItems: SceneItem[] }>(
             "GetSceneItemList",
             { sceneName: scene.sceneName }
           );
+          itemsByScene[scene.sceneName] = items.sceneItems;
           for (const item of items.sceneItems) {
             map.set(`${scene.sceneName}:${item.sourceUuid}`, item.sceneItemId);
           }
@@ -184,7 +158,29 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
       })
     );
     sceneItemMapRef.current = map;
+    setSceneItems(itemsByScene);
   }, [request]);
+
+  // Creates a scene if it doesn't already exist. Safe to call unconditionally —
+  // a duplicate-name create is treated as a no-op rather than an error.
+  const createScene = useCallback(async (sceneName: string) => {
+    try {
+      await request("CreateScene", { sceneName });
+    } catch {
+      // Most likely "already exists" — refetch below will confirm either way.
+    }
+    await fetchScenes();
+  }, [request, fetchScenes]);
+
+  const ensureSceneExists = useCallback(async (sceneName: string) => {
+    const data = await request<{ scenes: Scene[] }>("GetSceneList");
+    if (data.scenes.some((s) => s.sceneName === sceneName)) return;
+    await createScene(sceneName);
+  }, [request, createScene]);
+
+  const sceneHasSource = useCallback((sceneName: string, sourceName: string) => {
+    return (sceneItems[sceneName] ?? []).some((item) => item.sourceName === sourceName);
+  }, [sceneItems]);
 
   const fetchStreamStatus = useCallback(async () => {
     const data = await request<{ outputActive: boolean }>("GetStreamStatus");
@@ -221,8 +217,60 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
     await request("SetSourceFilterEnabled", { sourceName, filterName, filterEnabled: enabled });
   }, [request]);
 
+  // Creates a Media Source pulling `url` (an ingest output's SRT URL) and
+  // drops it straight into `sceneName`, enabled. Refreshes the scene item map
+  // afterward so the new item's toggle works in the Sources tree right away.
+  const addMediaSourceToScene = useCallback(async (sceneName: string, inputName: string, url: string) => {
+    await request("CreateInput", {
+      sceneName,
+      inputName,
+      inputKind: "ffmpeg_source",
+      inputSettings: { is_local_file: false, input: url, restart_on_activate: true },
+      sceneItemEnabled: true,
+    });
+    await fetchScenes();
+  }, [request, fetchScenes]);
+
+  // Creates a Browser Source pointed at `url` (an alert widget link, e.g.
+  // StreamElements) and drops it into `sceneName`, enabled. Sized to a
+  // standard 1080p canvas — alert widgets are transparent overlays, so this
+  // covers the frame without needing per-widget dimensions. `reroute_audio`
+  // ("Control audio via OBS" in the UI) is on so alert sound routes through
+  // OBS's mixer — required for the Source Clone in addSourceCloneToScene to
+  // carry audio into other scenes at all.
+  const addBrowserSourceToScene = useCallback(async (sceneName: string, inputName: string, url: string) => {
+    await request("CreateInput", {
+      sceneName,
+      inputName,
+      inputKind: "browser_source",
+      inputSettings: { url, width: 1920, height: 1080, reroute_audio: true },
+      sceneItemEnabled: true,
+    });
+    await fetchScenes();
+  }, [request, fetchScenes]);
+
+  // Creates a Source Clone (the exeldro obs-source-clone plugin, bundled with
+  // every StreamWizard instance) in `sceneName` that mirrors `sourceName`'s
+  // render output. Used to repeat an alert widget across scenes without
+  // running a second browser process per scene — a real duplicate browser
+  // source per scene would multiply CPU cost with every scene it's added to.
+  const addSourceCloneToScene = useCallback(async (sceneName: string, inputName: string, sourceName: string) => {
+    await request("CreateInput", {
+      sceneName,
+      inputName,
+      inputKind: "source-clone",
+      inputSettings: { clone: sourceName, clone_type: 0, audio: true },
+      sceneItemEnabled: true,
+    });
+    await fetchScenes();
+  }, [request, fetchScenes]);
+
   const connect = useCallback(() => {
     if (!getWsUrl || socketRef.current || connectingRef.current) return;
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
     connectingRef.current = true;
     setStatus("connecting");
 
@@ -230,20 +278,12 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
       connectingRef.current = false;
       if (socketRef.current) return;
 
+      let everConnected = false;
       const socket = new WebSocket(wsUrl);
       socketRef.current = socket;
 
       socket.addEventListener("message", (event) => {
         const message = JSON.parse(event.data as string);
-        // The source-profiler VendorEvent is high-frequency telemetry (a full
-        // recursive source tree, many times a second) already consumed into
-        // `sourceStats` for the profiler UI. Logging it would pin 200 copies of
-        // a large payload in `logEntries` -- the dominant heap leak (V8 keeps
-        // each payload's strings as ExternalStringData) -- and drown out every
-        // real event in the debug log within seconds. Keep it out of the log.
-        if (!isProfilerTelemetry(message)) {
-          appendLog(message.op, message.d);
-        }
 
         if (message.op === OP_HELLO) {
           const { rpcVersion, authentication } = message.d as {
@@ -258,6 +298,10 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
             send(OP_IDENTIFY, { rpcVersion, eventSubscriptions: EVENT_SUBSCRIPTIONS });
           }
         } else if (message.op === OP_IDENTIFIED) {
+          everConnected = true;
+          retryCountRef.current = 0;
+          setIsAutoRetrying(false);
+          setHasTimedOut(false);
           setStatus("open");
           fetchScenes().catch(() => {});
           fetchStreamStatus().catch(() => {});
@@ -267,11 +311,19 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
           pollStats();
           statsIntervalRef.current = setInterval(pollStats, 2000);
         } else if (message.op === OP_REQUEST_RESPONSE) {
-          const { requestId, responseData } = message.d as { requestId: string; responseData: unknown };
-          const resolve = pendingRef.current.get(requestId);
-          if (resolve) {
+          const { requestId, requestStatus, responseData } = message.d as {
+            requestId: string;
+            requestStatus?: { result: boolean; code: number; comment?: string };
+            responseData: unknown;
+          };
+          const pending = pendingRef.current.get(requestId);
+          if (pending) {
             pendingRef.current.delete(requestId);
-            resolve(responseData);
+            if (requestStatus && !requestStatus.result) {
+              pending.reject(new Error(requestStatus.comment || `Request failed (code ${requestStatus.code})`));
+            } else {
+              pending.resolve(responseData);
+            }
           }
         } else if (message.op === OP_EVENT) {
           const { eventType, eventData } = message.d as {
@@ -291,7 +343,7 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
               eventType: string;
               eventData: SourceStatsPayload;
             };
-            if (vendorName === "source-profiler" && innerType === "SourceStats") {
+            if (vendorName === "streamwizard-stats" && innerType === "SourceStats") {
               setSourceStats(innerData);
             }
           }
@@ -304,14 +356,36 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
           statsIntervalRef.current = null;
         }
         socketRef.current = null;
+        pendingRef.current.forEach((p) => p.reject(new Error("Connection closed")));
         pendingRef.current.clear();
         sceneItemMapRef.current.clear();
         setStatus("closed");
         setScenes([]);
+        setSceneItems({});
         setCurrentScene(null);
         setIsStreaming(false);
         setSourceStats(null);
         setObsStats(null);
+
+        // OBS wasn't ready yet — schedule a retry while we still have a URL.
+        // Once OBS has connected at least once, close means the user stopped
+        // the container intentionally, so we don't auto-retry.
+        if (!everConnected) {
+          retryCountRef.current += 1;
+          if (retryCountRef.current < MAX_AUTO_RETRIES) {
+            setIsAutoRetrying(true);
+            retryTimerRef.current = setTimeout(() => {
+              retryTimerRef.current = null;
+              connect();
+            }, RETRY_DELAY_MS);
+          } else {
+            // Exhausted the retry budget without OBS ever coming up. Surface a
+            // distinct "timed out" state so the UI can offer a clear recovery
+            // path instead of an indistinguishable "Disconnected".
+            setIsAutoRetrying(false);
+            setHasTimedOut(true);
+          }
+        }
       });
 
       socket.addEventListener("error", () => {
@@ -321,21 +395,42 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
       connectingRef.current = false;
       setStatus("closed");
     });
-  }, [getWsUrl, password, send, fetchScenes, fetchStreamStatus, appendLog]);
+  }, [getWsUrl, password, send, fetchScenes, fetchStreamStatus]);
 
   const disconnect = useCallback(() => {
     socketRef.current?.close();
   }, []);
 
-  useEffect(() => {
-    if (getWsUrl) connect();
-    return () => { socketRef.current?.close(); };
-  }, [getWsUrl, connect]);
+  // Manual reconnect after a timeout: the auto-retry loop reuses `connect`, so
+  // we must reset the retry budget here or a timed-out socket would refuse to
+  // try again (retryCount is already at MAX).
+  const reconnect = useCallback(() => {
+    retryCountRef.current = 0;
+    setHasTimedOut(false);
+    setIsAutoRetrying(false);
+    connect();
+  }, [connect]);
 
-  const clearLog = useCallback(() => setLogEntries([]), []);
+  useEffect(() => {
+    retryCountRef.current = 0;
+    setIsAutoRetrying(false);
+    setHasTimedOut(false);
+    if (getWsUrl) connect();
+    return () => {
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      socketRef.current?.close();
+    };
+  }, [getWsUrl, connect]);
 
   return {
     status,
+    isAutoRetrying,
+    hasTimedOut,
+    scenes,
+    sceneItems,
     filteredScenes,
     currentScene,
     isStreaming,
@@ -343,13 +438,18 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
     togglingStream,
     sourceStats,
     obsStats,
-    logEntries,
-    clearLog,
     connect,
+    reconnect,
     disconnect,
     switchScene,
     toggleStream,
     setSceneItemEnabled,
     setSourceFilterEnabled,
+    addMediaSourceToScene,
+    addBrowserSourceToScene,
+    addSourceCloneToScene,
+    createScene,
+    ensureSceneExists,
+    sceneHasSource,
   };
 }
