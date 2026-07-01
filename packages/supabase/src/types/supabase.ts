@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       _clip_uuid_migration_backup_folders: {
@@ -732,6 +757,177 @@ export type Database = {
         }
         Relationships: []
       }
+      ingest_output_keys: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          key_id: string
+          label: string
+          last_used_at: string | null
+          output_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_id: string
+          label?: string
+          last_used_at?: string | null
+          output_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_id?: string
+          label?: string
+          last_used_at?: string | null
+          output_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_output_keys_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_stream_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingest_session_stats: {
+        Row: {
+          byte_recv_total: number | null
+          id: string
+          kbps: number | null
+          mbps_bandwidth: number | null
+          mbps_recv_rate: number | null
+          pkt_recv_drop: number | null
+          pkt_recv_loss: number | null
+          pkt_recv_loss_total: number | null
+          pkt_recv_retrans: number | null
+          protocol: string
+          recorded_at: string
+          rtt_ms: number | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          byte_recv_total?: number | null
+          id?: string
+          kbps?: number | null
+          mbps_bandwidth?: number | null
+          mbps_recv_rate?: number | null
+          pkt_recv_drop?: number | null
+          pkt_recv_loss?: number | null
+          pkt_recv_loss_total?: number | null
+          pkt_recv_retrans?: number | null
+          protocol: string
+          recorded_at?: string
+          rtt_ms?: number | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          byte_recv_total?: number | null
+          id?: string
+          kbps?: number | null
+          mbps_bandwidth?: number | null
+          mbps_recv_rate?: number | null
+          pkt_recv_drop?: number | null
+          pkt_recv_loss?: number | null
+          pkt_recv_loss_total?: number | null
+          pkt_recv_retrans?: number | null
+          protocol?: string
+          recorded_at?: string
+          rtt_ms?: number | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_session_stats_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingest_sessions: {
+        Row: {
+          ended_at: string | null
+          id: string
+          key_id: string
+          last_bitrate_kbps: number | null
+          protocol: string
+          remote_ip: unknown
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          ended_at?: string | null
+          id?: string
+          key_id: string
+          last_bitrate_kbps?: number | null
+          protocol: string
+          remote_ip?: unknown
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          ended_at?: string | null
+          id?: string
+          key_id?: string
+          last_bitrate_kbps?: number | null
+          protocol?: string
+          remote_ip?: unknown
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_sessions_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_stream_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingest_stream_keys: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          last_used_at: string | null
+          stream_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_used_at?: string | null
+          stream_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_used_at?: string | null
+          stream_key?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       integrations: {
         Row: {
           created_at: string
@@ -980,6 +1176,173 @@ export type Database = {
           },
         ]
       }
+      obs_instances: {
+        Row: {
+          container_id: string | null
+          container_name: string
+          cpu_quota: number
+          created_at: string
+          id: string
+          memory_mb: number
+          node_id: string
+          obs_ws_password_ciphertext: string | null
+          obs_ws_password_iv: string | null
+          obs_ws_password_tag: string | null
+          resolution: string
+          shm_size: string
+          status: string
+          subscription_id: string | null
+          updated_at: string
+          user_id: string
+          vram_allocated_mb: number
+        }
+        Insert: {
+          container_id?: string | null
+          container_name: string
+          cpu_quota: number
+          created_at?: string
+          id?: string
+          memory_mb: number
+          node_id: string
+          obs_ws_password_ciphertext?: string | null
+          obs_ws_password_iv?: string | null
+          obs_ws_password_tag?: string | null
+          resolution: string
+          shm_size: string
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+          vram_allocated_mb: number
+        }
+        Update: {
+          container_id?: string | null
+          container_name?: string
+          cpu_quota?: number
+          created_at?: string
+          id?: string
+          memory_mb?: number
+          node_id?: string
+          obs_ws_password_ciphertext?: string | null
+          obs_ws_password_iv?: string | null
+          obs_ws_password_tag?: string | null
+          resolution?: string
+          shm_size?: string
+          status?: string
+          subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+          vram_allocated_mb?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obs_instances_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "obs_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obs_instances_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obs_node_api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_ciphertext: string
+          key_hash: string
+          key_iv: string
+          key_tag: string
+          node_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_ciphertext: string
+          key_hash: string
+          key_iv: string
+          key_tag: string
+          node_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_ciphertext?: string
+          key_hash?: string
+          key_iv?: string
+          key_tag?: string
+          node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obs_node_api_keys_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "obs_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obs_nodes: {
+        Row: {
+          api_url: string | null
+          claim_token_expires_at: string | null
+          claim_token_hash: string | null
+          cpu_quota: number
+          created_at: string
+          gpu_bus_id: string | null
+          id: string
+          max_instances: number
+          memory_mb: number
+          name: string
+          shm_size: string
+          status: string
+          total_vram_mb: number
+          updated_at: string
+          vram_mb: number
+        }
+        Insert: {
+          api_url?: string | null
+          claim_token_expires_at?: string | null
+          claim_token_hash?: string | null
+          cpu_quota: number
+          created_at?: string
+          gpu_bus_id?: string | null
+          id?: string
+          max_instances: number
+          memory_mb: number
+          name: string
+          shm_size: string
+          status?: string
+          total_vram_mb: number
+          updated_at?: string
+          vram_mb: number
+        }
+        Update: {
+          api_url?: string | null
+          claim_token_expires_at?: string | null
+          claim_token_hash?: string | null
+          cpu_quota?: number
+          created_at?: string
+          gpu_bus_id?: string | null
+          id?: string
+          max_instances?: number
+          memory_mb?: number
+          name?: string
+          shm_size?: string
+          status?: string
+          total_vram_mb?: number
+          updated_at?: string
+          vram_mb?: number
+        }
+        Relationships: []
+      }
       overlay_items: {
         Row: {
           config: Json
@@ -1181,6 +1544,68 @@ export type Database = {
             referencedColumns: ["twitch_user_id"]
           },
         ]
+      }
+      plans: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          limits: Json
+          name: string
+          product_id: string
+          sort_order: number
+          stripe_price_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_active?: boolean
+          limits?: Json
+          name: string
+          product_id: string
+          sort_order?: number
+          stripe_price_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          limits?: Json
+          name?: string
+          product_id?: string
+          sort_order?: number
+          stripe_price_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plans_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       smp_actions: {
         Row: {
@@ -1662,6 +2087,56 @@ export type Database = {
           },
         ]
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          grant_note: string | null
+          granted_by: string | null
+          id: string
+          plan_id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          grant_note?: string | null
+          granted_by?: string | null
+          id?: string
+          plan_id: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          grant_note?: string | null
+          granted_by?: string | null
+          id?: string
+          plan_id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           avatar_url: string | null
@@ -1828,6 +2303,7 @@ export type Database = {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
       }
+      check_product_access: { Args: { p_product_id: string }; Returns: boolean }
       check_user_role:
         | { Args: { p_role: string }; Returns: boolean }
         | { Args: { p_role: string; p_user_id: string }; Returns: boolean }
@@ -1884,6 +2360,17 @@ export type Database = {
           video_id: string
           view_count: number
           vod_offset: number
+        }[]
+      }
+      get_product_access: {
+        Args: { p_product_id: string }
+        Returns: {
+          can_access: boolean
+          can_interact: boolean
+          limits: Json
+          plan_id: string
+          plan_name: string
+          status: string
         }[]
       }
       get_stream_data: { Args: { p_video_id: string }; Returns: Json }
@@ -2091,6 +2578,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       clip_sync_status: ["completed", "failed", "syncing"],

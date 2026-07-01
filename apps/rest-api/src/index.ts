@@ -15,6 +15,7 @@ import { supabaseMiddleware, supabaseAuth } from "./middleware/auth";
 import { handleTwitchEventSub } from "./routes/twitch-eventsub";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
 import { handleGithubWebhook } from "./handlers/github";
+import nodes from "./routes/nodes";
 
 const app = new Hono();
 
@@ -76,6 +77,12 @@ app.post(
   handleGithubWebhook,
 );
 
+// Node claim handshake -- called by obs-instance-manager's install script
+// from a fresh, untrusted VM with a one-time token, no Supabase session
+// involved. Registered before the cookie/CORS-oriented "/api/*" middleware
+// below so it doesn't inherit either, same as the webhook route above.
+app.route("/api/nodes", nodes);
+
 // ============================================
 // API ROUTES (User-facing)
 // ============================================
@@ -102,6 +109,7 @@ app.get("/api/clips/sync-status", supabaseAuth(), syncStatusHandler);
 
 Bun.serve({
   fetch: app.fetch,
+  hostname: "0.0.0.0",
   port: Number(process.env.PORT ?? 8080),
 });
 

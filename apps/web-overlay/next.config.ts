@@ -42,7 +42,7 @@ const overlaySceneFontsCsp = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://cdn.streamwizard.org",
   "media-src 'self' blob: data:",
   `connect-src 'self' https://api.open-meteo.com https://nominatim.openstreetmap.org${wsServerUrl ? ` ${wsServerUrl}` : ""}`,
 ].join("; ");

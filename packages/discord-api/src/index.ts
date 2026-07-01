@@ -2,6 +2,7 @@ import { DiscordMembersClient, type DiscordApiConfig } from "./members";
 
 export { DiscordMemberNotFoundError } from "./errors";
 export type { DiscordApiConfig } from "./members";
+export { sendDiscordDirectMessage, type DiscordMessagePayload } from "./dm";
 
 export class DiscordApi {
   public members: DiscordMembersClient;
