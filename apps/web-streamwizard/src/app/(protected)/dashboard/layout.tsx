@@ -53,13 +53,30 @@ export default async function layout({
     }
   }
 
+  const { data: roleRow } = await supabase
+    .from("user_roles")
+    .select("id")
+    .eq("user_id", data.user.id)
+    .eq("role", "admin")
+    .maybeSingle();
+
+  const { data: hasCloudObsAccess } = await supabase.rpc("check_product_access", {
+    p_product_id: "cloud_obs",
+  });
+
   return (
     <SidebarProvider>
       <OnboardingModal clipCount={clipCount ?? 0} discordStatus={discordStatus} />
       <ClipFolderProvider ClipFolders={folders || []}>
         <ModalProvider>
           <ClipFolderDialogProvider>
-            <AppSidebar user={data.user} folders={folders || []} variant="inset" />
+            <AppSidebar
+              user={data.user}
+              folders={folders || []}
+              isAdmin={!!roleRow}
+              hasCloudObsAccess={!!hasCloudObsAccess}
+              variant="inset"
+            />
             <SidebarInset>
               <SiteHeader />
               <div className="w-full p-3 sm:p-5 mx-auto md:gap-6 md:py-6">{children}</div>

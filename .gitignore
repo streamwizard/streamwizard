@@ -5,6 +5,9 @@ node_modules
 .pnp
 .pnp.js
 
+# MCP server config (contains API keys)
+.mcp.json
+
 # Local env files
 .env
 supabase/.env
