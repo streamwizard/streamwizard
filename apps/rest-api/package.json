@@ -17,7 +17,7 @@
     "@repo/logger": "workspace:*",
     "@sentry/bun": "^10",
     "@sentry/hono": "^10",
-    "@supabase/ssr": "^0.8.0",
+    "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.105.1",
     "hono": "^4.12.21",
     "zod": "^4.4.3"
