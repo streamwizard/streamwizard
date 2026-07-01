@@ -36,15 +36,16 @@ export default async function layout({
 
 
   console.log("data.user.id", data.user.id);
-  const { data: roleRow, error: roleError } = await supabase
+  const { data: roleRow } = await supabase
     .from("user_roles")
     .select("id")
     .eq("user_id", data.user.id)
     .eq("role", "admin")
     .maybeSingle();
 
-
-  console.log("roleRow", roleRow);
+  const { data: hasCloudObsAccess } = await supabase.rpc("check_product_access", {
+    p_product_id: "cloud_obs",
+  });
 
   return (
     <SidebarProvider>
@@ -52,7 +53,13 @@ export default async function layout({
       <ClipFolderProvider ClipFolders={folders || []}>
         <ModalProvider>
           <ClipFolderDialogProvider>
-            <AppSidebar user={data.user} folders={folders || []} isAdmin={!!roleRow} variant="inset" />
+            <AppSidebar
+              user={data.user}
+              folders={folders || []}
+              isAdmin={!!roleRow}
+              hasCloudObsAccess={!!hasCloudObsAccess}
+              variant="inset"
+            />
             <SidebarInset>
               <SiteHeader />
               <div className="w-full p-3 sm:p-5 mx-auto md:gap-6 md:py-6">{children}</div>
