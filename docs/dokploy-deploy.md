@@ -12,12 +12,20 @@ Searched in "./*"
 
 ## Required settings per app
 
-For every app, set these in the Dokploy application's **Build** section:
+Two different Dokploy fields, on two different tabs, control the build root.
+Both must point at the repository root, **not** the app folder:
 
-| Setting              | Value                              |
-| -------------------- | ---------------------------------- |
-| Docker Context Path  | `.`                                |
-| Docker File          | `apps/<app-name>/Dockerfile`       |
+| Tab            | Field               | Value                          |
+| -------------- | ------------------- | ------------------------------ |
+| Git / Provider | **Build Path**      | `/`                            |
+| Build          | **Docker Context Path** | `.`                        |
+| Build          | **Docker File**     | `apps/<app-name>/Dockerfile`   |
+
+> ⚠️ The most common mistake: **Build Path** (Git/Provider tab) is left pointing
+> at `/apps/<app-name>`. When that happens, Dokploy resolves the build context
+> *and* the Dockerfile path inside the app folder, so `packages/` is never sent
+> to the build and `bun install` fails with "Workspace dependency not found".
+> Setting Docker Context Path alone does not fix it — check Build Path too.
 
 Examples:
 

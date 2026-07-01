@@ -28,11 +28,14 @@ import {
   getTicketOpenerProfile,
   getTicketSettings,
   nextTicketNumber,
+  setTicketGithubIssue,
   type DiscordTicket,
   type DiscordTicketCategory,
   type DiscordTicketSettings,
   type TicketOpenerProfile,
 } from "@repo/supabase/queries/tickets";
+import { createTicketIssue, getInstallationOctokit } from "@repo/github-api";
+import { env } from "./env";
 import { Sentry } from "../sentry";
 
 // customId namespace for ticket component interactions. interactionCreate routes
@@ -171,13 +174,14 @@ function buildTicketIntroMessage(ticket: DiscordTicket, settings: DiscordTicketS
 
   const close = new ButtonBuilder().setCustomId(TICKET_IDS.close).setLabel("Close Ticket").setEmoji("🔒").setStyle(ButtonStyle.Danger);
 
-  // Phase 2 placeholder — wired up when GitHub sync lands.
-  const github = new ButtonBuilder()
-    .setCustomId(TICKET_IDS.github)
-    .setLabel("Move to GitHub")
-    .setEmoji("🐙")
-    .setStyle(ButtonStyle.Secondary)
-    .setDisabled(true);
+  // Once an issue exists, this becomes a link button instead of an action button.
+  const github = ticket.github_issue_url
+    ? new ButtonBuilder()
+        .setLabel(`Issue #${ticket.github_issue_number}`)
+        .setEmoji("🐙")
+        .setStyle(ButtonStyle.Link)
+        .setURL(ticket.github_issue_url)
+    : new ButtonBuilder().setCustomId(TICKET_IDS.github).setLabel("Move to GitHub").setEmoji("🐙").setStyle(ButtonStyle.Secondary);
 
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(claim, close, github);
 
@@ -289,6 +293,52 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
   await interaction.followUp({ content: `🙋 You claimed this ticket.`, flags: MessageFlags.Ephemeral });
 }
 
+export async function handleGithubButton(interaction: ButtonInteraction): Promise<void> {
+  if (!interaction.inCachedGuild()) return;
+
+  const settings = await getTicketSettings(supabase, interaction.guildId);
+  if (!isStaff(interaction.member, settings)) {
+    await interaction.reply({ content: "Only staff can move tickets to GitHub.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+
+  const ticket = await getTicketByChannelId(supabase, interaction.channelId);
+  if (!ticket) {
+    await interaction.reply({ content: "This channel isn't a tracked ticket.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+  if (ticket.github_issue_url) {
+    await interaction.reply({ content: `This ticket is already on GitHub: ${ticket.github_issue_url}`, flags: MessageFlags.Ephemeral });
+    return;
+  }
+
+  await interaction.deferUpdate();
+
+  const opener = ticket.opener_user_id ? await getTicketOpenerProfile(supabase, ticket.opener_user_id) : null;
+  const body = [
+    ticket.description,
+    "",
+    `**Category:** ${categoryLabel(ticket.category)}`,
+    `**Discord ticket:** #${String(ticket.ticket_number).padStart(4, "0")}`,
+    `**Opened by:** ${opener ? `${opener.name} (${opener.email})` : `Discord user <@${ticket.opener_discord_user_id}>`}`,
+  ].join("\n");
+
+  const octokit = getInstallationOctokit({
+    appId: env.GITHUB_APP_ID,
+    privateKey: env.GITHUB_APP_PRIVATE_KEY,
+    installationId: env.GITHUB_APP_INSTALLATION_ID,
+  });
+  const issue = await createTicketIssue(octokit, env.GITHUB_ISSUES_REPO, { title: ticket.subject, body });
+
+  await setTicketGithubIssue(supabase, ticket.channel_id, issue.number, issue.url);
+
+  const updated = await getTicketByChannelId(supabase, ticket.channel_id);
+  if (updated) {
+    await interaction.editReply(buildTicketIntroMessage(updated, settings, opener));
+  }
+  await interaction.followUp({ content: `🐙 Created GitHub issue #${issue.number}: ${issue.url}`, flags: MessageFlags.Ephemeral });
+}
+
 export async function handleCloseButton(interaction: ButtonInteraction): Promise<void> {
   if (!interaction.inCachedGuild()) return;
 
@@ -387,6 +437,9 @@ export async function handleTicketInteraction(
         break;
       case TICKET_IDS.claim:
         await handleClaimButton(interaction);
+        break;
+      case TICKET_IDS.github:
+        await handleGithubButton(interaction);
         break;
       case TICKET_IDS.close:
         await handleCloseButton(interaction);

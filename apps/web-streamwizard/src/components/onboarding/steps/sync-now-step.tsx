@@ -83,7 +83,9 @@ export function SyncNowStep({ clipCount }: SyncNowStepProps) {
         >
           {isSyncing ? (
             <>
-              <LoadingSpinner />
+              <span className="mr-2 h-4 w-4 shrink-0">
+                <LoadingSpinner />
+              </span>
               {hasClips ? "Syncing..." : "Pulling in your clips..."}
             </>
           ) : state === "error" ? (

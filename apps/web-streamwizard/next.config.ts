@@ -21,8 +21,8 @@ function buildCsp(): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     // Google Fonts actual font files
     "font-src 'self' https://fonts.gstatic.com",
-    // Twitch CDN images + data URIs used by the UI
-    "img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv https://clips-media-assets2.twitch.tv",
+    // Twitch CDN images + our own R2 CDN (e.g. error page gifs) + data URIs used by the UI
+    `img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv https://clips-media-assets2.twitch.tv ${process.env.NEXT_PUBLIC_CDN_URL}`,
     // R2 CDN for video assets (light mode transition WebM, future overlay assets)
     `media-src 'self' ${process.env.NEXT_PUBLIC_CDN_URL}`,
     // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them.
@@ -128,6 +128,14 @@ const nextConfig = {
         protocol: "https",
         hostname: "clips-media-assets2.twitch.tv",
       },
+      ...(process.env.NEXT_PUBLIC_CDN_URL
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: new URL(process.env.NEXT_PUBLIC_CDN_URL).hostname,
+            },
+          ]
+        : []),
     ],
   },
 };

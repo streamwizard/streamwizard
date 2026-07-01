@@ -9,6 +9,10 @@ import { ClipFolderDialogProvider } from "@/providers/clip-folder-dialog-provide
 import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
 import { redirect } from "next/navigation";
 import { getClipFolders } from "@repo/supabase/queries/clips";
+import { getUserPreferences, getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
+import { getGuildSettings } from "@repo/supabase/queries/discord";
+import { getGuildMemberRoleIds } from "@/server/discord/roles";
+import { env } from "@/lib/env";
 
 export default async function layout({
   children,
@@ -33,9 +37,22 @@ export default async function layout({
     .select("id", { count: "exact", head: true })
     .eq("user_id", data.user.id);
 
+  // Only checked while onboarding is still in progress — avoids an extra
+  // Discord REST call on every dashboard page load for everyone past it.
+  let discordStatus: "verified" | "not_member" | "not_linked" = "not_linked";
+  const prefs = await getUserPreferences(supabase);
+  if (!prefs?.onboarding_completed) {
+    const discordUserId = await getDiscordUserIdByUserIdMaybe(supabase, data.user.id);
+    if (discordUserId) {
+      const [settings, roleIds] = await Promise.all([
+        getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID),
+        getGuildMemberRoleIds(discordUserId),
+      ]);
+      discordStatus =
+        roleIds && settings?.verified_role_id && roleIds.includes(settings.verified_role_id) ? "verified" : "not_member";
+    }
+  }
 
-
-  console.log("data.user.id", data.user.id);
   const { data: roleRow } = await supabase
     .from("user_roles")
     .select("id")
@@ -49,7 +66,7 @@ export default async function layout({
 
   return (
     <SidebarProvider>
-      <OnboardingModal clipCount={clipCount ?? 0} />
+      <OnboardingModal clipCount={clipCount ?? 0} discordStatus={discordStatus} />
       <ClipFolderProvider ClipFolders={folders || []}>
         <ModalProvider>
           <ClipFolderDialogProvider>

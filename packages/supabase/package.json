@@ -91,6 +91,10 @@
       "types": "./src/queries/discord.ts",
       "default": "./src/queries/discord.ts"
     },
+    "./queries/discord-activity": {
+      "types": "./src/queries/discord-activity.ts",
+      "default": "./src/queries/discord-activity.ts"
+    },
     "./queries/tickets": {
       "types": "./src/queries/tickets.ts",
       "default": "./src/queries/tickets.ts"
