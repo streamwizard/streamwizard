@@ -15,7 +15,7 @@ import {
   Tv2,
   Zap,
 } from "lucide-react";
-import { ScrollArea, Switch } from "@repo/ui";
+import { ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@repo/ui";
 import { cn } from "@repo/ui";
 import type { SourceStatNode, SourceStatsPayload } from "@/hooks/use-obs-websocket";
 
@@ -342,20 +342,16 @@ export function ObsSourceProfiler({ sourceStats, onSetSceneItemEnabled, onSetSou
           />
         </div>
         {/* sort */}
-        <select
-          value={sortKey}
-          onChange={(e) => setSortKey(e.target.value as SortKey)}
-          className={cn(
-            "shrink-0 text-xs bg-muted/40 border border-transparent rounded-md",
-            "px-2 py-1 focus:outline-none focus:border-border/60 cursor-pointer",
-            "text-muted-foreground",
-          )}
-          aria-label="Sort by"
-        >
-          {SORT_OPTS.map((o) => (
-            <option key={o.key} value={o.key}>{o.label}</option>
-          ))}
-        </select>
+        <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
+          <SelectTrigger size="sm" className="h-[26px] shrink-0 text-xs" aria-label="Sort by">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="end">
+            {SORT_OPTS.map((o) => (
+              <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* ── filter pills ── */}

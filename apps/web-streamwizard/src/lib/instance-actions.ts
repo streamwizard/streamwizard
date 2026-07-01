@@ -1,16 +1,13 @@
 import { supabase } from "@repo/supabase/next/client";
 
-// Calls obs-instance-manager's admin-scoped POST /admin/instances/:id/start|stop
-// directly from the browser, gated by the admin's own Supabase JWT (the node
-// checks the role, not instance ownership). Shared by the node detail and
-// instance detail pages so both can toggle instances without duplicating the
-// fetch/token logic.
+// Calls obs-instance-manager's user-scoped POST /instances/:id/start|stop.
+// Shared by the node detail and instance detail pages.
 export async function toggleInstance(apiUrl: string, instanceId: string, action: "start" | "stop"): Promise<{ status: string }> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("Not signed in.");
 
-  const res = await fetch(`${apiUrl.replace(/\/$/, "")}/admin/instances/${instanceId}/${action}`, {
+  const res = await fetch(`${apiUrl.replace(/\/$/, "")}/instances/${instanceId}/${action}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });

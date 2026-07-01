@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function IrlPage() {
-  redirect("/dashboard/irl/ingest");
+  redirect("/dashboard/irl/obs");
 }

@@ -628,6 +628,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ingest_output_keys: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          key_id: string
+          label: string
+          last_used_at: string | null
+          output_key: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_id: string
+          label?: string
+          last_used_at?: string | null
+          output_key: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_id?: string
+          label?: string
+          last_used_at?: string | null
+          output_key?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_output_keys_key_id_fkey"
+            columns: ["key_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_stream_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ingest_session_stats: {
         Row: {
           byte_recv_total: number | null
@@ -721,47 +762,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "ingest_sessions_key_id_fkey"
-            columns: ["key_id"]
-            isOneToOne: false
-            referencedRelation: "ingest_stream_keys"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ingest_output_keys: {
-        Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          key_id: string
-          label: string
-          last_used_at: string | null
-          output_key: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          key_id: string
-          label?: string
-          last_used_at?: string | null
-          output_key: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          key_id?: string
-          label?: string
-          last_used_at?: string | null
-          output_key?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ingest_output_keys_key_id_fkey"
             columns: ["key_id"]
             isOneToOne: false
             referencedRelation: "ingest_stream_keys"
@@ -1051,14 +1051,18 @@ export type Database = {
         Row: {
           container_id: string | null
           container_name: string
+          cpu_quota: number
           created_at: string
           id: string
+          memory_mb: number
           node_id: string
           obs_ws_password_ciphertext: string | null
           obs_ws_password_iv: string | null
           obs_ws_password_tag: string | null
           resolution: string
+          shm_size: string
           status: string
+          subscription_id: string | null
           updated_at: string
           user_id: string
           vram_allocated_mb: number
@@ -1066,14 +1070,18 @@ export type Database = {
         Insert: {
           container_id?: string | null
           container_name: string
+          cpu_quota: number
           created_at?: string
           id?: string
+          memory_mb: number
           node_id: string
           obs_ws_password_ciphertext?: string | null
           obs_ws_password_iv?: string | null
           obs_ws_password_tag?: string | null
           resolution: string
+          shm_size: string
           status?: string
+          subscription_id?: string | null
           updated_at?: string
           user_id: string
           vram_allocated_mb: number
@@ -1081,14 +1089,18 @@ export type Database = {
         Update: {
           container_id?: string | null
           container_name?: string
+          cpu_quota?: number
           created_at?: string
           id?: string
+          memory_mb?: number
           node_id?: string
           obs_ws_password_ciphertext?: string | null
           obs_ws_password_iv?: string | null
           obs_ws_password_tag?: string | null
           resolution?: string
+          shm_size?: string
           status?: string
+          subscription_id?: string | null
           updated_at?: string
           user_id?: string
           vram_allocated_mb?: number
@@ -1096,6 +1108,51 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "obs_instances_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "obs_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "obs_instances_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "user_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      obs_node_api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_ciphertext: string
+          key_hash: string
+          key_iv: string
+          key_tag: string
+          node_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_ciphertext: string
+          key_hash: string
+          key_iv: string
+          key_tag: string
+          node_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_ciphertext?: string
+          key_hash?: string
+          key_iv?: string
+          key_tag?: string
+          node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "obs_node_api_keys_node_id_fkey"
             columns: ["node_id"]
             isOneToOne: false
             referencedRelation: "obs_nodes"
@@ -1358,6 +1415,68 @@ export type Database = {
             referencedColumns: ["twitch_user_id"]
           },
         ]
+      }
+      plans: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          limits: Json
+          name: string
+          product_id: string
+          sort_order: number
+          stripe_price_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          is_active?: boolean
+          limits?: Json
+          name: string
+          product_id: string
+          sort_order?: number
+          stripe_price_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          limits?: Json
+          name?: string
+          product_id?: string
+          sort_order?: number
+          stripe_price_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plans_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       smp_actions: {
         Row: {
@@ -1839,6 +1958,56 @@ export type Database = {
           },
         ]
       }
+      user_subscriptions: {
+        Row: {
+          created_at: string
+          current_period_end: string | null
+          grant_note: string | null
+          granted_by: string | null
+          id: string
+          plan_id: string
+          status: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_period_end?: string | null
+          grant_note?: string | null
+          granted_by?: string | null
+          id?: string
+          plan_id: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_period_end?: string | null
+          grant_note?: string | null
+          granted_by?: string | null
+          id?: string
+          plan_id?: string
+          status?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           avatar_url: string | null
@@ -2005,6 +2174,7 @@ export type Database = {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
       }
+      check_product_access: { Args: { p_product_id: string }; Returns: boolean }
       check_user_role:
         | { Args: { p_role: string }; Returns: boolean }
         | { Args: { p_role: string; p_user_id: string }; Returns: boolean }
@@ -2061,6 +2231,17 @@ export type Database = {
           video_id: string
           view_count: number
           vod_offset: number
+        }[]
+      }
+      get_product_access: {
+        Args: { p_product_id: string }
+        Returns: {
+          can_access: boolean
+          can_interact: boolean
+          limits: Json
+          plan_id: string
+          plan_name: string
+          status: string
         }[]
       }
       get_stream_data: { Args: { p_video_id: string }; Returns: Json }
