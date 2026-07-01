@@ -3,6 +3,7 @@ import type { BotEvent } from "../types/discord";
 import { Sentry } from "../sentry";
 import { canRunCommand } from "../lib/permissions";
 import { handleTicketInteraction } from "../lib/tickets";
+import { handleSetupInteraction } from "../lib/setup-wizard";
 
 export default {
   name: Events.InteractionCreate,
@@ -22,6 +23,11 @@ export default {
     // own error handling). Dispatched purely by customId, so they survive restarts.
     if ((interaction.isButton() || interaction.isModalSubmit()) && interaction.customId.startsWith("ticket:")) {
       await handleTicketInteraction(interaction);
+      return;
+    }
+
+    if ((interaction.isButton() || interaction.isAnySelectMenu()) && interaction.customId.startsWith("setup:")) {
+      await handleSetupInteraction(interaction);
       return;
     }
 

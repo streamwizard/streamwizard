@@ -17,6 +17,11 @@ const schema = z.object({
   TWITCH_CLIENT_SECRET: z.string().min(1),
   TWITCH_WEBHOOK_SECRET: z.string().min(1),
 
+  // GitHub (ticket → issue sync webhook)
+  GITHUB_WEBHOOK_SECRET: z.string().min(1),
+  GITHUB_ISSUES_REPO: z.string().min(1), // "owner/repo"
+  DISCORD_BOT_TOKEN: z.string().min(1),
+
   // Public URL returned to nodes during /claim so they know where to send requests
   STREAMWIZARD_API_URL: z.string().url(),
 
@@ -26,9 +31,6 @@ const schema = z.object({
   OBS_S3_ENDPOINT: z.url(),
   OBS_S3_REGION: z.string().min(1),
   OBS_S3_SECRET_KEY: z.string().min(1),
-
-
-
 
   // Sentry
   SENTRY_DSN: z.string().url().optional(),

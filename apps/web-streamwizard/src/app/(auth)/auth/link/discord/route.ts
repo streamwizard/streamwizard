@@ -15,7 +15,9 @@ export async function GET(request: Request) {
     provider: "discord",
     options: {
       redirectTo: `${origin}/auth/callback/discord`,
-      scopes: "identify role_connections.write",
+      // The Verified Member role is granted directly by the bot once we have
+      // the user's Discord ID, so we only need enough scope to link the identity.
+      scopes: "identify",
     },
   });
 

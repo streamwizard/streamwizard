@@ -6,10 +6,10 @@
     "dev": "doppler run --config dev_discord_bot -- bun --preload ./src/sentry.ts --hot src/index.ts",
     "start": "bun --preload ./src/sentry.ts src/index.ts",
     "check-types": "tsc --noEmit",
-    "deploy-commands": "doppler run --config dev_discord_bot -- bun run src/scripts/deploy-commands.ts",
-    "register-role-connection-metadata": "doppler run --config dev_discord_bot -- bun run src/scripts/register-role-connection-metadata.ts"
+    "deploy-commands": "doppler run --config dev_discord_bot -- bun run src/scripts/deploy-commands.ts"
   },
   "dependencies": {
+    "@repo/github-api": "workspace:*",
     "@repo/sentry": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@sentry/bun": "^10",

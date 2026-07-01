@@ -24,6 +24,21 @@ export default {
     console.log(`[guildMemberAdd] Sending welcome message to channel "${channel.name}"`);
     try {
       const [joinNumber, connection] = await Promise.all([getJoinNumber(member), getConnectionInfo(member)]);
+
+      // A linked account may have failed its initial role grant if the user
+      // OAuth'd before joining the server (Discord rejects role grants for
+      // non-members). Joining is the first point we're guaranteed they're an
+      // actual member, so retry here — otherwise the welcome message below
+      // claims "your roles are good to go" while no role was ever granted.
+      if (connection.isConnected && settings?.verified_role_id) {
+        try {
+          await member.roles.add(settings.verified_role_id);
+        } catch (roleError) {
+          Sentry.captureException(roleError);
+          console.error(`[guildMemberAdd] Failed to grant verified role to "${member.user.tag}" in "${member.guild.name}":`, roleError);
+        }
+      }
+
       await channel.send(buildWelcomeMessage(member, joinNumber, connection));
     } catch (error) {
       Sentry.captureException(error);
