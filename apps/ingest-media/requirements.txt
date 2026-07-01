@@ -1,7 +1,0 @@
-# RTMP server (handshake + chunk parsing). Pin to a known-good release.
-pyrtmp==0.3.0
-
-# NOTE: The GStreamer Python bindings (gi.repository.Gst / GLib) are NOT pip
-# packages here — they are provided by the system packages installed in the
-# Dockerfile (python3-gi, gir1.2-gstreamer-1.0, gstreamer1.0-plugins-*). libsrt
-# is loaded at runtime via ctypes from the system libsrt (libsrt-openssl).

@@ -83,6 +83,10 @@
       "types": "./src/queries/obs-nodes.ts",
       "default": "./src/queries/obs-nodes.ts"
     },
+    "./queries/subscriptions": {
+      "types": "./src/queries/subscriptions.ts",
+      "default": "./src/queries/subscriptions.ts"
+    },
     "./queries/discord": {
       "types": "./src/queries/discord.ts",
       "default": "./src/queries/discord.ts"
