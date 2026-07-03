@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CloudOBSViewer } from "@/components/irl/CloudOBSViewer";
 import { getNodeApiUrlAction } from "@/actions/nodes";
-import { mintWsUrl } from "@/lib/ws-ticket";
+import { mintNoVncConnection } from "@/lib/ws-ticket";
 
 // Admin's noVNC proxy lives at /admin/instances/:id/novnc on the node's API
 // (vs. the end-user /instances/:id/novnc), gated by the admin's own role
@@ -39,12 +39,11 @@ function AdminVncView() {
     });
   }, [nodeId, instanceId]);
 
-  const getWsUrl = useCallback(() => {
+  const getConnection = useCallback(() => {
     if (!apiUrl || !instanceId) return Promise.reject(new Error("Instance not ready."));
-    return mintWsUrl(apiUrl, {
+    return mintNoVncConnection(apiUrl, {
       ticketPath: `/admin/instances/${instanceId}/ws-ticket`,
       wsPath: `/admin/instances/${instanceId}/novnc`,
-      scope: "novnc",
     });
   }, [apiUrl, instanceId]);
 
@@ -62,7 +61,7 @@ function AdminVncView() {
             </button>
           </div>
         ) : apiUrl && instanceId ? (
-          <CloudOBSViewer getWsUrl={getWsUrl} />
+          <CloudOBSViewer getConnection={getConnection} />
         ) : (
           <p className="p-4 text-sm text-white/60">Resolving node…</p>
         )}
