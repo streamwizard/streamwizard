@@ -4,6 +4,7 @@ process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); 
 import { handlers } from "./handlers/eventHandler";
 import { TwitchEventSubReceiver } from "@repo/twitch-eventsub";
 import { env } from "./lib/env";
+import { createEventSubAlerter } from "./lib/eventsub-alerter";
 import { overlayWsClient } from "./overlay-ws-client";
 import { isMetricsEnabled } from "@repo/metrics";
 
@@ -19,6 +20,7 @@ async function main() {
     const EventSubReceiver = new TwitchEventSubReceiver(handlers, {
       wsUrl: production,
       conduitId: env.TWITCH_CONDUIT_ID,
+      onLifecycleEvent: createEventSubAlerter(),
     });
 
     process.on("SIGINT", async () => {
