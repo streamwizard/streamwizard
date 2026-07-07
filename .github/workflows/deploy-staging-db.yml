@@ -7,6 +7,11 @@ on:
     paths:
       - 'supabase/migrations/**'
   workflow_dispatch:
+    inputs:
+      include_all:
+        description: "Also apply out-of-order (past-dated) migrations — needed once after merging feature branches out of timestamp order. Leave off for normal deploys."
+        type: boolean
+        default: false
 
 jobs:
   deploy:
@@ -24,8 +29,18 @@ jobs:
         with:
           version: 2.104.0
 
+      # Normal deploys stay strict: a plain `db push` errors if it finds a
+      # local migration older than staging's latest, which catches accidental
+      # out-of-order history. When feature branches are legitimately merged out
+      # of timestamp order (e.g. #106 before #107), run this workflow manually
+      # with include_all=true to apply those "past" migrations once. Applying
+      # pending migrations is non-destructive — it never resets or drops data.
       - name: Push Migrations to Staging Supabase
         run: |
-          doppler run --command="supabase db push --db-url \$SUPABASE_DB_URL --yes"
+          FLAGS="--yes"
+          if [ "${{ inputs.include_all }}" = "true" ]; then
+            FLAGS="$FLAGS --include-all"
+          fi
+          doppler run --command="supabase db push --db-url \$SUPABASE_DB_URL $FLAGS"
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
