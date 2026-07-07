@@ -16,8 +16,14 @@ import { handleTwitchEventSub } from "./routes/twitch-eventsub";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
 import { handleGithubWebhook } from "./handlers/github";
 import nodes from "./routes/nodes";
+import ingestNodes from "./routes/ingest-nodes";
 
 const app = new Hono();
+
+// Liveness probe for the monitoring alerter — registered before every
+// middleware so probe traffic never hits Sentry tracing or http_request
+// metrics.
+app.get("/health", (c) => c.json({ ok: true }));
 
 // ============================================
 // SECURITY MIDDLEWARE (Applied in order)
@@ -82,6 +88,9 @@ app.post(
 // involved. Registered before the cookie/CORS-oriented "/api/*" middleware
 // below so it doesn't inherit either, same as the webhook route above.
 app.route("/api/nodes", nodes);
+
+// Same rationale as above, for ingest-server's install script.
+app.route("/api/ingest-nodes", ingestNodes);
 
 // ============================================
 // API ROUTES (User-facing)

@@ -11,7 +11,15 @@ import { supabase } from "@repo/supabase/next/client";
 
 export type WsTicketScope = "metrics" | "novnc" | "obsws";
 
-export async function getWsTicket(apiUrl: string, ticketPath: string, scope: WsTicketScope): Promise<string> {
+// vnc_password is only ever present for scope=novnc (see obs-instance-manager's
+// POST /:id/ws-ticket) -- the noVNC/RFB handshake happens directly between this
+// client and x11vnc inside the container (the API's WS proxy is a blind byte
+// relay), so the browser needs the password out-of-band to authenticate it.
+async function getWsTicket(
+  apiUrl: string,
+  ticketPath: string,
+  scope: WsTicketScope,
+): Promise<{ ticket: string; vncPassword?: string }> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("Not signed in.");
@@ -27,8 +35,8 @@ export async function getWsTicket(apiUrl: string, ticketPath: string, scope: WsT
     throw new Error(body.error ?? `Failed to get WebSocket ticket (${res.status})`);
   }
 
-  const { ticket } = (await res.json()) as { ticket: string };
-  return ticket;
+  const { ticket, vnc_password } = (await res.json()) as { ticket: string; vnc_password?: string };
+  return { ticket, vncPassword: vnc_password };
 }
 
 // apiUrl must come from a trusted server-side lookup (never the query string):
@@ -38,10 +46,27 @@ export async function mintWsUrl(
   apiUrl: string,
   opts: { ticketPath: string; wsPath: string; scope: WsTicketScope },
 ): Promise<string> {
-  const ticket = await getWsTicket(apiUrl, opts.ticketPath, opts.scope);
+  const { ticket } = await getWsTicket(apiUrl, opts.ticketPath, opts.scope);
   const url = new URL(apiUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
   url.pathname = `${url.pathname.replace(/\/$/, "")}${opts.wsPath}`;
   url.searchParams.set("ticket", ticket);
   return url.toString();
+}
+
+// Same as mintWsUrl, but for scope=novnc specifically: also returns the VNC
+// password the caller must hand to noVNC's RFB client (as `credentials.password`)
+// to complete the RFB auth handshake with x11vnc. See CloudOBSViewer.
+export async function mintNoVncConnection(
+  apiUrl: string,
+  opts: { ticketPath: string; wsPath: string },
+): Promise<{ url: string; password: string }> {
+  const { ticket, vncPassword } = await getWsTicket(apiUrl, opts.ticketPath, "novnc");
+  if (!vncPassword) throw new Error("Server didn't return a VNC password for this instance.");
+
+  const url = new URL(apiUrl);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.pathname = `${url.pathname.replace(/\/$/, "")}${opts.wsPath}`;
+  url.searchParams.set("ticket", ticket);
+  return { url: url.toString(), password: vncPassword };
 }
