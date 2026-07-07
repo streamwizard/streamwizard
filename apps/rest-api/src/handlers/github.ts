@@ -1,6 +1,7 @@
 import { type Context } from "hono";
 import { getTicketByGithubIssue, syncTicketStatusFromGithub } from "@repo/supabase/queries/tickets";
 import { supabase } from "@repo/supabase";
+import { sendDiscordChannelMessage } from "@repo/discord-api";
 import { env } from "../lib/env";
 
 const GRACE_PERIOD_MS = 24 * 60 * 60 * 1000;
@@ -73,16 +74,9 @@ async function handleIssueReopened(payload: GithubIssuesEventPayload): Promise<v
 }
 
 async function postDiscordMessage(channelId: string, content: string): Promise<void> {
-  const response = await fetch(`https://discord.com/api/v10/channels/${channelId}/messages`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bot ${env.DISCORD_BOT_TOKEN}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ content }),
-  });
-
-  if (!response.ok) {
-    console.error("Failed to post Discord message for GitHub ticket sync", channelId, response.status, await response.text());
+  try {
+    await sendDiscordChannelMessage(channelId, { content });
+  } catch (err) {
+    console.error("Failed to post Discord message for GitHub ticket sync", channelId, err);
   }
 }

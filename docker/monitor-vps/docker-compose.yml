@@ -1,0 +1,94 @@
+# StreamWizard monitoring VPS — runs on a small dedicated box on the tailnet
+# (NOT Dokploy). Hosts the prod web-monitor (dashboard), the alerter (the
+# self-ticking alert engine from apps/alerter), Telegraf shipping Supabase
+# platform metrics into InfluxDB, and Caddy terminating TLS for
+# monitor.streamwizard.org.
+#
+# There is deliberately NO InfluxDB service here — the existing external
+# instance stays where it is; everything talks to it over INFLUXDB_URL.
+#
+# Copy .env.example to .env and fill it in before `docker compose up --build -d`.
+# See README.md for the full provisioning runbook.
+
+services:
+  web-monitor:
+    build:
+      context: ../..
+      dockerfile: apps/web-monitor/Dockerfile
+      args:
+        # Build-time secrets (Sentry, env validation) come from the same
+        # Doppler config as runtime.
+        DOPPLER_TOKEN: ${DOPPLER_TOKEN}
+    environment:
+      DOPPLER_TOKEN: ${DOPPLER_TOKEN}
+    networks:
+      - monitor
+    restart: unless-stopped
+
+  # The alert engine: evaluates rules every TICK_SECONDS and notifies
+  # Discord/Telegram. Deliberately independent of web-monitor — dashboard
+  # deploys or crashes never take alerting down.
+  alerter:
+    build:
+      context: ../..
+      dockerfile: apps/alerter/Dockerfile
+    environment:
+      # Doppler service token for the root prd config — Supabase, Influx,
+      # Discord/Telegram, and ALERT_ENV all come from Doppler.
+      DOPPLER_TOKEN: ${ALERTER_DOPPLER_TOKEN}
+      # Optional healthchecks.io dead-man's switch; pinged on every successful
+      # tick, /fail on failures. Leave empty to disable.
+      HEALTHCHECKS_PING_URL: ${HEALTHCHECKS_PING_URL:-}
+    # Probes reach OBS/ingest boxes on their tailnet IPs through the host's
+    # tailscaled: Docker masquerades bridge traffic out of tailscale0, so no
+    # host networking or Tailscale sidecar is needed. If probes to 100.x IPs
+    # fail, see "Tailnet reachability" in the README.
+    networks:
+      - monitor
+    # An in-flight evaluation pass can take ~35s; let it finish on SIGTERM.
+    stop_grace_period: 45s
+    restart: unless-stopped
+
+  telegraf:
+    image: telegraf:1.31-alpine
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - ./telegraf/scrape-supabase.sh:/etc/telegraf/scrape-supabase.sh:ro
+    environment:
+      INFLUXDB_URL: ${INFLUXDB_URL}
+      INFLUXDB_TOKEN: ${INFLUXDB_TOKEN}
+      INFLUXDB_ORG: ${INFLUXDB_ORG}
+      SUPABASE_METRICS_URL_PROD: ${SUPABASE_METRICS_URL_PROD}
+      SB_SECRET_KEY_PROD: ${SB_SECRET_KEY_PROD}
+      SUPABASE_METRICS_URL_STAGING: ${SUPABASE_METRICS_URL_STAGING}
+      SB_SECRET_KEY_STAGING: ${SB_SECRET_KEY_STAGING}
+      INFLUX_BUCKET_PROD: ${INFLUX_BUCKET_PROD:-streamwizard-prod}
+      INFLUX_BUCKET_STAGING: ${INFLUX_BUCKET_STAGING:-streamwizard-staging}
+    networks:
+      - monitor
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      MONITOR_DOMAIN: ${MONITOR_DOMAIN:-monitor.streamwizard.org}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - monitor
+    depends_on:
+      - web-monitor
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
+
+networks:
+  monitor:
+    driver: bridge

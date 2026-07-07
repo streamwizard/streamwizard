@@ -25,6 +25,7 @@ import { useNodeMetricsStream, type ConnectionStatus } from "@/hooks/use-node-me
 import { toggleInstance, removeInstance } from "@/lib/instance-actions";
 import { createInstanceAction } from "@/actions/nodes";
 import { HostMetricsCharts } from "@/components/admin/metrics-charts";
+import { formatMb } from "@/lib/format";
 
 const INSTANCES_POLL_INTERVAL_MS = 5000;
 
@@ -157,36 +158,40 @@ export function NodeDetailClient({ node }: { node: ObsNode }) {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Capacity</CardTitle>
-          <CardDescription>Configured limits this node advertises.</CardDescription>
+          <CardTitle>Node</CardTitle>
+          <CardDescription>
+            Capacity you configured, plus hardware self-reported by the node when it linked to the panel.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div>
-            <p className="text-xs text-muted-foreground">Max instances</p>
-            <p className="font-medium">{node.max_instances}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">VRAM alloc / total</p>
-            <p className="font-medium">
-              {node.vram_mb} / {node.total_vram_mb} MB
-            </p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Memory</p>
-            <p className="font-medium">{node.memory_mb} MB</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">CPU quota</p>
-            <p className="font-medium">{node.cpu_quota}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Shm size</p>
-            <p className="font-medium">{node.shm_size}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">GPU bus ID</p>
-            <p className="font-medium">{node.gpu_bus_id ?? "—"}</p>
-          </div>
+        <CardContent>
+          <Table>
+            <TableBody>
+              <TableRow>
+                <TableCell className="text-muted-foreground">Max instances</TableCell>
+                <TableCell className="font-medium">{node.max_instances}</TableCell>
+                <TableCell className="text-muted-foreground">Hostname</TableCell>
+                <TableCell className="font-medium">{node.hostname ?? "Not linked yet"}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="text-muted-foreground">GPU model</TableCell>
+                <TableCell className="font-medium">{node.gpu_model ?? "Not linked yet"}</TableCell>
+                <TableCell className="text-muted-foreground">GPU bus ID</TableCell>
+                <TableCell className="font-medium">{node.gpu_bus_id ?? "Not linked yet"}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="text-muted-foreground">Total VRAM</TableCell>
+                <TableCell className="font-medium">{formatMb(node.total_vram_mb, "Not linked yet")}</TableCell>
+                <TableCell className="text-muted-foreground">RAM total</TableCell>
+                <TableCell className="font-medium">{formatMb(node.ram_total_mb, "Not linked yet")}</TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell className="text-muted-foreground">CPU cores</TableCell>
+                <TableCell className="font-medium">{node.cpu_cores ?? "Not linked yet"}</TableCell>
+                <TableCell className="text-muted-foreground">Storage total</TableCell>
+                <TableCell className="font-medium">{formatMb(node.storage_total_mb, "Not linked yet")}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
 

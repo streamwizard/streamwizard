@@ -1,7 +1,29 @@
 const DISCORD_API_BASE = "https://discord.com/api/v10";
 
+// Minimal shapes for the Discord message-create REST schema — just enough to
+// build embeds and link buttons without pulling in discord.js (this package
+// is REST-only, no gateway connection).
+export interface DiscordEmbed {
+  title?: string;
+  description?: string;
+  color?: number;
+  fields?: { name: string; value: string; inline?: boolean }[];
+  footer?: { text: string };
+  /** ISO 8601 — Discord renders it localized under the embed. */
+  timestamp?: string;
+}
+
+export interface DiscordLinkButton {
+  type: 2; // Button
+  style: 5; // Link
+  label: string;
+  url: string;
+}
+
 export interface DiscordMessagePayload {
-  content: string;
+  content?: string;
+  embeds?: DiscordEmbed[];
+  components?: { type: 1; components: DiscordLinkButton[] }[]; // ActionRow
 }
 
 /**

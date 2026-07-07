@@ -9,10 +9,11 @@ type VncStatus = "connecting" | "connected" | "disconnected" | "error";
 const RETRY_DELAY_MS = 3000;
 const MAX_AUTO_RETRIES = 30; // ~90 seconds of waiting
 
-// getWsUrl mints a fresh single-use ws-ticket and returns the full WS URL. It's
-// called once per connection attempt (including every retry) because a ticket
-// can't be reused -- see lib/ws-ticket.ts.
-export function CloudOBSViewer({ getWsUrl }: { getWsUrl: () => Promise<string> }) {
+// getConnection mints a fresh single-use ws-ticket (plus the VNC password
+// x11vnc now requires) and returns the full WS URL. It's called once per
+// connection attempt (including every retry) because a ticket can't be
+// reused -- see lib/ws-ticket.ts's mintNoVncConnection.
+export function CloudOBSViewer({ getConnection }: { getConnection: () => Promise<{ url: string; password: string }> }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<VncStatus>("connecting");
   const [attempt, setAttempt] = useState(0);
@@ -55,10 +56,10 @@ export function CloudOBSViewer({ getWsUrl }: { getWsUrl: () => Promise<string> }
     setStatus("connecting");
     setErrorMessage(null);
 
-    Promise.all([import("@novnc/novnc"), getWsUrl()]).then(([{ default: RFB }, wsUrl]) => {
+    Promise.all([import("@novnc/novnc"), getConnection()]).then(([{ default: RFB }, { url, password }]) => {
       if (cancelled) return;
 
-      rfb = new RFB(container, wsUrl);
+      rfb = new RFB(container, url, { credentials: { password } });
       rfb.scaleViewport = true;
       rfb.resizeSession = false;
 
@@ -127,7 +128,7 @@ export function CloudOBSViewer({ getWsUrl }: { getWsUrl: () => Promise<string> }
     // `attempt` is intentionally included so incrementing it re-runs this effect
     // and creates a fresh RFB connection (used for both auto-retry and manual
     // retry). `visible` re-runs it to drop/restore the socket on tab visibility.
-  }, [getWsUrl, attempt, visible]);
+  }, [getConnection, attempt, visible]);
 
   const handleManualRetry = () => {
     retryCountRef.current = 0;

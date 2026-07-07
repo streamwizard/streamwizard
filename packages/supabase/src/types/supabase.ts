@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       _clip_uuid_migration_backup_folders: {
@@ -85,6 +60,180 @@ export type Database = {
           folder_id?: number | null
           id?: number | null
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      alert_events: {
+        Row: {
+          created_at: string
+          entity_id: string
+          env: string
+          event_type: string
+          id: number
+          message: string | null
+          rule_id: string
+          severity: string | null
+          value: number | null
+        }
+        Insert: {
+          created_at?: string
+          entity_id?: string
+          env: string
+          event_type: string
+          id?: never
+          message?: string | null
+          rule_id: string
+          severity?: string | null
+          value?: number | null
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          env?: string
+          event_type?: string
+          id?: never
+          message?: string | null
+          rule_id?: string
+          severity?: string | null
+          value?: number | null
+        }
+        Relationships: []
+      }
+      alert_locks: {
+        Row: {
+          expires_at: string
+          locked_at: string
+          locked_by: string | null
+          name: string
+        }
+        Insert: {
+          expires_at: string
+          locked_at?: string
+          locked_by?: string | null
+          name: string
+        }
+        Update: {
+          expires_at?: string
+          locked_at?: string
+          locked_by?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      alert_notification_config: {
+        Row: {
+          discord_channel_id: string | null
+          discord_severity: string
+          discord_target: string
+          env: string
+          telegram_chat_id: string | null
+          telegram_severity: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          discord_channel_id?: string | null
+          discord_severity?: string
+          discord_target?: string
+          env: string
+          telegram_chat_id?: string | null
+          telegram_severity?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          discord_channel_id?: string | null
+          discord_severity?: string
+          discord_target?: string
+          env?: string
+          telegram_chat_id?: string | null
+          telegram_severity?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      alert_rule_config: {
+        Row: {
+          crit: number | null
+          enabled: boolean
+          envs: string[] | null
+          for_ticks: number | null
+          rule_id: string
+          updated_at: string
+          updated_by: string | null
+          warn: number | null
+        }
+        Insert: {
+          crit?: number | null
+          enabled?: boolean
+          envs?: string[] | null
+          for_ticks?: number | null
+          rule_id: string
+          updated_at?: string
+          updated_by?: string | null
+          warn?: number | null
+        }
+        Update: {
+          crit?: number | null
+          enabled?: boolean
+          envs?: string[] | null
+          for_ticks?: number | null
+          rule_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          warn?: number | null
+        }
+        Relationships: []
+      }
+      alert_state: {
+        Row: {
+          consecutive_breaches: number
+          entity_id: string
+          env: string
+          first_fired_at: string | null
+          id: string
+          last_notified_at: string | null
+          last_value: number | null
+          message: string | null
+          notify_failed: boolean
+          rule_id: string
+          severity: string | null
+          silenced_until: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          consecutive_breaches?: number
+          entity_id?: string
+          env: string
+          first_fired_at?: string | null
+          id?: string
+          last_notified_at?: string | null
+          last_value?: number | null
+          message?: string | null
+          notify_failed?: boolean
+          rule_id: string
+          severity?: string | null
+          silenced_until?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          consecutive_breaches?: number
+          entity_id?: string
+          env?: string
+          first_fired_at?: string | null
+          id?: string
+          last_notified_at?: string | null
+          last_value?: number | null
+          message?: string | null
+          notify_failed?: boolean
+          rule_id?: string
+          severity?: string | null
+          silenced_until?: string | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -757,6 +906,110 @@ export type Database = {
         }
         Relationships: []
       }
+      ingest_node_api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_ciphertext: string
+          key_hash: string
+          key_iv: string
+          key_tag: string
+          node_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_ciphertext: string
+          key_hash: string
+          key_iv: string
+          key_tag: string
+          node_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_ciphertext?: string
+          key_hash?: string
+          key_iv?: string
+          key_tag?: string
+          node_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ingest_node_api_keys_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ingest_nodes: {
+        Row: {
+          claim_token_expires_at: string | null
+          claim_token_hash: string | null
+          control_secret_ciphertext: string | null
+          control_secret_iv: string | null
+          control_secret_tag: string | null
+          cpu_cores: number | null
+          created_at: string
+          hostname: string | null
+          id: string
+          lan_ip: string | null
+          maintenance: boolean
+          max_concurrent_sessions: number | null
+          name: string
+          public_ip: string | null
+          ram_total_mb: number | null
+          status: string
+          storage_total_mb: number | null
+          tailscale_ip: string | null
+          updated_at: string
+        }
+        Insert: {
+          claim_token_expires_at?: string | null
+          claim_token_hash?: string | null
+          control_secret_ciphertext?: string | null
+          control_secret_iv?: string | null
+          control_secret_tag?: string | null
+          cpu_cores?: number | null
+          created_at?: string
+          hostname?: string | null
+          id?: string
+          lan_ip?: string | null
+          maintenance?: boolean
+          max_concurrent_sessions?: number | null
+          name: string
+          public_ip?: string | null
+          ram_total_mb?: number | null
+          status?: string
+          storage_total_mb?: number | null
+          tailscale_ip?: string | null
+          updated_at?: string
+        }
+        Update: {
+          claim_token_expires_at?: string | null
+          claim_token_hash?: string | null
+          control_secret_ciphertext?: string | null
+          control_secret_iv?: string | null
+          control_secret_tag?: string | null
+          cpu_cores?: number | null
+          created_at?: string
+          hostname?: string | null
+          id?: string
+          lan_ip?: string | null
+          maintenance?: boolean
+          max_concurrent_sessions?: number | null
+          name?: string
+          public_ip?: string | null
+          ram_total_mb?: number | null
+          status?: string
+          storage_total_mb?: number | null
+          tailscale_ip?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ingest_output_keys: {
         Row: {
           created_at: string
@@ -1194,6 +1447,9 @@ export type Database = {
           subscription_id: string | null
           updated_at: string
           user_id: string
+          vnc_password_ciphertext: string | null
+          vnc_password_iv: string | null
+          vnc_password_tag: string | null
           vram_allocated_mb: number
         }
         Insert: {
@@ -1213,6 +1469,9 @@ export type Database = {
           subscription_id?: string | null
           updated_at?: string
           user_id: string
+          vnc_password_ciphertext?: string | null
+          vnc_password_iv?: string | null
+          vnc_password_tag?: string | null
           vram_allocated_mb: number
         }
         Update: {
@@ -1232,6 +1491,9 @@ export type Database = {
           subscription_id?: string | null
           updated_at?: string
           user_id?: string
+          vnc_password_ciphertext?: string | null
+          vnc_password_iv?: string | null
+          vnc_password_tag?: string | null
           vram_allocated_mb?: number
         }
         Relationships: [
@@ -1294,52 +1556,61 @@ export type Database = {
           api_url: string | null
           claim_token_expires_at: string | null
           claim_token_hash: string | null
-          cpu_quota: number
+          cpu_cores: number | null
           created_at: string
           gpu_bus_id: string | null
+          gpu_model: string | null
+          hostname: string | null
           id: string
+          maintenance: boolean
+          max_encoder_sessions: number | null
           max_instances: number
-          memory_mb: number
           name: string
-          shm_size: string
+          ram_total_mb: number | null
           status: string
-          total_vram_mb: number
+          storage_total_mb: number | null
+          total_vram_mb: number | null
           updated_at: string
-          vram_mb: number
         }
         Insert: {
           api_url?: string | null
           claim_token_expires_at?: string | null
           claim_token_hash?: string | null
-          cpu_quota: number
+          cpu_cores?: number | null
           created_at?: string
           gpu_bus_id?: string | null
+          gpu_model?: string | null
+          hostname?: string | null
           id?: string
+          maintenance?: boolean
+          max_encoder_sessions?: number | null
           max_instances: number
-          memory_mb: number
           name: string
-          shm_size: string
+          ram_total_mb?: number | null
           status?: string
-          total_vram_mb: number
+          storage_total_mb?: number | null
+          total_vram_mb?: number | null
           updated_at?: string
-          vram_mb: number
         }
         Update: {
           api_url?: string | null
           claim_token_expires_at?: string | null
           claim_token_hash?: string | null
-          cpu_quota?: number
+          cpu_cores?: number | null
           created_at?: string
           gpu_bus_id?: string | null
+          gpu_model?: string | null
+          hostname?: string | null
           id?: string
+          maintenance?: boolean
+          max_encoder_sessions?: number | null
           max_instances?: number
-          memory_mb?: number
           name?: string
-          shm_size?: string
+          ram_total_mb?: number | null
           status?: string
-          total_vram_mb?: number
+          storage_total_mb?: number | null
+          total_vram_mb?: number | null
           updated_at?: string
-          vram_mb?: number
         }
         Relationships: []
       }
@@ -2303,6 +2574,16 @@ export type Database = {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
       }
+      admin_query_stats: {
+        Args: { limit_count?: number }
+        Returns: {
+          calls: number
+          mean_exec_ms: number
+          query: string
+          rows_returned: number
+          total_exec_ms: number
+        }[]
+      }
       check_product_access: { Args: { p_product_id: string }; Returns: boolean }
       check_user_role:
         | { Args: { p_role: string }; Returns: boolean }
@@ -2578,9 +2859,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       clip_sync_status: ["completed", "failed", "syncing"],

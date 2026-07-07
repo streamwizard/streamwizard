@@ -5,32 +5,75 @@ import {
   randomBytes,
 } from "crypto";
 import { Hono } from "hono";
+import { z } from "zod";
 import { supabase } from "@repo/supabase";
 import { encryptToken } from "@repo/supabase/crypto";
 import {
   claimNodeByTokenHash,
   consumeClaimToken,
   countActiveObsInstancesForNode,
-  deleteObsInstance,
+  deleteObsInstanceForNode,
   getNodeById,
-  getObsInstanceById,
   getObsInstanceByIdForNode,
   getTwitchIntegration,
   insertNodeApiKey,
   insertObsInstance,
   isUserAdmin,
   listObsInstancesByNode,
-  listObsInstancesByUser,
+  listObsInstancesByUserOnNode,
   sumAllocatedVramForNode,
-  updateObsInstance,
-  updateObsInstanceByContainerId,
+  updateObsInstanceForNode,
+  updateObsInstanceByContainerIdForNode,
   updateTwitchTokens,
+  userHasInstanceOnNode,
 } from "@repo/supabase/queries/obs-nodes";
 import { getSubscriptionLimits } from "@repo/supabase/queries/subscriptions";
 import { env } from "../lib/env";
 import { nodeAuth } from "../middleware/node-auth";
 
 const nodes = new Hono();
+
+// Field allowlists for the instance-write routes. node_id is never accepted
+// from the body — it's always forced to the authenticated node — and id/
+// user_id are immutable after creation, so neither can be used to move a row
+// to another node or reassign ownership. Unlisted keys are stripped by zod.
+const insertInstanceSchema = z.object({
+  id: z.string().uuid().optional(),
+  user_id: z.string().uuid(),
+  container_id: z.string().nullable().optional(),
+  container_name: z.string().min(1),
+  resolution: z.string().min(1),
+  status: z.string().min(1).optional(),
+  vram_allocated_mb: z.number(),
+  memory_mb: z.number(),
+  cpu_quota: z.number(),
+  shm_size: z.string().min(1),
+  subscription_id: z.string().uuid().nullable().optional(),
+  obs_ws_password_ciphertext: z.string().nullable().optional(),
+  obs_ws_password_iv: z.string().nullable().optional(),
+  obs_ws_password_tag: z.string().nullable().optional(),
+  vnc_password_ciphertext: z.string().nullable().optional(),
+  vnc_password_iv: z.string().nullable().optional(),
+  vnc_password_tag: z.string().nullable().optional(),
+});
+
+const updateInstanceSchema = z.object({
+  container_id: z.string().nullable().optional(),
+  container_name: z.string().min(1).optional(),
+  resolution: z.string().min(1).optional(),
+  status: z.string().min(1).optional(),
+  vram_allocated_mb: z.number().optional(),
+  memory_mb: z.number().optional(),
+  cpu_quota: z.number().optional(),
+  shm_size: z.string().min(1).optional(),
+  subscription_id: z.string().uuid().nullable().optional(),
+  obs_ws_password_ciphertext: z.string().nullable().optional(),
+  obs_ws_password_iv: z.string().nullable().optional(),
+  obs_ws_password_tag: z.string().nullable().optional(),
+  vnc_password_ciphertext: z.string().nullable().optional(),
+  vnc_password_iv: z.string().nullable().optional(),
+  vnc_password_tag: z.string().nullable().optional(),
+});
 
 // ── Claim ─────────────────────────────────────────────────────────────────────
 
@@ -39,9 +82,29 @@ const nodes = new Hono();
 // but the one-time claim token in the body, which is why this lives in
 // rest-api (brute-force protection, security headers, audit logging already
 // wired up here) instead of the session/cookie-oriented web app.
+// Lowercases and replaces runs of non-alphanumerics with a single hyphen, e.g.
+// "GPU Box 1" -> "gpu-box-1". The panel is the single source of truth for this
+// slug -- it's computed once here and handed back in the claim response so
+// install.sh can apply the exact same string as the machine's hostname,
+// instead of re-deriving it in bash and risking drift.
+function slugifyHostname(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "obs-node";
+}
+
 nodes.post("/claim", async (c) => {
   const body = await c.req.json();
-  const { token, gpu_bus_id } = body as { token?: string; gpu_bus_id?: string };
+  const { token, gpu_bus_id, vram_total_mb, ram_total_mb, cpu_cores, gpu_model, storage_total_mb } = body as {
+    token?: string;
+    gpu_bus_id?: string;
+    vram_total_mb?: number;
+    ram_total_mb?: number;
+    cpu_cores?: number;
+    gpu_model?: string;
+    storage_total_mb?: number;
+  };
 
   if (!token || !gpu_bus_id) {
     return c.json({ error: "token and gpu_bus_id are required" }, 400);
@@ -49,9 +112,22 @@ nodes.post("/claim", async (c) => {
 
   const tokenHash = createHash("sha256").update(token).digest("hex");
 
+  // Look up the pending node first so we can derive its hostname slug from
+  // the admin-chosen name before the atomic claim UPDATE below.
+  const pendingNode = await claimNodeByTokenHash(supabase, tokenHash);
+  const hostname = slugifyHostname(pendingNode?.name ?? "obs-node");
+
   // Atomic: the UPDATE itself is scoped by hash/status/expiry, so concurrent
   // claims with the same token can't both succeed (see consumeClaimToken).
-  const linked = await consumeClaimToken(supabase, tokenHash, gpu_bus_id);
+  const linked = await consumeClaimToken(supabase, tokenHash, {
+    gpu_bus_id,
+    total_vram_mb: vram_total_mb,
+    ram_total_mb,
+    cpu_cores,
+    gpu_model,
+    storage_total_mb,
+    hostname,
+  });
 
   if (!linked) {
     // The atomic update matched nothing -- look the row up read-only just to
@@ -75,24 +151,10 @@ nodes.post("/claim", async (c) => {
     key_tag: authTag,
   });
 
-  const obj = {
-    node_id: linked.id,
-    node_api_key: apiKey,
-    rest_api_url: env.STREAMWIZARD_API_URL,
-    supabase_url: env.SUPABASE_URL,
-    S3_ENDPOINT: env.OBS_S3_ENDPOINT,
-    S3_ACCESS_KEY: env.OBS_S3_ACCESS_KEY,
-    S3_SECRET_KEY: env.OBS_S3_SECRET_KEY,
-    S3_BUCKET: env.OBS_S3_BUCKET,
-    S3_REGION: env.OBS_S3_REGION,
-    TOKEN_ENCRYPTION_KEY: env.TOKEN_ENCRYPTION_KEY
-  };
-
-  console.log(obj);
-
   return c.json({
     node_id: linked.id,
     node_api_key: apiKey,
+    hostname: linked.hostname,
     rest_api_url: env.STREAMWIZARD_API_URL,
     supabase_url: env.SUPABASE_URL,
     S3_ENDPOINT: env.OBS_S3_ENDPOINT,
@@ -100,7 +162,17 @@ nodes.post("/claim", async (c) => {
     S3_SECRET_KEY: env.OBS_S3_SECRET_KEY,
     S3_BUCKET: env.OBS_S3_BUCKET,
     S3_REGION: env.OBS_S3_REGION,
-    TOKEN_ENCRYPTION_KEY: env.TOKEN_ENCRYPTION_KEY
+    TOKEN_ENCRYPTION_KEY: env.TOKEN_ENCRYPTION_KEY,
+    // Present only when rest-api itself has InfluxDB configured for this
+    // environment — omitted otherwise, same as the ingest-node claim route.
+    ...(env.INFLUXDB_URL && env.INFLUXDB_ORG && env.INFLUXDB_BUCKET && env.INFLUXDB_TOKEN
+      ? {
+          INFLUXDB_URL: env.INFLUXDB_URL,
+          INFLUXDB_ORG: env.INFLUXDB_ORG,
+          INFLUXDB_BUCKET: env.INFLUXDB_BUCKET,
+          INFLUXDB_TOKEN: env.INFLUXDB_TOKEN,
+        }
+      : {}),
   });
 });
 
@@ -183,19 +255,26 @@ nodes.get("/instances/active-count", nodeAuth(), async (c) => {
 });
 
 nodes.get("/instances/:id", nodeAuth(), async (c) => {
+  const nodeId = c.get("nodeId");
   const id = c.req.param("id");
   const userId = c.req.query("user_id");
-  const instance = userId
-    ? await getObsInstanceById(supabase, id, userId)
-    : await getObsInstanceByIdForNode(supabase, id);
-  if (!instance) return c.json({ error: "Instance not found" }, 404);
+  // Always scoped to the calling node; the optional user_id further narrows it.
+  const instance = await getObsInstanceByIdForNode(supabase, id, nodeId);
+  if (!instance || (userId && instance.user_id !== userId)) {
+    return c.json({ error: "Instance not found" }, 404);
+  }
   return c.json(instance);
 });
 
 nodes.post("/instances", nodeAuth(), async (c) => {
-  const body = await c.req.json();
+  const nodeId = c.get("nodeId");
+  const parsed = insertInstanceSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
+  }
   try {
-    const instance = await insertObsInstance(supabase, body);
+    // node_id is forced to the authenticated node, never taken from the body.
+    const instance = await insertObsInstance(supabase, { ...parsed.data, node_id: nodeId });
     return c.json(instance, 201);
   } catch (err) {
     return c.json({ error: (err as Error).message }, 500);
@@ -203,10 +282,15 @@ nodes.post("/instances", nodeAuth(), async (c) => {
 });
 
 nodes.patch("/instances/:id", nodeAuth(), async (c) => {
+  const nodeId = c.get("nodeId");
   const id = c.req.param("id");
-  const body = await c.req.json();
+  const parsed = updateInstanceSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
+  }
   try {
-    const instance = await updateObsInstance(supabase, id, body);
+    const instance = await updateObsInstanceForNode(supabase, id, nodeId, parsed.data);
+    if (!instance) return c.json({ error: "Instance not found" }, 404);
     return c.json(instance);
   } catch (err) {
     return c.json({ error: (err as Error).message }, 500);
@@ -214,21 +298,28 @@ nodes.patch("/instances/:id", nodeAuth(), async (c) => {
 });
 
 nodes.patch("/instances/by-container/:containerId", nodeAuth(), async (c) => {
+  const nodeId = c.get("nodeId");
   const containerId = c.req.param("containerId");
-  const body = await c.req.json();
-  const instance = await updateObsInstanceByContainerId(
+  const parsed = updateInstanceSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
+  }
+  const instance = await updateObsInstanceByContainerIdForNode(
     supabase,
     containerId,
-    body,
+    nodeId,
+    parsed.data,
   );
   if (!instance) return c.json({ error: "Instance not found" }, 404);
   return c.json(instance);
 });
 
 nodes.delete("/instances/:id", nodeAuth(), async (c) => {
+  const nodeId = c.get("nodeId");
   const id = c.req.param("id");
   try {
-    await deleteObsInstance(supabase, id);
+    const deleted = await deleteObsInstanceForNode(supabase, id, nodeId);
+    if (!deleted) return c.json({ error: "Instance not found" }, 404);
     return c.json({ ok: true });
   } catch (err) {
     return c.json({ error: (err as Error).message }, 500);
@@ -238,11 +329,18 @@ nodes.delete("/instances/:id", nodeAuth(), async (c) => {
 // ── User-scoped queries ───────────────────────────────────────────────────────
 
 nodes.get("/users/:userId/instances", nodeAuth(), async (c) => {
+  const nodeId = c.get("nodeId");
   const userId = c.req.param("userId");
-  const instances = await listObsInstancesByUser(supabase, userId);
+  // Only this node's instances for the user — a node has no business
+  // enumerating a user's instances on other nodes.
+  const instances = await listObsInstancesByUserOnNode(supabase, userId, nodeId);
   return c.json(instances);
 });
 
+// Not instance-scoped by design: the node manager's admin panel calls this to
+// check whether an arbitrary logged-in user holds the platform admin role, so
+// the caller may legitimately have no instance on this node. Only a boolean is
+// disclosed, and the route is already behind node auth.
 nodes.get("/users/:userId/is-admin", nodeAuth(), async (c) => {
   const userId = c.req.param("userId");
   const admin = await isUserAdmin(supabase, userId);
@@ -353,7 +451,15 @@ async function refreshTwitchToken(
 // Returns { key: string | null } — null means no Twitch integration or fetch
 // failed, which is non-fatal (OBS will show the "Enter Stream Key" screen).
 nodes.get("/users/:userId/stream-key", nodeAuth(), async (c) => {
+  const nodeId = c.get("nodeId");
   const userId = c.req.param("userId");
+
+  // The stream key is a live broadcast credential. Only hand it to a node that
+  // actually hosts an instance for this user — otherwise a single compromised
+  // node key could enumerate every user's Twitch stream key.
+  if (!(await userHasInstanceOnNode(supabase, userId, nodeId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
 
   try {
     const integration = await getTwitchIntegration(supabase, userId);
