@@ -6,6 +6,7 @@ import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
 import { env } from "@/lib/env";
 import { getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions";
+import { obsNodeCapacitySchema } from "@/schemas/obs-node";
 import {
   type ObsNode,
   type ObsInstance,
@@ -93,9 +94,12 @@ export async function createNodeAction(
     return { data: null, error: "Forbidden" };
   }
 
+  const parsed = obsNodeCapacitySchema.safeParse(fields);
+  if (!parsed.success) return { data: null, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+
   const { rawToken, tokenHash } = generateClaimToken();
   const { data, error } = await createNode(adminClient, {
-    ...fields,
+    ...parsed.data,
     claim_token_hash: tokenHash,
     claim_token_expires_at: new Date(Date.now() + CLAIM_TOKEN_TTL_MS).toISOString(),
   });
@@ -120,7 +124,10 @@ export async function updateNodeAction(
     return { data: null, error: "Forbidden" };
   }
 
-  const { data, error } = await updateNodeCapacity(adminClient, id, fields);
+  const parsed = obsNodeCapacitySchema.safeParse(fields);
+  if (!parsed.success) return { data: null, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+
+  const { data, error } = await updateNodeCapacity(adminClient, id, parsed.data);
   if (error) return { data: null, error };
 
   revalidatePath(NODES_PATH);

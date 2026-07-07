@@ -22,8 +22,23 @@ export const env = createEnv({
     SUPABASE_SECRET_KEY: z.string().min(1),
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_RELEASE: z.string().optional(),
+    // Alert routing/display — the engine itself runs in apps/alerter; the
+    // /alerts UI still reads these for notification defaults and test sends.
+    // Next standalone overwrites NODE_ENV=production at startup, so non-prod
+    // deployments must state their env explicitly for alert routing.
+    ALERT_ENV: z.enum(["prod", "staging", "dev"]).optional(),
+    ALERT_DISCORD_CHANNEL_ID: z.string().min(1).optional(),
+    DISCORD_BOT_TOKEN: z.string().min(1).optional(),
+    TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+    TELEGRAM_CHAT_ID: z.string().min(1).optional(),
+    // Same var the rest of the stack uses for the rest-api base URL; the
+    // ws-server probe derives from NEXT_PUBLIC_WS_SERVER_URL.
+    STREAMWIZARD_API_URL: z.string().url().optional(),
   },
   client: {
+    // Canonical origin for auth redirects (request.url reports the bind
+    // address under Next standalone). Falls back to Host headers when unset.
+    NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
     NEXT_PUBLIC_WS_SERVER_URL: z.string().min(1).optional(),
     NEXT_PUBLIC_MONITOR_SECRET: z.string().min(1).optional(),
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -42,6 +57,13 @@ export const env = createEnv({
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
     SENTRY_DSN: process.env.SENTRY_DSN,
     SENTRY_RELEASE: process.env.SENTRY_RELEASE,
+    ALERT_ENV: process.env.ALERT_ENV,
+    ALERT_DISCORD_CHANNEL_ID: process.env.ALERT_DISCORD_CHANNEL_ID,
+    DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
+    TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+    TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
+    STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
+    NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
     NEXT_PUBLIC_WS_SERVER_URL: process.env.NEXT_PUBLIC_WS_SERVER_URL,
     NEXT_PUBLIC_MONITOR_SECRET: process.env.NEXT_PUBLIC_MONITOR_SECRET,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

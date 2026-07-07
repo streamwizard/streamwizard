@@ -1,10 +1,11 @@
 "use server";
 
 import { randomBytes } from "crypto";
+import { env } from "@/lib/env";
 import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
-import { sendDiscordDirectMessage } from "@repo/discord-api";
+import { sendDiscordDirectMessage, type DiscordMessagePayload } from "@repo/discord-api";
 import { revalidatePath } from "next/cache";
 import type { Database } from "@repo/supabase";
 
@@ -16,16 +17,40 @@ function generateStreamKey(): string {
   return randomBytes(32).toString("hex");
 }
 
-function ingestUrls(host: string, key: string) {
-  return [
-    `SRT: srt://${host}:8888?streamid=${key}`,
-    `SRTLA: host ${host}, port 5000, streamid ${key}`,
-  ];
-}
+const STREAMWIZARD_BLURPLE = 0x7c5cff;
 
-function ingestKeyDmContent(label: string, streamKey: string) {
+function ingestKeyDmEmbed(label: string, streamKey: string): DiscordMessagePayload {
   const host = process.env.NEXT_PUBLIC_INGEST_HOST ?? "your-stream-server";
-  return [`Ingest key: **${label}**`, ...ingestUrls(host, streamKey)].join("\n");
+  return {
+    embeds: [
+      {
+        title: "🔑 Ingest Key",
+        description: `**Don't share this. Don't show it on stream.** Anyone who gets this key can stream to your channel.\n\nConnection info for **${label}** is blurred below. Tap it to reveal, tap the code block to copy.`,
+        color: STREAMWIZARD_BLURPLE,
+        fields: [
+          { name: "SRT", value: `||\`\`\`srt://${host}:8888?streamid=${streamKey}\`\`\`||` },
+          { name: "SRTLA", value: `Host \`${host}\`, port \`5000\`, stream ID\n||\`\`\`${streamKey}\`\`\`||` },
+          {
+            name: "Key leaked?",
+            value: "Rotate it right away from Manage keys below. Streaming won't stop until you do.",
+          },
+        ],
+      },
+    ],
+    components: [
+      {
+        type: 1,
+        components: [
+          {
+            type: 2,
+            style: 5,
+            label: "Manage keys",
+            url: `${env.NEXT_PUBLIC_BASE_URL}${INGEST_SETTINGS_PATH}`,
+          },
+        ],
+      },
+    ],
+  };
 }
 
 /**
@@ -40,7 +65,7 @@ async function notifyDiscord(userId: string, label: string, streamKey: string) {
     const discordUserId = await getDiscordUserIdByUserIdMaybe(adminClient, userId);
     if (!discordUserId) return;
 
-    await sendDiscordDirectMessage(discordUserId, { content: ingestKeyDmContent(label, streamKey) });
+    await sendDiscordDirectMessage(discordUserId, ingestKeyDmEmbed(label, streamKey));
   } catch (err) {
     console.error("[ingest-keys] Couldn't DM ingest key to Discord", err);
   }
@@ -70,7 +95,7 @@ export async function sendIngestKeyDiscordDM(id: string): Promise<{ error: strin
   }
 
   try {
-    await sendDiscordDirectMessage(discordUserId, { content: ingestKeyDmContent(key.label, key.stream_key) });
+    await sendDiscordDirectMessage(discordUserId, ingestKeyDmEmbed(key.label, key.stream_key));
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Couldn't send that DM" };
   }

@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartEmptyState } from "@/components/widgets/chart-empty-state";
 import { CheckCircle2 } from "lucide-react";
 import { fetcher, formatTime } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
@@ -84,6 +85,9 @@ export function WsAuthFailureChart({ initialData, rangeHours = 24 }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent>
+        {chartData.length === 0 ? (
+          <ChartEmptyState />
+        ) : (
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -103,6 +107,7 @@ export function WsAuthFailureChart({ initialData, rangeHours = 24 }: Props) {
             ))}
           </BarChart>
         </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

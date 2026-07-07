@@ -8,11 +8,6 @@ export type ObsNode = Database["public"]["Tables"]["obs_nodes"]["Row"];
 export interface ObsNodeCapacity {
   name: string;
   max_instances: number;
-  memory_mb: number;
-  cpu_quota: number;
-  vram_mb: number;
-  total_vram_mb: number;
-  shm_size: string;
   api_url: string;
 }
 
@@ -58,6 +53,17 @@ export async function getNodeById(client: DBClient, id: string): Promise<ObsNode
   return data;
 }
 
+// Postgres unique_violation. obs_nodes.name has a UNIQUE constraint
+// (obs_nodes_name_key) since the name doubles as the node's hostname -- two
+// nodes sharing one would mean two machines claiming the same hostname.
+// Translate the raw constraint-violation message into something an admin
+// can act on, rather than surfacing Postgres's internal wording.
+function describeNodeError(error: { code?: string; message: string } | null): string | null {
+  if (!error) return null;
+  if (error.code === "23505") return "A node with this name already exists. Names must be unique.";
+  return error.message;
+}
+
 export async function createNode(
   client: DBClient,
   fields: ObsNodeCapacity & ObsNodeClaimFields,
@@ -67,7 +73,7 @@ export async function createNode(
     .insert({ ...fields, status: "pending" })
     .select("*")
     .single();
-  return { data, error: error?.message ?? null };
+  return { data, error: describeNodeError(error) };
 }
 
 export async function updateNodeCapacity(
@@ -76,7 +82,7 @@ export async function updateNodeCapacity(
   fields: ObsNodeCapacity,
 ): Promise<{ data: ObsNode | null; error: string | null }> {
   const { data, error } = await client.from("obs_nodes").update(fields).eq("id", id).select("*").single();
-  return { data, error: error?.message ?? null };
+  return { data, error: describeNodeError(error) };
 }
 
 export async function deleteNode(client: DBClient, id: string): Promise<{ error: string | null }> {
@@ -101,18 +107,28 @@ export async function claimNodeByTokenHash(client: DBClient, tokenHash: string):
  * preconditions (hash match, not already linked, not expired) didn't hold by
  * the time this statement ran; the caller does a separate read-only lookup
  * only to pick the right error status code, never to decide the mutation. */
+export interface ObsNodeSelfReportedFields {
+  gpu_bus_id: string;
+  total_vram_mb?: number;
+  ram_total_mb?: number;
+  cpu_cores?: number;
+  gpu_model?: string;
+  storage_total_mb?: number;
+  hostname: string;
+}
+
 export async function consumeClaimToken(
   client: DBClient,
   tokenHash: string,
-  gpuBusId: string,
+  fields: ObsNodeSelfReportedFields,
 ): Promise<ObsNode | null> {
   const { data } = await client
     .from("obs_nodes")
     .update({
       status: "linked",
-      gpu_bus_id: gpuBusId,
       claim_token_hash: null,
       claim_token_expires_at: null,
+      ...fields,
     })
     .eq("claim_token_hash", tokenHash)
     .neq("status", "linked")
@@ -285,8 +301,15 @@ export async function getObsInstanceById(client: DBClient, instanceId: string, u
   return data;
 }
 
-export async function getObsInstanceByIdForNode(client: DBClient, instanceId: string): Promise<ObsInstance | null> {
-  const { data } = await client.from("obs_instances").select("*").eq("id", instanceId).maybeSingle();
+/** Single instance by id, scoped to the calling node so one node can never
+ * read another node's instance rows. */
+export async function getObsInstanceByIdForNode(client: DBClient, instanceId: string, nodeId: string): Promise<ObsInstance | null> {
+  const { data } = await client
+    .from("obs_instances")
+    .select("*")
+    .eq("id", instanceId)
+    .eq("node_id", nodeId)
+    .maybeSingle();
   return data;
 }
 
@@ -296,34 +319,79 @@ export async function insertObsInstance(client: DBClient, fields: ObsInstanceIns
   return data;
 }
 
-export async function updateObsInstance(client: DBClient, instanceId: string, fields: ObsInstanceUpdate): Promise<ObsInstance> {
+/** Node-scoped update: the WHERE also matches node_id, so a node can only
+ * mutate its own rows. Returns null when no such row belongs to the node
+ * (nonexistent, or owned by another node) — the route turns that into a 404. */
+export async function updateObsInstanceForNode(
+  client: DBClient,
+  instanceId: string,
+  nodeId: string,
+  fields: ObsInstanceUpdate,
+): Promise<ObsInstance | null> {
   const { data, error } = await client
     .from("obs_instances")
     .update(fields)
     .eq("id", instanceId)
+    .eq("node_id", nodeId)
     .select()
-    .single();
+    .maybeSingle();
   if (error) throw error;
   return data;
 }
 
-export async function updateObsInstanceByContainerId(
+export async function updateObsInstanceByContainerIdForNode(
   client: DBClient,
   containerId: string,
+  nodeId: string,
   fields: ObsInstanceUpdate,
 ): Promise<ObsInstance | null> {
   const { data } = await client
     .from("obs_instances")
     .update(fields)
     .eq("container_id", containerId)
+    .eq("node_id", nodeId)
     .select()
     .maybeSingle();
   return data;
 }
 
-export async function deleteObsInstance(client: DBClient, instanceId: string): Promise<void> {
-  const { error } = await client.from("obs_instances").delete().eq("id", instanceId);
+/** Node-scoped delete. Returns false when nothing matched (missing, or another
+ * node's row), so the caller can answer 404 instead of a silent 200. */
+export async function deleteObsInstanceForNode(client: DBClient, instanceId: string, nodeId: string): Promise<boolean> {
+  const { data, error } = await client
+    .from("obs_instances")
+    .delete()
+    .eq("id", instanceId)
+    .eq("node_id", nodeId)
+    .select("id");
   if (error) throw error;
+  return (data?.length ?? 0) > 0;
+}
+
+/** True if the user has at least one instance provisioned on this node. Gates
+ * node-authenticated, user-scoped reads (e.g. the Twitch stream key) so a node
+ * can only act for users it actually hosts. */
+export async function userHasInstanceOnNode(client: DBClient, userId: string, nodeId: string): Promise<boolean> {
+  const { count, error } = await client
+    .from("obs_instances")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("node_id", nodeId);
+  if (error) throw error;
+  return (count ?? 0) > 0;
+}
+
+/** A user's instances that live on this node — the only ones a node manager
+ * can act on locally (it resolves each container_id against its own Docker). */
+export async function listObsInstancesByUserOnNode(client: DBClient, userId: string, nodeId: string): Promise<ObsInstance[]> {
+  const { data, error } = await client
+    .from("obs_instances")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("node_id", nodeId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
 }
 
 export async function sumAllocatedVramForNode(client: DBClient, nodeId: string): Promise<number> {
