@@ -6,7 +6,8 @@ import { withSentryConfig } from "@sentry/nextjs";
 const turbopackRoot = path.resolve(__dirname, "../..");
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core", "@repo/metrics"],
+  output: "standalone",
+  transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core", "@repo/metrics", "@repo/alerting"],
   turbopack: {
     root: turbopackRoot,
   },

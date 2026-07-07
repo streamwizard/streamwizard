@@ -13,7 +13,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
   Badge,
   Button,
   Card,
@@ -40,6 +39,8 @@ import {
 import type { ObsNode, ObsNodeCapacity } from "@repo/supabase/queries/obs-nodes";
 import type { NodeHealthStatus } from "@/lib/node-health";
 import { createNodeAction, deleteNodeAction, updateNodeAction } from "@/actions/nodes";
+import { obsNodeCapacitySchema } from "@/schemas/obs-node";
+import { formatMb } from "@/lib/format";
 
 function copy(value: string, what: string) {
   navigator.clipboard.writeText(value);
@@ -49,11 +50,6 @@ function copy(value: string, what: string) {
 const EMPTY_FORM: ObsNodeCapacity = {
   name: "",
   max_instances: 10,
-  memory_mb: 4096,
-  cpu_quota: 1,
-  vram_mb: 2048,
-  total_vram_mb: 8192,
-  shm_size: "2g",
   api_url: "",
 };
 
@@ -76,6 +72,24 @@ function healthLabel(health: NodeHealthStatus): string {
   return "Not linked";
 }
 
+/** Compact, two-line summary of what install.sh self-reported at claim time. */
+function HardwareSummary({ node }: { node: ObsNode }) {
+  if (node.status !== "linked") {
+    return <span className="text-xs text-muted-foreground">Not linked yet</span>;
+  }
+  return (
+    <div className="text-xs">
+      <p className="font-medium">
+        {node.gpu_model ?? "GPU"}
+        {node.total_vram_mb != null ? ` · ${formatMb(node.total_vram_mb)} VRAM` : ""}
+      </p>
+      <p className="text-muted-foreground">
+        {formatMb(node.ram_total_mb)} RAM · {node.cpu_cores ?? "—"} cores
+      </p>
+    </div>
+  );
+}
+
 function NodeForm({
   form,
   setForm,
@@ -83,15 +97,20 @@ function NodeForm({
   form: ObsNodeCapacity;
   setForm: (form: ObsNodeCapacity) => void;
 }) {
+  const nameResult = obsNodeCapacitySchema.shape.name.safeParse(form.name);
+  const nameError = !nameResult.success && form.name.length > 0 ? nameResult.error.issues[0]?.message : null;
+
   return (
     <div className="grid grid-cols-2 gap-4">
       <div className="col-span-2 space-y-2">
-        <Label htmlFor="node-name">Name</Label>
+        <Label htmlFor="node-name">Name (this becomes the node&apos;s hostname)</Label>
         <Input
           id="node-name"
+          placeholder="gpu-box-1"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
         />
+        {nameError && <p className="text-xs text-destructive">{nameError}</p>}
       </div>
       <div className="col-span-2 space-y-2">
         <Label htmlFor="node-api-url">API URL</Label>
@@ -102,58 +121,13 @@ function NodeForm({
           onChange={(e) => setForm({ ...form, api_url: e.target.value })}
         />
       </div>
-      <div className="space-y-2">
+      <div className="col-span-2 space-y-2">
         <Label htmlFor="node-max-instances">Max instances</Label>
         <Input
           id="node-max-instances"
           type="number"
           value={form.max_instances}
           onChange={(e) => setForm({ ...form, max_instances: Number(e.target.value) })}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="node-memory">Memory (MB)</Label>
-        <Input
-          id="node-memory"
-          type="number"
-          value={form.memory_mb}
-          onChange={(e) => setForm({ ...form, memory_mb: Number(e.target.value) })}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="node-cpu-quota">CPU quota</Label>
-        <Input
-          id="node-cpu-quota"
-          type="number"
-          step="0.1"
-          value={form.cpu_quota}
-          onChange={(e) => setForm({ ...form, cpu_quota: Number(e.target.value) })}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="node-shm-size">Shm size</Label>
-        <Input
-          id="node-shm-size"
-          value={form.shm_size}
-          onChange={(e) => setForm({ ...form, shm_size: e.target.value })}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="node-vram">VRAM reserved per instance (MB)</Label>
-        <Input
-          id="node-vram"
-          type="number"
-          value={form.vram_mb}
-          onChange={(e) => setForm({ ...form, vram_mb: Number(e.target.value) })}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="node-total-vram">Total VRAM on node (MB)</Label>
-        <Input
-          id="node-total-vram"
-          type="number"
-          value={form.total_vram_mb}
-          onChange={(e) => setForm({ ...form, total_vram_mb: Number(e.target.value) })}
         />
       </div>
     </div>
@@ -178,6 +152,9 @@ export function NodesSection({
   const [editingNode, setEditingNode] = useState<ObsNode | null>(null);
   const [editForm, setEditForm] = useState<ObsNodeCapacity>(EMPTY_FORM);
 
+  const [deletingNode, setDeletingNode] = useState<ObsNode | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+
   if (error) {
     return <p className="text-destructive text-sm">{error}</p>;
   }
@@ -201,11 +178,6 @@ export function NodesSection({
     setEditForm({
       name: node.name,
       max_instances: node.max_instances,
-      memory_mb: node.memory_mb,
-      cpu_quota: node.cpu_quota,
-      vram_mb: node.vram_mb,
-      total_vram_mb: node.total_vram_mb,
-      shm_size: node.shm_size,
       api_url: node.api_url ?? "",
     });
   };
@@ -231,6 +203,8 @@ export function NodesSection({
       return;
     }
     setNodes((prev) => prev.filter((n) => n.id !== id));
+    setDeletingNode(null);
+    setDeleteConfirmText("");
     toast.success("Node deleted.");
   };
 
@@ -274,13 +248,17 @@ export function NodesSection({
               <DialogHeader>
                 <DialogTitle>Add node</DialogTitle>
                 <DialogDescription>
-                  Set the capacity this node should advertise. You&apos;ll get a one-time install
-                  command after saving.
+                  Name it, tell it how to reach the node, and cap how many instances it can run.
+                  Hardware details (GPU, VRAM, RAM, CPU, storage, hostname) are self-reported by
+                  the node when you run the one-time install command you&apos;ll get after saving.
                 </DialogDescription>
               </DialogHeader>
               <NodeForm form={createForm} setForm={setCreateForm} />
               <DialogFooter>
-                <Button onClick={handleCreate} disabled={isPending || !createForm.name || !createForm.api_url}>
+                <Button
+                  onClick={handleCreate}
+                  disabled={isPending || !obsNodeCapacitySchema.safeParse(createForm).success}
+                >
                   {isPending ? "Creating…" : "Create node"}
                 </Button>
               </DialogFooter>
@@ -296,8 +274,7 @@ export function NodesSection({
                 <TableHead>Link status</TableHead>
                 <TableHead>Health</TableHead>
                 <TableHead>Max instances</TableHead>
-                <TableHead>VRAM (alloc/total)</TableHead>
-                <TableHead>GPU bus ID</TableHead>
+                <TableHead>Hardware</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -321,31 +298,48 @@ export function NodesSection({
                     </TableCell>
                     <TableCell>{node.max_instances}</TableCell>
                     <TableCell>
-                      {node.vram_mb} / {node.total_vram_mb}
+                      <HardwareSummary node={node} />
                     </TableCell>
-                    <TableCell>{node.gpu_bus_id ?? "—"}</TableCell>
                     <TableCell>{new Date(node.created_at).toLocaleString("en-US")}</TableCell>
                     <TableCell className="text-right">
                       <Button size="icon" variant="ghost" onClick={() => openEdit(node)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
+                      <AlertDialog
+                        open={deletingNode?.id === node.id}
+                        onOpenChange={(open) => {
+                          if (!open) {
+                            setDeletingNode(null);
+                            setDeleteConfirmText("");
+                          }
+                        }}
+                      >
+                        <Button size="icon" variant="ghost" onClick={() => setDeletingNode(node)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Delete this node?</AlertDialogTitle>
                             <AlertDialogDescription>
                               &quot;{node.name}&quot; will be removed. Any instances already running on it
-                              aren&apos;t cleaned up by this action — this can&apos;t be undone.
+                              aren&apos;t cleaned up by this action — this can&apos;t be undone. Type{" "}
+                              <span className="font-mono font-semibold">{node.name}</span> to confirm.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
+                          <Input
+                            autoFocus
+                            value={deleteConfirmText}
+                            onChange={(e) => setDeleteConfirmText(e.target.value)}
+                            placeholder={node.name}
+                          />
                           <AlertDialogFooter>
                             <AlertDialogCancel>Keep it</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => handleDelete(node.id)}>Delete</AlertDialogAction>
+                            <AlertDialogAction
+                              disabled={deleteConfirmText !== node.name}
+                              onClick={() => handleDelete(node.id)}
+                            >
+                              Delete
+                            </AlertDialogAction>
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
@@ -366,7 +360,10 @@ export function NodesSection({
           </DialogHeader>
           <NodeForm form={editForm} setForm={setEditForm} />
           <DialogFooter>
-            <Button onClick={handleEdit} disabled={isPending || !editForm.name}>
+            <Button
+              onClick={handleEdit}
+              disabled={isPending || !obsNodeCapacitySchema.safeParse(editForm).success}
+            >
               {isPending ? "Saving…" : "Save changes"}
             </Button>
           </DialogFooter>

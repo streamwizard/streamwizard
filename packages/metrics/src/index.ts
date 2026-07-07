@@ -7,5 +7,10 @@ export { trackEventSubReceived, trackEventSubRevocation } from "./eventsub-metri
 
 // Query (read) exports — server-only, InfluxDB read path
 export { runFluxQuery } from "./query-client";
+export * from "./queries/query-opts";
 export * from "./queries/ws-queries";
 export * from "./queries/http-queries";
+export * from "./queries/system-queries";
+export * from "./queries/obs-queries";
+export * from "./queries/alert-queries";
+export * from "./queries/supabase-platform-queries";
