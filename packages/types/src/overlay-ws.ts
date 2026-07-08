@@ -99,18 +99,64 @@ export type StreamWizardEventType =
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 
+// Full raw + derived stat set broadcast by ingest-control's session-stats
+// handler. Everything below session identity is optional because RTMP only
+// reports throughput — the SRT/SRTLA transport fields simply never appear.
 export interface IngestStatsPayload {
   session_id: string;
   protocol: "rtmp" | "srt" | "srtla";
+  /** Ingest node this session landed on (INGEST_NODE_ID). */
+  node_id?: string;
+  /** Durable "camera" identity the session was authorized under. */
+  stream_key_id?: string;
+  /** Human label of that stream key ("Camera 1"). */
+  label?: string;
+  // Throughput
   kbps?: number;
   mbps_recv_rate?: number;
   mbps_bandwidth?: number;
+  mbps_max_bw?: number;
   rtt_ms?: number;
+  // Window counters (since last sample)
+  pkt_recv?: number;
   pkt_recv_loss?: number;
   pkt_recv_drop?: number;
   pkt_recv_retrans?: number;
+  pkt_recv_belated?: number;
+  pkt_recv_undecrypt?: number;
+  pkt_reorder_distance?: number;
+  // Receiver buffer health
+  ms_rcv_buf?: number;
+  byte_rcv_buf?: number;
+  pkt_flight_size?: number;
+  // Session totals
   pkt_recv_loss_total?: number;
+  pkt_recv_drop_total?: number;
+  pkt_recv_undecrypt_total?: number;
   byte_recv_total?: number;
+  // Derived percentages (loss/drop/retrans over packets expected this window)
+  loss_pct?: number;
+  drop_pct?: number;
+  retrans_pct?: number;
+}
+
+// Host NIC totals only — cpu/ram/disk deliberately stay on the InfluxDB
+// polling path; the WS carries just the network signal.
+export interface IngestNodeBandwidthPayload {
+  node_id: string;
+  /** Epoch ms at sample time on the node. */
+  ts: number;
+  rx_bytes_per_sec: number;
+  tx_bytes_per_sec: number;
+  tailscale_rx_bytes_per_sec: number;
+  tailscale_tx_bytes_per_sec: number;
+}
+
+// Node-scoped bot message: never delivered to user rooms (so it's not an
+// OverlayEventType) — ws-server folds it into monitor state instead.
+export interface NodeMetricsMessage {
+  kind: "node_metrics";
+  payload: IngestNodeBandwidthPayload;
 }
 
 export type OverlaySocketMessage =
@@ -213,3 +259,7 @@ export interface BotBroadcastMessage {
   type: OverlayEventType;
   payload: unknown;
 }
+
+// Everything a bot socket may send: room-scoped fan-out messages plus
+// node-scoped metrics. Discriminate on `"kind" in msg`.
+export type BotOutboundMessage = BotBroadcastMessage | NodeMetricsMessage;

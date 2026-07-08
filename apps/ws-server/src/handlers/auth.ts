@@ -76,8 +76,13 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       trackWsAuthFailure("bot", "invalid_bot_key");
       return new Response("Unauthorized", { status: 401 });
     }
+    // Self-declared identity label ("ingest-node:<id>"). Never reject on a
+    // bad/missing source — older bot clients don't send one — just fall back,
+    // and constrain the charset so it's safe as a metrics tag.
+    const rawSource = url.searchParams.get("source");
+    const source = rawSource && /^[a-zA-Z0-9:_.-]{1,64}$/.test(rawSource) ? rawSource : "unknown";
     const upgraded = server.upgrade(req, {
-      data: { role: "bot", userId: "_bot", channels: new Set<OverlayEventType>(), connectedAt: Date.now(), connId: `c-${nextConnId++}` },
+      data: { role: "bot", userId: "_bot", source, channels: new Set<OverlayEventType>(), connectedAt: Date.now(), connId: `c-${nextConnId++}` },
     });
     if (!upgraded) {
       trackWsAuthFailure("bot", "upgrade_failed");
