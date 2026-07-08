@@ -13,9 +13,11 @@ import {
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartEmptyState } from "@/components/widgets/chart-empty-state";
-import { fetcher, formatTime, formatBytesPerSec } from "@/lib/utils";
+import { fetcher, formatTime, formatBandwidth } from "@/lib/utils";
+import type { BandwidthUnit } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useTimeRange } from "@/lib/time-range-context";
+import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
 
 // Shared shape for any "one value per node per timestamp" series — host_system
 // and obs_node measurements both query down to this, so a single chart
@@ -31,12 +33,12 @@ export interface NodeMetricPoint {
 // actual formatter lives here, client-side.
 export type NodeMetricFormat = "percent" | "bytesPerSec" | "number";
 
-function formatValue(value: number, format: NodeMetricFormat): string {
+function formatValue(value: number, format: NodeMetricFormat, bandwidthUnit: BandwidthUnit): string {
   switch (format) {
     case "percent":
       return `${value.toFixed(0)}%`;
     case "bytesPerSec":
-      return formatBytesPerSec(value);
+      return formatBandwidth(value, bandwidthUnit);
     default:
       return String(value);
   }
@@ -95,6 +97,7 @@ function fluxRangeToMs(fluxRange: string): number {
 export function NodeMetricChart({ title, initialData, apiPath, dataKey, format = "number" }: Props) {
   const { interval } = useRefreshInterval();
   const { range } = useTimeRange();
+  const { unit: bandwidthUnit } = useBandwidthUnit();
   const { data: raw } = useSWR<Record<string, NodeMetricPoint[]>>(
     `${apiPath}?range=${range.fluxRange}&window=${range.window}`,
     fetcher,
@@ -139,7 +142,7 @@ export function NodeMetricChart({ title, initialData, apiPath, dataKey, format =
             <YAxis
               tick={{ fontSize: 11 }}
               className="fill-muted-foreground"
-              tickFormatter={(value: number) => formatValue(value, format)}
+              tickFormatter={(value: number) => formatValue(value, format, bandwidthUnit)}
               allowDecimals={false}
             />
             <Tooltip
@@ -149,14 +152,14 @@ export function NodeMetricChart({ title, initialData, apiPath, dataKey, format =
                 borderRadius: "6px",
                 fontSize: "12px",
               }}
-              formatter={(value: number) => formatValue(value, format)}
+              formatter={(value: number) => formatValue(value, format, bandwidthUnit)}
               labelFormatter={(t) => formatTime(new Date(t as number).toISOString())}
             />
             <Legend wrapperStyle={{ fontSize: "12px" }} />
             {nodeIds.map((nodeId, i) => (
               <Area
                 key={nodeId}
-                type="monotone"
+                type="linear"
                 dataKey={nodeId}
                 stroke={CHART_COLORS[i % CHART_COLORS.length]}
                 fill={`url(#g-${dataKey}-${nodeId})`}

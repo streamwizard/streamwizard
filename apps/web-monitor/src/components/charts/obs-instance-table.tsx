@@ -3,8 +3,9 @@
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { fetcher, formatBytesPerSec } from "@/lib/utils";
+import { fetcher, formatBandwidth } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
+import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
 import type { ObsInstanceSnapshot } from "@repo/metrics";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 // is, and what it's using.
 export function ObsInstanceTable({ initialData }: Props) {
   const { interval } = useRefreshInterval();
+  const { unit } = useBandwidthUnit();
   const { data: raw } = useSWR<{ instanceSnapshot: ObsInstanceSnapshot[] }>("/api/metrics/obs", fetcher, {
     fallbackData: { instanceSnapshot: initialData },
     refreshInterval: interval,
@@ -59,7 +61,7 @@ export function ObsInstanceTable({ initialData }: Props) {
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{row.vramUsedMb.toFixed(0)} MB</TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground text-xs">
-                    {formatBytesPerSec(row.rxBytesPerSec)} / {formatBytesPerSec(row.txBytesPerSec)}
+                    {formatBandwidth(row.rxBytesPerSec, unit)} / {formatBandwidth(row.txBytesPerSec, unit)}
                   </TableCell>
                 </TableRow>
               ))

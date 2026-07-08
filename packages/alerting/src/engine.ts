@@ -191,6 +191,52 @@ async function enrichNodeNotifications(
   }
 }
 
+// A fully-down node trips two rules at once: its *_silent absence rule (crit,
+// the authoritative "node is gone" signal) and probe.node_unreachable (warn,
+// the health-endpoint probe). They answer different questions — the probe
+// still fires on its own when a node serves metrics but its health endpoint is
+// down — but for a plain node-down they're redundant. Drop the probe breach
+// while the node is owned by the crit silence path so an operator gets one
+// crit alert, not a warn+crit pair. probe.node_unreachable's forTicks is tuned
+// above the silence threshold (see rules.ts) so the probe can't reach its fire
+// threshold before this gate engages, which is what keeps it from firing a
+// warn and then resolving it seconds later.
+const NODE_SILENT_RULE_IDS = ["ingest.node_silent", "obs.node_silent"] as const;
+
+export function suppressRedundantNodeProbes(
+  breachesByRule: Map<string, Breach[]>,
+  prev: AlertState[],
+  registry: Registry,
+): void {
+  const probeBreaches = breachesByRule.get("probe.node_unreachable");
+  if (!probeBreaches || probeBreaches.length === 0) return;
+
+  // Node ids whose silence rule is breaching this tick or already firing.
+  const downNodeIds = new Set<string>();
+  for (const ruleId of NODE_SILENT_RULE_IDS) {
+    for (const b of breachesByRule.get(ruleId) ?? []) downNodeIds.add(b.entityId);
+  }
+  for (const s of prev) {
+    if ((NODE_SILENT_RULE_IDS as readonly string[]).includes(s.rule_id) && s.status === "firing") {
+      downNodeIds.add(s.entity_id);
+    }
+  }
+  if (downNodeIds.size === 0) return;
+
+  // Probe ids are `ingest-node:<name>` / `obs-node:<name>`; the silence rules
+  // key on the node uuid, so map probe id back to node id via the registry.
+  const nodeIdByProbeId = new Map<string, string>();
+  for (const n of registry.ingestNodes) nodeIdByProbeId.set(`ingest-node:${n.name}`, n.id);
+  for (const n of registry.obsNodes) nodeIdByProbeId.set(`obs-node:${n.name}`, n.id);
+
+  const kept = probeBreaches.filter((b) => {
+    const nodeId = nodeIdByProbeId.get(b.entityId);
+    return !(nodeId && downNodeIds.has(nodeId));
+  });
+  if (kept.length === 0) breachesByRule.delete("probe.node_unreachable");
+  else breachesByRule.set("probe.node_unreachable", kept);
+}
+
 async function evaluateEnv(
   alertEnv: Env,
   bucket: string,
@@ -236,6 +282,9 @@ async function evaluateEnv(
     Sentry.captureException(err, { tags: { alertEnv, stage: "load-state" } });
     prev = [...(stateMirror.get(alertEnv)?.values() ?? [])];
   }
+
+  // Node-down dedup: needs both this tick's breaches and prev firing state.
+  suppressRedundantNodeProbes(breachesByRule, prev, registry);
 
   const { upserts, events, notifications } = computeTransitions(alertEnv, prev, breachesByRule, rules, now);
 

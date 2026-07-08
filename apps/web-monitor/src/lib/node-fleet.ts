@@ -12,6 +12,9 @@ const FLEET_PROBE_TIMEOUT_MS = 4_000;
 export interface FleetNode {
   id: string;
   name: string;
+  /** Reachable address — tailnet IP for ingest, api host for OBS. Far more
+   *  useful in the UI than the registry UUID. */
+  address: string | null;
   /** Registry status (linked / pending / …). */
   status: string;
   maintenance: boolean;
@@ -29,6 +32,7 @@ interface RegistryRow {
   status: string;
   maintenance: boolean;
   created_at: string;
+  address: string | null;
   healthUrl: string | null;
 }
 
@@ -40,6 +44,7 @@ async function loadRegistryRows(kind: "ingest" | "obs"): Promise<RegistryRow[]> 
     if (error) throw new Error(`Couldn't load obs_nodes: ${error.message}`);
     return data.map((n) => ({
       ...n,
+      address: n.api_url ? n.api_url.replace(/^https?:\/\//, "").replace(/\/$/, "") : null,
       healthUrl: n.api_url ? `${n.api_url.replace(/\/$/, "")}/health` : null,
     }));
   }
@@ -49,6 +54,7 @@ async function loadRegistryRows(kind: "ingest" | "obs"): Promise<RegistryRow[]> 
   if (error) throw new Error(`Couldn't load ingest_nodes: ${error.message}`);
   return data.map((n) => ({
     ...n,
+    address: n.tailscale_ip ?? null,
     healthUrl: n.tailscale_ip ? `http://${n.tailscale_ip}:8090/health` : null,
   }));
 }
@@ -88,6 +94,7 @@ export async function getFleet(kind: "ingest" | "obs"): Promise<FleetNode[]> {
       return {
         id: row.id,
         name: row.name,
+        address: row.address,
         status: row.status,
         maintenance: row.maintenance,
         createdAt: row.created_at,

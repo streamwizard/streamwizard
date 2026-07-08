@@ -11,6 +11,16 @@ interface Props {
   initialData: ActiveIngestSignal[];
 }
 
+// Draw attention to lossy links: clean stays muted, a few percent goes amber,
+// heavy loss/retransmit goes red. Undefined (protocol doesn't report it) is
+// left unstyled.
+function lossClass(pct: number | undefined): string {
+  if (pct === undefined) return "text-muted-foreground";
+  if (pct >= 2) return "text-red-600 dark:text-red-400";
+  if (pct >= 0.5) return "text-amber-600 dark:text-amber-400";
+  return "text-muted-foreground";
+}
+
 // One row per currently-active incoming signal — a user with two cameras
 // (two stream keys) shows up as two rows here, grouped visually by user_id.
 export function ActiveSignalsTable({ initialData }: Props) {
@@ -35,13 +45,16 @@ export function ActiveSignalsTable({ initialData }: Props) {
               <TableHead>Signal</TableHead>
               <TableHead>Protocol</TableHead>
               <TableHead className="text-right">Bitrate</TableHead>
+              <TableHead className="text-right">RTT</TableHead>
+              <TableHead className="text-right">Loss</TableHead>
+              <TableHead className="text-right">Retrans</TableHead>
               <TableHead className="text-right">Last Seen</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   No active signals
                 </TableCell>
               </TableRow>
@@ -52,6 +65,15 @@ export function ActiveSignalsTable({ initialData }: Props) {
                   <TableCell className="text-xs">{row.label}</TableCell>
                   <TableCell className="text-xs uppercase">{row.protocol}</TableCell>
                   <TableCell className="text-right tabular-nums">{row.kbps.toFixed(0)} kbps</TableCell>
+                  <TableCell className="text-right tabular-nums text-xs">
+                    {row.rttMs === undefined ? "—" : `${row.rttMs.toFixed(0)} ms`}
+                  </TableCell>
+                  <TableCell className={`text-right tabular-nums text-xs ${lossClass(row.lossPct)}`}>
+                    {row.lossPct === undefined ? "—" : `${row.lossPct.toFixed(2)}%`}
+                  </TableCell>
+                  <TableCell className={`text-right tabular-nums text-xs ${lossClass(row.retransPct)}`}>
+                    {row.retransPct === undefined ? "—" : `${row.retransPct.toFixed(2)}%`}
+                  </TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground text-xs">
                     {new Date(row.lastSeen).toLocaleTimeString()}
                   </TableCell>
