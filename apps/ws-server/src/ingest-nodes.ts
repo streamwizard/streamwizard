@@ -2,12 +2,13 @@ import type { IngestNodeBandwidthPayload } from "@repo/types";
 import type { IngestNodeLive } from "./monitor/types";
 
 // Latest bandwidth reading per ingest node, fed by `node_metrics` bot
-// messages (one per node every ~10s). Keyed by the node's self-reported
+// messages (one per node every ~1s). Keyed by the node's self-reported
 // node_id; entries age out after STALE_MS so a dead node drops from the
 // snapshot instead of freezing at its last reading forever.
 
-// ~3 missed 10s sampler ticks — long enough to ride out a reconnect,
-// short enough that a dead node disappears promptly.
+// Generous relative to the 1s cadence on purpose: the bot client's reconnect
+// backoff caps at 30s, so a briefly-dropped node can pause that long without
+// being dead — evicting sooner would make nodes flap during reconnects.
 const STALE_MS = 30_000;
 
 const nodes = new Map<string, { entry: IngestNodeLive; receivedAt: number }>();

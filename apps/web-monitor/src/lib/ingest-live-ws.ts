@@ -38,7 +38,10 @@ export type LiveStreamEntry = {
 };
 
 const RECONNECT_DELAY_MS = 3000;
-// Nodes report every 10s; streams every ~2s. Evict at ~3 missed reports.
+// Nodes and streams both report every ~1s. Node eviction stays at 30s because
+// the node's bot reconnect backoff caps at 30s — shorter would flap during
+// reconnects; streams evict fast since a stopped stream never comes back
+// under the same session_id.
 const NODE_STALE_MS = 30_000;
 const STREAM_STALE_MS = 10_000;
 const EVICT_SWEEP_MS = 2_000;
