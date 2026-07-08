@@ -9,6 +9,7 @@ import { StatusIndicator, type IndicatorStatus } from "@/components/widgets/stat
 import { fetcher, formatBandwidth } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
+import { useIngestLive } from "@/lib/ingest-live-context";
 import type { IngestNode } from "@/lib/ingest-nodes";
 
 interface Props {
@@ -54,12 +55,21 @@ function ram(usedMb: number | null, totalMb: number | null): string {
 export function IngestNodeTable({ initialData, title }: Props) {
   const { interval } = useRefreshInterval();
   const { unit } = useBandwidthUnit();
+  const { nodes: liveNodes } = useIngestLive();
   const { data: raw } = useSWR<{ ingestNodes: IngestNode[] }>("/api/metrics/ingest", fetcher, {
     fallbackData: { ingestNodes: initialData },
     refreshInterval: interval,
   });
 
-  const rows = raw?.ingestNodes ?? initialData;
+  // Network column prefers the 1s WebSocket reading over the polled InfluxDB
+  // snapshot (registry node id == WS node_id == the InfluxDB node_id tag).
+  // Nodes without a live entry — WS down, or an old image — keep the polled
+  // value, so the column degrades to exactly what it showed before.
+  const liveById = new Map(liveNodes.map((n) => [n.nodeId, n]));
+  const rows = (raw?.ingestNodes ?? initialData).map((node) => {
+    const live = liveById.get(node.id);
+    return live ? { ...node, rxBytesPerSec: live.rxBps, txBytesPerSec: live.txBps } : node;
+  });
 
   return (
     <Card>
