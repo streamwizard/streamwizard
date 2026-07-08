@@ -3,6 +3,11 @@ import {
   queryHostMemUsed,
   queryHostRxBandwidth,
   queryHostTxBandwidth,
+  queryHostDiskUsed,
+  queryHostCpuSteal,
+  queryHostLoadAvg,
+  queryHostTailscaleRx,
+  queryHostTailscaleTx,
   queryActiveIngestSignals,
 } from "@repo/metrics";
 import type { ActiveIngestSignal } from "@repo/metrics";
@@ -21,6 +26,11 @@ export default async function IngestDashboard() {
   let hostMem: NodeMetricPoint[] = [];
   let hostRx: NodeMetricPoint[] = [];
   let hostTx: NodeMetricPoint[] = [];
+  let hostDisk: NodeMetricPoint[] = [];
+  let hostSteal: NodeMetricPoint[] = [];
+  let hostLoad: NodeMetricPoint[] = [];
+  let hostTsRx: NodeMetricPoint[] = [];
+  let hostTsTx: NodeMetricPoint[] = [];
   let activeSignals: ActiveIngestSignal[] = [];
 
   let registeredIds: Set<string> | null = null;
@@ -31,22 +41,35 @@ export default async function IngestDashboard() {
     // registry unreachable — table renders its empty state
   }
   // Fail-soft per source so one broken query can't blank every panel.
-  [hostCpu, hostMem, hostRx, hostTx, activeSignals, registeredIds] = await Promise.all([
-    queryHostCpu("24h", "1h").catch(() => []),
-    queryHostMemUsed("24h", "1h").catch(() => []),
-    queryHostRxBandwidth("24h", "1h").catch(() => []),
-    queryHostTxBandwidth("24h", "1h").catch(() => []),
-    queryActiveIngestSignals().catch(() => []),
-    getRegisteredNodeIds("ingest_nodes").catch(() => null),
-  ]);
+  [hostCpu, hostMem, hostRx, hostTx, hostDisk, hostSteal, hostLoad, hostTsRx, hostTsTx, activeSignals, registeredIds] =
+    await Promise.all([
+      queryHostCpu("24h", "1h").catch(() => []),
+      queryHostMemUsed("24h", "1h").catch(() => []),
+      queryHostRxBandwidth("24h", "1h").catch(() => []),
+      queryHostTxBandwidth("24h", "1h").catch(() => []),
+      queryHostDiskUsed("24h", "1h").catch(() => []),
+      queryHostCpuSteal("24h", "1h").catch(() => []),
+      queryHostLoadAvg("24h", "1h").catch(() => []),
+      queryHostTailscaleRx("24h", "1h").catch(() => []),
+      queryHostTailscaleTx("24h", "1h").catch(() => []),
+      queryActiveIngestSignals().catch(() => []),
+      getRegisteredNodeIds("ingest_nodes").catch(() => null),
+    ]);
 
   // Influx keeps points from deleted nodes until they age out of the range;
   // show only nodes that still exist in the registry, labeled by name.
   const nodeNames = new Map(fleet.map((n) => [n.id, n.name]));
-  hostCpu = labelNodes(filterToRegistered(hostCpu, registeredIds, (p) => p.nodeId), nodeNames);
-  hostMem = labelNodes(filterToRegistered(hostMem, registeredIds, (p) => p.nodeId), nodeNames);
-  hostRx = labelNodes(filterToRegistered(hostRx, registeredIds, (p) => p.nodeId), nodeNames);
-  hostTx = labelNodes(filterToRegistered(hostTx, registeredIds, (p) => p.nodeId), nodeNames);
+  const show = (points: NodeMetricPoint[]) =>
+    labelNodes(filterToRegistered(points, registeredIds, (p) => p.nodeId), nodeNames);
+  hostCpu = show(hostCpu);
+  hostMem = show(hostMem);
+  hostRx = show(hostRx);
+  hostTx = show(hostTx);
+  hostDisk = show(hostDisk);
+  hostSteal = show(hostSteal);
+  hostLoad = show(hostLoad);
+  hostTsRx = show(hostTsRx);
+  hostTsTx = show(hostTsTx);
 
   const nodeCount = new Set(hostCpu.map((p) => p.nodeId)).size;
   const userCount = new Set(activeSignals.map((s) => s.userId)).size;
@@ -78,7 +101,10 @@ export default async function IngestDashboard() {
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Host Resources</h2>
         <div className="grid grid-cols-2 gap-4">
           <NodeMetricChart title="CPU %" initialData={hostCpu} apiPath="/api/metrics/ingest" dataKey="hostCpu" format="percent" />
+          <NodeMetricChart title="CPU Steal %" initialData={hostSteal} apiPath="/api/metrics/ingest" dataKey="hostSteal" format="percent" />
           <NodeMetricChart title="RAM Used (MB)" initialData={hostMem} apiPath="/api/metrics/ingest" dataKey="hostMem" />
+          <NodeMetricChart title="Disk Used %" initialData={hostDisk} apiPath="/api/metrics/ingest" dataKey="hostDisk" format="percent" />
+          <NodeMetricChart title="Load Avg (1m)" initialData={hostLoad} apiPath="/api/metrics/ingest" dataKey="hostLoad" />
         </div>
       </section>
 
@@ -87,6 +113,8 @@ export default async function IngestDashboard() {
         <div className="grid grid-cols-2 gap-4">
           <NodeMetricChart title="Incoming" initialData={hostRx} apiPath="/api/metrics/ingest" dataKey="hostRx" format="bytesPerSec" />
           <NodeMetricChart title="Outgoing" initialData={hostTx} apiPath="/api/metrics/ingest" dataKey="hostTx" format="bytesPerSec" />
+          <NodeMetricChart title="Tailscale In" initialData={hostTsRx} apiPath="/api/metrics/ingest" dataKey="hostTsRx" format="bytesPerSec" />
+          <NodeMetricChart title="Tailscale Out" initialData={hostTsTx} apiPath="/api/metrics/ingest" dataKey="hostTsTx" format="bytesPerSec" />
         </div>
       </section>
 
