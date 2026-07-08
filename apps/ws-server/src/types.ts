@@ -10,6 +10,12 @@ export interface ConnectionData {
   channels: Set<OverlayEventType>;
   connectedAt: number;
   connId: string;
+  /**
+   * Self-declared identity of a bot connection ("ingest-node:<id>",
+   * "streamwizard-bot"). Observability-only: every bot shares the same
+   * secret, so a forged source can mislabel but not escalate.
+   */
+  source?: string;
 }
 
 export interface RoomData {
