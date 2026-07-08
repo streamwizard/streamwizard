@@ -8,20 +8,22 @@ import {
   queryHostLoadAvg,
   queryHostTailscaleRx,
   queryHostTailscaleTx,
+  queryHostSnapshot,
   queryActiveIngestSignals,
 } from "@repo/metrics";
 import { Server, Radio, Users, ArrowDownToLine, Cpu, Network } from "lucide-react";
-import type { ActiveIngestSignal } from "@repo/metrics";
+import type { ActiveIngestSignal, HostNodeSnapshot } from "@repo/metrics";
 import type { NodeMetricPoint } from "@/components/charts/node-metric-chart";
 import { NodeMetricChart } from "@/components/charts/node-metric-chart";
 import { ActiveSignalsTable } from "@/components/charts/active-signals-table";
-import { NodeFleetTable } from "@/components/charts/node-fleet-table";
+import { IngestNodeTable } from "@/components/charts/ingest-node-table";
 import { StatCard } from "@/components/widgets/stat-card";
 import { PageHeader } from "@/components/widgets/page-header";
 import { SectionHeading } from "@/components/widgets/section-heading";
 import { LiveIndicator } from "@/components/widgets/live-indicator";
 import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
 import { getFleet, type FleetNode } from "@/lib/node-fleet";
+import { mergeIngestNodes } from "@/lib/ingest-nodes";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,7 @@ export default async function IngestDashboard() {
   let hostLoad: NodeMetricPoint[] = [];
   let hostTsRx: NodeMetricPoint[] = [];
   let hostTsTx: NodeMetricPoint[] = [];
+  let hostSnapshot: HostNodeSnapshot[] = [];
   let activeSignals: ActiveIngestSignal[] = [];
 
   let registeredIds: Set<string> | null = null;
@@ -45,7 +48,7 @@ export default async function IngestDashboard() {
     // registry unreachable — table renders its empty state
   }
   // Fail-soft per source so one broken query can't blank every panel.
-  [hostCpu, hostMem, hostRx, hostTx, hostDisk, hostSteal, hostLoad, hostTsRx, hostTsTx, activeSignals, registeredIds] =
+  [hostCpu, hostMem, hostRx, hostTx, hostDisk, hostSteal, hostLoad, hostTsRx, hostTsTx, hostSnapshot, activeSignals, registeredIds] =
     await Promise.all([
       queryHostCpu("24h", "1h").catch(() => []),
       queryHostMemUsed("24h", "1h").catch(() => []),
@@ -56,6 +59,7 @@ export default async function IngestDashboard() {
       queryHostLoadAvg("24h", "1h").catch(() => []),
       queryHostTailscaleRx("24h", "1h").catch(() => []),
       queryHostTailscaleTx("24h", "1h").catch(() => []),
+      queryHostSnapshot().catch(() => []),
       queryActiveIngestSignals().catch(() => []),
       getRegisteredNodeIds("ingest_nodes").catch(() => null),
     ]);
@@ -85,6 +89,9 @@ export default async function IngestDashboard() {
   const registeredCount = registeredIds?.size ?? null;
   const nodesTone = nodeCount === 0 ? "danger" : registeredCount !== null && nodeCount < registeredCount ? "warning" : "positive";
 
+  // Registry + health + latest resource snapshot, one row per node.
+  const ingestNodes = mergeIngestNodes(fleet, hostSnapshot);
+
   return (
     <div className="space-y-8">
       <PageHeader title="Ingest Servers" description="Real-time health of the ingest fleet">
@@ -105,7 +112,7 @@ export default async function IngestDashboard() {
           <StatCard title="Streaming Users" value={userCount} description="Distinct users currently live" icon={Users} />
           <StatCard title="Total Incoming" value={totalIncoming} description="Sum across active signals" icon={ArrowDownToLine} />
         </div>
-        <NodeFleetTable initialData={fleet} apiPath="/api/metrics/ingest" title="Registered Nodes" />
+        <IngestNodeTable initialData={ingestNodes} title="Registered Nodes" />
       </section>
 
       <section className="space-y-3">
