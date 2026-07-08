@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState } from "react";
+import { DASHBOARD_COOKIE, writeDashboardCookie } from "./dashboard-prefs";
 
 export interface TimeRangeOption {
   label: string;
@@ -26,6 +27,12 @@ export const TIME_RANGE_OPTIONS: TimeRangeOption[] = [
 
 const DEFAULT_RANGE = TIME_RANGE_OPTIONS[7]!; // Last 24h
 
+// Resolve a persisted fluxRange (the cookie value) back to its full option,
+// falling back to the default for unknown/absent values.
+export function parseTimeRange(fluxRange: string | undefined): TimeRangeOption {
+  return TIME_RANGE_OPTIONS.find((o) => o.fluxRange === fluxRange) ?? DEFAULT_RANGE;
+}
+
 type TimeRangeContextValue = {
   range: TimeRangeOption;
   setRange: (range: TimeRangeOption) => void;
@@ -36,8 +43,22 @@ const TimeRangeContext = createContext<TimeRangeContextValue>({
   setRange: () => {},
 });
 
-export function TimeRangeProvider({ children }: { children: React.ReactNode }) {
-  const [range, setRange] = useState<TimeRangeOption>(DEFAULT_RANGE);
+export function TimeRangeProvider({
+  initialRange,
+  children,
+}: {
+  /** Raw cookie value (a fluxRange like "5m") from the server layout; resolved
+   *  here so the same input drives both the SSR render and client hydration. */
+  initialRange?: string;
+  children: React.ReactNode;
+}) {
+  const [range, setRangeState] = useState<TimeRangeOption>(() => parseTimeRange(initialRange));
+
+  const setRange = (next: TimeRangeOption) => {
+    setRangeState(next);
+    writeDashboardCookie(DASHBOARD_COOKIE.timeRange, next.fluxRange);
+  };
+
   return (
     <TimeRangeContext.Provider value={{ range, setRange }}>
       {children}
