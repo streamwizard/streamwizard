@@ -48,56 +48,58 @@ export function NodeFleetTable({ initialData, apiPath, title }: Props) {
         <CardTitle className="text-base">{title}</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Node</TableHead>
-              <TableHead>Health</TableHead>
-              <TableHead>Registry</TableHead>
-              <TableHead className="text-right">Last metric</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                  No nodes registered
-                </TableCell>
+                <TableHead>Health</TableHead>
+                <TableHead>Node</TableHead>
+                <TableHead className="text-right">Latency</TableHead>
+                <TableHead>Registry</TableHead>
+                <TableHead className="text-right">Last metric</TableHead>
               </TableRow>
-            ) : (
-              rows.map((node) => {
-                const health = HEALTH_DISPLAY[node.health];
-                return (
-                  <TableRow key={node.id}>
-                    <TableCell>
-                      <div className="font-medium text-sm">{node.name}</div>
-                      <code className="font-mono text-xs text-muted-foreground">{node.id}</code>
-                    </TableCell>
-                    <TableCell>
-                      <StatusIndicator status={health.status} label={health.label} />
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {node.health === "healthy" && node.healthLatencyMs !== null
-                          ? `${node.healthLatencyMs} ms`
-                          : node.health === "unreachable"
-                            ? node.healthDetail
-                            : null}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <Badge variant={node.status === "linked" ? "outline" : "secondary"}>{node.status}</Badge>
-                        {node.maintenance && <Badge variant="secondary">maintenance</Badge>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
-                      {relativeTime(node.lastMetricAt)}
-                    </TableCell>
-                  </TableRow>
-                );
-              })
-            )}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    No nodes registered
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((node) => {
+                  const health = HEALTH_DISPLAY[node.health];
+                  return (
+                    <TableRow key={node.id}>
+                      <TableCell>
+                        <StatusIndicator status={health.status} label={health.label} />
+                        {node.health === "unreachable" && node.healthDetail && (
+                          <div className="mt-0.5 text-xs text-muted-foreground">{node.healthDetail}</div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-medium">{node.name}</div>
+                        <code className="font-mono text-xs text-muted-foreground">{node.address ?? "no address"}</code>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
+                        {node.health === "healthy" && node.healthLatencyMs !== null ? `${node.healthLatencyMs} ms` : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant={node.status === "linked" ? "outline" : "secondary"}>{node.status}</Badge>
+                          {node.maintenance && <Badge variant="secondary">maintenance</Badge>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-xs text-muted-foreground">
+                        {relativeTime(node.lastMetricAt)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );
