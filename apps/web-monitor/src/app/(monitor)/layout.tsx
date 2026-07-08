@@ -6,6 +6,7 @@ import { MonitorSidebar } from "@/components/monitor-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { RefreshIntervalProvider } from "@/lib/refresh-interval-context";
 import { TimeRangeProvider } from "@/lib/time-range-context";
+import { BandwidthUnitProvider } from "@/lib/bandwidth-unit-context";
 import { homeEnv } from "@/lib/home-env";
 
 export default async function MonitorLayout({ children }: { children: React.ReactNode }) {
@@ -30,13 +31,15 @@ export default async function MonitorLayout({ children }: { children: React.Reac
   return (
     <TimeRangeProvider>
       <RefreshIntervalProvider>
-        <SidebarProvider>
-          <MonitorSidebar />
-          <SidebarInset>
-            <MonitorHeader envLabel={homeEnv()} />
-            <main className="flex-1 overflow-auto p-6">{children}</main>
-          </SidebarInset>
-        </SidebarProvider>
+        <BandwidthUnitProvider>
+          <SidebarProvider>
+            <MonitorSidebar />
+            <SidebarInset>
+              <MonitorHeader envLabel={homeEnv()} />
+              <main className="flex-1 overflow-auto p-6">{children}</main>
+            </SidebarInset>
+          </SidebarProvider>
+        </BandwidthUnitProvider>
       </RefreshIntervalProvider>
     </TimeRangeProvider>
   );

@@ -9,9 +9,12 @@ export interface TimeRangeOption {
 }
 
 export const TIME_RANGE_OPTIONS: TimeRangeOption[] = [
-  { label: "Last 5m",  fluxRange: "5m",   window: "1m"  },
-  { label: "Last 15m", fluxRange: "15m",  window: "2m"  },
-  { label: "Last 30m", fluxRange: "30m",  window: "5m"  },
+  // Short ranges use fine windows matched to the ~10s sampler cadence so a
+  // stream stopping shows a real drop within seconds, not a minute-long slope
+  // from coarse 1m/2m averaging blurring the transition.
+  { label: "Last 5m",  fluxRange: "5m",   window: "10s" },
+  { label: "Last 15m", fluxRange: "15m",  window: "30s" },
+  { label: "Last 30m", fluxRange: "30m",  window: "30s" },
   { label: "Last 1h",  fluxRange: "1h",   window: "5m"  },
   { label: "Last 3h",  fluxRange: "3h",   window: "15m" },
   { label: "Last 6h",  fluxRange: "6h",   window: "30m" },
