@@ -8,11 +8,13 @@ import {
   queryHostLoadAvg,
   queryHostTailscaleRx,
   queryHostTailscaleTx,
+  queryHostSnapshot,
   queryActiveIngestSignals,
 } from "@repo/metrics";
 import { NextResponse } from "next/server";
 import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
 import { getFleet } from "@/lib/node-fleet";
+import { mergeIngestNodes } from "@/lib/ingest-nodes";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +27,7 @@ export async function GET(request: Request) {
     // Each source is independently fail-soft: one slow/broken query (e.g. the
     // active-signals pivot) must degrade only its own panel, never blank the
     // whole page.
-    const [hostCpu, hostMem, hostRx, hostTx, hostDisk, hostSteal, hostLoad, hostTsRx, hostTsTx, activeSignals, registeredIds, fleet] =
+    const [hostCpu, hostMem, hostRx, hostTx, hostDisk, hostSteal, hostLoad, hostTsRx, hostTsTx, hostSnapshot, activeSignals, registeredIds, fleet] =
       await Promise.all([
         queryHostCpu(fluxRange, window).catch(() => []),
         queryHostMemUsed(fluxRange, window).catch(() => []),
@@ -36,6 +38,7 @@ export async function GET(request: Request) {
         queryHostLoadAvg(fluxRange, window).catch(() => []),
         queryHostTailscaleRx(fluxRange, window).catch(() => []),
         queryHostTailscaleTx(fluxRange, window).catch(() => []),
+        queryHostSnapshot().catch(() => []),
         queryActiveIngestSignals().catch(() => []),
         getRegisteredNodeIds("ingest_nodes").catch(() => null),
         getFleet("ingest").catch(() => []),
@@ -54,6 +57,7 @@ export async function GET(request: Request) {
       hostLoad: show(hostLoad),
       hostTsRx: show(hostTsRx),
       hostTsTx: show(hostTsTx),
+      ingestNodes: mergeIngestNodes(fleet, hostSnapshot),
       activeSignals,
       fleet,
     });
