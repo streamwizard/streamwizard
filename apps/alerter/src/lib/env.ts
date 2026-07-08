@@ -35,7 +35,10 @@ const schema = z.object({
   MONITOR_BASE_URL: z.string().url().optional(),
 
   // Dead-man's switch: pinged after every tick, /fail on errors.
-  HEALTHCHECKS_PING_URL: z.string().url().optional(),
+  // Compose's `${HEALTHCHECKS_PING_URL:-}` default injects an empty string when
+  // unset, which `.url()` rejects; treat "" as "disabled" (matches the falsy
+  // guard at the ping site) rather than a validation error.
+  HEALTHCHECKS_PING_URL: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
   TICK_SECONDS: z.coerce.number().int().positive().default(15),
 
   // Sentry
