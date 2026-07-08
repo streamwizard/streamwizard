@@ -660,18 +660,24 @@ export function buildRules(overrides: RuleOverrides = {}): AlertRule[] {
     customRule(
       {
         id: "ws.message_drops",
-        title: "WebSocket messages dropped",
+        title: "WebSocket messages malformed",
         forTicks: 1,
         warn: { default: 0, unit: "count / 5m", direction: "above" },
         async evaluate(ctx, t) {
-          const count = await queryWsEventTotal("ws_message_drop", "5m", { bucket: ctx.bucket });
+          // room_not_found is excluded on purpose: a bot broadcast for a user
+          // with no open dashboard/overlay is normal operation (ingest stats
+          // arrive every second whether or not anyone subscribed), so counting
+          // it here made every unwatched stream page an operator. What's left
+          // — malformed payloads — always indicates a protocol bug or version
+          // skew between a bot client and ws-server, so the threshold stays 0.
+          const count = await queryWsEventTotal("ws_message_drop", "5m", { bucket: ctx.bucket }, ["room_not_found"]);
           if (count <= t.warn) return [];
           return [
             {
               entityId: "",
               severity: "warn",
               value: count,
-              message: `${count} WebSocket messages dropped in 5m`,
+              message: `${count} malformed WebSocket messages dropped in 5m`,
             },
           ];
         },
