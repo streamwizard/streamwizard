@@ -7,16 +7,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatCard } from "@/components/widgets/stat-card";
 import { cn, formatBandwidth } from "@/lib/utils";
 import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
-import { useIngestLiveWs, type LiveStatus } from "@/lib/ingest-live-ws";
+import { useIngestLive } from "@/lib/ingest-live-context";
+import type { LiveStatus } from "@/lib/ingest-live-ws";
 
 // Realtime slice of the ingest page: fleet/per-node NIC bandwidth and
-// per-stream transport health straight off the ws-server monitor socket.
+// per-stream transport health straight off the ws-server monitor socket
+// (shared via IngestLiveProvider — see lib/ingest-live-context.tsx).
 // Deliberately network-only — cpu/ram/disk stay on the InfluxDB panels below.
-
-interface Props {
-  wsUrl: string | null;
-  monitorSecret: string | null;
-}
 
 const STATUS_DISPLAY: Record<LiveStatus, { dot: string; label: string }> = {
   connected: { dot: "bg-emerald-500", label: "Live" },
@@ -54,11 +51,11 @@ function num(v: number | undefined, suffix = "", digits = 0): string {
   return v === undefined ? "—" : `${v.toFixed(digits)}${suffix}`;
 }
 
-export function IngestLivePanel({ wsUrl, monitorSecret }: Props) {
+export function IngestLivePanel() {
   const { unit } = useBandwidthUnit();
-  const { status, nodes, fleet, streams } = useIngestLiveWs(wsUrl, monitorSecret);
+  const { configured, status, nodes, fleet, streams } = useIngestLive();
 
-  if (!wsUrl || !monitorSecret) {
+  if (!configured) {
     return (
       <Card>
         <CardContent className="py-6 text-sm text-muted-foreground">
