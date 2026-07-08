@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { RefreshIntervalSelector } from "@/components/refresh-interval-selector";
 import { TimeRangeSelector } from "@/components/time-range-selector";
+import { BandwidthUnitToggle } from "@/components/bandwidth-unit-toggle";
 import { findNavLocation } from "@/lib/nav-config";
 import { cn } from "@/lib/utils";
 
@@ -46,6 +47,7 @@ export function MonitorHeader({ envLabel }: { envLabel: string }) {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="ml-auto flex items-center gap-3">
+        <BandwidthUnitToggle />
         <TimeRangeSelector />
         <RefreshIntervalSelector />
         <Badge variant="outline" className={cn("uppercase", ENV_BADGE_CLASSES[envLabel])}>

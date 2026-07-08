@@ -3,8 +3,9 @@
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { fetcher, formatBytesPerSec } from "@/lib/utils";
+import { fetcher, formatBandwidth } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
+import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
 import type { ObsNodeSnapshot } from "@repo/metrics";
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 // (running instances vs max, VRAM used vs total).
 export function ObsNodeTable({ initialData }: Props) {
   const { interval } = useRefreshInterval();
+  const { unit } = useBandwidthUnit();
   const { data: raw } = useSWR<{ nodeSnapshot: ObsNodeSnapshot[] }>("/api/metrics/obs", fetcher, {
     fallbackData: { nodeSnapshot: initialData },
     refreshInterval: interval,
@@ -63,7 +65,7 @@ export function ObsNodeTable({ initialData }: Props) {
                     {row.runningInstanceCount} / {row.maxInstances}
                   </TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground text-xs">
-                    {formatBytesPerSec(row.rxBytesPerSec)} / {formatBytesPerSec(row.txBytesPerSec)}
+                    {formatBandwidth(row.rxBytesPerSec, unit)} / {formatBandwidth(row.txBytesPerSec, unit)}
                   </TableCell>
                 </TableRow>
               ))
