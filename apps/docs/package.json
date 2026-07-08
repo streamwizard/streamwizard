@@ -10,6 +10,6 @@
     "node": ">=18 <25"
   },
   "devDependencies": {
-    "mint": "latest"
+    "mint": "^4.2.678"
   }
 }
