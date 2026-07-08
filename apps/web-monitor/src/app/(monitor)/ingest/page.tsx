@@ -10,12 +10,16 @@ import {
   queryHostTailscaleTx,
   queryActiveIngestSignals,
 } from "@repo/metrics";
+import { Server, Radio, Users, ArrowDownToLine, Cpu, Network } from "lucide-react";
 import type { ActiveIngestSignal } from "@repo/metrics";
 import type { NodeMetricPoint } from "@/components/charts/node-metric-chart";
 import { NodeMetricChart } from "@/components/charts/node-metric-chart";
 import { ActiveSignalsTable } from "@/components/charts/active-signals-table";
 import { NodeFleetTable } from "@/components/charts/node-fleet-table";
 import { StatCard } from "@/components/widgets/stat-card";
+import { PageHeader } from "@/components/widgets/page-header";
+import { SectionHeading } from "@/components/widgets/section-heading";
+import { LiveIndicator } from "@/components/widgets/live-indicator";
 import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
 import { getFleet, type FleetNode } from "@/lib/node-fleet";
 
@@ -74,32 +78,39 @@ export default async function IngestDashboard() {
   const nodeCount = new Set(hostCpu.map((p) => p.nodeId)).size;
   const userCount = new Set(activeSignals.map((s) => s.userId)).size;
   const totalKbps = activeSignals.reduce((acc, s) => acc + s.kbps, 0);
+  const totalIncoming = totalKbps >= 1000 ? `${(totalKbps / 1000).toFixed(1)} Mbps` : `${totalKbps.toFixed(0)} kbps`;
+
+  // Node health drives the card colour: green when every registered node is
+  // reporting, amber when some are silent, red when nothing is reporting.
+  const registeredCount = registeredIds?.size ?? null;
+  const nodesTone = nodeCount === 0 ? "danger" : registeredCount !== null && nodeCount < registeredCount ? "warning" : "positive";
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold">Ingest Servers</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Last 24 hours · refreshes every 30s</p>
-      </div>
+      <PageHeader title="Ingest Servers" description="Real-time health of the ingest fleet">
+        <LiveIndicator />
+      </PageHeader>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Fleet</h2>
-        <div className="grid grid-cols-4 gap-4">
+        <SectionHeading icon={Server}>Fleet</SectionHeading>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
             title="Ingest Nodes"
             value={registeredIds === null ? nodeCount : `${nodeCount} / ${registeredIds.size}`}
             description={registeredIds === null ? "Reporting host metrics" : "Reporting / registered"}
+            tone={nodesTone}
+            icon={Server}
           />
-          <StatCard title="Active Signals" value={activeSignals.length} description="Incoming streams right now" />
-          <StatCard title="Streaming Users" value={userCount} description="Distinct users currently live" />
-          <StatCard title="Total Incoming" value={`${totalKbps.toFixed(0)} kbps`} description="Sum across active signals" />
+          <StatCard title="Active Signals" value={activeSignals.length} description="Incoming streams right now" icon={Radio} />
+          <StatCard title="Streaming Users" value={userCount} description="Distinct users currently live" icon={Users} />
+          <StatCard title="Total Incoming" value={totalIncoming} description="Sum across active signals" icon={ArrowDownToLine} />
         </div>
         <NodeFleetTable initialData={fleet} apiPath="/api/metrics/ingest" title="Registered Nodes" />
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Host Resources</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <SectionHeading icon={Cpu}>Host Resources</SectionHeading>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <NodeMetricChart title="CPU %" initialData={hostCpu} apiPath="/api/metrics/ingest" dataKey="hostCpu" format="percent" />
           <NodeMetricChart title="CPU Steal %" initialData={hostSteal} apiPath="/api/metrics/ingest" dataKey="hostSteal" format="percent" />
           <NodeMetricChart title="RAM Used (MB)" initialData={hostMem} apiPath="/api/metrics/ingest" dataKey="hostMem" />
@@ -109,8 +120,8 @@ export default async function IngestDashboard() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Bandwidth</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <SectionHeading icon={Network}>Bandwidth</SectionHeading>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <NodeMetricChart title="Incoming" initialData={hostRx} apiPath="/api/metrics/ingest" dataKey="hostRx" format="bytesPerSec" />
           <NodeMetricChart title="Outgoing" initialData={hostTx} apiPath="/api/metrics/ingest" dataKey="hostTx" format="bytesPerSec" />
           <NodeMetricChart title="Tailscale In" initialData={hostTsRx} apiPath="/api/metrics/ingest" dataKey="hostTsRx" format="bytesPerSec" />
@@ -119,7 +130,7 @@ export default async function IngestDashboard() {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Signals by User</h2>
+        <SectionHeading icon={Radio}>Signals by User</SectionHeading>
         <ActiveSignalsTable initialData={activeSignals} />
       </section>
     </div>
