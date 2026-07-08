@@ -5,6 +5,7 @@ export function trackWsConnection(
   role: "publisher" | "subscriber" | "bot",
   event: "open" | "close",
   durationMs?: number,
+  source?: string,
 ): void {
   const point = new Point("ws_connection")
     .tag("service", "ws-server")
@@ -12,6 +13,11 @@ export function trackWsConnection(
     .tag("event", event)
     .intField("count", 1);
 
+  // Bot self-declared identity ("ingest-node:<id>") — bounded cardinality:
+  // one value per node/bot process.
+  if (source !== undefined) {
+    point.tag("source", source);
+  }
   if (durationMs !== undefined) {
     point.floatField("duration_ms", durationMs);
   }
@@ -19,14 +25,18 @@ export function trackWsConnection(
   pushPoint(point);
 }
 
-export function trackWsMessage(role: "publisher" | "subscriber" | "bot", messageType: string): void {
-  pushPoint(
-    new Point("ws_message")
-      .tag("service", "ws-server")
-      .tag("role", role)
-      .tag("message_type", messageType)
-      .intField("count", 1),
-  );
+export function trackWsMessage(role: "publisher" | "subscriber" | "bot", messageType: string, source?: string): void {
+  const point = new Point("ws_message")
+    .tag("service", "ws-server")
+    .tag("role", role)
+    .tag("message_type", messageType)
+    .intField("count", 1);
+
+  if (source !== undefined) {
+    point.tag("source", source);
+  }
+
+  pushPoint(point);
 }
 
 export function trackWsAuthFailure(
@@ -44,7 +54,7 @@ export function trackWsAuthFailure(
 
 export function trackWsMessageDrop(
   role: "publisher" | "subscriber" | "bot",
-  reason: "room_not_found" | "malformed_json",
+  reason: "room_not_found" | "malformed_json" | "malformed_node_metrics",
 ): void {
   pushPoint(
     new Point("ws_message_drop")

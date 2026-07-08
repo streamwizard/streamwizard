@@ -17,6 +17,8 @@ import type { NodeMetricPoint } from "@/components/charts/node-metric-chart";
 import { NodeMetricChart } from "@/components/charts/node-metric-chart";
 import { ActiveSignalsTable } from "@/components/charts/active-signals-table";
 import { IngestNodeTable } from "@/components/charts/ingest-node-table";
+import { IngestLivePanel } from "@/components/charts/ingest-live-panel";
+import { IngestLiveProvider } from "@/lib/ingest-live-context";
 import { StatCard } from "@/components/widgets/stat-card";
 import { PageHeader } from "@/components/widgets/page-header";
 import { SectionHeading } from "@/components/widgets/section-heading";
@@ -93,6 +95,12 @@ export default async function IngestDashboard() {
   const ingestNodes = mergeIngestNodes(fleet, hostSnapshot);
 
   return (
+    // One shared monitor WebSocket for every live consumer below (realtime
+    // panel + the Registered Nodes table's network column).
+    <IngestLiveProvider
+      wsUrl={process.env.NEXT_PUBLIC_WS_SERVER_URL ?? null}
+      monitorSecret={process.env.NEXT_PUBLIC_MONITOR_SECRET ?? null}
+    >
     <div className="space-y-8">
       <PageHeader title="Ingest Servers" description="Real-time health of the ingest fleet">
         <LiveIndicator />
@@ -113,6 +121,13 @@ export default async function IngestDashboard() {
           <StatCard title="Total Incoming" value={totalIncoming} description="Sum across active signals" icon={ArrowDownToLine} />
         </div>
         <IngestNodeTable initialData={ingestNodes} title="Registered Nodes" />
+      </section>
+
+      <section className="space-y-3">
+        <SectionHeading icon={Network}>Realtime Network</SectionHeading>
+        {/* WS-fed, network-only: fleet/per-node NIC bandwidth + per-stream
+            transport health. cpu/ram/disk stay on the InfluxDB charts below. */}
+        <IngestLivePanel />
       </section>
 
       <section className="space-y-3">
@@ -141,5 +156,6 @@ export default async function IngestDashboard() {
         <ActiveSignalsTable initialData={activeSignals} />
       </section>
     </div>
+    </IngestLiveProvider>
   );
 }
