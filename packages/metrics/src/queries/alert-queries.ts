@@ -232,19 +232,31 @@ export async function queryBucketPointCount(range = "5m", opts?: QueryOpts): Pro
 }
 
 /** Sum of a count-style ws measurement over the window
- * (rules: ws.auth_failure_spike, ws.message_drops). */
+ * (rules: ws.auth_failure_spike, ws.message_drops).
+ *
+ * excludeReasons drops rows whose `reason` tag matches — used to keep
+ * expected-behavior counters (bot room_not_found: "someone is streaming but
+ * nobody is watching") out of alerts that should only see real faults. */
 export async function queryWsEventTotal(
   measurement: "ws_auth_failure" | "ws_message_drop",
   range = "5m",
   opts?: QueryOpts,
+  excludeReasons: readonly string[] = [],
 ): Promise<number> {
   assertValidFluxDuration(range, "range");
+  for (const reason of excludeReasons) {
+    if (!/^[a-z_]+$/.test(reason)) throw new Error(`Invalid reason tag: ${reason}`);
+  }
   const bucket = resolveBucket(opts);
+  const reasonFilter = excludeReasons.length
+    ? `|> filter(fn: (r) => ${excludeReasons.map((r) => `r.reason != "${r}"`).join(" and ")})`
+    : "";
   const query = `
     from(bucket: "${bucket}")
       |> range(start: -${range})
       |> filter(fn: (r) => r._measurement == "${measurement}")
       |> filter(fn: (r) => r._field == "count")
+      ${reasonFilter}
       |> group()
       |> sum()
       |> yield(name: "ws_event_total")
