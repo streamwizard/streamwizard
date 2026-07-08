@@ -3,6 +3,11 @@ import {
   queryHostMemUsed,
   queryHostRxBandwidth,
   queryHostTxBandwidth,
+  queryHostDiskUsed,
+  queryHostCpuSteal,
+  queryHostLoadAvg,
+  queryHostTailscaleRx,
+  queryHostTailscaleTx,
   queryActiveIngestSignals,
 } from "@repo/metrics";
 import { NextResponse } from "next/server";
@@ -20,22 +25,35 @@ export async function GET(request: Request) {
     // Each source is independently fail-soft: one slow/broken query (e.g. the
     // active-signals pivot) must degrade only its own panel, never blank the
     // whole page.
-    const [hostCpu, hostMem, hostRx, hostTx, activeSignals, registeredIds, fleet] = await Promise.all([
-      queryHostCpu(fluxRange, window).catch(() => []),
-      queryHostMemUsed(fluxRange, window).catch(() => []),
-      queryHostRxBandwidth(fluxRange, window).catch(() => []),
-      queryHostTxBandwidth(fluxRange, window).catch(() => []),
-      queryActiveIngestSignals().catch(() => []),
-      getRegisteredNodeIds("ingest_nodes").catch(() => null),
-      getFleet("ingest").catch(() => []),
-    ]);
+    const [hostCpu, hostMem, hostRx, hostTx, hostDisk, hostSteal, hostLoad, hostTsRx, hostTsTx, activeSignals, registeredIds, fleet] =
+      await Promise.all([
+        queryHostCpu(fluxRange, window).catch(() => []),
+        queryHostMemUsed(fluxRange, window).catch(() => []),
+        queryHostRxBandwidth(fluxRange, window).catch(() => []),
+        queryHostTxBandwidth(fluxRange, window).catch(() => []),
+        queryHostDiskUsed(fluxRange, window).catch(() => []),
+        queryHostCpuSteal(fluxRange, window).catch(() => []),
+        queryHostLoadAvg(fluxRange, window).catch(() => []),
+        queryHostTailscaleRx(fluxRange, window).catch(() => []),
+        queryHostTailscaleTx(fluxRange, window).catch(() => []),
+        queryActiveIngestSignals().catch(() => []),
+        getRegisteredNodeIds("ingest_nodes").catch(() => null),
+        getFleet("ingest").catch(() => []),
+      ]);
 
     const nodeNames = new Map(fleet.map((n) => [n.id, n.name]));
+    const show = <T extends { nodeId: string }>(points: T[]) =>
+      labelNodes(filterToRegistered(points, registeredIds, (p) => p.nodeId), nodeNames);
     return NextResponse.json({
-      hostCpu: labelNodes(filterToRegistered(hostCpu, registeredIds, (p) => p.nodeId), nodeNames),
-      hostMem: labelNodes(filterToRegistered(hostMem, registeredIds, (p) => p.nodeId), nodeNames),
-      hostRx: labelNodes(filterToRegistered(hostRx, registeredIds, (p) => p.nodeId), nodeNames),
-      hostTx: labelNodes(filterToRegistered(hostTx, registeredIds, (p) => p.nodeId), nodeNames),
+      hostCpu: show(hostCpu),
+      hostMem: show(hostMem),
+      hostRx: show(hostRx),
+      hostTx: show(hostTx),
+      hostDisk: show(hostDisk),
+      hostSteal: show(hostSteal),
+      hostLoad: show(hostLoad),
+      hostTsRx: show(hostTsRx),
+      hostTsTx: show(hostTsTx),
       activeSignals,
       fleet,
     });
