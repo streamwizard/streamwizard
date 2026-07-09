@@ -26,6 +26,10 @@ export const env = createEnv({
     DISCORD_BOT_TOKEN: z.string().min(1),
     DISCORD_GUILD_ID: z.string().min(1),
     WS_SERVER_URL: z.string(),
+    // Pushes auto-switcher config changes to ws-server /internal/broadcast
+    // so the engine reacts instantly; optional — without it the engine still
+    // picks changes up on its periodic re-fetch.
+    CONSUMER_SECRET: z.string().min(1).optional(),
     STREAMWIZARD_API_URL: z.string().url(),
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_RELEASE: z.string().optional(),
@@ -58,6 +62,7 @@ export const env = createEnv({
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID,
     WS_SERVER_URL: process.env.WS_SERVER_URL,
+    CONSUMER_SECRET: process.env.CONSUMER_SECRET,
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
     SENTRY_DSN: process.env.SENTRY_DSN,
     SENTRY_RELEASE: process.env.SENTRY_RELEASE,

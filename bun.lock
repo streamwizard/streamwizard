@@ -53,6 +53,26 @@
         "mint": "^4.2.678",
       },
     },
+    "apps/obs-auto-switcher": {
+      "name": "@repo/obs-auto-switcher",
+      "version": "0.0.0",
+      "dependencies": {
+        "@repo/logger": "workspace:*",
+        "@repo/metrics": "workspace:*",
+        "@repo/schemas": "workspace:*",
+        "@repo/sentry": "workspace:*",
+        "@repo/supabase": "workspace:*",
+        "@repo/twitch-api": "workspace:*",
+        "@repo/types": "workspace:*",
+        "@sentry/bun": "^10",
+        "zod": "^4.4.3",
+      },
+      "devDependencies": {
+        "@repo/typescript-config": "workspace:*",
+        "@types/bun": "^1.3.6",
+        "typescript": "5.9.2",
+      },
+    },
     "apps/rest-api": {
       "name": "@repo/rest-api",
       "version": "0.0.0",
@@ -1153,6 +1173,8 @@
     "@repo/logger": ["@repo/logger@workspace:packages/logger"],
 
     "@repo/metrics": ["@repo/metrics@workspace:packages/metrics"],
+
+    "@repo/obs-auto-switcher": ["@repo/obs-auto-switcher@workspace:apps/obs-auto-switcher"],
 
     "@repo/posthog": ["@repo/posthog@workspace:packages/posthog"],
 
