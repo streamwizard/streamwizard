@@ -44,7 +44,7 @@ export const websocketHandlers = {
     } else if (role === "consumer") {
       addConsumer(ws);
       console.log(`[consumer] connected source=${ws.data.source ?? "unknown"} types=${[...(ws.data.consumerTypes ?? [])].join(",") || "*"}`);
-      broadcastToMonitors({ ts: Date.now(), kind: "connect", direction: "system", role: "bot", roomId: "_consumer", source: ws.data.source });
+      broadcastToMonitors({ ts: Date.now(), kind: "connect", direction: "system", role: "consumer", roomId: "_consumer", source: ws.data.source });
     } else {
       const room = rooms.get(userId);
       if (room) {
@@ -188,7 +188,7 @@ export const websocketHandlers = {
     if (role === "consumer") {
       removeConsumer(ws);
       console.log(`[consumer] disconnected source=${ws.data.source ?? "unknown"}`);
-      broadcastToMonitors({ ts: Date.now(), kind: "disconnect", direction: "system", role: "bot", roomId: "_consumer", source: ws.data.source, meta: { durationMs } });
+      broadcastToMonitors({ ts: Date.now(), kind: "disconnect", direction: "system", role: "consumer", roomId: "_consumer", source: ws.data.source, meta: { durationMs } });
       return;
     }
 

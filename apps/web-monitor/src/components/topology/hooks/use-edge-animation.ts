@@ -49,7 +49,17 @@ export function useEdgeAnimation(
       const hasConnEdges = connEdges.length > 0;
 
       if (evt.role === "bot") {
-        emitDot("e-bot-server", 0, false);
+        // Light up the edge of the specific bot that sent this (keyed by its
+        // source label), plus every consumer edge whose type filter would
+        // deliver the message.
+        emitDot(`e-bot-${evt.source ?? "unknown"}`, 0, false);
+        for (const edge of layoutEdgesRef.current) {
+          if (!edge.id.startsWith("e-server-consumer-")) continue;
+          const types = (edge.data as { consumerTypes?: string[] } | undefined)?.consumerTypes ?? [];
+          if (types.length === 0 || (evt.eventType && types.includes(evt.eventType))) {
+            emitDot(edge.id, DOT_TRAVEL_MS, true);
+          }
+        }
         emitDot(roomEdgeId, DOT_TRAVEL_MS, !hasConnEdges);
         for (const ce of connEdges) {
           emitDot(ce.id, DOT_TRAVEL_MS * 2, true);

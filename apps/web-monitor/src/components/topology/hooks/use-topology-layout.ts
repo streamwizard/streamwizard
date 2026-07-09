@@ -3,10 +3,9 @@
 import { useMemo } from "react";
 import dagre from "@dagrejs/dagre";
 import type { Node, Edge } from "@xyflow/react";
-import type { MonitorSnapshot } from "@/lib/monitor-ws";
+import type { BotConnSnapshot, ConsumerConnSnapshot, MonitorSnapshot } from "@/lib/monitor-ws";
 
 const SERVER_NODE_ID = "server";
-const BOT_NODE_ID = "bot";
 const NODE_WIDTH = 180;
 const NODE_HEIGHT = 80;
 const CONN_NODE_WIDTH = 120;
@@ -14,6 +13,24 @@ const CONN_NODE_HEIGHT = 60;
 
 interface LayoutOptions {
   expanded: boolean;
+}
+
+/** Edge id a bot's traffic animates on — shared with use-edge-animation. */
+export function botEdgeId(source: string): string {
+  return `e-bot-${source}`;
+}
+
+// One topology node per distinct `source` label. A label normally maps to a
+// single socket, but reconnects can briefly overlap — collapse those into a
+// count instead of drawing twins.
+function groupBySource<T extends { source: string; connectedAt: number }>(conns: T[]): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const conn of conns) {
+    const group = groups.get(conn.source) ?? [];
+    group.push(conn);
+    groups.set(conn.source, group);
+  }
+  return groups;
 }
 
 export function useTopologyLayout(
@@ -41,26 +58,60 @@ export function useTopologyLayout(
       },
     });
 
-    g.setNode(BOT_NODE_ID, { width: NODE_WIDTH, height: NODE_HEIGHT });
-    nodes.push({
-      id: BOT_NODE_ID,
-      type: "botNode",
-      position: { x: 0, y: 0 },
-      data: {
-        connected: snapshot.bot.connected,
-        connId: snapshot.bot.connId,
-        connectedAt: snapshot.bot.connectedAt,
-      },
-    });
-    edges.push({
-      id: `e-bot-server`,
-      source: BOT_NODE_ID,
-      target: SERVER_NODE_ID,
-      type: "animatedEdge",
-      style: { stroke: "#a855f7", strokeWidth: 1.5 },
-      data: { dotColor: "#a855f7" },
-    });
-    g.setEdge(BOT_NODE_ID, SERVER_NODE_ID);
+    // Producers (bots): overlay bot, one per ingest node, auto-switcher
+    // status publisher — labeled by their self-declared source.
+    for (const [source, conns] of groupBySource<BotConnSnapshot>(snapshot.bots)) {
+      const botNodeId = `bot-${source}`;
+      g.setNode(botNodeId, { width: NODE_WIDTH, height: NODE_HEIGHT });
+      nodes.push({
+        id: botNodeId,
+        type: "botNode",
+        position: { x: 0, y: 0 },
+        data: {
+          source,
+          connCount: conns.length,
+          connectedAt: Math.min(...conns.map((c) => c.connectedAt)),
+        },
+      });
+      edges.push({
+        id: botEdgeId(source),
+        source: botNodeId,
+        target: SERVER_NODE_ID,
+        type: "animatedEdge",
+        style: { stroke: "#a855f7", strokeWidth: 1.5 },
+        data: { dotColor: "#a855f7" },
+      });
+      g.setEdge(botNodeId, SERVER_NODE_ID);
+    }
+
+    // Server-side consumers (obs-auto-switcher): receive the cross-room feed,
+    // so the edge points away from the server. `types` rides on the edge so
+    // the animation hook can light it up only for messages it would deliver.
+    for (const [source, conns] of groupBySource<ConsumerConnSnapshot>(snapshot.consumers ?? [])) {
+      const consumerNodeId = `consumer-${source}`;
+      const types = conns[0]?.types ?? [];
+      g.setNode(consumerNodeId, { width: NODE_WIDTH, height: NODE_HEIGHT });
+      nodes.push({
+        id: consumerNodeId,
+        type: "consumerNode",
+        position: { x: 0, y: 0 },
+        data: {
+          source,
+          connCount: conns.length,
+          connectedAt: Math.min(...conns.map((c) => c.connectedAt)),
+          types,
+        },
+      });
+      edges.push({
+        id: `e-server-consumer-${source}`,
+        source: SERVER_NODE_ID,
+        target: consumerNodeId,
+        type: "animatedEdge",
+        style: { stroke: "#fb923c", strokeWidth: 1.5 },
+        data: { dotColor: "#fb923c", consumerTypes: types },
+      });
+      g.setEdge(SERVER_NODE_ID, consumerNodeId);
+    }
 
     for (const room of snapshot.rooms) {
       const roomNodeId = `room-${room.roomId}`;

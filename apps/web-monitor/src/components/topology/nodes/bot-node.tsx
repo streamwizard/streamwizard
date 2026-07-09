@@ -2,13 +2,23 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import { Bot } from "lucide-react";
+import { Bot, Radio, Repeat, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { describeSource, type SourceKind } from "../source-label";
 
+// One node per producer `source` label (a source can briefly hold >1 socket
+// during a reconnect — shown as a connection count).
 export type BotNodeData = {
-  connected: boolean;
-  connId: string | null;
-  connectedAt: number | null;
+  source: string;
+  connCount: number;
+  connectedAt: number;
+};
+
+const KIND_ICONS: Record<SourceKind, typeof Bot> = {
+  "ingest-node": Radio,
+  "overlay-bot": Bot,
+  "auto-switcher": Repeat,
+  unknown: HelpCircle,
 };
 
 function formatDuration(ms: number): string {
@@ -21,40 +31,27 @@ function formatDuration(ms: number): string {
 }
 
 export const BotNode = memo(function BotNode({ data }: NodeProps) {
-  const { connected, connId, connectedAt } = data as BotNodeData;
+  const { source, connCount, connectedAt } = data as BotNodeData;
+  const label = describeSource(source);
+  const Icon = KIND_ICONS[label.kind];
 
   return (
-    <div
-      className={cn(
-        "rounded-lg border px-4 py-3 shadow-md min-w-[150px]",
-        connected
-          ? "border-purple-500/40 bg-purple-950/40"
-          : "border-border bg-card"
-      )}
-    >
+    <div className="rounded-lg border border-purple-500/40 bg-purple-950/40 px-4 py-3 shadow-md min-w-[150px]">
       <Handle type="source" position={Position.Bottom} className="!bg-purple-400 !w-2 !h-2" />
 
       <div className="flex items-center gap-2 mb-1">
-        <Bot className={cn("h-4 w-4", connected ? "text-purple-400" : "text-muted-foreground")} />
-        <span className={cn("text-sm font-semibold", connected ? "text-purple-200" : "text-muted-foreground")}>
-          StreamWizard Bot
-        </span>
-      </div>
-
-      <div className="flex items-center gap-2 text-xs">
-        <span className={cn(connected ? "text-purple-300" : "text-muted-foreground")}>
-          {connected ? "Connected" : "Disconnected"}
-        </span>
-        {connected && connId && (
-          <span className="text-muted-foreground font-mono">{connId}</span>
+        <Icon className="h-4 w-4 text-purple-400" />
+        <span className="text-sm font-semibold text-purple-200">{label.title}</span>
+        {connCount > 1 && (
+          <span className="text-[10px] rounded bg-purple-500/20 px-1 text-purple-300">×{connCount}</span>
         )}
       </div>
 
-      {connected && connectedAt && (
-        <div className="text-[10px] text-muted-foreground mt-0.5">
-          {formatDuration(Date.now() - connectedAt)}
-        </div>
+      {label.subtitle && (
+        <div className={cn("text-xs text-purple-300/80 font-mono truncate max-w-[180px]")}>{label.subtitle}</div>
       )}
+
+      <div className="text-[10px] text-muted-foreground mt-0.5">{formatDuration(Date.now() - connectedAt)}</div>
     </div>
   );
 });
