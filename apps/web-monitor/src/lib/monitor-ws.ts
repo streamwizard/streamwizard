@@ -6,7 +6,7 @@ export type MonitorEnvelope = {
   ts: number;
   kind: "message" | "connect" | "disconnect" | "room";
   direction: "inbound" | "outbound" | "system";
-  role: "publisher" | "subscriber" | "bot";
+  role: "publisher" | "subscriber" | "bot" | "consumer";
   roomId: string;
   eventType?: string;
   payload?: unknown;
@@ -36,6 +36,14 @@ export type BotConnSnapshot = {
   connId: string;
   connectedAt: number;
   source: string;
+};
+
+export type ConsumerConnSnapshot = {
+  connId: string;
+  connectedAt: number;
+  source: string;
+  /** Message-type filter the consumer subscribed with (empty = everything). */
+  types: string[];
 };
 
 /** Live per-node bandwidth sample forwarded outside the envelope/snapshot flow. */
@@ -83,6 +91,8 @@ export type MonitorSnapshot = {
   /** Legacy single-bot view — prefer `bots`. */
   bot: BotSnapshot;
   bots: BotConnSnapshot[];
+  /** Absent on snapshots from older ws-server builds. */
+  consumers?: ConsumerConnSnapshot[];
   ingestNodes: IngestNodeLive[];
   ingestFleet: { rxBps: number; txBps: number; nodeCount: number };
 };

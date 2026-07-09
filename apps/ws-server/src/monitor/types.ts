@@ -4,7 +4,7 @@ export interface MonitorEnvelope {
   ts: number;
   kind: "message" | "connect" | "disconnect" | "room" | "snapshot";
   direction: "inbound" | "outbound" | "system";
-  role: "publisher" | "subscriber" | "bot";
+  role: "publisher" | "subscriber" | "bot" | "consumer";
   roomId: string;
   eventType?: string;
   payload?: unknown;
@@ -52,6 +52,14 @@ export interface BotConnSnapshot {
   source: string;
 }
 
+export interface ConsumerConnSnapshot {
+  connId: string;
+  connectedAt: number;
+  source: string;
+  /** Message-type filter the consumer subscribed with (empty = everything). */
+  types: string[];
+}
+
 /** Latest non-stale bandwidth reading for one ingest node. */
 export interface IngestNodeLive {
   nodeId: string;
@@ -71,6 +79,7 @@ export interface MonitorSnapshot {
   /** Legacy single-bot view, derived from `bots` — kept for older monitor UIs. */
   bot: BotSnapshot;
   bots: BotConnSnapshot[];
+  consumers: ConsumerConnSnapshot[];
   ingestNodes: IngestNodeLive[];
   ingestFleet: { rxBps: number; txBps: number; nodeCount: number };
 }
