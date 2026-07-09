@@ -1429,6 +1429,99 @@ export type Database = {
           },
         ]
       }
+      obs_auto_switcher_configs: {
+        Row: {
+          advanced_thresholds: Json | null
+          auto_stop_enabled: boolean
+          auto_stop_minutes: number
+          chat_notices_enabled: boolean
+          chat_template_degraded: string
+          chat_template_offline: string
+          chat_template_recovered: string
+          created_at: string
+          enabled: boolean
+          log_events_enabled: boolean
+          mode: string
+          override_expires_at: string | null
+          override_scene_name: string | null
+          override_scene_uuid: string | null
+          pinned_stream_key_label: string | null
+          scene_degraded_name: string | null
+          scene_degraded_uuid: string | null
+          scene_live_name: string | null
+          scene_live_uuid: string | null
+          scene_model: string
+          scene_offline_name: string | null
+          scene_offline_uuid: string | null
+          sensitivity_preset: string
+          updated_at: string
+          user_id: string
+          warning_source_enabled: boolean
+          warning_source_name: string | null
+          warning_source_uuid: string | null
+        }
+        Insert: {
+          advanced_thresholds?: Json | null
+          auto_stop_enabled?: boolean
+          auto_stop_minutes?: number
+          chat_notices_enabled?: boolean
+          chat_template_degraded?: string
+          chat_template_offline?: string
+          chat_template_recovered?: string
+          created_at?: string
+          enabled?: boolean
+          log_events_enabled?: boolean
+          mode?: string
+          override_expires_at?: string | null
+          override_scene_name?: string | null
+          override_scene_uuid?: string | null
+          pinned_stream_key_label?: string | null
+          scene_degraded_name?: string | null
+          scene_degraded_uuid?: string | null
+          scene_live_name?: string | null
+          scene_live_uuid?: string | null
+          scene_model?: string
+          scene_offline_name?: string | null
+          scene_offline_uuid?: string | null
+          sensitivity_preset?: string
+          updated_at?: string
+          user_id: string
+          warning_source_enabled?: boolean
+          warning_source_name?: string | null
+          warning_source_uuid?: string | null
+        }
+        Update: {
+          advanced_thresholds?: Json | null
+          auto_stop_enabled?: boolean
+          auto_stop_minutes?: number
+          chat_notices_enabled?: boolean
+          chat_template_degraded?: string
+          chat_template_offline?: string
+          chat_template_recovered?: string
+          created_at?: string
+          enabled?: boolean
+          log_events_enabled?: boolean
+          mode?: string
+          override_expires_at?: string | null
+          override_scene_name?: string | null
+          override_scene_uuid?: string | null
+          pinned_stream_key_label?: string | null
+          scene_degraded_name?: string | null
+          scene_degraded_uuid?: string | null
+          scene_live_name?: string | null
+          scene_live_uuid?: string | null
+          scene_model?: string
+          scene_offline_name?: string | null
+          scene_offline_uuid?: string | null
+          sensitivity_preset?: string
+          updated_at?: string
+          user_id?: string
+          warning_source_enabled?: boolean
+          warning_source_name?: string | null
+          warning_source_uuid?: string | null
+        }
+        Relationships: []
+      }
       obs_instances: {
         Row: {
           container_id: string | null

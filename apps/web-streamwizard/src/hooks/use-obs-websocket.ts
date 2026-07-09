@@ -18,6 +18,9 @@ export type ObsConnectionStatus = "closed" | "connecting" | "open";
 export interface Scene {
   sceneName: string;
   sceneIndex: number;
+  // Stable across renames — the auto switcher stores scenes by uuid so a
+  // renamed scene doesn't break switching.
+  sceneUuid: string;
 }
 
 export interface SceneItem {

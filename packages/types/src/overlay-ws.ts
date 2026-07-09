@@ -89,13 +89,21 @@ import type {
   UserAuthorizationRevokeEvent,
   UserUpdateEvent,
   UserWhisperMessageEvent,
+  // obs-auto-switcher
+  AutoSwitcherStatus,
+  AutoSwitcherConfig,
 } from "@repo/schemas";
 
 export type { OverlayGeoPayload, OverlayStatusPayload };
 
 export type StreamWizardEventType =
   | "streamwizard.geo"
-  | "streamwizard.ingest_stats";
+  | "streamwizard.ingest_stats"
+  // obs-auto-switcher: engine → user room (state/heartbeat for the status card)
+  | "streamwizard.auto_switcher_status"
+  // obs-auto-switcher: web server actions → /internal/broadcast → consumer
+  // feed (config/override changes; payload is the obs_auto_switcher_configs row)
+  | "streamwizard.auto_switcher_config";
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 
@@ -164,6 +172,8 @@ export type OverlaySocketMessage =
   | { type: "streamwizard.geo"; status: "connected"; payload: OverlayGeoPayload }
   | { type: "streamwizard.geo"; status: "offline" }
   | { type: "streamwizard.ingest_stats"; payload: IngestStatsPayload }
+  | { type: "streamwizard.auto_switcher_status"; payload: AutoSwitcherStatus }
+  | { type: "streamwizard.auto_switcher_config"; payload: AutoSwitcherConfig }
   // Channel
   | { type: "channel.update";                                             payload: ChannelUpdateEvent }
   | { type: "channel.follow";                                             payload: ChannelFollowEvent }
