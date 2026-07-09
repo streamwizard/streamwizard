@@ -49,6 +49,10 @@ export const ConsumerNode = memo(function ConsumerNode({ data }: NodeProps) {
         )}
       </div>
 
+      <div className="text-[10px] font-medium uppercase tracking-wider text-orange-400/80 mb-0.5">
+        {label.kind === "auto-switcher" ? "stats feed in" : "consumer"}
+      </div>
+
       {label.subtitle && <div className="text-xs text-orange-300/80 font-mono truncate max-w-[180px]">{label.subtitle}</div>}
 
       {types.length > 0 && (
