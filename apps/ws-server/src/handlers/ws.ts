@@ -81,6 +81,13 @@ export const websocketHandlers = {
 
     // --- Bot: node metrics or fan-out to a target user's room ---
     if (role === "bot") {
+      // Re-register on every message (Map.set by connId — effectively free).
+      // The registry fills at open(), but a dev --hot reload resets module
+      // state while sockets stay open: bandwidth state self-heals because
+      // it's message-driven, and without this the bot would stay invisible
+      // in the snapshot/topology until it reconnected.
+      addBotSocket(ws);
+
       let msg: BotOutboundMessage;
       try {
         msg = JSON.parse(rawStr) as BotOutboundMessage;
