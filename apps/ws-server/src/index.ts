@@ -5,7 +5,7 @@ import "./lib/env";
 import { handleUpgrade } from "./handlers/auth";
 import { websocketHandlers } from "./handlers/ws";
 import { rooms } from "./rooms";
-import { monitors, broadcastSnapshot } from "./monitor";
+import { monitors, broadcastSnapshot, getBotSockets } from "./monitor";
 import { consumers } from "./consumers";
 import { isMetricsEnabled } from "@repo/metrics";
 import type { ConnectionData } from "./types";
@@ -30,6 +30,12 @@ setInterval(() => {
     ws.ping();
   }
   for (const ws of consumers) {
+    ws.ping();
+  }
+  // Bots too: a quiet producer (e.g. the auto-switcher status publisher with
+  // nothing enabled) would otherwise idle past Cloudflare's timeout and churn
+  // through reconnects.
+  for (const ws of getBotSockets().values()) {
     ws.ping();
   }
 }, 30_000);
