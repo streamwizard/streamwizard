@@ -34,6 +34,9 @@ export const BotNode = memo(function BotNode({ data }: NodeProps) {
   const { source, connCount, connectedAt } = data as BotNodeData;
   const label = describeSource(source);
   const Icon = KIND_ICONS[label.kind];
+  // The auto-switcher shows up twice (it also holds a consumer socket) —
+  // spell out which half this is.
+  const roleTag = label.kind === "auto-switcher" ? "status out" : "producer";
 
   return (
     <div className="rounded-lg border border-purple-500/40 bg-purple-950/40 px-4 py-3 shadow-md min-w-[150px]">
@@ -46,6 +49,8 @@ export const BotNode = memo(function BotNode({ data }: NodeProps) {
           <span className="text-[10px] rounded bg-purple-500/20 px-1 text-purple-300">×{connCount}</span>
         )}
       </div>
+
+      <div className="text-[10px] font-medium uppercase tracking-wider text-purple-400/80 mb-0.5">{roleTag}</div>
 
       {label.subtitle && (
         <div className={cn("text-xs text-purple-300/80 font-mono truncate max-w-[180px]")}>{label.subtitle}</div>
