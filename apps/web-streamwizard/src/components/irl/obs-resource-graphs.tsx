@@ -47,7 +47,7 @@ function MiniChart({ data, dataKey, color, unit }: { data: Sample[]; dataKey: ke
             borderRadius: "6px",
             fontSize: "12px",
           }}
-          formatter={(v: number) => [`${v.toFixed(1)}${unit}`, dataKey.toString().toUpperCase()]}
+          formatter={(v) => [`${Number(v).toFixed(1)}${unit}`, dataKey.toString().toUpperCase()]}
           labelFormatter={() => ""}
         />
         <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={false} isAnimationActive={false} />
