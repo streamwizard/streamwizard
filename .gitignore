@@ -5,7 +5,7 @@ node_modules
 .pnp
 .pnp.js
 
-# MCP server config (contains API keys)
+# MCP server config (can contains API keys)
 .mcp.json
 
 # Local env files
@@ -39,10 +39,31 @@ yarn-error.log*
 
 # Misc
 .DS_Store
+Thumbs.db
 *.pem
+*.swp
+*.swo
+*~
+
+# JetBrains IDEs
+.idea/
 
 # Wrangler local dev state
 .wrangler/
 
 # Mintlify local cache
 .mintlify/
+
+# Claude Code local settings (per-user permission overrides)
+**/.claude/settings.local.json
+
+# VS Code personal/machine-specific settings (tasks.json and extensions.json stay tracked)
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
+
+# TypeScript incremental build info
+*.tsbuildinfo
+
+# Next.js generated type shim (regenerated on every dev/build)
+next-env.d.ts
