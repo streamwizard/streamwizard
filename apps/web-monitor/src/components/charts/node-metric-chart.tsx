@@ -152,7 +152,7 @@ export function NodeMetricChart({ title, initialData, apiPath, dataKey, format =
                 borderRadius: "6px",
                 fontSize: "12px",
               }}
-              formatter={(value: number) => formatValue(value, format, bandwidthUnit)}
+              formatter={(value) => formatValue(Number(value), format, bandwidthUnit)}
               labelFormatter={(t) => formatTime(new Date(t as number).toISOString())}
             />
             <Legend wrapperStyle={{ fontSize: "12px" }} />
