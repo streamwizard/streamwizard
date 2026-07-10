@@ -1,7 +1,14 @@
-import { Clock, Eye, Star, UserPlus, Users } from "lucide-react";
+import { Clock, Eye, Star, Tv, UserPlus, Users } from "lucide-react";
 import { getStatsRowData } from "@/actions/supabase/analytics/stream-stats";
 import { StatCard } from "./StatCard";
 import { formatDuration } from "@/lib/format";
+
+function formatOnAir(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
 
 function numTrend(current: number, previous: number | null) {
   if (previous === null) return undefined;
@@ -30,7 +37,13 @@ export async function StatsRow({ streamId, broadcasterId, startedAt, endedAt }: 
   const { current, previous } = await getStatsRowData(streamId, broadcasterId, startedAt, endedAt);
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <StatCard
+        icon={Tv}
+        label="Time in ads"
+        value={current.adTimeSeconds > 0 ? formatDuration(current.adTimeSeconds) : "—"}
+        trend={durTrend(current.adTimeSeconds || null, previous?.adTimeSeconds || null)}
+      />
       <StatCard
         icon={Eye}
         label="Peak viewers"
@@ -39,14 +52,14 @@ export async function StatsRow({ streamId, broadcasterId, startedAt, endedAt }: 
       />
       <StatCard
         icon={Users}
-        label="Avg viewers"
+        label="Avg. viewers"
         value={current.avgViewers.toLocaleString()}
         trend={numTrend(current.avgViewers, previous?.avgViewers ?? null)}
       />
       <StatCard
         icon={Clock}
-        label="Duration"
-        value={current.durationSeconds != null ? formatDuration(current.durationSeconds) : "—"}
+        label="On air"
+        value={current.durationSeconds != null ? formatOnAir(current.durationSeconds) : "—"}
         trend={durTrend(current.durationSeconds, previous?.durationSeconds ?? null)}
       />
       <StatCard

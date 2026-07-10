@@ -1,37 +1,24 @@
-# @repo/streamwizard-bot
+# streamwizard-bot
 
-The dedicated event processing engine for StreamWizard. This service manages WebSocket connections to Twitch EventSub and handles real-time stream state transitions.
+The chat bot and event processor. It holds a persistent connection to Twitch EventSub, answers chat commands, logs every event, and fans real-time events out to overlays.
 
-## 🚀 Overview
+## What it does
 
-The StreamWizard Bot is responsible for:
+- **Chat commands** — listens to Twitch chat over EventSub and responds via `@repo/twitch-api`. Command lookups go through `@repo/supabase/queries/commands`.
+- **Event processing** — handles follows, subs, gifts, raids, cheers, and stream state changes, validating each payload against shared schemas at the boundary.
+- **Overlay fan-out** — after every non-chat event, `processTwitchEvent` resolves the broadcaster to a user and pushes the event to `ws-server`, which relays it to that user's overlays. Only connects to the WS server if `OVERLAY_WS_URL` is set.
 
-- **WebSocket Event Consumption**: Maintaining a persistent connection to Twitch via AWS/Twitch EventSub WebSockets.
-- **Event Dispatching**: Processing incoming events (follows, subs, bits, stream state changes) and triggering appropriate handlers.
-- **Database Logging**: Recording all incoming Twitch events into Supabase for history and analytics.
-- **Context Management**: Providing shared API instances and context to event handlers.
+## Internal structure
 
-## 🛠 Features
+- `src/handlers/` — registration and dispatch (`eventHandler.ts` is the hub).
+- `src/functions/` — the per-event business logic (what actually happens on a follow, a sub, a raid).
 
-- **Robust Handling**: Designed to handle bursts of events during high-traffic streams.
-- **Pluggable Handlers**: Easy-to-extend registry system for adding new event types.
-- **Type Safety**: Uses shared schemas to validate event payloads at the boundary.
+This is a connect-out service — it dials Twitch and the WS server rather than listening on a port of its own. See the root [`ARCHITECTURE.md`](../../ARCHITECTURE.md) for how it plugs into the event bus.
 
-## 🚀 Running Locally
+## Running locally
 
-From the root directory:
+From the repo root:
 
 ```bash
 bun dev --filter=@repo/streamwizard-bot
 ```
-
-Or from this directory:
-
-```bash
-bun dev
-```
-
-## 📂 Internal Structure
-
-- `src/handlers/`: Contains the registration and dispatch logic for different event providers.
-- `src/functions/`: Business logic for individual event types (e.g., what happens when someone follows).

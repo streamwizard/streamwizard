@@ -11,10 +11,12 @@ export const metadata: Metadata = {
   description: "Login in to your account to access your dashboard.",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const { next } = await searchParams;
+
   return (
-    <div className=" relative hidden  flex-col items-center h-screen justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-      <div className="relative  h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
+    <div className="relative grid min-h-screen flex-col items-center justify-center lg:max-w-none lg:grid-cols-2 lg:px-0">
+      <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
         <div className="absolute inset-0 bg-zinc-900" />
         <div className="z-50 h-full flex justify-center items-center flex-col relative">
           <Image
@@ -46,8 +48,8 @@ export default function LoginPage() {
           </blockquote>
         </div>
       </div>
-      <div className="lg:p-8">
-        <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+      <div className="px-4 py-8 sm:px-8">
+        <div className="mx-auto flex w-full max-w-sm flex-col justify-center space-y-6">
           <div className="flex flex-col space-y-2 text-center">
             <h1 className="text-2xl font-semibold tracking-tight">Login</h1>
             <p className="text-sm text-muted-foreground">
@@ -57,7 +59,7 @@ export default function LoginPage() {
               </Link> */}
             </p>
           </div>
-          <UserAuthForm redirect={null} />
+          <UserAuthForm redirect={next ?? null} />
           <p className="px-8 text-center text-sm text-muted-foreground">
             By clicking continue, you agree to our
             <Link href="/terms-of-service" className="underline underline-offset-4 hover:text-primary">

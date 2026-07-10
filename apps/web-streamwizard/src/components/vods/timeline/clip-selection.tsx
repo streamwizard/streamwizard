@@ -35,6 +35,7 @@ export function ClipSelection({ clipSelection, clipStartPercent, clipEndPercent,
   const handleMiddleTouchStart = (e: React.TouchEvent) => {
     if (!disabled && e.touches.length > 0) {
       e.preventDefault();
+      e.stopPropagation();
       setDragging("middle");
       setDragStartInfo({
         clientX: e.touches[0].clientX,
@@ -55,6 +56,7 @@ export function ClipSelection({ clipSelection, clipStartPercent, clipEndPercent,
   const handleStartTouchStart = (e: React.TouchEvent) => {
     if (!disabled) {
       e.preventDefault();
+      e.stopPropagation();
       setDragging("start");
     }
   };
@@ -70,6 +72,7 @@ export function ClipSelection({ clipSelection, clipStartPercent, clipEndPercent,
   const handleEndTouchStart = (e: React.TouchEvent) => {
     if (!disabled) {
       e.preventDefault();
+      e.stopPropagation();
       setDragging("end");
     }
   };

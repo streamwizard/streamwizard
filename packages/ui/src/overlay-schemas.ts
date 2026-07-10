@@ -20,7 +20,7 @@ const displayFieldLayoutSchema = z.object({
 /** Persisted JSON on `clips_widget` rows (no per-field embed). */
 export const clipsWidgetItemConfigSchema = z.object({
   sourceMode: z.enum(CLIP_SOURCE_MODES),
-  folderIds: z.array(z.number()),
+  folderIds: z.array(z.string()),
   gameIds: z.array(z.string()),
   creatorIds: z.array(z.string()),
   timeWindow: z.union([z.enum(TIME_WINDOW_PRESETS), z.literal("custom")]),

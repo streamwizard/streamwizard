@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartEmptyState } from "@/components/widgets/chart-empty-state";
 import { fetcher, formatTime } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useTimeRange } from "@/lib/time-range-context";
@@ -57,6 +58,9 @@ export function WsConnectionChart({ initialData, rangeHours = 24 }: Props) {
         <CardTitle className="text-base">Connections by Role (opens)</CardTitle>
       </CardHeader>
       <CardContent>
+        {chartData.length === 0 ? (
+          <ChartEmptyState />
+        ) : (
         <ResponsiveContainer width="100%" height={240}>
           <AreaChart data={chartData}>
             <defs>
@@ -90,6 +94,7 @@ export function WsConnectionChart({ initialData, rangeHours = 24 }: Props) {
             <Area type="monotone" dataKey="bot" stroke="var(--chart-3)" fill="url(#gBot)" strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

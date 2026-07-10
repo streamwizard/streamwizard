@@ -6,7 +6,8 @@ import { withSentryConfig } from "@sentry/nextjs";
 const turbopackRoot = path.resolve(__dirname, "../..");
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core", "@repo/metrics"],
+  output: "standalone",
+  transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core", "@repo/metrics", "@repo/alerting"],
   turbopack: {
     root: turbopackRoot,
   },
@@ -17,8 +18,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  tunnelRoute: "/monitoring",
-});
+export default process.env.NODE_ENV === "development"
+  ? nextConfig
+  : withSentryConfig(nextConfig, {
+      silent: !process.env.CI,
+      widenClientFileUpload: true,
+      tunnelRoute: "/monitoring",
+    });

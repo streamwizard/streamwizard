@@ -23,7 +23,7 @@ export async function createTwitchClip(
   return { editUrl: clip.edit_url };
 }
 
-export async function SyncBroadcasterClips(): Promise<{ message: string; success: boolean }> {
+export async function SyncBroadcasterClips(): Promise<{ message: string; success: boolean; skipped?: boolean; lastSync?: string }> {
   const supabase = await createClient();
 
   const {
@@ -43,14 +43,19 @@ export async function SyncBroadcasterClips(): Promise<{ message: string; success
       success: true,
     };
   } catch (error: unknown) {
-    if (axios.isAxiosError<{ skipped: boolean; message: string; success: boolean }>(error)) {
-      const skipped = error.response?.data?.skipped;
-      if (skipped) {
+    if (axios.isAxiosError<{ skipped: boolean; message: string; success: boolean; lastSync?: string }>(error)) {
+      const data = error.response?.data;
+      if (data?.skipped) {
         return {
-          message: error.response?.data?.message || "Error syncing clips",
+          message: data.message || "Already synced recently",
           success: false,
+          skipped: true,
+          lastSync: data.lastSync,
         };
       }
+      console.error("[SyncBroadcasterClips] API error:", error.response?.status, JSON.stringify(error.response?.data ?? {}));
+    } else {
+      console.error("[SyncBroadcasterClips] Unexpected error:", error instanceof Error ? error.message : error);
     }
     return {
       message: "Error syncing clips",

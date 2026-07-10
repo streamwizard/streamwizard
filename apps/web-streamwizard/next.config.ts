@@ -1,4 +1,5 @@
 import "./src/lib/env";
+import path from "path";
 import { withSentryConfig } from "@sentry/nextjs";
 
 function buildCsp(): string {
@@ -9,29 +10,56 @@ function buildCsp(): string {
 
   const directives: string[] = [
     "default-src 'self'",
-    // Next.js App Router inlines hydration scripts; unsafe-inline is required unless nonces are wired up
-    "script-src 'self' 'unsafe-inline'",
-    // Next.js inlines critical styles; Google Fonts stylesheet is fetched at runtime
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    // Next.js App Router requires unsafe-inline for hydration scripts.
+    // Monaco Editor requires unsafe-eval for its language service workers and
+    // loads its core files from jsdelivr CDN (no custom loader is configured).
+    // player.twitch.tv is needed for the Twitch embedded player script.
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://player.twitch.tv https://cdn.jsdelivr.net",
+    // Monaco Editor spawns language workers via blob: URLs
+    "worker-src blob:",
+    // Next.js inlines critical styles; Google Fonts and Monaco (via jsdelivr) load external stylesheets
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net",
     // Google Fonts actual font files
     "font-src 'self' https://fonts.gstatic.com",
-    // Twitch CDN images + data URIs used by the UI
-    "img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv",
-    // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them
+    // Twitch CDN images + our own R2 CDN (e.g. error page gifs) + data URIs used by the UI
+    `img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv https://clips-media-assets2.twitch.tv ${process.env.NEXT_PUBLIC_CDN_URL}`,
+    // R2 CDN for video assets (light mode transition WebM, future overlay assets)
+    `media-src 'self' ${process.env.NEXT_PUBLIC_CDN_URL}`,
+    // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them.
+    // Monaco fetches worker scripts and additional resources from jsdelivr CDN.
     [
       "connect-src 'self'",
       supabaseUrl,
       supabaseWs,
       wsServerUrl,
+      "https://cdn.jsdelivr.net",
+      // Cloud OBS noVNC viewer and obs-websocket controls — connect directly
+      // to the stream-server's OBS container (TODO: hardcoded test IP).
+      "ws://10.10.10.185:6080",
+      "ws://10.10.10.185:4455",
+      // Admin node metrics panel connects directly to obs-instance-manager's
+      // /admin/metrics/stream on the node host, and the admin nodes page
+      // also POSTs directly to its REST API to create test instances
+      // (TODO: hardcoded test IP).
+      "ws://10.10.10.185:3000",
+      "http://10.10.10.185:3000",
+
     ]
       .filter(Boolean)
       .join(" "),
-    "frame-src 'none'",
+    // Twitch embedded player and clips use iframes served from these origins
+    "frame-src https://player.twitch.tv https://clips.twitch.tv",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
-    "upgrade-insecure-requests",
   ];
+
+  // upgrade-insecure-requests would force the Cloud OBS noVNC ws:// connection
+  // to wss://, which the plain-ws websockify on the OBS container can't speak.
+  // TODO: drop this guard once the OBS container is fronted by TLS.
+  if (process.env.NODE_ENV === "production") {
+    directives.push("upgrade-insecure-requests");
+  }
 
   return directives.join("; ");
 }
@@ -39,6 +67,12 @@ function buildCsp(): string {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
+  // Allows accessing the dev server (and its HMR websocket) from the LAN IP
+  // in addition to localhost/127.0.0.1, e.g. when testing from another device.
+  allowedDevOrigins: ["127.0.0.1", "10.10.10.73"],
+  turbopack: {
+    root: path.resolve(__dirname, "../.."),
+  },
   output: "standalone",
   skipTrailingSlashRedirect: true,
   async headers() {
@@ -90,12 +124,26 @@ const nextConfig = {
         protocol: "https",
         hostname: "vod-secure.twitch.tv",
       },
+      {
+        protocol: "https",
+        hostname: "clips-media-assets2.twitch.tv",
+      },
+      ...(process.env.NEXT_PUBLIC_CDN_URL
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: new URL(process.env.NEXT_PUBLIC_CDN_URL).hostname,
+            },
+          ]
+        : []),
     ],
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  silent: !process.env.CI,
-  widenClientFileUpload: true,
-  tunnelRoute: "/monitoring",
-});
+export default process.env.NODE_ENV === "development"
+  ? nextConfig
+  : withSentryConfig(nextConfig, {
+      silent: !process.env.CI,
+      widenClientFileUpload: true,
+      tunnelRoute: "/monitoring",
+    });

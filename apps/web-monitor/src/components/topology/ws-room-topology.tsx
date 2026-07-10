@@ -20,6 +20,7 @@ import "@xyflow/react/dist/style.css";
 import { ArrowLeft, Circle, Zap, ZapOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMonitor } from "@/components/ws-monitor-provider";
+import type { MonitorEnvelope } from "@/lib/monitor-ws";
 import { RoomNode } from "./nodes/room-node";
 import { ConnectionNode } from "./nodes/connection-node";
 import { AnimatedEdge } from "./edges/animated-edge";
@@ -48,7 +49,9 @@ function RoomTopologyInner({ roomId }: { roomId: string }) {
   type EdgeState = { trigger: number; isLast: boolean };
   const [activeEdges, setActiveEdges] = useState<Map<string, EdgeState>>(new Map());
   const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
-  const lastProcessedRef = useRef(0);
+  // Identity-based cursor: events can share a millisecond, so a ts cursor
+  // silently dropped same-ms pulses (see use-edge-animation.ts).
+  const lastHeadRef = useRef<MonitorEnvelope | null>(null);
 
   const activateEdge = useCallback((edgeId: string, delay: number, isLast: boolean) => {
     const timer = setTimeout(() => {
@@ -64,7 +67,13 @@ function RoomTopologyInner({ roomId }: { roomId: string }) {
   }, []);
 
   useEffect(() => {
-    if (!animationEnabled || events.length === 0 || !room) return;
+    if (events.length === 0) return;
+
+    const prevHead = lastHeadRef.current;
+    lastHeadRef.current = events[0] ?? null;
+    // Keep the cursor moving while animation is off so re-enabling doesn't
+    // replay the buffered backlog.
+    if (!animationEnabled || !room) return;
 
     const conns = room.connections ?? [];
     const subEdgeIds = conns
@@ -73,7 +82,7 @@ function RoomTopologyInner({ roomId }: { roomId: string }) {
     const hasSubscribers = subEdgeIds.length > 0;
 
     for (const evt of events) {
-      if (evt.ts <= lastProcessedRef.current) break;
+      if (evt === prevHead) break;
       if (evt.kind !== "message" || evt.roomId !== roomId) continue;
 
       if (evt.role === "publisher" || evt.role === "bot") {
@@ -86,14 +95,12 @@ function RoomTopologyInner({ roomId }: { roomId: string }) {
         }
       }
     }
-
-    const first = events[0];
-    if (first) lastProcessedRef.current = first.ts;
   }, [events, animationEnabled, room, roomId, activateEdge]);
 
   useEffect(() => {
+    const timers = timersRef.current;
     return () => {
-      for (const timer of timersRef.current) clearTimeout(timer);
+      for (const timer of timers) clearTimeout(timer);
     };
   }, []);
 

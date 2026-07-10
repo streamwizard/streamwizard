@@ -6,15 +6,58 @@ export type MonitorEnvelope = {
   ts: number;
   kind: "message" | "connect" | "disconnect" | "room";
   direction: "inbound" | "outbound" | "system";
-  role: "publisher" | "subscriber" | "bot";
+  role: "publisher" | "subscriber" | "bot" | "consumer";
   roomId: string;
   eventType?: string;
   payload?: unknown;
+  /** Bot self-declared identity ("ingest-node:<id>"), when the sender is a bot. */
+  source?: string;
   meta?: {
     subscriberCount?: number;
     hasPublisher?: boolean;
     durationMs?: number;
     sessionId?: string;
+    /** Bot messages: false when no room existed (mirrored for ops anyway). */
+    delivered?: boolean;
+  };
+};
+
+/** Latest bandwidth reading for one ingest node (host NIC totals). */
+export type IngestNodeLive = {
+  nodeId: string;
+  ts: number;
+  rxBps: number;
+  txBps: number;
+  tsRxBps: number;
+  tsTxBps: number;
+};
+
+export type BotConnSnapshot = {
+  connId: string;
+  connectedAt: number;
+  source: string;
+};
+
+export type ConsumerConnSnapshot = {
+  connId: string;
+  connectedAt: number;
+  source: string;
+  /** Message-type filter the consumer subscribed with (empty = everything). */
+  types: string[];
+};
+
+/** Live per-node bandwidth sample forwarded outside the envelope/snapshot flow. */
+export type MonitorNodeBandwidth = {
+  ts: number;
+  kind: "node_bandwidth";
+  source?: string;
+  payload: {
+    node_id: string;
+    ts: number;
+    rx_bytes_per_sec: number;
+    tx_bytes_per_sec: number;
+    tailscale_rx_bytes_per_sec: number;
+    tailscale_tx_bytes_per_sec: number;
   };
 };
 
@@ -45,10 +88,16 @@ export type MonitorSnapshot = {
   kind: "snapshot";
   rooms: RoomSnapshot[];
   totalConnections: number;
+  /** Legacy single-bot view — prefer `bots`. */
   bot: BotSnapshot;
+  bots: BotConnSnapshot[];
+  /** Absent on snapshots from older ws-server builds. */
+  consumers?: ConsumerConnSnapshot[];
+  ingestNodes: IngestNodeLive[];
+  ingestFleet: { rxBps: number; txBps: number; nodeCount: number };
 };
 
-export type MonitorMessage = MonitorEnvelope | MonitorSnapshot;
+export type MonitorMessage = MonitorEnvelope | MonitorSnapshot | MonitorNodeBandwidth;
 
 function isSnapshot(msg: MonitorMessage): msg is MonitorSnapshot {
   return msg.kind === "snapshot";
@@ -106,6 +155,11 @@ export function useMonitorWs(wsUrl: string | null, monitorSecret: string | null)
             setSnapshot(msg);
             return;
           }
+
+          // Per-node bandwidth ticks arrive every ~10s per node — routing them
+          // into the event buffer would flood the live feed. The /ingest live
+          // panel consumes these via its own dedicated hook instead.
+          if (msg.kind === "node_bandwidth") return;
 
           eventCountRef.current++;
 

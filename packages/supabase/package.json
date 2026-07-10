@@ -75,6 +75,46 @@
       "types": "./src/queries/irl.ts",
       "default": "./src/queries/irl.ts"
     },
+    "./queries/ingest": {
+      "types": "./src/queries/ingest.ts",
+      "default": "./src/queries/ingest.ts"
+    },
+    "./queries/obs-nodes": {
+      "types": "./src/queries/obs-nodes.ts",
+      "default": "./src/queries/obs-nodes.ts"
+    },
+    "./queries/ingest-nodes": {
+      "types": "./src/queries/ingest-nodes.ts",
+      "default": "./src/queries/ingest-nodes.ts"
+    },
+    "./queries/subscriptions": {
+      "types": "./src/queries/subscriptions.ts",
+      "default": "./src/queries/subscriptions.ts"
+    },
+    "./queries/discord": {
+      "types": "./src/queries/discord.ts",
+      "default": "./src/queries/discord.ts"
+    },
+    "./queries/discord-activity": {
+      "types": "./src/queries/discord-activity.ts",
+      "default": "./src/queries/discord-activity.ts"
+    },
+    "./queries/tickets": {
+      "types": "./src/queries/tickets.ts",
+      "default": "./src/queries/tickets.ts"
+    },
+    "./queries/alerts": {
+      "types": "./src/queries/alerts.ts",
+      "default": "./src/queries/alerts.ts"
+    },
+    "./queries/alert-rule-config": {
+      "types": "./src/queries/alert-rule-config.ts",
+      "default": "./src/queries/alert-rule-config.ts"
+    },
+    "./queries/alert-notification-config": {
+      "types": "./src/queries/alert-notification-config.ts",
+      "default": "./src/queries/alert-notification-config.ts"
+    },
     "./types/supabase": {
       "types": "./src/types/supabase.ts",
       "default": "./src/types/supabase.ts"
@@ -82,6 +122,10 @@
     "./crypto": {
       "types": "./src/crypto.ts",
       "default": "./src/crypto.ts"
+    },
+    "./queries/query-stats": {
+      "types": "./src/queries/query-stats.ts",
+      "default": "./src/queries/query-stats.ts"
     }
   },
   "scripts": {
@@ -91,7 +135,7 @@
   "dependencies": {
     "@repo/metrics": "workspace:*",
     "@supabase/supabase-js": "^2.105.1",
-    "@supabase/ssr": "^0.8.0"
+    "@supabase/ssr": "^0.12.0"
   },
   "peerDependencies": {
     "next": ">=15.0.0"

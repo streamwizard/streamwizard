@@ -8,6 +8,8 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/discord-api": "workspace:*",
+    "@repo/github-api": "workspace:*",
     "@repo/metrics": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",
@@ -17,13 +19,14 @@
     "@repo/logger": "workspace:*",
     "@sentry/bun": "^10",
     "@sentry/hono": "^10",
-    "@supabase/ssr": "^0.8.0",
+    "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.105.1",
     "hono": "^4.12.21",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bun": "^1.3.6",
+    "@types/node": "^20",
     "@repo/typescript-config": "workspace:*",
     "typescript": "5.9.2"
   }

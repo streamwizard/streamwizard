@@ -4,7 +4,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot --filter=@repo/ws-server --filter=@repo/rest-api",
+    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot --filter=@repo/discord-bot --filter=@repo/ws-server --filter=@repo/rest-api --filter=@repo/alert-worker --filter=@repo/web-monitor --filter=@repo/obs-auto-switcher",
     "dev:monitor": "turbo run dev --filter=@repo/web-monitor",
     "doppler:sync": "bash scripts/sync-doppler-shared.sh",
     "lint": "turbo run lint",
@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "prettier": "^3.7.4",
+    "shadcn": "^4.11.0",
     "turbo": "^2.9.15",
     "typescript": "5.9.2"
   },
