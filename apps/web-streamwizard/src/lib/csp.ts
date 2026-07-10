@@ -40,6 +40,12 @@ export function buildCsp(nonce: string): string {
       // Universal SSL covers just one subdomain level.
       "wss://*.streamwizard.org",
       "https://*.streamwizard.org",
+      // Custom-widget previews render in srcdoc iframes, which inherit this
+      // policy: widgets fetch state from the overlay app and call the weather
+      // and geocoding APIs (see buildWidgetSrcdoc in @repo/ui).
+      process.env.NEXT_PUBLIC_OVERLAY_URL,
+      "https://api.open-meteo.com",
+      "https://nominatim.openstreetmap.org",
     ]
       .filter(Boolean)
       .join(" "),
