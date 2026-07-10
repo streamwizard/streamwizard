@@ -1,5 +1,6 @@
 {
   "name": "twitch-tools",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "build": "turbo run build",

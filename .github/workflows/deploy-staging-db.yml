@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Install Doppler CLI
         uses: dopplerhq/cli-action@4819d808ab99e5cde19a0637a16536a4038fad73 # v4
@@ -38,9 +40,10 @@ jobs:
       - name: Push Migrations to Staging Supabase
         run: |
           FLAGS="--yes"
-          if [ "${{ inputs.include_all }}" = "true" ]; then
+          if [ "$INCLUDE_ALL" = "true" ]; then
             FLAGS="$FLAGS --include-all"
           fi
           doppler run --command="supabase db push --db-url \$SUPABASE_DB_URL $FLAGS"
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
+          INCLUDE_ALL: ${{ inputs.include_all }}
