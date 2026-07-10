@@ -7,14 +7,14 @@ import { homeEnv } from "@repo/alerting/home-env";
 // healthchecks.io, sleep, repeat. Replaces the old curl sidecar + web-monitor
 // /api/alerts/evaluate route. The loop is sequential on purpose — a pass can
 // legitimately take ~35s, and running them back-to-back can never self-overlap.
-// The engine's own Supabase lock guards against a second alerter process.
+// The engine's own Supabase lock guards against a second alert-worker process.
 
 process.on("uncaughtException", (err) => {
-  console.error("[alerter] uncaughtException", err);
+  console.error("[alert-worker] uncaughtException", err);
   Sentry.captureException(err);
 });
 process.on("unhandledRejection", (reason) => {
-  console.error("[alerter] unhandledRejection", reason);
+  console.error("[alert-worker] unhandledRejection", reason);
   Sentry.captureException(reason);
 });
 
@@ -23,11 +23,11 @@ let wakeFromSleep: (() => void) | undefined;
 
 function requestStop(signal: string): void {
   if (stopped) {
-    console.error(`[alerter] second ${signal} — exiting without finishing the pass`);
+    console.error(`[alert-worker] second ${signal} — exiting without finishing the pass`);
     process.exit(1);
   }
   stopped = true;
-  console.log(`[alerter] ${signal} received — stopping after the current pass`);
+  console.log(`[alert-worker] ${signal} received — stopping after the current pass`);
   wakeFromSleep?.();
 }
 process.on("SIGTERM", () => requestStop("SIGTERM"));
@@ -61,13 +61,13 @@ async function ping(suffix = ""): Promise<void> {
 async function tick(): Promise<boolean> {
   try {
     const summary = await runEvaluationPass();
-    console.log(`[alerter] ${new Date().toISOString()} ok ${JSON.stringify(summary)}`);
+    console.log(`[alert-worker] ${new Date().toISOString()} ok ${JSON.stringify(summary)}`);
     await ping();
     return true;
   } catch (err) {
     // runEvaluationPass is fail-open internally; reaching here means the
     // whole pass died (e.g. a bug, not a dependency outage).
-    console.error(`[alerter] ${new Date().toISOString()} FAILED`, err);
+    console.error(`[alert-worker] ${new Date().toISOString()} FAILED`, err);
     Sentry.captureException(err);
     await ping("/fail");
     return false;
@@ -75,7 +75,7 @@ async function tick(): Promise<boolean> {
 }
 
 const once = process.argv.includes("--once");
-console.log(`[alerter] starting env=${homeEnv()} tick=${env.TICK_SECONDS}s${once ? " (single pass)" : ""}`);
+console.log(`[alert-worker] starting env=${homeEnv()} tick=${env.TICK_SECONDS}s${once ? " (single pass)" : ""}`);
 
 if (once) {
   const ok = await tick();
@@ -87,4 +87,4 @@ while (!stopped) {
   await tick();
   if (!stopped) await sleep(env.TICK_SECONDS * 1000);
 }
-console.log("[alerter] stopped");
+console.log("[alert-worker] stopped");

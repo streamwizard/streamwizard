@@ -3,7 +3,9 @@ import { insertIrlGeoTrack } from "@repo/supabase/queries/irl";
 import type { BotOutboundMessage, PublisherMessage } from "@repo/types";
 import { trackWsConnection, trackWsMessage, trackWsMessageDrop, trackWsRoomEvent } from "@repo/metrics";
 import { rooms, broadcastToRoom } from "../rooms";
-import { monitors, broadcastToMonitors, broadcastNodeBandwidth, broadcastSnapshot, sanitizePayload, addBotSocket, removeBotSocket } from "../monitor";
+import { monitors, broadcastToMonitors, broadcastNodeBandwidth, broadcastSnapshot, addBotSocket, removeBotSocket } from "../monitor";
+import { addConsumer, removeConsumer } from "../consumers";
+import { routeBotBroadcast } from "../bot-router";
 import { updateNodeBandwidth } from "../ingest-nodes";
 import type { ConnectionData, ServerWebSocket } from "../types";
 
@@ -39,6 +41,10 @@ export const websocketHandlers = {
       addBotSocket(ws);
       console.log(`[bot] connected source=${ws.data.source ?? "unknown"}`);
       broadcastToMonitors({ ts: Date.now(), kind: "connect", direction: "system", role: "bot", roomId: "_bot", source: ws.data.source });
+    } else if (role === "consumer") {
+      addConsumer(ws);
+      console.log(`[consumer] connected source=${ws.data.source ?? "unknown"} types=${[...(ws.data.consumerTypes ?? [])].join(",") || "*"}`);
+      broadcastToMonitors({ ts: Date.now(), kind: "connect", direction: "system", role: "consumer", roomId: "_consumer", source: ws.data.source });
     } else {
       const room = rooms.get(userId);
       if (room) {
@@ -68,12 +74,20 @@ export const websocketHandlers = {
   message(ws: ServerWebSocket<ConnectionData>, raw: string | Buffer): void {
     const { role, userId, session_id } = ws.data;
 
-    if (role === "monitor") return;
+    // Monitors and consumers are receive-only.
+    if (role === "monitor" || role === "consumer") return;
 
     const rawStr = typeof raw === "string" ? raw : raw.toString();
 
     // --- Bot: node metrics or fan-out to a target user's room ---
     if (role === "bot") {
+      // Re-register on every message (Map.set by connId — effectively free).
+      // The registry fills at open(), but a dev --hot reload resets module
+      // state while sockets stay open: bandwidth state self-heals because
+      // it's message-driven, and without this the bot would stay invisible
+      // in the snapshot/topology until it reconnected.
+      addBotSocket(ws);
+
       let msg: BotOutboundMessage;
       try {
         msg = JSON.parse(rawStr) as BotOutboundMessage;
@@ -83,10 +97,18 @@ export const websocketHandlers = {
         return;
       }
 
-      // Node-scoped metrics: never room-routed — fold into the per-node
-      // bandwidth state (feeds the 5s snapshot) and forward live to monitors.
-      // (`kind` only exists on NodeMetricsMessage, so `in` alone narrows.)
+      // Node-scoped messages: never room-routed. (`kind` only exists on
+      // node-scoped messages, so `in` splits them from fan-out broadcasts.)
       if ("kind" in msg) {
+        // Heartbeat echo — the bot client uses the pong to tell a healthy
+        // link from a half-open TCP connection.
+        if (msg.kind === "ping") {
+          ws.send(JSON.stringify({ kind: "pong", ts: msg.ts }));
+          return;
+        }
+
+        // Metrics fold into the per-node bandwidth state (feeds the 5s
+        // snapshot) and forward live to monitors.
         const p = msg.payload;
         if (typeof p?.node_id !== "string" || p.node_id.length === 0 || typeof p.rx_bytes_per_sec !== "number" || typeof p.tx_bytes_per_sec !== "number") {
           trackWsMessageDrop("bot", "malformed_node_metrics");
@@ -105,27 +127,7 @@ export const websocketHandlers = {
         return;
       }
 
-      trackWsMessage("bot", msg.type ?? "unknown", ws.data.source);
-      const room = rooms.get(msg.userId);
-      // Mirror to monitors even when nobody subscribes — ops needs to see
-      // stream stats for users whose dashboard isn't open. `delivered` tells
-      // the two cases apart.
-      broadcastToMonitors({
-        ts: Date.now(),
-        kind: "message",
-        direction: "inbound",
-        role: "bot",
-        roomId: msg.userId,
-        eventType: msg.type,
-        payload: sanitizePayload(msg.payload),
-        source: ws.data.source,
-        meta: { subscriberCount: room?.subscribers.size ?? 0, delivered: !!room },
-      });
-      if (!room) {
-        trackWsMessageDrop("bot", "room_not_found");
-        return;
-      }
-      broadcastToRoom(room, msg.type, msg.payload);
+      routeBotBroadcast(msg, ws.data.source);
       return;
     }
 
@@ -195,6 +197,13 @@ export const websocketHandlers = {
       removeBotSocket(ws);
       console.log(`[bot] disconnected source=${ws.data.source ?? "unknown"}`);
       broadcastToMonitors({ ts: Date.now(), kind: "disconnect", direction: "system", role: "bot", roomId: "_bot", source: ws.data.source, meta: { durationMs } });
+      return;
+    }
+
+    if (role === "consumer") {
+      removeConsumer(ws);
+      console.log(`[consumer] disconnected source=${ws.data.source ?? "unknown"}`);
+      broadcastToMonitors({ ts: Date.now(), kind: "disconnect", direction: "system", role: "consumer", roomId: "_consumer", source: ws.data.source, meta: { durationMs } });
       return;
     }
 

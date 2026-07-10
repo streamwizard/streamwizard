@@ -25,6 +25,27 @@ export async function getIngestNodeById(client: DBClient, id: string): Promise<I
   return data;
 }
 
+export interface IngestNodeHosts {
+  /** Public IP encoders push their SRT/SRTLA feed to. */
+  public_ip: string | null;
+  /** Tailnet IP a cloud OBS instance pulls the feed from. */
+  tailscale_ip: string | null;
+}
+
+/** The node users' ingest keys resolve to. v1 runs a single ingest node, so
+ * this returns the most recently linked one; when multi-node lands this is the
+ * seam to replace with a per-user assignment lookup. */
+export async function getActiveIngestNodeHosts(client: DBClient): Promise<IngestNodeHosts | null> {
+  const { data } = await client
+    .from("ingest_nodes")
+    .select("public_ip, tailscale_ip")
+    .eq("status", "linked")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data;
+}
+
 // Postgres unique_violation. ingest_nodes.name has a UNIQUE constraint
 // (ingest_nodes_name_key) since the name doubles as the node's hostname --
 // two nodes sharing one would mean two machines claiming the same hostname.

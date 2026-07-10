@@ -5,6 +5,7 @@ import { env } from "@/lib/env";
 import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
+import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest-nodes";
 import { sendDiscordDirectMessage, type DiscordMessagePayload } from "@repo/discord-api";
 import { revalidatePath } from "next/cache";
 import type { Database } from "@repo/supabase";
@@ -19,8 +20,14 @@ function generateStreamKey(): string {
 
 const STREAMWIZARD_BLURPLE = 0x7c5cff;
 
-function ingestKeyDmEmbed(label: string, streamKey: string): DiscordMessagePayload {
-  const host = process.env.NEXT_PUBLIC_INGEST_HOST ?? "your-stream-server";
+/** Public host encoders push to — the linked ingest node's public IP, falling
+ * back to env/placeholder only when no node is linked. Mirrors CloudObsPage. */
+async function resolveIngestHost(adminClient: ReturnType<typeof createAdminClient>): Promise<string> {
+  const hosts = await getActiveIngestNodeHosts(adminClient);
+  return hosts?.public_ip ?? process.env.NEXT_PUBLIC_INGEST_HOST ?? "your-stream-server";
+}
+
+function ingestKeyDmEmbed(label: string, streamKey: string, host: string): DiscordMessagePayload {
   return {
     embeds: [
       {
@@ -65,7 +72,8 @@ async function notifyDiscord(userId: string, label: string, streamKey: string) {
     const discordUserId = await getDiscordUserIdByUserIdMaybe(adminClient, userId);
     if (!discordUserId) return;
 
-    await sendDiscordDirectMessage(discordUserId, ingestKeyDmEmbed(label, streamKey));
+    const host = await resolveIngestHost(adminClient);
+    await sendDiscordDirectMessage(discordUserId, ingestKeyDmEmbed(label, streamKey, host));
   } catch (err) {
     console.error("[ingest-keys] Couldn't DM ingest key to Discord", err);
   }
@@ -95,7 +103,8 @@ export async function sendIngestKeyDiscordDM(id: string): Promise<{ error: strin
   }
 
   try {
-    await sendDiscordDirectMessage(discordUserId, ingestKeyDmEmbed(key.label, key.stream_key));
+    const host = await resolveIngestHost(adminClient);
+    await sendDiscordDirectMessage(discordUserId, ingestKeyDmEmbed(key.label, key.stream_key, host));
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Couldn't send that DM" };
   }

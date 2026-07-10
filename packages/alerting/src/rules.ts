@@ -494,6 +494,23 @@ export function buildRules(overrides: RuleOverrides = {}): AlertRule[] {
       },
       overrides,
     ),
+    thresholdRule(
+      {
+        id: "ingest.ws_broadcast_down",
+        title: "Ingest node WS broadcast link down",
+        // ~45s sustained at the 15s tick — rides out the client's normal
+        // reconnect backoff (caps at 30s) without flapping.
+        forTicks: 3,
+        warn: 1,
+        direction: "below",
+        // The field is 0/1 and only written by nodes that have WS broadcast
+        // configured, so absence (old node version / WS disabled) stays quiet.
+        tunable: false,
+        fetch: (ctx) => hostSystemField(ctx, (f) => f.ws_broadcast_connected),
+        format: (node) => `WS broadcast link from ${node} to ws-server is down`,
+      },
+      overrides,
+    ),
     absenceRule(
       {
         id: "ingest.node_silent",

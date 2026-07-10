@@ -3,7 +3,7 @@
 # the VPS always runs the base file alone.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.local.yml \
-#     --env-file <env file> up --build -d web-monitor alerter
+#     --env-file <env file> up --build -d web-monitor alert-worker
 #
 # ALERT_ENV=dev keeps the engine's home env "dev", which routes every alert
 # to alert_events only — a local run never messages Discord/Telegram.
@@ -37,7 +37,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-  alerter:
+  alert-worker:
     # Skip `doppler run --`; env comes straight from this file.
     entrypoint: ["bun", "run", "start"]
     environment:

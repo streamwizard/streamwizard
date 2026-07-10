@@ -33,6 +33,7 @@ interface ObsIngestSourcesProps {
   onAddToScene: (sceneName: string, inputName: string, url: string) => Promise<void>;
   initialIngestKeys: IngestStreamKey[];
   ingestHost: string;
+  obsPullHost: string;
 }
 
 export function ObsIngestSources({
@@ -42,6 +43,7 @@ export function ObsIngestSources({
   onAddToScene,
   initialIngestKeys,
   ingestHost,
+  obsPullHost,
 }: ObsIngestSourcesProps) {
   const [keys, setKeys] = useState<IngestOutputKey[] | null>(null);
   const [activeKey, setActiveKey] = useState<IngestOutputKey | null>(null);
@@ -67,7 +69,7 @@ export function ObsIngestSources({
     if (!activeKey || !dialogScene || !trimmedName) return;
     setSubmitting(true);
     try {
-      await onAddToScene(dialogScene, trimmedName, obsPullUrl(activeKey.output_key));
+      await onAddToScene(dialogScene, trimmedName, obsPullUrl(obsPullHost, activeKey.output_key));
       setAddedTo((prev) => ({ ...prev, [activeKey.id]: dialogScene }));
       toast.success(`Added "${trimmedName}" to ${dialogScene}`);
       setActiveKey(null);

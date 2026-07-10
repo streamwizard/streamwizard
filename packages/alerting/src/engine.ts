@@ -21,7 +21,7 @@ import { computeTransitions } from "./state";
 import { dispatchNotifications, resolveRoute, type EnvRoute } from "./notify";
 import type { AlertNotification, AlertRule, Breach, Env, EnvContext, Registry, RuleOverrides } from "./types";
 
-const LOCK_NAME = "alerter";
+const LOCK_NAME = "alert-worker";
 // Above the worst legitimate pass (10s probes + 15s rule timeout + persistence)
 // so a running pass is never stolen; low enough that a crashed pass only
 // blocks a couple of 15s ticks.
