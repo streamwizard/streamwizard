@@ -81,7 +81,7 @@ export function WsConnectionDurationChart({ initialData, rangeHours = 24 }: Prop
             <XAxis dataKey="time" tick={{ fontSize: 11 }} />
             <YAxis tick={{ fontSize: 11 }} unit="s" />
             <Tooltip
-              formatter={(value: number) => [`${value}s`, ""]}
+              formatter={(value) => [`${value}s`, ""]}
               contentStyle={{
                 backgroundColor: "var(--card)",
                 border: "1px solid var(--border)",
