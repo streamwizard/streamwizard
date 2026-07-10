@@ -67,7 +67,7 @@ async function findCurrentStreamId(userId: string): Promise<string | null> {
 export async function handleUpgrade(req: Request, server: BunServer): Promise<Response | undefined> {
   const url = new URL(req.url);
 
-  // Liveness probe for the monitoring alerter — plain HTTP, no upgrade.
+  // Liveness probe for the monitoring alert-worker — plain HTTP, no upgrade.
   if (url.pathname === "/health") {
     return Response.json({ ok: true });
   }

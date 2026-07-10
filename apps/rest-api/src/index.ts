@@ -20,7 +20,7 @@ import ingestNodes from "./routes/ingest-nodes";
 
 const app = new Hono();
 
-// Liveness probe for the monitoring alerter — registered before every
+// Liveness probe for the monitoring alert-worker — registered before every
 // middleware so probe traffic never hits Sentry tracing or http_request
 // metrics.
 app.get("/health", (c) => c.json({ ok: true }));

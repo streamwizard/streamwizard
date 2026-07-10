@@ -36,7 +36,7 @@ engine.start();
 
 console.log(`[obs-auto-switcher] running — ${configStore.size} enabled config(s) loaded`);
 
-// Liveness probe (docker healthcheck / alerter).
+// Liveness probe (docker healthcheck / alert-worker).
 Bun.serve({
   port: Number(process.env.PORT ?? 8010),
   fetch(req) {

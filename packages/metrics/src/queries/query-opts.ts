@@ -1,4 +1,4 @@
-// Shared options for query builders. The alerter evaluates every environment
+// Shared options for query builders. The alert-worker evaluates every environment
 // in one pass, so builders must accept an explicit bucket instead of always
 // reading the process-wide INFLUXDB_BUCKET.
 export interface QueryOpts {

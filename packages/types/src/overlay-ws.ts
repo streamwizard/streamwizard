@@ -167,6 +167,20 @@ export interface NodeMetricsMessage {
   payload: IngestNodeBandwidthPayload;
 }
 
+// App-level heartbeat: bot sockets are otherwise send-only, so without a
+// reply the client can't tell a healthy link from a half-open TCP connection.
+export interface BotPingMessage {
+  kind: "ping";
+  /** Epoch ms at send time; echoed back in the pong. */
+  ts: number;
+}
+
+// ws-server's reply to BotPingMessage — the only message a bot ever receives.
+export interface BotPongMessage {
+  kind: "pong";
+  ts: number;
+}
+
 export type OverlaySocketMessage =
   // StreamWizard internal
   | { type: "streamwizard.geo"; status: "connected"; payload: OverlayGeoPayload }
@@ -271,5 +285,6 @@ export interface BotBroadcastMessage {
 }
 
 // Everything a bot socket may send: room-scoped fan-out messages plus
-// node-scoped metrics. Discriminate on `"kind" in msg`.
-export type BotOutboundMessage = BotBroadcastMessage | NodeMetricsMessage;
+// node-scoped metrics and heartbeats. `"kind" in msg` splits fan-out from
+// node-scoped; discriminate the rest on `msg.kind`.
+export type BotOutboundMessage = BotBroadcastMessage | NodeMetricsMessage | BotPingMessage;

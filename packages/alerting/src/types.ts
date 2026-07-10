@@ -21,7 +21,7 @@ export interface ProbeResult {
   latencyMs: number;
 }
 
-/** The slice of an obs_nodes / ingest_nodes row the alerter needs. */
+/** The slice of an obs_nodes / ingest_nodes row the alert-worker needs. */
 export interface RegistryNode {
   id: string;
   name: string;

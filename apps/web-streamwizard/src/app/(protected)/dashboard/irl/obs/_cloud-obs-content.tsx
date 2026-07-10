@@ -42,10 +42,11 @@ interface CloudObsContentProps {
   plan: ProductAccess["plan"];
   initialIngestKeys: IngestStreamKey[];
   ingestHost: string;
+  obsPullHost: string;
   autoSwitcherConfig: AutoSwitcherConfigRow | null;
 }
 
-export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, ingestHost, autoSwitcherConfig }: CloudObsContentProps) {
+export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, ingestHost, obsPullHost, autoSwitcherConfig }: CloudObsContentProps) {
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [apiUrl, setApiUrl] = useState<string | null>(null);
   const [obsWsPassword, setObsWsPassword] = useState<string | null>(null);
@@ -272,7 +273,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
       const justCreated = justCreatedKeyIdRef.current === primaryKey.id;
       if (justCreated) {
         try {
-          await obs.addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(outputKey.output_key));
+          await obs.addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(obsPullHost, outputKey.output_key));
           justCreatedKeyIdRef.current = null;
           toast.success("Ingest source added to OBS", {
             description: `Your feed is now wired into the "${IRL_SCENE_NAME}" scene.`,
@@ -290,7 +291,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
             label: "Add it",
             onClick: () => {
               obs
-                .addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(outputKey.output_key))
+                .addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(obsPullHost, outputKey.output_key))
                 .then(() =>
                   toast.success("Added to OBS", { description: `Wired into the "${IRL_SCENE_NAME}" scene.` }),
                 )
@@ -308,7 +309,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
     return () => {
       cancelled = true;
     };
-  }, [obs.status, obs.scenes.length, obs.sceneItems, ingestKeys]);
+  }, [obs.status, obs.scenes.length, obs.sceneItems, ingestKeys, obsPullHost]);
 
   // The container is up but OBS never became reachable within the retry budget.
   useEffect(() => {
@@ -649,6 +650,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
                     onAddToScene={obs.addMediaSourceToScene}
                     initialIngestKeys={ingestKeys}
                     ingestHost={ingestHost}
+                    obsPullHost={obsPullHost}
                   />
                 </CardContent>
               </Card>
