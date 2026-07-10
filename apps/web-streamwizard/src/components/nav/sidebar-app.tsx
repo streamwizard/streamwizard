@@ -11,13 +11,15 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@repo/ui";
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@repo/supabase";
 import { User } from "@supabase/supabase-js";
-import { BarChart2, FileVideoCamera, Layers } from "lucide-react";
-import Image from "next/image";
+import { BarChart2, Cloud, FileVideoCamera, Layers, MapPin, Radio, Server, Users } from "lucide-react";
+import { StreamWizardLogo } from "@/components/brand/streamwizard-logo";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { FaDiscord } from "react-icons/fa";
 import { Separator } from "@repo/ui";
 import { DashboardUserNav } from "./dashboard-user-nav";
@@ -27,19 +29,31 @@ import SidebarCommands from "./sidebar-commands";
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User;
   folders: Database["public"]["Tables"]["clip_folders"]["Row"][];
+  isAdmin?: boolean;
+  hasCloudObsAccess?: boolean;
 }
 
-export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
+export function AppSidebar({
+  user,
+  folders,
+  isAdmin = false,
+  hasCloudObsAccess = false,
+  ...props
+}: AppSidebarProps) {
+  const { setOpenMobile, isMobile } = useSidebar();
+  const closeMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+  const pathname = usePathname();
+
   return (
     <Sidebar className="h-full" {...props}>
       <SidebarHeader>
         <div className="flex flex-row items-center gap-2 px-4 mt-4 justify-center">
-          <Image
-            src="/logo.png"
-            width={100}
-            height={100}
-            alt="Logo"
-            style={{ width: 100, height: 100 }}
+          <StreamWizardLogo
+            width={160}
+            height={160}
+            style={{ width: 160, height: 160 }}
             priority
           />
         </div>
@@ -53,8 +67,8 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard">
+                <SidebarMenuButton asChild isActive={pathname === "/dashboard"}>
+                  <Link href="/dashboard" onClick={closeMobile}>
                     <BarChart2 className="mr-2 h-4 w-4" />
                     Stream Analytics
                   </Link>
@@ -69,8 +83,8 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/vods">
+                <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/vods")}>
+                  <Link href="/dashboard/vods" onClick={closeMobile}>
                     <FileVideoCamera className="mr-2 h-4 w-4" />
                     Vods
                   </Link>
@@ -80,13 +94,44 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
             <SidebarClips clipFolders={folders} />
           </SidebarGroupContent>
         </SidebarGroup>
+        {hasCloudObsAccess && (
+          <SidebarGroup>
+            <SidebarGroupLabel>IRL</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/irl/obs")}>
+                    <Link href="/dashboard/irl/obs" onClick={closeMobile}>
+                      <Cloud className="mr-2 h-4 w-4" />
+                      Cloud OBS
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/irl/gps")}>
+                    <Link href="/dashboard/irl/gps" onClick={closeMobile}>
+                      <MapPin className="mr-2 h-4 w-4" />
+                      GPS
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+
         <SidebarGroup>
           <SidebarGroupLabel>Overlays</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link href="/dashboard/overlays">
+                <SidebarMenuButton
+                  asChild
+                  isActive={
+                    pathname.startsWith("/dashboard/overlays") || pathname.startsWith("/dashboard/widgets")
+                  }
+                >
+                  <Link href="/dashboard/overlays" onClick={closeMobile}>
                     <Layers className="mr-2 h-4 w-4" />
                     Overlay Editor
                   </Link>
@@ -102,6 +147,40 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
             <SidebarCommands />
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {isAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Admin</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/admin/nodes")}>
+                    <Link href="/dashboard/admin/nodes" onClick={closeMobile}>
+                      <Server className="mr-2 h-4 w-4" />
+                      Nodes
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/admin/ingest-nodes")}>
+                    <Link href="/dashboard/admin/ingest-nodes" onClick={closeMobile}>
+                      <Radio className="mr-2 h-4 w-4" />
+                      Ingest Nodes
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/admin/subscriptions")}>
+                    <Link href="/dashboard/admin/subscriptions" onClick={closeMobile}>
+                      <Users className="mr-2 h-4 w-4" />
+                      Subscriptions
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <SidebarFooter>
@@ -110,7 +189,7 @@ export function AppSidebar({ user, folders, ...props }: AppSidebarProps) {
               <Link
                 href={discordInviteLink}
                 target="_blank"
-                className="items flex h-8 w-full select-none items-center justify-between rounded-md pl-3 pr-3 text-sm text-muted-foreground transition hover:cursor-pointer hover:bg-border/50 "
+                className="items flex h-8 w-full select-none items-center justify-between rounded-md pl-3 pr-3 text-sm text-sidebar-foreground/80 transition hover:cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
                 <div className="flex flex-row items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full ">

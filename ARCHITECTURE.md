@@ -118,21 +118,15 @@ There are two transport types:
 - **Conduit** — WebSocket-based, always registered.
 - **Webhook** — HTTP callback to `rest-api`, skipped when `NODE_ENV=development` because Twitch requires HTTPS. Covers `stream.online`, `stream.offline`, and `channel.update`.
 
-### Clip Sync Worker (`apps/clip-sync`)
-
-Long-running worker with two loops:
-- `hourly-sync`: Polls all broadcaster integrations and syncs recent clips via `@repo/twitch-api`.
-- `pending-clips`: Polls `pending_clips` rows (clips being processed by Twitch), retries until ready, then upserts into `clips`.
-
-Both functions use `supabase` from `@repo/supabase` and query functions from `@repo/supabase/queries/*`.
-
-### SMP Bridge (`apps/smp-bridge`)
-
-Bridges Twitch EventSub events to a Minecraft server. Uses `supabase` from `@repo/supabase` for reading SMP action configurations (`@repo/supabase/queries/smp`) and tracking player online status.
-
 ### Twitch Chat Bot (`apps/streamwizard-bot`)
 
 Connects to Twitch chat via EventSub and responds to commands. Uses `supabase` from `@repo/supabase` for command lookups (via `@repo/supabase/queries/commands`) and `@repo/twitch-api` for chat messages.
+
+### Discord Bot (`apps/discord-bot`)
+
+A standalone Discord bot (Bun + discord.js v14). Commands (`src/commands/`) and gateway event listeners (`src/events/`) are auto-discovered by `src/handlers/` at startup — adding a file is enough, no manual registration. Slash commands still need to be pushed to Discord via `bun run deploy-commands` after they change. See the app's own `README.md` for the extension pattern.
+
+Per-command role permissions are configured per-guild via `/permissions set command:<name> role:<@role>`, stored in the `discord_command_permissions` table, and cached in-memory for 5 minutes (`src/lib/permissions.ts`). A command with no rows is open to everyone. `/permissions` itself can only be run by the server owner (checked against `guild.ownerId` in code, since Discord has no "owner" permission flag to delegate to), so there's no bootstrap step.
 
 ## Package Dependencies
 
@@ -156,11 +150,6 @@ apps/rest-api
   ├── @repo/env           — Root env schema for backend config
   └── @repo/schemas       — Zod schemas for EventSub payloads
 
-apps/clip-sync
-  ├── @repo/supabase      — `supabase` singleton + **`queries/clips`**, **`queries/vods`**, **`queries/user`**
-  ├── @repo/twitch-api    — **`TwitchApi`** for clip/video fetching
-  └── @repo/env           — Root env schema
-
 apps/streamwizard-bot
   ├── @repo/supabase      — `supabase` singleton + **`queries/commands`**
   ├── @repo/twitch-api    — **`TwitchApi`** for chat messages
@@ -171,10 +160,9 @@ apps/ws-server
   ├── @repo/supabase      — `supabase` singleton + **`queries/overlays`**, **`queries/user`**, **`queries/live-status`**, **`queries/irl`**
   └── @repo/types         — `BotBroadcastMessage`, `OverlayEventType`
 
-apps/smp-bridge
-  ├── @repo/supabase      — `supabase` singleton + **`queries/smp`**
-  ├── @repo/twitch-api    — **`TwitchApi`** for Helix lookups
-  └── @repo/types         — EventSub subscription types
+apps/discord-bot
+  ├── @repo/sentry        — `getSentryOptions` for error tracking
+  └── @repo/supabase      — `supabase` singleton + **`queries/discord`** for the role-permission mapping
 ```
 
 Next.js dashboard code imports **`env`** from **`@repo/env/next`** where the server/client distinction matters, and **`@repo/env`** when matching the canonical schema used by shared packages.

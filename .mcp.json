@@ -2,7 +2,27 @@
   "mcpServers": {
     "doppler": {
       "command": "bunx",
-      "args": ["@dopplerhq/mcp-server"]
+      "args": [
+        "@dopplerhq/mcp-server"
+      ]
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
+    },
+    "todiagram": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@todiagram/todiagram-mcp@latest"
+      ],
+      "env": {
+        "TODIAGRAM_API_KEY": "ffc7ea0e-1e9e-4832-8f1b-853176e53b01"
+      }
     }
   }
 }

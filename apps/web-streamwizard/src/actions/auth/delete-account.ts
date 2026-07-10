@@ -2,19 +2,23 @@
 
 import { getAuthContext } from "@/lib/auth";
 import { getChannelAccessToken } from "@repo/supabase";
-import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
+import { getGuildSettings } from "@repo/supabase/queries/discord";
+import { createAdminClient, supabaseAdmin } from "@repo/supabase/next/admin";
 import { TwitchApi } from "@repo/twitch-api";
 import { redirect } from "next/navigation";
 import axios from "axios";
+import { removeRole } from "@/server/discord/roles";
+import { env } from "@/lib/env";
 
 export async function deleteAccount() {
-  let user, supabase, broadcasterId: string;
+  let user, broadcasterId: string;
   try {
-    ({ user, supabase, broadcasterId } = await getAuthContext());
+    ({ user, broadcasterId } = await getAuthContext());
   } catch {
     return { success: false, error: "Unauthorized" };
   }
-
+  const supabase = createAdminClient();
   // Revoke the Twitch access token so it is immediately invalidated.
   // This cannot remove the app from the user's Twitch authorized connections
   // UI — they must do that manually from Twitch Settings → Connections.
@@ -22,7 +26,10 @@ export async function deleteAccount() {
     const accessToken = await getChannelAccessToken(broadcasterId);
     await axios.post(
       "https://id.twitch.tv/oauth2/revoke",
-      new URLSearchParams({ client_id: process.env.TWITCH_CLIENT_ID!, token: accessToken }),
+      new URLSearchParams({
+        client_id: process.env.TWITCH_CLIENT_ID!,
+        token: accessToken,
+      }),
       { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
     );
   } catch {
@@ -34,10 +41,30 @@ export async function deleteAccount() {
   // keep counting against quota until explicitly removed.
   try {
     const eventsub = new TwitchApi().eventsub;
-    const { data: subscriptions } = await eventsub.getSubscriptions(broadcasterId);
-    await Promise.all(subscriptions.map((sub) => eventsub.deleteSubscription(sub.id, broadcasterId)));
+    const { data: subscriptions } =
+      await eventsub.getSubscriptions(broadcasterId);
+    await Promise.all(
+      subscriptions.map((sub) =>
+        eventsub.deleteSubscription(sub.id, broadcasterId),
+      ),
+    );
   } catch {
     // Non-fatal: proceed with data deletion even if cleanup fails.
+  }
+
+  // Best-effort: revoke the Verified Member role directly via the bot before
+  // wiping the integration row, since deleting the account doesn't remove
+  // the user from the Discord server itself. A failure here must not block
+  // account deletion.
+  try {
+    const { data: integration } = await getDiscordIntegrationByUserId(supabase, user.id);
+    const settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
+    if (integration?.discord_user_id && settings?.verified_role_id) {
+      await removeRole(integration.discord_user_id, settings.verified_role_id);
+    }
+  } catch (revokeErr) {
+    const { captureException } = await import("@sentry/nextjs");
+    captureException(revokeErr);
   }
 
   const { error: rpcError } = await supabase.rpc("delete_user_data", {
@@ -45,8 +72,10 @@ export async function deleteAccount() {
   });
   if (rpcError) return { success: false, error: rpcError.message };
 
-  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
+  const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
+    user.id,
+  );
   if (authError) return { success: false, error: authError.message };
 
-  redirect("/");
+  redirect("/goodbye");
 }

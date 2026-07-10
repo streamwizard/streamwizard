@@ -1,93 +1,37 @@
-# StreamWizard Backend Tools
+# StreamWizard
 
-StreamWizard.org is the ultimate toolkit for Twitch broadcasters, designed to enhance stream interactivity, automate content creation, and provide deep analytics. This repository contains the core backend infrastructure that powers the StreamWizard ecosystem.
+[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/29Eq659egv)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
-## 🚀 Overview
+Your stream, organized. Clips, chat, overlays, and analytics — finally in one place, instead of seven browser tabs and a Notion doc you stopped updating in March.
 
-This repository houses the core backend services and shared logic for Twitch integrations. It's built as a monorepo using [Turborepo](https://turbo.build/) and [Bun](https://bun.sh/).
+## What is StreamWizard?
 
-### Core Features
+StreamWizard is a toolkit for Twitch streamers. Sort your clips into folders, run overlays straight in OBS, wire up a chat bot, and get analytics that actually tell you something — without bouncing between five different tools to do it.
 
-- **Twitch EventSub Management**: Robust handling of real-time Twitch events (follows, subs, raids).
-- **VOD & Clip Management**: Automated synchronization and organization of Twitch content.
-- **Interactive SMP Bridge**: Real-time integration between Twitch events and Minecraft servers.
-- **Shared Architecture**: Centralized types, configurations, and API clients used across all StreamWizard services.
+This repo is the whole thing, open source under the MIT license: the dashboard streamers log into, the OBS overlays, the Twitch bot, the APIs, and the real-time event bus that ties them all together.
 
-## 📁 Repository Structure
+## Quick Links
 
-```text
-.
-├── apps/
-│   ├── rest-api/         # Hono-based API for frontend and webhooks
-│   ├── streamwizard-bot/  # Dedicated bot for processing Twitch events
-│   └── smp-bridge/       # Twitch-to-SMP integration service
-└── packages/
-    ├── twitch-api/       # Shared Twitch Helix API client
-    ├── supabase/         # Shared database client and helpers
-    ├── logger/           # Centralized logging utilities
-    ├── types/           # Shared TypeScript interfaces (Helix, EventSub, etc)
-    ├── env/             # Type-safe environment variable management
-    ├── schemas/         # Zod validation schemas
-    └── typescript-config/# Shared TS configuration
-```
+- **Open the app** — [streamwizard.org](https://streamwizard.org)
+- **Docs** — [docs.streamwizard.org](https://docs.streamwizard.org)
+- **Discord** — [join the community](https://discord.gg/29Eq659egv)
+- **Report a bug** — [open an issue](https://github.com/streamwizard/streamwizard/issues)
+- **Contributing** — [CONTRIBUTING.md](./CONTRIBUTING.md)
+- **Architecture** — [ARCHITECTURE.md](./ARCHITECTURE.md)
 
-## 🛠 Tech Stack
+## Built with
 
-- **Runtime**: [Bun](https://bun.sh/)
-- **Monorepo Manager**: [Turborepo](https://turbo.build/)
-- **Framework**: [Hono](https://hono.dev/)
-- **Database**: [Supabase](https://supabase.com/) / PostgreSQL
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Validation**: [Zod](https://zod.dev/)
+[Bun](https://bun.sh/), [Turborepo](https://turbo.build/), [Next.js](https://nextjs.org/), [Hono](https://hono.dev/), [Supabase](https://supabase.com/), and [TypeScript](https://www.typescriptlang.org/) top to bottom.
 
-## 🏁 Getting Started
+## Contributing
 
-### Prerequisites
+Want to fix a bug, add a feature, or just poke around the code? Everything you need — how the monorepo is laid out, how to run it locally, and how to open a PR — is in [CONTRIBUTING.md](./CONTRIBUTING.md). Never opened a PR before? That guide starts from zero.
 
-- [Bun](https://bun.sh/docs/installation) installed on your machine.
-- A Twitch Developer Application for client IDs and secrets.
-- A Supabase project for data storage.
+Not a coder but found something broken? [Open an issue](https://github.com/streamwizard/streamwizard/issues), or use the StreamWizard bot in [Discord](https://discord.gg/29Eq659egv) — `/bug`, `/feature`, `/docs`, and `/perf` file it for you without leaving chat.
 
-### Installation
+## License
 
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/streamwizard/streamwizard-backend.git
-   cd streamwizard-backend
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   bun install
-   ```
-
-3. Set up environment variables:
-   Create a `.env` in the root and configure the necessary keys as defined in `@repo/env`.
-
-4. Run development mode:
-   ```bash
-   bun dev
-   ```
-
-## 📜 Available Scripts
-
-- `bun dev`: Starts all applications in development mode.
-- `bun build`: Builds all applications for production.
-- `bun lint`: Runs linting across the entire workspace.
-- `bun format`: Formats code using Prettier.
-- `bun check-types`: Validates TypeScript types across all packages.
-
-## 🐛 Reporting issues
-
-Found a bug? Something's slow? Docs are wrong? You have two options — pick whichever is less annoying:
-
-- **GitHub** — [open an issue](https://github.com/streamwizard/streamwizard/issues) using one of the templates
-- **Discord** — use the StreamWizard bot in the [community server](https://discord.gg/29Eq659egv). `/bug`, `/feature`, `/docs`, and `/perf` create the GitHub issue for you without leaving Discord
-
-Both routes end up in the same place.
-
-## 📄 License
-
-This project is licensed under the MIT License.
+MIT. See [`LICENSE`](./LICENSE).
+</content>
+</invoke>

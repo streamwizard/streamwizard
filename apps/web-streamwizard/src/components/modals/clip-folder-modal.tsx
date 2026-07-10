@@ -29,11 +29,13 @@ const formSchema = z.object({
 
 interface Props {
   user_id: string;
-  folder_id?: number;
+  folder_id?: string;
   folder_name?: string;
+  parent_folder_id?: string;
+  parent_folder_name?: string;
 }
 
-export function ClipFolderModal({ user_id, folder_id, folder_name }: Props) {
+export function ClipFolderModal({ user_id, folder_id, folder_name, parent_folder_id, parent_folder_name }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { closeModal } = useModal();
 
@@ -66,31 +68,46 @@ export function ClipFolderModal({ user_id, folder_id, folder_name }: Props) {
         }
       );
     } else {
-      toast.promise(createClipFolder(values.name, user_id), {
-        loading: "Creating folder...",
-        success: "Folder created successfully!",
-        error: "Failed to create folder.",
-        finally() {
-          setIsSubmitting(false);
-          closeModal();
+      toast.promise(
+        async () => {
+          const res = await createClipFolder(values.name, user_id, parent_folder_id);
+          if (!res.success) {
+            throw new Error(res.message);
+          }
+          return res.message;
         },
-      });
+        {
+          loading: "Creating folder...",
+          success: "Folder created successfully!",
+          error: (error) => (error instanceof Error ? error.message : "Failed to create folder."),
+          finally() {
+            setIsSubmitting(false);
+            closeModal();
+          },
+        }
+      );
     }
   }
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-[960px]">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-full sm:w-[480px]">
         <FormField
           control={form.control}
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Folder Name</FormLabel>
+              <FormLabel>{folder_id ? "Folder Name" : parent_folder_name ? "Subfolder Name" : "Folder Name"}</FormLabel>
               <FormControl>
-                <Input placeholder="My New Folder" {...field} />
+                <Input placeholder={parent_folder_name ? `Inside ${parent_folder_name}` : "My New Folder"} {...field} />
               </FormControl>
-              <FormDescription>Enter a name for your new folder.</FormDescription>
+              <FormDescription>
+                {folder_id
+                  ? "Enter a new name for this folder."
+                  : parent_folder_name
+                    ? `This subfolder will be created inside "${parent_folder_name}".`
+                    : "Enter a name for your new folder."}
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -102,7 +119,7 @@ export function ClipFolderModal({ user_id, folder_id, folder_name }: Props) {
               {folder_id ? "Updating..." : "Creating..."}
             </>
           ) : (
-            <>{folder_id ? "Rename Folder" : "Create Folder"}</>
+            <>{folder_id ? "Rename Folder" : parent_folder_name ? "Create Subfolder" : "Create Folder"}</>
           )}
         </Button>
       </form>

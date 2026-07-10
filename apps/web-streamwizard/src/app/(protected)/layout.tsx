@@ -1,20 +1,15 @@
-import { createClient } from "@repo/supabase/next/server";
 import { SessionProvider } from "@/providers/session-provider";
-import { redirect } from "next/navigation";
+import { PreferencesInitializer } from "@/components/global/preferences-initializer";
+import { getSession } from "@/lib/session";
 import React from "react";
 
 export default async function layout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
+  const session = await getSession();
 
-  if (error) {
-    console.log(error);
-    redirect("/login");
-  }
-
-  if (!data || !data.user) {
-    redirect("/login");
-  }
-
-  return <SessionProvider session={data.user}>{children}</SessionProvider>;
+  return (
+    <SessionProvider session={session.user}>
+      <PreferencesInitializer preferences={session.preferences} />
+      {children}
+    </SessionProvider>
+  );
 }

@@ -1,0 +1,145 @@
+import {
+  queryObsNodeCpu,
+  queryObsNodeRam,
+  queryObsNodeGpuUtil,
+  queryObsNodeVram,
+  queryObsNodeInstanceCount,
+  queryObsNodeBandwidth,
+  queryObsNodeSnapshot,
+  queryObsInstanceSnapshot,
+} from "@repo/metrics";
+import type { ObsNodeSnapshot, ObsInstanceSnapshot } from "@repo/metrics";
+import type { NodeMetricPoint } from "@/components/charts/node-metric-chart";
+import { NodeMetricChart } from "@/components/charts/node-metric-chart";
+import { ObsNodeTable } from "@/components/charts/obs-node-table";
+import { ObsInstanceTable } from "@/components/charts/obs-instance-table";
+import { NodeFleetTable } from "@/components/charts/node-fleet-table";
+import { StatCard } from "@/components/widgets/stat-card";
+import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
+import { getFleet, type FleetNode } from "@/lib/node-fleet";
+
+export const dynamic = "force-dynamic";
+
+export default async function ObsDashboard() {
+  let nodeCpu: NodeMetricPoint[] = [];
+  let nodeRam: NodeMetricPoint[] = [];
+  let nodeGpu: NodeMetricPoint[] = [];
+  let nodeVram: NodeMetricPoint[] = [];
+  let nodeInstanceCount: NodeMetricPoint[] = [];
+  let nodeRx: NodeMetricPoint[] = [];
+  let nodeTx: NodeMetricPoint[] = [];
+  let nodeSnapshot: ObsNodeSnapshot[] = [];
+  let instanceSnapshot: ObsInstanceSnapshot[] = [];
+
+  let registeredIds: Set<string> | null = null;
+  let fleet: FleetNode[] = [];
+  try {
+    fleet = await getFleet("obs");
+  } catch {
+    // registry unreachable — table renders its empty state
+  }
+  try {
+    [nodeCpu, nodeRam, nodeGpu, nodeVram, nodeInstanceCount, nodeRx, nodeTx, nodeSnapshot, instanceSnapshot, registeredIds] =
+      await Promise.all([
+        queryObsNodeCpu("24h", "1h"),
+        queryObsNodeRam("24h", "1h"),
+        queryObsNodeGpuUtil("24h", "1h"),
+        queryObsNodeVram("24h", "1h"),
+        queryObsNodeInstanceCount("24h", "1h"),
+        queryObsNodeBandwidth("rx", "24h", "1h"),
+        queryObsNodeBandwidth("tx", "24h", "1h"),
+        queryObsNodeSnapshot(),
+        queryObsInstanceSnapshot(),
+        getRegisteredNodeIds("obs_nodes"),
+      ]);
+  } catch {
+    // InfluxDB not available — show empty state
+  }
+
+  // Influx keeps points from deleted nodes until they age out of the range;
+  // show only nodes that still exist in the registry, labeled by name.
+  const nodeNames = new Map(fleet.map((n) => [n.id, n.name]));
+  nodeCpu = labelNodes(filterToRegistered(nodeCpu, registeredIds, (p) => p.nodeId), nodeNames);
+  nodeRam = labelNodes(filterToRegistered(nodeRam, registeredIds, (p) => p.nodeId), nodeNames);
+  nodeGpu = labelNodes(filterToRegistered(nodeGpu, registeredIds, (p) => p.nodeId), nodeNames);
+  nodeVram = labelNodes(filterToRegistered(nodeVram, registeredIds, (p) => p.nodeId), nodeNames);
+  nodeInstanceCount = labelNodes(filterToRegistered(nodeInstanceCount, registeredIds, (p) => p.nodeId), nodeNames);
+  nodeRx = labelNodes(filterToRegistered(nodeRx, registeredIds, (p) => p.nodeId), nodeNames);
+  nodeTx = labelNodes(filterToRegistered(nodeTx, registeredIds, (p) => p.nodeId), nodeNames);
+  nodeSnapshot = labelNodes(filterToRegistered(nodeSnapshot, registeredIds, (n) => n.nodeId), nodeNames);
+  instanceSnapshot = labelNodes(filterToRegistered(instanceSnapshot, registeredIds, (i) => i.nodeId), nodeNames);
+
+  const totalRunning = nodeSnapshot.reduce((acc, n) => acc + n.runningInstanceCount, 0);
+  const totalCapacity = nodeSnapshot.reduce((acc, n) => acc + n.maxInstances, 0);
+  const totalVramUsed = nodeSnapshot.reduce((acc, n) => acc + n.vramUsedMb, 0);
+  const totalVramCapacity = nodeSnapshot.reduce((acc, n) => acc + n.vramTotalMb, 0);
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-xl font-semibold">OBS Nodes</h1>
+        <p className="text-sm text-muted-foreground mt-0.5">Last 24 hours · refreshes every 30s</p>
+      </div>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Fleet</h2>
+        <div className="grid grid-cols-4 gap-4">
+          <StatCard
+            title="Nodes"
+            value={registeredIds === null ? nodeSnapshot.length : `${nodeSnapshot.length} / ${registeredIds.size}`}
+            description={registeredIds === null ? "Reporting host metrics" : "Reporting / registered"}
+          />
+          <StatCard
+            title="Running Instances"
+            value={`${totalRunning} / ${totalCapacity}`}
+            description="Across all nodes"
+          />
+          <StatCard
+            title="VRAM"
+            value={`${totalVramUsed.toFixed(0)} / ${totalVramCapacity.toFixed(0)} MB`}
+            description="Used vs total across nodes"
+          />
+          <StatCard
+            title="Utilization"
+            value={totalCapacity > 0 ? `${((totalRunning / totalCapacity) * 100).toFixed(0)}%` : "—"}
+            description="Instance capacity used"
+          />
+        </div>
+        <NodeFleetTable initialData={fleet} apiPath="/api/metrics/obs" title="Registered Nodes" />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Host Resources</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <NodeMetricChart title="CPU %" initialData={nodeCpu} apiPath="/api/metrics/obs" dataKey="nodeCpu" format="percent" />
+          <NodeMetricChart title="RAM Used (MB)" initialData={nodeRam} apiPath="/api/metrics/obs" dataKey="nodeRam" />
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">GPU</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <NodeMetricChart title="GPU Utilization %" initialData={nodeGpu} apiPath="/api/metrics/obs" dataKey="nodeGpu" format="percent" />
+          <NodeMetricChart title="VRAM Used (MB)" initialData={nodeVram} apiPath="/api/metrics/obs" dataKey="nodeVram" />
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Instances & Bandwidth</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <NodeMetricChart title="Running Instances" initialData={nodeInstanceCount} apiPath="/api/metrics/obs" dataKey="nodeInstanceCount" />
+          <NodeMetricChart title="Bandwidth In" initialData={nodeRx} apiPath="/api/metrics/obs" dataKey="nodeRx" format="bytesPerSec" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <NodeMetricChart title="Bandwidth Out" initialData={nodeTx} apiPath="/api/metrics/obs" dataKey="nodeTx" format="bytesPerSec" />
+        </div>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Fleet Detail</h2>
+        <ObsNodeTable initialData={nodeSnapshot} />
+        <ObsInstanceTable initialData={instanceSnapshot} />
+      </section>
+    </div>
+  );
+}

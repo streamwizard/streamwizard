@@ -31,22 +31,31 @@ export function AnimatedEdge({
   const { isLast = true, dotColor = "#60a5fa", trigger = 0 } = (data ?? {}) as AnimatedEdgeData;
 
   const [dots, setDots] = useState<Dot[]>([]);
-  const lastTriggerRef = useRef(trigger);
-
-  if (trigger !== lastTriggerRef.current && trigger > 0) {
-    lastTriggerRef.current = trigger;
-    const dotId = ++globalDotId;
-    setDots((prev) => [...prev, { id: dotId, isLast }]);
-  }
+  const lastTriggerRef = useRef(0);
+  // Every dot gets its own removal timer. A shared "remove the latest" timer
+  // cancelled earlier dots' cleanup whenever pulses overlapped, leaving them
+  // frozen at the end of the edge (animateMotion fill="freeze").
+  const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
 
   useEffect(() => {
-    if (dots.length === 0) return;
-    const latest = dots[dots.length - 1]!;
+    if (trigger === 0 || trigger === lastTriggerRef.current) return;
+    lastTriggerRef.current = trigger;
+
+    const dotId = ++globalDotId;
+    setDots((prev) => [...prev, { id: dotId, isLast }]);
     const timer = setTimeout(() => {
-      setDots((prev) => prev.filter((d) => d.id !== latest.id));
+      timersRef.current.delete(timer);
+      setDots((prev) => prev.filter((d) => d.id !== dotId));
     }, DOT_LIFETIME_MS);
-    return () => clearTimeout(timer);
-  }, [dots.length]);
+    timersRef.current.add(timer);
+  }, [trigger, isLast]);
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      for (const timer of timers) clearTimeout(timer);
+    };
+  }, []);
 
   const [edgePath] = getSmoothStepPath({
     sourceX,

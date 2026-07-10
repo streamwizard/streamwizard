@@ -16,12 +16,13 @@ interface StatCardProps {
 
 export function StatCard({ icon: Icon, label, value, trend }: StatCardProps) {
   return (
-    <Card className="flex flex-col gap-2 p-4">
+    <Card className="relative flex flex-col gap-2 overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4 transition-colors hover:border-white/[0.12]">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-purple-500/20 to-transparent" />
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         <Icon className="h-3.5 w-3.5 shrink-0" />
         {label}
       </div>
-      <p className="text-2xl font-bold tracking-tight">{value}</p>
+      <p className="font-mono text-xl font-bold tabular-nums tracking-tight sm:text-2xl">{value}</p>
       {trend && (
         <div
           className={

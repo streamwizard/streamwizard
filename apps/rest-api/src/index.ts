@@ -10,18 +10,27 @@ import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
 import { rawBodyMiddleware } from "./middleware/raw-body";
 import { twitchEventSubVerification } from "./middleware/twitch-eventsub";
+import { githubWebhookVerification } from "./middleware/github-webhook";
 import { supabaseMiddleware, supabaseAuth } from "./middleware/auth";
 import { handleTwitchEventSub } from "./routes/twitch-eventsub";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
+import { handleGithubWebhook } from "./handlers/github";
+import nodes from "./routes/nodes";
+import ingestNodes from "./routes/ingest-nodes";
 
 const app = new Hono();
+
+// Liveness probe for the monitoring alert-worker — registered before every
+// middleware so probe traffic never hits Sentry tracing or http_request
+// metrics.
+app.get("/health", (c) => c.json({ ok: true }));
 
 // ============================================
 // SECURITY MIDDLEWARE (Applied in order)
 // ============================================
 
 // Sentry must be first — sets up tracing and Hono's onError capture
-if (process.env.SENTRY_DSN) {
+if (process.env.SENTRY_DSN && process.env.NODE_ENV !== "development") {
   app.use("*", sentry(app, {
     ...getSentryOptions({ dsn: process.env.SENTRY_DSN, service: "rest-api" }),
     integrations: [createSupabaseIntegration(Sentry)],
@@ -65,6 +74,24 @@ app.post(
   handleTwitchEventSub,
 );
 
+// GitHub Webhook Handler (currently: ticket → issue sync; dispatches on event type
+// in handleGithubWebhook, so future GitHub App features can share this endpoint)
+app.post(
+  "/webhooks/github",
+  rawBodyMiddleware(),
+  githubWebhookVerification(),
+  handleGithubWebhook,
+);
+
+// Node claim handshake -- called by obs-instance-manager's install script
+// from a fresh, untrusted VM with a one-time token, no Supabase session
+// involved. Registered before the cookie/CORS-oriented "/api/*" middleware
+// below so it doesn't inherit either, same as the webhook route above.
+app.route("/api/nodes", nodes);
+
+// Same rationale as above, for ingest-server's install script.
+app.route("/api/ingest-nodes", ingestNodes);
+
 // ============================================
 // API ROUTES (User-facing)
 // ============================================
@@ -91,6 +118,7 @@ app.get("/api/clips/sync-status", supabaseAuth(), syncStatusHandler);
 
 Bun.serve({
   fetch: app.fetch,
+  hostname: "0.0.0.0",
   port: Number(process.env.PORT ?? 8080),
 });
 

@@ -12,6 +12,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChartEmptyState } from "@/components/widgets/chart-empty-state";
 import { fetcher, formatTime } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useTimeRange } from "@/lib/time-range-context";
@@ -75,6 +76,9 @@ export function WsMessageChart({ initialData, rangeHours = 24 }: Props) {
         <CardTitle className="text-base">Messages by Role & Type</CardTitle>
       </CardHeader>
       <CardContent>
+        {chartData.length === 0 ? (
+          <ChartEmptyState />
+        ) : (
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -94,6 +98,7 @@ export function WsMessageChart({ initialData, rangeHours = 24 }: Props) {
             ))}
           </BarChart>
         </ResponsiveContainer>
+        )}
       </CardContent>
     </Card>
   );

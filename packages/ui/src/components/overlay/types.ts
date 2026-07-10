@@ -80,7 +80,7 @@ export interface ClipDisplayFieldLayout {
 /** Persisted on the main clip `overlay_items` row only (clip source + playback; no per-field data). */
 export interface ClipsWidgetItemConfig {
   sourceMode: ClipSourceMode;
-  folderIds: number[];
+  folderIds: string[];
   gameIds: string[];
   creatorIds: string[];
   timeWindow: TimeWindowPreset | "custom";

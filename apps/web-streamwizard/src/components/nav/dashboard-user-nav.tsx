@@ -1,7 +1,7 @@
 "use client";
 import { LinkIcon, LogOut, Moon, MoreHorizontal, Sun } from "lucide-react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
+import { useThemeTransition } from "@/hooks/use-theme-transition";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui";
 import {
@@ -20,7 +20,7 @@ import { logout } from "@/actions/auth/logout";
 import { resetUser } from "@repo/posthog";
 
 export function DashboardUserNav({ username, profile_img }: { username: string; profile_img: string }) {
-  const { setTheme } = useTheme();
+  const { switchToLight, switchToDark, switchToSystem } = useThemeTransition();
 
   const signOut = async () => {
     resetUser(); // unlink PostHog identity before session is destroyed
@@ -30,7 +30,7 @@ export function DashboardUserNav({ username, profile_img }: { username: string; 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <div className="items flex h-8 w-full select-none items-center justify-between rounded-md pl-3 pr-3 text-sm text-muted-foreground transition hover:cursor-pointer hover:bg-border/50">
+        <div className="items flex h-8 w-full select-none items-center justify-between rounded-md pl-3 pr-3 text-sm text-sidebar-foreground/80 transition hover:cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
           <div className="flex flex-row items-center gap-2.5">
             <Avatar className="h-6 w-6 truncate border border-border">
               <AvatarImage src={profile_img} alt={`@${username}`} />
@@ -71,15 +71,15 @@ export function DashboardUserNav({ username, profile_img }: { username: string; 
               <span className="ml-5">Theme</span>
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              <DropdownMenuItem onClick={() => setTheme("light")} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => switchToLight()} className="cursor-pointer">
                 <Sun className="mr-2 h-3 w-3" />
                 Light
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("dark")} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => switchToDark()} className="cursor-pointer">
                 <Moon className="mr-2 h-3 w-3" />
                 Dark
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("system")} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => switchToSystem()} className="cursor-pointer">
                 <LinkIcon className="mr-2 h-3 w-3" />
                 System
               </DropdownMenuItem>

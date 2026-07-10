@@ -1,0 +1,29 @@
+import { z } from "zod"
+
+const schema = z.object({
+  NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
+
+  // Supabase (service role — config reads, obs_instances/obs_nodes lookups,
+  // stream_events inserts)
+  SUPABASE_URL: z.string().url(),
+  SUPABASE_SECRET_KEY: z.string().min(1),
+
+  // ws-server: consumer feed in (ingest stats + config pushes), bot feed out
+  // (status messages to user rooms)
+  WS_SERVER_URL: z.string().url(),
+  CONSUMER_SECRET: z.string().min(1),
+
+  // obs-instance-manager /internal/* routes (must match the nodes'
+  // INTERNAL_SERVICE_KEY)
+  OBS_MANAGER_INTERNAL_KEY: z.string().min(1),
+
+  // Twitch app credentials for chat notices (@repo/twitch-api app token path)
+  TWITCH_CLIENT_ID: z.string().min(1),
+  TWITCH_CLIENT_SECRET: z.string().min(1),
+
+  // Sentry
+  SENTRY_DSN: z.string().url().optional(),
+  SENTRY_RELEASE: z.string().optional(),
+})
+
+export const env = schema.parse(process.env)
