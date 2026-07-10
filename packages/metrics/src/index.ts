@@ -3,7 +3,7 @@ export { trackTwitchApiRequest, closeMetrics, isMetricsEnabled } from "./twitch-
 export { trackWsConnection, trackWsMessage, trackWsAuthFailure, trackWsMessageDrop, trackWsRoomEvent } from "./ws-metrics";
 export { trackHttpRequest, metricsMiddleware } from "./http-metrics";
 export { trackSupabaseQuery } from "./supabase-metrics";
-export { trackEventSubReceived, trackEventSubRevocation } from "./eventsub-metrics";
+export { trackEventSubReceived, trackEventSubRevocation, trackEventSubConnection } from "./eventsub-metrics";
 export { trackAutoSwitcherEvent } from "./auto-switcher-metrics";
 
 // Query (read) exports — server-only, InfluxDB read path
