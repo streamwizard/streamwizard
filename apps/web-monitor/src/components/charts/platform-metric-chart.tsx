@@ -66,7 +66,7 @@ export function PlatformMetricChart({ title, seriesKey, initialData, unit = "", 
                 borderRadius: "6px",
                 fontSize: "12px",
               }}
-              formatter={(value: number) => [`${value.toFixed(1)}${unit}`, title]}
+              formatter={(value) => [`${Number(value).toFixed(1)}${unit}`, title]}
             />
             {/* An area series needs 2+ points to draw anything — show dots
                 while the series is sparse (young bucket, wide windows). */}
