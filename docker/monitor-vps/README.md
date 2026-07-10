@@ -9,14 +9,14 @@ boxes on their Tailscale IPs.
 | Service | Image | Ports (host) | Role |
 | --- | --- | --- | --- |
 | `web-monitor` | `apps/web-monitor` (Next.js) | internal `3000` | Dashboard (alert state, history, rule + notification config UI) |
-| `alerter` | `apps/alerter` (Bun) | — | The alert engine: self-ticks every 15s, notifies Discord/Telegram, pings healthchecks.io |
+| `alert-worker` | `apps/alert-worker` (Bun) | — | The alert engine: self-ticks every 15s, notifies Discord/Telegram, pings healthchecks.io |
 | `telegraf` | `telegraf` | — | Scrapes Supabase platform metrics (prod + staging) into the per-env Influx buckets |
 | `caddy` | `caddy` | `80`, `443` | TLS for `monitor.streamwizard.org` |
 
 There is **no InfluxDB container** — the existing external instance stays where
 it is. The alert engine is single-env: this deployment runs with the prod
 Doppler config and monitors prod only. A staging deployment elsewhere needs its
-own alerter with its own Doppler config.
+own alert-worker with its own Doppler config.
 
 ## Provisioning runbook
 
@@ -42,9 +42,9 @@ own alerter with its own Doppler config.
      `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `STREAMWIZARD_API_URL`,
      `WS_SERVER_URL` (same value as web-monitor's
      `NEXT_PUBLIC_WS_SERVER_URL`), and optionally `SENTRY_DSN`. Mint a
-     **service token** for `prd` → `ALERTER_DOPPLER_TOKEN` in `.env`.
-     (Locally the alerter runs off the root `dev` config — see
-     `apps/alerter/doppler.yaml`.)
+     **service token** for `prd` → `ALERT_WORKER_DOPPLER_TOKEN` in `.env`.
+     (Locally the alert-worker runs off the root `dev` config — see
+     `apps/alert-worker/doppler.yaml`.)
    - Telegram: create the bot via @BotFather, message it once, then read the
      chat id from `https://api.telegram.org/bot<token>/getUpdates`.
    - Discord: the bot must be in the alerts guild with *Send Messages* +
@@ -53,7 +53,7 @@ own alerter with its own Doppler config.
    resolving before first boot to get its certificate).
 5. **healthchecks.io**: create a check with a 60s period / ~3 min grace and a
    Telegram or email integration — this is the dead-man's switch that fires
-   when the whole VPS (or the alerter) goes dark. Put the ping URL in `.env`.
+   when the whole VPS (or the alert-worker) goes dark. Put the ping URL in `.env`.
 
 ## Run
 
@@ -68,20 +68,20 @@ Update: `git pull && docker compose up --build -d`.
 
 ## Verification
 
-- `docker compose logs alerter` — two consecutive `ok {...}` tick summaries,
+- `docker compose logs alert-worker` — two consecutive `ok {...}` tick summaries,
   and the healthchecks.io check shows pings arriving.
 - `docker compose exec telegraf telegraf --test --config /etc/telegraf/telegraf.conf`
   — prints `node_*` / `pg_*` series with the right `influx_bucket` tag (the
   tag itself is stripped on write). Then confirm points in both buckets via
   the Influx UI.
-- `docker compose stop alerter` → healthchecks.io flips to *down* within its
-  grace period → `docker compose start alerter`.
+- `docker compose stop alert-worker` → healthchecks.io flips to *down* within its
+  grace period → `docker compose start alert-worker`.
 
 ## Tailnet reachability
 
-`alerter` runs on a normal bridge network; Docker masquerades its outbound
+`alert-worker` runs on a normal bridge network; Docker masquerades its outbound
 traffic, so connections to `100.x` tailnet IPs go out via the host's
 `tailscale0` and probes to OBS/ingest boxes just work. If they don't (probe
 rules for nodes report down while `curl http://<tailscale-ip>:8090/health`
-works on the host), the quick fix is `network_mode: host` on the `alerter`
+works on the host), the quick fix is `network_mode: host` on the `alert-worker`
 service — it publishes no ports, so nothing else needs to change.

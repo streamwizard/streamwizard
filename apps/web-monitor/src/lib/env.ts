@@ -22,7 +22,7 @@ export const env = createEnv({
     SUPABASE_SECRET_KEY: z.string().min(1),
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_RELEASE: z.string().optional(),
-    // Alert routing/display — the engine itself runs in apps/alerter; the
+    // Alert routing/display — the engine itself runs in apps/alert-worker; the
     // /alerts UI still reads these for notification defaults and test sends.
     // Next standalone overwrites NODE_ENV=production at startup, so non-prod
     // deployments must state their env explicitly for alert routing.

@@ -19,7 +19,7 @@ const schema = z.object({
   INFLUXDB_ORG: z.string().min(1),
   INFLUXDB_BUCKET: z.string().min(1),
 
-  // Notification channels — optional so a dev alerter (alert_events only)
+  // Notification channels — optional so a dev alert-worker (alert_events only)
   // boots without them.
   ALERT_DISCORD_CHANNEL_ID: z.string().min(1).optional(),
   DISCORD_BOT_TOKEN: z.string().min(1).optional(),

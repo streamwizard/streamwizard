@@ -1,6 +1,6 @@
 // Lazy process.env accessors, read at call time — the same convention as
 // @repo/metrics and @repo/discord-api. Validation belongs to the host app
-// (zod in apps/alerter, t3-env in web-monitor); this module only maps names.
+// (zod in apps/alert-worker, t3-env in web-monitor); this module only maps names.
 // Empty strings count as unset, matching t3-env's emptyStringAsUndefined.
 
 function optional(name: string): string | undefined {
@@ -24,7 +24,7 @@ export const alertConfig = {
   get supabaseUrl() {
     return required("SUPABASE_URL");
   },
-  /** The alerter reads WS_SERVER_URL; the NEXT_PUBLIC_ fallback keeps the
+  /** The alert-worker reads WS_SERVER_URL; the NEXT_PUBLIC_ fallback keeps the
    * web-monitor deployment working without a Doppler rename. */
   get wsServerUrl() {
     return optional("WS_SERVER_URL") ?? optional("NEXT_PUBLIC_WS_SERVER_URL");

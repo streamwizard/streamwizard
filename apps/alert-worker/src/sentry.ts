@@ -6,7 +6,7 @@ import { getSentryOptions, createSupabaseIntegration } from "@repo/sentry";
 // @sentry/core, which routes to this client.
 if (process.env.SENTRY_DSN && process.env.NODE_ENV !== "development") {
   Sentry.init({
-    ...getSentryOptions({ dsn: process.env.SENTRY_DSN, service: "alerter" }),
+    ...getSentryOptions({ dsn: process.env.SENTRY_DSN, service: "alert-worker" }),
     integrations: [createSupabaseIntegration(Sentry)],
   });
   console.log("[sentry] active");

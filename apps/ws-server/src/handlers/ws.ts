@@ -97,10 +97,18 @@ export const websocketHandlers = {
         return;
       }
 
-      // Node-scoped metrics: never room-routed — fold into the per-node
-      // bandwidth state (feeds the 5s snapshot) and forward live to monitors.
-      // (`kind` only exists on NodeMetricsMessage, so `in` alone narrows.)
+      // Node-scoped messages: never room-routed. (`kind` only exists on
+      // node-scoped messages, so `in` splits them from fan-out broadcasts.)
       if ("kind" in msg) {
+        // Heartbeat echo — the bot client uses the pong to tell a healthy
+        // link from a half-open TCP connection.
+        if (msg.kind === "ping") {
+          ws.send(JSON.stringify({ kind: "pong", ts: msg.ts }));
+          return;
+        }
+
+        // Metrics fold into the per-node bandwidth state (feeds the 5s
+        // snapshot) and forward live to monitors.
         const p = msg.payload;
         if (typeof p?.node_id !== "string" || p.node_id.length === 0 || typeof p.rx_bytes_per_sec !== "number" || typeof p.tx_bytes_per_sec !== "number") {
           trackWsMessageDrop("bot", "malformed_node_metrics");
