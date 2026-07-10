@@ -36,9 +36,6 @@ export const env = createEnv({
     STREAMWIZARD_API_URL: z.string().url().optional(),
   },
   client: {
-    // Canonical origin for auth redirects (request.url reports the bind
-    // address under Next standalone). Falls back to Host headers when unset.
-    NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
     NEXT_PUBLIC_WS_SERVER_URL: z.string().min(1).optional(),
     NEXT_PUBLIC_MONITOR_SECRET: z.string().min(1).optional(),
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -63,7 +60,6 @@ export const env = createEnv({
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
-    NEXT_PUBLIC_BASE_URL: process.env.NEXT_PUBLIC_BASE_URL,
     NEXT_PUBLIC_WS_SERVER_URL: process.env.NEXT_PUBLIC_WS_SERVER_URL,
     NEXT_PUBLIC_MONITOR_SECRET: process.env.NEXT_PUBLIC_MONITOR_SECRET,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

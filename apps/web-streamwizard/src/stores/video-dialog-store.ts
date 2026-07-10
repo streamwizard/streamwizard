@@ -6,6 +6,7 @@ import type { TimelineEvent, TimelineSegment, TimelineSegmentType } from "@/comp
 import type { Database } from "@repo/supabase";
 import { StreamEventType, type Clip } from "@/types/stream-events";
 import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
+import { openTwitchUrl } from "@/lib/utils/open-twitch-url";
 import { TwitchVideo, parseDuration, type TwitchStreamMarker } from "@/types/twitch-video";
 import { create } from "zustand";
 import { toast } from "sonner";
@@ -513,7 +514,7 @@ export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
         action: data.editUrl
           ? {
               label: "View Clip",
-              onClick: () => window.open(data.editUrl, "_blank"),
+              onClick: () => openTwitchUrl(data.editUrl),
             }
           : undefined,
         description: "It may take a few seconds for the clip to be available.",

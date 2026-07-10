@@ -35,6 +35,17 @@ export function resolveWidgetTemplate(
   return { resolvedHtml: replace(html), resolvedCss: replace(extraCss) };
 }
 
+// srcdoc iframes inherit the embedding page's CSP. The dashboard serves a
+// nonce-based script-src without 'unsafe-inline', so every script tag below
+// (inline and CDN) must carry the page's nonce to execute there. The nonce
+// content attribute is hidden from the DOM, but the IDL property on any of
+// Next's own nonce'd scripts still exposes it. Under the overlay app's
+// 'unsafe-inline' policy the attribute is inert, so stamping is always safe.
+function documentNonce(): string {
+  if (typeof document === "undefined") return "";
+  return document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
+}
+
 export function buildWidgetSrcdoc(
   html: string,
   js: string,
@@ -45,6 +56,7 @@ export function buildWidgetSrcdoc(
 ): string {
   const { resolvedHtml, resolvedCss } = resolveWidgetTemplate(html, extraCss, fields, fieldValues);
   const stateUrl = overlayOrigin ? JSON.stringify(`${overlayOrigin}/api/widgets/state`) : "null";
+  const nonce = documentNonce();
   const connectSrc = [
     overlayOrigin,
     "https://api.open-meteo.com",
@@ -55,10 +67,10 @@ export function buildWidgetSrcdoc(
 <head>
   <meta name="color-scheme" content="normal">
   <meta http-equiv="Content-Security-Policy" content="connect-src ${connectSrc}">
-  <script src="https://cdn.tailwindcss.com"><\/script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"><\/script>
-  <script>
+  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/script>
+  <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>
+  <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"><\/script>
+  <script nonce="${nonce}">
     console.log('[widget] gsap:', typeof gsap, '| TextPlugin:', typeof TextPlugin);
     gsap.registerPlugin(TextPlugin);
   <\/script>
@@ -70,7 +82,7 @@ export function buildWidgetSrcdoc(
 </head>
 <body style="background:transparent!important;background-color:transparent!important">
   ${resolvedHtml}
-  <script>
+  <script nonce="${nonce}">
     document.documentElement.style.background = 'transparent';
     document.body.style.background = 'transparent';
     window.StreamWizard = { stateUrl: ${stateUrl} };

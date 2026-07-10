@@ -11,21 +11,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { getActiveOverlaySceneBySlug, getOverlayItemById, getAllOverlayItemsByScene } from "@repo/supabase/queries/overlays";
 import { getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
 import { getClipFolderJunctions, getOverlayClips } from "@repo/supabase/queries/clips";
+import { overlayCorsHeaders } from "@/lib/overlay-cors";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
-
-export async function OPTIONS() {
-  return new NextResponse(null, { status: 204, headers: CORS_HEADERS });
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, { status: 204, headers: overlayCorsHeaders(request) });
 }
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const CORS_HEADERS = overlayCorsHeaders(request);
   try {
     const { slug } = await params;
     const itemId = request.nextUrl.searchParams.get("itemId");

@@ -1,6 +1,7 @@
 {
   "name": "@repo/discord-bot",
   "version": "0.0.0",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "doppler run --config dev_discord_bot -- bun --preload ./src/sentry.ts --hot src/index.ts",

@@ -1,6 +1,7 @@
 {
   "name": "@repo/alert-worker",
   "version": "0.0.0",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "doppler run --config dev -- bun --preload ./src/sentry.ts --hot src/index.ts",

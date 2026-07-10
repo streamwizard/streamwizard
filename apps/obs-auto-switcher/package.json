@@ -1,6 +1,7 @@
 {
   "name": "@repo/obs-auto-switcher",
   "version": "0.0.0",
+  "license": "MIT",
   "private": true,
   "scripts": {
     "dev": "doppler run --config dev_obs_auto_switcher -- bun --preload ./src/sentry.ts --hot src/index.ts",
