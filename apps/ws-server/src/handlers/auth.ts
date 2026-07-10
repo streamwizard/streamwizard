@@ -5,15 +5,52 @@ import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlay
 import { getLiveStreamIdByBroadcasterId } from "@repo/supabase/queries/live-status";
 import { getIrlCollectorTokenUserId, touchIrlCollectorToken } from "@repo/supabase/queries/irl";
 import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
-import type { OverlayEventType } from "@repo/types";
+import type { BotBroadcastMessage, OverlayEventType } from "@repo/types";
 import { trackWsAuthFailure } from "@repo/metrics";
 import { isRateLimited } from "../rate-limit";
 import { rooms } from "../rooms";
+import { routeBotBroadcast } from "../bot-router";
 import type { ConnectionData } from "../types";
 
 type BunServer = import("bun").Server<ConnectionData>;
 
-const VALID_ROLES = new Set(["publisher", "subscriber", "bot", "monitor"]);
+const VALID_ROLES = new Set(["publisher", "subscriber", "bot", "monitor", "consumer"]);
+
+function isValidSecret(candidate: string | null | undefined, secret: string): boolean {
+  const candidateBuf = Buffer.from(candidate ?? "");
+  const secretBuf = Buffer.from(secret);
+  return candidateBuf.length === secretBuf.length && timingSafeEqual(candidateBuf, secretBuf);
+}
+
+// Server-to-server injection of a bot-shaped broadcast over plain HTTP —
+// lets web server actions push config/override changes to the consumer feed
+// (and the user's room) with a fetch instead of a WS handshake.
+async function handleInternalBroadcast(req: Request): Promise<Response> {
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+  if (!env.CONSUMER_SECRET) {
+    return new Response("Not Found", { status: 404 });
+  }
+  const key = req.headers.get("authorization")?.replace("Bearer ", "");
+  if (!isValidSecret(key, env.CONSUMER_SECRET)) {
+    trackWsAuthFailure("bot", "invalid_bot_key");
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  let msg: BotBroadcastMessage;
+  try {
+    msg = (await req.json()) as BotBroadcastMessage;
+  } catch {
+    return new Response("Bad Request: invalid JSON", { status: 400 });
+  }
+  if (typeof msg.userId !== "string" || msg.userId.length === 0 || typeof msg.type !== "string" || msg.type.length === 0) {
+    return new Response("Bad Request: userId and type are required", { status: 400 });
+  }
+
+  const { delivered } = routeBotBroadcast(msg, "internal-http");
+  return Response.json({ ok: true, delivered });
+}
 
 let nextConnId = 1;
 
@@ -30,9 +67,13 @@ async function findCurrentStreamId(userId: string): Promise<string | null> {
 export async function handleUpgrade(req: Request, server: BunServer): Promise<Response | undefined> {
   const url = new URL(req.url);
 
-  // Liveness probe for the monitoring alerter — plain HTTP, no upgrade.
+  // Liveness probe for the monitoring alert-worker — plain HTTP, no upgrade.
   if (url.pathname === "/health") {
     return Response.json({ ok: true });
+  }
+
+  if (url.pathname === "/internal/broadcast") {
+    return handleInternalBroadcast(req);
   }
 
   if (url.pathname !== "/ws") {
@@ -86,6 +127,40 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     });
     if (!upgraded) {
       trackWsAuthFailure("bot", "upgrade_failed");
+      return new Response("Upgrade Failed", { status: 500 });
+    }
+    return undefined;
+  }
+
+  // --- Consumer (trusted server-side firehose: obs-auto-switcher) ---
+  if (role === "consumer") {
+    if (!env.CONSUMER_SECRET) {
+      return new Response("Consumer not configured", { status: 404 });
+    }
+    const key = req.headers.get("authorization")?.replace("Bearer ", "");
+    if (!isValidSecret(key, env.CONSUMER_SECRET)) {
+      trackWsAuthFailure("consumer", "invalid_bot_key");
+      return new Response("Unauthorized", { status: 401 });
+    }
+    const rawSource = url.searchParams.get("source");
+    const source = rawSource && /^[a-zA-Z0-9:_.-]{1,64}$/.test(rawSource) ? rawSource : "unknown";
+    const rawTypes = url.searchParams.get("types");
+    const consumerTypes = rawTypes
+      ? new Set(rawTypes.split(",").map((s) => s.trim()).filter((s) => s.length > 0))
+      : new Set<string>();
+    const upgraded = server.upgrade(req, {
+      data: {
+        role: "consumer" as const,
+        userId: "_consumer",
+        source,
+        consumerTypes,
+        channels: new Set<OverlayEventType>(),
+        connectedAt: Date.now(),
+        connId: `c-${nextConnId++}`,
+      },
+    });
+    if (!upgraded) {
+      trackWsAuthFailure("consumer", "upgrade_failed");
       return new Response("Upgrade Failed", { status: 500 });
     }
     return undefined;

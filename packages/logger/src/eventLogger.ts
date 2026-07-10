@@ -77,6 +77,33 @@ class StreameventsLogger {
 
     return await this.logEvent(streamEvent);
   }
+
+  // log a StreamWizard-internal event (e.g. obs.scene_switch from the
+  // auto-switcher). stream_id/offset_seconds only exist while the
+  // broadcaster is live on Twitch, so this returns false (no insert, no
+  // throw) when they're offline — callers keep their own log regardless.
+  public async logStreamwizardEvent(event: { broadcaster_id: string; event_type: string; event_data: any; metadata?: any }): Promise<boolean> {
+    const streamId = await this.getStreamId(event.broadcaster_id);
+    if (!streamId) return false;
+
+    let offset: number;
+    try {
+      offset = await this.getOffset(event.broadcaster_id);
+    } catch {
+      return false;
+    }
+
+    await this.logEvent({
+      broadcaster_id: event.broadcaster_id,
+      event_type: event.event_type,
+      event_data: event.event_data,
+      metadata: event.metadata ?? {},
+      provider: "streamwizard",
+      stream_id: streamId,
+      offset_seconds: offset,
+    });
+    return true;
+  }
 }
 
 export const streamEventsLogger = new StreameventsLogger();

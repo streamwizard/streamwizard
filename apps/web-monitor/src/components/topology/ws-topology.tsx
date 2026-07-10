@@ -27,6 +27,7 @@ import { ServerNode } from "./nodes/server-node";
 import { RoomNode } from "./nodes/room-node";
 import { ConnectionNode } from "./nodes/connection-node";
 import { BotNode } from "./nodes/bot-node";
+import { ConsumerNode } from "./nodes/consumer-node";
 import { AnimatedEdge } from "./edges/animated-edge";
 import { useEffect } from "react";
 
@@ -35,6 +36,7 @@ const nodeTypes: NodeTypes = {
   roomNode: RoomNode,
   connectionNode: ConnectionNode,
   botNode: BotNode,
+  consumerNode: ConsumerNode,
 };
 
 const edgeTypes: EdgeTypes = {
@@ -173,6 +175,7 @@ function TopologyInner() {
                 if (node.type === "serverNode") return "#60a5fa";
                 if (node.type === "roomNode") return "#4ade80";
                 if (node.type === "botNode") return "#a855f7";
+                if (node.type === "consumerNode") return "#fb923c";
                 return "#a1a1aa";
               }}
               className="!bg-card !border-border"

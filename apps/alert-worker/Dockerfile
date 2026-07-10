@@ -1,6 +1,6 @@
 # This Dockerfile expects the Docker build context to be the repository root.
 # Runs on the monitoring VPS via docker/monitor-vps/docker-compose.yml:
-# - Docker File: apps/alerter/Dockerfile
+# - Docker File: apps/alert-worker/Dockerfile
 # - Docker Context Path: .
 
 # ============================================
@@ -48,9 +48,9 @@ COPY --from=deps --chown=bun:bun /app/package.json ./
 COPY --from=deps --chown=bun:bun /app/packages ./packages
 
 # Only this app (with its node_modules) — not the other apps
-COPY --from=deps --chown=bun:bun /app/apps/alerter ./apps/alerter
+COPY --from=deps --chown=bun:bun /app/apps/alert-worker ./apps/alert-worker
 
-WORKDIR /app/apps/alerter
+WORKDIR /app/apps/alert-worker
 
 USER bun
 

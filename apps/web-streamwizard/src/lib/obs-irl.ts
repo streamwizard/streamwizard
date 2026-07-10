@@ -15,8 +15,9 @@ export const ALERTS_SCENE_NAME = "_alerts";
 // out of scene pickers even though it isn't `_`/`-` prefixed.
 export const WELCOME_SCENE_NAME = "Welcome (Delete me)";
 
-/** The SRT URL an OBS Media Source uses to pull a feed from the ingest server. */
-export function obsPullUrl(outputKey: string) {
-  const host = process.env.NEXT_PUBLIC_OBS_PULL_HOST ?? "your-ingest-tailscale-ip";
+/** The SRT URL an OBS Media Source uses to pull a feed from the ingest server.
+ * `host` is the ingest node's tailnet IP, resolved server-side from the linked
+ * node and threaded down (see CloudObsPage). */
+export function obsPullUrl(host: string, outputKey: string) {
   return `srt://${host}:9000?streamid=${outputKey}&latency=4000`;
 }

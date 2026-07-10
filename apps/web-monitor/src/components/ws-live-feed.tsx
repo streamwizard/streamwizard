@@ -23,6 +23,7 @@ const ROLE_COLORS: Record<string, string> = {
   publisher: "bg-blue-600/20 text-blue-400 border-blue-600/30",
   subscriber: "bg-green-600/20 text-green-400 border-green-600/30",
   bot: "bg-purple-600/20 text-purple-400 border-purple-600/30",
+  consumer: "bg-orange-600/20 text-orange-400 border-orange-600/30",
 };
 
 const KIND_COLORS: Record<string, string> = {
@@ -43,7 +44,7 @@ function formatTs(ts: number): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", fractionalSecondDigits: 1 } as Intl.DateTimeFormatOptions);
 }
 
-type RoleFilter = "all" | "publisher" | "subscriber" | "bot";
+type RoleFilter = "all" | "publisher" | "subscriber" | "bot" | "consumer";
 type KindFilter = "all" | "message" | "connect" | "disconnect" | "room";
 
 export function WsLiveFeed() {
@@ -106,6 +107,7 @@ export function WsLiveFeed() {
               <SelectItem value="publisher">Publisher</SelectItem>
               <SelectItem value="subscriber">Subscriber</SelectItem>
               <SelectItem value="bot">Bot</SelectItem>
+              <SelectItem value="consumer">Consumer</SelectItem>
             </SelectContent>
           </Select>
           <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as KindFilter)}>
@@ -188,8 +190,8 @@ export function WsLiveFeed() {
                         <Badge variant="outline" className={cn("text-[10px] justify-center", KIND_COLORS[event.kind])}>
                           {event.kind}
                         </Badge>
-                        <Badge variant="outline" className={cn("text-[10px] justify-center", ROLE_COLORS[event.role])}>
-                          {event.role}
+                        <Badge variant="outline" className={cn("text-[10px] justify-center truncate", ROLE_COLORS[event.role])}>
+                          {event.source ?? event.role}
                         </Badge>
                         <span className="truncate font-mono text-xs">{event.eventType ?? "—"}</span>
                         <span className="truncate text-xs text-muted-foreground font-mono">{event.roomId}</span>

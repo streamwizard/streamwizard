@@ -89,13 +89,21 @@ import type {
   UserAuthorizationRevokeEvent,
   UserUpdateEvent,
   UserWhisperMessageEvent,
+  // obs-auto-switcher
+  AutoSwitcherStatus,
+  AutoSwitcherConfig,
 } from "@repo/schemas";
 
 export type { OverlayGeoPayload, OverlayStatusPayload };
 
 export type StreamWizardEventType =
   | "streamwizard.geo"
-  | "streamwizard.ingest_stats";
+  | "streamwizard.ingest_stats"
+  // obs-auto-switcher: engine → user room (state/heartbeat for the status card)
+  | "streamwizard.auto_switcher_status"
+  // obs-auto-switcher: web server actions → /internal/broadcast → consumer
+  // feed (config/override changes; payload is the obs_auto_switcher_configs row)
+  | "streamwizard.auto_switcher_config";
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 
@@ -159,11 +167,27 @@ export interface NodeMetricsMessage {
   payload: IngestNodeBandwidthPayload;
 }
 
+// App-level heartbeat: bot sockets are otherwise send-only, so without a
+// reply the client can't tell a healthy link from a half-open TCP connection.
+export interface BotPingMessage {
+  kind: "ping";
+  /** Epoch ms at send time; echoed back in the pong. */
+  ts: number;
+}
+
+// ws-server's reply to BotPingMessage — the only message a bot ever receives.
+export interface BotPongMessage {
+  kind: "pong";
+  ts: number;
+}
+
 export type OverlaySocketMessage =
   // StreamWizard internal
   | { type: "streamwizard.geo"; status: "connected"; payload: OverlayGeoPayload }
   | { type: "streamwizard.geo"; status: "offline" }
   | { type: "streamwizard.ingest_stats"; payload: IngestStatsPayload }
+  | { type: "streamwizard.auto_switcher_status"; payload: AutoSwitcherStatus }
+  | { type: "streamwizard.auto_switcher_config"; payload: AutoSwitcherConfig }
   // Channel
   | { type: "channel.update";                                             payload: ChannelUpdateEvent }
   | { type: "channel.follow";                                             payload: ChannelFollowEvent }
@@ -261,5 +285,6 @@ export interface BotBroadcastMessage {
 }
 
 // Everything a bot socket may send: room-scoped fan-out messages plus
-// node-scoped metrics. Discriminate on `"kind" in msg`.
-export type BotOutboundMessage = BotBroadcastMessage | NodeMetricsMessage;
+// node-scoped metrics and heartbeats. `"kind" in msg` splits fan-out from
+// node-scoped; discriminate the rest on `msg.kind`.
+export type BotOutboundMessage = BotBroadcastMessage | NodeMetricsMessage | BotPingMessage;

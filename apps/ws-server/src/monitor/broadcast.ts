@@ -1,6 +1,7 @@
 import type { ConnectionData, ServerWebSocket } from "../types";
-import type { BotConnSnapshot, ConnectionSnapshot, MonitorEnvelope, MonitorNodeBandwidth, MonitorSnapshot, RoomSnapshot } from "./types";
+import type { BotConnSnapshot, ConnectionSnapshot, ConsumerConnSnapshot, MonitorEnvelope, MonitorNodeBandwidth, MonitorSnapshot, RoomSnapshot } from "./types";
 import { rooms } from "../rooms";
+import { consumers } from "../consumers";
 import { getLiveIngestNodes } from "../ingest-nodes";
 
 export const monitors = new Set<ServerWebSocket<ConnectionData>>();
@@ -100,13 +101,20 @@ export function buildRoomSnapshot(): MonitorSnapshot {
     source: ws.data.source ?? "unknown",
   }));
 
+  const consumerSnapshots: ConsumerConnSnapshot[] = [...consumers].map((ws) => ({
+    connId: ws.data.connId,
+    connectedAt: ws.data.connectedAt,
+    source: ws.data.source ?? "unknown",
+    types: [...(ws.data.consumerTypes ?? [])],
+  }));
+
   const { nodes: ingestNodes, fleet: ingestFleet } = getLiveIngestNodes();
 
   return {
     ts: Date.now(),
     kind: "snapshot",
     rooms: roomSnapshots,
-    totalConnections: totalConnections + bots.length,
+    totalConnections: totalConnections + bots.length + consumerSnapshots.length,
     // Legacy single-bot field, derived so older monitor UIs keep working.
     bot: {
       connected: bots.length > 0,
@@ -114,6 +122,7 @@ export function buildRoomSnapshot(): MonitorSnapshot {
       connectedAt: bots[0]?.connectedAt ?? null,
     },
     bots,
+    consumers: consumerSnapshots,
     ingestNodes,
     ingestFleet,
   };

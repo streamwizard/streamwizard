@@ -14,7 +14,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "@repo/ui";
-import { Play, Square, Wifi, WifiOff, Loader2, Radio, Rocket, AlertTriangle, Gauge, Layers, FolderUp } from "lucide-react";
+import { Play, Square, Wifi, WifiOff, Loader2, Radio, Rocket, AlertTriangle, Gauge, Layers, FolderUp, Repeat } from "lucide-react";
 import { getMyLatestInstanceAction, getInstanceNodeApiUrlAction, getInstanceObsWsPasswordAction, launchMyInstanceAction } from "@/actions/nodes";
 import { mintWsUrl } from "@/lib/ws-ticket";
 import { toggleInstance } from "@/lib/instance-actions";
@@ -32,6 +32,8 @@ import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
 import { cn } from "@repo/ui";
 import type { ProductAccess } from "@/lib/require-product-access";
 import type { IngestStreamKey } from "@/actions/ingest-keys";
+import type { AutoSwitcherConfigRow } from "@/actions/supabase/auto-switcher";
+import { AutoSwitcherTab } from "@/components/irl/auto-switcher/auto-switcher-tab";
 import { listOutputKeys } from "@/actions/ingest-output-keys";
 import { ALERTS_SCENE_NAME, IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl } from "@/lib/obs-irl";
 
@@ -40,9 +42,11 @@ interface CloudObsContentProps {
   plan: ProductAccess["plan"];
   initialIngestKeys: IngestStreamKey[];
   ingestHost: string;
+  obsPullHost: string;
+  autoSwitcherConfig: AutoSwitcherConfigRow | null;
 }
 
-export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, ingestHost }: CloudObsContentProps) {
+export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, ingestHost, obsPullHost, autoSwitcherConfig }: CloudObsContentProps) {
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [apiUrl, setApiUrl] = useState<string | null>(null);
   const [obsWsPassword, setObsWsPassword] = useState<string | null>(null);
@@ -269,7 +273,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
       const justCreated = justCreatedKeyIdRef.current === primaryKey.id;
       if (justCreated) {
         try {
-          await obs.addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(outputKey.output_key));
+          await obs.addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(obsPullHost, outputKey.output_key));
           justCreatedKeyIdRef.current = null;
           toast.success("Ingest source added to OBS", {
             description: `Your feed is now wired into the "${IRL_SCENE_NAME}" scene.`,
@@ -287,7 +291,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
             label: "Add it",
             onClick: () => {
               obs
-                .addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(outputKey.output_key))
+                .addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(obsPullHost, outputKey.output_key))
                 .then(() =>
                   toast.success("Added to OBS", { description: `Wired into the "${IRL_SCENE_NAME}" scene.` }),
                 )
@@ -305,7 +309,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
     return () => {
       cancelled = true;
     };
-  }, [obs.status, obs.scenes.length, obs.sceneItems, ingestKeys]);
+  }, [obs.status, obs.scenes.length, obs.sceneItems, ingestKeys, obsPullHost]);
 
   // The container is up but OBS never became reachable within the retry budget.
   useEffect(() => {
@@ -602,6 +606,10 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
                 <Radio className="h-3.5 w-3.5" />
                 Ingest
               </TabsTrigger>
+              <TabsTrigger value="auto-switcher">
+                <Repeat className="h-3.5 w-3.5" />
+                Auto Switcher
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="sources">
@@ -642,9 +650,19 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
                     onAddToScene={obs.addMediaSourceToScene}
                     initialIngestKeys={ingestKeys}
                     ingestHost={ingestHost}
+                    obsPullHost={obsPullHost}
                   />
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="auto-switcher">
+              <AutoSwitcherTab
+                initialConfig={autoSwitcherConfig}
+                scenes={obs.filteredScenes}
+                sceneItems={obs.sceneItems}
+                obsConnected={obs.status === "open"}
+              />
             </TabsContent>
           </Tabs>
         </div>

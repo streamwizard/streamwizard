@@ -1,3 +1,4 @@
+export * from "./src/auto-switcher";
 export * from "./src/automod";
 export * from "./src/channel";
 export * from "./src/channel-points";

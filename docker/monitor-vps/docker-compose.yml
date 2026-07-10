@@ -1,6 +1,6 @@
 # StreamWizard monitoring VPS — runs on a small dedicated box on the tailnet
-# (NOT Dokploy). Hosts the prod web-monitor (dashboard), the alerter (the
-# self-ticking alert engine from apps/alerter), Telegraf shipping Supabase
+# (NOT Dokploy). Hosts the prod web-monitor (dashboard), the alert-worker (the
+# self-ticking alert engine from apps/alert-worker), Telegraf shipping Supabase
 # platform metrics into InfluxDB, and Caddy terminating TLS for
 # monitor.streamwizard.org.
 #
@@ -28,14 +28,14 @@ services:
   # The alert engine: evaluates rules every TICK_SECONDS and notifies
   # Discord/Telegram. Deliberately independent of web-monitor — dashboard
   # deploys or crashes never take alerting down.
-  alerter:
+  alert-worker:
     build:
       context: ../..
-      dockerfile: apps/alerter/Dockerfile
+      dockerfile: apps/alert-worker/Dockerfile
     environment:
       # Doppler service token for the root prd config — Supabase, Influx,
       # Discord/Telegram, and ALERT_ENV all come from Doppler.
-      DOPPLER_TOKEN: ${ALERTER_DOPPLER_TOKEN}
+      DOPPLER_TOKEN: ${ALERT_WORKER_DOPPLER_TOKEN}
       # Optional healthchecks.io dead-man's switch; pinged on every successful
       # tick, /fail on failures. Leave empty to disable.
       HEALTHCHECKS_PING_URL: ${HEALTHCHECKS_PING_URL:-}
