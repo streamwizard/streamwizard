@@ -44,7 +44,12 @@ export function getSentryOptions(config: SentryConfig) {
   const isProd = process.env.NODE_ENV === "production";
   return {
     dsn: config.dsn,
-    environment: process.env.NODE_ENV ?? "development",
+    // Next's standalone server.js hard-sets NODE_ENV=production at startup,
+    // so staging deployments would report as "production" without an explicit
+    // override — same reason the alerting package has ALERT_ENV (see
+    // packages/alerting/src/home-env.ts). `||` not `??`: build-time env
+    // inlining can turn unset vars into empty strings.
+    environment: process.env.SENTRY_ENVIRONMENT || process.env.ALERT_ENV || process.env.NODE_ENV || "development",
     release: process.env.SENTRY_RELEASE,
     tracesSampleRate: isProd ? 0.1 : 1.0,
     enableLogs: true,
