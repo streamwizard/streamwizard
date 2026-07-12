@@ -1,10 +1,35 @@
 import { NextRequest } from "next/server";
 
+// This proxy exists so OBS can play Twitch's signed clip MP4s (see
+// ClipsWidgetContainer's proxyUrl). Only those CDNs are legitimate upstreams —
+// without the allowlist this is an unauthenticated open proxy (SSRF into
+// internal/metadata endpoints, plus free bandwidth for anyone).
+function isAllowedUpstream(url: URL): boolean {
+  if (url.protocol !== "https:") return false;
+  const host = url.hostname;
+  return (
+    host === "twitchcdn.net" ||
+    host.endsWith(".twitchcdn.net") ||
+    host === "twitch.tv" ||
+    host.endsWith(".twitch.tv")
+  );
+}
+
 export async function GET(request: NextRequest) {
   const url = request.nextUrl.searchParams.get("url");
 
   if (!url) {
     return new Response("Missing url parameter", { status: 400 });
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return new Response("Invalid url parameter", { status: 400 });
+  }
+  if (!isAllowedUpstream(parsed)) {
+    return new Response("Upstream host not allowed", { status: 403 });
   }
 
   const headers: Record<string, string> = {};
