@@ -4,7 +4,11 @@ import {
   DiscordRateLimitError,
   type DiscordMessagePayload,
 } from "@repo/discord-api";
-import { sendTelegramMessage, escapeTelegramHtml, TelegramRateLimitError } from "@repo/telegram-api";
+import {
+  sendTelegramMessage,
+  escapeTelegramHtml,
+  TelegramRateLimitError,
+} from "@repo/telegram-api";
 import * as Sentry from "@sentry/core";
 import { alertConfig } from "./config";
 import type { AlertNotification, Env, NodeStats } from "./types";
@@ -62,7 +66,9 @@ export function resolveRoute(
   const discordTarget = row.discord_target as DiscordTarget;
   return {
     // The env fallback is a CHANNEL id — never reuse it as a DM user id.
-    discordId: row.discord_channel_id ?? (discordTarget === "channel" ? dflt.discordId : undefined),
+    discordId:
+      row.discord_channel_id ??
+      (discordTarget === "channel" ? dflt.discordId : undefined),
     discordTarget,
     discordSeverity: row.discord_severity as SeverityGate,
     telegramChatId: row.telegram_chat_id ?? dflt.telegramChatId,
@@ -78,39 +84,79 @@ const RESOLVED_COLOR = 0x22c55e;
 
 /** Last-known node stats as inline embed fields (Discord lays them out
  * three per row). Only fields the node actually reports are shown. */
-function statFields(s: NodeStats): { name: string; value: string; inline: boolean }[] {
+function statFields(
+  s: NodeStats,
+): { name: string; value: string; inline: boolean }[] {
   const gb = (mb: number) => (mb / 1024).toFixed(1);
   const pct = (used?: number, total?: number) =>
-    used !== undefined && total !== undefined && total > 0 ? `${((used / total) * 100).toFixed(0)}% (${gb(used)}/${gb(total)} GB)` : undefined;
+    used !== undefined && total !== undefined && total > 0
+      ? `${((used / total) * 100).toFixed(0)}% (${gb(used)}/${gb(total)} GB)`
+      : undefined;
   const entries: [string, string | undefined][] = [
     ["CPU", s.cpuPct !== undefined ? `${s.cpuPct.toFixed(0)}%` : undefined],
     ["RAM", pct(s.memUsedMb, s.memTotalMb)],
-    ["GPU", s.gpuTempC !== undefined ? `${s.gpuTempC.toFixed(0)}°C` : undefined],
+    [
+      "GPU",
+      s.gpuTempC !== undefined ? `${s.gpuTempC.toFixed(0)}°C` : undefined,
+    ],
     ["VRAM", pct(s.vramUsedMb, s.vramTotalMb)],
-    ["Bandwidth", s.bandwidthMbps !== undefined ? `${s.bandwidthMbps.toFixed(1)} Mbps` : undefined],
+    [
+      "Bandwidth",
+      s.bandwidthMbps !== undefined
+        ? `${s.bandwidthMbps.toFixed(1)} Mbps`
+        : undefined,
+    ],
     ["Disk", s.diskPct !== undefined ? `${s.diskPct.toFixed(0)}%` : undefined],
-    ["Instances", s.runningInstances !== undefined && s.maxInstances !== undefined ? `${s.runningInstances}/${s.maxInstances}` : undefined],
+    [
+      "Instances",
+      s.runningInstances !== undefined && s.maxInstances !== undefined
+        ? `${s.runningInstances}/${s.maxInstances}`
+        : undefined,
+    ],
   ];
-  return entries.flatMap(([name, value]) => (value === undefined ? [] : [{ name, value, inline: true }]));
+  return entries.flatMap(([name, value]) =>
+    value === undefined ? [] : [{ name, value, inline: true }],
+  );
 }
 
 function discordPayload(n: AlertNotification): DiscordMessagePayload {
-  const icon = n.kind === "resolved" ? "✅" : n.severity === "crit" ? "🚨" : "⚠️";
-  const label = n.kind === "resolved" ? "resolved" : n.kind === "renotified" ? `still firing (${n.severity})` : n.severity;
-  const firedAtUnix = n.firedAt ? Math.floor(new Date(n.firedAt).getTime() / 1000) : undefined;
+  const icon =
+    n.kind === "resolved" ? "✅" : n.severity === "crit" ? "🚨" : "⚠️";
+  const label =
+    n.kind === "resolved"
+      ? "resolved"
+      : n.kind === "renotified"
+        ? `still firing (${n.severity})`
+        : n.severity;
+  const firedAtUnix = n.firedAt
+    ? Math.floor(new Date(n.firedAt).getTime() / 1000)
+    : undefined;
   const monitorUrl = alertConfig.monitorBaseUrl;
 
   const fields: { name: string; value: string; inline?: boolean }[] = [];
   if (n.node) {
     fields.push({ name: "Node", value: n.node.name, inline: true });
     // Code formatting so the address is tap-to-copy in Discord.
-    if (n.node.address) fields.push({ name: n.node.kind === "ingest" ? "IP" : "API", value: `\`${n.node.address}\``, inline: true });
+    if (n.node.address)
+      fields.push({
+        name: n.node.kind === "ingest" ? "IP" : "API",
+        value: `\`${n.node.address}\``,
+        inline: true,
+      });
   } else if (n.entityId) {
-    fields.push({ name: "Entity", value: n.entityLabel ?? n.entityId, inline: true });
+    fields.push({
+      name: "Entity",
+      value: n.entityLabel ?? n.entityId,
+      inline: true,
+    });
   }
   // <t:...:R> renders as a live relative time ("2 hours ago") in Discord.
   if (firedAtUnix !== undefined) {
-    fields.push({ name: n.kind === "resolved" ? "Was firing since" : "Firing since", value: `<t:${firedAtUnix}:R>`, inline: true });
+    fields.push({
+      name: n.kind === "resolved" ? "Was firing since" : "Firing since",
+      value: `<t:${firedAtUnix}:R>`,
+      inline: true,
+    });
   }
   if (n.node?.stats) fields.push(...statFields(n.node.stats));
 
@@ -119,7 +165,8 @@ function discordPayload(n: AlertNotification): DiscordMessagePayload {
       {
         title: `${icon} [${n.env}] ${n.ruleTitle} — ${label}`,
         description: n.message,
-        color: n.kind === "resolved" ? RESOLVED_COLOR : SEVERITY_COLOR[n.severity],
+        color:
+          n.kind === "resolved" ? RESOLVED_COLOR : SEVERITY_COLOR[n.severity],
         fields,
         // Technical ids stay greppable without cluttering the fields.
         footer: { text: n.entityId ? `${n.ruleId} · ${n.entityId}` : n.ruleId },
@@ -132,7 +179,12 @@ function discordPayload(n: AlertNotification): DiscordMessagePayload {
             {
               type: 1 as const,
               components: [
-                { type: 2 as const, style: 5 as const, label: "Open dashboard", url: `${monitorUrl.replace(/\/$/, "")}/alerts` },
+                {
+                  type: 2 as const,
+                  style: 5 as const,
+                  label: "Open dashboard",
+                  url: `${monitorUrl.replace(/\/$/, "")}/alerts`,
+                },
               ],
             },
           ],
@@ -143,7 +195,12 @@ function discordPayload(n: AlertNotification): DiscordMessagePayload {
 
 function telegramText(n: AlertNotification): string {
   const icon = n.kind === "resolved" ? "✅" : "🚨";
-  const label = n.kind === "resolved" ? "resolved" : n.kind === "renotified" ? "still firing" : "FIRING";
+  const label =
+    n.kind === "resolved"
+      ? "resolved"
+      : n.kind === "renotified"
+        ? "still firing"
+        : "FIRING";
   const entity = n.entityLabel ?? n.entityId;
   const entitySuffix = entity ? ` (${escapeTelegramHtml(entity)})` : "";
   return `${icon} <b>[${n.env}] ${escapeTelegramHtml(n.ruleTitle)}</b>${entitySuffix} — ${label}\n${escapeTelegramHtml(n.message)}`;
@@ -158,10 +215,14 @@ async function withRetries(send: () => Promise<void>): Promise<void> {
     } catch (err) {
       lastError = err;
       const retryAfterS =
-        err instanceof DiscordRateLimitError || err instanceof TelegramRateLimitError
+        err instanceof DiscordRateLimitError ||
+        err instanceof TelegramRateLimitError
           ? err.retryAfterSeconds
           : 2 ** attempt; // 1s, 2s backoff
-      if (attempt < 2) await new Promise((r) => setTimeout(r, Math.min(retryAfterS, 10) * 1000));
+      if (attempt < 2)
+        await new Promise((r) =>
+          setTimeout(r, Math.min(retryAfterS, 10) * 1000),
+        );
     }
   }
   throw lastError;
@@ -180,7 +241,11 @@ export async function dispatchNotifications(
 
   for (const n of notifications) {
     const sends: Promise<void>[] = [];
-    if (route.discordId && alertConfig.discordBotToken && gateAllows(route.discordSeverity, n.severity)) {
+    if (
+      route.discordId &&
+      alertConfig.discordBotToken &&
+      gateAllows(route.discordSeverity, n.severity)
+    ) {
       const discordId = route.discordId;
       const send =
         route.discordTarget === "dm"
@@ -188,9 +253,15 @@ export async function dispatchNotifications(
           : () => sendDiscordChannelMessage(discordId, discordPayload(n));
       sends.push(withRetries(send));
     }
-    if (route.telegramChatId && alertConfig.telegramBotToken && gateAllows(route.telegramSeverity, n.severity)) {
+    if (
+      route.telegramChatId &&
+      alertConfig.telegramBotToken &&
+      gateAllows(route.telegramSeverity, n.severity)
+    ) {
       const chatId = route.telegramChatId;
-      sends.push(withRetries(() => sendTelegramMessage(telegramText(n), { chatId })));
+      sends.push(
+        withRetries(() => sendTelegramMessage(telegramText(n), { chatId })),
+      );
     }
     if (sends.length === 0) continue;
 

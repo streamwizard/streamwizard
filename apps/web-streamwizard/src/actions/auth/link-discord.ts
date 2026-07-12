@@ -34,7 +34,7 @@ export async function linkDiscord(next?: string) {
   });
 
   if (error) {
-    redirect("/error");
+    redirect("/error?code=discord_link");
   }
 
   redirect(data.url);

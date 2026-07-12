@@ -9,8 +9,18 @@ export async function proxy(request: NextRequest) {
   // *response* (so the browser enforces it). A static header without a nonce
   // would need script-src 'unsafe-inline', defeating CSP's XSS protection.
   const nonce = btoa(crypto.randomUUID());
-  const csp = buildCsp(nonce);
+  // Only the widget editor loads Monaco, which needs the policy's weakest
+  // directives ('unsafe-eval', jsdelivr, blob: workers). Grant them just there
+  // so every other page — including public marketing/legal routes — runs the
+  // tighter policy.
+  const needsMonaco = request.nextUrl.pathname.startsWith("/dashboard/widgets/");
+  const csp = buildCsp(nonce, { monaco: needsMonaco });
   request.headers.set("content-security-policy", csp);
+  // Next reads the nonce from the CSP header above for its own inline scripts,
+  // but libraries that inject their own inline <script> (next-themes' anti-flash
+  // script) can't see it. Expose it as a plain header so the root layout can
+  // read it via headers() and forward it to those providers.
+  request.headers.set("x-nonce", nonce);
 
   const response = await updateSession(request);
   // In dev the policy is report-only: nothing is blocked (local test nodes and
