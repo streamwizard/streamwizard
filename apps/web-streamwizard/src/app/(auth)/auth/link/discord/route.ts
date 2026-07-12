@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@repo/supabase/next/server";
+import { reportError } from "@/lib/report-redirect";
 
 export async function GET(request: Request) {
   const origin = new URL(request.url).origin;
@@ -22,6 +23,7 @@ export async function GET(request: Request) {
   });
 
   if (error) {
+    reportError(error, "auth/link/discord: linkIdentity failed");
     return NextResponse.redirect(`${origin}/error?code=discord_link`);
   }
 

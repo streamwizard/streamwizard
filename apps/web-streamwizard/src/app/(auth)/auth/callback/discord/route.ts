@@ -5,6 +5,7 @@ import { linkDiscordIntegration } from "@repo/supabase/queries/user";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { assignRole, DiscordMemberNotFoundError } from "@/server/discord/roles";
 import { env } from "@/lib/env";
+import { reportError } from "@/lib/report-redirect";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
     if (pgError.code === "23505" && pgError.message?.includes("discord_user_id")) {
       return errorRedirect("already_linked");
     }
-    console.log(err);
+    reportError(err, "auth/callback/discord: linkDiscordIntegration failed");
     return errorRedirect("link_failed");
   }
 

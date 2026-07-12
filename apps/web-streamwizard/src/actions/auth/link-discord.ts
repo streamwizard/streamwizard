@@ -10,6 +10,7 @@ import { deleteDiscordIntegration, getDiscordIntegrationByUserId } from "@repo/s
 import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { assignRole, DiscordMemberNotFoundError, removeRole } from "@/server/discord/roles";
 import { env } from "@/lib/env";
+import { reportAndRedirect } from "@/lib/report-redirect";
 
 export async function linkDiscord(next?: string) {
   const supabase = await createClient();
@@ -34,7 +35,7 @@ export async function linkDiscord(next?: string) {
   });
 
   if (error) {
-    redirect("/error?code=discord_link");
+    reportAndRedirect(error, "/error?code=discord_link");
   }
 
   redirect(data.url);
@@ -48,7 +49,7 @@ export async function reassignDiscordRole() {
 
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) {
-    redirect("/error");
+    reportAndRedirect(userError ?? new Error("reassignDiscordRole: no user session"), "/error");
   }
 
   const { data: integration, error: integrationError } = await getDiscordIntegrationByUserId(
@@ -56,7 +57,7 @@ export async function reassignDiscordRole() {
     userData.user.id
   );
   if (integrationError || !integration?.discord_user_id) {
-    redirect("/error");
+    reportAndRedirect(integrationError ?? new Error("reassignDiscordRole: no linked Discord integration"), "/error");
   }
 
   const settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
@@ -83,12 +84,12 @@ export async function unlinkDiscord() {
 
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) {
-    redirect("/error");
+    reportAndRedirect(userError ?? new Error("unlinkDiscord: no user session"), "/error");
   }
 
   const { data: identitiesData, error: identitiesError } = await supabase.auth.getUserIdentities();
   if (identitiesError) {
-    redirect("/error");
+    reportAndRedirect(identitiesError, "/error");
   }
 
   const discordIdentity = identitiesData.identities.find((identity) => identity.provider === "discord");
@@ -103,7 +104,7 @@ export async function unlinkDiscord() {
   if (discordIdentity) {
     const { error: unlinkError } = await supabase.auth.unlinkIdentity(discordIdentity);
     if (unlinkError) {
-      redirect("/error");
+      reportAndRedirect(unlinkError, "/error");
     }
   }
 

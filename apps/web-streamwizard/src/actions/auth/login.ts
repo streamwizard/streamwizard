@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 
 import { createClient } from "@repo/supabase/next/server";
 import { TWITCH_SCOPES } from "@/lib/constant";
+import { reportAndRedirect } from "@/lib/report-redirect";
 
 export async function login(next?: string | null) {
   const supabase = await createClient();
@@ -24,7 +25,7 @@ export async function login(next?: string | null) {
   });
 
   if (error) {
-    redirect("/error?code=auth");
+    reportAndRedirect(error, "/error?code=auth");
   }
 
   redirect(data.url);
@@ -43,7 +44,7 @@ export async function signup(formData: FormData) {
   const { error } = await supabase.auth.signUp(data);
 
   if (error) {
-    redirect("/error");
+    reportAndRedirect(error, "/error");
   }
 
   revalidatePath("/", "layout");
