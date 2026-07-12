@@ -22,11 +22,14 @@ function generateStreamKey(): string {
 
 const STREAMWIZARD_BLURPLE = 0x7c5cff;
 
-/** Public host encoders push to — the linked ingest node's public IP, falling
- * back to env/placeholder only when no node is linked. Mirrors CloudObsPage. */
+/** Public host encoders push to — the linked ingest node's public domain when
+ * ops has set one, else its public IP, falling back to env/placeholder only
+ * when no node is linked. Mirrors CloudObsPage. */
 async function resolveIngestHost(adminClient: ReturnType<typeof createAdminClient>): Promise<string> {
   const hosts = await getActiveIngestNodeHosts(adminClient);
-  return hosts?.public_ip ?? process.env.NEXT_PUBLIC_INGEST_HOST ?? "your-stream-server";
+  return (
+    hosts?.public_hostname ?? hosts?.public_ip ?? process.env.NEXT_PUBLIC_INGEST_HOST ?? "your-stream-server"
+  );
 }
 
 function ingestKeyDmEmbed(label: string, streamKey: string, host: string): DiscordMessagePayload {

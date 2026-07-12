@@ -959,6 +959,7 @@ export type Database = {
           maintenance: boolean
           max_concurrent_sessions: number | null
           name: string
+          public_hostname: string | null
           public_ip: string | null
           ram_total_mb: number | null
           status: string
@@ -980,6 +981,7 @@ export type Database = {
           maintenance?: boolean
           max_concurrent_sessions?: number | null
           name: string
+          public_hostname?: string | null
           public_ip?: string | null
           ram_total_mb?: number | null
           status?: string
@@ -1001,6 +1003,7 @@ export type Database = {
           maintenance?: boolean
           max_concurrent_sessions?: number | null
           name?: string
+          public_hostname?: string | null
           public_ip?: string | null
           ram_total_mb?: number | null
           status?: string
