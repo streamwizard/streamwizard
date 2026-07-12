@@ -22,7 +22,7 @@ export async function GET(request: Request) {
   });
 
   if (error) {
-    return NextResponse.redirect(`${origin}/error`);
+    return NextResponse.redirect(`${origin}/error?code=discord_link`);
   }
 
   return NextResponse.redirect(data.url);

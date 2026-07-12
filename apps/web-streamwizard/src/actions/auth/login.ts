@@ -24,7 +24,7 @@ export async function login(next?: string | null) {
   });
 
   if (error) {
-    redirect("/error");
+    redirect("/error?code=auth");
   }
 
   redirect(data.url);
