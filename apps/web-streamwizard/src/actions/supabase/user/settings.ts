@@ -3,6 +3,7 @@ import { createClient } from "@repo/supabase/next/server";
 import { getUserPreferences as _getUserPreferences, updateUserPreferences as _updateUserPreferences } from "@repo/supabase/queries/user";
 import { userPreferencesSchema } from "@/schemas/user-preferences";
 import { z } from "zod";
+import { reportError } from "@repo/sentry";
 
 export async function updateUserPreferences(user_id: string, formData: z.infer<typeof userPreferencesSchema>) {
   const supabase = await createClient();
@@ -10,7 +11,7 @@ export async function updateUserPreferences(user_id: string, formData: z.infer<t
     await _updateUserPreferences(supabase, user_id, formData);
     return true;
   } catch (error) {
-    console.error(error);
+    reportError(error, "actions/user/settings");
     return false;
   }
 }
@@ -32,7 +33,7 @@ export async function saveOnboardingProgress(preferences: Partial<z.infer<typeof
     await _updateUserPreferences(supabase, user.id, preferences);
     return true;
   } catch (error) {
-    console.error(error);
+    reportError(error, "actions/user/settings");
     return false;
   }
 }
@@ -45,7 +46,7 @@ export async function completeOnboarding(preferences: z.infer<typeof userPrefere
     await _updateUserPreferences(supabase, user.id, { ...preferences, onboarding_completed: true });
     return true;
   } catch (error) {
-    console.error(error);
+    reportError(error, "actions/user/settings");
     return false;
   }
 }

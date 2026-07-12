@@ -9,6 +9,7 @@ import type { Json } from "@repo/supabase";
 import { slimClipsWidgetItemConfig, type ClipsWidgetItemConfig } from "@repo/ui/overlay";
 import { buildOverlayClipQuery } from "@/lib/overlay-clip-query-builder";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { reportError } from "@repo/sentry";
 
 /** Minimal clip identity for Twitch Helix downloads (broadcaster id from clips row). */
 export type PlaylistClip = {
@@ -45,7 +46,12 @@ async function getTwitchClipIdsInFolders(
     folderIds
   );
 
-  if (error) return { ok: false };
+  // A DB failure here silently empties the playlist in OBS — report it,
+  // nobody watches a browser source's console.
+  if (error) {
+    reportError(error, "clips.getTwitchClipIdsInFolders");
+    return { ok: false };
+  }
 
   const junctionRows = (data ?? []) as { clip_id: string }[];
 
@@ -135,7 +141,13 @@ export async function loadOverlayClipPlaylistForWidget(
   query = query.limit(sqlFetchLimit(c));
 
   const { data: rows, error } = await query;
-  if (error || !rows?.length) return [];
+  // Report DB failures separately from a genuinely empty playlist — both
+  // render as "no clips" in OBS, but only one of them is our bug.
+  if (error) {
+    reportError(error, "clips.loadOverlayClipPlaylistForWidget");
+    return [];
+  }
+  if (!rows?.length) return [];
 
   let ordered = [...rows];
 

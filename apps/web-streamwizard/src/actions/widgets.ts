@@ -1,5 +1,7 @@
 "use server";
 
+import { reportError } from "@repo/sentry";
+
 import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
@@ -13,7 +15,8 @@ export async function getActiveSubscriberToken(): Promise<{ token: string | null
   } catch {
     return { token: null, error: "Unauthorized" };
   }
-  const { data } = await getLatestSubscriberToken(supabase, user.id);
+  const { data, error } = await getLatestSubscriberToken(supabase, user.id);
+  if (error) reportError(error, "actions/widgets");
   return { token: data?.subscriber_token ?? null, error: null };
 }
 
@@ -75,6 +78,7 @@ export async function getWidgets() {
     .select("*")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
+  if (error) reportError(error, "actions/widgets");
   return { data: data as unknown as Widget[] | null, error: error?.message ?? null };
 }
 
@@ -91,6 +95,7 @@ export async function getWidget(id: string) {
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
+  if (error) reportError(error, "actions/widgets");
   return { data: data as unknown as Widget | null, error: error?.message ?? null };
 }
 
@@ -125,6 +130,7 @@ export async function createWidget(input: {
     .select()
     .single();
   revalidatePath("/dashboard/widget-library");
+  if (error) reportError(error, "actions/widgets");
   return { data: data as unknown as Widget | null, error: error?.message ?? null };
 }
 
@@ -152,6 +158,7 @@ export async function updateWidget(
     .update({ ...updates, updated_at: new Date().toISOString() } as any)
     .eq("id", id)
     .eq("user_id", user.id);
+  if (error) reportError(error, "actions/widgets");
   return { error: error?.message ?? null };
 }
 
@@ -168,6 +175,7 @@ export async function deleteWidget(id: string) {
     .eq("id", id)
     .eq("user_id", user.id);
   revalidatePath("/dashboard/widget-library");
+  if (error) reportError(error, "actions/widgets");
   return { error: error?.message ?? null };
 }
 
@@ -201,6 +209,7 @@ export async function getOrCreateWidgetInstance(
     })
     .select()
     .single();
+  if (error) reportError(error, "actions/widgets");
   return { data: data as unknown as OverlayWidgetInstance | null, error: error?.message ?? null };
 }
 
@@ -220,6 +229,7 @@ export async function updateWidgetInstanceFieldValues(
     .update({ field_values: fieldValues as any, updated_at: new Date().toISOString() })
     .eq("id", instanceId)
     .eq("user_id", user.id);
+  if (error) reportError(error, "actions/widgets");
   return { error: error?.message ?? null };
 }
 
@@ -245,6 +255,7 @@ export async function getApprovedLibraryEntries(opts?: {
     query = query.or(`title.ilike.%${opts.search}%,description.ilike.%${opts.search}%`);
   }
   const { data, error } = await query;
+  if (error) reportError(error, "actions/widgets");
   return { data, error: error?.message ?? null };
 }
 
@@ -266,6 +277,7 @@ export async function publishWidgetToLibrary(
     tags: input.tags,
     is_approved: false,
   });
+  if (error) reportError(error, "actions/widgets");
   return { error: error?.message ?? null };
 }
 
@@ -306,7 +318,10 @@ export async function installWidgetFromLibrary(entryId: string) {
     .select()
     .single();
 
-  if (forkError) return { data: null, error: forkError.message };
+  if (forkError) {
+    reportError(forkError, "actions/widgets");
+    return { data: null, error: forkError.message };
+  }
 
   await supabase.rpc("increment_widget_installs", { entry_id: entryId });
 
@@ -328,6 +343,7 @@ export async function getPendingLibraryEntries() {
     .select("*, widgets(*)")
     .eq("is_approved", false)
     .order("created_at", { ascending: true });
+  if (error) reportError(error, "actions/widgets");
   return { data, error: error?.message ?? null };
 }
 
@@ -343,6 +359,7 @@ export async function approveLibraryEntry(entryId: string) {
     .update({ is_approved: true })
     .eq("id", entryId);
   revalidatePath("/dashboard/admin/widget-library");
+  if (error) reportError(error, "actions/widgets");
   return { error: error?.message ?? null };
 }
 
@@ -358,5 +375,6 @@ export async function rejectLibraryEntry(entryId: string) {
     .delete()
     .eq("id", entryId);
   revalidatePath("/dashboard/admin/widget-library");
+  if (error) reportError(error, "actions/widgets");
   return { error: error?.message ?? null };
 }

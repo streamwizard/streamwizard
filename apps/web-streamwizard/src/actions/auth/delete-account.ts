@@ -1,5 +1,7 @@
 "use server";
 
+import { reportError } from "@repo/sentry";
+
 import { getAuthContext } from "@/lib/auth";
 import { getChannelAccessToken } from "@repo/supabase";
 import { getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
@@ -70,12 +72,18 @@ export async function deleteAccount() {
   const { error: rpcError } = await supabase.rpc("delete_user_data", {
     p_twitch_user_id: broadcasterId,
   });
-  if (rpcError) return { success: false, error: rpcError.message };
+  if (rpcError) {
+    reportError(rpcError, "actions/delete-account");
+    return { success: false, error: rpcError.message };
+  }
 
   const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
     user.id,
   );
-  if (authError) return { success: false, error: authError.message };
+  if (authError) {
+    reportError(authError, "actions/delete-account");
+    return { success: false, error: authError.message };
+  }
 
   redirect("/goodbye");
 }

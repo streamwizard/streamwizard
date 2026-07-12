@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 
 import { createClient } from "@repo/supabase/next/server";
+import { reportError } from "@repo/sentry";
 
 export async function GET(request: Request) {
-  const origin = new URL(request.url).origin;
+  // Same origin handling as the callback routes: behind the proxy the
+  // standalone server sees an internal Host (e.g. 0.0.0.0:3000), which both
+  // breaks the redirects and makes Supabase reject redirectTo as not
+  // allowlisted. Only trust the request origin in local dev.
+  const requestUrl = new URL(request.url);
+  const origin =
+    process.env.NODE_ENV === "development"
+      ? requestUrl.origin
+      : (process.env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
   const supabase = await createClient();
 
   const { data: userData, error: userError } = await supabase.auth.getUser();
@@ -22,6 +31,7 @@ export async function GET(request: Request) {
   });
 
   if (error) {
+    reportError(error, "auth/link/discord: linkIdentity failed");
     return NextResponse.redirect(`${origin}/error?code=discord_link`);
   }
 

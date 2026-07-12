@@ -1,5 +1,7 @@
 "use server";
 
+import { reportError } from "@repo/sentry";
+
 import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
@@ -68,7 +70,10 @@ export async function grantSubscriptionAction(
     { onConflict: "user_id,plan_id" }
   );
 
-  if (error) return { error: error.message };
+  if (error) {
+    reportError(error, "actions/subscriptions");
+    return { error: error.message };
+  }
   revalidatePath(SUBSCRIPTIONS_PATH);
   return { error: null };
 }
@@ -81,7 +86,10 @@ export async function revokeSubscriptionAction(subscriptionId: string) {
     .update({ status: "canceled", updated_at: new Date().toISOString() })
     .eq("id", subscriptionId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    reportError(error, "actions/subscriptions");
+    return { error: error.message };
+  }
   revalidatePath(SUBSCRIPTIONS_PATH);
   return { error: null };
 }
@@ -106,7 +114,10 @@ export async function updateSubscriptionAction(
     })
     .eq("id", subscriptionId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    reportError(error, "actions/subscriptions");
+    return { error: error.message };
+  }
   revalidatePath(SUBSCRIPTIONS_PATH);
   return { error: null };
 }

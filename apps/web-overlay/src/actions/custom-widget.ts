@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { reportError } from "@repo/sentry";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
 
 export interface CustomWidgetData {
@@ -16,7 +17,7 @@ export async function loadCustomWidgetData(
   ownerUserId: string,
   instanceId?: string
 ): Promise<{ data: CustomWidgetData | null; error: string | null }> {
-  const [{ data: widget, error: wErr }, { data: instance }] = await Promise.all([
+  const [{ data: widget, error: wErr }, { data: instance, error: iErr }] = await Promise.all([
     supabaseAdmin
       .from("widgets")
       .select("html, js, extra_css, fields")
@@ -32,6 +33,15 @@ export async function loadCustomWidgetData(
           .single()
       : Promise.resolve({ data: null, error: null }),
   ]);
+
+  // PGRST116 = .single() matched no rows — a missing/deleted widget or
+  // instance is a config state, not a failure worth reporting.
+  if (wErr && wErr.code !== "PGRST116") {
+    reportError(wErr, "custom-widget.loadCustomWidgetData: widget query");
+  }
+  if (iErr && iErr.code !== "PGRST116") {
+    reportError(iErr, "custom-widget.loadCustomWidgetData: instance query");
+  }
 
   if (wErr || !widget) return { data: null, error: wErr?.message ?? "Widget not found" };
 

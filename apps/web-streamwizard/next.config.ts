@@ -50,6 +50,11 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_PUBLIC_KEY ?? "",
     NEXT_PUBLIC_WS_SERVER_URL: process.env.WS_SERVER_URL ?? "",
     NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN ?? "",
+    // Inlined into the client bundle so browser-side Sentry events carry the
+    // real deploy environment (staging vs production) — NODE_ENV is
+    // "production" for both. getSentryOptions falls back through ALERT_ENV
+    // and NODE_ENV when this is empty.
+    SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT ?? process.env.ALERT_ENV ?? "",
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY ?? process.env.POSTHOG_KEY ?? "",
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com",
   },

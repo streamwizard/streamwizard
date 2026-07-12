@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseIntegration } from "@supabase/sentry-js-integration";
-import type { ErrorEvent, Event } from "@sentry/core";
+import { captureException, type ErrorEvent, type Event } from "@sentry/core";
 
 export interface SentryConfig {
   dsn: string;
@@ -44,7 +44,12 @@ export function getSentryOptions(config: SentryConfig) {
   const isProd = process.env.NODE_ENV === "production";
   return {
     dsn: config.dsn,
-    environment: process.env.NODE_ENV ?? "development",
+    // Next's standalone server.js hard-sets NODE_ENV=production at startup,
+    // so staging deployments would report as "production" without an explicit
+    // override — same reason the alerting package has ALERT_ENV (see
+    // packages/alerting/src/home-env.ts). `||` not `??`: build-time env
+    // inlining can turn unset vars into empty strings.
+    environment: process.env.SENTRY_ENVIRONMENT || process.env.ALERT_ENV || process.env.NODE_ENV || "development",
     release: process.env.SENTRY_RELEASE,
     tracesSampleRate: isProd ? 0.1 : 1.0,
     enableLogs: true,
@@ -54,6 +59,17 @@ export function getSentryOptions(config: SentryConfig) {
     },
     beforeSend: (event: ErrorEvent) => scrubEvent(event),
   };
+}
+
+// Many SDKs (Supabase above all) return errors as values instead of throwing,
+// so framework error hooks never see them — checking the error and bailing
+// silently drops the only record of what went wrong. Funnel those paths
+// through here before bailing. Captures via @sentry/core against whichever
+// client the app initialized; the console.error keeps a trail in server logs
+// where Sentry is disabled (dev) or the event never arrives.
+export function reportError(error: unknown, context: string): void {
+  console.error(`[${context}]`, error);
+  captureException(error, { tags: { context } });
 }
 
 export function createSupabaseIntegration(sentry: any) {

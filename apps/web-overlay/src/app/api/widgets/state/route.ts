@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { reportError } from "@repo/sentry";
 import { Json } from "@repo/supabase";
 
 const ALLOWED_ORIGINS = new Set([
@@ -93,6 +94,7 @@ export async function POST(req: NextRequest) {
     .eq("id", instance.id);
 
   if (error) {
+    reportError(error, "api/widgets/state: widget_state update");
     return NextResponse.json({ error: error.message }, { status: 500, headers: corsHeaders(req) });
   }
 
