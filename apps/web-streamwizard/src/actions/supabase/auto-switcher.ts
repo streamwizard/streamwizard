@@ -4,6 +4,7 @@ import { createClient } from "@repo/supabase/next/server";
 import type { Database } from "@repo/supabase";
 import { env } from "@/lib/env";
 import { autoSwitcherFormSchema, type AutoSwitcherFormValues } from "@/schemas/auto-switcher";
+import { reportError } from "@repo/sentry";
 
 export type AutoSwitcherConfigRow = Database["public"]["Tables"]["obs_auto_switcher_configs"]["Row"];
 
@@ -25,7 +26,7 @@ async function pushConfigToEngine(row: AutoSwitcherConfigRow): Promise<void> {
       signal: AbortSignal.timeout(3_000),
     });
   } catch (error) {
-    console.error("[auto-switcher] config push failed (engine will catch up on re-fetch):", error);
+    reportError(error, "auto-switcher: config push");
   }
 }
 
@@ -54,7 +55,7 @@ export async function upsertAutoSwitcherConfig(values: AutoSwitcherFormValues): 
     .select()
     .single();
   if (error) {
-    console.error("[auto-switcher] upsert failed:", error);
+    reportError(error, "auto-switcher: upsert");
     return { ok: false, error: "Could not save settings" };
   }
 
@@ -83,7 +84,7 @@ export async function setSceneOverride(
     .select()
     .single();
   if (error || !data) {
-    console.error("[auto-switcher] override set failed:", error);
+    reportError(error, "auto-switcher: override set");
     return { ok: false, error: "Could not set the override — save your switcher settings first" };
   }
 
@@ -99,7 +100,7 @@ export async function clearSceneOverride(): Promise<{ ok: boolean; error?: strin
     .select()
     .single();
   if (error || !data) {
-    console.error("[auto-switcher] override clear failed:", error);
+    reportError(error, "auto-switcher: override clear");
     return { ok: false, error: "Could not clear the override" };
   }
 

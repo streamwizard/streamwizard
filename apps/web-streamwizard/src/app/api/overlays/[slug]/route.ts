@@ -3,6 +3,7 @@ import { overlayItemFromDbRow, toPublicOverlayApiItems } from "@/types/overlays"
 import { NextRequest, NextResponse } from "next/server";
 import { getActiveOverlaySceneBySlug, getAllOverlayItemsByScene } from "@repo/supabase/queries/overlays";
 import { overlayCorsHeaders } from "@/lib/overlay-cors";
+import { reportError } from "@repo/sentry";
 
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers: overlayCorsHeaders(request) });
@@ -52,7 +53,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error fetching overlay:", error);
+    reportError(error, "api/overlays/[slug]");
     return NextResponse.json(
       {
         error:

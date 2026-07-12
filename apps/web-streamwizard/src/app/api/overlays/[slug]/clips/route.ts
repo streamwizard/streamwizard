@@ -12,6 +12,7 @@ import { getActiveOverlaySceneBySlug, getOverlayItemById, getAllOverlayItemsBySc
 import { getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
 import { getClipFolderJunctions, getOverlayClips } from "@repo/supabase/queries/clips";
 import { overlayCorsHeaders } from "@/lib/overlay-cors";
+import { reportError } from "@repo/sentry";
 
 export async function OPTIONS(request: NextRequest) {
   return new NextResponse(null, { status: 204, headers: overlayCorsHeaders(request) });
@@ -153,7 +154,7 @@ export async function GET(
       }
     );
   } catch (error) {
-    console.error("Error in overlay clips endpoint:", error);
+    reportError(error, "api/overlays/[slug]/clips");
     return NextResponse.json(
       {
         error:

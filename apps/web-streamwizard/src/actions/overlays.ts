@@ -1,5 +1,7 @@
 "use server";
 
+import { reportError } from "@repo/sentry";
+
 import { randomBytes } from "crypto";
 import {
   createSceneSchema,
@@ -60,7 +62,10 @@ export async function getOverlayScenes() {
   try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
 
   const { data, error } = await _getOverlayScenes(supabase, user.id);
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/overlays");
+    return { data: null, error: error.message };
+  }
   return { data, error: null };
 }
 
@@ -69,7 +74,10 @@ export async function getOverlayScene(id: string) {
   try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
 
   const { scene, items, error } = await _getOverlayScene(supabase, id, user.id);
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/overlays");
+    return { data: null, error: error.message };
+  }
 
   return {
     data: {
@@ -107,7 +115,10 @@ export async function createOverlayScene(formData: {
     .select()
     .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/overlays");
+    return { data: null, error: error.message };
+  }
 
   revalidatePath("/dashboard/overlays");
   return { data, error: null };
@@ -129,7 +140,10 @@ export async function updateOverlayScene(formData: {
   const { id, ...updates } = parsed.data;
 
   const { data, error } = await _updateOverlayScene(supabase, id, user.id, updates);
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/overlays");
+    return { data: null, error: error.message };
+  }
 
   revalidatePath("/dashboard/overlays");
   return { data, error: null };
@@ -140,7 +154,10 @@ export async function deleteOverlayScene(id: string) {
   try { ({ supabase, user } = await getAuthContext()); } catch { return { success: false, error: "Unauthorized" }; }
 
   const { error } = await _deleteOverlayScene(supabase, id, user.id);
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    reportError(error, "actions/overlays");
+    return { success: false, error: error.message };
+  }
 
   revalidatePath("/dashboard/overlays");
   return { success: true, error: null };
@@ -152,6 +169,7 @@ export async function duplicateOverlayScene(id: string) {
 
   const { data: original, error: fetchError } = await getOverlaySceneRow(supabase, id, user.id);
 
+  if (fetchError) reportError(fetchError, "actions/overlays");
   if (fetchError || !original)
     return { data: null, error: fetchError?.message ?? "Not found" };
 
@@ -165,10 +183,14 @@ export async function duplicateOverlayScene(id: string) {
     height: original.height,
   });
 
+  if (createError) reportError(createError, "actions/overlays");
   if (createError || !newScene)
     return { data: null, error: createError?.message ?? "Failed to create" };
 
-  const { data: originalItems } = await getAllOverlayItemsByScene(supabase, id);
+  const { data: originalItems, error: itemsFetchErr } = await getAllOverlayItemsByScene(supabase, id);
+  // Items failing to load means the duplicate is created empty — report it,
+  // the user has no way to tell this apart from a scene that had no items.
+  if (itemsFetchErr) reportError(itemsFetchErr, "actions/overlays");
 
   if (originalItems?.length) {
     const roots = originalItems.filter((row) => row.type !== "clip_display_field");
@@ -183,6 +205,7 @@ export async function duplicateOverlayScene(id: string) {
       }))
     );
 
+    if (rootErr) reportError(rootErr, "actions/overlays");
     if (rootErr || !insertedRoots) {
       return { data: null, error: rootErr?.message ?? "Failed to copy items" };
     }
@@ -207,7 +230,10 @@ export async function duplicateOverlayScene(id: string) {
 
       if (childRows.length > 0) {
         const { error: childErr } = await insertOverlayItems(supabase, childRows);
-        if (childErr) return { data: null, error: childErr.message };
+        if (childErr) {
+          reportError(childErr, "actions/overlays");
+          return { data: null, error: childErr.message };
+        }
       }
     }
   }
@@ -253,7 +279,10 @@ export async function saveOverlayItem(item: {
       config: parsed.data.config as unknown as Json,
     });
 
-    if (error) return { data: null, error: error.message };
+    if (error) {
+      reportError(error, "actions/overlays");
+      return { data: null, error: error.message };
+    }
     return { data, error: null };
   }
 
@@ -273,7 +302,10 @@ export async function saveOverlayItem(item: {
     config: parsed.data.config as unknown as Json,
   });
 
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/overlays");
+    return { data: null, error: error.message };
+  }
   return { data, error: null };
 }
 
@@ -292,7 +324,10 @@ export async function deleteOverlayItem(id: string) {
   let supabase;
   try { ({ supabase } = await getAuthContext()); } catch { return { success: false, error: "Unauthorized" }; }
   const { error } = await _deleteOverlayItem(supabase, id);
-  if (error) return { success: false, error: error.message };
+  if (error) {
+    reportError(error, "actions/overlays");
+    return { success: false, error: error.message };
+  }
   return { success: true, error: null };
 }
 
@@ -336,7 +371,10 @@ export async function saveAllOverlayItems(
 
   if (idsToDelete.length > 0) {
     const { error: delErr } = await deleteOverlayItemsByIds(supabase, idsToDelete);
-    if (delErr) return { success: false, error: delErr.message, data: null };
+    if (delErr) {
+      reportError(delErr, "actions/overlays");
+      return { success: false, error: delErr.message, data: null };
+    }
   }
 
   for (const item of existingItems) {
@@ -362,7 +400,10 @@ export async function saveAllOverlayItems(
       label: parsed.data.label,
       config: parsed.data.config as unknown as Json,
     });
-    if (error) return { success: false, error: error.message, data: null };
+    if (error) {
+      reportError(error, "actions/overlays");
+      return { success: false, error: error.message, data: null };
+    }
   }
 
   const newRoots = newItems.filter((i) => i.type !== "clip_display_field");
@@ -400,7 +441,10 @@ export async function saveAllOverlayItems(
 
     const { data: insertedRoots, error: insErr } = await insertOverlayItemsReturningIds(supabase, insertPayloads);
 
-    if (insErr) return { success: false, error: insErr.message, data: null };
+    if (insErr) {
+      reportError(insErr, "actions/overlays");
+      return { success: false, error: insErr.message, data: null };
+    }
     if (!insertedRoots || insertedRoots.length !== newRoots.length) {
       return {
         success: false,
@@ -447,12 +491,17 @@ export async function saveAllOverlayItems(
     }
 
     const { error: chErr } = await insertOverlayItems(supabase, childPayloads);
-    if (chErr) return { success: false, error: chErr.message, data: null };
+    if (chErr) {
+      reportError(chErr, "actions/overlays");
+      return { success: false, error: chErr.message, data: null };
+    }
   }
 
   revalidatePath("/dashboard/overlays");
 
   const reloaded = await getOverlayScene(sceneId);
+  // getOverlayScene already reports its own DB errors; this reload is
+  // best-effort, so the save still returns success without the fresh data.
   if (reloaded.error || !reloaded.data) {
     return {
       success: true,
@@ -476,5 +525,6 @@ export async function resetSceneSubscriberToken(sceneId: string): Promise<{ erro
     .eq("user_id", user.id);
 
   revalidatePath("/dashboard/overlays");
+  if (error) reportError(error, "actions/overlays");
   return { error: error?.message ?? null };
 }

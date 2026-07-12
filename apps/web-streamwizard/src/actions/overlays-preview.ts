@@ -1,5 +1,7 @@
 "use server";
 
+import { reportError } from "@repo/sentry";
+
 import type { ClipsWidgetConfig } from "@/types/overlays";
 import { getAuthContext } from "@/lib/auth";
 import { getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
@@ -58,7 +60,10 @@ export async function getPreviewClips(config: ClipsWidgetConfig): Promise<{
     }
   );
 
-  if (error) return { clips: [], error: error.message };
+  if (error) {
+    reportError(error, "actions/overlays-preview");
+    return { clips: [], error: error.message };
+  }
 
   let result = (clips ?? []) as unknown as PreviewClip[];
 

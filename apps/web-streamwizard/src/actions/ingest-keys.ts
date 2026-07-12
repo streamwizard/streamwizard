@@ -1,5 +1,7 @@
 "use server";
 
+import { reportError } from "@repo/sentry";
+
 import { randomBytes } from "crypto";
 import { env } from "@/lib/env";
 import { getAuthContext } from "@/lib/auth";
@@ -75,7 +77,7 @@ async function notifyDiscord(userId: string, label: string, streamKey: string) {
     const host = await resolveIngestHost(adminClient);
     await sendDiscordDirectMessage(discordUserId, ingestKeyDmEmbed(label, streamKey, host));
   } catch (err) {
-    console.error("[ingest-keys] Couldn't DM ingest key to Discord", err);
+    reportError(err, "ingest-keys.notifyDiscord");
   }
 }
 
@@ -95,6 +97,7 @@ export async function sendIngestKeyDiscordDM(id: string): Promise<{ error: strin
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();
+  if (keyError) reportError(keyError, "actions/ingest-keys");
   if (keyError || !key) return { error: keyError?.message ?? "Key not found" };
 
   const discordUserId = await getDiscordUserIdByUserIdMaybe(adminClient, user.id);
@@ -127,7 +130,10 @@ export async function createIngestKey(label: string): Promise<{ data: IngestStre
     .select("*")
     .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/ingest-keys");
+    return { data: null, error: error.message };
+  }
 
   // Every incoming key needs an OBS output key to be pullable. The user never
   // manages this directly, so it's created here rather than surfaced as a step.
@@ -159,6 +165,7 @@ export async function listIngestKeys(): Promise<{ data: IngestStreamKey[] | null
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  if (error) reportError(error, "actions/ingest-keys");
   return { data, error: error?.message ?? null };
 }
 
@@ -179,7 +186,10 @@ export async function rotateIngestKey(id: string): Promise<{ data: IngestStreamK
     .select("*")
     .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/ingest-keys");
+    return { data: null, error: error.message };
+  }
 
   revalidatePath(INGEST_SETTINGS_PATH);
   return { data, error: null };
@@ -201,5 +211,6 @@ export async function deleteIngestKey(id: string): Promise<{ error: string | nul
     .eq("user_id", user.id);
 
   revalidatePath(INGEST_SETTINGS_PATH);
+  if (error) reportError(error, "actions/ingest-keys");
   return { error: error?.message ?? null };
 }

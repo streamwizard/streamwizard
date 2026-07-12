@@ -1,5 +1,7 @@
 "use server";
 
+import { reportError } from "@repo/sentry";
+
 import { randomBytes } from "crypto";
 import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
@@ -22,7 +24,10 @@ export async function createIrlToken(name: string): Promise<{ data: { token_url:
     .from("irl_collector_tokens")
     .insert({ user_id: user.id, token, name });
 
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/irl-tokens");
+    return { data: null, error: error.message };
+  }
 
   const baseUrl = process.env.NEXT_PUBLIC_OVERLAY_URL ?? "";
   const token_url = `${baseUrl}/irl/collector?token=${encodeURIComponent(token)}`;
@@ -46,6 +51,7 @@ export async function listIrlTokens(): Promise<{ data: IrlCollectorToken[] | nul
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  if (error) reportError(error, "actions/irl-tokens");
   return { data, error: error?.message ?? null };
 }
 
@@ -66,7 +72,10 @@ export async function getIrlSubscriberToken(): Promise<{ data: string | null; er
     .limit(1)
     .maybeSingle() as unknown as { data: { subscriber_token: string } | null; error: { message: string } | null };
 
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/irl-tokens");
+    return { data: null, error: error.message };
+  }
   return { data: data?.subscriber_token ?? null, error: null };
 }
 
@@ -86,6 +95,7 @@ export async function deleteIrlToken(id: string): Promise<{ error: string | null
     .eq("user_id", user.id);
 
   revalidatePath("/dashboard/irl/ingest");
+  if (error) reportError(error, "actions/irl-tokens");
   return { error: error?.message ?? null };
 }
 

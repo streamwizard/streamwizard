@@ -1,5 +1,7 @@
 "use server";
 
+import { reportError } from "@repo/sentry";
+
 import { randomBytes } from "crypto";
 import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
@@ -59,7 +61,10 @@ export async function createOutputKey(
     .select("*")
     .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/ingest-output-keys");
+    return { data: null, error: error.message };
+  }
 
   revalidatePath(INGEST_SETTINGS_PATH);
   return { data, error: null };
@@ -83,6 +88,7 @@ export async function listOutputKeys(
   if (keyId) query = query.eq("key_id", keyId);
 
   const { data, error } = await query.order("created_at", { ascending: false });
+  if (error) reportError(error, "actions/ingest-output-keys");
   return { data, error: error?.message ?? null };
 }
 
@@ -105,7 +111,10 @@ export async function rotateOutputKey(
     .select("*")
     .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) {
+    reportError(error, "actions/ingest-output-keys");
+    return { data: null, error: error.message };
+  }
 
   revalidatePath(INGEST_SETTINGS_PATH);
   return { data, error: null };
@@ -127,5 +136,6 @@ export async function deleteOutputKey(id: string): Promise<{ error: string | nul
     .eq("user_id", user.id);
 
   revalidatePath(INGEST_SETTINGS_PATH);
+  if (error) reportError(error, "actions/ingest-output-keys");
   return { error: error?.message ?? null };
 }
