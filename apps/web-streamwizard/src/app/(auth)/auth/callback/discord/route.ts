@@ -5,7 +5,7 @@ import { linkDiscordIntegration } from "@repo/supabase/queries/user";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { assignRole, DiscordMemberNotFoundError } from "@/server/discord/roles";
 import { env } from "@/lib/env";
-import { reportError } from "@/lib/report-redirect";
+import { reportError } from "@repo/sentry";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
