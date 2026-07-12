@@ -3,6 +3,7 @@ import { LightModeOverlay } from "@/components/global/light-mode-overlay";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { PHProvider, PostHogPageView } from "@repo/posthog";
 import { Metadata } from "next";
+import { headers } from "next/headers";
 import localFont from "next/font/local";
 import { Suspense } from "react";
 import { Toaster } from "sonner";
@@ -31,16 +32,21 @@ export const metadata: Metadata = {
   keywords: ["twitch", "music", "streaming", "interactive", "chat"],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Per-request nonce set by the proxy (src/proxy.ts). next-themes injects an
+  // inline anti-flash script that Next can't nonce for us, so we forward it
+  // explicitly or the CSP blocks the script (script-src has no 'unsafe-inline').
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <PHProvider>
-          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+          <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange nonce={nonce}>
             <LightModeOverlay />
             <Suspense>
               <PostHogPageView />

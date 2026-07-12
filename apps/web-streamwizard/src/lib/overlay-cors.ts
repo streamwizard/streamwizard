@@ -10,7 +10,9 @@ const ALLOWED_ORIGINS = new Set([process.env.NEXT_PUBLIC_OVERLAY_URL].filter(Boo
 export function overlayCorsHeaders(req: NextRequest): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
   return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "",
+    // Omitted entirely for disallowed origins — the browser then blocks the
+    // cross-origin read, which is the intent.
+    ...(ALLOWED_ORIGINS.has(origin) ? { "Access-Control-Allow-Origin": origin } : {}),
     "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     Vary: "Origin",
