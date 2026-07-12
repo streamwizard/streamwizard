@@ -48,6 +48,7 @@ function copy(value: string, what: string) {
 const EMPTY_FORM: IngestNodeCapacity = {
   name: "",
   max_concurrent_sessions: null,
+  public_hostname: null,
 };
 
 function statusVariant(status: string): "default" | "secondary" | "outline" | "destructive" {
@@ -108,6 +109,19 @@ function IngestNodeForm({
           }
         />
       </div>
+      <div className="col-span-2 space-y-2">
+        <Label htmlFor="ingest-node-public-hostname">Public domain (optional)</Label>
+        <Input
+          id="ingest-node-public-hostname"
+          placeholder="ingest-01.streamwizard.org"
+          value={form.public_hostname ?? ""}
+          onChange={(e) => setForm({ ...form, public_hostname: e.target.value === "" ? null : e.target.value })}
+        />
+        <p className="text-xs text-muted-foreground">
+          Point a DNS record at this box, then set it here. Encoders connect to this domain
+          instead of the raw IP — leave blank to use the public IP.
+        </p>
+      </div>
     </div>
   );
 }
@@ -154,6 +168,7 @@ export function IngestNodesSection({
     setEditForm({
       name: node.name,
       max_concurrent_sessions: node.max_concurrent_sessions,
+      public_hostname: node.public_hostname,
     });
   };
 
@@ -257,7 +272,12 @@ export function IngestNodesSection({
             <TableBody>
               {nodes.map((node) => (
                 <TableRow key={node.id}>
-                  <TableCell className="font-medium">{node.name}</TableCell>
+                  <TableCell className="font-medium">
+                    {node.name}
+                    {node.public_hostname && (
+                      <p className="text-xs font-normal text-muted-foreground">{node.public_hostname}</p>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={statusVariant(node.status)}>{node.status}</Badge>
                   </TableCell>

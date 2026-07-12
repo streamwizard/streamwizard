@@ -8,6 +8,9 @@ export type IngestNode = Database["public"]["Tables"]["ingest_nodes"]["Row"];
 export interface IngestNodeCapacity {
   name: string;
   max_concurrent_sessions: number | null;
+  /** Admin-set public FQDN encoders connect to (e.g. ingest-01.streamwizard.org).
+   * null when ops hasn't pointed a domain at this box yet. */
+  public_hostname: string | null;
 }
 
 export interface IngestNodeClaimFields {
@@ -26,7 +29,9 @@ export async function getIngestNodeById(client: DBClient, id: string): Promise<I
 }
 
 export interface IngestNodeHosts {
-  /** Public IP encoders push their SRT/SRTLA feed to. */
+  /** Admin-set public FQDN encoders connect to, preferred over public_ip when set. */
+  public_hostname: string | null;
+  /** Public IP encoders push their SRT/SRTLA feed to (fallback when no domain is set). */
   public_ip: string | null;
   /** Tailnet IP a cloud OBS instance pulls the feed from. */
   tailscale_ip: string | null;
@@ -38,7 +43,7 @@ export interface IngestNodeHosts {
 export async function getActiveIngestNodeHosts(client: DBClient): Promise<IngestNodeHosts | null> {
   const { data } = await client
     .from("ingest_nodes")
-    .select("public_ip, tailscale_ip")
+    .select("public_hostname, public_ip, tailscale_ip")
     .eq("status", "linked")
     .order("created_at", { ascending: false })
     .limit(1)
