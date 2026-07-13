@@ -3,14 +3,14 @@
 # the VPS always runs the base file alone.
 #
 #   docker compose -f docker-compose.yml -f docker-compose.local.yml \
-#     --env-file <env file> up --build -d web-monitor alert-worker
+#     --env-file <env file> up --build -d web-admin alert-worker
 #
 # ALERT_ENV=dev keeps the engine's home env "dev", which routes every alert
 # to alert_events only — a local run never messages Discord/Telegram.
 # Caddy is deliberately not started (needs real DNS for its certificate).
 
 services:
-  web-monitor:
+  web-admin:
     build:
       args:
         DOPPLER_TOKEN: ""
@@ -18,7 +18,7 @@ services:
         SUPABASE_URL: http://host.docker.internal:54321
         SUPABASE_PUBLIC_KEY: ${SUPABASE_PUBLIC_KEY}
     # Skip `doppler run --`; env comes straight from this file.
-    entrypoint: ["bun", "apps/web-monitor/server.js"]
+    entrypoint: ["bun", "apps/web-admin/server.js"]
     ports:
       - "3005:3000"
     environment:

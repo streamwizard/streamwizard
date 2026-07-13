@@ -8,7 +8,7 @@ import type { IngestNodeLive, MonitorMessage } from "./monitor-ws";
 // this page only needs "latest per node" bandwidth and "latest per session"
 // stream stats — tiny bounded maps, no event history.
 
-// Mirrors the widened IngestStatsPayload from @repo/types (web-monitor
+// Mirrors the widened IngestStatsPayload from @repo/types (web-admin
 // redeclares WS shapes locally, same as monitor-ws.ts does).
 export type LiveStreamStats = {
   session_id: string;

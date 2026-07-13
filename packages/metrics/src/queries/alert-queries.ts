@@ -1,7 +1,7 @@
 import { runFluxQuery, assertValidFluxDuration } from "../query-client";
 import { resolveBucket, type QueryOpts } from "./query-opts";
 
-// Read side of the web-monitor alert engine. Unlike the dashboard queries
+// Read side of the web-admin alert engine. Unlike the dashboard queries
 // (time series for charts), every builder here answers one rule-evaluation
 // question per entity: "what is the latest/aggregate value in the window?".
 // All of them take an explicit QueryOpts bucket so one engine pass can

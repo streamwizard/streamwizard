@@ -1,4 +1,4 @@
-# web-monitor
+# web-admin
 
 The internal ops dashboard. Service graphs, live metrics, and a view into what every StreamWizard service is doing — for the team, not for streamers. If you're a contributor, you probably don't need to touch this one.
 
@@ -21,7 +21,7 @@ Graphs are laid out with [`@xyflow/react`](https://reactflow.dev/) and [`dagre`]
 From the repo root:
 
 ```bash
-bun dev --filter=@repo/web-monitor
+bun dev --filter=@repo/web-admin
 ```
 
 Or with the convenience script:

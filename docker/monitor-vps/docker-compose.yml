@@ -1,8 +1,8 @@
 # StreamWizard monitoring VPS — runs on a small dedicated box on the tailnet
-# (NOT Dokploy). Hosts the prod web-monitor (dashboard), the alert-worker (the
+# (NOT Dokploy). Hosts the prod web-admin (dashboard), the alert-worker (the
 # self-ticking alert engine from apps/alert-worker), Telegraf shipping Supabase
 # platform metrics into InfluxDB, and Caddy terminating TLS for
-# monitor.streamwizard.org.
+# admin.streamwizard.org.
 #
 # There is deliberately NO InfluxDB service here — the existing external
 # instance stays where it is; everything talks to it over INFLUXDB_URL.
@@ -11,10 +11,10 @@
 # See README.md for the full provisioning runbook.
 
 services:
-  web-monitor:
+  web-admin:
     build:
       context: ../..
-      dockerfile: apps/web-monitor/Dockerfile
+      dockerfile: apps/web-admin/Dockerfile
       args:
         # Build-time secrets (Sentry, env validation) come from the same
         # Doppler config as runtime.
@@ -26,7 +26,7 @@ services:
     restart: unless-stopped
 
   # The alert engine: evaluates rules every TICK_SECONDS and notifies
-  # Discord/Telegram. Deliberately independent of web-monitor — dashboard
+  # Discord/Telegram. Deliberately independent of web-admin — dashboard
   # deploys or crashes never take alerting down.
   alert-worker:
     build:
@@ -74,7 +74,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      MONITOR_DOMAIN: ${MONITOR_DOMAIN:-monitor.streamwizard.org}
+      ADMIN_DOMAIN: ${ADMIN_DOMAIN:-admin.streamwizard.org}
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
@@ -82,7 +82,7 @@ services:
     networks:
       - monitor
     depends_on:
-      - web-monitor
+      - web-admin
     restart: unless-stopped
 
 volumes:

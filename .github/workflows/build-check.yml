@@ -23,8 +23,8 @@ jobs:
             dockerfile: apps/web-streamwizard/Dockerfile
           - name: web-overlay
             dockerfile: apps/web-overlay/Dockerfile
-          - name: web-monitor
-            dockerfile: apps/web-monitor/Dockerfile
+          - name: web-admin
+            dockerfile: apps/web-admin/Dockerfile
 
     steps:
       - name: Checkout code

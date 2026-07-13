@@ -46,7 +46,7 @@ export interface TickSummary {
   durationMs: number;
 }
 
-// Env resolution lives in ./home-env — web-monitor re-exports it for the
+// Env resolution lives in ./home-env — web-admin re-exports it for the
 // layout badge, so the UI can never disagree with what the engine evaluates.
 
 /** Services expected to write http_request continuously. ws-server and the

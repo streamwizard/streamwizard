@@ -3,8 +3,8 @@ import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "StreamWizard Monitor",
-  description: "Internal metrics dashboard",
+  title: "StreamWizard Admin",
+  description: "Internal admin control panel",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

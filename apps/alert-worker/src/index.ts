@@ -4,7 +4,7 @@ import { runEvaluationPass } from "@repo/alerting/engine";
 import { homeEnv } from "@repo/alerting/home-env";
 
 // The alert engine's ticker: run an evaluation pass, report the outcome to
-// healthchecks.io, sleep, repeat. Replaces the old curl sidecar + web-monitor
+// healthchecks.io, sleep, repeat. Replaces the old curl sidecar + web-admin
 // /api/alerts/evaluate route. The loop is sequential on purpose — a pass can
 // legitimately take ~35s, and running them back-to-back can never self-overlap.
 // The engine's own Supabase lock guards against a second alert-worker process.

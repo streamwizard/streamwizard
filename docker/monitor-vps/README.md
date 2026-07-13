@@ -8,10 +8,10 @@ boxes on their Tailscale IPs.
 
 | Service | Image | Ports (host) | Role |
 | --- | --- | --- | --- |
-| `web-monitor` | `apps/web-monitor` (Next.js) | internal `3000` | Dashboard (alert state, history, rule + notification config UI) |
+| `web-admin` | `apps/web-admin` (Next.js) | internal `3000` | Dashboard (alert state, history, rule + notification config UI) |
 | `alert-worker` | `apps/alert-worker` (Bun) | — | The alert engine: self-ticks every 15s, notifies Discord/Telegram, pings healthchecks.io |
 | `telegraf` | `telegraf` | — | Scrapes Supabase platform metrics (prod + staging) into the per-env Influx buckets |
-| `caddy` | `caddy` | `80`, `443` | TLS for `monitor.streamwizard.org` |
+| `caddy` | `caddy` | `80`, `443` | TLS for `admin.streamwizard.org` |
 
 There is **no InfluxDB container** — the existing external instance stays where
 it is. The alert engine is single-env: this deployment runs with the prod
@@ -26,10 +26,10 @@ own alert-worker with its own Doppler config.
    Containers reach tailnet IPs through the host — no sidecar needed (see
    below).
 3. **Doppler**: two configs, one per service.
-   - `prd_web_monitor` (dashboard): clone vars from `dev_web_monitor`, point at
+   - `prd_web_admin` (dashboard): clone vars from `dev_web_admin`, point at
      prod Supabase/Influx bucket, and add `ALERT_ENV=prod` (Next standalone
      clobbers NODE_ENV, so the env badge must be explicit),
-     `NEXT_PUBLIC_BASE_URL=https://monitor.streamwizard.org` (auth redirects;
+     `NEXT_PUBLIC_BASE_URL=https://admin.streamwizard.org` (auth redirects;
      the prd root config's value points at the main site), plus
      `ALERT_DISCORD_CHANNEL_ID`, `DISCORD_BOT_TOKEN`, `TELEGRAM_BOT_TOKEN`,
      `TELEGRAM_CHAT_ID`, `STREAMWIZARD_API_URL` (the /alerts/notifications UI
@@ -40,7 +40,7 @@ own alert-worker with its own Doppler config.
      `INFLUXDB_ORG`, `INFLUXDB_BUCKET` (prod bucket), `ALERT_ENV=prod`,
      `NODE_ENV=production`, `ALERT_DISCORD_CHANNEL_ID`, `DISCORD_BOT_TOKEN`,
      `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `STREAMWIZARD_API_URL`,
-     `WS_SERVER_URL` (same value as web-monitor's
+     `WS_SERVER_URL` (same value as web-admin's
      `NEXT_PUBLIC_WS_SERVER_URL`), and optionally `SENTRY_DSN`. Mint a
      **service token** for `prd` → `ALERT_WORKER_DOPPLER_TOKEN` in `.env`.
      (Locally the alert-worker runs off the root `dev` config — see
@@ -49,7 +49,7 @@ own alert-worker with its own Doppler config.
      chat id from `https://api.telegram.org/bot<token>/getUpdates`.
    - Discord: the bot must be in the alerts guild with *Send Messages* +
      *Embed Links* on the alert channel.
-4. **DNS**: A record `monitor.streamwizard.org` → VPS public IP (Caddy needs it
+4. **DNS**: A record `admin.streamwizard.org` → VPS public IP (Caddy needs it
    resolving before first boot to get its certificate).
 5. **healthchecks.io**: create a check with a 60s period / ~3 min grace and a
    Telegram or email integration — this is the dead-man's switch that fires

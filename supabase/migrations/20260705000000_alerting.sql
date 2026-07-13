@@ -1,11 +1,11 @@
--- Alerting state for the web-monitor alert engine (monitoring plan v2.2).
+-- Alerting state for the web-admin alert engine (monitoring plan v2.2).
 -- The engine (service_role) evaluates ~29 rules per environment every 60s:
 -- alert_state holds the current status per rule x env x entity (dedup,
 -- consecutive-breach counting, 30m crit renotify cooldown, silencing),
 -- alert_events is the append-only history that powers the Alerts UI, and
 -- alert_locks is the overlap guard so two evaluate ticks never run
 -- concurrently. Alert state deliberately lives in Supabase rather than in
--- process so dedup/cooldown/history survive web-monitor deploys.
+-- process so dedup/cooldown/history survive web-admin deploys.
 CREATE TABLE "public"."alert_state" (
     "id" uuid NOT NULL DEFAULT gen_random_uuid(),
     "rule_id" text NOT NULL,

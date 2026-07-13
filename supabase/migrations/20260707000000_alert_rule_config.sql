@@ -1,5 +1,5 @@
 -- Per-rule overrides for the alert engine's rule catalog. The catalog itself
--- (query logic, defaults) lives in code (web-monitor src/lib/alerts/rules.ts);
+-- (query logic, defaults) lives in code (web-admin src/lib/alerts/rules.ts);
 -- this table stores only admin-edited deviations from those defaults so
 -- thresholds can be tuned from the Alerts UI without a deploy. NULL columns
 -- mean "use the code default"; a missing row means the rule is untouched.
@@ -26,7 +26,7 @@ CREATE OR REPLACE TRIGGER "alert_rule_config_updated_at"
     BEFORE UPDATE ON "public"."alert_rule_config"
     FOR EACH ROW EXECUTE FUNCTION "public"."update_updated_at_column"();
 
--- RLS: writes go through web-monitor server actions (service_role, after an
+-- RLS: writes go through web-admin server actions (service_role, after an
 -- explicit admin check); admins can read for the rules UI.
 ALTER TABLE "public"."alert_rule_config" ENABLE ROW LEVEL SECURITY;
 

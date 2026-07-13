@@ -32,7 +32,7 @@ export function MonitorSidebar() {
                 </div>
                 <div className="grid flex-1 text-left leading-tight">
                   <span className="truncate font-semibold text-sm">StreamWizard</span>
-                  <span className="truncate text-xs text-muted-foreground">Monitor</span>
+                  <span className="truncate text-xs text-muted-foreground">Admin</span>
                 </div>
               </Link>
             </SidebarMenuButton>

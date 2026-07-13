@@ -42,7 +42,7 @@ export function MonitorHeader({ envLabel }: { envLabel: string }) {
             </>
           )}
           <BreadcrumbItem>
-            <BreadcrumbPage>{location?.item.label ?? "Monitor"}</BreadcrumbPage>
+            <BreadcrumbPage>{location?.item.label ?? "Admin"}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
