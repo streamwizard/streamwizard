@@ -1,6 +1,6 @@
 // Lazy process.env accessors, read at call time — the same convention as
 // @repo/metrics and @repo/discord-api. Validation belongs to the host app
-// (zod in apps/alert-worker, t3-env in web-monitor); this module only maps names.
+// (zod in apps/alert-worker, t3-env in web-admin); this module only maps names.
 // Empty strings count as unset, matching t3-env's emptyStringAsUndefined.
 
 function optional(name: string): string | undefined {
@@ -25,7 +25,7 @@ export const alertConfig = {
     return required("SUPABASE_URL");
   },
   /** The alert-worker reads WS_SERVER_URL; the NEXT_PUBLIC_ fallback keeps the
-   * web-monitor deployment working without a Doppler rename. */
+   * web-admin deployment working without a Doppler rename. */
   get wsServerUrl() {
     return optional("WS_SERVER_URL") ?? optional("NEXT_PUBLIC_WS_SERVER_URL");
   },
@@ -44,7 +44,7 @@ export const alertConfig = {
   get telegramBotToken() {
     return optional("TELEGRAM_BOT_TOKEN");
   },
-  /** Where the web-monitor dashboard lives; adds an "Open dashboard" button
+  /** Where the web-admin dashboard lives; adds an "Open dashboard" button
    * to Discord alerts when set. */
   get monitorBaseUrl() {
     return optional("MONITOR_BASE_URL");

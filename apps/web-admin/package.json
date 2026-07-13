@@ -1,10 +1,10 @@
 {
-  "name": "@repo/web-monitor",
+  "name": "@repo/web-admin",
   "license": "MIT",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config dev_web_monitor -- next dev --port 3003",
+    "dev": "doppler run --config dev_web_admin -- next dev --port 3003",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

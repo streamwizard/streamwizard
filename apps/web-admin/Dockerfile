@@ -1,6 +1,6 @@
 # This Dockerfile expects the Docker build context to be the repository root.
 # Dokploy settings:
-# - Docker File: apps/web-monitor/Dockerfile
+# - Docker File: apps/web-admin/Dockerfile
 # - Docker Context Path: .
 
 # ============================================
@@ -36,7 +36,7 @@ ARG DOPPLER_TOKEN
 ARG SUPABASE_URL
 ARG SUPABASE_PUBLIC_KEY
 
-WORKDIR /app/apps/web-monitor
+WORKDIR /app/apps/web-admin
 RUN if [ -n "$DOPPLER_TOKEN" ]; then doppler run --token "$DOPPLER_TOKEN" -- bun run build; else bun run build; fi
 
 # ============================================
@@ -59,9 +59,9 @@ RUN apt-get update && apt-get install -y apt-transport-https ca-certificates cur
     apt-get -y install doppler && \
     rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder --chown=bun:bun /app/apps/web-monitor/public ./apps/web-monitor/public
-COPY --from=builder --chown=bun:bun /app/apps/web-monitor/.next/standalone ./
-COPY --from=builder --chown=bun:bun /app/apps/web-monitor/.next/static ./apps/web-monitor/.next/static
+COPY --from=builder --chown=bun:bun /app/apps/web-admin/public ./apps/web-admin/public
+COPY --from=builder --chown=bun:bun /app/apps/web-admin/.next/standalone ./
+COPY --from=builder --chown=bun:bun /app/apps/web-admin/.next/static ./apps/web-admin/.next/static
 
 USER bun
 
@@ -69,4 +69,4 @@ EXPOSE 3000
 
 # DOPPLER_TOKEN must be set in Dokploy's Environment Variables section at runtime
 ENTRYPOINT ["doppler", "run", "--"]
-CMD ["bun", "apps/web-monitor/server.js"]
+CMD ["bun", "apps/web-admin/server.js"]
