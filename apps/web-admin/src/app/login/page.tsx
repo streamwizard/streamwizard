@@ -15,9 +15,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <p className="text-sm text-muted-foreground">Admin access only</p>
         </div>
 
-        {error === "unauthorized" && (
+        {error === "signin_required" && (
+          <p className="rounded-md bg-muted px-4 py-3 text-center text-sm text-muted-foreground">
+            Please sign in to continue.
+          </p>
+        )}
+
+        {error === "session_failed" && (
           <p className="rounded-md bg-destructive/10 px-4 py-3 text-center text-sm text-destructive">
-            Your account does not have admin access.
+            We couldn&apos;t start your session. Please try signing in again.
           </p>
         )}
 
