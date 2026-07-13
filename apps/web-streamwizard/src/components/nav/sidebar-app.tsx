@@ -108,6 +108,14 @@ export function AppSidebar({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/irl/ingest")}>
+                    <Link href="/dashboard/irl/ingest" onClick={closeMobile}>
+                      <Radio className="mr-2 h-4 w-4" />
+                      Ingest
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
                   <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/irl/gps")}>
                     <Link href="/dashboard/irl/gps" onClick={closeMobile}>
                       <MapPin className="mr-2 h-4 w-4" />

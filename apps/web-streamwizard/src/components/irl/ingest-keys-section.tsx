@@ -146,26 +146,24 @@ export function IngestKeysSection({
               </p>
             </div>
           ) : (
-            <p className="text-muted-foreground text-sm">
-              No keys yet. Create one below and you&apos;ll get your ingest URLs.
-            </p>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="key-label">New key</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="key-label"
-                placeholder="Label (e.g. Belabox, phone, backup)"
-                value={label}
-                onChange={(e) => setLabel(e.target.value)}
-                disabled={isPending}
-              />
-              <Button onClick={handleCreate} disabled={!canInteract || isPending}>
-                {isPending ? "Creating…" : "Create key"}
-              </Button>
+            <div className="space-y-2">
+              <p className="text-muted-foreground text-sm">
+                No key yet. Create one and you&apos;ll get your ingest URLs.
+              </p>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="key-label"
+                  placeholder="Label (e.g. Belabox, phone, backup)"
+                  value={label}
+                  onChange={(e) => setLabel(e.target.value)}
+                  disabled={isPending}
+                />
+                <Button onClick={handleCreate} disabled={!canInteract || isPending}>
+                  {isPending ? "Creating…" : "Create key"}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

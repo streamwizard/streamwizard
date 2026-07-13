@@ -13,12 +13,10 @@ export default async function CloudObsPage() {
     getActiveIngestNodeHosts(createAdminClient()),
   ]);
 
-  // Encoders push to the node's public domain (when ops has set one) or its
-  // public IP; the cloud OBS instance pulls the feed back over the tailnet.
-  // Both come from the linked ingest node, falling back to env/placeholder
-  // only when no node is linked (e.g. local dev).
-  const ingestHost =
-    nodeHosts?.public_hostname ?? nodeHosts?.public_ip ?? process.env.NEXT_PUBLIC_INGEST_HOST ?? "your-stream-server";
+  // The cloud OBS instance pulls the incoming feed back over the tailnet. This
+  // comes from the linked ingest node, falling back to env/placeholder only
+  // when no node is linked (e.g. local dev). Key management (and the public
+  // push host) now lives on /dashboard/irl/ingest.
   const obsPullHost = nodeHosts?.tailscale_ip ?? process.env.NEXT_PUBLIC_OBS_PULL_HOST ?? "your-ingest-tailscale-ip";
 
   return (
@@ -26,7 +24,6 @@ export default async function CloudObsPage() {
       canInteract={access.canInteract}
       plan={access.plan}
       initialIngestKeys={keys ?? []}
-      ingestHost={ingestHost}
       obsPullHost={obsPullHost}
       autoSwitcherConfig={autoSwitcherConfig}
     />
