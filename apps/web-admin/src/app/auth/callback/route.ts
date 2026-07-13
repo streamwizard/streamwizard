@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createClient } from "@repo/supabase/next/server";
+import { createRouteHandlerClient } from "@repo/supabase/next/server";
 
 // Relative Location headers are resolved by the browser against the origin it
 // is already on, so redirects stay same-origin by construction — no need to
@@ -26,7 +26,12 @@ export async function GET(request: NextRequest) {
     return redirectTo("/login?error=oauth_failed");
   }
 
-  const supabase = await createClient();
+  // Build the success response up front so the session cookies land directly
+  // on the redirect we return. Writing them via next/headers cookies() and
+  // returning a separately-constructed response dropped the Set-Cookie behind
+  // the staging proxy, so the dashboard gate saw "Auth session missing!".
+  const response = redirectTo("/ws");
+  const supabase = createRouteHandlerClient(request, response);
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
@@ -42,5 +47,5 @@ export async function GET(request: NextRequest) {
     return redirectTo("/login?error=session_failed");
   }
 
-  return redirectTo("/ws");
+  return response;
 }
