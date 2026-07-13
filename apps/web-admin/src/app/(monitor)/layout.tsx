@@ -13,10 +13,14 @@ import { homeEnv } from "@/lib/home-env";
 
 export default async function MonitorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
 
-  if (!data.user) {
-    redirect("/login");
+  if (error || !data.user) {
+    // A missing session is normal for a first visit, but a real error here
+    // (bad/expired token, misconfigured Supabase client) is worth logging so
+    // the "silent bounce to /login" has a paper trail in the server logs.
+    if (error) console.warn("[web-admin] getUser failed at dashboard gate:", error.message);
+    redirect("/login?error=signin_required");
   }
 
   const { data: roleRow } = await supabaseAdmin
@@ -27,7 +31,7 @@ export default async function MonitorLayout({ children }: { children: React.Reac
     .maybeSingle();
 
   if (!roleRow) {
-    redirect("/login?error=unauthorized");
+    redirect("/no-access");
   }
 
   // Restore the dashboard chrome settings persisted from a previous visit, so
@@ -43,7 +47,7 @@ export default async function MonitorLayout({ children }: { children: React.Reac
       <RefreshIntervalProvider initialInterval={initialInterval}>
         <BandwidthUnitProvider initialUnit={initialUnit}>
           <SidebarProvider>
-            <MonitorSidebar />
+            <MonitorSidebar userEmail={data.user.email ?? ""} />
             <SidebarInset>
               <MonitorHeader envLabel={homeEnv()} />
               <main className="flex-1 overflow-auto p-6">{children}</main>
