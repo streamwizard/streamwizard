@@ -6,6 +6,7 @@ import { Activity } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -15,9 +16,10 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { NavUser } from "@/components/nav-user";
 import { navGroups, isNavItemActive } from "@/lib/nav-config";
 
-export function MonitorSidebar() {
+export function MonitorSidebar({ userEmail }: { userEmail: string }) {
   const pathname = usePathname();
 
   return (
@@ -60,6 +62,9 @@ export function MonitorSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
+      <SidebarFooter>
+        <NavUser email={userEmail} />
+      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   );
