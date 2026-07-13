@@ -8,7 +8,15 @@ export async function updateSession(request: NextRequest) {
     request,
   });
 
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+  // Mirror server.ts: fall back to the non-prefixed Doppler vars. In a
+  // standalone build the NEXT_PUBLIC_ values are only baked in when Supabase
+  // env is present at *build* time; reading the plain names keeps the
+  // middleware pointed at the right project (so cookie names match) even when
+  // the build ran without them and only runtime env is available.
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL!;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_PUBLIC_KEY!;
+
+  const supabase = createServerClient(supabaseUrl, supabaseKey, {
     cookies: {
       getAll() {
         return request.cookies.getAll();
