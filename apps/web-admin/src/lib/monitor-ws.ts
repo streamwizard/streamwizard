@@ -136,7 +136,10 @@ export function useMonitorWs(wsUrl: string | null, monitorSecret: string | null)
   useEffect(() => {
     if (!wsUrl || !monitorSecret) return;
 
+    let disposed = false;
+
     function connect() {
+      if (disposed) return;
       setStatus("connecting");
 
       const url = `${wsUrl}/ws?role=monitor&token=${encodeURIComponent(monitorSecret!)}`;
@@ -175,8 +178,11 @@ export function useMonitorWs(wsUrl: string | null, monitorSecret: string | null)
       };
 
       ws.onclose = () => {
-        setStatus("disconnected");
         wsRef.current = null;
+        // Don't resurrect the socket after teardown — otherwise every unmount
+        // or wsUrl/secret change leaks a detached reconnect loop.
+        if (disposed) return;
+        setStatus("disconnected");
         reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY_MS);
       };
 
@@ -188,9 +194,15 @@ export function useMonitorWs(wsUrl: string | null, monitorSecret: string | null)
     connect();
 
     return () => {
+      disposed = true;
       if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      wsRef.current?.close();
+      const ws = wsRef.current;
       wsRef.current = null;
+      if (ws) {
+        // Drop handlers first so the pending close can't schedule a reconnect.
+        ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+        ws.close();
+      }
     };
   }, [wsUrl, monitorSecret]);
 
