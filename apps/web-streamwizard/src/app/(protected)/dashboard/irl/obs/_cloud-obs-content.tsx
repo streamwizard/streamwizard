@@ -23,7 +23,6 @@ import { ObsVncPreview } from "@/components/irl/obs-vnc-preview";
 import { ObsBootProgress } from "@/components/irl/obs-boot-progress";
 import { ObsOfflineState } from "@/components/irl/obs-offline-state";
 import { ObsSetupStepper } from "@/components/irl/obs-setup-stepper";
-import { useSessionStore } from "@/stores/session-store";
 import { ObsSourceProfiler } from "@/components/irl/obs-source-profiler";
 import { ObsResourceGraphs } from "@/components/irl/obs-resource-graphs";
 import { ObsFileUploader } from "@/components/irl/obs-file-uploader";
@@ -73,7 +72,6 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
   // the "adjust state during render" below only fires the one time
   // containerStatus resolves out of "unknown" — not on every render.
   const [resolvedFor, setResolvedFor] = useState<typeof containerStatus | null>(null);
-  const memesEnabled = useSessionStore((s) => s.preferences.memes_enabled);
   // True while we're expecting OBS to come online from a user-initiated launch
   // or start, so the "OBS connected" toast only fires for those flows and not
   // on a passive reconnect when the page first loads an already-running box.
@@ -202,6 +200,14 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
     (obs.status === "connecting" || obs.isAutoRetrying);
   const inLaunchFlow = isProvisioning || isBooting;
   const hasTimedOut = containerStatus === "running" && obs.hasTimedOut && obs.status !== "open";
+
+  // When OBS isn't open, decide whether to show the idle "offline" state (with a
+  // Start button) or the "booting" loader. Only show offline once we *know* the
+  // box is stopped and nothing's launching, or after a boot timeout. Anything
+  // else — the initial instance lookup still resolving ("unknown"), a launch in
+  // flight, or the OBS WS still connecting — is a loading state, so a refresh
+  // doesn't flash "offline" before we know the real status.
+  const stripIsOffline = hasTimedOut || (containerStatus === "stopped" && !isProvisioning);
 
   // Lock in whether this is a guided setup once we actually know the user's
   // instance state (containerStatus starts "unknown" until the initial fetch
@@ -548,7 +554,15 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
           isn't, the strip would just be empty shells, so swap the whole thing
           for a single offline/booting state instead. */}
       {obs.status !== "open" ? (
-        <ObsOfflineState status={inLaunchFlow ? "booting" : "offline"} memesEnabled={memesEnabled} />
+        <ObsOfflineState
+          status={stripIsOffline ? "offline" : "booting"}
+          starting={togglingContainer}
+          onStart={
+            containerStatus !== "running" && canInteract && instanceId && apiUrl
+              ? handleToggleContainer
+              : undefined
+          }
+        />
       ) : (
         <div className="space-y-6">
           {/* Scenes — the primary in-stream control, front and center */}
