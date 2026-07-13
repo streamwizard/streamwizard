@@ -1,6 +1,0 @@
-# TLS termination for the monitor dashboard. Caddy provisions and renews the
-# Let's Encrypt certificate automatically — the DNS A record for
-# ADMIN_DOMAIN must point at this VPS before first boot.
-{$ADMIN_DOMAIN}
-
-reverse_proxy web-admin:3000

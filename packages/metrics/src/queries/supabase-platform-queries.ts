@@ -2,8 +2,8 @@ import { runFluxQuery, assertValidFluxDuration } from "../query-client";
 import { resolveBucket, type QueryOpts } from "./query-opts";
 
 // Supabase platform metrics, scraped from the per-project privileged
-// Prometheus endpoint by the monitor VPS's Telegraf (see
-// docker/monitor-vps/telegraf/). The prometheus parser writes every metric
+// Prometheus endpoint by Telegraf on the monitoring host. The prometheus
+// parser writes every metric
 // into a single measurement named "prometheus" with the metric name as the
 // field key — so unlike the app metrics, everything here filters on _field.
 //

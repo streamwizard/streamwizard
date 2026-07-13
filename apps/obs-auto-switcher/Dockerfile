@@ -1,5 +1,5 @@
 # This Dockerfile expects the Docker build context to be the repository root.
-# Runs on the monitoring VPS via docker/monitor-vps/docker-compose.yml:
+# Deployed via Dokploy:
 # - Docker File: apps/obs-auto-switcher/Dockerfile
 # - Docker Context Path: .
 
