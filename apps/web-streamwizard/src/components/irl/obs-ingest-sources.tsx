@@ -20,19 +20,15 @@ import {
   SelectValue,
 } from "@repo/ui";
 import { listOutputKeys, type IngestOutputKey } from "@/actions/ingest-output-keys";
-import { type IngestStreamKey } from "@/actions/ingest-keys";
 import type { Scene } from "@/hooks/use-obs-websocket";
 import { obsPullUrl } from "@/lib/obs-irl";
 import { IngestLiveStats } from "./ingest-live-stats";
-import { IngestKeysSection } from "./ingest-keys-section";
 
 interface ObsIngestSourcesProps {
   scenes: Scene[];
   currentScene: string | null;
   canInteract: boolean;
   onAddToScene: (sceneName: string, inputName: string, url: string) => Promise<void>;
-  initialIngestKeys: IngestStreamKey[];
-  ingestHost: string;
   obsPullHost: string;
 }
 
@@ -41,8 +37,6 @@ export function ObsIngestSources({
   currentScene,
   canInteract,
   onAddToScene,
-  initialIngestKeys,
-  ingestHost,
   obsPullHost,
 }: ObsIngestSourcesProps) {
   const [keys, setKeys] = useState<IngestOutputKey[] | null>(null);
@@ -85,7 +79,6 @@ export function ObsIngestSources({
   return (
     <div className="space-y-6">
       <IngestLiveStats />
-      <IngestKeysSection initialKeys={initialIngestKeys} ingestHost={ingestHost} canInteract={canInteract} />
 
       <div className="space-y-3 border-t pt-6">
         {keys === null ? (

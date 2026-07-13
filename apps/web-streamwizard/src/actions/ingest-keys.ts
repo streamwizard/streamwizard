@@ -14,7 +14,7 @@ import type { Database } from "@repo/supabase";
 
 export type IngestStreamKey = Database["public"]["Tables"]["ingest_stream_keys"]["Row"];
 
-const INGEST_SETTINGS_PATH = "/dashboard/irl/obs";
+const INGEST_SETTINGS_PATH = "/dashboard/irl/ingest";
 
 function generateStreamKey(): string {
   return randomBytes(32).toString("hex");
@@ -127,6 +127,18 @@ export async function createIngestKey(label: string): Promise<{ data: IngestStre
   }
 
   const adminClient = createAdminClient();
+
+  // One key per user. If they've got one already, they rotate it, not stack a
+  // second one. Guards against a double-click or a stale UI as much as intent.
+  const { data: existing } = await adminClient
+    .from("ingest_stream_keys")
+    .select("id")
+    .eq("user_id", user.id)
+    .limit(1);
+  if (existing && existing.length > 0) {
+    return { data: null, error: "You've already got an ingest key. Rotate it instead." };
+  }
+
   const { data, error } = await adminClient
     .from("ingest_stream_keys")
     .insert({ user_id: user.id, stream_key: generateStreamKey(), label: label.trim() || "My Ingest Key" })

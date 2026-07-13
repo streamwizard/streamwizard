@@ -40,12 +40,11 @@ interface CloudObsContentProps {
   canInteract: boolean;
   plan: ProductAccess["plan"];
   initialIngestKeys: IngestStreamKey[];
-  ingestHost: string;
   obsPullHost: string;
   autoSwitcherConfig: AutoSwitcherConfigRow | null;
 }
 
-export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, ingestHost, obsPullHost, autoSwitcherConfig }: CloudObsContentProps) {
+export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, obsPullHost, autoSwitcherConfig }: CloudObsContentProps) {
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [apiUrl, setApiUrl] = useState<string | null>(null);
   const [obsWsPassword, setObsWsPassword] = useState<string | null>(null);
@@ -80,9 +79,6 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
   // the auto-wire effect add it silently instead of just notifying. Lost on
   // reload (accepted tradeoff, avoids a persisted "pending wire" flag).
   const justCreatedKeyIdRef = useRef<string | null>(null);
-  // Notify about a missing ingest source at most once per OBS connection,
-  // not once per scene refetch while connected.
-  const notifiedMissingThisConnectionRef = useRef(false);
 
   const handleKeyCreated = (key: IngestStreamKey) => {
     setIngestKeys((prev) => [key, ...prev]);
@@ -244,19 +240,11 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
     }
   }, [obs.status]);
 
-  // Reset the "already notified" guard whenever we leave a connected session,
-  // so a fresh connection gets its own chance to notify about a missing source.
-  useEffect(() => {
-    if (obs.status !== "open") {
-      notifiedMissingThisConnectionRef.current = false;
-    }
-  }, [obs.status]);
-
   // Auto-wire the primary ingest key into the fixed "IRL" scene once OBS is
   // connected and scenes have actually loaded (status flips to "open" slightly
   // before fetchScenes() resolves, so wait for scenes rather than acting on
   // stale/empty data). Only a key created THIS session gets wired silently —
-  // everything else is notify-only, so we never fight a user who deliberately
+  // everything else is left alone, so we never fight a user who deliberately
   // removed the source. Only the primary (most recent) key is ever auto-wired;
   // creating a second key never rewires "StreamWizard Ingest" onto it, since
   // the fixed source name means detection is keyed by name, not by key. That's
@@ -289,26 +277,6 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
             description: err instanceof Error ? err.message : "Add it manually from the Ingest tab.",
           });
         }
-      } else if (!notifiedMissingThisConnectionRef.current) {
-        notifiedMissingThisConnectionRef.current = true;
-        toast.error("Your ingest source is missing from OBS", {
-          description: `The "${IRL_SOURCE_NAME}" source isn't in your ${IRL_SCENE_NAME} scene.`,
-          action: {
-            label: "Add it",
-            onClick: () => {
-              obs
-                .addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(obsPullHost, outputKey.output_key))
-                .then(() =>
-                  toast.success("Added to OBS", { description: `Wired into the "${IRL_SCENE_NAME}" scene.` }),
-                )
-                .catch((err) =>
-                  toast.error("Couldn't add it", {
-                    description: err instanceof Error ? err.message : "Try again?",
-                  }),
-                );
-            },
-          },
-        });
       }
     })();
 
@@ -599,6 +567,17 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
             </CardContent>
           </Card>
 
+          {/* Live incoming signal + a shortcut to drop that feed into a scene.
+              Key management lives on its own page (/dashboard/irl/ingest); this
+              stays here because it needs the live OBS scenes. */}
+          <ObsIngestSources
+            scenes={obs.scenes}
+            currentScene={obs.currentScene}
+            canInteract={canInteract}
+            onAddToScene={obs.addMediaSourceToScene}
+            obsPullHost={obsPullHost}
+          />
+
           {/* Sources / Performance / Files — tabbed so only one dense panel
               is on screen at a time instead of everything stacked and
               fully expanded, which is what made the live view feel noisy. */}
@@ -615,10 +594,6 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
               <TabsTrigger value="files">
                 <FolderUp className="h-3.5 w-3.5" />
                 Files
-              </TabsTrigger>
-              <TabsTrigger value="ingest">
-                <Radio className="h-3.5 w-3.5" />
-                Ingest
               </TabsTrigger>
               <TabsTrigger value="auto-switcher">
                 <Repeat className="h-3.5 w-3.5" />
@@ -650,22 +625,6 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, i
               <Card>
                 <CardContent className="pt-4">
                   <ObsFileUploader />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="ingest">
-              <Card>
-                <CardContent className="pt-4">
-                  <ObsIngestSources
-                    scenes={obs.scenes}
-                    currentScene={obs.currentScene}
-                    canInteract={canInteract}
-                    onAddToScene={obs.addMediaSourceToScene}
-                    initialIngestKeys={ingestKeys}
-                    ingestHost={ingestHost}
-                    obsPullHost={obsPullHost}
-                  />
                 </CardContent>
               </Card>
             </TabsContent>
