@@ -13,9 +13,10 @@ const schema = z.object({
   WS_SERVER_URL: z.string().url(),
   CONSUMER_SECRET: z.string().min(1),
 
-  // obs-instance-manager /internal/* routes (must match the nodes'
-  // INTERNAL_SERVICE_KEY)
-  OBS_MANAGER_INTERNAL_KEY: z.string().min(1),
+  // Decrypts each node's per-node obs_command key (from obs_node_api_keys)
+  // before calling the node's /obs route. Must match the key the rest-api /
+  // nodes encrypt with.
+  TOKEN_ENCRYPTION_KEY: z.string().min(1),
 
   // Twitch app credentials for chat notices (@repo/twitch-api app token path)
   TWITCH_CLIENT_ID: z.string().min(1),

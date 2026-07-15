@@ -11,7 +11,7 @@ switches back once it's stable. Configured per user from the Cloud OBS page
 ```
 ingest-control ──(role=bot)──► ws-server ──(role=consumer)──► this engine
 web server actions ──POST /internal/broadcast──► ws-server ──► this engine   (config/override pushes)
-this engine ──POST /internal/instances/:id/obs/command──► obs-instance-manager ──► obs-websocket (container)
+this engine ──POST /obs/instances/:id/command──► obs-instance-manager ──► obs-websocket (container)
 this engine ──(role=bot)──► ws-server ──► user room                          (auto_switcher_status for the UI)
 ```
 
@@ -44,7 +44,7 @@ scale, shard users across replicas — don't duplicate them.
 | `SUPABASE_URL` / `SUPABASE_SECRET_KEY` | config reads, obs_instances/obs_nodes lookups, stream_events inserts, bot auth to ws-server |
 | `WS_SERVER_URL` | ws-server base URL (ws(s)://) |
 | `CONSUMER_SECRET` | ws-server `role=consumer` + `/internal/broadcast` (must match ws-server's env) |
-| `OBS_MANAGER_INTERNAL_KEY` | `/internal/*` on obs-instance-manager nodes (must match each node's `INTERNAL_SERVICE_KEY`) |
+| `TOKEN_ENCRYPTION_KEY` | decrypts each node's per-node `obs_command` key (from `obs_node_api_keys`) before calling the node's `/obs` route |
 | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | chat notices via `@repo/twitch-api` |
 | `PORT` (default 8010) | `/health` liveness endpoint |
 | `SENTRY_DSN` / `SENTRY_RELEASE` | optional |

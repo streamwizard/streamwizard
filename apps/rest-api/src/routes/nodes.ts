@@ -14,6 +14,7 @@ import {
   countActiveObsInstancesForNode,
   deleteObsInstanceForNode,
   getNodeById,
+  getNodeCommandKeyHash,
   getObsInstanceByIdForNode,
   getTwitchIntegration,
   insertNodeApiKey,
@@ -145,10 +146,24 @@ nodes.post("/claim", async (c) => {
   const apiKey = randomBytes(32).toString("hex");
   const { ciphertext, iv, authTag } = encryptToken(apiKey);
   await insertNodeApiKey(supabase, linked.id, {
+    type: "rest_api",
     key_hash: createHash("sha256").update(apiKey).digest("hex"),
     key_ciphertext: ciphertext,
     key_iv: iv,
     key_tag: authTag,
+  });
+
+  // Per-node command key for the obs-auto-switcher's /obs route. The node only
+  // ever learns its SHA-256 hash (via GET /api/nodes/me), never the plaintext,
+  // so unlike node_api_key this is deliberately NOT returned in the response.
+  const commandKey = randomBytes(32).toString("hex");
+  const commandEnc = encryptToken(commandKey);
+  await insertNodeApiKey(supabase, linked.id, {
+    type: "obs_command",
+    key_hash: createHash("sha256").update(commandKey).digest("hex"),
+    key_ciphertext: commandEnc.ciphertext,
+    key_iv: commandEnc.iv,
+    key_tag: commandEnc.authTag,
   });
 
   return c.json({
@@ -231,7 +246,10 @@ nodes.get("/me", nodeAuth(), async (c) => {
   const nodeId = c.get("nodeId");
   const node = await getNodeById(supabase, nodeId);
   if (!node) return c.json({ error: "Node not found" }, 404);
-  return c.json(node);
+  // command_key_hash lets the node validate the obs-auto-switcher's Bearer on
+  // its /obs route without ever holding the plaintext command key.
+  const command_key_hash = await getNodeCommandKeyHash(supabase, nodeId);
+  return c.json({ ...node, command_key_hash });
 });
 
 // ── Instance queries ──────────────────────────────────────────────────────────

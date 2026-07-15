@@ -1,5 +1,6 @@
 import { supabase } from "@repo/supabase";
-import { env } from "../lib/env";
+import { decryptToken } from "@repo/supabase/crypto";
+import { getNodeCommandKeyEncrypted } from "@repo/supabase/queries/obs-nodes";
 
 export interface ObsCommand {
   request: string;
@@ -15,6 +16,9 @@ export interface ObsCommandResult {
 interface ResolvedInstance {
   instanceId: string;
   apiUrl: string;
+  // The node's per-node obs_command key (decrypted), sent as the Bearer to the
+  // node's /obs route. Cached alongside the instance so we decrypt once per TTL.
+  commandKey: string;
 }
 
 const INSTANCE_CACHE_TTL_MS = 30_000;
@@ -37,9 +41,13 @@ async function resolveInstance(userId: string): Promise<ResolvedInstance | null>
 
   if (error) throw new Error(`obs_instances lookup failed: ${error.message}`);
   const apiUrl = (data?.obs_nodes as { api_url?: string } | null)?.api_url;
-  if (!data || !apiUrl) return null;
+  if (!data || !apiUrl || !data.node_id) return null;
 
-  const resolved = { instanceId: data.id, apiUrl: apiUrl.replace(/\/$/, "") };
+  const enc = await getNodeCommandKeyEncrypted(supabase, data.node_id);
+  if (!enc) throw new Error(`no obs_command key provisioned for node ${data.node_id}`);
+  const commandKey = decryptToken(enc.key_ciphertext, enc.key_iv, enc.key_tag);
+
+  const resolved = { instanceId: data.id, apiUrl: apiUrl.replace(/\/$/, ""), commandKey };
   cache.set(userId, { resolved, at: Date.now() });
   return resolved;
 }
@@ -49,10 +57,10 @@ export function invalidateInstanceCache(userId: string): void {
 }
 
 async function post(resolved: ResolvedInstance, commands: ObsCommand[]): Promise<ObsCommandResult[]> {
-  const res = await fetch(`${resolved.apiUrl}/internal/instances/${resolved.instanceId}/obs/command`, {
+  const res = await fetch(`${resolved.apiUrl}/obs/instances/${resolved.instanceId}/command`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${env.OBS_MANAGER_INTERNAL_KEY}`,
+      authorization: `Bearer ${resolved.commandKey}`,
       "content-type": "application/json",
     },
     body: JSON.stringify({ commands }),
