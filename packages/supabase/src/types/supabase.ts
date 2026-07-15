@@ -1618,6 +1618,7 @@ export type Database = {
           key_iv: string
           key_tag: string
           node_id: string
+          type: string
         }
         Insert: {
           created_at?: string
@@ -1627,6 +1628,7 @@ export type Database = {
           key_iv: string
           key_tag: string
           node_id: string
+          type?: string
         }
         Update: {
           created_at?: string
@@ -1636,6 +1638,7 @@ export type Database = {
           key_iv?: string
           key_tag?: string
           node_id?: string
+          type?: string
         }
         Relationships: [
           {
