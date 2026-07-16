@@ -17,6 +17,7 @@ import { NodeFleetTable } from "@/components/charts/node-fleet-table";
 import { StatCard } from "@/components/widgets/stat-card";
 import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
 import { getFleet, type FleetNode } from "@/lib/node-fleet";
+import { settled } from "@/lib/settled";
 
 export const dynamic = "force-dynamic";
 
@@ -38,23 +39,31 @@ export default async function ObsDashboard() {
   } catch {
     // registry unreachable — table renders its empty state
   }
-  try {
-    [nodeCpu, nodeRam, nodeGpu, nodeVram, nodeInstanceCount, nodeRx, nodeTx, nodeSnapshot, instanceSnapshot, registeredIds] =
-      await Promise.all([
-        queryObsNodeCpu("24h", "1h"),
-        queryObsNodeRam("24h", "1h"),
-        queryObsNodeGpuUtil("24h", "1h"),
-        queryObsNodeVram("24h", "1h"),
-        queryObsNodeInstanceCount("24h", "1h"),
-        queryObsNodeBandwidth("rx", "24h", "1h"),
-        queryObsNodeBandwidth("tx", "24h", "1h"),
-        queryObsNodeSnapshot(),
-        queryObsInstanceSnapshot(),
-        getRegisteredNodeIds("obs_nodes"),
-      ]);
-  } catch {
-    // InfluxDB not available — show empty state
-  }
+  const [cpuRes, ramRes, gpuRes, vramRes, instanceCountRes, rxRes, txRes, snapshotRes, instanceSnapshotRes, registeredIdsRes] =
+    await Promise.allSettled([
+      queryObsNodeCpu("24h", "1h"),
+      queryObsNodeRam("24h", "1h"),
+      queryObsNodeGpuUtil("24h", "1h"),
+      queryObsNodeVram("24h", "1h"),
+      queryObsNodeInstanceCount("24h", "1h"),
+      queryObsNodeBandwidth("rx", "24h", "1h"),
+      queryObsNodeBandwidth("tx", "24h", "1h"),
+      queryObsNodeSnapshot(),
+      queryObsInstanceSnapshot(),
+      getRegisteredNodeIds("obs_nodes"),
+    ]);
+
+  nodeCpu = settled(cpuRes, [], "obs node cpu");
+  nodeRam = settled(ramRes, [], "obs node ram");
+  nodeGpu = settled(gpuRes, [], "obs node gpu");
+  nodeVram = settled(vramRes, [], "obs node vram");
+  nodeInstanceCount = settled(instanceCountRes, [], "obs node instance count");
+  nodeRx = settled(rxRes, [], "obs node rx");
+  nodeTx = settled(txRes, [], "obs node tx");
+  nodeSnapshot = settled(snapshotRes, [], "obs node snapshot");
+  instanceSnapshot = settled(instanceSnapshotRes, [], "obs instance snapshot");
+  // null (not []) keeps filterToRegistered permissive when the registry is down.
+  registeredIds = settled(registeredIdsRes, null, "obs registered ids");
 
   // Influx keeps points from deleted nodes until they age out of the range;
   // show only nodes that still exist in the registry, labeled by name.

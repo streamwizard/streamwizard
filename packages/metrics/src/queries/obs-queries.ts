@@ -77,6 +77,9 @@ export interface ObsNodeSnapshot {
 
 // Latest per-node reading across every tracked field — the "fleet at a
 // glance" table, one row per node.
+// pivot() dissolves _value into one column per field, so last() must be told
+// to check _time — its "_value" default errors with `no column "_value" exists`
+// (and only once data exists: an empty pivot yields no tables to check).
 export async function queryObsNodeSnapshot(opts?: QueryOpts): Promise<ObsNodeSnapshot[]> {
   const bucket = resolveBucket(opts);
   const query = `
@@ -85,7 +88,7 @@ export async function queryObsNodeSnapshot(opts?: QueryOpts): Promise<ObsNodeSna
       |> filter(fn: (r) => r._measurement == "obs_node")
       |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
       |> group(columns: ["node_id"])
-      |> last()
+      |> last(column: "_time")
       |> yield(name: "obs_node_snapshot")
   `;
   return runFluxQuery(query, (row) => ({
@@ -127,7 +130,7 @@ export async function queryObsInstanceSnapshot(opts?: QueryOpts): Promise<ObsIns
       |> filter(fn: (r) => r._measurement == "obs_instance")
       |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
       |> group(columns: ["instance_id"])
-      |> last()
+      |> last(column: "_time")
       |> yield(name: "obs_instance_snapshot")
   `;
   return runFluxQuery(query, (row) => ({
