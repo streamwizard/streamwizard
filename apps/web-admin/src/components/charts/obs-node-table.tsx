@@ -37,7 +37,10 @@ export function ObsNodeTable({ initialData }: Props) {
               <TableHead className="text-right">CPU</TableHead>
               <TableHead className="text-right">RAM</TableHead>
               <TableHead className="text-right">GPU</TableHead>
+              <TableHead className="text-right">Encoder</TableHead>
+              <TableHead className="text-right">Power</TableHead>
               <TableHead className="text-right">VRAM</TableHead>
+              <TableHead className="text-right">NVENC</TableHead>
               <TableHead className="text-right">Instances</TableHead>
               <TableHead className="text-right">Bandwidth (in/out)</TableHead>
             </TableRow>
@@ -45,7 +48,7 @@ export function ObsNodeTable({ initialData }: Props) {
           <TableBody>
             {rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                   No nodes reporting
                 </TableCell>
               </TableRow>
@@ -58,8 +61,13 @@ export function ObsNodeTable({ initialData }: Props) {
                     {row.ramUsedMb.toFixed(0)} / {row.ramTotalMb.toFixed(0)} MB
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{row.gpuUtilPct.toFixed(0)}%</TableCell>
+                  <TableCell className="text-right tabular-nums">{row.encoderUtilPct.toFixed(0)}%</TableCell>
+                  <TableCell className="text-right tabular-nums">{row.powerDrawW.toFixed(0)} W</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {row.vramUsedMb.toFixed(0)} / {row.vramTotalMb.toFixed(0)} MB
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">
+                    {row.nvencSessions} @ {row.nvencAvgFps.toFixed(0)} fps
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {row.runningInstanceCount} / {row.maxInstances}

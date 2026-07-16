@@ -38,8 +38,28 @@ export function queryObsNodeRam(fluxRange = "24h", window = "5m", opts?: QueryOp
   return queryObsNodeField("ram_used_mb", fluxRange, window, opts);
 }
 
+// nvidia-smi's utilization.gpu — time-occupancy, not load. It DROPS when
+// clocks boost under encode load and excludes the NVENC ASIC; use
+// queryObsNodeEncoderUtil for "is this streaming box saturated".
 export function queryObsNodeGpuUtil(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsNodeMetricPoint[]> {
   return queryObsNodeField("gpu_util_pct", fluxRange, window, opts);
+}
+
+/** NVENC ASIC busy % — absent from nodes running a collector without the field. */
+export function queryObsNodeEncoderUtil(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsNodeMetricPoint[]> {
+  return queryObsNodeField("encoder_util_pct", fluxRange, window, opts);
+}
+
+export function queryObsNodePower(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsNodeMetricPoint[]> {
+  return queryObsNodeField("power_draw_w", fluxRange, window, opts);
+}
+
+export function queryObsNodeNvencSessions(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsNodeMetricPoint[]> {
+  return queryObsNodeField("nvenc_sessions", fluxRange, window, opts);
+}
+
+export function queryObsNodeNvencFps(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsNodeMetricPoint[]> {
+  return queryObsNodeField("nvenc_avg_fps", fluxRange, window, opts);
 }
 
 export function queryObsNodeVram(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsNodeMetricPoint[]> {
@@ -68,6 +88,11 @@ export interface ObsNodeSnapshot {
   vramUsedMb: number;
   vramTotalMb: number;
   gpuTempC: number;
+  /** NVENC ASIC busy %; 0 for nodes whose collector predates the field. */
+  encoderUtilPct: number;
+  powerDrawW: number;
+  nvencSessions: number;
+  nvencAvgFps: number;
   runningInstanceCount: number;
   maxInstances: number;
   rxBytesPerSec: number;
@@ -100,6 +125,10 @@ export async function queryObsNodeSnapshot(opts?: QueryOpts): Promise<ObsNodeSna
     vramUsedMb: Number(row.vram_used_mb ?? 0),
     vramTotalMb: Number(row.vram_total_mb ?? 0),
     gpuTempC: Number(row.gpu_temp_c ?? 0),
+    encoderUtilPct: Number(row.encoder_util_pct ?? 0),
+    powerDrawW: Number(row.power_draw_w ?? 0),
+    nvencSessions: Number(row.nvenc_sessions ?? 0),
+    nvencAvgFps: Number(row.nvenc_avg_fps ?? 0),
     runningInstanceCount: Number(row.running_instance_count ?? 0),
     maxInstances: Number(row.max_instances ?? 0),
     rxBytesPerSec: Number(row.rx_bytes_per_sec ?? 0),

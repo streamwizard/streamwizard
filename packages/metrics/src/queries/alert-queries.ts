@@ -24,6 +24,8 @@ const OBS_NODE_ALERT_FIELDS = [
   "vram_total_mb",
   "nvenc_avg_fps",
   "nvenc_sessions",
+  "encoder_util_pct",
+  "power_draw_w",
   "max_encoder_sessions",
   "running_instance_count",
   "max_instances",
