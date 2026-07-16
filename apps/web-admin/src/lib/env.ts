@@ -3,9 +3,15 @@ import { z } from "zod";
 
 // Derive NEXT_PUBLIC_ vars from their non-prefixed Doppler counterparts.
 // next.config.ts does the same to bake them into the client bundle at build time.
-process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLIC_KEY;
-process.env.NEXT_PUBLIC_SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN;
+// Assigning undefined to process.env stores the *string* "undefined", which then
+// fails validation even for optional vars (stg sets no SENTRY_DSN) — leave unset.
+function derive(key: string, value: string | undefined): void {
+  if (value !== undefined) process.env[key] = value;
+}
+
+derive("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL);
+derive("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLIC_KEY);
+derive("NEXT_PUBLIC_SENTRY_DSN", process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN);
 
 export const env = createEnv({
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
