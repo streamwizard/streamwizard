@@ -2,6 +2,10 @@ import {
   queryObsNodeCpu,
   queryObsNodeRam,
   queryObsNodeGpuUtil,
+  queryObsNodeEncoderUtil,
+  queryObsNodePower,
+  queryObsNodeNvencSessions,
+  queryObsNodeNvencFps,
   queryObsNodeVram,
   queryObsNodeInstanceCount,
   queryObsNodeBandwidth,
@@ -25,6 +29,10 @@ export default async function ObsDashboard() {
   let nodeCpu: NodeMetricPoint[] = [];
   let nodeRam: NodeMetricPoint[] = [];
   let nodeGpu: NodeMetricPoint[] = [];
+  let nodeEncoder: NodeMetricPoint[] = [];
+  let nodePower: NodeMetricPoint[] = [];
+  let nodeNvencSessions: NodeMetricPoint[] = [];
+  let nodeNvencFps: NodeMetricPoint[] = [];
   let nodeVram: NodeMetricPoint[] = [];
   let nodeInstanceCount: NodeMetricPoint[] = [];
   let nodeRx: NodeMetricPoint[] = [];
@@ -39,23 +47,45 @@ export default async function ObsDashboard() {
   } catch {
     // registry unreachable — table renders its empty state
   }
-  const [cpuRes, ramRes, gpuRes, vramRes, instanceCountRes, rxRes, txRes, snapshotRes, instanceSnapshotRes, registeredIdsRes] =
-    await Promise.allSettled([
-      queryObsNodeCpu("24h", "1h"),
-      queryObsNodeRam("24h", "1h"),
-      queryObsNodeGpuUtil("24h", "1h"),
-      queryObsNodeVram("24h", "1h"),
-      queryObsNodeInstanceCount("24h", "1h"),
-      queryObsNodeBandwidth("rx", "24h", "1h"),
-      queryObsNodeBandwidth("tx", "24h", "1h"),
-      queryObsNodeSnapshot(),
-      queryObsInstanceSnapshot(),
-      getRegisteredNodeIds("obs_nodes"),
-    ]);
+  const [
+    cpuRes,
+    ramRes,
+    gpuRes,
+    encoderRes,
+    powerRes,
+    nvencSessionsRes,
+    nvencFpsRes,
+    vramRes,
+    instanceCountRes,
+    rxRes,
+    txRes,
+    snapshotRes,
+    instanceSnapshotRes,
+    registeredIdsRes,
+  ] = await Promise.allSettled([
+    queryObsNodeCpu("24h", "1h"),
+    queryObsNodeRam("24h", "1h"),
+    queryObsNodeGpuUtil("24h", "1h"),
+    queryObsNodeEncoderUtil("24h", "1h"),
+    queryObsNodePower("24h", "1h"),
+    queryObsNodeNvencSessions("24h", "1h"),
+    queryObsNodeNvencFps("24h", "1h"),
+    queryObsNodeVram("24h", "1h"),
+    queryObsNodeInstanceCount("24h", "1h"),
+    queryObsNodeBandwidth("rx", "24h", "1h"),
+    queryObsNodeBandwidth("tx", "24h", "1h"),
+    queryObsNodeSnapshot(),
+    queryObsInstanceSnapshot(),
+    getRegisteredNodeIds("obs_nodes"),
+  ]);
 
   nodeCpu = settled(cpuRes, [], "obs node cpu");
   nodeRam = settled(ramRes, [], "obs node ram");
   nodeGpu = settled(gpuRes, [], "obs node gpu");
+  nodeEncoder = settled(encoderRes, [], "obs node encoder");
+  nodePower = settled(powerRes, [], "obs node power");
+  nodeNvencSessions = settled(nvencSessionsRes, [], "obs node nvenc sessions");
+  nodeNvencFps = settled(nvencFpsRes, [], "obs node nvenc fps");
   nodeVram = settled(vramRes, [], "obs node vram");
   nodeInstanceCount = settled(instanceCountRes, [], "obs node instance count");
   nodeRx = settled(rxRes, [], "obs node rx");
@@ -71,6 +101,10 @@ export default async function ObsDashboard() {
   nodeCpu = labelNodes(filterToRegistered(nodeCpu, registeredIds, (p) => p.nodeId), nodeNames);
   nodeRam = labelNodes(filterToRegistered(nodeRam, registeredIds, (p) => p.nodeId), nodeNames);
   nodeGpu = labelNodes(filterToRegistered(nodeGpu, registeredIds, (p) => p.nodeId), nodeNames);
+  nodeEncoder = labelNodes(filterToRegistered(nodeEncoder, registeredIds, (p) => p.nodeId), nodeNames);
+  nodePower = labelNodes(filterToRegistered(nodePower, registeredIds, (p) => p.nodeId), nodeNames);
+  nodeNvencSessions = labelNodes(filterToRegistered(nodeNvencSessions, registeredIds, (p) => p.nodeId), nodeNames);
+  nodeNvencFps = labelNodes(filterToRegistered(nodeNvencFps, registeredIds, (p) => p.nodeId), nodeNames);
   nodeVram = labelNodes(filterToRegistered(nodeVram, registeredIds, (p) => p.nodeId), nodeNames);
   nodeInstanceCount = labelNodes(filterToRegistered(nodeInstanceCount, registeredIds, (p) => p.nodeId), nodeNames);
   nodeRx = labelNodes(filterToRegistered(nodeRx, registeredIds, (p) => p.nodeId), nodeNames);
@@ -87,7 +121,7 @@ export default async function ObsDashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-xl font-semibold">OBS Nodes</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Last 24 hours · refreshes every 30s</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Range and refresh follow the header controls</p>
       </div>
 
       <section className="space-y-3">
@@ -128,8 +162,16 @@ export default async function ObsDashboard() {
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">GPU</h2>
         <div className="grid grid-cols-2 gap-4">
-          <NodeMetricChart title="GPU Utilization %" initialData={nodeGpu} apiPath="/api/metrics/obs" dataKey="nodeGpu" format="percent" />
+          <NodeMetricChart title="Encoder (NVENC) Utilization %" initialData={nodeEncoder} apiPath="/api/metrics/obs" dataKey="nodeEncoder" format="percent" />
+          <NodeMetricChart title="Power Draw (W)" initialData={nodePower} apiPath="/api/metrics/obs" dataKey="nodePower" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <NodeMetricChart title="GPU Utilization % (time occupancy)" initialData={nodeGpu} apiPath="/api/metrics/obs" dataKey="nodeGpu" format="percent" />
           <NodeMetricChart title="VRAM Used (MB)" initialData={nodeVram} apiPath="/api/metrics/obs" dataKey="nodeVram" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <NodeMetricChart title="NVENC Sessions" initialData={nodeNvencSessions} apiPath="/api/metrics/obs" dataKey="nodeNvencSessions" />
+          <NodeMetricChart title="NVENC Encode FPS" initialData={nodeNvencFps} apiPath="/api/metrics/obs" dataKey="nodeNvencFps" />
         </div>
       </section>
 

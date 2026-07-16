@@ -39,4 +39,13 @@ describe("rule overrides", () => {
     expect(entry?.warn).toBeUndefined();
     expect(entry?.crit).toBeUndefined();
   });
+
+  test("encoder saturation rule ships with its tunable default", () => {
+    const rule = buildRules().find((r) => r.id === "gpu.encoder_util_high");
+    expect(rule?.enabled).toBe(true);
+    expect(rule?.forTicks).toBe(2);
+
+    const entry = getRuleCatalog().find((r) => r.id === "gpu.encoder_util_high");
+    expect(entry?.warn?.default).toBe(90);
+  });
 });

@@ -31,6 +31,9 @@ export const GPU_TEMP_WARN_C = 83;
 export const GPU_TEMP_CRIT_C = 90;
 export const VRAM_USED_WARN_PCT = 92;
 export const NVENC_FPS_LOW = 28;
+/** NVENC ASIC busy % — the true saturation signal for a streaming box
+ *  (utilization.gpu is time-occupancy and excludes the encoder). */
+export const ENCODER_UTIL_WARN_PCT = 90;
 export const NODE_CPU_WARN_PCT = 90;
 export const NODE_RAM_WARN_PCT = 92;
 export const INGEST_BANDWIDTH_WARN_PCT = 80;
@@ -339,6 +342,21 @@ export function buildRules(overrides: RuleOverrides = {}): AlertRule[] {
           obsNodeField(ctx, (f) => ((f.nvenc_sessions ?? 0) > 0 ? f.nvenc_avg_fps : undefined)),
         format: (node, v, t) =>
           `NVENC on ${node} averaging ${v.toFixed(1)} fps with active sessions (crit < ${t.crit})`,
+      },
+      overrides,
+    ),
+    thresholdRule(
+      {
+        id: "gpu.encoder_util_high",
+        title: "NVENC encoder saturated",
+        forTicks: 2,
+        warn: ENCODER_UTIL_WARN_PCT,
+        unit: "%",
+        // Field is absent on nodes running a collector that predates it (or
+        // boards reporting [N/A]); obsNodeField skips undefined, so no gate.
+        fetch: (ctx) => obsNodeField(ctx, (f) => f.encoder_util_pct),
+        format: (node, v, t) =>
+          `NVENC on ${node} at ${v.toFixed(0)}% utilization (warn > ${t.warn}%) — encode capacity nearly exhausted`,
       },
       overrides,
     ),
