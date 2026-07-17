@@ -14,8 +14,8 @@ export type AutoSwitcherConfigRow = Database["public"]["Tables"]["obs_auto_switc
 // picks the change up within a minute — so push failures never fail the save.
 async function pushConfigToEngine(row: AutoSwitcherConfigRow): Promise<void> {
   if (!env.CONSUMER_SECRET) return;
-  const httpUrl = env.WS_SERVER_URL.replace(/^ws:/, "http:").replace(/^wss:/, "https:");
   try {
+    const httpUrl = env.WS_SERVER_URL.replace(/^ws:/, "http:").replace(/^wss:/, "https:");
     await fetch(`${httpUrl}/internal/broadcast`, {
       method: "POST",
       headers: {
@@ -74,6 +74,15 @@ export async function setSceneOverride(
   }
 
   const supabase = await createClient();
+  // getUser refreshes an expired session (and distinguishes "logged out" from
+  // "no config row") -- the deck stays open for hours on a phone, so a stale
+  // cookie is a real path here, not an edge case.
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) return { ok: false, error: "Session expired. Refresh the page." };
+
   const { data, error } = await supabase
     .from("obs_auto_switcher_configs")
     .update({
@@ -81,11 +90,12 @@ export async function setSceneOverride(
       override_scene_name: sceneName,
       override_expires_at: durationMinutes ? new Date(Date.now() + durationMinutes * 60_000).toISOString() : null,
     })
+    .eq("user_id", user.id)
     .select()
-    .single();
+    .maybeSingle();
   if (error || !data) {
     reportError(error, "auto-switcher: override set");
-    return { ok: false, error: "Could not set the override — save your switcher settings first" };
+    return { ok: false, error: error ? `Could not set the override (${error.message})` : "Save your switcher settings first" };
   }
 
   await pushConfigToEngine(data);
@@ -94,14 +104,21 @@ export async function setSceneOverride(
 
 export async function clearSceneOverride(): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) return { ok: false, error: "Session expired. Refresh the page." };
+
   const { data, error } = await supabase
     .from("obs_auto_switcher_configs")
     .update({ override_scene_uuid: null, override_scene_name: null, override_expires_at: null })
+    .eq("user_id", user.id)
     .select()
-    .single();
+    .maybeSingle();
   if (error || !data) {
     reportError(error, "auto-switcher: override clear");
-    return { ok: false, error: "Could not clear the override" };
+    return { ok: false, error: error ? `Could not clear the override (${error.message})` : "Could not clear the override" };
   }
 
   await pushConfigToEngine(data);
