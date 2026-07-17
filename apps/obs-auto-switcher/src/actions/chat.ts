@@ -19,23 +19,37 @@ export interface ChatTemplateVars {
   scene?: string;
 }
 
-export function renderChatTemplate(template: string, vars: ChatTemplateVars): string {
+export function renderChatTemplate(
+  template: string,
+  vars: ChatTemplateVars,
+): string {
   return template
-    .replaceAll("{bitrate}", vars.bitrate !== undefined ? String(Math.round(vars.bitrate)) : "?")
-    .replaceAll("{rtt}", vars.rtt !== undefined ? String(Math.round(vars.rtt)) : "?")
+    .replaceAll(
+      "{bitrate}",
+      vars.bitrate !== undefined ? String(Math.round(vars.bitrate)) : "?",
+    )
+    .replaceAll(
+      "{rtt}",
+      vars.rtt !== undefined ? String(Math.round(vars.rtt)) : "?",
+    )
     .replaceAll("{loss}", vars.loss !== undefined ? vars.loss.toFixed(1) : "?")
     .replaceAll("{scene}", vars.scene ?? "?");
 }
 
 async function getBroadcasterId(userId: string): Promise<string | null> {
-  if (broadcasterIdCache.has(userId)) return broadcasterIdCache.get(userId) ?? null;
+  if (broadcasterIdCache.has(userId))
+    return broadcasterIdCache.get(userId) ?? null;
   const broadcasterId = await getTwitchUserIdByUserIdMaybe(supabase, userId);
   broadcasterIdCache.set(userId, broadcasterId);
   return broadcasterId;
 }
 
 /** Sends a chat notice; silently no-ops without a Twitch link or inside the per-user rate limit. */
-export async function sendChatNotice(userId: string, template: string, vars: ChatTemplateVars): Promise<void> {
+export async function sendChatNotice(
+  userId: string,
+  template: string,
+  vars: ChatTemplateVars,
+): Promise<void> {
   const now = Date.now();
   const last = lastSentAt.get(userId) ?? 0;
   if (now - last < RATE_LIMIT_MS) return;
@@ -45,8 +59,14 @@ export async function sendChatNotice(userId: string, template: string, vars: Cha
     if (!broadcasterId) return;
 
     lastSentAt.set(userId, now);
-    await new TwitchApi(broadcasterId).chat.sendMessage({ message: renderChatTemplate(template, vars) });
+    await new TwitchApi(broadcasterId).chat.sendMessage({
+      message: renderChatTemplate(template, vars),
+      sender: "broadcaster",
+    });
   } catch (err) {
-    console.warn(`[chat] notice failed user=${userId}:`, (err as Error).message);
+    console.warn(
+      `[chat] notice failed user=${userId}:`,
+      (err as Error).message,
+    );
   }
 }
