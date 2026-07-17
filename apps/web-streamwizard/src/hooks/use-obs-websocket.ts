@@ -105,6 +105,10 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [sceneItems, setSceneItems] = useState<Record<string, SceneItem[]>>({});
   const [currentScene, setCurrentScene] = useState<string | null>(null);
+  // When the current scene last changed, captured at the moment the change is
+  // observed (event, switch, or initial fetch) so consumers don't need their
+  // own change-detection effects to show an "updated at" time.
+  const [sceneChangedAt, setSceneChangedAt] = useState<Date | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
   const [togglingStream, setTogglingStream] = useState(false);
@@ -140,6 +144,7 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
     const sorted = data.scenes.slice().sort((a, b) => b.sceneIndex - a.sceneIndex);
     setScenes(sorted);
     setCurrentScene(data.currentProgramSceneName);
+    setSceneChangedAt(new Date());
 
     // Build sceneItemId lookup for each scene so we can call SetSceneItemEnabled
     const map = new Map<string, number>();
@@ -195,6 +200,7 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
     try {
       await request("SetCurrentProgramScene", { sceneName });
       setCurrentScene(sceneName);
+      setSceneChangedAt(new Date());
     } finally {
       setSwitchingTo(null);
     }
@@ -335,6 +341,7 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
           };
           if (eventType === "CurrentProgramSceneChanged") {
             setCurrentScene(eventData.sceneName as string);
+            setSceneChangedAt(new Date());
           } else if (eventType === "StreamStateChanged") {
             setIsStreaming(eventData.outputActive as boolean);
           } else if (eventType === "SceneListChanged") {
@@ -366,6 +373,7 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
         setScenes([]);
         setSceneItems({});
         setCurrentScene(null);
+        setSceneChangedAt(null);
         setIsStreaming(false);
         setSourceStats(null);
         setObsStats(null);
@@ -436,6 +444,7 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
     sceneItems,
     filteredScenes,
     currentScene,
+    sceneChangedAt,
     isStreaming,
     switchingTo,
     togglingStream,

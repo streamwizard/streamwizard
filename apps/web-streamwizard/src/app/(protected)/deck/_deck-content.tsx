@@ -6,23 +6,29 @@ import { toast } from "sonner";
 import { Badge, Button, Card, CardContent, cn } from "@repo/ui";
 import { AlertTriangle, Loader2, MonitorOff, Radio, Square, Wifi, WifiOff } from "lucide-react";
 import { getMyLatestInstanceAction, getInstanceNodeApiUrlAction, getInstanceObsWsPasswordAction } from "@/actions/nodes";
+import { setSceneOverride } from "@/actions/supabase/auto-switcher";
 import { mintWsUrl } from "@/lib/ws-ticket";
 import { toggleInstance } from "@/lib/instance-actions";
-import { useObsWebSocket } from "@/hooks/use-obs-websocket";
+import { useObsWebSocket, type Scene } from "@/hooks/use-obs-websocket";
 import { ObsBootProgress } from "@/components/irl/obs-boot-progress";
 import { ObsOfflineState } from "@/components/irl/obs-offline-state";
 import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
+import { AutoSwitcherHoldCard } from "./_auto-switcher-hold-card";
 import { InstallPrompt } from "./_install-prompt";
 
 interface DeckContentProps {
   canInteract: boolean;
+  autoSwitcher: {
+    enabled: boolean;
+    initialOverride: { sceneName: string | null } | null;
+  };
 }
 
 // Tall touch targets: an IRL streamer is tapping this one-handed on a phone
 // while walking, so every actionable button gets the same oversized shape.
 const deckButtonClass = "h-24 rounded-2xl text-base font-semibold";
 
-export function DeckContent({ canInteract }: DeckContentProps) {
+export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [apiUrl, setApiUrl] = useState<string | null>(null);
   const [obsWsPassword, setObsWsPassword] = useState<string | null>(null);
@@ -30,7 +36,14 @@ export function DeckContent({ canInteract }: DeckContentProps) {
   const [togglingContainer, setTogglingContainer] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [bootElapsed, setBootElapsed] = useState(0);
-  const [sceneUpdatedAt, setSceneUpdatedAt] = useState<Date | null>(null);
+  // Last override state the deck knows about (scene name held, or null), plus
+  // when the deck last changed it. The hold card prefers the engine's live
+  // status frames; these cover the gap right after a tap and ws-down fallback.
+  const [heldScene, setHeldScene] = useState<string | null>(autoSwitcher.initialOverride?.sceneName ?? null);
+  const [heldAt, setHeldAt] = useState(0);
+  // True from a deck-initiated container start until OBS connects; gates the
+  // boot stepper so plain websocket reconnects don't look like OBS restarting.
+  const [startRequested, setStartRequested] = useState(false);
   // Only toast "OBS connected" for a connect the user initiated from this page,
   // not the passive connect when the deck loads against an already-running box.
   const awaitingConnectRef = useRef(false);
@@ -83,6 +96,7 @@ export function DeckContent({ canInteract }: DeckContentProps) {
     try {
       await toggleInstance(apiUrl, instanceId, "start");
       setContainerStatus("running");
+      setStartRequested(true);
       awaitingConnectRef.current = true;
       // reconnect (not connect) resets the retry budget, so a restart after a
       // previous boot timeout will actually retry instead of giving up at once.
@@ -97,26 +111,72 @@ export function DeckContent({ canInteract }: DeckContentProps) {
     }
   };
 
+  const handleSceneSwitch = (scene: Scene) => {
+    // Switch immediately; don't wait on the override round-trip.
+    obs.switchScene(scene.sceneName).catch((err) => {
+      toast.error("Couldn't switch the scene", { description: err instanceof Error ? err.message : "Try again?" });
+    });
+
+    if (!autoSwitcher.enabled) return;
+    // Hold the scene so the auto switcher doesn't take it back (or force the
+    // connection-lost scene when the feed drops). If the engine flips the
+    // scene inside the ~1s push window, it re-switches to the held scene the
+    // moment the override lands.
+    setSceneOverride(scene.sceneUuid, scene.sceneName, null)
+      .then((result) => {
+        if (result.ok) {
+          setHeldScene(scene.sceneName);
+          setHeldAt(Date.now());
+        } else {
+          toast.warning("Scene switched, but the hold didn't stick", {
+            description: "The auto switcher may switch back. Tap the scene again.",
+          });
+        }
+      })
+      .catch(() => {
+        toast.warning("Scene switched, but the hold didn't stick", {
+          description: "The auto switcher may switch back. Tap the scene again.",
+        });
+      });
+  };
+
+  const handleHoldReleased = () => {
+    setHeldScene(null);
+    setHeldAt(Date.now());
+  };
+
+  // The boot stepper is only honest after the user actually started the
+  // container from this page. Every other connect (page load onto a running
+  // box, waking the phone, network change) is just the websocket coming back,
+  // so it gets a plain "Connecting" state instead of "Booting OBS".
+  if (obs.status === "open" && startRequested) {
+    setStartRequested(false);
+  }
+
   // Start flow phases -- starting (start request in flight), booting (container
-  // up, OBS WS connecting/retrying), connected, or timed out.
+  // up after a deck start, OBS WS connecting/retrying), connected, or timed out.
   const isStarting = togglingContainer && containerStatus !== "running";
+  const connectingLike = obs.status === "connecting" || obs.isAutoRetrying;
   const isBooting =
-    !isStarting &&
-    containerStatus === "running" &&
-    obs.status !== "open" &&
-    !obs.hasTimedOut &&
-    (obs.status === "connecting" || obs.isAutoRetrying);
+    !isStarting && startRequested && containerStatus === "running" && obs.status !== "open" && !obs.hasTimedOut && connectingLike;
+  const isReconnecting =
+    !isStarting && !startRequested && containerStatus === "running" && obs.status !== "open" && !obs.hasTimedOut && connectingLike;
   const inStartFlow = isStarting || isBooting;
   const hasTimedOut = containerStatus === "running" && obs.hasTimedOut && obs.status !== "open";
   const hasNoInstance = containerStatus === "stopped" && !instanceId;
 
+  // Reset the elapsed counter on the flow edges during render (the React-blessed
+  // adjust-state-on-change pattern); the interval below only ever counts up.
+  const [flowActive, setFlowActive] = useState(false);
+  if (inStartFlow !== flowActive) {
+    setFlowActive(inStartFlow);
+    setBootElapsed(0);
+  }
+
   // Single elapsed timer spanning the whole start flow. Keyed on the boolean so
-  // it runs continuously across starting -> booting and resets when the flow ends.
+  // it runs continuously across starting -> booting.
   useEffect(() => {
-    if (!inStartFlow) {
-      setBootElapsed(0);
-      return;
-    }
+    if (!inStartFlow) return;
     const start = Date.now();
     const id = setInterval(() => setBootElapsed(Math.floor((Date.now() - start) / 1000)), 1000);
     return () => clearInterval(id);
@@ -129,11 +189,30 @@ export function DeckContent({ canInteract }: DeckContentProps) {
     }
   }, [obs.status]);
 
+  // Phones kill the socket when the screen locks or the network changes, and
+  // the hook deliberately doesn't retry after a successful connect. Reconnect
+  // on wake/focus/network-restore instead of making the streamer find a button.
+  const { reconnect } = obs;
   useEffect(() => {
-    if (obs.currentScene) setSceneUpdatedAt(new Date());
-  }, [obs.currentScene]);
+    const maybeReconnect = () => {
+      if (document.visibilityState !== "visible") return;
+      if (containerStatus !== "running" || obs.status !== "closed" || !apiUrl || !instanceId) return;
+      reconnect();
+    };
+    document.addEventListener("visibilitychange", maybeReconnect);
+    window.addEventListener("focus", maybeReconnect);
+    window.addEventListener("online", maybeReconnect);
+    window.addEventListener("pageshow", maybeReconnect);
+    return () => {
+      document.removeEventListener("visibilitychange", maybeReconnect);
+      window.removeEventListener("focus", maybeReconnect);
+      window.removeEventListener("online", maybeReconnect);
+      window.removeEventListener("pageshow", maybeReconnect);
+    };
+  }, [containerStatus, obs.status, apiUrl, instanceId, reconnect]);
 
-  const statusVariant = obs.status === "open" ? "default" : hasTimedOut ? "destructive" : inStartFlow ? "secondary" : "outline";
+  const statusVariant =
+    obs.status === "open" ? "default" : hasTimedOut ? "destructive" : inStartFlow || isReconnecting ? "secondary" : "outline";
 
   return (
     <main className="min-h-dvh bg-background px-4 py-6 select-none [touch-action:manipulation]">
@@ -145,9 +224,9 @@ export function DeckContent({ canInteract }: DeckContentProps) {
           <h1 className="text-xl font-semibold">Stream Deck</h1>
           <Badge variant={statusVariant} className="gap-1.5">
             {obs.status === "open" && <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block animate-pulse" />}
-            {inStartFlow && <Loader2 className="h-3 w-3 animate-spin" />}
+            {(inStartFlow || isReconnecting) && <Loader2 className="h-3 w-3 animate-spin" />}
             {hasTimedOut && <AlertTriangle className="h-3 w-3" />}
-            {!inStartFlow && !hasTimedOut && obs.status === "closed" && <WifiOff className="h-3 w-3" />}
+            {!inStartFlow && !isReconnecting && !hasTimedOut && obs.status === "closed" && <WifiOff className="h-3 w-3" />}
             {obs.status === "open"
               ? "OBS Connected"
               : hasTimedOut
@@ -156,6 +235,8 @@ export function DeckContent({ canInteract }: DeckContentProps) {
               ? "Starting up…"
               : isBooting
               ? "OBS booting…"
+              : isReconnecting
+              ? "Connecting…"
               : containerStatus === "running"
               ? "Disconnected"
               : "Offline"}
@@ -192,6 +273,13 @@ export function DeckContent({ canInteract }: DeckContentProps) {
           </Card>
         ) : inStartFlow ? (
           <ObsBootProgress phase={isStarting ? "provisioning" : "booting"} elapsedSeconds={bootElapsed} />
+        ) : isReconnecting ? (
+          <Card>
+            <CardContent className="flex items-center justify-center gap-3 py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Connecting to OBS…</p>
+            </CardContent>
+          </Card>
         ) : hasTimedOut ? (
           <Card>
             <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
@@ -247,11 +335,20 @@ export function DeckContent({ canInteract }: DeckContentProps) {
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-green-500 animate-pulse" />
                   <p className="truncate text-lg font-semibold text-primary">{obs.currentScene ?? "—"}</p>
                 </div>
-                {sceneUpdatedAt && (
-                  <p className="text-xs tabular-nums text-muted-foreground">Updated {sceneUpdatedAt.toLocaleTimeString()}</p>
+                {obs.sceneChangedAt && (
+                  <p className="text-xs tabular-nums text-muted-foreground">Updated {obs.sceneChangedAt.toLocaleTimeString()}</p>
                 )}
               </CardContent>
             </Card>
+
+            {/* Auto switcher hold state */}
+            <AutoSwitcherHoldCard
+              enabled={autoSwitcher.enabled}
+              canInteract={canInteract}
+              heldScene={heldScene}
+              heldAt={heldAt}
+              onReleased={handleHoldReleased}
+            />
 
             {/* Scenes */}
             {obs.filteredScenes.length === 0 ? (
@@ -270,7 +367,7 @@ export function DeckContent({ canInteract }: DeckContentProps) {
                       key={scene.sceneUuid}
                       variant={isActive ? "default" : "outline"}
                       disabled={obs.switchingTo !== null}
-                      onClick={() => obs.switchScene(scene.sceneName)}
+                      onClick={() => handleSceneSwitch(scene)}
                       className={cn(deckButtonClass, "relative")}
                     >
                       {isActive && <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-green-500 border border-background" />}

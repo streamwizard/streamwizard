@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { requireProductAccess } from "@/lib/require-product-access";
+import { getAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
 import { DeckContent } from "./_deck-content";
 
 export const metadata: Metadata = {
@@ -27,7 +28,17 @@ export const viewport: Viewport = {
 };
 
 export default async function DeckPage() {
-  const access = await requireProductAccess("cloud_obs");
+  const [access, autoSwitcherConfig] = await Promise.all([requireProductAccess("cloud_obs"), getAutoSwitcherConfig()]);
 
-  return <DeckContent canInteract={access.canInteract} />;
+  return (
+    <DeckContent
+      canInteract={access.canInteract}
+      autoSwitcher={{
+        enabled: autoSwitcherConfig?.enabled ?? false,
+        initialOverride: autoSwitcherConfig?.override_scene_uuid
+          ? { sceneName: autoSwitcherConfig.override_scene_name }
+          : null,
+      }}
+    />
+  );
 }
