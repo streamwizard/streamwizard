@@ -129,13 +129,13 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
           setHeldAt(Date.now());
         } else {
           toast.warning("Scene switched, but the hold didn't stick", {
-            description: "The auto switcher may switch back. Tap the scene again.",
+            description: result.error ?? "The auto switcher may switch back. Tap the scene again.",
           });
         }
       })
-      .catch(() => {
+      .catch((err) => {
         toast.warning("Scene switched, but the hold didn't stick", {
-          description: "The auto switcher may switch back. Tap the scene again.",
+          description: err instanceof Error ? err.message : "The auto switcher may switch back. Tap the scene again.",
         });
       });
   };
