@@ -241,11 +241,9 @@ export async function dispatchNotifications(
 
   for (const n of notifications) {
     const sends: Promise<void>[] = [];
-    if (
-      route.discordId &&
-      alertConfig.discordBotToken &&
-      gateAllows(route.discordSeverity, n.severity)
-    ) {
+    const discordGateOpen = gateAllows(route.discordSeverity, n.severity);
+    const telegramGateOpen = gateAllows(route.telegramSeverity, n.severity);
+    if (route.discordId && alertConfig.discordBotToken && discordGateOpen) {
       const discordId = route.discordId;
       const send =
         route.discordTarget === "dm"
@@ -253,17 +251,30 @@ export async function dispatchNotifications(
           : () => sendDiscordChannelMessage(discordId, discordPayload(n));
       sends.push(withRetries(send));
     }
-    if (
-      route.telegramChatId &&
-      alertConfig.telegramBotToken &&
-      gateAllows(route.telegramSeverity, n.severity)
-    ) {
+    if (route.telegramChatId && alertConfig.telegramBotToken && telegramGateOpen) {
       const chatId = route.telegramChatId;
       sends.push(
         withRetries(() => sendTelegramMessage(telegramText(n), { chatId })),
       );
     }
-    if (sends.length === 0) continue;
+    if (sends.length === 0) {
+      // A gate said "notify" but no channel could carry it (missing channel id,
+      // chat id, or bot token). Silence here once hid a fully broken staging
+      // pipeline — surface it as a delivery failure instead of a quiet skip.
+      // Gates that are deliberately closed (e.g. dev routes everything to the
+      // database only) are not a misconfiguration and still skip silently.
+      const misconfigured =
+        (discordGateOpen && (!route.discordId || !alertConfig.discordBotToken)) ||
+        (telegramGateOpen && (!route.telegramChatId || !alertConfig.telegramBotToken));
+      if (misconfigured) {
+        failed.push({ ruleId: n.ruleId, entityId: n.entityId });
+        Sentry.captureMessage(
+          `Alert notification for ${n.ruleId} passed its severity gate but no channel is configured`,
+          "warning",
+        );
+      }
+      continue;
+    }
 
     const results = await Promise.allSettled(sends);
     if (results.every((r) => r.status === "rejected")) {

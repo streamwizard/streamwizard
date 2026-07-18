@@ -40,6 +40,18 @@ describe("rule overrides", () => {
     expect(entry?.crit).toBeUndefined();
   });
 
+  test("instance crash rules ship in the OBS group with their defaults", () => {
+    const catalog = getRuleCatalog();
+    const crash = catalog.find((r) => r.id === "obs.instance_crash");
+    expect(crash?.group).toBe("OBS / GPU nodes");
+    expect(crash?.warn?.default).toBe(10);
+    expect(crash?.defaultEnvs).toEqual(["prod", "staging"]);
+
+    const loop = catalog.find((r) => r.id === "obs.instance_crash_loop");
+    expect(loop?.crit?.default).toBe(3);
+    expect(loop?.defaultEnvs).toEqual(["prod", "staging"]);
+  });
+
   test("encoder saturation rule ships with its tunable default", () => {
     const rule = buildRules().find((r) => r.id === "gpu.encoder_util_high");
     expect(rule?.enabled).toBe(true);

@@ -315,3 +315,33 @@ export async function queryEventsubLastEvent(range = "30m", opts?: QueryOpts): P
   const rows = await runFluxQuery(query, (row) => row._time ?? "");
   return rows[0] || null;
 }
+
+/** Watchdog lifecycle events per OBS instance (rules: obs.instance_crash,
+ * obs.instance_crash_loop). Written by obs-instance-manager on container
+ * death and every auto-heal action it takes. */
+export interface ObsInstanceEventCount {
+  instanceId: string;
+  nodeId: string;
+  event: string;
+  count: number;
+}
+
+export async function queryObsInstanceEvents(range = "10m", opts?: QueryOpts): Promise<ObsInstanceEventCount[]> {
+  assertValidFluxDuration(range, "range");
+  const bucket = resolveBucket(opts);
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: -${range})
+      |> filter(fn: (r) => r._measurement == "obs_instance_event")
+      |> filter(fn: (r) => r._field == "count")
+      |> group(columns: ["instance_id", "node_id", "event"])
+      |> count()
+      |> yield(name: "obs_instance_events")
+  `;
+  return runFluxQuery(query, (row) => ({
+    instanceId: row.instance_id ?? "unknown",
+    nodeId: row.node_id ?? "unknown",
+    event: row.event ?? "unknown",
+    count: Number(row._value ?? 0),
+  }));
+}

@@ -317,7 +317,7 @@ async function evaluateEnv(
           env: alertEnv,
           entity_id: f.entityId,
           event_type: "notify_failed" as const,
-          message: "All notification channels failed",
+          message: "Notification not delivered: all channels failed or none configured",
         })),
       );
     } catch (err) {
