@@ -6,6 +6,7 @@ import {
   queryHttpP95ByService,
   queryLastWriteByTag,
   queryBucketPointCount,
+  queryObsInstanceEvents,
   queryWsEventTotal,
   queryDbQueryErrorRate,
   queryEventsubLastEvent,
@@ -60,6 +61,10 @@ export const SUPABASE_SCRAPE_SILENT_MIN = 10;
  * without false-firing on a single hiccup. */
 export const NODE_SILENT_AFTER_MS = 45 * 1000;
 export const SERVICE_SILENT_AFTER_MIN = 5;
+/** How long a single-crash alert stays visible after the crash. */
+export const INSTANCE_CRASH_WINDOW_MIN = 10;
+export const INSTANCE_CRASH_LOOP_COUNT = 3;
+export const INSTANCE_CRASH_LOOP_WINDOW_MIN = 30;
 export const EVENTSUB_SILENCE_MIN = 30;
 export const INGEST_STALL_MIN_SESSION_AGE_MS = 2 * 60 * 1000;
 
@@ -452,6 +457,89 @@ export function buildRules(overrides: RuleOverrides = {}): AlertRule[] {
         unit: "%",
         fetch: (ctx) => obsNodeField(ctx, (f) => f.disk_used_pct),
         format: (node, v, t) => `Disk on ${node} at ${v.toFixed(1)}% (warn > ${t.warn}%, crit > ${t.crit}%)`,
+      },
+      overrides,
+    ),
+    // Instance lifecycle events written by obs-instance-manager's watchdog
+    // (obs_instance_event measurement). The manager auto-heals crashes
+    // silently — these two rules are what make that recovery loud. Event
+    // rules auto-resolve once the lookback window slides past the last event.
+    customRule(
+      {
+        id: "obs.instance_crash",
+        title: "OBS instance crashed",
+        forTicks: 1,
+        envs: ["prod", "staging"],
+        warn: { default: INSTANCE_CRASH_WINDOW_MIN, unit: "min lookback", direction: "above" },
+        async evaluate(ctx, t) {
+          const windowMin = Math.max(1, Math.round(t.warn));
+          const events = await queryObsInstanceEvents(`${windowMin}m`, { bucket: ctx.bucket });
+          const byInstance = new Map<
+            string,
+            { nodeId: string; crashes: number; restored: boolean; restartFailed: boolean }
+          >();
+          for (const e of events) {
+            const entry =
+              byInstance.get(e.instanceId) ??
+              { nodeId: e.nodeId, crashes: 0, restored: false, restartFailed: false };
+            if (e.event === "crash") entry.crashes += e.count;
+            if (e.event === "auto_restarted") entry.restored = true;
+            if (e.event === "restart_failed") entry.restartFailed = true;
+            byInstance.set(e.instanceId, entry);
+          }
+          const breaches: Breach[] = [];
+          for (const [instanceId, s] of byInstance) {
+            if (s.crashes === 0 && !s.restartFailed) continue;
+            // A failed auto-restart means the instance is down and the
+            // automation gave up — that's the page-worthy case. A crash the
+            // watchdog already restarted is informational.
+            const what =
+              s.crashes > 0
+                ? `crashed ${s.crashes}× in ${windowMin}m`
+                : "failed to auto-restart";
+            const suffix = s.restartFailed
+              ? s.crashes > 0
+                ? " and auto-restart FAILED"
+                : ""
+              : s.restored
+                ? " (auto-restarted)"
+                : "";
+            breaches.push({
+              entityId: instanceId,
+              severity: s.restartFailed ? "crit" : "warn",
+              value: s.crashes,
+              message: `OBS instance ${instanceId} on ${s.nodeId} ${what}${suffix}`,
+            });
+          }
+          return breaches;
+        },
+      },
+      overrides,
+    ),
+    customRule(
+      {
+        id: "obs.instance_crash_loop",
+        title: "OBS instance crash-looping",
+        forTicks: 1,
+        envs: ["prod", "staging"],
+        crit: {
+          default: INSTANCE_CRASH_LOOP_COUNT,
+          unit: `crashes / ${INSTANCE_CRASH_LOOP_WINDOW_MIN}m`,
+          direction: "above",
+        },
+        async evaluate(ctx, t) {
+          const events = await queryObsInstanceEvents(`${INSTANCE_CRASH_LOOP_WINDOW_MIN}m`, {
+            bucket: ctx.bucket,
+          });
+          return events
+            .filter((e) => e.event === "crash" && e.count >= t.crit)
+            .map((e) => ({
+              entityId: e.instanceId,
+              severity: "crit" as const,
+              value: e.count,
+              message: `OBS instance ${e.instanceId} on ${e.nodeId} is crash-looping: ${e.count} crashes in ${INSTANCE_CRASH_LOOP_WINDOW_MIN}m`,
+            }));
+        },
       },
       overrides,
     ),
