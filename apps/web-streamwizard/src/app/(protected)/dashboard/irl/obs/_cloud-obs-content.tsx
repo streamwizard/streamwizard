@@ -19,6 +19,8 @@ import { getMyLatestInstanceAction, getInstanceNodeApiUrlAction, getInstanceObsW
 import { mintWsUrl } from "@/lib/ws-ticket";
 import { toggleInstance } from "@/lib/instance-actions";
 import { useObsWebSocket } from "@/hooks/use-obs-websocket";
+import { useObsInstanceLifecycle } from "@/components/irl/use-obs-instance-lifecycle";
+import type { ObsInstanceLifecyclePayload } from "@repo/types";
 import { ObsVncPreview } from "@/components/irl/obs-vnc-preview";
 import { ObsBootProgress } from "@/components/irl/obs-boot-progress";
 import { ObsOfflineState } from "@/components/irl/obs-offline-state";
@@ -85,6 +87,21 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
     justCreatedKeyIdRef.current = key.id;
   };
 
+  // Loads a specific instance's node API URL + OBS WS password into state
+  // (also setting instanceId). Shared by the initial load and the lifecycle
+  // handler below, which uses it to adopt an instance started on another
+  // device while this one was tracking none.
+  const hydrateInstance = useCallback(async (id: string) => {
+    setInstanceId(id);
+    const [{ data: nodeData }, { data: passwordData }] = await Promise.all([
+      getInstanceNodeApiUrlAction(id),
+      getInstanceObsWsPasswordAction(id),
+    ]);
+    if (!nodeData || !passwordData) return;
+    setApiUrl(nodeData.apiUrl);
+    setObsWsPassword(passwordData.password);
+  }, []);
+
   useEffect(() => {
     async function init() {
       // Look up the user's most recent instance regardless of status -- a
@@ -95,20 +112,11 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
         setContainerStatus("stopped");
         return;
       }
-      setInstanceId(instance.id);
       setContainerStatus(instance.status === "running" ? "running" : "stopped");
-
-      const [{ data: nodeData }, { data: passwordData }] = await Promise.all([
-        getInstanceNodeApiUrlAction(instance.id),
-        getInstanceObsWsPasswordAction(instance.id),
-      ]);
-
-      if (!nodeData || !passwordData) return;
-      setApiUrl(nodeData.apiUrl);
-      setObsWsPassword(passwordData.password);
+      await hydrateInstance(instance.id);
     }
     init();
-  }, []);
+  }, [hydrateInstance]);
 
   const handleLaunch = async () => {
     setLaunching(true);
@@ -151,6 +159,46 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
     getWsUrl: apiUrl && instanceId ? getWsUrl : null,
     password: obsWsPassword,
   });
+
+  // Live container lifecycle from the manager (start/stop/delete/crash), so the
+  // dashboard reflects state changes from other devices or admins without a
+  // refresh -- and learns about a "started" the OBS socket can't carry (there's
+  // no socket while the box is off).
+  const handleLifecycle = useCallback(
+    (payload: ObsInstanceLifecyclePayload) => {
+      // Ignore events for an instance we're not tracking -- unless we're
+      // tracking none yet, in which case a "started" adopts the new one below.
+      if (instanceId && payload.instanceId !== instanceId) return;
+
+      switch (payload.action) {
+        case "stopped":
+        case "error":
+          setContainerStatus("stopped");
+          obs.disconnect();
+          break;
+        case "deleted":
+          setInstanceId(null);
+          setApiUrl(null);
+          setObsWsPassword(null);
+          setContainerStatus("stopped");
+          obs.disconnect();
+          break;
+        case "started":
+          setContainerStatus("running");
+          if (payload.instanceId !== instanceId || !apiUrl || !obsWsPassword) {
+            // New instance, or one we never fully loaded: fetch its node URL +
+            // password; the OBS hook auto-connects once all three are set.
+            void hydrateInstance(payload.instanceId);
+          } else {
+            obs.reconnect();
+          }
+          break;
+      }
+    },
+    [instanceId, apiUrl, obsWsPassword, obs, hydrateInstance],
+  );
+
+  useObsInstanceLifecycle(handleLifecycle);
 
   const openViewer = () => {
     if (!instanceId) return;

@@ -188,6 +188,14 @@ nodes.post("/claim", async (c) => {
           INFLUXDB_TOKEN: env.INFLUXDB_TOKEN,
         }
       : {}),
+    // Present only when both are configured on rest-api — lets the node push
+    // container lifecycle events to browsers via ws-server /internal/broadcast.
+    ...(env.WS_SERVER_URL && env.CONSUMER_SECRET
+      ? {
+          WS_SERVER_URL: env.WS_SERVER_URL,
+          CONSUMER_SECRET: env.CONSUMER_SECRET,
+        }
+      : {}),
   });
 });
 

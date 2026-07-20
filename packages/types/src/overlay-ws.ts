@@ -103,9 +103,23 @@ export type StreamWizardEventType =
   | "streamwizard.auto_switcher_status"
   // obs-auto-switcher: web server actions → /internal/broadcast → consumer
   // feed (config/override changes; payload is the obs_auto_switcher_configs row)
-  | "streamwizard.auto_switcher_config";
+  | "streamwizard.auto_switcher_config"
+  // obs-instance-manager: container start/stop/delete/crash → /internal/broadcast
+  // → the owning user's room, so decks/dashboards update live and cross-device
+  | "streamwizard.obs_instance_lifecycle";
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
+
+// Pushed by the obs-instance-manager whenever a user's Cloud OBS container
+// transitions. "deleted" is an action, not a DB status -- the row is removed on
+// delete. The manager keeps a matching local literal (it's a standalone repo
+// that doesn't import this package); keep the two in sync.
+export interface ObsInstanceLifecyclePayload {
+  instanceId: string;
+  action: "started" | "stopped" | "error" | "deleted";
+  /** ISO timestamp the manager observed the transition. */
+  at: string;
+}
 
 // Full raw + derived stat set broadcast by ingest-control's session-stats
 // handler. Everything below session identity is optional because RTMP only
@@ -188,6 +202,7 @@ export type OverlaySocketMessage =
   | { type: "streamwizard.ingest_stats"; payload: IngestStatsPayload }
   | { type: "streamwizard.auto_switcher_status"; payload: AutoSwitcherStatus }
   | { type: "streamwizard.auto_switcher_config"; payload: AutoSwitcherConfig }
+  | { type: "streamwizard.obs_instance_lifecycle"; payload: ObsInstanceLifecyclePayload }
   // Channel
   | { type: "channel.update";                                             payload: ChannelUpdateEvent }
   | { type: "channel.follow";                                             payload: ChannelFollowEvent }
