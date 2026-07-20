@@ -4,6 +4,14 @@ export type CspOptions = {
   // spawns workers via blob: URLs. Those are the weakest directives in the
   // policy, so we grant them per-route instead of to every page. See src/proxy.ts.
   monaco?: boolean;
+  // Staging sits behind Cloudflare Access. When the Access session cookie is
+  // missing/expired, a same-origin fetch (e.g. the /deck manifest link) gets
+  // redirected to Access's own login page on streamwizard.cloudflareaccess.com
+  // instead of the resource. Without this, that redirect target isn't an
+  // allowed source anywhere, so default-src blocks it outright and the user
+  // never gets the chance to reauth. Production has no Access in front of it,
+  // so this is staging-only. See src/proxy.ts.
+  cloudflareAccess?: boolean;
 };
 
 // Built per-request in src/proxy.ts so script-src can carry a fresh nonce —
@@ -11,7 +19,7 @@ export type CspOptions = {
 // and stamps it on its inline (hydration/RSC) scripts, which is what lets us
 // drop 'unsafe-inline' from script-src.
 export function buildCsp(nonce: string, options: CspOptions = {}): string {
-  const { monaco = false } = options;
+  const { monaco = false, cloudflareAccess = false } = options;
   const supabaseUrl = process.env.SUPABASE_URL ?? "";
   // Supabase realtime uses WebSocket — derive wss:// from the https:// URL
   const supabaseWs = supabaseUrl.replace(/^https:\/\//, "wss://");
@@ -71,6 +79,13 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       .join(" "),
     // Twitch embedded player and clips use iframes served from these origins
     "frame-src https://player.twitch.tv https://clips.twitch.tv",
+    // Explicit manifest-src (rather than relying on the default-src fallback)
+    // so we can carve out the Cloudflare Access reauth redirect on staging
+    // without loosening default-src for everything else.
+    [
+      "manifest-src 'self'",
+      ...(cloudflareAccess ? ["https://streamwizard.cloudflareaccess.com"] : []),
+    ].join(" "),
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
