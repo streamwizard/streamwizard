@@ -14,7 +14,12 @@ export async function proxy(request: NextRequest) {
   // so every other page — including public marketing/legal routes — runs the
   // tighter policy.
   const needsMonaco = request.nextUrl.pathname.startsWith("/dashboard/widgets/");
-  const csp = buildCsp(nonce, { monaco: needsMonaco });
+  // Only staging sits behind Cloudflare Access — see the cloudflareAccess
+  // option doc in csp.ts for why this needs its own manifest-src carve-out.
+  // NODE_ENV is "staging" there (see src/lib/env.ts), which the built-in
+  // NodeJS.ProcessEnv type doesn't know about, hence the cast.
+  const cloudflareAccess = (process.env.NODE_ENV as string) === "staging";
+  const csp = buildCsp(nonce, { monaco: needsMonaco, cloudflareAccess });
   request.headers.set("content-security-policy", csp);
   // Next reads the nonce from the CSP header above for its own inline scripts,
   // but libraries that inject their own inline <script> (next-themes' anti-flash

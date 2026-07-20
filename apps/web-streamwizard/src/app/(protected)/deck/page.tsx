@@ -5,10 +5,6 @@ import { DeckContent } from "./_deck-content";
 
 export const metadata: Metadata = {
   title: "Stream Deck",
-  // Only this route links the manifest, so Chrome offers "install" for the
-  // deck alone. start_url/scope live in the manifest; scope stays "/" so the
-  // login redirect keeps the user inside the installed app window.
-  manifest: "/deck-manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -31,14 +27,24 @@ export default async function DeckPage() {
   const [access, autoSwitcherConfig] = await Promise.all([requireProductAccess("cloud_obs"), getAutoSwitcherConfig()]);
 
   return (
-    <DeckContent
-      canInteract={access.canInteract}
-      autoSwitcher={{
-        enabled: autoSwitcherConfig?.enabled ?? false,
-        initialOverride: autoSwitcherConfig?.override_scene_uuid
-          ? { sceneName: autoSwitcherConfig.override_scene_name }
-          : null,
-      }}
-    />
+    <>
+      {/* Only this route links the manifest, so Chrome offers "install" for the
+          deck alone. start_url/scope live in the manifest; scope stays "/" so the
+          login redirect keeps the user inside the installed app window.
+          Rendered as a raw link (React hoists it to <head>) instead of via
+          metadata.manifest because the fetch must carry cookies: without
+          use-credentials, Cloudflare Access on staging redirects the
+          cookieless manifest request to its login page, which CSP blocks. */}
+      <link rel="manifest" href="/deck-manifest.webmanifest" crossOrigin="use-credentials" />
+      <DeckContent
+        canInteract={access.canInteract}
+        autoSwitcher={{
+          enabled: autoSwitcherConfig?.enabled ?? false,
+          initialOverride: autoSwitcherConfig?.override_scene_uuid
+            ? { sceneName: autoSwitcherConfig.override_scene_name }
+            : null,
+        }}
+      />
+    </>
   );
 }
