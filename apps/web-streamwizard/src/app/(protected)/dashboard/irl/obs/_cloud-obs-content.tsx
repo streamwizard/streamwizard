@@ -19,11 +19,12 @@ import { getMyLatestInstanceAction, getInstanceNodeApiUrlAction, getInstanceObsW
 import { mintWsUrl } from "@/lib/ws-ticket";
 import { toggleInstance } from "@/lib/instance-actions";
 import { useObsWebSocket } from "@/hooks/use-obs-websocket";
-import { useObsInstanceLifecycle } from "@/components/irl/use-obs-instance-lifecycle";
+import { useObsLifecycleNotifications } from "@/components/irl/use-obs-lifecycle-notifications";
 import type { ObsInstanceLifecyclePayload } from "@repo/types";
 import { ObsVncPreview } from "@/components/irl/obs-vnc-preview";
 import { ObsBootProgress } from "@/components/irl/obs-boot-progress";
 import { ObsOfflineState } from "@/components/irl/obs-offline-state";
+import { ObsLifecycleBanner } from "@/components/irl/obs-lifecycle-banner";
 import { ObsSetupStepper } from "@/components/irl/obs-setup-stepper";
 import { ObsSourceProfiler } from "@/components/irl/obs-source-profiler";
 import { ObsResourceGraphs } from "@/components/irl/obs-resource-graphs";
@@ -77,6 +78,9 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
   // or start, so the "OBS connected" toast only fires for those flows and not
   // on a passive reconnect when the page first loads an already-running box.
   const awaitingConnectRef = useRef(false);
+  // True from a local launch/start/restart until the next lifecycle event, so
+  // the event our own action produces doesn't fire a second (external) toast.
+  const selfInitiatedRef = useRef(false);
   // Set when a key is created this session and not yet wired into OBS — lets
   // the auto-wire effect add it silently instead of just notifying. Lost on
   // reload (accepted tradeoff, avoids a persisted "pending wire" flag).
@@ -121,6 +125,9 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
   const handleLaunch = async () => {
     setLaunching(true);
     setLaunchError(null);
+    // Our own launch: suppress the external toast for the "started" it produces.
+    selfInitiatedRef.current = true;
+    clearStopReason();
     try {
       const { data, error } = await launchMyInstanceAction();
       if (error || !data) {
@@ -171,6 +178,15 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
       if (instanceId && payload.instanceId !== instanceId) return;
 
       switch (payload.action) {
+        case "starting":
+          // Transitional: box coming up elsewhere. The hook's `transition` drives
+          // the "Starting…" UI; the terminal "started" hydrates/connects.
+          break;
+        case "stopping":
+          // Transitional: deliberate stop underway. Halt the OBS socket so we
+          // show "Stopping…" instead of it fighting the imminent drop.
+          obs.disconnect();
+          break;
         case "stopped":
         case "error":
           setContainerStatus("stopped");
@@ -198,7 +214,11 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
     [instanceId, apiUrl, obsWsPassword, obs, hydrateInstance],
   );
 
-  useObsInstanceLifecycle(handleLifecycle);
+  const { stopReason, clearStopReason, transition } = useObsLifecycleNotifications({
+    instanceId,
+    selfInitiatedRef,
+    onEvent: handleLifecycle,
+  });
 
   const openViewer = () => {
     if (!instanceId) return;
@@ -211,6 +231,10 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
     if (!apiUrl || !instanceId) return;
     const action = containerStatus === "running" ? "stop" : "start";
     setTogglingContainer(true);
+    // Our own start/stop: suppress the external toast for the event it produces,
+    // and clear any crash banner we're recovering from.
+    selfInitiatedRef.current = true;
+    clearStopReason();
     try {
       await toggleInstance(apiUrl, instanceId, action);
       setContainerStatus(action === "start" ? "running" : "stopped");
@@ -252,6 +276,11 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
   // flight, or the OBS WS still connecting — is a loading state, so a refresh
   // doesn't flash "offline" before we know the real status.
   const stripIsOffline = hasTimedOut || (containerStatus === "stopped" && !isProvisioning);
+  const crashed = containerStatus === "stopped" && stopReason === "crashed";
+  // Transitional states from other devices/admin. Local actor sees inLaunchFlow;
+  // these cover "someone else did it" so a deliberate stop reads "Stopping…".
+  const isStopping = transition === "stopping" && obs.status !== "open";
+  const externalStarting = transition === "starting" && !inLaunchFlow && obs.status !== "open";
 
   // Lock in whether this is a guided setup once we actually know the user's
   // instance state (containerStatus starts "unknown" until the initial fetch
@@ -345,7 +374,13 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
   }, [obs.hasTimedOut, obs.reconnect]);
 
   const statusVariant =
-    obs.status === "open" ? "default" : hasTimedOut ? "destructive" : inLaunchFlow ? "secondary" : "outline";
+    obs.status === "open"
+      ? "default"
+      : hasTimedOut || crashed
+      ? "destructive"
+      : inLaunchFlow || isStopping || externalStarting
+      ? "secondary"
+      : "outline";
 
   if (showSetupStepper) {
     return (
@@ -411,6 +446,14 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
     <div className="w-full space-y-6">
       {!canInteract && <FeatureDisabledBanner />}
 
+      {/* High-signal banner for a crash (stream just dropped) or a delete. */}
+      <ObsLifecycleBanner
+        reason={stopReason}
+        onRestart={canInteract && instanceId && apiUrl ? handleToggleContainer : undefined}
+        restarting={togglingContainer}
+        onDismiss={clearStopReason}
+      />
+
       {/* Top section */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         {/* VNC preview */}
@@ -427,14 +470,20 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
             <h2 className="text-lg font-semibold">Cloud OBS</h2>
             <Badge variant={statusVariant} className="gap-1.5">
               {obs.status === "open" && <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block animate-pulse" />}
-              {inLaunchFlow && <Loader2 className="h-3 w-3 animate-spin" />}
-              {hasTimedOut && <AlertTriangle className="h-3 w-3" />}
-              {!inLaunchFlow && !hasTimedOut && obs.status === "closed" && <WifiOff className="h-3 w-3" />}
+              {(inLaunchFlow || isStopping || externalStarting) && <Loader2 className="h-3 w-3 animate-spin" />}
+              {(hasTimedOut || crashed) && <AlertTriangle className="h-3 w-3" />}
+              {!inLaunchFlow && !isStopping && !externalStarting && !hasTimedOut && !crashed && obs.status === "closed" && (
+                <WifiOff className="h-3 w-3" />
+              )}
               {obs.status === "open"
                 ? "OBS Connected"
+                : crashed
+                ? "Crashed"
                 : hasTimedOut
                 ? "Not responding"
-                : isProvisioning
+                : isStopping
+                ? "Stopping…"
+                : isProvisioning || externalStarting
                 ? "Starting up…"
                 : isBooting
                 ? "OBS booting…"
@@ -504,7 +553,11 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
             <div>
               <p className="text-sm font-medium">Container</p>
               <p className="text-xs text-muted-foreground">
-                {isProvisioning
+                {isStopping
+                  ? "Stopping your container…"
+                  : externalStarting
+                  ? "Starting your container…"
+                  : isProvisioning
                   ? "Provisioning your container…"
                   : isBooting
                   ? "Container's up. Waiting for OBS."
@@ -570,15 +623,27 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
           isn't, the strip would just be empty shells, so swap the whole thing
           for a single offline/booting state instead. */}
       {obs.status !== "open" ? (
-        <ObsOfflineState
-          status={stripIsOffline ? "offline" : "booting"}
-          starting={togglingContainer}
-          onStart={
-            containerStatus !== "running" && canInteract && instanceId && apiUrl
-              ? handleToggleContainer
-              : undefined
-          }
-        />
+        isStopping ? (
+          <Card>
+            <CardContent className="flex items-center justify-center gap-3 py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Stopping your container…</p>
+            </CardContent>
+          </Card>
+        ) : externalStarting ? (
+          <ObsOfflineState status="booting" />
+        ) : (
+          <ObsOfflineState
+            status={stripIsOffline ? "offline" : "booting"}
+            reason={stopReason ?? "clean"}
+            starting={togglingContainer}
+            onStart={
+              containerStatus !== "running" && canInteract && instanceId && apiUrl
+                ? handleToggleContainer
+                : undefined
+            }
+          />
+        )
       ) : (
         <div className="space-y-6">
           {/* Scenes — the primary in-stream control, front and center */}
