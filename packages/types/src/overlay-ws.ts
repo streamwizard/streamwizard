@@ -111,12 +111,15 @@ export type StreamWizardEventType =
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 
 // Pushed by the obs-instance-manager whenever a user's Cloud OBS container
-// transitions. "deleted" is an action, not a DB status -- the row is removed on
-// delete. The manager keeps a matching local literal (it's a standalone repo
-// that doesn't import this package); keep the two in sync.
+// transitions. "starting"/"stopping" are transitional (leading-edge, no DB
+// status) so other devices can show an honest "Starting…"/"Stopping…" during
+// the wait; the terminal "started"/"stopped"/"error" follows. "deleted" is an
+// action, not a DB status -- the row is removed on delete. The manager keeps a
+// matching local literal (it's a standalone repo that doesn't import this
+// package); keep the two in sync.
 export interface ObsInstanceLifecyclePayload {
   instanceId: string;
-  action: "started" | "stopped" | "error" | "deleted";
+  action: "starting" | "started" | "stopping" | "stopped" | "error" | "deleted";
   /** ISO timestamp the manager observed the transition. */
   at: string;
 }

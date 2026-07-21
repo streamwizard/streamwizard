@@ -10,10 +10,11 @@ import { setSceneOverride } from "@/actions/supabase/auto-switcher";
 import { mintWsUrl } from "@/lib/ws-ticket";
 import { toggleInstance } from "@/lib/instance-actions";
 import { useObsWebSocket, type Scene } from "@/hooks/use-obs-websocket";
-import { useObsInstanceLifecycle } from "@/components/irl/use-obs-instance-lifecycle";
+import { useObsLifecycleNotifications } from "@/components/irl/use-obs-lifecycle-notifications";
 import type { ObsInstanceLifecyclePayload } from "@repo/types";
 import { ObsBootProgress } from "@/components/irl/obs-boot-progress";
 import { ObsOfflineState } from "@/components/irl/obs-offline-state";
+import { ObsLifecycleBanner } from "@/components/irl/obs-lifecycle-banner";
 import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
 import { AutoSwitcherHoldCard } from "./_auto-switcher-hold-card";
 import { InstallPrompt } from "./_install-prompt";
@@ -49,6 +50,9 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
   // Only toast "OBS connected" for a connect the user initiated from this page,
   // not the passive connect when the deck loads against an already-running box.
   const awaitingConnectRef = useRef(false);
+  // True from a local start/restart until the next lifecycle event, so the
+  // event that our own action produces doesn't fire a second (external) toast.
+  const selfInitiatedRef = useRef(false);
 
   // Loads a specific instance's node API URL + OBS WS password into state
   // (also setting instanceId). Shared by the initial load and the lifecycle
@@ -109,9 +113,21 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
       if (instanceId && payload.instanceId !== instanceId) return;
 
       switch (payload.action) {
+        case "starting":
+          // Transitional: box is coming up elsewhere. The hook's `transition`
+          // drives the "Starting…" UI; the terminal "started" hydrates/connects.
+          break;
+        case "stopping":
+          // Transitional: a deliberate stop is underway. Stop the OBS socket from
+          // fighting the imminent drop so we show "Stopping…", not "Reconnecting".
+          obs.disconnect();
+          break;
         case "stopped":
         case "error":
           setContainerStatus("stopped");
+          // Kill any in-flight boot state so a crash mid-launch can't keep the
+          // stepper spinning "spinning up your container" forever.
+          setStartRequested(false);
           obs.disconnect();
           break;
         case "deleted":
@@ -119,6 +135,7 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
           setApiUrl(null);
           setObsWsPassword(null);
           setContainerStatus("stopped");
+          setStartRequested(false);
           obs.disconnect();
           break;
         case "started":
@@ -136,11 +153,19 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
     [instanceId, apiUrl, obsWsPassword, obs, hydrateInstance],
   );
 
-  useObsInstanceLifecycle(handleLifecycle);
+  const { stopReason, clearStopReason, setStopReason, transition } = useObsLifecycleNotifications({
+    instanceId,
+    selfInitiatedRef,
+    onEvent: handleLifecycle,
+  });
 
   const handleStart = async () => {
     if (!apiUrl || !instanceId) return;
     setTogglingContainer(true);
+    // Our own start: suppress the external toast for the "started" it produces,
+    // and clear any crash banner we're recovering from.
+    selfInitiatedRef.current = true;
+    clearStopReason();
     try {
       await toggleInstance(apiUrl, instanceId, "start");
       setContainerStatus("running");
@@ -212,6 +237,12 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
   const inStartFlow = isStarting || isBooting;
   const hasTimedOut = containerStatus === "running" && obs.hasTimedOut && obs.status !== "open";
   const hasNoInstance = containerStatus === "stopped" && !instanceId;
+  const crashed = containerStatus === "stopped" && stopReason === "crashed";
+  // Transitional states pushed from other devices/admin. The local actor sees
+  // its own flow (inStartFlow); these cover the "someone else did it" case so a
+  // deliberate stop reads "Stopping…", not a misleading reconnect spinner.
+  const isStopping = transition === "stopping" && obs.status !== "open";
+  const externalStarting = transition === "starting" && !inStartFlow && obs.status !== "open";
 
   // Reset the elapsed counter on the flow edges during render (the React-blessed
   // adjust-state-on-change pattern); the interval below only ever counts up.
@@ -240,11 +271,22 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
   // Phones kill the socket when the screen locks or the network changes, and
   // the hook deliberately doesn't retry after a successful connect. Reconnect
   // on wake/focus/network-restore instead of making the streamer find a button.
-  const { reconnect } = obs;
+  const { reconnect, disconnect } = obs;
   useEffect(() => {
-    const maybeReconnect = () => {
+    const maybeReconnect = async () => {
       if (document.visibilityState !== "visible") return;
       if (containerStatus !== "running" || obs.status !== "closed" || !apiUrl || !instanceId) return;
+      // A stop/crash push is best-effort and can be missed. Before reconnecting,
+      // confirm the box is really still up -- reconnecting to an off container is
+      // pointless and would spin ~90s before giving up. If it's off, say so
+      // ("turned off"/"crashed") instead of retrying into the void.
+      const { data: instance } = await getMyLatestInstanceAction();
+      if (!instance || instance.id !== instanceId || instance.status !== "running") {
+        setStopReason(instance?.status === "error" ? "crashed" : "clean");
+        setContainerStatus("stopped");
+        disconnect();
+        return;
+      }
       reconnect();
     };
     document.addEventListener("visibilitychange", maybeReconnect);
@@ -257,29 +299,68 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
       window.removeEventListener("online", maybeReconnect);
       window.removeEventListener("pageshow", maybeReconnect);
     };
-  }, [containerStatus, obs.status, apiUrl, instanceId, reconnect]);
+  }, [containerStatus, obs.status, apiUrl, instanceId, reconnect, disconnect, setStopReason]);
+
+  // Fallback for a missed stop/crash push while the deck stays open and focused:
+  // a connected socket that drops but leaves containerStatus stuck "running"
+  // would sit on "Lost connection" forever. Give the push a moment to land, then
+  // verify against the source of truth -- if the box is really off, flip to
+  // "turned off"/"crashed" so we're not implying a reconnect that can't happen.
+  useEffect(() => {
+    if (containerStatus !== "running" || obs.status !== "closed" || !instanceId) return;
+    const id = setTimeout(async () => {
+      const { data: instance } = await getMyLatestInstanceAction();
+      if (!instance || instance.id !== instanceId || instance.status !== "running") {
+        setStopReason(instance?.status === "error" ? "crashed" : "clean");
+        setContainerStatus("stopped");
+        disconnect();
+      }
+    }, 5_000);
+    return () => clearTimeout(id);
+  }, [containerStatus, obs.status, instanceId, disconnect, setStopReason]);
 
   const statusVariant =
-    obs.status === "open" ? "default" : hasTimedOut ? "destructive" : inStartFlow || isReconnecting ? "secondary" : "outline";
+    obs.status === "open"
+      ? "default"
+      : hasTimedOut || crashed
+      ? "destructive"
+      : inStartFlow || isReconnecting || isStopping || externalStarting
+      ? "secondary"
+      : "outline";
 
   return (
     <main className="min-h-dvh bg-background px-4 py-6 select-none [touch-action:manipulation]">
       <div className="mx-auto w-full max-w-md space-y-4">
         {!canInteract && <FeatureDisabledBanner />}
 
+        {/* High-signal banner for events the streamer can't afford to miss: a
+            crash (stream just dropped) or a delete. */}
+        <ObsLifecycleBanner
+          reason={stopReason}
+          onRestart={canInteract && instanceId && apiUrl ? handleStart : undefined}
+          restarting={togglingContainer}
+          onDismiss={clearStopReason}
+        />
+
         {/* Title + connection status */}
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-semibold">Stream Deck</h1>
           <Badge variant={statusVariant} className="gap-1.5">
             {obs.status === "open" && <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block animate-pulse" />}
-            {(inStartFlow || isReconnecting) && <Loader2 className="h-3 w-3 animate-spin" />}
-            {hasTimedOut && <AlertTriangle className="h-3 w-3" />}
-            {!inStartFlow && !isReconnecting && !hasTimedOut && obs.status === "closed" && <WifiOff className="h-3 w-3" />}
+            {(inStartFlow || isReconnecting || isStopping || externalStarting) && <Loader2 className="h-3 w-3 animate-spin" />}
+            {(hasTimedOut || crashed) && <AlertTriangle className="h-3 w-3" />}
+            {!inStartFlow && !isReconnecting && !isStopping && !externalStarting && !hasTimedOut && !crashed && obs.status === "closed" && (
+              <WifiOff className="h-3 w-3" />
+            )}
             {obs.status === "open"
               ? "OBS Connected"
+              : crashed
+              ? "Crashed"
               : hasTimedOut
               ? "Not responding"
-              : isStarting
+              : isStopping
+              ? "Stopping…"
+              : isStarting || externalStarting
               ? "Starting up…"
               : isBooting
               ? "OBS booting…"
@@ -302,6 +383,20 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
           <Card>
             <CardContent className="flex items-center justify-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </CardContent>
+          </Card>
+        ) : isStopping ? (
+          <Card>
+            <CardContent className="flex items-center justify-center gap-3 py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Stopping your container…</p>
+            </CardContent>
+          </Card>
+        ) : externalStarting ? (
+          <Card>
+            <CardContent className="flex items-center justify-center gap-3 py-12">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Starting your container…</p>
             </CardContent>
           </Card>
         ) : hasNoInstance ? (
@@ -342,6 +437,7 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
         ) : containerStatus === "stopped" ? (
           <ObsOfflineState
             status="offline"
+            reason={stopReason ?? "clean"}
             starting={togglingContainer}
             onStart={canInteract && instanceId && apiUrl ? handleStart : undefined}
           />
