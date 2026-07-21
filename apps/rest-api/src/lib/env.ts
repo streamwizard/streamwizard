@@ -51,6 +51,13 @@ const schema = z.object({
   INFLUXDB_ORG: z.string().optional(),
   INFLUXDB_BUCKET: z.string().optional(),
   INFLUXDB_TOKEN: z.string().optional(),
+
+  // ws-server broadcast — relayed to OBS nodes in the /claim response so the
+  // obs-instance-manager can push container lifecycle events to the owning
+  // user's browser room. Optional and paired: a claim omits both from the
+  // response unless both are set. CONSUMER_SECRET must match the ws-server's.
+  WS_SERVER_URL: z.string().optional(),
+  CONSUMER_SECRET: z.string().optional(),
 });
 
 export const env = schema.parse(process.env);
