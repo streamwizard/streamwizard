@@ -229,14 +229,46 @@ export function useObsWebSocket({ getWsUrl, password }: UseObsWebSocketOptions) 
   // Creates a Media Source pulling `url` (an ingest output's SRT URL) and
   // drops it straight into `sceneName`, enabled. Refreshes the scene item map
   // afterward so the new item's toggle works in the Sources tree right away.
+  //
+  // - restart_on_activate: false — the IRL feed is a live pull, not a clip;
+  //   restarting playback each time the source activates just adds a stall.
+  // - reconnect_delay_sec: 2 — faster recovery when the ingest link drops.
+  // After creation the source is stretched to fill the whole canvas so the
+  // feed is fullscreen from the start (OBS drops a new media source at its
+  // native pixel size otherwise, which can leave it invisible/off-frame).
   const addMediaSourceToScene = useCallback(async (sceneName: string, inputName: string, url: string) => {
-    await request("CreateInput", {
+    const created = await request<{ sceneItemId: number }>("CreateInput", {
       sceneName,
       inputName,
       inputKind: "ffmpeg_source",
-      inputSettings: { is_local_file: false, input: url, restart_on_activate: true },
+      inputSettings: {
+        is_local_file: false,
+        input: url,
+        restart_on_activate: false,
+        reconnect_delay_sec: 2,
+      },
       sceneItemEnabled: true,
     });
+
+    // Fill the canvas: bound the item to the base (canvas) resolution and let
+    // OBS scale the feed to fit inside those bounds.
+    try {
+      const video = await request<{ baseWidth: number; baseHeight: number }>("GetVideoSettings");
+      await request("SetSceneItemTransform", {
+        sceneName,
+        sceneItemId: created.sceneItemId,
+        sceneItemTransform: {
+          positionX: 0,
+          positionY: 0,
+          boundsType: "OBS_BOUNDS_SCALE_INNER",
+          boundsWidth: video.baseWidth,
+          boundsHeight: video.baseHeight,
+        },
+      });
+    } catch {
+      // Non-fatal: source is still added, just not auto-sized.
+    }
+
     await fetchScenes();
   }, [request, fetchScenes]);
 
