@@ -1,0 +1,74 @@
+---
+title: "Ingest keys"
+description: "The private address your phone streams to. Copy it into your streaming app, keep it secret, and replace it the second it leaks."
+---
+
+Your **ingest key** is where your phone or IRL encoder sends its video. Think of
+it as a private mailbox: your camera drops video in, and your cloud OBS picks it
+up. It lives on the **Ingest** page in the sidebar.
+
+<Frame caption="The Ingest page: your push URLs up top, your keys down below. The key itself is hidden here.">
+  <img src="/images/cloud-obs/ingest-keys.png" alt="Ingest keys page" />
+</Frame>
+
+<Warning>
+  Your ingest key is a password. Anyone who has it can stream as you. Don't paste
+  it in a Discord you don't control, don't show it on stream, and don't put it in
+  a screenshot. If it gets out, **rotate** it (see below).
+</Warning>
+
+## Getting your streaming URL
+
+Under **Your ingest URLs** you'll see two options. You only need one. Pick the
+one your app or gear uses:
+
+- **SRT** works for most phone apps and encoders. Copy this URL and paste it in.
+- **SRTLA** is for bonded setups that combine several connections at once
+  (Belabox, IRLToolkit, Moblin, and similar). If you're not using one of those,
+  you don't need this.
+
+You don't need to understand how SRT and SRTLA work. They're just the two ways to
+hand your video to us. Copy the matching one, paste it into your app, start
+streaming. That's it.
+
+Tap the copy button next to a URL to grab it. Your key is already baked into the
+URL, so there's nothing else to fill in.
+
+## Making and managing keys
+
+You can have more than one key. Handy for labelling your gear ("phone",
+"backpack", "backup") or handing a fresh key to a guest.
+
+Each key in **Your keys** has a few buttons:
+
+| Button | What it does |
+|---|---|
+| **Copy** | Copies the key to your clipboard. |
+| **Send to Discord** | DMs the key to you on Discord, so you can grab it on your phone. |
+| **Rotate** | Makes a brand new key and kills the old one. Use this if a key leaks. |
+| **Delete** | Removes a key you're done with. |
+
+<Warning>
+  **Rotate** breaks any device still using the old key. After you rotate, update
+  the URL in your streaming app or it won't connect.
+</Warning>
+
+## Checking your connection
+
+The **Live ingest status** card shows how your incoming video is doing while
+you're streaming: whether the connection is good, how much video is coming
+through, and whether anything is getting dropped. When you're not streaming, it
+just says there's no active stream right now.
+
+If the numbers look rough, that's usually your mobile signal, not us. A weaker
+signal means lower quality or a frozen picture. This is exactly what the
+[Auto Switcher](/cloud-obs/auto-switcher) is built to cover for you.
+
+## Phone connected?
+
+Once your app is pointed at your ingest URL, you're done here. Time to learn the
+buttons you'll actually use while streaming.
+
+<Card title="Next up: Your controls" icon="sliders" href="/cloud-obs/controls">
+  Go live, switch scenes, and check your stream's health from one page.
+</Card>
