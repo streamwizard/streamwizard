@@ -1540,8 +1540,10 @@ export type Database = {
           resolution: string
           shm_size: string
           status: string
+          storage_quota_mb: number
           subscription_id: string | null
           updated_at: string
+          used_storage_bytes: number
           user_id: string
           vnc_password_ciphertext: string | null
           vnc_password_iv: string | null
@@ -1562,8 +1564,10 @@ export type Database = {
           resolution: string
           shm_size: string
           status?: string
+          storage_quota_mb?: number
           subscription_id?: string | null
           updated_at?: string
+          used_storage_bytes?: number
           user_id: string
           vnc_password_ciphertext?: string | null
           vnc_password_iv?: string | null
@@ -1584,8 +1588,10 @@ export type Database = {
           resolution?: string
           shm_size?: string
           status?: string
+          storage_quota_mb?: number
           subscription_id?: string | null
           updated_at?: string
+          used_storage_bytes?: number
           user_id?: string
           vnc_password_ciphertext?: string | null
           vnc_password_iv?: string | null

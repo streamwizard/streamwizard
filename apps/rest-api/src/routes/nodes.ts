@@ -74,6 +74,10 @@ const updateInstanceSchema = z.object({
   vnc_password_ciphertext: z.string().nullable().optional(),
   vnc_password_iv: z.string().nullable().optional(),
   vnc_password_tag: z.string().nullable().optional(),
+  // Reported by the node after media uploads/deletes so the dashboard's storage
+  // bar stays accurate. storage_quota_mb is intentionally NOT accepted here --
+  // quota is admin/plan-owned, not something a node can raise for itself.
+  used_storage_bytes: z.number().int().nonnegative().optional(),
 });
 
 // ── Claim ─────────────────────────────────────────────────────────────────────
