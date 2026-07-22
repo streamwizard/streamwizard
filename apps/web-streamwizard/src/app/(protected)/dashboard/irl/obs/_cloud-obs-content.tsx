@@ -737,7 +737,11 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
             <TabsContent value="files">
               <Card>
                 <CardContent className="pt-4">
-                  <ObsFileUploader />
+                  <ObsFileUploader
+                    apiUrl={apiUrl}
+                    instanceId={instanceId}
+                    isRunning={containerStatus === "running"}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>

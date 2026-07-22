@@ -1,161 +1,233 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, X, FileIcon, CheckCircle } from "lucide-react";
+import { Upload, X, FileIcon, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Button, Progress } from "@repo/ui";
 import { cn } from "@repo/ui";
+import { toast } from "sonner";
+import {
+  deleteMediaFile,
+  listMediaFiles,
+  renameMediaFile,
+  uploadMediaFile,
+  type MediaFile,
+} from "@/lib/media-actions";
 
-interface UploadFile {
+interface Props {
+  apiUrl: string | null;
+  instanceId: string | null;
+  isRunning: boolean;
+}
+
+interface Uploading {
   id: string;
   name: string;
   size: number;
-  type: string;
-  url: string;
   progress: number;
-  done: boolean;
 }
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
-export function ObsFileUploader() {
-  const [files, setFiles] = useState<UploadFile[]>([]);
+export function ObsFileUploader({ apiUrl, instanceId, isRunning }: Props) {
+  const [files, setFiles] = useState<MediaFile[]>([]);
+  const [usedBytes, setUsedBytes] = useState(0);
+  const [quotaBytes, setQuotaBytes] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [uploads, setUploads] = useState<Uploading[]>([]);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const addFiles = useCallback((incoming: FileList | File[]) => {
-    const newFiles: UploadFile[] = Array.from(incoming).map((f) => ({
-      id: crypto.randomUUID(),
-      name: f.name,
-      size: f.size,
-      type: f.type,
-      url: URL.createObjectURL(f),
-      progress: 0,
-      done: false,
-    }));
-    setFiles((prev) => [...prev, ...newFiles]);
-  }, []);
+  const ready = Boolean(apiUrl && instanceId && isRunning);
 
-  const removeFile = useCallback((id: string) => {
-    setFiles((prev) => {
-      const target = prev.find((f) => f.id === id);
-      if (target) URL.revokeObjectURL(target.url);
-      return prev.filter((f) => f.id !== id);
-    });
-  }, []);
+  const refresh = useCallback(async () => {
+    if (!apiUrl || !instanceId) return;
+    setLoading(true);
+    try {
+      const listing = await listMediaFiles(apiUrl, instanceId);
+      setFiles(listing.files);
+      setUsedBytes(listing.used_bytes);
+      setQuotaBytes(listing.quota_bytes);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, [apiUrl, instanceId]);
 
-  // Simulate upload progress for newly added files
   useEffect(() => {
-    const pending = files.filter((f) => !f.done && f.progress < 100);
-    if (pending.length === 0) return;
+    if (ready) void refresh();
+    else {
+      setFiles([]);
+      setUsedBytes(0);
+    }
+  }, [ready, refresh]);
 
-    const id = setInterval(() => {
-      setFiles((prev) =>
-        prev.map((f) => {
-          if (f.done || f.progress >= 100) return f;
-          const next = Math.min(100, f.progress + Math.random() * 15 + 5);
-          return { ...f, progress: parseFloat(next.toFixed(0)), done: next >= 100 };
-        })
-      );
-    }, 200);
+  const upload = useCallback(
+    async (incoming: File[]) => {
+      if (!apiUrl || !instanceId) return;
+      for (const file of incoming) {
+        const id = crypto.randomUUID();
+        setUploads((prev) => [...prev, { id, name: file.name, size: file.size, progress: 0 }]);
+        try {
+          const listing = await uploadMediaFile(apiUrl, instanceId, file, (p) =>
+            setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, progress: p } : u))),
+          );
+          setFiles(listing.files);
+          setUsedBytes(listing.used_bytes);
+          setQuotaBytes(listing.quota_bytes);
+          toast.success(`Uploaded ${file.name}`);
+        } catch (err) {
+          toast.error(`${file.name}: ${(err as Error).message}`);
+        } finally {
+          setUploads((prev) => prev.filter((u) => u.id !== id));
+        }
+      }
+    },
+    [apiUrl, instanceId],
+  );
 
-    return () => clearInterval(id);
-  }, [files]);
+  const onRename = useCallback(
+    async (file: MediaFile) => {
+      if (!apiUrl || !instanceId) return;
+      const next = window.prompt("Rename file", file.path);
+      if (!next || next === file.path) return;
+      try {
+        const { scene_reference_warning } = await renameMediaFile(apiUrl, instanceId, file.path, next);
+        if (scene_reference_warning) {
+          toast.warning("Renamed. If a scene used this file, update the source — its path changed.");
+        } else {
+          toast.success("File renamed");
+        }
+        await refresh();
+      } catch (err) {
+        toast.error((err as Error).message);
+      }
+    },
+    [apiUrl, instanceId, refresh],
+  );
 
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDragging(true);
-  };
+  const onDelete = useCallback(
+    async (file: MediaFile) => {
+      if (!apiUrl || !instanceId) return;
+      if (!window.confirm(`Delete ${file.path}?`)) return;
+      try {
+        const listing = await deleteMediaFile(apiUrl, instanceId, file.path);
+        setFiles(listing.files);
+        setUsedBytes(listing.used_bytes);
+        setQuotaBytes(listing.quota_bytes);
+        toast.success("File deleted");
+      } catch (err) {
+        toast.error((err as Error).message);
+      }
+    },
+    [apiUrl, instanceId],
+  );
 
-  const onDragLeave = () => setDragging(false);
+  if (!ready) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border py-12 px-6 text-center">
+        <Upload className="h-8 w-8 text-muted-foreground" />
+        <p className="text-sm font-medium">Files are available while your instance is running</p>
+        <p className="text-xs text-muted-foreground">Start the instance to upload and manage media.</p>
+      </div>
+    );
+  }
+
+  const usedPercent = quotaBytes > 0 ? Math.min(100, (usedBytes / quotaBytes) * 100) : 0;
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
-    if (e.dataTransfer.files.length > 0) addFiles(e.dataTransfer.files);
-  };
-
-  const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      addFiles(e.target.files);
-      e.target.value = "";
-    }
+    if (e.dataTransfer.files.length > 0) void upload(Array.from(e.dataTransfer.files));
   };
 
   return (
     <div className="space-y-4">
+      {/* Storage usage */}
+      <div className="space-y-1">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>Storage</span>
+          <span className="tabular-nums">
+            {formatBytes(usedBytes)} / {formatBytes(quotaBytes)}
+          </span>
+        </div>
+        <Progress value={usedPercent} className="h-2" />
+      </div>
+
       {/* Drop zone */}
       <div
-        onDragOver={onDragOver}
-        onDragLeave={onDragLeave}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
         className={cn(
-          "flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-12 px-6 cursor-pointer transition-all",
-          dragging
-            ? "border-primary bg-primary/5 scale-[1.01]"
-            : "border-border hover:border-primary/50 hover:bg-muted/30"
+          "flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-10 px-6 cursor-pointer transition-all",
+          dragging ? "border-primary bg-primary/5 scale-[1.01]" : "border-border hover:border-primary/50 hover:bg-muted/30",
         )}
       >
         <Upload className={cn("h-8 w-8 transition-colors", dragging ? "text-primary" : "text-muted-foreground")} />
         <div className="text-center">
           <p className="text-sm font-medium">Drop files here or click to browse</p>
-          <p className="text-xs text-muted-foreground mt-1">Any file type · No size limit</p>
+          <p className="text-xs text-muted-foreground mt-1">Uploads go to your OBS media folder</p>
         </div>
-        <input ref={inputRef} type="file" multiple className="hidden" onChange={onInputChange} />
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.length) void upload(Array.from(e.target.files));
+            e.target.value = "";
+          }}
+        />
       </div>
 
+      {/* In-flight uploads */}
+      {uploads.map((u) => (
+        <div key={u.id} className="rounded-lg border bg-card p-3 flex items-center gap-3">
+          <Loader2 className="h-5 w-5 text-muted-foreground shrink-0 animate-spin" />
+          <div className="flex-1 min-w-0 space-y-1">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-sm font-medium truncate">{u.name}</p>
+              <span className="text-xs text-muted-foreground tabular-nums">{u.progress}%</span>
+            </div>
+            <Progress value={u.progress} className="h-1" />
+          </div>
+        </div>
+      ))}
+
       {/* File list */}
-      {files.length > 0 && (
+      {loading && files.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-6 text-center">Loading files…</p>
+      ) : files.length === 0 && uploads.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-6 text-center">No files yet.</p>
+      ) : (
         <div className="space-y-2">
           {files.map((file) => (
-            <div key={file.id} className="rounded-lg border bg-card p-3 flex items-center gap-3">
+            <div key={file.path} className="rounded-lg border bg-card p-3 flex items-center gap-3">
               <FileIcon className="h-5 w-5 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0 space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-medium truncate">{file.name}</p>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-muted-foreground">{formatBytes(file.size)}</span>
-                    {file.done ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <span className="text-xs text-muted-foreground tabular-nums">{file.progress}%</span>
-                    )}
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      onClick={(e) => { e.stopPropagation(); removeFile(file.id); }}
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-                {!file.done && (
-                  <Progress value={file.progress} className="h-1" />
-                )}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{file.path}</p>
+                <p className="text-xs text-muted-foreground">{formatBytes(file.size)}</p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onRename(file)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onDelete(file)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {files.length > 0 && (
-        <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground"
-            onClick={() => {
-              files.forEach((f) => URL.revokeObjectURL(f.url));
-              setFiles([]);
-            }}
-          >
-            Clear all
-          </Button>
         </div>
       )}
     </div>
