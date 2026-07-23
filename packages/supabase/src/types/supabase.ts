@@ -1527,6 +1527,7 @@ export type Database = {
       }
       obs_instances: {
         Row: {
+          config_template: string | null
           container_id: string | null
           container_name: string
           cpu_quota: number
@@ -1551,6 +1552,7 @@ export type Database = {
           vram_allocated_mb: number
         }
         Insert: {
+          config_template?: string | null
           container_id?: string | null
           container_name: string
           cpu_quota: number
@@ -1575,6 +1577,7 @@ export type Database = {
           vram_allocated_mb: number
         }
         Update: {
+          config_template?: string | null
           container_id?: string | null
           container_name?: string
           cpu_quota?: number

@@ -399,6 +399,24 @@ export async function updateObsInstanceByContainerIdForNode(
   return data;
 }
 
+/** Applies plan-owned fields (config_template + resource snapshot) to every
+ * instance a user owns. Used when their plan changes so the next container start
+ * reflects the new plan. Admin/service-role only — RLS is bypassed and ownership
+ * is enforced by the user_id predicate here. Returns the updated rows. */
+export async function updateObsInstancesByUser(
+  client: DBClient,
+  userId: string,
+  fields: ObsInstanceUpdate,
+): Promise<ObsInstance[]> {
+  const { data, error } = await client
+    .from("obs_instances")
+    .update(fields)
+    .eq("user_id", userId)
+    .select();
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** Node-scoped delete. Returns false when nothing matched (missing, or another
  * node's row), so the caller can answer 404 instead of a silent 200. */
 export async function deleteObsInstanceForNode(client: DBClient, instanceId: string, nodeId: string): Promise<boolean> {

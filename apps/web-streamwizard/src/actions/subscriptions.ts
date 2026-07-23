@@ -4,7 +4,12 @@ import { reportError } from "@repo/sentry";
 
 import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
+import { getPlanLimits } from "@repo/supabase/queries/subscriptions";
+import { updateObsInstancesByUser } from "@repo/supabase/queries/obs-nodes";
 import { revalidatePath } from "next/cache";
+
+// Product whose plans carry cloud-OBS resource limits + a config_template folder.
+const CLOUD_OBS_PRODUCT_ID = "cloud_obs";
 
 const SUBSCRIPTIONS_PATH = "/dashboard/admin/subscriptions";
 
@@ -74,6 +79,32 @@ export async function grantSubscriptionAction(
     reportError(error, "actions/subscriptions");
     return { error: error.message };
   }
+
+  // Re-apply the new plan to the user's existing cloud-OBS instances so an
+  // upgrade/downgrade takes effect on their next start: the profile folder
+  // (config_template) and the resource snapshot the resume path reads from the
+  // row. A running instance keeps its current container until it next restarts.
+  // Best-effort: the subscription is already granted, so a failure here is logged
+  // but doesn't fail the action (instances still pick up the plan on next start).
+  if (planRow.product_id === CLOUD_OBS_PRODUCT_ID) {
+    try {
+      const limits = await getPlanLimits(adminClient, planId);
+      if (limits) {
+        await updateObsInstancesByUser(adminClient, userId, {
+          config_template: limits.config_template ?? null,
+          resolution: limits.resolution,
+          memory_mb: limits.memory_mb,
+          cpu_quota: limits.cpu_quota,
+          shm_size: limits.shm_size,
+          // limits jsonb calls it vram_mb; the column is vram_allocated_mb.
+          vram_allocated_mb: limits.vram_mb,
+        });
+      }
+    } catch (e) {
+      reportError(e, "actions/subscriptions:reapply-instances");
+    }
+  }
+
   revalidatePath(SUBSCRIPTIONS_PATH);
   return { error: null };
 }
