@@ -9,6 +9,10 @@ export interface CloudObsPlanLimits {
   cpu_quota: number;
   shm_size: string;
   vram_mb: number;
+  // Names the plan-owned OBS template folder under obs-templates/ whose profile
+  // (resolution/fps/encoder) each instance is seeded from. Optional: plans seeded
+  // before this key exists fall back to the manager's DEFAULT_TEMPLATE.
+  config_template?: string;
 }
 
 export type ProductAccess = {
