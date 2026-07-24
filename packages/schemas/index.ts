@@ -18,3 +18,4 @@ export * from "./src/user";
 
 
 export * from "./src/widget-editor-declarations";
+export * from "./src/widget-editor-lib-declarations";

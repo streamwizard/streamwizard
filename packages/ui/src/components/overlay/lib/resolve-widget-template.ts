@@ -99,9 +99,46 @@ export function buildWidgetSrcdoc(
   <script nonce="${nonce}">
     document.documentElement.style.background = 'transparent';
     document.body.style.background = 'transparent';
-    window.StreamWizard = { stateUrl: ${stateUrl} };
+    window.StreamWizard = {
+      stateUrl: ${stateUrl},
+      session: null,
+      // Typed wrapper around the raw state API; see the editor's autocomplete
+      // (StreamWizardStateApi). Throws outside a placed overlay widget, where
+      // there is no session to authenticate with.
+      state: {
+        _require: function() {
+          var sw = window.StreamWizard;
+          if (!sw.stateUrl || !sw.session || !sw.session.subscriberToken || !sw.session.overlayItemId) {
+            throw new Error('StreamWizard.state is only available when the widget runs on an overlay (not in the editor preview).');
+          }
+          return sw;
+        },
+        get: async function() {
+          var sw = this._require();
+          // Token travels in the Authorization header, never the URL
+          var res = await fetch(sw.stateUrl + '?itemId=' + encodeURIComponent(sw.session.overlayItemId), {
+            headers: { 'Authorization': 'Bearer ' + sw.session.subscriberToken }
+          });
+          if (!res.ok) throw new Error('Failed to load widget state (' + res.status + ')');
+          var body = await res.json();
+          return body.state != null ? body.state : null;
+        },
+        set: async function(state) {
+          var sw = this._require();
+          var res = await fetch(sw.stateUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sw.session.subscriberToken },
+            body: JSON.stringify({ itemId: sw.session.overlayItemId, state: state })
+          });
+          if (!res.ok) throw new Error('Failed to save widget state (' + res.status + ')');
+        }
+      }
+    };
     window.addEventListener('message', function(e) {
-      if (e.data.type === 'onWidgetLoad') window.dispatchEvent(new CustomEvent('onWidgetLoad', { detail: e.data.payload }));
+      if (e.data.type === 'onWidgetLoad') {
+        if (e.data.payload && e.data.payload.session) window.StreamWizard.session = e.data.payload.session;
+        window.dispatchEvent(new CustomEvent('onWidgetLoad', { detail: e.data.payload }));
+      }
       if (e.data.type === 'onEventReceived') window.dispatchEvent(new CustomEvent('onEventReceived', { detail: e.data.payload }));
       if (e.data.type === 'onSessionUpdate') window.dispatchEvent(new CustomEvent('onSessionUpdate', { detail: e.data.payload }));
     });

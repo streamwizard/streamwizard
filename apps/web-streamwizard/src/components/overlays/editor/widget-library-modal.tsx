@@ -74,11 +74,16 @@ const DEFAULT_WIDGET_JS = `/*
  * StreamWizard Widget — JavaScript
  *
  * Available globals:
- *   gsap        — GSAP animation library
- *   TextPlugin  — GSAP text animation
+ *   gsap               — GSAP animation library
+ *   TextPlugin         — GSAP text animation (gsap.registerPlugin(TextPlugin))
+ *   fieldData          — values from your Fields tab
+ *   StreamWizard.state — persist data between streams (get/set); only works
+ *                        on a live overlay, not in the editor preview
  *
- * Register TextPlugin if you want to animate text content:
- *   gsap.registerPlugin(TextPlugin);
+ * Events arrive as Twitch EventSub payloads. The listener name is the
+ * EventSub type: 'channel.follow', 'channel.subscribe', 'channel.cheer',
+ * 'channel.raid', 'channel.chat.message', and so on. Autocomplete knows
+ * every payload — type e.detail. and let the editor guide you.
  */
 
 // ─── Widget load ────────────────────────────────────────────────────────────
@@ -109,25 +114,21 @@ window.addEventListener('onEventReceived', function(obj) {
   const listener = obj.detail.listener;
   const event = obj.detail.event;
 
-  if (listener === 'follower-latest') {
-    showAlert(event.name, 'just followed!', 'New Follower!');
+  if (listener === 'channel.follow') {
+    showAlert(event.user_name, 'just followed!', 'New Follower!');
   }
 
-  if (listener === 'subscriber-latest') {
-    const months = event.amount > 1 ? \`for \${event.amount} months!\` : 'just subscribed!';
-    showAlert(event.name, months, 'New Subscriber!');
+  if (listener === 'channel.subscribe') {
+    showAlert(event.user_name, event.is_gift ? 'got a gifted sub!' : 'just subscribed!', 'New Subscriber!');
   }
 
-  if (listener === 'cheer-latest') {
-    showAlert(event.name, \`cheered \${event.amount} bits!\`, 'Cheer!');
+  if (listener === 'channel.cheer') {
+    const name = event.is_anonymous ? 'Anonymous' : event.user_name;
+    showAlert(name, \`cheered \${event.bits} bits!\`, 'Cheer!');
   }
 
-  if (listener === 'tip-latest') {
-    showAlert(event.name, \`tipped $\${event.amount}!\`, 'New Tip!');
-  }
-
-  if (listener === 'raid-latest') {
-    showAlert(event.name, \`raided with \${event.amount} viewers!\`, 'Incoming Raid!');
+  if (listener === 'channel.raid') {
+    showAlert(event.from_broadcaster_user_name, \`raided with \${event.viewers} viewers!\`, 'Incoming Raid!');
   }
 });
 
@@ -158,20 +159,7 @@ function showAlert(username, message, label = 'Alert') {
   tl.to('#widget',
     { opacity: 0, scale: 0.9, y: -10, duration: 0.3, ease: 'power2.in' }
   );
-}
-
-
-// ─── Session updates ────────────────────────────────────────────────────────
-// Fires when session stats change (follower count, sub count, goals etc.)
-// Useful for goal bars and stat displays.
-//
-window.addEventListener('onSessionUpdate', function(obj) {
-  const session = obj.detail.session;
-
-  // Example: update a follower count display
-  // const count = session['follower-session']?.count ?? 0;
-  // document.getElementById('follower-count').textContent = count;
-});`;
+}`;
 
 interface LibraryEntry {
   id: string;

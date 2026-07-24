@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import type { Widget } from "@/actions/widgets";
 import { updateWidget, publishWidgetToLibrary, getActiveSubscriberToken } from "@/actions/widgets";
 import { env } from "@/lib/env";
-import { WIDGET_EDITOR_DECLARATIONS } from "@repo/schemas";
+import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS } from "@repo/schemas";
 import { buildWidgetSrcdoc, mergeFieldValues, CustomWidgetIframe } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { ImagePlus } from "lucide-react";
@@ -29,68 +29,6 @@ const MonacoEditor = dynamic(
   { ssr: false }
 );
 
-const GSAP_TYPES = `
-interface GSAPTweenVars {
-  duration?: number;
-  delay?: number;
-  ease?: string;
-  opacity?: number;
-  x?: number;
-  y?: number;
-  scale?: number;
-  rotation?: number;
-  width?: number | string;
-  height?: number | string;
-  backgroundColor?: string;
-  color?: string;
-  fontSize?: number | string;
-  repeat?: number;
-  yoyo?: boolean;
-  stagger?: number | object;
-  onComplete?: () => void;
-  onStart?: () => void;
-  onUpdate?: () => void;
-  [key: string]: any;
-}
-
-interface GSAPTimeline {
-  to(targets: any, vars: GSAPTweenVars, position?: number | string): GSAPTimeline;
-  from(targets: any, vars: GSAPTweenVars, position?: number | string): GSAPTimeline;
-  fromTo(targets: any, fromVars: GSAPTweenVars, toVars: GSAPTweenVars, position?: number | string): GSAPTimeline;
-  add(child: any, position?: number | string): GSAPTimeline;
-  play(): GSAPTimeline;
-  pause(): GSAPTimeline;
-  reverse(): GSAPTimeline;
-  restart(): GSAPTimeline;
-  kill(): void;
-  duration(): number;
-  progress(value?: number): GSAPTimeline | number;
-  repeat(value?: number): GSAPTimeline | number;
-  delay(value?: number): GSAPTimeline | number;
-}
-
-interface GSAP {
-  to(targets: any, vars: GSAPTweenVars): object;
-  from(targets: any, vars: GSAPTweenVars): object;
-  fromTo(targets: any, fromVars: GSAPTweenVars, toVars: GSAPTweenVars): object;
-  set(targets: any, vars: GSAPTweenVars): object;
-  timeline(vars?: GSAPTweenVars): GSAPTimeline;
-  registerPlugin(...plugins: any[]): void;
-  killTweensOf(targets: any): void;
-  delayedCall(delay: number, callback: () => void): object;
-  utils: {
-    clamp(min: number, max: number, value: number): number;
-    mapRange(inMin: number, inMax: number, outMin: number, outMax: number, value: number): number;
-    interpolate(start: any, end: any, progress: number): any;
-  };
-}
-
-declare const gsap: GSAP;
-
-interface TextPlugin {
-  text?: string | { value: string; delimiter?: string };
-}
-`;
 
 
 const EDITOR_OPTIONS = {
@@ -347,8 +285,8 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
       "streamwizard-api.d.ts"
     );
     monaco.languages.typescript.javascriptDefaults.addExtraLib(
-      GSAP_TYPES,
-      "gsap.d.ts"
+      WIDGET_EDITOR_LIB_DECLARATIONS,
+      "streamwizard-libs.d.ts"
     );
 
     // JSON schema validation for the fields tab
@@ -414,6 +352,14 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
           className="h-8 text-sm w-48"
         />
         <div className="ml-auto flex items-center gap-2">
+          <a
+            href={env.NEXT_PUBLIC_DOCS_URL ?? "https://docs.streamwizard.org"}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs px-2.5 py-1 rounded-md border border-border hover:bg-accent transition-colors text-muted-foreground"
+          >
+            Docs
+          </a>
           <button
             type="button"
             onClick={() => setWsEnabled((v) => !v)}
