@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
 import type { ObsNode, ObsNodeInstanceDetail } from "@repo/supabase/queries/obs-nodes";
 import { useNodeMetricsStream, type ConnectionStatus } from "@/hooks/use-node-metrics-stream";
-import { toggleInstance } from "@/lib/instance-actions";
+import { toggleInstanceAdmin } from "@/lib/instance-actions";
 import { ContainerMetricsCharts } from "@/components/admin/metrics-charts";
 
 function statusLabel(status: ConnectionStatus): { text: string; variant: "default" | "secondary" | "outline" | "destructive" } {
@@ -44,7 +44,7 @@ export function InstanceDetailClient({ node, instance }: { node: ObsNode; instan
     }
     setIsPending(true);
     try {
-      const updated = await toggleInstance(node.api_url, instance.id, isRunning ? "stop" : "start");
+      const updated = await toggleInstanceAdmin(node.api_url, instance.id, isRunning ? "stop" : "start");
       setCurrentStatus(updated.status);
       toast.success(`Container ${isRunning ? "stopped" : "started"}.`);
     } catch (err) {

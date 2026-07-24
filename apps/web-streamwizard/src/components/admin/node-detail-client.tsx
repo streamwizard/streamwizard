@@ -22,7 +22,7 @@ import {
 import type { ObsNode, ObsNodeInstanceOwner } from "@repo/supabase/queries/obs-nodes";
 import { listNodeInstancesAction } from "@/actions/nodes";
 import { useNodeMetricsStream, type ConnectionStatus } from "@/hooks/use-node-metrics-stream";
-import { toggleInstance, removeInstance } from "@/lib/instance-actions";
+import { toggleInstanceAdmin, removeInstance } from "@/lib/instance-actions";
 import { createInstanceAction } from "@/actions/nodes";
 import { HostMetricsCharts } from "@/components/admin/metrics-charts";
 import { formatMb } from "@/lib/format";
@@ -95,7 +95,7 @@ export function NodeDetailClient({ node }: { node: ObsNode }) {
     }
     setPendingInstanceId(instance.id);
     try {
-      const updated = await toggleInstance(node.api_url, instance.id, action);
+      const updated = await toggleInstanceAdmin(node.api_url, instance.id, action);
       setInstances((prev) => prev.map((i) => (i.id === instance.id ? { ...i, status: updated.status } : i)));
       toast.success(`Container ${action === "start" ? "started" : "stopped"}.`);
     } catch (err) {
