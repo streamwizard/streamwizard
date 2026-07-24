@@ -60,6 +60,8 @@ export {
   resolveWidgetTemplate,
   buildWidgetSrcdoc,
   mergeFieldValues,
+  ASSET_FIELD_TYPES,
+  isAssetFieldType,
   type WidgetFieldDef,
   type WidgetFieldSchema,
 } from "./components/overlay/lib/resolve-widget-template";

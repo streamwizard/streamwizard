@@ -9,6 +9,8 @@ import { updateWidget, publishWidgetToLibrary, getActiveSubscriberToken } from "
 import { env } from "@/lib/env";
 import { WIDGET_EDITOR_DECLARATIONS } from "@repo/schemas";
 import { buildWidgetSrcdoc, mergeFieldValues, CustomWidgetIframe } from "@repo/ui/overlay";
+import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
+import { ImagePlus } from "lucide-react";
 import type { WidgetFieldSchema, CustomWidgetIframeHandle } from "@repo/ui/overlay";
 import { Button } from "@repo/ui";
 import { Input } from "@repo/ui";
@@ -205,6 +207,8 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   const [activeTab, setActiveTab] = useState<"html" | "js" | "fields" | "css">("html");
   const [isDirty, setIsDirty] = useState(false);
   const monacoRef = useRef<Monaco | null>(null);
+  const editorRef = useRef<Parameters<OnMount>[0] | null>(null);
+  const [assetPickerOpen, setAssetPickerOpen] = useState(false);
   const [isSaving, startSave] = useTransition();
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishTitle, setPublishTitle] = useState(widget.name);
@@ -216,7 +220,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   const [srcdoc, setSrcdoc] = useState(() => {
     const fields = coerceFields(widget.fields as WidgetFieldSchema);
     const defaults = mergeFieldValues(fields, {});
-    return buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, fields, defaults);
+    return buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, fields, defaults, undefined, env.NEXT_PUBLIC_ASSET_CDN_URL);
   });
   const [fieldData, setFieldData] = useState<Record<string, unknown>>(() => {
     const fields = coerceFields(widget.fields as WidgetFieldSchema);
@@ -286,6 +290,16 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     }
   }
 
+  function insertAssetUrl(url: string) {
+    const editor = editorRef.current;
+    if (!editor) return;
+    const selection = editor.getSelection();
+    if (!selection) return;
+    // executeEdits fires onChange, which marks dirty and hot-reloads the preview
+    editor.executeEdits("asset-picker", [{ range: selection, text: url, forceMoveMarkers: true }]);
+    editor.focus();
+  }
+
   function fireTestEvent(listener: string, event: Record<string, unknown>) {
     widgetRef.current?.postMessage({ type: "onEventReceived", payload: { listener, event } });
   }
@@ -294,7 +308,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     const fields = parsedFields() ?? (widget.fields as WidgetFieldSchema);
     const defaults = mergeFieldValues(fields, {});
     setFieldData(defaults);
-    setSrcdoc(buildWidgetSrcdoc(htmlRef.current, jsRef.current, cssRef.current, fields, defaults));
+    setSrcdoc(buildWidgetSrcdoc(htmlRef.current, jsRef.current, cssRef.current, fields, defaults, undefined, env.NEXT_PUBLIC_ASSET_CDN_URL));
     setRefreshKey((k) => k + 1);
   }
 
@@ -325,6 +339,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
 
   const handleMount: OnMount = useCallback((editor, monaco) => {
     monacoRef.current = monaco;
+    editorRef.current = editor;
 
     // StreamWizard type definitions for the JS tab
     monaco.languages.typescript.javascriptDefaults.addExtraLib(
@@ -495,6 +510,15 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
                 Fields {fieldsError && <span className="ml-1 text-destructive">!</span>}
               </TabsTrigger>
               <TabsTrigger value="css" className="text-xs h-7">Extra CSS</TabsTrigger>
+              <button
+                type="button"
+                onClick={() => setAssetPickerOpen(true)}
+                className="ml-auto flex items-center gap-1 text-xs px-2 py-1 rounded-md border border-border hover:bg-accent transition-colors"
+                title="Insert a media-library file URL at the cursor"
+              >
+                <ImagePlus className="h-3.5 w-3.5" />
+                Insert asset
+              </button>
             </TabsList>
 
             <div className="flex-1 min-h-0">
@@ -582,6 +606,13 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
           />
         </div>
       </div>
+
+      <AssetPickerDialog
+        open={assetPickerOpen}
+        onOpenChange={setAssetPickerOpen}
+        onSelect={(asset) => insertAssetUrl(asset.url)}
+        title="Insert asset"
+      />
     </div>
   );
 }

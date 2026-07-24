@@ -29,7 +29,7 @@ export function CustomWidgetContainer({ scene, item }: OverlayWidgetProps) {
           return;
         }
         setFieldData(mergeFieldValues(data.fields, data.field_values));
-        setSrcdoc(buildWidgetSrcdoc(data.html, data.js, data.extra_css, data.fields, data.field_values, env.NEXT_PUBLIC_OVERLAY_URL));
+        setSrcdoc(buildWidgetSrcdoc(data.html, data.js, data.extra_css, data.fields, data.field_values, env.NEXT_PUBLIC_OVERLAY_URL, env.NEXT_PUBLIC_ASSET_CDN_URL));
       }
     );
 

@@ -7,6 +7,9 @@ import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-
 import { getWidgets, getWidget, getOrCreateWidgetInstance, updateWidgetInstanceFieldValues } from "@/actions/widgets";
 import type { Widget, OverlayWidgetInstance } from "@/actions/widgets";
 import type { WidgetFieldDef, WidgetFieldSchema } from "@repo/ui/overlay";
+import { isAssetFieldType } from "@repo/ui/overlay";
+import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
+import type { AssetKind } from "@/actions/assets";
 import { GoogleFontSelect } from "@/components/overlays/inspector-fields";
 import { Label } from "@repo/ui";
 import { Input } from "@repo/ui";
@@ -231,6 +234,18 @@ function FieldInput({
     );
   }
 
+  if (isAssetFieldType(def.type)) {
+    return (
+      <AssetField
+        fieldKey={fieldKey}
+        label={label}
+        kind={def.type as AssetKind}
+        value={typeof value === "string" ? value : ""}
+        onChange={onChange}
+      />
+    );
+  }
+
   if (def.type === "googleFont") {
     return (
       <GoogleFontSelect
@@ -242,6 +257,56 @@ function FieldInput({
   }
 
   return null;
+}
+
+function AssetField({
+  fieldKey,
+  label,
+  kind,
+  value,
+  onChange,
+}: {
+  fieldKey: string;
+  label: string;
+  kind: AssetKind;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const fileName = value ? decodeURIComponent(value.split("/").pop() ?? value) : null;
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      <div className="flex items-center gap-2">
+        {kind === "image" && value && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={value} alt={label} className="h-8 w-8 rounded object-cover bg-muted shrink-0" />
+        )}
+        <Button
+          size="sm"
+          variant="outline"
+          className="flex-1 min-w-0 justify-start text-xs font-normal"
+          onClick={() => setPickerOpen(true)}
+        >
+          <span className="truncate">{fileName ?? `Choose ${kind}…`}</span>
+        </Button>
+        {value && (
+          <Button size="sm" variant="ghost" className="text-xs shrink-0" onClick={() => onChange("")}>
+            Clear
+          </Button>
+        )}
+      </div>
+      <AssetPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        kindFilter={[kind]}
+        title={`Pick ${kind === "audio" ? "a sound" : `an ${kind}`} for ${label}`}
+        onSelect={(asset) => onChange(asset.url)}
+        key={`picker-${fieldKey}`}
+      />
+    </div>
+  );
 }
 
 function WidgetPicker({ onSelect }: { onSelect: (widgetId: string) => void }) {

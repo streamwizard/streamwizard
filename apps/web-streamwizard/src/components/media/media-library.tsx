@@ -9,6 +9,7 @@ import {
   confirmAssetUpload,
   createAssetUpload,
   deleteAsset,
+  type AssetKind,
   type AssetListing,
   type UserAsset,
 } from "@/actions/assets";
@@ -60,7 +61,15 @@ function KindIcon({ asset }: { asset: UserAsset }) {
   );
 }
 
-export function MediaLibrary({ initialListing }: { initialListing: AssetListing | null }) {
+interface MediaLibraryProps {
+  initialListing: AssetListing | null;
+  // Select mode (asset pickers): clicking a file calls onSelect instead of
+  // showing copy/delete actions. kindFilter narrows the list (e.g. images only).
+  onSelect?: (asset: UserAsset) => void;
+  kindFilter?: AssetKind[];
+}
+
+export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibraryProps) {
   const [listing, setListing] = useState<AssetListing | null>(initialListing);
   const [uploads, setUploads] = useState<Uploading[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -112,6 +121,8 @@ export function MediaLibrary({ initialListing }: { initialListing: AssetListing 
 
   const usedPercent =
     listing && listing.quota_bytes > 0 ? Math.min(100, (listing.used_bytes / listing.quota_bytes) * 100) : 0;
+
+  const visibleFiles = (listing?.files ?? []).filter((f) => !kindFilter || kindFilter.includes(f.kind));
 
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -179,7 +190,7 @@ export function MediaLibrary({ initialListing }: { initialListing: AssetListing 
         </div>
       ))}
 
-      {!listing || (listing.files.length === 0 && uploads.length === 0) ? (
+      {!listing || (visibleFiles.length === 0 && uploads.length === 0) ? (
         <div className="flex flex-col items-center gap-2 py-10 text-center">
           <ImageIcon className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm font-medium">Nothing here yet</p>
@@ -189,8 +200,15 @@ export function MediaLibrary({ initialListing }: { initialListing: AssetListing 
         </div>
       ) : (
         <div className="space-y-2">
-          {listing.files.map((asset) => (
-            <div key={asset.id} className="rounded-lg border bg-card p-3 flex items-center gap-3">
+          {visibleFiles.map((asset) => (
+            <div
+              key={asset.id}
+              onClick={onSelect ? () => onSelect(asset) : undefined}
+              className={cn(
+                "rounded-lg border bg-card p-3 flex items-center gap-3",
+                onSelect && "cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors",
+              )}
+            >
               <KindIcon asset={asset} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{asset.file_name}</p>
@@ -198,14 +216,16 @@ export function MediaLibrary({ initialListing }: { initialListing: AssetListing 
                   {formatBytes(asset.size_bytes)} · {asset.kind}
                 </p>
               </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <Button size="icon" variant="ghost" className="h-7 w-7" title="Copy URL" onClick={() => onCopyUrl(asset)}>
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-                <Button size="icon" variant="ghost" className="h-7 w-7" title="Delete" onClick={() => onDelete(asset)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+              {!onSelect && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Copy URL" onClick={() => onCopyUrl(asset)}>
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Delete" onClick={() => onDelete(asset)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
             </div>
           ))}
         </div>

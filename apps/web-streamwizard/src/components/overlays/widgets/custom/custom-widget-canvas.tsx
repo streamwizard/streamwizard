@@ -28,7 +28,7 @@ function CustomWidgetCanvasInner({ item, scene }: OverlayCanvasProps) {
 
       const merged = mergeFieldValues(widget.fields, fieldValues);
       setFieldData(merged);
-      setSrcdoc(buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, widget.fields, fieldValues, env.NEXT_PUBLIC_OVERLAY_URL));
+      setSrcdoc(buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, widget.fields, fieldValues, env.NEXT_PUBLIC_OVERLAY_URL, env.NEXT_PUBLIC_ASSET_CDN_URL));
     }
 
     load();

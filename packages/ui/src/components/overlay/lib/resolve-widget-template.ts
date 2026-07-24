@@ -1,4 +1,7 @@
 export interface WidgetFieldDef {
+  // Free-form, but the editors special-case: "text", "number", "color",
+  // "dropdown", "checkbox", and the media-library asset types "image",
+  // "audio", "video" (value = public CDN URL string).
   type: string;
   label?: string;
   value?: unknown;
@@ -6,6 +9,13 @@ export interface WidgetFieldDef {
   min?: number;
   max?: number;
   step?: number;
+}
+
+/** Field types whose value is a media-library asset URL. */
+export const ASSET_FIELD_TYPES = ["image", "audio", "video"] as const;
+
+export function isAssetFieldType(type: string): boolean {
+  return (ASSET_FIELD_TYPES as readonly string[]).includes(type);
 }
 
 export type WidgetFieldSchema = Record<string, WidgetFieldDef>;
@@ -52,13 +62,17 @@ export function buildWidgetSrcdoc(
   extraCss: string,
   fields: WidgetFieldSchema,
   fieldValues: Record<string, unknown>,
-  overlayOrigin?: string
+  overlayOrigin?: string,
+  // Media-library CDN origin: lets widget JS fetch() uploaded assets. Plain
+  // <img>/<audio>/<video> tags don't need it — this CSP only sets connect-src.
+  assetCdnOrigin?: string
 ): string {
   const { resolvedHtml, resolvedCss } = resolveWidgetTemplate(html, extraCss, fields, fieldValues);
   const stateUrl = overlayOrigin ? JSON.stringify(`${overlayOrigin}/api/widgets/state`) : "null";
   const nonce = documentNonce();
   const connectSrc = [
     overlayOrigin,
+    assetCdnOrigin,
     "https://api.open-meteo.com",
     "https://nominatim.openstreetmap.org",
   ].filter(Boolean).join(" ");
