@@ -16,7 +16,7 @@ import {
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@repo/supabase";
 import { User } from "@supabase/supabase-js";
-import { BarChart2, Cloud, FileVideoCamera, Layers, MapPin, Radio, Server, Users } from "lucide-react";
+import { BarChart2, Cloud, FileVideoCamera, FolderOpen, Layers, MapPin, Radio, Server, Users } from "lucide-react";
 import { StreamWizardLogo } from "@/components/brand/streamwizard-logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -142,6 +142,14 @@ export function AppSidebar({
                   <Link href="/dashboard/overlays" onClick={closeMobile}>
                     <Layers className="mr-2 h-4 w-4" />
                     Overlay Editor
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/media")}>
+                  <Link href="/dashboard/media" onClick={closeMobile}>
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    Media
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

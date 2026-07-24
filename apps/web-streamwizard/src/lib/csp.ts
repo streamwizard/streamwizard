@@ -48,11 +48,15 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     [
       "img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv https://clips-media-assets2.twitch.tv",
       process.env.NEXT_PUBLIC_CDN_URL,
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),
-    // R2 CDN for video assets (light mode transition WebM, future overlay assets)
-    ["media-src 'self'", process.env.NEXT_PUBLIC_CDN_URL].filter(Boolean).join(" "),
+    // R2 CDN for video assets (light mode transition WebM) + user-uploaded
+    // media-library assets on their own R2 domain
+    ["media-src 'self'", process.env.NEXT_PUBLIC_CDN_URL, process.env.NEXT_PUBLIC_ASSET_CDN_URL]
+      .filter(Boolean)
+      .join(" "),
     // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them.
     // Monaco fetches worker scripts and additional resources from jsdelivr CDN.
     [
@@ -74,6 +78,10 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       process.env.NEXT_PUBLIC_OVERLAY_URL,
       "https://api.open-meteo.com",
       "https://nominatim.openstreetmap.org",
+      // Media-library uploads PUT directly to presigned R2 URLs; widget JS may
+      // also fetch() assets from the public asset CDN.
+      process.env.R2_ACCOUNT_ID ? `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com` : "",
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),

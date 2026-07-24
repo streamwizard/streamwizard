@@ -57,6 +57,8 @@ const nextConfig = {
     SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT ?? process.env.ALERT_ENV ?? "",
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY ?? process.env.POSTHOG_KEY ?? "",
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com",
+    NEXT_PUBLIC_ASSET_CDN_URL:
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL ?? process.env.ASSET_CDN_URL ?? process.env.NEXT_PUBLIC_CDN_URL ?? "",
   },
   images: {
     remotePatterns: [
@@ -77,6 +79,14 @@ const nextConfig = {
             {
               protocol: "https" as const,
               hostname: new URL(process.env.NEXT_PUBLIC_CDN_URL).hostname,
+            },
+          ]
+        : []),
+      ...(process.env.NEXT_PUBLIC_ASSET_CDN_URL
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: new URL(process.env.NEXT_PUBLIC_ASSET_CDN_URL).hostname,
             },
           ]
         : []),

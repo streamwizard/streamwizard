@@ -8,6 +8,10 @@ process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? p
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLIC_KEY;
 process.env.NEXT_PUBLIC_WS_SERVER_URL = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? process.env.WS_SERVER_URL;
 process.env.NEXT_PUBLIC_SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN;
+// User assets live in the same R2 bucket as our static CDN (under assets/),
+// so the asset CDN URL falls back to NEXT_PUBLIC_CDN_URL unless overridden.
+process.env.NEXT_PUBLIC_ASSET_CDN_URL =
+  process.env.NEXT_PUBLIC_ASSET_CDN_URL ?? process.env.ASSET_CDN_URL ?? process.env.NEXT_PUBLIC_CDN_URL;
 
 export const env = createEnv({
   server: {
@@ -33,6 +37,13 @@ export const env = createEnv({
     STREAMWIZARD_API_URL: z.string().url(),
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_RELEASE: z.string().optional(),
+    // Cloudflare R2 for user-uploaded overlay assets (media library). Optional
+    // so environments without the feature configured still boot; the asset
+    // actions throw a clear error when missing.
+    R2_ACCOUNT_ID: z.string().min(1).optional(),
+    R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+    R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    R2_ASSETS_BUCKET: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -44,6 +55,9 @@ export const env = createEnv({
     NEXT_PUBLIC_POSTHOG_KEY: z.string().min(1).optional(),
     NEXT_PUBLIC_POSTHOG_HOST: z.string().url().default("https://eu.i.posthog.com"),
     NEXT_PUBLIC_CDN_URL: z.string().url(),
+    // Public custom domain of the R2 user-assets bucket (media library).
+    // Separate from NEXT_PUBLIC_CDN_URL, which serves our own static assets.
+    NEXT_PUBLIC_ASSET_CDN_URL: z.string().url().optional(),
     NEXT_PUBLIC_DOCS_URL: z.string().url().optional(),
   },
   runtimeEnv: {
@@ -66,6 +80,10 @@ export const env = createEnv({
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
     SENTRY_DSN: process.env.SENTRY_DSN,
     SENTRY_RELEASE: process.env.SENTRY_RELEASE,
+    R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
+    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
+    R2_ASSETS_BUCKET: process.env.R2_ASSETS_BUCKET,
     // Derived in next.config.ts env: block from their non-prefixed Doppler counterparts
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -76,6 +94,7 @@ export const env = createEnv({
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY,
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST,
     NEXT_PUBLIC_CDN_URL: process.env.NEXT_PUBLIC_CDN_URL,
+    NEXT_PUBLIC_ASSET_CDN_URL: process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     NEXT_PUBLIC_DOCS_URL: process.env.NEXT_PUBLIC_DOCS_URL,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
