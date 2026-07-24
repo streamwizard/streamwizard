@@ -17,6 +17,8 @@ import type {
 import { overlayItemFromDbRow } from "@/types/overlays";
 import type { Database, Json } from "@repo/supabase";
 import { getAuthContext } from "@/lib/auth";
+import { getOverlayTemplate } from "@/components/overlays/templates/definitions";
+import { createClipDisplayFieldChildItems } from "@repo/ui/overlay";
 import {
   getOverlayScenes as _getOverlayScenes,
   getOverlayScene as _getOverlayScene,
@@ -122,6 +124,112 @@ export async function createOverlayScene(formData: {
 
   revalidatePath("/dashboard/overlays");
   return { data, error: null };
+}
+
+export async function createOverlayFromTemplate(formData: {
+  name: string;
+  templateId: string;
+  render_mode?: "obs" | "phone";
+}) {
+  let supabase, user;
+  try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
+
+  const template = getOverlayTemplate(formData.templateId);
+  if (!template) return { data: null, error: "Unknown template" };
+
+  const parsed = createSceneSchema.safeParse({
+    name: formData.name,
+    width: template.width,
+    height: template.height,
+  });
+  if (!parsed.success) return { data: null, error: parsed.error.message };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: scene, error: sceneError } = await (supabase.from("overlay_scenes") as any)
+    .insert({
+      user_id: user.id,
+      name: parsed.data.name,
+      slug: generateSlug(parsed.data.name),
+      width: template.width,
+      height: template.height,
+      render_mode: formData.render_mode ?? template.render_mode,
+    })
+    .select()
+    .single();
+
+  if (sceneError) {
+    reportError(sceneError, "actions/overlays");
+    return { data: null, error: sceneError.message };
+  }
+
+  if (template.items.length > 0) {
+    const roots = template.items.map((item) => ({
+      scene_id: scene.id as string,
+      type: item.type,
+      x: item.x,
+      y: item.y,
+      w: item.w,
+      h: item.h,
+      z_index: item.z_index,
+      rotation: 0,
+      opacity: 1,
+      is_visible: true,
+      is_locked: false,
+      label: item.label,
+      config: item.config as unknown as Json,
+    }));
+
+    const { data: inserted, error: itemsError } = await insertOverlayItemsReturningIds(supabase, roots);
+    if (itemsError || !inserted) {
+      reportError(itemsError, "actions/overlays");
+      // Scene without its items is a broken template instance; clean up.
+      await _deleteOverlayScene(supabase, scene.id, user.id);
+      return { data: null, error: itemsError?.message ?? "Failed to create template items" };
+    }
+
+    // Clips widgets carry per-field child rows (title/creator/game/...) that
+    // every clips widget is expected to have; generate them like the editor does.
+    const childRows: Database["public"]["Tables"]["overlay_items"]["Insert"][] = [];
+    template.items.forEach((item, idx) => {
+      if (item.type !== "clips_widget") return;
+      const parentId = inserted[idx]!.id;
+      const children = createClipDisplayFieldChildItems(
+        scene.id,
+        parentId,
+        { x: item.x, y: item.y, w: item.w, h: item.h, z_index: item.z_index },
+        () => crypto.randomUUID()
+      );
+      for (const child of children) {
+        childRows.push({
+          scene_id: scene.id,
+          type: child.type,
+          x: child.x,
+          y: child.y,
+          w: child.w,
+          h: child.h,
+          z_index: child.z_index,
+          rotation: child.rotation,
+          opacity: child.opacity,
+          is_visible: child.is_visible,
+          is_locked: child.is_locked,
+          label: child.label,
+          config: child.config as unknown as Json,
+        });
+      }
+    });
+
+    if (childRows.length > 0) {
+      const { error: childError } = await insertOverlayItems(supabase, childRows);
+      if (childError) {
+        reportError(childError, "actions/overlays");
+        await _deleteOverlayScene(supabase, scene.id, user.id);
+        return { data: null, error: childError.message };
+      }
+    }
+  }
+
+  revalidatePath("/dashboard/overlays");
+  return { data: scene, error: null };
 }
 
 export async function updateOverlayScene(formData: {

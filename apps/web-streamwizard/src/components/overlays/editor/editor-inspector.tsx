@@ -27,6 +27,7 @@ import {
 import type { OverlayItem } from "@/types/overlays";
 import { asClipDisplayFieldConfig } from "@/types/overlays";
 import { getOverlayWidgetDefinition } from "../registry/overlay-widget-registry";
+import { InspectorSection } from "./inspector-section";
 import { useOverlayStore } from "./use-overlay-store";
 
 interface EditorInspectorProps {
@@ -381,46 +382,50 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Rotation</Label>
-              <Input
-                type="number"
-                value={item.rotation}
-                onChange={(e) =>
-                  handleUpdate({ rotation: Number(e.target.value) })
-                }
-                className="h-8 text-sm"
-                min={-360}
-                max={360}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Z-Index</Label>
-              <Input
-                type="number"
-                value={item.z_index}
-                onChange={(e) =>
-                  handleUpdate({ z_index: Number(e.target.value) })
-                }
-                className="h-8 text-sm"
-              />
-            </div>
-          </div>
+          <InspectorSection title="Advanced">
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Rotation</Label>
+                  <Input
+                    type="number"
+                    value={item.rotation}
+                    onChange={(e) =>
+                      handleUpdate({ rotation: Number(e.target.value) })
+                    }
+                    className="h-8 text-sm"
+                    min={-360}
+                    max={360}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Z-Index</Label>
+                  <Input
+                    type="number"
+                    value={item.z_index}
+                    onChange={(e) =>
+                      handleUpdate({ z_index: Number(e.target.value) })
+                    }
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">
-              Opacity ({Math.round(item.opacity * 100)}%)
-            </Label>
-            <Slider
-              value={[item.opacity * 100]}
-              onValueChange={([val]) => handleUpdate({ opacity: val / 100 })}
-              min={0}
-              max={100}
-              step={1}
-              className="py-1"
-            />
-          </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Opacity ({Math.round(item.opacity * 100)}%)
+                </Label>
+                <Slider
+                  value={[item.opacity * 100]}
+                  onValueChange={([val]) => handleUpdate({ opacity: val / 100 })}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="py-1"
+                />
+              </div>
+            </div>
+          </InspectorSection>
         </div>
       </div>
 

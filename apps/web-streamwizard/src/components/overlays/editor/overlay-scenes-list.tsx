@@ -42,10 +42,12 @@ import { toast } from "sonner";
 import { env } from "@/lib/env";
 import {
   createOverlayScene,
+  createOverlayFromTemplate,
   deleteOverlayScene,
   duplicateOverlayScene,
   updateOverlayScene,
 } from "@/actions/overlays";
+import { OVERLAY_TEMPLATES } from "@/components/overlays/templates/definitions";
 
 interface OverlayScene {
   id: string;
@@ -66,16 +68,24 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [renderMode, setRenderMode] = useState<RenderMode>("obs");
+  const [templateId, setTemplateId] = useState("blank");
   const [dialogOpen, setDialogOpen] = useState(false);
 
   async function handleCreate() {
     if (!newName.trim()) return;
     setIsCreating(true);
 
-    const { data, error } = await createOverlayScene({
-      name: newName.trim(),
-      render_mode: renderMode,
-    });
+    // Phone overlays render on-device with GPS widgets; the starter templates
+    // are OBS layouts, so phone mode always starts blank.
+    const effectiveTemplate = renderMode === "phone" ? "blank" : templateId;
+    const { data, error } =
+      effectiveTemplate === "blank"
+        ? await createOverlayScene({ name: newName.trim(), render_mode: renderMode })
+        : await createOverlayFromTemplate({
+            name: newName.trim(),
+            templateId: effectiveTemplate,
+            render_mode: renderMode,
+          });
 
     if (error) {
       toast.error(error);
@@ -84,6 +94,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
       setDialogOpen(false);
       setNewName("");
       setRenderMode("obs");
+      setTemplateId("blank");
       router.push(`/dashboard/overlays/${data.id}/edit`);
     }
 
@@ -134,7 +145,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
               New Overlay
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-xl">
             <DialogHeader>
               <DialogTitle>Create New Overlay</DialogTitle>
             </DialogHeader>
@@ -186,6 +197,32 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                   </button>
                 </div>
               </div>
+
+              {/* Starter templates (OBS mode only — phone overlays start blank) */}
+              {renderMode === "obs" && (
+                <div className="space-y-2">
+                  <Label>Start from</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {OVERLAY_TEMPLATES.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => setTemplateId(template.id)}
+                        className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left text-sm transition-colors ${
+                          templateId === template.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-muted-foreground"
+                        }`}
+                      >
+                        <span className="font-medium">{template.name}</span>
+                        <span className="text-xs text-muted-foreground leading-tight">
+                          {template.description}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <Button
                 onClick={handleCreate}
