@@ -18,6 +18,7 @@ import { overlayItemFromDbRow } from "@/types/overlays";
 import type { Database, Json } from "@repo/supabase";
 import { getAuthContext } from "@/lib/auth";
 import { getOverlayTemplate } from "@/components/overlays/templates/definitions";
+import { getStarterWidget } from "@/components/overlays/widgets/custom/starter-widgets";
 import { createClipDisplayFieldChildItems } from "@repo/ui/overlay";
 import {
   getOverlayScenes as _getOverlayScenes,
@@ -163,7 +164,37 @@ export async function createOverlayFromTemplate(formData: {
   }
 
   if (template.items.length > 0) {
-    const roots = template.items.map((item) => ({
+    // Starter-widget items get their own copy of the starter source, owned by
+    // the user (same as installing it from the library's Starters tab).
+    const starterWidgetIds = new Map<number, string>();
+    for (const [idx, item] of template.items.entries()) {
+      if (!item.starterWidgetId) continue;
+      const starter = getStarterWidget(item.starterWidgetId);
+      if (!starter) continue;
+      const { data: widget, error: widgetError } = await supabase
+        .from("widgets")
+        .insert({
+          user_id: user.id,
+          name: starter.name,
+          description: starter.description,
+          html: starter.html,
+          js: starter.js,
+          extra_css: starter.extra_css,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          fields: starter.fields as any,
+          tags: starter.tags,
+        })
+        .select("id")
+        .single();
+      if (widgetError || !widget) {
+        reportError(widgetError, "actions/overlays");
+        await _deleteOverlayScene(supabase, scene.id, user.id);
+        return { data: null, error: widgetError?.message ?? "Failed to create starter widget" };
+      }
+      starterWidgetIds.set(idx, widget.id);
+    }
+
+    const roots = template.items.map((item, idx) => ({
       scene_id: scene.id as string,
       type: item.type,
       x: item.x,
@@ -176,7 +207,9 @@ export async function createOverlayFromTemplate(formData: {
       is_visible: true,
       is_locked: false,
       label: item.label,
-      config: item.config as unknown as Json,
+      config: (starterWidgetIds.has(idx)
+        ? { ...(item.config as object), widget_id: starterWidgetIds.get(idx), instance_id: "" }
+        : item.config) as unknown as Json,
     }));
 
     const { data: inserted, error: itemsError } = await insertOverlayItemsReturningIds(supabase, roots);
@@ -185,6 +218,34 @@ export async function createOverlayFromTemplate(formData: {
       // Scene without its items is a broken template instance; clean up.
       await _deleteOverlayScene(supabase, scene.id, user.id);
       return { data: null, error: itemsError?.message ?? "Failed to create template items" };
+    }
+
+    // Wire each starter widget item to its own instance row (holds per-item
+    // field values / state), then point the item config at it.
+    for (const [idx, widgetId] of starterWidgetIds) {
+      const itemId = inserted[idx]!.id;
+      const { data: instance, error: instanceError } = await supabase
+        .from("overlay_widget_instances")
+        .insert({ overlay_item_id: itemId, widget_id: widgetId, user_id: user.id })
+        .select("id")
+        .single();
+      if (instanceError || !instance) {
+        reportError(instanceError, "actions/overlays");
+        await _deleteOverlayScene(supabase, scene.id, user.id);
+        return { data: null, error: instanceError?.message ?? "Failed to create widget instance" };
+      }
+      const { error: cfgError } = await updateOverlayItemData(supabase, itemId, {
+        config: {
+          ...(template.items[idx]!.config as object),
+          widget_id: widgetId,
+          instance_id: instance.id,
+        } as unknown as Json,
+      });
+      if (cfgError) {
+        reportError(cfgError, "actions/overlays");
+        await _deleteOverlayScene(supabase, scene.id, user.id);
+        return { data: null, error: cfgError.message };
+      }
     }
 
     // Clips widgets carry per-field child rows (title/creator/game/...) that

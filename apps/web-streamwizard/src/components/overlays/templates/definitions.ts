@@ -20,6 +20,12 @@ export interface OverlayTemplateItem {
   z_index: number;
   label: string;
   config: OverlayItemConfig;
+  /**
+   * custom_widget items only: instantiation creates a copy of this starter
+   * widget (see starter-widgets.ts) owned by the user and wires the item's
+   * widget_id/instance_id to it.
+   */
+  starterWidgetId?: string;
 }
 
 export interface OverlayTemplate {
@@ -175,6 +181,26 @@ export const OVERLAY_TEMPLATES: OverlayTemplate[] = [
           fontSize: 44,
           fontWeight: 700,
         },
+      },
+    ],
+  },
+  {
+    id: "alert-box",
+    name: "Alert box",
+    description: "Follow, sub, cheer, and raid alerts. Add your own image and sound from the media library.",
+    render_mode: "obs",
+    ...CANVAS,
+    items: [
+      {
+        type: "custom_widget",
+        x: 660,
+        y: 80,
+        w: 600,
+        h: 400,
+        z_index: 1,
+        label: "Alerts",
+        config: { widget_id: "", instance_id: "" },
+        starterWidgetId: "alert-box",
       },
     ],
   },
