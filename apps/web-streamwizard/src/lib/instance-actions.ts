@@ -1,13 +1,36 @@
 import { supabase } from "@repo/supabase/next/client";
 
 // Calls obs-instance-manager's user-scoped POST /instances/:id/start|stop.
-// Shared by the node detail and instance detail pages.
+// Used by the end-user pages (deck, cloud OBS dashboard) where the caller
+// owns the instance.
 export async function toggleInstance(apiUrl: string, instanceId: string, action: "start" | "stop"): Promise<{ status: string }> {
   const { data } = await supabase.auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error("Not signed in.");
 
   const res = await fetch(`${apiUrl.replace(/\/$/, "")}/instances/${instanceId}/${action}`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error ?? `Failed to ${action} container (${res.status})`);
+  }
+
+  return (await res.json()) as { status: string };
+}
+
+// Calls obs-instance-manager's admin-scoped POST /admin/instances/:id/start|stop.
+// Used by the admin node/instance detail pages, where the instance usually
+// belongs to another user — the user-scoped route would 404 on the ownership
+// check, so authority comes from the admin role instead.
+export async function toggleInstanceAdmin(apiUrl: string, instanceId: string, action: "start" | "stop"): Promise<{ status: string }> {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Not signed in.");
+
+  const res = await fetch(`${apiUrl.replace(/\/$/, "")}/admin/instances/${instanceId}/${action}`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}` },
   });
