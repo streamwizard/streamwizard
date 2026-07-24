@@ -35,7 +35,7 @@ interface EditorInspectorProps {
 }
 
 export function EditorInspector({ clipFolders }: EditorInspectorProps) {
-  const { scene, selectedItemId, updateItem } = useOverlayStore();
+  const { scene, selectedItemId, updateItem, editorMode } = useOverlayStore();
 
   const selectedItem = scene?.items.find((i) => i.id === selectedItemId);
   const def = selectedItem
@@ -382,6 +382,8 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
             </p>
           </div>
 
+          {/* Simple mode hides rotation/z-index/opacity entirely */}
+          {editorMode === "pro" && (
           <InspectorSection title="Advanced">
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
@@ -426,6 +428,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
               </div>
             </div>
           </InspectorSection>
+          )}
         </div>
       </div>
 

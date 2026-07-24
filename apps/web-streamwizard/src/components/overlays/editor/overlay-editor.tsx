@@ -52,6 +52,8 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
     setEditorClipPreviewForceMute,
     editorClipPreviewAutoplayBlocked,
     attemptEditorClipPreviewUnblock,
+    editorMode,
+    setEditorMode,
   } = useOverlayStore();
   const [isSaving, setIsSaving] = useState(false);
   const [widgetSheetOpen, setWidgetSheetOpen] = useState(false);
@@ -148,6 +150,30 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Simple keeps the calm layout for new users; Pro shows everything */}
+          <div className="flex items-center border rounded-md p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setEditorMode("simple")}
+              className={`px-2 py-1 rounded transition-colors ${
+                editorMode === "simple" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Fewer panels, the essentials only"
+            >
+              Simple
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditorMode("pro")}
+              className={`px-2 py-1 rounded transition-colors ${
+                editorMode === "pro" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Full editor with layers panel"
+            >
+              Pro
+            </button>
+          </div>
+
           <div className="flex items-center gap-1 border rounded-md p-0.5">
             {editorClipPreviewAutoplayBlocked ? (
               <Button
@@ -275,9 +301,11 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
       ) : null}
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-56 border-r overflow-y-auto shrink-0 bg-background">
-          <EditorLayers />
-        </div>
+        {editorMode === "pro" && (
+          <div className="w-56 border-r overflow-y-auto shrink-0 bg-background">
+            <EditorLayers />
+          </div>
+        )}
 
         <div className="flex-1 overflow-auto bg-muted/30">
           <EditorCanvas />

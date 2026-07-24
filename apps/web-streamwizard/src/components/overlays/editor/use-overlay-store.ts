@@ -13,11 +13,23 @@ import type {
 } from "@/types/overlays";
 import { asClipDisplayFieldConfig } from "@/types/overlays";
 
+export type EditorMode = "simple" | "pro";
+
+const EDITOR_MODE_STORAGE_KEY = "overlay-editor-mode";
+
+function loadEditorMode(): EditorMode {
+  if (typeof window === "undefined") return "simple";
+  return window.localStorage.getItem(EDITOR_MODE_STORAGE_KEY) === "pro" ? "pro" : "simple";
+}
+
 interface OverlayEditorState {
   scene: OverlaySceneWithItems | null;
   selectedItemId: string | null;
   isDirty: boolean;
   zoom: number;
+  /** Simple hides the layers panel and keeps the calm inspector defaults; pro is the full editor. */
+  editorMode: EditorMode;
+  setEditorMode: (mode: EditorMode) => void;
 
   setScene: (scene: OverlaySceneWithItems) => void;
   selectItem: (id: string | null) => void;
@@ -62,6 +74,13 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   selectedItemId: null,
   isDirty: false,
   zoom: 0.5,
+  editorMode: loadEditorMode(),
+  setEditorMode: (mode) => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(EDITOR_MODE_STORAGE_KEY, mode);
+    }
+    set({ editorMode: mode });
+  },
 
   setScene: (scene) =>
     set({
