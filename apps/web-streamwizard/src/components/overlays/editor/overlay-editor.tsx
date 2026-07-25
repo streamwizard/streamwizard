@@ -9,7 +9,9 @@ import {
   LayoutGrid,
   Pause,
   Play,
+  Redo2,
   Save,
+  Undo2,
   Volume2,
   VolumeX,
   ZoomIn,
@@ -46,6 +48,13 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
     addItem,
     addCustomWidget,
     markClean,
+    history,
+    undo,
+    redo,
+    clearSelection,
+    removeSelectedItems,
+    duplicateSelectedItems,
+    nudgeSelected,
     editorClipPreviewPaused,
     setEditorClipPreviewPaused,
     editorClipPreviewForceMute,
@@ -100,14 +109,67 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+      const mod = e.metaKey || e.ctrlKey;
+
+      if (mod && e.key.toLowerCase() === "s") {
         e.preventDefault();
         handleSave();
+        return;
+      }
+
+      // Editing shortcuts stay dead while typing.
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
+      ) {
+        return;
+      }
+
+      if (mod && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        duplicateSelectedItems();
+        return;
+      }
+      if (e.key === "Escape") {
+        // Radix overlays handle their own Escape and preventDefault it.
+        if (!e.defaultPrevented) clearSelection();
+        return;
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        removeSelectedItems();
+        return;
+      }
+      if (e.key.startsWith("Arrow")) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        nudgeSelected(
+          e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0,
+          e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0
+        );
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleSave]);
+  }, [
+    handleSave,
+    undo,
+    redo,
+    clearSelection,
+    removeSelectedItems,
+    duplicateSelectedItems,
+    nudgeSelected,
+  ]);
 
   const hasClipsWidget = useMemo(
     () =>
@@ -250,6 +312,29 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
             <Copy className="mr-2 h-3 w-3" />
             Copy URL
           </Button>
+
+          <div className="flex items-center gap-1 border rounded-md p-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => undo()}
+              disabled={history.past.length === 0}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => redo()}
+              disabled={history.future.length === 0}
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 className="h-3 w-3" />
+            </Button>
+          </div>
 
           <div className="flex items-center gap-1 border rounded-md px-1">
             <Button

@@ -16,6 +16,9 @@ import { asClipDisplayFieldConfig } from "@/types/overlays";
 export type EditorMode = "simple" | "pro";
 
 const EDITOR_MODE_STORAGE_KEY = "overlay-editor-mode";
+const HISTORY_LIMIT = 50;
+const NUDGE_HISTORY_COALESCE_MS = 400;
+const MIN_ITEM_SIZE = 50;
 
 function loadEditorMode(): EditorMode {
   if (typeof window === "undefined") return "simple";
@@ -24,15 +27,22 @@ function loadEditorMode(): EditorMode {
 
 interface OverlayEditorState {
   scene: OverlaySceneWithItems | null;
-  selectedItemId: string | null;
+  selectedItemIds: string[];
   isDirty: boolean;
   zoom: number;
+  /** Undo/redo snapshots of scene.items. Cleared on every setScene (save remaps temp ids). */
+  history: { past: OverlayItem[][]; future: OverlayItem[][] };
+  /** Set by the canvas context menu "Rename" — the inspector focuses its Label input, then clears it. */
+  renameRequestId: string | null;
   /** Simple hides the layers panel and keeps the calm inspector defaults; pro is the full editor. */
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
 
   setScene: (scene: OverlaySceneWithItems) => void;
   selectItem: (id: string | null) => void;
+  toggleSelectItem: (id: string) => void;
+  setSelectedItems: (ids: string[]) => void;
+  clearSelection: () => void;
   selectClipDisplayFieldForEdit: (
     parentClipItemId: string,
     fieldKey: DisplayFieldKey
@@ -40,13 +50,25 @@ interface OverlayEditorState {
   setZoom: (zoom: number) => void;
   markDirty: () => void;
   markClean: () => void;
+  setRenameRequestId: (id: string | null) => void;
+
+  pushHistory: (snapshot?: OverlayItem[]) => void;
+  undo: () => void;
+  redo: () => void;
 
   addItem: (type: RootOverlayItemType) => void;
   addCustomWidget: (widgetId: string) => void;
   updateItem: (id: string, updates: Partial<OverlayItem>) => void;
   removeItem: (id: string) => void;
+  removeSelectedItems: () => void;
   duplicateItem: (id: string) => void;
+  duplicateSelectedItems: () => void;
+  nudgeSelected: (dx: number, dy: number) => void;
   reorderItem: (id: string, direction: "up" | "down") => void;
+  setLayerOrder: (orderedIdsTopFirst: string[]) => void;
+  bringToFront: (id: string) => void;
+  sendToBack: (id: string) => void;
+  renameItem: (id: string, label: string) => void;
   toggleItemVisibility: (id: string) => void;
   toggleItemLock: (id: string) => void;
 
@@ -62,6 +84,11 @@ interface OverlayEditorState {
   attemptEditorClipPreviewUnblock: () => void;
 }
 
+/** The single-selection id when exactly one item is selected; feeds legacy single-select consumers. */
+export function selectPrimarySelectedId(s: Pick<OverlayEditorState, "selectedItemIds">): string | null {
+  return s.selectedItemIds.length === 1 ? s.selectedItemIds[0]! : null;
+}
+
 let tempIdCounter = 0;
 
 function nextTempId(): string {
@@ -69,11 +96,122 @@ function nextTempId(): string {
   return `temp-${tempIdCounter}`;
 }
 
+let lastNudgeAt = 0;
+
+/**
+ * Keep an item inside the scene: size capped to scene dims, position so the
+ * whole rect stays in-bounds. Single choke point for move/resize/nudge/inspector.
+ */
+function clampGeometry(
+  item: OverlayItem,
+  updates: Partial<OverlayItem>,
+  scene: { width: number; height: number }
+): Partial<OverlayItem> {
+  const w = Math.min(Math.max(MIN_ITEM_SIZE, updates.w ?? item.w), scene.width);
+  const h = Math.min(Math.max(MIN_ITEM_SIZE, updates.h ?? item.h), scene.height);
+  const x = Math.min(Math.max(0, updates.x ?? item.x), scene.width - w);
+  const y = Math.min(Math.max(0, updates.y ?? item.y), scene.height - h);
+  return { ...updates, x, y, w, h };
+}
+
+function touchesGeometry(updates: Partial<OverlayItem>): boolean {
+  return (
+    updates.x !== undefined ||
+    updates.y !== undefined ||
+    updates.w !== undefined ||
+    updates.h !== undefined
+  );
+}
+
+/** Ids removed when deleting a root: itself plus any registry-defined children. */
+function cascadeIds(scene: OverlaySceneWithItems, id: string): Set<string> {
+  const ids = new Set<string>([id]);
+  const item = scene.items.find((i) => i.id === id);
+  const def = item ? getOverlayWidgetDefinition(item.type) : undefined;
+  if (item && def && isRootOverlayDefinition(def) && def.getChildItems) {
+    for (const ch of def.getChildItems(scene.items, id)) {
+      ids.add(ch.id);
+    }
+  }
+  return ids;
+}
+
+/** Build duplicate items (parent + synced children) for a root item. */
+function buildDuplicate(
+  scene: OverlaySceneWithItems,
+  id: string,
+  maxZ: number
+): { items: OverlayItem[]; parentId: string } | null {
+  const original = scene.items.find((item) => item.id === id);
+  if (!original || !isRootLayerType(original.type)) return null;
+
+  const newParentId = nextTempId();
+  const duplicateParent: OverlayItem = {
+    ...original,
+    id: newParentId,
+    x: original.x + 20,
+    y: original.y + 20,
+    z_index: maxZ + 1,
+    label: original.label + " (Copy)",
+  };
+
+  const newItems: OverlayItem[] = [duplicateParent];
+
+  const origDef = getOverlayWidgetDefinition(original.type);
+  if (isRootOverlayDefinition(origDef) && origDef.getChildItems) {
+    const children = origDef.getChildItems(scene.items, id);
+    for (const ch of children) {
+      const cfg = asClipDisplayFieldConfig(ch.config);
+      newItems.push({
+        ...ch,
+        id: nextTempId(),
+        x: duplicateParent.x,
+        y: duplicateParent.y,
+        w: duplicateParent.w,
+        h: duplicateParent.h,
+        z_index: duplicateParent.z_index,
+        config: {
+          ...cfg,
+          parentClipItemId: newParentId,
+        },
+      });
+    }
+  }
+
+  return { items: newItems, parentId: newParentId };
+}
+
+/** Apply a top-first root ordering: contiguous z (top = count), clip children mirror parent z. */
+function applyLayerOrder(
+  items: OverlayItem[],
+  orderedIdsTopFirst: string[]
+): OverlayItem[] {
+  const zById = new Map<string, number>();
+  orderedIdsTopFirst.forEach((id, idx) => {
+    zById.set(id, orderedIdsTopFirst.length - idx);
+  });
+
+  return items.map((i) => {
+    if (isRootLayerType(i.type)) {
+      const z = zById.get(i.id);
+      return z === undefined ? i : { ...i, z_index: z };
+    }
+    if (i.type === "clip_display_field") {
+      const pid = asClipDisplayFieldConfig(i.config).parentClipItemId;
+      const pz = zById.get(pid);
+      return pz === undefined ? i : { ...i, z_index: pz };
+    }
+    return i;
+  });
+}
+
 export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   scene: null,
-  selectedItemId: null,
+  selectedItemIds: [],
   isDirty: false,
   zoom: 0.5,
+  history: { past: [], future: [] },
+  renameRequestId: null,
   editorMode: loadEditorMode(),
   setEditorMode: (mode) => {
     if (typeof window !== "undefined") {
@@ -86,10 +224,37 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     set({
       scene,
       isDirty: false,
-      selectedItemId: null,
+      selectedItemIds: [],
+      // Save remaps temp-N ids to DB ids; undoing across that boundary would
+      // resurrect dead temp ids and duplicate rows on the next full-replace save.
+      history: { past: [], future: [] },
     }),
 
-  selectItem: (id) => set({ selectedItemId: id }),
+  selectItem: (id) => set({ selectedItemIds: id === null ? [] : [id] }),
+
+  toggleSelectItem: (id) => {
+    const { scene, selectedItemIds } = get();
+    const item = scene?.items.find((i) => i.id === id);
+    if (!item) return;
+    // Clip children never participate in multi-selection.
+    if (!isRootLayerType(item.type)) {
+      set({ selectedItemIds: [id] });
+      return;
+    }
+    const onlyRoots = selectedItemIds.filter((sid) => {
+      const s = scene!.items.find((i) => i.id === sid);
+      return s && isRootLayerType(s.type);
+    });
+    set({
+      selectedItemIds: onlyRoots.includes(id)
+        ? onlyRoots.filter((sid) => sid !== id)
+        : [...onlyRoots, id],
+    });
+  },
+
+  setSelectedItems: (ids) => set({ selectedItemIds: ids }),
+
+  clearSelection: () => set({ selectedItemIds: [] }),
 
   selectClipDisplayFieldForEdit: (parentClipItemId, fieldKey) => {
     const { scene } = get();
@@ -101,7 +266,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
           parentClipItemId &&
         asClipDisplayFieldConfig(i.config).fieldKey === fieldKey
     );
-    if (child) set({ selectedItemId: child.id });
+    if (child) set({ selectedItemIds: [child.id] });
   },
 
   setZoom: (zoom) => set({ zoom: Math.max(0.1, Math.min(2, zoom)) }),
@@ -110,8 +275,53 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
 
   markClean: () => set({ isDirty: false }),
 
+  setRenameRequestId: (id) => set({ renameRequestId: id }),
+
+  pushHistory: (snapshot) => {
+    const { scene, history } = get();
+    const items = snapshot ?? scene?.items;
+    if (!items) return;
+    // Skip no-op pushes (e.g. focusing an input without editing) so undo never
+    // appears to do nothing; items reference only changes when something mutated.
+    if (history.past[history.past.length - 1] === items) return;
+    const past = [...history.past, items].slice(-HISTORY_LIMIT);
+    set({ history: { past, future: [] } });
+  },
+
+  undo: () => {
+    const { scene, history, selectedItemIds } = get();
+    if (!scene || history.past.length === 0) return;
+    const previous = history.past[history.past.length - 1]!;
+    const surviving = new Set(previous.map((i) => i.id));
+    set({
+      scene: { ...scene, items: previous },
+      history: {
+        past: history.past.slice(0, -1),
+        future: [...history.future, scene.items],
+      },
+      selectedItemIds: selectedItemIds.filter((id) => surviving.has(id)),
+      isDirty: true,
+    });
+  },
+
+  redo: () => {
+    const { scene, history, selectedItemIds } = get();
+    if (!scene || history.future.length === 0) return;
+    const next = history.future[history.future.length - 1]!;
+    const surviving = new Set(next.map((i) => i.id));
+    set({
+      scene: { ...scene, items: next },
+      history: {
+        past: [...history.past, scene.items].slice(-HISTORY_LIMIT),
+        future: history.future.slice(0, -1),
+      },
+      selectedItemIds: selectedItemIds.filter((id) => surviving.has(id)),
+      isDirty: true,
+    });
+  },
+
   addItem: (type) => {
-    const { scene } = get();
+    const { scene, pushHistory } = get();
     if (!scene) return;
 
     const def = OVERLAY_WIDGET_REGISTRY[type];
@@ -121,15 +331,16 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     const newItems = def.createRootItems({ scene, nextId: nextTempId, maxZ });
     if (newItems.length === 0) return;
 
+    pushHistory();
     set({
       scene: { ...scene, items: [...scene.items, ...newItems] },
-      selectedItemId: newItems[0]!.id,
+      selectedItemIds: [newItems[0]!.id],
       isDirty: true,
     });
   },
 
   addCustomWidget: (widgetId) => {
-    const { scene } = get();
+    const { scene, pushHistory } = get();
     if (!scene) return;
 
     const def = OVERLAY_WIDGET_REGISTRY["custom_widget"];
@@ -142,9 +353,10 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     // Patch the widget_id into the config immediately so the canvas renders it right away
     const item = { ...newItems[0]!, config: { ...newItems[0]!.config, widget_id: widgetId } };
 
+    pushHistory();
     set({
       scene: { ...scene, items: [...scene.items, item] },
-      selectedItemId: item.id,
+      selectedItemIds: [item.id],
       isDirty: true,
     });
   },
@@ -153,8 +365,15 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     const { scene } = get();
     if (!scene) return;
 
+    const target = scene.items.find((i) => i.id === id);
+    if (!target) return;
+
+    const nextUpdates = touchesGeometry(updates)
+      ? clampGeometry(target, updates, scene)
+      : updates;
+
     let nextItems = scene.items.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
+      item.id === id ? { ...item, ...nextUpdates } : item
     );
 
     const updated = nextItems.find((i) => i.id === id);
@@ -163,11 +382,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       parentDef &&
       isRootOverlayDefinition(parentDef) &&
       parentDef.syncChildGeometryFromParent &&
-      (updates.x !== undefined ||
-        updates.y !== undefined ||
-        updates.w !== undefined ||
-        updates.h !== undefined ||
-        updates.z_index !== undefined)
+      (touchesGeometry(nextUpdates) || nextUpdates.z_index !== undefined)
     ) {
       nextItems = nextItems.map((ch) => {
         if (ch.type !== "clip_display_field") return ch;
@@ -190,82 +405,135 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   },
 
   removeItem: (id) => {
-    const { scene, selectedItemId } = get();
+    const { scene, selectedItemIds, pushHistory } = get();
     if (!scene) return;
 
-    const item = scene.items.find((i) => i.id === id);
-    const idsToRemove = new Set<string>([id]);
-    const def = item ? getOverlayWidgetDefinition(item.type) : undefined;
-    if (item && def && isRootOverlayDefinition(def) && def.getChildItems) {
-      for (const ch of def.getChildItems(scene.items, id)) {
-        idsToRemove.add(ch.id);
-      }
-    }
+    const idsToRemove = cascadeIds(scene, id);
 
+    pushHistory();
     set({
       scene: {
         ...scene,
         items: scene.items.filter((i) => !idsToRemove.has(i.id)),
       },
-      selectedItemId:
-        selectedItemId && idsToRemove.has(selectedItemId)
-          ? null
-          : selectedItemId,
+      selectedItemIds: selectedItemIds.filter((sid) => !idsToRemove.has(sid)),
+      isDirty: true,
+    });
+  },
+
+  removeSelectedItems: () => {
+    const { scene, selectedItemIds, pushHistory } = get();
+    if (!scene || selectedItemIds.length === 0) return;
+
+    // A selected clip child is "deleted" by hiding it (matches layers-panel semantics).
+    const single =
+      selectedItemIds.length === 1
+        ? scene.items.find((i) => i.id === selectedItemIds[0])
+        : undefined;
+    if (single && !isRootLayerType(single.type)) {
+      pushHistory();
+      const parentId = asClipDisplayFieldConfig(single.config).parentClipItemId;
+      set({
+        scene: {
+          ...scene,
+          items: scene.items.map((i) =>
+            i.id === single.id ? { ...i, is_visible: false } : i
+          ),
+        },
+        selectedItemIds: parentId ? [parentId] : [],
+        isDirty: true,
+      });
+      return;
+    }
+
+    const idsToRemove = new Set<string>();
+    for (const id of selectedItemIds) {
+      const item = scene.items.find((i) => i.id === id);
+      if (!item || !isRootLayerType(item.type)) continue;
+      for (const rid of cascadeIds(scene, id)) idsToRemove.add(rid);
+    }
+    if (idsToRemove.size === 0) return;
+
+    pushHistory();
+    set({
+      scene: {
+        ...scene,
+        items: scene.items.filter((i) => !idsToRemove.has(i.id)),
+      },
+      selectedItemIds: [],
       isDirty: true,
     });
   },
 
   duplicateItem: (id) => {
-    const { scene } = get();
+    const { scene, pushHistory } = get();
     if (!scene) return;
 
-    const original = scene.items.find((item) => item.id === id);
-    if (!original || !isRootLayerType(original.type)) return;
-
     const maxZ = scene.items.reduce((max, item) => Math.max(max, item.z_index), 0);
+    const dup = buildDuplicate(scene, id, maxZ);
+    if (!dup) return;
 
-    const newParentId = nextTempId();
-    const duplicateParent: OverlayItem = {
-      ...original,
-      id: newParentId,
-      x: original.x + 20,
-      y: original.y + 20,
-      z_index: maxZ + 1,
-      label: original.label + " (Copy)",
-    };
-
-    const newItems: OverlayItem[] = [duplicateParent];
-
-    const origDef = getOverlayWidgetDefinition(original.type);
-    if (isRootOverlayDefinition(origDef) && origDef.getChildItems) {
-      const children = origDef.getChildItems(scene.items, id);
-      for (const ch of children) {
-        const cfg = asClipDisplayFieldConfig(ch.config);
-        newItems.push({
-          ...ch,
-          id: nextTempId(),
-          x: duplicateParent.x,
-          y: duplicateParent.y,
-          w: duplicateParent.w,
-          h: duplicateParent.h,
-          z_index: duplicateParent.z_index,
-          config: {
-            ...cfg,
-            parentClipItemId: newParentId,
-          },
-        });
-      }
-    }
-
+    pushHistory();
     set({
-      scene: { ...scene, items: [...scene.items, ...newItems] },
-      selectedItemId: duplicateParent.id,
+      scene: { ...scene, items: [...scene.items, ...dup.items] },
+      selectedItemIds: [dup.parentId],
       isDirty: true,
     });
   },
 
+  duplicateSelectedItems: () => {
+    const { scene, selectedItemIds, pushHistory } = get();
+    if (!scene || selectedItemIds.length === 0) return;
+
+    let items = scene.items;
+    let maxZ = items.reduce((max, item) => Math.max(max, item.z_index), 0);
+    const newSelection: string[] = [];
+    const added: OverlayItem[] = [];
+
+    for (const id of selectedItemIds) {
+      const dup = buildDuplicate({ ...scene, items }, id, maxZ);
+      if (!dup) continue;
+      added.push(...dup.items);
+      items = [...items, ...dup.items];
+      newSelection.push(dup.parentId);
+      maxZ += 1;
+    }
+    if (added.length === 0) return;
+
+    pushHistory();
+    set({
+      scene: { ...scene, items },
+      selectedItemIds: newSelection,
+      isDirty: true,
+    });
+  },
+
+  nudgeSelected: (dx, dy) => {
+    const { scene, selectedItemIds, pushHistory, updateItem } = get();
+    if (!scene || selectedItemIds.length === 0) return;
+
+    const movable = selectedItemIds
+      .map((id) => scene.items.find((i) => i.id === id))
+      .filter(
+        (i): i is OverlayItem =>
+          !!i && isRootLayerType(i.type) && !i.is_locked
+      );
+    if (movable.length === 0) return;
+
+    // Holding an arrow key produces one history entry per burst, not per press.
+    const now = Date.now();
+    if (now - lastNudgeAt > NUDGE_HISTORY_COALESCE_MS) {
+      pushHistory();
+    }
+    lastNudgeAt = now;
+
+    for (const item of movable) {
+      updateItem(item.id, { x: item.x + dx, y: item.y + dy });
+    }
+  },
+
   reorderItem: (id, direction) => {
-    const { scene } = get();
+    const { scene, pushHistory } = get();
     if (!scene) return;
 
     const item = scene.items.find((i) => i.id === id);
@@ -273,44 +541,74 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
 
     const roots = scene.items
       .filter((i) => isRootLayerType(i.type))
-      .sort((a, b) => a.z_index - b.z_index);
-    const idx = roots.findIndex((item) => item.id === id);
+      .sort((a, b) => b.z_index - a.z_index);
+    const idx = roots.findIndex((r) => r.id === id);
     if (idx === -1) return;
 
-    const swapIdx = direction === "up" ? idx + 1 : idx - 1;
+    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
     if (swapIdx < 0 || swapIdx >= roots.length) return;
 
-    const tempZ = roots[idx].z_index;
-    roots[idx] = { ...roots[idx], z_index: roots[swapIdx].z_index };
-    roots[swapIdx] = { ...roots[swapIdx], z_index: tempZ };
+    const order = roots.map((r) => r.id);
+    [order[idx], order[swapIdx]] = [order[swapIdx]!, order[idx]!];
 
-    const zById = new Map(roots.map((r) => [r.id, r.z_index]));
-    const nextItems = scene.items.map((i) => {
-      const z = zById.get(i.id);
-      if (z === undefined) return i;
-      const next = { ...i, z_index: z };
-      if (isRootLayerType(i.type)) {
-        return next;
-      }
-      if (i.type === "clip_display_field") {
-        const pid = asClipDisplayFieldConfig(i.config).parentClipItemId;
-        const pz = zById.get(pid);
-        if (pz === undefined) return next;
-        return { ...next, z_index: pz };
-      }
-      return next;
-    });
-
+    pushHistory();
     set({
-      scene: { ...scene, items: nextItems },
+      scene: { ...scene, items: applyLayerOrder(scene.items, order) },
+      isDirty: true,
+    });
+  },
+
+  setLayerOrder: (orderedIdsTopFirst) => {
+    const { scene, pushHistory } = get();
+    if (!scene) return;
+
+    pushHistory();
+    set({
+      scene: { ...scene, items: applyLayerOrder(scene.items, orderedIdsTopFirst) },
+      isDirty: true,
+    });
+  },
+
+  bringToFront: (id) => {
+    const { scene, setLayerOrder } = get();
+    if (!scene) return;
+    const order = scene.items
+      .filter((i) => isRootLayerType(i.type))
+      .sort((a, b) => b.z_index - a.z_index)
+      .map((i) => i.id)
+      .filter((iid) => iid !== id);
+    setLayerOrder([id, ...order]);
+  },
+
+  sendToBack: (id) => {
+    const { scene, setLayerOrder } = get();
+    if (!scene) return;
+    const order = scene.items
+      .filter((i) => isRootLayerType(i.type))
+      .sort((a, b) => b.z_index - a.z_index)
+      .map((i) => i.id)
+      .filter((iid) => iid !== id);
+    setLayerOrder([...order, id]);
+  },
+
+  renameItem: (id, label) => {
+    const { scene, pushHistory } = get();
+    if (!scene) return;
+    pushHistory();
+    set({
+      scene: {
+        ...scene,
+        items: scene.items.map((i) => (i.id === id ? { ...i, label } : i)),
+      },
       isDirty: true,
     });
   },
 
   toggleItemVisibility: (id) => {
-    const { scene } = get();
+    const { scene, pushHistory } = get();
     if (!scene) return;
 
+    pushHistory();
     set({
       scene: {
         ...scene,
@@ -323,9 +621,10 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   },
 
   toggleItemLock: (id) => {
-    const { scene } = get();
+    const { scene, pushHistory } = get();
     if (!scene) return;
 
+    pushHistory();
     set({
       scene: {
         ...scene,
