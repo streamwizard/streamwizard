@@ -65,7 +65,15 @@ export function buildWidgetSrcdoc(
   overlayOrigin?: string,
   // Media-library CDN origin: lets widget JS fetch() uploaded assets. Plain
   // <img>/<audio>/<video> tags don't need it — this CSP only sets connect-src.
-  assetCdnOrigin?: string
+  assetCdnOrigin?: string,
+  opts?: {
+    /**
+     * Mirror console output and uncaught errors to the parent as `swLog`
+     * messages. Editor-only: a chatty widget on a live overlay would postMessage
+     * on every log for nobody's benefit.
+     */
+    forwardLogs?: boolean;
+  }
 ): string {
   const { resolvedHtml, resolvedCss } = resolveWidgetTemplate(html, extraCss, fields, fieldValues);
   const stateUrl = overlayOrigin ? JSON.stringify(`${overlayOrigin}/api/widgets/state`) : "null";
@@ -76,12 +84,45 @@ export function buildWidgetSrcdoc(
     "https://api.open-meteo.com",
     "https://nominatim.openstreetmap.org",
   ].filter(Boolean).join(" ");
+  // Installed before anything else so it also catches library load failures and
+  // errors thrown while the widget's own script is still evaluating.
+  const logForwarder = opts?.forwardLogs
+    ? `  <script nonce="${nonce}">
+    (function () {
+      function send(level, args) {
+        try {
+          parent.postMessage({
+            type: 'swLog',
+            level: level,
+            text: Array.prototype.map.call(args, function (a) {
+              if (typeof a === 'string') return a;
+              try { return JSON.stringify(a); } catch (e) { return String(a); }
+            }).join(' ')
+          }, '*');
+        } catch (e) { /* parent gone or payload not cloneable */ }
+      }
+      ['log', 'info', 'warn', 'error'].forEach(function (level) {
+        var orig = console[level];
+        console[level] = function () { send(level, arguments); orig.apply(console, arguments); };
+      });
+      window.addEventListener('error', function (e) {
+        send('error', [e.message + '  (' + (e.filename || 'widget') + ':' + e.lineno + ')']);
+      });
+      window.addEventListener('unhandledrejection', function (e) {
+        var r = e.reason;
+        send('error', ['Unhandled promise rejection: ' + ((r && r.message) || String(r))]);
+      });
+    })();
+  <\/script>
+`
+    : "";
+
   return `<!DOCTYPE html>
 <html style="background:transparent!important;background-color:transparent!important;color-scheme:normal">
 <head>
   <meta name="color-scheme" content="normal">
   <meta http-equiv="Content-Security-Policy" content="connect-src ${connectSrc}">
-  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/script>
+${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/script>
   <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>
   <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"><\/script>
   <script nonce="${nonce}">

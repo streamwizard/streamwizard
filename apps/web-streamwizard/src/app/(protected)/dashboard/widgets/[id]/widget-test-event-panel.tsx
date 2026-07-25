@@ -39,6 +39,33 @@ function prettyPayload(type: WidgetTestEventType) {
   return JSON.stringify(WIDGET_TEST_EVENTS[type].build(), null, 2);
 }
 
+/** Restores the event the author last worked with on this widget. */
+function readSaved(widgetId: string): {
+  type: WidgetTestEventType;
+  payload: string;
+  edited: boolean;
+} {
+  const fallback = {
+    type: "channel.follow" as WidgetTestEventType,
+    payload: prettyPayload("channel.follow"),
+    edited: false,
+  };
+  try {
+    const raw = localStorage.getItem(storageKey(widgetId));
+    if (!raw) return fallback;
+    const saved = JSON.parse(raw) as { type?: string; payload?: string };
+    if (!saved.type || !isWidgetTestEventType(saved.type)) return fallback;
+    return {
+      type: saved.type,
+      payload: saved.payload ?? prettyPayload(saved.type),
+      edited: Boolean(saved.payload),
+    };
+  } catch {
+    // corrupt or unavailable storage — start clean
+    return fallback;
+  }
+}
+
 export function WidgetTestEventPanel({
   widgetId,
   wsConnected,
@@ -49,29 +76,14 @@ export function WidgetTestEventPanel({
   /** Posts straight into the preview iframe — no server round-trip. */
   onFireLocal: (listener: string, event: Record<string, unknown>) => void;
 }) {
+  const [saved] = useState(() => readSaved(widgetId));
   const [mode, setMode] = useState<FireMode>("local");
-  const [selected, setSelected] = useState<WidgetTestEventType>("channel.follow");
+  const [selected, setSelected] = useState<WidgetTestEventType>(saved.type);
   const [payloadOpen, setPayloadOpen] = useState(false);
-  const [payloadText, setPayloadText] = useState(() => prettyPayload("channel.follow"));
+  const [payloadText, setPayloadText] = useState(saved.payload);
   /** Untouched payloads are rebuilt per fire so timestamps and ids stay fresh. */
-  const [payloadEdited, setPayloadEdited] = useState(false);
+  const [payloadEdited, setPayloadEdited] = useState(saved.edited);
   const [isSending, startSend] = useTransition();
-
-  // Restore the last event the author was working with for this widget.
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey(widgetId));
-      if (!raw) return;
-      const saved = JSON.parse(raw) as { type?: string; payload?: string };
-      if (saved.type && isWidgetTestEventType(saved.type)) {
-        setSelected(saved.type);
-        setPayloadText(saved.payload ?? prettyPayload(saved.type));
-        setPayloadEdited(Boolean(saved.payload));
-      }
-    } catch {
-      // corrupt or unavailable storage — fall back to defaults
-    }
-  }, [widgetId]);
 
   useEffect(() => {
     try {
@@ -84,10 +96,9 @@ export function WidgetTestEventPanel({
     }
   }, [widgetId, selected, payloadEdited, payloadText]);
 
-  // Losing the socket mid-session would leave Live selected but unverifiable.
-  useEffect(() => {
-    if (!wsConnected) setMode("local");
-  }, [wsConnected]);
+  // Derived, not stored: losing the socket mid-session must fall back to Local
+  // without clobbering the author's choice for when it reconnects.
+  const effectiveMode: FireMode = wsConnected ? mode : "local";
 
   const grouped = useMemo(() => {
     const out = new Map<string, WidgetTestEventType[]>();
@@ -126,7 +137,7 @@ export function WidgetTestEventPanel({
     const payload = resolvePayload(type);
     if (!payload) return;
 
-    if (mode === "local") {
+    if (effectiveMode === "local") {
       onFireLocal(type, payload);
       return;
     }
@@ -205,7 +216,7 @@ export function WidgetTestEventPanel({
             type="button"
             onClick={() => setMode("local")}
             className={`text-[11px] px-2 py-0.5 transition-colors ${
-              mode === "local" ? "bg-accent text-foreground" : "text-muted-foreground"
+              effectiveMode === "local" ? "bg-accent text-foreground" : "text-muted-foreground"
             }`}
           >
             Local
@@ -220,7 +231,7 @@ export function WidgetTestEventPanel({
                 : "Send through ws-server to every overlay in your room"
             }
             className={`text-[11px] px-2 py-0.5 transition-colors disabled:opacity-40 ${
-              mode === "live" ? "bg-accent text-foreground" : "text-muted-foreground"
+              effectiveMode === "live" ? "bg-accent text-foreground" : "text-muted-foreground"
             }`}
           >
             Live

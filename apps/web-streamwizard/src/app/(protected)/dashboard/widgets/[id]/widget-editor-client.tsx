@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition, useRef, useCallback, useMemo } from "react";
+import { useState, useTransition, useRef, useCallback, useMemo, useEffect } from "react";
+import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import type { OnMount, Monaco } from "@monaco-editor/react";
 import { useRouter } from "next/navigation";
@@ -14,11 +15,17 @@ import { buildWidgetSrcdoc, mergeFieldValues, resolveWidgetTemplate, CustomWidge
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { WidgetTestEventPanel } from "./widget-test-event-panel";
 import { WidgetFieldsPanel } from "./widget-fields-panel";
+import { WidgetConsolePanel } from "./widget-console-panel";
+import {
+  WIDGET_FIELDS_JSON_SCHEMA,
+  WIDGET_FIELDS_SCHEMA_URI,
+} from "./widget-fields-json-schema";
 import { ImagePlus } from "lucide-react";
-import type { WidgetFieldSchema, CustomWidgetIframeHandle, WsRoomOptions, WsRoomStatus } from "@repo/ui/overlay";
+import type { WidgetFieldSchema, CustomWidgetIframeHandle, WsRoomOptions, WsRoomStatus, WidgetLogEntry } from "@repo/ui/overlay";
 import { Button } from "@repo/ui";
 import { Input } from "@repo/ui";
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +56,14 @@ const EDITOR_OPTIONS = {
   formatOnType: false,
 };
 
+/** Console/error mirroring is editor-only — overlays don't need the traffic. */
+const SRCDOC_OPTS = { forwardLogs: true } as const;
+
+/** Ring-buffer bound so a runaway logging loop can't grow the page unbounded. */
+const MAX_LOGS = 300;
+
+// Module-scoped: Monaco's providers are global to the loaded instance, and this
+// page never mounts two editors. Would need to become per-instance if it did.
 let emmetProvidersRegistered = false;
 
 function registerEmmetProviders(monaco: Monaco) {
@@ -152,15 +167,20 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   const [isSaving, startSave] = useTransition();
   const [publishOpen, setPublishOpen] = useState(false);
   const [publishTitle, setPublishTitle] = useState(widget.name);
-  const [publishDesc, setPublishDesc] = useState(widget.description ?? "");
-  const [publishTags, setPublishTags] = useState(widget.tags?.join(", ") ?? "");
   const [isPublishing, startPublish] = useTransition();
+  // Widget metadata, saved with the code instead of only reaching the library
+  // submission -- the widget row's own description and tags used to rot.
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [description, setDescription] = useState(widget.description ?? "");
+  const [tagsText, setTagsText] = useState(widget.tags?.join(", ") ?? "");
+  const [logs, setLogs] = useState<WidgetLogEntry[]>([]);
+  const [consoleOpen, setConsoleOpen] = useState(false);
   const widgetRef = useRef<CustomWidgetIframeHandle>(null);
   const hotReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [srcdoc, setSrcdoc] = useState(() => {
     const fields = coerceFields(widget.fields as WidgetFieldSchema);
     const defaults = mergeFieldValues(fields, {});
-    return buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, fields, defaults, undefined, env.NEXT_PUBLIC_ASSET_CDN_URL);
+    return buildWidgetSrcdoc(widget.html, widget.js, widget.extra_css, fields, defaults, undefined, env.NEXT_PUBLIC_ASSET_CDN_URL, SRCDOC_OPTS);
   });
   const [fieldData, setFieldData] = useState<Record<string, unknown>>(() => {
     const fields = coerceFields(widget.fields as WidgetFieldSchema);
@@ -173,8 +193,11 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   );
   // Editor-session-only values the author is trying out, keyed by field.
   const [fieldOverrides, setFieldOverrides] = useState<Record<string, unknown>>({});
+  // Mirrored so the debounced hot-reload timer doesn't act on a stale closure.
   const fieldOverridesRef = useRef(fieldOverrides);
-  fieldOverridesRef.current = fieldOverrides;
+  useEffect(() => {
+    fieldOverridesRef.current = fieldOverrides;
+  }, [fieldOverrides]);
   const [fieldsPanelOpen, setFieldsPanelOpen] = useState(true);
   // Manual mode stops the iframe remounting mid-edit, which is the difference
   // between debugging an animation and watching it restart every keystroke.
@@ -234,7 +257,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     setFieldOverrides(overrides);
     fieldOverridesRef.current = overrides;
     setFieldData(mergeFieldValues(fields, overrides));
-    setSrcdoc(buildWidgetSrcdoc(htmlRef.current, jsRef.current, cssRef.current, fields, overrides, undefined, env.NEXT_PUBLIC_ASSET_CDN_URL));
+    setSrcdoc(buildWidgetSrcdoc(htmlRef.current, jsRef.current, cssRef.current, fields, overrides, undefined, env.NEXT_PUBLIC_ASSET_CDN_URL, SRCDOC_OPTS));
     setRefreshKey((k) => k + 1);
   }
 
@@ -244,29 +267,87 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     refreshPreview({ ...fieldOverridesRef.current, [key]: value });
   }
 
-  function handleSave() {
+  function parsedTags(): string[] {
+    return tagsText
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+  }
+
+  const handleSave = useCallback(() => {
     const fields = parsedFields();
-    if (!fields) return;
+    if (!fields) {
+      toast.error("Fix the Fields JSON before saving");
+      return;
+    }
     startSave(async () => {
-      await updateWidget(widget.id, { name, html: htmlRef.current, js: jsRef.current, extra_css: cssRef.current, fields });
+      const { error } = await updateWidget(widget.id, {
+        name,
+        description,
+        tags: parsedTags(),
+        html: htmlRef.current,
+        js: jsRef.current,
+        extra_css: cssRef.current,
+        fields,
+      });
+      if (error) {
+        toast.error(error);
+        return;
+      }
       setIsDirty(false);
       refreshPreview();
+      toast.success("Widget saved");
     });
-  }
+    // handleSave is bound into a Monaco command once at mount; the refs it reads
+    // are stable, and the state it reads is re-read via the latest closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, description, tagsText, widget.id]);
+
+  // Keep the Monaco keybinding pointed at the current closure without
+  // re-registering the command on every keystroke.
+  const handleSaveRef = useRef(handleSave);
+  useEffect(() => {
+    handleSaveRef.current = handleSave;
+  }, [handleSave]);
 
   function handlePublish() {
     startPublish(async () => {
-      const tags = publishTags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean);
       const { error } = await publishWidgetToLibrary(widget.id, {
         title: publishTitle,
-        description: publishDesc,
-        tags,
+        description,
+        tags: parsedTags(),
       });
-      if (!error) setPublishOpen(false);
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      setPublishOpen(false);
+      toast.success("Submitted for review");
     });
+  }
+
+  // Browser-level guard. Next's client router can't be intercepted here, so the
+  // in-app escape hatch (the Back button) confirms separately.
+  useEffect(() => {
+    if (!isDirty) return;
+    function warn(e: BeforeUnloadEvent) {
+      e.preventDefault();
+    }
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [isDirty]);
+
+  function handleBack() {
+    if (isDirty && !window.confirm("You have unsaved changes. Leave anyway?")) return;
+    router.back();
+  }
+
+  function appendLog(entry: WidgetLogEntry) {
+    setLogs((prev) => {
+      const next = [...prev, entry];
+      return next.length > MAX_LOGS ? next.slice(next.length - MAX_LOGS) : next;
+    });
+    if (entry.level === "error") setConsoleOpen(true);
   }
 
   const handleMount: OnMount = useCallback((editor, monaco) => {
@@ -283,19 +364,26 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
       "streamwizard-libs.d.ts"
     );
 
-    // JSON schema validation for the fields tab
+    // JSON schema validation + completion for the fields tab. `path="fields"`
+    // on the editor produces the model uri this matches on.
     monaco.languages.json.jsonDefaults.setDiagnosticsOptions({
       validate: true,
       allowComments: false,
-      schemas: [],
+      schemas: [
+        {
+          uri: WIDGET_FIELDS_SCHEMA_URI,
+          fileMatch: ["fields"],
+          schema: WIDGET_FIELDS_JSON_SCHEMA,
+        },
+      ],
     });
 
     // Emmet completions for HTML and CSS
     registerEmmetProviders(monaco);
 
-    // Ctrl/Cmd+S: format the current document
+    // Ctrl/Cmd+S saves. Formatting keeps Monaco's own Shift+Alt+F.
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      editor.getAction("editor.action.formatDocument")?.run();
+      handleSaveRef.current();
     });
   }, []);
 
@@ -353,7 +441,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-2 border-b bg-background shrink-0">
         <button
-          onClick={() => router.back()}
+          onClick={handleBack}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
           ← Back
@@ -363,12 +451,40 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
           onChange={(e) => { setName(e.target.value); setIsDirty(true); }}
           className="h-8 text-sm w-48"
         />
+        <Popover open={detailsOpen} onOpenChange={setDetailsOpen}>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="ghost" className="h-8 text-xs">
+              Details
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-80 space-y-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Description</label>
+              <Textarea
+                value={description}
+                onChange={(e) => { setDescription(e.target.value); setIsDirty(true); }}
+                rows={3}
+                placeholder="What does this widget do?"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Tags (comma separated)</label>
+              <Input
+                value={tagsText}
+                onChange={(e) => { setTagsText(e.target.value); setIsDirty(true); }}
+                placeholder="irl, speed, overlay"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Saved with the widget.</p>
+          </PopoverContent>
+        </Popover>
         <div className="ml-auto flex items-center gap-2">
           <a
-            href={env.NEXT_PUBLIC_DOCS_URL ?? "https://docs.streamwizard.org"}
+            href={`${env.NEXT_PUBLIC_DOCS_URL ?? "https://docs.streamwizard.org"}/overlays/widgets`}
             target="_blank"
             rel="noreferrer"
             className="text-xs px-2.5 py-1 rounded-md border border-border hover:bg-accent transition-colors text-muted-foreground"
+            title="Widget API reference"
           >
             Docs
           </a>
@@ -407,11 +523,13 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
                     onChange={(e) => setPublishTitle(e.target.value)}
                   />
                 </div>
+                {/* Description and tags come from the widget's own details, so
+                    the library entry and the widget row can't disagree. */}
                 <div className="space-y-1.5">
                   <label className="text-xs font-medium">Description</label>
                   <Textarea
-                    value={publishDesc}
-                    onChange={(e) => setPublishDesc(e.target.value)}
+                    value={description}
+                    onChange={(e) => { setDescription(e.target.value); setIsDirty(true); }}
                     rows={3}
                   />
                 </div>
@@ -420,8 +538,8 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
                     Tags (comma separated)
                   </label>
                   <Input
-                    value={publishTags}
-                    onChange={(e) => setPublishTags(e.target.value)}
+                    value={tagsText}
+                    onChange={(e) => { setTagsText(e.target.value); setIsDirty(true); }}
                     placeholder="irl, speed, overlay"
                   />
                 </div>
@@ -563,6 +681,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
               fieldData={fieldData}
               wsRoom={wsRoom}
               onWsStatus={setWsStatus}
+              onLog={appendLog}
               className="flex-1 min-w-0"
               title="Widget preview"
             />
@@ -575,6 +694,13 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
               />
             )}
           </div>
+
+          <WidgetConsolePanel
+            logs={logs}
+            open={consoleOpen}
+            onToggle={() => setConsoleOpen((v) => !v)}
+            onClear={() => setLogs([])}
+          />
         </div>
       </div>
 
