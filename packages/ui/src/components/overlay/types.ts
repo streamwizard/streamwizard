@@ -1,3 +1,5 @@
+import type { AlertWidgetItemConfig } from "./widgets/alert/alert-widget-config";
+
 export type GoogleFontFamily = string;
 export const DEFAULT_GOOGLE_FONT_FAMILY: GoogleFontFamily = "Inter";
 
@@ -23,6 +25,7 @@ export const OVERLAY_ITEM_TYPES = [
   "timer_widget",
   "clock_widget",
   "custom_widget",
+  "alert_widget",
   ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 export type OverlayItemType = (typeof OVERLAY_ITEM_TYPES)[number];
@@ -34,6 +37,7 @@ export const ROOT_OVERLAY_ITEM_TYPES = [
   "timer_widget",
   "clock_widget",
   "custom_widget",
+  "alert_widget",
   ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 export type RootOverlayItemType = (typeof ROOT_OVERLAY_ITEM_TYPES)[number];
@@ -215,7 +219,8 @@ export type OverlayItemConfig =
   | TimerWidgetItemConfig
   | ClockWidgetItemConfig
   | IrlFieldWidgetItemConfig
-  | CustomWidgetItemConfig;
+  | CustomWidgetItemConfig
+  | AlertWidgetItemConfig;
 
 /**
  * Flattened shape used by the clip preview, API, and query builder: parent row + display field children merged.

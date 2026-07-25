@@ -14,6 +14,8 @@ import {
   IrlFieldWidgetRenderer,
   collectIrlFieldFontFamilies,
 } from "./widgets/irl/irl-field-widget-definition";
+import { alertWidgetBaseDefinition } from "./widgets/alert/alert-widget-definition";
+import { AlertWidgetRenderer } from "./widgets/alert/AlertWidgetRenderer";
 import { IRL_FIELD_WIDGET_TYPES } from "./types";
 
 export type OverlayWidgetProps = {
@@ -44,6 +46,11 @@ const CORE_WIDGETS: OverlayWidgetRegistration[] = [
     id: "clock_widget",
     Component: ClockWidgetRenderer as W,
     collectFontFamilies: clockWidgetBaseDefinition.collectFontFamilies,
+  },
+  {
+    id: "alert_widget",
+    Component: AlertWidgetRenderer as W,
+    collectFontFamilies: alertWidgetBaseDefinition.collectFontFamilies,
   },
   ...IRL_FIELD_WIDGET_TYPES.map((type) => ({
     id: type,
