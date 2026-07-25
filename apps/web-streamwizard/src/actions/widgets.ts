@@ -6,19 +6,6 @@ import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
-import { getLatestSubscriberToken } from "@repo/supabase/queries/overlays";
-
-export async function getActiveSubscriberToken(): Promise<{ token: string | null; error: string | null }> {
-  let supabase, user;
-  try {
-    ({ supabase, user } = await getAuthContext());
-  } catch {
-    return { token: null, error: "Unauthorized" };
-  }
-  const { data, error } = await getLatestSubscriberToken(supabase, user.id);
-  if (error) reportError(error, "actions/widgets");
-  return { token: data?.subscriber_token ?? null, error: null };
-}
 
 async function requireAdminContext() {
   const { user } = await getAuthContext();

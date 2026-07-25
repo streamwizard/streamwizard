@@ -1,17 +1,19 @@
 "use client";
 
-import { useState, useTransition, useRef, useCallback, useEffect } from "react";
+import { useState, useTransition, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { OnMount, Monaco } from "@monaco-editor/react";
 import { useRouter } from "next/navigation";
 import type { Widget } from "@/actions/widgets";
-import { updateWidget, publishWidgetToLibrary, getActiveSubscriberToken } from "@/actions/widgets";
+import { updateWidget, publishWidgetToLibrary } from "@/actions/widgets";
+import { supabase } from "@repo/supabase/next/client";
+import { useSession } from "@/providers/session-provider";
 import { env } from "@/lib/env";
 import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS } from "@repo/schemas";
 import { buildWidgetSrcdoc, mergeFieldValues, CustomWidgetIframe } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { ImagePlus } from "lucide-react";
-import type { WidgetFieldSchema, CustomWidgetIframeHandle } from "@repo/ui/overlay";
+import type { WidgetFieldSchema, CustomWidgetIframeHandle, WsRoomOptions, WsRoomStatus } from "@repo/ui/overlay";
 import { Button } from "@repo/ui";
 import { Input } from "@repo/ui";
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui";
@@ -44,8 +46,6 @@ const EDITOR_OPTIONS = {
   formatOnPaste: false,
   formatOnType: false,
 };
-
-type WsStatus = "disconnected" | "connecting" | "connected";
 
 let emmetProvidersRegistered = false;
 
@@ -166,59 +166,23 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   });
   const [refreshKey, setRefreshKey] = useState(0);
   const [wsEnabled, setWsEnabled] = useState(false);
-  const [wsStatus, setWsStatus] = useState<WsStatus>("disconnected");
-  const wsRef = useRef<WebSocket | null>(null);
-  const subscriberTokenRef = useRef<string | null>(null);
+  const [wsStatus, setWsStatus] = useState<WsRoomStatus>("disconnected");
+  const user = useSession();
 
-  // Fetch the subscriber token once on mount
-  useEffect(() => {
-    getActiveSubscriberToken().then(({ token }) => {
-      subscriberTokenRef.current = token;
-    });
-  }, []);
-
-  // Manage WS lifecycle based on the toggle
-  useEffect(() => {
-    if (!wsEnabled) {
-      wsRef.current?.close();
-      wsRef.current = null;
-      setWsStatus("disconnected");
-      return;
-    }
-
-    const token = subscriberTokenRef.current;
-    if (!token) {
-      setWsEnabled(false);
-      return;
-    }
-
-    setWsStatus("connecting");
-    const ws = new WebSocket(`${env.NEXT_PUBLIC_WS_SERVER_URL}/ws?role=subscriber&token=${encodeURIComponent(token)}`);
-    wsRef.current = ws;
-
-    ws.onopen = () => setWsStatus("connected");
-
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data as string) as { type: string; payload: unknown };
-        widgetRef.current?.postMessage(
-          { type: "onEventReceived", payload: { listener: msg.type, event: msg.payload } }
-        );
-      } catch {
-        // ignore malformed messages
-      }
+  // Subscribing to the signed-in user's own room needs no scene: ws-server's
+  // subscriber path accepts a Supabase JWT directly, same as the IRL dashboard
+  // widgets. Resolved per connect so a refreshed token reuses the same room.
+  const wsRoom = useMemo<WsRoomOptions | undefined>(() => {
+    if (!wsEnabled) return undefined;
+    return {
+      roomKey: `dashboard:${user.id}`,
+      wsUrl: env.NEXT_PUBLIC_WS_SERVER_URL,
+      getToken: async () => {
+        const { data } = await supabase.auth.getSession();
+        return data.session?.access_token ?? "";
+      },
     };
-
-    ws.onclose = () => {
-      if (wsRef.current === ws) setWsStatus("disconnected");
-    };
-
-    ws.onerror = () => ws.close();
-
-    return () => {
-      ws.close();
-    };
-  }, [wsEnabled]);
+  }, [wsEnabled, user.id]);
 
   function parsedFields(): WidgetFieldSchema | null {
     try {
@@ -547,6 +511,8 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
             ref={widgetRef}
             srcdoc={srcdoc}
             fieldData={fieldData}
+            wsRoom={wsRoom}
+            onWsStatus={setWsStatus}
             className="flex-1 w-full"
             title="Widget preview"
           />

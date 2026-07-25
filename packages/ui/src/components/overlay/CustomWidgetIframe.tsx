@@ -4,11 +4,18 @@
 declare const process: { env: Record<string, string | undefined> };
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
-import { subscribeToWsRoom } from "./lib/ws-store";
+import { subscribeToWsRoomWith, wsStatusFromMessage, type WsRoomOptions, type WsRoomStatus } from "./lib/ws-store";
 import { useIrlGeoContext } from "./hooks/use-irl-geo-context";
 
 export interface CustomWidgetIframeHandle {
   postMessage: (msg: unknown) => void;
+}
+
+/** A log line the widget's own code produced inside the sandbox. */
+export interface WidgetLogEntry {
+  level: "log" | "info" | "warn" | "error";
+  text: string;
+  ts: number;
 }
 
 export interface CustomWidgetIframeProps {
@@ -16,6 +23,14 @@ export interface CustomWidgetIframeProps {
   fieldData: Record<string, unknown>;
   userId?: string;
   subscriberToken?: string;
+  /**
+   * Auth for callers whose credential isn't a scene subscriber token (the widget
+   * editor uses the signed-in user's Supabase JWT). Takes precedence over
+   * `subscriberToken`. Memoize it — identity changes reconnect the socket.
+   */
+  wsRoom?: WsRoomOptions;
+  onWsStatus?: (status: WsRoomStatus) => void;
+  onLog?: (entry: WidgetLogEntry) => void;
   overlayItemId?: string;
   style?: React.CSSProperties;
   className?: string;
@@ -23,14 +38,36 @@ export interface CustomWidgetIframeProps {
 }
 
 export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWidgetIframeProps>(
-  function CustomWidgetIframe({ srcdoc, fieldData, userId = "", subscriberToken, overlayItemId, style, className, title = "custom widget" }, ref) {
+  function CustomWidgetIframe({ srcdoc, fieldData, userId = "", subscriberToken, wsRoom, onWsStatus, onLog, overlayItemId, style, className, title = "custom widget" }, ref) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const fieldDataRef = useRef(fieldData);
     fieldDataRef.current = fieldData;
+    // Held in refs so a caller passing inline callbacks doesn't resubscribe every render.
+    const onWsStatusRef = useRef(onWsStatus);
+    onWsStatusRef.current = onWsStatus;
+    const onLogRef = useRef(onLog);
+    onLogRef.current = onLog;
 
     useImperativeHandle(ref, () => ({
       postMessage: (msg) => iframeRef.current?.contentWindow?.postMessage(msg, "*"),
     }), []);
+
+    // Forward console output and uncaught errors from inside the sandbox.
+    useEffect(() => {
+      if (!onLog) return;
+      function handle(e: MessageEvent) {
+        if (e.source !== iframeRef.current?.contentWindow) return;
+        const data = e.data as { type?: string; level?: string; text?: string };
+        if (data?.type !== "swLog") return;
+        onLogRef.current?.({
+          level: (data.level as WidgetLogEntry["level"]) ?? "log",
+          text: String(data.text ?? ""),
+          ts: Date.now(),
+        });
+      }
+      window.addEventListener("message", handle);
+      return () => window.removeEventListener("message", handle);
+    }, [onLog]);
 
     useEffect(() => {
       const iframe = iframeRef.current;
@@ -61,10 +98,23 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
     }, [srcdoc]);
 
     useEffect(() => {
-      if (!subscriberToken) return;
       const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
       if (!wsUrl) return;
-      return subscribeToWsRoom(subscriberToken, wsUrl, (raw) => {
+      const opts: WsRoomOptions | null =
+        wsRoom ??
+        (subscriberToken
+          ? { roomKey: subscriberToken, wsUrl, getToken: () => subscriberToken }
+          : null);
+      if (!opts) {
+        onWsStatusRef.current?.("disconnected");
+        return;
+      }
+      return subscribeToWsRoomWith(opts, (raw) => {
+        const status = wsStatusFromMessage(raw);
+        if (status) {
+          onWsStatusRef.current?.(status);
+          return;
+        }
         const msg = raw as { type?: string; payload?: unknown };
         if (!msg.type || msg.type.startsWith("ws:")) return;
         iframeRef.current?.contentWindow?.postMessage(
@@ -72,7 +122,7 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
           "*"
         );
       });
-    }, [subscriberToken]);
+    }, [subscriberToken, wsRoom]);
 
     // In phone mode, forward local GPS into the iframe using the same event
     // format as WS events so widget authors don't need separate handling.
