@@ -91,8 +91,10 @@ export function buildWidgetSrcdoc(
   <style>
     *,html,body{box-sizing:border-box;margin:0;padding:0}
     html,body{background:transparent!important;background-color:transparent!important;color-scheme:normal;width:100%;height:100%;overflow:hidden}
-    ${resolvedCss}
   <\/style>
+  <!-- Author CSS is isolated in its own tag so the editor can swap it via
+       postMessage without reloading the document and losing widget state. -->
+  <style id="sw-extra-css">${resolvedCss}<\/style>
 </head>
 <body style="background:transparent!important;background-color:transparent!important">
   ${resolvedHtml}
@@ -141,6 +143,12 @@ export function buildWidgetSrcdoc(
       }
       if (e.data.type === 'onEventReceived') window.dispatchEvent(new CustomEvent('onEventReceived', { detail: e.data.payload }));
       if (e.data.type === 'onSessionUpdate') window.dispatchEvent(new CustomEvent('onSessionUpdate', { detail: e.data.payload }));
+      // Editor-only: hot-swap author CSS in place. HTML and JS still need a
+      // document reload, but CSS is the tab people iterate on most.
+      if (e.data.type === 'swPatchCss') {
+        var styleEl = document.getElementById('sw-extra-css');
+        if (styleEl) styleEl.textContent = e.data.css || '';
+      }
     });
     ${js}
   <\/script>

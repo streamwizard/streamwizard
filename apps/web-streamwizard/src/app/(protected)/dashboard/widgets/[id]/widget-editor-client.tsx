@@ -10,9 +10,10 @@ import { supabase } from "@repo/supabase/next/client";
 import { useSession } from "@/providers/session-provider";
 import { env } from "@/lib/env";
 import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS } from "@repo/schemas";
-import { buildWidgetSrcdoc, mergeFieldValues, CustomWidgetIframe } from "@repo/ui/overlay";
+import { buildWidgetSrcdoc, mergeFieldValues, resolveWidgetTemplate, CustomWidgetIframe } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { WidgetTestEventPanel } from "./widget-test-event-panel";
+import { WidgetFieldsPanel } from "./widget-fields-panel";
 import { ImagePlus } from "lucide-react";
 import type { WidgetFieldSchema, CustomWidgetIframeHandle, WsRoomOptions, WsRoomStatus } from "@repo/ui/overlay";
 import { Button } from "@repo/ui";
@@ -165,6 +166,19 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     const fields = coerceFields(widget.fields as WidgetFieldSchema);
     return mergeFieldValues(fields, {});
   });
+  // Schema mirror of the Fields tab, so the field panel can render without
+  // reparsing the JSON on every keystroke.
+  const [fieldsSchema, setFieldsSchema] = useState<WidgetFieldSchema>(() =>
+    coerceFields(widget.fields as WidgetFieldSchema)
+  );
+  // Editor-session-only values the author is trying out, keyed by field.
+  const [fieldOverrides, setFieldOverrides] = useState<Record<string, unknown>>({});
+  const fieldOverridesRef = useRef(fieldOverrides);
+  fieldOverridesRef.current = fieldOverrides;
+  const [fieldsPanelOpen, setFieldsPanelOpen] = useState(true);
+  // Manual mode stops the iframe remounting mid-edit, which is the difference
+  // between debugging an animation and watching it restart every keystroke.
+  const [reloadMode, setReloadMode] = useState<"live" | "manual">("live");
   const [refreshKey, setRefreshKey] = useState(0);
   const [wsEnabled, setWsEnabled] = useState(false);
   const [wsStatus, setWsStatus] = useState<WsRoomStatus>("disconnected");
@@ -207,12 +221,27 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     widgetRef.current?.postMessage({ type: "onEventReceived", payload: { listener, event } });
   }
 
-  function refreshPreview() {
+  function refreshPreview(overrideValues?: Record<string, unknown>) {
     const fields = parsedFields() ?? (widget.fields as WidgetFieldSchema);
-    const defaults = mergeFieldValues(fields, {});
-    setFieldData(defaults);
-    setSrcdoc(buildWidgetSrcdoc(htmlRef.current, jsRef.current, cssRef.current, fields, defaults, undefined, env.NEXT_PUBLIC_ASSET_CDN_URL));
+    // Renaming or deleting a field in the JSON must drop its stale override.
+    const source = overrideValues ?? fieldOverridesRef.current;
+    const overrides: Record<string, unknown> = {};
+    for (const key of Object.keys(fields)) {
+      if (key in source) overrides[key] = source[key];
+    }
+
+    setFieldsSchema(fields);
+    setFieldOverrides(overrides);
+    fieldOverridesRef.current = overrides;
+    setFieldData(mergeFieldValues(fields, overrides));
+    setSrcdoc(buildWidgetSrcdoc(htmlRef.current, jsRef.current, cssRef.current, fields, overrides, undefined, env.NEXT_PUBLIC_ASSET_CDN_URL));
     setRefreshKey((k) => k + 1);
+  }
+
+  function setFieldOverride(key: string, value: unknown) {
+    // Field values feed both {{placeholder}} substitution in the HTML/CSS and
+    // the fieldData handed to JS, so the document has to be rebuilt.
+    refreshPreview({ ...fieldOverridesRef.current, [key]: value });
   }
 
   function handleSave() {
@@ -283,6 +312,18 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     : activeTab === "fields" ? fieldsJsonRef.current
     : cssRef.current;
 
+  /** Swaps author CSS in the running document — no remount, no lost state. */
+  function patchPreviewCss() {
+    const fields = parsedFields() ?? fieldsSchema;
+    const { resolvedCss } = resolveWidgetTemplate(
+      "",
+      cssRef.current,
+      fields,
+      fieldOverridesRef.current
+    );
+    widgetRef.current?.postMessage({ type: "swPatchCss", css: resolvedCss });
+  }
+
   function handleEditorChange(v: string | undefined) {
     const val = v ?? "";
     if (!isDirty) setIsDirty(true);
@@ -296,9 +337,15 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
       try { JSON.parse(val); setFieldsError(null); } catch { setFieldsError("Invalid JSON"); validChange = false; }
     }
 
-    if (!validChange) return;
+    if (!validChange || reloadMode === "manual") return;
     if (hotReloadTimer.current) clearTimeout(hotReloadTimer.current);
-    hotReloadTimer.current = setTimeout(refreshPreview, 600);
+    // JS gets a longer debounce: reloading it costs the widget all its state,
+    // so mid-expression rebuilds are pure noise.
+    const isCss = activeTab === "css";
+    hotReloadTimer.current = setTimeout(
+      isCss ? patchPreviewCss : refreshPreview,
+      isCss ? 250 : activeTab === "js" ? 1000 : 600
+    );
   }
 
   return (
@@ -458,16 +505,48 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
             backgroundPosition: "0 0,0 8px,8px -8px,-8px 0",
           }}
         >
-          <div className="shrink-0 px-3 py-1.5 border-b bg-background flex items-center justify-between">
+          <div className="shrink-0 px-3 py-1.5 border-b bg-background flex items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">Preview</span>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-6 text-xs"
-              onClick={refreshPreview}
-            >
-              Refresh
-            </Button>
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center rounded-md border border-border overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => setReloadMode("live")}
+                  title="Rebuild the preview as you type"
+                  className={`text-[11px] px-2 py-0.5 transition-colors ${
+                    reloadMode === "live" ? "bg-accent text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  Live
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReloadMode("manual")}
+                  title="Only rebuild on Refresh or Save — keeps animations and timers running"
+                  className={`text-[11px] px-2 py-0.5 transition-colors ${
+                    reloadMode === "manual" ? "bg-accent text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  Manual
+                </button>
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 text-xs"
+                onClick={() => setFieldsPanelOpen((v) => !v)}
+              >
+                {fieldsPanelOpen ? "Hide fields" : "Fields"}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 text-xs"
+                onClick={() => refreshPreview()}
+              >
+                Refresh
+              </Button>
+            </div>
           </div>
 
           <WidgetTestEventPanel
@@ -476,16 +555,26 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
             onFireLocal={fireTestEvent}
           />
 
-          <CustomWidgetIframe
-            key={refreshKey}
-            ref={widgetRef}
-            srcdoc={srcdoc}
-            fieldData={fieldData}
-            wsRoom={wsRoom}
-            onWsStatus={setWsStatus}
-            className="flex-1 w-full"
-            title="Widget preview"
-          />
+          <div className="flex flex-1 min-h-0">
+            <CustomWidgetIframe
+              key={refreshKey}
+              ref={widgetRef}
+              srcdoc={srcdoc}
+              fieldData={fieldData}
+              wsRoom={wsRoom}
+              onWsStatus={setWsStatus}
+              className="flex-1 min-w-0"
+              title="Widget preview"
+            />
+            {fieldsPanelOpen && (
+              <WidgetFieldsPanel
+                fields={fieldsSchema}
+                overrides={fieldOverrides}
+                onChange={setFieldOverride}
+                onReset={() => refreshPreview({})}
+              />
+            )}
+          </div>
         </div>
       </div>
 
