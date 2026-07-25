@@ -1,9 +1,11 @@
 import type { OverlayItemConfig } from "@/types/overlays";
 import {
+  createDefaultAlertWidgetConfig,
   DEFAULT_CLIPS_WIDGET_ITEM_CONFIG,
   DEFAULT_CLOCK_WIDGET_ITEM_CONFIG,
   DEFAULT_TEXT_WIDGET_ITEM_CONFIG,
   TIMER_WIDGET_CONFIG_DEFAULTS,
+  ALERT_WIDGET_DEFAULT_SIZE,
   CLIPS_WIDGET_DEFAULT_SIZE,
 } from "@repo/ui/overlay";
 
@@ -187,20 +189,19 @@ export const OVERLAY_TEMPLATES: OverlayTemplate[] = [
   {
     id: "alert-box",
     name: "Alert box",
-    description: "Follow, sub, cheer, and raid alerts. Add your own image and sound from the media library.",
+    description: "Follow, sub, cheer, and raid alerts. Add your own media and sounds — no code needed.",
     render_mode: "obs",
     ...CANVAS,
     items: [
       {
-        type: "custom_widget",
-        x: 660,
+        type: "alert_widget",
+        x: Math.round((1920 - ALERT_WIDGET_DEFAULT_SIZE.w) / 2),
         y: 80,
-        w: 600,
-        h: 400,
+        w: ALERT_WIDGET_DEFAULT_SIZE.w,
+        h: ALERT_WIDGET_DEFAULT_SIZE.h,
         z_index: 1,
-        label: "Alerts",
-        config: { widget_id: "", instance_id: "" },
-        starterWidgetId: "alert-box",
+        label: "Alert box",
+        config: createDefaultAlertWidgetConfig(),
       },
     ],
   },

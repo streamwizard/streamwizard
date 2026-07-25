@@ -54,6 +54,12 @@ import {
 import { CustomWidgetSettings } from "../widgets/custom/custom-widget-settings";
 import { CustomWidgetCanvas } from "../widgets/custom/custom-widget-canvas";
 import {
+  ALERT_WIDGET_DEFAULT_SIZE,
+  createAlertWidgetRootItems,
+} from "../widgets/alert/alert-widget-definition";
+import { AlertWidgetSettings } from "../widgets/alert/alert-widget-settings";
+import {
+  AlertWidgetRenderer,
   TextWidgetRenderer,
   TimerWidgetRenderer,
   ClockWidgetRenderer,
@@ -92,6 +98,21 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
         SettingsPanel: ClipDisplayFieldSettings,
       },
     ],
+  },
+  alert_widget: {
+    type: "alert_widget",
+    layerScope: "root",
+    showInLibrary: true,
+    category: "alerts",
+    library: {
+      title: "Alert box",
+      description:
+        "Follow, sub, cheer, and raid alerts with your own images, videos, and sounds. No code needed.",
+    },
+    defaultSize: { ...ALERT_WIDGET_DEFAULT_SIZE },
+    createRootItems: createAlertWidgetRootItems,
+    CanvasContent: AlertWidgetRenderer,
+    SettingsPanel: AlertWidgetSettings,
   },
   text_widget: {
     type: "text_widget",
