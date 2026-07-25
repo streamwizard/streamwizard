@@ -12,6 +12,7 @@ import { env } from "@/lib/env";
 import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS } from "@repo/schemas";
 import { buildWidgetSrcdoc, mergeFieldValues, CustomWidgetIframe } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
+import { WidgetTestEventPanel } from "./widget-test-event-panel";
 import { ImagePlus } from "lucide-react";
 import type { WidgetFieldSchema, CustomWidgetIframeHandle, WsRoomOptions, WsRoomStatus } from "@repo/ui/overlay";
 import { Button } from "@repo/ui";
@@ -469,42 +470,11 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
             </Button>
           </div>
 
-          {/* Test event triggers */}
-          <div className="shrink-0 px-3 py-1.5 border-b bg-background flex items-center gap-1.5 flex-wrap">
-            <span className="text-[10px] text-muted-foreground mr-1 shrink-0">Test:</span>
-            <Button size="sm" variant="outline" className="h-6 text-[11px] px-2"
-              onClick={() => fireTestEvent("channel.follow", { user_id: "1", user_login: "testuser", user_name: "TestUser", broadcaster_user_id: "2", broadcaster_user_login: "broadcaster", broadcaster_user_name: "Broadcaster", followed_at: new Date().toISOString() })}>
-              Follow
-            </Button>
-            <Button size="sm" variant="outline" className="h-6 text-[11px] px-2"
-              onClick={() => fireTestEvent("channel.subscribe", { user_id: "1", user_login: "testuser", user_name: "TestUser", broadcaster_user_id: "2", broadcaster_user_login: "broadcaster", broadcaster_user_name: "Broadcaster", tier: "1000", is_gift: false })}>
-              Sub
-            </Button>
-            <Button size="sm" variant="outline" className="h-6 text-[11px] px-2"
-              onClick={() => fireTestEvent("channel.subscription.gift", { user_id: "1", user_login: "testuser", user_name: "TestUser", broadcaster_user_id: "2", broadcaster_user_login: "broadcaster", broadcaster_user_name: "Broadcaster", total: 5, tier: "1000", cumulative_total: 10, is_anonymous: false })}>
-              Gift Sub
-            </Button>
-            <Button size="sm" variant="outline" className="h-6 text-[11px] px-2"
-              onClick={() => fireTestEvent("channel.subscription.message", { user_id: "1", user_login: "testuser", user_name: "TestUser", broadcaster_user_id: "2", broadcaster_user_login: "broadcaster", broadcaster_user_name: "Broadcaster", tier: "1000", message: { text: "Love the stream!", emotes: [] }, cumulative_months: 6, streak_months: 3, duration_months: 1 })}>
-              Resub
-            </Button>
-            <Button size="sm" variant="outline" className="h-6 text-[11px] px-2"
-              onClick={() => fireTestEvent("channel.cheer", { is_anonymous: false, user_id: "1", user_login: "testuser", user_name: "TestUser", broadcaster_user_id: "2", broadcaster_user_login: "broadcaster", broadcaster_user_name: "Broadcaster", message: "PogChamp", bits: 100 })}>
-              Cheer
-            </Button>
-            <Button size="sm" variant="outline" className="h-6 text-[11px] px-2"
-              onClick={() => fireTestEvent("channel.raid", { from_broadcaster_user_id: "1", from_broadcaster_user_login: "testuser", from_broadcaster_user_name: "TestUser", to_broadcaster_user_id: "2", to_broadcaster_user_login: "broadcaster", to_broadcaster_user_name: "Broadcaster", viewers: 42 })}>
-              Raid
-            </Button>
-            <Button size="sm" variant="outline" className="h-6 text-[11px] px-2"
-              onClick={() => fireTestEvent("channel.chat.message", { broadcaster_user_id: "2", broadcaster_user_login: "broadcaster", broadcaster_user_name: "Broadcaster", chatter_user_id: "1", chatter_user_login: "testuser", chatter_user_name: "TestUser", message_id: crypto.randomUUID(), message: { text: "Hello streamer!", fragments: [{ type: "text", text: "Hello streamer!" }] }, color: "#FF6B6B", badges: [], message_type: "text", cheer: null, reply: null })}>
-              Chat
-            </Button>
-            <Button size="sm" variant="outline" className="h-6 text-[11px] px-2"
-              onClick={() => fireTestEvent("channel.channel_points_custom_reward_redemption.add", { id: crypto.randomUUID(), broadcaster_user_id: "2", broadcaster_user_login: "broadcaster", broadcaster_user_name: "Broadcaster", user_id: "1", user_login: "testuser", user_name: "TestUser", user_input: "Hello!", status: "unfulfilled", reward: { id: crypto.randomUUID(), title: "Test Reward", cost: 500, prompt: "" }, redeemed_at: new Date().toISOString() })}>
-              Redeem
-            </Button>
-          </div>
+          <WidgetTestEventPanel
+            widgetId={widget.id}
+            wsConnected={wsStatus === "connected"}
+            onFireLocal={fireTestEvent}
+          />
 
           <CustomWidgetIframe
             key={refreshKey}

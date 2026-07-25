@@ -62,6 +62,7 @@ export {
 } from "./components/overlay/lib/ws-store";
 export {
   ALERT_EVENT_TYPES,
+  ALERT_EVENT_SUBSCRIPTION_TYPES,
   ALERT_EVENT_LABELS,
   ALERT_AMOUNT_LABELS,
   ALERT_LAYOUTS,
