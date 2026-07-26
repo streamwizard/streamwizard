@@ -22,7 +22,8 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
-    "typescript": "^5.7.3",
+    "@types/node": "^25.0.8",
+    "typescript": "^7.0.2",
     "zod-to-ts": "^2.0.0"
   }
 }

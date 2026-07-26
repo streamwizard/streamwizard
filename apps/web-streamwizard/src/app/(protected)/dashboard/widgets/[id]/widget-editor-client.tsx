@@ -35,10 +35,12 @@ import {
 } from "@repo/ui";
 import { Textarea } from "@repo/ui";
 
-const MonacoEditor = dynamic(
-  () => import("@monaco-editor/react").then((mod) => mod.default),
-  { ssr: false }
-);
+// Self-hosted Monaco + Tailwind language service. Importing the wrapper rather
+// than @monaco-editor/react directly guarantees setupMonaco() runs before the
+// editor asks the loader for an instance. See src/lib/monaco/setup.ts.
+const MonacoEditor = dynamic(() => import("@/lib/monaco/editor"), {
+  ssr: false,
+});
 
 
 
