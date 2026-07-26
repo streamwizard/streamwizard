@@ -21,8 +21,9 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@types/node": "^25.0.8",
     "@types/react": "^19.2.14",
-    "typescript": "^5.9.3"
+    "typescript": "^7.0.2"
   },
   "peerDependencies": {
     "next": ">=15",
