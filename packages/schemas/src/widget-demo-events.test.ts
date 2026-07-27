@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test";
 import {
   DEMO_EVENTS,
+  DEMO_EVENT_DEFS,
   DEMO_EVENT_TYPES,
   buildDemoEvent,
   isDemoEventType,
-  type DemoEventType,
 } from "./widget-demo-events";
 import { OverlayGeoEventSchema } from "./streamwizard";
 import { ChannelChatMessageEventSchema } from "./chat";
@@ -23,15 +23,15 @@ describe("demo events", () => {
   for (const type of DEMO_EVENT_TYPES) {
     it(`${type} builds a payload matching its schema`, () => {
       const { payload } = buildDemoEvent(type);
-      const result = DEMO_EVENTS[type].schema.safeParse(payload);
+      const result = DEMO_EVENT_DEFS[type].schema.safeParse(payload);
       expect(result.success).toBe(true);
     });
 
-    const variants = DEMO_EVENTS[type].variants;
+    const variants = DEMO_EVENT_DEFS[type].variants;
     for (const variant of Object.keys(variants ?? {})) {
       it(`${type} variant "${variant}" matches its schema`, () => {
         const { payload } = buildDemoEvent(type, undefined, variant);
-        const result = DEMO_EVENTS[type].schema.safeParse(payload);
+        const result = DEMO_EVENT_DEFS[type].schema.safeParse(payload);
         expect(result.success).toBe(true);
       });
     }
@@ -153,7 +153,7 @@ describe("chat stream simulator", () => {
 describe("demo event catalogue", () => {
   it("every entry has a label, group, schema and build", () => {
     for (const type of DEMO_EVENT_TYPES) {
-      const def = DEMO_EVENTS[type as DemoEventType];
+      const def = DEMO_EVENT_DEFS[type];
       expect(def.label.length).toBeGreaterThan(0);
       expect(def.group.length).toBeGreaterThan(0);
       expect(typeof def.build).toBe("function");

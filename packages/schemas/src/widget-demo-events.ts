@@ -208,6 +208,13 @@ export type DemoEventType = keyof typeof DEMO_EVENTS;
 export const DEMO_EVENT_TYPES = Object.keys(DEMO_EVENTS) as DemoEventType[];
 
 /**
+ * `DEMO_EVENTS` keeps its literal types so each entry's label is known at the
+ * call site, but that means indexing it yields a union where only some members
+ * declare `variants`. Consumers iterating the catalogue want the common shape.
+ */
+export const DEMO_EVENT_DEFS = DEMO_EVENTS as Record<DemoEventType, DemoEventDef>;
+
+/**
  * Doubles as the allowlist for the server action that broadcasts a demo event
  * into a live room -- never let a client-supplied event type through unchecked.
  */

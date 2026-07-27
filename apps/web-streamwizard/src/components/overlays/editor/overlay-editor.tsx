@@ -5,6 +5,7 @@ import { Database } from "@repo/supabase";
 import {
   ArrowLeft,
   Copy,
+  FlaskConical,
   Info,
   LayoutGrid,
   Pause,
@@ -23,6 +24,7 @@ import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays";
 import type { Widget } from "@/actions/widgets";
 import { primeWidgetCache } from "@/components/overlays/widgets/custom/widget-cache";
+import { DemoEventPanel } from "@/components/demo/demo-event-panel";
 import { env } from "@/lib/env";
 import type {
   OverlayItemConfig,
@@ -71,10 +73,14 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     attemptEditorClipPreviewUnblock,
     editorMode,
     setEditorMode,
+    emitDemoEvent,
+    runningSimulatorIds,
+    setRunningSimulatorIds,
   } = useOverlayStore();
   const [isSaving, setIsSaving] = useState(false);
   const [widgetSheetOpen, setWidgetSheetOpen] = useState(false);
   const [widgetLibraryOpen, setWidgetLibraryOpen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
 
   useEffect(() => {
     setScene(initialScene);
@@ -298,6 +304,21 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
           </div>
 
           <Button
+            variant={demoOpen ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setDemoOpen((v) => !v)}
+            title="Feed fake events to every widget on this canvas"
+          >
+            <FlaskConical className="mr-2 h-3 w-3" />
+            Demo
+            {runningSimulatorIds.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 text-[10px] leading-4 text-primary">
+                {runningSimulatorIds.length}
+              </span>
+            )}
+          </Button>
+
+          <Button
             variant="outline"
             size="sm"
             onClick={() => setWidgetSheetOpen(true)}
@@ -392,6 +413,18 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
           </p>
         </div>
       ) : null}
+
+      {/* Kept mounted and hidden with CSS rather than unmounted: collapsing the
+          panel must not stop a running simulator, and the payload editor keeps
+          its scroll position. Live needs no socket of our own -- the server
+          action broadcasts through ws-server -- so wsConnected stays undefined. */}
+      <div className={demoOpen ? undefined : "hidden"}>
+        <DemoEventPanel
+          storageId={scene.id}
+          onFireLocal={emitDemoEvent}
+          onRunningSimulatorsChange={setRunningSimulatorIds}
+        />
+      </div>
 
       <div className="flex flex-1 overflow-hidden">
         {editorMode === "pro" && (

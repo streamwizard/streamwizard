@@ -5,6 +5,7 @@ import { asCustomWidgetConfig } from "@/types/overlays";
 import type { CustomWidgetItemConfig } from "@/types/overlays";
 import type { OverlayCanvasProps } from "../../registry/overlay-widget-registry.types";
 import { getOrCreateWidgetInstance } from "@/actions/widgets";
+import { useOverlayStore } from "../../editor/use-overlay-store";
 import { fetchWidget } from "./widget-cache";
 import {
   CustomWidgetIframe,
@@ -130,6 +131,22 @@ function CustomWidgetCanvasInner({ item, scene }: OverlayCanvasProps) {
     }, PREVIEW_RELOAD_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [source, fieldValues]);
+
+  // Demo mode fan-out. Subscribed transiently rather than through the hook so a
+  // 1 Hz simulator doesn't re-render every widget on the canvas each tick --
+  // which also keeps it independent of this component's memo comparator.
+  useEffect(
+    () =>
+      useOverlayStore.subscribe((state, prev) => {
+        const demo = state.demoEvent;
+        if (!demo || demo.seq === prev.demoEvent?.seq) return;
+        iframeRef.current?.postMessage({
+          type: "onEventReceived",
+          payload: { listener: demo.listener, event: demo.event },
+        });
+      }),
+    []
+  );
 
   if (!cfg.widget_id) {
     return (

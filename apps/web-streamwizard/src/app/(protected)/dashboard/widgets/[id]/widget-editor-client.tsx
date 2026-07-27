@@ -13,7 +13,7 @@ import { env } from "@/lib/env";
 import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS } from "@repo/schemas";
 import { buildWidgetSrcdoc, mergeFieldValues, flattenFieldSchema, GROUP_FIELD_TYPE, resolveWidgetTemplate, CustomWidgetIframe } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
-import { WidgetTestEventPanel } from "./widget-test-event-panel";
+import { DemoEventPanel } from "@/components/demo/demo-event-panel";
 import { WidgetFieldsPanel } from "./widget-fields-panel";
 import { WidgetConsolePanel } from "./widget-console-panel";
 import {
@@ -672,8 +672,8 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
             </div>
           </div>
 
-          <WidgetTestEventPanel
-            widgetId={widget.id}
+          <DemoEventPanel
+            storageId={widget.id}
             wsConnected={wsStatus === "connected"}
             onFireLocal={fireTestEvent}
           />

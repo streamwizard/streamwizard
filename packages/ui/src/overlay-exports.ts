@@ -105,6 +105,12 @@ export {
   type WidgetFieldSchema,
 } from "./components/overlay/lib/resolve-widget-template";
 export {
+  WIDGET_SIMULATORS,
+  WIDGET_SIMULATOR_IDS,
+  type SimulatorDef,
+  type SimulatorEmit,
+} from "./components/overlay/lib/widget-simulators";
+export {
   OverlaySceneCanvas,
   type OverlayWidgetProps,
   type OverlayWidgetRegistration,

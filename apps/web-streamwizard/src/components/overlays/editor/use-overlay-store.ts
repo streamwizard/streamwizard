@@ -82,6 +82,20 @@ interface OverlayEditorState {
   editorClipPreviewResumeTick: number;
   bumpEditorClipPreviewResume: () => void;
   attemptEditorClipPreviewUnblock: () => void;
+
+  /**
+   * Demo mode: the last fake event pushed at the canvas's widget iframes.
+   * Editor-session only -- never enters history and never marks the scene
+   * dirty, same as the clip preview controls above.
+   *
+   * Consumers compare `seq` and nothing else; firing the same event twice must
+   * still deliver twice, which an equality check on the payload wouldn't do.
+   */
+  demoEvent: { listener: string; event: Record<string, unknown>; seq: number } | null;
+  emitDemoEvent: (listener: string, event: Record<string, unknown>) => void;
+  /** Ids of the simulators currently looping, so the toolbar can badge a count. */
+  runningSimulatorIds: string[];
+  setRunningSimulatorIds: (ids: string[]) => void;
 }
 
 /** The single-selection id when exactly one item is selected; feeds legacy single-select consumers. */
@@ -661,4 +675,13 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       editorClipPreviewPaused: false,
       editorClipPreviewResumeTick: s.editorClipPreviewResumeTick + 1,
     })),
+
+  demoEvent: null,
+  emitDemoEvent: (listener, event) =>
+    set((s) => ({
+      demoEvent: { listener, event, seq: (s.demoEvent?.seq ?? 0) + 1 },
+    })),
+
+  runningSimulatorIds: [],
+  setRunningSimulatorIds: (ids) => set({ runningSimulatorIds: ids }),
 }));
