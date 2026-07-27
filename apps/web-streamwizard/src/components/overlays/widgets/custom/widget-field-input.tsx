@@ -1,12 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import type { WidgetFieldDef } from "@repo/ui/overlay";
-import { isAssetFieldType } from "@repo/ui/overlay";
+import type { WidgetFieldDef, WidgetFieldSchema } from "@repo/ui/overlay";
+import { isAssetFieldType, isGroupFieldDef } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import type { AssetKind } from "@/actions/assets";
 import { GoogleFontSelect } from "@/components/overlays/inspector-fields";
-import { Button, Input, Label, Slider, Switch } from "@repo/ui";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+  Button,
+  Input,
+  Label,
+  Slider,
+  Switch,
+} from "@repo/ui";
 import {
   Select,
   SelectContent,
@@ -14,6 +24,73 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui";
+
+/**
+ * Renders a whole field schema, turning `type: "group"` entries into
+ * collapsible sections like the alert widget's per-event accordion. Grouping is
+ * presentation only: `onChange` still reports the leaf field's own key, because
+ * a group does not namespace the values it contains.
+ */
+export function WidgetFieldList({
+  fields,
+  values,
+  onChange,
+  idPrefix = "",
+}: {
+  fields: WidgetFieldSchema;
+  /** Resolved values by field key. A missing key falls back to the default. */
+  values: Record<string, unknown>;
+  onChange: (key: string, value: unknown) => void;
+  /** Keeps input ids unique when the same field key appears in two groups. */
+  idPrefix?: string;
+}) {
+  // Consecutive groups share one Accordion so their borders line up; leaves
+  // between them still render in the order the author wrote.
+  const chunks: { group: boolean; entries: [string, WidgetFieldDef][] }[] = [];
+  for (const entry of Object.entries(fields)) {
+    const group = isGroupFieldDef(entry[1]);
+    const last = chunks[chunks.length - 1];
+    if (last && last.group === group) last.entries.push(entry);
+    else chunks.push({ group, entries: [entry] });
+  }
+
+  return (
+    <>
+      {chunks.map((chunk, i) =>
+        chunk.group ? (
+          <Accordion key={`g${i}`} type="multiple" className="-mx-1">
+            {chunk.entries.map(([key, def]) => (
+              <AccordionItem key={key} value={key} className="border-b">
+                <AccordionTrigger className="py-2 px-1 text-xs hover:no-underline">
+                  {def.label ?? key}
+                </AccordionTrigger>
+                <AccordionContent className="space-y-3 px-1 pb-4">
+                  <WidgetFieldList
+                    fields={def.fields ?? {}}
+                    values={values}
+                    onChange={onChange}
+                    idPrefix={`${idPrefix}${key}-`}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        ) : (
+          chunk.entries.map(([key, def]) => (
+            <WidgetFieldInput
+              key={key}
+              fieldKey={key}
+              idPrefix={idPrefix}
+              def={def}
+              value={key in values ? values[key] : def.value}
+              onChange={(v) => onChange(key, v)}
+            />
+          ))
+        )
+      )}
+    </>
+  );
+}
 
 /**
  * Renders one widget field from its schema definition. Shared by the overlay
@@ -26,15 +103,20 @@ export function WidgetFieldInput({
   def,
   value,
   onChange,
+  idPrefix = "",
 }: {
   fieldKey: string;
   def: WidgetFieldDef;
   value: unknown;
   onChange: (v: unknown) => void;
+  idPrefix?: string;
 }) {
   if (def.type === "hidden") return null;
+  // Groups hold no value of their own — WidgetFieldList renders them.
+  if (isGroupFieldDef(def)) return null;
 
   const label = def.label ?? fieldKey;
+  const id = `field-${idPrefix}${fieldKey}`;
 
   if (def.type === "text") {
     return (
@@ -69,9 +151,9 @@ export function WidgetFieldInput({
         <Switch
           checked={Boolean(value)}
           onCheckedChange={onChange}
-          id={`field-${fieldKey}`}
+          id={id}
         />
-        <Label htmlFor={`field-${fieldKey}`} className="text-xs">{label}</Label>
+        <Label htmlFor={id} className="text-xs">{label}</Label>
       </div>
     );
   }
@@ -137,7 +219,7 @@ export function WidgetFieldInput({
   if (isAssetFieldType(def.type)) {
     return (
       <AssetField
-        fieldKey={fieldKey}
+        fieldKey={`${idPrefix}${fieldKey}`}
         label={label}
         kind={def.type as AssetKind}
         value={typeof value === "string" ? value : ""}
@@ -149,7 +231,7 @@ export function WidgetFieldInput({
   if (def.type === "googleFont") {
     return (
       <GoogleFontSelect
-        id={`field-${fieldKey}`}
+        id={id}
         value={String(value ?? "")}
         onValueChange={onChange}
       />

@@ -40,6 +40,7 @@ import { buildWidgetSrcdoc, mergeFieldValues } from "@repo/ui/overlay";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
 import { Plus, Pencil, Trash2, Code2, Download, Sparkles } from "lucide-react";
 import { STARTER_WIDGETS, getStarterWidget } from "@/components/overlays/widgets/custom/starter-widgets";
+import { primeWidgetCache } from "@/components/overlays/widgets/custom/widget-cache";
 
 const DEFAULT_WIDGET_HTML = `<!--
   StreamWizard Widget — HTML
@@ -200,6 +201,8 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
     setLoadingMine(true);
     getWidgets().then(({ data }) => {
       setMyWidgets(data ?? []);
+      // Adding one to the canvas should render it without a second fetch.
+      primeWidgetCache(data ?? []);
       setLoadingMine(false);
     });
     setLoadingLibrary(true);
@@ -259,6 +262,7 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
       setInstallingId(null);
       if (!data) return;
       setMyWidgets((prev) => [data, ...prev]);
+      primeWidgetCache([data]);
       if (addToCanvas) {
         onAddToCanvas(data.id);
         onOpenChange(false);
@@ -273,6 +277,7 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
       setInstallingId(null);
       if (data) {
         setMyWidgets((prev) => [data, ...prev]);
+        primeWidgetCache([data]);
       }
     });
   }

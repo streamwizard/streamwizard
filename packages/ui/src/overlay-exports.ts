@@ -98,6 +98,9 @@ export {
   mergeFieldValues,
   ASSET_FIELD_TYPES,
   isAssetFieldType,
+  GROUP_FIELD_TYPE,
+  isGroupFieldDef,
+  flattenFieldSchema,
   type WidgetFieldDef,
   type WidgetFieldSchema,
 } from "./components/overlay/lib/resolve-widget-template";

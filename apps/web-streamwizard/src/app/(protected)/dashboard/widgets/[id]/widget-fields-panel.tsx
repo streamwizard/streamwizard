@@ -1,7 +1,7 @@
 "use client";
 
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
-import { WidgetFieldInput } from "@/components/overlays/widgets/custom/widget-field-input";
+import { WidgetFieldList } from "@/components/overlays/widgets/custom/widget-field-input";
 import { Button } from "@repo/ui";
 
 /**
@@ -20,7 +20,7 @@ export function WidgetFieldsPanel({
   onChange: (key: string, value: unknown) => void;
   onReset: () => void;
 }) {
-  const entries = Object.entries(fields);
+  const isEmpty = Object.keys(fields).length === 0;
   const hasOverrides = Object.keys(overrides).length > 0;
 
   return (
@@ -39,20 +39,12 @@ export function WidgetFieldsPanel({
       </div>
 
       <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
-        {entries.length === 0 ? (
+        {isEmpty ? (
           <p className="text-xs text-muted-foreground">
             No fields yet. Add them in the Fields tab to make this widget configurable.
           </p>
         ) : (
-          entries.map(([key, def]) => (
-            <WidgetFieldInput
-              key={key}
-              fieldKey={key}
-              def={def}
-              value={key in overrides ? overrides[key] : def.value}
-              onChange={(v) => onChange(key, v)}
-            />
-          ))
+          <WidgetFieldList fields={fields} values={overrides} onChange={onChange} />
         )}
       </div>
     </div>

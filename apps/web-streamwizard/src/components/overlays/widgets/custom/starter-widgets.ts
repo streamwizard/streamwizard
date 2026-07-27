@@ -90,10 +90,18 @@ const ALERT_BOX_FIELDS: WidgetFieldSchema = {
   soundVolume: { type: "slider", label: "Sound volume", value: 0.7, min: 0, max: 1, step: 0.05 },
   accentColor: { type: "colorpicker", label: "Accent color", value: "#9e7aff" },
   alertDuration: { type: "slider", label: "Seconds on screen", value: 5, min: 2, max: 15, step: 1 },
-  showFollows: { type: "checkbox", label: "Show follows", value: true },
-  showSubs: { type: "checkbox", label: "Show subs", value: true },
-  showCheers: { type: "checkbox", label: "Show cheers", value: true },
-  showRaids: { type: "checkbox", label: "Show raids", value: true },
+  // Doubles as the worked example of a "group": a collapsible section in the
+  // inspector whose children keep their plain keys (fieldData.showFollows).
+  alertTypes: {
+    type: "group",
+    label: "Alert types",
+    fields: {
+      showFollows: { type: "checkbox", label: "Show follows", value: true },
+      showSubs: { type: "checkbox", label: "Show subs", value: true },
+      showCheers: { type: "checkbox", label: "Show cheers", value: true },
+      showRaids: { type: "checkbox", label: "Show raids", value: true },
+    },
+  },
 };
 
 export const STARTER_WIDGETS: StarterWidget[] = [

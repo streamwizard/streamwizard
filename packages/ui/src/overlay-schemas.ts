@@ -175,6 +175,10 @@ export const irlFieldWidgetConfigSchema = overlayTextStyleSchema.extend({
 export const customWidgetItemConfigSchema = z.object({
   widget_id: z.string().default(""),
   instance_id: z.string().default(""),
+  // Author-defined settings, so the shape is only known to the widget itself.
+  // Values are rendered as text or fed to the widget's own script -- never
+  // executed here -- and the schema that produced them lives on the widget row.
+  field_values: z.record(z.string(), z.unknown()).default({}),
 });
 
 const alertMediaKindSchema = z.enum(["", "image", "video"]).default("");

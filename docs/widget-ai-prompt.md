@@ -59,6 +59,22 @@ addEventListener('onWidgetLoad', (e) => {
 });
 ```
 
+### `onFieldsUpdate` — settings changed while running
+
+Fires when the streamer edits a setting in the overlay editor. Re-apply your
+values here instead of assuming a reload: a widget that handles this updates
+live without losing its animation or runtime state. Widgets that ignore it are
+reloaded instead, which restarts the script.
+
+```js
+addEventListener('onFieldsUpdate', (e) => {
+  cfg = e.detail.fieldData;
+  apply(); // same code your onWidgetLoad handler runs
+});
+```
+
+The latest values are also on `StreamWizard.fieldData`.
+
 ### `onEventReceived` — every live event
 
 ```js
@@ -88,9 +104,11 @@ JSON object, key → definition. Keys become `{{key}}` placeholders in HTML and 
 }
 ```
 
-Types: `text` (string), `number`, `checkbox` (boolean), `colorpicker` (`#rrggbb`), `slider` (`min`/`max`/`step`), `dropdown` (`options`), `googleFont` (family name string), `image` / `audio` / `video` (media-library picker, value is a CDN URL string), `hidden`.
+Types: `text` (string), `number`, `checkbox` (boolean), `colorpicker` (`#rrggbb`), `slider` (`min`/`max`/`step`), `dropdown` (`options`), `googleFont` (family name string), `image` / `audio` / `video` (media-library picker, value is a CDN URL string), `hidden`, `group` (`fields`).
 
-Allowed keys per field: `type` (required), `label`, `value`, `options`, `min`, `max`, `step`. Nothing else — the editor's JSON schema rejects extra keys.
+`group` collects fields into a collapsible section: `{ "type": "group", "label": "Follow", "fields": { ...same shape... } }`. Grouping is presentation only — nested keys stay flat, so a field inside a group is still `{{key}}` and `fieldData.key`, and keys must be unique across the whole schema. Max five levels of nesting.
+
+Allowed keys per field: `type` (required), `label`, `value`, `options`, `min`, `max`, `step`, `fields` (groups only). Nothing else — the editor's JSON schema rejects extra keys.
 
 `{{key}}` substitution happens **once**, before the document renders. Anything that must change while running must be set from JS on the DOM.
 

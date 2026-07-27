@@ -21,6 +21,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays";
+import type { Widget } from "@/actions/widgets";
+import { primeWidgetCache } from "@/components/overlays/widgets/custom/widget-cache";
 import { env } from "@/lib/env";
 import type {
   OverlayItemConfig,
@@ -36,9 +38,15 @@ import { useOverlayStore } from "./use-overlay-store";
 interface OverlayEditorProps {
   initialScene: OverlaySceneWithItems;
   clipFolders: Database["public"]["Tables"]["clip_folders"]["Row"][];
+  /** Widget rows for the scene's custom widgets, fetched with the page. */
+  initialWidgets: Widget[];
 }
 
-export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps) {
+export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: OverlayEditorProps) {
+  // Before first render, so the canvas never has to fetch what the page already
+  // loaded.
+  useState(() => primeWidgetCache(initialWidgets));
+
   const {
     scene,
     isDirty,

@@ -1,7 +1,7 @@
 export interface WidgetFieldDef {
   // Free-form, but the editors special-case: "text", "number", "color",
-  // "dropdown", "checkbox", and the media-library asset types "image",
-  // "audio", "video" (value = public CDN URL string).
+  // "dropdown", "checkbox", the media-library asset types "image", "audio",
+  // "video" (value = public CDN URL string), and "group" (see `fields`).
   type: string;
   label?: string;
   value?: unknown;
@@ -9,6 +9,13 @@ export interface WidgetFieldDef {
   min?: number;
   max?: number;
   step?: number;
+  /**
+   * Only for `type: "group"` — the fields shown inside a collapsible section,
+   * the same shape the alert widget's per-event accordion has. Groups are
+   * presentation only: their children keep living in the flat value namespace,
+   * so `{{key}}` and `fieldData.key` are unaffected by how they are grouped.
+   */
+  fields?: WidgetFieldSchema;
 }
 
 /** Field types whose value is a media-library asset URL. */
@@ -18,14 +25,43 @@ export function isAssetFieldType(type: string): boolean {
   return (ASSET_FIELD_TYPES as readonly string[]).includes(type);
 }
 
+/** Field type that holds other fields instead of a value of its own. */
+export const GROUP_FIELD_TYPE = "group";
+
+export function isGroupFieldDef(def: WidgetFieldDef): boolean {
+  return def.type === GROUP_FIELD_TYPE;
+}
+
 export type WidgetFieldSchema = Record<string, WidgetFieldDef>;
+
+/**
+ * Flattens groups away, leaving only fields that own a value. Nested keys stay
+ * as authored — a group is a folder in the inspector, not a namespace — so a
+ * duplicate key in two groups collapses to one value, last one winning.
+ */
+export function flattenFieldSchema(fields: WidgetFieldSchema): WidgetFieldSchema {
+  const out: WidgetFieldSchema = {};
+  const walk = (schema: WidgetFieldSchema, depth: number) => {
+    for (const [key, def] of Object.entries(schema)) {
+      if (isGroupFieldDef(def)) {
+        // Depth bound keeps a hand-written cyclic-looking schema from stalling
+        // the editor; nobody nests inspector sections this deep on purpose.
+        if (depth < 5 && def.fields) walk(def.fields, depth + 1);
+        continue;
+      }
+      out[key] = def;
+    }
+  };
+  walk(fields, 0);
+  return out;
+}
 
 export function mergeFieldValues(
   fields: WidgetFieldSchema,
   overrides: Record<string, unknown>
 ): Record<string, unknown> {
   const result: Record<string, unknown> = {};
-  for (const [key, def] of Object.entries(fields)) {
+  for (const [key, def] of Object.entries(flattenFieldSchema(fields))) {
     result[key] = key in overrides ? overrides[key] : def.value;
   }
   return result;
@@ -142,9 +178,20 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
   <script nonce="${nonce}">
     document.documentElement.style.background = 'transparent';
     document.body.style.background = 'transparent';
+    // Authors that re-apply settings on 'onFieldsUpdate' can be updated in
+    // place; the editor reloads the document for the ones that don't, so it
+    // needs to know which kind this is before it decides.
+    var swHandlesFieldUpdates = false;
+    var swOriginalAddEventListener = window.addEventListener.bind(window);
+    window.addEventListener = function(type) {
+      if (type === 'onFieldsUpdate') swHandlesFieldUpdates = true;
+      return swOriginalAddEventListener.apply(null, arguments);
+    };
     window.StreamWizard = {
       stateUrl: ${stateUrl},
       session: null,
+      /** Latest field values. Replaced before each 'onFieldsUpdate'. */
+      fieldData: {},
       // Typed wrapper around the raw state API; see the editor's autocomplete
       // (StreamWizardStateApi). Throws outside a placed overlay widget, where
       // there is no session to authenticate with.
@@ -180,7 +227,19 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
     window.addEventListener('message', function(e) {
       if (e.data.type === 'onWidgetLoad') {
         if (e.data.payload && e.data.payload.session) window.StreamWizard.session = e.data.payload.session;
+        if (e.data.payload && e.data.payload.fieldData) window.StreamWizard.fieldData = e.data.payload.fieldData;
         window.dispatchEvent(new CustomEvent('onWidgetLoad', { detail: e.data.payload }));
+      }
+      // A setting changed while the document stayed loaded. Widgets that act on
+      // this keep their runtime state; the reply tells the editor whether this
+      // one did, so it can fall back to a reload for widgets that read
+      // fieldData once at load.
+      if (e.data.type === 'swFieldData') {
+        window.StreamWizard.fieldData = e.data.fieldData || {};
+        window.dispatchEvent(new CustomEvent('onFieldsUpdate', { detail: { fieldData: window.StreamWizard.fieldData } }));
+        try {
+          parent.postMessage({ type: 'swFieldDataApplied', handled: swHandlesFieldUpdates }, '*');
+        } catch (err) { /* parent gone */ }
       }
       if (e.data.type === 'onEventReceived') window.dispatchEvent(new CustomEvent('onEventReceived', { detail: e.data.payload }));
       if (e.data.type === 'onSessionUpdate') window.dispatchEvent(new CustomEvent('onSessionUpdate', { detail: e.data.payload }));

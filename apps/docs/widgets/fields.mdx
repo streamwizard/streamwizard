@@ -38,11 +38,47 @@ overlay. Values reach your code two ways:
 | `audio` | media library picker | file URL string |
 | `video` | media library picker | file URL string |
 | `hidden` | nothing (internal value) | anything |
+| `group` | collapsible section (uses `fields`) | — (holds other fields) |
 
 `image`, `audio`, and `video` open the user's [media library](/overlays/media-library),
 so streamers pick their own files without editing code.
 
 Dropdown options: `"options": [{ "value": "left", "label": "Left" }, ...]`.
+
+## Grouping fields
+
+A long settings panel is easier to use in sections. Give a field
+`"type": "group"` and put its settings in `fields`, and the panel shows a
+collapsible section — the same thing the built-in alert widget does with follows,
+subs and cheers.
+
+```json
+{
+  "follow": {
+    "type": "group",
+    "label": "Follow",
+    "fields": {
+      "followText":  { "type": "text", "label": "Message", "value": "Thanks {name}!" },
+      "followColor": { "type": "colorpicker", "label": "Colour", "value": "#9e7aff" }
+    }
+  },
+  "sub": {
+    "type": "group",
+    "label": "Subscription",
+    "fields": {
+      "subText": { "type": "text", "label": "Message", "value": "Welcome {name}!" }
+    }
+  }
+}
+```
+
+Groups are presentation only. A grouped field keeps its plain key everywhere
+else, so the example above is still `{{followText}}` in HTML and
+`fieldData.followText` in JS — never `fieldData.follow.followText`. That means
+field keys stay unique across the whole widget, and you can reorganise your
+panel into groups without touching your code.
+
+Groups can hold groups, up to five levels deep.
 
 ## Reading fields in JS
 
@@ -59,3 +95,14 @@ addEventListener('onWidgetLoad', (e) => {
 
 Defaults come from `value` in the schema; per-overlay overrides are merged in
 before your widget loads.
+
+When the streamer edits a setting while the widget is running, `onFieldsUpdate`
+fires with the new values. Handle it to update in place — otherwise the editor
+reloads your widget to show the change, restarting your script.
+
+```js
+addEventListener('onFieldsUpdate', (e) => {
+  const fieldData = e.detail.fieldData;
+  document.getElementById('title').style.color = fieldData.accentColor;
+});
+```

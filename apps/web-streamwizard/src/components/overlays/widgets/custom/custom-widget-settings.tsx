@@ -1,51 +1,47 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { asCustomWidgetConfig } from "@/types/overlays";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
-import { getWidgets, getWidget, getOrCreateWidgetInstance, updateWidgetInstanceFieldValues } from "@/actions/widgets";
-import type { Widget, OverlayWidgetInstance } from "@/actions/widgets";
+import { getWidgets, getOrCreateWidgetInstance } from "@/actions/widgets";
+import type { Widget } from "@/actions/widgets";
 import { Button } from "@repo/ui";
-import { WidgetFieldInput } from "./widget-field-input";
+import { WidgetFieldList } from "./widget-field-input";
+import { primeWidgetCache, useWidget } from "./widget-cache";
 
 export function CustomWidgetSettings({
   item,
   updateItem,
 }: OverlayInspectorAppendProps) {
   const cfg = asCustomWidgetConfig(item.config);
-  const [widget, setWidget] = useState<Widget | null>(null);
-  const [instance, setInstance] = useState<OverlayWidgetInstance | null>(null);
-  const [fieldValues, setFieldValues] = useState<Record<string, unknown>>({});
-  const [isPending, startTransition] = useTransition();
+  const widget = useWidget(cfg.widget_id);
 
-  useEffect(() => {
-    if (!cfg.widget_id) return;
-    getWidget(cfg.widget_id).then(({ data }) => {
-      if (data) setWidget(data);
-    });
-  }, [cfg.widget_id]);
+  // Field values live in the item config, so edits are local store writes that
+  // the canvas can render instantly and the scene's Save button persists --
+  // same lifecycle as every other inspector setting.
+  const fieldValues = cfg.field_values ?? {};
 
   useEffect(() => {
     if (!cfg.widget_id || !item.id || item.id.startsWith("temp-")) return;
     getOrCreateWidgetInstance(item.id, cfg.widget_id).then(({ data }) => {
-      if (data) {
-        setInstance(data);
-        setFieldValues(data.field_values ?? {});
-        // Sync instance_id into config if not set
-        if (!cfg.instance_id) {
-          updateItem(item.id, { config: { ...cfg, instance_id: data.id } });
-        }
+      if (!data) return;
+      const patch: Partial<typeof cfg> = {};
+      // The instance row still backs StreamWizard.state, so the item needs to
+      // know which row is its own.
+      if (!cfg.instance_id) patch.instance_id = data.id;
+      // Adopt values saved before they moved into the config. Harmless to
+      // repeat: it sticks once the scene is saved.
+      if (!cfg.field_values) patch.field_values = data.field_values ?? {};
+      if (Object.keys(patch).length > 0) {
+        updateItem(item.id, { config: { ...cfg, ...patch } });
       }
     });
   }, [cfg.widget_id, item.id]);
 
   function patchFieldValue(key: string, value: unknown) {
-    const next = { ...fieldValues, [key]: value };
-    setFieldValues(next);
-    if (!instance) return;
-    startTransition(async () => {
-      await updateWidgetInstanceFieldValues(instance.id, next);
+    updateItem(item.id, {
+      config: { ...cfg, field_values: { ...fieldValues, [key]: value } },
     });
   }
 
@@ -53,7 +49,9 @@ export function CustomWidgetSettings({
     return (
       <WidgetPicker
         onSelect={(widgetId) =>
-          updateItem(item.id, { config: { ...cfg, widget_id: widgetId, instance_id: "" } })
+          updateItem(item.id, {
+            config: { ...cfg, widget_id: widgetId, instance_id: "", field_values: {} },
+          })
         }
       />
     );
@@ -75,7 +73,9 @@ export function CustomWidgetSettings({
             size="sm"
             variant="ghost"
             onClick={() =>
-              updateItem(item.id, { config: { ...cfg, widget_id: "", instance_id: "" } })
+              updateItem(item.id, {
+                config: { ...cfg, widget_id: "", instance_id: "", field_values: {} },
+              })
             }
           >
             Change
@@ -85,15 +85,11 @@ export function CustomWidgetSettings({
 
       {widget && Object.keys(widget.fields).length > 0 && (
         <div className="space-y-3">
-          {Object.entries(widget.fields).map(([key, def]) => (
-            <WidgetFieldInput
-              key={key}
-              fieldKey={key}
-              def={def}
-              value={key in fieldValues ? fieldValues[key] : def.value}
-              onChange={(v) => patchFieldValue(key, v)}
-            />
-          ))}
+          <WidgetFieldList
+            fields={widget.fields}
+            values={fieldValues}
+            onChange={patchFieldValue}
+          />
         </div>
       )}
 
@@ -113,6 +109,8 @@ function WidgetPicker({ onSelect }: { onSelect: (widgetId: string) => void }) {
   useEffect(() => {
     getWidgets().then(({ data }) => {
       setWidgets(data ?? []);
+      // Picking from this list should render the widget without another trip.
+      primeWidgetCache(data ?? []);
       setLoading(false);
     });
   }, []);

@@ -11,7 +11,7 @@ import { supabase } from "@repo/supabase/next/client";
 import { useSession } from "@/providers/session-provider";
 import { env } from "@/lib/env";
 import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS } from "@repo/schemas";
-import { buildWidgetSrcdoc, mergeFieldValues, resolveWidgetTemplate, CustomWidgetIframe } from "@repo/ui/overlay";
+import { buildWidgetSrcdoc, mergeFieldValues, flattenFieldSchema, GROUP_FIELD_TYPE, resolveWidgetTemplate, CustomWidgetIframe } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { WidgetTestEventPanel } from "./widget-test-event-panel";
 import { WidgetFieldsPanel } from "./widget-fields-panel";
@@ -131,11 +131,14 @@ function registerEmmetProviders(monaco: Monaco) {
 /** Normalize fields authored in the JSON editor before saving or previewing.
  *  Dropdown options may be written as a plain object { value: label } instead
  *  of the canonical array [{ value, label }]. Coerce them so downstream code
- *  can always call .map() safely. */
+ *  can always call .map() safely. Groups are walked so fields nested in a
+ *  collapsible section get the same treatment. */
 function coerceFields(fields: WidgetFieldSchema): WidgetFieldSchema {
   const out: WidgetFieldSchema = {};
   for (const [key, def] of Object.entries(fields)) {
-    if (
+    if (def.type === GROUP_FIELD_TYPE) {
+      out[key] = { ...def, fields: coerceFields(def.fields ?? {}) };
+    } else if (
       def.type === "dropdown" &&
       def.options !== undefined &&
       !Array.isArray(def.options)
@@ -251,7 +254,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     // Renaming or deleting a field in the JSON must drop its stale override.
     const source = overrideValues ?? fieldOverridesRef.current;
     const overrides: Record<string, unknown> = {};
-    for (const key of Object.keys(fields)) {
+    for (const key of Object.keys(flattenFieldSchema(fields))) {
       if (key in source) overrides[key] = source[key];
     }
 

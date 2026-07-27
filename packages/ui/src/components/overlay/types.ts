@@ -204,12 +204,24 @@ export type IrlSocketMessage =
 /** Config for a custom user-authored widget placed on an overlay scene. */
 export interface CustomWidgetItemConfig {
   widget_id: string;
+  /**
+   * Row in overlay_widget_instances backing this item. Only carries
+   * `widget_state` now -- field values live in `field_values` below so they
+   * save with the item and can be previewed without a round trip.
+   */
   instance_id: string;
+  /**
+   * Author-visible settings. Optional because items placed before field values
+   * moved out of the instance row don't have it; readers fall back to the
+   * instance's `field_values` until the item is saved again.
+   */
+  field_values?: Record<string, unknown>;
 }
 
 export const DEFAULT_CUSTOM_WIDGET_ITEM_CONFIG: CustomWidgetItemConfig = {
   widget_id: "",
   instance_id: "",
+  field_values: {},
 };
 
 export type OverlayItemConfig =
