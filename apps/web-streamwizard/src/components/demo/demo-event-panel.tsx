@@ -10,7 +10,7 @@ import {
   isDemoEventType,
   type DemoEventType,
 } from "@repo/schemas";
-import { WIDGET_SIMULATORS } from "@repo/ui/overlay";
+import { WIDGET_SIMULATORS, scanWidgetListeners } from "@repo/ui/overlay";
 import { sendTestEventToOverlay } from "@/actions/overlay-test-alert";
 import { Button, Textarea } from "@repo/ui";
 import {
@@ -36,6 +36,9 @@ const PINNED: DemoEventType[] = [
  * should take. Local has no such cost, so the cap only applies to Live.
  */
 const MIN_LIVE_INTERVAL_MS = 1000;
+
+/** Picker group holding the events the widget's own source references. */
+const USED_GROUP = "Used by this widget";
 
 type FireMode = "local" | "live";
 
@@ -90,6 +93,12 @@ export interface DemoEventPanelProps {
    * action, not the caller's connection.
    */
   wsConnected?: boolean;
+  /**
+   * The widget's JS, used to lead the picker with the events it actually
+   * handles. The overlay editor joins every custom widget on the canvas.
+   * Omit it and the full catalogue shows flat.
+   */
+  sourceJs?: string;
   /** Local delivery sink: straight into the preview iframe(s), no server round-trip. */
   onFireLocal: (listener: string, event: Record<string, unknown>) => void;
   /** Reported so the host can badge its toolbar while simulators loop. */
@@ -99,6 +108,7 @@ export interface DemoEventPanelProps {
 
 export function DemoEventPanel({
   storageId,
+  sourceJs,
   wsConnected,
   onFireLocal,
   onRunningSimulatorsChange,
@@ -150,14 +160,36 @@ export function DemoEventPanel({
   const liveAvailable = wsConnected === undefined || wsConnected;
   const effectiveMode: FireMode = liveAvailable ? mode : "local";
 
+  /**
+   * Reading the widget's own source is enough to tell which events it handles,
+   * which beats making a streamer guess from a list of seventy. Cheap enough to
+   * redo as an author types in the widget editor.
+   */
+  const scan = useMemo(
+    () => (sourceJs ? scanWidgetListeners(sourceJs, DEMO_EVENT_TYPES) : null),
+    [sourceJs]
+  );
+
+  const detected = useMemo(() => {
+    if (!scan?.confident) return [];
+    return scan.listeners.filter(isDemoEventType);
+  }, [scan]);
+
   const grouped = useMemo(() => {
     const out = new Map<string, DemoEventType[]>();
+    // Detected events lead in their own group and are listed once -- a value
+    // repeated across two SelectGroups confuses Radix's selection. Nothing is
+    // ever removed: a scan that misses a computed listener string costs sort
+    // order, not access.
+    const promoted = new Set(detected);
+    if (detected.length > 0) out.set(USED_GROUP, detected);
     for (const type of DEMO_EVENT_TYPES) {
+      if (promoted.has(type)) continue;
       const group = DEMO_EVENTS[type].group;
       out.set(group, [...(out.get(group) ?? []), type]);
     }
     return [...out.entries()];
-  }, []);
+  }, [detected]);
 
   const variants = useMemo(() => {
     const defined = DEMO_EVENT_DEFS[selected].variants;

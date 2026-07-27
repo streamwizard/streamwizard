@@ -111,6 +111,10 @@ export {
   type SimulatorEmit,
 } from "./components/overlay/lib/widget-simulators";
 export {
+  scanWidgetListeners,
+  type WidgetListenerScan,
+} from "./components/overlay/lib/detect-widget-listeners";
+export {
   OverlaySceneCanvas,
   type OverlayWidgetProps,
   type OverlayWidgetRegistration,

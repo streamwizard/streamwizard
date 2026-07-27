@@ -10,8 +10,8 @@ import { updateWidget, publishWidgetToLibrary } from "@/actions/widgets";
 import { supabase } from "@repo/supabase/next/client";
 import { useSession } from "@/providers/session-provider";
 import { env } from "@/lib/env";
-import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS } from "@repo/schemas";
-import { buildWidgetSrcdoc, mergeFieldValues, flattenFieldSchema, GROUP_FIELD_TYPE, resolveWidgetTemplate, CustomWidgetIframe } from "@repo/ui/overlay";
+import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS, DEMO_EVENT_TYPES } from "@repo/schemas";
+import { buildWidgetSrcdoc, mergeFieldValues, flattenFieldSchema, GROUP_FIELD_TYPE, resolveWidgetTemplate, CustomWidgetIframe, scanWidgetListeners } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { DemoEventPanel } from "@/components/demo/demo-event-panel";
 import { WidgetFieldsPanel } from "./widget-fields-panel";
@@ -20,7 +20,7 @@ import {
   WIDGET_FIELDS_JSON_SCHEMA,
   WIDGET_FIELDS_SCHEMA_URI,
 } from "./widget-fields-json-schema";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Info } from "lucide-react";
 import type { WidgetFieldSchema, CustomWidgetIframeHandle, WsRoomOptions, WsRoomStatus, WidgetLogEntry } from "@repo/ui/overlay";
 import { Button } from "@repo/ui";
 import { Input } from "@repo/ui";
@@ -203,6 +203,10 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   useEffect(() => {
     fieldOverridesRef.current = fieldOverrides;
   }, [fieldOverrides]);
+  // Mirror of jsRef for the demo panel's listener scan, refreshed with the
+  // preview rather than on every keystroke.
+  const [jsSource, setJsSource] = useState(widget.js);
+  const [legacyDemoDismissed, setLegacyDemoDismissed] = useState(false);
   const [fieldsPanelOpen, setFieldsPanelOpen] = useState(true);
   // Manual mode stops the iframe remounting mid-edit, which is the difference
   // between debugging an animation and watching it restart every keystroke.
@@ -226,6 +230,13 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
       },
     };
   }, [wsEnabled, user.id]);
+
+  // Flags the pattern Demo mode replaces, so authors know the field and the
+  // fake-data loop in their own script are now dead weight.
+  const legacyDemo = useMemo(() => {
+    if (legacyDemoDismissed) return null;
+    return scanWidgetListeners(jsSource, DEMO_EVENT_TYPES).legacyDemo;
+  }, [jsSource, legacyDemoDismissed]);
 
   function parsedFields(): WidgetFieldSchema | null {
     try {
@@ -263,6 +274,9 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     fieldOverridesRef.current = overrides;
     setFieldData(mergeFieldValues(fields, overrides));
     setSrcdoc(buildWidgetSrcdoc(htmlRef.current, jsRef.current, cssRef.current, fields, overrides, undefined, env.NEXT_PUBLIC_ASSET_CDN_URL, SRCDOC_OPTS));
+    // Mirrored into state so the demo panel's listener scan follows the source
+    // the author is actually editing; jsRef alone never triggers a re-render.
+    setJsSource(jsRef.current);
     setRefreshKey((k) => k + 1);
   }
 
@@ -674,9 +688,35 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
 
           <DemoEventPanel
             storageId={widget.id}
+            sourceJs={jsSource}
             wsConnected={wsStatus === "connected"}
             onFireLocal={fireTestEvent}
           />
+
+          {legacyDemo && (
+            <div className="shrink-0 border-b bg-amber-500/5 px-3 py-1.5">
+              <p className="flex items-start gap-1.5 text-[11px] leading-snug text-muted-foreground">
+                <Info className="mt-0.5 h-3 w-3 shrink-0 opacity-80" aria-hidden />
+                <span>
+                  This widget ships its own demo mode (
+                  {legacyDemo.hits.map((hit, i) => (
+                    <span key={hit}>
+                      {i > 0 && ", "}
+                      <code className="text-foreground/80">{hit}</code>
+                    </span>
+                  ))}
+                  ). Demo mode above replaces it — you can drop that code and its field.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLegacyDemoDismissed(true)}
+                  className="ml-auto shrink-0 text-muted-foreground hover:text-foreground"
+                >
+                  Dismiss
+                </button>
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-1 min-h-0">
             <CustomWidgetIframe

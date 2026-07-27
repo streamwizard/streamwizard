@@ -23,9 +23,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays";
 import type { Widget } from "@/actions/widgets";
-import { primeWidgetCache } from "@/components/overlays/widgets/custom/widget-cache";
+import {
+  getCachedWidget,
+  primeWidgetCache,
+} from "@/components/overlays/widgets/custom/widget-cache";
 import { DemoEventPanel } from "@/components/demo/demo-event-panel";
 import { env } from "@/lib/env";
+import { asCustomWidgetConfig } from "@/types/overlays";
 import type {
   OverlayItemConfig,
   OverlaySceneWithItems,
@@ -81,6 +85,18 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
   const [widgetSheetOpen, setWidgetSheetOpen] = useState(false);
   const [widgetLibraryOpen, setWidgetLibraryOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
+
+  // Every custom widget's source, concatenated, so the demo picker can lead
+  // with the events anything on this canvas actually listens for. The cache is
+  // primed before first render, so this needs no fetch.
+  const canvasWidgetJs = useMemo(
+    () =>
+      (scene?.items ?? [])
+        .filter((item) => item.type === "custom_widget")
+        .map((item) => getCachedWidget(asCustomWidgetConfig(item.config).widget_id)?.js ?? "")
+        .join("\n"),
+    [scene?.items]
+  );
 
   useEffect(() => {
     setScene(initialScene);
@@ -421,6 +437,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       <div className={demoOpen ? undefined : "hidden"}>
         <DemoEventPanel
           storageId={scene.id}
+          sourceJs={canvasWidgetJs}
           onFireLocal={emitDemoEvent}
           onRunningSimulatorsChange={setRunningSimulatorIds}
         />
