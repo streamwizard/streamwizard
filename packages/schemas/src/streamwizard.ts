@@ -12,7 +12,10 @@ export const OverlayGeoPayloadSchema = z.object({
 
 export const OverlayGeoEventSchema = z.discriminatedUnion("status", [
   z.object({ status: z.literal("connected"), payload: OverlayGeoPayloadSchema }),
-  z.object({ status: z.literal("offline"), payload: z.undefined() }),
+  // No `payload` key at all: that's what ws-server sends when the publisher
+  // drops. Declaring it as z.undefined() made the key *required* under zod 4,
+  // so the real offline frame failed to parse.
+  z.object({ status: z.literal("offline") }),
 ]);
 
 export const OverlayStatusPayloadSchema = z.object({
