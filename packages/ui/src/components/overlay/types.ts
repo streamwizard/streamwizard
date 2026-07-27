@@ -196,11 +196,6 @@ export interface GeoPayload {
   timestamp: number;
 }
 
-/** @deprecated Use OverlaySocketMessage from @repo/types instead. */
-export type IrlSocketMessage =
-  | { type: "streamwizard.geo"; payload: GeoPayload }
-  | { type: "streamwizard.status"; payload: { status: "offline" } };
-
 /** Config for a custom user-authored widget placed on an overlay scene. */
 export interface CustomWidgetItemConfig {
   widget_id: string;

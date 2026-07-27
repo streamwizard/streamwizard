@@ -1,7 +1,10 @@
 import type { EventSubSubscriptionType } from "./eventsub";
 import type {
   OverlayGeoPayload,
+  OverlayGeoEvent,
   OverlayStatusPayload,
+  ObsInstanceLifecyclePayload,
+  IngestStatsPayload,
   // channel
   ChannelUpdateEvent,
   ChannelFollowEvent,
@@ -94,7 +97,14 @@ import type {
   AutoSwitcherConfig,
 } from "@repo/schemas";
 
-export type { OverlayGeoPayload, OverlayStatusPayload };
+export type { OverlayGeoPayload, OverlayGeoEvent, OverlayStatusPayload };
+
+/**
+ * Widget-facing name for the geo frame's payload. Kept as an alias rather than
+ * used directly below because the widget editor's generated declarations call
+ * it this, and the docs generator matches the two by name.
+ */
+export type StreamWizardGeoEvent = OverlayGeoEvent;
 
 export type StreamWizardEventType =
   | "streamwizard.geo"
@@ -110,60 +120,10 @@ export type StreamWizardEventType =
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 
-// Pushed by the obs-instance-manager whenever a user's Cloud OBS container
-// transitions. "starting"/"stopping" are transitional (leading-edge, no DB
-// status) so other devices can show an honest "Starting…"/"Stopping…" during
-// the wait; the terminal "started"/"stopped"/"error" follows. "deleted" is an
-// action, not a DB status -- the row is removed on delete. The manager keeps a
-// matching local literal (it's a standalone repo that doesn't import this
-// package); keep the two in sync.
-export interface ObsInstanceLifecyclePayload {
-  instanceId: string;
-  action: "starting" | "started" | "stopping" | "stopped" | "error" | "deleted";
-  /** ISO timestamp the manager observed the transition. */
-  at: string;
-}
-
-// Full raw + derived stat set broadcast by ingest-control's session-stats
-// handler. Everything below session identity is optional because RTMP only
-// reports throughput — the SRT/SRTLA transport fields simply never appear.
-export interface IngestStatsPayload {
-  session_id: string;
-  protocol: "rtmp" | "srt" | "srtla";
-  /** Ingest node this session landed on (INGEST_NODE_ID). */
-  node_id?: string;
-  /** Durable "camera" identity the session was authorized under. */
-  stream_key_id?: string;
-  /** Human label of that stream key ("Camera 1"). */
-  label?: string;
-  // Throughput
-  kbps?: number;
-  mbps_recv_rate?: number;
-  mbps_bandwidth?: number;
-  mbps_max_bw?: number;
-  rtt_ms?: number;
-  // Window counters (since last sample)
-  pkt_recv?: number;
-  pkt_recv_loss?: number;
-  pkt_recv_drop?: number;
-  pkt_recv_retrans?: number;
-  pkt_recv_belated?: number;
-  pkt_recv_undecrypt?: number;
-  pkt_reorder_distance?: number;
-  // Receiver buffer health
-  ms_rcv_buf?: number;
-  byte_rcv_buf?: number;
-  pkt_flight_size?: number;
-  // Session totals
-  pkt_recv_loss_total?: number;
-  pkt_recv_drop_total?: number;
-  pkt_recv_undecrypt_total?: number;
-  byte_recv_total?: number;
-  // Derived percentages (loss/drop/retrans over packets expected this window)
-  loss_pct?: number;
-  drop_pct?: number;
-  retrans_pct?: number;
-}
+// Both of these are zod-derived in @repo/schemas -- re-exported rather than
+// redeclared so the wire type and the validator can't drift apart. Their docs
+// live on the schemas.
+export type { ObsInstanceLifecyclePayload, IngestStatsPayload };
 
 // Host NIC totals only — cpu/ram/disk deliberately stay on the InfluxDB
 // polling path; the WS carries just the network signal.
@@ -200,8 +160,10 @@ export interface BotPongMessage {
 
 export type OverlaySocketMessage =
   // StreamWizard internal
-  | { type: "streamwizard.geo"; status: "connected"; payload: OverlayGeoPayload }
-  | { type: "streamwizard.geo"; status: "offline" }
+  // ws-server nests the status discriminant inside `payload` (it calls
+  // broadcastToRoom with the whole {status, payload} envelope), so the
+  // discriminant is one level down from where the other arms carry theirs.
+  | { type: "streamwizard.geo"; payload: StreamWizardGeoEvent }
   | { type: "streamwizard.ingest_stats"; payload: IngestStatsPayload }
   | { type: "streamwizard.auto_switcher_status"; payload: AutoSwitcherStatus }
   | { type: "streamwizard.auto_switcher_config"; payload: AutoSwitcherConfig }

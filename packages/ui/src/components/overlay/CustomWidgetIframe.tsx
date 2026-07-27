@@ -161,12 +161,18 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
     }, [subscriberToken, wsRoom]);
 
     // In phone mode, forward local GPS into the iframe using the same event
-    // format as WS events so widget authors don't need separate handling.
+    // format as WS events so widget authors don't need separate handling. That
+    // means the {status, payload} envelope ws-server broadcasts, not a bare
+    // GeoPayload -- null here is "provider mounted, no fix yet", which reads
+    // the same as the publisher being gone.
     const contextGeo = useIrlGeoContext();
     useEffect(() => {
       if (contextGeo === undefined) return; // OBS mode — WS handles geo
+      const event = contextGeo
+        ? { status: "connected", payload: contextGeo }
+        : { status: "offline" };
       iframeRef.current?.contentWindow?.postMessage(
-        { type: "onEventReceived", payload: { listener: "streamwizard.geo", event: contextGeo } },
+        { type: "onEventReceived", payload: { listener: "streamwizard.geo", event } },
         "*"
       );
     }, [contextGeo]);

@@ -22,6 +22,26 @@ Events prefixed `channel.` and `stream.` are Twitch EventSub payloads,
 relayed as-is. Events prefixed `streamwizard.` come from StreamWizard itself
 (GPS, ingest stats, and other IRL data).
 
+## `streamwizard.geo`
+
+```ts
+type StreamWizardGeoEvent = {
+    status: "connected";
+    payload: {
+        latitude: number;
+        longitude: number;
+        altitude: number | null;
+        speed: number | null;
+        heading: number | null;
+        accuracy: number;
+        timestamp: number;
+    };
+} | {
+    status: "offline";
+    payload: undefined;
+};
+```
+
 ## `channel.update`
 
 ```ts
