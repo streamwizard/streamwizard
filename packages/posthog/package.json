@@ -23,7 +23,7 @@
     "@repo/typescript-config": "workspace:*",
     "@types/node": "^25.0.8",
     "@types/react": "^19.2.14",
-    "typescript": "^7.0.2"
+    "typescript": "^5.9.2"
   },
   "peerDependencies": {
     "next": ">=15",
