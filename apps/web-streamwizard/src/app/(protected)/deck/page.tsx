@@ -38,12 +38,10 @@ export default async function DeckPage() {
       <link rel="manifest" href="/deck-manifest.webmanifest" crossOrigin="use-credentials" />
       <DeckContent
         canInteract={access.canInteract}
-        autoSwitcher={{
-          enabled: autoSwitcherConfig?.enabled ?? false,
-          initialOverride: autoSwitcherConfig?.override_scene_uuid
-            ? { sceneName: autoSwitcherConfig.override_scene_name }
-            : null,
-        }}
+        autoSwitcherConfig={autoSwitcherConfig}
+        initialOverride={
+          autoSwitcherConfig?.override_scene_uuid ? { sceneName: autoSwitcherConfig.override_scene_name } : null
+        }
       />
     </>
   );

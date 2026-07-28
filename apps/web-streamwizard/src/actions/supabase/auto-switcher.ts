@@ -36,7 +36,9 @@ export async function getAutoSwitcherConfig(): Promise<AutoSwitcherConfigRow | n
   return data;
 }
 
-export async function upsertAutoSwitcherConfig(values: AutoSwitcherFormValues): Promise<{ ok: boolean; error?: string }> {
+export async function upsertAutoSwitcherConfig(
+  values: AutoSwitcherFormValues,
+): Promise<{ ok: boolean; data?: AutoSwitcherConfigRow; error?: string }> {
   const parsed = autoSwitcherFormSchema.safeParse(values);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid settings" };
@@ -60,7 +62,9 @@ export async function upsertAutoSwitcherConfig(values: AutoSwitcherFormValues): 
   }
 
   await pushConfigToEngine(data);
-  return { ok: true };
+  // The saved row goes back to the caller so client state (the deck's switcher
+  // tab) can refresh without a page load.
+  return { ok: true, data };
 }
 
 export async function setSceneOverride(
