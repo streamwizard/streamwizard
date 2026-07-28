@@ -3,10 +3,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Badge, Button, Card, CardContent, cn } from "@repo/ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  cn,
+} from "@repo/ui";
 import { AlertTriangle, Loader2, MonitorOff, Radio, Square, Wifi, WifiOff } from "lucide-react";
 import { getMyLatestInstanceAction, getInstanceNodeApiUrlAction, getInstanceObsWsPasswordAction } from "@/actions/nodes";
-import { setSceneOverride } from "@/actions/supabase/auto-switcher";
+import { setSceneOverride, type AutoSwitcherConfigRow } from "@/actions/supabase/auto-switcher";
 import { mintWsUrl } from "@/lib/ws-ticket";
 import { toggleInstance } from "@/lib/instance-actions";
 import { useObsWebSocket, type Scene } from "@/hooks/use-obs-websocket";
@@ -18,20 +32,29 @@ import { ObsLifecycleBanner } from "@/components/irl/obs-lifecycle-banner";
 import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
 import { AutoSwitcherHoldCard } from "./_auto-switcher-hold-card";
 import { InstallPrompt } from "./_install-prompt";
+import { DeckFooter, deckMainPadding, type DeckTab } from "./_deck-tab-bar";
+import { SwitcherSettingsPanel, type SaveBarActions, type SaveBarState } from "./_switcher-settings-panel";
 
 interface DeckContentProps {
   canInteract: boolean;
-  autoSwitcher: {
-    enabled: boolean;
-    initialOverride: { sceneName: string | null } | null;
-  };
+  /** Full config row, so the switcher tab can edit it and the deck can gate scene holds on it. */
+  autoSwitcherConfig: AutoSwitcherConfigRow | null;
+  initialOverride: { sceneName: string | null } | null;
 }
 
 // Tall touch targets: an IRL streamer is tapping this one-handed on a phone
 // while walking, so every actionable button gets the same oversized shape.
 const deckButtonClass = "h-24 rounded-2xl text-base font-semibold";
 
-export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
+export function DeckContent({ canInteract, autoSwitcherConfig, initialOverride }: DeckContentProps) {
+  const [tab, setTab] = useState<DeckTab>("deck");
+  // Config lives in state, not as a frozen prop: saving on the switcher tab must
+  // immediately change whether a scene tap holds the scene, without a reload.
+  const [switcherConfig, setSwitcherConfig] = useState(autoSwitcherConfig);
+  const [saveBar, setSaveBar] = useState<SaveBarState | null>(null);
+  const saveBarActionsRef = useRef<SaveBarActions | null>(null);
+  const [discardPrompt, setDiscardPrompt] = useState<DeckTab | null>(null);
+  const switcherEnabled = switcherConfig?.enabled ?? false;
   const [instanceId, setInstanceId] = useState<string | null>(null);
   const [apiUrl, setApiUrl] = useState<string | null>(null);
   const [obsWsPassword, setObsWsPassword] = useState<string | null>(null);
@@ -42,7 +65,7 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
   // Last override state the deck knows about (scene name held, or null), plus
   // when the deck last changed it. The hold card prefers the engine's live
   // status frames; these cover the gap right after a tap and ws-down fallback.
-  const [heldScene, setHeldScene] = useState<string | null>(autoSwitcher.initialOverride?.sceneName ?? null);
+  const [heldScene, setHeldScene] = useState<string | null>(initialOverride?.sceneName ?? null);
   const [heldAt, setHeldAt] = useState(0);
   // True from a deck-initiated container start until OBS connects; gates the
   // boot stepper so plain websocket reconnects don't look like OBS restarting.
@@ -190,7 +213,7 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
       toast.error("Couldn't switch the scene", { description: err instanceof Error ? err.message : "Try again?" });
     });
 
-    if (!autoSwitcher.enabled) return;
+    if (!switcherEnabled) return;
     // Hold the scene so the auto switcher doesn't take it back (or force the
     // connection-lost scene when the feed drops). If the engine flips the
     // scene inside the ~1s push window, it re-switches to the held scene the
@@ -217,6 +240,54 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
     setHeldScene(null);
     setHeldAt(Date.now());
   };
+
+  // Opening the switcher tab pushes a history entry so the system back gesture
+  // (Android predictive back, iOS swipe) closes it instead of leaving the deck.
+  // The panel unmounts with the tab, so its save-bar state leaves with it.
+  const leaveSwitcher = useCallback(() => {
+    setSaveBar(null);
+    saveBarActionsRef.current = null;
+  }, []);
+
+  const goToTab = useCallback(
+    (next: DeckTab) => {
+      if (tab === next) return;
+      if (next === "switcher") {
+        window.history.pushState({ deckTab: "switcher" }, "");
+      } else {
+        leaveSwitcher();
+        if (window.history.state?.deckTab === "switcher") window.history.back();
+      }
+      setTab(next);
+    },
+    [tab, leaveSwitcher],
+  );
+
+  const handleTabChange = (next: DeckTab) => {
+    // Leaving the switcher tab mid-edit would silently drop the changes.
+    if (tab === "switcher" && next !== "switcher" && saveBar?.dirty) {
+      setDiscardPrompt(next);
+      return;
+    }
+    goToTab(next);
+  };
+
+  const switcherDirty = saveBar?.dirty ?? false;
+  useEffect(() => {
+    const onPopState = () => {
+      if (switcherDirty) {
+        // popstate can't be cancelled, so re-arm the entry we just consumed and
+        // ask before throwing the edits away.
+        window.history.pushState({ deckTab: "switcher" }, "");
+        setDiscardPrompt("deck");
+        return;
+      }
+      leaveSwitcher();
+      setTab("deck");
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [switcherDirty, leaveSwitcher]);
 
   // The boot stepper is only honest after the user actually started the
   // container from this page. Every other connect (page load onto a running
@@ -328,8 +399,15 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
       ? "secondary"
       : "outline";
 
+  const showSaveBar = tab === "switcher" && saveBar != null && (saveBar.dirty || saveBar.submitting);
+
   return (
-    <main className="min-h-dvh bg-background px-4 py-6 select-none [touch-action:manipulation]">
+    <main
+      className={cn(
+        "min-h-dvh bg-background px-4 pt-6 select-none [touch-action:manipulation]",
+        deckMainPadding(showSaveBar),
+      )}
+    >
       <div className="mx-auto w-full max-w-md space-y-4">
         {!canInteract && <FeatureDisabledBanner />}
 
@@ -342,9 +420,10 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
           onDismiss={clearStopReason}
         />
 
-        {/* Title + connection status */}
+        {/* Title + connection status. The OBS badge stays on both tabs: the
+            scene pickers in the switcher settings need a live scene list. */}
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold">Stream Deck</h1>
+          <h1 className="text-xl font-semibold">{tab === "switcher" ? "Auto switcher" : "Stream Deck"}</h1>
           <Badge variant={statusVariant} className="gap-1.5">
             {obs.status === "open" && <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block animate-pulse" />}
             {(inStartFlow || isReconnecting || isStopping || externalStarting) && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -372,7 +451,18 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
           </Badge>
         </div>
 
-        {loadError ? (
+        {tab === "switcher" ? (
+          <SwitcherSettingsPanel
+            config={switcherConfig}
+            scenes={obs.filteredScenes}
+            sceneItems={obs.sceneItems}
+            obsConnected={obs.status === "open"}
+            canInteract={canInteract}
+            onSaved={setSwitcherConfig}
+            onSaveBarChange={setSaveBar}
+            actionsRef={saveBarActionsRef}
+          />
+        ) : loadError ? (
           <Card>
             <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
               <AlertTriangle className="h-6 w-6 text-destructive" />
@@ -487,7 +577,7 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
 
             {/* Auto switcher hold state */}
             <AutoSwitcherHoldCard
-              enabled={autoSwitcher.enabled}
+              enabled={switcherEnabled}
               canInteract={canInteract}
               heldScene={heldScene}
               heldAt={heldAt}
@@ -538,6 +628,38 @@ export function DeckContent({ canInteract, autoSwitcher }: DeckContentProps) {
 
         <InstallPrompt />
       </div>
+
+      <DeckFooter
+        tab={tab}
+        onTabChange={handleTabChange}
+        saveBar={tab === "switcher" ? saveBar : null}
+        onSave={() => saveBarActionsRef.current?.save()}
+        onDiscard={() => saveBarActionsRef.current?.discard()}
+      />
+
+      <AlertDialog open={discardPrompt !== null} onOpenChange={(open) => !open && setDiscardPrompt(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Drop your changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You changed some switcher settings but never saved them. Leaving now throws them away.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep editing</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const next = discardPrompt;
+                saveBarActionsRef.current?.discard();
+                setDiscardPrompt(null);
+                if (next) goToTab(next);
+              }}
+            >
+              Discard
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </main>
   );
 }
