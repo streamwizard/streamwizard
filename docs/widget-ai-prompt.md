@@ -222,7 +222,9 @@ There is no `streamwizard.status` event reaching widgets — an IRL phone going 
 
 ## Editor behaviour worth knowing
 
-- Test buttons fire synthetic payloads for: follow, sub, gift sub, resub, sub ended, cheer, raid, channel update, ban, chat message, chat cleared, reward redeemed, stream online, stream offline. There is **no** geo test button — test GPS with a real phone session or by dispatching the event yourself from the console.
+- **Never build a demo mode into a widget.** No `demoMode` field, no `startDemo()`, no fake-data loop. StreamWizard's Demo mode feeds fake events to any widget from the editor toolbar — including a moving GPS track — so widget-side demo code is redundant and ships dead weight to viewers.
+- Demo mode fires one-shot payloads for every event in the catalogue (follow, sub, gift sub, resub, sub ended, cheer, raid, channel update, ban, chat message, chat cleared, reward redeemed, stream online/offline, plus `streamwizard.geo` and the other `streamwizard.*` events), and runs looping simulators for a moving GPS track and a chat feed. Geo also has an **Offline** button for the `status: "offline"` case.
+- The picker leads with the events your widget's source actually references, so keep listener strings as plain literals (`listener === 'channel.follow'`) rather than building them at runtime.
 - **Connect** subscribes the preview to the author's real channel events.
 - Live reload rebuilds the document on HTML/JS/Fields changes (widget state resets); CSS-only edits hot-swap without a reload.
 - Field values changed in the editor's field panel rebuild the document too.

@@ -81,6 +81,23 @@ addEventListener('onEventReceived', (obj) => {
 });
 ```
 
+### Don't build a demo mode
+
+Widgets used to ship their own preview data — a `demoMode` checkbox plus a
+`startDemo()` loop faking events inside the widget's own script. Don't. Demo
+mode in the editor toolbar feeds fake events to any widget from outside it,
+including looping simulators for a moving GPS track and a chat feed, so that
+code is redundant and ships to every viewer for no reason.
+
+Two things follow from this:
+
+- Handle real events properly and demo mode works for free — it delivers the
+  exact payload shape the wire does.
+- Keep listener strings as plain literals (`listener === 'channel.follow'`).
+  The picker reads your source to lead with the events you actually handle;
+  strings assembled at runtime can't be detected, and you fall back to the
+  full list.
+
 ### `onSessionUpdate`
 
 Fires when session data changes (rarely used).
@@ -609,6 +626,7 @@ addEventListener('onEventReceived', (obj) => {
    ```
 7. **Keep JS self-contained.** No `import`/`require`. Write plain ES2020 JavaScript.
 8. **Widget dimensions** come from the overlay editor. Design layouts in percentage or `vw`/`vh` units so they scale correctly, or use absolute positioning from edges.
+9. **No demo mode.** Don't add a `demoMode` field or a fake-data loop — the editor's Demo mode covers it. See [Don't build a demo mode](#dont-build-a-demo-mode).
 
 ---
 

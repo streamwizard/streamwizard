@@ -58,6 +58,7 @@
               "widgets/quickstart",
               "widgets/fields",
               "widgets/state",
+              "widgets/testing",
               "widgets/publishing"
             ]
           },
