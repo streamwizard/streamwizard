@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config dev_web_overlay -- next dev --port 3001 --experimental-https",
+    "dev": "node ../../scripts/prune-turbo-cache.mjs && doppler run --config dev_web_overlay -- next dev --port 3001 --experimental-https",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
