@@ -6,19 +6,6 @@ import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
-import { getLatestSubscriberToken } from "@repo/supabase/queries/overlays";
-
-export async function getActiveSubscriberToken(): Promise<{ token: string | null; error: string | null }> {
-  let supabase, user;
-  try {
-    ({ supabase, user } = await getAuthContext());
-  } catch {
-    return { token: null, error: "Unauthorized" };
-  }
-  const { data, error } = await getLatestSubscriberToken(supabase, user.id);
-  if (error) reportError(error, "actions/widgets");
-  return { token: data?.subscriber_token ?? null, error: null };
-}
 
 async function requireAdminContext() {
   const { user } = await getAuthContext();
@@ -97,6 +84,26 @@ export async function getWidget(id: string) {
     .single();
   if (error) reportError(error, "actions/widgets");
   return { data: data as unknown as Widget | null, error: error?.message ?? null };
+}
+
+/** Batch form of getWidget, for warming a whole scene's widgets in one trip. */
+export async function getWidgetsByIds(ids: string[]) {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) return { data: [] as Widget[], error: null };
+
+  let supabase, user;
+  try {
+    ({ supabase, user } = await getAuthContext());
+  } catch {
+    return { data: null, error: "Unauthorized" };
+  }
+  const { data, error } = await supabase
+    .from("widgets")
+    .select("*")
+    .eq("user_id", user.id)
+    .in("id", unique);
+  if (error) reportError(error, "actions/widgets");
+  return { data: data as unknown as Widget[] | null, error: error?.message ?? null };
 }
 
 export async function createWidget(input: {
@@ -211,26 +218,6 @@ export async function getOrCreateWidgetInstance(
     .single();
   if (error) reportError(error, "actions/widgets");
   return { data: data as unknown as OverlayWidgetInstance | null, error: error?.message ?? null };
-}
-
-export async function updateWidgetInstanceFieldValues(
-  instanceId: string,
-  fieldValues: Record<string, unknown>
-) {
-  let supabase, user;
-  try {
-    ({ supabase, user } = await getAuthContext());
-  } catch {
-    return { error: "Unauthorized" };
-  }
-  const { error } = await supabase
-    .from("overlay_widget_instances")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .update({ field_values: fieldValues as any, updated_at: new Date().toISOString() })
-    .eq("id", instanceId)
-    .eq("user_id", user.id);
-  if (error) reportError(error, "actions/widgets");
-  return { error: error?.message ?? null };
 }
 
 // --- Library ---

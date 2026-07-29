@@ -54,15 +54,66 @@ export {
 } from "./components/overlay/widgets/irl/use-irl-geo-data";
 export {
   subscribeToWsRoom,
+  subscribeToWsRoomWith,
+  wsStatusFromMessage,
   type WsEventListener,
+  type WsRoomOptions,
+  type WsRoomStatus,
 } from "./components/overlay/lib/ws-store";
+export {
+  ALERT_EVENT_TYPES,
+  ALERT_EVENT_SUBSCRIPTION_TYPES,
+  ALERT_EVENT_LABELS,
+  ALERT_AMOUNT_LABELS,
+  ALERT_LAYOUTS,
+  ALERT_ANIMATIONS_IN,
+  ALERT_ANIMATIONS_OUT,
+  ALERT_TEST_BROWSER_EVENT,
+  DEFAULT_ALERT_VARIANT_TITLES,
+  createDefaultAlertWidgetConfig,
+  createDefaultAlertVariantConfig,
+  normalizeAlertWidgetConfig,
+  alertInstanceFromSocketMessage,
+  renderAlertTemplate,
+  buildTestAlertSocketMessage,
+  type AlertEventType,
+  type AlertMediaKind,
+  type AlertLayout,
+  type AlertAnimationIn,
+  type AlertAnimationOut,
+  type AlertVariantConfig,
+  type AlertWidgetItemConfig,
+  type AlertInstance,
+  type AlertTestBrowserEventDetail,
+} from "./components/overlay/widgets/alert/alert-widget-config";
+export { AlertWidgetRenderer } from "./components/overlay/widgets/alert/AlertWidgetRenderer";
+export type { AlertWidgetRendererProps } from "./components/overlay/widgets/alert/AlertWidgetRenderer";
+export {
+  alertWidgetBaseDefinition,
+  ALERT_WIDGET_DEFAULT_SIZE,
+} from "./components/overlay/widgets/alert/alert-widget-definition";
 export {
   resolveWidgetTemplate,
   buildWidgetSrcdoc,
   mergeFieldValues,
+  ASSET_FIELD_TYPES,
+  isAssetFieldType,
+  GROUP_FIELD_TYPE,
+  isGroupFieldDef,
+  flattenFieldSchema,
   type WidgetFieldDef,
   type WidgetFieldSchema,
 } from "./components/overlay/lib/resolve-widget-template";
+export {
+  WIDGET_SIMULATORS,
+  WIDGET_SIMULATOR_IDS,
+  type SimulatorDef,
+  type SimulatorEmit,
+} from "./components/overlay/lib/widget-simulators";
+export {
+  scanWidgetListeners,
+  type WidgetListenerScan,
+} from "./components/overlay/lib/detect-widget-listeners";
 export {
   OverlaySceneCanvas,
   type OverlayWidgetProps,
@@ -72,4 +123,5 @@ export {
   CustomWidgetIframe,
   type CustomWidgetIframeHandle,
   type CustomWidgetIframeProps,
+  type WidgetLogEntry,
 } from "./components/overlay/CustomWidgetIframe";

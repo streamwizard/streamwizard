@@ -2,6 +2,19 @@ import "./src/lib/env";
 import path from "path";
 import { withSentryConfig } from "@sentry/nextjs";
 
+// A CDN var that isn't a parseable URL (unset in CI, typo'd in an env file)
+// would otherwise throw here and fail the whole config load, taking the build
+// down with an "Invalid URL" that names neither the variable nor the value.
+function remotePatternFor(url: string | undefined) {
+  if (!url) return [];
+  try {
+    return [{ protocol: "https" as const, hostname: new URL(url).hostname }];
+  } catch {
+    console.warn(`[next.config] ignoring unparseable CDN URL: ${url}`);
+    return [];
+  }
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
@@ -57,6 +70,8 @@ const nextConfig = {
     SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT ?? process.env.ALERT_ENV ?? "",
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY ?? process.env.POSTHOG_KEY ?? "",
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com",
+    NEXT_PUBLIC_ASSET_CDN_URL:
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL ?? process.env.ASSET_CDN_URL ?? process.env.NEXT_PUBLIC_CDN_URL ?? "",
   },
   images: {
     remotePatterns: [
@@ -72,14 +87,8 @@ const nextConfig = {
         protocol: "https",
         hostname: "clips-media-assets2.twitch.tv",
       },
-      ...(process.env.NEXT_PUBLIC_CDN_URL
-        ? [
-            {
-              protocol: "https" as const,
-              hostname: new URL(process.env.NEXT_PUBLIC_CDN_URL).hostname,
-            },
-          ]
-        : []),
+      ...remotePatternFor(process.env.NEXT_PUBLIC_CDN_URL),
+      ...remotePatternFor(process.env.NEXT_PUBLIC_ASSET_CDN_URL),
     ],
   },
 };

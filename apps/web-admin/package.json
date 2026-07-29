@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config dev_web_admin -- next dev --port 3003",
+    "dev": "node ../../scripts/prune-turbo-cache.mjs && doppler run --config dev_web_admin -- next dev --port 3003",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -49,7 +49,7 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5"
+    "typescript": "^5.9.2"
   },
   "ignoreScripts": [
     "sharp",

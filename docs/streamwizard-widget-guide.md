@@ -50,6 +50,19 @@ addEventListener('onWidgetLoad', (obj) => {
 });
 ```
 
+### `onFieldsUpdate`
+
+Fires when the streamer changes a setting while the widget keeps running. Re-apply the values here — the same work your `onWidgetLoad` handler does — so edits show up without restarting your widget.
+
+```js
+addEventListener('onFieldsUpdate', (obj) => {
+  const { fieldData } = obj.detail;
+  document.getElementById('title').style.color = fieldData.accentColor;
+});
+```
+
+The current values are also readable at any time from `StreamWizard.fieldData`. If your widget doesn't listen for this event, the editor reloads the whole widget when a setting changes instead, which restarts your script and clears its state.
+
 ### `onEventReceived`
 
 Fires whenever a Twitch EventSub event is received. The `listener` property is the canonical EventSub subscription type string. Use a switch or if-chain to handle the events you care about.
@@ -67,6 +80,23 @@ addEventListener('onEventReceived', (obj) => {
   }
 });
 ```
+
+### Don't build a demo mode
+
+Widgets used to ship their own preview data — a `demoMode` checkbox plus a
+`startDemo()` loop faking events inside the widget's own script. Don't. Demo
+mode in the editor toolbar feeds fake events to any widget from outside it,
+including looping simulators for a moving GPS track and a chat feed, so that
+code is redundant and ships to every viewer for no reason.
+
+Two things follow from this:
+
+- Handle real events properly and demo mode works for free — it delivers the
+  exact payload shape the wire does.
+- Keep listener strings as plain literals (`listener === 'channel.follow'`).
+  The picker reads your source to lead with the events you actually handle;
+  strings assembled at runtime can't be detected, and you fall back to the
+  full list.
 
 ### `onSessionUpdate`
 
@@ -127,6 +157,27 @@ The **Fields** tab accepts a JSON object where each key is a field identifier an
 | `dropdown` | `string` | `options` | Select box |
 | `googleFont` | `string` | — | Google Font family picker |
 | `hidden` | any | — | Not shown in sidebar; just carries a value |
+| `group` | — | `fields` | Collapsible section holding other fields |
+
+#### `group` — collapsible sections
+
+```jsonc
+{
+  "follow": {
+    "type": "group",
+    "label": "Follow",
+    "fields": {
+      "followText":  { "type": "text", "label": "Message", "value": "Thanks {name}!" },
+      "followColor": { "type": "colorpicker", "label": "Colour", "value": "#9e7aff" }
+    }
+  }
+}
+```
+
+Grouping is presentation only — nested keys stay in the flat namespace, so the
+above is `{{followText}}` / `fieldData.followText`, not
+`fieldData.follow.followText`. Keys must therefore stay unique across the whole
+schema. Groups may nest up to five levels deep.
 
 #### `dropdown` options format
 
@@ -567,7 +618,7 @@ addEventListener('onEventReceived', (obj) => {
 1. **No external scripts.** Only GSAP and Tailwind from the bundled CDNs are available. Do not add `<script src>` tags.
 2. **No external images unless hosted.** Use CSS gradients or inline SVG for graphics; or have the user configure an image URL via a `text` field.
 3. **Background is always transparent.** Never set a background on `body` or `html`.
-4. **`fieldData` is read-only.** It only reflects values at load time. React to user-configured changes via `onWidgetLoad`.
+4. **`fieldData` is read-only.** Writing to it changes nothing. Read the initial values in `onWidgetLoad` and re-read them in `onFieldsUpdate` when the streamer edits a setting.
 5. **The widget has no internet access** (sandbox) so `fetch()` and XHR will fail.
 6. **GSAP TextPlugin** must be registered before use:
    ```js
@@ -575,6 +626,7 @@ addEventListener('onEventReceived', (obj) => {
    ```
 7. **Keep JS self-contained.** No `import`/`require`. Write plain ES2020 JavaScript.
 8. **Widget dimensions** come from the overlay editor. Design layouts in percentage or `vw`/`vh` units so they scale correctly, or use absolute positioning from edges.
+9. **No demo mode.** Don't add a `demoMode` field or a fake-data loop — the editor's Demo mode covers it. See [Don't build a demo mode](#dont-build-a-demo-mode).
 
 ---
 

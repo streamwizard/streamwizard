@@ -1,8 +1,9 @@
 export type CspOptions = {
   // Monaco Editor (only the widget editor route loads it) needs 'unsafe-eval'
-  // for its language services, pulls core files + workers from jsdelivr, and
-  // spawns workers via blob: URLs. Those are the weakest directives in the
-  // policy, so we grant them per-route instead of to every page. See src/proxy.ts.
+  // for its language services and spawns same-origin module workers. Monaco is
+  // bundled from npm rather than fetched from a CDN, so no third-party origin is
+  // involved. 'unsafe-eval' is the weakest directive in the policy, so we grant
+  // it per-route instead of to every page. See src/proxy.ts.
   monaco?: boolean;
   // Staging sits behind Cloudflare Access. When the Access session cookie is
   // missing/expired, a same-origin fetch (e.g. the /deck manifest link) gets
@@ -28,39 +29,37 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
   const directives: string[] = [
     "default-src 'self'",
     // Inline scripts must carry the per-request nonce. player.twitch.tv is
-    // needed for the Twitch embedded player script. Monaco's 'unsafe-eval' +
-    // jsdelivr are added only on the editor route (see monaco option).
+    // needed for the Twitch embedded player script. Monaco's 'unsafe-eval' is
+    // added only on the editor route (see monaco option).
     [
       "script-src 'self'",
       `'nonce-${nonce}'`,
       "https://player.twitch.tv",
-      ...(monaco ? ["'unsafe-eval'", "https://cdn.jsdelivr.net"] : []),
+      ...(monaco ? ["'unsafe-eval'"] : []),
     ].join(" "),
     // Next.js inlines critical styles; Google Fonts load external stylesheets.
-    // Monaco (via jsdelivr) loads external stylesheets only on the editor route.
-    [
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      ...(monaco ? ["https://cdn.jsdelivr.net"] : []),
-    ].join(" "),
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     // Google Fonts actual font files
     "font-src 'self' https://fonts.gstatic.com",
     // Twitch CDN images + our own R2 CDN (e.g. error page gifs) + data URIs used by the UI
     [
       "img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv https://clips-media-assets2.twitch.tv",
       process.env.NEXT_PUBLIC_CDN_URL,
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),
-    // R2 CDN for video assets (light mode transition WebM, future overlay assets)
-    ["media-src 'self'", process.env.NEXT_PUBLIC_CDN_URL].filter(Boolean).join(" "),
+    // R2 CDN for video assets (light mode transition WebM) + user-uploaded
+    // media-library assets on their own R2 domain
+    ["media-src 'self'", process.env.NEXT_PUBLIC_CDN_URL, process.env.NEXT_PUBLIC_ASSET_CDN_URL]
+      .filter(Boolean)
+      .join(" "),
     // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them.
-    // Monaco fetches worker scripts and additional resources from jsdelivr CDN.
     [
       "connect-src 'self'",
       supabaseUrl,
       supabaseWs,
       wsServerUrl,
-      ...(monaco ? ["https://cdn.jsdelivr.net"] : []),
       // Cloud OBS nodes (noVNC viewer, obs-websocket controls, and the
       // obs-instance-manager metrics/REST endpoints) are provisioned
       // dynamically, so they're addressed as *.streamwizard.org subdomains
@@ -74,6 +73,10 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       process.env.NEXT_PUBLIC_OVERLAY_URL,
       "https://api.open-meteo.com",
       "https://nominatim.openstreetmap.org",
+      // Media-library uploads PUT directly to presigned R2 URLs; widget JS may
+      // also fetch() assets from the public asset CDN.
+      process.env.R2_ACCOUNT_ID ? `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com` : "",
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),
@@ -94,9 +97,13 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     "frame-ancestors 'none'",
   ];
 
-  // Monaco Editor spawns language workers via blob: URLs — editor route only.
+  // Monaco's language workers (editor, html, css, json, typescript, tailwindcss)
+  // are bundled by Next and served from our own origin. blob: stays allowed
+  // because Monaco falls back to a blob shim when a worker URL is cross-origin,
+  // e.g. once static assets move behind a CDN. Editor route only — no other page
+  // spawns workers.
   if (monaco) {
-    directives.push("worker-src blob:");
+    directives.push("worker-src 'self' blob:");
   }
 
   // Local dev sends this policy as report-only (see src/proxy.ts), so plain

@@ -942,6 +942,13 @@ export type Database = {
             referencedRelation: "ingest_nodes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ingest_node_api_keys_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_servers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ingest_nodes: {
@@ -1522,6 +1529,39 @@ export type Database = {
           warning_source_enabled?: boolean
           warning_source_name?: string | null
           warning_source_uuid?: string | null
+        }
+        Relationships: []
+      }
+      obs_beta_feedback: {
+        Row: {
+          created_at: string
+          overall: Json
+          responses: Json
+          status: string
+          submitted_at: string | null
+          tester_info: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          overall?: Json
+          responses?: Json
+          status?: string
+          submitted_at?: string | null
+          tester_info?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          overall?: Json
+          responses?: Json
+          status?: string
+          submitted_at?: string | null
+          tester_info?: Json
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -2401,6 +2441,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_assets: {
+        Row: {
+          created_at: string
+          file_name: string
+          id: string
+          key: string
+          kind: string
+          mime_type: string
+          size_bytes: number
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          id?: string
+          key: string
+          kind: string
+          mime_type: string
+          size_bytes?: number
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          id?: string
+          key?: string
+          kind?: string
+          mime_type?: string
+          size_bytes?: number
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           created_at: string | null
@@ -2465,6 +2541,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_storage_usage: {
+        Row: {
+          updated_at: string
+          used_bytes: number
+          user_id: string
+        }
+        Insert: {
+          updated_at?: string
+          used_bytes?: number
+          user_id: string
+        }
+        Update: {
+          updated_at?: string
+          used_bytes?: number
+          user_id?: string
+        }
+        Relationships: []
       }
       user_subscriptions: {
         Row: {
@@ -2675,7 +2769,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      ingest_servers: {
+        Row: {
+          host: string | null
+          id: string | null
+          name: string | null
+          srt_port: number | null
+          srtla_port: number | null
+        }
+        Insert: {
+          host?: never
+          id?: string | null
+          name?: string | null
+          srt_port?: never
+          srtla_port?: never
+        }
+        Update: {
+          host?: never
+          id?: string | null
+          name?: string | null
+          srt_port?: never
+          srtla_port?: never
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_clip_to_folder: {

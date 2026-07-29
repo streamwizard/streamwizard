@@ -5,8 +5,10 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot --filter=@repo/discord-bot --filter=@repo/ws-server --filter=@repo/rest-api --filter=@repo/alert-worker --filter=@repo/web-admin --filter=@repo/obs-auto-switcher",
+    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot  --filter=@repo/ws-server   --filter=@repo/web-admin ",
     "dev:admin": "turbo run dev --filter=@repo/web-admin",
+    "dev:docs": "turbo run dev --filter=@repo/docs",
+    "clean": "rm -rf apps/*/.next",
     "doppler:sync": "bash scripts/sync-doppler-shared.sh",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
@@ -35,6 +37,7 @@
     "packages/*"
   ],
   "dependencies": {
+    "ajv": "^8.17.1",
     "server-only": "^0.0.1"
   }
 }

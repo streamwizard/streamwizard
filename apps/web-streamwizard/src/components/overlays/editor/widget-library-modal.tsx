@@ -38,7 +38,9 @@ import {
 import type { Widget } from "@/actions/widgets";
 import { buildWidgetSrcdoc, mergeFieldValues } from "@repo/ui/overlay";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
-import { Plus, Pencil, Trash2, Code2, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Code2, Download, Sparkles } from "lucide-react";
+import { STARTER_WIDGETS, getStarterWidget } from "@/components/overlays/widgets/custom/starter-widgets";
+import { primeWidgetCache } from "@/components/overlays/widgets/custom/widget-cache";
 
 const DEFAULT_WIDGET_HTML = `<!--
   StreamWizard Widget — HTML
@@ -74,11 +76,16 @@ const DEFAULT_WIDGET_JS = `/*
  * StreamWizard Widget — JavaScript
  *
  * Available globals:
- *   gsap        — GSAP animation library
- *   TextPlugin  — GSAP text animation
+ *   gsap               — GSAP animation library
+ *   TextPlugin         — GSAP text animation (gsap.registerPlugin(TextPlugin))
+ *   fieldData          — values from your Fields tab
+ *   StreamWizard.state — persist data between streams (get/set); only works
+ *                        on a live overlay, not in the editor preview
  *
- * Register TextPlugin if you want to animate text content:
- *   gsap.registerPlugin(TextPlugin);
+ * Events arrive as Twitch EventSub payloads. The listener name is the
+ * EventSub type: 'channel.follow', 'channel.subscribe', 'channel.cheer',
+ * 'channel.raid', 'channel.chat.message', and so on. Autocomplete knows
+ * every payload — type e.detail. and let the editor guide you.
  */
 
 // ─── Widget load ────────────────────────────────────────────────────────────
@@ -109,25 +116,21 @@ window.addEventListener('onEventReceived', function(obj) {
   const listener = obj.detail.listener;
   const event = obj.detail.event;
 
-  if (listener === 'follower-latest') {
-    showAlert(event.name, 'just followed!', 'New Follower!');
+  if (listener === 'channel.follow') {
+    showAlert(event.user_name, 'just followed!', 'New Follower!');
   }
 
-  if (listener === 'subscriber-latest') {
-    const months = event.amount > 1 ? \`for \${event.amount} months!\` : 'just subscribed!';
-    showAlert(event.name, months, 'New Subscriber!');
+  if (listener === 'channel.subscribe') {
+    showAlert(event.user_name, event.is_gift ? 'got a gifted sub!' : 'just subscribed!', 'New Subscriber!');
   }
 
-  if (listener === 'cheer-latest') {
-    showAlert(event.name, \`cheered \${event.amount} bits!\`, 'Cheer!');
+  if (listener === 'channel.cheer') {
+    const name = event.is_anonymous ? 'Anonymous' : event.user_name;
+    showAlert(name, \`cheered \${event.bits} bits!\`, 'Cheer!');
   }
 
-  if (listener === 'tip-latest') {
-    showAlert(event.name, \`tipped $\${event.amount}!\`, 'New Tip!');
-  }
-
-  if (listener === 'raid-latest') {
-    showAlert(event.name, \`raided with \${event.amount} viewers!\`, 'Incoming Raid!');
+  if (listener === 'channel.raid') {
+    showAlert(event.from_broadcaster_user_name, \`raided with \${event.viewers} viewers!\`, 'Incoming Raid!');
   }
 });
 
@@ -158,20 +161,7 @@ function showAlert(username, message, label = 'Alert') {
   tl.to('#widget',
     { opacity: 0, scale: 0.9, y: -10, duration: 0.3, ease: 'power2.in' }
   );
-}
-
-
-// ─── Session updates ────────────────────────────────────────────────────────
-// Fires when session stats change (follower count, sub count, goals etc.)
-// Useful for goal bars and stat displays.
-//
-window.addEventListener('onSessionUpdate', function(obj) {
-  const session = obj.detail.session;
-
-  // Example: update a follower count display
-  // const count = session['follower-session']?.count ?? 0;
-  // document.getElementById('follower-count').textContent = count;
-});`;
+}`;
 
 interface LibraryEntry {
   id: string;
@@ -211,6 +201,8 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
     setLoadingMine(true);
     getWidgets().then(({ data }) => {
       setMyWidgets(data ?? []);
+      // Adding one to the canvas should render it without a second fetch.
+      primeWidgetCache(data ?? []);
       setLoadingMine(false);
     });
     setLoadingLibrary(true);
@@ -253,6 +245,31 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
     router.push(`/dashboard/widgets/${id}`);
   }
 
+  function handleUseStarter(starterId: string, addToCanvas: boolean) {
+    const starter = getStarterWidget(starterId);
+    if (!starter) return;
+    setInstallingId(starterId);
+    startTransition(async () => {
+      const { data } = await createWidget({
+        name: starter.name,
+        description: starter.description,
+        html: starter.html,
+        js: starter.js,
+        extra_css: starter.extra_css,
+        fields: starter.fields,
+        tags: starter.tags,
+      });
+      setInstallingId(null);
+      if (!data) return;
+      setMyWidgets((prev) => [data, ...prev]);
+      primeWidgetCache([data]);
+      if (addToCanvas) {
+        onAddToCanvas(data.id);
+        onOpenChange(false);
+      }
+    });
+  }
+
   function handleInstall(entryId: string) {
     setInstallingId(entryId);
     startTransition(async () => {
@@ -260,6 +277,7 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
       setInstallingId(null);
       if (data) {
         setMyWidgets((prev) => [data, ...prev]);
+        primeWidgetCache([data]);
       }
     });
   }
@@ -284,8 +302,45 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
         <Tabs defaultValue="personal" className="flex flex-col flex-1 min-h-0">
           <TabsList className="shrink-0">
             <TabsTrigger value="personal">My Widgets</TabsTrigger>
+            <TabsTrigger value="starters">Starters</TabsTrigger>
             <TabsTrigger value="public">Public Library</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="starters" className="flex-1 overflow-y-auto mt-4 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Ready-made widgets. Use one as-is or open the code and make it yours.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {STARTER_WIDGETS.map((starter) => (
+                <div key={starter.id} className="rounded-lg border bg-card p-4 flex flex-col gap-2">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary shrink-0" />
+                    <h4 className="text-sm font-semibold">{starter.name}</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground flex-1">{starter.description}</p>
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      size="sm"
+                      className="flex-1"
+                      disabled={installingId === starter.id}
+                      onClick={() => handleUseStarter(starter.id, true)}
+                    >
+                      Add to canvas
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={installingId === starter.id}
+                      onClick={() => handleUseStarter(starter.id, false)}
+                      title="Copies it to My Widgets without placing it"
+                    >
+                      Save only
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </TabsContent>
 
           <TabsContent value="personal" className="flex-1 overflow-y-auto mt-4 space-y-4">
             <div className="flex justify-end">

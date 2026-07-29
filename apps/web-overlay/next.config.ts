@@ -53,6 +53,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_PUBLIC_KEY ?? "",
     NEXT_PUBLIC_WS_SERVER_URL: wsServerUrl,
     NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN ?? "",
+    NEXT_PUBLIC_ASSET_CDN_URL:
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL ?? process.env.ASSET_CDN_URL ?? process.env.NEXT_PUBLIC_CDN_URL ?? "",
   },
   transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core"],
   allowedDevOrigins: ["10.10.10.73"],

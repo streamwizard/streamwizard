@@ -5,11 +5,14 @@ import { Database } from "@repo/supabase";
 import {
   ArrowLeft,
   Copy,
+  FlaskConical,
   Info,
   LayoutGrid,
   Pause,
   Play,
+  Redo2,
   Save,
+  Undo2,
   Volume2,
   VolumeX,
   ZoomIn,
@@ -19,7 +22,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays";
+import type { Widget } from "@/actions/widgets";
+import {
+  getCachedWidget,
+  primeWidgetCache,
+} from "@/components/overlays/widgets/custom/widget-cache";
+import { DemoEventPanel } from "@/components/demo/demo-event-panel";
 import { env } from "@/lib/env";
+import { asCustomWidgetConfig } from "@/types/overlays";
 import type {
   OverlayItemConfig,
   OverlaySceneWithItems,
@@ -34,9 +44,15 @@ import { useOverlayStore } from "./use-overlay-store";
 interface OverlayEditorProps {
   initialScene: OverlaySceneWithItems;
   clipFolders: Database["public"]["Tables"]["clip_folders"]["Row"][];
+  /** Widget rows for the scene's custom widgets, fetched with the page. */
+  initialWidgets: Widget[];
 }
 
-export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps) {
+export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: OverlayEditorProps) {
+  // Before first render, so the canvas never has to fetch what the page already
+  // loaded.
+  useState(() => primeWidgetCache(initialWidgets));
+
   const {
     scene,
     isDirty,
@@ -46,16 +62,41 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
     addItem,
     addCustomWidget,
     markClean,
+    history,
+    undo,
+    redo,
+    clearSelection,
+    removeSelectedItems,
+    duplicateSelectedItems,
+    nudgeSelected,
     editorClipPreviewPaused,
     setEditorClipPreviewPaused,
     editorClipPreviewForceMute,
     setEditorClipPreviewForceMute,
     editorClipPreviewAutoplayBlocked,
     attemptEditorClipPreviewUnblock,
+    editorMode,
+    setEditorMode,
+    emitDemoEvent,
+    runningSimulatorIds,
+    setRunningSimulatorIds,
   } = useOverlayStore();
   const [isSaving, setIsSaving] = useState(false);
   const [widgetSheetOpen, setWidgetSheetOpen] = useState(false);
   const [widgetLibraryOpen, setWidgetLibraryOpen] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
+
+  // Every custom widget's source, concatenated, so the demo picker can lead
+  // with the events anything on this canvas actually listens for. The cache is
+  // primed before first render, so this needs no fetch.
+  const canvasWidgetJs = useMemo(
+    () =>
+      (scene?.items ?? [])
+        .filter((item) => item.type === "custom_widget")
+        .map((item) => getCachedWidget(asCustomWidgetConfig(item.config).widget_id)?.js ?? "")
+        .join("\n"),
+    [scene?.items]
+  );
 
   useEffect(() => {
     setScene(initialScene);
@@ -98,14 +139,67 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+      const mod = e.metaKey || e.ctrlKey;
+
+      if (mod && e.key.toLowerCase() === "s") {
         e.preventDefault();
         handleSave();
+        return;
+      }
+
+      // Editing shortcuts stay dead while typing.
+      const t = e.target as HTMLElement | null;
+      if (
+        t &&
+        (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
+      ) {
+        return;
+      }
+
+      if (mod && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        duplicateSelectedItems();
+        return;
+      }
+      if (e.key === "Escape") {
+        // Radix overlays handle their own Escape and preventDefault it.
+        if (!e.defaultPrevented) clearSelection();
+        return;
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        removeSelectedItems();
+        return;
+      }
+      if (e.key.startsWith("Arrow")) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        nudgeSelected(
+          e.key === "ArrowLeft" ? -step : e.key === "ArrowRight" ? step : 0,
+          e.key === "ArrowUp" ? -step : e.key === "ArrowDown" ? step : 0
+        );
       }
     }
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleSave]);
+  }, [
+    handleSave,
+    undo,
+    redo,
+    clearSelection,
+    removeSelectedItems,
+    duplicateSelectedItems,
+    nudgeSelected,
+  ]);
 
   const hasClipsWidget = useMemo(
     () =>
@@ -148,6 +242,30 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Simple keeps the calm layout for new users; Pro shows everything */}
+          <div className="flex items-center border rounded-md p-0.5 text-xs">
+            <button
+              type="button"
+              onClick={() => setEditorMode("simple")}
+              className={`px-2 py-1 rounded transition-colors ${
+                editorMode === "simple" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Fewer panels, the essentials only"
+            >
+              Simple
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditorMode("pro")}
+              className={`px-2 py-1 rounded transition-colors ${
+                editorMode === "pro" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
+              }`}
+              title="Full editor with layers panel"
+            >
+              Pro
+            </button>
+          </div>
+
           <div className="flex items-center gap-1 border rounded-md p-0.5">
             {editorClipPreviewAutoplayBlocked ? (
               <Button
@@ -202,6 +320,21 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
           </div>
 
           <Button
+            variant={demoOpen ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setDemoOpen((v) => !v)}
+            title="Feed fake events to every widget on this canvas"
+          >
+            <FlaskConical className="mr-2 h-3 w-3" />
+            Demo
+            {runningSimulatorIds.length > 0 && (
+              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 text-[10px] leading-4 text-primary">
+                {runningSimulatorIds.length}
+              </span>
+            )}
+          </Button>
+
+          <Button
             variant="outline"
             size="sm"
             onClick={() => setWidgetSheetOpen(true)}
@@ -224,6 +357,29 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
             <Copy className="mr-2 h-3 w-3" />
             Copy URL
           </Button>
+
+          <div className="flex items-center gap-1 border rounded-md p-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => undo()}
+              disabled={history.past.length === 0}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => redo()}
+              disabled={history.future.length === 0}
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 className="h-3 w-3" />
+            </Button>
+          </div>
 
           <div className="flex items-center gap-1 border rounded-md px-1">
             <Button
@@ -274,10 +430,25 @@ export function OverlayEditor({ initialScene, clipFolders }: OverlayEditorProps)
         </div>
       ) : null}
 
+      {/* Kept mounted and hidden with CSS rather than unmounted: collapsing the
+          panel must not stop a running simulator, and the payload editor keeps
+          its scroll position. Live needs no socket of our own -- the server
+          action broadcasts through ws-server -- so wsConnected stays undefined. */}
+      <div className={demoOpen ? undefined : "hidden"}>
+        <DemoEventPanel
+          storageId={scene.id}
+          sourceJs={canvasWidgetJs}
+          onFireLocal={emitDemoEvent}
+          onRunningSimulatorsChange={setRunningSimulatorIds}
+        />
+      </div>
+
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-56 border-r overflow-y-auto shrink-0 bg-background">
-          <EditorLayers />
-        </div>
+        {editorMode === "pro" && (
+          <div className="w-56 border-r overflow-y-auto shrink-0 bg-background">
+            <EditorLayers />
+          </div>
+        )}
 
         <div className="flex-1 overflow-auto bg-muted/30">
           <EditorCanvas />

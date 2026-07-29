@@ -17,6 +17,9 @@ import type {
 import { overlayItemFromDbRow } from "@/types/overlays";
 import type { Database, Json } from "@repo/supabase";
 import { getAuthContext } from "@/lib/auth";
+import { getOverlayTemplate } from "@/components/overlays/templates/definitions";
+import { getStarterWidget } from "@/components/overlays/widgets/custom/starter-widgets";
+import { createClipDisplayFieldChildItems } from "@repo/ui/overlay";
 import {
   getOverlayScenes as _getOverlayScenes,
   getOverlayScene as _getOverlayScene,
@@ -122,6 +125,172 @@ export async function createOverlayScene(formData: {
 
   revalidatePath("/dashboard/overlays");
   return { data, error: null };
+}
+
+export async function createOverlayFromTemplate(formData: {
+  name: string;
+  templateId: string;
+  render_mode?: "obs" | "phone";
+}) {
+  let supabase, user;
+  try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
+
+  const template = getOverlayTemplate(formData.templateId);
+  if (!template) return { data: null, error: "Unknown template" };
+
+  const parsed = createSceneSchema.safeParse({
+    name: formData.name,
+    width: template.width,
+    height: template.height,
+  });
+  if (!parsed.success) return { data: null, error: parsed.error.message };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: scene, error: sceneError } = await (supabase.from("overlay_scenes") as any)
+    .insert({
+      user_id: user.id,
+      name: parsed.data.name,
+      slug: generateSlug(parsed.data.name),
+      width: template.width,
+      height: template.height,
+      render_mode: formData.render_mode ?? template.render_mode,
+    })
+    .select()
+    .single();
+
+  if (sceneError) {
+    reportError(sceneError, "actions/overlays");
+    return { data: null, error: sceneError.message };
+  }
+
+  if (template.items.length > 0) {
+    // Starter-widget items get their own copy of the starter source, owned by
+    // the user (same as installing it from the library's Starters tab).
+    const starterWidgetIds = new Map<number, string>();
+    for (const [idx, item] of template.items.entries()) {
+      if (!item.starterWidgetId) continue;
+      const starter = getStarterWidget(item.starterWidgetId);
+      if (!starter) continue;
+      const { data: widget, error: widgetError } = await supabase
+        .from("widgets")
+        .insert({
+          user_id: user.id,
+          name: starter.name,
+          description: starter.description,
+          html: starter.html,
+          js: starter.js,
+          extra_css: starter.extra_css,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          fields: starter.fields as any,
+          tags: starter.tags,
+        })
+        .select("id")
+        .single();
+      if (widgetError || !widget) {
+        reportError(widgetError, "actions/overlays");
+        await _deleteOverlayScene(supabase, scene.id, user.id);
+        return { data: null, error: widgetError?.message ?? "Failed to create starter widget" };
+      }
+      starterWidgetIds.set(idx, widget.id);
+    }
+
+    const roots = template.items.map((item, idx) => ({
+      scene_id: scene.id as string,
+      type: item.type,
+      x: item.x,
+      y: item.y,
+      w: item.w,
+      h: item.h,
+      z_index: item.z_index,
+      rotation: 0,
+      opacity: 1,
+      is_visible: true,
+      is_locked: false,
+      label: item.label,
+      config: (starterWidgetIds.has(idx)
+        ? { ...(item.config as object), widget_id: starterWidgetIds.get(idx), instance_id: "" }
+        : item.config) as unknown as Json,
+    }));
+
+    const { data: inserted, error: itemsError } = await insertOverlayItemsReturningIds(supabase, roots);
+    if (itemsError || !inserted) {
+      reportError(itemsError, "actions/overlays");
+      // Scene without its items is a broken template instance; clean up.
+      await _deleteOverlayScene(supabase, scene.id, user.id);
+      return { data: null, error: itemsError?.message ?? "Failed to create template items" };
+    }
+
+    // Wire each starter widget item to its own instance row (holds per-item
+    // field values / state), then point the item config at it.
+    for (const [idx, widgetId] of starterWidgetIds) {
+      const itemId = inserted[idx]!.id;
+      const { data: instance, error: instanceError } = await supabase
+        .from("overlay_widget_instances")
+        .insert({ overlay_item_id: itemId, widget_id: widgetId, user_id: user.id })
+        .select("id")
+        .single();
+      if (instanceError || !instance) {
+        reportError(instanceError, "actions/overlays");
+        await _deleteOverlayScene(supabase, scene.id, user.id);
+        return { data: null, error: instanceError?.message ?? "Failed to create widget instance" };
+      }
+      const { error: cfgError } = await updateOverlayItemData(supabase, itemId, {
+        config: {
+          ...(template.items[idx]!.config as object),
+          widget_id: widgetId,
+          instance_id: instance.id,
+        } as unknown as Json,
+      });
+      if (cfgError) {
+        reportError(cfgError, "actions/overlays");
+        await _deleteOverlayScene(supabase, scene.id, user.id);
+        return { data: null, error: cfgError.message };
+      }
+    }
+
+    // Clips widgets carry per-field child rows (title/creator/game/...) that
+    // every clips widget is expected to have; generate them like the editor does.
+    const childRows: Database["public"]["Tables"]["overlay_items"]["Insert"][] = [];
+    template.items.forEach((item, idx) => {
+      if (item.type !== "clips_widget") return;
+      const parentId = inserted[idx]!.id;
+      const children = createClipDisplayFieldChildItems(
+        scene.id,
+        parentId,
+        { x: item.x, y: item.y, w: item.w, h: item.h, z_index: item.z_index },
+        () => crypto.randomUUID()
+      );
+      for (const child of children) {
+        childRows.push({
+          scene_id: scene.id,
+          type: child.type,
+          x: child.x,
+          y: child.y,
+          w: child.w,
+          h: child.h,
+          z_index: child.z_index,
+          rotation: child.rotation,
+          opacity: child.opacity,
+          is_visible: child.is_visible,
+          is_locked: child.is_locked,
+          label: child.label,
+          config: child.config as unknown as Json,
+        });
+      }
+    });
+
+    if (childRows.length > 0) {
+      const { error: childError } = await insertOverlayItems(supabase, childRows);
+      if (childError) {
+        reportError(childError, "actions/overlays");
+        await _deleteOverlayScene(supabase, scene.id, user.id);
+        return { data: null, error: childError.message };
+      }
+    }
+  }
+
+  revalidatePath("/dashboard/overlays");
+  return { data: scene, error: null };
 }
 
 export async function updateOverlayScene(formData: {

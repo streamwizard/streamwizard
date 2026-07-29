@@ -1,23 +1,62 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import type { RootOverlayItemType } from "@/types/overlays";
+import type { OverlayItem, RootOverlayItemType } from "@/types/overlays";
 import { asClipDisplayFieldConfig } from "@/types/overlays";
 import {
   getRootOverlayWidgetDefinition,
   isRootLayerType,
 } from "../registry/overlay-widget-registry";
 import type { EditorClipPlaybackControls } from "../registry/overlay-widget-registry.types";
-import { useOverlayStore } from "./use-overlay-store";
+import { LayerContextMenu } from "./layer-context-menu";
+import { computeSnap, type Guide } from "./snapping";
+import { selectPrimarySelectedId, useOverlayStore } from "./use-overlay-store";
+
+/** Screen-px snap radius; converted to scene px by dividing by zoom. */
+const SNAP_THRESHOLD_PX = 8;
+/** Screen-px movement before a background drag becomes a marquee (below = click-to-deselect). */
+const MARQUEE_THRESHOLD_PX = 4;
+
+interface DragItemStart {
+  id: string;
+  startX: number;
+  startY: number;
+  startW: number;
+  startH: number;
+}
+
+interface DragState {
+  mode: "move" | "resize";
+  /** The item the pointer went down on — snapping references its rect. */
+  grabbedId: string;
+  pointerStartX: number;
+  pointerStartY: number;
+  items: DragItemStart[];
+  handle?: string;
+}
+
+interface MarqueeState {
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+  active: boolean;
+  additive: boolean;
+}
 
 export function EditorCanvas() {
   const {
     scene,
-    selectedItemId,
+    selectedItemIds,
     zoom,
     selectItem,
+    toggleSelectItem,
+    setSelectedItems,
+    clearSelection,
     selectClipDisplayFieldForEdit,
     updateItem,
+    pushHistory,
+    setRenameRequestId,
     editorClipPreviewPaused,
     setEditorClipPreviewPaused,
     editorClipPreviewForceMute,
@@ -27,6 +66,8 @@ export function EditorCanvas() {
     editorClipPreviewResumeTick,
     bumpEditorClipPreviewResume,
   } = useOverlayStore();
+
+  const primarySelectedId = selectPrimarySelectedId({ selectedItemIds });
 
   const editorClipPlayback = useMemo<EditorClipPlaybackControls>(
     () => ({
@@ -52,82 +93,203 @@ export function EditorCanvas() {
   );
 
   const canvasRef = useRef<HTMLDivElement>(null);
-  const [dragState, setDragState] = useState<{
-    itemId: string;
-    mode: "move" | "resize";
-    startX: number;
-    startY: number;
-    startItemX: number;
-    startItemY: number;
-    startItemW: number;
-    startItemH: number;
-    handle?: string;
-  } | null>(null);
+  const [dragState, setDragState] = useState<DragState | null>(null);
+  const [marquee, setMarquee] = useState<MarqueeState | null>(null);
+  const [guides, setGuides] = useState<Guide[]>([]);
+  /** Pre-gesture items snapshot — pushed as one history entry on mouseup if geometry changed. */
+  const gestureSnapshotRef = useRef<OverlayItem[] | null>(null);
+  const movedRef = useRef(false);
 
-  const handleMouseDown = useCallback(
+  const toScenePoint = useCallback(
+    (e: { clientX: number; clientY: number }) => {
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return { x: 0, y: 0 };
+      return {
+        x: (e.clientX - rect.left) / zoom,
+        y: (e.clientY - rect.top) / zoom,
+      };
+    },
+    [zoom]
+  );
+
+  const handleItemMouseDown = useCallback(
     (
       e: React.MouseEvent,
       itemId: string,
       mode: "move" | "resize",
       handle?: string
     ) => {
+      if (e.button !== 0) return; // right-click opens the context menu, never a drag
       e.stopPropagation();
       e.preventDefault();
 
-      const item = scene?.items.find((i) => i.id === itemId);
-      if (!item || item.is_locked) return;
+      if (!scene) return;
+      const item = scene.items.find((i) => i.id === itemId);
+      if (!item) return;
 
-      selectItem(itemId);
+      if (e.shiftKey && mode === "move" && isRootLayerType(item.type)) {
+        toggleSelectItem(itemId);
+        return;
+      }
 
+      // Locked items are selectable but never draggable.
+      if (item.is_locked) {
+        if (!selectedItemIds.includes(itemId)) selectItem(itemId);
+        return;
+      }
+
+      const inSelection = selectedItemIds.includes(itemId);
+      if (!inSelection) selectItem(itemId);
+
+      // Group move when grabbing a member of a multi-selection; resize is always single-item.
+      const groupIds =
+        mode === "move" && inSelection && selectedItemIds.length > 1
+          ? selectedItemIds
+          : [itemId];
+      const items: DragItemStart[] = groupIds
+        .map((id) => scene.items.find((i) => i.id === id))
+        .filter(
+          (i): i is OverlayItem =>
+            !!i && !i.is_locked && (i.id === itemId || isRootLayerType(i.type))
+        )
+        .map((i) => ({
+          id: i.id,
+          startX: i.x,
+          startY: i.y,
+          startW: i.w,
+          startH: i.h,
+        }));
+      if (items.length === 0) return;
+
+      gestureSnapshotRef.current = scene.items;
+      movedRef.current = false;
       setDragState({
-        itemId,
         mode,
-        startX: e.clientX,
-        startY: e.clientY,
-        startItemX: item.x,
-        startItemY: item.y,
-        startItemW: item.w,
-        startItemH: item.h,
+        grabbedId: itemId,
+        pointerStartX: e.clientX,
+        pointerStartY: e.clientY,
+        items,
         handle,
       });
     },
-    [scene, selectItem]
+    [scene, selectedItemIds, selectItem, toggleSelectItem]
+  );
+
+  const handleBackgroundMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (e.button !== 0) return;
+      const point = toScenePoint(e);
+      setMarquee({
+        startX: point.x,
+        startY: point.y,
+        currentX: point.x,
+        currentY: point.y,
+        active: false,
+        additive: e.shiftKey,
+      });
+    },
+    [toScenePoint]
   );
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      if (!dragState || !scene) return;
+      if (!scene) return;
 
-      const dx = (e.clientX - dragState.startX) / zoom;
-      const dy = (e.clientY - dragState.startY) / zoom;
+      if (marquee) {
+        const point = toScenePoint(e);
+        const movedPx =
+          Math.max(
+            Math.abs(point.x - marquee.startX),
+            Math.abs(point.y - marquee.startY)
+          ) * zoom;
+        setMarquee({
+          ...marquee,
+          currentX: point.x,
+          currentY: point.y,
+          active: marquee.active || movedPx > MARQUEE_THRESHOLD_PX,
+        });
+        return;
+      }
+
+      if (!dragState) return;
+
+      const dx = (e.clientX - dragState.pointerStartX) / zoom;
+      const dy = (e.clientY - dragState.pointerStartY) / zoom;
+      if (dx !== 0 || dy !== 0) movedRef.current = true;
 
       if (dragState.mode === "move") {
-        const newX = Math.max(0, Math.min(scene.width, dragState.startItemX + dx));
-        const newY = Math.max(0, Math.min(scene.height, dragState.startItemY + dy));
-        updateItem(dragState.itemId, {
-          x: Math.round(newX),
-          y: Math.round(newY),
-        });
+        // Clamp the delta at gesture level so a group keeps its relative layout.
+        let minDx = -Infinity;
+        let maxDx = Infinity;
+        let minDy = -Infinity;
+        let maxDy = Infinity;
+        for (const it of dragState.items) {
+          minDx = Math.max(minDx, -it.startX);
+          maxDx = Math.min(maxDx, scene.width - it.startX - it.startW);
+          minDy = Math.max(minDy, -it.startY);
+          maxDy = Math.min(maxDy, scene.height - it.startY - it.startH);
+        }
+        let cdx = Math.min(Math.max(dx, minDx), maxDx);
+        let cdy = Math.min(Math.max(dy, minDy), maxDy);
+
+        // Snap using the grabbed item's rect; Alt disables.
+        const grabbed = dragState.items.find((i) => i.id === dragState.grabbedId);
+        if (grabbed && !e.altKey) {
+          const draggedIds = new Set(dragState.items.map((i) => i.id));
+          const targets = scene.items.filter(
+            (i) =>
+              isRootLayerType(i.type) &&
+              i.is_visible &&
+              !draggedIds.has(i.id)
+          );
+          const snapped = computeSnap(
+            {
+              x: grabbed.startX + cdx,
+              y: grabbed.startY + cdy,
+              w: grabbed.startW,
+              h: grabbed.startH,
+            },
+            targets,
+            scene,
+            SNAP_THRESHOLD_PX / zoom
+          );
+          const snapDx = snapped.x - (grabbed.startX + cdx);
+          const snapDy = snapped.y - (grabbed.startY + cdy);
+          // Only accept a snap that keeps the whole group in bounds.
+          if (cdx + snapDx >= minDx && cdx + snapDx <= maxDx) cdx += snapDx;
+          if (cdy + snapDy >= minDy && cdy + snapDy <= maxDy) cdy += snapDy;
+          setGuides(snapped.guides);
+        } else {
+          setGuides([]);
+        }
+
+        for (const it of dragState.items) {
+          updateItem(it.id, {
+            x: Math.round(it.startX + cdx),
+            y: Math.round(it.startY + cdy),
+          });
+        }
       } else if (dragState.mode === "resize") {
-        let newW = dragState.startItemW;
-        let newH = dragState.startItemH;
-        let newX = dragState.startItemX;
-        let newY = dragState.startItemY;
+        const it = dragState.items[0]!;
+        let newW = it.startW;
+        let newH = it.startH;
+        let newX = it.startX;
+        let newY = it.startY;
 
         const handle = dragState.handle ?? "se";
 
-        if (handle.includes("e")) newW = Math.max(50, dragState.startItemW + dx);
-        if (handle.includes("s")) newH = Math.max(50, dragState.startItemH + dy);
+        if (handle.includes("e")) newW = Math.max(50, it.startW + dx);
+        if (handle.includes("s")) newH = Math.max(50, it.startH + dy);
         if (handle.includes("w")) {
-          newW = Math.max(50, dragState.startItemW - dx);
-          newX = dragState.startItemX + (dragState.startItemW - newW);
+          newW = Math.max(50, it.startW - dx);
+          newX = it.startX + (it.startW - newW);
         }
         if (handle.includes("n")) {
-          newH = Math.max(50, dragState.startItemH - dy);
-          newY = dragState.startItemY + (dragState.startItemH - newH);
+          newH = Math.max(50, it.startH - dy);
+          newY = it.startY + (it.startH - newH);
         }
 
-        updateItem(dragState.itemId, {
+        updateItem(it.id, {
           x: Math.round(newX),
           y: Math.round(newY),
           w: Math.round(newW),
@@ -135,12 +297,62 @@ export function EditorCanvas() {
         });
       }
     },
-    [dragState, scene, zoom, updateItem]
+    [dragState, marquee, scene, zoom, updateItem, toScenePoint]
   );
 
   const handleMouseUp = useCallback(() => {
-    setDragState(null);
-  }, []);
+    if (marquee && scene) {
+      if (marquee.active) {
+        const x1 = Math.min(marquee.startX, marquee.currentX);
+        const y1 = Math.min(marquee.startY, marquee.currentY);
+        const x2 = Math.max(marquee.startX, marquee.currentX);
+        const y2 = Math.max(marquee.startY, marquee.currentY);
+        const hit = scene.items
+          .filter(
+            (i) =>
+              isRootLayerType(i.type) &&
+              i.is_visible &&
+              !i.is_locked &&
+              i.x < x2 &&
+              i.x + i.w > x1 &&
+              i.y < y2 &&
+              i.y + i.h > y1
+          )
+          .map((i) => i.id);
+        setSelectedItems(
+          marquee.additive
+            ? Array.from(new Set([...selectedItemIds, ...hit]))
+            : hit
+        );
+      } else if (!marquee.additive) {
+        clearSelection();
+      }
+      setMarquee(null);
+      return;
+    }
+
+    if (dragState) {
+      if (movedRef.current && gestureSnapshotRef.current) {
+        pushHistory(gestureSnapshotRef.current); // one undo entry per drag/resize gesture
+      } else if (!movedRef.current && selectedItemIds.length > 1) {
+        // Plain click (no drag) on a multi-selected item collapses to that item.
+        selectItem(dragState.grabbedId);
+      }
+      gestureSnapshotRef.current = null;
+      movedRef.current = false;
+      setDragState(null);
+      setGuides([]);
+    }
+  }, [
+    marquee,
+    dragState,
+    scene,
+    selectedItemIds,
+    setSelectedItems,
+    selectItem,
+    clearSelection,
+    pushHistory,
+  ]);
 
   if (!scene) return null;
 
@@ -150,7 +362,7 @@ export function EditorCanvas() {
     )
     .sort((a, b) => a.z_index - b.z_index);
 
-  const selected = scene.items.find((i) => i.id === selectedItemId);
+  const selected = scene.items.find((i) => i.id === primarySelectedId);
 
   const resizeHandles = ["nw", "ne", "sw", "se", "n", "s", "e", "w"];
   const handleCursors: Record<string, string> = {
@@ -181,13 +393,23 @@ export function EditorCanvas() {
     return positions[handle] ?? { transform: "none" };
   }
 
+  const marqueeRect =
+    marquee?.active
+      ? {
+          x: Math.min(marquee.startX, marquee.currentX),
+          y: Math.min(marquee.startY, marquee.currentY),
+          w: Math.abs(marquee.currentX - marquee.startX),
+          h: Math.abs(marquee.currentY - marquee.startY),
+        }
+      : null;
+
   return (
     <div
       className="flex items-center justify-center p-8 min-h-full"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      onClick={() => selectItem(null)}
+      onMouseDown={handleBackgroundMouseDown}
     >
       <div
         ref={canvasRef}
@@ -221,94 +443,145 @@ export function EditorCanvas() {
           const childOfThis =
             selected?.type === "clip_display_field" &&
             asClipDisplayFieldConfig(selected.config).parentClipItemId === item.id;
-          const isSelected = selectedItemId === item.id || !!childOfThis;
+          const isSelected = selectedItemIds.includes(item.id) || !!childOfThis;
+          const showHandles =
+            isSelected &&
+            !item.is_locked &&
+            (selectedItemIds.length <= 1 || !!childOfThis);
 
           return (
-            <div
+            <LayerContextMenu
               key={item.id}
-              className="absolute group"
-              style={{
-                left: item.x * zoom,
-                top: item.y * zoom,
-                width: item.w * zoom,
-                height: item.h * zoom,
-                zIndex: item.z_index,
-                opacity: item.opacity,
-                transform: item.rotation !== 0 ? `rotate(${item.rotation}deg)` : undefined,
-                cursor: item.is_locked ? "not-allowed" : "move",
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
+              item={item}
+              onRename={() => {
                 selectItem(item.id);
+                setRenameRequestId(item.id);
               }}
-              onMouseDown={(e) => handleMouseDown(e, item.id, "move")}
             >
               <div
-                className={`
-                  w-full h-full rounded border-2 transition-colors overflow-hidden
-                  ${isSelected ? "border-primary" : "border-white/20 hover:border-white/40"}
-                `}
+                className="absolute group"
+                style={{
+                  left: item.x * zoom,
+                  top: item.y * zoom,
+                  width: item.w * zoom,
+                  height: item.h * zoom,
+                  zIndex: item.z_index,
+                  opacity: item.opacity,
+                  transform: item.rotation !== 0 ? `rotate(${item.rotation}deg)` : undefined,
+                  cursor: item.is_locked ? "not-allowed" : "move",
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                onContextMenu={() => {
+                  if (!selectedItemIds.includes(item.id)) selectItem(item.id);
+                }}
+                onMouseDown={(e) => handleItemMouseDown(e, item.id, "move")}
               >
-                {Canvas ? (
-                  <Canvas
-                    item={item}
-                    scene={scene}
-                    zoom={zoom}
-                    selectedItemId={selectedItemId}
-                    selected={selected}
-                    selectItem={selectItem}
-                    selectClipDisplayFieldForEdit={selectClipDisplayFieldForEdit}
-                    updateItem={updateItem}
-                    editorClipPlayback={editorClipPlayback}
-                  />
-                ) : (
-                  <div
-                    className="w-full h-full flex flex-col items-center justify-center"
-                    style={{
-                      background: "rgba(99, 102, 241, 0.15)",
-                      backdropFilter: "blur(4px)",
-                    }}
-                  >
+                <div
+                  className={`
+                    w-full h-full rounded border-2 transition-colors overflow-hidden
+                    ${isSelected ? "border-primary" : "border-white/20 hover:border-white/40"}
+                  `}
+                >
+                  {Canvas ? (
+                    <Canvas
+                      item={item}
+                      scene={scene}
+                      zoom={zoom}
+                      selectedItemId={primarySelectedId}
+                      selected={selected}
+                      selectItem={selectItem}
+                      selectClipDisplayFieldForEdit={selectClipDisplayFieldForEdit}
+                      updateItem={updateItem}
+                      editorClipPlayback={editorClipPlayback}
+                    />
+                  ) : (
                     <div
-                      className="text-white/80 text-center px-2"
-                      style={{ fontSize: Math.max(10, 14 * zoom) }}
+                      className="w-full h-full flex flex-col items-center justify-center"
+                      style={{
+                        background: "rgba(99, 102, 241, 0.15)",
+                        backdropFilter: "blur(4px)",
+                      }}
                     >
-                      <div className="font-medium truncate">{item.label}</div>
                       <div
-                        className="text-white/50 mt-0.5"
-                        style={{ fontSize: Math.max(8, 10 * zoom) }}
+                        className="text-white/80 text-center px-2"
+                        style={{ fontSize: Math.max(10, 14 * zoom) }}
                       >
-                        {item.type}
+                        <div className="font-medium truncate">{item.label}</div>
+                        <div
+                          className="text-white/50 mt-0.5"
+                          style={{ fontSize: Math.max(8, 10 * zoom) }}
+                        >
+                          {item.type}
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
+                </div>
+
+                {showHandles && (
+                  <>
+                    {resizeHandles.map((handle) => {
+                      const pos = getHandlePosition(handle);
+                      return (
+                        <div
+                          key={handle}
+                          className="absolute w-2 h-2 bg-primary border border-primary-foreground rounded-sm"
+                          style={{
+                            ...pos,
+                            cursor: handleCursors[handle],
+                            zIndex: 10,
+                          }}
+                          onMouseDown={(e) =>
+                            handleItemMouseDown(e, item.id, "resize", handle)
+                          }
+                        />
+                      );
+                    })}
+                  </>
                 )}
               </div>
-
-              {isSelected && !item.is_locked && (
-                <>
-                  {resizeHandles.map((handle) => {
-                    const pos = getHandlePosition(handle);
-                    return (
-                      <div
-                        key={handle}
-                        className="absolute w-2 h-2 bg-primary border border-primary-foreground rounded-sm"
-                        style={{
-                          ...pos,
-                          cursor: handleCursors[handle],
-                          zIndex: 10,
-                        }}
-                        onMouseDown={(e) =>
-                          handleMouseDown(e, item.id, "resize", handle)
-                        }
-                      />
-                    );
-                  })}
-                </>
-              )}
-            </div>
+            </LayerContextMenu>
           );
         })}
+
+        {guides.map((guide, idx) => (
+          <div
+            key={`${guide.orientation}-${guide.position}-${idx}`}
+            className="absolute bg-primary/70 pointer-events-none"
+            style={
+              guide.orientation === "v"
+                ? {
+                    left: guide.position * zoom,
+                    top: 0,
+                    width: 1,
+                    height: "100%",
+                    zIndex: 9999,
+                  }
+                : {
+                    top: guide.position * zoom,
+                    left: 0,
+                    height: 1,
+                    width: "100%",
+                    zIndex: 9999,
+                  }
+            }
+          />
+        ))}
+
+        {marqueeRect && (
+          <div
+            className="absolute border border-primary bg-primary/10 pointer-events-none"
+            style={{
+              left: marqueeRect.x * zoom,
+              top: marqueeRect.y * zoom,
+              width: marqueeRect.w * zoom,
+              height: marqueeRect.h * zoom,
+              zIndex: 9999,
+            }}
+          />
+        )}
       </div>
     </div>
   );

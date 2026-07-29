@@ -1,3 +1,5 @@
+import type { AlertWidgetItemConfig } from "./widgets/alert/alert-widget-config";
+
 export type GoogleFontFamily = string;
 export const DEFAULT_GOOGLE_FONT_FAMILY: GoogleFontFamily = "Inter";
 
@@ -23,6 +25,7 @@ export const OVERLAY_ITEM_TYPES = [
   "timer_widget",
   "clock_widget",
   "custom_widget",
+  "alert_widget",
   ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 export type OverlayItemType = (typeof OVERLAY_ITEM_TYPES)[number];
@@ -34,6 +37,7 @@ export const ROOT_OVERLAY_ITEM_TYPES = [
   "timer_widget",
   "clock_widget",
   "custom_widget",
+  "alert_widget",
   ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 export type RootOverlayItemType = (typeof ROOT_OVERLAY_ITEM_TYPES)[number];
@@ -192,20 +196,27 @@ export interface GeoPayload {
   timestamp: number;
 }
 
-/** @deprecated Use OverlaySocketMessage from @repo/types instead. */
-export type IrlSocketMessage =
-  | { type: "streamwizard.geo"; payload: GeoPayload }
-  | { type: "streamwizard.status"; payload: { status: "offline" } };
-
 /** Config for a custom user-authored widget placed on an overlay scene. */
 export interface CustomWidgetItemConfig {
   widget_id: string;
+  /**
+   * Row in overlay_widget_instances backing this item. Only carries
+   * `widget_state` now -- field values live in `field_values` below so they
+   * save with the item and can be previewed without a round trip.
+   */
   instance_id: string;
+  /**
+   * Author-visible settings. Optional because items placed before field values
+   * moved out of the instance row don't have it; readers fall back to the
+   * instance's `field_values` until the item is saved again.
+   */
+  field_values?: Record<string, unknown>;
 }
 
 export const DEFAULT_CUSTOM_WIDGET_ITEM_CONFIG: CustomWidgetItemConfig = {
   widget_id: "",
   instance_id: "",
+  field_values: {},
 };
 
 export type OverlayItemConfig =
@@ -215,7 +226,8 @@ export type OverlayItemConfig =
   | TimerWidgetItemConfig
   | ClockWidgetItemConfig
   | IrlFieldWidgetItemConfig
-  | CustomWidgetItemConfig;
+  | CustomWidgetItemConfig
+  | AlertWidgetItemConfig;
 
 /**
  * Flattened shape used by the clip preview, API, and query builder: parent row + display field children merged.

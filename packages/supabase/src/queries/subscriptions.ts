@@ -15,6 +15,30 @@ export interface CloudObsPlanLimits {
   config_template?: string;
 }
 
+/**
+ * Highest asset-storage quota (media library, R2) granted by any of the user's
+ * active subscriptions, from plans.limits->storage->asset_quota_mb. Null when
+ * no active plan grants one; callers fall back to the free default.
+ */
+export async function getUserAssetQuotaMb(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+): Promise<number | null> {
+  const { data } = await supabase
+    .from("user_subscriptions")
+    .select("plans(limits)")
+    .eq("user_id", userId)
+    .in("status", ["active", "trialing", "past_due"]);
+  let max: number | null = null;
+  for (const row of data ?? []) {
+    const plan = Array.isArray(row.plans) ? row.plans[0] : row.plans;
+    const limits = plan?.limits as { storage?: { asset_quota_mb?: number } } | null;
+    const quota = limits?.storage?.asset_quota_mb;
+    if (typeof quota === "number" && (max === null || quota > max)) max = quota;
+  }
+  return max;
+}
+
 export type ProductAccess = {
   canAccess: boolean;
   canInteract: boolean;

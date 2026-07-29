@@ -175,6 +175,59 @@ export const irlFieldWidgetConfigSchema = overlayTextStyleSchema.extend({
 export const customWidgetItemConfigSchema = z.object({
   widget_id: z.string().default(""),
   instance_id: z.string().default(""),
+  // Author-defined settings, so the shape is only known to the widget itself.
+  // Values are rendered as text or fed to the widget's own script -- never
+  // executed here -- and the schema that produced them lives on the widget row.
+  field_values: z.record(z.string(), z.unknown()).default({}),
+});
+
+const alertMediaKindSchema = z.enum(["", "image", "video"]).default("");
+
+const alertVariantConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  mediaUrl: z.string().max(2000).default(""),
+  mediaKind: alertMediaKindSchema,
+  soundUrl: z.string().max(2000).default(""),
+  volume: z.number().min(0).max(1).default(0.8),
+  titleTemplate: z.string().max(200).default(""),
+  messageTemplate: z.string().max(200).default(""),
+  durationSeconds: z.number().min(0).max(60).default(6),
+  minAmount: z.number().int().min(0).max(1_000_000).default(0),
+  layout: z.enum(["stacked", "row", "overlay"]).default("stacked"),
+  animationIn: z
+    .enum(["fade", "slide_up", "slide_down", "zoom", "bounce"])
+    .default("zoom"),
+  animationOut: z.enum(["fade", "slide_down", "zoom"]).default("fade"),
+  fontFamily: z.preprocess(
+    (val) =>
+      typeof val === "string" && isValidGoogleFontFamilyName(val)
+        ? val.trim()
+        : DEFAULT_GOOGLE_FONT_FAMILY,
+    googleFontFamilySchema
+  ),
+  fontSize: z.number().min(8).max(200).default(32),
+  fontWeight: z
+    .union([z.literal(400), z.literal(500), z.literal(600), z.literal(700)])
+    .default(700),
+  align: z.enum(["left", "center", "right"]).default("center"),
+  titleColor: hexColorSchema.default("#ffffff"),
+  messageColor: hexColorSchema.default("#d4d4d8"),
+  accentColor: hexColorSchema.default("#9e7aff"),
+  textShadow: z.boolean().default(true),
+});
+
+/** Persisted JSON on `alert_widget` rows. */
+export const alertWidgetItemConfigSchema = z.object({
+  gapSeconds: z.number().min(0).max(30).default(1),
+  masterVolume: z.number().min(0).max(1).default(0.8),
+  variants: z.object({
+    follow: alertVariantConfigSchema,
+    sub: alertVariantConfigSchema,
+    resub: alertVariantConfigSchema,
+    gift_sub: alertVariantConfigSchema,
+    cheer: alertVariantConfigSchema,
+    raid: alertVariantConfigSchema,
+  }),
 });
 
 export const overlayItemConfigSchema = z.union([
@@ -185,6 +238,7 @@ export const overlayItemConfigSchema = z.union([
   clockWidgetItemConfigSchema,
   irlFieldWidgetConfigSchema,
   customWidgetItemConfigSchema,
+  alertWidgetItemConfigSchema,
 ]);
 
 export const overlayItemSchema = z.discriminatedUnion("type", [
@@ -275,6 +329,7 @@ export const overlayItemSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("irl_longitude_widget"), x: z.number().min(0), y: z.number().min(0), w: z.number().min(50), h: z.number().min(50), z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: irlFieldWidgetConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("irl_accuracy_widget"), x: z.number().min(0), y: z.number().min(0), w: z.number().min(50), h: z.number().min(50), z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: irlFieldWidgetConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("custom_widget"), x: z.number().min(0), y: z.number().min(0), w: z.number().min(50), h: z.number().min(50), z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: customWidgetItemConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("alert_widget"), x: z.number().min(0), y: z.number().min(0), w: z.number().min(50), h: z.number().min(50), z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: alertWidgetItemConfigSchema }),
 ]);
 
 export const createSceneSchema = z.object({

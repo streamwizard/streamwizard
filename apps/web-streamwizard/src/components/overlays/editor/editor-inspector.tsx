@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@repo/ui";
 import { Input } from "@repo/ui";
 import { Label } from "@repo/ui";
@@ -19,23 +19,37 @@ import {
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
+  Copy,
   LayoutTemplate,
   Maximize2,
   StretchHorizontal,
   StretchVertical,
+  Trash2,
 } from "lucide-react";
 import type { OverlayItem } from "@/types/overlays";
 import { asClipDisplayFieldConfig } from "@/types/overlays";
 import { getOverlayWidgetDefinition } from "../registry/overlay-widget-registry";
-import { useOverlayStore } from "./use-overlay-store";
+import { InspectorSection } from "./inspector-section";
+import { selectPrimarySelectedId, useOverlayStore } from "./use-overlay-store";
 
 interface EditorInspectorProps {
   clipFolders: Database["public"]["Tables"]["clip_folders"]["Row"][];
 }
 
 export function EditorInspector({ clipFolders }: EditorInspectorProps) {
-  const { scene, selectedItemId, updateItem } = useOverlayStore();
+  const {
+    scene,
+    selectedItemIds,
+    updateItem,
+    editorMode,
+    pushHistory,
+    renameRequestId,
+    setRenameRequestId,
+    duplicateSelectedItems,
+    removeSelectedItems,
+  } = useOverlayStore();
 
+  const selectedItemId = selectPrimarySelectedId({ selectedItemIds });
   const selectedItem = scene?.items.find((i) => i.id === selectedItemId);
   const def = selectedItem
     ? getOverlayWidgetDefinition(selectedItem.type)
@@ -45,10 +59,58 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
   const sceneH = scene?.height ?? 1080;
 
   const [sceneLayoutOpen, setSceneLayoutOpen] = useState(false);
+  const labelInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setSceneLayoutOpen(false);
   }, [selectedItemId]);
+
+  // Canvas context-menu "Rename" focuses the Label input.
+  useEffect(() => {
+    if (renameRequestId && renameRequestId === selectedItemId) {
+      labelInputRef.current?.focus();
+      labelInputRef.current?.select();
+      setRenameRequestId(null);
+    }
+  }, [renameRequestId, selectedItemId, setRenameRequestId]);
+
+  if (selectedItemIds.length > 1) {
+    return (
+      <div className="p-4 space-y-4">
+        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          Selection
+        </h3>
+        <p className="text-sm text-foreground">
+          {selectedItemIds.length} items selected
+        </p>
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => duplicateSelectedItems()}
+          >
+            <Copy className="mr-2 h-3.5 w-3.5" />
+            Duplicate all
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => removeSelectedItems()}
+          >
+            <Trash2 className="mr-2 h-3.5 w-3.5" />
+            Delete all
+          </Button>
+        </div>
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          Drag on the canvas to move all selected items together. Select a
+          single item to edit its properties.
+        </p>
+      </div>
+    );
+  }
 
   if (!selectedItem) {
     return (
@@ -153,7 +215,9 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
           <div className="space-y-1.5">
             <Label className="text-xs">Label</Label>
             <Input
+              ref={labelInputRef}
               value={item.label}
+              onFocus={() => pushHistory()}
               onChange={(e) => handleUpdate({ label: e.target.value })}
               className="h-8 text-sm"
             />
@@ -165,6 +229,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
               <Input
                 type="number"
                 value={Math.round(item.x)}
+                onFocus={() => pushHistory()}
                 onChange={(e) => handleUpdate({ x: Number(e.target.value) })}
                 className="h-8 text-sm"
               />
@@ -174,6 +239,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
               <Input
                 type="number"
                 value={Math.round(item.y)}
+                onFocus={() => pushHistory()}
                 onChange={(e) => handleUpdate({ y: Number(e.target.value) })}
                 className="h-8 text-sm"
               />
@@ -186,9 +252,8 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
               <Input
                 type="number"
                 value={Math.round(item.w)}
-                onChange={(e) =>
-                  handleUpdate({ w: Math.max(50, Number(e.target.value)) })
-                }
+                onFocus={() => pushHistory()}
+                onChange={(e) => handleUpdate({ w: Number(e.target.value) })}
                 className="h-8 text-sm"
               />
             </div>
@@ -197,9 +262,8 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
               <Input
                 type="number"
                 value={Math.round(item.h)}
-                onChange={(e) =>
-                  handleUpdate({ h: Math.max(50, Number(e.target.value)) })
-                }
+                onFocus={() => pushHistory()}
+                onChange={(e) => handleUpdate({ h: Number(e.target.value) })}
                 className="h-8 text-sm"
               />
             </div>
@@ -381,46 +445,56 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Rotation</Label>
-              <Input
-                type="number"
-                value={item.rotation}
-                onChange={(e) =>
-                  handleUpdate({ rotation: Number(e.target.value) })
-                }
-                className="h-8 text-sm"
-                min={-360}
-                max={360}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Z-Index</Label>
-              <Input
-                type="number"
-                value={item.z_index}
-                onChange={(e) =>
-                  handleUpdate({ z_index: Number(e.target.value) })
-                }
-                className="h-8 text-sm"
-              />
-            </div>
-          </div>
+          {/* Simple mode hides rotation/z-index/opacity entirely */}
+          {editorMode === "pro" && (
+          <InspectorSection title="Advanced">
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Rotation</Label>
+                  <Input
+                    type="number"
+                    value={item.rotation}
+                    onFocus={() => pushHistory()}
+                    onChange={(e) =>
+                      handleUpdate({ rotation: Number(e.target.value) })
+                    }
+                    className="h-8 text-sm"
+                    min={-360}
+                    max={360}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Z-Index</Label>
+                  <Input
+                    type="number"
+                    value={item.z_index}
+                    onFocus={() => pushHistory()}
+                    onChange={(e) =>
+                      handleUpdate({ z_index: Number(e.target.value) })
+                    }
+                    className="h-8 text-sm"
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">
-              Opacity ({Math.round(item.opacity * 100)}%)
-            </Label>
-            <Slider
-              value={[item.opacity * 100]}
-              onValueChange={([val]) => handleUpdate({ opacity: val / 100 })}
-              min={0}
-              max={100}
-              step={1}
-              className="py-1"
-            />
-          </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Opacity ({Math.round(item.opacity * 100)}%)
+                </Label>
+                <Slider
+                  value={[item.opacity * 100]}
+                  onPointerDown={() => pushHistory()}
+                  onValueChange={([val]) => handleUpdate({ opacity: val / 100 })}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="py-1"
+                />
+              </div>
+            </div>
+          </InspectorSection>
+          )}
         </div>
       </div>
 

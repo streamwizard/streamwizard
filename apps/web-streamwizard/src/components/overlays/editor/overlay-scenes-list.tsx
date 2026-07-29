@@ -42,10 +42,12 @@ import { toast } from "sonner";
 import { env } from "@/lib/env";
 import {
   createOverlayScene,
+  createOverlayFromTemplate,
   deleteOverlayScene,
   duplicateOverlayScene,
   updateOverlayScene,
 } from "@/actions/overlays";
+import { OVERLAY_TEMPLATES } from "@/components/overlays/templates/definitions";
 
 interface OverlayScene {
   id: string;
@@ -66,28 +68,48 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [renderMode, setRenderMode] = useState<RenderMode>("obs");
+  const [templateId, setTemplateId] = useState("blank");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [createdScene, setCreatedScene] = useState<OverlayScene | null>(null);
 
   async function handleCreate() {
     if (!newName.trim()) return;
     setIsCreating(true);
 
-    const { data, error } = await createOverlayScene({
-      name: newName.trim(),
-      render_mode: renderMode,
-    });
+    // Phone overlays render on-device with GPS widgets; the starter templates
+    // are OBS layouts, so phone mode always starts blank.
+    const effectiveTemplate = renderMode === "phone" ? "blank" : templateId;
+    const { data, error } =
+      effectiveTemplate === "blank"
+        ? await createOverlayScene({ name: newName.trim(), render_mode: renderMode })
+        : await createOverlayFromTemplate({
+            name: newName.trim(),
+            templateId: effectiveTemplate,
+            render_mode: renderMode,
+          });
 
     if (error) {
       toast.error(error);
     } else if (data) {
       toast.success("Overlay created");
-      setDialogOpen(false);
       setNewName("");
-      setRenderMode("obs");
-      router.push(`/dashboard/overlays/${data.id}/edit`);
+      setTemplateId("blank");
+      // Stay in the dialog: show the done step with the browser-source URL
+      // and OBS instructions instead of dropping straight into the editor.
+      setCreatedScene(data as OverlayScene);
+      router.refresh();
     }
 
     setIsCreating(false);
+  }
+
+  function closeCreateDialog(open: boolean) {
+    setDialogOpen(open);
+    if (!open) {
+      setCreatedScene(null);
+      setRenderMode("obs");
+      setTemplateId("blank");
+    }
   }
 
   async function handleDelete(id: string) {
@@ -127,17 +149,70 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
   return (
     <div className="space-y-4">
       <div className="hidden md:flex justify-end">
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={closeCreateDialog}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
               New Overlay
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-xl">
             <DialogHeader>
-              <DialogTitle>Create New Overlay</DialogTitle>
+              <DialogTitle>{createdScene ? "Your overlay is ready" : "Create New Overlay"}</DialogTitle>
             </DialogHeader>
+            {createdScene ? (
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>Browser source URL</Label>
+                  <div className="flex gap-2">
+                    <Input readOnly value={getOverlayUrl(createdScene)} className="text-sm" />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0"
+                      title="Copy URL"
+                      onClick={() => {
+                        navigator.clipboard.writeText(getOverlayUrl(createdScene));
+                        toast.success("Overlay URL copied");
+                      }}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {createdScene.render_mode !== "phone" ? (
+                  <ol className="list-decimal list-inside space-y-1.5 text-sm text-muted-foreground">
+                    <li>In OBS, add a source: Sources → + → Browser.</li>
+                    <li>Paste the URL above.</li>
+                    <li>
+                      Set width to {createdScene.width} and height to {createdScene.height}.
+                    </li>
+                    <li>Turn the overlay on with the switch on its card when you go live.</li>
+                  </ol>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Open this URL in your phone&apos;s browser while streaming. It reads your GPS on the
+                    device, so keep the tab in the foreground.
+                  </p>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() => {
+                      closeCreateDialog(false);
+                      router.push(`/dashboard/overlays/${createdScene.id}/edit`);
+                    }}
+                  >
+                    Open editor
+                  </Button>
+                  <Button variant="outline" onClick={() => closeCreateDialog(false)}>
+                    Done
+                  </Button>
+                </div>
+              </div>
+            ) : (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="overlay-name">Name</Label>
@@ -187,6 +262,32 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                 </div>
               </div>
 
+              {/* Starter templates (OBS mode only — phone overlays start blank) */}
+              {renderMode === "obs" && (
+                <div className="space-y-2">
+                  <Label>Start from</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {OVERLAY_TEMPLATES.map((template) => (
+                      <button
+                        key={template.id}
+                        type="button"
+                        onClick={() => setTemplateId(template.id)}
+                        className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left text-sm transition-colors ${
+                          templateId === template.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-muted-foreground"
+                        }`}
+                      >
+                        <span className="font-medium">{template.name}</span>
+                        <span className="text-xs text-muted-foreground leading-tight">
+                          {template.description}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <Button
                 onClick={handleCreate}
                 disabled={isCreating || !newName.trim()}
@@ -195,6 +296,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                 {isCreating ? "Creating..." : "Create Overlay"}
               </Button>
             </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
