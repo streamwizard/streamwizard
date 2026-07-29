@@ -106,7 +106,10 @@ export type StreamWizardEventType =
   | "streamwizard.auto_switcher_config"
   // obs-instance-manager: container start/stop/delete/crash → /internal/broadcast
   // → the owning user's room, so decks/dashboards update live and cross-device
-  | "streamwizard.obs_instance_lifecycle";
+  | "streamwizard.obs_instance_lifecycle"
+  // obs-instance-manager: the container's program scene actually changed,
+  // observed on a node-side obs-websocket connection → /internal/broadcast
+  | "streamwizard.obs_scene_changed";
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 
@@ -121,6 +124,23 @@ export interface ObsInstanceLifecyclePayload {
   instanceId: string;
   action: "starting" | "started" | "stopping" | "stopped" | "error" | "deleted";
   /** ISO timestamp the manager observed the transition. */
+  at: string;
+}
+
+// The Cloud OBS container's program scene changed. Observed, not commanded: the
+// manager holds a node-side obs-websocket connection per running instance and
+// forwards CurrentProgramSceneChanged, so this fires for switches made by the
+// auto-switcher, the browser panel, the streamer in OBS over VNC, or a hotkey
+// alike -- and keeps firing with the streamer's own machine switched off. Also
+// emitted once per (re)connect with the then-current scene, since ws-server has
+// no replay for a browser source that loads mid-stream. Same keep-in-sync
+// caveat as ObsInstanceLifecyclePayload above.
+export interface ObsSceneChangedPayload {
+  instanceId: string;
+  sceneName: string;
+  /** obs-websocket v5 scene UUID -- stable across renames, unlike sceneName. */
+  sceneUuid: string;
+  /** ISO timestamp the manager observed the change. */
   at: string;
 }
 
