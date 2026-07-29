@@ -82,12 +82,20 @@ export class UserMonitor {
 
   private tickCount = 0;
 
+  // Fingerprint of the last status we published, so onStats can publish the
+  // streak build-up without publishing every second of a healthy stream.
+  // See statusKey().
+  private lastPublishedKey: string | null = null;
+
   constructor(
     private userId: string,
     config: EffectiveConfig,
     private deps: MonitorDeps,
   ) {
     this.cfg = config;
+    // Without this a monitor created mid-session says nothing until the first
+    // heartbeat, so an overlay opened at that moment renders blank for 5s.
+    this.publish(Date.now());
   }
 
   // ── config / override ──────────────────────────────────────────────────
@@ -162,6 +170,11 @@ export class UserMonitor {
 
     this.updateStreaks(payload);
     this.evaluate(now);
+    // evaluate() only publishes on a phase change, so without this the whole
+    // pre-switch build-up ("bitrate bad 1/3, 2/3…") is invisible until the 5s
+    // heartbeat — and on the `fast` preset the entire warning window is 2s, so
+    // it would usually never be seen at all.
+    this.publishIfChanged(now);
   }
 
   onSessionEnded(sessionId: string, now: number): void {
@@ -545,6 +558,15 @@ export class UserMonitor {
         ? { scene_uuid: overrideUuid, scene_name: row.override_scene_name, expires_at: row.override_expires_at }
         : null,
       selected_session: selected ? { session_id: selected.sessionId, label: selected.label } : null,
+      warning_shown: this.warningShown,
+      latest: this.latestStats
+        ? {
+            kbps: this.latestStats.kbps ?? null,
+            rtt_ms: this.latestStats.rtt_ms ?? null,
+            loss_pct: this.latestStats.loss_pct ?? null,
+            at: now,
+          }
+        : null,
       streaks: {
         bitrate: { ...this.streaks.bitrate },
         rtt: { ...this.streaks.rtt },
@@ -561,7 +583,43 @@ export class UserMonitor {
     };
   }
 
+  // Fingerprint of everything a status consumer renders that can change from
+  // one sample to the next. `good` is clamped at its recover threshold on
+  // purpose: it climbs forever on a healthy stream (updateStreaks), so an
+  // unclamped key would publish every single second and defeat the point.
+  // Clamped, a stable stream produces an unchanged key and falls back to the
+  // heartbeat, while every step of a bad streak — and every step of recovery
+  // progress, which is what the recovery bar draws — publishes at 1 Hz.
+  private statusKey(now: number): string {
+    const thr = this.cfg.thresholds;
+    const recoverPolls: Record<MetricKey, number> = {
+      bitrate: thr.bitrate_recover_polls,
+      rtt: thr.rtt_recover_polls,
+      loss: thr.loss_recover_polls,
+    };
+    const parts: (string | number)[] = [
+      this.activeOverrideUuid(now) ?? "",
+      this.phase,
+      this.cfg.row.enabled && this.selectedSessionId !== null ? 1 : 0,
+      this.warningShown ? 1 : 0,
+      this.lastError ?? "",
+    ];
+    for (const key of METRICS) {
+      parts.push(this.streaks[key].bad, Math.min(this.streaks[key].good, recoverPolls[key]));
+    }
+    return parts.join("|");
+  }
+
+  private publishIfChanged(now: number): void {
+    if (this.statusKey(now) === this.lastPublishedKey) return;
+    this.publish(now);
+  }
+
   private publish(now: number): void {
+    // Stamped here rather than at the call sites so the heartbeat and
+    // phase-change publishes also refresh it — otherwise one of those could be
+    // followed immediately by an identical publishIfChanged.
+    this.lastPublishedKey = this.statusKey(now);
     this.deps.publishStatus(this.userId, this.buildStatus(now));
   }
 }

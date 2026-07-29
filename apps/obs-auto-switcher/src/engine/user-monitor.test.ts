@@ -1,0 +1,200 @@
+import { test, expect, beforeEach } from "bun:test";
+import { AUTO_SWITCHER_PRESET_THRESHOLDS, type AutoSwitcherConfig, type AutoSwitcherStatus } from "@repo/schemas";
+import type { IngestStatsPayload } from "@repo/types";
+import type { EffectiveConfig } from "../config-store";
+import { UserMonitor, type MonitorDeps } from "./user-monitor";
+import { clearSwitchLog } from "./switch-log";
+
+// The publish contract is what an overlay renders against: a status must land
+// on every step of a streak that is moving, and must NOT land every second of a
+// healthy stream. Both halves are easy to break with a one-line change to
+// statusKey(), and neither is visible without a live degrading stream, so they
+// are pinned here.
+
+const USER = "user-1";
+const THR = AUTO_SWITCHER_PRESET_THRESHOLDS.balanced; // trigger 3, recover 20, startup 5
+
+let published: AutoSwitcherStatus[] = [];
+
+function makeDeps(): MonitorDeps {
+  return {
+    setScene: async () => ({ ok: true }),
+    stopStream: async () => ({ ok: true }),
+    resolveSceneItemId: async () => 1,
+    setSceneItemEnabled: async () => ({ ok: true }),
+    sendChat: async () => {},
+    logEvent: async () => {},
+    clearOverride: async () => {},
+    publishStatus: (_userId, status) => {
+      published.push(status);
+    },
+  };
+}
+
+function makeConfig(overrides: Partial<AutoSwitcherConfig> = {}): EffectiveConfig {
+  return {
+    row: {
+      user_id: USER,
+      enabled: true,
+      mode: "simple",
+      scene_model: "three",
+      scene_live_uuid: "scene-live",
+      scene_live_name: "Live",
+      scene_degraded_uuid: "scene-degraded",
+      scene_degraded_name: "Degraded",
+      scene_offline_uuid: "scene-offline",
+      scene_offline_name: "Offline",
+      sensitivity_preset: "balanced",
+      advanced_thresholds: null,
+      pinned_stream_key_label: null,
+      log_events_enabled: false,
+      chat_notices_enabled: false,
+      chat_template_degraded: "",
+      chat_template_offline: "",
+      chat_template_recovered: "",
+      warning_source_enabled: false,
+      warning_source_uuid: null,
+      warning_source_name: null,
+      auto_stop_enabled: false,
+      auto_stop_minutes: 10,
+      override_scene_uuid: null,
+      override_scene_name: null,
+      override_expires_at: null,
+      ...overrides,
+    } as AutoSwitcherConfig,
+    thresholds: THR,
+  };
+}
+
+const GOOD: Omit<IngestStatsPayload, "session_id"> = {
+  protocol: "srt",
+  kbps: 6000,
+  rtt_ms: 40,
+  loss_pct: 0,
+};
+
+const BAD: Omit<IngestStatsPayload, "session_id"> = {
+  protocol: "srt",
+  kbps: 200,
+  rtt_ms: 40,
+  loss_pct: 0,
+};
+
+let clock = 1_000_000;
+
+/** One 1 Hz ingest sample. */
+function sample(monitor: UserMonitor, stats: Omit<IngestStatsPayload, "session_id">): void {
+  clock += 1_000;
+  monitor.onStats({ session_id: "sess-1", ...stats } as IngestStatsPayload, clock);
+}
+
+function tick(monitor: UserMonitor): void {
+  clock += 1_000;
+  monitor.onTick(clock);
+}
+
+/** Runs enough good samples to clear the startup gate and reach `live`. */
+function bringLive(monitor: UserMonitor): void {
+  for (let i = 0; i < THR.bitrate_startup_polls; i++) sample(monitor, GOOD);
+  expect(published.at(-1)!.state).toBe("live");
+  published = [];
+}
+
+beforeEach(() => {
+  published = [];
+  clock = 1_000_000;
+  clearSwitchLog(USER);
+});
+
+test("publishes once on construction so a widget isn't blank for 5s", () => {
+  new UserMonitor(USER, makeConfig(), makeDeps());
+  expect(published).toHaveLength(1);
+  expect(published[0]!.state).toBe("idle");
+});
+
+test("a healthy stream does not publish per sample", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  bringLive(monitor);
+
+  // `good` climbs every second, but it is clamped at the recover threshold in
+  // the key, so past that point nothing changes and nothing is published.
+  for (let i = 0; i < THR.bitrate_recover_polls + 15; i++) sample(monitor, GOOD);
+
+  // Only the samples still below the recover clamp may publish.
+  expect(published.length).toBeLessThanOrEqual(THR.bitrate_recover_polls);
+
+  const before = published.length;
+  for (let i = 0; i < 10; i++) sample(monitor, GOOD);
+  expect(published.length).toBe(before);
+});
+
+test("publishes on every step of a bad streak, before the switch fires", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  bringLive(monitor);
+
+  // Two bad samples, still below the 3-poll trigger: no phase change, so
+  // before this feature these produced nothing at all.
+  sample(monitor, BAD);
+  expect(published).toHaveLength(1);
+  expect(published[0]!.state).toBe("live");
+  expect(published[0]!.streaks.bitrate.bad).toBe(1);
+
+  sample(monitor, BAD);
+  expect(published).toHaveLength(2);
+  expect(published[1]!.streaks.bitrate.bad).toBe(2);
+
+  // Third crosses the trigger and switches.
+  sample(monitor, BAD);
+  expect(published.at(-1)!.state).toBe("degraded");
+});
+
+test("publishes on every step of recovery progress", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  bringLive(monitor);
+  for (let i = 0; i < THR.bitrate_trigger_polls; i++) sample(monitor, BAD);
+  expect(published.at(-1)!.state).toBe("degraded");
+  published = [];
+
+  // Recovery is what the green bar draws, so each good poll must be visible.
+  for (let i = 0; i < 5; i++) sample(monitor, GOOD);
+  expect(published).toHaveLength(5);
+  expect(published.map((s) => s.streaks.bitrate.good)).toEqual([1, 2, 3, 4, 5]);
+  expect(published.every((s) => s.state === "degraded")).toBe(true);
+});
+
+test("the heartbeat still fires on a stream that publishes nothing", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  bringLive(monitor);
+  for (let i = 0; i < THR.bitrate_recover_polls + 5; i++) sample(monitor, GOOD);
+  published = [];
+
+  for (let i = 0; i < 5; i++) tick(monitor);
+  expect(published).toHaveLength(1);
+});
+
+test("carries warning_shown and the latest sample", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  bringLive(monitor);
+  sample(monitor, BAD);
+
+  const status = published.at(-1)!;
+  expect(status.warning_shown).toBe(false); // warning source disabled in this config
+  expect(status.latest).toEqual({ kbps: 200, rtt_ms: 40, loss_pct: 0, at: clock });
+});
+
+test("latest is null before any sample, and nulls absent RTMP metrics", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  expect(published[0]!.latest).toBeNull();
+
+  // RTMP reports throughput only — rtt/loss genuinely never arrive.
+  sample(monitor, { protocol: "rtmp", kbps: 4000 });
+  const status = published.at(-1)!;
+  expect(status.latest).toEqual({ kbps: 4000, rtt_ms: null, loss_pct: null, at: clock });
+});
+
+test("a config push publishes even when nothing else changed", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  published = [];
+  monitor.applyConfig(makeConfig({ scene_live_name: "Main" }), clock);
+  expect(published).toHaveLength(1);
+});

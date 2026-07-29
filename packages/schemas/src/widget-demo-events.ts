@@ -2,12 +2,14 @@ import { z } from "zod";
 import {
   IngestStatsPayloadSchema,
   ObsInstanceLifecyclePayloadSchema,
+  ObsSceneChangedPayloadSchema,
   OverlayGeoEventSchema,
 } from "./streamwizard";
 import {
   AUTO_SWITCHER_PRESET_THRESHOLDS,
   autoSwitcherConfigSchema,
   autoSwitcherStatusSchema,
+  type AutoSwitcherStatus,
 } from "./auto-switcher";
 import {
   WIDGET_TEST_EVENTS,
@@ -66,6 +68,47 @@ const DEMO_SESSION_ID = "demo-session";
 const DEMO_LAT = 52.3676;
 const DEMO_LON = 4.9041;
 
+const ZERO_STREAK = { bad: 0, good: 0 } as const;
+
+/**
+ * Builds a complete, schema-valid `AutoSwitcherStatus` from a partial override,
+ * so every demo variant and the `switcher.degrade` simulator describe only what
+ * they actually change. Shared rather than copied because the payload has ten
+ * required fields -- a hand-written fixture per variant drifts the moment the
+ * schema grows one more.
+ */
+export function buildDemoSwitcherStatus(patch: Partial<AutoSwitcherStatus> = {}): AutoSwitcherStatus {
+  return {
+    state: "live",
+    armed: true,
+    override: null,
+    selected_session: { session_id: DEMO_SESSION_ID, label: "Camera 1" },
+    streaks: {
+      bitrate: { bad: 0, good: 12 },
+      rtt: { bad: 0, good: 12 },
+      loss: { bad: 0, good: 12 },
+    },
+    thresholds: AUTO_SWITCHER_PRESET_THRESHOLDS.balanced,
+    warning_shown: false,
+    latest: { kbps: 6000, rtt_ms: 42, loss_pct: 0.2, at: Date.now() },
+    last_switch: null,
+    last_error: null,
+    offline_since: null,
+    auto_stop_deadline: null,
+    ...patch,
+  };
+}
+
+/** `build` thunks must return a plain record; the status is structurally one. */
+function switcherStatus(patch: Partial<AutoSwitcherStatus>): Record<string, unknown> {
+  return buildDemoSwitcherStatus(patch) as unknown as Record<string, unknown>;
+}
+
+/** Stamps `at` so variants only spell out the numbers they care about. */
+function sample(kbps: number, rtt_ms: number, loss_pct: number): AutoSwitcherStatus["latest"] {
+  return { kbps, rtt_ms, loss_pct, at: Date.now() };
+}
+
 export const STREAMWIZARD_DEMO_EVENTS = {
   "streamwizard.geo": {
     label: "GPS fix",
@@ -115,25 +158,115 @@ export const STREAMWIZARD_DEMO_EVENTS = {
     }),
   },
   "streamwizard.auto_switcher_status": {
-    label: "Auto switcher status",
+    label: "Auto switcher: live",
     group: "Auto switcher",
     schema: autoSwitcherStatusSchema,
-    build: () => ({
-      state: "live",
-      armed: true,
-      override: null,
-      selected_session: { session_id: DEMO_SESSION_ID, label: "Camera 1" },
-      streaks: {
-        bitrate: { bad: 0, good: 12 },
-        rtt: { bad: 0, good: 12 },
-        loss: { bad: 0, good: 12 },
+    build: () => switcherStatus({}),
+    // One-shot buttons for each visual state a status widget has to handle.
+    // For a bar that actually *fills*, use the `switcher.degrade` simulator --
+    // a single fixture can't show progress.
+    variants: {
+      degrading: {
+        label: "Auto switcher: degrading",
+        // Bitrate two polls into a three-poll trigger: the "about to switch"
+        // frame, which is the one the engine never used to publish.
+        build: () =>
+          switcherStatus({
+            streaks: { bitrate: { bad: 2, good: 0 }, rtt: ZERO_STREAK, loss: ZERO_STREAK },
+            warning_shown: true,
+            latest: sample(780, 96, 0.4),
+          }),
       },
-      thresholds: AUTO_SWITCHER_PRESET_THRESHOLDS.balanced,
-      last_switch: null,
-      last_error: null,
-      offline_since: null,
-      auto_stop_deadline: null,
+      degraded: {
+        label: "Auto switcher: degraded",
+        build: () =>
+          switcherStatus({
+            state: "degraded",
+            streaks: { bitrate: { bad: 0, good: 8 }, rtt: { bad: 0, good: 8 }, loss: { bad: 0, good: 8 } },
+            latest: sample(1120, 240, 1.8),
+            last_switch: {
+              at: Date.now(),
+              from_scene: "Live",
+              to_scene: "Connection Lost",
+              reason: "auto_fallback",
+              detail: "bitrate 780 kbps < 1000 kbps",
+              session_id: DEMO_SESSION_ID,
+              label: "Camera 1",
+            },
+          }),
+      },
+      startup: {
+        label: "Auto switcher: starting up",
+        build: () =>
+          switcherStatus({
+            state: "startup",
+            streaks: { bitrate: { bad: 0, good: 2 }, rtt: { bad: 0, good: 2 }, loss: { bad: 0, good: 2 } },
+            latest: sample(5200, 48, 0),
+          }),
+      },
+      offline: {
+        label: "Auto switcher: offline",
+        build: () =>
+          switcherStatus({
+            state: "offline",
+            streaks: { bitrate: ZERO_STREAK, rtt: ZERO_STREAK, loss: ZERO_STREAK },
+            latest: null,
+            offline_since: Date.now() - 12_000,
+          }),
+      },
+      override: {
+        label: "Auto switcher: manual override",
+        // Override masks the phase entirely and freezes the streaks, so a
+        // widget must render it as its own state rather than drawing stale bars.
+        build: () =>
+          switcherStatus({
+            state: "override",
+            override: { scene_uuid: "demo-scene-brb", scene_name: "BRB", expires_at: null },
+          }),
+      },
+      disarmed: {
+        label: "Auto switcher: no stream",
+        build: () =>
+          switcherStatus({
+            state: "idle",
+            armed: false,
+            selected_session: null,
+            streaks: { bitrate: ZERO_STREAK, rtt: ZERO_STREAK, loss: ZERO_STREAK },
+            latest: null,
+          }),
+      },
+    },
+  },
+  "streamwizard.obs_scene_changed": {
+    label: "OBS scene changed",
+    group: "Cloud OBS",
+    schema: ObsSceneChangedPayloadSchema,
+    build: () => ({
+      instanceId: "demo-instance",
+      sceneName: "Live",
+      sceneUuid: "demo-scene-live",
+      at: new Date().toISOString(),
     }),
+    variants: {
+      brb: {
+        label: "OBS scene changed: BRB",
+        build: () => ({
+          instanceId: "demo-instance",
+          sceneName: "BRB",
+          sceneUuid: "demo-scene-brb",
+          at: new Date().toISOString(),
+        }),
+      },
+      connectionLost: {
+        label: "OBS scene changed: Connection Lost",
+        build: () => ({
+          instanceId: "demo-instance",
+          sceneName: "Connection Lost",
+          sceneUuid: "demo-scene-offline",
+          at: new Date().toISOString(),
+        }),
+      },
+    },
   },
   "streamwizard.auto_switcher_config": {
     label: "Auto switcher config",

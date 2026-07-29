@@ -39,6 +39,25 @@ export const ObsInstanceLifecyclePayloadSchema = z.object({
 });
 
 /**
+ * The Cloud OBS container's program scene changed. Observed, not commanded: the
+ * obs-instance-manager holds a node-side obs-websocket connection per running
+ * instance and forwards CurrentProgramSceneChanged, so this fires for switches
+ * made by the auto-switcher, the browser panel, the streamer in OBS over VNC,
+ * or a hotkey alike -- and keeps firing with the streamer's own machine off.
+ * Also emitted once per (re)connect with the then-current scene, since
+ * ws-server has no replay for a browser source that loads mid-stream. Same
+ * keep-in-sync caveat as ObsInstanceLifecyclePayloadSchema above.
+ */
+export const ObsSceneChangedPayloadSchema = z.object({
+  instanceId: z.string(),
+  sceneName: z.string(),
+  /** obs-websocket v5 scene UUID -- stable across renames, unlike sceneName. */
+  sceneUuid: z.string(),
+  /** ISO timestamp the manager observed the change. */
+  at: z.string(),
+});
+
+/**
  * Full raw + derived stat set broadcast by ingest-control's session-stats
  * handler. Everything below session identity is optional because RTMP only
  * reports throughput -- the SRT/SRTLA transport fields simply never appear.
@@ -92,4 +111,5 @@ export type OverlayGeoPayload = z.infer<typeof OverlayGeoPayloadSchema>;
 export type OverlayGeoEvent = z.infer<typeof OverlayGeoEventSchema>;
 export type OverlayStatusPayload = z.infer<typeof OverlayStatusPayloadSchema>;
 export type ObsInstanceLifecyclePayload = z.infer<typeof ObsInstanceLifecyclePayloadSchema>;
+export type ObsSceneChangedPayload = z.infer<typeof ObsSceneChangedPayloadSchema>;
 export type IngestStatsPayload = z.infer<typeof IngestStatsPayloadSchema>;

@@ -4,6 +4,7 @@ import type {
   OverlayGeoEvent,
   OverlayStatusPayload,
   ObsInstanceLifecyclePayload,
+  ObsSceneChangedPayload,
   IngestStatsPayload,
   // channel
   ChannelUpdateEvent,
@@ -126,24 +127,7 @@ export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 // Both of these are zod-derived in @repo/schemas -- re-exported rather than
 // redeclared so the wire type and the validator can't drift apart. Their docs
 // live on the schemas.
-export type { ObsInstanceLifecyclePayload, IngestStatsPayload };
-
-// The Cloud OBS container's program scene changed. Observed, not commanded: the
-// manager holds a node-side obs-websocket connection per running instance and
-// forwards CurrentProgramSceneChanged, so this fires for switches made by the
-// auto-switcher, the browser panel, the streamer in OBS over VNC, or a hotkey
-// alike -- and keeps firing with the streamer's own machine switched off. Also
-// emitted once per (re)connect with the then-current scene, since ws-server has
-// no replay for a browser source that loads mid-stream. Same keep-in-sync
-// caveat as ObsInstanceLifecyclePayload above.
-export interface ObsSceneChangedPayload {
-  instanceId: string;
-  sceneName: string;
-  /** obs-websocket v5 scene UUID -- stable across renames, unlike sceneName. */
-  sceneUuid: string;
-  /** ISO timestamp the manager observed the change. */
-  at: string;
-}
+export type { ObsInstanceLifecyclePayload, IngestStatsPayload, ObsSceneChangedPayload };
 
 // Host NIC totals only — cpu/ram/disk deliberately stay on the InfluxDB
 // polling path; the WS carries just the network signal.
@@ -188,6 +172,7 @@ export type OverlaySocketMessage =
   | { type: "streamwizard.auto_switcher_status"; payload: AutoSwitcherStatus }
   | { type: "streamwizard.auto_switcher_config"; payload: AutoSwitcherConfig }
   | { type: "streamwizard.obs_instance_lifecycle"; payload: ObsInstanceLifecyclePayload }
+  | { type: "streamwizard.obs_scene_changed"; payload: ObsSceneChangedPayload }
   // Channel
   | { type: "channel.update";                                             payload: ChannelUpdateEvent }
   | { type: "channel.follow";                                             payload: ChannelFollowEvent }
