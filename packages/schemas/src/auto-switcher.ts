@@ -143,6 +143,25 @@ export type AutoSwitcherSwitchEntry = z.infer<typeof autoSwitcherSwitchEntrySche
 
 const metricStreakSchema = z.object({ bad: z.number(), good: z.number() });
 
+// Last ingest sample the engine judged against the thresholds. Every field is
+// nullable because RTMP only reports throughput — the SRT transport metrics
+// genuinely never arrive — and the whole object is null before the first
+// sample of a session.
+//
+// Deliberately NOT part of the publish dirty-check (see statusKey() in
+// user-monitor.ts): kbps changes every second, so keying on it would publish at
+// 1 Hz forever and defeat the mechanism. Consumers get fresh numbers on every
+// status they receive — 1 Hz while a streak is building, every 5s otherwise.
+const autoSwitcherLatestSampleSchema = z.object({
+  kbps: z.number().nullable(),
+  rtt_ms: z.number().nullable(),
+  loss_pct: z.number().nullable(),
+  /** Epoch ms the engine processed the sample. */
+  at: z.number(),
+});
+
+export type AutoSwitcherLatestSample = z.infer<typeof autoSwitcherLatestSampleSchema>;
+
 export const autoSwitcherStatusSchema = z.object({
   state: autoSwitcherStateSchema,
   armed: z.boolean(),
@@ -165,6 +184,14 @@ export const autoSwitcherStatusSchema = z.object({
     loss: metricStreakSchema,
   }),
   thresholds: autoSwitcherThresholdsSchema,
+  /**
+   * Whether the "unstable connection" source is currently visible in OBS. Stays
+   * false when the warning source is disabled or unconfigured, so an overlay
+   * mirroring this lights up in lockstep with what viewers actually see on
+   * stream rather than with a condition they were never shown.
+   */
+  warning_shown: z.boolean(),
+  latest: autoSwitcherLatestSampleSchema.nullable(),
   last_switch: autoSwitcherSwitchEntrySchema.nullable(),
   last_error: z.string().nullable(),
   offline_since: z.number().nullable(),

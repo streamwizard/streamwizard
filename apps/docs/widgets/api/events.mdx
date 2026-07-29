@@ -41,6 +41,128 @@ type StreamWizardGeoEvent = {
 };
 ```
 
+## `streamwizard.ingest_stats`
+
+```ts
+type IngestStatsPayload = {
+    session_id: string;
+    protocol: "rtmp" | "srt" | "srtla";
+    node_id?: string | undefined;
+    stream_key_id?: string | undefined;
+    label?: string | undefined;
+    kbps?: number | undefined;
+    mbps_recv_rate?: number | undefined;
+    mbps_bandwidth?: number | undefined;
+    mbps_max_bw?: number | undefined;
+    rtt_ms?: number | undefined;
+    pkt_recv?: number | undefined;
+    pkt_recv_loss?: number | undefined;
+    pkt_recv_drop?: number | undefined;
+    pkt_recv_retrans?: number | undefined;
+    pkt_recv_belated?: number | undefined;
+    pkt_recv_undecrypt?: number | undefined;
+    pkt_reorder_distance?: number | undefined;
+    ms_rcv_buf?: number | undefined;
+    byte_rcv_buf?: number | undefined;
+    pkt_flight_size?: number | undefined;
+    pkt_recv_loss_total?: number | undefined;
+    pkt_recv_drop_total?: number | undefined;
+    pkt_recv_undecrypt_total?: number | undefined;
+    byte_recv_total?: number | undefined;
+    loss_pct?: number | undefined;
+    drop_pct?: number | undefined;
+    retrans_pct?: number | undefined;
+    [x: string]: unknown;
+};
+```
+
+## `streamwizard.auto_switcher_status`
+
+```ts
+type AutoSwitcherStatus = {
+    state: "idle" | "startup" | "live" | "degraded" | "offline" | "override";
+    armed: boolean;
+    override: {
+        scene_uuid: string;
+        scene_name: string | null;
+        expires_at: string | null;
+    } | null;
+    selected_session: {
+        session_id: string;
+        label: string | null;
+    } | null;
+    streaks: {
+        bitrate: {
+            bad: number;
+            good: number;
+        };
+        rtt: {
+            bad: number;
+            good: number;
+        };
+        loss: {
+            bad: number;
+            good: number;
+        };
+    };
+    thresholds: {
+        bitrate_min_kbps: number;
+        rtt_max_ms: number;
+        loss_max_pct: number;
+        bitrate_trigger_polls: number;
+        rtt_trigger_polls: number;
+        loss_trigger_polls: number;
+        bitrate_recover_polls: number;
+        rtt_recover_polls: number;
+        loss_recover_polls: number;
+        bitrate_startup_polls: number;
+        rtt_startup_polls: number;
+        loss_startup_polls: number;
+        offline_timeout_seconds: number;
+    };
+    warning_shown: boolean;
+    latest: {
+        kbps: number | null;
+        rtt_ms: number | null;
+        loss_pct: number | null;
+        at: number;
+    } | null;
+    last_switch: {
+        at: number;
+        from_scene: string | null;
+        to_scene: string;
+        reason: "auto_fallback" | "auto_recover" | "auto_offline" | "auto_stop" | "override" | "manual";
+        detail: string;
+        session_id: string | null;
+        label: string | null;
+    } | null;
+    last_error: string | null;
+    offline_since: number | null;
+    auto_stop_deadline: number | null;
+};
+```
+
+## `streamwizard.obs_instance_lifecycle`
+
+```ts
+type ObsInstanceLifecyclePayload = {
+    instanceId: string;
+    action: "starting" | "started" | "stopping" | "stopped" | "error" | "deleted";
+    at: string;
+};
+```
+
+## `streamwizard.obs_scene_changed`
+
+```ts
+type ObsSceneChangedPayload = {
+    instanceId: string;
+    sceneName: string;
+    sceneUuid: string;
+    at: string;
+};
+```
+
 ## `channel.update`
 
 ```ts
