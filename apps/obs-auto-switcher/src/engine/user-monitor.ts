@@ -189,6 +189,10 @@ export class UserMonitor {
         this.enterOffline(now, "ingest session ended");
       }
     }
+    // enterOffline's own publish only lands once the scene switch resolves, so
+    // without this the drop to Standby waits on a network round trip -- or on
+    // the heartbeat, if no scenes are configured.
+    this.publishIfChanged(now);
   }
 
   onTick(now: number): void {
@@ -235,8 +239,17 @@ export class UserMonitor {
       this.executeSwitch(now, true);
     }
 
-    if (this.tickCount % STATUS_HEARTBEAT_TICKS === 0) {
+    // The heartbeat exists so a consumer can tell "the engine is alive and this
+    // stream is fine" from "the engine died". With nothing being watched there
+    // is nothing to be alive about, and a monitor exists for every *enabled*
+    // config rather than every live stream -- so beating while idle meant every
+    // enabled user cost 0.2 msg/s around the clock, streaming or not, fanned out
+    // to every monitor and consumer. At rest we publish the transition and then
+    // shut up; changes still report immediately below.
+    if (this.tickCount % STATUS_HEARTBEAT_TICKS === 0 && this.currentSession(now)) {
       this.publish(now);
+    } else {
+      this.publishIfChanged(now);
     }
   }
 
@@ -546,25 +559,48 @@ export class UserMonitor {
     return this.cfg.thresholds.offline_timeout_seconds * 1_000;
   }
 
+  /**
+   * The watched session, but only while it is actually delivering stats.
+   *
+   * `selectedSessionId` is intentionally never cleared -- the state machine uses
+   * it to notice a session resuming -- so it stays set long after a stream ends,
+   * and `tracker.get` keeps answering until the 2-minute GC prune. Reporting
+   * either of those as "we are watching a stream" produced a status that
+   * contradicted itself: `armed: true` next to `selected_session: null`, with a
+   * four-minute-old `latest` presented as current. Freshness is judged by the
+   * same offline timeout the offline detection uses, so "armed" and "the engine
+   * would switch on the next bad sample" mean the same thing.
+   */
+  private currentSession(now: number): TrackedSession | undefined {
+    if (!this.selectedSessionId) return undefined;
+    const session = this.tracker.get(this.selectedSessionId);
+    if (!session) return undefined;
+    return now - session.lastSeenMs <= this.offlineTimeoutMs() ? session : undefined;
+  }
+
   buildStatus(now: number): AutoSwitcherStatus {
     const { row } = this.cfg;
     const overrideUuid = this.activeOverrideUuid(now);
-    const selected = this.selectedSessionId ? this.tracker.get(this.selectedSessionId) : undefined;
+    const selected = this.currentSession(now);
     const log = getSwitchLog(this.userId);
     return {
       state: overrideUuid ? "override" : this.phase,
-      armed: row.enabled && this.selectedSessionId !== null,
+      armed: row.enabled && selected !== undefined,
       override: overrideUuid
         ? { scene_uuid: overrideUuid, scene_name: row.override_scene_name, expires_at: row.override_expires_at }
         : null,
       selected_session: selected ? { session_id: selected.sessionId, label: selected.label } : null,
       warning_shown: this.warningShown,
-      latest: this.latestStats
+      // Read off the tracked session, not `this.latestStats` -- that is retained
+      // for the detail strings and the event log long after a stream ends. `at`
+      // is the sample's own arrival time; stamping it with `now` made a frozen
+      // four-minute-old reading look live.
+      latest: selected
         ? {
-            kbps: this.latestStats.kbps ?? null,
-            rtt_ms: this.latestStats.rtt_ms ?? null,
-            loss_pct: this.latestStats.loss_pct ?? null,
-            at: now,
+            kbps: selected.latest.kbps ?? null,
+            rtt_ms: selected.latest.rtt_ms ?? null,
+            loss_pct: selected.latest.loss_pct ?? null,
+            at: selected.lastSeenMs,
           }
         : null,
       streaks: {
@@ -600,7 +636,9 @@ export class UserMonitor {
     const parts: (string | number)[] = [
       this.activeOverrideUuid(now) ?? "",
       this.phase,
-      this.cfg.row.enabled && this.selectedSessionId !== null ? 1 : 0,
+      // Must match buildStatus's `armed` exactly, or the transition to Standby
+      // would only surface on the next heartbeat.
+      this.cfg.row.enabled && this.currentSession(now) !== undefined ? 1 : 0,
       this.warningShown ? 1 : 0,
       this.lastError ?? "",
     ];
