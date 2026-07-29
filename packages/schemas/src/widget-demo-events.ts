@@ -209,6 +209,11 @@ export const STREAMWIZARD_DEMO_EVENTS = {
         build: () =>
           switcherStatus({
             state: "offline",
+            // Offline means the watched session stopped delivering, so there is
+            // nothing being watched and no current reading -- the engine reports
+            // all three of these together.
+            armed: false,
+            selected_session: null,
             streaks: { bitrate: ZERO_STREAK, rtt: ZERO_STREAK, loss: ZERO_STREAK },
             latest: null,
             offline_since: Date.now() - 12_000,

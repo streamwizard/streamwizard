@@ -192,6 +192,52 @@ test("latest is null before any sample, and nulls absent RTMP metrics", () => {
   expect(status.latest).toEqual({ kbps: 4000, rtt_ms: null, loss_pct: null, at: clock });
 });
 
+// Regression: the status used to contradict itself once a stream ended --
+// `armed: true` (selectedSessionId is never cleared) next to
+// `selected_session: null` (the tracker had dropped it), with a `latest` frozen
+// at the last sample but stamped `at: now`, so a four-minute-old reading looked
+// live. The deck's "Standby" badge is driven off `armed`, so it never appeared.
+test("goes to standby when the watched session ends", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  bringLive(monitor);
+
+  clock += 1_000;
+  monitor.onSessionEnded("sess-1", clock);
+
+  const status = published.at(-1)!;
+  expect(status.state).toBe("offline");
+  expect(status.armed).toBe(false);
+  expect(status.selected_session).toBeNull();
+  expect(status.latest).toBeNull();
+});
+
+test("goes to standby when the stream goes silent past the offline timeout", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  bringLive(monitor);
+
+  // No stats at all for longer than offline_timeout_seconds.
+  clock += THR.offline_timeout_seconds * 1_000 + 1_000;
+  monitor.onTick(clock);
+
+  const status = published.at(-1)!;
+  expect(status.state).toBe("offline");
+  expect(status.armed).toBe(false);
+  expect(status.selected_session).toBeNull();
+  expect(status.latest).toBeNull();
+});
+
+test("latest carries the sample's own arrival time, not the publish time", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  bringLive(monitor);
+  sample(monitor, BAD);
+  const sampledAt = clock;
+
+  // A later heartbeat republishes the same reading; `at` must not drift forward
+  // with it, or consumers can't tell a fresh sample from a held one.
+  for (let i = 0; i < 5; i++) tick(monitor);
+  expect(published.at(-1)!.latest!.at).toBe(sampledAt);
+});
+
 test("a config push publishes even when nothing else changed", () => {
   const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
   published = [];
