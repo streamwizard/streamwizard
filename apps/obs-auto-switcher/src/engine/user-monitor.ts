@@ -239,10 +239,14 @@ export class UserMonitor {
       this.executeSwitch(now, true);
     }
 
-    // The heartbeat is the floor; between beats a tick still reports anything
-    // that changed without a stats sample behind it -- going offline on the
-    // timeout, an override expiring, an auto-stop firing.
-    if (this.tickCount % STATUS_HEARTBEAT_TICKS === 0) {
+    // The heartbeat exists so a consumer can tell "the engine is alive and this
+    // stream is fine" from "the engine died". With nothing being watched there
+    // is nothing to be alive about, and a monitor exists for every *enabled*
+    // config rather than every live stream -- so beating while idle meant every
+    // enabled user cost 0.2 msg/s around the clock, streaming or not, fanned out
+    // to every monitor and consumer. At rest we publish the transition and then
+    // shut up; changes still report immediately below.
+    if (this.tickCount % STATUS_HEARTBEAT_TICKS === 0 && this.currentSession(now)) {
       this.publish(now);
     } else {
       this.publishIfChanged(now);

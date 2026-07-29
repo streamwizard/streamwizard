@@ -134,8 +134,12 @@ var METRICS = [
   { key: 'loss', label: 'loss' }
 ];
 
-/* No status for this long means the engine went away. The engine sends a
- * heartbeat every 5s, so 15s of silence is three missed beats. */
+/* No status for this long means the engine went away. It heartbeats every 5s
+ * while it is watching a stream, so 15s of silence is three missed beats.
+ *
+ * It deliberately goes quiet when nothing is streaming, so silence only counts
+ * as "gone" if the last thing it told us was that a stream was live -- see
+ * isStale(). */
 var STALE_MS = 15000;
 
 var status = null;
@@ -179,9 +183,18 @@ function buildBars() {
   }).join('');
 }
 
+/* A resting frame (nothing being watched) is the engine's final word until
+ * something changes, so it must never rot into "No signal" -- that would turn
+ * "you are not streaming" into "your switcher is broken" after 15 seconds. */
+function isStale() {
+  if (!status) return true;
+  if (!status.armed) return false;
+  return Date.now() - statusAt > STALE_MS;
+}
+
 function render() {
   var card = document.getElementById('card');
-  var stale = !status || Date.now() - statusAt > STALE_MS;
+  var stale = isStale();
   var state = stale ? 'unknown' : status.state;
 
   /* Override freezes the state machine, so the streaks underneath it are

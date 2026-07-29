@@ -162,13 +162,45 @@ test("publishes on every step of recovery progress", () => {
   expect(published.every((s) => s.state === "degraded")).toBe(true);
 });
 
-test("the heartbeat still fires on a stream that publishes nothing", () => {
+test("goes quiet when nothing is streaming", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  bringLive(monitor);
+  clock += 1_000;
+  monitor.onSessionEnded("sess-1", clock);
+
+  // One honest resting frame, then silence -- a monitor exists per enabled
+  // config, so beating here costs every enabled user 0.2 msg/s round the clock.
+  expect(published.at(-1)!.armed).toBe(false);
+  published = [];
+  for (let i = 0; i < 30; i++) tick(monitor);
+  expect(published).toHaveLength(0);
+});
+
+test("resumes publishing when a stream starts again", () => {
+  const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
+  clock += 1_000;
+  monitor.onSessionEnded("sess-1", clock);
+  for (let i = 0; i < 10; i++) tick(monitor);
+  published = [];
+
+  sample(monitor, GOOD);
+  expect(published.length).toBeGreaterThan(0);
+  expect(published.at(-1)!.armed).toBe(true);
+});
+
+test("the heartbeat still fires on a healthy stream that publishes nothing", () => {
   const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
   bringLive(monitor);
   for (let i = 0; i < THR.bitrate_recover_polls + 5; i++) sample(monitor, GOOD);
   published = [];
 
-  for (let i = 0; i < 5; i++) tick(monitor);
+  // Keep the session fresh so this exercises the heartbeat rather than the
+  // offline timeout — the samples themselves are past the `good` clamp and
+  // publish nothing.
+  for (let i = 0; i < 5; i++) {
+    sample(monitor, GOOD);
+    tick(monitor);
+  }
   expect(published).toHaveLength(1);
 });
 
