@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, cn } from "@repo/ui";
-import { LayoutGrid, Loader2, Repeat } from "lucide-react";
+import { LayoutGrid, Loader2, SlidersHorizontal } from "lucide-react";
 import type { SaveBarState } from "./_switcher-settings-panel";
 
 export type DeckTab = "deck" | "switcher";
@@ -12,7 +12,7 @@ export type DeckTab = "deck" | "switcher";
 
 const TABS: { value: DeckTab; label: string; Icon: typeof LayoutGrid }[] = [
   { value: "deck", label: "Deck", Icon: LayoutGrid },
-  { value: "switcher", label: "Switcher", Icon: Repeat },
+  { value: "switcher", label: "Sensitivity", Icon: SlidersHorizontal },
 ];
 
 interface DeckFooterProps {

@@ -1,21 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import {
-  Button,
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-  Switch,
-  cn,
-} from "@repo/ui";
-import { Check, ChevronRight, Minus, Plus } from "lucide-react";
+import type { ReactNode } from "react";
+import { Button, Switch, cn } from "@repo/ui";
+import { Check, Minus, Plus } from "lucide-react";
 
-// Touch primitives for the deck's switcher tab. Everything here is sized for a
-// thumb: rows are >=56px, steppers replace number keyboards, and value pickers
-// open a bottom drawer instead of a cramped popover select.
+// Touch primitives for the deck's sensitivity tab. Everything here is sized for
+// a thumb: rows are >=56px and steppers replace number keyboards.
 
 export function SettingSection({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
@@ -74,112 +64,6 @@ export function SwitchRow({
     <SettingRow label={label} description={description}>
       <Switch checked={checked} onCheckedChange={onCheckedChange} disabled={disabled} aria-label={label} />
     </SettingRow>
-  );
-}
-
-/** Full-width tappable row that shows the current value and opens a picker. */
-export function PickerRow({
-  label,
-  description,
-  value,
-  placeholder,
-  error,
-  disabled,
-  onOpen,
-}: {
-  label: string;
-  description?: string;
-  value: string | null;
-  placeholder: string;
-  error?: string | null;
-  disabled?: boolean;
-  onOpen: () => void;
-}) {
-  return (
-    <div className="px-1 py-1">
-      <button
-        type="button"
-        onClick={onOpen}
-        disabled={disabled}
-        className={cn(
-          "flex min-h-14 w-full items-center justify-between gap-3 rounded-xl px-3 py-2 text-left transition-colors",
-          "active:bg-accent disabled:opacity-50",
-        )}
-      >
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium">{label}</span>
-          {description ? <span className="mt-0.5 block text-xs text-muted-foreground">{description}</span> : null}
-        </span>
-        <span className="flex min-w-0 shrink items-center gap-1">
-          <span className={cn("truncate text-sm", value ? "text-foreground" : "text-muted-foreground")}>{value ?? placeholder}</span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-        </span>
-      </button>
-      {error ? <p className="px-3 pb-2 text-xs text-destructive">{error}</p> : null}
-    </div>
-  );
-}
-
-export interface PickerOption {
-  value: string;
-  label: string;
-}
-
-/** Bottom drawer list picker. Long scene names get a full row instead of being truncated in a popover. */
-export function PickerDrawer({
-  open,
-  onOpenChange,
-  title,
-  description,
-  options,
-  selected,
-  emptyLabel,
-  onSelect,
-}: {
-  open: boolean;
-  onOpenChange: (next: boolean) => void;
-  title: string;
-  description?: string;
-  options: PickerOption[];
-  selected: string | null;
-  emptyLabel: string;
-  onSelect: (value: string) => void;
-}) {
-  return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="pb-[env(safe-area-inset-bottom)]">
-        <DrawerHeader>
-          <DrawerTitle>{title}</DrawerTitle>
-          {description ? <DrawerDescription>{description}</DrawerDescription> : null}
-        </DrawerHeader>
-        <div className="max-h-[55vh] overflow-y-auto px-2 pb-4">
-          {options.length === 0 ? (
-            <p className="px-3 py-8 text-center text-sm text-muted-foreground">{emptyLabel}</p>
-          ) : (
-            options.map((option) => {
-              const isSelected = option.value === selected;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => {
-                    onSelect(option.value);
-                    onOpenChange(false);
-                  }}
-                  className={cn(
-                    "flex min-h-14 w-full items-center justify-between gap-3 rounded-xl px-3 text-left transition-colors active:bg-accent",
-                    isSelected && "bg-accent/50",
-                  )}
-                >
-                  <span className="min-w-0 flex-1 truncate text-sm font-medium">{option.label}</span>
-                  {isSelected ? <Check className="h-4 w-4 shrink-0 text-primary" /> : null}
-                </button>
-              );
-            })
-          )}
-        </div>
-      </DrawerContent>
-    </Drawer>
   );
 }
 
@@ -289,59 +173,4 @@ export function ChoiceCards<T extends string>({
       })}
     </div>
   );
-}
-
-/** Two-up segmented control for short binary choices. */
-export function SegmentedRow<T extends string>({
-  label,
-  value,
-  options,
-  disabled,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  options: { value: T; label: string; hint?: string }[];
-  disabled?: boolean;
-  onChange: (next: T) => void;
-}) {
-  return (
-    <div className="space-y-2 p-3">
-      <p className="px-1 text-sm font-medium">{label}</p>
-      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={label}>
-        {options.map((option) => {
-          const isSelected = option.value === value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={isSelected}
-              disabled={disabled}
-              onClick={() => onChange(option.value)}
-              className={cn(
-                "min-h-14 rounded-xl border px-3 py-2 text-center transition-colors active:bg-accent disabled:opacity-50",
-                isSelected && "border-primary bg-primary/5",
-              )}
-            >
-              <span className="block text-sm font-medium">{option.label}</span>
-              {option.hint ? <span className="mt-0.5 block text-[11px] leading-tight text-muted-foreground">{option.hint}</span> : null}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/** Small helper so a PickerRow + PickerDrawer pair is a single call site. */
-export function usePickerState() {
-  const [openPicker, setOpenPicker] = useState<string | null>(null);
-  return {
-    openPicker,
-    open: (key: string) => setOpenPicker(key),
-    close: () => setOpenPicker(null),
-    isOpen: (key: string) => openPicker === key,
-    setOpen: (key: string) => (next: boolean) => setOpenPicker(next ? key : null),
-  };
 }
