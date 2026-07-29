@@ -420,10 +420,10 @@ export function DeckContent({ canInteract, autoSwitcherConfig, initialOverride }
           onDismiss={clearStopReason}
         />
 
-        {/* Title + connection status. The OBS badge stays on both tabs: the
-            scene pickers in the switcher settings need a live scene list. */}
+        {/* Title + connection status. The OBS badge stays on both tabs so the
+            connection state is never a tab switch away. */}
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold">{tab === "switcher" ? "Auto switcher" : "Stream Deck"}</h1>
+          <h1 className="text-xl font-semibold">{tab === "switcher" ? "Sensitivity" : "Stream Deck"}</h1>
           <Badge variant={statusVariant} className="gap-1.5">
             {obs.status === "open" && <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block animate-pulse" />}
             {(inStartFlow || isReconnecting || isStopping || externalStarting) && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -454,9 +454,6 @@ export function DeckContent({ canInteract, autoSwitcherConfig, initialOverride }
         {tab === "switcher" ? (
           <SwitcherSettingsPanel
             config={switcherConfig}
-            scenes={obs.filteredScenes}
-            sceneItems={obs.sceneItems}
-            obsConnected={obs.status === "open"}
             canInteract={canInteract}
             onSaved={setSwitcherConfig}
             onSaveBarChange={setSaveBar}
