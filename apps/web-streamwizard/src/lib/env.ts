@@ -4,14 +4,27 @@ import { z } from "zod"
 // Derive NEXT_PUBLIC_ vars from their non-prefixed Doppler counterparts so they
 // exist in process.env before createEnv validates them. The next.config.ts env:
 // block does the same derivation to bake them into the client bundle at build time.
-process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLIC_KEY;
-process.env.NEXT_PUBLIC_WS_SERVER_URL = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? process.env.WS_SERVER_URL;
-process.env.NEXT_PUBLIC_SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN;
+//
+// Assigned through this helper because `process.env.X = undefined` stores the
+// *string* "undefined" -- a truthy value that then fails anything parsing it as
+// a URL (see the images.remotePatterns block in next.config.ts).
+function deriveEnv(key: string, ...sources: (string | undefined)[]) {
+  const value = sources.find((v) => v !== undefined && v !== "");
+  if (value !== undefined) process.env[key] = value;
+}
+
+deriveEnv("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_URL);
+deriveEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, process.env.SUPABASE_PUBLIC_KEY);
+deriveEnv("NEXT_PUBLIC_WS_SERVER_URL", process.env.NEXT_PUBLIC_WS_SERVER_URL, process.env.WS_SERVER_URL);
+deriveEnv("NEXT_PUBLIC_SENTRY_DSN", process.env.NEXT_PUBLIC_SENTRY_DSN, process.env.SENTRY_DSN);
 // User assets live in the same R2 bucket as our static CDN (under assets/),
 // so the asset CDN URL falls back to NEXT_PUBLIC_CDN_URL unless overridden.
-process.env.NEXT_PUBLIC_ASSET_CDN_URL =
-  process.env.NEXT_PUBLIC_ASSET_CDN_URL ?? process.env.ASSET_CDN_URL ?? process.env.NEXT_PUBLIC_CDN_URL;
+deriveEnv(
+  "NEXT_PUBLIC_ASSET_CDN_URL",
+  process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+  process.env.ASSET_CDN_URL,
+  process.env.NEXT_PUBLIC_CDN_URL,
+);
 
 export const env = createEnv({
   server: {
