@@ -104,52 +104,103 @@ const ALERT_BOX_FIELDS: WidgetFieldSchema = {
   },
 };
 
-const SWITCHER_STATUS_HTML = `<div id="card" class="flex flex-col gap-3 w-full rounded-2xl border px-5 py-4 backdrop-blur-sm transition-all duration-500">
-  <div class="flex items-center justify-center gap-3">
-    <span id="dot-wrap" class="relative flex h-2.5 w-2.5 shrink-0">
-      <span id="dot-ping" class="absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping"></span>
+const SWITCHER_STATUS_HTML = `<div id="card"
+     class="inline-flex flex-col gap-2 rounded-2xl border px-4 py-3 backdrop-blur-sm transition-all duration-500">
+
+  <!-- Scene row -->
+  <div class="flex items-center gap-2.5">
+    <span class="relative flex h-2.5 w-2.5 shrink-0">
+      <span id="dot-ping" class="absolute inline-flex h-full w-full rounded-full opacity-75"></span>
       <span id="dot" class="relative inline-flex h-2.5 w-2.5 rounded-full"></span>
     </span>
-    <span id="scene" class="font-semibold leading-tight text-center">Waiting…</span>
-    <span id="pill" class="shrink-0 hidden text-[10px] font-bold tracking-widest px-2 py-0.5 rounded-md border"></span>
+
+    <span id="scene" class="font-semibold leading-tight">Waiting…</span>
+
+    <span id="pill"
+          class="hidden shrink-0 rounded-md border px-1.5 py-0.5 text-[0.6em] font-bold uppercase tracking-widest">
+    </span>
   </div>
-  <div id="bars" class="hidden flex-col gap-2"></div>
-  <p id="note" class="hidden text-xs text-center opacity-60"></p>
+
+  <!-- Metric rows. Injected by the JS so the three metrics stay defined in one
+       place. Each row hides itself unless it has something to say. -->
+  <div id="bars" class="hidden flex-col gap-1.5"></div>
+
+  <!-- Countdown / status line -->
+  <p id="note" class="hidden text-[0.7em] leading-tight opacity-70"></p>
 </div>`;
 
-// Ported from the xpudu monitoring overlay: the bar flips meaning by phase --
-// filling red toward the switch while live, filling green toward recovery once
-// in fallback -- and a metric that is behaving renders nothing at all, so a
-// healthy stream shows just the scene name.
-const SWITCHER_STATUS_JS = `/* Auto switcher status: which scene you are on, and how close the
- * switcher is to changing it. Put it in OBS as a browser source, or on a
- * phone-mode overlay to watch it while you walk.
+// Ported from the xpudu monitoring overlay: each row flips meaning by phase
+// -- filling red toward the switch while live, filling green toward recovery
+// once in fallback -- and a metric that is behaving renders nothing at all,
+// so a healthy stream shows just the scene name.
+const SWITCHER_STATUS_JS = `/* Auto switcher status:
  *
- * To try it without a live stream, open Demo mode and run the
- * "Auto switcher degrade + recover" simulator. */
+ * Shows which scene OBS is on and how close the auto switcher is to changing
+ * it. Each metric row shows two numbers:
+ *
+ *   bitrate  [=====   ]  780/800   1/6
+ *                        ^measured  ^bad polls out of the trigger
+ *
+ * The poll count is the one that matters — it is the countdown to the switch.
+ * The measured value tells you why.
+ *
+ * Events consumed (both already arrive on the overlay's own socket, nothing to
+ * subscribe to):
+ *   streamwizard.auto_switcher_status  — state, streaks, thresholds, latest
+ *   streamwizard.obs_scene_changed     — the scene OBS actually switched to
+ *
+ * To try it without streaming: Demo mode → run "Auto switcher degrade +
+ * recover", or fire the one-shot "Auto switcher: degrading" variant.
+ */
 
+/* ── settings ──────────────────────────────────────────────────────────────
+ * Read from the onWidgetLoad payload rather than a bare 'fieldData' global.
+ * The docs mention a global, but the sandbox only guarantees
+ * e.detail.fieldData / window.StreamWizard.fieldData — touching a bare
+ * 'fieldData' at the top of the file throws before the widget ever renders. */
+var F = {};
+
+function bool(value, fallback) {
+  return value === undefined || value === null ? fallback : value !== false;
+}
+
+function color(key, fallback) {
+  return F[key] || fallback;
+}
+
+/* ── state ─────────────────────────────────────────────────────────────── */
 var METRICS = [
   { key: 'bitrate', label: 'bitrate' },
-  { key: 'rtt', label: 'rtt' },
+  { key: 'rtt', label: 'ping' },
   { key: 'loss', label: 'loss' }
 ];
 
-/* No status for this long means the engine went away. It heartbeats every 5s
- * while it is watching a stream, so 15s of silence is three missed beats.
- *
- * It deliberately goes quiet when nothing is streaming, so silence only counts
- * as "gone" if the last thing it told us was that a stream was live -- see
- * isStale(). */
+/* The engine heartbeats every 5s *while it is watching a stream*, so three
+ * missed beats means it went away. It deliberately goes quiet when nothing is
+ * streaming, which is why isStale() only counts silence when the last frame
+ * said a stream was live. */
 var STALE_MS = 15000;
 
-var status = null;
-var statusAt = 0;
+var swStatus = null;
+var swStatusAt = 0;
 var sceneName = null;
+var ticker = null;
 
-window.addEventListener('onWidgetLoad', function () {
-  buildBars();
+/* ── lifecycle ─────────────────────────────────────────────────────────── */
+window.addEventListener('onWidgetLoad', function (e) {
+  F = (e.detail && e.detail.fieldData) || {};
+  buildRows();
   render();
-  setInterval(render, 1000);
+  /* Redraw on a timer too: the countdown and the stale guard both move on
+   * their own, with no event to prompt them. */
+  if (!ticker) ticker = setInterval(render, 500);
+});
+
+/* Re-apply settings in place instead of making the editor reload the document
+ * on every tweak (which would throw away the current status). */
+window.addEventListener('onFieldsUpdate', function (e) {
+  F = (e.detail && e.detail.fieldData) || {};
+  render();
 });
 
 window.addEventListener('onEventReceived', function (e) {
@@ -157,12 +208,14 @@ window.addEventListener('onEventReceived', function (e) {
   var event = e.detail.event;
 
   if (listener === 'streamwizard.auto_switcher_status') {
-    status = event;
-    statusAt = Date.now();
+    swStatus = event;
+    swStatusAt = Date.now();
   }
 
-  /* The scene OBS is actually on, whoever changed it -- the switcher, the
-   * panel, or you tapping around in OBS yourself. */
+  /* The scene OBS is actually on — whoever changed it: the switcher, the web
+   * panel, or you tapping around in OBS over VNC. Note this arrives completely
+   * independently of the status feed, so a scene label that updates is NOT
+   * evidence that the switcher is reporting. */
   if (listener === 'streamwizard.obs_scene_changed') {
     sceneName = event.sceneName;
   }
@@ -170,169 +223,317 @@ window.addEventListener('onEventReceived', function (e) {
   render();
 });
 
-function buildBars() {
+/* ── build ─────────────────────────────────────────────────────────────── */
+function buildRows() {
   var host = document.getElementById('bars');
-  host.innerHTML = METRICS.map(function (m) {
-    return '<div id="row-' + m.key + '" class="hidden items-center gap-3">' +
-      '<span class="font-mono opacity-50 w-16 shrink-0">' + m.label + '</span>' +
-      '<div class="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">' +
-        '<div id="fill-' + m.key + '" class="h-full rounded-full transition-all duration-300" style="width:0%"></div>' +
-      '</div>' +
-      '<span id="count-' + m.key + '" class="font-mono tabular-nums shrink-0 text-right opacity-80"></span>' +
-    '</div>';
-  }).join('');
+  var rows = '';
+  for (var i = 0; i < METRICS.length; i++) {
+    var m = METRICS[i];
+    rows +=
+      '<div id="row-' + m.key + '" class="hidden items-center gap-2">' +
+        '<span class="w-12 shrink-0 text-[0.7em] uppercase tracking-wide opacity-50">' + m.label + '</span>' +
+        '<div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">' +
+          '<div id="fill-' + m.key + '" class="h-full rounded-full transition-all duration-300" style="width:0%"></div>' +
+        '</div>' +
+        '<span id="meas-' + m.key + '" class="shrink-0 text-[0.65em] tabular-nums opacity-45"></span>' +
+        '<span id="polls-' + m.key + '" class="w-10 shrink-0 text-right text-[0.7em] font-semibold tabular-nums"></span>' +
+      '</div>';
+  }
+  host.innerHTML = rows;
 }
 
-/* A resting frame (nothing being watched) is the engine's final word until
- * something changes, so it must never rot into "No signal" -- that would turn
+/* ── render ────────────────────────────────────────────────────────────── */
+
+/* A resting frame (nothing being watched) is the engine's last word until
+ * something changes, so it must never rot into "no signal" — that would turn
  * "you are not streaming" into "your switcher is broken" after 15 seconds. */
 function isStale() {
-  if (!status) return true;
-  if (!status.armed) return false;
-  return Date.now() - statusAt > STALE_MS;
+  if (!swStatus) return true;
+  if (!swStatus.armed) return false;
+  return Date.now() - swStatusAt > STALE_MS;
 }
 
 function render() {
-  var card = document.getElementById('card');
   var stale = isStale();
-  var state = stale ? 'unknown' : status.state;
+  var state = stale ? 'unknown' : swStatus.state;
 
-  /* Override freezes the state machine, so the streaks underneath it are
-   * stale by definition -- render it as its own thing, never with bars. */
-  var inFallback = state === 'degraded' || state === 'offline';
-  var showBars = fieldData.showBars !== false && !stale &&
-    (state === 'live' || state === 'startup' || state === 'degraded');
+  /* Recovering: the engine is on the fallback scene and counting good polls
+   * back up to the recover thresholds. */
+  var recovering = !stale && (state === 'degraded' || state === 'offline');
+  var accent = accentFor(state, stale);
 
-  var accent = colorFor(state, stale);
-  card.style.background = fieldData.background || 'rgba(0,0,0,0.75)';
+  paintCard(accent, state, stale);
+  paintScene(state, stale, accent);
+  paintRows(state, stale, recovering);
+  paintNote(state, stale, recovering);
+}
+
+function paintCard(accent, state, stale) {
+  var card = document.getElementById('card');
+  card.style.background = F.background || 'rgba(0,0,0,0.72)';
+  card.style.color = F.textColor || '#ffffff';
+  card.style.fontSize = (Number(F.fontSize) || 18) + 'px';
   card.style.borderColor = state === 'live' || stale ? 'rgba(255,255,255,0.12)' : accent + '66';
-  card.style.color = fieldData.textColor || '#ffffff';
-  card.style.fontSize = (Number(fieldData.fontSize) || 16) + 'px';
+  card.style.minWidth = bool(F.showBars, true) ? '280px' : '0px';
+}
 
+function paintScene(state, stale, accent) {
   var dot = document.getElementById('dot');
   var ping = document.getElementById('dot-ping');
   dot.style.background = accent;
   ping.style.background = accent;
-  /* Pulse only when something needs attention, so a healthy overlay is still. */
-  ping.style.display = (!stale && (inFallback || status.warning_shown)) ? '' : 'none';
+  /* Pulse only when something wants attention, so a healthy overlay is still. */
+  ping.style.display = !stale && (state === 'degraded' || state === 'offline' || swStatus.warning_shown) ? '' : 'none';
 
   document.getElementById('scene').textContent = sceneLabel(stale);
 
   var pill = document.getElementById('pill');
-  var pillText = pillFor(state, stale);
-  pill.textContent = pillText;
-  pill.style.display = pillText ? '' : 'none';
+  var text = pillFor(state, stale);
+  pill.textContent = text;
+  pill.style.display = text ? '' : 'none';
   pill.style.color = accent;
   pill.style.borderColor = accent + '66';
-  pill.style.background = accent + '33';
-
-  document.getElementById('bars').style.display = showBars ? 'flex' : 'none';
-  if (showBars) {
-    var anyVisible = false;
-    for (var i = 0; i < METRICS.length; i++) {
-      if (renderRow(METRICS[i], inFallback)) anyVisible = true;
-    }
-    document.getElementById('bars').style.display = anyVisible ? 'flex' : 'none';
-  }
-
-  var note = document.getElementById('note');
-  var noteText = noteFor(state, stale);
-  note.textContent = noteText;
-  note.style.display = noteText ? '' : 'none';
+  pill.style.background = accent + '2b';
 }
 
-/* Returns whether the row is showing, so an all-healthy set can collapse the
- * whole bar block instead of leaving an empty gap. */
-function renderRow(metric, inFallback) {
+function paintRows(state, stale, recovering) {
+  var host = document.getElementById('bars');
+
+  /* Override freezes the state machine, so the streaks under it are stale by
+   * definition — never draw rows for it. Same for idle and unknown. */
+  var eligible = !stale && (state === 'live' || state === 'startup' || state === 'degraded' || state === 'offline');
+  if (!bool(F.showBars, true) || !eligible) {
+    host.style.display = 'none';
+    return;
+  }
+
+  var anyVisible = false;
+  for (var i = 0; i < METRICS.length; i++) {
+    if (paintRow(METRICS[i], recovering)) anyVisible = true;
+  }
+  host.style.display = anyVisible ? 'flex' : 'none';
+}
+
+/* Returns whether this row ended up visible, so an all-healthy set collapses
+ * the whole block instead of leaving an empty gap. */
+function paintRow(metric, recovering) {
   var row = document.getElementById('row-' + metric.key);
-  var streak = status.streaks[metric.key];
-  var thr = status.thresholds;
+  var streak = swStatus.streaks[metric.key];
+  var bad = streak.bad;
 
-  var value = inFallback ? streak.good : streak.bad;
-  var limit = inFallback
-    ? thr[metric.key + '_recover_polls']
-    : thr[metric.key + '_trigger_polls'];
-
-  if (value <= 0) { row.style.display = 'none'; return false; }
+  /* Three things a row can be showing:
+   *   recovering — good polls climbing toward the recover threshold
+   *   failing    — bad polls climbing toward the trigger
+   *   healthy    — how much of the threshold the current reading is using,
+   *                which moves before any bad poll is counted. Off by default:
+   *                on stream you want silence when things are fine, but on the
+   *                phone it is the whole point of looking. */
+  var mode = recovering ? 'recovering' : bad > 0 ? 'failing' : bool(F.alwaysShowMetrics, false) ? 'healthy' : null;
+  if (!mode) {
+    row.style.display = 'none';
+    return false;
+  }
   row.style.display = 'flex';
 
-  var pct = Math.min((value / limit) * 100, 100);
-  var color = inFallback ? '#34d399' : pct >= 90 ? '#f87171' : pct >= 60 ? '#fbbf24' : '#facc15';
+  var limit = pollLimit(metric.key, recovering);
+  var polls = Math.min(recovering ? streak.good : bad, limit);
+  var pct = mode === 'healthy' ? thresholdUsage(metric.key) : Math.min((polls / limit) * 100, 100);
+
+  var barColor =
+    mode === 'recovering' ? color('recoverColor', '#34d399')
+    : mode === 'healthy' ? color('healthyColor', '#34d399')
+    : pct >= 90 ? color('criticalColor', '#f87171')
+    : pct >= 55 ? color('warningColor', '#fbbf24')
+    : color('cautionColor', '#facc15');
 
   var fill = document.getElementById('fill-' + metric.key);
-  fill.style.width = pct + '%';
-  fill.style.background = color;
+  fill.style.width = (pct === null ? 0 : pct) + '%';
+  fill.style.background = barColor;
+  fill.style.opacity = mode === 'healthy' ? '0.45' : '1';
 
-  var count = document.getElementById('count-' + metric.key);
-  count.style.color = color;
-  count.style.fontSize = '0.75em';
-  count.textContent = fieldData.showMetricValues !== false && status.latest
-    ? measured(metric.key)
-    : Math.min(value, limit) + '/' + limit + (inFallback ? ' good' : ' bad');
+  /* Measured value and poll count are separate columns on purpose. The poll
+   * count is the countdown to the switch; the measured value is the reason. */
+  var meas = document.getElementById('meas-' + metric.key);
+  meas.textContent = bool(F.showMeasured, true) ? measured(metric.key) : '';
+
+  var pollsEl = document.getElementById('polls-' + metric.key);
+  pollsEl.style.color = barColor;
+  pollsEl.textContent = mode === 'healthy' ? '0/' + pollLimit(metric.key, false) : polls + '/' + limit;
   return true;
 }
 
-function measured(key) {
-  var s = status.latest;
-  var thr = status.thresholds;
+/* How much of its threshold the current reading is using, 0-100, lower is
+ * better for all three. Bitrate is inverted (a floor, not a ceiling) so the
+ * bars all read the same way: filling up means trouble. */
+function thresholdUsage(key) {
+  var s = swStatus.latest;
+  var thr = swStatus.thresholds;
+  if (!s) return 0;
   if (key === 'bitrate') {
-    return s.kbps === null ? '-' : Math.round(s.kbps) + '/' + thr.bitrate_min_kbps + ' kbps';
+    if (s.kbps === null || s.kbps <= 0) return 0;
+    return Math.min((thr.bitrate_min_kbps / s.kbps) * 100, 100);
   }
   if (key === 'rtt') {
-    return s.rtt_ms === null ? '-' : Math.round(s.rtt_ms) + '/' + thr.rtt_max_ms + ' ms';
+    return s.rtt_ms === null ? 0 : Math.min((s.rtt_ms / thr.rtt_max_ms) * 100, 100);
   }
-  return s.loss_pct === null ? '-' : s.loss_pct.toFixed(1) + '/' + thr.loss_max_pct + '%';
+  return s.loss_pct === null ? 0 : Math.min((s.loss_pct / thr.loss_max_pct) * 100, 100);
+}
+
+function pollLimit(key, recovering) {
+  var thr = swStatus.thresholds;
+  return recovering ? thr[key + '_recover_polls'] : thr[key + '_trigger_polls'];
+}
+
+/* The actual reading against the threshold it is judged by. 'latest' fields are
+ * null for RTMP, which only reports throughput. */
+function measured(key) {
+  var s = swStatus.latest;
+  var thr = swStatus.thresholds;
+  if (!s) return '';
+  if (key === 'bitrate') {
+    return s.kbps === null ? '—' : Math.round(s.kbps) + '/' + thr.bitrate_min_kbps;
+  }
+  if (key === 'rtt') {
+    return s.rtt_ms === null ? '—' : Math.round(s.rtt_ms) + '/' + thr.rtt_max_ms + 'ms';
+  }
+  return s.loss_pct === null ? '—' : s.loss_pct.toFixed(1) + '/' + thr.loss_max_pct + '%';
 }
 
 function sceneLabel(stale) {
   if (sceneName) return sceneName;
-  /* Before the first scene event, fall back to whatever the switcher last
-   * asked for. Close enough to be useful, and it self-corrects. */
-  if (!stale && status.last_switch) return status.last_switch.to_scene;
+  /* Before the first scene event, fall back to whatever the switcher last asked
+   * for. Close enough to be useful, and it self-corrects on the next change. */
+  if (!stale && swStatus.last_switch) return swStatus.last_switch.to_scene;
   return stale ? 'No signal' : 'Unknown scene';
 }
 
 function pillFor(state, stale) {
   if (stale) return '';
-  if (state === 'override') return 'HOLD';
-  if (state === 'degraded') return 'FALLBACK';
-  if (state === 'offline') return 'OFFLINE';
-  if (state === 'startup') return 'STARTING';
+  if (state === 'override') return 'hold';
+  if (state === 'degraded') return 'fallback';
+  if (state === 'offline') return 'offline';
+  if (state === 'startup') return 'starting';
   return '';
 }
 
-function noteFor(state, stale) {
-  if (stale) return 'No status from the switcher';
-  if (state === 'override') return 'Scene held manually';
-  if (state === 'idle' || !status.armed) return 'No stream';
+function paintNote(state, stale, recovering) {
+  var note = document.getElementById('note');
+  var text = noteFor(state, stale, recovering);
+  note.textContent = text;
+  note.style.display = text ? '' : 'none';
+}
+
+function noteFor(state, stale, recovering) {
+  /* Deliberately explicit: this is the line that tells you the status feed
+   * itself is missing, which a scene label alone cannot. */
+  if (stale) return 'No swStatus from the switcher';
+  if (state === 'override') {
+    return swStatus.override && swStatus.override.scene_name
+      ? 'Held on ' + swStatus.override.scene_name
+      : 'Scene held manually';
+  }
+  if (state === 'idle' || !swStatus.armed) return 'No stream';
+
+  if (recovering) {
+    if (!bool(F.showCountdown, true)) return '';
+    var left = pollsToRecover();
+    return left === null ? 'Waiting for a stable link' : 'Stable for ' + left + ' more polls to switch back';
+  }
+
+  /* Live but something is already failing: how many more bad polls until the
+   * switch. This is the number the engine used to never publish. */
+  if (bool(F.showCountdown, true)) {
+    var until = pollsToSwitch();
+    if (until !== null) return until <= 1 ? 'Switching now' : 'Switching in ' + until + ' polls';
+  }
   return '';
 }
 
-function colorFor(state, stale) {
-  if (stale) return fieldData.offlineColor || '#94a3b8';
-  if (state === 'offline') return fieldData.offlineColor || '#94a3b8';
-  if (state === 'degraded') return fieldData.fallbackColor || '#fb923c';
-  if (state === 'override') return fieldData.overrideColor || '#a78bfa';
-  if (state === 'startup') return fieldData.warningColor || '#facc15';
-  if (status.warning_shown) return fieldData.warningColor || '#facc15';
-  return fieldData.healthyColor || '#34d399';
+/* Fallback fires when ANY metric hits its trigger, so the countdown is the
+ * closest metric. */
+function pollsToSwitch() {
+  var best = null;
+  for (var i = 0; i < METRICS.length; i++) {
+    var key = METRICS[i].key;
+    var bad = swStatus.streaks[key].bad;
+    if (bad <= 0) continue;
+    var left = Math.max(pollLimit(key, false) - bad, 0);
+    if (best === null || left < best) best = left;
+  }
+  return best;
+}
+
+/* Recovery needs ALL metrics good, so the wait is the furthest-behind metric. */
+function pollsToRecover() {
+  var worst = null;
+  for (var i = 0; i < METRICS.length; i++) {
+    var key = METRICS[i].key;
+    var left = Math.max(pollLimit(key, true) - swStatus.streaks[key].good, 0);
+    if (worst === null || left > worst) worst = left;
+  }
+  return worst === 0 ? null : worst;
+}
+
+function accentFor(state, stale) {
+  if (stale || state === 'offline' || state === 'idle') return color('offlineColor', '#94a3b8');
+  if (state === 'degraded') return color('fallbackColor', '#fb923c');
+  if (state === 'override') return color('overrideColor', '#a78bfa');
+  if (state === 'startup') return color('cautionColor', '#facc15');
+  if (swStatus.warning_shown) return color('cautionColor', '#facc15');
+  return color('healthyColor', '#34d399');
+}`;
+
+const SWITCHER_STATUS_CSS = `/* Soften the attention pulse. Tailwind's animate-ping is a hard 1s strobe,
+   which is fine for a notification badge and awful on a stream overlay you are
+   staring at for hours. */
+#dot-ping {
+  animation: sw-pulse 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes sw-pulse {
+  0%   { transform: scale(1);    opacity: 0.7; }
+  70%  { transform: scale(2.4);  opacity: 0; }
+  100% { transform: scale(2.4);  opacity: 0; }
+}
+
+/* Bars grow from the left rather than fading in, so a filling bar reads as
+   progress toward the switch instead of a value blinking on. */
+#bars > div > div > div {
+  transform-origin: left center;
+}
+
+/* Keep the card from jumping around as rows appear and disappear — the scene
+   row stays put and the bars grow downward. */
+#card {
+  align-items: stretch;
 }`;
 
 const SWITCHER_STATUS_FIELDS: WidgetFieldSchema = {
   showBars: { type: "checkbox", label: "Show poll bars", value: true },
-  showMetricValues: { type: "checkbox", label: "Show measured values on the bars", value: true },
-  fontSize: { type: "slider", label: "Text size (px)", value: 16, min: 10, max: 32, step: 1 },
+  showMeasured: { type: "checkbox", label: "Show the measured value on each bar", value: true },
+  alwaysShowMetrics: { type: "checkbox", label: "Always show all three metrics (off = only when something is wrong)", value: false },
+  showCountdown: { type: "checkbox", label: "Show \"switching in N polls\"", value: true },
+  fontSize: { type: "slider", label: "Text size (px)", value: 18, min: 10, max: 40, step: 1 },
   colors: {
     type: "group",
     label: "Colors",
     fields: {
       healthyColor: { type: "colorpicker", label: "Healthy", value: "#34d399" },
-      warningColor: { type: "colorpicker", label: "Warning", value: "#facc15" },
-      fallbackColor: { type: "colorpicker", label: "Fallback", value: "#fb923c" },
-      offlineColor: { type: "colorpicker", label: "Offline", value: "#94a3b8" },
+      cautionColor: { type: "colorpicker", label: "Caution (first bad polls)", value: "#facc15" },
+      warningColor: { type: "colorpicker", label: "Warning (over halfway)", value: "#fbbf24" },
+      criticalColor: { type: "colorpicker", label: "Critical (about to switch)", value: "#f87171" },
+      recoverColor: { type: "colorpicker", label: "Recovering", value: "#34d399" },
+      fallbackColor: { type: "colorpicker", label: "On fallback scene", value: "#fb923c" },
       overrideColor: { type: "colorpicker", label: "Manual hold", value: "#a78bfa" },
+      offlineColor: { type: "colorpicker", label: "Offline / no stream", value: "#94a3b8" },
+    },
+  },
+  card: {
+    type: "group",
+    label: "Card",
+    fields: {
       textColor: { type: "colorpicker", label: "Text", value: "#ffffff" },
-      background: { type: "text", label: "Card background (CSS color)", value: "rgba(0,0,0,0.75)" },
+      background: { type: "text", label: "Background (any CSS color)", value: "rgba(0,0,0,0.72)" },
     },
   },
 };
@@ -356,7 +557,7 @@ export const STARTER_WIDGETS: StarterWidget[] = [
     tags: ["irl", "auto switcher"],
     html: SWITCHER_STATUS_HTML,
     js: SWITCHER_STATUS_JS,
-    extra_css: "",
+    extra_css: SWITCHER_STATUS_CSS,
     fields: SWITCHER_STATUS_FIELDS,
   },
 ];

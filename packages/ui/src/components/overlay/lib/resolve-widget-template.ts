@@ -113,6 +113,11 @@ export function buildWidgetSrcdoc(
 ): string {
   const { resolvedHtml, resolvedCss } = resolveWidgetTemplate(html, extraCss, fields, fieldValues);
   const stateUrl = overlayOrigin ? JSON.stringify(`${overlayOrigin}/api/widgets/state`) : "null";
+  // Serialized into the bootstrap so the documented `fieldData` global holds the
+  // real values from the widget's very first line, not from onWidgetLoad. `<` is
+  // escaped because a field value containing "</script>" would otherwise close
+  // the tag it is embedded in.
+  const initialFieldData = JSON.stringify(mergeFieldValues(fields, fieldValues)).replace(/</g, "\\u003c");
   const nonce = documentNonce();
   const connectSrc = [
     overlayOrigin,
@@ -182,6 +187,14 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
     // place; the editor reloads the document for the ones that don't, so it
     // needs to know which kind this is before it decides.
     var swHandlesFieldUpdates = false;
+    // The documented global (see apps/docs/widgets/fields.mdx: "the global
+    // fieldData object"). It has to be a real binding, not just
+    // StreamWizard.fieldData: widget scripts run as classic scripts in this
+    // scope, so a bare fieldData reference throws a ReferenceError without
+    // one -- which is what made every starter widget that read a setting at top
+    // level fail before it rendered. Seeded with the resolved values and
+    // reassigned wherever StreamWizard.fieldData changes below.
+    var fieldData = ${initialFieldData};
     var swOriginalAddEventListener = window.addEventListener.bind(window);
     window.addEventListener = function(type) {
       if (type === 'onFieldsUpdate') swHandlesFieldUpdates = true;
@@ -191,7 +204,7 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
       stateUrl: ${stateUrl},
       session: null,
       /** Latest field values. Replaced before each 'onFieldsUpdate'. */
-      fieldData: {},
+      fieldData: fieldData,
       // Typed wrapper around the raw state API; see the editor's autocomplete
       // (StreamWizardStateApi). Throws outside a placed overlay widget, where
       // there is no session to authenticate with.
@@ -227,7 +240,10 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
     window.addEventListener('message', function(e) {
       if (e.data.type === 'onWidgetLoad') {
         if (e.data.payload && e.data.payload.session) window.StreamWizard.session = e.data.payload.session;
-        if (e.data.payload && e.data.payload.fieldData) window.StreamWizard.fieldData = e.data.payload.fieldData;
+        if (e.data.payload && e.data.payload.fieldData) {
+          window.StreamWizard.fieldData = e.data.payload.fieldData;
+          fieldData = window.StreamWizard.fieldData;
+        }
         window.dispatchEvent(new CustomEvent('onWidgetLoad', { detail: e.data.payload }));
       }
       // A setting changed while the document stayed loaded. Widgets that act on
@@ -236,7 +252,8 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
       // fieldData once at load.
       if (e.data.type === 'swFieldData') {
         window.StreamWizard.fieldData = e.data.fieldData || {};
-        window.dispatchEvent(new CustomEvent('onFieldsUpdate', { detail: { fieldData: window.StreamWizard.fieldData } }));
+        fieldData = window.StreamWizard.fieldData;
+        window.dispatchEvent(new CustomEvent('onFieldsUpdate', { detail: { fieldData: fieldData } }));
         try {
           parent.postMessage({ type: 'swFieldDataApplied', handled: swHandlesFieldUpdates }, '*');
         } catch (err) { /* parent gone */ }
