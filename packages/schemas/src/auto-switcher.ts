@@ -4,6 +4,18 @@ import { z } from "zod";
 // One "poll" = one ingest stats sample = 1 second (the SRT sampler reports at
 // 1 Hz). Fallback fires when ANY metric has been bad for its trigger_polls;
 // recovery requires ALL metrics good for their recover_polls.
+//
+// The loss_* fields threshold UNRECOVERED loss (SRT drop_pct — packets the
+// buffer gave up on, i.e. visible glitches), not raw pre-retransmit loss:
+// cellular routinely shows 2-5% raw loss that the 4s ingest buffer recovers
+// completely. Field names stay "loss" because that's what streamers call it
+// and because renaming would invalidate stored advanced_thresholds rows.
+//
+// RTT maxima are sized against the ingest receiver buffer
+// (INGEST_SRT_INGRESS_LATENCY_MS, 4000ms): SRT keeps recovering until RTT
+// approaches roughly buffer/4 ≈ 1000ms, so triggers sit at 600-1200ms as a
+// pre-emptive band rather than the old 250-400ms, which flipped scenes on
+// cell bufferbloat the buffer would have absorbed invisibly.
 
 export const autoSwitcherThresholdsSchema = z.object({
   bitrate_min_kbps: z.number().int().min(0),
@@ -57,9 +69,9 @@ function bundle(
 }
 
 export const AUTO_SWITCHER_PRESET_THRESHOLDS: Record<AutoSwitcherSensitivityPreset, AutoSwitcherThresholds> = {
-  relaxed: bundle(800, 400, 8, 6, 30, 8, 8),
-  balanced: bundle(1000, 300, 5, 3, 20, 5, 5),
-  fast: bundle(1200, 250, 3, 2, 10, 3, 3),
+  relaxed: bundle(800, 1200, 5, 6, 30, 8, 8),
+  balanced: bundle(1000, 900, 2, 3, 20, 5, 5),
+  fast: bundle(1200, 600, 1, 2, 10, 3, 3),
 };
 
 // ─── Config row ──────────────────────────────────────────────────────────────
@@ -155,6 +167,7 @@ const metricStreakSchema = z.object({ bad: z.number(), good: z.number() });
 const autoSwitcherLatestSampleSchema = z.object({
   kbps: z.number().nullable(),
   rtt_ms: z.number().nullable(),
+  /** Unrecovered loss (SRT drop_pct) — the value actually judged against loss_max_pct. */
   loss_pct: z.number().nullable(),
   /** Epoch ms the engine processed the sample. */
   at: z.number(),

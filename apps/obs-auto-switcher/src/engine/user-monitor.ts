@@ -267,11 +267,12 @@ export class UserMonitor {
 
   private updateStreaks(payload: IngestStatsPayload): void {
     const thr = this.cfg.thresholds;
+    const loss = unrecoveredLossPct(payload);
     // Missing metrics count as OK — RTMP sessions only report kbps.
     const ok: Record<MetricKey, boolean> = {
       bitrate: payload.kbps === undefined || payload.kbps >= thr.bitrate_min_kbps,
       rtt: payload.rtt_ms === undefined || payload.rtt_ms <= thr.rtt_max_ms,
-      loss: payload.loss_pct === undefined || payload.loss_pct <= thr.loss_max_pct,
+      loss: loss === undefined || loss <= thr.loss_max_pct,
     };
     for (const key of METRICS) {
       if (ok[key]) {
@@ -450,7 +451,7 @@ export class UserMonitor {
       const vars = {
         bitrate: this.latestStats?.kbps,
         rtt: this.latestStats?.rtt_ms,
-        loss: this.latestStats?.loss_pct,
+        loss: this.latestStats ? unrecoveredLossPct(this.latestStats) : undefined,
         scene: entry.to_scene,
       };
       if (entry.reason === "auto_fallback") {
@@ -535,20 +536,22 @@ export class UserMonitor {
   private fallbackDetail(bad: MetricKey[]): string {
     const thr = this.cfg.thresholds;
     const s = this.latestStats;
+    const loss = s ? unrecoveredLossPct(s) : undefined;
     const parts = bad.map((key) => {
       if (key === "bitrate") return `bitrate ${s?.kbps !== undefined ? Math.round(s.kbps) : "?"} kbps < ${thr.bitrate_min_kbps} kbps`;
       if (key === "rtt") return `RTT ${s?.rtt_ms !== undefined ? Math.round(s.rtt_ms) : "?"} ms > ${thr.rtt_max_ms} ms`;
-      return `loss ${s?.loss_pct !== undefined ? s.loss_pct.toFixed(1) : "?"}% > ${thr.loss_max_pct}%`;
+      return `loss ${loss !== undefined ? loss.toFixed(1) : "?"}% > ${thr.loss_max_pct}%`;
     });
     return parts.join(", ");
   }
 
   private recoverDetail(): string {
     const s = this.latestStats;
+    const loss = s ? unrecoveredLossPct(s) : undefined;
     const bits = [
       s?.kbps !== undefined ? `${Math.round(s.kbps)} kbps` : null,
       s?.rtt_ms !== undefined ? `${Math.round(s.rtt_ms)} ms RTT` : null,
-      s?.loss_pct !== undefined ? `${s.loss_pct.toFixed(1)}% loss` : null,
+      loss !== undefined ? `${loss.toFixed(1)}% loss` : null,
     ].filter(Boolean);
     return `link stable (${bits.join(", ") || "no metrics"})`;
   }
@@ -599,7 +602,7 @@ export class UserMonitor {
         ? {
             kbps: selected.latest.kbps ?? null,
             rtt_ms: selected.latest.rtt_ms ?? null,
-            loss_pct: selected.latest.loss_pct ?? null,
+            loss_pct: unrecoveredLossPct(selected.latest) ?? null,
             at: selected.lastSeenMs,
           }
         : null,
@@ -660,6 +663,15 @@ export class UserMonitor {
     this.lastPublishedKey = this.statusKey(now);
     this.deps.publishStatus(this.userId, this.buildStatus(now));
   }
+}
+
+// The "loss" metric judges UNRECOVERED loss: drop_pct counts packets SRT gave
+// up on after exhausting the receiver buffer (visible glitches), while raw
+// loss_pct counts pre-retransmit loss — routinely 2-5% on cellular with zero
+// on-screen impact, which is what made the old thresholds flap. loss_pct
+// remains as a fallback for ingest nodes that predate drop_pct derivation.
+function unrecoveredLossPct(payload: IngestStatsPayload): number | undefined {
+  return payload.drop_pct ?? payload.loss_pct;
 }
 
 function newStreaks(): Record<MetricKey, Streak> {

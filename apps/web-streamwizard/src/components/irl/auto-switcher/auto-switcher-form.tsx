@@ -418,7 +418,9 @@ function ChatTemplateField({ form, name, label }: { form: any; name: keyof AutoS
 const MATRIX_ROWS = [
   { key: "bitrate", label: "Bitrate", unit: "min kbps", value: "bitrate_min_kbps", trigger: "bitrate_trigger_polls", recover: "bitrate_recover_polls", startup: "bitrate_startup_polls" },
   { key: "rtt", label: "Ping (RTT)", unit: "max ms", value: "rtt_max_ms", trigger: "rtt_trigger_polls", recover: "rtt_recover_polls", startup: "rtt_startup_polls" },
-  { key: "loss", label: "Packet loss", unit: "max %", value: "loss_max_pct", trigger: "loss_trigger_polls", recover: "loss_recover_polls", startup: "loss_startup_polls" },
+  // "Unrecovered" = packets SRT gave up on (visible glitches), not raw cell
+  // loss the ingest buffer repairs — see unrecoveredLossPct in the engine.
+  { key: "loss", label: "Packet loss (unrecovered)", unit: "max %", value: "loss_max_pct", trigger: "loss_trigger_polls", recover: "loss_recover_polls", startup: "loss_startup_polls" },
 ] as const;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
