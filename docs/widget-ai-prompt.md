@@ -30,19 +30,44 @@ Hard constraints:
 
 | Global | What it is |
 |---|---|
+| `fieldData` | Field values, already populated before your first line runs |
 | `gsap`, `TextPlugin` | GSAP 3.12.5, plugin pre-registered |
 | `StreamWizard.state` | `get()` / `set(obj)` persistence — see below |
 | `StreamWizard.session` | `{ subscriberToken, overlayItemId }` once placed on an overlay; `null` in the editor preview |
 | `StreamWizard.stateUrl` | Raw state endpoint. Prefer `StreamWizard.state`. |
+| `StreamWizard.fieldData` | Same values as `fieldData`; kept in sync |
 
-There is **no `fieldData` global at runtime**. Read field values from `onWidgetLoad`:
+`fieldData` holds the field defaults merged with the streamer's overrides, and is
+seeded before your script evaluates, so reading it at the top level is safe:
 
 ```js
-let cfg = {};
-addEventListener('onWidgetLoad', (e) => {
-  cfg = e.detail.fieldData;
-});
+const duration = Number(fieldData.duration) || 5;
 ```
+
+It is **reassigned** when the streamer edits a setting, so read it fresh inside
+your handlers rather than caching primitives at load time if you want live
+updates — see `onFieldsUpdate`.
+
+## Never name a top-level variable after a `window` property
+
+Widget JS runs as a classic script in the iframe's global scope, so `var x` at
+top level does not create a new binding when `window.x` already exists — it
+reuses that property. For accessor properties this fails **silently and
+destructively**:
+
+```js
+var status = null;
+status = { state: 'live' };   // window.status stringifies: "[object Object]"
+status.state                   // undefined — no error, nothing in the console
+```
+
+Anything reading `status.foo` then gets `undefined`, so the widget renders a
+blank or default state with no clue why. Prefix them (`swStatus`), or wrap the
+whole script in an IIFE.
+
+Reserved by `Window`, most likely to bite: `status`, `name`, `length`, `event`,
+`top`, `self`, `parent`, `origin`, `history`, `location`, `screen`, `frames`,
+`stop`, `open`, `close`, `focus`, `blur`, `print`, `scroll`, `find`.
 
 ## Lifecycle events
 
@@ -73,7 +98,8 @@ addEventListener('onFieldsUpdate', (e) => {
 });
 ```
 
-The latest values are also on `StreamWizard.fieldData`.
+The `fieldData` global and `StreamWizard.fieldData` are both updated before this
+fires, so either works — `e.detail.fieldData` is just the most explicit.
 
 ### `onEventReceived` — every live event
 
@@ -135,9 +161,9 @@ await StreamWizard.state.set({ deaths: 4 });                    // replaces the 
 `channel.poll.begin`, `channel.poll.progress`, `channel.poll.end`, `channel.prediction.begin`, `channel.prediction.progress`, `channel.prediction.lock`, `channel.prediction.end`,
 `stream.online`, `stream.offline`,
 `conduit.shard.disabled`, `drop.entitlement.grant`, `extension.bits_transaction.create`, `user.authorization.grant`, `user.authorization.revoke`, `user.update`, `user.whisper.message`,
-`streamwizard.geo` (IRL GPS — shape below).
+`streamwizard.geo` (IRL GPS — shape below), `streamwizard.ingest_stats`, `streamwizard.auto_switcher_status`, `streamwizard.auto_switcher_config`, `streamwizard.obs_instance_lifecycle`, `streamwizard.obs_scene_changed` (StreamWizard's own — shapes below).
 
-Payloads are stock Twitch EventSub payloads (the `event` object, unwrapped). Every listed event also carries `broadcaster_user_id` / `_login` / `_name` unless noted.
+Payloads are stock Twitch EventSub payloads (the `event` object, unwrapped). Every listed event also carries `broadcaster_user_id` / `_login` / `_name` unless noted. The `streamwizard.*` events are not Twitch payloads; their shapes are given below.
 
 ## Common payloads
 
@@ -220,10 +246,85 @@ Allowed IRL APIs (already in the CSP): `https://api.open-meteo.com` (weather, e.
 
 There is no `streamwizard.status` event reaching widgets — an IRL phone going away arrives as `streamwizard.geo` with `status: "offline"`.
 
+## IRL stream health — the ingest and auto-switcher events
+
+Three producers, and they are independent: the ingest node reports what it
+measured, the auto switcher reports what it decided about that, and the OBS
+instance manager reports what OBS actually did. A widget showing one of them tells
+you nothing about the other two arriving.
+
+### `streamwizard.ingest_stats` — ~1/s per active stream
+
+```
+session_id, protocol  "srt" | "srtla" | "rtmp"
+label                 stream key name, e.g. "Camera 1"
+kbps, rtt_ms
+loss_pct, drop_pct, retrans_pct   derived percentages
+```
+
+Everything below `session_id`/`protocol` is optional: RTMP reports throughput
+only, so the SRT transport fields never appear for it. Flows whether or not the
+auto switcher is enabled.
+
+### `streamwizard.auto_switcher_status` — on change, plus a 5s heartbeat
+
+```
+state        "idle" | "startup" | "live" | "degraded" | "offline" | "override"
+armed        true only while a stream is actually being watched
+streaks      { bitrate: {bad, good}, rtt: {...}, loss: {...} }   consecutive polls
+thresholds   { bitrate_min_kbps, rtt_max_ms, loss_max_pct,
+               <metric>_trigger_polls, <metric>_recover_polls,
+               <metric>_startup_polls, offline_timeout_seconds }
+warning_shown  the "unstable connection" source is visible in OBS right now
+latest       { kbps, rtt_ms, loss_pct, at } | null   — nulls for absent metrics
+last_switch  { at, from_scene, to_scene, reason, detail, session_id, label } | null
+override     { scene_uuid, scene_name, expires_at } | null
+offline_since, auto_stop_deadline, last_error
+```
+
+One poll = one 1 Hz ingest sample. The asymmetry matters for anything that draws
+progress: a fallback fires when **any** metric reaches its `trigger_polls`, but
+recovery needs **all** metrics good for their `recover_polls`. So a "switching in
+N" countdown is the *closest* metric, while "stable for N more" is the
+*furthest behind*.
+
+`good` climbs without bound on a healthy stream — clamp it before dividing, or
+you get `1284/10`. While `state` is `"override"` the engine is paused and the
+streaks are frozen, so don't draw them. `armed: false` with `state: "offline"` or
+`"idle"` means nothing is streaming, and the engine deliberately stops
+heartbeating then — treat silence after such a frame as "no stream", not as "the
+engine died", or a resting overlay decays into a false error.
+
+### `streamwizard.obs_scene_changed` — on every scene change
+
+```
+instanceId, sceneName, sceneUuid, at   (ISO)
+```
+
+Observed rather than commanded: it fires for switches made by the auto switcher,
+the web panel, the streamer clicking around in OBS over VNC, or a hotkey. Prefer
+it over `auto_switcher_status.last_switch.to_scene`, which is only what the engine
+*asked for*. Also emitted once when the manager's listener (re)connects, so a
+browser source that loads mid-stream still gets the current scene.
+
+### `streamwizard.obs_instance_lifecycle`
+
+```
+instanceId, action  "starting" | "started" | "stopping" | "stopped" | "error" | "deleted"
+at                  ISO
+```
+
+### `streamwizard.auto_switcher_config`
+
+The streamer's `obs_auto_switcher_configs` row (scene UUIDs, sensitivity preset,
+chat templates, toggles). Rarely useful to a widget — `auto_switcher_status`
+already carries the resolved `thresholds`.
+
 ## Editor behaviour worth knowing
 
 - **Never build a demo mode into a widget.** No `demoMode` field, no `startDemo()`, no fake-data loop. StreamWizard's Demo mode feeds fake events to any widget from the editor toolbar — including a moving GPS track — so widget-side demo code is redundant and ships dead weight to viewers.
-- Demo mode fires one-shot payloads for every event in the catalogue (follow, sub, gift sub, resub, sub ended, cheer, raid, channel update, ban, chat message, chat cleared, reward redeemed, stream online/offline, plus `streamwizard.geo` and the other `streamwizard.*` events), and runs looping simulators for a moving GPS track and a chat feed. Geo also has an **Offline** button for the `status: "offline"` case.
+- Demo mode fires one-shot payloads for every event in the catalogue (follow, sub, gift sub, resub, sub ended, cheer, raid, channel update, ban, chat message, chat cleared, reward redeemed, stream online/offline, plus `streamwizard.geo` and the other `streamwizard.*` events), and runs looping simulators for a moving GPS track, a chat feed, and a full auto-switcher degrade/recover cycle. Geo has an **Offline** button; `auto_switcher_status` has variants for degrading, degraded, startup, offline, override and no-stream.
+- Anything that draws *progress* needs a simulator, not a one-shot fixture — a single payload cannot show a bar filling. Use "Auto switcher degrade + recover" for stream-health widgets and "Moving GPS track" for IRL ones.
 - The picker leads with the events your widget's source actually references, so keep listener strings as plain literals (`listener === 'channel.follow'`) rather than building them at runtime.
 - **Connect** subscribes the preview to the author's real channel events.
 - Live reload rebuilds the document on HTML/JS/Fields changes (widget state resets); CSS-only edits hot-swap without a reload.
