@@ -1,6 +1,27 @@
 import type { GetChattersResponse } from "@repo/types";
 import { TwitchApiBaseClient } from "./base-client";
 
+/**
+ * One version of one badge. `id` is the version string EventSub sends as
+ * `badges[].id`; the image URLs are the only place the artwork can come from,
+ * since the uuid in them is opaque and not derivable from set_id + version.
+ */
+export interface TwitchBadgeVersion {
+  id: string;
+  image_url_1x: string;
+  image_url_2x: string;
+  image_url_4x: string;
+  title: string;
+  description: string;
+  click_action: string | null;
+  click_url: string | null;
+}
+
+export interface TwitchBadgeSet {
+  set_id: string;
+  versions: TwitchBadgeVersion[];
+}
+
 export class TwitchChatClient extends TwitchApiBaseClient {
   constructor(broadcaster_id: string | null = null) {
     super(broadcaster_id);
@@ -29,6 +50,27 @@ export class TwitchChatClient extends TwitchApiBaseClient {
     } catch (error) {
       console.error(error);
     }
+  }
+
+  /**
+   * Badge sets Twitch ships to every channel (moderator, vip, staff, ...).
+   * App token: no channel context, no scopes.
+   */
+  async getGlobalBadges(): Promise<TwitchBadgeSet[]> {
+    const response = await this.appApi().get("/chat/badges/global");
+    return response.data.data ?? [];
+  }
+
+  /**
+   * This channel's own badge sets — custom subscriber tiers and bits badges.
+   * These are what a hand-drawn approximation can never match, so they take
+   * precedence over the global set of the same name.
+   */
+  async getChannelBadges(): Promise<TwitchBadgeSet[]> {
+    const response = await this.appApi().get("/chat/badges", {
+      params: { broadcaster_id: this.broadcaster_id },
+    });
+    return response.data.data ?? [];
   }
 
   async sendShoutout(to_broadcaster_id: string) {

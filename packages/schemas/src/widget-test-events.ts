@@ -47,9 +47,51 @@ const BROADCASTER = {
   broadcaster_user_name: "Broadcaster",
 };
 
+/**
+ * Twitch's own default avatar. Real URL on the real CDN, so a widget that
+ * renders `user_profile_image_url` in the editor sees exactly what it will see
+ * live -- including the load behaviour of an actual remote image.
+ */
+const DEFAULT_PROFILE_IMAGE_URL =
+  "https://static-cdn.jtvnw.net/user-default-pictures-uv/294c98b5-e34d-42cd-a8f0-140b72fba9b0-profile_image-300x300.png";
+
+/**
+ * Real global badge artwork, in the shape StreamWizard adds before dispatch:
+ * the EventSub fields plus the resolved URLs. `url` is the StreamElements
+ * alias for url_2x. A live event omits these until the badge cache is warm, so
+ * widgets must still guard -- but the demo shows the enriched shape because
+ * that is what authors will see nearly all of the time.
+ */
+const DEMO_BADGES = [
+  {
+    set_id: "moderator",
+    id: "1",
+    info: "",
+    url: "https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/2",
+    url_1x: "https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/1",
+    url_2x: "https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/2",
+    url_4x: "https://static-cdn.jtvnw.net/badges/v1/3267646d-33f0-4b17-b3df-f923a41db1d0/3",
+  },
+  {
+    set_id: "subscriber",
+    id: "0",
+    info: "14",
+    url: "https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/2",
+    url_1x: "https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/1",
+    url_2x: "https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/2",
+    url_4x: "https://static-cdn.jtvnw.net/badges/v1/5d9f2208-5dd8-11e7-8513-2ff4adfae661/3",
+  },
+];
+
 function viewer(opts?: WidgetTestEventOptions) {
   const userName = opts?.userName ?? DEFAULT_USER_NAME;
-  return { user_id: "1", user_login: userName.toLowerCase(), user_name: userName };
+  return {
+    user_id: "1",
+    user_login: userName.toLowerCase(),
+    user_name: userName,
+    // Added by StreamWizard, not by Twitch -- see EnrichedUserProfileSchema.
+    user_profile_image_url: DEFAULT_PROFILE_IMAGE_URL,
+  };
 }
 
 /** Stable in environments without crypto.randomUUID (older Safari, some SSR paths). */
@@ -132,6 +174,7 @@ export const WIDGET_TEST_EVENTS = {
         from_broadcaster_user_id: v.user_id,
         from_broadcaster_user_login: v.user_login,
         from_broadcaster_user_name: v.user_name,
+        user_profile_image_url: v.user_profile_image_url,
         to_broadcaster_user_id: BROADCASTER.broadcaster_user_id,
         to_broadcaster_user_login: BROADCASTER.broadcaster_user_login,
         to_broadcaster_user_name: BROADCASTER.broadcaster_user_name,
@@ -185,7 +228,8 @@ export const WIDGET_TEST_EVENTS = {
           fragments: [{ type: "text", text: "Hello streamer!" }],
         },
         color: "#FF6B6B",
-        badges: [],
+        badges: DEMO_BADGES,
+        user_profile_image_url: v.user_profile_image_url,
         message_type: "text",
         cheer: null,
         reply: null,

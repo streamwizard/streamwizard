@@ -16,6 +16,7 @@
     "@repo/sentry": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/twitch-api": "workspace:*",
+    "@repo/twitch-assets": "workspace:*",
     "@repo/twitch-eventsub": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/types": "workspace:*",

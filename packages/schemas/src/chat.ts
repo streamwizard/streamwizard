@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { BadgeSchema } from "./shared";
+import { BadgeSchema, EnrichedUserProfileSchema } from "./shared";
 
 // ─── Shared chat fragment (richer than automod) ──────────────────────────────
 
@@ -72,6 +72,7 @@ export const ChannelChatMessageEventSchema = z.object({
   }),
   color: z.string(),
   badges: z.array(BadgeSchema),
+  ...EnrichedUserProfileSchema.shape,
   message_type: z.enum([
     "text",
     "channel_points_highlighted",
@@ -202,6 +203,7 @@ export const ChannelChatNotificationEventSchema = z.object({
   chatter_is_anonymous: z.boolean(),
   color: z.string(),
   badges: z.array(BadgeSchema),
+  ...EnrichedUserProfileSchema.shape,
   system_message: z.string(),
   message_id: z.string(),
   message: z.object({

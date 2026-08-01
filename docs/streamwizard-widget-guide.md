@@ -110,6 +110,91 @@ addEventListener('onSessionUpdate', (obj) => {
 
 ---
 
+## Twitch lookups — `StreamWizard.twitch`
+
+EventSub is generous with ids and stingy with pictures. A chat message tells you a badge is `set_id: "subscriber", id: "12"` — it does not tell you what that badge looks like, and you can't work it out, because the image URL contains a random uuid that only Twitch knows. Same story for avatars, cheermote graphics and box art.
+
+Your widget can't ask Twitch directly: the origin is blocked, and a Twitch token in widget source would ship to every viewer. So StreamWizard asks on your behalf.
+
+### Assets — cheap, cached, call them freely
+
+Badge and cheermote maps are fetched once and reused. Avatars are cached per user and batched.
+
+```js
+// Once, at load. After this the per-message resolvers work with no await.
+await StreamWizard.twitch.ready();
+
+addEventListener('onEventReceived', (e) => {
+  if (e.detail.listener !== 'channel.chat.message') return;
+  const event = e.detail.event;
+
+  const badgeUrls = event.badges.map((b) => StreamWizard.twitch.badgeUrl(b, '2x'));
+
+  for (const frag of event.message.fragments) {
+    if (frag.type === 'cheermote') {
+      const src = StreamWizard.twitch.cheermoteUrl(frag.cheermote, { theme: 'dark', format: 'animated', scale: '4' });
+    }
+  }
+});
+```
+
+| Call | Returns |
+|---|---|
+| `ready()` | Fetches badges + cheermotes, enables the two sync resolvers below |
+| `badgeUrl(badge, scale?)` | Image URL for an `event.badges[]` entry. Sync, no network. `scale` is `'1x'`, `'2x'` (default) or `'4x'` |
+| `cheermoteUrl(cheermote, opts?)` | Image URL for a fragment's `.cheermote`. Sync, no network |
+| `badges()` / `cheermotes()` | The raw maps, if you'd rather index them yourself |
+| `user(id)` | `{ id, login, display_name, profile_image_url }` |
+| `users(ids)` | Same, batched. Max 100 ids, memoised per id |
+| `game(id)` | `{ id, name, box_art_url }` — `box_art_url` is a template, replace `{width}` and `{height}` |
+| `thirdPartyEmotes(provider)` | `'7tv'`, `'bttv'` or `'ffz'` → emote code → `{ url_1x, url_2x, url_4x }` |
+
+The channel's own custom subscriber and bits badges come back automatically — `badgeUrl` returns that channel's artwork, not a generic stand-in.
+
+### Live values — always fresh, never cached
+
+```js
+await StreamWizard.twitch.followerTotal();  // number
+await StreamWizard.twitch.subTotal();       // number
+await StreamWizard.twitch.stream();         // { is_live, viewer_count, game_id, game_name, title, started_at, thumbnail_url }
+```
+
+These three skip every cache on the way out and back. That's deliberate: a goal bar that comes back from an OBS restart showing yesterday's number is worse than no goal bar.
+
+### Goal widgets
+
+Read the truth at load, adjust from events, re-anchor on a timer:
+
+```js
+let total = await StreamWizard.twitch.followerTotal();
+render(total);
+
+addEventListener('onEventReceived', (e) => {
+  if (e.detail.listener === 'channel.follow') render(++total);
+});
+
+setInterval(async () => {
+  total = await StreamWizard.twitch.followerTotal();
+  render(total);
+}, 60000);
+```
+
+The `setInterval` isn't optional polish. Events can be dropped or replayed when the connection blips, so a counter you only ever increment drifts away from reality over a long stream.
+
+Don't store the count with `StreamWizard.state` either. It's stale the second the widget closes; read it fresh instead.
+
+### In the editor preview
+
+Every `StreamWizard.twitch` method throws in the preview — there's no session to authenticate with. Wrap calls in `try/catch` so your widget still renders while you're building it.
+
+### Already in the payload
+
+Most events arrive with badge URLs and the subject's avatar already filled in (`badges[].url`, `user_profile_image_url`), so simple widgets need no lookup at all. Both are optional — StreamWizard adds them only when the value is already cached, so guard before use and fall back to `StreamWizard.twitch` if you need a guarantee.
+
+If you're porting from StreamElements, `badge.url` is there on purpose. It means the same thing it did there.
+
+---
+
 ## Template tokens
 
 Inside your **HTML** and **CSS** you can use `{{fieldKey}}` tokens. They are replaced with the resolved field value before the iframe renders.
@@ -366,7 +451,9 @@ event.chatter_user_id     — Twitch user ID
 event.message.text        — plain text of the message
 event.message.fragments   — array of { type, text, emote?, cheermote?, mention? }
 event.color               — hex colour the user has chosen for their name
-event.badges              — array of { set_id, id, info }
+event.badges              — array of { set_id, id, info } plus StreamWizard's
+                            url / url_1x / url_2x / url_4x (optional — guard them)
+event.user_profile_image_url — chatter's avatar, added by StreamWizard (optional)
 event.message_type        — "text" | "channel_points_highlighted" | ...
 event.cheer?.bits         — bits amount if this is a cheer
 event.reply?.parent_message_body — quoted message if this is a reply
@@ -377,6 +464,7 @@ event.reply?.parent_message_body — quoted message if this is a reply
 event.user_name           — display name of the new follower
 event.user_id
 event.followed_at         — ISO 8601 timestamp
+event.user_profile_image_url — added by StreamWizard (optional)
 ```
 
 ### `channel.subscribe`
@@ -616,10 +704,10 @@ addEventListener('onEventReceived', (obj) => {
 ## Rules and constraints
 
 1. **No external scripts.** Only GSAP and Tailwind from the bundled CDNs are available. Do not add `<script src>` tags.
-2. **No external images unless hosted.** Use CSS gradients or inline SVG for graphics; or have the user configure an image URL via a `text` field.
+2. **Images can come from anywhere** — the CSP only restricts `fetch()`, not `<img>`. Twitch artwork (badges, avatars, emotes, box art) is resolved through `StreamWizard.twitch`; for the streamer's own graphics use an `image` field so they can pick from the media library.
 3. **Background is always transparent.** Never set a background on `body` or `html`.
 4. **`fieldData` is read-only.** Writing to it changes nothing. Read the initial values in `onWidgetLoad` and re-read them in `onFieldsUpdate` when the streamer edits a setting.
-5. **The widget has no internet access** (sandbox) so `fetch()` and XHR will fail.
+5. **`fetch()` is limited to an allowlist.** The overlay origin (widget state and `StreamWizard.twitch`), the StreamWizard media CDN, `api.open-meteo.com` and `nominatim.openstreetmap.org`. Everything else is blocked, including `api.twitch.tv`, 7TV, BTTV and FrankerFaceZ — use `StreamWizard.twitch` for those. `<img>`, `<audio>` and `<video>` tags can load any URL.
 6. **GSAP TextPlugin** must be registered before use:
    ```js
    gsap.registerPlugin(TextPlugin);

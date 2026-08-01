@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { asCustomWidgetConfig } from "@/types/overlays";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
 import { getWidgets, getOrCreateWidgetInstance } from "@/actions/widgets";
@@ -16,6 +17,9 @@ export function CustomWidgetSettings({
 }: OverlayInspectorAppendProps) {
   const cfg = asCustomWidgetConfig(item.config);
   const widget = useWidget(cfg.widget_id);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
   // Field values live in the item config, so edits are local store writes that
   // the canvas can render instantly and the scene's Save button persists --
@@ -65,7 +69,10 @@ export function CustomWidgetSettings({
         </h3>
         <div className="flex items-center gap-1 shrink-0">
           <Button asChild size="sm" variant="ghost">
-            <Link href={`/dashboard/widgets/${cfg.widget_id}`} target="_blank">
+            <Link
+              href={`/dashboard/widgets/${cfg.widget_id}?from=${encodeURIComponent(currentUrl)}`}
+              target="_blank"
+            >
               Edit code
             </Link>
           </Button>
@@ -105,6 +112,9 @@ export function CustomWidgetSettings({
 function WidgetPicker({ onSelect }: { onSelect: (widgetId: string) => void }) {
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [loading, setLoading] = useState(true);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
   useEffect(() => {
     getWidgets().then(({ data }) => {
@@ -126,7 +136,10 @@ function WidgetPicker({ onSelect }: { onSelect: (widgetId: string) => void }) {
           You don't have any custom widgets yet.
         </p>
         <Button asChild size="sm" variant="outline" className="w-full">
-          <Link href="/dashboard/widgets/new" target="_blank">
+          <Link
+            href={`/dashboard/widgets/new?from=${encodeURIComponent(currentUrl)}`}
+            target="_blank"
+          >
             Create a widget
           </Link>
         </Button>
