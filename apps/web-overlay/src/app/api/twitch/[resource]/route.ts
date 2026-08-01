@@ -81,7 +81,11 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/twitch/[reso
     return NextResponse.json({ error: "Unknown resource" }, { status: 404, headers });
   }
 
-  const token = bearerToken(req) ?? req.nextUrl.searchParams.get("token");
+  // Header only. /api/widgets/state still accepts ?token= for widgets written
+  // against its original contract; this route is new, so it has no such debt
+  // and shouldn't take one on — a token in a query string ends up in server
+  // logs, referrers and error reports.
+  const token = bearerToken(req);
   if (!token) {
     return NextResponse.json({ error: "Missing token" }, { status: 401, headers });
   }
