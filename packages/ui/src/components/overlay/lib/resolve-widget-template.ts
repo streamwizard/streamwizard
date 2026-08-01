@@ -113,6 +113,7 @@ export function buildWidgetSrcdoc(
 ): string {
   const { resolvedHtml, resolvedCss } = resolveWidgetTemplate(html, extraCss, fields, fieldValues);
   const stateUrl = overlayOrigin ? JSON.stringify(`${overlayOrigin}/api/widgets/state`) : "null";
+  const twitchUrl = overlayOrigin ? JSON.stringify(`${overlayOrigin}/api/twitch`) : "null";
   const nonce = documentNonce();
   const connectSrc = [
     overlayOrigin,
@@ -221,6 +222,142 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
             body: JSON.stringify({ itemId: sw.session.overlayItemId, state: state })
           });
           if (!res.ok) throw new Error('Failed to save widget state (' + res.status + ')');
+        }
+      },
+      // Twitch lookups. EventSub hands the widget ids, not pictures; this
+      // resolves them via the overlay origin so no Twitch credential ever
+      // reaches the iframe. See the widget guide for the full contract.
+      twitch: {
+        twitchUrl: ${twitchUrl},
+        // Assets only. Live counters are deliberately absent from this map --
+        // memoising them would reintroduce exactly the staleness the server
+        // refuses to introduce.
+        _assets: {},
+        _require: function() {
+          var sw = window.StreamWizard;
+          if (!sw.twitch.twitchUrl || !sw.session || !sw.session.subscriberToken) {
+            throw new Error('StreamWizard.twitch is only available when the widget runs on an overlay (not in the editor preview).');
+          }
+          return sw;
+        },
+        _get: async function(path) {
+          var sw = this._require();
+          var res = await fetch(sw.twitch.twitchUrl + path, {
+            headers: { 'Authorization': 'Bearer ' + sw.session.subscriberToken }
+          });
+          if (!res.ok) throw new Error('Twitch lookup failed (' + res.status + ') for ' + path);
+          return await res.json();
+        },
+        // One in-flight promise per asset key, kept forever: badge and emote
+        // maps change on the order of hours, and the document is reloaded when
+        // the overlay is.
+        _asset: function(key, path, pick) {
+          var self = this;
+          if (!self._assets[key]) {
+            self._assets[key] = self._get(path).then(pick).catch(function(err) {
+              // Don't cache the failure -- a widget that loads during a blip
+              // should recover on its next call.
+              delete self._assets[key];
+              throw err;
+            });
+          }
+          return self._assets[key];
+        },
+        /** set_id -> version -> {url_1x,url_2x,url_4x,title,description}. */
+        badges: function() {
+          return this._asset('badges', '/badges', function(b) { return b.badges; });
+        },
+        /** lowercased prefix -> {prefix, tiers[]}, tiers sorted high to low. */
+        cheermotes: function() {
+          return this._asset('cheermotes', '/cheermotes', function(b) { return b.cheermotes; });
+        },
+        /** provider is '7tv', 'bttv' or 'ffz'. Returns code -> emote. */
+        thirdPartyEmotes: function(provider) {
+          return this._asset('emotes:' + provider, '/emotes?provider=' + encodeURIComponent(provider), function(b) { return b.emotes; });
+        },
+        /** Batched and memoised per id, so repeat chatters cost nothing. */
+        users: async function(ids) {
+          var self = this;
+          var wanted = [];
+          var out = {};
+          for (var i = 0; i < ids.length; i++) {
+            var key = 'user:' + ids[i];
+            if (self._assets[key]) out[ids[i]] = await self._assets[key];
+            else if (wanted.indexOf(ids[i]) === -1) wanted.push(ids[i]);
+          }
+          if (wanted.length) {
+            var pending = self._get('/users?ids=' + wanted.map(encodeURIComponent).join(','));
+            wanted.forEach(function(id) {
+              self._assets['user:' + id] = pending.then(function(b) { return b.users[id]; });
+            });
+            var body = await pending;
+            wanted.forEach(function(id) { out[id] = body.users[id]; });
+          }
+          return out;
+        },
+        user: async function(id) {
+          var users = await this.users([id]);
+          return users[id];
+        },
+        game: function(id) {
+          return this._asset('game:' + id, '/game?id=' + encodeURIComponent(id), function(b) { return b.game; });
+        },
+        // --- live values: never memoised, never cached ---
+        // Fetch at load for the true starting value, adjust locally from
+        // events, and re-anchor every minute or so -- events can drop or
+        // replay across a reconnect, so a counter that is only incremented
+        // drifts over a long stream.
+        followerTotal: async function() {
+          var body = await this._get('/followers');
+          return body.total;
+        },
+        subTotal: async function() {
+          var body = await this._get('/subscribers');
+          return body.total;
+        },
+        stream: async function() {
+          var body = await this._get('/stream');
+          return body.stream;
+        },
+        // --- local resolvers: no network, need the map fetched first ---
+        /** badge is an EventSub badges[] entry: {set_id, id, info}. */
+        badgeUrl: function(badge, scale) {
+          var map = this._badgeMap;
+          if (!map || !badge) return undefined;
+          var versions = map[badge.set_id];
+          var version = versions && versions[badge.id];
+          if (!version) return undefined;
+          return version['url_' + (scale || '2x')] || version.url_2x;
+        },
+        /** fragment is a message fragment's .cheermote: {prefix, bits, tier}. */
+        cheermoteUrl: function(fragment, options) {
+          var map = this._cheermoteMap;
+          if (!map || !fragment) return undefined;
+          var entry = map[String(fragment.prefix).toLowerCase()];
+          if (!entry) return undefined;
+          var opts = options || {};
+          // Tiers are sorted descending, so the first one the cheer covers wins.
+          var tier = null;
+          for (var i = 0; i < entry.tiers.length; i++) {
+            if (fragment.bits >= entry.tiers[i].min_bits) { tier = entry.tiers[i]; break; }
+          }
+          if (!tier) tier = entry.tiers[entry.tiers.length - 1];
+          if (!tier) return undefined;
+          var theme = tier.images[opts.theme || 'dark'] || tier.images.dark || {};
+          var format = theme[opts.format || 'animated'] || theme.animated || theme.static || {};
+          return format[opts.scale || '4'] || format['2'] || format['1'];
+        },
+        /**
+         * Fetches badges and cheermotes and keeps them for the synchronous
+         * badgeUrl/cheermoteUrl resolvers. Call once at load; after it settles,
+         * per-message rendering is a plain object lookup with no awaits.
+         */
+        ready: async function() {
+          var self = this;
+          var maps = await Promise.all([self.badges(), self.cheermotes()]);
+          self._badgeMap = maps[0];
+          self._cheermoteMap = maps[1];
+          return { badges: maps[0], cheermotes: maps[1] };
         }
       }
     };

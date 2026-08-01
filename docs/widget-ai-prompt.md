@@ -20,8 +20,9 @@ The document is: `<style id="sw-extra-css">` (your CSS) in `<head>`, your HTML i
 Hard constraints:
 
 - No `import`/`require`, no npm, no extra `<script src>`. Plain ES2020 only.
-- `fetch()` is restricted by CSP `connect-src` to: the overlay origin (widget state API), the StreamWizard media CDN, `https://api.open-meteo.com`, `https://nominatim.openstreetmap.org`. Everything else is blocked.
+- `fetch()` is restricted by CSP `connect-src` to: the overlay origin (widget state API and `StreamWizard.twitch`), the StreamWizard media CDN, `https://api.open-meteo.com`, `https://nominatim.openstreetmap.org`. Everything else is blocked.
 - `<img>`, `<audio>`, `<video>` tags load any URL (CSP above only limits `connect-src`).
+- You cannot call `api.twitch.tv`, 7TV, BTTV or FrankerFaceZ directly — blocked origin, and there's no token in the page anyway. Use `StreamWizard.twitch` (below) for every Twitch lookup.
 - Never set a background on `html` or `body`.
 - Widget size comes from the overlay canvas. Lay out with `%`, `vw`/`vh`, flex/grid, or absolute offsets from edges — never a fixed px canvas.
 - `console.log/info/warn/error` and uncaught errors are mirrored to the editor console panel. Use them for debug output.
@@ -34,6 +35,7 @@ Hard constraints:
 | `StreamWizard.state` | `get()` / `set(obj)` persistence — see below |
 | `StreamWizard.session` | `{ subscriberToken, overlayItemId }` once placed on an overlay; `null` in the editor preview |
 | `StreamWizard.stateUrl` | Raw state endpoint. Prefer `StreamWizard.state`. |
+| `StreamWizard.twitch` | Twitch lookups: badges, cheermotes, avatars, box art, follower/sub totals — see below |
 
 There is **no `fieldData` global at runtime**. Read field values from `onWidgetLoad`:
 
@@ -123,6 +125,56 @@ await StreamWizard.state.set({ deaths: 4 });                    // replaces the 
 
 `get()`/`set()` **throw in the editor preview** (no session there). Always wrap in `try/catch` or `.catch()`. Don't save inside an animation loop — debounce or batch.
 
+## Twitch lookups — `StreamWizard.twitch`
+
+EventSub gives you ids, not pictures: `badges[].set_id`, a cheermote `prefix`, a `user_id`. This turns them into URLs. Everything goes through StreamWizard's own API, so no Twitch token is ever in the page.
+
+Two kinds of call, and mixing them up is the mistake to avoid:
+
+**Assets** — cached server-side, memoised in the page. Call them freely.
+
+```js
+await StreamWizard.twitch.ready();  // fetches badges + cheermotes once, at load
+
+// then, per message, no network and no await:
+const url  = StreamWizard.twitch.badgeUrl(badge);                 // badge from event.badges[]
+const cheer = StreamWizard.twitch.cheermoteUrl(frag.cheermote);   // fragment.cheermote
+
+await StreamWizard.twitch.user('71092938');        // { id, login, display_name, profile_image_url }
+await StreamWizard.twitch.users(ids);              // batched, max 100, memoised per id
+await StreamWizard.twitch.game('509658');          // { id, name, box_art_url } — replace {width}/{height}
+await StreamWizard.twitch.thirdPartyEmotes('7tv'); // '7tv' | 'bttv' | 'ffz' → code → emote
+```
+
+**Live values** — never cached, anywhere. Every call is a fresh read.
+
+```js
+await StreamWizard.twitch.followerTotal();  // number
+await StreamWizard.twitch.subTotal();       // number
+await StreamWizard.twitch.stream();         // { is_live, viewer_count, game_id, game_name, title, started_at, thumbnail_url }
+```
+
+### Goal widgets — the pattern to copy
+
+```js
+let total = await StreamWizard.twitch.followerTotal();  // truth, on every load
+render(total);
+
+addEventListener('onEventReceived', (e) => {
+  if (e.detail.listener === 'channel.follow') render(++total);
+});
+
+// Re-anchor. Events can drop or replay across a reconnect, so a counter that
+// only ever increments drifts over a long stream.
+setInterval(async () => { total = await StreamWizard.twitch.followerTotal(); render(total); }, 60000);
+```
+
+Do **not** persist a follower or sub count with `StreamWizard.state` — it's stale the moment the widget closes. Read it fresh instead.
+
+All `StreamWizard.twitch` methods **throw in the editor preview** (no session). Wrap in `try/catch`.
+
+Badges and avatars also arrive pre-resolved on most events (`badges[].url`, `user_profile_image_url`) — those fields are optional, so guard them and fall back to a lookup.
+
 ## Event listener strings
 
 `automod.message.hold`, `automod.message.hold/2`, `automod.message.update`, `automod.message.update/2`, `automod.settings.update`, `automod.terms.update`,
@@ -148,7 +200,8 @@ channel.chat.message
   message.text
   message.fragments[]  { type: "text"|"cheermote"|"emote"|"mention", text, cheermote?{prefix,bits,tier}, emote?{id,emote_set_id}, mention?{user_id,user_name,user_login} }
   color                 hex string, may be ""
-  badges[]              { set_id, id, info }
+  badges[]              { set_id, id, info, url?, url_1x?, url_2x?, url_4x? }   ← url* added by StreamWizard
+  user_profile_image_url?   ← added by StreamWizard
   message_type          "text" | "channel_points_highlighted" | "channel_points_sub_only" | "user_intro" | "power_ups_message_effect" | "power_ups_gigantified_emote"
   cheer?.bits
   reply?                { parent_message_id, parent_message_body, parent_user_id, parent_user_name, parent_user_login, thread_* }
@@ -156,9 +209,11 @@ channel.chat.message
 
 channel.follow
   user_id / user_login / user_name, followed_at (ISO)
+  user_profile_image_url?   ← added by StreamWizard
 
 channel.subscribe
   user_id / user_login / user_name, tier "1000"|"2000"|"3000", is_gift
+  user_profile_image_url?   ← added by StreamWizard
 
 channel.subscription.gift
   user_id / user_login / user_name  (null when anonymous)
@@ -171,11 +226,13 @@ channel.subscription.message   (resub)
 
 channel.cheer
   is_anonymous, user_id / user_login / user_name (null when anonymous), message, bits
+  user_profile_image_url?   ← added by StreamWizard
 
 channel.raid
   from_broadcaster_user_id / _login / _name
   to_broadcaster_user_id / _login / _name
   viewers
+  user_profile_image_url?   ← the raider's avatar, added by StreamWizard
 
 channel.channel_points_custom_reward_redemption.add
   id, user_id / user_login / user_name

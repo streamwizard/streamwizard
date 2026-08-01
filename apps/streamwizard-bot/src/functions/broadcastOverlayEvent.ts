@@ -2,6 +2,7 @@ import type { OverlayEventType } from "@repo/types";
 import { supabase } from "@repo/supabase";
 import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/user";
 import { overlayWsClient } from "../overlay-ws-client";
+import { enrichOverlayEvent } from "./enrichOverlayEvent";
 
 // broadcaster_user_id (Twitch) → supabase user_id
 const userIdCache = new Map<string, string>();
@@ -25,5 +26,12 @@ export async function broadcastOverlayEvent(
   const userId = await resolveUserId(broadcasterId);
   if (!userId) return;
 
-  overlayWsClient.send({ userId, type, payload });
+  // Adds badge image URLs and the subject's avatar when they're already
+  // cached. Cache-only and additive, so this never delays the broadcast and
+  // never changes a field a widget already reads.
+  overlayWsClient.send({
+    userId,
+    type,
+    payload: enrichOverlayEvent(broadcasterId, type, payload),
+  });
 }

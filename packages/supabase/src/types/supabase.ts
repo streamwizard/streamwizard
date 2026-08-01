@@ -2411,6 +2411,27 @@ export type Database = {
         }
         Relationships: []
       }
+      twitch_asset_cache: {
+        Row: {
+          cache_key: string
+          expires_at: string
+          payload: Json
+          updated_at: string
+        }
+        Insert: {
+          cache_key: string
+          expires_at: string
+          payload: Json
+          updated_at?: string
+        }
+        Update: {
+          cache_key?: string
+          expires_at?: string
+          payload?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       twitch_clip_syncs: {
         Row: {
           clip_count: number
