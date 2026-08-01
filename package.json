@@ -5,7 +5,7 @@
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
-    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay --filter=@repo/streamwizard-bot  --filter=@repo/ws-server   --filter=@repo/web-admin ",
+    "dev:main": "turbo run dev --filter=@repo/web-streamwizard --filter=@repo/web-overlay  --filter=@repo/ws-server   --filter=@repo/web-admin ",
     "dev:admin": "turbo run dev --filter=@repo/web-admin",
     "dev:docs": "turbo run dev --filter=@repo/docs",
     "clean": "rm -rf apps/*/.next",
