@@ -41,9 +41,13 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     // Google Fonts actual font files
     "font-src 'self' https://fonts.gstatic.com",
-    // Twitch CDN images + our own R2 CDN (e.g. error page gifs) + data URIs used by the UI
+    // Twitch CDN images + our own R2 CDN (e.g. error page gifs) + data URIs used
+    // by the UI. The third-party emote CDNs are here for the widget editor
+    // preview: widgets resolve 7TV/BTTV/FFZ emotes through /api/twitch and then
+    // render them as <img>, and the preview iframe inherits this policy.
     [
       "img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv https://clips-media-assets2.twitch.tv",
+      "https://cdn.7tv.app https://cdn.betterttv.net https://cdn.frankerfacez.com",
       process.env.NEXT_PUBLIC_CDN_URL,
       process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]

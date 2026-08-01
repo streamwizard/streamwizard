@@ -36,14 +36,42 @@ loadDotenvFilesIntoProcessEnv(turbopackRoot);
 
 const wsServerUrl = process.env.WS_SERVER_URL ?? "";
 
+const assetCdnUrl =
+  process.env.NEXT_PUBLIC_ASSET_CDN_URL ??
+  process.env.ASSET_CDN_URL ??
+  process.env.NEXT_PUBLIC_CDN_URL ??
+  "";
+
+/**
+ * Artwork widgets render but don't host: Twitch badges, emotes, avatars and box
+ * art, plus the three third-party emote CDNs. Widgets resolve these through
+ * /api/twitch, which hands back a URL — and a URL this policy has to allow, or
+ * every badge renders as a broken image.
+ *
+ * Note this header also governs the widget iframes: they're `srcdoc`, so they
+ * inherit the embedding document's CSP. The per-widget <meta> policy can only
+ * set connect-src, so it cannot loosen img-src/media-src on its own.
+ */
+const widgetImageHosts = [
+  "https://static-cdn.jtvnw.net",
+  "https://cdn.7tv.app",
+  "https://cdn.betterttv.net",
+  "https://cdn.frankerfacez.com",
+].join(" ");
+
+// Media-library uploads. Hardcoded host kept as a fallback for deployments that
+// don't set the env var; without the CDN here, alert sounds and videos fail to
+// play with no error a streamer would ever see.
+const mediaHosts = ["https://cdn.streamwizard.org", assetCdnUrl].filter(Boolean).join(" ");
+
 /** OBS-friendly fonts CSP for the overlay scene viewer (optional hardening). */
 const overlaySceneFontsCsp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https://cdn.streamwizard.org",
-  "media-src 'self' blob: data:",
+  `img-src 'self' data: blob: ${mediaHosts} ${widgetImageHosts}`,
+  `media-src 'self' blob: data: ${mediaHosts}`,
   `connect-src 'self' https://api.open-meteo.com https://nominatim.openstreetmap.org${wsServerUrl ? ` ${wsServerUrl}` : ""}`,
 ].join("; ");
 
