@@ -4,7 +4,7 @@ import { useState, useTransition, useRef, useCallback, useMemo, useEffect } from
 import { toast } from "sonner";
 import dynamic from "next/dynamic";
 import type { OnMount, Monaco } from "@monaco-editor/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import type { Widget } from "@/actions/widgets";
 import { updateWidget, publishWidgetToLibrary } from "@/actions/widgets";
 import { supabase } from "@repo/supabase/next/client";
@@ -158,6 +158,8 @@ function coerceFields(fields: WidgetFieldSchema): WidgetFieldSchema {
 
 export function WidgetEditorClient({ widget }: { widget: Widget }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromUrl = searchParams.get("from");
   const [name, setName] = useState(widget.name);
   const htmlRef = useRef(widget.html);
   const jsRef = useRef(widget.js);
@@ -358,6 +360,10 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
 
   function handleBack() {
     if (isDirty && !window.confirm("You have unsaved changes. Leave anyway?")) return;
+    if (fromUrl && fromUrl.startsWith("/") && !fromUrl.startsWith("//") && !fromUrl.includes("\\")) {
+      router.push(fromUrl);
+      return;
+    }
     router.back();
   }
 
