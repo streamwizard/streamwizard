@@ -114,6 +114,7 @@ export async function createOverlayScene(formData: {
       width: parsed.data.width ?? 1920,
       height: parsed.data.height ?? 1080,
       render_mode: formData.render_mode ?? "obs",
+      is_active: true,
     })
     .select()
     .single();
@@ -154,6 +155,7 @@ export async function createOverlayFromTemplate(formData: {
       width: template.width,
       height: template.height,
       render_mode: formData.render_mode ?? template.render_mode,
+      is_active: true,
     })
     .select()
     .single();
