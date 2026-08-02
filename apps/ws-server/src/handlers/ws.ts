@@ -162,7 +162,16 @@ export const websocketHandlers = {
         meta: { subscriberCount: room.subscribers.size },
       });
 
-      if (session_id) {
+      // Devices fire fixes faster than 1/s and keep firing while parked, so
+      // gate the log: full rate while moving (that's the data walks are
+      // replayed from when tuning distance math), one row per 10s otherwise.
+      // Broadcasts above are untouched — viewers always get the live rate.
+      const moving = typeof geo.speed === "number" && geo.speed >= 0.5;
+      const sinceInsert = Date.now() - (room.lastGeoInsertAt ?? 0);
+      const shouldLog = moving ? sinceInsert >= 900 : sinceInsert >= 10_000;
+
+      if (session_id && shouldLog) {
+        room.lastGeoInsertAt = Date.now();
         insertIrlGeoTrack(supabase, {
           user_id: userId,
           session_id,
