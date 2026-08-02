@@ -131,7 +131,7 @@ const SWITCHER_STATUS_JS = `/* Auto switcher status: which scene you are on, and
 var METRICS = [
   { key: 'bitrate', label: 'bitrate' },
   { key: 'rtt', label: 'rtt' },
-  { key: 'loss', label: 'loss' }
+  { key: 'loss', label: 'dropped' }
 ];
 
 /* No status for this long means the engine went away. It heartbeats every 5s

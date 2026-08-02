@@ -12,7 +12,7 @@ import { clearSwitchLog } from "./switch-log";
 // are pinned here.
 
 const USER = "user-1";
-const THR = AUTO_SWITCHER_PRESET_THRESHOLDS.balanced; // trigger 3, recover 20, startup 5
+const THR = AUTO_SWITCHER_PRESET_THRESHOLDS.balanced; // trigger 4, recover 8, startup 6
 
 let published: AutoSwitcherStatus[] = [];
 
@@ -66,18 +66,23 @@ function makeConfig(overrides: Partial<AutoSwitcherConfig> = {}): EffectiveConfi
   };
 }
 
+// loss_pct is deliberately non-zero on the healthy sample: raw link loss is
+// normal on cellular and the switcher must ignore it. drop_pct is the metric it
+// actually judges.
 const GOOD: Omit<IngestStatsPayload, "session_id"> = {
   protocol: "srt",
   kbps: 6000,
   rtt_ms: 40,
-  loss_pct: 0,
+  loss_pct: 3,
+  drop_pct: 0,
 };
 
 const BAD: Omit<IngestStatsPayload, "session_id"> = {
   protocol: "srt",
   kbps: 200,
   rtt_ms: 40,
-  loss_pct: 0,
+  loss_pct: 3,
+  drop_pct: 0,
 };
 
 let clock = 1_000_000;
@@ -132,18 +137,16 @@ test("publishes on every step of a bad streak, before the switch fires", () => {
   const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
   bringLive(monitor);
 
-  // Two bad samples, still below the 3-poll trigger: no phase change, so
-  // before this feature these produced nothing at all.
-  sample(monitor, BAD);
-  expect(published).toHaveLength(1);
-  expect(published[0]!.state).toBe("live");
-  expect(published[0]!.streaks.bitrate.bad).toBe(1);
+  // Every bad sample below the trigger: no phase change, so before this feature
+  // these produced nothing at all.
+  for (let i = 1; i < THR.bitrate_trigger_polls; i++) {
+    sample(monitor, BAD);
+    expect(published).toHaveLength(i);
+    expect(published.at(-1)!.state).toBe("live");
+    expect(published.at(-1)!.streaks.bitrate.bad).toBe(i);
+  }
 
-  sample(monitor, BAD);
-  expect(published).toHaveLength(2);
-  expect(published[1]!.streaks.bitrate.bad).toBe(2);
-
-  // Third crosses the trigger and switches.
+  // The last one crosses the trigger and switches.
   sample(monitor, BAD);
   expect(published.at(-1)!.state).toBe("degraded");
 });
@@ -218,7 +221,7 @@ test("latest is null before any sample, and nulls absent RTMP metrics", () => {
   const monitor = new UserMonitor(USER, makeConfig(), makeDeps());
   expect(published[0]!.latest).toBeNull();
 
-  // RTMP reports throughput only — rtt/loss genuinely never arrive.
+  // RTMP reports throughput only — rtt/drop genuinely never arrive.
   sample(monitor, { protocol: "rtmp", kbps: 4000 });
   const status = published.at(-1)!;
   expect(status.latest).toEqual({ kbps: 4000, rtt_ms: null, loss_pct: null, at: clock });

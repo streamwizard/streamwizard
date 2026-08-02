@@ -6,9 +6,9 @@ import type { AutoSwitcherFormValues } from "@/schemas/auto-switcher";
 // surfaces can't drift on defaults or preset wording.
 
 export const PRESET_COPY: Record<AutoSwitcherSensitivityPreset, { title: string; blurb: string }> = {
-  relaxed: { title: "Relaxed", blurb: "Waits ~6s of bad signal before switching, ~30s stable before switching back. Fewest false alarms." },
-  balanced: { title: "Balanced", blurb: "Switches after ~3s bad, back after ~20s stable. The right pick for most IRL setups." },
-  fast: { title: "Fast", blurb: "Switches after ~2s bad, back after ~10s stable. For when a single frozen frame is one too many." },
+  relaxed: { title: "Relaxed", blurb: "Waits ~6s of bad signal before switching, ~15s stable before switching back. Rides out tunnels and dead spots." },
+  balanced: { title: "Balanced", blurb: "Switches after ~4s bad, back after ~8s stable. The right pick for most IRL setups." },
+  fast: { title: "Fast", blurb: "Switches after ~2s bad, back after ~5s stable. For when a single frozen frame is one too many." },
 };
 
 /** Maps a nullable config row to form defaults, mirroring the column defaults in SQL. */

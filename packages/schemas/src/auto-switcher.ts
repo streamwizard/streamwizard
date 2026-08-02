@@ -4,6 +4,13 @@ import { z } from "zod";
 // One "poll" = one ingest stats sample = 1 second (the SRT sampler reports at
 // 1 Hz). Fallback fires when ANY metric has been bad for its trigger_polls;
 // recovery requires ALL metrics good for their recover_polls.
+//
+// The `loss_*` fields are named for the raw-loss metric they originally read,
+// but the engine judges them against `drop_pct` — SRT packets the receiver gave
+// up on, i.e. damage the viewer actually sees. Raw `loss_pct` (pktRcvLoss before
+// retransmission) routinely sits at several percent on a healthy cellular link
+// because the 4 s ingest buffer recovers it, so it was never a fault signal.
+// Field names are kept so existing `advanced_thresholds` JSON keeps parsing.
 
 export const autoSwitcherThresholdsSchema = z.object({
   bitrate_min_kbps: z.number().int().min(0),
@@ -56,10 +63,38 @@ function bundle(
   };
 }
 
+// Tuned for IRL over SRT/SRTLA on the move, against the ingest's 4000 ms
+// ingress receiver buffer (INGEST_SRT_INGRESS_LATENCY_MS):
+//
+// - rtt_max_ms: SRT recovers loss while latency >= ~4x RTT and gives up below
+//   ~3x, so with a 4 s buffer ARQ is comfortable to ~1000 ms and failing past
+//   ~1300 ms. Cellular on the move idles at 50-300 ms and spikes past 1000 ms
+//   on handover/bufferbloat, which the buffer absorbs — the old 250-400 ms
+//   thresholds fired on ordinary handovers. NOALBS ships 1500 ms for the same
+//   job. If a node's ingress latency changes, these move with it.
+// - loss_max_pct: read as drop_pct (see above). Any sustained drop is visible
+//   damage, so the numbers are small; ~380 pkt/s at 4 Mbps makes 0.5% ≈ 2
+//   packets in a 1 s window.
+// - bitrate_min_kbps: adaptive encoders (BELABOX/Moblin/IRLPro) ride down to
+//   500-1000 kbps in bad spots and stay watchable, so the floor is a
+//   last-resort signal rather than the primary one. NOALBS defaults to 450.
+// - offline_timeout_seconds: OBS still has ~4 s of buffered good video when
+//   stats stop, so cutting to the offline scene sooner than that cuts away
+//   from a picture that is still fine.
+// - trigger_polls: the buffer means a bad sample now becomes visible
+//   corruption ~4 s later, so there is slack here; no need to be twitchy.
+// - recover_polls: NOALBS switches back the instant the link is good. We can't
+//   quite — the ingest buffer drains during the outage and needs roughly its
+//   own depth (~4 s) of over-delivery to refill, so recovering sooner than that
+//   cuts back to a stuttering picture. That makes ~5 s the physical floor.
+//   Beyond it the only thing a longer streak buys is flap protection, and it is
+//   expensive: the good streak resets to zero on a single bad sample across all
+//   three metrics, so a 20-30 s requirement can leave a usable stream parked on
+//   the backup scene indefinitely.
 export const AUTO_SWITCHER_PRESET_THRESHOLDS: Record<AutoSwitcherSensitivityPreset, AutoSwitcherThresholds> = {
-  relaxed: bundle(800, 400, 8, 6, 30, 8, 8),
-  balanced: bundle(1000, 300, 5, 3, 20, 5, 5),
-  fast: bundle(1200, 250, 3, 2, 10, 3, 3),
+  relaxed: bundle(300, 2000, 2, 6, 15, 8, 10),
+  balanced: bundle(500, 1500, 1, 4, 8, 6, 7),
+  fast: bundle(800, 1000, 0.5, 2, 5, 4, 5),
 };
 
 // ─── Config row ──────────────────────────────────────────────────────────────

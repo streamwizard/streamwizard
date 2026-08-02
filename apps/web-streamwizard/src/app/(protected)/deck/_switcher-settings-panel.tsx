@@ -61,8 +61,10 @@ const THRESHOLD_GROUPS = [
   },
   {
     key: "loss",
-    label: "Packet loss",
-    limit: { field: "loss_max_pct", label: "Climbs above", unit: "%", min: 0, max: 100, step: 1 },
+    // Measured against drop_pct (packets SRT gave up on), not raw link loss —
+    // hence the sub-1% steps.
+    label: "Dropped packets",
+    limit: { field: "loss_max_pct", label: "Climbs above", unit: "%", min: 0, max: 100, step: 0.5 },
     trigger: "loss_trigger_polls",
     recover: "loss_recover_polls",
     startup: "loss_startup_polls",
