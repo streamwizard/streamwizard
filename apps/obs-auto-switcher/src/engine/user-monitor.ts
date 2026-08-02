@@ -268,10 +268,17 @@ export class UserMonitor {
   private updateStreaks(payload: IngestStatsPayload): void {
     const thr = this.cfg.thresholds;
     // Missing metrics count as OK — RTMP sessions only report kbps.
+    //
+    // The "loss" metric judges drop_pct, not loss_pct: raw loss is counted
+    // before SRT retransmits, so a healthy cellular link fully recovered by the
+    // 4 s ingest buffer still reports several percent of it. drop_pct is what
+    // the receiver gave up on — the part the viewer sees. See the threshold
+    // notes in @repo/schemas; the field names stay `loss_*` so stored
+    // advanced_thresholds JSON keeps parsing.
     const ok: Record<MetricKey, boolean> = {
       bitrate: payload.kbps === undefined || payload.kbps >= thr.bitrate_min_kbps,
       rtt: payload.rtt_ms === undefined || payload.rtt_ms <= thr.rtt_max_ms,
-      loss: payload.loss_pct === undefined || payload.loss_pct <= thr.loss_max_pct,
+      loss: payload.drop_pct === undefined || payload.drop_pct <= thr.loss_max_pct,
     };
     for (const key of METRICS) {
       if (ok[key]) {
@@ -538,7 +545,7 @@ export class UserMonitor {
     const parts = bad.map((key) => {
       if (key === "bitrate") return `bitrate ${s?.kbps !== undefined ? Math.round(s.kbps) : "?"} kbps < ${thr.bitrate_min_kbps} kbps`;
       if (key === "rtt") return `RTT ${s?.rtt_ms !== undefined ? Math.round(s.rtt_ms) : "?"} ms > ${thr.rtt_max_ms} ms`;
-      return `loss ${s?.loss_pct !== undefined ? s.loss_pct.toFixed(1) : "?"}% > ${thr.loss_max_pct}%`;
+      return `dropped ${s?.drop_pct !== undefined ? s.drop_pct.toFixed(1) : "?"}% > ${thr.loss_max_pct}%`;
     });
     return parts.join(", ");
   }
@@ -548,7 +555,7 @@ export class UserMonitor {
     const bits = [
       s?.kbps !== undefined ? `${Math.round(s.kbps)} kbps` : null,
       s?.rtt_ms !== undefined ? `${Math.round(s.rtt_ms)} ms RTT` : null,
-      s?.loss_pct !== undefined ? `${s.loss_pct.toFixed(1)}% loss` : null,
+      s?.drop_pct !== undefined ? `${s.drop_pct.toFixed(1)}% dropped` : null,
     ].filter(Boolean);
     return `link stable (${bits.join(", ") || "no metrics"})`;
   }
@@ -599,7 +606,11 @@ export class UserMonitor {
         ? {
             kbps: selected.latest.kbps ?? null,
             rtt_ms: selected.latest.rtt_ms ?? null,
-            loss_pct: selected.latest.loss_pct ?? null,
+            // drop_pct, despite the field name — status consumers draw this
+            // number against loss_max_pct, so it has to be the same metric the
+            // engine judged. Raw loss_pct stays in the event log and InfluxDB
+            // for diagnostics.
+            loss_pct: selected.latest.drop_pct ?? null,
             at: selected.lastSeenMs,
           }
         : null,

@@ -28,7 +28,15 @@ export async function logSwitchEvent(
         session_id: entry.session_id,
         label: entry.label,
         metrics_snapshot: metrics
-          ? { kbps: metrics.kbps ?? null, rtt_ms: metrics.rtt_ms ?? null, loss_pct: metrics.loss_pct ?? null, protocol: metrics.protocol }
+          ? {
+              kbps: metrics.kbps ?? null,
+              rtt_ms: metrics.rtt_ms ?? null,
+              // Both: drop_pct is what the switcher decided on, raw loss_pct
+              // tells you afterwards whether the link was lossy but recovering.
+              loss_pct: metrics.loss_pct ?? null,
+              drop_pct: metrics.drop_pct ?? null,
+              protocol: metrics.protocol,
+            }
           : null,
       },
       metadata: { source: "obs-auto-switcher" },

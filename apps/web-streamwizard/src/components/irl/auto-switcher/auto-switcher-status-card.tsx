@@ -25,7 +25,7 @@ function stateBadge(state: AutoSwitcherStatus["state"]): { label: string; varian
 const METRIC_LABELS: Record<"bitrate" | "rtt" | "loss", string> = {
   bitrate: "Bitrate",
   rtt: "Ping (RTT)",
-  loss: "Packet loss",
+  loss: "Dropped packets",
 };
 
 function reasonLabel(reason: string): string {

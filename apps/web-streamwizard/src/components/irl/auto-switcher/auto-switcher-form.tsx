@@ -1,6 +1,7 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
@@ -418,17 +419,44 @@ function ChatTemplateField({ form, name, label }: { form: any; name: keyof AutoS
 const MATRIX_ROWS = [
   { key: "bitrate", label: "Bitrate", unit: "min kbps", value: "bitrate_min_kbps", trigger: "bitrate_trigger_polls", recover: "bitrate_recover_polls", startup: "bitrate_startup_polls" },
   { key: "rtt", label: "Ping (RTT)", unit: "max ms", value: "rtt_max_ms", trigger: "rtt_trigger_polls", recover: "rtt_recover_polls", startup: "rtt_startup_polls" },
-  { key: "loss", label: "Packet loss", unit: "max %", value: "loss_max_pct", trigger: "loss_trigger_polls", recover: "loss_recover_polls", startup: "loss_startup_polls" },
+  // loss_max_pct is measured against drop_pct — packets SRT gave up on, not raw
+  // link loss, which cellular recovers without the viewer noticing.
+  { key: "loss", label: "Dropped packets", unit: "max %", value: "loss_max_pct", trigger: "loss_trigger_polls", recover: "loss_recover_polls", startup: "loss_startup_polls" },
 ] as const;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function AdvancedThresholdsMatrix({ form }: { form: any }) {
-  const thresholds = (form.watch("advanced_thresholds") ?? null) as AutoSwitcherThresholds | null;
+  // useWatch, not form.watch: watch() only re-renders the component that called
+  // useForm, and this one takes the form as a prop. With watch() every input
+  // below wrote to form state, nothing re-rendered, and the controlled value
+  // snapped back to the old number -- the whole matrix read as read-only.
+  const thresholds = (useWatch({ control: form.control, name: "advanced_thresholds" }) ?? null) as AutoSwitcherThresholds | null;
+
+  // What the user is mid-way through typing, per field. Form state only ever
+  // holds numbers, so without this an empty box parses to 0 (clearing 1500 to
+  // retype it snapped to "0") and a trailing decimal point was swallowed the
+  // moment it was typed ("0." -> 0 -> "0", so 0.5 was unreachable). The draft
+  // is dropped on blur, which is also what normalises "007" back to 7.
+  const [drafts, setDrafts] = useState<Partial<Record<keyof AutoSwitcherThresholds, string>>>({});
+
   if (!thresholds) return null;
 
   const set = (key: keyof AutoSwitcherThresholds, raw: string) => {
+    setDrafts((prev) => ({ ...prev, [key]: raw }));
     const value = Number(raw);
-    form.setValue("advanced_thresholds", { ...thresholds, [key]: Number.isFinite(value) ? value : 0 }, { shouldDirty: true });
+    // An unparseable or empty box leaves the last good number in form state, so
+    // a half-typed field can never save as 0.
+    if (raw.trim() === "" || !Number.isFinite(value)) return;
+    form.setValue("advanced_thresholds", { ...thresholds, [key]: value }, { shouldDirty: true });
+  };
+
+  const commit = (key: keyof AutoSwitcherThresholds) => {
+    setDrafts((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   };
 
   return (
@@ -455,7 +483,13 @@ function AdvancedThresholdsMatrix({ form }: { form: any }) {
                 </td>
                 {([row.value, row.trigger, row.recover, row.startup] as (keyof AutoSwitcherThresholds)[]).map((key) => (
                   <td key={key} className="py-1 pr-3">
-                    <Input type="number" className="h-8 w-24" value={thresholds[key]} onChange={(e) => set(key, e.target.value)} />
+                    <Input
+                      type="number"
+                      className="h-8 w-24"
+                      value={drafts[key] ?? thresholds[key]}
+                      onChange={(e) => set(key, e.target.value)}
+                      onBlur={() => commit(key)}
+                    />
                   </td>
                 ))}
               </tr>
@@ -468,8 +502,9 @@ function AdvancedThresholdsMatrix({ form }: { form: any }) {
         <Input
           type="number"
           className="mt-1 h-8"
-          value={thresholds.offline_timeout_seconds}
+          value={drafts.offline_timeout_seconds ?? thresholds.offline_timeout_seconds}
           onChange={(e) => set("offline_timeout_seconds", e.target.value)}
+          onBlur={() => commit("offline_timeout_seconds")}
         />
       </div>
     </div>
