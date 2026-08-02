@@ -2,21 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
 import { Json } from "@repo/supabase";
-
-const ALLOWED_ORIGINS = new Set([
-  process.env.NEXT_PUBLIC_OVERLAY_URL,       // prod overlay URL
-  process.env.NEXT_PUBLIC_BASE_URL,          // streamwizard dashboard (editor preview)
-].filter(Boolean));
-
-function corsHeaders(req: NextRequest) {
-  const origin = req.headers.get("origin") ?? "null";
-  return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Vary": "Origin",
-  };
-}
+// Was a second copy of the same allowlist. Shared now so the sandboxed-iframe
+// origin can't be handled in one route and forgotten in the other.
+import { corsHeaders } from "@/lib/widget-api";
 
 export function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
