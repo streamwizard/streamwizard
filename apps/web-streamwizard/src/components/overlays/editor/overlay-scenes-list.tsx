@@ -61,7 +61,7 @@ interface OverlayScene {
   updated_at: string;
 }
 
-type RenderMode = "obs" | "phone";
+type RenderMode = "obs" | "gps";
 
 export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
   const router = useRouter();
@@ -78,7 +78,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
 
     // Phone overlays render on-device with GPS widgets; the starter templates
     // are OBS layouts, so phone mode always starts blank.
-    const effectiveTemplate = renderMode === "phone" ? "blank" : templateId;
+    const effectiveTemplate = renderMode === "gps" ? "blank" : templateId;
     const { data, error } =
       effectiveTemplate === "blank"
         ? await createOverlayScene({ name: newName.trim(), render_mode: renderMode })
@@ -181,7 +181,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                   </div>
                 </div>
 
-                {createdScene.render_mode !== "phone" ? (
+                {createdScene.render_mode !== "gps" ? (
                   <ol className="list-decimal list-inside space-y-1.5 text-sm text-muted-foreground">
                     <li>In OBS, add a source: Sources → + → Browser.</li>
                     <li>Paste the URL above.</li>
@@ -225,7 +225,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                 />
               </div>
 
-              {/* OBS / Phone toggle */}
+              {/* OBS / GPS toggle */}
               <div className="space-y-2">
                 <Label>Type</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -246,15 +246,15 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRenderMode("phone")}
+                    onClick={() => setRenderMode("gps")}
                     className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-sm transition-colors ${
-                      renderMode === "phone"
+                      renderMode === "gps"
                         ? "border-primary bg-primary/5 text-primary"
                         : "border-border text-muted-foreground hover:border-muted-foreground"
                     }`}
                   >
                     <Smartphone className="h-5 w-5" />
-                    <span className="font-medium">Phone</span>
+                    <span className="font-medium">GPS</span>
                     <span className="text-xs text-center leading-tight opacity-70">
                       Rendered on your phone with GPS
                     </span>
@@ -262,7 +262,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                 </div>
               </div>
 
-              {/* Starter templates (OBS mode only — phone overlays start blank) */}
+              {/* Starter templates (OBS mode only — GPS overlays start blank) */}
               {renderMode === "obs" && (
                 <div className="space-y-2">
                   <Label>Start from</Label>
@@ -322,10 +322,10 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                       <CardTitle className="text-base truncate">
                         {scene.name}
                       </CardTitle>
-                      {scene.render_mode === "phone" ? (
+                      {scene.render_mode === "gps" ? (
                         <Badge variant="outline" className="shrink-0 gap-1 text-[10px] px-1.5">
                           <Smartphone className="h-2.5 w-2.5" />
-                          Phone
+                          GPS
                         </Badge>
                       ) : (
                         <Badge variant="outline" className="shrink-0 gap-1 text-[10px] px-1.5">

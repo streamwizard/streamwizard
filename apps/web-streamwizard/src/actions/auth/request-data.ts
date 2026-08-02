@@ -95,9 +95,6 @@ export async function requestUserData() {
     fetchAll("irl_geo_track", (from, to) =>
       supabase.from("irl_geo_track").select("*").eq("user_id", userId).range(from, to),
     ),
-    fetchAll("irl_collector_tokens", (from, to) =>
-      supabase.from("irl_collector_tokens").select("*").eq("user_id", userId).range(from, to),
-    ),
     fetchAll("feedback", (from, to) =>
       supabase.from("feedback").select("*").eq("user_id", userId).range(from, to),
     ),
@@ -129,7 +126,6 @@ export async function requestUserData() {
     streamEvents,
     viewerCounts,
     irlGeoTrack,
-    irlCollectorTokens,
     feedback,
     testimonials,
   ] = results;
@@ -152,7 +148,6 @@ export async function requestUserData() {
   if (streamEvents.length) export_data.stream_events = streamEvents;
   if (viewerCounts.length) export_data.stream_viewer_counts = viewerCounts;
   if (irlGeoTrack.length) export_data.irl_geo_track = irlGeoTrack;
-  if (irlCollectorTokens.length) export_data.irl_collector_tokens = irlCollectorTokens;
   if (feedback.length) export_data.feedback = feedback;
   if (testimonials.length) export_data.testimonials = testimonials;
 

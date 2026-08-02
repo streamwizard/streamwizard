@@ -34,7 +34,7 @@ export interface OverlayTemplate {
   id: string;
   name: string;
   description: string;
-  render_mode: "obs" | "phone";
+  render_mode: "obs" | "gps";
   width: number;
   height: number;
   items: OverlayTemplateItem[];
