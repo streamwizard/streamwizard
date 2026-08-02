@@ -29,4 +29,6 @@ export interface RoomData {
   subscribers: Set<ServerWebSocket<ConnectionData>>;
   session_id: string;
   stream_id: string | null;
+  /** epoch ms of the last irl_geo_track insert — gates DB write rate, not broadcasts */
+  lastGeoInsertAt?: number;
 }
