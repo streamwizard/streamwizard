@@ -36,6 +36,18 @@ loadDotenvFilesIntoProcessEnv(turbopackRoot);
 
 const wsServerUrl = process.env.WS_SERVER_URL ?? "";
 
+/**
+ * This app's own public origin, needed in connect-src *by name*.
+ *
+ * `'self'` is not enough. Widget iframes are `srcdoc`, so they inherit this
+ * policy, but a srcdoc document resolves `'self'` against its own URL
+ * (`about:srcdoc`) rather than the embedder's origin — so `'self'` matches
+ * nothing inside the iframe, and a widget calling same-origin /api/twitch or
+ * /api/widgets/state is blocked. Naming the origin makes it match from both
+ * the page and the iframe.
+ */
+const overlayUrl = process.env.NEXT_PUBLIC_OVERLAY_URL ?? "";
+
 const assetCdnUrl =
   process.env.NEXT_PUBLIC_ASSET_CDN_URL ??
   process.env.ASSET_CDN_URL ??
@@ -72,7 +84,10 @@ const overlaySceneFontsCsp = [
   "font-src 'self' data: https://fonts.gstatic.com",
   `img-src 'self' data: blob: ${mediaHosts} ${widgetImageHosts}`,
   `media-src 'self' blob: data: ${mediaHosts}`,
-  `connect-src 'self' https://api.open-meteo.com https://nominatim.openstreetmap.org${wsServerUrl ? ` ${wsServerUrl}` : ""}`,
+  // mediaHosts is here as well as in media-src: the per-widget <meta> policy
+  // allows the asset CDN in connect-src, so a widget may fetch() an upload
+  // rather than only pointing a tag at it. Same srcdoc reasoning as overlayUrl.
+  `connect-src 'self'${overlayUrl ? ` ${overlayUrl}` : ""} ${mediaHosts} https://api.open-meteo.com https://nominatim.openstreetmap.org${wsServerUrl ? ` ${wsServerUrl}` : ""}`,
 ].join("; ");
 
 const nextConfig: NextConfig = {
