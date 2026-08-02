@@ -48,10 +48,11 @@ function formatLastUsed(value: string) {
   });
 }
 
-function ingestUrls(host: string, key: string) {
+function ingestFields(host: string, key: string) {
   return [
-    { protocol: "SRT", url: `srt://${host}:8888?streamid=${key}` },
-    { protocol: "SRTLA", url: `host ${host} · port 5000 · streamid ${key}` },
+    { label: "SRT URL", value: `srt://${host}:8888` },
+    { label: "SRTLA URL", value: `srtla://${host}:5000` },
+    { label: "Stream ID", value: key },
   ];
 }
 
@@ -128,21 +129,23 @@ export function IngestKeysSection({
         <CardContent className="space-y-6">
           {activeKey ? (
             <div className="space-y-3">
-              <Label>Your ingest URLs</Label>
-              {ingestUrls(ingestHost, activeKey.stream_key).map(({ protocol, url }) => (
-                <div key={protocol} className="flex items-center gap-2">
-                  <Badge variant="secondary" className="w-16 justify-center">
-                    {protocol}
+              <Label>Your ingest settings</Label>
+              {ingestFields(ingestHost, activeKey.stream_key).map(({ label: fieldLabel, value }) => (
+                <div key={fieldLabel} className="flex items-center gap-2">
+                  <Badge variant="secondary" className="w-24 justify-center">
+                    {fieldLabel}
                   </Badge>
-                  <Input readOnly value={url} className="font-mono text-xs" />
-                  <Button size="icon" variant="ghost" onClick={() => copy(url, `${protocol} URL`)}>
+                  <Input readOnly value={value} className="font-mono text-xs" />
+                  <Button size="icon" variant="ghost" onClick={() => copy(value, fieldLabel)}>
                     <Copy className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
               <p className="text-muted-foreground text-xs">
-                SRT and SRTLA carry the key in the <code>streamid</code> field. Using bonded
-                connections (Belabox, IRLToolkit, Moblin)? Point them at the SRTLA host above.
+                Most encoders have separate fields for the URL and the stream ID. Paste the stream
+                ID into <code>streamid</code>. Got one that only takes a single line? Use{" "}
+                <code>srt://{ingestHost}:8888?streamid=&lt;stream ID&gt;</code>. Bonded setups
+                (Belabox, IRLToolkit, Moblin) use the SRTLA URL.
               </p>
             </div>
           ) : (

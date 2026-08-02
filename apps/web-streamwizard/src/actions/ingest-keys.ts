@@ -37,11 +37,12 @@ function ingestKeyDmEmbed(label: string, streamKey: string, host: string): Disco
     embeds: [
       {
         title: "🔑 Ingest Key",
-        description: `**Don't share this. Don't show it on stream.** Anyone who gets this key can stream to your channel.\n\nConnection info for **${label}** is blurred below. Tap it to reveal, tap the code block to copy.`,
+        description: `**Don't share this. Don't show it on stream.** Anyone who gets this key can stream to your channel.\n\nConnection info for **${label}** is below. Your stream ID is blurred. Tap it to reveal, tap the code block to copy. Most encoders have separate fields for the URL and the stream ID.`,
         color: STREAMWIZARD_BLURPLE,
         fields: [
-          { name: "SRT", value: `||\`\`\`srt://${host}:8888?streamid=${streamKey}\`\`\`||` },
-          { name: "SRTLA", value: `Host \`${host}\`, port \`5000\`, stream ID\n||\`\`\`${streamKey}\`\`\`||` },
+          { name: "SRT URL", value: `\`\`\`srt://${host}:8888\`\`\`` },
+          { name: "SRTLA URL", value: `\`\`\`srtla://${host}:5000\`\`\`` },
+          { name: "Stream ID", value: `||\`\`\`${streamKey}\`\`\`||` },
           {
             name: "Key leaked?",
             value: "Rotate it right away from Manage keys below. Streaming won't stop until you do.",
