@@ -13,6 +13,7 @@
 export {
   resolveBadges,
   peekBadges,
+  peekBadgesCached,
   warmBadges,
   resolveCheermotes,
   peekCheermotes,
@@ -20,6 +21,7 @@ export {
   resolveUser,
   resolveUsers,
   peekUser,
+  peekUserCached,
   warmUser,
   resolveGame,
 } from "./assets";

@@ -116,6 +116,48 @@ export function peekMemory<T>(key: string): T | undefined {
   return memoryGet(key) as T | undefined;
 }
 
+/**
+ * Keys the DB missed too. Without this an uncached chatter costs a round trip
+ * on every message they send until the background warm lands — the same
+ * per-message storm the memory layer exists to prevent, one tier down.
+ */
+const DB_MISS_TTL = 30 * SECOND;
+const dbMisses = new Map<string, number>();
+
+/**
+ * Memory, then Supabase. Never Helix.
+ *
+ * The enrichment path's read. `peekMemory` alone means a restarted process
+ * ignores rows that are still warm in `twitch_asset_cache`, re-opening a full
+ * cold window on every deploy; this reads that tier without ever reaching for
+ * an upstream call the hot path can't afford.
+ */
+export async function peekCached<T>(key: string): Promise<T | undefined> {
+  const local = memoryGet(key);
+  if (local !== undefined) return local as T;
+
+  const missedAt = dbMisses.get(key);
+  if (missedAt !== undefined) {
+    if (Date.now() - missedAt < DB_MISS_TTL) return undefined;
+    dbMisses.delete(key);
+  }
+
+  // Prefixed so this never joins a resolve*() flight for the same key — that
+  // promise can be waiting on Helix, which is exactly what this must not do.
+  const hit = await singleFlight(`peek:${key}`, () => getCached<T>(key));
+  if (hit === undefined) {
+    // Same bound as the memory layer: a channel full of one-message chatters
+    // must not grow this map forever.
+    if (dbMisses.size >= MEMORY_MAX_ENTRIES) {
+      const cutoff = Date.now() - DB_MISS_TTL;
+      for (const [k, at] of dbMisses) if (at < cutoff) dbMisses.delete(k);
+      if (dbMisses.size >= MEMORY_MAX_ENTRIES) dbMisses.clear();
+    }
+    dbMisses.set(key, Date.now());
+  }
+  return hit;
+}
+
 const inFlight = new Map<string, Promise<unknown>>();
 
 /**

@@ -27,11 +27,12 @@ export async function broadcastOverlayEvent(
   if (!userId) return;
 
   // Adds badge image URLs and the subject's avatar when they're already
-  // cached. Cache-only and additive, so this never delays the broadcast and
-  // never changes a field a widget already reads.
+  // cached. Cache-only and additive, so this never reaches Helix and never
+  // changes a field a widget already reads. It can await a cache read, but
+  // only within its own short budget.
   overlayWsClient.send({
     userId,
     type,
-    payload: enrichOverlayEvent(broadcasterId, type, payload),
+    payload: await enrichOverlayEvent(broadcasterId, type, payload),
   });
 }
