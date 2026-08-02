@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import { useMemo, type ReactNode } from "react";
 import type { OverlayItem, OverlayScene } from "./types";
 import { useGoogleFonts } from "./hooks/use-google-font";
+import { WidgetScaleFrame } from "./WidgetScaleFrame";
 import { textWidgetBaseDefinition } from "./widgets/text/text-widget-definition";
 import { timerWidgetBaseDefinition } from "./widgets/timer/timer-widget-definition";
 import { clockWidgetBaseDefinition } from "./widgets/clock/clock-widget-definition";
@@ -101,7 +102,7 @@ function OverlayLayerWrapper({
         boxSizing: "border-box",
       }}
     >
-      {children}
+      <WidgetScaleFrame item={item}>{children}</WidgetScaleFrame>
     </div>
   );
 }

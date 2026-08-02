@@ -25,12 +25,11 @@ export interface AlertWidgetRendererProps {
   /** Needed for the live WS subscription; the editor canvas also passes it. */
   scene?: OverlayScene;
   /**
-   * Editor zoom. Presence doubles as the editor flag: with `zoom` set the
-   * renderer skips the WS subscription (test alerts arrive via the
-   * `streamwizard:test-alert` browser event) and shows a placeholder while
+   * Editor flag: the renderer skips the WS subscription (test alerts arrive via
+   * the `streamwizard:test-alert` browser event) and shows a placeholder while
    * idle so the box stays visible on the canvas.
    */
-  zoom?: number;
+  isEditor?: boolean;
 }
 
 type Phase = "in" | "hold" | "out";
@@ -98,7 +97,7 @@ function renderAccentedTemplate(
   });
 }
 
-export function AlertWidgetRenderer({ item, scene, zoom }: AlertWidgetRendererProps) {
+export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidgetRendererProps) {
   const cfg = useMemo(() => normalizeAlertWidgetConfig(item.config), [item.config]);
   const fontFamilies = useMemo(
     () => [...new Set(ALERT_EVENT_TYPES.map((e) => cfg.variants[e].fontFamily))],
@@ -106,8 +105,6 @@ export function AlertWidgetRenderer({ item, scene, zoom }: AlertWidgetRendererPr
   );
   useGoogleFonts(fontFamilies);
 
-  const isEditor = zoom !== undefined;
-  const scale = zoom ?? 1;
 
   const [active, setActive] = useState<ActiveAlert | null>(null);
   const [phase, setPhase] = useState<Phase>("in");
@@ -222,7 +219,7 @@ export function AlertWidgetRenderer({ item, scene, zoom }: AlertWidgetRendererPr
           borderRadius: 8,
           color: "rgba(255,255,255,0.55)",
           fontFamily: "sans-serif",
-          fontSize: 14 * scale,
+          fontSize: 14,
           textAlign: "center",
           padding: 8,
         }}
@@ -288,7 +285,7 @@ export function AlertWidgetRenderer({ item, scene, zoom }: AlertWidgetRendererPr
     <div
       style={{
         color: variant.titleColor,
-        fontSize: variant.fontSize * scale,
+        fontSize: variant.fontSize,
         fontWeight: variant.fontWeight,
         fontFamily,
         textAlign: variant.align,
@@ -308,7 +305,7 @@ export function AlertWidgetRenderer({ item, scene, zoom }: AlertWidgetRendererPr
     <div
       style={{
         color: variant.messageColor,
-        fontSize: Math.round(variant.fontSize * 0.6) * scale,
+        fontSize: Math.round(variant.fontSize * 0.6),
         fontWeight: 400,
         fontFamily,
         textAlign: variant.align,
@@ -342,8 +339,8 @@ export function AlertWidgetRenderer({ item, scene, zoom }: AlertWidgetRendererPr
           flexDirection: variant.layout === "row" ? "row" : "column",
           alignItems: variant.layout === "row" ? "center" : alignItems,
           justifyContent: "center",
-          gap: 12 * scale,
-          padding: 8 * scale,
+          gap: 12,
+          padding: 8,
           animation,
         }}
       >
@@ -355,7 +352,7 @@ export function AlertWidgetRenderer({ item, scene, zoom }: AlertWidgetRendererPr
             display: "flex",
             flexDirection: "column",
             alignItems,
-            gap: 4 * scale,
+            gap: 4,
             minWidth: 0,
           }}
         >

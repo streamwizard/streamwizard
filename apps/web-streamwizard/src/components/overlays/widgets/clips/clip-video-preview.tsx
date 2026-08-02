@@ -17,7 +17,8 @@ import type { EditorClipPlaybackControls } from "../../registry/overlay-widget-r
 
 interface ClipVideoPreviewProps {
   config: ClipsWidgetConfig;
-  zoom: number;
+  /** On-screen px per content px; editor chrome divides by it to stay legible. */
+  screenScale: number;
   editable?: boolean;
   /** When set with `onSelectField`, selection is controlled by the parent (e.g. overlay editor store). */
   selectedFieldKey?: DisplayFieldKey | null;
@@ -59,7 +60,7 @@ function createPlaybackOrder(length: number, random: boolean, previousFirst?: nu
 
 export function ClipVideoPreview({
   config,
-  zoom,
+  screenScale,
   editable = false,
   selectedFieldKey: selectedFieldKeyProp,
   editorClipPlayback,
@@ -634,7 +635,7 @@ export function ClipVideoPreview({
   if (clips.length === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-black/80">
-        <span className="text-white/50 text-center px-2" style={{ fontSize: Math.max(10, 12 * zoom) }}>
+        <span className="text-white/50 text-center px-2" style={{ fontSize: Math.max(10 / screenScale, 12) }}>
           No clips match filters
         </span>
       </div>
@@ -784,9 +785,9 @@ export function ClipVideoPreview({
           className="p-1 rounded bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors shrink-0"
         >
           {isPlaying ? (
-            <Pause style={{ width: Math.max(10, 14 * zoom), height: Math.max(10, 14 * zoom) }} />
+            <Pause style={{ width: Math.max(10 / screenScale, 14), height: Math.max(10 / screenScale, 14) }} />
           ) : (
-            <Play style={{ width: Math.max(10, 14 * zoom), height: Math.max(10, 14 * zoom) }} />
+            <Play style={{ width: Math.max(10 / screenScale, 14), height: Math.max(10 / screenScale, 14) }} />
           )}
         </button>
         <button
@@ -798,9 +799,9 @@ export function ClipVideoPreview({
           className="p-1 rounded bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors shrink-0"
         >
           {muted ? (
-            <VolumeX style={{ width: Math.max(10, 14 * zoom), height: Math.max(10, 14 * zoom) }} />
+            <VolumeX style={{ width: Math.max(10 / screenScale, 14), height: Math.max(10 / screenScale, 14) }} />
           ) : (
-            <Volume2 style={{ width: Math.max(10, 14 * zoom), height: Math.max(10, 14 * zoom) }} />
+            <Volume2 style={{ width: Math.max(10 / screenScale, 14), height: Math.max(10 / screenScale, 14) }} />
           )}
         </button>
         <button
@@ -811,14 +812,14 @@ export function ClipVideoPreview({
           }}
           className="p-1 rounded bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors shrink-0"
         >
-          <SkipForward style={{ width: Math.max(10, 14 * zoom), height: Math.max(10, 14 * zoom) }} />
+          <SkipForward style={{ width: Math.max(10 / screenScale, 14), height: Math.max(10 / screenScale, 14) }} />
         </button>
       </div>
 
       {/* Clip counter */}
       <div
         className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white/60"
-        style={{ zIndex: 3, fontSize: Math.max(7, 9 * zoom) }}
+        style={{ zIndex: 3, fontSize: Math.max(7 / screenScale, 9) }}
       >
         {isRandomMode ? orderPosition + 1 : currentIndex + 1} / {clips.length}
       </div>

@@ -66,11 +66,20 @@ import {
   IrlFieldWidgetRenderer,
 } from "@repo/ui/overlay";
 import type {
+  OverlayCanvasProps,
   OverlayChildResolvedDefinition,
   OverlayRootWidgetDefinition,
   ResolvedOverlayWidgetDefinition,
   WidgetCategory,
 } from "./overlay-widget-registry.types";
+
+/**
+ * On the canvas the alert box has no live socket to listen to, so it renders a
+ * placeholder instead of subscribing and sitting empty.
+ */
+function AlertWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <AlertWidgetRenderer item={item} scene={scene} isEditor />;
+}
 
 export const OVERLAY_WIDGET_REGISTRY: Record<
   RootOverlayItemType,
@@ -111,7 +120,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     },
     defaultSize: { ...ALERT_WIDGET_DEFAULT_SIZE },
     createRootItems: createAlertWidgetRootItems,
-    CanvasContent: AlertWidgetRenderer,
+    CanvasContent: AlertWidgetCanvas,
     SettingsPanel: AlertWidgetSettings,
   },
   text_widget: {

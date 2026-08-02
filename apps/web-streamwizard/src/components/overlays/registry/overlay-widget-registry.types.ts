@@ -35,7 +35,13 @@ export interface EditorClipPlaybackControls {
 export interface OverlayCanvasProps {
   item: OverlayItem;
   scene: OverlaySceneWithItems;
-  zoom: number;
+  /**
+   * On-screen px per content px (editor zoom x the item's content scale). The
+   * canvas already applies both as CSS transforms, so widget bodies must NOT
+   * multiply by this — it exists only so editor-only chrome (playback buttons,
+   * placeholder labels) can divide by it to stay legible when zoomed out.
+   */
+  screenScale: number;
   selectedItemId: string | null;
   selected: OverlayItem | undefined;
   selectItem: (id: string | null) => void;

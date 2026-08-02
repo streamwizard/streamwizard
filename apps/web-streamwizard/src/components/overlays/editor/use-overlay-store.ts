@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { clampCrop, getCropInsets, getDesignSize } from "@repo/ui/overlay";
 import {
   getOverlayWidgetDefinition,
   isRootLayerType,
@@ -18,7 +19,7 @@ export type EditorMode = "simple" | "pro";
 const EDITOR_MODE_STORAGE_KEY = "overlay-editor-mode";
 const HISTORY_LIMIT = 50;
 const NUDGE_HISTORY_COALESCE_MS = 400;
-const MIN_ITEM_SIZE = 50;
+export const MIN_ITEM_SIZE = 50;
 
 function loadEditorMode(): EditorMode {
   if (typeof window === "undefined") return "simple";
@@ -115,6 +116,11 @@ let lastNudgeAt = 0;
 /**
  * Keep an item inside the scene: size capped to scene dims, position so the
  * whole rect stays in-bounds. Single choke point for move/resize/nudge/inspector.
+ *
+ * The design box lives outside scene space (it is what the content is drawn at
+ * before scaling), so it only gets a lower bound. When a caller changes the
+ * rendered size without saying what the design size should be, the design box
+ * is left alone and the content simply scales — that is the whole point.
  */
 function clampGeometry(
   item: OverlayItem,
@@ -125,7 +131,45 @@ function clampGeometry(
   const h = Math.min(Math.max(MIN_ITEM_SIZE, updates.h ?? item.h), scene.height);
   const x = Math.min(Math.max(0, updates.x ?? item.x), scene.width - w);
   const y = Math.min(Math.max(0, updates.y ?? item.y), scene.height - h);
-  return { ...updates, x, y, w, h };
+  const geometry: Partial<OverlayItem> = { ...updates, x, y, w, h };
+  if (updates.design_w !== undefined) {
+    geometry.design_w = Math.max(MIN_ITEM_SIZE, updates.design_w);
+  }
+  if (updates.design_h !== undefined) {
+    geometry.design_h = Math.max(MIN_ITEM_SIZE, updates.design_h);
+  }
+
+  if (touchesCrop(updates)) {
+    const design = {
+      w: geometry.design_w ?? getDesignSize(item).w,
+      h: geometry.design_h ?? getDesignSize(item).h,
+    };
+    const current = getCropInsets(item);
+    const crop = clampCrop(
+      {
+        top: updates.crop_top ?? current.top,
+        right: updates.crop_right ?? current.right,
+        bottom: updates.crop_bottom ?? current.bottom,
+        left: updates.crop_left ?? current.left,
+      },
+      design
+    );
+    geometry.crop_top = crop.top;
+    geometry.crop_right = crop.right;
+    geometry.crop_bottom = crop.bottom;
+    geometry.crop_left = crop.left;
+  }
+
+  return geometry;
+}
+
+function touchesCrop(updates: Partial<OverlayItem>): boolean {
+  return (
+    updates.crop_top !== undefined ||
+    updates.crop_right !== undefined ||
+    updates.crop_bottom !== undefined ||
+    updates.crop_left !== undefined
+  );
 }
 
 function touchesGeometry(updates: Partial<OverlayItem>): boolean {
@@ -133,7 +177,10 @@ function touchesGeometry(updates: Partial<OverlayItem>): boolean {
     updates.x !== undefined ||
     updates.y !== undefined ||
     updates.w !== undefined ||
-    updates.h !== undefined
+    updates.h !== undefined ||
+    updates.design_w !== undefined ||
+    updates.design_h !== undefined ||
+    touchesCrop(updates)
   );
 }
 
@@ -183,6 +230,12 @@ function buildDuplicate(
         y: duplicateParent.y,
         w: duplicateParent.w,
         h: duplicateParent.h,
+        design_w: duplicateParent.design_w,
+        design_h: duplicateParent.design_h,
+        crop_top: duplicateParent.crop_top,
+        crop_right: duplicateParent.crop_right,
+        crop_bottom: duplicateParent.crop_bottom,
+        crop_left: duplicateParent.crop_left,
         z_index: duplicateParent.z_index,
         config: {
           ...cfg,
@@ -407,6 +460,12 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
           y: updated!.y,
           w: updated!.w,
           h: updated!.h,
+          design_w: updated!.design_w,
+          design_h: updated!.design_h,
+          crop_top: updated!.crop_top,
+          crop_right: updated!.crop_right,
+          crop_bottom: updated!.crop_bottom,
+          crop_left: updated!.crop_left,
           z_index: updated!.z_index,
         };
       });
