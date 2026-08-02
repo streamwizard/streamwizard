@@ -28,6 +28,16 @@ import {
 } from "lucide-react";
 import type { OverlayItem } from "@/types/overlays";
 import { asClipDisplayFieldConfig } from "@/types/overlays";
+import {
+  clampCrop,
+  clampScale,
+  getCropInsets,
+  getDesignSize,
+  getItemScale,
+  hasCrop,
+  NO_CROP,
+  type CropInsets,
+} from "@repo/ui/overlay";
 import { getOverlayWidgetDefinition } from "../registry/overlay-widget-registry";
 import { InspectorSection } from "./inspector-section";
 import { selectPrimarySelectedId, useOverlayStore } from "./use-overlay-store";
@@ -126,6 +136,74 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
     updateItem(item.id, updates);
   }
 
+  const designSize = getDesignSize(item);
+  const itemScale = getItemScale(item);
+  const cropInsets = getCropInsets(item);
+  const isCropped = hasCrop(item);
+
+  /** Resize the whole widget, contents included. */
+  function setScale(next: number) {
+    const scale = clampScale(next);
+    handleUpdate({
+      w: Math.round(designSize.w * scale),
+      h: Math.round(designSize.h * scale),
+    });
+  }
+
+  function setScalePercent(percent: number) {
+    if (!Number.isFinite(percent) || percent <= 0) return;
+    setScale(percent / 100);
+  }
+
+  function setRenderedWidth(w: number) {
+    if (!Number.isFinite(w) || w <= 0) return;
+    setScale(w / designSize.w);
+  }
+
+  function setRenderedHeight(h: number) {
+    if (!Number.isFinite(h) || h <= 0) return;
+    setScale(h / designSize.h);
+  }
+
+  /**
+   * Crop hides part of the content and shrinks the box to match, leaving the
+   * scale alone. Stretch the box back out afterwards and you have zoomed in
+   * without the widget ever leaving the canvas.
+   */
+  function setCropInset(edge: keyof CropInsets, value: number) {
+    if (!Number.isFinite(value) || value < 0) return;
+    const next = clampCrop({ ...cropInsets, [edge]: value }, designSize);
+    applyCrop(next);
+  }
+
+  function applyCrop(next: CropInsets) {
+    handleUpdate({
+      crop_top: next.top,
+      crop_right: next.right,
+      crop_bottom: next.bottom,
+      crop_left: next.left,
+      w: Math.round((designSize.w - next.left - next.right) * itemScale),
+      h: Math.round((designSize.h - next.top - next.bottom) * itemScale),
+    });
+  }
+
+  /** Resize the layout box without touching how big the content renders. */
+  function setDesignWidth(designW: number) {
+    if (!Number.isFinite(designW) || designW <= 0) return;
+    handleUpdate({
+      design_w: designW,
+      w: Math.round(designW * itemScale),
+    });
+  }
+
+  function setDesignHeight(designH: number) {
+    if (!Number.isFinite(designH) || designH <= 0) return;
+    handleUpdate({
+      design_h: designH,
+      h: Math.round(designH * itemScale),
+    });
+  }
+
   /** Geometry targets the clips widget when a nested display field is selected. */
   const layoutTarget: OverlayItem =
     item.type === "clip_display_field"
@@ -138,30 +216,35 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
 
   const layoutLocked = layoutTarget.is_locked;
 
-  function fitToScene() {
+  /**
+   * Fitting scales the widget rather than stretching its frame, so a widget
+   * fitted to the scene keeps its proportions instead of distorting.
+   */
+  function scaleLayoutTarget(scale: number, position: Partial<OverlayItem>) {
     if (layoutLocked) return;
+    const design = getDesignSize(layoutTarget);
+    const s = clampScale(scale);
     updateItem(layoutTarget.id, {
+      ...position,
+      w: Math.round(design.w * s),
+      h: Math.round(design.h * s),
+    });
+  }
+
+  function fitToScene() {
+    const design = getDesignSize(layoutTarget);
+    scaleLayoutTarget(Math.min(sceneW / design.w, sceneH / design.h), {
       x: 0,
       y: 0,
-      w: sceneW,
-      h: sceneH,
     });
   }
 
   function fitSceneWidth() {
-    if (layoutLocked) return;
-    updateItem(layoutTarget.id, {
-      x: 0,
-      w: sceneW,
-    });
+    scaleLayoutTarget(sceneW / getDesignSize(layoutTarget).w, { x: 0 });
   }
 
   function fitSceneHeight() {
-    if (layoutLocked) return;
-    updateItem(layoutTarget.id, {
-      y: 0,
-      h: sceneH,
-    });
+    scaleLayoutTarget(sceneH / getDesignSize(layoutTarget).h, { y: 0 });
   }
 
   function alignLeft() {
@@ -253,7 +336,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                 type="number"
                 value={Math.round(item.w)}
                 onFocus={() => pushHistory()}
-                onChange={(e) => handleUpdate({ w: Number(e.target.value) })}
+                onChange={(e) => setRenderedWidth(Number(e.target.value))}
                 className="h-8 text-sm"
               />
             </div>
@@ -263,10 +346,118 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                 type="number"
                 value={Math.round(item.h)}
                 onFocus={() => pushHistory()}
-                onChange={(e) => handleUpdate({ h: Number(e.target.value) })}
+                onChange={(e) => setRenderedHeight(Number(e.target.value))}
                 className="h-8 text-sm"
               />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Size</Label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  value={Math.round(itemScale * 100)}
+                  onFocus={() => pushHistory()}
+                  onChange={(e) => setScalePercent(Number(e.target.value))}
+                  className="h-8 text-sm pr-6"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                  %
+                </span>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">&nbsp;</Label>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 w-full text-xs"
+                disabled={item.is_locked || itemScale === 1}
+                onClick={() => {
+                  pushHistory();
+                  setScalePercent(100);
+                }}
+              >
+                Reset to 100%
+              </Button>
+            </div>
+          </div>
+
+          {/*
+            The frame is the box the widget lays itself out in. Widening it gives
+            text more room to wrap; it never changes how big the text is.
+          */}
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Frame width</Label>
+              <Input
+                type="number"
+                value={Math.round(designSize.w)}
+                onFocus={() => pushHistory()}
+                onChange={(e) => setDesignWidth(Number(e.target.value))}
+                className="h-8 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Frame height</Label>
+              <Input
+                type="number"
+                value={Math.round(designSize.h)}
+                onFocus={() => pushHistory()}
+                onChange={(e) => setDesignHeight(Number(e.target.value))}
+                className="h-8 text-sm"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-0.5">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs">Crop</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                disabled={item.is_locked || !isCropped}
+                onClick={() => {
+                  pushHistory();
+                  applyCrop(NO_CROP);
+                }}
+              >
+                Reset
+              </Button>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              {(
+                [
+                  ["top", "Top"],
+                  ["right", "Right"],
+                  ["bottom", "Bottom"],
+                  ["left", "Left"],
+                ] as const
+              ).map(([edge, label]) => (
+                <div key={edge} className="space-y-1.5">
+                  <Label className="text-[10px] text-muted-foreground">
+                    {label}
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={Math.round(cropInsets[edge])}
+                    onFocus={() => pushHistory()}
+                    onChange={(e) => setCropInset(edge, Number(e.target.value))}
+                    className="h-8 text-sm px-2"
+                  />
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-snug">
+              Crop away what you don&apos;t need, then drag a corner to stretch
+              the rest back out — that zooms in without leaving the canvas. Hold
+              Alt and drag a handle to crop on the canvas.
+            </p>
           </div>
 
           <div className="space-y-2 pt-0.5">

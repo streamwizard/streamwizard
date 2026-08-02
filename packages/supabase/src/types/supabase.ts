@@ -1766,6 +1766,12 @@ export type Database = {
         Row: {
           config: Json
           created_at: string
+          crop_bottom: number
+          crop_left: number
+          crop_right: number
+          crop_top: number
+          design_h: number
+          design_w: number
           h: number
           id: string
           is_locked: boolean
@@ -1784,6 +1790,12 @@ export type Database = {
         Insert: {
           config?: Json
           created_at?: string
+          crop_bottom?: number
+          crop_left?: number
+          crop_right?: number
+          crop_top?: number
+          design_h?: number
+          design_w?: number
           h?: number
           id?: string
           is_locked?: boolean
@@ -1802,6 +1814,12 @@ export type Database = {
         Update: {
           config?: Json
           created_at?: string
+          crop_bottom?: number
+          crop_left?: number
+          crop_right?: number
+          crop_top?: number
+          design_h?: number
+          design_w?: number
           h?: number
           id?: string
           is_locked?: boolean

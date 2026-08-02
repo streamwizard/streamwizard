@@ -32,6 +32,13 @@ function createIrlFieldWidgetItem(
     y: Math.round(ctx.scene.height / 2 - h / 2),
     w,
     h,
+    // New widgets are authored at their default size, so they start at scale 1.
+    design_w: w,
+    design_h: h,
+    crop_top: 0,
+    crop_right: 0,
+    crop_bottom: 0,
+    crop_left: 0,
     z_index: ctx.maxZ + 1,
     rotation: 0,
     opacity: 1,

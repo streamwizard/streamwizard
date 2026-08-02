@@ -6,6 +6,23 @@ export type {
   StreamWizardEventType,
 } from "@repo/types";
 export * from "./components/overlay/widget-definition";
+export {
+  MIN_ITEM_SCALE,
+  MAX_ITEM_SCALE,
+  MIN_SOURCE_SIZE,
+  NO_CROP,
+  getDesignSize,
+  getCropInsets,
+  getSourceSize,
+  hasCrop,
+  getItemScale,
+  applyScale,
+  clampScale,
+  clampCrop,
+  type Size,
+  type CropInsets,
+} from "./components/overlay/lib/item-scale";
+export { WidgetScaleFrame } from "./components/overlay/WidgetScaleFrame";
 export { formatCountdownMs } from "./components/overlay/lib/format-countdown";
 export { formatClockWidgetDisplay } from "./components/overlay/lib/format-clock-widget";
 export {

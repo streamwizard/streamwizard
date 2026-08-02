@@ -245,8 +245,26 @@ export interface OverlayItem {
   type: OverlayItemType;
   x: number;
   y: number;
+  /** Rendered width in scene px — always `design_w * scale`. */
   w: number;
+  /** Rendered height in scene px — always `design_h * scale`. */
   h: number;
+  /**
+   * Intrinsic size the widget's content is authored at. The renderer lays out at
+   * this size and is then scaled by `w / design_w`, so shrinking a widget shrinks
+   * its text instead of cropping it. See `lib/item-scale`.
+   */
+  design_w: number;
+  design_h: number;
+  /**
+   * Crop insets into the design box, in design px. All zero means no crop.
+   * The region left over is what fills the rendered rect, so cropping in and
+   * scaling back up zooms the widget without moving it off the scene.
+   */
+  crop_top: number;
+  crop_right: number;
+  crop_bottom: number;
+  crop_left: number;
   z_index: number;
   rotation: number;
   opacity: number;
@@ -579,7 +597,19 @@ export function slimClipsWidgetItemConfig(raw: unknown): ClipsWidgetItemConfig {
 export function createClipDisplayFieldChildItems(
   sceneId: string,
   parentId: string,
-  parent: Pick<OverlayItem, "x" | "y" | "w" | "h" | "z_index">,
+  parent: Pick<OverlayItem, "x" | "y" | "w" | "h"> &
+    Partial<
+      Pick<
+        OverlayItem,
+        | "design_w"
+        | "design_h"
+        | "crop_top"
+        | "crop_right"
+        | "crop_bottom"
+        | "crop_left"
+      >
+    > &
+    Pick<OverlayItem, "z_index">,
   nextId: () => string
 ): OverlayItem[] {
   return DISPLAY_FIELD_KEYS.map((fieldKey, stackOrder) => ({
@@ -590,6 +620,13 @@ export function createClipDisplayFieldChildItems(
     y: parent.y,
     w: parent.w,
     h: parent.h,
+    // Children mirror the parent's box exactly, design size and crop included.
+    design_w: parent.design_w ?? parent.w,
+    design_h: parent.design_h ?? parent.h,
+    crop_top: parent.crop_top ?? 0,
+    crop_right: parent.crop_right ?? 0,
+    crop_bottom: parent.crop_bottom ?? 0,
+    crop_left: parent.crop_left ?? 0,
     z_index: parent.z_index,
     rotation: 0,
     opacity: 1,
@@ -720,6 +757,14 @@ export interface OverlayItemDbRow {
   y: number;
   w: number;
   h: number;
+  /** Nullable for rows written before the design-size migration landed. */
+  design_w?: number | null;
+  design_h?: number | null;
+  /** Nullable for rows written before the crop migration landed. */
+  crop_top?: number | null;
+  crop_right?: number | null;
+  crop_bottom?: number | null;
+  crop_left?: number | null;
   z_index: number;
   rotation: number;
   opacity: number;
@@ -733,6 +778,13 @@ export function overlayItemFromDbRow(row: OverlayItemDbRow): OverlayItem {
   return {
     ...row,
     type: row.type as OverlayItem["type"],
+    // A legacy row with no design size renders at scale 1.
+    design_w: row.design_w && row.design_w > 0 ? row.design_w : row.w,
+    design_h: row.design_h && row.design_h > 0 ? row.design_h : row.h,
+    crop_top: row.crop_top ?? 0,
+    crop_right: row.crop_right ?? 0,
+    crop_bottom: row.crop_bottom ?? 0,
+    crop_left: row.crop_left ?? 0,
     config: row.config as OverlayItemConfig,
   };
 }

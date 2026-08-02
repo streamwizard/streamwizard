@@ -203,6 +203,13 @@ export async function createOverlayFromTemplate(formData: {
       y: item.y,
       w: item.w,
       h: item.h,
+      // Template items are authored at their placed size, so they start at scale 1.
+      design_w: item.w,
+      design_h: item.h,
+      crop_top: 0,
+      crop_right: 0,
+      crop_bottom: 0,
+      crop_left: 0,
       z_index: item.z_index,
       rotation: 0,
       opacity: 1,
@@ -270,6 +277,12 @@ export async function createOverlayFromTemplate(formData: {
           y: child.y,
           w: child.w,
           h: child.h,
+          design_w: child.design_w,
+          design_h: child.design_h,
+          crop_top: child.crop_top,
+          crop_right: child.crop_right,
+          crop_bottom: child.crop_bottom,
+          crop_left: child.crop_left,
           z_index: child.z_index,
           rotation: child.rotation,
           opacity: child.opacity,
@@ -421,6 +434,12 @@ export async function saveOverlayItem(item: {
   y: number;
   w: number;
   h: number;
+  design_w: number;
+  design_h: number;
+  crop_top: number;
+  crop_right: number;
+  crop_bottom: number;
+  crop_left: number;
   z_index: number;
   rotation: number;
   opacity: number;
@@ -441,6 +460,12 @@ export async function saveOverlayItem(item: {
       y: parsed.data.y,
       w: parsed.data.w,
       h: parsed.data.h,
+      design_w: parsed.data.design_w,
+      design_h: parsed.data.design_h,
+      crop_top: parsed.data.crop_top,
+      crop_right: parsed.data.crop_right,
+      crop_bottom: parsed.data.crop_bottom,
+      crop_left: parsed.data.crop_left,
       z_index: parsed.data.z_index,
       rotation: parsed.data.rotation,
       opacity: parsed.data.opacity,
@@ -464,6 +489,12 @@ export async function saveOverlayItem(item: {
     y: parsed.data.y,
     w: parsed.data.w,
     h: parsed.data.h,
+    design_w: parsed.data.design_w,
+    design_h: parsed.data.design_h,
+    crop_top: parsed.data.crop_top,
+    crop_right: parsed.data.crop_right,
+    crop_bottom: parsed.data.crop_bottom,
+    crop_left: parsed.data.crop_left,
     z_index: parsed.data.z_index,
     rotation: parsed.data.rotation,
     opacity: parsed.data.opacity,
@@ -513,6 +544,12 @@ export async function saveAllOverlayItems(
     y: number;
     w: number;
     h: number;
+    design_w: number;
+    design_h: number;
+    crop_top: number;
+    crop_right: number;
+    crop_bottom: number;
+    crop_left: number;
     z_index: number;
     rotation: number;
     opacity: number;
@@ -563,6 +600,12 @@ export async function saveAllOverlayItems(
       y: parsed.data.y,
       w: parsed.data.w,
       h: parsed.data.h,
+      design_w: parsed.data.design_w,
+      design_h: parsed.data.design_h,
+      crop_top: parsed.data.crop_top,
+      crop_right: parsed.data.crop_right,
+      crop_bottom: parsed.data.crop_bottom,
+      crop_left: parsed.data.crop_left,
       z_index: parsed.data.z_index,
       rotation: parsed.data.rotation,
       opacity: parsed.data.opacity,
@@ -600,6 +643,12 @@ export async function saveAllOverlayItems(
         y: p.y,
         w: p.w,
         h: p.h,
+        design_w: p.design_w,
+        design_h: p.design_h,
+        crop_top: p.crop_top,
+        crop_right: p.crop_right,
+        crop_bottom: p.crop_bottom,
+        crop_left: p.crop_left,
         z_index: p.z_index,
         rotation: p.rotation,
         opacity: p.opacity,
@@ -651,6 +700,12 @@ export async function saveAllOverlayItems(
         y: p.y,
         w: p.w,
         h: p.h,
+        design_w: p.design_w,
+        design_h: p.design_h,
+        crop_top: p.crop_top,
+        crop_right: p.crop_right,
+        crop_bottom: p.crop_bottom,
+        crop_left: p.crop_left,
         z_index: p.z_index,
         rotation: p.rotation,
         opacity: p.opacity,
