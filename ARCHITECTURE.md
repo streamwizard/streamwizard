@@ -227,7 +227,7 @@ The WS server is a **unified overlay event bus** — not just an IRL GPS relay. 
 
 | Role | Auth | Description |
 |------|------|-------------|
-| `publisher` | Supabase JWT *or* `irl_collector_tokens` row | Phone/device sending GPS payloads. One per user room. |
+| `publisher` | Supabase JWT *or* `overlay_scenes.subscriber_token` | The GPS overlay page sending GPS payloads. One per user room. |
 | `subscriber` | `overlay_scenes.subscriber_token` | OBS overlay WebSocket. Many per user room. |
 | `bot` | `Authorization: Bearer <SUPABASE_SERVICE_ROLE_KEY>` | `streamwizard-bot` — persistent connection, fans out Twitch events to subscribers. |
 
@@ -247,7 +247,7 @@ ws://<host>/ws?role=<publisher|subscriber|bot>&token=<token>&channels=<comma-sep
 "channel.subscription.message" | "channel.raid" | "channel.cheer"
 
 // Internal StreamWizard events:
-"streamwizard.geo"    // GPS payload from phone publisher
+"streamwizard.geo"    // GPS payload from the GPS overlay publisher
 "streamwizard.status" // Publisher connection status: { status: "offline" }
 ```
 

@@ -23,14 +23,14 @@ interface GeoPayload {
   timestamp: number;
 }
 
-export function PhoneOverlayCanvas({
+export function GpsOverlayCanvas({
   scene,
   items,
   token,
 }: {
   scene: OverlaySceneRow;
   items: OverlayItemRow[];
-  /** Optional collector token — if provided, geo is forwarded to WS for DB logging. */
+  /** The scene's subscriber_token — authenticates this page as the WS publisher so geo reaches the DB log and other viewers. */
   token: string;
 }) {
   const wsRef = useRef<WebSocket | null>(null);

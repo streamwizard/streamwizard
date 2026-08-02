@@ -16,7 +16,7 @@ import {
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@repo/supabase";
 import { User } from "@supabase/supabase-js";
-import { BarChart2, ClipboardCheck, Cloud, FileVideoCamera, FolderOpen, Layers, MapPin, Radio, Server, Users } from "lucide-react";
+import { BarChart2, ClipboardCheck, Cloud, FileVideoCamera, FolderOpen, Layers, Radio, Server, Users } from "lucide-react";
 import { StreamWizardLogo } from "@/components/brand/streamwizard-logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -112,14 +112,6 @@ export function AppSidebar({
                     <Link href="/dashboard/irl/ingest" onClick={closeMobile}>
                       <Radio className="mr-2 h-4 w-4" />
                       Ingest
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith("/dashboard/irl/gps")}>
-                    <Link href="/dashboard/irl/gps" onClick={closeMobile}>
-                      <MapPin className="mr-2 h-4 w-4" />
-                      GPS
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

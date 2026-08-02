@@ -95,7 +95,7 @@ export async function createOverlayScene(formData: {
   name: string;
   width?: number;
   height?: number;
-  render_mode?: "obs" | "phone";
+  render_mode?: "obs" | "gps";
 }) {
   let supabase, user;
   try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }
@@ -131,7 +131,7 @@ export async function createOverlayScene(formData: {
 export async function createOverlayFromTemplate(formData: {
   name: string;
   templateId: string;
-  render_mode?: "obs" | "phone";
+  render_mode?: "obs" | "gps";
 }) {
   let supabase, user;
   try { ({ supabase, user } = await getAuthContext()); } catch { return { data: null, error: "Unauthorized" }; }

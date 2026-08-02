@@ -3,7 +3,6 @@ import { env } from "../lib/env";
 import { supabase } from "@repo/supabase";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
 import { getLiveStreamIdByBroadcasterId } from "@repo/supabase/queries/live-status";
-import { getIrlCollectorTokenUserId, touchIrlCollectorToken } from "@repo/supabase/queries/irl";
 import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import type { BotBroadcastMessage, OverlayEventType } from "@repo/types";
 import { trackWsAuthFailure } from "@repo/metrics";
@@ -180,12 +179,10 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     const { data: { user } } = await supabase.auth.getUser(token);
     if (user) resolvedUserId = user.id;
 
-    // Path B: irl_collector_tokens DB lookup
+    // Path B: overlay subscriber token (gps overlay page publishing on-device GPS)
     if (!resolvedUserId) {
-      resolvedUserId = await getIrlCollectorTokenUserId(supabase, token);
-      if (resolvedUserId) {
-        touchIrlCollectorToken(supabase, token);
-      }
+      const { data: scene } = await getOverlaySceneBySubscriberToken(supabase, token);
+      if (scene) resolvedUserId = scene.user_id;
     }
 
     if (!resolvedUserId) {

@@ -1356,36 +1356,6 @@ export type Database = {
           },
         ]
       }
-      irl_collector_tokens: {
-        Row: {
-          created_at: string
-          id: string
-          is_active: boolean
-          last_used_at: string | null
-          name: string
-          token: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          last_used_at?: string | null
-          name?: string
-          token: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          last_used_at?: string | null
-          name?: string
-          token?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       irl_geo_track: {
         Row: {
           accuracy: number | null
