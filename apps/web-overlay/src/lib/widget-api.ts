@@ -8,21 +8,42 @@ import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
  * the channel it belongs to.
  */
 
+/**
+ * Widget iframes are `sandbox="allow-scripts"` with no `allow-same-origin`, so
+ * the document has an opaque origin and its requests carry `Origin: null`.
+ * That is the isolation working as intended — author JS must never reach the
+ * overlay origin's cookies or storage — so the API answers the opaque origin
+ * rather than the sandbox being widened to satisfy CORS.
+ *
+ * Safe because these routes carry no ambient authority: no cookies, and no
+ * `Access-Control-Allow-Credentials`, so a browser will not attach one. Each is
+ * authorised by the subscriber token in the Authorization header, which also
+ * scopes the answer to a single channel. Anyone able to send `Origin: null`
+ * still needs that token, and once they have it the browser was never what was
+ * stopping them.
+ */
+const OPAQUE_ORIGIN = "null";
+
 const ALLOWED_ORIGINS = new Set(
   [
     process.env.NEXT_PUBLIC_OVERLAY_URL, // prod overlay URL
     process.env.NEXT_PUBLIC_BASE_URL, // streamwizard dashboard (editor preview)
+    OPAQUE_ORIGIN, // sandboxed widget iframe on either of the above
   ].filter(Boolean)
 );
 
 export function corsHeaders(req: NextRequest): Record<string, string> {
-  const origin = req.headers.get("origin") ?? "null";
-  return {
-    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.has(origin) ? origin : "",
+  const origin = req.headers.get("origin") ?? OPAQUE_ORIGIN;
+  const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     Vary: "Origin",
   };
+  // Omitted rather than empty for a disallowed origin. An empty value is still
+  // a header the browser has to reject, and it reads in devtools as a broken
+  // deployment rather than as a refusal.
+  if (ALLOWED_ORIGINS.has(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
 }
 
 /**
