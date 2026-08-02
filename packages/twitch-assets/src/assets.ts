@@ -1,5 +1,5 @@
 import { TwitchApi } from "@repo/twitch-api";
-import { ASSET_TTL, getCached, peekMemory, setCached, singleFlight } from "./cache";
+import { ASSET_TTL, getCached, peekCached, peekMemory, setCached, singleFlight } from "./cache";
 import type {
   BadgeMap,
   CheermoteMap,
@@ -83,12 +83,29 @@ export async function resolveBadges(broadcasterId: string): Promise<BadgeMap> {
   return { ...global, ...channel };
 }
 
-/** Cache-only. Undefined until something has warmed both halves. */
+/**
+ * Cache-only. Undefined until *both* halves are warm.
+ *
+ * Both, not either: a channel with no custom badges caches a legitimate `{}`,
+ * so "channel warm, global cold" would otherwise return a truthy near-empty
+ * map — every badge silently resolving to nothing, and no warm triggered
+ * because the map looked like a hit.
+ */
 export function peekBadges(broadcasterId: string): BadgeMap | undefined {
   const global = peekMemory<BadgeMap>(keys.globalBadges());
   const channel = peekMemory<BadgeMap>(keys.channelBadges(broadcasterId));
-  if (!global && !channel) return undefined;
-  return { ...(global ?? {}), ...(channel ?? {}) };
+  if (!global || !channel) return undefined;
+  return { ...global, ...channel };
+}
+
+/** Same contract as {@link peekBadges}, but reads the Supabase tier too. */
+export async function peekBadgesCached(broadcasterId: string): Promise<BadgeMap | undefined> {
+  const [global, channel] = await Promise.all([
+    peekCached<BadgeMap>(keys.globalBadges()),
+    peekCached<BadgeMap>(keys.channelBadges(broadcasterId)),
+  ]);
+  if (!global || !channel) return undefined;
+  return { ...global, ...channel };
 }
 
 /** Fire-and-forget warm, for the enrichment path's background fill. */
@@ -179,6 +196,11 @@ export async function resolveUser(userId: string): Promise<PublicUser | undefine
 
 export function peekUser(userId: string): PublicUser | undefined {
   return peekMemory<PublicUser>(keys.user(userId));
+}
+
+/** Same contract as {@link peekUser}, but reads the Supabase tier too. */
+export function peekUserCached(userId: string): Promise<PublicUser | undefined> {
+  return peekCached<PublicUser>(keys.user(userId));
 }
 
 /**
