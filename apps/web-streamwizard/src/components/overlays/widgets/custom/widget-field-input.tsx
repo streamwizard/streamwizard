@@ -12,6 +12,7 @@ import {
   AccordionItem,
   AccordionTrigger,
   Button,
+  ColorPicker,
   Input,
   Label,
   Slider,
@@ -159,16 +160,11 @@ export function WidgetFieldInput({
   }
 
   if (def.type === "colorpicker") {
-    const hex = typeof value === "string" && value.startsWith("#") ? value : "#ffffff";
+    const hex = typeof value === "string" ? value : "#ffffff";
     return (
       <div className="space-y-1.5">
         <Label className="text-xs">{label}</Label>
-        <input
-          type="color"
-          value={hex}
-          onChange={(e) => onChange(e.target.value)}
-          className="h-9 w-full rounded-md border border-input bg-background cursor-pointer"
-        />
+        <ColorPicker value={hex} onChange={onChange} aria-label={label} />
       </div>
     );
   }
