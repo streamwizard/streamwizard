@@ -8,6 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
   Button,
+  ColorPicker,
   Input,
   Label,
   Select,
@@ -442,35 +443,27 @@ export function AlertWidgetSettings({ item, updateItem }: OverlayInspectorAppend
                   <div className="grid grid-cols-3 gap-2">
                     <div className="space-y-1.5">
                       <Label className="text-xs">Title</Label>
-                      <input
-                        type="color"
-                        value={variant.titleColor.length === 7 ? variant.titleColor : "#ffffff"}
-                        onChange={(e) => patchVariant(event, { titleColor: e.target.value })}
-                        className="h-9 w-full rounded-md border border-input bg-background cursor-pointer"
+                      <ColorPicker
+                        value={variant.titleColor}
+                        onChange={(titleColor) => patchVariant(event, { titleColor })}
                         aria-label="Title color"
                       />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Accent</Label>
-                      <input
-                        type="color"
-                        value={
-                          variant.accentColor.length === 7 ? variant.accentColor : "#9e7aff"
-                        }
-                        onChange={(e) => patchVariant(event, { accentColor: e.target.value })}
-                        className="h-9 w-full rounded-md border border-input bg-background cursor-pointer"
+                      <ColorPicker
+                        value={variant.accentColor}
+                        fallback="#9e7aff"
+                        onChange={(accentColor) => patchVariant(event, { accentColor })}
                         aria-label="Accent color"
                       />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Message</Label>
-                      <input
-                        type="color"
-                        value={
-                          variant.messageColor.length === 7 ? variant.messageColor : "#d4d4d8"
-                        }
-                        onChange={(e) => patchVariant(event, { messageColor: e.target.value })}
-                        className="h-9 w-full rounded-md border border-input bg-background cursor-pointer"
+                      <ColorPicker
+                        value={variant.messageColor}
+                        fallback="#d4d4d8"
+                        onChange={(messageColor) => patchVariant(event, { messageColor })}
                         aria-label="Message color"
                       />
                     </div>
