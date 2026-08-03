@@ -55,11 +55,11 @@ export async function requestUserData() {
     fetchAll("overlay_scenes", (from, to) =>
       supabase.from("overlay_scenes").select("*").eq("user_id", userId).range(from, to),
     ),
-    fetchAll("widgets", (from, to) =>
-      supabase.from("widgets").select("*").eq("user_id", userId).range(from, to),
+    fetchAll("overlay_widgets", (from, to) =>
+      supabase.from("overlay_widgets").select("*").eq("user_id", userId).range(from, to),
     ),
-    fetchAll("widget_library_entries", (from, to) =>
-      supabase.from("widget_library_entries").select("*").eq("user_id", userId).range(from, to),
+    fetchAll("overlay_widget_library_entries", (from, to) =>
+      supabase.from("overlay_widget_library_entries").select("*").eq("user_id", userId).range(from, to),
     ),
     fetchAll("clips", (from, to) =>
       supabase.from("clips").select("*").eq("user_id", userId).range(from, to),

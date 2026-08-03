@@ -47,7 +47,13 @@ import {
   duplicateOverlayScene,
   updateOverlayScene,
 } from "@/actions/overlays";
-import { OVERLAY_TEMPLATES } from "@/components/overlays/templates/definitions";
+
+export interface OverlayTemplateOption {
+  slug: string;
+  name: string;
+  description: string;
+  render_mode: string;
+}
 
 interface OverlayScene {
   id: string;
@@ -63,7 +69,13 @@ interface OverlayScene {
 
 type RenderMode = "obs" | "gps";
 
-export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
+export function OverlayScenesList({
+  scenes,
+  templates,
+}: {
+  scenes: OverlayScene[];
+  templates: OverlayTemplateOption[];
+}) {
   const router = useRouter();
   const [isCreating, setIsCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -72,13 +84,24 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createdScene, setCreatedScene] = useState<OverlayScene | null>(null);
 
+  // A template is built for one render mode; "blank" suits both.
+  const availableTemplates = templates.filter(
+    (t) => t.slug === "blank" || t.render_mode === renderMode
+  );
+
+  function selectRenderMode(mode: RenderMode) {
+    setRenderMode(mode);
+    // The picked template may not exist in the other mode; fall back to blank.
+    setTemplateId((current) =>
+      templates.some((t) => t.slug === current && t.render_mode === mode) ? current : "blank"
+    );
+  }
+
   async function handleCreate() {
     if (!newName.trim()) return;
     setIsCreating(true);
 
-    // Phone overlays render on-device with GPS widgets; the starter templates
-    // are OBS layouts, so phone mode always starts blank.
-    const effectiveTemplate = renderMode === "gps" ? "blank" : templateId;
+    const effectiveTemplate = templateId;
     const { data, error } =
       effectiveTemplate === "blank"
         ? await createOverlayScene({ name: newName.trim(), render_mode: renderMode })
@@ -231,7 +254,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setRenderMode("obs")}
+                    onClick={() => selectRenderMode("obs")}
                     className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-sm transition-colors ${
                       renderMode === "obs"
                         ? "border-primary bg-primary/5 text-primary"
@@ -246,7 +269,7 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setRenderMode("gps")}
+                    onClick={() => selectRenderMode("gps")}
                     className={`flex flex-col items-center gap-2 rounded-lg border p-4 text-sm transition-colors ${
                       renderMode === "gps"
                         ? "border-primary bg-primary/5 text-primary"
@@ -262,18 +285,18 @@ export function OverlayScenesList({ scenes }: { scenes: OverlayScene[] }) {
                 </div>
               </div>
 
-              {/* Starter templates (OBS mode only — GPS overlays start blank) */}
-              {renderMode === "obs" && (
+              {/* Starter templates for the selected render mode. */}
+              {availableTemplates.length > 0 && (
                 <div className="space-y-2">
                   <Label>Start from</Label>
                   <div className="grid grid-cols-2 gap-2">
-                    {OVERLAY_TEMPLATES.map((template) => (
+                    {availableTemplates.map((template) => (
                       <button
-                        key={template.id}
+                        key={template.slug}
                         type="button"
-                        onClick={() => setTemplateId(template.id)}
+                        onClick={() => setTemplateId(template.slug)}
                         className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left text-sm transition-colors ${
-                          templateId === template.id
+                          templateId === template.slug
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-muted-foreground"
                         }`}

@@ -35,6 +35,10 @@
       "types": "./src/queries/overlays.ts",
       "default": "./src/queries/overlays.ts"
     },
+    "./queries/overlay-templates": {
+      "types": "./src/queries/overlay-templates.ts",
+      "default": "./src/queries/overlay-templates.ts"
+    },
     "./queries/user": {
       "types": "./src/queries/user.ts",
       "default": "./src/queries/user.ts"

@@ -33,13 +33,14 @@ import {
   deleteWidget,
   getWidgets,
   getApprovedLibraryEntries,
+  getWidgetTemplates,
+  installWidgetTemplate,
   installWidgetFromLibrary,
 } from "@/actions/widgets";
-import type { Widget } from "@/actions/widgets";
+import type { WidgetTemplate, Widget } from "@/actions/widgets";
 import { buildWidgetSrcdoc, mergeFieldValues } from "@repo/ui/overlay";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
 import { Plus, Pencil, Trash2, Code2, Download, Sparkles } from "lucide-react";
-import { STARTER_WIDGETS, getStarterWidget } from "@/components/overlays/widgets/custom/starter-widgets";
 import { primeWidgetCache } from "@/components/overlays/widgets/custom/widget-cache";
 
 const DEFAULT_WIDGET_HTML = `<!--
@@ -169,7 +170,7 @@ interface LibraryEntry {
   description: string;
   tags: string[];
   installs: number;
-  widgets: {
+  overlay_widgets: {
     html: string;
     js: string;
     extra_css: string;
@@ -187,6 +188,7 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
   const router = useRouter();
   const [myWidgets, setMyWidgets] = useState<Widget[]>([]);
   const [libraryEntries, setLibraryEntries] = useState<LibraryEntry[]>([]);
+  const [widgetTemplates, setWidgetTemplates] = useState<WidgetTemplate[]>([]);
   const [loadingMine, setLoadingMine] = useState(false);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
   const [search, setSearch] = useState("");
@@ -205,6 +207,7 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
       primeWidgetCache(data ?? []);
       setLoadingMine(false);
     });
+    getWidgetTemplates().then(({ data }) => setWidgetTemplates(data ?? []));
     setLoadingLibrary(true);
     getApprovedLibraryEntries().then(({ data }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -245,20 +248,10 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
     router.push(`/dashboard/widgets/${id}`);
   }
 
-  function handleUseStarter(starterId: string, addToCanvas: boolean) {
-    const starter = getStarterWidget(starterId);
-    if (!starter) return;
-    setInstallingId(starterId);
+  function handleUseWidgetTemplate(templateId: string, addToCanvas: boolean) {
+    setInstallingId(templateId);
     startTransition(async () => {
-      const { data } = await createWidget({
-        name: starter.name,
-        description: starter.description,
-        html: starter.html,
-        js: starter.js,
-        extra_css: starter.extra_css,
-        fields: starter.fields,
-        tags: starter.tags,
-      });
+      const { data } = await installWidgetTemplate(templateId);
       setInstallingId(null);
       if (!data) return;
       setMyWidgets((prev) => [data, ...prev]);
@@ -311,27 +304,27 @@ export function WidgetLibraryModal({ open, onOpenChange, onAddToCanvas }: Widget
               Ready-made widgets. Use one as-is or open the code and make it yours.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {STARTER_WIDGETS.map((starter) => (
-                <div key={starter.id} className="rounded-lg border bg-card p-4 flex flex-col gap-2">
+              {widgetTemplates.map((widgetTemplate) => (
+                <div key={widgetTemplate.id} className="rounded-lg border bg-card p-4 flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary shrink-0" />
-                    <h4 className="text-sm font-semibold">{starter.name}</h4>
+                    <h4 className="text-sm font-semibold">{widgetTemplate.name}</h4>
                   </div>
-                  <p className="text-xs text-muted-foreground flex-1">{starter.description}</p>
+                  <p className="text-xs text-muted-foreground flex-1">{widgetTemplate.description}</p>
                   <div className="flex gap-2 pt-1">
                     <Button
                       size="sm"
                       className="flex-1"
-                      disabled={installingId === starter.id}
-                      onClick={() => handleUseStarter(starter.id, true)}
+                      disabled={installingId === widgetTemplate.id}
+                      onClick={() => handleUseWidgetTemplate(widgetTemplate.id, true)}
                     >
                       Add to canvas
                     </Button>
                     <Button
                       size="sm"
                       variant="outline"
-                      disabled={installingId === starter.id}
-                      onClick={() => handleUseStarter(starter.id, false)}
+                      disabled={installingId === widgetTemplate.id}
+                      onClick={() => handleUseWidgetTemplate(widgetTemplate.id, false)}
                       title="Copies it to My Widgets without placing it"
                     >
                       Save only
@@ -497,11 +490,11 @@ function LibraryCard({
   isInstalling: boolean;
 }) {
   const srcdoc = buildWidgetSrcdoc(
-    entry.widgets.html,
-    entry.widgets.js,
-    entry.widgets.extra_css,
-    entry.widgets.fields,
-    mergeFieldValues(entry.widgets.fields, {})
+    entry.overlay_widgets.html,
+    entry.overlay_widgets.js,
+    entry.overlay_widgets.extra_css,
+    entry.overlay_widgets.fields,
+    mergeFieldValues(entry.overlay_widgets.fields, {})
   );
 
   return (
