@@ -15,7 +15,7 @@ interface PendingEntry {
   description: string;
   tags: string[];
   created_at: string;
-  widgets: {
+  overlay_widgets: {
     html: string;
     js: string;
     extra_css: string;
@@ -68,11 +68,11 @@ export function AdminWidgetLibraryClient({
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
       {entries.map((entry) => {
         const srcdoc = buildWidgetSrcdoc(
-          entry.widgets.html,
-          entry.widgets.js,
-          entry.widgets.extra_css,
-          entry.widgets.fields,
-          mergeFieldValues(entry.widgets.fields, {})
+          entry.overlay_widgets.html,
+          entry.overlay_widgets.js,
+          entry.overlay_widgets.extra_css,
+          entry.overlay_widgets.fields,
+          mergeFieldValues(entry.overlay_widgets.fields, {})
         );
         return (
           <Card key={entry.id} className="overflow-hidden">

@@ -26,7 +26,7 @@ export async function loadCustomWidgetData(
   const needsInstance = fieldValues === undefined && Boolean(instanceId);
   const [{ data: widget, error: wErr }, { data: instance, error: iErr }] = await Promise.all([
     supabaseAdmin
-      .from("widgets")
+      .from("overlay_widgets")
       .select("html, js, extra_css, fields")
       .eq("id", widgetId)
       .eq("user_id", ownerUserId)

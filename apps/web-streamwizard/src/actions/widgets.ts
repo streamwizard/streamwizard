@@ -4,6 +4,10 @@ import { reportError } from "@repo/sentry";
 
 import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
+import {
+  getWidgetTemplates as _getWidgetTemplates,
+  getWidgetTemplateById,
+} from "@repo/supabase/queries/overlay-templates";
 import { revalidatePath } from "next/cache";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
 
@@ -61,7 +65,7 @@ export async function getWidgets() {
     return { data: null, error: "Unauthorized" };
   }
   const { data, error } = await supabase
-    .from("widgets")
+    .from("overlay_widgets")
     .select("*")
     .eq("user_id", user.id)
     .order("updated_at", { ascending: false });
@@ -77,7 +81,7 @@ export async function getWidget(id: string) {
     return { data: null, error: "Unauthorized" };
   }
   const { data, error } = await supabase
-    .from("widgets")
+    .from("overlay_widgets")
     .select("*")
     .eq("id", id)
     .eq("user_id", user.id)
@@ -98,7 +102,7 @@ export async function getWidgetsByIds(ids: string[]) {
     return { data: null, error: "Unauthorized" };
   }
   const { data, error } = await supabase
-    .from("widgets")
+    .from("overlay_widgets")
     .select("*")
     .eq("user_id", user.id)
     .in("id", unique);
@@ -122,7 +126,7 @@ export async function createWidget(input: {
     return { data: null, error: "Unauthorized" };
   }
   const { data, error } = await supabase
-    .from("widgets")
+    .from("overlay_widgets")
     .insert({
       user_id: user.id,
       name: input.name,
@@ -160,7 +164,7 @@ export async function updateWidget(
     return { error: "Unauthorized" };
   }
   const { error } = await supabase
-    .from("widgets")
+    .from("overlay_widgets")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .update({ ...updates, updated_at: new Date().toISOString() } as any)
     .eq("id", id)
@@ -177,7 +181,7 @@ export async function deleteWidget(id: string) {
     return { error: "Unauthorized" };
   }
   const { error } = await supabase
-    .from("widgets")
+    .from("overlay_widgets")
     .delete()
     .eq("id", id)
     .eq("user_id", user.id);
@@ -233,8 +237,8 @@ export async function getApprovedLibraryEntries(opts?: {
     return { data: null, error: "Unauthorized" };
   }
   let query = supabase
-    .from("widget_library_entries")
-    .select("*, widgets(*)")
+    .from("overlay_widget_library_entries")
+    .select("*, overlay_widgets(*)")
     .eq("is_approved", true)
     .order("installs", { ascending: false });
 
@@ -256,7 +260,7 @@ export async function publishWidgetToLibrary(
   } catch {
     return { error: "Unauthorized" };
   }
-  const { error } = await supabase.from("widget_library_entries").insert({
+  const { error } = await supabase.from("overlay_widget_library_entries").insert({
     widget_id: widgetId,
     user_id: user.id,
     title: input.title,
@@ -268,6 +272,84 @@ export async function publishWidgetToLibrary(
   return { error: error?.message ?? null };
 }
 
+export interface WidgetTemplate {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  tags: string[];
+}
+
+/**
+ * Widget templates, shown as the library's Starters tab. Source (html/js/css/fields) is deliberately left
+ * out — installing copies it server-side, so the client never needs it.
+ */
+export async function getWidgetTemplates() {
+  let supabase;
+  try {
+    ({ supabase } = await getAuthContext());
+  } catch {
+    return { data: null, error: "Unauthorized" };
+  }
+
+  const { data, error } = await _getWidgetTemplates(supabase);
+  if (error) {
+    reportError(error, "actions/widgets");
+    return { data: null, error: error.message };
+  }
+
+  return {
+    data: (data ?? []).map((s) => ({
+      id: s.id,
+      slug: s.slug,
+      name: s.name,
+      description: s.description,
+      tags: s.tags,
+    })) satisfies WidgetTemplate[],
+    error: null,
+  };
+}
+
+/** Copy a widget template into an `overlay_widgets` row the user owns and can edit. */
+export async function installWidgetTemplate(templateId: string) {
+  let supabase, user;
+  try {
+    ({ supabase, user } = await getAuthContext());
+  } catch {
+    return { data: null, error: "Unauthorized" };
+  }
+
+  const { data: widgetTemplate, error: templateError } = await getWidgetTemplateById(supabase, templateId);
+  if (templateError) {
+    reportError(templateError, "actions/widgets");
+    return { data: null, error: templateError.message };
+  }
+  if (!widgetTemplate) return { data: null, error: "Widget template not found" };
+
+  const { data: installed, error: installError } = await supabase
+    .from("overlay_widgets")
+    .insert({
+      user_id: user.id,
+      name: widgetTemplate.name,
+      description: widgetTemplate.description,
+      html: widgetTemplate.html,
+      js: widgetTemplate.js,
+      extra_css: widgetTemplate.extra_css,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      fields: widgetTemplate.fields as any,
+      tags: widgetTemplate.tags,
+    })
+    .select()
+    .single();
+
+  if (installError) {
+    reportError(installError, "actions/widgets");
+    return { data: null, error: installError.message };
+  }
+
+  return { data: installed as unknown as Widget, error: null };
+}
+
 export async function installWidgetFromLibrary(entryId: string) {
   let supabase, user;
   try {
@@ -277,8 +359,8 @@ export async function installWidgetFromLibrary(entryId: string) {
   }
 
   const { data: entry, error: entryError } = await supabase
-    .from("widget_library_entries")
-    .select("*, widgets(*)")
+    .from("overlay_widget_library_entries")
+    .select("*, overlay_widgets(*)")
     .eq("id", entryId)
     .eq("is_approved", true)
     .single();
@@ -287,10 +369,10 @@ export async function installWidgetFromLibrary(entryId: string) {
     return { data: null, error: entryError?.message ?? "Entry not found" };
   }
 
-  const source = (entry as unknown as { widgets: Widget }).widgets;
+  const source = (entry as unknown as { overlay_widgets: Widget }).overlay_widgets;
 
   const { data: forked, error: forkError } = await supabase
-    .from("widgets")
+    .from("overlay_widgets")
     .insert({
       user_id: user.id,
       name: source.name,
@@ -326,8 +408,8 @@ export async function getPendingLibraryEntries() {
     return { data: null, error: "Forbidden" };
   }
   const { data, error } = await adminClient
-    .from("widget_library_entries")
-    .select("*, widgets(*)")
+    .from("overlay_widget_library_entries")
+    .select("*, overlay_widgets(*)")
     .eq("is_approved", false)
     .order("created_at", { ascending: true });
   if (error) reportError(error, "actions/widgets");
@@ -342,7 +424,7 @@ export async function approveLibraryEntry(entryId: string) {
     return { error: "Forbidden" };
   }
   const { error } = await adminClient
-    .from("widget_library_entries")
+    .from("overlay_widget_library_entries")
     .update({ is_approved: true })
     .eq("id", entryId);
   revalidatePath("/dashboard/admin/widget-library");
@@ -358,7 +440,7 @@ export async function rejectLibraryEntry(entryId: string) {
     return { error: "Forbidden" };
   }
   const { error } = await adminClient
-    .from("widget_library_entries")
+    .from("overlay_widget_library_entries")
     .delete()
     .eq("id", entryId);
   revalidatePath("/dashboard/admin/widget-library");

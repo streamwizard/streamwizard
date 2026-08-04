@@ -44,8 +44,8 @@ export default async function DatabaseDashboard() {
     supabaseAdmin.from("overlay_scenes").select("*", { count: "exact", head: true }),
     supabaseAdmin.from("overlay_scenes").select("*", { count: "exact", head: true }).eq("is_active", true),
     supabaseAdmin.from("overlay_items").select("*", { count: "exact", head: true }),
-    supabaseAdmin.from("widgets").select("*", { count: "exact", head: true }),
-    supabaseAdmin.from("widget_library_entries").select("*", { count: "exact", head: true }).eq("is_approved", true),
+    supabaseAdmin.from("overlay_widgets").select("*", { count: "exact", head: true }),
+    supabaseAdmin.from("overlay_widget_library_entries").select("*", { count: "exact", head: true }).eq("is_approved", true),
     supabaseAdmin.from("integrations_twitch").select("*", { count: "exact", head: true }),
   ]);
 

@@ -1857,6 +1857,114 @@ export type Database = {
         }
         Relationships: []
       }
+      overlay_template_items: {
+        Row: {
+          config: Json
+          created_at: string
+          h: number
+          id: string
+          label: string
+          sort_order: number
+          template_id: string
+          type: string
+          updated_at: string
+          w: number
+          widget_template_id: string | null
+          x: number
+          y: number
+          z_index: number
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          h?: number
+          id?: string
+          label?: string
+          sort_order?: number
+          template_id: string
+          type: string
+          updated_at?: string
+          w?: number
+          widget_template_id?: string | null
+          x?: number
+          y?: number
+          z_index?: number
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          h?: number
+          id?: string
+          label?: string
+          sort_order?: number
+          template_id?: string
+          type?: string
+          updated_at?: string
+          w?: number
+          widget_template_id?: string | null
+          x?: number
+          y?: number
+          z_index?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overlay_template_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "overlay_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "overlay_template_items_widget_template_id_fkey"
+            columns: ["widget_template_id"]
+            isOneToOne: false
+            referencedRelation: "overlay_widget_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      overlay_templates: {
+        Row: {
+          created_at: string
+          description: string
+          height: number
+          id: string
+          is_published: boolean
+          name: string
+          render_mode: string
+          slug: string
+          sort_order: number
+          updated_at: string
+          width: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          height?: number
+          id?: string
+          is_published?: boolean
+          name: string
+          render_mode?: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+          width?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          height?: number
+          id?: string
+          is_published?: boolean
+          name?: string
+          render_mode?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+          width?: number
+        }
+        Relationships: []
+      }
       overlay_widget_instances: {
         Row: {
           created_at: string
@@ -1900,10 +2008,150 @@ export type Database = {
             foreignKeyName: "overlay_widget_instances_widget_id_fkey"
             columns: ["widget_id"]
             isOneToOne: false
-            referencedRelation: "widgets"
+            referencedRelation: "overlay_widgets"
             referencedColumns: ["id"]
           },
         ]
+      }
+      overlay_widget_library_entries: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          installs: number
+          is_approved: boolean
+          likes: number
+          tags: string[]
+          title: string
+          user_id: string
+          widget_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          installs?: number
+          is_approved?: boolean
+          likes?: number
+          tags?: string[]
+          title: string
+          user_id: string
+          widget_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          installs?: number
+          is_approved?: boolean
+          likes?: number
+          tags?: string[]
+          title?: string
+          user_id?: string
+          widget_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overlay_widget_library_entries_widget_id_fkey"
+            columns: ["widget_id"]
+            isOneToOne: false
+            referencedRelation: "overlay_widgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      overlay_widget_templates: {
+        Row: {
+          created_at: string
+          description: string
+          extra_css: string
+          fields: Json
+          html: string
+          id: string
+          is_published: boolean
+          js: string
+          name: string
+          slug: string
+          sort_order: number
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          extra_css?: string
+          fields?: Json
+          html?: string
+          id?: string
+          is_published?: boolean
+          js?: string
+          name: string
+          slug: string
+          sort_order?: number
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          extra_css?: string
+          fields?: Json
+          html?: string
+          id?: string
+          is_published?: boolean
+          js?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      overlay_widgets: {
+        Row: {
+          created_at: string
+          description: string
+          extra_css: string
+          fields: Json
+          html: string
+          id: string
+          js: string
+          name: string
+          preview_url: string | null
+          tags: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          extra_css?: string
+          fields?: Json
+          html?: string
+          id?: string
+          js?: string
+          name: string
+          preview_url?: string | null
+          tags?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          extra_css?: string
+          fields?: Json
+          html?: string
+          id?: string
+          js?: string
+          name?: string
+          preview_url?: string | null
+          tags?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       pending_clips: {
         Row: {
@@ -2683,98 +2931,6 @@ export type Database = {
             referencedColumns: ["twitch_user_id"]
           },
         ]
-      }
-      widget_library_entries: {
-        Row: {
-          created_at: string
-          description: string
-          id: string
-          installs: number
-          is_approved: boolean
-          likes: number
-          tags: string[]
-          title: string
-          user_id: string
-          widget_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string
-          id?: string
-          installs?: number
-          is_approved?: boolean
-          likes?: number
-          tags?: string[]
-          title: string
-          user_id: string
-          widget_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          id?: string
-          installs?: number
-          is_approved?: boolean
-          likes?: number
-          tags?: string[]
-          title?: string
-          user_id?: string
-          widget_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "widget_library_entries_widget_id_fkey"
-            columns: ["widget_id"]
-            isOneToOne: false
-            referencedRelation: "widgets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      widgets: {
-        Row: {
-          created_at: string
-          description: string
-          extra_css: string
-          fields: Json
-          html: string
-          id: string
-          js: string
-          name: string
-          preview_url: string | null
-          tags: string[]
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string
-          extra_css?: string
-          fields?: Json
-          html?: string
-          id?: string
-          js?: string
-          name: string
-          preview_url?: string | null
-          tags?: string[]
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          extra_css?: string
-          fields?: Json
-          html?: string
-          id?: string
-          js?: string
-          name?: string
-          preview_url?: string | null
-          tags?: string[]
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
     }
     Views: {

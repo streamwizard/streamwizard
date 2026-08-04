@@ -34,6 +34,16 @@
                 ]
               },
               {
+                "group": "IRL streaming",
+                "pages": [
+                  "irl/overview",
+                  "irl/cloud-obs",
+                  "irl/irl-pro",
+                  "irl/auto-switcher",
+                  "irl/deck"
+                ]
+              },
+              {
                 "group": "Overlays",
                 "pages": [
                   "overlays/overview",

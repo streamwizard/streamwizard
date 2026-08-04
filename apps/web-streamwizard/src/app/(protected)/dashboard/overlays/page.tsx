@@ -1,4 +1,4 @@
-import { getOverlayScenes } from "@/actions/overlays";
+import { getOverlayScenes, getOverlayTemplates } from "@/actions/overlays";
 import { OverlayScenesList } from "@/components/overlays/editor/overlay-scenes-list";
 import { redirect } from "next/navigation";
 import { createClient } from "@repo/supabase/next/server";
@@ -9,7 +9,10 @@ export default async function OverlaysPage() {
 
   if (!user?.user) redirect("/login");
 
-  const { data: scenes, error } = await getOverlayScenes();
+  const [{ data: scenes, error }, { data: templates }] = await Promise.all([
+    getOverlayScenes(),
+    getOverlayTemplates(),
+  ]);
 
   if (error) {
     return (
@@ -30,7 +33,15 @@ export default async function OverlaysPage() {
       <div className="md:hidden rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-400">
         Overlays need a bigger screen to build. Switch to desktop to create or edit them. You can still turn them on and off here. Mobile support is on the way.
       </div>
-      <OverlayScenesList scenes={scenes ?? []} />
+      <OverlayScenesList
+        scenes={scenes ?? []}
+        templates={(templates ?? []).map((t) => ({
+          slug: t.slug,
+          name: t.name,
+          description: t.description,
+          render_mode: t.render_mode,
+        }))}
+      />
     </div>
   );
 }
