@@ -2,7 +2,7 @@
 
 import { reportError } from "@repo/sentry";
 
-import { getAuthContext } from "@/lib/auth";
+import { assertAdmin } from "@/lib/assert-admin";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getPlanLimits } from "@repo/supabase/queries/subscriptions";
 import { updateObsInstancesByUser } from "@repo/supabase/queries/obs-nodes";
@@ -11,19 +11,11 @@ import { revalidatePath } from "next/cache";
 // Product whose plans carry cloud-OBS resource limits + a config_template folder.
 const CLOUD_OBS_PRODUCT_ID = "cloud_obs";
 
-const SUBSCRIPTIONS_PATH = "/dashboard/admin/subscriptions";
+const SUBSCRIPTIONS_PATH = "/subscriptions";
 
 async function requireAdminContext() {
-  const { user } = await getAuthContext();
-  const adminClient = createAdminClient();
-  const { data: roleRow } = await adminClient
-    .from("user_roles")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("role", "admin")
-    .maybeSingle();
-  if (!roleRow) throw new Error("Forbidden");
-  return { adminClient, adminUserId: user.id };
+  const adminUserId = await assertAdmin();
+  return { adminClient: createAdminClient(), adminUserId };
 }
 
 export async function grantSubscriptionAction(

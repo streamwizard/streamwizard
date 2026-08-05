@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CloudOBSViewer } from "@/components/irl/CloudOBSViewer";
+import { CloudOBSViewer } from "@/components/cloud-obs-viewer";
 import { getNodeApiUrlAction } from "@/actions/nodes";
 import { mintNoVncConnection } from "@/lib/ws-ticket";
 

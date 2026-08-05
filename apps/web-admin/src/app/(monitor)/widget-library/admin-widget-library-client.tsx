@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { approveLibraryEntry, rejectLibraryEntry } from "@/actions/widgets";
+import { approveLibraryEntry, rejectLibraryEntry } from "@/actions/widget-library";
 import { buildWidgetSrcdoc, mergeFieldValues } from "@repo/ui/overlay";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
 import { Button } from "@repo/ui";

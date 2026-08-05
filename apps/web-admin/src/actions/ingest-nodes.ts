@@ -1,7 +1,7 @@
 "use server";
 
 import { randomBytes, createHash } from "crypto";
-import { getAuthContext } from "@/lib/auth";
+import { assertAdmin } from "@/lib/assert-admin";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
 import { env } from "@/lib/env";
@@ -16,7 +16,7 @@ import {
   getIngestNodeById,
 } from "@repo/supabase/queries/ingest-nodes";
 
-const INGEST_NODES_PATH = "/dashboard/admin/ingest-nodes";
+const INGEST_NODES_PATH = "/ingest-nodes";
 // Shorter than obs-nodes.ts's 30 minutes: the claim response for an ingest
 // node includes the raw SUPABASE_SECRET_KEY (full service-role DB access),
 // since ingest-control talks to Supabase directly rather than through
@@ -24,16 +24,8 @@ const INGEST_NODES_PATH = "/dashboard/admin/ingest-nodes";
 const CLAIM_TOKEN_TTL_MS = 15 * 60 * 1000;
 
 async function requireAdminContext() {
-  const { user } = await getAuthContext();
-  const adminClient = createAdminClient();
-  const { data: roleRow } = await adminClient
-    .from("user_roles")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("role", "admin")
-    .maybeSingle();
-  if (!roleRow) throw new Error("Forbidden");
-  return adminClient;
+  await assertAdmin();
+  return createAdminClient();
 }
 
 function generateClaimToken() {
