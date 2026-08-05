@@ -31,4 +31,10 @@ export interface RoomData {
   stream_id: string | null;
   /** epoch ms of the last irl_geo_track insert — gates DB write rate, not broadcasts */
   lastGeoInsertAt?: number;
+  /**
+   * epoch ms of the last geo message ACCEPTED from the primary publisher.
+   * Lets a standby publisher take over when the primary goes silent (half-open
+   * TCP, page killed without a close frame) instead of the room going dark.
+   */
+  lastGeoAt?: number;
 }
