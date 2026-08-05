@@ -14,7 +14,20 @@ export function buildCsp(nonce: string): string {
     // Next.js inlines critical styles
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
-    "img-src 'self' data:",
+    // Emote CDNs + asset CDN are for the widget-moderation preview iframes:
+    // srcdoc iframes inherit this policy, and widgets render Twitch/7TV/BTTV/FFZ
+    // emotes and media-library images.
+    [
+      "img-src 'self' data: https://static-cdn.jtvnw.net",
+      "https://cdn.7tv.app https://cdn.betterttv.net https://cdn.frankerfacez.com",
+      process.env.NEXT_PUBLIC_CDN_URL,
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+    ]
+      .filter(Boolean)
+      .join(" "),
+    ["media-src 'self'", process.env.NEXT_PUBLIC_CDN_URL, process.env.NEXT_PUBLIC_ASSET_CDN_URL]
+      .filter(Boolean)
+      .join(" "),
     // Sentry is tunneled through /monitoring so 'self' covers it; the ws
     // topology/live pages open a WebSocket straight to ws-server.
     [
@@ -22,6 +35,20 @@ export function buildCsp(nonce: string): string {
       supabaseUrl,
       supabaseWs,
       wsServerUrl,
+      // Cloud OBS / ingest nodes are provisioned dynamically as
+      // *.streamwizard.org subdomains: the node/instance pages fetch
+      // obs-instance-manager REST (start/stop/remove, ws-tickets) and open
+      // WebSockets (metrics stream, noVNC, obsws) straight from the browser.
+      // Single-label names only — Cloudflare Universal SSL covers one level.
+      "wss://*.streamwizard.org",
+      "https://*.streamwizard.org",
+      // Widget-moderation previews render in srcdoc iframes, which inherit
+      // this policy: widgets fetch overlay state plus the weather and
+      // geocoding APIs (see buildWidgetSrcdoc in @repo/ui).
+      process.env.NEXT_PUBLIC_OVERLAY_URL,
+      "https://api.open-meteo.com",
+      "https://nominatim.openstreetmap.org",
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),
