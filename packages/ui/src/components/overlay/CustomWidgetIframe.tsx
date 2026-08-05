@@ -139,9 +139,17 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
     // later), and out-of-phase duplicates double-count distance in widgets that
     // integrate over fixes. Tracked in a ref so the WS subscription doesn't
     // reconnect when geo context updates.
+    //
+    // The guard arms only once a real local fix exists (`!= null`, not
+    // provider-mounted). A GPS overlay opened where geolocation never fires
+    // (OBS browser source, desktop tab with permission denied) mounts the
+    // provider with geo forever null -- gating on the provider alone would
+    // drop the phone's WS-relayed fixes there and blank the widget. Until
+    // the first local fix the WS frames pass through; the widget's own
+    // stale-timestamp guard eats any brief overlap.
     const contextGeo = useIrlGeoContext();
     const contextGeoActiveRef = useRef(false);
-    contextGeoActiveRef.current = contextGeo !== undefined;
+    contextGeoActiveRef.current = contextGeo != null;
 
     useEffect(() => {
       const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
