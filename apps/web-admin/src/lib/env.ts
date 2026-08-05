@@ -44,6 +44,11 @@ export const env = createEnv({
     // Encrypts OBS WS passwords written to obs_instances; must be byte-identical
     // to web-streamwizard's key or its user-facing pages can't decrypt them.
     TOKEN_ENCRYPTION_KEY: z.string().min(1),
+    // Auto-switcher config pushes ride ws-server's /internal/broadcast; both
+    // optional — without them saves still land in the DB and the engine's 60s
+    // reconcile picks them up.
+    WS_SERVER_URL: z.string().min(1).optional(),
+    CONSUMER_SECRET: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_WS_SERVER_URL: z.string().min(1).optional(),
@@ -71,6 +76,8 @@ export const env = createEnv({
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
     TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY,
+    WS_SERVER_URL: process.env.WS_SERVER_URL,
+    CONSUMER_SECRET: process.env.CONSUMER_SECRET,
     NEXT_PUBLIC_WS_SERVER_URL: process.env.NEXT_PUBLIC_WS_SERVER_URL,
     NEXT_PUBLIC_MONITOR_SECRET: process.env.NEXT_PUBLIC_MONITOR_SECRET,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

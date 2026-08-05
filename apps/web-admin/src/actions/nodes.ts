@@ -206,6 +206,34 @@ export async function createInstanceAction(
   return { data: instance, error: null };
 }
 
+// Decrypts an instance's OBS WebSocket password so the admin instance page can
+// open an obsws session (scene list for the auto-switcher editor). Admin-only —
+// no ownership predicate, authority comes from the role check.
+export async function getInstanceObsWsPasswordAdminAction(
+  instanceId: string,
+): Promise<{ data: { password: string } | null; error: string | null }> {
+  let adminClient;
+  try {
+    adminClient = await requireAdminContext();
+  } catch {
+    return { data: null, error: "Forbidden" };
+  }
+
+  const { data, error } = await adminClient
+    .from("obs_instances")
+    .select("obs_ws_password_ciphertext, obs_ws_password_iv, obs_ws_password_tag")
+    .eq("id", instanceId)
+    .maybeSingle();
+
+  if (error || !data) return { data: null, error: "Instance not found." };
+  const { obs_ws_password_ciphertext: ciphertext, obs_ws_password_iv: iv, obs_ws_password_tag: tag } = data;
+  if (!ciphertext || !iv || !tag) return { data: null, error: "Password not set on this instance." };
+
+  const { decryptToken } = await import("@repo/supabase/crypto");
+  const password = decryptToken(ciphertext, iv, tag);
+  return { data: { password }, error: null };
+}
+
 export async function deleteNodeAction(id: string): Promise<{ error: string | null }> {
   let adminClient;
   try {

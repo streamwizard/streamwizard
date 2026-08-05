@@ -50,6 +50,10 @@ interface Props {
   apiPath: string;
   dataKey: string;
   format?: NodeMetricFormat;
+  /** Show only these series (matched against the point's nodeId, which is the
+   * node *name* after labeling — pass both name and raw id to be safe). Used
+   * by the single-node detail page on top of the fleet-wide API payload. */
+  filterNodeIds?: string[];
 }
 
 type ChartRow = { t: number; [nodeId: string]: number | undefined };
@@ -94,7 +98,7 @@ function fluxRangeToMs(fluxRange: string): number {
   return match[2] === "h" ? n * 3_600_000 : n * 60_000;
 }
 
-export function NodeMetricChart({ title, initialData, apiPath, dataKey, format = "number" }: Props) {
+export function NodeMetricChart({ title, initialData, apiPath, dataKey, format = "number", filterNodeIds }: Props) {
   const { interval } = useRefreshInterval();
   const { range } = useTimeRange();
   const { unit: bandwidthUnit } = useBandwidthUnit();
@@ -108,7 +112,12 @@ export function NodeMetricChart({ title, initialData, apiPath, dataKey, format =
   // space on the right instead of their last sample hugging the edge.
   const now = Date.now();
   const domainStart = now - fluxRangeToMs(range.fluxRange);
-  const { rows, nodeIds } = transformData(raw?.[dataKey] ?? initialData, fluxRangeToMs(range.window), domainStart, now);
+  let points = raw?.[dataKey] ?? initialData;
+  if (filterNodeIds?.length) {
+    const allowed = new Set(filterNodeIds);
+    points = points.filter((p) => allowed.has(p.nodeId));
+  }
+  const { rows, nodeIds } = transformData(points, fluxRangeToMs(range.window), domainStart, now);
 
   return (
     <Card>

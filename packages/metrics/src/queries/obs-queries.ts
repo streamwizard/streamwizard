@@ -137,6 +137,61 @@ export async function queryObsNodeSnapshot(opts?: QueryOpts): Promise<ObsNodeSna
   }));
 }
 
+export interface ObsInstanceMetricPoint {
+  time: string;
+  instanceId: string;
+  value: number;
+}
+
+async function queryObsInstanceField(
+  instanceId: string,
+  field: string,
+  fluxRange: string,
+  window: string,
+  opts?: QueryOpts,
+): Promise<ObsInstanceMetricPoint[]> {
+  assertValidFluxDuration(fluxRange, "range");
+  assertValidFluxDuration(window, "window");
+  // instanceId lands inside the Flux source — restrict to uuid-safe characters
+  // so it can't break out of the string literal.
+  if (!/^[a-zA-Z0-9-]+$/.test(instanceId)) throw new Error("Invalid instance id");
+  const bucket = resolveBucket(opts);
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: -${fluxRange})
+      |> filter(fn: (r) => r._measurement == "obs_instance")
+      |> filter(fn: (r) => r.instance_id == "${instanceId}")
+      |> filter(fn: (r) => r._field == "${field}")
+      |> aggregateWindow(every: ${window}, fn: mean, createEmpty: false)
+      |> yield(name: "${field}")
+  `;
+  return runFluxQuery(query, (row) => ({
+    time: row._time ?? "",
+    instanceId: row.instance_id ?? "unknown",
+    value: Number(row._value),
+  }));
+}
+
+export function queryObsInstanceCpu(instanceId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsInstanceMetricPoint[]> {
+  return queryObsInstanceField(instanceId, "cpu_pct", fluxRange, window, opts);
+}
+
+export function queryObsInstanceRam(instanceId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsInstanceMetricPoint[]> {
+  return queryObsInstanceField(instanceId, "ram_used_mb", fluxRange, window, opts);
+}
+
+export function queryObsInstanceVram(instanceId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsInstanceMetricPoint[]> {
+  return queryObsInstanceField(instanceId, "vram_used_mb", fluxRange, window, opts);
+}
+
+export function queryObsInstanceRx(instanceId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsInstanceMetricPoint[]> {
+  return queryObsInstanceField(instanceId, "rx_bytes_per_sec", fluxRange, window, opts);
+}
+
+export function queryObsInstanceTx(instanceId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<ObsInstanceMetricPoint[]> {
+  return queryObsInstanceField(instanceId, "tx_bytes_per_sec", fluxRange, window, opts);
+}
+
 export interface ObsInstanceSnapshot {
   nodeId: string;
   instanceId: string;
