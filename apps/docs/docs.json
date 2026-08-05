@@ -40,6 +40,8 @@
                   "irl/cloud-obs",
                   "irl/irl-pro",
                   "irl/auto-switcher",
+                  "irl/switcher-monitor",
+                  "irl/walking-stats",
                   "irl/deck"
                 ]
               },
