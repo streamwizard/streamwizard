@@ -54,7 +54,7 @@ export function trackWsAuthFailure(
 
 export function trackWsMessageDrop(
   role: "publisher" | "subscriber" | "bot",
-  reason: "room_not_found" | "malformed_json" | "malformed_node_metrics",
+  reason: "room_not_found" | "malformed_json" | "malformed_node_metrics" | "not_primary",
 ): void {
   pushPoint(
     new Point("ws_message_drop")

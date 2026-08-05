@@ -149,8 +149,27 @@ export const websocketHandlers = {
       return;
     }
 
+    // One publisher per room. A user can run two GPS overlay pages at once
+    // (two scenes in IRL Pro, a phone plus a desktop tab) and each one auths
+    // its own publisher socket; without this gate every socket broadcasts and
+    // logs, so subscribers see interleaved duplicate fixes and the geo table
+    // records the same walk under multiple sessions. The newest connection is
+    // primary (set at open()); everything else is dropped here — unless the
+    // primary has gone silent, in which case the sender takes over so a
+    // half-open primary socket can't keep the room dark.
+    if (room.publisher !== ws) {
+      const primarySilent = Date.now() - (room.lastGeoAt ?? 0) > 15_000;
+      if (room.publisher !== null && !primarySilent) {
+        trackWsMessageDrop("publisher", "not_primary");
+        return;
+      }
+      trackWsRoomEvent(room.publisher === null ? "publisher_joined" : "publisher_replaced");
+      room.publisher = ws;
+    }
+
     if (msg.type === "geo") {
       const geo = msg.payload;
+      room.lastGeoAt = Date.now();
       broadcastToRoom(room, "streamwizard.geo", { status: "connected", payload: geo });
       broadcastToMonitors({
         ts: Date.now(),
@@ -219,18 +238,23 @@ export const websocketHandlers = {
     if (role === "publisher") {
       const room = rooms.get(userId);
       if (room) {
-        broadcastToRoom(room, "streamwizard.geo", { status: "offline" });
-        room.publisher = null;
-        trackWsRoomEvent("publisher_left");
+        // Only the primary's departure changes room state. A standby socket
+        // (second overlay page) closing must not broadcast offline or null
+        // out a primary that is still publishing.
+        if (room.publisher === ws) {
+          broadcastToRoom(room, "streamwizard.geo", { status: "offline" });
+          room.publisher = null;
+          trackWsRoomEvent("publisher_left");
+        }
         broadcastToMonitors({
           ts: Date.now(),
           kind: "disconnect",
           direction: "system",
           role: "publisher",
           roomId: userId,
-          meta: { durationMs, subscriberCount: room.subscribers.size, hasPublisher: false },
+          meta: { durationMs, subscriberCount: room.subscribers.size, hasPublisher: room.publisher !== null },
         });
-        if (room.subscribers.size === 0) {
+        if (!room.publisher && room.subscribers.size === 0) {
           rooms.delete(userId);
           trackWsRoomEvent("deleted");
           broadcastToMonitors({ ts: Date.now(), kind: "room", direction: "system", role: "publisher", roomId: userId, eventType: "room_deleted" });
