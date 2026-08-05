@@ -88,13 +88,26 @@ to SRT or SRTLA if you can.
     speak SRTLA. StreamWizard does, so leave it off and let the `srtla://`
     URL do the work.
   </Step>
-  <Step title="Go live">
+  <Step title="Start sending">
     Tap the round button at the bottom and confirm **Start Broadcast**. Your
     feed lands in the `IRL` scene of your cloud OBS within a few seconds.
 
-    While you're live, the overlay shows your connection name, bitrate, and
-    a timer. On SRTLA you also get a card per network with its bitrate and
-    ping, so you can watch the bond do its thing.
+    This does not put you on Twitch. The phone streams to your ingest server
+    and nowhere else, so you can test your connection any time without going
+    live. To actually go live: start the broadcast here first, then hit **Go
+    live** on [the deck](/irl/deck), which is what starts your cloud OBS
+    streaming to Twitch.
+
+    The Cloud OBS page shows what's arriving, which is the quickest way to
+    tell whether the phone side is working:
+
+    <Frame caption="Live ingest status, on the Cloud OBS page.">
+      <img src="/images/irl/live-ingest-status.png" alt="Live ingest status showing bitrate, RTT, packet loss and bandwidth estimate" />
+    </Frame>
+
+    While you're sending, the app's overlay shows your connection name,
+    bitrate, and a timer. On SRTLA you also get a card per network with its
+    bitrate and ping, so you can watch the bond do its thing.
 
     <Frame caption="Live over SRTLA: one card per bonded network.">
       <img src="/images/irl/irl-pro-04-live-bonded.png" alt="IRL Pro streaming with bonding stats" />
