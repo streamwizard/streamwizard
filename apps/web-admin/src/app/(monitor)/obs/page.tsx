@@ -22,6 +22,9 @@ import { StatCard } from "@/components/widgets/stat-card";
 import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
 import { getFleet, type FleetNode } from "@/lib/node-fleet";
 import { settled } from "@/lib/settled";
+import { listNodesAction } from "@/actions/nodes";
+import { checkNodesHealth } from "@/lib/node-health";
+import { NodesSection } from "@/components/admin/nodes-section";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +50,10 @@ export default async function ObsDashboard() {
   } catch {
     // registry unreachable — table renders its empty state
   }
+
+  // Management data (registry CRUD + live /health probes) alongside the metrics.
+  const { data: managedNodes, error: manageError } = await listNodesAction();
+  const healthByNodeId = managedNodes ? await checkNodesHealth(managedNodes) : {};
   const [
     cpuRes,
     ramRes,
@@ -149,6 +156,11 @@ export default async function ObsDashboard() {
           />
         </div>
         <NodeFleetTable initialData={fleet} apiPath="/api/metrics/obs" title="Registered Nodes" />
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Manage Nodes</h2>
+        <NodesSection initialNodes={managedNodes ?? []} error={manageError} healthByNodeId={healthByNodeId} />
       </section>
 
       <section className="space-y-3">

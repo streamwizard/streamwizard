@@ -39,7 +39,7 @@ export const env = createEnv({
     TELEGRAM_CHAT_ID: z.string().min(1).optional(),
     // Same var the rest of the stack uses for the rest-api base URL; the
     // ws-server probe derives from NEXT_PUBLIC_WS_SERVER_URL. Node install
-    // commands on /nodes and /ingest-nodes embed it, so it must be set.
+    // commands on /obs and /ingest embed it, so it must be set.
     STREAMWIZARD_API_URL: z.string().url(),
     // Encrypts OBS WS passwords written to obs_instances; must be byte-identical
     // to web-streamwizard's key or its user-facing pages can't decrypt them.

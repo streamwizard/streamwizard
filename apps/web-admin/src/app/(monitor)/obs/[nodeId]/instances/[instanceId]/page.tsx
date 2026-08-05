@@ -21,7 +21,7 @@ export default async function InstanceDetailPage({
     <div className="space-y-6">
       <div>
         <Button asChild variant="ghost" size="sm" className="-ml-2 mb-2">
-          <Link href={`/nodes/${nodeId}`}>
+          <Link href={`/obs/${nodeId}`}>
             <ArrowLeft className="mr-1 h-4 w-4" />
             {node.name}
           </Link>

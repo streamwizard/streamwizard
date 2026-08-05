@@ -1,7 +1,6 @@
 import {
   Bell,
   BellRing,
-  Boxes,
   Cloud,
   Cpu,
   Database,
@@ -13,7 +12,6 @@ import {
   Network,
   Package,
   Radio,
-  Router,
   Server,
   SlidersHorizontal,
   Users,
@@ -73,8 +71,6 @@ export const navGroups: NavGroup[] = [
   {
     label: "Platform",
     items: [
-      { href: "/nodes", label: "OBS Fleet", icon: Boxes },
-      { href: "/ingest-nodes", label: "Ingest Fleet", icon: Router },
       { href: "/subscriptions", label: "Subscriptions", icon: Users },
       { href: "/widget-library", label: "Widget Review", icon: Package },
     ],

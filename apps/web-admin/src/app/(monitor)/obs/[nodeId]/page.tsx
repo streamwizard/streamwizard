@@ -17,7 +17,7 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ nod
     <div className="space-y-6">
       <div>
         <Button asChild variant="ghost" size="sm" className="-ml-2 mb-2">
-          <Link href="/nodes">
+          <Link href="/obs">
             <ArrowLeft className="mr-1 h-4 w-4" />
             Nodes
           </Link>

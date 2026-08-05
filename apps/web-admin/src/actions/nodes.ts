@@ -22,7 +22,7 @@ import {
   getInstanceByIdWithOwner,
 } from "@repo/supabase/queries/obs-nodes";
 
-const NODES_PATH = "/nodes";
+const NODES_PATH = "/obs";
 const CLAIM_TOKEN_TTL_MS = 30 * 60 * 1000;
 
 async function requireAdminContext() {
