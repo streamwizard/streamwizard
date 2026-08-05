@@ -133,6 +133,16 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
       return () => window.removeEventListener("message", handle);
     }, []);
 
+    // In phone mode the page publishes its own GPS to ws-server, and the server
+    // broadcasts to every socket in the room -- including this page. Without a
+    // guard each fix reaches the widget twice (context now, WS echo ~100ms
+    // later), and out-of-phase duplicates double-count distance in widgets that
+    // integrate over fixes. Tracked in a ref so the WS subscription doesn't
+    // reconnect when geo context updates.
+    const contextGeo = useIrlGeoContext();
+    const contextGeoActiveRef = useRef(false);
+    contextGeoActiveRef.current = contextGeo !== undefined;
+
     useEffect(() => {
       const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
       if (!wsUrl) return;
@@ -153,6 +163,8 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
         }
         const msg = raw as { type?: string; payload?: unknown };
         if (!msg.type || msg.type.startsWith("ws:")) return;
+        // Geo comes from local context on this page; drop the server echo.
+        if (msg.type === "streamwizard.geo" && contextGeoActiveRef.current) return;
         iframeRef.current?.contentWindow?.postMessage(
           { type: "onEventReceived", payload: { listener: msg.type, event: msg.payload } },
           "*"
@@ -165,7 +177,6 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
     // means the {status, payload} envelope ws-server broadcasts, not a bare
     // GeoPayload -- null here is "provider mounted, no fix yet", which reads
     // the same as the publisher being gone.
-    const contextGeo = useIrlGeoContext();
     useEffect(() => {
       if (contextGeo === undefined) return; // OBS mode — WS handles geo
       const event = contextGeo
