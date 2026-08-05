@@ -53,15 +53,6 @@ export default async function layout({
     }
   }
 
-  const { data: roleRow, error: roleError } = await supabase
-    .from("user_roles")
-    .select("id")
-    .eq("user_id", data.user.id)
-    .eq("role", "admin")
-    .maybeSingle();
-
-    console.log(data.user.id, roleError);
-
   const { data: hasCloudObsAccess } = await supabase.rpc("check_product_access", {
     p_product_id: "cloud_obs",
   });
@@ -75,7 +66,6 @@ export default async function layout({
             <AppSidebar
               user={data.user}
               folders={folders || []}
-              isAdmin={!!roleRow}
               hasCloudObsAccess={!!hasCloudObsAccess}
               variant="inset"
             />

@@ -3,19 +3,12 @@
 import { reportError } from "@repo/sentry";
 
 import { getAuthContext } from "@/lib/auth";
-import { createAdminClient } from "@repo/supabase/next/admin";
 import {
   getWidgetTemplates as _getWidgetTemplates,
   getWidgetTemplateById,
 } from "@repo/supabase/queries/overlay-templates";
 import { revalidatePath } from "next/cache";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
-
-async function requireAdminContext() {
-  const { user } = await getAuthContext();
-  if (user.app_metadata?.is_admin !== true) throw new Error("Forbidden");
-  return createAdminClient();
-}
 
 export interface Widget {
   id: string;
@@ -398,52 +391,3 @@ export async function installWidgetFromLibrary(entryId: string) {
   return { data: forked as unknown as Widget, error: null };
 }
 
-// --- Admin moderation ---
-
-export async function getPendingLibraryEntries() {
-  let adminClient;
-  try {
-    adminClient = await requireAdminContext();
-  } catch {
-    return { data: null, error: "Forbidden" };
-  }
-  const { data, error } = await adminClient
-    .from("overlay_widget_library_entries")
-    .select("*, overlay_widgets(*)")
-    .eq("is_approved", false)
-    .order("created_at", { ascending: true });
-  if (error) reportError(error, "actions/widgets");
-  return { data, error: error?.message ?? null };
-}
-
-export async function approveLibraryEntry(entryId: string) {
-  let adminClient;
-  try {
-    adminClient = await requireAdminContext();
-  } catch {
-    return { error: "Forbidden" };
-  }
-  const { error } = await adminClient
-    .from("overlay_widget_library_entries")
-    .update({ is_approved: true })
-    .eq("id", entryId);
-  revalidatePath("/dashboard/admin/widget-library");
-  if (error) reportError(error, "actions/widgets");
-  return { error: error?.message ?? null };
-}
-
-export async function rejectLibraryEntry(entryId: string) {
-  let adminClient;
-  try {
-    adminClient = await requireAdminContext();
-  } catch {
-    return { error: "Forbidden" };
-  }
-  const { error } = await adminClient
-    .from("overlay_widget_library_entries")
-    .delete()
-    .eq("id", entryId);
-  revalidatePath("/dashboard/admin/widget-library");
-  if (error) reportError(error, "actions/widgets");
-  return { error: error?.message ?? null };
-}

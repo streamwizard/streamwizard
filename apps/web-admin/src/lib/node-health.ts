@@ -26,7 +26,7 @@ export async function checkNodesHealth(
   const healthByNodeId: Record<string, NodeHealthStatus> = {};
   nodes.forEach((node, i) => {
     const result = results[i];
-    healthByNodeId[node.id] = result.status === "fulfilled" ? result.value : "unreachable";
+    healthByNodeId[node.id] = result?.status === "fulfilled" ? result.value : "unreachable";
   });
   return healthByNodeId;
 }

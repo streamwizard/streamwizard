@@ -1,20 +1,10 @@
-import { notFound } from "next/navigation";
-import { getAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { SubscriptionsClient, type ProductWithPlans, type SubscriptionRow, type UserRow } from "./_subscriptions-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function AdminSubscriptionsPage() {
-  const { user } = await getAuthContext();
   const adminClient = createAdminClient();
-
-  const { data: roleRow } = await adminClient
-    .from("user_roles")
-    .select("id")
-    .eq("user_id", user.id)
-    .eq("role", "admin")
-    .maybeSingle();
-
-  if (!roleRow) notFound();
 
   const [
     { data: rawUsers },
@@ -65,7 +55,7 @@ export default async function AdminSubscriptionsPage() {
   }));
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">User Subscriptions</h1>
         <p className="text-sm text-muted-foreground mt-1">

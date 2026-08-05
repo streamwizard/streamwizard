@@ -1,6 +1,7 @@
 import {
   Bell,
   BellRing,
+  Boxes,
   Cloud,
   Cpu,
   Database,
@@ -10,9 +11,12 @@ import {
   LayoutList,
   MonitorDot,
   Network,
+  Package,
   Radio,
+  Router,
   Server,
   SlidersHorizontal,
+  Users,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -64,6 +68,15 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/obs", label: "OBS Nodes", icon: Cpu },
       { href: "/ingest", label: "Ingest Servers", icon: Server },
+    ],
+  },
+  {
+    label: "Platform",
+    items: [
+      { href: "/nodes", label: "OBS Fleet", icon: Boxes },
+      { href: "/ingest-nodes", label: "Ingest Fleet", icon: Router },
+      { href: "/subscriptions", label: "Subscriptions", icon: Users },
+      { href: "/widget-library", label: "Widget Review", icon: Package },
     ],
   },
   {

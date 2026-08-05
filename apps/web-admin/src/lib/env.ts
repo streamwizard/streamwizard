@@ -38,8 +38,12 @@ export const env = createEnv({
     TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
     TELEGRAM_CHAT_ID: z.string().min(1).optional(),
     // Same var the rest of the stack uses for the rest-api base URL; the
-    // ws-server probe derives from NEXT_PUBLIC_WS_SERVER_URL.
-    STREAMWIZARD_API_URL: z.string().url().optional(),
+    // ws-server probe derives from NEXT_PUBLIC_WS_SERVER_URL. Node install
+    // commands on /nodes and /ingest-nodes embed it, so it must be set.
+    STREAMWIZARD_API_URL: z.string().url(),
+    // Encrypts OBS WS passwords written to obs_instances; must be byte-identical
+    // to web-streamwizard's key or its user-facing pages can't decrypt them.
+    TOKEN_ENCRYPTION_KEY: z.string().min(1),
   },
   client: {
     NEXT_PUBLIC_WS_SERVER_URL: z.string().min(1).optional(),
@@ -66,6 +70,7 @@ export const env = createEnv({
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
+    TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY,
     NEXT_PUBLIC_WS_SERVER_URL: process.env.NEXT_PUBLIC_WS_SERVER_URL,
     NEXT_PUBLIC_MONITOR_SECRET: process.env.NEXT_PUBLIC_MONITOR_SECRET,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
