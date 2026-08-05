@@ -33,7 +33,11 @@ export interface ObsNodeInstanceDetail {
   cpu_quota: number;
   shm_size: string;
   subscription_id: string | null;
+  config_template: string | null;
+  storage_quota_mb: number | null;
+  used_storage_bytes: number | null;
   created_at: string;
+  updated_at: string;
   owner_name: string | null;
   owner_email: string | null;
 }
@@ -535,7 +539,7 @@ export async function getInstanceByIdWithOwner(
 ): Promise<ObsNodeInstanceDetail | null> {
   const { data: instance } = await client
     .from("obs_instances")
-    .select("id, user_id, node_id, container_id, container_name, resolution, status, vram_allocated_mb, memory_mb, cpu_quota, shm_size, subscription_id, created_at")
+    .select("id, user_id, node_id, container_id, container_name, resolution, status, vram_allocated_mb, memory_mb, cpu_quota, shm_size, subscription_id, config_template, storage_quota_mb, used_storage_bytes, created_at, updated_at")
     .eq("id", instanceId)
     .maybeSingle();
   if (!instance) return null;

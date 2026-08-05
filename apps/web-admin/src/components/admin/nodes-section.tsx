@@ -285,7 +285,7 @@ export function NodesSection({
                 return (
                   <TableRow key={node.id}>
                     <TableCell className="font-medium">
-                      <Link href={`/dashboard/admin/nodes/${node.id}`} className="hover:underline">
+                      <Link href={`/obs/${node.id}`} className="hover:underline">
                         {node.name}
                       </Link>
                     </TableCell>

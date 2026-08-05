@@ -269,7 +269,7 @@ export function NodeDetailClient({ node }: { node: ObsNode }) {
                   return (
                     <TableRow key={instance.id}>
                       <TableCell>
-                        <Link href={`/dashboard/admin/nodes/${node.id}/instances/${instance.id}`} className="hover:underline">
+                        <Link href={`/obs/${node.id}/instances/${instance.id}`} className="hover:underline">
                           {instance.owner_name ?? instance.owner_email ?? instance.user_id}
                         </Link>
                       </TableCell>

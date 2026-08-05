@@ -26,6 +26,8 @@ import { LiveIndicator } from "@/components/widgets/live-indicator";
 import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
 import { getFleet, type FleetNode } from "@/lib/node-fleet";
 import { mergeIngestNodes } from "@/lib/ingest-nodes";
+import { listIngestNodesAction } from "@/actions/ingest-nodes";
+import { IngestNodesSection } from "@/components/admin/ingest-nodes-section";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +96,9 @@ export default async function IngestDashboard() {
   // Registry + health + latest resource snapshot, one row per node.
   const ingestNodes = mergeIngestNodes(fleet, hostSnapshot);
 
+  // Management data (registry CRUD) alongside the metrics.
+  const { data: managedNodes, error: manageError } = await listIngestNodesAction();
+
   return (
     // One shared monitor WebSocket for every live consumer below (realtime
     // panel + the Registered Nodes table's network column).
@@ -121,6 +126,11 @@ export default async function IngestDashboard() {
           <StatCard title="Total Incoming" value={totalIncoming} description="Sum across active signals" icon={ArrowDownToLine} />
         </div>
         <IngestNodeTable initialData={ingestNodes} title="Registered Nodes" />
+      </section>
+
+      <section className="space-y-3">
+        <SectionHeading icon={Server}>Manage Nodes</SectionHeading>
+        <IngestNodesSection initialNodes={managedNodes ?? []} error={manageError} />
       </section>
 
       <section className="space-y-3">

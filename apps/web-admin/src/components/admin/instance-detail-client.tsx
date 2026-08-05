@@ -6,6 +6,7 @@ import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitl
 import type { ObsNode, ObsNodeInstanceDetail } from "@repo/supabase/queries/obs-nodes";
 import { useNodeMetricsStream, type ConnectionStatus } from "@/hooks/use-node-metrics-stream";
 import { toggleInstanceAdmin } from "@/lib/instance-actions";
+import { formatMb } from "@/lib/format";
 import { ContainerMetricsCharts } from "@/components/admin/metrics-charts";
 
 function statusLabel(status: ConnectionStatus): { text: string; variant: "default" | "secondary" | "outline" | "destructive" } {
@@ -97,6 +98,30 @@ export function InstanceDetailClient({ node, instance }: { node: ObsNode; instan
           <div>
             <p className="text-xs text-muted-foreground">Container ID</p>
             <p className="font-mono text-xs">{instance.container_id ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">RAM limit</p>
+            <p className="font-medium">{formatMb(instance.memory_mb)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">CPU quota</p>
+            <p className="font-medium">{instance.cpu_quota}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Shared memory</p>
+            <p className="font-medium">{instance.shm_size}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Config template</p>
+            <p className="font-medium">{instance.config_template ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Storage</p>
+            <p className="font-medium">
+              {instance.used_storage_bytes != null ? formatMb(Math.round(instance.used_storage_bytes / (1024 * 1024))) : "—"}
+              {" / "}
+              {formatMb(instance.storage_quota_mb)}
+            </p>
           </div>
         </CardContent>
       </Card>

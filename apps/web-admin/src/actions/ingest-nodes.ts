@@ -16,7 +16,7 @@ import {
   getIngestNodeById,
 } from "@repo/supabase/queries/ingest-nodes";
 
-const INGEST_NODES_PATH = "/ingest-nodes";
+const INGEST_NODES_PATH = "/ingest";
 // Shorter than obs-nodes.ts's 30 minutes: the claim response for an ingest
 // node includes the raw SUPABASE_SECRET_KEY (full service-role DB access),
 // since ingest-control talks to Supabase directly rather than through
