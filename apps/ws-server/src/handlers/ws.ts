@@ -25,9 +25,19 @@ export const websocketHandlers = {
     if (role === "publisher") {
       const room = rooms.get(userId);
       if (room) {
-        if (room.publisher) trackWsRoomEvent("publisher_replaced");
-        else trackWsRoomEvent("publisher_joined");
-        room.publisher = ws;
+        // Same claim rule as the message() gate: a connecting socket only
+        // becomes primary when the slot is free or the primary has gone
+        // silent. "Newest connection wins" would let any second page (OBS
+        // browser source, desktop tab) steal the slot from an actively
+        // walking phone and cost it 15s of dropped fixes.
+        const primarySilent = Date.now() - (room.lastGeoAt ?? 0) > 15_000;
+        if (!room.publisher) {
+          trackWsRoomEvent("publisher_joined");
+          room.publisher = ws;
+        } else if (primarySilent) {
+          trackWsRoomEvent("publisher_replaced");
+          room.publisher = ws;
+        }
       }
       broadcastToMonitors({
         ts: Date.now(),
@@ -149,25 +159,28 @@ export const websocketHandlers = {
       return;
     }
 
-    // One publisher per room. A user can run two GPS overlay pages at once
-    // (two scenes in IRL Pro, a phone plus a desktop tab) and each one auths
-    // its own publisher socket; without this gate every socket broadcasts and
-    // logs, so subscribers see interleaved duplicate fixes and the geo table
-    // records the same walk under multiple sessions. The newest connection is
-    // primary (set at open()); everything else is dropped here — unless the
-    // primary has gone silent, in which case the sender takes over so a
-    // half-open primary socket can't keep the room dark.
-    if (room.publisher !== ws) {
-      const primarySilent = Date.now() - (room.lastGeoAt ?? 0) > 15_000;
-      if (room.publisher !== null && !primarySilent) {
-        trackWsMessageDrop("publisher", "not_primary");
-        return;
-      }
-      trackWsRoomEvent(room.publisher === null ? "publisher_joined" : "publisher_replaced");
-      room.publisher = ws;
-    }
-
     if (msg.type === "geo") {
+      // One publisher per room. A user can run two GPS overlay pages at once
+      // (two scenes in IRL Pro, a phone plus a desktop tab) and each one auths
+      // its own publisher socket; without this gate every socket broadcasts and
+      // logs, so subscribers see interleaved duplicate fixes and the geo table
+      // records the same walk under multiple sessions. Standby geo is dropped —
+      // unless the slot is free or the primary has gone silent, in which case
+      // the sender takes over so a half-open primary socket can't keep the
+      // room dark. The gate lives inside the geo branch so only actual geo
+      // traffic can claim the slot, and an accepted takeover stamps lastGeoAt
+      // immediately (below) so two standbys can't leapfrog each other off one
+      // silent window.
+      if (room.publisher !== ws) {
+        const primarySilent = Date.now() - (room.lastGeoAt ?? 0) > 15_000;
+        if (room.publisher !== null && !primarySilent) {
+          trackWsMessageDrop("publisher", "not_primary");
+          return;
+        }
+        trackWsRoomEvent(room.publisher === null ? "publisher_joined" : "publisher_replaced");
+        room.publisher = ws;
+      }
+
       const geo = msg.payload;
       room.lastGeoAt = Date.now();
       broadcastToRoom(room, "streamwizard.geo", { status: "connected", payload: geo });
