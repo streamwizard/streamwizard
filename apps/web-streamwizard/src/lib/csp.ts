@@ -77,9 +77,12 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       process.env.NEXT_PUBLIC_OVERLAY_URL,
       "https://api.open-meteo.com",
       "https://nominatim.openstreetmap.org",
-      // Media-library uploads PUT directly to presigned R2 URLs; widget JS may
-      // also fetch() assets from the public asset CDN.
-      process.env.R2_ACCOUNT_ID ? `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com` : "",
+      // Media-library uploads PUT directly to presigned R2 URLs. The AWS SDK
+      // signs these virtual-hosted-style (bucket name in the subdomain), so
+      // the allowed host must carry the bucket, not just the account id.
+      process.env.R2_ACCOUNT_ID && process.env.R2_ASSETS_BUCKET
+        ? `https://${process.env.R2_ASSETS_BUCKET}.${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+        : "",
       process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
