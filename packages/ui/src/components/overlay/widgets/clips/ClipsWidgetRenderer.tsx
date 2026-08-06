@@ -215,15 +215,23 @@ export function ClipsWidgetRenderer({
           setSlots(slotsRef.current);
 
           const el = videoRefs.current[slotIndex];
-          if (el) {
-            el.src = next.videoUrl;
-            el.load();
-            await waitForBuffer(el, slotIndex);
-            console.log(`[clips] slot ${slotIndex}: buffered`, {
-              readyState: el.readyState,
-              duration: el.duration,
-            });
+          if (!el) {
+            // Previously silent, and it meant the clip never played: the fill
+            // had nowhere to attach a src.
+            console.error(
+              `[clips] slot ${slotIndex}: no <video> element to load into`
+            );
+            return false;
           }
+
+          el.src = next.videoUrl;
+          el.load();
+          await waitForBuffer(el, slotIndex);
+          console.log(`[clips] slot ${slotIndex}: buffered`, {
+            readyState: el.readyState,
+            duration: el.duration,
+            ...describeMediaError(el),
+          });
           return true;
         } catch (err) {
           console.error(`[clips] slot ${slotIndex}: fill failed`, err);
@@ -333,13 +341,16 @@ export function ClipsWidgetRenderer({
 
   const currentClip = slots[activeSlot]?.clip;
 
-  if (status === "initial") {
-    return <div style={EMPTY_STATE_STYLE}>Loading clips…</div>;
-  }
-
-  if (status === "empty") {
-    return <div style={EMPTY_STATE_STYLE}>No clips match this widget.</div>;
-  }
+  // The players stay mounted in every state. Returning a bare status message
+  // instead would unmount them, and the first fill runs before the widget has
+  // any clip — with no element to attach it to, the first clip's src was never
+  // set and it silently never played.
+  const statusMessage =
+    status === "initial"
+      ? "Loading clips…"
+      : status === "empty"
+        ? "No clips match this widget."
+        : null;
 
   return (
     <div
@@ -386,7 +397,13 @@ export function ClipsWidgetRenderer({
         />
       ))}
 
-      {currentClip ? (
+      {statusMessage ? (
+        <div style={{ ...EMPTY_STATE_STYLE, position: "absolute", inset: 0, zIndex: 4 }}>
+          {statusMessage}
+        </div>
+      ) : null}
+
+      {currentClip && !statusMessage ? (
         <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
           {config.displayFieldOrder.map((key: DisplayFieldKey) => {
             if (!config.displayFields[key]) return null;
