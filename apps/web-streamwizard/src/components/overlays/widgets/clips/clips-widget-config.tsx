@@ -371,22 +371,6 @@ export function ClipsWidgetConfigPanel({
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Max Clips</Label>
-            <Input
-              type="number"
-              value={config.maxClips}
-              onChange={(e) =>
-                onUpdate({
-                  maxClips: Math.max(1, Math.min(100, Number(e.target.value))),
-                })
-              }
-              className="h-8 text-sm"
-              min={1}
-              max={100}
-            />
-          </div>
-
-          <div className="space-y-1.5">
             <Label className="text-xs">Min View Count</Label>
             <Input
               type="number"
@@ -410,37 +394,6 @@ export function ClipsWidgetConfigPanel({
               }
             />
           </div>
-        </div>
-      </InspectorSection>
-
-      <Separator />
-
-      {/* Refresh */}
-      <InspectorSection title="Refresh">
-
-        <div className="space-y-1.5">
-          <Label className="text-xs">
-            Refresh Interval ({config.refreshIntervalSeconds}s)
-          </Label>
-          <Select
-            value={String(config.refreshIntervalSeconds)}
-            onValueChange={(val) =>
-              onUpdate({ refreshIntervalSeconds: Number(val) })
-            }
-          >
-            <SelectTrigger className="h-8 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="30">30 seconds</SelectItem>
-              <SelectItem value="60">1 minute</SelectItem>
-              <SelectItem value="120">2 minutes</SelectItem>
-              <SelectItem value="300">5 minutes</SelectItem>
-              <SelectItem value="600">10 minutes</SelectItem>
-              <SelectItem value="1800">30 minutes</SelectItem>
-              <SelectItem value="3600">1 hour</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </InspectorSection>
 

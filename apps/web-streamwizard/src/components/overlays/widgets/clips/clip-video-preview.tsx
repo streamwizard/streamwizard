@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Pause, Play, SkipForward, Volume2, VolumeX } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { PreviewClip } from "@/actions/overlays-preview";
 import { getPreviewClips } from "@/actions/overlays-preview";
@@ -72,7 +72,6 @@ export function ClipVideoPreview({
   const [playOrder, setPlayOrder] = useState<number[]>([]);
   const [orderPosition, setOrderPosition] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [sessionMuted, setSessionMuted] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePlayer, setActivePlayer] = useState<0 | 1>(0);
   const isRandomMode = config.sort === "random";
@@ -82,9 +81,10 @@ export function ClipVideoPreview({
   const persistedMuted =
     config.clipMuted ?? DEFAULT_CLIPS_WIDGET_CONFIG.clipMuted;
   const volume = config.clipVolume ?? 1;
+  // Outside the editor there is no mute control, so the widget's own setting wins.
   const muted = previewEditor
     ? editorClipPlayback.previewForceMute || persistedMuted
-    : (sessionMuted ?? persistedMuted);
+    : persistedMuted;
 
   const mediaShouldPlay = previewEditor
     ? !editorClipPlayback.previewPaused && isPlaying
@@ -130,7 +130,6 @@ export function ClipVideoPreview({
         timeWindow: config.timeWindow,
         customDateRange: config.customDateRange,
         sort: config.sort,
-        maxClips: config.maxClips,
         minViewCount: config.minViewCount,
         isFeaturedOnly: config.isFeaturedOnly,
       }),
@@ -142,7 +141,6 @@ export function ClipVideoPreview({
       config.timeWindow,
       config.customDateRange,
       config.sort,
-      config.maxClips,
       config.minViewCount,
       config.isFeaturedOnly,
     ]
@@ -480,43 +478,6 @@ export function ClipVideoPreview({
     editorClipPlayback,
   ]);
 
-  const togglePlay = useCallback(() => {
-    const ref = getActiveRef();
-    if (!ref.current) return;
-
-    if (isPlaying) {
-      ref.current.pause();
-      setIsPlaying(false);
-    } else {
-      if (previewEditor) {
-        editorClipPlayback.setPreviewPaused(false);
-      }
-      setIsPlaying(true);
-      ref.current.play().catch((err) => {
-        if (
-          previewEditor &&
-          err instanceof DOMException &&
-          err.name === "NotAllowedError"
-        ) {
-          editorClipPlayback.setAutoplayBlocked(true);
-        }
-      });
-    }
-  }, [isPlaying, getActiveRef, previewEditor, editorClipPlayback]);
-
-  const toggleMute = useCallback(() => {
-    if (previewEditor) {
-      const currentlyMuted = editorClipPlayback.previewForceMute || persistedMuted;
-      if (currentlyMuted) {
-        editorClipPlayback.setPreviewForceMute(false);
-      } else {
-        editorClipPlayback.setPreviewForceMute(true);
-      }
-    } else {
-      setSessionMuted(!muted);
-    }
-  }, [previewEditor, editorClipPlayback, persistedMuted, muted]);
-
   useEffect(() => {
     const a = videoRefA.current;
     const b = videoRefB.current;
@@ -770,59 +731,6 @@ export function ClipVideoPreview({
         </>
       )}
 
-      {/* Editor / hover controls */}
-      <div
-        className="absolute top-1 right-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-        style={{ zIndex: 3 }}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            togglePlay();
-          }}
-          className="p-1 rounded bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors shrink-0"
-        >
-          {isPlaying ? (
-            <Pause style={{ width: Math.max(10 / screenScale, 14), height: Math.max(10 / screenScale, 14) }} />
-          ) : (
-            <Play style={{ width: Math.max(10 / screenScale, 14), height: Math.max(10 / screenScale, 14) }} />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleMute();
-          }}
-          className="p-1 rounded bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors shrink-0"
-        >
-          {muted ? (
-            <VolumeX style={{ width: Math.max(10 / screenScale, 14), height: Math.max(10 / screenScale, 14) }} />
-          ) : (
-            <Volume2 style={{ width: Math.max(10 / screenScale, 14), height: Math.max(10 / screenScale, 14) }} />
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            playNext();
-          }}
-          className="p-1 rounded bg-black/60 hover:bg-black/80 text-white/80 hover:text-white transition-colors shrink-0"
-        >
-          <SkipForward style={{ width: Math.max(10 / screenScale, 14), height: Math.max(10 / screenScale, 14) }} />
-        </button>
-      </div>
-
-      {/* Clip counter */}
-      <div
-        className="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-black/60 text-white/60"
-        style={{ zIndex: 3, fontSize: Math.max(7 / screenScale, 9) }}
-      >
-        {isRandomMode ? orderPosition + 1 : currentIndex + 1} / {clips.length}
-      </div>
     </div>
   );
 }

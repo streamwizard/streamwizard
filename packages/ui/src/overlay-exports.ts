@@ -40,7 +40,11 @@ export { TextWidgetRenderer } from "./components/overlay/widgets/text/TextWidget
 export { TimerWidgetRenderer } from "./components/overlay/widgets/timer/TimerWidgetRenderer";
 export { ClockWidgetRenderer } from "./components/overlay/widgets/clock/ClockWidgetRenderer";
 export { ClipsWidgetRenderer } from "./components/overlay/widgets/clips/ClipsWidgetRenderer";
-export type { ClipsWidgetRendererProps } from "./components/overlay/widgets/clips/ClipsWidgetRenderer";
+export type {
+  ClipsWidgetRendererProps,
+  NextClipResult,
+  ClipRotationCursor,
+} from "./components/overlay/widgets/clips/ClipsWidgetRenderer";
 export type { WidgetRenderProps } from "./components/overlay/widgets/text/TextWidgetRenderer";
 export {
   textWidgetBaseDefinition,

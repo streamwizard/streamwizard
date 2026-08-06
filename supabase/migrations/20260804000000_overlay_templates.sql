@@ -516,7 +516,7 @@ INSERT INTO public.overlay_template_items (template_id, type, x, y, w, h, z_inde
   (SELECT id FROM public.overlay_templates WHERE slug = 'clips-showcase'),
   'clips_widget', 0, 0, 1920, 1080, 1,
   'Clips',
-  '{"sourceMode":"all","folderIds":[],"gameIds":[],"creatorIds":[],"timeWindow":"last30d","sort":"most_viewed","maxClips":10,"minViewCount":0,"isFeaturedOnly":false,"refreshIntervalSeconds":300,"clipMuted":false,"clipVolume":1,"clipTransition":"cut","clipTransitionMs":600}'::jsonb,
+  '{"sourceMode":"all","folderIds":[],"gameIds":[],"creatorIds":[],"timeWindow":"all","sort":"random","minViewCount":0,"isFeaturedOnly":false,"clipMuted":false,"clipVolume":1,"clipTransition":"cut","clipTransitionMs":600}'::jsonb,
   NULL,
   0
 );
