@@ -43,6 +43,29 @@ type Slot = {
   videoUrl: string;
 };
 
+const MEDIA_ERROR_NAMES: Record<number, string> = {
+  1: "MEDIA_ERR_ABORTED",
+  2: "MEDIA_ERR_NETWORK",
+  3: "MEDIA_ERR_DECODE",
+  4: "MEDIA_ERR_SRC_NOT_SUPPORTED",
+};
+
+/**
+ * A failed <video> reports nothing useful to the network tab — the proxy status
+ * that caused it is invisible from the element. Surface what it does know.
+ */
+function describeMediaError(el: HTMLVideoElement | null | undefined) {
+  if (!el) return { reason: "no element" };
+  return {
+    code: el.error?.code,
+    name: el.error ? MEDIA_ERROR_NAMES[el.error.code] : undefined,
+    message: el.error?.message,
+    networkState: el.networkState,
+    readyState: el.readyState,
+    src: el.currentSrc || el.src,
+  };
+}
+
 const EMPTY_STATE_STYLE: CSSProperties = {
   width: "100%",
   height: "100%",
@@ -125,24 +148,38 @@ export function ClipsWidgetRenderer({
   }, [isRandomMode]);
 
   /** Resolves once the element can play through, or once we stop waiting on it. */
-  const waitForBuffer = useCallback((el: HTMLVideoElement): Promise<void> => {
-    if (el.readyState >= 3) return Promise.resolve();
+  const waitForBuffer = useCallback(
+    (el: HTMLVideoElement, slotIndex: number): Promise<void> => {
+      if (el.readyState >= 3) return Promise.resolve();
 
-    return new Promise<void>((resolve) => {
-      let settled = false;
-      const finish = () => {
-        if (settled) return;
-        settled = true;
-        el.removeEventListener("canplay", finish);
-        el.removeEventListener("error", finish);
-        window.clearTimeout(timeoutId);
-        resolve();
-      };
-      const timeoutId = window.setTimeout(finish, BUFFER_TIMEOUT_MS);
-      el.addEventListener("canplay", finish);
-      el.addEventListener("error", finish);
-    });
-  }, []);
+      return new Promise<void>((resolve) => {
+        let settled = false;
+        const finish = (reason: string) => {
+          if (settled) return;
+          settled = true;
+          el.removeEventListener("canplay", onCanPlay);
+          el.removeEventListener("error", onError);
+          window.clearTimeout(timeoutId);
+          if (reason !== "canplay") {
+            console.warn(
+              `[clips] slot ${slotIndex} buffer ended on "${reason}"`,
+              describeMediaError(el)
+            );
+          }
+          resolve();
+        };
+        const onCanPlay = () => finish("canplay");
+        const onError = () => finish("error");
+        const timeoutId = window.setTimeout(
+          () => finish(`timeout after ${BUFFER_TIMEOUT_MS}ms`),
+          BUFFER_TIMEOUT_MS
+        );
+        el.addEventListener("canplay", onCanPlay);
+        el.addEventListener("error", onError);
+      });
+    },
+    []
+  );
 
   /**
    * Loads the next clip into `slotIndex` and buffers it. Queued rather than
@@ -153,9 +190,22 @@ export function ClipsWidgetRenderer({
     (slotIndex: number): Promise<boolean> => {
       const run = async (): Promise<boolean> => {
         try {
-          const next = await fetchNextClip(cursorRef.current, recentlyPlayedIds());
+          const excluded = recentlyPlayedIds();
+          console.log(`[clips] slot ${slotIndex}: requesting next clip`, {
+            excludedCount: excluded.length,
+          });
+
+          const next = await fetchNextClip(cursorRef.current, excluded);
           if (!mountedRef.current) return false;
-          if (!next) return false;
+          if (!next) {
+            console.warn(`[clips] slot ${slotIndex}: no clip returned`);
+            return false;
+          }
+
+          console.log(`[clips] slot ${slotIndex}: got "${next.clip.title}"`, {
+            clipId: next.clip.clipId,
+            videoUrl: next.videoUrl,
+          });
 
           cursorRef.current = next.cursor;
           const slot = { clip: next.clip, videoUrl: next.videoUrl };
@@ -168,10 +218,15 @@ export function ClipsWidgetRenderer({
           if (el) {
             el.src = next.videoUrl;
             el.load();
-            await waitForBuffer(el);
+            await waitForBuffer(el, slotIndex);
+            console.log(`[clips] slot ${slotIndex}: buffered`, {
+              readyState: el.readyState,
+              duration: el.duration,
+            });
           }
           return true;
-        } catch {
+        } catch (err) {
+          console.error(`[clips] slot ${slotIndex}: fill failed`, err);
           return false;
         }
       };
@@ -188,16 +243,20 @@ export function ClipsWidgetRenderer({
     let cancelled = false;
 
     void (async () => {
+      console.log("[clips] widget mounted, loading first clip");
       const ok = await fillSlot(0);
       if (cancelled || !mountedRef.current) return;
 
       if (!ok) {
+        console.warn("[clips] first clip failed — showing empty state");
         setStatus("empty");
         return;
       }
 
       setStatus("playing");
-      videoRefs.current[0]?.play().catch(() => {});
+      videoRefs.current[0]
+        ?.play()
+        .catch((err) => console.warn("[clips] slot 0 autoplay rejected", err));
       await fillSlot(1);
     })();
 
@@ -208,27 +267,38 @@ export function ClipsWidgetRenderer({
   }, [fetchNextClip]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const advance = useCallback(async () => {
-    if (transitioningRef.current) return;
+    if (transitioningRef.current) {
+      console.log("[clips] advance ignored — transition already running");
+      return;
+    }
     transitioningRef.current = true;
 
     try {
       const current = activeSlot;
       const nextSlot = (current + 1) % SLOT_COUNT;
       const followingSlot = (current + 2) % SLOT_COUNT;
+      console.log(`[clips] advancing ${current} -> ${nextSlot}`);
 
       // The buffered slot may be missing if the previous fetch failed — fetch it
       // now. Costs a visible pause, but only in the already-degraded case.
       if (!slotsRef.current[nextSlot]) {
+        console.warn(
+          `[clips] slot ${nextSlot} was not buffered — fetching inline (visible stall)`
+        );
         const filled = await fillSlot(nextSlot);
         if (!filled || !mountedRef.current) return;
       }
 
       const nextEl = videoRefs.current[nextSlot];
       if (nextEl) {
-        await waitForBuffer(nextEl);
+        await waitForBuffer(nextEl, nextSlot);
         if (!mountedRef.current) return;
         nextEl.currentTime = 0;
-        nextEl.play().catch(() => {});
+        nextEl
+          .play()
+          .catch((err) =>
+            console.warn(`[clips] slot ${nextSlot} play rejected`, err)
+          );
       }
 
       const outgoing = slotsRef.current[current];
@@ -300,9 +370,17 @@ export function ClipsWidgetRenderer({
           muted={config.clipMuted}
           playsInline
           onEnded={() => {
+            console.log(`[clips] slot ${slotIndex}: ended`);
             if (activeSlot === slotIndex) void advance();
           }}
           onError={() => {
+            // The element never sees the HTTP status behind the failure — a
+            // proxy 502/503 arrives here as a bare MEDIA_ERR_SRC_NOT_SUPPORTED.
+            // Log the src so it can be replayed with curl.
+            console.error(
+              `[clips] slot ${slotIndex}: video error`,
+              describeMediaError(videoRefs.current[slotIndex])
+            );
             if (activeSlot === slotIndex) void advance();
           }}
         />
