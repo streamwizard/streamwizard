@@ -37,7 +37,19 @@ export function ClipsWidgetContainer({ scene, item }: OverlayWidgetProps) {
           (cursor as ClipCursor | null) ?? null,
           excludeClipIds
         );
-        if (!next) return null;
+        if (!next) {
+          // Either the filters match nothing, or Twitch refused a download URL
+          // for every clip we tried. The server side logs which; from here they
+          // look identical.
+          console.warn("[clips] getNextOverlayClip returned null", {
+            sceneUserId,
+            sort: config.sort,
+            timeWindow: config.timeWindow,
+            hadCursor: cursor != null,
+            excludedCount: excludeClipIds.length,
+          });
+          return null;
+        }
 
         return {
           clip: {
@@ -53,13 +65,14 @@ export function ClipsWidgetContainer({ scene, item }: OverlayWidgetProps) {
           videoUrl: next.proxyUrl,
           cursor: next.cursor,
         };
-      } catch {
+      } catch (err) {
         // The renderer keeps showing the current clip and asks again on the next
         // transition — a failed fetch must never blank the overlay.
+        console.error("[clips] getNextOverlayClip threw", err);
         return null;
       }
     },
-    [sceneUserId, item.config]
+    [sceneUserId, item.config, config.sort, config.timeWindow]
   );
 
   return <ClipsWidgetRenderer config={config} fetchNextClip={fetchNextClip} />;
