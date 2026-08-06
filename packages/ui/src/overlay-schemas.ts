@@ -28,10 +28,8 @@ export const clipsWidgetItemConfigSchema = z.object({
     .object({ start: z.string(), end: z.string() })
     .optional(),
   sort: z.enum(CLIP_SORT_OPTIONS),
-  maxClips: z.number().int().min(1).max(100),
   minViewCount: z.number().int().min(0),
   isFeaturedOnly: z.boolean(),
-  refreshIntervalSeconds: z.number().int().min(10).max(3600),
   clipMuted: z.boolean().default(false),
   clipVolume: z.number().min(0).max(1).default(1),
   clipTransition: z.enum(["cut", "crossfade"]).default("cut"),

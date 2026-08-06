@@ -90,10 +90,8 @@ export interface ClipsWidgetItemConfig {
   timeWindow: TimeWindowPreset | "custom";
   customDateRange?: { start: string; end: string };
   sort: ClipSortOption;
-  maxClips: number;
   minViewCount: number;
   isFeaturedOnly: boolean;
-  refreshIntervalSeconds: number;
   /** Muted by default so autoplay works in browsers; unmute for audible playback in OBS. */
   clipMuted: boolean;
   /** 0–1, applied when not muted. */
@@ -389,12 +387,10 @@ export const DEFAULT_CLIPS_WIDGET_ITEM_CONFIG: ClipsWidgetItemConfig = {
   folderIds: [],
   gameIds: [],
   creatorIds: [],
-  timeWindow: "last30d",
-  sort: "newest",
-  maxClips: 20,
+  timeWindow: "all",
+  sort: "random",
   minViewCount: 0,
   isFeaturedOnly: false,
-  refreshIntervalSeconds: 300,
   clipMuted: false,
   clipVolume: 1,
   clipTransition: "cut",
@@ -580,13 +576,9 @@ export function slimClipsWidgetItemConfig(raw: unknown): ClipsWidgetItemConfig {
     timeWindow: c.timeWindow ?? DEFAULT_CLIPS_WIDGET_ITEM_CONFIG.timeWindow,
     customDateRange: c.customDateRange,
     sort: c.sort ?? DEFAULT_CLIPS_WIDGET_ITEM_CONFIG.sort,
-    maxClips: c.maxClips ?? DEFAULT_CLIPS_WIDGET_ITEM_CONFIG.maxClips,
     minViewCount: c.minViewCount ?? DEFAULT_CLIPS_WIDGET_ITEM_CONFIG.minViewCount,
     isFeaturedOnly:
       c.isFeaturedOnly ?? DEFAULT_CLIPS_WIDGET_ITEM_CONFIG.isFeaturedOnly,
-    refreshIntervalSeconds:
-      c.refreshIntervalSeconds ??
-      DEFAULT_CLIPS_WIDGET_ITEM_CONFIG.refreshIntervalSeconds,
     clipMuted: c.clipMuted ?? DEFAULT_CLIPS_WIDGET_ITEM_CONFIG.clipMuted,
     clipVolume: c.clipVolume ?? DEFAULT_CLIPS_WIDGET_ITEM_CONFIG.clipVolume,
     clipTransition,
