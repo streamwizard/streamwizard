@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { isValidVideoProxySignature } from "@/lib/video-proxy-signature";
+import { reportError } from "@repo/sentry";
 
 // This proxy exists so OBS can play Twitch's signed clip MP4s (see
 // getSignedClipProxyUrl). Without a check this is an unauthenticated open
@@ -9,6 +10,22 @@ import { isValidVideoProxySignature } from "@/lib/video-proxy-signature";
 // that, so a signed link can never be downgraded to another scheme.
 
 const MAX_REDIRECTS = 3;
+
+/**
+ * In the overlay editor the browser fetches these clip URLs directly and they
+ * play fine. Here the *server* fetches them, and a bare server-side request —
+ * no User-Agent, no Referer, from a datacenter IP — is the shape Twitch's CDN
+ * answers with 503. Present the request the way the browser that would
+ * otherwise be making it does.
+ */
+const UPSTREAM_BROWSER_HEADERS: Record<string, string> = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+  Accept: "video/mp4,video/*;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+  Referer: "https://www.twitch.tv/",
+  Origin: "https://www.twitch.tv",
+};
 
 /** Registrable-ish domain: the last two labels, e.g. `cloudfront.net`. */
 function baseDomain(hostname: string): string {
@@ -73,21 +90,37 @@ export async function GET(request: NextRequest) {
     return new Response("Invalid or expired proxy signature", { status: 403 });
   }
 
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...UPSTREAM_BROWSER_HEADERS };
   const rangeHeader = request.headers.get("range");
   if (rangeHeader) {
     headers["Range"] = rangeHeader;
   }
 
-  const upstream = await fetchWithCheckedRedirects(url, headers);
+  let upstream: Response | null;
+  try {
+    upstream = await fetchWithCheckedRedirects(url, headers);
+  } catch (err) {
+    // DNS, TLS, timeout, blocked egress. Without this the rejection escapes the
+    // route and surfaces as an opaque platform error with nothing logged —
+    // indistinguishable from the upstream simply refusing us.
+    reportError(err, "api/video.upstreamFetch");
+    return new Response("Could not reach upstream", { status: 502 });
+  }
+
   if (!upstream) {
     return new Response("Upstream redirected off the signed host", { status: 502 });
   }
 
   if (!upstream.ok && upstream.status !== 206) {
-    return new Response(`Upstream error: ${upstream.status}`, {
-      status: upstream.status,
-    });
+    // Deliberately not mirroring the upstream status: a 503 from the CDN echoed
+    // verbatim reads as "the overlay is down" in the browser and in uptime
+    // checks. We are a gateway, so upstream failures are 502 with the real
+    // status in the body and in Sentry.
+    reportError(
+      new Error(`Clip upstream responded ${upstream.status} for ${parsed.hostname}`),
+      "api/video.upstreamStatus"
+    );
+    return new Response(`Upstream error: ${upstream.status}`, { status: 502 });
   }
 
   const responseHeaders = new Headers({
