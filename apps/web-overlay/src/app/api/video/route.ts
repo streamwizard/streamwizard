@@ -1,18 +1,54 @@
 import { NextRequest } from "next/server";
+import { isValidVideoProxySignature } from "@/lib/video-proxy-signature";
 
 // This proxy exists so OBS can play Twitch's signed clip MP4s (see
-// ClipsWidgetContainer's proxyUrl). Only those CDNs are legitimate upstreams —
-// without the allowlist this is an unauthenticated open proxy (SSRF into
-// internal/metadata endpoints, plus free bandwidth for anyone).
-function isAllowedUpstream(url: URL): boolean {
-  if (url.protocol !== "https:") return false;
-  const host = url.hostname;
-  return (
-    host === "twitchcdn.net" ||
-    host.endsWith(".twitchcdn.net") ||
-    host === "twitch.tv" ||
-    host.endsWith(".twitch.tv")
-  );
+// getSignedClipProxyUrl). Without a check this is an unauthenticated open
+// proxy (SSRF into internal/metadata endpoints, plus free bandwidth for
+// anyone). The url param must carry an unexpired HMAC this server issued,
+// so the only reachable upstreams are ones we chose. https-only on top of
+// that, so a signed link can never be downgraded to another scheme.
+
+const MAX_REDIRECTS = 3;
+
+/** Registrable-ish domain: the last two labels, e.g. `cloudfront.net`. */
+function baseDomain(hostname: string): string {
+  return hostname.split(".").slice(-2).join(".");
+}
+
+/**
+ * Only the first URL carries our signature, so letting fetch() follow
+ * redirects blindly would hand an upstream the ability to point us anywhere —
+ * the SSRF the signature closes, reopened one hop later. Each hop must stay
+ * https and within the signed URL's own domain; anything else is refused.
+ */
+async function fetchWithCheckedRedirects(
+  signedUrl: string,
+  headers: Record<string, string>
+): Promise<Response | null> {
+  const allowedDomain = baseDomain(new URL(signedUrl).hostname);
+  let current = signedUrl;
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const response = await fetch(current, { headers, redirect: "manual" });
+
+    const location = response.headers.get("location");
+    if (response.status < 300 || response.status >= 400 || !location) {
+      return response;
+    }
+
+    let next: URL;
+    try {
+      next = new URL(location, current);
+    } catch {
+      return null;
+    }
+    if (next.protocol !== "https:" || baseDomain(next.hostname) !== allowedDomain) {
+      return null;
+    }
+    current = next.toString();
+  }
+
+  return null;
 }
 
 export async function GET(request: NextRequest) {
@@ -28,8 +64,13 @@ export async function GET(request: NextRequest) {
   } catch {
     return new Response("Invalid url parameter", { status: 400 });
   }
-  if (!isAllowedUpstream(parsed)) {
-    return new Response("Upstream host not allowed", { status: 403 });
+  if (parsed.protocol !== "https:") {
+    return new Response("Upstream must be https", { status: 403 });
+  }
+
+  const searchParams = request.nextUrl.searchParams;
+  if (!isValidVideoProxySignature(url, searchParams.get("exp"), searchParams.get("sig"))) {
+    return new Response("Invalid or expired proxy signature", { status: 403 });
   }
 
   const headers: Record<string, string> = {};
@@ -38,7 +79,10 @@ export async function GET(request: NextRequest) {
     headers["Range"] = rangeHeader;
   }
 
-  const upstream = await fetch(url, { headers });
+  const upstream = await fetchWithCheckedRedirects(url, headers);
+  if (!upstream) {
+    return new Response("Upstream redirected off the signed host", { status: 502 });
+  }
 
   if (!upstream.ok && upstream.status !== 206) {
     return new Response(`Upstream error: ${upstream.status}`, {
