@@ -176,3 +176,17 @@ export async function getLatestSubscriberToken(client: DBClient, userId: string)
     .limit(1)
     .maybeSingle();
 }
+
+/** Rotates the token that authorizes read-only overlay subscribers. */
+export async function updateSceneSubscriberToken(
+  client: DBClient,
+  sceneId: string,
+  userId: string,
+  token: string,
+) {
+  return client
+    .from("overlay_scenes")
+    .update({ subscriber_token: token })
+    .eq("id", sceneId)
+    .eq("user_id", userId);
+}

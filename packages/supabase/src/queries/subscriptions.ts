@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
 
+type DBClient = SupabaseClient<Database>;
+
 export interface CloudObsPlanLimits {
   resolution: string;
   fps: number;
@@ -115,5 +117,88 @@ export async function getProductAccess(
           limits: (row.limits as Record<string, unknown>) ?? {},
         }
       : null,
+  };
+}
+
+// ── Admin grants ─────────────────────────────────────────────────────────────
+// Service-role only: web-admin grants and revokes access independently of
+// Stripe, so these bypass RLS by design.
+
+const LIVE_SUBSCRIPTION_FILTER = "(canceled,inactive)";
+
+export async function getPlanProductId(client: DBClient, planId: string): Promise<string | null> {
+  const { data } = await client.from("plans").select("product_id").eq("id", planId).single();
+  return data?.product_id ?? null;
+}
+
+/** A user's subscriptions that still count as live, with the product they belong to. */
+export async function getLiveSubscriptionsForUser(client: DBClient, userId: string) {
+  return client
+    .from("user_subscriptions")
+    .select("id, plan_id, plans!inner(product_id)")
+    .eq("user_id", userId)
+    .not("status", "in", LIVE_SUBSCRIPTION_FILTER);
+}
+
+export async function cancelSubscriptions(client: DBClient, subscriptionIds: string[]) {
+  return client
+    .from("user_subscriptions")
+    .update({ status: "canceled", updated_at: new Date().toISOString() })
+    .in("id", subscriptionIds);
+}
+
+export async function cancelSubscription(client: DBClient, subscriptionId: string) {
+  return client
+    .from("user_subscriptions")
+    .update({ status: "canceled", updated_at: new Date().toISOString() })
+    .eq("id", subscriptionId);
+}
+
+export async function upsertSubscriptionGrant(
+  client: DBClient,
+  grant: {
+    user_id: string;
+    plan_id: string;
+    status: "active" | "trialing";
+    granted_by: string;
+    grant_note: string | null;
+    current_period_end: string | null;
+  },
+) {
+  return client
+    .from("user_subscriptions")
+    .upsert({ ...grant, updated_at: new Date().toISOString() }, { onConflict: "user_id,plan_id" });
+}
+
+export async function updateSubscriptionGrant(
+  client: DBClient,
+  subscriptionId: string,
+  updates: {
+    status: "active" | "trialing" | "past_due";
+    current_period_end: string | null;
+    grant_note: string | null;
+  },
+) {
+  return client
+    .from("user_subscriptions")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("id", subscriptionId);
+}
+
+/** Every user, every live subscription and the product/plan catalog — the admin grants screen. */
+export async function getSubscriptionsOverview(client: DBClient) {
+  const [users, subscriptions, products] = await Promise.all([
+    client.from("users").select("id, name, email, avatar_url").order("name"),
+    client
+      .from("user_subscriptions")
+      .select("id, user_id, status, current_period_end, grant_note, plans(id, name, products(id, name))")
+      .not("status", "in", LIVE_SUBSCRIPTION_FILTER),
+    client.from("products").select("id, name, plans(id, name, sort_order)").order("id"),
+  ]);
+
+  return {
+    users: users.data ?? [],
+    subscriptions: subscriptions.data ?? [],
+    products: products.data ?? [],
   };
 }
