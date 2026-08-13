@@ -13,6 +13,7 @@
   }
 }
 @source "../../../../packages/ui/src";
+@source "../../../../packages/obs-web/src";
 
 @plugin "tailwindcss-animate";
 

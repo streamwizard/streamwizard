@@ -2,7 +2,7 @@
 
 import { reportError } from "@repo/sentry";
 
-import { getAuthContext } from "@/lib/auth";
+import { tryAuthContext } from "@/lib/auth";
 import { getChannelAccessToken } from "@repo/supabase";
 import { getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
@@ -14,12 +14,9 @@ import { removeRole } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 
 export async function deleteAccount() {
-  let user, broadcasterId: string;
-  try {
-    ({ user, broadcasterId } = await getAuthContext());
-  } catch {
-    return { success: false, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { success: false, error: "Unauthorized" };
+  const { user, broadcasterId } = ctx;
   const supabase = createAdminClient();
   // Revoke the Twitch access token so it is immediately invalidated.
   // This cannot remove the app from the user's Twitch authorized connections

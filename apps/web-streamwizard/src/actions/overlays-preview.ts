@@ -3,7 +3,7 @@
 import { reportError } from "@repo/sentry";
 
 import type { ClipsWidgetConfig } from "@/types/overlays";
-import { getAuthContext } from "@/lib/auth";
+import { tryAuthContext } from "@/lib/auth";
 import { getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
 import { getClipFolderJunctions, getOverlayClips } from "@repo/supabase/queries/clips";
 
@@ -32,8 +32,9 @@ export async function getPreviewClips(config: ClipsWidgetConfig): Promise<{
   clips: PreviewClip[];
   error: string | null;
 }> {
-  let supabase, user;
-  try { ({ supabase, user } = await getAuthContext()); } catch { return { clips: [], error: "Unauthorized" }; }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { clips: [], error: "Unauthorized" };
+  const { supabase, user } = ctx;
 
   const { data: twitchIntegration } = await getTwitchIntegrationByUserId(supabase, user.id);
   const twitchUserId = twitchIntegration?.twitch_user_id ?? null;

@@ -3,7 +3,14 @@
 import { reportError } from "@repo/sentry";
 
 import { randomBytes } from "crypto";
-import { getAuthContext } from "@/lib/auth";
+import {
+  deleteOutputKey as deleteOutputKeyRow,
+  ingestKeyBelongsToUser,
+  insertOutputKey,
+  rotateOutputKeySecret,
+  selectOutputKeys,
+} from "@repo/supabase/queries/ingest";
+import { tryAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
 import type { Database } from "@repo/supabase";
@@ -25,41 +32,28 @@ async function assertOwnsKey(
   keyId: string,
   userId: string,
 ): Promise<boolean> {
-  const { data } = await adminClient
-    .from("ingest_stream_keys")
-    .select("id")
-    .eq("id", keyId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  return !!data;
+  return ingestKeyBelongsToUser(adminClient, keyId, userId);
 }
 
 export async function createOutputKey(
   keyId: string,
   label: string,
 ): Promise<{ data: IngestOutputKey | null; error: string | null }> {
-  let user;
-  try {
-    ({ user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { user } = ctx;
 
   const adminClient = createAdminClient();
   if (!(await assertOwnsKey(adminClient, keyId, user.id))) {
     return { data: null, error: "Stream key not found" };
   }
 
-  const { data, error } = await adminClient
-    .from("ingest_output_keys")
-    .insert({
-      user_id: user.id,
-      key_id: keyId,
-      output_key: generateOutputKey(),
-      label: label.trim() || "My OBS Output Key",
-    })
-    .select("*")
-    .single();
+  const { data, error } = await insertOutputKey(adminClient, {
+    user_id: user.id,
+    key_id: keyId,
+    output_key: generateOutputKey(),
+    label: label.trim() || "My OBS Output Key",
+  });
 
   if (error) {
     reportError(error, "actions/ingest-output-keys");
@@ -73,21 +67,12 @@ export async function createOutputKey(
 export async function listOutputKeys(
   keyId?: string,
 ): Promise<{ data: IngestOutputKey[] | null; error: string | null }> {
-  let user;
-  try {
-    ({ user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { user } = ctx;
 
   const adminClient = createAdminClient();
-  let query = adminClient
-    .from("ingest_output_keys")
-    .select("*")
-    .eq("user_id", user.id);
-  if (keyId) query = query.eq("key_id", keyId);
-
-  const { data, error } = await query.order("created_at", { ascending: false });
+  const { data, error } = await selectOutputKeys(adminClient, user.id, keyId);
   if (error) reportError(error, "actions/ingest-output-keys");
   return { data, error: error?.message ?? null };
 }
@@ -95,21 +80,12 @@ export async function listOutputKeys(
 export async function rotateOutputKey(
   id: string,
 ): Promise<{ data: IngestOutputKey | null; error: string | null }> {
-  let user;
-  try {
-    ({ user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { user } = ctx;
 
   const adminClient = createAdminClient();
-  const { data, error } = await adminClient
-    .from("ingest_output_keys")
-    .update({ output_key: generateOutputKey() })
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select("*")
-    .single();
+  const { data, error } = await rotateOutputKeySecret(adminClient, id, user.id, generateOutputKey());
 
   if (error) {
     reportError(error, "actions/ingest-output-keys");
@@ -121,19 +97,12 @@ export async function rotateOutputKey(
 }
 
 export async function deleteOutputKey(id: string): Promise<{ error: string | null }> {
-  let user;
-  try {
-    ({ user } = await getAuthContext());
-  } catch {
-    return { error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { error: "Unauthorized" };
+  const { user } = ctx;
 
   const adminClient = createAdminClient();
-  const { error } = await adminClient
-    .from("ingest_output_keys")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
+  const { error } = await deleteOutputKeyRow(adminClient, id, user.id);
 
   revalidatePath(INGEST_SETTINGS_PATH);
   if (error) reportError(error, "actions/ingest-output-keys");
