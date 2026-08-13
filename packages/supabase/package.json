@@ -71,10 +71,6 @@
       "types": "./src/queries/viewer-counts.ts",
       "default": "./src/queries/viewer-counts.ts"
     },
-    "./queries/smp": {
-      "types": "./src/queries/smp.ts",
-      "default": "./src/queries/smp.ts"
-    },
     "./queries/irl": {
       "types": "./src/queries/irl.ts",
       "default": "./src/queries/irl.ts"

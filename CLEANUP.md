@@ -196,17 +196,16 @@ have no `check-types` script), plus `bun run build` for the Next apps.
   `alerting` and `user-state` for the injected `SupabaseClient` *type*, and
   `@repo/sentry` because its integration takes the client class itself.
 
-## Open questions
+- **Dead code removed.** 25 files, 3776 lines, none of them reachable: the
+  vendored `map.tsx` kit (and the `maplibre-gl` dependency it alone pulled in),
+  four shadcn dashboard-starter leftovers, the clip-folder modals, an unwired
+  rest-api rate limiter, and a dozen smaller orphans. Verified by resolving
+  every import specifier in the repo — relative, `@/` alias and workspace
+  package, including `exports` maps and `new URL(...)` worker references — to a
+  file, then taking what nothing pointed at.
 
-- Four more files in `apps/web-streamwizard/src/components` have **no importers
-  anywhere** — `data-table.tsx` (654), `chart-area-interactive.tsx` (291),
-  `section-cards.tsx` (102) and `theme-toggle.tsx` (41). They look like
-  leftovers from the shadcn dashboard starter block. Left in place; say the word
-  and they go.
-- `apps/web-streamwizard/src/components/ui/map.tsx` (1844 lines) has **no
-  importers anywhere** and is the only thing pulling in `maplibre-gl`. Looks
-  like a vendored map kit staged for the walk-map work. Left untouched — say the
-  word and it either gets deleted or split into a `map/` directory.
+  Deliberately kept: discord-bot's `commands/` and `events/` (loaded by
+  `Bun.Glob` at runtime), the monaco workers, and every framework entry point.
 
 ## Next
 
