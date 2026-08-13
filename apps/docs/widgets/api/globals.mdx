@@ -8,9 +8,11 @@ description: "Everything injected into your widget's sandbox: globals, lifecycle
 | Global | What it is |
 |--------|-----------|
 | `fieldData` | Values of your [fields](/widgets/fields), defaults merged with the streamer's overrides. |
-| `StreamWizard.state` | `get()` / `set()` persistence, see [state](/widgets/state). |
+| `StreamWizard.state` | `get()` / `set()` persistence for this one placed widget, see [state](/widgets/state). |
+| `StreamWizard.userState` | `get(key)` / `getAll()` / `set(key, value)` / `increment(key, amount?)` / `delete(key)` / `subscribe(key, cb)` / `onChange(cb)` channel-wide state, also written by the server, pushed live to open overlays. See [state](/widgets/state). |
 | `StreamWizard.session` | `{ subscriberToken, overlayItemId }` once the widget runs on an overlay; `null` in the editor preview. |
 | `StreamWizard.stateUrl` | Raw state endpoint. Prefer `StreamWizard.state`. |
+| `StreamWizard.userStateUrl` | Raw channel-state endpoint. Prefer `StreamWizard.userState`. |
 | `gsap` | GSAP 3.12 animation library. |
 | `TextPlugin` | GSAP text animation; call `gsap.registerPlugin(TextPlugin)` first. |
 

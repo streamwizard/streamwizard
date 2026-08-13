@@ -6,6 +6,7 @@ import type {
   ObsInstanceLifecyclePayload,
   ObsSceneChangedPayload,
   IngestStatsPayload,
+  UserStateUpdatePayload,
   // channel
   ChannelUpdateEvent,
   ChannelFollowEvent,
@@ -120,14 +121,18 @@ export type StreamWizardEventType =
   | "streamwizard.obs_instance_lifecycle"
   // obs-instance-manager: the container's program scene actually changed,
   // observed on a node-side obs-websocket connection → /internal/broadcast
-  | "streamwizard.obs_scene_changed";
+  | "streamwizard.obs_scene_changed"
+  // user_states mutation: whichever process applied the write (bot via its
+  // socket, rest-api/web-overlay via /internal/broadcast) → user room, one
+  // message per changed key, so overlays track counters without polling
+  | "streamwizard.user_state";
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 
 // Both of these are zod-derived in @repo/schemas -- re-exported rather than
 // redeclared so the wire type and the validator can't drift apart. Their docs
 // live on the schemas.
-export type { ObsInstanceLifecyclePayload, IngestStatsPayload, ObsSceneChangedPayload };
+export type { ObsInstanceLifecyclePayload, IngestStatsPayload, ObsSceneChangedPayload, UserStateUpdatePayload };
 
 // Host NIC totals only — cpu/ram/disk deliberately stay on the InfluxDB
 // polling path; the WS carries just the network signal.
@@ -173,6 +178,7 @@ export type OverlaySocketMessage =
   | { type: "streamwizard.auto_switcher_config"; payload: AutoSwitcherConfig }
   | { type: "streamwizard.obs_instance_lifecycle"; payload: ObsInstanceLifecyclePayload }
   | { type: "streamwizard.obs_scene_changed"; payload: ObsSceneChangedPayload }
+  | { type: "streamwizard.user_state"; payload: UserStateUpdatePayload }
   // Channel
   | { type: "channel.update";                                             payload: ChannelUpdateEvent }
   | { type: "channel.follow";                                             payload: ChannelFollowEvent }

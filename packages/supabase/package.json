@@ -79,6 +79,10 @@
       "types": "./src/queries/irl.ts",
       "default": "./src/queries/irl.ts"
     },
+    "./queries/user-states": {
+      "types": "./src/queries/user-states.ts",
+      "default": "./src/queries/user-states.ts"
+    },
     "./queries/ingest": {
       "types": "./src/queries/ingest.ts",
       "default": "./src/queries/ingest.ts"

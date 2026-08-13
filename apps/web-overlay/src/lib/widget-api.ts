@@ -64,6 +64,23 @@ export function bearerToken(req: NextRequest): string | null {
  * request would turn every overlay into an open Helix proxy for any channel on
  * Twitch, so the parameter simply does not exist in the API.
  */
+/**
+ * subscriber_token → the scene owner's user id.
+ *
+ * Same lookup as broadcasterIdForToken without the Twitch hop, for the routes
+ * that key on our own user id rather than a Helix one. As above, the id may
+ * only ever come from the token — never from the request.
+ */
+export async function userIdForToken(token: string): Promise<string | null> {
+  const { data: scene } = await supabaseAdmin
+    .from("overlay_scenes")
+    .select("user_id")
+    .eq("subscriber_token", token)
+    .maybeSingle();
+
+  return scene?.user_id ?? null;
+}
+
 export async function broadcasterIdForToken(token: string): Promise<string | null> {
   const { data: scene } = await supabaseAdmin
     .from("overlay_scenes")

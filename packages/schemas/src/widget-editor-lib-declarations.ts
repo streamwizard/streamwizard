@@ -87,6 +87,50 @@ interface StreamWizardStateApi {
   set(state: Record<string, any>): Promise<void>;
 }
 
+/**
+ * Channel-wide state, shared by every widget on the channel and written by the
+ * server too - unlike StreamWizard.state, which is private to this one placed
+ * widget. Use it for anything that should outlive the overlay being closed, or
+ * that another surface needs to see.
+ *
+ * Keys are 1-64 characters of a-z, 0-9 or _. Keys beginning "sys." are written
+ * by StreamWizard itself and are read-only here:
+ *
+ *   sys.stream_id          current Twitch stream id, or null when offline
+ *   sys.stream_started_at  ISO timestamp the stream started
+ *   sys.is_live            boolean
+ */
+interface StreamWizardUserStateApi {
+  /** Reads one key. Resolves to null when it has never been set. */
+  get(key: string): Promise<any | null>;
+  /** Reads every key for the channel as one object. */
+  getAll(): Promise<Record<string, any>>;
+  /**
+   * Writes one key. Rejects "sys." keys, values over 8KB, and keys outside the
+   * allowed character set. Only available when the widget is placed on an
+   * overlay - throws in the editor preview.
+   */
+  set(key: string, value: any): Promise<void>;
+  /**
+   * Adds amount (default 1; may be negative) to a numeric key atomically on
+   * the server and resolves to the new value. Two increments racing both
+   * count - use this for counters instead of get-then-set. A key that does
+   * not exist yet starts from 0. Rejects non-numeric stored values.
+   */
+  increment(key: string, amount?: number): Promise<number>;
+  /** Removes one key. Subscribers receive null. */
+  delete(key: string): Promise<void>;
+  /**
+   * Fires callback whenever ANY channel-state key changes - your own writes,
+   * other widgets', or the server's (sys. keys included). Safe to register
+   * anywhere; in the editor preview it simply never fires. Returns an
+   * unsubscribe function.
+   */
+  onChange(callback: (key: string, value: any | null, updatedAt: string | null) => void): () => void;
+  /** Like onChange, filtered to one key. Returns an unsubscribe function. */
+  subscribe(key: string, callback: (value: any | null, updatedAt: string | null) => void): () => void;
+}
+
 interface TwitchBadgeImage {
   url_1x: string;
   url_2x: string;
@@ -200,9 +244,14 @@ interface StreamWizardTwitchApi {
 interface StreamWizardGlobal {
   /** Base URL of the raw state API; prefer StreamWizard.state.get/set. */
   stateUrl: string | null;
+  /** Base URL of the raw channel-state API; prefer StreamWizard.userState. */
+  userStateUrl: string | null;
   /** Set from onWidgetLoad; null until then or in the editor preview. */
   session: StreamWizardSession | null;
+  /** This widget instance's own private state. */
   state: StreamWizardStateApi;
+  /** Channel-wide state, shared with other widgets and the server. */
+  userState: StreamWizardUserStateApi;
   twitch: StreamWizardTwitchApi;
 }
 

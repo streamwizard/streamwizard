@@ -3,7 +3,7 @@ import { env } from "../lib/env";
 import { supabase } from "@repo/supabase";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
 import { getLiveStreamIdByBroadcasterId } from "@repo/supabase/queries/live-status";
-import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
+import { getTwitchIntegrationByBroadcasterId, getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import type { BotBroadcastMessage, OverlayEventType } from "@repo/types";
 import { trackWsAuthFailure } from "@repo/metrics";
 import { isRateLimited } from "../rate-limit";
@@ -51,6 +51,54 @@ async function handleInternalBroadcast(req: Request): Promise<Response> {
   return Response.json({ ok: true, delivered });
 }
 
+// Server-to-server stream_id push from the rest-api EventSub handlers.
+// A room resolves stream_id once, at publisher upgrade — so a GPS overlay
+// opened before the stream goes live would log its whole walk with
+// stream_id=null. stream.online/offline pushes here so a long-lived room
+// picks up the id (or drops it) without the phone reconnecting.
+async function handleInternalStreamStatus(req: Request): Promise<Response> {
+  if (req.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+  if (!env.CONSUMER_SECRET) {
+    return new Response("Not Found", { status: 404 });
+  }
+  const key = req.headers.get("authorization")?.replace("Bearer ", "");
+  if (!isValidSecret(key, env.CONSUMER_SECRET)) {
+    trackWsAuthFailure("bot", "invalid_bot_key");
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  let body: { broadcasterId?: unknown; streamId?: unknown };
+  try {
+    body = (await req.json()) as typeof body;
+  } catch {
+    return new Response("Bad Request: invalid JSON", { status: 400 });
+  }
+
+  const broadcasterId = body.broadcasterId;
+  const streamId = body.streamId ?? null;
+  if (typeof broadcasterId !== "string" || broadcasterId.length === 0) {
+    return new Response("Bad Request: broadcasterId is required", { status: 400 });
+  }
+  if (streamId !== null && typeof streamId !== "string") {
+    return new Response("Bad Request: streamId must be a string or null", { status: 400 });
+  }
+
+  const { data: integration } = await getTwitchIntegrationByBroadcasterId(supabase, broadcasterId);
+  if (!integration) {
+    // Not every broadcaster we get EventSub for has a live room here.
+    return Response.json({ ok: true, updated: false });
+  }
+
+  const room = rooms.get(integration.user_id);
+  if (!room) return Response.json({ ok: true, updated: false });
+
+  room.stream_id = streamId;
+  console.log(`[stream-status] room=${integration.user_id} stream=${streamId ?? "none"}`);
+  return Response.json({ ok: true, updated: true });
+}
+
 let nextConnId = 1;
 
 async function findCurrentStreamId(userId: string): Promise<string | null> {
@@ -73,6 +121,10 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
 
   if (url.pathname === "/internal/broadcast") {
     return handleInternalBroadcast(req);
+  }
+
+  if (url.pathname === "/internal/stream-status") {
+    return handleInternalStreamStatus(req);
   }
 
   if (url.pathname !== "/ws") {

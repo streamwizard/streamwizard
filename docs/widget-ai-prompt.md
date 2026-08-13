@@ -32,9 +32,11 @@ Hard constraints:
 | Global | What it is |
 |---|---|
 | `gsap`, `TextPlugin` | GSAP 3.12.5, plugin pre-registered |
-| `StreamWizard.state` | `get()` / `set(obj)` persistence — see below |
+| `StreamWizard.state` | `get()` / `set(obj)` persistence for this placed widget — see below |
+| `StreamWizard.userState` | `get(key)` / `getAll()` / `set(key, value)` channel-wide state, server-written too — see below |
 | `StreamWizard.session` | `{ subscriberToken, overlayItemId }` once placed on an overlay; `null` in the editor preview |
 | `StreamWizard.stateUrl` | Raw state endpoint. Prefer `StreamWizard.state`. |
+| `StreamWizard.userStateUrl` | Raw channel-state endpoint. Prefer `StreamWizard.userState`. |
 | `StreamWizard.twitch` | Twitch lookups: badges, cheermotes, avatars, box art, follower/sub totals — see below |
 
 There is **no `fieldData` global at runtime**. Read field values from `onWidgetLoad`:
@@ -124,6 +126,47 @@ await StreamWizard.state.set({ deaths: 4 });                    // replaces the 
 ```
 
 `get()`/`set()` **throw in the editor preview** (no session there). Always wrap in `try/catch` or `.catch()`. Don't save inside an animation loop — debounce or batch.
+
+## Channel state — `StreamWizard.userState`
+
+Key/value state shared across the whole channel, and written by StreamWizard's servers as well as by widgets. Keys are 1–64 chars of `a-z0-9_`, values any JSON ≤8KB, 200 keys per channel.
+
+```js
+const deaths = await StreamWizard.userState.get('deaths');   // null when unset
+await StreamWizard.userState.set('current_game', 'Elden Ring');
+const all = await StreamWizard.userState.getAll();
+
+// Counters: ALWAYS increment, never get-then-set (racing writers lose updates).
+// Atomic on the server; resolves to the new value; missing key starts at 0.
+const n = await StreamWizard.userState.increment('deaths');       // +1
+await StreamWizard.userState.increment('deaths', -1);             // signed
+await StreamWizard.userState.delete('old_key');
+
+// Live updates, pushed on every change (any widget, the server, chat commands).
+// Both return an unsubscribe fn. Safe in the editor preview — never fires there.
+StreamWizard.userState.subscribe('deaths', (value) => render(value ?? 0));
+StreamWizard.userState.onChange((key, value, updatedAt) => { /* all keys */ });
+```
+
+Keys beginning `sys.` are **read-only** — the server owns them:
+
+| Key | Value |
+|---|---|
+| `sys.stream_id` | Current Twitch stream id, `null` when offline |
+| `sys.stream_started_at` | ISO timestamp the stream started |
+| `sys.is_live` | boolean |
+
+Use this for anything that must be right after the overlay was closed. A widget only receives events while it is open, so "reset on `stream.online`" silently does nothing when the streamer goes live before starting OBS. Record which stream a total belongs to and compare on load instead:
+
+```js
+const [saved, savedStream, currentStream] = await Promise.all([
+  StreamWizard.userState.get('total'),
+  StreamWizard.userState.get('total_stream_id'),
+  StreamWizard.userState.get('sys.stream_id'),
+]);
+// Unknown stream id means keep what you had — never zero on "I don't know".
+total = currentStream && savedStream !== currentStream ? 0 : (saved ?? 0);
+```
 
 ## Twitch lookups — `StreamWizard.twitch`
 

@@ -195,6 +195,76 @@ If you're porting from StreamElements, `badge.url` is there on purpose. It means
 
 ---
 
+## Persistent state
+
+Two stores, and picking the wrong one is the most common bug in a widget that counts something.
+
+| | `StreamWizard.state` | `StreamWizard.userState` |
+|---|---|---|
+| Scope | this one placed widget | the whole channel |
+| Shape | one JSON blob, `set()` replaces it | key → value |
+| Written by | only this widget | this widget, other widgets, and StreamWizard's servers |
+
+```js
+// Per-widget blob
+const saved = await StreamWizard.state.get().catch(() => null);
+await StreamWizard.state.set({ deaths: 4 });
+
+// Channel-wide keys
+const deaths = await StreamWizard.userState.get('deaths');
+await StreamWizard.userState.set('current_game', 'Elden Ring');
+const everything = await StreamWizard.userState.getAll();
+
+// Counters: atomic server-side add — never get-then-set, which loses racing
+// writes. Resolves to the new value; a missing key starts from 0.
+const newDeaths = await StreamWizard.userState.increment('deaths');
+await StreamWizard.userState.delete('old_key');
+
+// Live updates: pushed to open overlays on every change, no polling. Both
+// return an unsubscribe function; safe to register in the editor preview
+// (there they just never fire).
+StreamWizard.userState.subscribe('deaths', (value) => render(value ?? 0));
+StreamWizard.userState.onChange((key, value) => console.log(key, value));
+```
+
+The read/write calls throw in the editor preview — there's no session to authenticate with. Wrap in `try/catch`.
+
+Channel keys are 1–64 characters of `a-z0-9_`, values any JSON up to 8KB, 200 keys per channel. `increment` works on numeric values only and rejects anything else. Changes also arrive as `onEventReceived` with listener `streamwizard.user_state` and event `{ key, value, updatedAt }`.
+
+### Server-written keys
+
+Keys beginning `sys.` belong to StreamWizard and reject writes — a widget that could set them could lie about what the channel is doing.
+
+| Key | Value |
+|---|---|
+| `sys.stream_id` | Current Twitch stream id, `null` when offline |
+| `sys.stream_started_at` | ISO timestamp the stream started |
+| `sys.is_live` | boolean |
+
+### Don't reset on an event
+
+A widget only receives events while it is open. "Reset the counter on `stream.online`" does exactly nothing when the streamer goes live before starting OBS — and the widget then restores last stream's total as if it were this one's.
+
+Record which stream the total belongs to and compare on load:
+
+```js
+addEventListener('onWidgetLoad', async () => {
+  const [saved, savedStream, currentStream] = await Promise.all([
+    StreamWizard.userState.get('total'),
+    StreamWizard.userState.get('total_stream_id'),
+    StreamWizard.userState.get('sys.stream_id'),
+  ]);
+
+  // An unknown stream id means keep what you had. Zeroing on "I don't know"
+  // throws away a real total every time the lookup fails.
+  total = currentStream && savedStream !== currentStream ? 0 : (saved ?? 0);
+});
+```
+
+Keep the event listener too if you want an instant reset while the overlay happens to be open — it's idempotent, so it costs nothing.
+
+---
+
 ## Template tokens
 
 Inside your **HTML** and **CSS** you can use `{{fieldKey}}` tokens. They are replaced with the resolved field value before the iframe renders.

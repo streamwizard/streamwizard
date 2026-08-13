@@ -24,6 +24,10 @@ export const env = createEnv({
     TWITCH_CLIENT_ID: z.string().min(1),
     TWITCH_CLIENT_SECRET: z.string().min(1),
     WS_SERVER_URL: z.string(),
+    // Authorizes POSTs to ws-server /internal/broadcast (user-state pushes).
+    // Optional: without it state mutations still land in the DB, they just
+    // don't reach open overlays until the widget's next read.
+    CONSUMER_SECRET: z.string().optional(),
     STREAMWIZARD_API_URL: z.string().url(),
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_RELEASE: z.string().optional(),
@@ -46,6 +50,7 @@ export const env = createEnv({
     TWITCH_CLIENT_ID: process.env.TWITCH_CLIENT_ID,
     TWITCH_CLIENT_SECRET: process.env.TWITCH_CLIENT_SECRET,
     WS_SERVER_URL: process.env.WS_SERVER_URL,
+    CONSUMER_SECRET: process.env.CONSUMER_SECRET,
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
     SENTRY_DSN: process.env.SENTRY_DSN,
     SENTRY_RELEASE: process.env.SENTRY_RELEASE,

@@ -13,6 +13,8 @@
   "dependencies": {
     "@repo/sentry": "workspace:*",
     "@repo/supabase": "workspace:*",
+    "@repo/user-state": "workspace:*",
+    "@repo/types": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/twitch-assets": "workspace:*",
     "@repo/ui": "workspace:*",

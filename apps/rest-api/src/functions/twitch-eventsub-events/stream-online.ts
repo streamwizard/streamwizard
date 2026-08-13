@@ -5,6 +5,8 @@ import { TwitchApi } from "@repo/twitch-api";
 import type { StreamOnlineEvent } from "@repo/schemas";
 import { streamEventsLogger } from "@repo/logger";
 import { viewerCountPoller } from "../../services/viewer-count-poller";
+import { notifyStreamStatus } from "../../lib/ws-server";
+import { setStreamUserState } from "../../lib/user-state";
 
 export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: TwitchApi) => {
   //   check if the stream is of type "live"
@@ -44,6 +46,13 @@ export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: Tw
     category_id: stream.game_id,
     category_name: stream.game_name,
   });
+
+  // Stamp any already-connected GPS overlay room with the new stream_id.
+  // Must run after insertVod — irl_geo_track.stream_id is an FK onto vods.
+  await notifyStreamStatus(stream.user_id, stream.id);
+
+  // Durable copy for overlays that were NOT connected when this fired.
+  await setStreamUserState(stream.user_id, { id: stream.id, startedAt: stream.started_at });
 
   await streamEventsLogger.logTwitchEvent({
     broadcaster_id: stream.user_id,
