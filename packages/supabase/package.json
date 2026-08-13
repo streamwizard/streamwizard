@@ -134,6 +134,26 @@
     "./queries/query-stats": {
       "types": "./src/queries/query-stats.ts",
       "default": "./src/queries/query-stats.ts"
+    },
+    "./queries/auto-switcher": {
+      "types": "./src/queries/auto-switcher.ts",
+      "default": "./src/queries/auto-switcher.ts"
+    },
+    "./queries/overlay-widgets": {
+      "types": "./src/queries/overlay-widgets.ts",
+      "default": "./src/queries/overlay-widgets.ts"
+    },
+    "./queries/assets": {
+      "types": "./src/queries/assets.ts",
+      "default": "./src/queries/assets.ts"
+    },
+    "./queries/data-export": {
+      "types": "./src/queries/data-export.ts",
+      "default": "./src/queries/data-export.ts"
+    },
+    "./queries/platform-stats": {
+      "types": "./src/queries/platform-stats.ts",
+      "default": "./src/queries/platform-stats.ts"
     }
   },
   "scripts": {
