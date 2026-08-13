@@ -22,7 +22,7 @@ import {
   Unlock,
 } from "lucide-react";
 import type { OverlayItem } from "@/types/overlays";
-import { useOverlayStore } from "./use-overlay-store";
+import { useOverlayStore } from "@/stores/overlay-editor-store";
 
 interface LayerContextMenuProps {
   item: OverlayItem;

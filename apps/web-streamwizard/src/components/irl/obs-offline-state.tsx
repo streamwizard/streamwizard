@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AlertTriangle, Loader2, MonitorOff, Play, RotateCw } from "lucide-react";
 import { Button, Card, CardContent } from "@repo/ui";
-import type { ObsStopReason } from "@/components/irl/use-obs-lifecycle-notifications";
+import type { ObsStopReason } from "@/hooks/obs/use-obs-lifecycle-notifications";
 
 interface ObsOfflineStateProps {
   status: "booting" | "offline";

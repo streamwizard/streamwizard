@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { Cpu, MemoryStick, MonitorPlay, Gauge } from "lucide-react";
-import type { ObsStats } from "@/hooks/use-obs-websocket";
+import type { ObsStats } from "@repo/obs-web";
 
 interface Sample {
   t: string;

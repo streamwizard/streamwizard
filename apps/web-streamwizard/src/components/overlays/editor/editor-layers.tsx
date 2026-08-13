@@ -44,7 +44,7 @@ import {
 import { DISPLAY_FIELD_LABELS } from "../widgets/clips/nested-fields";
 import { LayerContextMenu } from "./layer-context-menu";
 import { SortableLayerRow } from "./sortable-layer-row";
-import { selectPrimarySelectedId, useOverlayStore } from "./use-overlay-store";
+import { selectPrimarySelectedId, useOverlayStore } from "@/stores/overlay-editor-store";
 
 export function EditorLayers() {
   const {

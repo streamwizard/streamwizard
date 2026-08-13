@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { ScrollArea, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Switch } from "@repo/ui";
 import { cn } from "@repo/ui";
-import type { SourceStatNode, SourceStatsPayload } from "@/hooks/use-obs-websocket";
+import type { SourceStatNode, SourceStatsPayload } from "@repo/obs-web";
 
 // ─── types ──────────────────────────────────────────────────────────────────
 

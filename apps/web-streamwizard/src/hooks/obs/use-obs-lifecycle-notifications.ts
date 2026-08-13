@@ -3,7 +3,7 @@
 import { useCallback, useRef, useState, type MutableRefObject } from "react";
 import { toast } from "sonner";
 import type { ObsInstanceLifecyclePayload } from "@repo/types";
-import { useObsInstanceLifecycle } from "@/components/irl/use-obs-instance-lifecycle";
+import { useObsInstanceLifecycle } from "@/hooks/obs/use-obs-instance-lifecycle";
 
 // Why the box is stopped, derived from the last terminal lifecycle event. Drives
 // the stopped-state card, the crash banner, and the status badge so a clean

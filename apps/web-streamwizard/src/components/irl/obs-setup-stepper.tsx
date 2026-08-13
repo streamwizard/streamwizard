@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { AlertTriangle, Check, ExternalLink, Loader2, Rocket, Wifi } from "lucide-react";
 import { Button, Card, CardContent, Input, Label } from "@repo/ui";
 import { createIngestKey, type IngestStreamKey } from "@/actions/ingest-keys";
-import type { Scene, SceneItem } from "@/hooks/use-obs-websocket";
+import type { Scene, SceneItem } from "@repo/obs-web";
 import { ObsAlertsSources } from "@/components/irl/obs-alerts-sources";
 import { cn } from "@repo/ui";
 

@@ -27,20 +27,11 @@ import {
   Trash2,
 } from "lucide-react";
 import type { OverlayItem } from "@/types/overlays";
-import { asClipDisplayFieldConfig } from "@/types/overlays";
-import {
-  clampCrop,
-  clampScale,
-  getCropInsets,
-  getDesignSize,
-  getItemScale,
-  hasCrop,
-  NO_CROP,
-  type CropInsets,
-} from "@repo/ui/overlay";
+import { NO_CROP, type CropInsets } from "@repo/ui/overlay";
 import { getOverlayWidgetDefinition } from "../registry/overlay-widget-registry";
 import { InspectorSection } from "./inspector-section";
-import { selectPrimarySelectedId, useOverlayStore } from "./use-overlay-store";
+import { selectPrimarySelectedId, useOverlayStore } from "@/stores/overlay-editor-store";
+import { useInspectorCommands } from "@/hooks/overlays/use-inspector-commands";
 
 interface EditorInspectorProps {
   clipFolders: Database["public"]["Tables"]["clip_folders"]["Row"][];
@@ -64,9 +55,6 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
   const def = selectedItem
     ? getOverlayWidgetDefinition(selectedItem.type)
     : undefined;
-
-  const sceneW = scene?.width ?? 1920;
-  const sceneH = scene?.height ?? 1080;
 
   const [sceneLayoutOpen, setSceneLayoutOpen] = useState(false);
   const labelInputRef = useRef<HTMLInputElement>(null);
@@ -132,158 +120,26 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
 
   const item = selectedItem;
 
-  function handleUpdate(updates: Partial<OverlayItem>) {
-    updateItem(item.id, updates);
-  }
-
-  const designSize = getDesignSize(item);
-  const itemScale = getItemScale(item);
-  const cropInsets = getCropInsets(item);
-  const isCropped = hasCrop(item);
-
-  /** Resize the whole widget, contents included. */
-  function setScale(next: number) {
-    const scale = clampScale(next);
-    handleUpdate({
-      w: Math.round(designSize.w * scale),
-      h: Math.round(designSize.h * scale),
-    });
-  }
-
-  function setScalePercent(percent: number) {
-    if (!Number.isFinite(percent) || percent <= 0) return;
-    setScale(percent / 100);
-  }
-
-  function setRenderedWidth(w: number) {
-    if (!Number.isFinite(w) || w <= 0) return;
-    setScale(w / designSize.w);
-  }
-
-  function setRenderedHeight(h: number) {
-    if (!Number.isFinite(h) || h <= 0) return;
-    setScale(h / designSize.h);
-  }
-
-  /**
-   * Crop hides part of the content and shrinks the box to match, leaving the
-   * scale alone. Stretch the box back out afterwards and you have zoomed in
-   * without the widget ever leaving the canvas.
-   */
-  function setCropInset(edge: keyof CropInsets, value: number) {
-    if (!Number.isFinite(value) || value < 0) return;
-    const next = clampCrop({ ...cropInsets, [edge]: value }, designSize);
-    applyCrop(next);
-  }
-
-  function applyCrop(next: CropInsets) {
-    handleUpdate({
-      crop_top: next.top,
-      crop_right: next.right,
-      crop_bottom: next.bottom,
-      crop_left: next.left,
-      w: Math.round((designSize.w - next.left - next.right) * itemScale),
-      h: Math.round((designSize.h - next.top - next.bottom) * itemScale),
-    });
-  }
-
-  /** Resize the layout box without touching how big the content renders. */
-  function setDesignWidth(designW: number) {
-    if (!Number.isFinite(designW) || designW <= 0) return;
-    handleUpdate({
-      design_w: designW,
-      w: Math.round(designW * itemScale),
-    });
-  }
-
-  function setDesignHeight(designH: number) {
-    if (!Number.isFinite(designH) || designH <= 0) return;
-    handleUpdate({
-      design_h: designH,
-      h: Math.round(designH * itemScale),
-    });
-  }
-
-  /** Geometry targets the clips widget when a nested display field is selected. */
-  const layoutTarget: OverlayItem =
-    item.type === "clip_display_field"
-      ? scene?.items.find(
-          (i) =>
-            i.id ===
-            asClipDisplayFieldConfig(item.config).parentClipItemId
-        ) ?? item
-      : item;
-
-  const layoutLocked = layoutTarget.is_locked;
-
-  /**
-   * Fitting scales the widget rather than stretching its frame, so a widget
-   * fitted to the scene keeps its proportions instead of distorting.
-   */
-  function scaleLayoutTarget(scale: number, position: Partial<OverlayItem>) {
-    if (layoutLocked) return;
-    const design = getDesignSize(layoutTarget);
-    const s = clampScale(scale);
-    updateItem(layoutTarget.id, {
-      ...position,
-      w: Math.round(design.w * s),
-      h: Math.round(design.h * s),
-    });
-  }
-
-  function fitToScene() {
-    const design = getDesignSize(layoutTarget);
-    scaleLayoutTarget(Math.min(sceneW / design.w, sceneH / design.h), {
-      x: 0,
-      y: 0,
-    });
-  }
-
-  function fitSceneWidth() {
-    scaleLayoutTarget(sceneW / getDesignSize(layoutTarget).w, { x: 0 });
-  }
-
-  function fitSceneHeight() {
-    scaleLayoutTarget(sceneH / getDesignSize(layoutTarget).h, { y: 0 });
-  }
-
-  function alignLeft() {
-    if (layoutLocked) return;
-    updateItem(layoutTarget.id, { x: 0 });
-  }
-
-  function alignHorizontalCenter() {
-    if (layoutLocked) return;
-    updateItem(layoutTarget.id, {
-      x: Math.max(0, Math.round((sceneW - layoutTarget.w) / 2)),
-    });
-  }
-
-  function alignRight() {
-    if (layoutLocked) return;
-    updateItem(layoutTarget.id, {
-      x: Math.max(0, Math.round(sceneW - layoutTarget.w)),
-    });
-  }
-
-  function alignTop() {
-    if (layoutLocked) return;
-    updateItem(layoutTarget.id, { y: 0 });
-  }
-
-  function alignVerticalCenter() {
-    if (layoutLocked) return;
-    updateItem(layoutTarget.id, {
-      y: Math.max(0, Math.round((sceneH - layoutTarget.h) / 2)),
-    });
-  }
-
-  function alignBottom() {
-    if (layoutLocked) return;
-    updateItem(layoutTarget.id, {
-      y: Math.max(0, Math.round(sceneH - layoutTarget.h)),
-    });
-  }
+  const {
+    sceneW,
+    sceneH,
+    designSize,
+    itemScale,
+    cropInsets,
+    isCropped,
+    layoutTarget,
+    layoutLocked,
+    handleUpdate,
+    setScalePercent,
+    setRenderedWidth,
+    setRenderedHeight,
+    setCropInset,
+    applyCrop,
+    setDesignWidth,
+    setDesignHeight,
+    fit,
+    align,
+  } = useInspectorCommands(item, scene ?? null);
 
   const Settings = def?.SettingsPanel;
 
@@ -489,7 +345,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                       disabled={layoutLocked}
                       aria-label="Fit to screen"
                       onClick={() => {
-                        fitToScene();
+                        fit("scene");
                         setSceneLayoutOpen(false);
                       }}
                     >
@@ -504,7 +360,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                         disabled={layoutLocked}
                         aria-label="Full width"
                         onClick={() => {
-                          fitSceneWidth();
+                          fit("width");
                           setSceneLayoutOpen(false);
                         }}
                       >
@@ -518,7 +374,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                         disabled={layoutLocked}
                         aria-label="Full height"
                         onClick={() => {
-                          fitSceneHeight();
+                          fit("height");
                           setSceneLayoutOpen(false);
                         }}
                       >
@@ -534,7 +390,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                         disabled={layoutLocked}
                         aria-label="Align left"
                         onClick={() => {
-                          alignLeft();
+                          align("left");
                           setSceneLayoutOpen(false);
                         }}
                       >
@@ -548,7 +404,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                         disabled={layoutLocked}
                         aria-label="Align horizontal center"
                         onClick={() => {
-                          alignHorizontalCenter();
+                          align("hcenter");
                           setSceneLayoutOpen(false);
                         }}
                       >
@@ -562,7 +418,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                         disabled={layoutLocked}
                         aria-label="Align right"
                         onClick={() => {
-                          alignRight();
+                          align("right");
                           setSceneLayoutOpen(false);
                         }}
                       >
@@ -578,7 +434,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                         disabled={layoutLocked}
                         aria-label="Align top"
                         onClick={() => {
-                          alignTop();
+                          align("top");
                           setSceneLayoutOpen(false);
                         }}
                       >
@@ -592,7 +448,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                         disabled={layoutLocked}
                         aria-label="Align vertical center"
                         onClick={() => {
-                          alignVerticalCenter();
+                          align("vcenter");
                           setSceneLayoutOpen(false);
                         }}
                       >
@@ -606,7 +462,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
                         disabled={layoutLocked}
                         aria-label="Align bottom"
                         onClick={() => {
-                          alignBottom();
+                          align("bottom");
                           setSceneLayoutOpen(false);
                         }}
                       >

@@ -13,18 +13,12 @@ import {
   type AssetListing,
   type UserAsset,
 } from "@/actions/assets";
+import { formatBytes } from "@/lib/format";
 
 interface Uploading {
   id: string;
   name: string;
   progress: number;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
 // Browser PUTs straight to the presigned R2 URL; XHR gives real progress.

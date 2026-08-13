@@ -48,7 +48,7 @@ import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@repo/ui";
 import { Badge } from "@repo/ui";
 import { Button } from "@repo/ui";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@repo/ui";

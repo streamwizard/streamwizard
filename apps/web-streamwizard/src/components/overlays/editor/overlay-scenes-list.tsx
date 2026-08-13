@@ -42,11 +42,11 @@ import { toast } from "sonner";
 import { env } from "@/lib/env";
 import {
   createOverlayScene,
-  createOverlayFromTemplate,
   deleteOverlayScene,
   duplicateOverlayScene,
   updateOverlayScene,
-} from "@/actions/overlays";
+} from "@/actions/overlays/scenes";
+import { createOverlayFromTemplate } from "@/actions/overlays/templates";
 
 export interface OverlayTemplateOption {
   slug: string;
