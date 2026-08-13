@@ -2,9 +2,7 @@
 
 import useSWR from "swr";
 import { ArrowDown, ArrowUp } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { StatusIndicator, type IndicatorStatus } from "@/components/widgets/status-indicator";
 import { fetcher, formatBandwidth } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";

@@ -1,105 +1,61 @@
 "use client";
 
-import useSWR from "swr";
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartEmptyState } from "@/components/widgets/chart-empty-state";
-import { fetcher, formatTime } from "@/lib/utils";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useTimeRange } from "@/lib/time-range-context";
 import type { WsMessagePoint } from "@repo/metrics";
+import {
+  AXIS_TICK,
+  CHART_TOOLTIP_STYLE,
+  ChartCard,
+  LEGEND_WRAPPER_STYLE,
+  chartColor,
+  stackByTime,
+  useMetricsPoll,
+} from "./chart-kit";
 
 interface Props {
   initialData: WsMessagePoint[];
-  rangeHours?: number;
 }
 
-type ChartRow = { time: string; [key: string]: number | string };
+const seriesKeyOf = (point: Pick<WsMessagePoint, "role" | "messageType">) =>
+  `${point.role}:${point.messageType}`;
 
-function transformData(data: WsMessagePoint[]): ChartRow[] {
-  const map = new Map<string, ChartRow>();
+export function WsMessageChart({ initialData }: Props) {
+  const { messages } = useMetricsPoll("/api/metrics/ws", {
+    messages: initialData,
+  });
 
-  for (const point of data) {
-    const key = point.time;
-    const existing: ChartRow = map.get(key) ?? { time: key };
-    const seriesKey = `${point.role}:${point.messageType}`;
-    existing[seriesKey] = ((existing[seriesKey] as number | undefined) ?? 0) + point.count;
-    map.set(key, existing);
-  }
-
-  return Array.from(map.values())
-    .sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime())
-    .map((d) => ({ ...d, time: formatTime(d.time as string) }));
-}
-
-function getUniqueKeys(data: WsMessagePoint[]): string[] {
-  const keys = new Set<string>();
-  for (const point of data) {
-    keys.add(`${point.role}:${point.messageType}`);
-  }
-  return Array.from(keys);
-}
-
-const COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-];
-
-export function WsMessageChart({ initialData, rangeHours = 24 }: Props) {
-  const { interval } = useRefreshInterval();
-  const { range } = useTimeRange();
-  const { data: raw } = useSWR<{ messages: WsMessagePoint[] }>(
-    `/api/metrics/ws?range=${range.fluxRange}&window=${range.window}`,
-    fetcher,
-    { fallbackData: { messages: initialData }, refreshInterval: interval }
-  );
-
-  const messages = raw?.messages ?? initialData;
-  const chartData = transformData(messages);
-  const seriesKeys = getUniqueKeys(messages);
+  const points = messages ?? initialData;
+  const chartData = stackByTime(points, seriesKeyOf);
+  const seriesKeys = [...new Set(points.map(seriesKeyOf))];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Messages by Role & Type</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {chartData.length === 0 ? (
-          <ChartEmptyState />
-        ) : (
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis dataKey="time" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                fontSize: "12px",
-              }}
-            />
-            <Legend wrapperStyle={{ fontSize: "12px" }} />
-            {seriesKeys.map((key, i) => (
-              <Bar key={key} dataKey={key} stackId="a" fill={COLORS[i % COLORS.length]} />
-            ))}
-          </BarChart>
-        </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
+    <ChartCard title="Messages by Role & Type" isEmpty={chartData.length === 0}>
+      <BarChart data={chartData}>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+        <XAxis
+          dataKey="time"
+          tick={AXIS_TICK}
+          className="fill-muted-foreground"
+        />
+        <YAxis
+          allowDecimals={false}
+          tick={AXIS_TICK}
+          className="fill-muted-foreground"
+        />
+        <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+        <Legend wrapperStyle={LEGEND_WRAPPER_STYLE} />
+        {seriesKeys.map((key, i) => (
+          <Bar key={key} dataKey={key} stackId="a" fill={chartColor(i)} />
+        ))}
+      </BarChart>
+    </ChartCard>
   );
 }

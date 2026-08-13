@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { getOverviewStats } from "@repo/supabase/queries/platform-stats";
 import {
   queryWsActiveConnectionsEstimate,
   queryWsAuthFailures,
@@ -6,15 +7,7 @@ import {
   queryHttpRequestCount,
 } from "@repo/metrics";
 import { StatCard } from "@/components/widgets/stat-card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -55,53 +48,14 @@ export default async function OverviewDashboard() {
     // InfluxDB not available — leave defaults
   }
 
-  // Supabase stats
-  const [
-    liveStreamers,
-    clipsCount,
-    failedSyncs,
-    activeOverlays,
+  const {
+    liveStreamers: streamers,
+    viewerCounts: viewerCountMap,
+    clips: clipsCount,
+    failedClipSyncs: failedSyncCount,
+    activeOverlayScenes,
     enabledCommands,
-  ] = await Promise.all([
-    supabaseAdmin
-      .from("broadcaster_live_status")
-      .select("broadcaster_id, broadcaster_name, title, category_name, stream_started_at")
-      .eq("is_live", true),
-    supabaseAdmin.from("clips").select("*", { count: "exact", head: true }),
-    supabaseAdmin
-      .from("twitch_clip_syncs")
-      .select("*", { count: "exact", head: true })
-      .eq("sync_status", "failed"),
-    supabaseAdmin
-      .from("overlay_scenes")
-      .select("*", { count: "exact", head: true })
-      .eq("is_active", true),
-    supabaseAdmin
-      .from("commands")
-      .select("*", { count: "exact", head: true })
-      .eq("enabled", true),
-  ]);
-
-  const streamers = liveStreamers.data ?? [];
-  const failedSyncCount = failedSyncs.count ?? 0;
-
-  // Fetch latest viewer count per live broadcaster
-  const liveIds = streamers.map((s) => s.broadcaster_id);
-  const viewerCountMap = new Map<string, number>();
-
-  if (liveIds.length > 0) {
-    const { data: viewerRows } = await supabaseAdmin
-      .from("stream_viewer_counts")
-      .select("broadcaster_id, viewer_count, recorded_at")
-      .in("broadcaster_id", liveIds)
-      .order("recorded_at", { ascending: false });
-
-    for (const row of viewerRows ?? []) {
-      if (!viewerCountMap.has(row.broadcaster_id)) {
-        viewerCountMap.set(row.broadcaster_id, row.viewer_count);
-      }
-    }
-  }
+  } = await getOverviewStats(supabaseAdmin);
 
   return (
     <div className="space-y-8">
@@ -144,7 +98,7 @@ export default async function OverviewDashboard() {
         <div className="grid grid-cols-4 gap-4">
           <StatCard
             title="Total Clips"
-            value={(clipsCount.count ?? 0).toLocaleString()}
+            value={clipsCount.toLocaleString()}
             description="All synced clips in DB"
           />
           <StatCard
@@ -155,12 +109,12 @@ export default async function OverviewDashboard() {
           />
           <StatCard
             title="Active Overlays"
-            value={activeOverlays.count ?? 0}
+            value={activeOverlayScenes}
             description="Currently active scenes"
           />
           <StatCard
             title="Enabled Commands"
-            value={enabledCommands.count ?? 0}
+            value={enabledCommands}
             description="Active channel commands"
           />
         </div>

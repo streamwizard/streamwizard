@@ -2,22 +2,26 @@
 
 import useSWR from "swr";
 import {
-  AreaChart,
   Area,
+  AreaChart,
+  CartesianGrid,
+  Legend,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartEmptyState } from "@/components/widgets/chart-empty-state";
-import { fetcher, formatTime, formatBandwidth } from "@/lib/utils";
+import { formatTime, formatBandwidth, fetcher } from "@/lib/utils";
 import type { BandwidthUnit } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useTimeRange } from "@/lib/time-range-context";
 import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
+import {
+  AXIS_TICK,
+  CHART_TOOLTIP_STYLE,
+  ChartCard,
+  LEGEND_WRAPPER_STYLE,
+  chartColor,
+} from "./chart-kit";
 
 // Shared shape for any "one value per node per timestamp" series — host_system
 // and obs_node measurements both query down to this, so a single chart
@@ -33,7 +37,11 @@ export interface NodeMetricPoint {
 // actual formatter lives here, client-side.
 export type NodeMetricFormat = "percent" | "bytesPerSec" | "number";
 
-function formatValue(value: number, format: NodeMetricFormat, bandwidthUnit: BandwidthUnit): string {
+function formatValue(
+  value: number,
+  format: NodeMetricFormat,
+  bandwidthUnit: BandwidthUnit,
+): string {
   switch (format) {
     case "percent":
       return `${value.toFixed(0)}%`;
@@ -58,8 +66,6 @@ interface Props {
 
 type ChartRow = { t: number; [nodeId: string]: number | undefined };
 
-const CHART_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
-
 function transformData(
   data: NodeMetricPoint[],
   windowMs: number,
@@ -82,7 +88,11 @@ function transformData(
   // across a hole with no rows in it. Materialize every window bucket in the
   // visible range; buckets a node never wrote to stay undefined, which is
   // what actually breaks the line (connectNulls is off).
-  for (let t = Math.ceil(domainStart / windowMs) * windowMs; t <= domainEnd; t += windowMs) {
+  for (
+    let t = Math.ceil(domainStart / windowMs) * windowMs;
+    t <= domainEnd;
+    t += windowMs
+  ) {
     if (!map.has(t)) map.set(t, { t });
   }
 
@@ -98,7 +108,14 @@ function fluxRangeToMs(fluxRange: string): number {
   return match[2] === "h" ? n * 3_600_000 : n * 60_000;
 }
 
-export function NodeMetricChart({ title, initialData, apiPath, dataKey, format = "number", filterNodeIds }: Props) {
+export function NodeMetricChart({
+  title,
+  initialData,
+  apiPath,
+  dataKey,
+  format = "number",
+  filterNodeIds,
+}: Props) {
   const { interval } = useRefreshInterval();
   const { range } = useTimeRange();
   const { unit: bandwidthUnit } = useBandwidthUnit();
@@ -117,68 +134,70 @@ export function NodeMetricChart({ title, initialData, apiPath, dataKey, format =
     const allowed = new Set(filterNodeIds);
     points = points.filter((p) => allowed.has(p.nodeId));
   }
-  const { rows, nodeIds } = transformData(points, fluxRangeToMs(range.window), domainStart, now);
+  const { rows, nodeIds } = transformData(
+    points,
+    fluxRangeToMs(range.window),
+    domainStart,
+    now,
+  );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {rows.length === 0 ? (
-          <ChartEmptyState />
-        ) : (
-        <ResponsiveContainer width="100%" height={240}>
-          <AreaChart data={rows}>
-            <defs>
-              {nodeIds.map((nodeId, i) => (
-                <linearGradient key={nodeId} id={`g-${dataKey}-${nodeId}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={CHART_COLORS[i % CHART_COLORS.length]} stopOpacity={0} />
-                </linearGradient>
-              ))}
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis
-              dataKey="t"
-              type="number"
-              scale="time"
-              domain={[domainStart, now]}
-              tickFormatter={(t: number) => formatTime(new Date(t).toISOString())}
-              tick={{ fontSize: 11 }}
-              className="fill-muted-foreground"
-            />
-            <YAxis
-              tick={{ fontSize: 11 }}
-              className="fill-muted-foreground"
-              tickFormatter={(value: number) => formatValue(value, format, bandwidthUnit)}
-              allowDecimals={false}
-            />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                fontSize: "12px",
-              }}
-              formatter={(value) => formatValue(Number(value), format, bandwidthUnit)}
-              labelFormatter={(t) => formatTime(new Date(t as number).toISOString())}
-            />
-            <Legend wrapperStyle={{ fontSize: "12px" }} />
-            {nodeIds.map((nodeId, i) => (
-              <Area
-                key={nodeId}
-                type="linear"
-                dataKey={nodeId}
-                stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                fill={`url(#g-${dataKey}-${nodeId})`}
-                strokeWidth={2}
-              />
-            ))}
-          </AreaChart>
-        </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
+    <ChartCard title={title} isEmpty={rows.length === 0}>
+      <AreaChart data={rows}>
+        <defs>
+          {nodeIds.map((nodeId, i) => (
+            <linearGradient
+              key={nodeId}
+              id={`g-${dataKey}-${nodeId}`}
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              <stop offset="5%" stopColor={chartColor(i)} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={chartColor(i)} stopOpacity={0} />
+            </linearGradient>
+          ))}
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+        <XAxis
+          dataKey="t"
+          type="number"
+          scale="time"
+          domain={[domainStart, now]}
+          tickFormatter={(t: number) => formatTime(new Date(t).toISOString())}
+          tick={AXIS_TICK}
+          className="fill-muted-foreground"
+        />
+        <YAxis
+          tick={AXIS_TICK}
+          className="fill-muted-foreground"
+          tickFormatter={(value: number) =>
+            formatValue(value, format, bandwidthUnit)
+          }
+          allowDecimals={false}
+        />
+        <Tooltip
+          contentStyle={CHART_TOOLTIP_STYLE}
+          formatter={(value) =>
+            formatValue(Number(value), format, bandwidthUnit)
+          }
+          labelFormatter={(t) =>
+            formatTime(new Date(t as number).toISOString())
+          }
+        />
+        <Legend wrapperStyle={LEGEND_WRAPPER_STYLE} />
+        {nodeIds.map((nodeId, i) => (
+          <Area
+            key={nodeId}
+            type="linear"
+            dataKey={nodeId}
+            stroke={chartColor(i)}
+            fill={`url(#g-${dataKey}-${nodeId})`}
+            strokeWidth={2}
+          />
+        ))}
+      </AreaChart>
+    </ChartCard>
   );
 }

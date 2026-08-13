@@ -1,17 +1,7 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { listAlertEvents } from "@repo/supabase/queries/alerts";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { PageHeader } from "@/components/widgets/page-header";
 import { homeEnv } from "@/lib/home-env";
 import { cn } from "@/lib/utils";

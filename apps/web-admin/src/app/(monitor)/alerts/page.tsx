@@ -1,15 +1,6 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getAlertStates } from "@repo/supabase/queries/alerts";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Badge, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { SilenceMenu } from "@/components/alerts/silence-menu";
 import { PageHeader } from "@/components/widgets/page-header";
 import { StatCard } from "@/components/widgets/stat-card";

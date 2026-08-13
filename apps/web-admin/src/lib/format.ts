@@ -9,3 +9,13 @@ export function formatMb(mb: number | null | undefined, placeholder = "—"): st
   }
   return `${mb} MB`;
 }
+
+/** Compact elapsed time from a millisecond span: "45s", "12m", "3h 20m". */
+export function formatElapsed(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}

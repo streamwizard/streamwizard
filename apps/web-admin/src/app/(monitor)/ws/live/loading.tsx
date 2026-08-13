@@ -1,5 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, Skeleton } from "@repo/ui";
 
 export default function Loading() {
   return (

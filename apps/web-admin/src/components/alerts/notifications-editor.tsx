@@ -2,23 +2,13 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui";
 import { StatusIndicator } from "@/components/widgets/status-indicator";
 import {
   saveNotificationConfig,
   sendTestNotification,
   type TestSendResult,
-} from "@/app/(monitor)/alerts/notifications/actions";
+} from "@/actions/alert-notifications";
 
 type EnvName = "prod" | "staging" | "dev";
 type SeverityGate = "off" | "warn" | "crit";

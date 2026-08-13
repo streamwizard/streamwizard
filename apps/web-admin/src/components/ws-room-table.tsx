@@ -1,16 +1,7 @@
 "use client";
 
 import { Circle, Radio, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Badge, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { StatCard } from "@/components/widgets/stat-card";
 import { cn } from "@/lib/utils";
 import { useMonitor } from "@/components/ws-monitor-provider";

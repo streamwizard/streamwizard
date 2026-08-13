@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { cn } from "@/lib/utils";
 
 type StatTone = "default" | "positive" | "warning" | "danger";

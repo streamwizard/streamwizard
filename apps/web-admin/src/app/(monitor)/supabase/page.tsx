@@ -17,15 +17,7 @@ import {
 } from "@repo/metrics";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getQueryStats, type QueryStat } from "@repo/supabase/queries/query-stats";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { PlatformMetricChart } from "@/components/charts/platform-metric-chart";
 import { PageHeader } from "@/components/widgets/page-header";
 import { StatCard } from "@/components/widgets/stat-card";

@@ -4,7 +4,7 @@ import { createClient } from "@repo/supabase/next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { MonitorHeader } from "@/components/monitor-header";
 import { MonitorSidebar } from "@/components/monitor-sidebar";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@repo/ui";
 import { RefreshIntervalProvider } from "@/lib/refresh-interval-context";
 import { TimeRangeProvider } from "@/lib/time-range-context";
 import { BandwidthUnitProvider } from "@/lib/bandwidth-unit-context";

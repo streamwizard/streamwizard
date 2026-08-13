@@ -4,6 +4,7 @@ import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Bot, Radio, Repeat, HelpCircle } from "lucide-react";
 import { describeSource, type SourceKind } from "../source-label";
+import { formatElapsed } from "@/lib/format";
 
 // Trusted server-side consumers (obs-auto-switcher): they RECEIVE the
 // cross-room feed, so they hang below the server with the edge pointing at
@@ -22,15 +23,6 @@ const KIND_ICONS: Record<SourceKind, typeof Bot> = {
   "auto-switcher": Repeat,
   unknown: HelpCircle,
 };
-
-function formatDuration(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  return `${h}h ${m % 60}m`;
-}
 
 export const ConsumerNode = memo(function ConsumerNode({ data }: NodeProps) {
   const { source, connCount, connectedAt, types } = data as ConsumerNodeData;
@@ -66,7 +58,7 @@ export const ConsumerNode = memo(function ConsumerNode({ data }: NodeProps) {
         </div>
       )}
 
-      <div className="text-[10px] text-muted-foreground mt-0.5">{formatDuration(Date.now() - connectedAt)}</div>
+      <div className="text-[10px] text-muted-foreground mt-0.5">{formatElapsed(Date.now() - connectedAt)}</div>
     </div>
   );
 });

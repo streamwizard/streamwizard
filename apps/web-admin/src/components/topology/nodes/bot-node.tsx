@@ -5,6 +5,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { Bot, Radio, Repeat, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { describeSource, type SourceKind } from "../source-label";
+import { formatElapsed } from "@/lib/format";
 
 // One node per producer `source` label (a source can briefly hold >1 socket
 // during a reconnect — shown as a connection count).
@@ -20,15 +21,6 @@ const KIND_ICONS: Record<SourceKind, typeof Bot> = {
   "auto-switcher": Repeat,
   unknown: HelpCircle,
 };
-
-function formatDuration(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  return `${h}h ${m % 60}m`;
-}
 
 export const BotNode = memo(function BotNode({ data }: NodeProps) {
   const { source, connCount, connectedAt } = data as BotNodeData;
@@ -56,7 +48,7 @@ export const BotNode = memo(function BotNode({ data }: NodeProps) {
         <div className={cn("text-xs text-purple-300/80 font-mono truncate max-w-[180px]")}>{label.subtitle}</div>
       )}
 
-      <div className="text-[10px] text-muted-foreground mt-0.5">{formatDuration(Date.now() - connectedAt)}</div>
+      <div className="text-[10px] text-muted-foreground mt-0.5">{formatElapsed(Date.now() - connectedAt)}</div>
     </div>
   );
 });

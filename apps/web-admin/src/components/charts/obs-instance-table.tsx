@@ -1,8 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { fetcher, formatBandwidth } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";

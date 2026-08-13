@@ -1,30 +1,38 @@
 "use client";
 
-import useSWR from "swr";
 import {
-  BarChart,
   Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartEmptyState } from "@/components/widgets/chart-empty-state";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { CheckCircle2 } from "lucide-react";
-import { fetcher, formatTime } from "@/lib/utils";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useTimeRange } from "@/lib/time-range-context";
 import type { WsAuthFailurePoint } from "@repo/metrics";
+import {
+  AXIS_TICK,
+  CHART_TOOLTIP_STYLE,
+  ChartBody,
+  LEGEND_WRAPPER_STYLE,
+  stackByTime,
+  useMetricsPoll,
+} from "./chart-kit";
 
 interface Props {
   initialData: WsAuthFailurePoint[];
-  rangeHours?: number;
 }
 
-const REASONS = ["rate_limited", "invalid_token", "missing_token", "invalid_role", "invalid_bot_key", "upgrade_failed"];
+const REASONS = [
+  "rate_limited",
+  "invalid_token",
+  "missing_token",
+  "invalid_role",
+  "invalid_bot_key",
+  "upgrade_failed",
+];
 const COLORS: Record<string, string> = {
   rate_limited: "var(--chart-5)",
   invalid_token: "var(--chart-1)",
@@ -34,33 +42,17 @@ const COLORS: Record<string, string> = {
   upgrade_failed: "var(--destructive)",
 };
 
-type ChartRow = { time: string; [key: string]: number | string };
+export function WsAuthFailureChart({ initialData }: Props) {
+  const { authFailures } = useMetricsPoll("/api/metrics/ws", {
+    authFailures: initialData,
+  });
 
-function transformData(data: WsAuthFailurePoint[]): ChartRow[] {
-  const map = new Map<string, ChartRow>();
-  for (const point of data) {
-    const existing: ChartRow = map.get(point.time) ?? { time: point.time };
-    existing[point.reason] = ((existing[point.reason] as number | undefined) ?? 0) + point.count;
-    map.set(point.time, existing);
-  }
-  return Array.from(map.values())
-    .sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime())
-    .map((d) => ({ ...d, time: formatTime(d.time as string) }));
-}
-
-export function WsAuthFailureChart({ initialData, rangeHours = 24 }: Props) {
-  const { interval } = useRefreshInterval();
-  const { range } = useTimeRange();
-  const { data: raw } = useSWR<{ authFailures: WsAuthFailurePoint[] }>(
-    `/api/metrics/ws?range=${range.fluxRange}&window=${range.window}`,
-    fetcher,
-    { fallbackData: { authFailures: initialData }, refreshInterval: interval }
-  );
-
-  const failures = raw?.authFailures ?? initialData;
-  const chartData = transformData(failures);
+  const failures = authFailures ?? initialData;
+  const chartData = stackByTime(failures, (point) => point.reason);
   const totalFailures = failures.reduce((acc, f) => acc + f.count, 0);
-  const activeReasons = REASONS.filter((r) => failures.some((f) => f.reason === r));
+  const activeReasons = REASONS.filter((r) =>
+    failures.some((f) => f.reason === r),
+  );
 
   if (totalFailures === 0) {
     return (
@@ -70,7 +62,9 @@ export function WsAuthFailureChart({ initialData, rangeHours = 24 }: Props) {
         </CardHeader>
         <CardContent className="flex items-center gap-3 py-8 text-green-600 dark:text-green-400">
           <CheckCircle2 className="h-5 w-5 shrink-0" />
-          <span className="text-sm font-medium">No auth failures in this time range</span>
+          <span className="text-sm font-medium">
+            No auth failures in this time range
+          </span>
         </CardContent>
       </Card>
     );
@@ -81,33 +75,29 @@ export function WsAuthFailureChart({ initialData, rangeHours = 24 }: Props) {
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           Auth Failures
-          <span className="text-sm font-normal text-destructive">({totalFailures} total)</span>
+          <span className="text-sm font-normal text-destructive">
+            ({totalFailures} total)
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {chartData.length === 0 ? (
-          <ChartEmptyState />
-        ) : (
-        <ResponsiveContainer width="100%" height={240}>
+        <ChartBody isEmpty={chartData.length === 0}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis dataKey="time" tick={{ fontSize: 11 }} />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                fontSize: "12px",
-              }}
-            />
-            <Legend wrapperStyle={{ fontSize: "12px" }} />
+            <XAxis dataKey="time" tick={AXIS_TICK} />
+            <YAxis allowDecimals={false} tick={AXIS_TICK} />
+            <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+            <Legend wrapperStyle={LEGEND_WRAPPER_STYLE} />
             {activeReasons.map((reason) => (
-              <Bar key={reason} dataKey={reason} stackId="a" fill={COLORS[reason] ?? "var(--chart-1)"} />
+              <Bar
+                key={reason}
+                dataKey={reason}
+                stackId="a"
+                fill={COLORS[reason] ?? "var(--chart-1)"}
+              />
             ))}
           </BarChart>
-        </ResponsiveContainer>
-        )}
+        </ChartBody>
       </CardContent>
     </Card>
   );

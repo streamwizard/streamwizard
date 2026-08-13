@@ -3,6 +3,7 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { cn } from "@/lib/utils";
+import { formatElapsed } from "@/lib/format";
 
 export type ConnectionNodeData = {
   connId: string;
@@ -11,19 +12,10 @@ export type ConnectionNodeData = {
   channels: string[];
 };
 
-function formatDuration(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  return `${h}h ${m % 60}m`;
-}
-
 export const ConnectionNode = memo(function ConnectionNode({ data }: NodeProps) {
   const { connId, role, connectedAt, channels } = data as ConnectionNodeData;
   const isPub = role === "publisher";
-  const duration = formatDuration(Date.now() - connectedAt);
+  const duration = formatElapsed(Date.now() - connectedAt);
 
   return (
     <div
