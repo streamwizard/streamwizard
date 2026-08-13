@@ -5,94 +5,21 @@ import type {
     WebSocketCloseCode,
 } from '@repo/types';
 import { TwitchApi } from "@repo/twitch-api";
+import { closeReason, revocationReason } from "./reasons";
 
-// ==============================================================================
-// Interfaces for Package Consumers
-// ==============================================================================
+export type {
+    ConnectionState,
+    EventSubLifecycleEvent,
+    EventSubReceiverOptions,
+    HandlerRegistry,
+} from "./types";
+import type {
+    ConnectionState,
+    EventSubLifecycleEvent,
+    EventSubReceiverOptions,
+    HandlerRegistry,
+} from "./types";
 
-/**
- * Interface that apps must implement to handle Twitch EventSub events.
- * This allows each app to define their own handler implementation.
- */
-export interface HandlerRegistry {
-    /**
-     * Process a Twitch EventSub notification
-     * @param eventType - The type of event (e.g., 'channel.follow', 'stream.online')
-     * @param message - The full WebSocket notification message
-     */
-    processTwitchEvent(
-        eventType: EventSubSubscriptionType,
-        message: WebSocketNotificationMessage
-    ): Promise<void>;
-}
-
-/**
- * Lifecycle events emitted by the receiver so consumers can wire up
- * alerting/metrics without the package taking on any dependencies.
- */
-export type EventSubLifecycleEvent =
-    | { type: 'connected'; sessionId: string; attempt: number; downtimeMs: number | null }
-    | { type: 'connection_lost'; code: number | null; reason: string }
-    | { type: 'reconnect_scheduled'; attempt: number; delayMs: number }
-    | { type: 'keepalive_timeout'; silentForMs: number }
-    | { type: 'session_reconnect_requested' }
-    | { type: 'subscription_revoked'; subscriptionType: string; status: string; reason: string }
-    | { type: 'conduit_update_failed'; error: unknown };
-
-/**
- * Configuration options for the TwitchEventSubReceiver
- */
-export interface EventSubReceiverOptions {
-    /** The conduit ID for this receiver - required for updating shard transport */
-    conduitId: string;
-    /** Optional custom WebSocket URL (defaults to Twitch's production URL) */
-    wsUrl?: string;
-    /** Optional TwitchApi instance (will create one if not provided) */
-    twitchApi?: TwitchApi;
-    /** @deprecated ignored — the receiver retries forever */
-    maxReconnectAttempts?: number;
-    /** Base delay for reconnection in ms (default: 1000) */
-    baseReconnectDelay?: number;
-    /** Maximum delay for reconnection in ms (default: 30000) */
-    maxReconnectDelay?: number;
-    /** @deprecated ignored — replaced by a single keepalive deadline timer */
-    maxMissedKeepalives?: number;
-    /** Grace added to Twitch's keepalive_timeout_seconds before declaring the socket dead (default: 5000ms) */
-    keepaliveGraceMs?: number;
-    /** Max time to wait for session_welcome after opening a socket (default: 15000ms) */
-    welcomeTimeoutMs?: number;
-    /** Lifecycle event callback for alerting/metrics; errors thrown here are swallowed */
-    onLifecycleEvent?: (event: EventSubLifecycleEvent) => void;
-}
-
-/**
- * Connection state of the EventSub receiver
- */
-export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
-
-// ==============================================================================
-// TwitchEventSubReceiver Class
-// ==============================================================================
-
-/**
- * A reusable Twitch EventSub WebSocket receiver that can be used across different apps.
- *
- * The receiver never terminally stops on its own: every close code, keepalive
- * timeout, or failed connection attempt schedules another reconnect with capped
- * exponential backoff. Only an explicit `disconnect()` call stops it.
- *
- * @example
- * ```typescript
- * import { TwitchEventSubReceiver } from '@repo/twitch-eventsub';
- *
- * const receiver = new TwitchEventSubReceiver(myHandler, {
- *   conduitId: 'your-conduit-id',
- *   onLifecycleEvent: (event) => console.log(event),
- * });
- *
- * await receiver.connect();
- * ```
- */
 export class TwitchEventSubReceiver {
     private ws: WebSocket | null = null;
     private sessionId: string | null = null;
@@ -432,13 +359,13 @@ export class TwitchEventSubReceiver {
 
             case 'revocation':
                 const subscription = (payload as { subscription?: { status?: string; type?: string } }).subscription;
-                const revocationReason = this.getRevocationReason(subscription?.status);
-                console.warn(`⚠️ Subscription revoked (${subscription?.type}): ${revocationReason}`);
+                const revokedBecause = revocationReason(subscription?.status);
+                console.warn(`⚠️ Subscription revoked (${subscription?.type}): ${revokedBecause}`);
                 this.emit({
                     type: 'subscription_revoked',
                     subscriptionType: subscription?.type ?? 'unknown',
                     status: subscription?.status ?? 'unknown',
-                    reason: revocationReason,
+                    reason: revokedBecause,
                 });
                 break;
 
@@ -602,8 +529,8 @@ export class TwitchEventSubReceiver {
 
     private handleClose(event: CloseEvent): void {
         const closeCode = event.code;
-        const closeReason = this.getCloseReason(closeCode);
-        console.log(`🔌 WebSocket closed: ${closeCode} - ${closeReason}`);
+        const closedBecause = closeReason(closeCode);
+        console.log(`🔌 WebSocket closed: ${closeCode} - ${closedBecause}`);
 
         // If a migration is in flight, the old socket closing is expected
         // (Twitch closes it with 4004 once the grace period ends).
@@ -617,49 +544,12 @@ export class TwitchEventSubReceiver {
         // unused connections, but dying silently is never acceptable — log
         // loudly and try again with a fresh connection.
         if (closeCode === 4001 || closeCode === 4003 || closeCode === 4007) {
-            console.warn(`⚠️ Close code ${closeCode} (${closeReason}) — reconnecting with a fresh connection anyway`);
+            console.warn(`⚠️ Close code ${closeCode} (${closedBecause}) — reconnecting with a fresh connection anyway`);
         }
 
-        this.handleConnectionLoss(closeCode, closeReason);
+        this.handleConnectionLoss(closeCode, closedBecause);
     }
 
-    private getRevocationReason(status: string | undefined): string {
-        switch (status) {
-            case 'user_removed':
-                return 'The user no longer exists';
-            case 'authorization_revoked':
-                return 'The authorization token was revoked';
-            case 'version_removed':
-                return 'The subscription type/version is no longer supported';
-            default:
-                return 'Unknown reason';
-        }
-    }
-
-    private getCloseReason(code: number): string {
-        switch (code) {
-            case 4000:
-                return 'Internal server error';
-            case 4001:
-                return 'Client sent inbound traffic';
-            case 4002:
-                return 'Client failed ping-pong';
-            case 4003:
-                return 'Connection unused';
-            case 4004:
-                return 'Reconnect grace time expired';
-            case 4005:
-                return 'Network timeout';
-            case 4006:
-                return 'Network error';
-            case 4007:
-                return 'Invalid reconnect URL';
-            case 1000:
-                return 'Normal closure';
-            default:
-                return 'Unknown close code';
-        }
-    }
 }
 
 // Re-export types from @repo/types for convenience
