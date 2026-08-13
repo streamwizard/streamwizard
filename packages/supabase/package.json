@@ -154,6 +154,18 @@
     "./queries/platform-stats": {
       "types": "./src/queries/platform-stats.ts",
       "default": "./src/queries/platform-stats.ts"
+    },
+    "./queries/stream-events": {
+      "types": "./src/queries/stream-events.ts",
+      "default": "./src/queries/stream-events.ts"
+    },
+    "./queries/asset-cache": {
+      "types": "./src/queries/asset-cache.ts",
+      "default": "./src/queries/asset-cache.ts"
+    },
+    "./queries/alert-registry": {
+      "types": "./src/queries/alert-registry.ts",
+      "default": "./src/queries/alert-registry.ts"
     }
   },
   "scripts": {

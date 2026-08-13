@@ -183,6 +183,19 @@ have no `check-types` script), plus `bun run build` for the Next apps.
   (2 identical copies in web-streamwizard) and the ms-elapsed formatter
   (3 identical copies across web-admin's topology nodes).
 
+- **Packages stopped reaching past `@repo/supabase` too.** Four of them held
+  raw `.from()`/`.rpc()` calls: `@repo/alerting`'s registry load,
+  `@repo/logger`'s stream-event writes, `@repo/twitch-assets`'s cache, and
+  `@repo/user-state`'s definitions table and atomic RPCs. Those are now
+  `queries/{alert-registry,stream-events,asset-cache}.ts` plus additions to
+  `queries/user-states.ts`. `@repo/twitch-assets` also stopped building its own
+  Supabase client — the package's own lazy client now falls back to
+  `NEXT_PUBLIC_SUPABASE_URL`, which is the only reason it had one.
+
+  What still imports `@supabase/supabase-js` outside the package is fine:
+  `alerting` and `user-state` for the injected `SupabaseClient` *type*, and
+  `@repo/sentry` because its integration takes the client class itself.
+
 ## Open questions
 
 - Four more files in `apps/web-streamwizard/src/components` have **no importers

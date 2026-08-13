@@ -20,6 +20,12 @@ import { runProbes } from "./probes";
 import { computeTransitions } from "./state";
 import { dispatchNotifications, resolveRoute, type EnvRoute } from "./notify";
 import type { AlertNotification, AlertRule, Breach, Env, EnvContext, Registry, RuleOverrides } from "./types";
+import {
+  countLiveBroadcasters,
+  selectIngestNodeRegistry,
+  selectObsNodeRegistry,
+  selectOpenIngestSessions,
+} from "@repo/supabase/queries/alert-registry";
 
 const LOCK_NAME = "alert-worker";
 // Above the worst legitimate pass (10s probes + 15s rule timeout + persistence)
@@ -55,10 +61,10 @@ const EXPECTED_HTTP_SERVICES = ["rest-api"];
 
 async function loadRegistry(): Promise<Registry> {
   const [obsNodes, ingestNodes, liveSessions, liveChannels] = await Promise.all([
-    supabaseAdmin.from("obs_nodes").select("id, name, status, maintenance, created_at, api_url"),
-    supabaseAdmin.from("ingest_nodes").select("id, name, status, maintenance, created_at, tailscale_ip"),
-    supabaseAdmin.from("ingest_sessions").select("id, started_at").is("ended_at", null),
-    supabaseAdmin.from("broadcaster_live_status").select("broadcaster_id", { count: "exact", head: true }).eq("is_live", true),
+    selectObsNodeRegistry(supabaseAdmin),
+    selectIngestNodeRegistry(supabaseAdmin),
+    selectOpenIngestSessions(supabaseAdmin),
+    countLiveBroadcasters(supabaseAdmin),
   ]);
   if (obsNodes.error) throw new Error(`Couldn't load obs_nodes registry: ${obsNodes.error.message}`);
   if (ingestNodes.error) throw new Error(`Couldn't load ingest_nodes registry: ${ingestNodes.error.message}`);

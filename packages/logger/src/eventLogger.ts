@@ -1,5 +1,10 @@
 import type { Database } from "@repo/supabase";
 import { supabase } from "@repo/supabase";
+import {
+  insertStreamEvent,
+  selectLiveStreamId,
+  selectStreamStartedAt,
+} from "@repo/supabase/queries/stream-events";
 import type { EventSubSubscriptionType } from "@repo/types";
 
 type StreamEvent = {
@@ -12,7 +17,7 @@ type StreamEvent = {
 class StreameventsLogger {
   private readonly tableName = "stream_events";
   protected async logEvent(event: Database["public"]["Tables"]["stream_events"]["Insert"]) {
-    const { data, error } = await supabase.from(this.tableName).insert(event);
+    const { data, error } = await insertStreamEvent(supabase, event);
     if (error) {
       throw error;
     }
@@ -21,13 +26,13 @@ class StreameventsLogger {
 
   // check if the streamer is live
   protected async getStreamId(broadcasterId: string): Promise<string | null> {
-    const { data, error } = await supabase.from("broadcaster_live_status").select("stream_id").eq("broadcaster_id", broadcasterId).eq("is_live", true).single();
+    const { data } = await selectLiveStreamId(supabase, broadcasterId);
     return data?.stream_id ?? null;
   }
 
   // get the offset from when the stream started
   protected async getOffset(broadcasterId: string): Promise<number> {
-    const { data, error } = await supabase.from("broadcaster_live_status").select("stream_started_at").eq("broadcaster_id", broadcasterId);
+    const { data, error } = await selectStreamStartedAt(supabase, broadcasterId);
 
     if (error) {
       throw error;

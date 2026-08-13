@@ -101,3 +101,60 @@ export async function deleteUserState(
   const { error } = await client.from(TABLE).delete().eq("user_id", userId).eq("key", key);
   if (error) throw error;
 }
+
+// ── Reset definitions and the atomic mutation RPCs ───────────────────────────
+// Writes go through database functions rather than table updates: they apply
+// the key's reset policy and return the resulting row in one atomic step, so
+// two callers racing on the same counter can't lose an increment.
+
+const DEFINITIONS_TABLE = "user_state_definitions" as never;
+
+export interface UserStateOpResult {
+  key: string;
+  value: unknown;
+  updated_at: string | null;
+}
+
+export async function applyUserStateOp(
+  client: DBClient,
+  userId: string,
+  key: string,
+  op: "get" | "set" | "increment" | "delete",
+  value?: unknown,
+) {
+  return client.rpc("apply_user_state_op" as never, {
+    p_user_id: userId,
+    p_key: key,
+    p_op: op,
+    p_value: value === undefined ? null : value,
+  } as never);
+}
+
+/** Applies the 'stream' reset policy to every configured key, returning what changed. */
+export async function resetStreamStates(client: DBClient, userId: string) {
+  return client.rpc("reset_stream_states" as never, { p_user_id: userId } as never);
+}
+
+export async function selectUserStateDefinitions(client: DBClient, userId: string) {
+  return client
+    .from(DEFINITIONS_TABLE)
+    .select("key, reset_policy, reset_value, reset_grace_seconds")
+    .eq("user_id", userId);
+}
+
+export async function upsertUserStateDefinition(
+  client: DBClient,
+  definition: {
+    user_id: string;
+    key: string;
+    reset_policy: string;
+    reset_value: unknown;
+    reset_grace_seconds: number;
+  },
+) {
+  return client
+    .from(DEFINITIONS_TABLE)
+    .upsert({ ...definition, updated_at: new Date().toISOString() } as never, {
+      onConflict: "user_id,key",
+    });
+}
