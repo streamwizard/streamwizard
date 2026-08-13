@@ -1,131 +1,80 @@
-import { timingSafeEqual } from "crypto";
 import { env } from "../lib/env";
 import { supabase } from "@repo/supabase";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
-import { getLiveStreamIdByBroadcasterId } from "@repo/supabase/queries/live-status";
-import { getTwitchIntegrationByBroadcasterId, getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
-import type { BotBroadcastMessage, OverlayEventType } from "@repo/types";
+import type { OverlayEventType } from "@repo/types";
 import { trackWsAuthFailure } from "@repo/metrics";
 import { isRateLimited } from "../rate-limit";
 import { rooms } from "../rooms";
-import { routeBotBroadcast } from "../bot-router";
+import { findCurrentStreamId, handleInternalRoute, isValidSecret } from "./internal-http";
 import type { ConnectionData } from "../types";
 
 type BunServer = import("bun").Server<ConnectionData>;
 
 const VALID_ROLES = new Set(["publisher", "subscriber", "bot", "monitor", "consumer"]);
 
-function isValidSecret(candidate: string | null | undefined, secret: string): boolean {
-  const candidateBuf = Buffer.from(candidate ?? "");
-  const secretBuf = Buffer.from(secret);
-  return candidateBuf.length === secretBuf.length && timingSafeEqual(candidateBuf, secretBuf);
-}
-
-// Server-to-server injection of a bot-shaped broadcast over plain HTTP —
-// lets web server actions push config/override changes to the consumer feed
-// (and the user's room) with a fetch instead of a WS handshake.
-async function handleInternalBroadcast(req: Request): Promise<Response> {
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
-  }
-  if (!env.CONSUMER_SECRET) {
-    return new Response("Not Found", { status: 404 });
-  }
-  const key = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (!isValidSecret(key, env.CONSUMER_SECRET)) {
-    trackWsAuthFailure("bot", "invalid_bot_key");
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  let msg: BotBroadcastMessage;
-  try {
-    msg = (await req.json()) as BotBroadcastMessage;
-  } catch {
-    return new Response("Bad Request: invalid JSON", { status: 400 });
-  }
-  if (typeof msg.userId !== "string" || msg.userId.length === 0 || typeof msg.type !== "string" || msg.type.length === 0) {
-    return new Response("Bad Request: userId and type are required", { status: 400 });
-  }
-
-  const { delivered } = routeBotBroadcast(msg, "internal-http");
-  return Response.json({ ok: true, delivered });
-}
-
-// Server-to-server stream_id push from the rest-api EventSub handlers.
-// A room resolves stream_id once, at publisher upgrade — so a GPS overlay
-// opened before the stream goes live would log its whole walk with
-// stream_id=null. stream.online/offline pushes here so a long-lived room
-// picks up the id (or drops it) without the phone reconnecting.
-async function handleInternalStreamStatus(req: Request): Promise<Response> {
-  if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
-  }
-  if (!env.CONSUMER_SECRET) {
-    return new Response("Not Found", { status: 404 });
-  }
-  const key = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (!isValidSecret(key, env.CONSUMER_SECRET)) {
-    trackWsAuthFailure("bot", "invalid_bot_key");
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  let body: { broadcasterId?: unknown; streamId?: unknown };
-  try {
-    body = (await req.json()) as typeof body;
-  } catch {
-    return new Response("Bad Request: invalid JSON", { status: 400 });
-  }
-
-  const broadcasterId = body.broadcasterId;
-  const streamId = body.streamId ?? null;
-  if (typeof broadcasterId !== "string" || broadcasterId.length === 0) {
-    return new Response("Bad Request: broadcasterId is required", { status: 400 });
-  }
-  if (streamId !== null && typeof streamId !== "string") {
-    return new Response("Bad Request: streamId must be a string or null", { status: 400 });
-  }
-
-  const { data: integration } = await getTwitchIntegrationByBroadcasterId(supabase, broadcasterId);
-  if (!integration) {
-    // Not every broadcaster we get EventSub for has a live room here.
-    return Response.json({ ok: true, updated: false });
-  }
-
-  const room = rooms.get(integration.user_id);
-  if (!room) return Response.json({ ok: true, updated: false });
-
-  room.stream_id = streamId;
-  console.log(`[stream-status] room=${integration.user_id} stream=${streamId ?? "none"}`);
-  return Response.json({ ok: true, updated: true });
-}
-
+/** Monotonic per-connection id, used for metrics and the monitor feed. */
 let nextConnId = 1;
 
-async function findCurrentStreamId(userId: string): Promise<string | null> {
-  try {
-    const twitchUserId = await getTwitchUserIdByUserIdMaybe(supabase, userId);
-    if (!twitchUserId) return null;
-    return await getLiveStreamIdByBroadcasterId(supabase, twitchUserId);
-  } catch {
-    return null;
+/**
+ * Resolves a connection token to a user id. Two kinds are accepted on both the
+ * publisher and subscriber paths: a Supabase JWT (a signed-in dashboard user)
+ * or an overlay scene's subscriber token (a browser source or the GPS overlay
+ * page, which have no session).
+ */
+async function resolveUserIdFromToken(token: string): Promise<string | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser(token);
+  if (user) return user.id;
+
+  const { data: scene } = await getOverlaySceneBySubscriberToken(supabase, token);
+  return scene?.user_id ?? null;
+}
+
+/**
+ * Self-declared identity label ("ingest-node:<id>"). Never reject on a
+ * bad/missing source — older bot clients don't send one — just fall back, and
+ * constrain the charset so it's safe as a metrics tag.
+ */
+function parseSourceLabel(url: URL): string {
+  const raw = url.searchParams.get("source");
+  return raw && /^[a-zA-Z0-9:_.-]{1,64}$/.test(raw) ? raw : "unknown";
+}
+
+function parseCsvSet<T extends string>(url: URL, param: string): Set<T> {
+  const raw = url.searchParams.get(param);
+  if (!raw) return new Set<T>();
+  return new Set(
+    raw
+      .split(",")
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0) as T[],
+  );
+}
+
+/** Every role ends the same way: upgrade, or report why it couldn't. */
+function upgradeOrFail(
+  server: BunServer,
+  req: Request,
+  role: "publisher" | "subscriber" | "bot" | "monitor" | "consumer",
+  data: Omit<ConnectionData, "connectedAt" | "connId">,
+): Response | undefined {
+  const upgraded = server.upgrade(req, {
+    data: { ...data, connectedAt: Date.now(), connId: `c-${nextConnId++}` } as ConnectionData,
+  });
+  if (!upgraded) {
+    trackWsAuthFailure(role === "monitor" ? "unknown" : role, "upgrade_failed");
+    return new Response("Upgrade Failed", { status: 500 });
   }
+  return undefined;
 }
 
 export async function handleUpgrade(req: Request, server: BunServer): Promise<Response | undefined> {
   const url = new URL(req.url);
 
-  // Liveness probe for the monitoring alert-worker — plain HTTP, no upgrade.
-  if (url.pathname === "/health") {
-    return Response.json({ ok: true });
-  }
-
-  if (url.pathname === "/internal/broadcast") {
-    return handleInternalBroadcast(req);
-  }
-
-  if (url.pathname === "/internal/stream-status") {
-    return handleInternalStreamStatus(req);
-  }
+  // Plain HTTP first: the health probe and the secret-gated injection points.
+  const internal = handleInternalRoute(req, url.pathname);
+  if (internal) return internal;
 
   if (url.pathname !== "/ws") {
     return new Response("Not Found", { status: 404 });
@@ -143,22 +92,15 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     if (!env.MONITOR_SECRET) {
       return new Response("Monitor not configured", { status: 404 });
     }
-    const token = url.searchParams.get("token");
-    const tokenBuf = Buffer.from(token ?? "");
-    const secretBuf = Buffer.from(env.MONITOR_SECRET);
-    const valid = tokenBuf.length === secretBuf.length && timingSafeEqual(tokenBuf, secretBuf);
-    if (!valid) {
+    if (!isValidSecret(url.searchParams.get("token"), env.MONITOR_SECRET)) {
       trackWsAuthFailure("unknown", "invalid_token");
       return new Response("Unauthorized", { status: 401 });
     }
-    const upgraded = server.upgrade(req, {
-      data: { role: "monitor" as const, userId: "_monitor", channels: new Set<OverlayEventType>(), connectedAt: Date.now(), connId: `c-${nextConnId++}` },
+    return upgradeOrFail(server, req, "monitor", {
+      role: "monitor",
+      userId: "_monitor",
+      channels: new Set<OverlayEventType>(),
     });
-    if (!upgraded) {
-      trackWsAuthFailure("unknown", "upgrade_failed");
-      return new Response("Upgrade Failed", { status: 500 });
-    }
-    return undefined;
   }
 
   // --- Bot ---
@@ -168,19 +110,12 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       trackWsAuthFailure("bot", "invalid_bot_key");
       return new Response("Unauthorized", { status: 401 });
     }
-    // Self-declared identity label ("ingest-node:<id>"). Never reject on a
-    // bad/missing source — older bot clients don't send one — just fall back,
-    // and constrain the charset so it's safe as a metrics tag.
-    const rawSource = url.searchParams.get("source");
-    const source = rawSource && /^[a-zA-Z0-9:_.-]{1,64}$/.test(rawSource) ? rawSource : "unknown";
-    const upgraded = server.upgrade(req, {
-      data: { role: "bot", userId: "_bot", source, channels: new Set<OverlayEventType>(), connectedAt: Date.now(), connId: `c-${nextConnId++}` },
+    return upgradeOrFail(server, req, "bot", {
+      role: "bot",
+      userId: "_bot",
+      source: parseSourceLabel(url),
+      channels: new Set<OverlayEventType>(),
     });
-    if (!upgraded) {
-      trackWsAuthFailure("bot", "upgrade_failed");
-      return new Response("Upgrade Failed", { status: 500 });
-    }
-    return undefined;
   }
 
   // --- Consumer (trusted server-side firehose: obs-auto-switcher) ---
@@ -193,28 +128,13 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       trackWsAuthFailure("consumer", "invalid_bot_key");
       return new Response("Unauthorized", { status: 401 });
     }
-    const rawSource = url.searchParams.get("source");
-    const source = rawSource && /^[a-zA-Z0-9:_.-]{1,64}$/.test(rawSource) ? rawSource : "unknown";
-    const rawTypes = url.searchParams.get("types");
-    const consumerTypes = rawTypes
-      ? new Set(rawTypes.split(",").map((s) => s.trim()).filter((s) => s.length > 0))
-      : new Set<string>();
-    const upgraded = server.upgrade(req, {
-      data: {
-        role: "consumer" as const,
-        userId: "_consumer",
-        source,
-        consumerTypes,
-        channels: new Set<OverlayEventType>(),
-        connectedAt: Date.now(),
-        connId: `c-${nextConnId++}`,
-      },
+    return upgradeOrFail(server, req, "consumer", {
+      role: "consumer",
+      userId: "_consumer",
+      source: parseSourceLabel(url),
+      consumerTypes: parseCsvSet(url, "types"),
+      channels: new Set<OverlayEventType>(),
     });
-    if (!upgraded) {
-      trackWsAuthFailure("consumer", "upgrade_failed");
-      return new Response("Upgrade Failed", { status: 500 });
-    }
-    return undefined;
   }
 
   // --- Publisher ---
@@ -225,18 +145,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       return new Response("Unauthorized: missing token", { status: 401 });
     }
 
-    let resolvedUserId: string | null = null;
-
-    // Path A: Supabase JWT
-    const { data: { user } } = await supabase.auth.getUser(token);
-    if (user) resolvedUserId = user.id;
-
-    // Path B: overlay subscriber token (gps overlay page publishing on-device GPS)
-    if (!resolvedUserId) {
-      const { data: scene } = await getOverlaySceneBySubscriberToken(supabase, token);
-      if (scene) resolvedUserId = scene.user_id;
-    }
-
+    const resolvedUserId = await resolveUserIdFromToken(token);
     if (!resolvedUserId) {
       trackWsAuthFailure("publisher", "invalid_token");
       return new Response("Unauthorized: invalid token", { status: 401 });
@@ -245,13 +154,13 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     const session_id = crypto.randomUUID();
     const stream_id = await findCurrentStreamId(resolvedUserId);
 
-    const upgraded = server.upgrade(req, {
-      data: { role: "publisher", userId: resolvedUserId, session_id, channels: new Set<OverlayEventType>(), connectedAt: Date.now(), connId: `c-${nextConnId++}` },
+    const failed = upgradeOrFail(server, req, "publisher", {
+      role: "publisher",
+      userId: resolvedUserId,
+      session_id,
+      channels: new Set<OverlayEventType>(),
     });
-    if (!upgraded) {
-      trackWsAuthFailure("publisher", "upgrade_failed");
-      return new Response("Upgrade Failed", { status: 500 });
-    }
+    if (failed) return failed;
 
     console.log(`[publisher] connected userId=${resolvedUserId} session=${session_id} stream=${stream_id ?? "none"}`);
 
@@ -279,35 +188,15 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     return new Response("Unauthorized: missing token", { status: 401 });
   }
 
-  let subscriberUserId: string | null = null;
-
-  // Path A: Supabase JWT — a logged-in dashboard user subscribing to their own room
-  // (e.g. live ingest stats), not tied to any particular overlay scene.
-  const { data: { user: subscriberUser } } = await supabase.auth.getUser(subscriberToken);
-  if (subscriberUser) subscriberUserId = subscriberUser.id;
-
-  // Path B: overlay subscriber token (browser-source overlays, widget preview).
-  if (!subscriberUserId) {
-    const { data: scene } = await getOverlaySceneBySubscriberToken(supabase, subscriberToken);
-    if (scene) subscriberUserId = scene.user_id;
-  }
-
+  const subscriberUserId = await resolveUserIdFromToken(subscriberToken);
   if (!subscriberUserId) {
     trackWsAuthFailure("subscriber", "invalid_token");
     return new Response("Unauthorized: invalid token", { status: 401 });
   }
 
-  const rawChannels = url.searchParams.get("channels");
-  const channels = rawChannels
-    ? new Set(rawChannels.split(",").map((s) => s.trim()) as OverlayEventType[])
-    : new Set<OverlayEventType>();
-
-  const upgraded = server.upgrade(req, {
-    data: { role: "subscriber", userId: subscriberUserId, channels, connectedAt: Date.now(), connId: `c-${nextConnId++}` },
+  return upgradeOrFail(server, req, "subscriber", {
+    role: "subscriber",
+    userId: subscriberUserId,
+    channels: parseCsvSet<OverlayEventType>(url, "channels"),
   });
-  if (!upgraded) {
-    trackWsAuthFailure("subscriber", "upgrade_failed");
-    return new Response("Upgrade Failed", { status: 500 });
-  }
-  return undefined;
 }

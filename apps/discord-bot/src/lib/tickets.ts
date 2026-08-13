@@ -37,6 +37,7 @@ import {
 import { createTicketIssue, getInstallationOctokit } from "@repo/github-api";
 import { env } from "./env";
 import { Sentry } from "../sentry";
+import { TWITCH_PURPLE } from "./branding";
 
 // customId namespace for ticket component interactions. interactionCreate routes
 // anything starting with "ticket:" here. Handlers are stateless — they look the
@@ -64,7 +65,6 @@ const CATEGORY_CHOICES: { label: string; value: DiscordTicketCategory; descripti
   { label: "Other", value: "other", description: "Anything else", emoji: "📨" },
 ];
 
-const TWITCH_PURPLE = 0x9146ff;
 
 function categoryLabel(category: DiscordTicketCategory): string {
   const choice = CATEGORY_CHOICES.find((c) => c.value === category);

@@ -27,6 +27,7 @@ import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/
 import { buildPanelMessage } from "./tickets";
 import { invalidateSettingsCache } from "./activity-tracker";
 import { Sentry } from "../sentry";
+import { TWITCH_PURPLE } from "./branding";
 
 // customId namespace for the /setup wizard's components. interactionCreate
 // routes anything starting with "setup:" here. Each step writes straight to
@@ -52,7 +53,6 @@ export const SETUP_IDS = {
   ticketLogChannelSkip: "setup:ticket-log-channel-skip",
 } as const;
 
-const TWITCH_PURPLE = 0x9146ff;
 
 function stepWelcomeChannel() {
   const embed = new EmbedBuilder()
