@@ -32,13 +32,25 @@ credential that authorizes read-only overlay subscribers, so today a streamer
 who leaks their overlay URL has no way to invalidate it. Either wire it into
 the overlay settings UI or drop it and design the rotation flow properly.
 
+## Unfinished, not dead
+
+Both of these are unreferenced but kept on purpose, each with a header saying so:
+
+- `apps/rest-api/src/middleware/rateLimit.ts` — per-API-key rate limiting that
+  is **never mounted**, so no route is limited today. Wiring it is one
+  `app.use("*", rateLimit())` after the auth middleware, but the store is
+  per-process and in-memory, so a multi-instance deployment gets N x the limit.
+- `apps/streamwizard-bot/src/lib/user-state-service.ts` — ready for the bot-side
+  chat-command dispatcher ("!death add 1") that doesn't exist yet.
+
 ## Dead code
 
 - `saveOverlayItem` and `deleteOverlayItem` (`actions/overlays/items.ts`) have no
   callers; the editor saves through `saveAllOverlayItems`. They're still exported
   server actions, i.e. a live HTTP surface nothing uses.
-- `apps/web-streamwizard/src/components/ui/map.tsx` — 1844 lines, no importers,
-  and the only reason `maplibre-gl` is a dependency. Left in place at your call.
+
+The 25 unreferenced files this pass found — including `components/ui/map.tsx`
+and the shadcn starter leftovers — have since been deleted; see `CLEANUP.md`.
 
 ## Lint debt (pre-existing)
 

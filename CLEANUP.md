@@ -207,6 +207,11 @@ have no `check-types` script), plus `bun run build` for the Next apps.
   Deliberately kept: discord-bot's `commands/` and `events/` (loaded by
   `Bun.Glob` at runtime), the monaco workers, and every framework entry point.
 
+  Also kept, on your call, with a header explaining what they're for and that
+  they still need wiring: `apps/rest-api/src/middleware/rateLimit.ts` (per-API-key
+  limiting, never mounted) and `apps/streamwizard-bot/src/lib/user-state-service.ts`
+  (groundwork for the bot-side chat-command dispatcher).
+
 ## Next
 
 Nothing structural is outstanding — every app and package has had a pass. What's
