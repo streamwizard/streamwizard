@@ -107,9 +107,25 @@ export const IngestStatsPayloadSchema = z
   })
   .loose();
 
+/**
+ * One user_states key changed. Emitted by whichever process applied the
+ * mutation (bot, rest-api, or the web-overlay widget route) right after the
+ * database write, one message per key, into the owning user's room. `value` is
+ * the full new value -- state is last-write-wins, so a late or dropped frame
+ * is corrected by the next one and readers never need a diff. `null` means the
+ * key was deleted.
+ */
+export const UserStateUpdatePayloadSchema = z.object({
+  key: z.string(),
+  value: z.unknown().nullable(),
+  /** ISO timestamp of the database write. */
+  updatedAt: z.string().nullable(),
+});
+
 export type OverlayGeoPayload = z.infer<typeof OverlayGeoPayloadSchema>;
 export type OverlayGeoEvent = z.infer<typeof OverlayGeoEventSchema>;
 export type OverlayStatusPayload = z.infer<typeof OverlayStatusPayloadSchema>;
 export type ObsInstanceLifecyclePayload = z.infer<typeof ObsInstanceLifecyclePayloadSchema>;
 export type ObsSceneChangedPayload = z.infer<typeof ObsSceneChangedPayloadSchema>;
 export type IngestStatsPayload = z.infer<typeof IngestStatsPayloadSchema>;
+export type UserStateUpdatePayload = z.infer<typeof UserStateUpdatePayloadSchema>;

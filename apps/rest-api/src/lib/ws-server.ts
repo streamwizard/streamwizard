@@ -13,6 +13,39 @@ import { env } from "./env";
  * EventSub handler — the upgrade-time lookup still covers rooms opened after
  * the stream went live.
  */
+/**
+ * Fan a message out to a user's overlay room via ws-server's HTTP injection
+ * point. rest-api holds no bot socket — this is its transport for the same
+ * fan-out the bot does over its persistent connection. Best-effort like
+ * notifyStreamStatus below; the caller's DB write is the durable truth.
+ */
+export async function postInternalBroadcast(
+  userId: string,
+  type: string,
+  payload: unknown
+): Promise<void> {
+  if (!env.WS_SERVER_URL || !env.CONSUMER_SECRET) return;
+
+  const httpUrl = env.WS_SERVER_URL.replace(/^ws:/, "http:").replace(/^wss:/, "https:");
+
+  try {
+    const res = await fetch(`${httpUrl}/internal/broadcast`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${env.CONSUMER_SECRET}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ userId, type, payload }),
+      signal: AbortSignal.timeout(3_000),
+    });
+    if (!res.ok) {
+      console.error(`[ws-server] broadcast push failed status=${res.status} type=${type}`);
+    }
+  } catch (error) {
+    console.error("[ws-server] broadcast push failed", error);
+  }
+}
+
 export async function notifyStreamStatus(broadcasterId: string, streamId: string | null): Promise<void> {
   if (!env.WS_SERVER_URL || !env.CONSUMER_SECRET) return;
 

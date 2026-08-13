@@ -113,6 +113,9 @@ export function buildWidgetSrcdoc(
 ): string {
   const { resolvedHtml, resolvedCss } = resolveWidgetTemplate(html, extraCss, fields, fieldValues);
   const stateUrl = overlayOrigin ? JSON.stringify(`${overlayOrigin}/api/widgets/state`) : "null";
+  const userStateUrl = overlayOrigin
+    ? JSON.stringify(`${overlayOrigin}/api/widgets/user-state`)
+    : "null";
   const twitchUrl = overlayOrigin ? JSON.stringify(`${overlayOrigin}/api/twitch`) : "null";
   const nonce = documentNonce();
   const connectSrc = [
@@ -190,6 +193,7 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
     };
     window.StreamWizard = {
       stateUrl: ${stateUrl},
+      userStateUrl: ${userStateUrl},
       session: null,
       /** Latest field values. Replaced before each 'onFieldsUpdate'. */
       fieldData: {},
@@ -222,6 +226,90 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
             body: JSON.stringify({ itemId: sw.session.overlayItemId, state: state })
           });
           if (!res.ok) throw new Error('Failed to save widget state (' + res.status + ')');
+        }
+      },
+      // Channel-wide state. Where .state above is this one placed widget's
+      // private blob, this store is shared across the channel AND written by
+      // the server -- stream lifecycle lands in 'sys.' keys. That is what lets
+      // a widget find out about something that happened while it was closed,
+      // instead of only learning it from an event it had to be connected for.
+      userState: {
+        _require: function() {
+          var sw = window.StreamWizard;
+          if (!sw.userStateUrl || !sw.session || !sw.session.subscriberToken) {
+            throw new Error('StreamWizard.userState is only available when the widget runs on an overlay (not in the editor preview).');
+          }
+          return sw;
+        },
+        get: async function(key) {
+          var sw = this._require();
+          var res = await fetch(sw.userStateUrl + '?key=' + encodeURIComponent(key), {
+            headers: { 'Authorization': 'Bearer ' + sw.session.subscriberToken }
+          });
+          if (!res.ok) throw new Error('Failed to load channel state (' + res.status + ')');
+          var body = await res.json();
+          return body.value != null ? body.value : null;
+        },
+        getAll: async function() {
+          var sw = this._require();
+          var res = await fetch(sw.userStateUrl, {
+            headers: { 'Authorization': 'Bearer ' + sw.session.subscriberToken }
+          });
+          if (!res.ok) throw new Error('Failed to load channel state (' + res.status + ')');
+          var body = await res.json();
+          return body.state != null ? body.state : {};
+        },
+        set: async function(key, value) {
+          var sw = this._require();
+          var res = await fetch(sw.userStateUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sw.session.subscriberToken },
+            body: JSON.stringify({ key: key, value: value })
+          });
+          if (!res.ok) throw new Error('Failed to save channel state (' + res.status + ')');
+        },
+        // Server-side atomic add: two widgets (or a mod command and a widget)
+        // incrementing at once both count, unlike get-then-set. Numbers only.
+        increment: async function(key, amount) {
+          var sw = this._require();
+          var res = await fetch(sw.userStateUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sw.session.subscriberToken },
+            body: JSON.stringify({ key: key, op: 'increment', value: amount == null ? 1 : amount })
+          });
+          if (!res.ok) throw new Error('Failed to increment channel state (' + res.status + ')');
+          var body = await res.json();
+          return body.value;
+        },
+        delete: async function(key) {
+          var sw = this._require();
+          var res = await fetch(sw.userStateUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sw.session.subscriberToken },
+            body: JSON.stringify({ key: key, op: 'delete' })
+          });
+          if (!res.ok) throw new Error('Failed to delete channel state (' + res.status + ')');
+        },
+        // Live updates: every state mutation (this widget, another widget, the
+        // server, later chat commands) is pushed into the overlay's room and
+        // relayed here as an onEventReceived with listener
+        // 'streamwizard.user_state'. Registering is safe anywhere; in the
+        // editor preview there is no socket, so the callback simply never
+        // fires. Returns an unsubscribe function.
+        onChange: function(callback) {
+          var handler = function(e) {
+            var d = e.detail;
+            if (d && d.listener === 'streamwizard.user_state' && d.event) {
+              callback(d.event.key, d.event.value, d.event.updatedAt);
+            }
+          };
+          window.addEventListener('onEventReceived', handler);
+          return function() { window.removeEventListener('onEventReceived', handler); };
+        },
+        subscribe: function(key, callback) {
+          return this.onChange(function(changedKey, value, updatedAt) {
+            if (changedKey === key) callback(value, updatedAt);
+          });
         }
       },
       // Twitch lookups. EventSub hands the widget ids, not pictures; this
