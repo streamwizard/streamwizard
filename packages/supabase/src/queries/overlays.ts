@@ -60,10 +60,6 @@ export async function deleteOverlayScene(client: DBClient, id: string, userId: s
   return client.from("overlay_scenes").delete().eq("id", id).eq("user_id", userId);
 }
 
-export async function deleteOverlayItem(client: DBClient, id: string) {
-  return client.from("overlay_items").delete().eq("id", id);
-}
-
 export async function getOverlayItems(client: DBClient, sceneId: string) {
   return client.from("overlay_items").select("id").eq("scene_id", sceneId);
 }
@@ -128,21 +124,6 @@ export async function updateOverlayItemData(
   data: Database["public"]["Tables"]["overlay_items"]["Update"]
 ) {
   return client.from("overlay_items").update(data).eq("id", id);
-}
-
-export async function updateOverlayItemReturning(
-  client: DBClient,
-  id: string,
-  data: Database["public"]["Tables"]["overlay_items"]["Update"]
-) {
-  return client.from("overlay_items").update(data).eq("id", id).select().single();
-}
-
-export async function insertOverlayItemReturning(
-  client: DBClient,
-  data: Database["public"]["Tables"]["overlay_items"]["Insert"]
-) {
-  return client.from("overlay_items").insert(data).select().single();
 }
 
 export async function insertOverlayItemsReturningIds(

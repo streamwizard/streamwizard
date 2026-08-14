@@ -4,14 +4,11 @@ import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
 import type { Database } from "@repo/supabase";
 import {
-  deleteOverlayItem as deleteItemRow,
   deleteOverlayItemsByIds,
   getOverlayItems,
-  insertOverlayItemReturning,
   insertOverlayItems,
   insertOverlayItemsReturningIds,
   updateOverlayItemData,
-  updateOverlayItemReturning,
 } from "@repo/supabase/queries/overlays";
 import { overlayItemSchema } from "@/schemas/overlay";
 import type { OverlayItemConfig, OverlaySceneWithItems } from "@/types/overlays";
@@ -45,38 +42,6 @@ interface OverlayItemInput {
   is_locked: boolean;
   label: string;
   config: OverlayItemConfig;
-}
-
-export async function saveOverlayItem(item: OverlayItemInput) {
-  const ctx = await tryAuthContext();
-  if (!ctx) return { data: null, error: "Unauthorized" };
-
-  const parsed = overlayItemSchema.safeParse(item);
-  if (!parsed.success) return { data: null, error: parsed.error.message };
-
-  const columns = overlayItemColumns(parsed.data);
-
-  const { data, error } = item.id
-    ? await updateOverlayItemReturning(ctx.supabase, item.id, columns)
-    : await insertOverlayItemReturning(ctx.supabase, { scene_id: parsed.data.scene_id, ...columns });
-
-  if (error) {
-    reportError(error, OVERLAYS_ERROR_SCOPE);
-    return { data: null, error: error.message };
-  }
-  return { data, error: null };
-}
-
-export async function deleteOverlayItem(id: string) {
-  const ctx = await tryAuthContext();
-  if (!ctx) return { success: false, error: "Unauthorized" };
-
-  const { error } = await deleteItemRow(ctx.supabase, id);
-  if (error) {
-    reportError(error, OVERLAYS_ERROR_SCOPE);
-    return { success: false, error: error.message };
-  }
-  return { success: true, error: null };
 }
 
 /**
