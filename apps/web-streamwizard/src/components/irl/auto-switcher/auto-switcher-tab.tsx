@@ -1,11 +1,15 @@
 "use client";
 
-import type { Scene, SceneItem } from "@/hooks/use-obs-websocket";
-import type { AutoSwitcherConfigRow } from "@/actions/supabase/auto-switcher";
+import {
+  AutoSwitcherForm,
+  AutoSwitcherOverrideControls,
+  type Scene,
+  type SceneItem,
+} from "@repo/obs-web";
+import { clearSceneOverride, setSceneOverride, upsertAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
+import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher";
 import { AutoSwitcherStatusCard } from "./auto-switcher-status-card";
-import { AutoSwitcherOverrideControls } from "./auto-switcher-override-controls";
-import { AutoSwitcherForm } from "./auto-switcher-form";
-import { useAutoSwitcherStatus } from "./use-auto-switcher-status";
+import { useAutoSwitcherStatus } from "@/hooks/obs/use-auto-switcher-status";
 
 interface AutoSwitcherTabProps {
   initialConfig: AutoSwitcherConfigRow | null;
@@ -21,8 +25,20 @@ export function AutoSwitcherTab({ initialConfig, scenes, sceneItems, obsConnecte
   return (
     <div className="space-y-4">
       <AutoSwitcherStatusCard status={status} enabled={enabled} />
-      <AutoSwitcherOverrideControls scenes={scenes} status={status} enabled={enabled} />
-      <AutoSwitcherForm initialConfig={initialConfig} scenes={scenes} sceneItems={sceneItems} obsConnected={obsConnected} />
+      <AutoSwitcherOverrideControls
+        scenes={scenes}
+        status={status}
+        enabled={enabled}
+        onHold={setSceneOverride}
+        onRelease={clearSceneOverride}
+      />
+      <AutoSwitcherForm
+        initialConfig={initialConfig}
+        scenes={scenes}
+        sceneItems={sceneItems}
+        obsConnected={obsConnected}
+        onSave={upsertAutoSwitcherConfig}
+      />
     </div>
   );
 }

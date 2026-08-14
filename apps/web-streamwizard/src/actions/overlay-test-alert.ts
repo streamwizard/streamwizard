@@ -8,6 +8,7 @@ import {
   type AlertEventType,
 } from "@repo/ui/overlay";
 import { DEMO_EVENTS, buildDemoEvent, isDemoEventType } from "@repo/schemas";
+import { broadcastToUser } from "@repo/ws-client";
 import { env } from "@/lib/env";
 
 /**
@@ -82,26 +83,13 @@ export async function sendTestEventToOverlay(
     customPayload === undefined
       ? buildDemoEvent(event)
       : { type: event, payload: customPayload };
-  const httpUrl = env.WS_SERVER_URL.replace(/^ws:/, "http:").replace(/^wss:/, "https:");
-
-  try {
-    const res = await fetch(`${httpUrl}/internal/broadcast`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${env.CONSUMER_SECRET}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ userId: user.id, type: msg.type, payload: msg.payload }),
-      signal: AbortSignal.timeout(3_000),
-    });
-    if (!res.ok) {
-      return { ok: false, error: "Could not reach the overlay server" };
-    }
-    return { ok: true };
-  } catch (error) {
-    reportError(error, "overlay: test alert broadcast");
-    return { ok: false, error: "Could not reach the overlay server" };
-  }
+  const result = await broadcastToUser(user.id, msg.type, msg.payload, {
+    wsServerUrl: env.WS_SERVER_URL,
+    consumerSecret: env.CONSUMER_SECRET,
+  });
+  if (result.ok) return { ok: true };
+  if (result.reason === "network") reportError(result.error, "overlay: test alert broadcast");
+  return { ok: false, error: "Could not reach the overlay server" };
 }
 
 /** Alert-inspector entry point: takes a configurable alert category, not an EventSub type. */

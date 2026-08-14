@@ -1,5 +1,5 @@
 import { getPendingLibraryEntries } from "@/actions/widget-library";
-import { AdminWidgetLibraryClient } from "./admin-widget-library-client";
+import { AdminWidgetLibraryClient } from "@/components/widget-library/admin-widget-library-client";
 
 export const dynamic = "force-dynamic";
 

@@ -1,4 +1,4 @@
-import { getOverlayScene } from "@/actions/overlays";
+import { getOverlayScene } from "@/actions/overlays/scenes";
 import { getWidgetsByIds } from "@/actions/widgets";
 import { OverlayEditor } from "@/components/overlays/editor/overlay-editor";
 import { createClient } from "@repo/supabase/next/server";

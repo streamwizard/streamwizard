@@ -1,5 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, Skeleton } from "@repo/ui";
 
 /** Generic loading state: header + a row of stat cards + chart/table blocks.
  * Route-level loading.tsx files compose this with page-appropriate counts. */

@@ -5,7 +5,7 @@ import { asCustomWidgetConfig } from "@/types/overlays";
 import type { CustomWidgetItemConfig } from "@/types/overlays";
 import type { OverlayCanvasProps } from "../../registry/overlay-widget-registry.types";
 import { getOrCreateWidgetInstance } from "@/actions/widgets";
-import { useOverlayStore } from "../../editor/use-overlay-store";
+import { useOverlayStore } from "@/stores/overlay-editor-store";
 import { fetchWidget } from "./widget-cache";
 import {
   CustomWidgetIframe,

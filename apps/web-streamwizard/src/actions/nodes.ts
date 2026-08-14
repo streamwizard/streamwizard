@@ -1,12 +1,13 @@
 "use server";
 
 import { randomUUID } from "crypto";
-import { getAuthContext } from "@/lib/auth";
+import { tryAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions";
 import {
   type ObsInstance,
   getInstanceNodeApiUrl,
+  getInstanceObsWsPasswordFields,
   getUserRunningInstance,
   getUserLatestInstance,
   pickAvailableNode,
@@ -18,13 +19,9 @@ import {
 // predicate (user_id = userId) rather than via RLS.
 
 export async function getMyRunningInstanceAction(): Promise<{ data: ObsInstance | null; error: string | null }> {
-  let userId: string;
-  try {
-    const { user } = await getAuthContext();
-    userId = user.id;
-  } catch {
-    return { data: null, error: "Unauthenticated" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthenticated" };
+  const userId = ctx.user.id;
   const adminClient = createAdminClient();
   const instance = await getUserRunningInstance(adminClient, userId);
   return { data: instance, error: null };
@@ -37,13 +34,9 @@ export async function getMyRunningInstanceAction(): Promise<{ data: ObsInstance 
 export async function getInstanceNodeApiUrlAction(
   instanceId: string,
 ): Promise<{ data: { apiUrl: string } | null; error: string | null }> {
-  let userId: string;
-  try {
-    const { user } = await getAuthContext();
-    userId = user.id;
-  } catch {
-    return { data: null, error: "Unauthenticated" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthenticated" };
+  const userId = ctx.user.id;
   const adminClient = createAdminClient();
   const apiUrl = await getInstanceNodeApiUrl(adminClient, instanceId, userId);
   if (!apiUrl) return { data: null, error: "Instance not found or node has no API URL." };
@@ -53,24 +46,14 @@ export async function getInstanceNodeApiUrlAction(
 export async function getInstanceObsWsPasswordAction(
   instanceId: string,
 ): Promise<{ data: { password: string } | null; error: string | null }> {
-  let userId: string;
-  try {
-    const { user } = await getAuthContext();
-    userId = user.id;
-  } catch {
-    return { data: null, error: "Unauthenticated" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthenticated" };
+  const userId = ctx.user.id;
 
   const adminClient = createAdminClient();
-  const { data, error } = await adminClient
-    .from("obs_instances")
-    .select("obs_ws_password_ciphertext, obs_ws_password_iv, obs_ws_password_tag")
-    .eq("id", instanceId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error || !data) return { data: null, error: "Instance not found." };
-  const { obs_ws_password_ciphertext: ciphertext, obs_ws_password_iv: iv, obs_ws_password_tag: tag } = data;
+  const fields = await getInstanceObsWsPasswordFields(adminClient, instanceId, userId);
+  if (!fields) return { data: null, error: "Instance not found." };
+  const { ciphertext, iv, tag } = fields;
   if (!ciphertext || !iv || !tag) return { data: null, error: "Password not set on this instance." };
 
   const { decryptToken } = await import("@repo/supabase/crypto");
@@ -80,13 +63,9 @@ export async function getInstanceObsWsPasswordAction(
 
 /** Returns the user's most recent instance regardless of status (e.g. stopped). */
 export async function getMyLatestInstanceAction(): Promise<{ data: ObsInstance | null; error: string | null }> {
-  let userId: string;
-  try {
-    const { user } = await getAuthContext();
-    userId = user.id;
-  } catch {
-    return { data: null, error: "Unauthenticated" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthenticated" };
+  const userId = ctx.user.id;
   const adminClient = createAdminClient();
   const instance = await getUserLatestInstance(adminClient, userId);
   return { data: instance, error: null };
@@ -100,15 +79,10 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
   data: { instance: ObsInstance; apiUrl: string; password: string } | null;
   error: string | null;
 }> {
-  let supabase: Awaited<ReturnType<typeof getAuthContext>>["supabase"];
-  let userId: string;
-  try {
-    const ctx = await getAuthContext();
-    supabase = ctx.supabase;
-    userId = ctx.user.id;
-  } catch {
-    return { data: null, error: "Unauthenticated" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthenticated" };
+  const { supabase } = ctx;
+  const userId = ctx.user.id;
 
   const adminClient = createAdminClient();
 

@@ -2,7 +2,7 @@ import { loadOverlaySceneByOverlayId } from "@/actions/overlay";
 import { OverlaySceneCanvas, overlayItemFromDbRow } from "@repo/ui/overlay";
 import { ClipsWidgetContainer } from "@/components/widgets/clips-widget/ClipsWidgetContainer";
 import { CustomWidgetContainer } from "@/components/widgets/custom-widget/CustomWidgetContainer";
-import { GpsOverlayCanvas } from "./GpsOverlayCanvas";
+import { GpsOverlayCanvas } from "@/components/gps-overlay-canvas";
 import { notFound } from "next/navigation";
 
 const OVERLAY_WIDGETS = [

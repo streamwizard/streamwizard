@@ -1,101 +1,93 @@
 "use client";
 
-import useSWR from "swr";
 import {
-  AreaChart,
   Area,
+  AreaChart,
+  CartesianGrid,
+  Legend,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartEmptyState } from "@/components/widgets/chart-empty-state";
-import { fetcher, formatTime } from "@/lib/utils";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useTimeRange } from "@/lib/time-range-context";
 import type { WsConnectionPoint } from "@repo/metrics";
+import {
+  AXIS_TICK,
+  CHART_TOOLTIP_STYLE,
+  ChartCard,
+  LEGEND_WRAPPER_STYLE,
+  rowsByTime,
+  useMetricsPoll,
+} from "./chart-kit";
 
 interface Props {
   initialData: WsConnectionPoint[];
-  rangeHours?: number;
 }
 
-type ChartRow = { time: string; [key: string]: number | string };
+const ROLE_SERIES = [
+  { role: "publisher", gradientId: "gPublisher", color: "var(--chart-1)" },
+  { role: "subscriber", gradientId: "gSubscriber", color: "var(--chart-2)" },
+  { role: "bot", gradientId: "gBot", color: "var(--chart-3)" },
+] as const;
 
-function transformData(data: WsConnectionPoint[]): ChartRow[] {
-  const map = new Map<string, ChartRow>();
+export function WsConnectionChart({ initialData }: Props) {
+  const { connections } = useMetricsPoll("/api/metrics/ws", {
+    connections: initialData,
+  });
 
-  for (const point of data) {
-    if (point.event !== "open") continue;
-    const key = point.time;
-    const existing: ChartRow = map.get(key) ?? { time: key };
-    existing[point.role] = ((existing[point.role] as number | undefined) ?? 0) + point.count;
-    map.set(key, existing);
-  }
-
-  return Array.from(map.values())
-    .sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime())
-    .map((d) => ({ ...d, time: formatTime(d.time as string) }));
-}
-
-export function WsConnectionChart({ initialData, rangeHours = 24 }: Props) {
-  const { interval } = useRefreshInterval();
-  const { range } = useTimeRange();
-  const { data: raw } = useSWR<{ connections: WsConnectionPoint[] }>(
-    `/api/metrics/ws?range=${range.fluxRange}&window=${range.window}`,
-    fetcher,
-    { fallbackData: { connections: initialData }, refreshInterval: interval }
+  // Only "open" events — this chart counts connections made, not churn.
+  const opens = (connections ?? initialData).filter(
+    (point) => point.event === "open",
   );
-
-  const chartData = transformData(raw?.connections ?? initialData);
+  const chartData = rowsByTime(opens, (row, point) => {
+    row[point.role] =
+      ((row[point.role] as number | undefined) ?? 0) + point.count;
+  });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Connections by Role (opens)</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {chartData.length === 0 ? (
-          <ChartEmptyState />
-        ) : (
-        <ResponsiveContainer width="100%" height={240}>
-          <AreaChart data={chartData}>
-            <defs>
-              <linearGradient id="gPublisher" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gSubscriber" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--chart-2)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="var(--chart-2)" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gBot" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--chart-3)" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="var(--chart-3)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis dataKey="time" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-            <YAxis allowDecimals={false} tick={{ fontSize: 11 }} className="fill-muted-foreground" />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                fontSize: "12px",
-              }}
-            />
-            <Legend wrapperStyle={{ fontSize: "12px" }} />
-            <Area type="monotone" dataKey="publisher" stroke="var(--chart-1)" fill="url(#gPublisher)" strokeWidth={2} />
-            <Area type="monotone" dataKey="subscriber" stroke="var(--chart-2)" fill="url(#gSubscriber)" strokeWidth={2} />
-            <Area type="monotone" dataKey="bot" stroke="var(--chart-3)" fill="url(#gBot)" strokeWidth={2} />
-          </AreaChart>
-        </ResponsiveContainer>
-        )}
-      </CardContent>
-    </Card>
+    <ChartCard
+      title="Connections by Role (opens)"
+      isEmpty={chartData.length === 0}
+    >
+      <AreaChart data={chartData}>
+        <defs>
+          {ROLE_SERIES.map(({ gradientId, color }) => (
+            <linearGradient
+              key={gradientId}
+              id={gradientId}
+              x1="0"
+              y1="0"
+              x2="0"
+              y2="1"
+            >
+              <stop offset="5%" stopColor={color} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          ))}
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+        <XAxis
+          dataKey="time"
+          tick={AXIS_TICK}
+          className="fill-muted-foreground"
+        />
+        <YAxis
+          allowDecimals={false}
+          tick={AXIS_TICK}
+          className="fill-muted-foreground"
+        />
+        <Tooltip contentStyle={CHART_TOOLTIP_STYLE} />
+        <Legend wrapperStyle={LEGEND_WRAPPER_STYLE} />
+        {ROLE_SERIES.map(({ role, gradientId, color }) => (
+          <Area
+            key={role}
+            type="monotone"
+            dataKey={role}
+            stroke={color}
+            fill={`url(#${gradientId})`}
+            strokeWidth={2}
+          />
+        ))}
+      </AreaChart>
+    </ChartCard>
   );
 }

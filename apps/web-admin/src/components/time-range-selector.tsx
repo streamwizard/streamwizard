@@ -1,6 +1,6 @@
 "use client";
 
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui";
 import { TIME_RANGE_OPTIONS, useTimeRange } from "@/lib/time-range-context";
 
 export function TimeRangeSelector() {

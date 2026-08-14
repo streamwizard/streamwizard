@@ -41,36 +41,18 @@ import type { NodeHealthStatus } from "@/lib/node-health";
 import { createNodeAction, deleteNodeAction, updateNodeAction } from "@/actions/nodes";
 import { obsNodeCapacitySchema } from "@/schemas/obs-node";
 import { formatMb } from "@/lib/format";
-
-function copy(value: string, what: string) {
-  navigator.clipboard.writeText(value);
-  toast.success(`${what} copied`);
-}
+import {
+  copyToClipboard,
+  nodeHealthLabel,
+  nodeHealthVariant,
+  nodeStatusVariant,
+} from "@/lib/node-ui";
 
 const EMPTY_FORM: ObsNodeCapacity = {
   name: "",
   max_instances: 10,
   api_url: "",
 };
-
-function statusVariant(status: string): "default" | "secondary" | "outline" | "destructive" {
-  if (status === "linked") return "default";
-  if (status === "pending") return "secondary";
-  return "outline";
-}
-
-function healthVariant(health: NodeHealthStatus): "default" | "secondary" | "outline" | "destructive" {
-  if (health === "online") return "default";
-  if (health === "unlinked") return "outline";
-  return "destructive"; // offline, unreachable
-}
-
-function healthLabel(health: NodeHealthStatus): string {
-  if (health === "online") return "Online";
-  if (health === "offline") return "Offline";
-  if (health === "unreachable") return "Unreachable";
-  return "Not linked";
-}
 
 /** Compact, two-line summary of what install.sh self-reported at claim time. */
 function HardwareSummary({ node }: { node: ObsNode }) {
@@ -223,7 +205,7 @@ export function NodesSection({
               <pre className="flex-1 overflow-x-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap break-all">
                 {installCommand}
               </pre>
-              <Button size="icon" variant="ghost" onClick={() => copy(installCommand, "Install command")}>
+              <Button size="icon" variant="ghost" onClick={() => copyToClipboard(installCommand, "Install command")}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -291,10 +273,10 @@ export function NodesSection({
                     </TableCell>
                     <TableCell className="font-mono text-xs">{node.api_url ?? "—"}</TableCell>
                     <TableCell>
-                      <Badge variant={statusVariant(node.status)}>{node.status}</Badge>
+                      <Badge variant={nodeStatusVariant(node.status)}>{node.status}</Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={healthVariant(health)}>{healthLabel(health)}</Badge>
+                      <Badge variant={nodeHealthVariant(health)}>{nodeHealthLabel(health)}</Badge>
                     </TableCell>
                     <TableCell>{node.max_instances}</TableCell>
                     <TableCell>

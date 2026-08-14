@@ -5,16 +5,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { JsonView, darkStyles } from "react-json-view-lite";
 import "react-json-view-lite/dist/index.css";
 import { Pause, Play, Trash2, Circle } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge, Card, CardContent, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui";
 import { StatCard } from "@/components/widgets/stat-card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { useMonitor } from "@/components/ws-monitor-provider";
 import type { MonitorEnvelope } from "@/lib/monitor-ws";

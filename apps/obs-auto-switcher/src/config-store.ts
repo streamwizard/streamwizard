@@ -5,6 +5,7 @@ import {
   type AutoSwitcherConfig,
   type AutoSwitcherThresholds,
 } from "@repo/schemas";
+import { selectEnabledAutoSwitcherConfigs } from "@repo/supabase/queries/auto-switcher";
 
 export interface EffectiveConfig {
   row: AutoSwitcherConfig;
@@ -80,7 +81,7 @@ export class ConfigStore {
   }
 
   private async reconcile(): Promise<void> {
-    const { data, error } = await supabase.from("obs_auto_switcher_configs").select("*").eq("enabled", true);
+    const { data, error } = await selectEnabledAutoSwitcherConfigs(supabase);
     if (error) throw error;
 
     const seen = new Set<string>();

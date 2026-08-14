@@ -3,20 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { saveRuleConfig, resetRuleConfig } from "@/app/(monitor)/alerts/rules/actions";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Switch, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { saveRuleConfig, resetRuleConfig } from "@/actions/alert-rules";
 
 type EnvName = "prod" | "staging" | "dev";
 const ALL_ENVS: EnvName[] = ["prod", "staging", "dev"];

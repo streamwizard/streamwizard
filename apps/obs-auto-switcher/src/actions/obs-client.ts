@@ -1,6 +1,6 @@
 import { supabase } from "@repo/supabase";
 import { decryptToken } from "@repo/supabase/crypto";
-import { getNodeCommandKeyEncrypted } from "@repo/supabase/queries/obs-nodes";
+import { getNodeCommandKeyEncrypted, getRunningInstanceWithNodeUrl } from "@repo/supabase/queries/obs-nodes";
 
 export interface ObsCommand {
   request: string;
@@ -30,18 +30,11 @@ async function resolveInstance(userId: string): Promise<ResolvedInstance | null>
   const cached = cache.get(userId);
   if (cached && Date.now() - cached.at < INSTANCE_CACHE_TTL_MS) return cached.resolved;
 
-  const { data, error } = await supabase
-    .from("obs_instances")
-    .select("id, node_id, status, obs_nodes(api_url)")
-    .eq("user_id", userId)
-    .eq("status", "running")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  const { data, error } = await getRunningInstanceWithNodeUrl(supabase, userId);
 
   if (error) throw new Error(`obs_instances lookup failed: ${error.message}`);
-  const apiUrl = (data?.obs_nodes as { api_url?: string } | null)?.api_url;
-  if (!data || !apiUrl || !data.node_id) return null;
+  if (!data || !data.apiUrl || !data.node_id) return null;
+  const apiUrl = data.apiUrl;
 
   const enc = await getNodeCommandKeyEncrypted(supabase, data.node_id);
   if (!enc) throw new Error(`no obs_command key provisioned for node ${data.node_id}`);

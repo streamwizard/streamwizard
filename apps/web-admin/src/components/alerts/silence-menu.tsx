@@ -2,14 +2,8 @@
 
 import { useTransition } from "react";
 import { BellOff, ChevronDown } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { silenceAlert } from "@/app/(monitor)/alerts/actions";
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@repo/ui";
+import { silenceAlert } from "@/actions/alerts";
 
 const DURATIONS = [
   { label: "1 hour", hours: 1 },

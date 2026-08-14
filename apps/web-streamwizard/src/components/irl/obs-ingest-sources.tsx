@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from "@repo/ui";
 import { listOutputKeys, type IngestOutputKey } from "@/actions/ingest-output-keys";
-import type { Scene } from "@/hooks/use-obs-websocket";
+import type { Scene } from "@repo/obs-web";
 import { obsPullUrl } from "@/lib/obs-irl";
 import { IngestLiveStats } from "./ingest-live-stats";
 

@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ClipsWidgetConfig, DisplayFieldKey, ClipDataRow } from "../../types";
 import { formatClipField } from "../../lib/format-clip-fields";
+import { describeMediaError } from "./media-error";
 
 /** Opaque to the renderer — handed back to `fetchNextClip` to continue the rotation. */
 export type ClipRotationCursor = unknown;
@@ -42,29 +43,6 @@ type Slot = {
   clip: ClipDataRow;
   videoUrl: string;
 };
-
-const MEDIA_ERROR_NAMES: Record<number, string> = {
-  1: "MEDIA_ERR_ABORTED",
-  2: "MEDIA_ERR_NETWORK",
-  3: "MEDIA_ERR_DECODE",
-  4: "MEDIA_ERR_SRC_NOT_SUPPORTED",
-};
-
-/**
- * A failed <video> reports nothing useful to the network tab — the proxy status
- * that caused it is invisible from the element. Surface what it does know.
- */
-function describeMediaError(el: HTMLVideoElement | null | undefined) {
-  if (!el) return { reason: "no element" };
-  return {
-    code: el.error?.code,
-    name: el.error ? MEDIA_ERROR_NAMES[el.error.code] : undefined,
-    message: el.error?.message,
-    networkState: el.networkState,
-    readyState: el.readyState,
-    src: el.currentSrc || el.src,
-  };
-}
 
 const EMPTY_STATE_STYLE: CSSProperties = {
   width: "100%",

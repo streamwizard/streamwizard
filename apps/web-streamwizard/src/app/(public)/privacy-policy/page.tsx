@@ -155,11 +155,11 @@ function NormalContent() {
           </li>
           <li>
             <span className="font-medium text-foreground">PostHog Inc.</span> —
-            product analytics and session replay. We use PostHog's EU region
+            product analytics and session replay. We use PostHog&apos;s EU region
             (eu.i.posthog.com). PostHog may process data outside the EEA
             including in the US; this is covered by a signed Data Processing
             Agreement, Standard Contractual Clauses (EU Commission Decision
-            2021/914), and PostHog's participation in the EU-US Data Privacy
+            2021/914), and PostHog&apos;s participation in the EU-US Data Privacy
             Framework.{" "}
             <Link
               href="https://posthog.com/privacy"
@@ -201,7 +201,7 @@ function NormalContent() {
               Twitch Interactive, Inc.
             </span>{" "}
             — OAuth authentication provider. Your use of Twitch is governed by
-            Twitch's own privacy policy.{" "}
+            Twitch&apos;s own privacy policy.{" "}
             <Link
               href="https://www.twitch.tv/p/en/legal/privacy-notice/"
               target="_blank"
@@ -263,7 +263,7 @@ function NormalContent() {
           </li>
           <li>
             <span className="text-foreground font-medium">Erasure</span> —
-            request deletion of your personal data ("right to be forgotten").
+            request deletion of your personal data (&quot;right to be forgotten&quot;).
           </li>
           <li>
             <span className="text-foreground font-medium">Restriction</span> —
@@ -346,14 +346,14 @@ function NormalContent() {
             </span>{" "}
             — covered by a signed Data Processing Agreement, EU Standard
             Contractual Clauses (Module 2, Commission Decision 2021/914), and
-            PostHog's self-certification under the EU-US Data Privacy Framework.
+            PostHog&apos;s self-certification under the EU-US Data Privacy Framework.
           </li>
           <li>
             <span className="text-foreground font-medium">
               Twitch Interactive, Inc. (US)
             </span>{" "}
             — data shared as part of OAuth authentication is governed by
-            Twitch's own Privacy Policy and their EU data transfer mechanisms.
+            Twitch&apos;s own Privacy Policy and their EU data transfer mechanisms.
           </li>
         </ul>
         <p className="text-muted-foreground leading-relaxed">
@@ -368,7 +368,7 @@ function NormalContent() {
         </h2>
         <p className="text-muted-foreground leading-relaxed">
           We may update this Privacy Policy from time to time. When we do, we
-          will update the "Last updated" date at the top of this page. We
+          will update the &quot;Last updated&quot; date at the top of this page. We
           encourage you to review this page periodically. Continued use of the
           service after changes constitutes acceptance of the updated policy.
         </p>
@@ -424,25 +424,25 @@ function GenZContent() {
           >
             {CONTACT_EMAIL}
           </a>{" "}
-          if u got beef (or just questions, that's fine too).
+          if u got beef (or just questions, that&apos;s fine too).
         </p>
       </section>
 
       <section>
         <h2 className="text-2xl font-semibold mt-10 mb-4">
-          2. what data we're holding 💾
+          2. what data we&apos;re holding 💾
         </h2>
 
         <h3 className="text-lg font-medium mb-2">ur account stuff</h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
           when u log in via Twitch we get ur Twitch ID, display name, email, pfp
-          URL, and OAuth tokens (encrypted, we're not animals). we only ask for
+          URL, and OAuth tokens (encrypted, we&apos;re not animals). we only ask for
           the scopes we actually need. no weird scope grabs.
         </p>
 
         <h3 className="text-lg font-medium mb-2">the stuff u make</h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
-          clip folders, overlays, widget configs — all that. it's yours. we just
+          clip folders, overlays, widget configs — all that. it&apos;s yours. we just
           hold it for you.
         </p>
 
@@ -452,7 +452,7 @@ function GenZContent() {
         <p className="text-muted-foreground leading-relaxed mb-4">
           we use PostHog to see what pages people visit + where they click. once
           ur logged in we link ur PostHog profile to ur account ID so we can
-          understand what's cooked vs what slaps. EU region only.
+          understand what&apos;s cooked vs what slaps. EU region only.
         </p>
 
         <h3 className="text-lg font-medium mb-2">when things go wrong 💀</h3>
@@ -479,7 +479,7 @@ function GenZContent() {
             <thead>
               <tr className="border-b border-border">
                 <th className="text-left py-2 pr-4 font-medium text-foreground">
-                  what we're doing
+                  what we&apos;re doing
                 </th>
                 <th className="text-left py-2 pr-4 font-medium text-foreground">
                   legal reason (GDPR Art. 6)
@@ -538,7 +538,7 @@ function GenZContent() {
           <li>
             <span className="font-medium text-foreground">PostHog Inc.</span> —
             analytics + session replay. EU region (eu.i.posthog.com). they can
-            process data in the US but it's covered by a signed DPA, Standard
+            process data in the US but it&apos;s covered by a signed DPA, Standard
             Contractual Clauses, and the EU-US Data Privacy Framework. we did
             the paperwork fr.{" "}
             <Link
@@ -580,7 +580,7 @@ function GenZContent() {
             <span className="font-medium text-foreground">
               Twitch Interactive, Inc.
             </span>{" "}
-            — OAuth login provider. ur Twitch usage is covered by Twitch's own
+            — OAuth login provider. ur Twitch usage is covered by Twitch&apos;s own
             policy, not ours.{" "}
             <Link
               href="https://www.twitch.tv/p/en/legal/privacy-notice/"

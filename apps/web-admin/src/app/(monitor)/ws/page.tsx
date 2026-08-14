@@ -133,8 +133,8 @@ export default async function WsDashboard() {
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Connection Flow</h2>
         <div className="grid grid-cols-2 gap-4">
-          <WsConnectionChart initialData={connections} rangeHours={24} />
-          <WsConnectionDurationChart initialData={connectionDuration} rangeHours={24} />
+          <WsConnectionChart initialData={connections} />
+          <WsConnectionDurationChart initialData={connectionDuration} />
         </div>
       </section>
 
@@ -149,8 +149,8 @@ export default async function WsDashboard() {
           )}
         </h2>
         <div className="grid grid-cols-2 gap-4">
-          <WsAuthFailureChart initialData={authFailures} rangeHours={24} />
-          <WsMessageDropChart initialData={droppedMessages} rangeHours={24} />
+          <WsAuthFailureChart initialData={authFailures} />
+          <WsMessageDropChart initialData={droppedMessages} />
         </div>
       </section>
 
@@ -158,8 +158,8 @@ export default async function WsDashboard() {
       <section className="space-y-3">
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Message Flow</h2>
         <div className="grid grid-cols-2 gap-4">
-          <WsMessageChart initialData={messages} rangeHours={24} />
-          <WsTopEventsTable initialData={topMessageTypes} rangeHours={24} />
+          <WsMessageChart initialData={messages} />
+          <WsTopEventsTable initialData={topMessageTypes} />
         </div>
       </section>
     </div>

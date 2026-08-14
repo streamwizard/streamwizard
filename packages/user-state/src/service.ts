@@ -1,7 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@repo/supabase/types/supabase";
 import type { UserStateUpdatePayload } from "@repo/types";
-import { getUserStates, type UserStateEntry } from "@repo/supabase/queries/user-states";
+import {
+  applyUserStateOp,
+  getUserStates,
+  resetStreamStates as resetStreamStatesRpc,
+  selectUserStateDefinitions,
+  upsertUserStateDefinition,
+  type UserStateEntry,
+  type UserStateOpResult,
+} from "@repo/supabase/queries/user-states";
 
 type DBClient = SupabaseClient<Database>;
 
@@ -37,14 +45,6 @@ export interface UserStateServiceOptions {
   broadcast?: UserStateBroadcast;
 }
 
-interface OpResult {
-  key: string;
-  value: unknown;
-  updated_at: string | null;
-}
-
-const DEFINITIONS_TABLE = "user_state_definitions" as never;
-
 export function createUserStateService({ client, broadcast }: UserStateServiceOptions) {
   async function rpc(
     userId: string,
@@ -52,14 +52,9 @@ export function createUserStateService({ client, broadcast }: UserStateServiceOp
     op: "get" | "set" | "increment" | "delete",
     value?: unknown
   ): Promise<UserStateUpdatePayload> {
-    const { data, error } = await client.rpc("apply_user_state_op" as never, {
-      p_user_id: userId,
-      p_key: key,
-      p_op: op,
-      p_value: value === undefined ? null : value,
-    } as never);
+    const { data, error } = await applyUserStateOp(client, userId, key, op, value);
     if (error) throw error;
-    const row = data as unknown as OpResult;
+    const row = data as unknown as UserStateOpResult;
     return { key: row.key, value: row.value ?? null, updatedAt: row.updated_at };
   }
 
@@ -133,17 +128,13 @@ export function createUserStateService({ client, broadcast }: UserStateServiceOp
       key: string,
       config: { resetPolicy: UserStateResetPolicy; resetValue?: unknown; resetGraceSeconds?: number }
     ): Promise<void> {
-      const { error } = await client.from(DEFINITIONS_TABLE).upsert(
-        {
-          user_id: userId,
-          key,
-          reset_policy: config.resetPolicy,
-          reset_value: config.resetValue ?? 0,
-          reset_grace_seconds: config.resetGraceSeconds ?? 900,
-          updated_at: new Date().toISOString(),
-        } as never,
-        { onConflict: "user_id,key" }
-      );
+      const { error } = await upsertUserStateDefinition(client, {
+        user_id: userId,
+        key,
+        reset_policy: config.resetPolicy,
+        reset_value: config.resetValue ?? 0,
+        reset_grace_seconds: config.resetGraceSeconds ?? 900,
+      });
       if (error) throw error;
     },
 
@@ -157,11 +148,9 @@ export function createUserStateService({ client, broadcast }: UserStateServiceOp
      * bot/rest-api call (the second finds nothing left to reset).
      */
     async resetStreamStates(userId: string): Promise<UserStateUpdatePayload[]> {
-      const { data, error } = await client.rpc("reset_stream_states" as never, {
-        p_user_id: userId,
-      } as never);
+      const { data, error } = await resetStreamStatesRpc(client, userId);
       if (error) throw error;
-      const rows = (data ?? []) as unknown as OpResult[];
+      const rows = (data ?? []) as unknown as UserStateOpResult[];
       const payloads = rows.map((row) => ({
         key: row.key,
         value: row.value ?? null,
@@ -173,10 +162,7 @@ export function createUserStateService({ client, broadcast }: UserStateServiceOp
   };
 
   async function definitions(userId: string): Promise<UserStateDefinition[]> {
-    const { data, error } = await client
-      .from(DEFINITIONS_TABLE)
-      .select("key, reset_policy, reset_value, reset_grace_seconds")
-      .eq("user_id", userId);
+    const { data, error } = await selectUserStateDefinitions(client, userId);
     if (error) throw error;
     return ((data ?? []) as unknown as Array<Record<string, unknown>>).map((row) => ({
       key: row.key as string,

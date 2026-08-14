@@ -82,3 +82,103 @@ export const insertIngestSessionStatsBatch = withMetrics(
   "insert",
   async (client: DBClient, rows: IngestSessionStatsInsert[]) => client.from("ingest_session_stats").insert(rows),
 );
+
+// ── Streamer-facing key management ───────────────────────────────────────────
+// Ingest keys (what a phone/encoder publishes to) and their OBS output keys
+// (what OBS pulls). Both are service-role only: the tables hold live secrets,
+// so the web app reaches them through admin-client actions, never RLS.
+
+export const selectIngestKeyForUser = withMetrics(
+  "ingest_stream_keys",
+  "select",
+  async (client: DBClient, id: string, userId: string) =>
+    client.from("ingest_stream_keys").select("label, stream_key").eq("id", id).eq("user_id", userId).maybeSingle(),
+);
+
+export const selectIngestKeyIds = withMetrics(
+  "ingest_stream_keys",
+  "select",
+  async (client: DBClient, userId: string) =>
+    client.from("ingest_stream_keys").select("id").eq("user_id", userId).limit(1),
+);
+
+export const selectIngestKeys = withMetrics(
+  "ingest_stream_keys",
+  "select",
+  async (client: DBClient, userId: string) =>
+    client.from("ingest_stream_keys").select("*").eq("user_id", userId).order("created_at", { ascending: false }),
+);
+
+export const insertIngestKey = withMetrics(
+  "ingest_stream_keys",
+  "insert",
+  async (client: DBClient, values: { user_id: string; stream_key: string; label: string }) =>
+    client.from("ingest_stream_keys").insert(values).select("*").single(),
+);
+
+export const rotateIngestKeySecret = withMetrics(
+  "ingest_stream_keys",
+  "update",
+  async (client: DBClient, id: string, userId: string, streamKey: string) =>
+    client
+      .from("ingest_stream_keys")
+      .update({ stream_key: streamKey })
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select("*")
+      .single(),
+);
+
+export const deleteIngestKey = withMetrics(
+  "ingest_stream_keys",
+  "delete",
+  async (client: DBClient, id: string, userId: string) =>
+    client.from("ingest_stream_keys").delete().eq("id", id).eq("user_id", userId),
+);
+
+/** Ownership check before an output key is attached to an ingest key. */
+export const ingestKeyBelongsToUser = async (client: DBClient, keyId: string, userId: string) => {
+  const { data } = await client
+    .from("ingest_stream_keys")
+    .select("id")
+    .eq("id", keyId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !!data;
+};
+
+export const insertOutputKey = withMetrics(
+  "ingest_output_keys",
+  "insert",
+  async (client: DBClient, values: { user_id: string; key_id: string; output_key: string; label: string }) =>
+    client.from("ingest_output_keys").insert(values).select("*").single(),
+);
+
+export const selectOutputKeys = withMetrics(
+  "ingest_output_keys",
+  "select",
+  async (client: DBClient, userId: string, keyId?: string) => {
+    const query = client.from("ingest_output_keys").select("*").eq("user_id", userId);
+    return (keyId ? query.eq("key_id", keyId) : query).order("created_at", { ascending: false });
+  },
+);
+
+export const rotateOutputKeySecret = withMetrics(
+  "ingest_output_keys",
+  "update",
+  async (client: DBClient, id: string, userId: string, outputKey: string) =>
+    client
+      .from("ingest_output_keys")
+      .update({ output_key: outputKey })
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select("*")
+      .single(),
+);
+
+export const deleteOutputKey = withMetrics(
+  "ingest_output_keys",
+  "delete",
+  async (client: DBClient, id: string, userId: string) =>
+    client.from("ingest_output_keys").delete().eq("id", id).eq("user_id", userId),
+);

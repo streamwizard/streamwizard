@@ -2,9 +2,9 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CloudOBSViewer } from "@/components/irl/CloudOBSViewer";
+import { CloudOBSViewer } from "@repo/obs-web";
 import { getInstanceNodeApiUrlAction } from "@/actions/nodes";
-import { mintNoVncConnection } from "@/lib/ws-ticket";
+import { mintNoVncConnection } from "@repo/obs-web";
 
 function ObsViewerContent() {
   const searchParams = useSearchParams();

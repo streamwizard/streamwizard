@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { createUserStateService } from "@repo/user-state";
 import type { UserStateUpdatePayload } from "@repo/types";
+import { broadcastToUser } from "@repo/ws-client";
 import { env } from "./env";
 
 /**
@@ -11,21 +12,13 @@ import { env } from "./env";
  * unconfigured CONSUMER_SECRET simply means no live push.
  */
 async function broadcastUserState(userId: string, payload: UserStateUpdatePayload): Promise<void> {
-  if (!env.WS_SERVER_URL || !env.CONSUMER_SECRET) return;
-
-  const httpUrl = env.WS_SERVER_URL.replace(/^ws:/, "http:").replace(/^wss:/, "https:");
-  const res = await fetch(`${httpUrl}/internal/broadcast`, {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${env.CONSUMER_SECRET}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ userId, type: "streamwizard.user_state", payload }),
-    signal: AbortSignal.timeout(3_000),
+  const result = await broadcastToUser(userId, "streamwizard.user_state", payload, {
+    wsServerUrl: env.WS_SERVER_URL,
+    consumerSecret: env.CONSUMER_SECRET,
   });
-  if (!res.ok) {
-    throw new Error(`internal/broadcast responded ${res.status}`);
-  }
+  if (result.ok || result.reason === "unconfigured") return;
+  if (result.reason === "status") throw new Error(`internal/broadcast responded ${result.status}`);
+  throw result.error;
 }
 
 export const userStateService = createUserStateService({

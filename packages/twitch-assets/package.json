@@ -22,7 +22,6 @@
   },
   "dependencies": {
     "@repo/supabase": "workspace:*",
-    "@repo/twitch-api": "workspace:*",
-    "@supabase/supabase-js": "^2.105.1"
+    "@repo/twitch-api": "workspace:*"
   }
 }

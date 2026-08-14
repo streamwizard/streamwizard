@@ -39,3 +39,11 @@ export function formatMb(mb: number | null | undefined, placeholder = "—"): st
   }
   return `${mb} MB`;
 }
+
+/** Byte count at human scale: "512 B", "1.4 KB", "23.0 MB", "1.20 GB". */
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
+}

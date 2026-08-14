@@ -1,9 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Badge, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { fetcher } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useTimeRange } from "@/lib/time-range-context";
@@ -11,10 +9,9 @@ import type { HttpRouteStatPoint } from "@repo/metrics";
 
 interface Props {
   initialData: HttpRouteStatPoint[];
-  rangeHours?: number;
 }
 
-export function HttpRouteTable({ initialData, rangeHours = 24 }: Props) {
+export function HttpRouteTable({ initialData }: Props) {
   const { interval } = useRefreshInterval();
   const { range } = useTimeRange();
   const { data: raw } = useSWR<{ routeStats: HttpRouteStatPoint[] }>(

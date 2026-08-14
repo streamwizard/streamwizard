@@ -82,7 +82,7 @@ export default async function DashboardPage() {
           <div className="flex flex-col gap-2">
             <h2 className="text-xl font-semibold tracking-tight">Nothing here yet.</h2>
             <p className="max-w-sm text-sm text-muted-foreground">
-              Go stream something. Viewers, clips, chat activity — we'll track it all while you're live.
+              Go stream something. Viewers, clips, chat activity — we&apos;ll track it all while you&apos;re live.
             </p>
           </div>
         </div>

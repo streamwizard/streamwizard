@@ -3,7 +3,7 @@ import { listIngestKeys } from "@/actions/ingest-keys";
 import { getAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest-nodes";
-import { CloudObsContent } from "./_cloud-obs-content";
+import { CloudObsContent } from "@/components/irl/cloud-obs/cloud-obs-content";
 
 export default async function CloudObsPage() {
   const access = await requireProductAccess("cloud_obs");

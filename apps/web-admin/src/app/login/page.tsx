@@ -1,4 +1,4 @@
-import { signInWithTwitch } from "./actions";
+import { signInWithTwitch } from "@/actions/auth";
 
 interface LoginPageProps {
   searchParams: Promise<{ error?: string }>;

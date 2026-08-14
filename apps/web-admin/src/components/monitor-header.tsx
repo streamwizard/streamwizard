@@ -1,16 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Badge, Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Separator, SidebarTrigger } from "@repo/ui";
 import { RefreshIntervalSelector } from "@/components/refresh-interval-selector";
 import { TimeRangeSelector } from "@/components/time-range-selector";
 import { BandwidthUnitToggle } from "@/components/bandwidth-unit-toggle";

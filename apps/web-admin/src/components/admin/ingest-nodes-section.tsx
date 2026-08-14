@@ -39,23 +39,13 @@ import type { IngestNode, IngestNodeCapacity } from "@repo/supabase/queries/inge
 import { createIngestNodeAction, deleteIngestNodeAction, updateIngestNodeAction } from "@/actions/ingest-nodes";
 import { ingestNodeCapacitySchema } from "@/schemas/ingest-node";
 import { formatMb } from "@/lib/format";
-
-function copy(value: string, what: string) {
-  navigator.clipboard.writeText(value);
-  toast.success(`${what} copied`);
-}
+import { copyToClipboard, nodeStatusVariant } from "@/lib/node-ui";
 
 const EMPTY_FORM: IngestNodeCapacity = {
   name: "",
   max_concurrent_sessions: null,
   public_hostname: null,
 };
-
-function statusVariant(status: string): "default" | "secondary" | "outline" | "destructive" {
-  if (status === "linked") return "default";
-  if (status === "pending") return "secondary";
-  return "outline";
-}
 
 /** Compact summary of what install.sh self-reported at claim time. No health
  * column here (unlike OBS nodes) -- ingest-control never publishes its HTTP
@@ -214,7 +204,7 @@ export function IngestNodesSection({
               <pre className="flex-1 overflow-x-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap break-all">
                 {installCommand}
               </pre>
-              <Button size="icon" variant="ghost" onClick={() => copy(installCommand, "Install command")}>
+              <Button size="icon" variant="ghost" onClick={() => copyToClipboard(installCommand, "Install command")}>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
@@ -279,7 +269,7 @@ export function IngestNodesSection({
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={statusVariant(node.status)}>{node.status}</Badge>
+                    <Badge variant={nodeStatusVariant(node.status)}>{node.status}</Badge>
                   </TableCell>
                   <TableCell>{node.max_concurrent_sessions ?? "Unlimited"}</TableCell>
                   <TableCell>

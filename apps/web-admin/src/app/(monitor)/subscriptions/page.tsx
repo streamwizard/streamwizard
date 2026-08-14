@@ -1,35 +1,26 @@
 import { createAdminClient } from "@repo/supabase/next/admin";
-import { SubscriptionsClient, type ProductWithPlans, type SubscriptionRow, type UserRow } from "./_subscriptions-client";
+import { getSubscriptionsOverview } from "@repo/supabase/queries/subscriptions";
+import { SubscriptionsClient, type ProductWithPlans, type SubscriptionRow, type UserRow } from "@/components/subscriptions/subscriptions-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSubscriptionsPage() {
   const adminClient = createAdminClient();
 
-  const [
-    { data: rawUsers },
-    { data: rawSubscriptions },
-    { data: rawProducts },
-  ] = await Promise.all([
-    adminClient.from("users").select("id, name, email, avatar_url").order("name"),
-    adminClient
-      .from("user_subscriptions")
-      .select("id, user_id, status, current_period_end, grant_note, plans(id, name, products(id, name))")
-      .not("status", "in", "(canceled,inactive)"),
-    adminClient
-      .from("products")
-      .select("id, name, plans(id, name, sort_order)")
-      .order("id"),
-  ]);
+  const {
+    users: rawUsers,
+    subscriptions: rawSubscriptions,
+    products: rawProducts,
+  } = await getSubscriptionsOverview(adminClient);
 
-  const users: UserRow[] = (rawUsers ?? []).map((u) => ({
+  const users: UserRow[] = rawUsers.map((u) => ({
     id: u.id,
     name: u.name,
     email: u.email,
     avatar_url: u.avatar_url,
   }));
 
-  const subscriptions: SubscriptionRow[] = (rawSubscriptions ?? []).flatMap((s) => {
+  const subscriptions: SubscriptionRow[] = rawSubscriptions.flatMap((s) => {
     const plan = s.plans as unknown as { id: string; name: string; products: { id: string; name: string } } | null;
     if (!plan) return [];
     return [{
@@ -46,7 +37,7 @@ export default async function AdminSubscriptionsPage() {
     }];
   });
 
-  const products: ProductWithPlans[] = (rawProducts ?? []).map((p) => ({
+  const products: ProductWithPlans[] = rawProducts.map((p) => ({
     id: p.id,
     name: p.name,
     plans: ((p.plans as { id: string; name: string; sort_order: number }[]) ?? [])

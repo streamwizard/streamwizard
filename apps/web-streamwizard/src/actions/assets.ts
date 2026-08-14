@@ -6,7 +6,19 @@ import { getUserAssetQuotaMb } from "@repo/supabase/queries/subscriptions";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
 
-import { getAuthContext } from "@/lib/auth";
+import {
+  deleteUserAsset,
+  insertUserAsset,
+  markAssetReady,
+  selectAllAssetKeys,
+  selectPendingAssetSizes,
+  selectReadyAssets,
+  selectStalePendingAssets,
+  selectStorageUsage,
+  selectUserAsset,
+} from "@repo/supabase/queries/assets";
+
+import { tryAuthContext, type AuthContext } from "@/lib/auth";
 import { env } from "@/lib/env";
 
 // Media library: streamer-uploaded overlay assets (alert images/sounds/videos)
@@ -85,50 +97,33 @@ function sanitizeFileName(name: string): string {
   return cleaned.slice(0, 128) || "file";
 }
 
-async function getQuotaBytes(supabase: Awaited<ReturnType<typeof getAuthContext>>["supabase"], userId: string): Promise<number> {
+async function getQuotaBytes(supabase: AuthContext["supabase"], userId: string): Promise<number> {
   const planQuotaMb = await getUserAssetQuotaMb(supabase, userId);
   return (planQuotaMb ?? FREE_QUOTA_MB) * 1024 * 1024;
 }
 
 async function getUsedBytes(
-  supabase: Awaited<ReturnType<typeof getAuthContext>>["supabase"],
+  supabase: AuthContext["supabase"],
   userId: string,
   opts: { includePending: boolean },
 ): Promise<number> {
-  const { data: usage } = await supabase
-    .from("user_storage_usage")
-    .select("used_bytes")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data: usage } = await selectStorageUsage(supabase, userId);
   let used = usage?.used_bytes ?? 0;
 
   if (opts.includePending) {
     const cutoff = new Date(Date.now() - PENDING_RESERVATION_MS).toISOString();
-    const { data: pending } = await supabase
-      .from("user_assets")
-      .select("size_bytes")
-      .eq("user_id", userId)
-      .eq("status", "pending")
-      .gte("created_at", cutoff);
+    const { data: pending } = await selectPendingAssetSizes(supabase, userId, cutoff);
     used += (pending ?? []).reduce((sum, row) => sum + row.size_bytes, 0);
   }
   return used;
 }
 
 export async function listAssets(): Promise<{ data: AssetListing | null; error: string | null }> {
-  let supabase, user;
-  try {
-    ({ supabase, user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { supabase, user } = ctx;
 
-  const { data, error } = await supabase
-    .from("user_assets")
-    .select("id, key, file_name, mime_type, size_bytes, kind, created_at")
-    .eq("user_id", user.id)
-    .eq("status", "ready")
-    .order("created_at", { ascending: false });
+  const { data, error } = await selectReadyAssets(supabase, user.id);
   if (error) {
     reportError(error, "actions/assets");
     return { data: null, error: "Failed to load your media." };
@@ -165,12 +160,9 @@ export async function createAssetUpload(input: {
   mimeType: string;
   sizeBytes: number;
 }): Promise<{ data: { assetId: string; uploadUrl: string; url: string } | null; error: string | null }> {
-  let supabase, user;
-  try {
-    ({ supabase, user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { supabase, user } = ctx;
 
   const kind = kindFromMime(input.mimeType);
   if (!kind) return { data: null, error: "That file type isn't supported. Upload an image, sound, or video." };
@@ -195,7 +187,7 @@ export async function createAssetUpload(input: {
     const assetId = crypto.randomUUID();
     const key = `assets/${user.id}/${assetId}/${fileName}`;
 
-    const { error: insertError } = await supabase.from("user_assets").insert({
+    const { error: insertError } = await insertUserAsset(supabase, {
       id: assetId,
       user_id: user.id,
       key,
@@ -221,33 +213,22 @@ export async function createAssetUpload(input: {
 export async function confirmAssetUpload(
   assetId: string,
 ): Promise<{ data: AssetListing | null; error: string | null }> {
-  let supabase, user;
-  try {
-    ({ supabase, user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { supabase, user } = ctx;
 
-  const { data: asset } = await supabase
-    .from("user_assets")
-    .select("id, key, status")
-    .eq("id", assetId)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const { data: asset } = await selectUserAsset(supabase, assetId, user.id);
   if (!asset) return { data: null, error: "Upload not found." };
 
   try {
     if (asset.status !== "ready") {
       const head = await getR2().headObject(asset.key);
       if (!head) {
-        await supabase.from("user_assets").delete().eq("id", asset.id);
+        await deleteUserAsset(supabase, asset.id);
         return { data: null, error: "The upload didn't finish. Try again." };
       }
       // HeadObject is the source of truth for size — never the client's claim.
-      const { error: updateError } = await supabase
-        .from("user_assets")
-        .update({ size_bytes: head.size, status: "ready" })
-        .eq("id", asset.id);
+      const { error: updateError } = await markAssetReady(supabase, asset.id, head.size);
       if (updateError) {
         reportError(updateError, "actions/assets");
         return { data: null, error: "Failed to finish the upload." };
@@ -262,24 +243,16 @@ export async function confirmAssetUpload(
 }
 
 export async function deleteAsset(assetId: string): Promise<{ data: AssetListing | null; error: string | null }> {
-  let supabase, user;
-  try {
-    ({ supabase, user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { supabase, user } = ctx;
 
-  const { data: asset } = await supabase
-    .from("user_assets")
-    .select("id, key")
-    .eq("id", assetId)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const { data: asset } = await selectUserAsset(supabase, assetId, user.id);
   if (!asset) return { data: null, error: "File not found." };
 
   try {
     await getR2().deleteObject(asset.key);
-    const { error: deleteError } = await supabase.from("user_assets").delete().eq("id", asset.id);
+    const { error: deleteError } = await deleteUserAsset(supabase, asset.id);
     if (deleteError) {
       reportError(deleteError, "actions/assets");
       return { data: null, error: "Failed to delete the file." };
@@ -301,31 +274,23 @@ export async function reconcileAssets(): Promise<{
   data: { removedPending: number; removedOrphans: number } | null;
   error: string | null;
 }> {
-  let user;
-  try {
-    ({ user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
-  if (user.app_metadata?.is_admin !== true) return { data: null, error: "Forbidden" };
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  if (ctx.user.app_metadata?.is_admin !== true) return { data: null, error: "Forbidden" };
 
   try {
     const admin = createAdminClient();
     const r2 = getR2();
     const cutoff = new Date(Date.now() - PENDING_RESERVATION_MS).toISOString();
 
-    const { data: stale } = await admin
-      .from("user_assets")
-      .select("id, key")
-      .eq("status", "pending")
-      .lt("created_at", cutoff);
+    const { data: stale } = await selectStalePendingAssets(admin, cutoff);
     for (const row of stale ?? []) {
       // The object may exist if the client uploaded but never confirmed.
       await r2.deleteObject(row.key).catch(() => {});
-      await admin.from("user_assets").delete().eq("id", row.id);
+      await deleteUserAsset(admin, row.id);
     }
 
-    const { data: allRows } = await admin.from("user_assets").select("key");
+    const { data: allRows } = await selectAllAssetKeys(admin);
     const known = new Set((allRows ?? []).map((row) => row.key));
     const objects = await r2.listPrefix("assets/");
     let removedOrphans = 0;

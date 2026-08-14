@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { selectRegisteredNodeIds } from "@repo/supabase/queries/platform-stats";
 
 /** Node ids still present in the registry. Influx keeps a deleted node's
  * points until they age out of the query range, so the dashboards intersect
@@ -7,9 +8,9 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
  * unfiltered data rather than a blank dashboard. */
 export async function getRegisteredNodeIds(table: "ingest_nodes" | "obs_nodes"): Promise<Set<string> | null> {
   try {
-    const { data, error } = await supabaseAdmin.from(table).select("id");
+    const { data, error } = await selectRegisteredNodeIds(supabaseAdmin, table);
     if (error) throw new Error(error.message);
-    return new Set(data.map((row) => row.id));
+    return new Set((data ?? []).map((row) => row.id));
   } catch {
     return null;
   }

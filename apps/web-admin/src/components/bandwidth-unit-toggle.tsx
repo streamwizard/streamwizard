@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@repo/ui";
 import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
 
 // Flips every bandwidth readout in the dashboard between bits/s and bytes/s.

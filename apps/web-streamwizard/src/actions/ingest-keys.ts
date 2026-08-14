@@ -4,7 +4,16 @@ import { reportError } from "@repo/sentry";
 
 import { randomBytes } from "crypto";
 import { env } from "@/lib/env";
-import { getAuthContext } from "@/lib/auth";
+import {
+  deleteIngestKey as deleteIngestKeyRow,
+  insertIngestKey,
+  insertOutputKey,
+  rotateIngestKeySecret,
+  selectIngestKeyForUser,
+  selectIngestKeyIds,
+  selectIngestKeys,
+} from "@repo/supabase/queries/ingest";
+import { tryAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest-nodes";
@@ -87,20 +96,12 @@ async function notifyDiscord(userId: string, label: string, streamKey: string) {
 
 /** User-triggered resend, from the "Your keys" list — unlike notifyDiscord, this reports back so a missing link or failed send shows up as a real error instead of silently doing nothing. */
 export async function sendIngestKeyDiscordDM(id: string): Promise<{ error: string | null }> {
-  let user;
-  try {
-    ({ user } = await getAuthContext());
-  } catch {
-    return { error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { error: "Unauthorized" };
+  const { user } = ctx;
 
   const adminClient = createAdminClient();
-  const { data: key, error: keyError } = await adminClient
-    .from("ingest_stream_keys")
-    .select("label, stream_key")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const { data: key, error: keyError } = await selectIngestKeyForUser(adminClient, id, user.id);
   if (keyError) reportError(keyError, "actions/ingest-keys");
   if (keyError || !key) return { error: keyError?.message ?? "Key not found" };
 
@@ -120,31 +121,24 @@ export async function sendIngestKeyDiscordDM(id: string): Promise<{ error: strin
 }
 
 export async function createIngestKey(label: string): Promise<{ data: IngestStreamKey | null; error: string | null }> {
-  let user;
-  try {
-    ({ user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { user } = ctx;
 
   const adminClient = createAdminClient();
 
   // One key per user. If they've got one already, they rotate it, not stack a
   // second one. Guards against a double-click or a stale UI as much as intent.
-  const { data: existing } = await adminClient
-    .from("ingest_stream_keys")
-    .select("id")
-    .eq("user_id", user.id)
-    .limit(1);
+  const { data: existing } = await selectIngestKeyIds(adminClient, user.id);
   if (existing && existing.length > 0) {
     return { data: null, error: "You've already got an ingest key. Rotate it instead." };
   }
 
-  const { data, error } = await adminClient
-    .from("ingest_stream_keys")
-    .insert({ user_id: user.id, stream_key: generateStreamKey(), label: label.trim() || "My Ingest Key" })
-    .select("*")
-    .single();
+  const { data, error } = await insertIngestKey(adminClient, {
+    user_id: user.id,
+    stream_key: generateStreamKey(),
+    label: label.trim() || "My Ingest Key",
+  });
 
   if (error) {
     reportError(error, "actions/ingest-keys");
@@ -153,7 +147,7 @@ export async function createIngestKey(label: string): Promise<{ data: IngestStre
 
   // Every incoming key needs an OBS output key to be pullable. The user never
   // manages this directly, so it's created here rather than surfaced as a step.
-  await adminClient.from("ingest_output_keys").insert({
+  await insertOutputKey(adminClient, {
     user_id: user.id,
     key_id: data.id,
     output_key: generateStreamKey(),
@@ -167,40 +161,24 @@ export async function createIngestKey(label: string): Promise<{ data: IngestStre
 }
 
 export async function listIngestKeys(): Promise<{ data: IngestStreamKey[] | null; error: string | null }> {
-  let user;
-  try {
-    ({ user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { user } = ctx;
 
   const adminClient = createAdminClient();
-  const { data, error } = await adminClient
-    .from("ingest_stream_keys")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const { data, error } = await selectIngestKeys(adminClient, user.id);
 
   if (error) reportError(error, "actions/ingest-keys");
   return { data, error: error?.message ?? null };
 }
 
 export async function rotateIngestKey(id: string): Promise<{ data: IngestStreamKey | null; error: string | null }> {
-  let user;
-  try {
-    ({ user } = await getAuthContext());
-  } catch {
-    return { data: null, error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { user } = ctx;
 
   const adminClient = createAdminClient();
-  const { data, error } = await adminClient
-    .from("ingest_stream_keys")
-    .update({ stream_key: generateStreamKey() })
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .select("*")
-    .single();
+  const { data, error } = await rotateIngestKeySecret(adminClient, id, user.id, generateStreamKey());
 
   if (error) {
     reportError(error, "actions/ingest-keys");
@@ -212,19 +190,12 @@ export async function rotateIngestKey(id: string): Promise<{ data: IngestStreamK
 }
 
 export async function deleteIngestKey(id: string): Promise<{ error: string | null }> {
-  let user;
-  try {
-    ({ user } = await getAuthContext());
-  } catch {
-    return { error: "Unauthorized" };
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) return { error: "Unauthorized" };
+  const { user } = ctx;
 
   const adminClient = createAdminClient();
-  const { error } = await adminClient
-    .from("ingest_stream_keys")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
+  const { error } = await deleteIngestKeyRow(adminClient, id, user.id);
 
   revalidatePath(INGEST_SETTINGS_PATH);
   if (error) reportError(error, "actions/ingest-keys");

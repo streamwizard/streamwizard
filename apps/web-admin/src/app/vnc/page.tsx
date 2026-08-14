@@ -2,9 +2,9 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CloudOBSViewer } from "@/components/cloud-obs-viewer";
+import { CloudOBSViewer } from "@repo/obs-web";
 import { getNodeApiUrlAction } from "@/actions/nodes";
-import { mintNoVncConnection } from "@/lib/ws-ticket";
+import { mintNoVncConnection } from "@repo/obs-web";
 
 // Admin's noVNC proxy lives at /admin/instances/:id/novnc on the node's API
 // (vs. the end-user /instances/:id/novnc), gated by the admin's own role

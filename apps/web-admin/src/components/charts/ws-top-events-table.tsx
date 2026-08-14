@@ -1,8 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { fetcher } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useTimeRange } from "@/lib/time-range-context";
@@ -10,10 +9,9 @@ import type { WsTopMessageTypePoint } from "@repo/metrics";
 
 interface Props {
   initialData: WsTopMessageTypePoint[];
-  rangeHours?: number;
 }
 
-export function WsTopEventsTable({ initialData, rangeHours = 24 }: Props) {
+export function WsTopEventsTable({ initialData }: Props) {
   const { interval } = useRefreshInterval();
   const { range } = useTimeRange();
   const { data: raw } = useSWR<{ topMessageTypes: WsTopMessageTypePoint[] }>(

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { requireProductAccess } from "@/lib/require-product-access";
 import { getAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
-import { DeckContent } from "./_deck-content";
+import { DeckContent } from "@/components/deck/deck-content";
 
 export const metadata: Metadata = {
   title: "Stream Deck",

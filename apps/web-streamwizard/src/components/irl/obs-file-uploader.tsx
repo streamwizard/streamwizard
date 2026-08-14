@@ -12,6 +12,7 @@ import {
   uploadMediaFile,
   type MediaFile,
 } from "@/lib/media-actions";
+import { formatBytes } from "@/lib/format";
 
 interface Props {
   apiUrl: string | null;
@@ -24,13 +25,6 @@ interface Uploading {
   name: string;
   size: number;
   progress: number;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
 export function ObsFileUploader({ apiUrl, instanceId, isRunning }: Props) {

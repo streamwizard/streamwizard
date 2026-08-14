@@ -1,5 +1,5 @@
 import { Zap } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@repo/ui";
 
 export default function EventSubDashboard() {
   return (

@@ -21,7 +21,7 @@ import {
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { saveAllOverlayItems } from "@/actions/overlays";
+import { saveAllOverlayItems } from "@/actions/overlays/items";
 import type { Widget } from "@/actions/widgets";
 import {
   getCachedWidget,
@@ -39,7 +39,7 @@ import { EditorLayers } from "./editor-layers";
 import { EditorInspector } from "./editor-inspector";
 import { OverlayWidgetSheet } from "./overlay-widget-sheet";
 import { WidgetLibraryModal } from "./widget-library-modal";
-import { useOverlayStore } from "./use-overlay-store";
+import { useOverlayStore } from "@/stores/overlay-editor-store";
 
 interface OverlayEditorProps {
   initialScene: OverlaySceneWithItems;

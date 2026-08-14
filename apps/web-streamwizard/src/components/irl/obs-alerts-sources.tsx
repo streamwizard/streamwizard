@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Loader2, Plus } from "lucide-react";
 import { Button, Input, Label } from "@repo/ui";
 import { cn } from "@repo/ui";
-import type { Scene, SceneItem } from "@/hooks/use-obs-websocket";
+import type { Scene, SceneItem } from "@repo/obs-web";
 import { ALERTS_SCENE_NAME, WELCOME_SCENE_NAME } from "@/lib/obs-irl";
 
 interface ObsAlertsSourcesProps {

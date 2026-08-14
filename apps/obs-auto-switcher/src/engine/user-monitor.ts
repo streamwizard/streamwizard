@@ -8,6 +8,7 @@ import type { IngestStatsPayload } from "@repo/types";
 import { trackAutoSwitcherEvent } from "@repo/metrics";
 import type { EffectiveConfig } from "../config-store";
 import { SessionTracker, type TrackedSession } from "./session-tracker";
+import { METRICS, MetricStreaks, pollLimits, type MetricKey } from "./metric-streaks";
 import { recordSwitch, getSwitchLog } from "./switch-log";
 
 // Port of xpudu monitoring's per-path state machine (handlePathMetrics /
@@ -17,14 +18,6 @@ import { recordSwitch, getSwitchLog } from "./switch-log";
 // override with expiry, and typed switch reasons with human detail strings.
 
 type Phase = "idle" | "startup" | "live" | "degraded" | "offline";
-
-type MetricKey = "bitrate" | "rtt" | "loss";
-const METRICS: MetricKey[] = ["bitrate", "rtt", "loss"];
-
-interface Streak {
-  bad: number;
-  good: number;
-}
 
 interface SceneTarget {
   uuid: string;
@@ -60,7 +53,7 @@ export class UserMonitor {
 
   private phase: Phase = "idle";
   private selectedSessionId: string | null = null;
-  private streaks: Record<MetricKey, Streak> = newStreaks();
+  private readonly streaks = new MetricStreaks();
   private latestStats: IngestStatsPayload | null = null;
 
   private overrideEngagedUuid: string | null = null;
@@ -132,7 +125,7 @@ export class UserMonitor {
   // if the feed is dead, let the tick take it to offline.
   private resumeFromOverride(now: number): void {
     this.overrideEngagedUuid = null;
-    for (const key of METRICS) this.streaks[key].good = 0;
+    this.streaks.resetGood();
     if (this.phase !== "idle") {
       this.phase = "degraded";
       this.offlineSince = null;
@@ -163,12 +156,12 @@ export class UserMonitor {
     // like a brand new one.
     if (this.phase === "offline") {
       this.phase = "startup";
-      this.streaks = newStreaks();
+      this.streaks.reset();
       this.offlineSince = null;
       this.autoStopDone = false;
     }
 
-    this.updateStreaks(payload);
+    this.streaks.update(payload, this.cfg.thresholds);
     this.evaluate(now);
     // evaluate() only publishes on a phase change, so without this the whole
     // pre-switch build-up ("bitrate bad 1/3, 2/3…") is invisible until the 5s
@@ -259,56 +252,10 @@ export class UserMonitor {
     console.log(`[monitor] user=${this.userId} watching session=${session.sessionId} label=${session.label ?? "-"}`);
     this.selectedSessionId = session.sessionId;
     this.latestStats = session.latest;
-    this.streaks = newStreaks();
+    this.streaks.reset();
     this.phase = "startup";
     this.offlineSince = null;
     this.autoStopDone = false;
-  }
-
-  private updateStreaks(payload: IngestStatsPayload): void {
-    const thr = this.cfg.thresholds;
-    // Missing metrics count as OK — RTMP sessions only report kbps.
-    //
-    // The "loss" metric judges drop_pct, not loss_pct: raw loss is counted
-    // before SRT retransmits, so a healthy cellular link fully recovered by the
-    // 4 s ingest buffer still reports several percent of it. drop_pct is what
-    // the receiver gave up on — the part the viewer sees. See the threshold
-    // notes in @repo/schemas; the field names stay `loss_*` so stored
-    // advanced_thresholds JSON keeps parsing.
-    const ok: Record<MetricKey, boolean> = {
-      bitrate: payload.kbps === undefined || payload.kbps >= thr.bitrate_min_kbps,
-      rtt: payload.rtt_ms === undefined || payload.rtt_ms <= thr.rtt_max_ms,
-      loss: payload.drop_pct === undefined || payload.drop_pct <= thr.loss_max_pct,
-    };
-    for (const key of METRICS) {
-      if (ok[key]) {
-        this.streaks[key].good++;
-        this.streaks[key].bad = 0;
-      } else {
-        this.streaks[key].bad++;
-        this.streaks[key].good = 0;
-      }
-    }
-  }
-
-  private badMetrics(kind: "trigger" | "startup"): MetricKey[] {
-    const thr = this.cfg.thresholds;
-    const limits: Record<MetricKey, number> = {
-      bitrate: kind === "trigger" ? thr.bitrate_trigger_polls : thr.bitrate_startup_polls,
-      rtt: kind === "trigger" ? thr.rtt_trigger_polls : thr.rtt_startup_polls,
-      loss: kind === "trigger" ? thr.loss_trigger_polls : thr.loss_startup_polls,
-    };
-    return METRICS.filter((key) => this.streaks[key].bad >= limits[key]);
-  }
-
-  private allRecovered(kind: "recover" | "startup"): boolean {
-    const thr = this.cfg.thresholds;
-    const limits: Record<MetricKey, number> = {
-      bitrate: kind === "recover" ? thr.bitrate_recover_polls : thr.bitrate_startup_polls,
-      rtt: kind === "recover" ? thr.rtt_recover_polls : thr.rtt_startup_polls,
-      loss: kind === "recover" ? thr.loss_recover_polls : thr.loss_startup_polls,
-    };
-    return METRICS.every((key) => this.streaks[key].good >= limits[key]);
   }
 
   private evaluate(now: number): void {
@@ -319,13 +266,13 @@ export class UserMonitor {
     if (!scenes) return; // not fully configured — nothing to switch to
 
     if (this.phase === "startup") {
-      const bad = this.badMetrics("startup");
+      const bad = this.streaks.badMetrics("startup", this.cfg.thresholds);
       if (bad.length > 0) {
         // Bad from the start: go straight to the fallback scene (xpudu
         // startup gate) and require a full recovery to come back.
         this.phase = "degraded";
         this.requestSwitch(scenes.degraded, "auto_fallback", this.fallbackDetail(bad), now);
-      } else if (this.allRecovered("startup")) {
+      } else if (this.streaks.allRecovered("startup", this.cfg.thresholds)) {
         this.phase = "live";
         this.requestSwitch(scenes.live, "auto_recover", "startup complete — link stable", now);
       }
@@ -333,7 +280,7 @@ export class UserMonitor {
     }
 
     if (this.phase === "live") {
-      const bad = this.badMetrics("trigger");
+      const bad = this.streaks.badMetrics("trigger", this.cfg.thresholds);
       if (bad.length > 0) {
         this.phase = "degraded";
         this.setWarningSource(false, scenes.live);
@@ -345,7 +292,7 @@ export class UserMonitor {
     }
 
     if (this.phase === "degraded") {
-      if (this.allRecovered("recover")) {
+      if (this.streaks.allRecovered("recover", this.cfg.thresholds)) {
         this.phase = "live";
         this.setWarningSource(false, scenes.live);
         this.requestSwitch(scenes.live, "auto_recover", this.recoverDetail(), now);
@@ -358,7 +305,7 @@ export class UserMonitor {
     const scenes = this.sceneTargets();
     this.phase = "offline";
     this.offlineSince = now;
-    for (const key of METRICS) this.streaks[key] = { bad: 0, good: 0 };
+    this.streaks.reset();
     if (scenes && !this.overrideEngagedUuid) {
       this.requestSwitch(scenes.offline, "auto_offline", why, now);
     } else {
@@ -474,8 +421,8 @@ export class UserMonitor {
 
   private updateWarningSource(liveScene: SceneTarget): void {
     if (!this.cfg.row.warning_source_enabled) return;
-    const anyBad = METRICS.some((key) => this.streaks[key].bad >= WARNING_SHOW_BAD_POLLS);
-    const allGood = METRICS.every((key) => this.streaks[key].good >= WARNING_HIDE_GOOD_POLLS);
+    const anyBad = this.streaks.anyBadFor(WARNING_SHOW_BAD_POLLS);
+    const allGood = this.streaks.allGoodFor(WARNING_HIDE_GOOD_POLLS);
     if (anyBad && !this.warningShown) this.setWarningSource(true, liveScene);
     else if (allGood && this.warningShown) this.setWarningSource(false, liveScene);
   }
@@ -614,11 +561,7 @@ export class UserMonitor {
             at: selected.lastSeenMs,
           }
         : null,
-      streaks: {
-        bitrate: { ...this.streaks.bitrate },
-        rtt: { ...this.streaks.rtt },
-        loss: { ...this.streaks.loss },
-      },
+      streaks: this.streaks.snapshot(),
       thresholds: this.cfg.thresholds,
       last_switch: log.length > 0 ? log[log.length - 1]! : null,
       last_error: this.lastError,
@@ -638,12 +581,7 @@ export class UserMonitor {
   // heartbeat, while every step of a bad streak — and every step of recovery
   // progress, which is what the recovery bar draws — publishes at 1 Hz.
   private statusKey(now: number): string {
-    const thr = this.cfg.thresholds;
-    const recoverPolls: Record<MetricKey, number> = {
-      bitrate: thr.bitrate_recover_polls,
-      rtt: thr.rtt_recover_polls,
-      loss: thr.loss_recover_polls,
-    };
+    const recoverPolls = pollLimits("recover", this.cfg.thresholds);
     const parts: (string | number)[] = [
       this.activeOverrideUuid(now) ?? "",
       this.phase,
@@ -654,7 +592,8 @@ export class UserMonitor {
       this.lastError ?? "",
     ];
     for (const key of METRICS) {
-      parts.push(this.streaks[key].bad, Math.min(this.streaks[key].good, recoverPolls[key]));
+      const streak = this.streaks.get(key);
+      parts.push(streak.bad, Math.min(streak.good, recoverPolls[key]));
     }
     return parts.join("|");
   }
@@ -673,10 +612,3 @@ export class UserMonitor {
   }
 }
 
-function newStreaks(): Record<MetricKey, Streak> {
-  return {
-    bitrate: { bad: 0, good: 0 },
-    rtt: { bad: 0, good: 0 },
-    loss: { bad: 0, good: 0 },
-  };
-}

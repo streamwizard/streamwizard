@@ -39,8 +39,8 @@ export default async function HttpDashboard() {
         <StatCard title="Errors (4xx/5xx)" value={errorCount} description="Last 24h" />
       </div>
 
-      <HttpRequestChart initialData={requests} rangeHours={24} />
-      <HttpRouteTable initialData={routeStats} rangeHours={24} />
+      <HttpRequestChart initialData={requests} />
+      <HttpRouteTable initialData={routeStats} />
     </div>
   );
 }

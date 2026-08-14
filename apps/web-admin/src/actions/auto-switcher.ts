@@ -2,12 +2,16 @@
 
 import { assertAdmin } from "@/lib/assert-admin";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import type { Database } from "@repo/supabase";
-import { env } from "@/lib/env";
-import { autoSwitcherFormSchema, type AutoSwitcherFormValues } from "@/schemas/auto-switcher";
+import {
+  selectAutoSwitcherConfig,
+  updateSceneOverride,
+  upsertAutoSwitcherConfig,
+  type AutoSwitcherConfigRow,
+} from "@repo/supabase/queries/auto-switcher";
+import { autoSwitcherFormSchema, type AutoSwitcherFormValues } from "@repo/schemas";
 import { reportError } from "@repo/sentry";
-
-export type AutoSwitcherConfigRow = Database["public"]["Tables"]["obs_auto_switcher_configs"]["Row"];
+import { broadcastToUser } from "@repo/ws-client";
+import { env } from "@/lib/env";
 
 // Every write ends with a push through ws-server /internal/broadcast so the
 // engine reacts within ~1s. The DB row stays the source of truth: if the push
@@ -15,30 +19,18 @@ export type AutoSwitcherConfigRow = Database["public"]["Tables"]["obs_auto_switc
 // periodic re-fetch picks the change up within a minute — so push failures
 // never fail the save.
 async function pushConfigToEngine(row: AutoSwitcherConfigRow): Promise<void> {
-  if (!env.CONSUMER_SECRET || !env.WS_SERVER_URL) return;
-  try {
-    const httpUrl = env.WS_SERVER_URL.replace(/^ws:/, "http:").replace(/^wss:/, "https:");
-    await fetch(`${httpUrl}/internal/broadcast`, {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${env.CONSUMER_SECRET}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ userId: row.user_id, type: "streamwizard.auto_switcher_config", payload: row }),
-      signal: AbortSignal.timeout(3_000),
-    });
-  } catch (error) {
-    reportError(error, "web-admin auto-switcher: config push");
+  const result = await broadcastToUser(row.user_id, "streamwizard.auto_switcher_config", row, {
+    wsServerUrl: env.WS_SERVER_URL,
+    consumerSecret: env.CONSUMER_SECRET,
+  });
+  if (!result.ok && result.reason === "network") {
+    reportError(result.error, "web-admin auto-switcher: config push");
   }
 }
 
 export async function getAutoSwitcherConfigForUser(userId: string): Promise<AutoSwitcherConfigRow | null> {
   await assertAdmin();
-  const { data } = await supabaseAdmin
-    .from("obs_auto_switcher_configs")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
+  const { data } = await selectAutoSwitcherConfig(supabaseAdmin, userId);
   return data;
 }
 
@@ -57,11 +49,7 @@ export async function upsertAutoSwitcherConfigForUser(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid settings" };
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("obs_auto_switcher_configs")
-    .upsert({ user_id: userId, ...parsed.data })
-    .select()
-    .single();
+  const { data, error } = await upsertAutoSwitcherConfig(supabaseAdmin, userId, parsed.data);
   if (error) {
     reportError(error, "web-admin auto-switcher: upsert");
     return { ok: false, error: "Could not save settings" };
@@ -87,16 +75,11 @@ export async function setSceneOverrideForUser(
     return { ok: false, error: "Invalid duration" };
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("obs_auto_switcher_configs")
-    .update({
-      override_scene_uuid: sceneUuid,
-      override_scene_name: sceneName,
-      override_expires_at: durationMinutes ? new Date(Date.now() + durationMinutes * 60_000).toISOString() : null,
-    })
-    .eq("user_id", userId)
-    .select()
-    .maybeSingle();
+  const { data, error } = await updateSceneOverride(supabaseAdmin, userId, {
+    override_scene_uuid: sceneUuid,
+    override_scene_name: sceneName,
+    override_expires_at: durationMinutes ? new Date(Date.now() + durationMinutes * 60_000).toISOString() : null,
+  });
   if (error || !data) {
     reportError(error, "web-admin auto-switcher: override set");
     return { ok: false, error: error ? `Could not set the override (${error.message})` : "The user has no switcher settings yet" };
@@ -113,12 +96,11 @@ export async function clearSceneOverrideForUser(userId: string): Promise<{ ok: b
     return { ok: false, error: "Forbidden" };
   }
 
-  const { data, error } = await supabaseAdmin
-    .from("obs_auto_switcher_configs")
-    .update({ override_scene_uuid: null, override_scene_name: null, override_expires_at: null })
-    .eq("user_id", userId)
-    .select()
-    .maybeSingle();
+  const { data, error } = await updateSceneOverride(supabaseAdmin, userId, {
+    override_scene_uuid: null,
+    override_scene_name: null,
+    override_expires_at: null,
+  });
   if (error || !data) {
     reportError(error, "web-admin auto-switcher: override clear");
     return { ok: false, error: error ? `Could not clear the override (${error.message})` : "Could not clear the override" };

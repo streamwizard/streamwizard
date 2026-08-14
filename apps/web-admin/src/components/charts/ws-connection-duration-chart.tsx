@@ -1,40 +1,27 @@
 "use client";
 
-import useSWR from "swr";
 import {
-  LineChart,
+  CartesianGrid,
+  Legend,
   Line,
+  LineChart,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
 } from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { fetcher, formatTime } from "@/lib/utils";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useTimeRange } from "@/lib/time-range-context";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import type { WsConnectionDurationPoint } from "@repo/metrics";
+import {
+  AXIS_TICK,
+  CHART_TOOLTIP_STYLE,
+  ChartBody,
+  LEGEND_WRAPPER_STYLE,
+  rowsByTime,
+  useMetricsPoll,
+} from "./chart-kit";
 
 interface Props {
   initialData: WsConnectionDurationPoint[];
-  rangeHours?: number;
-}
-
-type ChartRow = { time: string; [key: string]: number | string };
-
-function transformData(data: WsConnectionDurationPoint[]): ChartRow[] {
-  const map = new Map<string, ChartRow>();
-  for (const point of data) {
-    const existing: ChartRow = map.get(point.time) ?? { time: point.time };
-    // Convert ms → seconds for readability
-    existing[point.role] = Math.round(point.avgMs / 1000);
-    map.set(point.time, existing);
-  }
-  return Array.from(map.values())
-    .sort((a, b) => new Date(a.time as string).getTime() - new Date(b.time as string).getTime())
-    .map((d) => ({ ...d, time: formatTime(d.time as string) }));
 }
 
 const ROLE_COLORS: Record<string, string> = {
@@ -43,17 +30,16 @@ const ROLE_COLORS: Record<string, string> = {
   bot: "var(--chart-3)",
 };
 
-export function WsConnectionDurationChart({ initialData, rangeHours = 24 }: Props) {
-  const { interval } = useRefreshInterval();
-  const { range } = useTimeRange();
-  const { data: raw } = useSWR<{ connectionDuration: WsConnectionDurationPoint[] }>(
-    `/api/metrics/ws?range=${range.fluxRange}&window=${range.window}`,
-    fetcher,
-    { fallbackData: { connectionDuration: initialData }, refreshInterval: interval }
-  );
+export function WsConnectionDurationChart({ initialData }: Props) {
+  const { connectionDuration } = useMetricsPoll("/api/metrics/ws", {
+    connectionDuration: initialData,
+  });
 
-  const durations = raw?.connectionDuration ?? initialData;
-  const chartData = transformData(durations);
+  const durations = connectionDuration ?? initialData;
+  // Convert ms → seconds for readability
+  const chartData = rowsByTime(durations, (row, point) => {
+    row[point.role] = Math.round(point.avgMs / 1000);
+  });
   const roles = [...new Set(durations.map((d) => d.role))];
 
   if (durations.length === 0) {
@@ -72,24 +58,21 @@ export function WsConnectionDurationChart({ initialData, rangeHours = 24 }: Prop
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Avg Connection Duration (seconds)</CardTitle>
+        <CardTitle className="text-base">
+          Avg Connection Duration (seconds)
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={240}>
+        <ChartBody isEmpty={false}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-            <XAxis dataKey="time" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} unit="s" />
+            <XAxis dataKey="time" tick={AXIS_TICK} />
+            <YAxis tick={AXIS_TICK} unit="s" />
             <Tooltip
               formatter={(value) => [`${value}s`, ""]}
-              contentStyle={{
-                backgroundColor: "var(--card)",
-                border: "1px solid var(--border)",
-                borderRadius: "6px",
-                fontSize: "12px",
-              }}
+              contentStyle={CHART_TOOLTIP_STYLE}
             />
-            <Legend wrapperStyle={{ fontSize: "12px" }} />
+            <Legend wrapperStyle={LEGEND_WRAPPER_STYLE} />
             {roles.map((role) => (
               <Line
                 key={role}
@@ -101,7 +84,7 @@ export function WsConnectionDurationChart({ initialData, rangeHours = 24 }: Prop
               />
             ))}
           </LineChart>
-        </ResponsiveContainer>
+        </ChartBody>
       </CardContent>
     </Card>
   );

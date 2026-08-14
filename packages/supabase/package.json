@@ -71,10 +71,6 @@
       "types": "./src/queries/viewer-counts.ts",
       "default": "./src/queries/viewer-counts.ts"
     },
-    "./queries/smp": {
-      "types": "./src/queries/smp.ts",
-      "default": "./src/queries/smp.ts"
-    },
     "./queries/irl": {
       "types": "./src/queries/irl.ts",
       "default": "./src/queries/irl.ts"
@@ -134,6 +130,38 @@
     "./queries/query-stats": {
       "types": "./src/queries/query-stats.ts",
       "default": "./src/queries/query-stats.ts"
+    },
+    "./queries/auto-switcher": {
+      "types": "./src/queries/auto-switcher.ts",
+      "default": "./src/queries/auto-switcher.ts"
+    },
+    "./queries/overlay-widgets": {
+      "types": "./src/queries/overlay-widgets.ts",
+      "default": "./src/queries/overlay-widgets.ts"
+    },
+    "./queries/assets": {
+      "types": "./src/queries/assets.ts",
+      "default": "./src/queries/assets.ts"
+    },
+    "./queries/data-export": {
+      "types": "./src/queries/data-export.ts",
+      "default": "./src/queries/data-export.ts"
+    },
+    "./queries/platform-stats": {
+      "types": "./src/queries/platform-stats.ts",
+      "default": "./src/queries/platform-stats.ts"
+    },
+    "./queries/stream-events": {
+      "types": "./src/queries/stream-events.ts",
+      "default": "./src/queries/stream-events.ts"
+    },
+    "./queries/asset-cache": {
+      "types": "./src/queries/asset-cache.ts",
+      "default": "./src/queries/asset-cache.ts"
+    },
+    "./queries/alert-registry": {
+      "types": "./src/queries/alert-registry.ts",
+      "default": "./src/queries/alert-registry.ts"
     }
   },
   "scripts": {

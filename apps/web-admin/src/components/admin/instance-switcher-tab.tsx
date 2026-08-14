@@ -2,12 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@repo/ui";
-import { useObsWebSocket } from "@/hooks/use-obs-websocket";
-import { mintWsUrl } from "@/lib/ws-ticket";
+import { AutoSwitcherForm, AutoSwitcherOverrideControls, mintWsUrl, useObsWebSocket } from "@repo/obs-web";
+import type { AutoSwitcherFormValues } from "@repo/schemas";
 import { getInstanceObsWsPasswordAdminAction } from "@/actions/nodes";
-import type { AutoSwitcherConfigRow } from "@/actions/auto-switcher";
-import { AutoSwitcherForm } from "@/components/admin/auto-switcher-form";
-import { AutoSwitcherOverrideControls } from "@/components/admin/auto-switcher-override-controls";
+import { clearSceneOverrideForUser, setSceneOverrideForUser, upsertAutoSwitcherConfigForUser } from "@/actions/auto-switcher";
+import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher";
 
 interface InstanceSwitcherTabProps {
   /** Owner of the config — the instance's user. */
@@ -58,13 +57,21 @@ export function InstanceSwitcherTab({ userId, instanceId, apiUrl, instanceRunnin
           </span>
         )}
       </div>
-      <AutoSwitcherOverrideControls userId={userId} scenes={obs.scenes} status={null} enabled={enabled} />
+      <AutoSwitcherOverrideControls
+        scenes={obs.scenes}
+        status={null}
+        enabled={enabled}
+        onHold={(sceneUuid, sceneName, durationMinutes) =>
+          setSceneOverrideForUser(userId, sceneUuid, sceneName, durationMinutes)
+        }
+        onRelease={() => clearSceneOverrideForUser(userId)}
+      />
       <AutoSwitcherForm
-        userId={userId}
         initialConfig={initialConfig}
         scenes={obs.scenes}
         sceneItems={obs.sceneItems}
         obsConnected={obsConnected}
+        onSave={(values: AutoSwitcherFormValues) => upsertAutoSwitcherConfigForUser(userId, values)}
       />
     </div>
   );

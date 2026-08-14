@@ -20,6 +20,7 @@ import {
   listInstancesByNodeWithOwner,
   getNodeById,
   getInstanceByIdWithOwner,
+  getInstanceObsWsPasswordFields,
 } from "@repo/supabase/queries/obs-nodes";
 
 const NODES_PATH = "/obs";
@@ -219,14 +220,9 @@ export async function getInstanceObsWsPasswordAdminAction(
     return { data: null, error: "Forbidden" };
   }
 
-  const { data, error } = await adminClient
-    .from("obs_instances")
-    .select("obs_ws_password_ciphertext, obs_ws_password_iv, obs_ws_password_tag")
-    .eq("id", instanceId)
-    .maybeSingle();
-
-  if (error || !data) return { data: null, error: "Instance not found." };
-  const { obs_ws_password_ciphertext: ciphertext, obs_ws_password_iv: iv, obs_ws_password_tag: tag } = data;
+  const fields = await getInstanceObsWsPasswordFields(adminClient, instanceId);
+  if (!fields) return { data: null, error: "Instance not found." };
+  const { ciphertext, iv, tag } = fields;
   if (!ciphertext || !iv || !tag) return { data: null, error: "Password not set on this instance." };
 
   const { decryptToken } = await import("@repo/supabase/crypto");

@@ -1,21 +1,5 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@repo/supabase";
-
-/**
- * Own client rather than importing one of the app-specific singletons: this
- * package runs in the bot (SUPABASE_URL) and in web-overlay route handlers
- * (NEXT_PUBLIC_SUPABASE_URL), so it takes whichever is set.
- */
-let _client: SupabaseClient<Database> | undefined;
-function db(): SupabaseClient<Database> {
-  if (!_client) {
-    _client = createClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SECRET_KEY!
-    );
-  }
-  return _client;
-}
+import { supabase } from "@repo/supabase";
+import { selectCachedAsset, upsertCachedAsset } from "@repo/supabase/queries/asset-cache";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;
@@ -75,12 +59,7 @@ export async function getCached<T>(key: string): Promise<T | undefined> {
   const local = memoryGet(key);
   if (local !== undefined) return local as T;
 
-  const { data, error } = await db()
-    .from("twitch_asset_cache")
-    .select("payload, expires_at")
-    .eq("cache_key", key)
-    .gt("expires_at", new Date().toISOString())
-    .maybeSingle();
+  const { data, error } = await selectCachedAsset(supabase, key);
 
   // A cache read failure must degrade to a miss, never throw into a render
   // path — worst case we make one extra Helix call.
@@ -94,17 +73,7 @@ export async function setCached(key: string, payload: unknown, ttlMs: number): P
   const expiresAt = Date.now() + ttlMs;
   memorySet(key, payload, expiresAt);
 
-  const { error } = await db()
-    .from("twitch_asset_cache")
-    .upsert(
-      {
-        cache_key: key,
-        payload: payload as never,
-        expires_at: new Date(expiresAt).toISOString(),
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "cache_key" }
-    );
+  const { error } = await upsertCachedAsset(supabase, { cacheKey: key, payload, expiresAt });
 
   // Same reasoning as above: the memory layer already has it, so a failed
   // write costs an extra fetch later, not a broken response now.

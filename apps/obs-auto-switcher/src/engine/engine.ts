@@ -7,6 +7,7 @@ import { clearSwitchLog } from "./switch-log";
 import { resolveSceneItemId, setScene, setSceneItemEnabledById, stopStream, invalidateInstanceCache } from "../actions/obs-client";
 import { sendChatNotice } from "../actions/chat";
 import { logSwitchEvent } from "../actions/event-log";
+import { clearSceneOverride } from "@repo/supabase/queries/auto-switcher";
 
 const TICK_MS = 1_000;
 
@@ -34,10 +35,7 @@ export class Engine {
       sendChat: sendChatNotice,
       logEvent: logSwitchEvent,
       clearOverride: async (userId) => {
-        const { error } = await supabase
-          .from("obs_auto_switcher_configs")
-          .update({ override_scene_uuid: null, override_scene_name: null, override_expires_at: null })
-          .eq("user_id", userId);
+        const { error } = await clearSceneOverride(supabase, userId);
         if (error) throw error;
       },
       publishStatus: (userId, status) => statusPublisher.publish(userId, status),
