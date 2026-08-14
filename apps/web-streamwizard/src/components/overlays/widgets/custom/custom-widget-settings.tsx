@@ -133,7 +133,7 @@ function WidgetPicker({ onSelect }: { onSelect: (widgetId: string) => void }) {
     return (
       <div className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          You don't have any custom widgets yet.
+          You don&apos;t have any custom widgets yet.
         </p>
         <Button asChild size="sm" variant="outline" className="w-full">
           <Link

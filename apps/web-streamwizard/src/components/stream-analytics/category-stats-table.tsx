@@ -26,7 +26,7 @@ export function CategoryStatsTable({ segments }: CategoryStatsTableProps) {
       <CardContent>
         {segments.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            No categories yet. Stream for a minute in something and we'll break it down here.
+            No categories yet. Stream for a minute in something and we&apos;ll break it down here.
           </p>
         ) : (
           <Table>

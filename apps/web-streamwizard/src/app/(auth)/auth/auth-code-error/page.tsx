@@ -97,7 +97,7 @@ export default async function AuthCodeErrorPage({
           )}
           <p className="text-muted-foreground">{message ?? FALLBACK_COPY}</p>
           <p className="text-sm text-muted-foreground">
-            Still happening after a couple of tries? Open a ticket in our Discord and we'll dig in.
+            Still happening after a couple of tries? Open a ticket in our Discord and we&apos;ll dig in.
           </p>
         </CardContent>
         <CardFooter className="flex flex-col gap-2">
