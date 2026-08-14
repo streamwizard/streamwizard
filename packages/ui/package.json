@@ -13,6 +13,10 @@
       "types": "./src/overlay-exports.ts",
       "default": "./src/overlay-exports.ts"
     },
+    "./chat": {
+      "types": "./src/chat-exports.ts",
+      "default": "./src/chat-exports.ts"
+    },
     "./overlay-schemas": {
       "types": "./src/overlay-schemas.ts",
       "default": "./src/overlay-schemas.ts"
