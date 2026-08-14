@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "check-types": "tsc --noEmit",
     "dev-local": "next dev -H 0.0.0.0 "
   },
   "dependencies": {
