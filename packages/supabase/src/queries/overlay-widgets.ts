@@ -82,15 +82,18 @@ export async function insertOverlayWidgetInstance(client: DBClient, payload: Ove
   return client.from("overlay_widget_instances").insert(payload).select().single();
 }
 
-export async function selectApprovedLibraryEntries(client: DBClient, search?: string) {
-  const query = client
+/**
+ * The whole approved library; callers filter client-side. Deliberately takes no
+ * search argument — a server-side filter belongs in bound `.ilike()` calls or
+ * `.textSearch()`, never in a string-built `.or()`, which lets the value rewrite
+ * the filter (including the `is_approved` scoping).
+ */
+export async function selectApprovedLibraryEntries(client: DBClient) {
+  return client
     .from("overlay_widget_library_entries")
     .select("*, overlay_widgets(*)")
     .eq("is_approved", true)
     .order("installs", { ascending: false });
-
-  if (!search) return query;
-  return query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
 }
 
 export async function selectApprovedLibraryEntry(client: DBClient, entryId: string) {

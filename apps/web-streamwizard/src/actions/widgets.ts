@@ -184,11 +184,11 @@ export async function getOrCreateWidgetInstance(overlayItemId: string, widgetId:
 
 // --- Library ---
 
-export async function getApprovedLibraryEntries(opts?: { search?: string; tags?: string[] }) {
+export async function getApprovedLibraryEntries() {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
 
-  const { data, error } = await selectApprovedLibraryEntries(ctx.supabase, opts?.search);
+  const { data, error } = await selectApprovedLibraryEntries(ctx.supabase);
   if (error) reportError(error, ERROR_SCOPE);
   return { data, error: error?.message ?? null };
 }
