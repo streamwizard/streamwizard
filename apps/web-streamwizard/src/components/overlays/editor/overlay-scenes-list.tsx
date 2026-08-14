@@ -16,6 +16,16 @@ import {
   DialogTrigger,
 } from "@repo/ui";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@repo/ui";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -31,6 +41,7 @@ import {
   Layers,
   MoreVertical,
   Plus,
+  RefreshCw,
   Trash2,
   Monitor,
   Smartphone,
@@ -44,6 +55,7 @@ import {
   createOverlayScene,
   deleteOverlayScene,
   duplicateOverlayScene,
+  resetSceneSubscriberToken,
   updateOverlayScene,
 } from "@/actions/overlays/scenes";
 import { createOverlayFromTemplate } from "@/actions/overlays/templates";
@@ -83,6 +95,8 @@ export function OverlayScenesList({
   const [templateId, setTemplateId] = useState("blank");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createdScene, setCreatedScene] = useState<OverlayScene | null>(null);
+  const [resetKeyScene, setResetKeyScene] = useState<OverlayScene | null>(null);
+  const [isResettingKey, setIsResettingKey] = useState(false);
 
   // A template is built for one render mode; "blank" suits both.
   const availableTemplates = templates.filter(
@@ -152,6 +166,28 @@ export function OverlayScenesList({
       router.refresh();
     } else {
       toast.error(error ?? "Failed to duplicate");
+    }
+  }
+
+  /**
+   * Rotates the scene's subscriber token — the key an open overlay page uses to
+   * read and write its own widget state. The browser-source URL keeps working;
+   * anything still holding the old key stops.
+   */
+  async function handleResetKey() {
+    if (!resetKeyScene) return;
+    setIsResettingKey(true);
+
+    const { error } = await resetSceneSubscriberToken(resetKeyScene.id);
+
+    setIsResettingKey(false);
+    setResetKeyScene(null);
+
+    if (error) {
+      toast.error(error);
+    } else {
+      toast.success("Overlay key reset. Refresh the browser source in OBS.");
+      router.refresh();
     }
   }
 
@@ -381,6 +417,10 @@ export function OverlayScenesList({
                         <Copy className="mr-2 h-4 w-4" />
                         Duplicate
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setResetKeyScene(scene)}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Reset overlay key
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleDelete(scene.id)}
                         className="text-destructive focus:text-destructive"
@@ -430,6 +470,25 @@ export function OverlayScenesList({
           ))}
         </div>
       )}
+
+      <AlertDialog open={resetKeyScene !== null} onOpenChange={(open) => !open && setResetKeyScene(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset the key for {resetKeyScene?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Do this if someone else got hold of your overlay. The URL stays the same, but every
+              browser source that has this overlay open right now goes blank until you refresh it in
+              OBS.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isResettingKey}>Never mind</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetKey} disabled={isResettingKey}>
+              {isResettingKey ? "Resetting..." : "Reset key"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
