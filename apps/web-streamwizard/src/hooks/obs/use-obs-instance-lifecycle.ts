@@ -17,7 +17,12 @@ import { env } from "@/lib/env";
 // the latest closure.
 export function useObsInstanceLifecycle(onEvent: (payload: ObsInstanceLifecyclePayload) => void): void {
   const onEventRef = useRef(onEvent);
-  onEventRef.current = onEvent;
+
+  // Written after commit, not during render: a render that React throws away
+  // would otherwise leave the socket calling a closure that never shipped.
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
 
   useEffect(() => {
     let ws: WebSocket | null = null;

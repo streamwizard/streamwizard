@@ -54,14 +54,15 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   const [fieldsPanelOpen, setFieldsPanelOpen] = useState(true);
 
   // Monaco owns the editor text; these refs are what it writes into, and what
-  // save and the preview rebuild read back.
-  const sources: WidgetSources = {
-    html: useRef(widget.html),
-    js: useRef(widget.js),
-    css: useRef(widget.extra_css),
-    fieldsJson: useRef(JSON.stringify(widget.fields, null, 2)),
-  };
+  // save and the preview rebuild read back. The container is memoised so it is
+  // one stable object rather than a fresh render-local that handlers mutate.
+  const htmlRef = useRef(widget.html);
+  const jsRef = useRef(widget.js);
+  const cssRef = useRef(widget.extra_css);
+  const fieldsJsonRef = useRef(JSON.stringify(widget.fields, null, 2));
+  const sources: WidgetSources = { html: htmlRef, js: jsRef, css: cssRef, fieldsJson: fieldsJsonRef };
   const [activeTab, setActiveTab] = useState<EditorTab>("html");
+  const [editorDefaultValue, setEditorDefaultValue] = useState(widget.html);
   const [fieldsError, setFieldsError] = useState<string | null>(null);
 
   const preview = useWidgetPreview({ widget, sources });
@@ -123,11 +124,11 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     draft.markDirty();
 
     let validChange = true;
-    if (activeTab === "html") sources.html.current = val;
-    else if (activeTab === "js") sources.js.current = val;
-    else if (activeTab === "css") sources.css.current = val;
+    if (activeTab === "html") htmlRef.current = val;
+    else if (activeTab === "js") jsRef.current = val;
+    else if (activeTab === "css") cssRef.current = val;
     else {
-      sources.fieldsJson.current = val;
+      fieldsJsonRef.current = val;
       try {
         JSON.parse(val);
         setFieldsError(null);
@@ -140,14 +141,23 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     if (validChange) scheduleHotReload(activeTab);
   }
 
-  const editorDefaultValue =
-    activeTab === "html"
-      ? sources.html.current
-      : activeTab === "js"
-        ? sources.js.current
-        : activeTab === "fields"
-          ? sources.fieldsJson.current
-          : sources.css.current;
+  /**
+   * Seeds the Monaco model for a tab. Monaco keeps one model per `path` and only
+   * reads `defaultValue` when it creates one, so this is snapshotted on the tab
+   * switch itself rather than read out of the ref every render.
+   */
+  function selectTab(next: EditorTab) {
+    const buffer =
+      next === "html"
+        ? htmlRef.current
+        : next === "js"
+          ? jsRef.current
+          : next === "fields"
+            ? fieldsJsonRef.current
+            : cssRef.current;
+    setEditorDefaultValue(buffer);
+    setActiveTab(next);
+  }
 
   function handlePublish() {
     draft.publish(publishTitle, () => setPublishOpen(false));
@@ -337,7 +347,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
         <div className="flex flex-col w-1/2 border-r min-h-0">
           <Tabs
             value={activeTab}
-            onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+            onValueChange={(v) => selectTab(v as EditorTab)}
             className="flex flex-col flex-1 min-h-0"
           >
             <TabsList className="shrink-0 rounded-none border-b h-9 justify-start px-2 gap-1">

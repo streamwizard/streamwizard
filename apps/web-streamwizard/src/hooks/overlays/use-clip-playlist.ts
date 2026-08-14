@@ -25,7 +25,7 @@ function createPlaybackOrder(length: number, random: boolean, previousFirst?: nu
   if (length <= 1) return [0];
   if (!random) return Array.from({ length }, (_, i) => i);
 
-  let order = shuffleIndices(length);
+  const order = shuffleIndices(length);
   if (previousFirst !== undefined && length > 1 && order[0] === previousFirst) {
     const swapIndex = 1 + Math.floor(Math.random() * (length - 1));
     [order[0], order[swapIndex]] = [order[swapIndex], order[0]];

@@ -41,9 +41,6 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
   const {
     scene,
     selectedItemIds,
-    updateItem,
-    editorMode,
-    pushHistory,
     renameRequestId,
     setRenameRequestId,
     duplicateSelectedItems,
@@ -52,16 +49,8 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
 
   const selectedItemId = selectPrimarySelectedId({ selectedItemIds });
   const selectedItem = scene?.items.find((i) => i.id === selectedItemId);
-  const def = selectedItem
-    ? getOverlayWidgetDefinition(selectedItem.type)
-    : undefined;
 
-  const [sceneLayoutOpen, setSceneLayoutOpen] = useState(false);
   const labelInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    setSceneLayoutOpen(false);
-  }, [selectedItemId]);
 
   // Canvas context-menu "Rename" focuses the Label input.
   useEffect(() => {
@@ -118,7 +107,32 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
     );
   }
 
-  const item = selectedItem;
+  // The single-item panel lives in its own component so its hooks — including
+  // useInspectorCommands, which needs a non-null item — are never called behind
+  // the two early returns above. Keying on the item id resets the panel's own
+  // state when the selection changes, no syncing effect needed.
+  return (
+    <SelectedItemInspector
+      key={selectedItem.id}
+      item={selectedItem}
+      clipFolders={clipFolders}
+      labelInputRef={labelInputRef}
+    />
+  );
+}
+
+function SelectedItemInspector({
+  item,
+  clipFolders,
+  labelInputRef,
+}: {
+  item: OverlayItem;
+  clipFolders: EditorInspectorProps["clipFolders"];
+  labelInputRef: React.RefObject<HTMLInputElement | null>;
+}) {
+  const { scene, updateItem, editorMode, pushHistory } = useOverlayStore();
+  const def = getOverlayWidgetDefinition(item.type);
+  const [sceneLayoutOpen, setSceneLayoutOpen] = useState(false);
 
   const {
     sceneW,
