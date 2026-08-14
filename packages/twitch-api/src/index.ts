@@ -1,8 +1,8 @@
 export type { ChannelSearchResult, TwitchUser, TwitchGame, TwitchCategory } from "./search";
 export type { ClipDownloadUrl } from "./clips";
 export type { Vod, GetVodsParams } from "./vods";
-export type { UpdateChannelParams } from "./channels";
-export type { TwitchBadgeSet, TwitchBadgeVersion } from "./chat";
+export type { UpdateChannelParams, ChannelInformation } from "./channels";
+export type { TwitchBadgeSet, TwitchBadgeVersion, SendChatMessageResponse } from "./chat";
 export type { TwitchCheermote, TwitchCheermoteTier } from "./bits";
 
 import { TwitchChatClient } from "./chat";

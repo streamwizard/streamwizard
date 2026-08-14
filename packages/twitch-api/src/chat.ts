@@ -22,12 +22,24 @@ export interface TwitchBadgeSet {
   versions: TwitchBadgeVersion[];
 }
 
+/**
+ * Helix answers 200 even when AutoMod holds a message, so `is_sent` — not the
+ * status code — is what says whether chat actually saw it.
+ */
+export interface SendChatMessageResponse {
+  data: {
+    message_id: string;
+    is_sent: boolean;
+    drop_reason?: { code: string; message: string } | null;
+  }[];
+}
+
 export class TwitchChatClient extends TwitchApiBaseClient {
   constructor(broadcaster_id: string | null = null) {
     super(broadcaster_id);
   }
-  async sendMessage({ message, replyToMessageId, sender = "bot" }: { message: string; replyToMessageId?: string | null, sender?: "bot" | "broadcaster" }) {
-    const response = await this.appApi().post(`/chat/messages`, {
+  async sendMessage({ message, replyToMessageId, sender = "bot" }: { message: string; replyToMessageId?: string | null, sender?: "bot" | "broadcaster" }): Promise<SendChatMessageResponse> {
+    const response = await this.appApi().post<SendChatMessageResponse>(`/chat/messages`, {
       message,
       broadcaster_id: this.broadcaster_id,
       sender_id: sender === "bot" ? "956066753" : this.broadcaster_id ,

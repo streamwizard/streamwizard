@@ -10,8 +10,15 @@ import {
   ChannelSubscriptionMessageEventSchema,
   ChannelUpdateEventSchema,
 } from "./channel";
-import { ChannelChatClearEventSchema, ChannelChatMessageEventSchema } from "./chat";
+import {
+  ChannelChatClearEventSchema,
+  ChannelChatClearUserMessagesEventSchema,
+  ChannelChatMessageDeleteEventSchema,
+  ChannelChatMessageEventSchema,
+  ChannelChatNotificationEventSchema,
+} from "./chat";
 import { ChannelPointsCustomRewardRedemptionAddEventSchema } from "./channel-points";
+import { ChannelShoutoutReceiveEventSchema } from "./misc";
 import { StreamOfflineEventSchema, StreamOnlineEventSchema } from "./stream";
 
 /**
@@ -223,16 +230,138 @@ export const WIDGET_TEST_EVENTS = {
         chatter_user_login: v.user_login,
         chatter_user_name: v.user_name,
         message_id: uuid(),
+        // Every fragment type Twitch can send, so a chat renderer exercises
+        // emote, mention and cheermote handling from a single test fire.
         message: {
-          text: "Hello streamer!",
-          fragments: [{ type: "text", text: "Hello streamer!" }],
+          text: "Hello @Broadcaster! Kappa Cheer100",
+          fragments: [
+            { type: "text", text: "Hello " },
+            {
+              type: "mention",
+              text: "@Broadcaster",
+              mention: { user_id: "2", user_name: "Broadcaster", user_login: "broadcaster" },
+            },
+            { type: "text", text: "! " },
+            { type: "emote", text: "Kappa", emote: { id: "25", emote_set_id: "0" } },
+            { type: "text", text: " " },
+            { type: "cheermote", text: "Cheer100", cheermote: { prefix: "Cheer", bits: 100, tier: 1 } },
+          ],
         },
         color: "#FF6B6B",
         badges: DEMO_BADGES,
         user_profile_image_url: v.user_profile_image_url,
         message_type: "text",
-        cheer: null,
-        reply: null,
+        cheer: { bits: 100 },
+        reply: {
+          parent_message_id: uuid(),
+          parent_message_body: "What game is this?",
+          parent_user_id: "2",
+          parent_user_name: "Broadcaster",
+          parent_user_login: "broadcaster",
+          thread_message_id: uuid(),
+          thread_user_id: "2",
+          thread_user_name: "Broadcaster",
+          thread_user_login: "broadcaster",
+        },
+      };
+    },
+  },
+  "channel.chat.notification": {
+    label: "Chat notice (resub)",
+    group: "Chat",
+    schema: ChannelChatNotificationEventSchema,
+    build: (o?) => {
+      const v = viewer(o);
+      return {
+        ...BROADCASTER,
+        chatter_user_id: v.user_id,
+        chatter_user_login: v.user_login,
+        chatter_user_name: v.user_name,
+        chatter_is_anonymous: false,
+        color: "#5CE1E6",
+        badges: DEMO_BADGES,
+        user_profile_image_url: v.user_profile_image_url,
+        system_message: `${v.user_name} subscribed for 6 months in a row!`,
+        message_id: uuid(),
+        message: {
+          text: "Six months, still here!",
+          fragments: [{ type: "text", text: "Six months, still here!" }],
+        },
+        notice_type: "resub",
+        sub: null,
+        resub: {
+          cumulative_months: 6,
+          duration_months: 1,
+          streak_months: 6,
+          sub_plan: "1000",
+          is_gift: false,
+          gifter_is_anonymous: null,
+          gifter_user_id: null,
+          gifter_user_name: null,
+          gifter_user_login: null,
+        },
+        sub_gift: null,
+        community_sub_gift: null,
+        gift_paid_upgrade: null,
+        prime_paid_upgrade: null,
+        pay_it_forward: null,
+        raid: null,
+        unraid: null,
+        announcement: null,
+        bits_badge_tier: null,
+        charity_donation: null,
+        watch_streak: null,
+      };
+    },
+  },
+  "channel.chat.message_delete": {
+    label: "Message deleted",
+    group: "Chat",
+    schema: ChannelChatMessageDeleteEventSchema,
+    build: (o?) => {
+      const v = viewer(o);
+      return {
+        ...BROADCASTER,
+        target_user_id: v.user_id,
+        target_user_login: v.user_login,
+        target_user_name: v.user_name,
+        // A live delete names an existing message; a fixture can't, so a
+        // renderer that finds no match should simply do nothing.
+        message_id: uuid(),
+      };
+    },
+  },
+  "channel.chat.clear_user_messages": {
+    label: "User timed out",
+    group: "Chat",
+    schema: ChannelChatClearUserMessagesEventSchema,
+    build: (o?) => {
+      const v = viewer(o);
+      return {
+        broadcaster_user_id: BROADCASTER.broadcaster_user_id,
+        broadcaster_user_login: BROADCASTER.broadcaster_user_login,
+        broadcaster_user_name: BROADCASTER.broadcaster_user_name,
+        target_user_id: v.user_id,
+        target_user_login: v.user_login,
+        target_user_name: v.user_name,
+      };
+    },
+  },
+  "channel.shoutout.receive": {
+    label: "Shoutout received",
+    group: "Channel",
+    schema: ChannelShoutoutReceiveEventSchema,
+    build: (o?) => {
+      const v = viewer(o);
+      return {
+        broadcaster_user_id: BROADCASTER.broadcaster_user_id,
+        broadcaster_user_login: BROADCASTER.broadcaster_user_login,
+        broadcaster_user_name: BROADCASTER.broadcaster_user_name,
+        from_broadcaster_user_id: v.user_id,
+        from_broadcaster_user_login: v.user_login,
+        from_broadcaster_user_name: v.user_name,
+        viewer_count: 128,
+        started_at: now(),
       };
     },
   },

@@ -54,6 +54,7 @@
     "@repo/storage": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/twitch-api": "workspace:*",
+    "@repo/twitch-assets": "workspace:*",
     "@repo/types": "workspace:*",
     "@repo/ui": "workspace:*",
     "@repo/ws-client": "workspace:*",

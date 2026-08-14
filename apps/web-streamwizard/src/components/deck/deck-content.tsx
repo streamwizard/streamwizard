@@ -33,21 +33,33 @@ import { ObsLifecycleBanner } from "@/components/irl/obs-lifecycle-banner";
 import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
 import { AutoSwitcherHoldCard } from "@/components/deck/auto-switcher-hold-card";
 import { InstallPrompt } from "@/components/deck/install-prompt";
-import { DeckFooter, deckMainPadding, type DeckTab } from "@/components/deck/deck-tab-bar";
-import { SwitcherSettingsPanel, type SaveBarActions, type SaveBarState } from "@/components/deck/switcher-settings-panel";
+import { DeckFooter, deckChatPadding, deckMainPadding } from "@/components/deck/deck-tab-bar";
+import { SwitcherSettingsPanel } from "@/components/deck/switcher-settings-panel";
+import { DeckChatPanel } from "@/components/deck/chat/deck-chat-panel";
+import { DeckStreamPanel } from "@/components/deck/stream-info/deck-stream-panel";
+import { useDeckChatRoom } from "@/hooks/deck/use-deck-chat-room";
 
 interface DeckContentProps {
   canInteract: boolean;
   /** Full config row, so the switcher tab can edit it and the deck can gate scene holds on it. */
   autoSwitcherConfig: AutoSwitcherConfigRow | null;
   initialOverride: { sceneName: string | null } | null;
+  /** Null when the Twitch integration is missing; chat then reads empty and can't send. */
+  broadcasterUserId: string | null;
+  broadcasterUserName: string | null;
 }
 
 // Tall touch targets: an IRL streamer is tapping this one-handed on a phone
 // while walking, so every actionable button gets the same oversized shape.
 const deckButtonClass = "h-24 rounded-2xl text-base font-semibold";
 
-export function DeckContent({ canInteract, autoSwitcherConfig, initialOverride }: DeckContentProps) {
+export function DeckContent({
+  canInteract,
+  autoSwitcherConfig,
+  initialOverride,
+  broadcasterUserId,
+  broadcasterUserName,
+}: DeckContentProps) {
   // Config lives in state, not as a frozen prop: saving on the switcher tab must
   // immediately change whether a scene tap holds the scene, without a reload.
   const [switcherConfig, setSwitcherConfig] = useState(autoSwitcherConfig);
@@ -63,6 +75,10 @@ export function DeckContent({ canInteract, autoSwitcherConfig, initialOverride }
     discardPrompt,
     setDiscardPrompt,
   } = useDeckTabs();
+
+  // Mounted here rather than inside the chat panel so switching tabs neither
+  // drops the buffered messages nor churns the websocket connection.
+  const chatRoom = useDeckChatRoom();
 
   // True from a deck-initiated container start until OBS connects; gates the
   // boot stepper so plain websocket reconnects don't look like OBS restarting.
@@ -223,16 +239,27 @@ export function DeckContent({ canInteract, autoSwitcherConfig, initialOverride }
       ? "secondary"
       : "outline";
 
-  const showSaveBar = tab === "switcher" && saveBar != null && (saveBar.dirty || saveBar.submitting);
+  // Any tab may own unsaved changes; only one is mounted at a time, so whatever
+  // reported a save bar is the tab on screen.
+  const showSaveBar = saveBar != null && (saveBar.dirty || saveBar.submitting);
+  // Chat is the one tab that owns the viewport instead of scrolling inside it:
+  // its message list is the scroller, and the composer has to stay put above
+  // the tab bar while the list moves under it.
+  const isChat = tab === "chat";
 
   return (
     <main
       className={cn(
-        "min-h-dvh bg-background px-4 pt-6 select-none [touch-action:manipulation]",
-        deckMainPadding(showSaveBar),
+        "bg-background px-4 pt-6 select-none [touch-action:manipulation]",
+        isChat ? cn("flex h-dvh flex-col overflow-hidden", deckChatPadding) : cn("min-h-dvh", deckMainPadding(showSaveBar)),
       )}
     >
-      <div className="mx-auto w-full max-w-md space-y-4">
+      <div
+        className={cn(
+          "mx-auto w-full max-w-md",
+          isChat ? "flex min-h-0 flex-1 flex-col gap-3" : "space-y-4",
+        )}
+      >
         {!canInteract && <FeatureDisabledBanner />}
 
         {/* High-signal banner for events the streamer can't afford to miss: a
@@ -246,8 +273,16 @@ export function DeckContent({ canInteract, autoSwitcherConfig, initialOverride }
 
         {/* Title + connection status. The OBS badge stays on both tabs so the
             connection state is never a tab switch away. */}
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-xl font-semibold">{tab === "switcher" ? "Sensitivity" : "Stream Deck"}</h1>
+        <div className="flex shrink-0 items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold">
+            {tab === "switcher"
+              ? "Sensitivity"
+              : tab === "stream"
+                ? "Stream info"
+                : isChat
+                  ? "Chat"
+                  : "Stream Deck"}
+          </h1>
           <Badge variant={statusVariant} className="gap-1.5">
             {obs.status === "open" && <span className="h-1.5 w-1.5 rounded-full bg-green-400 inline-block animate-pulse" />}
             {(inStartFlow || isReconnecting || isStopping || externalStarting) && <Loader2 className="h-3 w-3 animate-spin" />}
@@ -275,7 +310,22 @@ export function DeckContent({ canInteract, autoSwitcherConfig, initialOverride }
           </Badge>
         </div>
 
-        {tab === "switcher" ? (
+        {isChat ? (
+          <DeckChatPanel
+            room={chatRoom}
+            broadcasterUserId={broadcasterUserId}
+            broadcasterUserName={broadcasterUserName}
+            broadcasterUserLogin={broadcasterUserName?.toLowerCase() ?? null}
+            canSend={broadcasterUserId != null}
+          />
+        ) : tab === "stream" ? (
+          <DeckStreamPanel
+            broadcasterId={broadcasterUserId}
+            canInteract={canInteract}
+            onSaveBarChange={setSaveBar}
+            actionsRef={saveBarActionsRef}
+          />
+        ) : tab === "switcher" ? (
           <SwitcherSettingsPanel
             config={switcherConfig}
             canInteract={canInteract}
@@ -447,15 +497,17 @@ export function DeckContent({ canInteract, autoSwitcherConfig, initialOverride }
           </>
         )}
 
-        <InstallPrompt />
+        {/* The chat tab has no spare vertical space to offer it. */}
+        {isChat ? null : <InstallPrompt />}
       </div>
 
       <DeckFooter
         tab={tab}
         onTabChange={handleTabChange}
-        saveBar={tab === "switcher" ? saveBar : null}
+        saveBar={saveBar}
         onSave={() => saveBarActionsRef.current?.save()}
         onDiscard={() => saveBarActionsRef.current?.discard()}
+        chatUnread={chatRoom.unreadEvents > 0}
       />
 
       <AlertDialog open={discardPrompt !== null} onOpenChange={(open) => !open && setDiscardPrompt(null)}>
@@ -463,7 +515,7 @@ export function DeckContent({ canInteract, autoSwitcherConfig, initialOverride }
           <AlertDialogHeader>
             <AlertDialogTitle>Drop your changes?</AlertDialogTitle>
             <AlertDialogDescription>
-              You changed some switcher settings but never saved them. Leaving now throws them away.
+              You changed some settings but never saved them. Leaving now throws them away.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
