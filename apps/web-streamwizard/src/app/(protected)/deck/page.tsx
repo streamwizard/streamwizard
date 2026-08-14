@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { createClient } from "@repo/supabase/next/server";
 import { requireProductAccess } from "@/lib/require-product-access";
 import { getAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
 import { DeckContent } from "@/components/deck/deck-content";
@@ -24,7 +25,14 @@ export const viewport: Viewport = {
 };
 
 export default async function DeckPage() {
-  const [access, autoSwitcherConfig] = await Promise.all([requireProductAccess("cloud_obs"), getAutoSwitcherConfig()]);
+  const supabase = await createClient();
+  // The chat tab needs the channel's own identity: to highlight mentions of the
+  // streamer, and to label the message it echoes back after sending one.
+  const [access, autoSwitcherConfig, { data: twitch }] = await Promise.all([
+    requireProductAccess("cloud_obs"),
+    getAutoSwitcherConfig(),
+    supabase.from("integrations_twitch").select("twitch_user_id, twitch_username").maybeSingle(),
+  ]);
 
   return (
     <>
@@ -42,6 +50,8 @@ export default async function DeckPage() {
         initialOverride={
           autoSwitcherConfig?.override_scene_uuid ? { sceneName: autoSwitcherConfig.override_scene_name } : null
         }
+        broadcasterUserId={twitch?.twitch_user_id ?? null}
+        broadcasterUserName={twitch?.twitch_username ?? null}
       />
     </>
   );

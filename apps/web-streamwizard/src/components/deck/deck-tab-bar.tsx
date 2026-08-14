@@ -1,10 +1,10 @@
 "use client";
 
 import { Button, cn } from "@repo/ui";
-import { LayoutGrid, Loader2, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, Loader2, MessageSquare, PencilLine, SlidersHorizontal } from "lucide-react";
 import type { SaveBarState } from "@/components/deck/switcher-settings-panel";
 
-export type DeckTab = "deck" | "switcher";
+export type DeckTab = "deck" | "chat" | "stream" | "switcher";
 
 // Single fixed stack at the bottom of the deck: the save bar sits directly on
 // top of the tab bar, so neither needs to know the other's height. The whole
@@ -12,8 +12,17 @@ export type DeckTab = "deck" | "switcher";
 
 const TABS: { value: DeckTab; label: string; Icon: typeof LayoutGrid }[] = [
   { value: "deck", label: "Deck", Icon: LayoutGrid },
+  { value: "chat", label: "Chat", Icon: MessageSquare },
+  { value: "stream", label: "Stream info", Icon: PencilLine },
   { value: "switcher", label: "Sensitivity", Icon: SlidersHorizontal },
 ];
+
+// Derived rather than written out, so adding a tab above is the only edit.
+const TAB_GRID_COLS: Record<number, string> = {
+  2: "grid-cols-2",
+  3: "grid-cols-3",
+  4: "grid-cols-4",
+};
 
 interface DeckFooterProps {
   tab: DeckTab;
@@ -22,9 +31,11 @@ interface DeckFooterProps {
   saveBar: SaveBarState | null;
   onSave: () => void;
   onDiscard: () => void;
+  /** Dot on the chat tab while unseen chat activity is waiting. */
+  chatUnread?: boolean;
 }
 
-export function DeckFooter({ tab, onTabChange, saveBar, onSave, onDiscard }: DeckFooterProps) {
+export function DeckFooter({ tab, onTabChange, saveBar, onSave, onDiscard, chatUnread }: DeckFooterProps) {
   const showSaveBar = saveBar != null && (saveBar.dirty || saveBar.submitting);
 
   return (
@@ -53,9 +64,10 @@ export function DeckFooter({ tab, onTabChange, saveBar, onSave, onDiscard }: Dec
       ) : null}
 
       <nav aria-label="Deck sections" className="border-t bg-card/95 backdrop-blur">
-        <div className="mx-auto grid w-full max-w-md grid-cols-2">
+        <div className={cn("mx-auto grid w-full max-w-md", TAB_GRID_COLS[TABS.length])}>
           {TABS.map(({ value, label, Icon }) => {
             const active = value === tab;
+            const showDot = value === "chat" && chatUnread && !active;
             return (
               <button
                 key={value}
@@ -63,13 +75,20 @@ export function DeckFooter({ tab, onTabChange, saveBar, onSave, onDiscard }: Dec
                 onClick={() => onTabChange(value)}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "relative flex min-h-16 flex-col items-center justify-center gap-1 transition-colors active:bg-accent",
+                  "relative flex min-h-16 min-w-0 flex-col items-center justify-center gap-1 transition-colors active:bg-accent",
                   active ? "text-primary" : "text-muted-foreground",
                 )}
               >
                 {active ? <span className="absolute inset-x-6 top-0 h-0.5 rounded-full bg-primary" /> : null}
-                <Icon className="h-5 w-5" />
-                <span className="text-xs font-medium">{label}</span>
+                <span className="relative">
+                  <Icon className="h-5 w-5" />
+                  {showDot ? (
+                    <span className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full border border-card bg-primary" />
+                  ) : null}
+                </span>
+                {/* Four tabs on a narrow phone: the longer labels have to be
+                    allowed to truncate rather than wrap the row taller. */}
+                <span className="w-full truncate px-1 text-center text-[11px] font-medium">{label}</span>
               </button>
             );
           })}
@@ -78,6 +97,14 @@ export function DeckFooter({ tab, onTabChange, saveBar, onSave, onDiscard }: Dec
     </div>
   );
 }
+
+/**
+ * Exact footer height for the chat tab. The scrolling-content tabs pad
+ * generously so the last card isn't flush against the nav, but the chat
+ * composer is meant to sit right on top of it — extra padding would read as a
+ * gap in the middle of the keyboard stack.
+ */
+export const deckChatPadding = "pb-[calc(4rem_+_env(safe-area-inset-bottom))]";
 
 /** Bottom padding for <main> so nothing hides behind the fixed footer. */
 export function deckMainPadding(showSaveBar: boolean) {
