@@ -14,6 +14,12 @@ export interface WsRoomOptions {
    * Supabase JWT reconnects into the same room instead of forking a new one.
    */
   getToken: () => string | Promise<string>;
+  /**
+   * Event types this connection wants. Omitted or empty means every event in
+   * the room, which is what overlays want — a filter only pays off for a
+   * consumer like the deck's chat tab that ignores most of the room's traffic.
+   */
+  channels?: string[];
 }
 
 interface RoomState {
@@ -61,7 +67,13 @@ async function connect(roomKey: string, room: RoomState) {
     return;
   }
 
-  const ws = new WebSocket(`${room.opts.wsUrl}/ws?role=subscriber&token=${encodeURIComponent(token)}`);
+  const channels = room.opts.channels?.length
+    ? `&channels=${encodeURIComponent(room.opts.channels.join(","))}`
+    : "";
+
+  const ws = new WebSocket(
+    `${room.opts.wsUrl}/ws?role=subscriber&token=${encodeURIComponent(token)}${channels}`
+  );
   room.ws = ws;
 
   ws.onopen = () => {
@@ -87,6 +99,11 @@ async function connect(roomKey: string, room: RoomState) {
   ws.onerror = () => ws.close();
 }
 
+/**
+ * Subscribers sharing a `roomKey` share one socket, so the first caller's
+ * `channels` filter is the one that takes effect. Give a consumer with its own
+ * filter its own key.
+ */
 export function subscribeToWsRoomWith(
   opts: WsRoomOptions,
   listener: WsEventListener
