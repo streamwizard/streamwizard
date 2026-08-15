@@ -23,7 +23,7 @@ export type ServiceDependencies = {
 };
 
 // Union of all possible contexts (expand this as you add services)
-export type ServiceContext = GlobalContext | TwitchContext; // | YouTubeContext | DiscordContext | SpotifyContext;
+export type ServiceContext = GlobalContext | TwitchContext; // | YouTubeContext | DiscordContext;
 
 // ===== SERVICE CONFIGURATIONS =====
 
