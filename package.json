@@ -22,7 +22,7 @@
     "typescript": "5.9.2"
   },
   "overrides": {
-    "next": "^16.2.6",
+    "next": "16.2.12",
     "@sentry/core": "10.56.0",
     "@sentry/bun": "10.56.0",
     "@sentry/hono": "10.56.0",
