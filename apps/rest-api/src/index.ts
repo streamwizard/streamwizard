@@ -29,10 +29,14 @@ app.get("/health", (c) => c.json({ ok: true }));
 // SECURITY MIDDLEWARE (Applied in order)
 // ============================================
 
-// Sentry must be first — sets up tracing and Hono's onError capture
-if (process.env.SENTRY_DSN && process.env.NODE_ENV !== "development") {
+// Sentry must be first — sets up tracing and Hono's onError capture.
+// Staging and production share one Doppler config, so the DSN is namespaced
+// per app; the bare SENTRY_DSN fallback keeps the per-app dev configs working.
+const sentryDsn = process.env.SENTRY_DSN_REST_API || process.env.SENTRY_DSN;
+
+if (sentryDsn && process.env.NODE_ENV !== "development") {
   app.use("*", sentry(app, {
-    ...getSentryOptions({ dsn: process.env.SENTRY_DSN, service: "rest-api" }),
+    ...getSentryOptions({ dsn: sentryDsn, service: "rest-api" }),
     integrations: [createSupabaseIntegration(Sentry)],
   }));
   console.log("[sentry] active");

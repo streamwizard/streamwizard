@@ -1,9 +1,13 @@
 import * as Sentry from "@sentry/bun";
 import { getSentryOptions, createSupabaseIntegration } from "@repo/sentry";
 
-if (process.env.SENTRY_DSN && process.env.NODE_ENV !== "development") {
+// Staging and production share one Doppler config, so the DSN is namespaced
+// per app; the bare SENTRY_DSN fallback keeps the per-app dev configs working.
+const dsn = process.env.SENTRY_DSN_WS_SERVER || process.env.SENTRY_DSN;
+
+if (dsn && process.env.NODE_ENV !== "development") {
   Sentry.init({
-    ...getSentryOptions({ dsn: process.env.SENTRY_DSN, service: "ws-server" }),
+    ...getSentryOptions({ dsn, service: "ws-server" }),
     integrations: [createSupabaseIntegration(Sentry)],
   });
   console.log("[sentry] active");

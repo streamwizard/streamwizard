@@ -16,7 +16,7 @@ function deriveEnv(key: string, ...sources: (string | undefined)[]) {
 deriveEnv("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_URL);
 deriveEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, process.env.SUPABASE_PUBLIC_KEY);
 deriveEnv("NEXT_PUBLIC_WS_SERVER_URL", process.env.NEXT_PUBLIC_WS_SERVER_URL, process.env.WS_SERVER_URL);
-deriveEnv("NEXT_PUBLIC_SENTRY_DSN", process.env.NEXT_PUBLIC_SENTRY_DSN, process.env.SENTRY_DSN);
+deriveEnv("NEXT_PUBLIC_SENTRY_DSN", process.env.NEXT_PUBLIC_SENTRY_DSN, process.env.SENTRY_DSN_WEB_STREAMWIZARD, process.env.SENTRY_DSN);
 // User assets live in the same R2 bucket as our static CDN (under assets/),
 // so the asset CDN URL falls back to NEXT_PUBLIC_CDN_URL unless overridden.
 deriveEnv(

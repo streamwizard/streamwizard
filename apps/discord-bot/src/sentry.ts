@@ -1,8 +1,15 @@
 import * as Sentry from "@sentry/bun";
-import { getSentryOptions } from "@repo/sentry";
+import { getSentryOptions, createSupabaseIntegration } from "@repo/sentry";
 
-if (process.env.SENTRY_DSN && process.env.NODE_ENV !== "development") {
-  Sentry.init(getSentryOptions({ dsn: process.env.SENTRY_DSN, service: "discord-bot" }));
+// Staging and production share one Doppler config, so the DSN is namespaced
+// per app; the bare SENTRY_DSN fallback keeps the per-app dev configs working.
+const dsn = process.env.SENTRY_DSN_DISCORD_BOT || process.env.SENTRY_DSN;
+
+if (dsn && process.env.NODE_ENV !== "development") {
+  Sentry.init({
+    ...getSentryOptions({ dsn, service: "discord-bot" }),
+    integrations: [createSupabaseIntegration(Sentry)],
+  });
   console.log("[sentry] active");
 } else {
   console.log("[sentry] inactive (no SENTRY_DSN)");

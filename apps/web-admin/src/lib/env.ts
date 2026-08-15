@@ -11,7 +11,7 @@ function derive(key: string, value: string | undefined): void {
 
 derive("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL);
 derive("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLIC_KEY);
-derive("NEXT_PUBLIC_SENTRY_DSN", process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN);
+derive("NEXT_PUBLIC_SENTRY_DSN", process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN_WEB_ADMIN ?? process.env.SENTRY_DSN);
 
 export const env = createEnv({
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
