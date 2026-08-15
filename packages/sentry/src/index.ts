@@ -87,6 +87,25 @@ export async function flushSentry(timeoutMs = 2000): Promise<void> {
   }
 }
 
+// An uncaughtException means a stack unwound past every handler: locks may be
+// held, sockets half-written, module state half-mutated. Registering a handler
+// stops the runtime from exiting on its own, so a process that "survives" one
+// keeps serving from that state — the failure mode that produces the confusing
+// second incident. Report, flush, exit non-zero, let the container restart.
+//
+// Deliberately not used for unhandledRejection: a stray rejected promise is
+// usually a local mistake rather than a corrupted process, and exiting on one
+// turns a logged warning into an outage.
+export function reportFatal(error: unknown, context: string): void {
+  console.error(`[${context}] fatal — exiting`, error);
+  captureException(error);
+  // Never let a hung transport hold the process open; flushSentry is already
+  // bounded and never throws.
+  void flushSentry().finally(() => {
+    globalThis.process?.exit?.(1);
+  });
+}
+
 export function createSupabaseIntegration(sentry: any) {
   return supabaseIntegration(SupabaseClient, sentry, {
     tracing: true,

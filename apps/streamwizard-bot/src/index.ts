@@ -1,7 +1,7 @@
 import { Sentry } from "./sentry";
-process.on("uncaughtException", (err) => { Sentry.captureException(err); });
+process.on("uncaughtException", (err) => { reportFatal(err, "streamwizard-bot"); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
-import { flushSentry } from "@repo/sentry";
+import { flushSentry, reportFatal } from "@repo/sentry";
 import { handlers } from "./handlers/eventHandler";
 import { TwitchEventSubReceiver } from "@repo/twitch-eventsub";
 import { env } from "./lib/env";

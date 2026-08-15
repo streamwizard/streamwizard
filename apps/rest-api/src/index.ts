@@ -1,10 +1,10 @@
 import { Sentry } from "./sentry";
-process.on("uncaughtException", (err) => { Sentry.captureException(err); });
+process.on("uncaughtException", (err) => { reportFatal(err, "rest-api"); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import "./lib/env";
 import { Hono } from "hono";
 import { sentry } from "@sentry/hono/bun";
-import { getSentryOptions, createSupabaseIntegration, flushSentry } from "@repo/sentry";
+import { getSentryOptions, createSupabaseIntegration, flushSentry, reportFatal } from "@repo/sentry";
 import { metricsMiddleware, isMetricsEnabled } from "@repo/metrics";
 import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";

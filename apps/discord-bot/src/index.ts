@@ -1,8 +1,8 @@
 import { Sentry } from "./sentry";
-process.on("uncaughtException", (err) => { Sentry.captureException(err); });
+process.on("uncaughtException", (err) => { reportFatal(err, "discord-bot"); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 
-import { flushSentry } from "@repo/sentry";
+import { flushSentry, reportFatal } from "@repo/sentry";
 import { client } from "./lib/discord-client";
 import { env } from "./lib/env";
 import { loadCommands } from "./handlers/commandHandler";

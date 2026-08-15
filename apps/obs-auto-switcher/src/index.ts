@@ -1,12 +1,12 @@
 import { Sentry } from "./sentry";
 process.on("uncaughtException", (err) => {
-  Sentry.captureException(err);
+  reportFatal(err, "obs-auto-switcher");
 });
 process.on("unhandledRejection", (reason) => {
   Sentry.captureException(reason);
 });
 
-import { flushSentry } from "@repo/sentry";
+import { flushSentry, reportFatal } from "@repo/sentry";
 import { env } from "./lib/env";
 import { ConfigStore } from "./config-store";
 import { StatsFeed } from "./stats-feed";

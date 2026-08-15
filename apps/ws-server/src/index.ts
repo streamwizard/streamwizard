@@ -1,8 +1,8 @@
 import { Sentry } from "./sentry";
-process.on("uncaughtException", (err) => { Sentry.captureException(err); });
+process.on("uncaughtException", (err) => { reportFatal(err, "ws-server"); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import "./lib/env";
-import { flushSentry } from "@repo/sentry";
+import { flushSentry, reportFatal } from "@repo/sentry";
 import { handleUpgrade } from "./handlers/auth";
 import { websocketHandlers } from "./handlers/ws";
 import { rooms } from "./rooms";

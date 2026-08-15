@@ -1,5 +1,5 @@
 import { Sentry } from "./sentry";
-import { flushSentry } from "@repo/sentry";
+import { flushSentry, reportFatal } from "@repo/sentry";
 import { env } from "./lib/env";
 import { runEvaluationPass } from "@repo/alerting/engine";
 import { homeEnv } from "@repo/alerting/home-env";
@@ -11,8 +11,7 @@ import { homeEnv } from "@repo/alerting/home-env";
 // The engine's own Supabase lock guards against a second alert-worker process.
 
 process.on("uncaughtException", (err) => {
-  console.error("[alert-worker] uncaughtException", err);
-  Sentry.captureException(err);
+  reportFatal(err, "alert-worker");
 });
 process.on("unhandledRejection", (reason) => {
   console.error("[alert-worker] unhandledRejection", reason);
