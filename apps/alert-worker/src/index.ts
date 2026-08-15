@@ -1,4 +1,5 @@
 import { Sentry } from "./sentry";
+import { flushSentry } from "@repo/sentry";
 import { env } from "./lib/env";
 import { runEvaluationPass } from "@repo/alerting/engine";
 import { homeEnv } from "@repo/alerting/home-env";
@@ -88,3 +89,6 @@ while (!stopped) {
   if (!stopped) await sleep(env.TICK_SECONDS * 1000);
 }
 console.log("[alert-worker] stopped");
+// The --once path above already flushes; this is the SIGTERM exit, where a
+// failed final pass would otherwise never reach Sentry.
+await flushSentry();

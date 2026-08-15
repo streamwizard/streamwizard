@@ -4,7 +4,7 @@ process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); 
 import "./lib/env";
 import { Hono } from "hono";
 import { sentry } from "@sentry/hono/bun";
-import { getSentryOptions, createSupabaseIntegration } from "@repo/sentry";
+import { getSentryOptions, createSupabaseIntegration, flushSentry } from "@repo/sentry";
 import { metricsMiddleware, isMetricsEnabled } from "@repo/metrics";
 import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
@@ -120,11 +120,22 @@ app.post("/api/clips/sync", supabaseAuth(), syncClipsHandler);
 // Clips Sync Status - Get sync status for authenticated user
 app.get("/api/clips/sync-status", supabaseAuth(), syncStatusHandler);
 
-Bun.serve({
+const server = Bun.serve({
   fetch: app.fetch,
   hostname: "0.0.0.0",
   port: Number(process.env.PORT ?? 8080),
 });
+
+// Without a signal handler the container is killed outright on deploy and any
+// queued Sentry event dies with it.
+const shutdown = async () => {
+  console.log("[rest-api] shutting down");
+  server.stop();
+  await flushSentry();
+  process.exit(0);
+};
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 console.log(`[rest-api] listening on port ${process.env.PORT ?? 8080}`);
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

@@ -1,6 +1,6 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseIntegration } from "@supabase/sentry-js-integration";
-import { captureException, type ErrorEvent, type Event } from "@sentry/core";
+import { captureException, flush, type ErrorEvent, type Event } from "@sentry/core";
 
 export interface SentryConfig {
   dsn: string;
@@ -70,6 +70,21 @@ export function getSentryOptions(config: SentryConfig) {
 export function reportError(error: unknown, context: string): void {
   console.error(`[${context}]`, error);
   captureException(error, { tags: { context } });
+}
+
+// Sentry batches events and sends them in the background, so a process that
+// exits promptly — SIGTERM on deploy, `process.exit` after a failed startup —
+// takes the queue with it. The events lost that way are exactly the ones worth
+// having. Await this before any deliberate exit. Never throws and never blocks
+// past the timeout: a shutdown that hangs on telemetry is worse than a missing
+// event.
+export async function flushSentry(timeoutMs = 2000): Promise<void> {
+  try {
+    await flush(timeoutMs);
+  } catch {
+    // No client bound (Sentry disabled in dev) or the transport failed — the
+    // caller is on its way out either way.
+  }
 }
 
 export function createSupabaseIntegration(sentry: any) {

@@ -2,6 +2,7 @@ import { Sentry } from "./sentry";
 process.on("uncaughtException", (err) => { Sentry.captureException(err); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import "./lib/env";
+import { flushSentry } from "@repo/sentry";
 import { handleUpgrade } from "./handlers/auth";
 import { websocketHandlers } from "./handlers/ws";
 import { rooms } from "./rooms";
@@ -42,6 +43,17 @@ setInterval(() => {
 
 // Send a room snapshot to connected monitors every 5 s
 setInterval(broadcastSnapshot, 5_000);
+
+// Without a signal handler the container is killed outright on deploy and any
+// queued Sentry event dies with it.
+const shutdown = async () => {
+  console.log("[ws-server] shutting down");
+  server.stop();
+  await flushSentry();
+  process.exit(0);
+};
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 console.log(`[ws-server] listening on port ${server.port}`);
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

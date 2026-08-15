@@ -2,6 +2,7 @@ import { Sentry } from "./sentry";
 process.on("uncaughtException", (err) => { Sentry.captureException(err); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 
+import { flushSentry } from "@repo/sentry";
 import { client } from "./lib/discord-client";
 import { env } from "./lib/env";
 import { loadCommands } from "./handlers/commandHandler";
@@ -17,6 +18,7 @@ async function main() {
   const shutdown = async () => {
     await shutdownTracker();
     await client.destroy();
+    await flushSentry();
     process.exit(0);
   };
 
@@ -26,7 +28,11 @@ async function main() {
   await client.login(env.DISCORD_BOT_TOKEN);
 }
 
-main().catch((error) => {
+main().catch(async (error) => {
+  // A rejection handled here never reaches the unhandledRejection hook above,
+  // so capture it explicitly or a failed startup is invisible in Sentry.
   console.error("❌ Failed to start bot:", error);
+  Sentry.captureException(error);
+  await flushSentry();
   process.exit(1);
 });
