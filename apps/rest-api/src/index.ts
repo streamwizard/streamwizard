@@ -4,7 +4,7 @@ process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); 
 import "./lib/env";
 import { Hono } from "hono";
 import { sentry } from "@sentry/hono/bun";
-import { getSentryOptions, createSupabaseIntegration, flushSentry, reportFatal } from "@repo/sentry";
+import { getSentryOptions, createSupabaseIntegration, createConsoleLogsIntegration, flushSentry, reportFatal } from "@repo/sentry";
 import { metricsMiddleware, isMetricsEnabled } from "@repo/metrics";
 import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
@@ -37,7 +37,7 @@ const sentryDsn = process.env.SENTRY_DSN_REST_API || process.env.SENTRY_DSN;
 if (sentryDsn && process.env.NODE_ENV !== "development") {
   app.use("*", sentry(app, {
     ...getSentryOptions({ dsn: sentryDsn, service: "rest-api" }),
-    integrations: [createSupabaseIntegration(Sentry)],
+    integrations: [createSupabaseIntegration(Sentry), createConsoleLogsIntegration()],
   }));
   console.log("[sentry] active");
 } else {

@@ -3,12 +3,14 @@ import posthog from "posthog-js";
 
 if (process.env.NODE_ENV !== "development") {
   import("@sentry/nextjs").then(async (Sentry) => {
-    const { getSentryOptions, createSupabaseIntegration } = await import("@repo/sentry");
+    const { getSentryOptions, createSupabaseIntegration, createConsoleLogsIntegration } =
+      await import("@repo/sentry");
     Sentry.init({
       ...getSentryOptions({ dsn: process.env.NEXT_PUBLIC_SENTRY_DSN!, service: "web-streamwizard" }),
       integrations: [
         Sentry.replayIntegration(),
         createSupabaseIntegration(Sentry),
+        createConsoleLogsIntegration(),
       ],
       replaysSessionSampleRate: 0.1,
       replaysOnErrorSampleRate: 1.0,

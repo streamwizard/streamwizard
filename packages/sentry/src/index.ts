@@ -1,6 +1,12 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseIntegration } from "@supabase/sentry-js-integration";
-import { captureException, flush, type ErrorEvent, type Event } from "@sentry/core";
+import {
+  captureException,
+  consoleLoggingIntegration,
+  flush,
+  type ErrorEvent,
+  type Event,
+} from "@sentry/core";
 
 export interface SentryConfig {
   dsn: string;
@@ -104,6 +110,17 @@ export function reportFatal(error: unknown, context: string): void {
   void flushSentry().finally(() => {
     globalThis.process?.exit?.(1);
   });
+}
+
+// Forwards existing console output into Sentry Logs, so container logs survive
+// a redeploy and are searchable across services instead of living in
+// `docker logs` on one box. Pairs with enableLogs in getSentryOptions, which
+// only opens the transport — without this nothing feeds it.
+//
+// `debug`, `trace` and `assert` are left out: they are the highest-volume and
+// lowest-value levels, and logs are a metered category.
+export function createConsoleLogsIntegration() {
+  return consoleLoggingIntegration({ levels: ["log", "info", "warn", "error"] });
 }
 
 export function createSupabaseIntegration(sentry: any) {
