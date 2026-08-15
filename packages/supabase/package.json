@@ -55,10 +55,6 @@
       "types": "./src/queries/stream-analytics.ts",
       "default": "./src/queries/stream-analytics.ts"
     },
-    "./queries/public": {
-      "types": "./src/queries/public.ts",
-      "default": "./src/queries/public.ts"
-    },
     "./queries/sync": {
       "types": "./src/queries/sync.ts",
       "default": "./src/queries/sync.ts"

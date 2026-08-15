@@ -2,13 +2,16 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { discordInviteLink, githubLink } from "@/lib/constant";
+import { discordInviteLink, docsClipsLink, docsLink, githubLink } from "@/lib/constant";
 import { Separator } from "@repo/ui";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 
 const navigation = {
+  // These point at the docs, not /dashboard/clips: that route is behind auth, so
+  // it was a dead end for anyone (and any crawler) not already signed in.
   product: [
-    { name: "Clip Management", href: "/dashboard/clips" },
+    { name: "Clip Management", href: docsClipsLink },
+    { name: "Docs", href: docsLink },
   ],
   community: [
     { name: "Discord", href: discordInviteLink },
@@ -58,6 +61,8 @@ export function Footer() {
                   <li key={item.name}>
                     <Link
                       href={item.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-muted-foreground hover:text-white transition-colors"
                     >
                       {item.name}

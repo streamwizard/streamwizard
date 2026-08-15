@@ -9,7 +9,6 @@ const data = {
     "All stream events logged automatically",
   ],
   primaryImageSrc: "/img/landing-page/video-player.png",
-  secondaryImageSrc: "/img/landing-page/video-player-bg.png",
 };
 
 export default function VideoSection() {
@@ -19,7 +18,6 @@ export default function VideoSection() {
       description={data.description}
       features={data.features}
       primaryImageSrc={data.primaryImageSrc}
-      secondaryImageSrc={data.secondaryImageSrc}
       priority
     />
   );

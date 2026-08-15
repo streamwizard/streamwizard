@@ -1,16 +1,19 @@
 import { LegalNotice } from "@/components/legal/legal-notice";
 import { LegalTabs } from "@/components/legal-tabs";
 import { LEGAL_CONTACT_EMAIL } from "@/lib/legal";
+import { absoluteUrl } from "@/lib/seo";
 import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy – StreamWizard",
+  // Suffix comes from the root layout's title template.
+  title: "Privacy Policy",
   description:
     "How StreamWizard collects, uses, and protects your personal data.",
+  alternates: { canonical: absoluteUrl("/privacy-policy") },
 };
 
-const LAST_UPDATED = "26 May 2025";
+const LAST_UPDATED = "26 May 2026";
 const CONTACT_EMAIL = LEGAL_CONTACT_EMAIL;
 
 function NormalContent() {

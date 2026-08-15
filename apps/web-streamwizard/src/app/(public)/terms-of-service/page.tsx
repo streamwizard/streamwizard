@@ -1,12 +1,15 @@
 import { LegalNotice } from "@/components/legal/legal-notice";
 import { LegalTabs } from "@/components/legal-tabs";
 import { LEGAL_CONTACT_EMAIL } from "@/lib/legal";
+import { absoluteUrl } from "@/lib/seo";
 import { Metadata } from "next";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Terms of Service – StreamWizard",
+  // Suffix comes from the root layout's title template.
+  title: "Terms of Service",
   description: "The terms and conditions governing your use of StreamWizard.",
+  alternates: { canonical: absoluteUrl("/terms-of-service") },
 };
 
 const LAST_UPDATED = "26 May 2026";

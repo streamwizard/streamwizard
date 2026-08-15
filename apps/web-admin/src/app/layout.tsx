@@ -6,6 +6,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "StreamWizard Admin",
   description: "Internal admin control panel",
+  // Internal tool: keep every route out of search results.
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
