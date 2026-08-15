@@ -2,7 +2,7 @@ import { CookieBanner } from "@/components/cookie-banner";
 import { LightModeOverlay } from "@/components/global/light-mode-overlay";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { PHProvider, PostHogPageView } from "@repo/posthog";
-import { env } from "@/lib/env";
+import { siteUrl } from "@/lib/seo";
 import { Metadata } from "next";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
@@ -28,7 +28,7 @@ const SITE_DESCRIPTION =
 export const metadata: Metadata = {
   // Every relative URL below (and the generated OG image) resolves against this.
   // Without it Next silently emits relative og:image paths, which no scraper follows.
-  metadataBase: new URL(env.NEXT_PUBLIC_BASE_URL),
+  metadataBase: new URL(siteUrl()),
   title: {
     default: "StreamWizard: Twitch Clip Manager",
     template: `%s – ${SITE_NAME}`,

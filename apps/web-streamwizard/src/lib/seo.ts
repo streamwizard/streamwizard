@@ -33,23 +33,51 @@ export const DISALLOWED_PATHS = ["/api/", "/auth/", "/login", "/unauthorized", "
 
 /** The one host whose content is the real, indexable site. */
 const CANONICAL_HOST = "streamwizard.org";
+const CANONICAL_ORIGIN = `https://${CANONICAL_HOST}`;
+
+/**
+ * The env schema types this as a required URL, but `SKIP_ENV_VALIDATION` turns
+ * validation off entirely — which is how CI builds, with no Doppler secrets. So
+ * at build time this really can be undefined, whatever the type says.
+ */
+function configuredBaseUrl(): string | undefined {
+  const raw = env.NEXT_PUBLIC_BASE_URL as string | undefined;
+  if (!raw) return undefined;
+  try {
+    new URL(raw);
+    return raw;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Base URL for building absolute links. Falls back to the canonical origin so a
+ * secret-less build still produces valid metadata instead of throwing on
+ * `new URL(undefined)`.
+ */
+export function siteUrl(): string {
+  return configuredBaseUrl() ?? CANONICAL_ORIGIN;
+}
 
 /**
  * Staging and local both run this same code with a different NEXT_PUBLIC_BASE_URL,
  * so the host decides indexability. No extra env var to forget to set — pointing
  * an environment at a non-prod domain is itself the signal to stay out of the index.
+ *
+ * Note this deliberately does NOT use siteUrl(): an unset base URL must read as
+ * "not the production site", or a misconfigured deploy would inherit the
+ * fallback origin and advertise itself as indexable.
  */
 export function isIndexableEnvironment(): boolean {
-  try {
-    return new URL(env.NEXT_PUBLIC_BASE_URL).hostname === CANONICAL_HOST;
-  } catch {
-    return false;
-  }
+  const configured = configuredBaseUrl();
+  if (!configured) return false;
+  return new URL(configured).hostname === CANONICAL_HOST;
 }
 
 /** Absolute URL for a public path, built off the environment's own base URL. */
 export function absoluteUrl(path: string): string {
-  return new URL(path, env.NEXT_PUBLIC_BASE_URL).toString();
+  return new URL(path, siteUrl()).toString();
 }
 
 /**
