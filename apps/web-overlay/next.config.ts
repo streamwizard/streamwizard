@@ -109,6 +109,17 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        // Overlay URLs are for OBS, never for search results. The layout already
+        // sets robots metadata, but that only covers pages Next renders as HTML;
+        // this header also covers API routes and any non-HTML response.
+        //
+        // Deliberately no robots.txt Disallow to pair with this: a disallowed
+        // crawler never fetches the URL, so it never sees this header, and the
+        // URL can still be indexed bare. noindex has to be readable to work.
+        source: "/(.*)",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
         source: "/:overlayId",
         headers: [
           {
