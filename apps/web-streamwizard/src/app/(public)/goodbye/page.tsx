@@ -1,6 +1,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@repo/ui";
+import type { Metadata } from "next";
+
+// Offboarding page: reachable, but nothing here belongs in a search result.
+// noindex rather than a robots.txt Disallow, so crawlers can actually read it.
+export const metadata: Metadata = {
+  title: "Account deleted",
+  robots: { index: false, follow: false },
+};
 
 export default function GoodbyePage() {
   return (

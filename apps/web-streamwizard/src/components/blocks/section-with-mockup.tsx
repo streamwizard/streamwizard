@@ -9,7 +9,6 @@ interface SectionWithMockupProps {
   title: string | React.ReactNode;
   description: string | React.ReactNode;
   primaryImageSrc: string;
-  secondaryImageSrc: string;
   reverseLayout?: boolean;
   features?: string[];
   priority?: boolean;

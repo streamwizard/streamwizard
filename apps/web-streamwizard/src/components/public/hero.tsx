@@ -56,7 +56,17 @@ export default function Hero() {
         </div>
 
         <div className="relative rounded-xl mt-16 z-10 after:content-[''] after:absolute after:inset-0 after:z-50 after:rounded-[inherit] after:bg-[linear-gradient(to_top,var(--background)_10%,transparent_60%)] after:pointer-events-none before:content-[''] before:absolute before:[-inset:5rem] before:-z-10 before:filter-[blur(120px)] before:bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--color-three),transparent_70%),transparent_70%)] before:opacity-50 animate-fade-up [--animation-delay:400ms]">
-          <Image src="/img/landing-page/hero-dark.webp" alt="StreamWizard Interface" width={0} height={0} sizes="100vw" className="rounded-xl w-full h-auto" priority />
+          {/* Real intrinsic dimensions (not width/height 0) so the browser can
+              reserve space from the aspect ratio. This is the LCP element. */}
+          <Image
+            src="/img/landing-page/hero-dark.webp"
+            alt="The StreamWizard dashboard showing a Twitch clip library sorted into folders"
+            width={2539}
+            height={1271}
+            sizes="100vw"
+            className="rounded-xl w-full h-auto"
+            priority
+          />
           <BorderBeam size={250} duration={12} delay={9} />
         </div>
       </div>

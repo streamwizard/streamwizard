@@ -4,9 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 import { login } from "@/actions/auth/login";
-import { discordInviteLink, githubLink } from "@/lib/constant";
+import { discordInviteLink, docsLink, githubLink } from "@/lib/constant";
 import { FaDiscord, FaGithub } from "react-icons/fa";
-import { Menu } from "lucide-react";
+import { BookOpen, Menu } from "lucide-react";
 
 export default function Header() {
   return (
@@ -20,6 +20,10 @@ export default function Header() {
 
           {/* Desktop nav */}
           <nav className="hidden md:flex items-center gap-4">
+            <Link href={docsLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-sm">
+              <BookOpen className="h-4 w-4" />
+              Docs
+            </Link>
             <Link href={githubLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-sm">
               <FaGithub className="h-4 w-4" />
               GitHub
@@ -42,8 +46,16 @@ export default function Header() {
               </SheetTrigger>
               <SheetContent side="right" className="w-64">
                 <SheetTitle className="sr-only">Navigation</SheetTitle>
-                {/* Page nav links go here */}
                 <nav className="flex flex-col gap-2 px-4 pt-2">
+                  <Link
+                    href={docsLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 text-sm py-1"
+                  >
+                    <BookOpen className="h-4 w-4" />
+                    Docs
+                  </Link>
                 </nav>
 
                 <div className="mt-auto px-4 pb-4">

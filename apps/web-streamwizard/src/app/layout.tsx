@@ -2,6 +2,7 @@ import { CookieBanner } from "@/components/cookie-banner";
 import { LightModeOverlay } from "@/components/global/light-mode-overlay";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { PHProvider, PostHogPageView } from "@repo/posthog";
+import { env } from "@/lib/env";
 import { Metadata } from "next";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
@@ -20,16 +21,37 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+const SITE_NAME = "StreamWizard";
+const SITE_DESCRIPTION =
+  "Organize your Twitch clips. Search by game, date, or title. Actually find the moment you're looking for.";
+
 export const metadata: Metadata = {
-  title: "StreamWizard",
-  description:
-    "Elevate your Twitch streams by letting viewers request songs directly from your chat. StreamWizard fosters a more interactive and engaging experience for you and your chat.",
+  // Every relative URL below (and the generated OG image) resolves against this.
+  // Without it Next silently emits relative og:image paths, which no scraper follows.
+  metadataBase: new URL(env.NEXT_PUBLIC_BASE_URL),
+  title: {
+    default: "StreamWizard: Twitch Clip Manager",
+    template: `%s – ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
   authors: {
-    name: "StreamWizard",
+    name: SITE_NAME,
     url: "https://streamwizard.org",
   },
-
-  keywords: ["twitch", "music", "streaming", "interactive", "chat"],
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    locale: "en_US",
+    title: "StreamWizard: Twitch Clip Manager",
+    description: SITE_DESCRIPTION,
+    url: "/",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "StreamWizard: Twitch Clip Manager",
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default async function RootLayout({
