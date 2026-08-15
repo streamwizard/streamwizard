@@ -59,11 +59,41 @@ async function ping(suffix = ""): Promise<void> {
   }
 }
 
+// Sentry cron monitor: the counterpart to the healthchecks.io ping above, for
+// environments where HEALTHCHECKS_PING_URL isn't set (staging today). The
+// monitor is created on the first check-in, so there is nothing to configure
+// in the Sentry UI. Check-ins carry the SDK's environment, so staging and
+// production report separately.
+const MONITOR_SLUG = "alert-worker-tick";
+let lastHealthyCheckIn = 0;
+
+function reportCheckIn(ok: boolean): void {
+  // The loop ticks every 15s but the tightest schedule Sentry can express is
+  // one minute, so healthy check-ins are throttled to match. Failures always
+  // report — a missed failure is the whole point of the monitor.
+  const now = Date.now();
+  if (ok && now - lastHealthyCheckIn < 60_000) return;
+  if (ok) lastHealthyCheckIn = now;
+
+  Sentry.captureCheckIn(
+    { monitorSlug: MONITOR_SLUG, status: ok ? "ok" : "error" },
+    {
+      schedule: { type: "interval", value: 1, unit: "minute" },
+      // Two missed minutes before alerting: one tick can legitimately take
+      // ~35s, and a single slow pass shouldn't page anyone.
+      checkinMargin: 2,
+      maxRuntime: 5,
+      timezone: "Etc/UTC",
+    },
+  );
+}
+
 async function tick(): Promise<boolean> {
   try {
     const summary = await runEvaluationPass();
     console.log(`[alert-worker] ${new Date().toISOString()} ok ${JSON.stringify(summary)}`);
     await ping();
+    reportCheckIn(true);
     return true;
   } catch (err) {
     // runEvaluationPass is fail-open internally; reaching here means the
@@ -71,6 +101,7 @@ async function tick(): Promise<boolean> {
     console.error(`[alert-worker] ${new Date().toISOString()} FAILED`, err);
     Sentry.captureException(err);
     await ping("/fail");
+    reportCheckIn(false);
     return false;
   }
 }
