@@ -62,7 +62,7 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.SUPABASE_URL ?? "",
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_PUBLIC_KEY ?? "",
     NEXT_PUBLIC_WS_SERVER_URL: process.env.WS_SERVER_URL ?? "",
-    NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN ?? "",
+    NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN_WEB_STREAMWIZARD ?? process.env.SENTRY_DSN ?? "",
     // Inlined into the client bundle so browser-side Sentry events carry the
     // real deploy environment (staging vs production) — NODE_ENV is
     // "production" for both. getSentryOptions falls back through ALERT_ENV
@@ -99,4 +99,12 @@ export default process.env.NODE_ENV === "development"
       silent: !process.env.CI,
       widenClientFileUpload: true,
       tunnelRoute: "/monitoring",
+      // Source map upload. Without these three the build still succeeds but
+      // every staging/production stack trace stays minified and unreadable.
+      // SENTRY_AUTH_TOKEN is a *build-time* secret — it must reach the Docker
+      // build (Dokploy build arg), not just the runtime env.
+      org: "streamwizard",
+      project: "web-streamwizard",
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      sourcemaps: { deleteSourcemapsAfterUpload: true },
     });

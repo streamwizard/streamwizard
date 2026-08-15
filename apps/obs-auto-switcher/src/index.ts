@@ -1,11 +1,12 @@
 import { Sentry } from "./sentry";
 process.on("uncaughtException", (err) => {
-  Sentry.captureException(err);
+  reportFatal(err, "obs-auto-switcher");
 });
 process.on("unhandledRejection", (reason) => {
   Sentry.captureException(reason);
 });
 
+import { flushSentry, reportFatal } from "@repo/sentry";
 import { env } from "./lib/env";
 import { ConfigStore } from "./config-store";
 import { StatsFeed } from "./stats-feed";
@@ -48,12 +49,13 @@ Bun.serve({
   },
 });
 
-const shutdown = () => {
+const shutdown = async () => {
   console.log("[obs-auto-switcher] shutting down");
   engine.stop();
   configStore.stop();
   statsFeed.disconnect();
   statusPublisher.disconnect();
+  await flushSentry();
   process.exit(0);
 };
 process.on("SIGINT", shutdown);

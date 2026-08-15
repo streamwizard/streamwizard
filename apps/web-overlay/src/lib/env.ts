@@ -7,7 +7,8 @@ import { z } from "zod"
 process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLIC_KEY;
 process.env.NEXT_PUBLIC_WS_SERVER_URL = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? process.env.WS_SERVER_URL;
-process.env.NEXT_PUBLIC_SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN;
+process.env.NEXT_PUBLIC_SENTRY_DSN =
+  process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN_WEB_OVERLAY ?? process.env.SENTRY_DSN;
 // User media-library assets share the static-CDN bucket; falls back to the CDN URL.
 process.env.NEXT_PUBLIC_ASSET_CDN_URL =
   process.env.NEXT_PUBLIC_ASSET_CDN_URL ?? process.env.ASSET_CDN_URL ?? process.env.NEXT_PUBLIC_CDN_URL;

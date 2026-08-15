@@ -1,10 +1,10 @@
 import { Sentry } from "./sentry";
-process.on("uncaughtException", (err) => { Sentry.captureException(err); });
+process.on("uncaughtException", (err) => { reportFatal(err, "rest-api"); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import "./lib/env";
 import { Hono } from "hono";
 import { sentry } from "@sentry/hono/bun";
-import { getSentryOptions, createSupabaseIntegration } from "@repo/sentry";
+import { getSentryOptions, createSupabaseIntegration, createConsoleLogsIntegration, flushSentry, reportFatal } from "@repo/sentry";
 import { metricsMiddleware, isMetricsEnabled } from "@repo/metrics";
 import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
@@ -29,11 +29,15 @@ app.get("/health", (c) => c.json({ ok: true }));
 // SECURITY MIDDLEWARE (Applied in order)
 // ============================================
 
-// Sentry must be first — sets up tracing and Hono's onError capture
-if (process.env.SENTRY_DSN && process.env.NODE_ENV !== "development") {
+// Sentry must be first — sets up tracing and Hono's onError capture.
+// Staging and production share one Doppler config, so the DSN is namespaced
+// per app; the bare SENTRY_DSN fallback keeps the per-app dev configs working.
+const sentryDsn = process.env.SENTRY_DSN_REST_API || process.env.SENTRY_DSN;
+
+if (sentryDsn && process.env.NODE_ENV !== "development") {
   app.use("*", sentry(app, {
-    ...getSentryOptions({ dsn: process.env.SENTRY_DSN, service: "rest-api" }),
-    integrations: [createSupabaseIntegration(Sentry)],
+    ...getSentryOptions({ dsn: sentryDsn, service: "rest-api" }),
+    integrations: [createSupabaseIntegration(Sentry), createConsoleLogsIntegration()],
   }));
   console.log("[sentry] active");
 } else {
@@ -116,11 +120,22 @@ app.post("/api/clips/sync", supabaseAuth(), syncClipsHandler);
 // Clips Sync Status - Get sync status for authenticated user
 app.get("/api/clips/sync-status", supabaseAuth(), syncStatusHandler);
 
-Bun.serve({
+const server = Bun.serve({
   fetch: app.fetch,
   hostname: "0.0.0.0",
   port: Number(process.env.PORT ?? 8080),
 });
+
+// Without a signal handler the container is killed outright on deploy and any
+// queued Sentry event dies with it.
+const shutdown = async () => {
+  console.log("[rest-api] shutting down");
+  server.stop();
+  await flushSentry();
+  process.exit(0);
+};
+process.on("SIGINT", shutdown);
+process.on("SIGTERM", shutdown);
 
 console.log(`[rest-api] listening on port ${process.env.PORT ?? 8080}`);
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
