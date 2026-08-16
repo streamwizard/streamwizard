@@ -35,6 +35,12 @@ export default {
 
     const command = interaction.client.commands.get(interaction.commandName);
     if (!command) {
+      // Discord knows a command the bot doesn't — deploy-commands ran against a
+      // different build, or a command file failed to load. The user just sees
+      // the interaction hang.
+      Sentry.captureException(new Error(`No command matching "${interaction.commandName}" was found`), {
+        tags: { context: "commands.unknown-command" },
+      });
       console.error(`[commands] No command matching "${interaction.commandName}" was found`);
       return;
     }

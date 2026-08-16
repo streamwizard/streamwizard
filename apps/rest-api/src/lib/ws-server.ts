@@ -1,3 +1,4 @@
+import { reportError } from "@repo/sentry";
 import { broadcastToUser, postInternal, type BroadcastConfig, type BroadcastResult } from "@repo/ws-client";
 import { env } from "./env";
 
@@ -8,10 +9,17 @@ const wsConfig: BroadcastConfig = {
 
 function logFailure(label: string, context: string, result: BroadcastResult): void {
   if (result.ok || result.reason === "unconfigured") return;
+  // A push that fails is a broadcast a viewer never saw, and the reason is a
+  // returned value rather than a throw — nothing above this frame would ever
+  // see it, so report it here or it stays invisible.
   if (result.reason === "status") {
-    console.error(`[ws-server] ${label} push failed status=${result.status} ${context}`);
+    reportError(new Error(`ws-server ${label} push failed status=${result.status}`), "ws-server.push", {
+      label,
+      status: result.status,
+      context,
+    });
   } else {
-    console.error(`[ws-server] ${label} push failed`, result.error);
+    reportError(result.error, "ws-server.push", { label, context });
   }
 }
 

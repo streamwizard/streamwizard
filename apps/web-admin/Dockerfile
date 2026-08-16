@@ -30,6 +30,13 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_ENV_VALIDATION=true
 
 ARG DOPPLER_TOKEN
+# Stamps every Sentry event with the build it came from, and pins the source
+# maps uploaded by withSentryConfig to that same release. Dokploy must pass
+# this as a build arg (the git SHA); .git is dockerignored, so nothing here can
+# derive it. Unset is harmless — events simply carry no release. Needed in both
+# stages: the builder uploads maps under it, the runner tags server events.
+ARG SENTRY_RELEASE
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 # Only used by no-Doppler local builds: NEXT_PUBLIC_* values are baked into
 # the bundles at build time, so the Supabase URL/key must be present here —
 # with a token, Doppler supplies them and these stay empty.
@@ -47,6 +54,8 @@ FROM oven/bun:1.3.12 AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ARG SENTRY_RELEASE
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV NEXT_TELEMETRY_DISABLED=1

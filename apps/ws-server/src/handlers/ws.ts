@@ -1,3 +1,4 @@
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { insertIrlGeoTrack } from "@repo/supabase/queries/irl";
 import type { BotOutboundMessage, PublisherMessage } from "@repo/types";
@@ -216,7 +217,9 @@ export const websocketHandlers = {
           accuracy: geo.accuracy,
           recorded_at: new Date(geo.timestamp).toISOString(),
         }).then(({ error }) => {
-          if (error) console.error("[geo-insert]", (error as { message: string }).message);
+          // Returned as a value, never thrown — without this a broken geo
+          // insert loses the whole track and nothing anywhere says so.
+          if (error) reportError(error, "ws.geo-insert", { userId, session_id });
         });
       }
     }

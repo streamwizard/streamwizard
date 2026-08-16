@@ -1,4 +1,5 @@
 import type { GuildMember } from "discord.js";
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { getCommandRoles } from "@repo/supabase/queries/discord";
 
@@ -19,7 +20,10 @@ async function getAllowedRoleIds(guildId: string, commandName: string): Promise<
     const rows = await getCommandRoles(supabase, guildId, commandName);
     roleIds = rows.map((row) => row.role_id);
   } catch (error) {
-    console.error(`[permissions] Failed to load role config for ${guildId}/${commandName}, allowing by default:`, error);
+    // Fails open — an unreadable role config means every role may run the
+    // command, and the empty result is then cached for the full TTL. That is a
+    // permission check quietly turning itself off; it belongs in Sentry.
+    reportError(error, "permissions.load-role-config", { guildId, commandName });
   }
 
   cache.set(key, { roleIds, expiresAt: Date.now() + CACHE_TTL_MS });

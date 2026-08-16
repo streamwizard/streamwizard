@@ -1,4 +1,5 @@
 import { supabase } from "@repo/supabase";
+import { reportError } from "@repo/sentry";
 import {
   autoSwitcherConfigSchema,
   resolveAutoSwitcherThresholds,
@@ -45,7 +46,10 @@ export class ConfigStore {
   async start(): Promise<void> {
     await this.reconcile();
     this.reconcileTimer = setInterval(() => {
-      this.reconcile().catch((err) => console.error("[config-store] reconcile failed:", (err as Error).message));
+      // Only the message was logged before, which drops the stack — and a
+      // reconcile that keeps failing means the in-memory config silently
+      // drifts from the DB for as long as the process lives.
+      this.reconcile().catch((err) => reportError(err, "config-store.reconcile"));
     }, RECONCILE_INTERVAL_MS);
   }
 

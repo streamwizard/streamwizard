@@ -68,6 +68,10 @@ const nextConfig = {
     // "production" for both. getSentryOptions falls back through ALERT_ENV
     // and NODE_ENV when this is empty.
     SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT ?? process.env.ALERT_ENV ?? "",
+    // Same reason as SENTRY_ENVIRONMENT: without inlining, the client bundle
+    // reads process.env.SENTRY_RELEASE as undefined and browser events carry
+    // no release, so they never line up with the uploaded source maps.
+    SENTRY_RELEASE: process.env.SENTRY_RELEASE ?? "",
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY ?? process.env.POSTHOG_KEY ?? "",
     NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com",
     NEXT_PUBLIC_ASSET_CDN_URL:
