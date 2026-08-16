@@ -59,7 +59,11 @@ export default async function layout({
 
   return (
     <SidebarProvider>
-      <OnboardingModal clipCount={clipCount ?? 0} discordStatus={discordStatus} />
+      <OnboardingModal
+        clipCount={clipCount ?? 0}
+        discordStatus={discordStatus}
+        initialOnboardingCompleted={!!prefs?.onboarding_completed}
+      />
       <ClipFolderProvider ClipFolders={folders || []}>
         <ModalProvider>
           <ClipFolderDialogProvider>
