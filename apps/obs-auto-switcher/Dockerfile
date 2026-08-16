@@ -52,6 +52,14 @@ COPY --from=deps --chown=bun:bun /app/apps/obs-auto-switcher ./apps/obs-auto-swi
 
 WORKDIR /app/apps/obs-auto-switcher
 
+# Stamps every Sentry event with the build it came from, so an issue can be
+# tied to a deploy and source maps resolve against the right bundle. Dokploy
+# must pass this as a build arg (the git SHA); .git is dockerignored, so
+# nothing here can derive it on its own. Unset is harmless — events simply
+# carry no release, which is the behaviour before this existed.
+ARG SENTRY_RELEASE
+ENV SENTRY_RELEASE=$SENTRY_RELEASE
+
 USER bun
 
 # DOPPLER_TOKEN must be set in the compose environment at runtime

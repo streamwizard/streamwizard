@@ -56,7 +56,11 @@ export function getSentryOptions(config: SentryConfig) {
     // packages/alerting/src/home-env.ts). `||` not `??`: build-time env
     // inlining can turn unset vars into empty strings.
     environment: process.env.SENTRY_ENVIRONMENT || process.env.ALERT_ENV || process.env.NODE_ENV || "development",
-    release: process.env.SENTRY_RELEASE,
+    // `||` not `??`, and undefined rather than "": Next inlines unset vars as
+    // empty strings, and an empty release is a real release value to Sentry —
+    // every event would be tagged with a release that matches no uploaded
+    // source map. Undefined lets the SDK fall back to what the bundler injected.
+    release: process.env.SENTRY_RELEASE || undefined,
     tracesSampleRate: isProd ? 0.1 : 1.0,
     enableLogs: true,
     sendDefaultPii: false,
@@ -73,9 +77,15 @@ export function getSentryOptions(config: SentryConfig) {
 // through here before bailing. Captures via @sentry/core against whichever
 // client the app initialized; the console.error keeps a trail in server logs
 // where Sentry is disabled (dev) or the event never arrives.
-export function reportError(error: unknown, context: string): void {
-  console.error(`[${context}]`, error);
-  captureException(error, { tags: { context } });
+//
+// `extra` carries the per-call detail that used to live in the console.error
+// message (which broadcaster, which iteration). It stays out of the `context`
+// tag on purpose: tags are indexed for grouping, so folding an id into one
+// gives every occurrence its own bucket and the issue never aggregates.
+export function reportError(error: unknown, context: string, extra?: Record<string, unknown>): void {
+  if (extra) console.error(`[${context}]`, extra, error);
+  else console.error(`[${context}]`, error);
+  captureException(error, { tags: { context }, extra });
 }
 
 // Sentry batches events and sends them in the background, so a process that

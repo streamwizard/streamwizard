@@ -1,3 +1,4 @@
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/user";
 import { createUserStateService } from "@repo/user-state";
@@ -46,6 +47,6 @@ export async function setStreamUserState(
         : []),
     ]);
   } catch (error) {
-    console.error("[user-state] stream lifecycle write failed", error);
+    reportError(error, "user-state.stream-lifecycle-write", { broadcasterId, streamId: stream?.id ?? null });
   }
 }

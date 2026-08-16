@@ -1,3 +1,4 @@
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import type { IngestStatsPayload } from "@repo/types";
 import type { EffectiveConfig } from "../config-store";
@@ -49,7 +50,7 @@ export class Engine {
         try {
           monitor.onTick(now);
         } catch (err) {
-          console.error("[engine] tick failed:", (err as Error).message);
+          reportError(err, "engine.tick");
         }
       }
     }, TICK_MS);

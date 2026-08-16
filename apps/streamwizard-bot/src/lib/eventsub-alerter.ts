@@ -1,5 +1,6 @@
 import { sendDiscordDirectMessage } from "@repo/discord-api";
 import { trackEventSubConnection } from "@repo/metrics";
+import { reportError } from "@repo/sentry";
 import type { EventSubLifecycleEvent } from "@repo/twitch-eventsub";
 import { Sentry } from "../sentry";
 import { env } from "./env";
@@ -26,8 +27,10 @@ async function safeDm(content: string): Promise<void> {
   try {
     await sendDiscordDirectMessage(env.DISCORD_ALERT_USER_ID, { content });
   } catch (error) {
-    console.error("❌ Failed to send alert DM:", error);
-    Sentry.addBreadcrumb({ category: "alerting", message: "Alert DM failed", level: "warning" });
+    // The alert channel itself is down; Sentry is the only remaining way to
+    // find out, so this needs to be an issue rather than a breadcrumb on some
+    // later event that may never be sent.
+    reportError(error, "alerting.discord-dm");
   }
 }
 
