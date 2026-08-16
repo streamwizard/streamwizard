@@ -25,8 +25,24 @@ import { getSubscriptionLimits } from "@repo/supabase/queries/subscriptions";
 import { env } from "../lib/env";
 import { nodeAuth } from "../middleware/node-auth";
 import { getStreamKeyForUser } from "../lib/twitch-stream-key";
+import { TtlCache } from "../lib/ttl-cache";
 
 const nodes = new Hono();
+
+/**
+ * `/me` is two Supabase reads (node row + command key hash) on top of the auth
+ * lookup, and the node agent polls it on every cycle. Both inputs are close to
+ * static: `command_key_hash` is insert-only, and the only field that moves is
+ * capacity, changed by an admin in web-admin — a human action measured in
+ * minutes, so 30s of staleness is invisible to the agent.
+ */
+const ME_TTL_MS = 30 * 1000;
+
+type NodeMePayload = NonNullable<Awaited<ReturnType<typeof getNodeById>>> & {
+  command_key_hash: string | null;
+};
+
+const meByNodeId = new TtlCache<NodeMePayload>({ ttlMs: ME_TTL_MS });
 
 // Field allowlists for the instance-write routes. node_id is never accepted
 // from the body — it's always forced to the authenticated node — and id/
@@ -252,12 +268,18 @@ nodes.get("/subscriptions/:subscriptionId/limits", nodeAuth(), async (c) => {
 
 nodes.get("/me", nodeAuth(), async (c) => {
   const nodeId = c.get("nodeId");
-  const node = await getNodeById(supabase, nodeId);
-  if (!node) return c.json({ error: "Node not found" }, 404);
-  // command_key_hash lets the node validate the obs-auto-switcher's Bearer on
-  // its /obs route without ever holding the plaintext command key.
-  const command_key_hash = await getNodeCommandKeyHash(supabase, nodeId);
-  return c.json({ ...node, command_key_hash });
+  // Cached as one composite payload rather than per-query, so a hit costs zero
+  // Supabase requests instead of one. See ME_TTL_MS above for the tradeoff.
+  const payload = await meByNodeId.fetch(nodeId, async () => {
+    const node = await getNodeById(supabase, nodeId);
+    if (!node) return null;
+    // command_key_hash lets the node validate the obs-auto-switcher's Bearer on
+    // its /obs route without ever holding the plaintext command key.
+    const command_key_hash = await getNodeCommandKeyHash(supabase, nodeId);
+    return { ...node, command_key_hash };
+  });
+  if (!payload) return c.json({ error: "Node not found" }, 404);
+  return c.json(payload);
 });
 
 // ── Instance queries ──────────────────────────────────────────────────────────
