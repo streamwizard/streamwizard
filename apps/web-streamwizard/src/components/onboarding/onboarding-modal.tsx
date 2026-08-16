@@ -34,12 +34,25 @@ const STEP_IDS = [
 const DISCORD_LINK_STEP_INDEX = STEP_IDS.indexOf("discord-link");
 const DISCORD_JOIN_STEP_INDEX = STEP_IDS.indexOf("discord-join");
 
+// Rendered only while the modal is actually shown, so mounting IS the event.
+function OnboardingStartedTracker() {
+  useEffect(() => {
+    captureEvent("onboarding_started");
+  }, []);
+  return null;
+}
+
 export function OnboardingModal({
   clipCount,
   discordStatus,
+  initialOnboardingCompleted,
 }: {
   clipCount: number;
   discordStatus: "verified" | "not_member" | "not_linked";
+  // Server-fetched truth. The client store's onboarding_completed defaults to
+  // false and only hydrates in a later effect, so it can't gate analytics —
+  // a mount effect would false-fire for every user already past onboarding.
+  initialOnboardingCompleted: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -67,14 +80,10 @@ export function OnboardingModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The marker guard keeps the Discord OAuth round trip (which remounts this
-  // modal mid-flow) from counting as a second onboarding start.
-  useEffect(() => {
-    if (preferences.onboarding_completed) return;
-    if (searchParams.get("onboarding")) return;
-    captureEvent("onboarding_started");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Captured in the initializer because the strip-marker effect above rewrites
+  // the URL right after mount, and a mount-effect check would then see no
+  // marker and miscount the OAuth resume as a fresh onboarding start.
+  const [resumedMidFlow] = useState(() => !!searchParams.get("onboarding"));
 
   const handleChange = useCallback((partial: Partial<OnboardingValues>) => {
     setValues((prev) => ({ ...prev, ...partial }));
@@ -147,6 +156,7 @@ export function OnboardingModal({
 
   return (
     <Dialog open>
+      {!initialOnboardingCompleted && !resumedMidFlow && <OnboardingStartedTracker />}
       <DialogContent className="sm:max-w-lg" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle className="sr-only">Get set up</DialogTitle>
