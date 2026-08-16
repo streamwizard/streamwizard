@@ -1,5 +1,6 @@
 "use client";
 
+import { captureEvent } from "@repo/posthog";
 import { Button } from "@repo/ui";
 import {
   Card,
@@ -128,6 +129,7 @@ export function OverlayScenesList({
     if (error) {
       toast.error(error);
     } else if (data) {
+      captureEvent("overlay_created", { template: effectiveTemplate, render_mode: renderMode });
       toast.success("Overlay created");
       setNewName("");
       setTemplateId("blank");

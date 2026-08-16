@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { captureEvent } from "@repo/posthog";
 import { launchMyInstanceAction } from "@/actions/nodes";
 import { toggleInstance } from "@/lib/instance-actions";
 import { useObsInstanceSession } from "@/hooks/obs/use-obs-instance-session";
@@ -50,6 +51,7 @@ export function useCloudObsInstance() {
       setApiUrl(data.apiUrl);
       setObsWsPassword(data.password);
       setContainerStatus("running");
+      captureEvent("cloud_obs_launched");
       toast.success("Cloud OBS launched", {
         description: "Your container is booting. Give it a few seconds.",
       });

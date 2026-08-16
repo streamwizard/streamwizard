@@ -21,6 +21,8 @@ const BROADCASTER_TYPE_LABEL: Record<string, string> = {
 export type ConnectionInfo = {
   isConnected: boolean;
   twitch: PublicTwitchIntegration | null;
+  // StreamWizard account id for linked members, for analytics attribution.
+  userId: string | null;
 };
 
 export async function getJoinNumber(member: GuildMember): Promise<number | null> {
@@ -37,14 +39,14 @@ export async function getConnectionInfo(member: GuildMember): Promise<Connection
   try {
     const { data, error } = await getDiscordIntegrationByDiscordUserId(supabase, member.id);
     if (error) throw error;
-    if (!data) return { isConnected: false, twitch: null };
+    if (!data) return { isConnected: false, twitch: null, userId: null };
 
     const twitch = await getPublicTwitchIntegrationByDiscordUserId(supabase, member.id);
-    return { isConnected: true, twitch };
+    return { isConnected: true, twitch, userId: data.user_id };
   } catch (error) {
     Sentry.captureException(error);
     console.error(`[welcome] Failed to check connection status for "${member.user.tag}":`, error);
-    return { isConnected: false, twitch: null };
+    return { isConnected: false, twitch: null, userId: null };
   }
 }
 

@@ -6,6 +6,7 @@ import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { assignRole, DiscordMemberNotFoundError } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 import { reportError } from "@repo/sentry";
+import { captureServerEvent } from "@repo/posthog/server";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -89,6 +90,15 @@ export async function GET(request: Request) {
       const { captureException } = await import("@sentry/nextjs");
       captureException(roleErr);
     }
+  }
+
+  try {
+    captureServerEvent(data.session.user.id, "discord_linked", {
+      role_status: roleStatus,
+      source: next.includes("onboarding") ? "onboarding" : "settings",
+    });
+  } catch (phErr) {
+    reportError(phErr, "auth/callback/discord: posthog capture failed");
   }
 
   const redirectUrl = new URL(`${origin}${next}`);

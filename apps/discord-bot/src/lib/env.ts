@@ -25,6 +25,10 @@ const schema = z.object({
   // Sentry
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_RELEASE: z.string().optional(),
+
+  // PostHog (server-side capture; analytics silently off when unset)
+  POSTHOG_KEY: z.string().min(1).optional(),
+  POSTHOG_HOST: z.string().url().optional(),
 });
 
 export const env = schema.parse(process.env);

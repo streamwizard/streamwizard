@@ -1,5 +1,6 @@
 "use client";
 
+import { captureEvent } from "@repo/posthog";
 import { Button } from "@repo/ui";
 import { Database } from "@repo/supabase";
 import {
@@ -468,14 +469,20 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       <OverlayWidgetSheet
         open={widgetSheetOpen}
         onOpenChange={setWidgetSheetOpen}
-        onAddWidget={(type) => addItem(type)}
+        onAddWidget={(type) => {
+          captureEvent("widget_added", { widget: type, custom: false });
+          addItem(type);
+        }}
         onOpenLibrary={() => setWidgetLibraryOpen(true)}
       />
 
       <WidgetLibraryModal
         open={widgetLibraryOpen}
         onOpenChange={setWidgetLibraryOpen}
-        onAddToCanvas={(widgetId) => addCustomWidget(widgetId)}
+        onAddToCanvas={(widgetId) => {
+          captureEvent("widget_added", { custom: true });
+          addCustomWidget(widgetId);
+        }}
       />
     </div>
   );

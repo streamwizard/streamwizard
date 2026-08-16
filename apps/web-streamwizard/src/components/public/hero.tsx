@@ -51,7 +51,7 @@ export default function Hero() {
           <p className="text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-8">
             Organize your Twitch clips. Search by game, date, or title. Actually find the moment you&apos;re looking for.
           </p>
-          <TwitchLogin redirect="/dashboard/clips" text="Login With Twitch" variant="default" size="lg" className="" />
+          <TwitchLogin redirect="/dashboard/clips" text="Login With Twitch" variant="default" size="lg" className="" source="hero" />
           <Particles className="absolute inset-0 z-0" quantity={50} ease={80} color="#fffff" />
         </div>
 

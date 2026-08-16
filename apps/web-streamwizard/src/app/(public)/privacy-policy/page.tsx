@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/privacy-policy") },
 };
 
-const LAST_UPDATED = "26 May 2026";
+const LAST_UPDATED = "16 August 2026";
 const CONTACT_EMAIL = LEGAL_CONTACT_EMAIL;
 
 function NormalContent() {
@@ -64,11 +64,17 @@ function NormalContent() {
 
         <h3 className="text-lg font-medium mb-2">Analytics Data</h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
-          We use PostHog (EU region) to collect anonymised page-view events,
-          click interactions, and session recordings. Once you sign in, your
-          PostHog analytics profile is linked to your StreamWizard account ID so
-          we can understand how the product is used. PostHog stores data on EU
-          infrastructure.
+          We use PostHog (EU region) to collect page-view events and click
+          interactions. Your IP address is discarded at ingestion and is never
+          stored with analytics events. If you accept analytics cookies and sign
+          in, your PostHog analytics profile is linked to your StreamWizard
+          account ID so we can understand how the product is used. If you
+          decline, we count page views in cookieless mode instead: no cookies,
+          no identifiers, no profile. Only anonymous, aggregated statistics
+          that cannot be tied to you. We also record a few account-level
+          product events on our servers (for example linking your Discord
+          account or joining our Discord server), tied to your account under
+          legitimate interest. PostHog stores data on EU infrastructure.
         </p>
 
         <h3 className="text-lg font-medium mb-2">
@@ -158,7 +164,7 @@ function NormalContent() {
           </li>
           <li>
             <span className="font-medium text-foreground">PostHog Inc.</span> —
-            product analytics and session replay. We use PostHog&apos;s EU region
+            product analytics. We use PostHog&apos;s EU region
             (eu.i.posthog.com). PostHog may process data outside the EEA
             including in the US; this is covered by a signed Data Processing
             Agreement, Standard Contractual Clauses (EU Commission Decision
@@ -322,9 +328,10 @@ function NormalContent() {
             <span className="text-foreground font-medium">
               Analytics cookies
             </span>{" "}
-            (PostHog) — used to recognise your browser across sessions and power
-            session replay. Stored under our own domain via a reverse proxy to
-            prevent ad-blocker interference.
+            (PostHog) — only set if you accept analytics; used to recognise your
+            browser across sessions. Stored under our own domain via a reverse
+            proxy to prevent ad-blocker interference. If you decline, no
+            analytics cookies or identifiers are stored at all.
           </li>
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
@@ -453,9 +460,14 @@ function GenZContent() {
           analytics (if u said yes to cookies)
         </h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
-          we use PostHog to see what pages people visit + where they click. once
-          ur logged in we link ur PostHog profile to ur account ID so we can
-          understand what&apos;s cooked vs what slaps. EU region only.
+          we use PostHog to see what pages people visit + where they click. ur
+          IP gets dropped at the door, never stored with analytics. once ur
+          logged in we link ur PostHog profile to ur account ID so we can
+          understand what&apos;s cooked vs what slaps. EU region only. said no to
+          cookies? then it&apos;s cookieless mode: no cookies, no profile, ur just
+          an anonymous +1 in the page stats. nothing traces back to u. our
+          servers also log a few account moments (like linking Discord or
+          joining our Discord server) so we know the community is growing.
         </p>
 
         <h3 className="text-lg font-medium mb-2">when things go wrong 💀</h3>
@@ -540,7 +552,7 @@ function GenZContent() {
           </li>
           <li>
             <span className="font-medium text-foreground">PostHog Inc.</span> —
-            analytics + session replay. EU region (eu.i.posthog.com). they can
+            analytics. EU region (eu.i.posthog.com). they can
             process data in the US but it&apos;s covered by a signed DPA, Standard
             Contractual Clauses, and the EU-US Data Privacy Framework. we did
             the paperwork fr.{" "}
@@ -704,8 +716,8 @@ function GenZContent() {
               analytics cookies
             </span>{" "}
             (PostHog) — only set if u accepted. recognises ur browser across
-            sessions, powers session replay. runs through our own domain so ad
-            blockers don&apos;t clap it.
+            sessions. runs through our own domain so ad blockers don&apos;t clap
+            it. declined? zero analytics cookies, zero identifiers. fr.
           </li>
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">

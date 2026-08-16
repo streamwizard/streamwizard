@@ -10,6 +10,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "default": "./src/server.ts"
     }
   },
   "scripts": {
@@ -17,7 +21,8 @@
   },
   "dependencies": {
     "@posthog/react": "^1.2.3",
-    "posthog-js": "^1.382.0"
+    "posthog-js": "^1.382.0",
+    "posthog-node": "^5.49.1"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

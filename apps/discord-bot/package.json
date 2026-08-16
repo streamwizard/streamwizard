@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@repo/github-api": "workspace:*",
+    "@repo/posthog": "workspace:*",
     "@repo/sentry": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@sentry/bun": "^10",
