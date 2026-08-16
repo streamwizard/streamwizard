@@ -69,9 +69,12 @@ async function probeHttp(target: ProbeTarget): Promise<ProbeResult> {
 export async function runProbes(alertEnv: Env, registry: Registry): Promise<Map<string, ProbeResult>> {
   const targets: ProbeTarget[] = [...publicTargets(alertEnv)];
 
-  // This deployment's own backing services.
+  // This deployment's own backing services. Supabase is deliberately NOT an
+  // HTTP target here: the old /rest/v1/ probe sent no apikey, always got a
+  // 401, and okBelowStatus scored that healthy. The engine now derives the
+  // "supabase" probe result from whether the tick snapshot RPC succeeded and
+  // injects it into this map — same id, so alert_state entity ids are stable.
   targets.push({ id: "influxdb", url: `${alertConfig.influxdbUrl.replace(/\/$/, "")}/health` });
-  targets.push({ id: "supabase", url: `${alertConfig.supabaseUrl.replace(/\/$/, "")}/rest/v1/`, okBelowStatus: 500 });
 
   // Fleet nodes from the registry: OBS nodes expose /health on api_url,
   // ingest boxes on port 8090 over the tailnet.

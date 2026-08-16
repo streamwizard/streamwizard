@@ -108,6 +108,17 @@ async function tick(): Promise<boolean> {
 const once = process.argv.includes("--once");
 console.log(`[alert-worker] starting env=${homeEnv()} tick=${env.TICK_SECONDS}s${once ? " (single pass)" : ""}`);
 
+// forTicks is counted in ticks, not seconds, so changing TICK_SECONDS
+// rescales every rule's debounce. Print the derived wall-clock fire latency
+// once at boot so a tick change can never silently reshape alerting.
+{
+  const { buildRules } = await import("@repo/alerting/rules");
+  const latencies = buildRules()
+    .map((r) => `${r.id}=${r.forTicks * env.TICK_SECONDS}s`)
+    .join(" ");
+  console.log(`[alert-worker] rule fire latency at this tick: ${latencies}`);
+}
+
 if (once) {
   const ok = await tick();
   await Sentry.flush(2_000).catch(() => {});

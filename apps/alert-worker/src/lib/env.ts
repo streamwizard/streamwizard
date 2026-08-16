@@ -39,7 +39,15 @@ const schema = z.object({
   // unset, which `.url()` rejects; treat "" as "disabled" (matches the falsy
   // guard at the ping site) rather than a validation error.
   HEALTHCHECKS_PING_URL: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
+  // NOTE: forTicks debounces are counted in ticks, not seconds — raising this
+  // slows every rule's fire latency proportionally (the startup log prints
+  // the derived per-rule latencies). Production/staging set 60 via Doppler.
   TICK_SECONDS: z.coerce.number().int().positive().default(15),
+
+  // Escape hatch for the tick overlap lock (folded into the snapshot RPC, so
+  // it costs no extra requests). Anything but the literal "false" leaves it
+  // on. Read lazily by @repo/alerting's config, declared here for visibility.
+  ALERT_LOCK_ENABLED: z.enum(["true", "false"]).optional(),
 
   // Sentry
   SENTRY_DSN: z.string().url().optional(),
