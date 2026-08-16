@@ -17,13 +17,24 @@ import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
 import { handleGithubWebhook } from "./handlers/github";
 import nodes from "./routes/nodes";
 import ingestNodes from "./routes/ingest-nodes";
+import { nodeAuthCacheStats } from "./middleware/node-auth";
+import { ingestNodeAuthCacheStats } from "./middleware/ingest-node-auth";
 
 const app = new Hono();
 
 // Liveness probe for the monitoring alert-worker — registered before every
 // middleware so probe traffic never hits Sentry tracing or http_request
 // metrics.
-app.get("/health", (c) => c.json({ ok: true }));
+//
+// The auth cache stats ride along: those caches are what keeps the node
+// agents' poll loop off Supabase, so a hit rate that quietly collapses is the
+// first sign the egress bill is about to come back.
+app.get("/health", (c) =>
+  c.json({
+    ok: true,
+    caches: { nodeAuth: nodeAuthCacheStats(), ingestNodeAuth: ingestNodeAuthCacheStats() },
+  }),
+);
 
 // ============================================
 // SECURITY MIDDLEWARE (Applied in order)

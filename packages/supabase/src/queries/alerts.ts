@@ -78,3 +78,52 @@ export async function releaseAlertLock(client: DBClient, name: string, owner: st
   const { error } = await client.from("alert_locks").delete().eq("name", name).eq("locked_by", owner);
   if (error) throw new Error(`Couldn't release alert lock ${name}: ${error.message}`);
 }
+
+// ── Tick RPCs ────────────────────────────────────────────────────────────────
+// The alert-worker's per-tick traffic, folded into two round trips (see the
+// 20260816100000_alert_worker_tick_rpcs migration for the full rationale).
+// The lock helpers above remain for the web-admin UI and as documentation of
+// the lease semantics the snapshot RPC now implements server-side.
+
+/**
+ * Lock acquire + every read the engine needs, in one round trip. Returns the
+ * raw jsonb payload — the engine validates the shape at its boundary, because
+ * a malformed payload silently emptying the registry is the failure mode that
+ * would leave the worker looking healthy while alerting on nothing.
+ * `lockName: null` skips the overlap lock (ALERT_LOCK_ENABLED=false).
+ */
+export async function fetchAlertTickSnapshot(
+  client: DBClient,
+  params: { env: string; lockName: string | null; lockTtlSeconds: number; owner: string },
+): Promise<unknown> {
+  // Cast: generated types don't know service-only RPCs (same pattern as
+  // apply_user_state_op in user-states.ts).
+  const { data, error } = await client.rpc("alert_worker_tick_snapshot" as never, {
+    p_env: params.env,
+    p_lock_name: params.lockName,
+    p_lock_ttl_seconds: params.lockTtlSeconds,
+    p_owner: params.owner,
+  } as never);
+  if (error) throw new Error(`Couldn't fetch alert tick snapshot: ${error.message}`);
+  return data;
+}
+
+/** State upsert + event insert + lock release, in one round trip.
+ *  `lockName: null` means there is no lease to release. */
+export async function persistAlertTick(
+  client: DBClient,
+  params: {
+    states: AlertStateUpsert[];
+    events: AlertEventInsert[];
+    lockName: string | null;
+    owner: string;
+  },
+): Promise<void> {
+  const { error } = await client.rpc("alert_worker_tick_persist" as never, {
+    p_states: params.states,
+    p_events: params.events,
+    p_lock_name: params.lockName,
+    p_owner: params.owner,
+  } as never);
+  if (error) throw new Error(`Couldn't persist alert tick: ${error.message}`);
+}

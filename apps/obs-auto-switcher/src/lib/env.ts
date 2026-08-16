@@ -22,6 +22,12 @@ const schema = z.object({
   TWITCH_CLIENT_ID: z.string().min(1),
   TWITCH_CLIENT_SECRET: z.string().min(1),
 
+  // How often the in-memory config is reloaded wholesale from Supabase. This
+  // poll is only the safety net for a dropped consumer-feed push — a config
+  // change that lands normally applies in ~1s — so it is tuned for egress, not
+  // latency. See the comment on RECONCILE_INTERVAL_MS in config-store.ts.
+  CONFIG_RECONCILE_INTERVAL_MS: z.coerce.number().int().positive().default(300_000),
+
   // Sentry
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_RELEASE: z.string().optional(),

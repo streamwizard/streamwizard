@@ -154,10 +154,6 @@
     "./queries/asset-cache": {
       "types": "./src/queries/asset-cache.ts",
       "default": "./src/queries/asset-cache.ts"
-    },
-    "./queries/alert-registry": {
-      "types": "./src/queries/alert-registry.ts",
-      "default": "./src/queries/alert-registry.ts"
     }
   },
   "scripts": {

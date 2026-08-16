@@ -355,6 +355,7 @@
         "@repo/telegram-api": "workspace:*",
         "@sentry/core": "^10",
         "@supabase/supabase-js": "^2.105.1",
+        "zod": "^4.4.3",
       },
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",

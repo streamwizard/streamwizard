@@ -49,4 +49,16 @@ export const alertConfig = {
   get monitorBaseUrl() {
     return optional("MONITOR_BASE_URL");
   },
+  /** Escape hatch for the tick overlap lock, which rides the snapshot RPC and
+   * so costs nothing. Default on — it guards against Dokploy accidentally
+   * scaling the worker to two replicas. Only the literal "false" disables. */
+  get lockEnabled() {
+    return process.env.ALERT_LOCK_ENABLED !== "false";
+  },
+  /** Mirrors the worker's TICK_SECONDS (same default) so rule definitions can
+   * derive tick-count debounces from wall-clock invariants — see
+   * probe.node_unreachable. */
+  get tickSeconds() {
+    return Number(process.env.TICK_SECONDS) || 15;
+  },
 };

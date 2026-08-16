@@ -1,17 +1,14 @@
 import { randomUUID } from "node:crypto";
 import * as Sentry from "@sentry/core";
+import { z } from "zod";
 import { supabase as supabaseAdmin } from "@repo/supabase";
 import {
-  getAlertStates,
-  upsertAlertStates,
-  insertAlertEvents,
-  tryAcquireAlertLock,
-  releaseAlertLock,
+  fetchAlertTickSnapshot,
+  persistAlertTick,
+  type AlertEventInsert,
   type AlertState,
   type AlertStateUpsert,
 } from "@repo/supabase/queries/alerts";
-import { getAlertRuleConfigs } from "@repo/supabase/queries/alert-rule-config";
-import { getAlertNotificationConfigs } from "@repo/supabase/queries/alert-notification-config";
 import { alertConfig } from "./config";
 import { homeEnv } from "./home-env";
 import { queryLatestObsNodeFields, queryLatestHostSystemFields } from "@repo/metrics";
@@ -19,13 +16,16 @@ import { buildRules } from "./rules";
 import { runProbes } from "./probes";
 import { computeTransitions } from "./state";
 import { dispatchNotifications, resolveRoute, type EnvRoute } from "./notify";
-import type { AlertNotification, AlertRule, Breach, Env, EnvContext, Registry, RuleOverrides } from "./types";
-import {
-  countLiveBroadcasters,
-  selectIngestNodeRegistry,
-  selectObsNodeRegistry,
-  selectOpenIngestSessions,
-} from "@repo/supabase/queries/alert-registry";
+import type {
+  AlertNotification,
+  AlertRule,
+  Breach,
+  Env,
+  EnvContext,
+  ProbeResult,
+  Registry,
+  RuleOverrides,
+} from "./types";
 
 const LOCK_NAME = "alert-worker";
 // Above the worst legitimate pass (10s probes + 15s rule timeout + persistence)
@@ -59,38 +59,121 @@ export interface TickSummary {
  * web apps don't run metricsMiddleware — their liveness comes from probes. */
 const EXPECTED_HTTP_SERVICES = ["rest-api"];
 
-async function loadRegistry(): Promise<Registry> {
-  const [obsNodes, ingestNodes, liveSessions, liveChannels] = await Promise.all([
-    selectObsNodeRegistry(supabaseAdmin),
-    selectIngestNodeRegistry(supabaseAdmin),
-    selectOpenIngestSessions(supabaseAdmin),
-    countLiveBroadcasters(supabaseAdmin),
-  ]);
-  if (obsNodes.error) throw new Error(`Couldn't load obs_nodes registry: ${obsNodes.error.message}`);
-  if (ingestNodes.error) throw new Error(`Couldn't load ingest_nodes registry: ${ingestNodes.error.message}`);
-  if (liveSessions.error) throw new Error(`Couldn't load live ingest sessions: ${liveSessions.error.message}`);
+// ── Tick snapshot ────────────────────────────────────────────────────────────
+// Everything the pass needs arrives in one RPC payload (lock + registry +
+// configs + previous state — see the alert_worker_tick_rpcs migration). The
+// shape is validated here at the boundary: the dangerous failure mode is a
+// malformed payload being swallowed by a catch and quietly emptying the
+// registry, leaving the worker looking healthy while alerting on nothing.
+// A validation failure is treated exactly like the RPC failing — fail open.
 
+const snapshotNodeSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  status: z.string(),
+  maintenance: z.boolean(),
+  created_at: z.string(),
+  api_url: z.string().nullish(),
+  tailscale_ip: z.string().nullish(),
+});
+
+const tickSnapshotSchema = z.object({
+  locked: z.literal(true),
+  obs_nodes: z.array(snapshotNodeSchema),
+  ingest_nodes: z.array(snapshotNodeSchema),
+  live_ingest_sessions: z.array(z.object({ id: z.string(), started_at: z.string() })),
+  any_channel_live: z.boolean(),
+  rule_configs: z.array(
+    z.object({
+      rule_id: z.string(),
+      enabled: z.boolean(),
+      warn: z.number().nullable(),
+      crit: z.number().nullable(),
+      for_ticks: z.number().nullable(),
+      envs: z.array(z.string()).nullable(),
+    }),
+  ),
+  notification_config: z
+    .object({
+      discord_channel_id: z.string().nullable(),
+      discord_target: z.string(),
+      discord_severity: z.string(),
+      telegram_chat_id: z.string().nullable(),
+      telegram_severity: z.string(),
+    })
+    .nullable(),
+  alert_states: z.array(
+    z.object({
+      id: z.string(),
+      rule_id: z.string(),
+      env: z.string(),
+      entity_id: z.string(),
+      status: z.string(),
+      severity: z.string().nullable(),
+      consecutive_breaches: z.number(),
+      first_fired_at: z.string().nullable(),
+      last_notified_at: z.string().nullable(),
+      silenced_until: z.string().nullable(),
+      notify_failed: z.boolean(),
+      last_value: z.number().nullable(),
+      message: z.string().nullable(),
+      updated_at: z.string(),
+    }),
+  ),
+});
+
+type TickSnapshot = z.infer<typeof tickSnapshotSchema>;
+
+const notLockedSchema = z.object({ locked: z.literal(false) });
+
+/** "not-locked" is the contested-lock miniature payload — the server skips
+ * building the registry when the pass won't run anyway. Anything else must
+ * be a full, well-formed snapshot or this throws. */
+export function parseTickSnapshot(raw: unknown): TickSnapshot | "not-locked" {
+  if (notLockedSchema.safeParse(raw).success) return "not-locked";
+  return tickSnapshotSchema.parse(raw);
+}
+
+export function registryFromSnapshot(snapshot: TickSnapshot): Registry {
   return {
-    obsNodes: (obsNodes.data ?? []).map((n) => ({
+    obsNodes: snapshot.obs_nodes.map((n) => ({
       id: n.id,
       name: n.name,
       status: n.status,
       maintenance: n.maintenance,
       createdAt: n.created_at,
-      apiUrl: n.api_url,
+      apiUrl: n.api_url ?? null,
     })),
-    ingestNodes: (ingestNodes.data ?? []).map((n) => ({
+    ingestNodes: snapshot.ingest_nodes.map((n) => ({
       id: n.id,
       name: n.name,
       status: n.status,
       maintenance: n.maintenance,
       createdAt: n.created_at,
-      tailscaleIp: n.tailscale_ip,
+      tailscaleIp: n.tailscale_ip ?? null,
     })),
     services: EXPECTED_HTTP_SERVICES,
-    liveIngestSessions: (liveSessions.data ?? []).map((s) => ({ sessionId: s.id, startedAt: s.started_at })),
-    anyChannelLive: (liveChannels.count ?? 0) > 0,
+    liveIngestSessions: snapshot.live_ingest_sessions.map((s) => ({
+      sessionId: s.id,
+      startedAt: s.started_at,
+    })),
+    anyChannelLive: snapshot.any_channel_live,
   };
+}
+
+export function overridesFromSnapshot(snapshot: TickSnapshot): RuleOverrides {
+  return Object.fromEntries(
+    snapshot.rule_configs.map((row) => [
+      row.rule_id,
+      {
+        enabled: row.enabled,
+        warn: row.warn,
+        crit: row.crit,
+        forTicks: row.for_ticks,
+        envs: row.envs as Env[] | null,
+      },
+    ]),
+  );
 }
 
 // In-memory fallback so a Supabase outage degrades alerting instead of
@@ -243,6 +326,17 @@ export function suppressRedundantNodeProbes(
   else breachesByRule.set("probe.node_unreachable", kept);
 }
 
+/** What the pass carries from the snapshot phase into evaluation: previous
+ * state, whether Supabase answered (and therefore whether to persist), the
+ * derived supabase probe result, and the lease to release. */
+interface TickContext {
+  prev: AlertState[];
+  supabaseHealthy: boolean;
+  supabaseProbe: ProbeResult;
+  lockName: string | null;
+  owner: string;
+}
+
 async function evaluateEnv(
   alertEnv: Env,
   bucket: string,
@@ -250,6 +344,7 @@ async function evaluateEnv(
   now: Date,
   overrides: RuleOverrides,
   notifyRoute: EnvRoute,
+  tick: TickContext,
 ): Promise<EnvTickSummary> {
   const started = performance.now();
   // Disabled rules skip evaluation but stay in the state machine (zero
@@ -258,6 +353,10 @@ async function evaluateEnv(
   const activeRules = rules.filter((r) => r.enabled !== false);
 
   const probeResults = await runProbes(alertEnv, registry);
+  // The supabase probe is derived from the snapshot RPC rather than an HTTP
+  // target (see runEvaluationPass); injected here so probe rules see it
+  // exactly as if runProbes had produced it. The id must stay "supabase".
+  probeResults.set(tick.supabaseProbe.id, tick.supabaseProbe);
   const ctx: EnvContext = { env: alertEnv, bucket, now, supabase: supabaseAdmin, registry, probeResults };
 
   // One broken query must never kill the whole tick.
@@ -277,57 +376,53 @@ async function evaluateEnv(
     }
   });
 
-  // Load previous state (Supabase, falling back to the in-memory mirror).
-  let prev: AlertState[];
-  let supabaseHealthy = true;
-  try {
-    prev = await getAlertStates(supabaseAdmin, alertEnv);
-    stateMirror.set(alertEnv, new Map(prev.map((s) => [mirrorKey(s), s])));
-  } catch (err) {
-    supabaseHealthy = false;
-    Sentry.captureException(err, { tags: { alertEnv, stage: "load-state" } });
-    prev = [...(stateMirror.get(alertEnv)?.values() ?? [])];
-  }
-
   // Node-down dedup: needs both this tick's breaches and prev firing state.
-  suppressRedundantNodeProbes(breachesByRule, prev, registry);
+  suppressRedundantNodeProbes(breachesByRule, tick.prev, registry);
 
-  const { upserts, events, notifications } = computeTransitions(alertEnv, prev, breachesByRule, rules, now);
+  const { upserts, events, notifications } = computeTransitions(alertEnv, tick.prev, breachesByRule, rules, now);
 
+  // Mirror before dispatch: if the process dies mid-dispatch, the next tick's
+  // fallback state already counts this tick's transitions, which is what
+  // bounds the double-notify window of persisting after dispatch.
   updateMirror(alertEnv, upserts, now);
-  if (supabaseHealthy) {
-    try {
-      await upsertAlertStates(supabaseAdmin, upserts);
-      await insertAlertEvents(supabaseAdmin, events);
-    } catch (err) {
-      Sentry.captureException(err, { tags: { alertEnv, stage: "persist-state" } });
-    }
-  }
 
   await enrichNodeNotifications(notifications, registry, bucket);
 
   const { failed } = await dispatchNotifications(notifications, notifyRoute);
-  if (failed.length > 0) {
+
+  // Fold notify-failed flags into this tick's own rows so the persist RPC is
+  // the pass's only write. The failed (ruleId, entityId) pairs came out of
+  // `upserts` via computeTransitions, so the lookup cannot miss.
+  const failedKeys = new Set(failed.map((f) => `${f.ruleId} ${f.entityId}`));
+  const stateRows = upserts.map((u) =>
+    failedKeys.has(`${u.rule_id} ${u.entity_id ?? ""}`) ? { ...u, notify_failed: true } : u,
+  );
+  const eventRows: AlertEventInsert[] = [
+    ...events,
+    ...failed.map((f) => ({
+      rule_id: f.ruleId,
+      env: alertEnv,
+      entity_id: f.entityId,
+      event_type: "notify_failed" as const,
+      message: "Notification not delivered: all channels failed or none configured",
+    })),
+  ];
+
+  // One write round trip: state upsert + history events + lock release.
+  // Skipped when the snapshot failed (nothing acquired, nothing reachable —
+  // the mirror carries the state), and when a lockless tick has nothing to
+  // write, so an all-quiet pass costs zero write requests.
+  if (tick.supabaseHealthy && (stateRows.length > 0 || eventRows.length > 0 || tick.lockName !== null)) {
     try {
-      await upsertAlertStates(
-        supabaseAdmin,
-        failed.map((f) => {
-          const row = upserts.find((u) => u.rule_id === f.ruleId && (u.entity_id ?? "") === f.entityId);
-          return { ...row!, notify_failed: true };
-        }),
-      );
-      await insertAlertEvents(
-        supabaseAdmin,
-        failed.map((f) => ({
-          rule_id: f.ruleId,
-          env: alertEnv,
-          entity_id: f.entityId,
-          event_type: "notify_failed" as const,
-          message: "Notification not delivered: all channels failed or none configured",
-        })),
-      );
+      await persistAlertTick(supabaseAdmin, {
+        states: stateRows,
+        events: eventRows,
+        lockName: tick.lockName,
+        owner: tick.owner,
+      });
     } catch (err) {
-      Sentry.captureException(err, { tags: { alertEnv, stage: "notify-failed-flag" } });
+      // The lease, if held, expires on its own within LOCK_TTL_SECONDS.
+      Sentry.captureException(err, { tags: { alertEnv, stage: "persist-state" } });
     }
   }
 
@@ -347,72 +442,85 @@ export async function runEvaluationPass(): Promise<TickSummary> {
   const started = performance.now();
   const now = new Date();
   const owner = randomUUID();
+  const alertEnv = homeEnv();
+  // The overlap lock rides the snapshot RPC, so keeping it costs zero extra
+  // requests. ALERT_LOCK_ENABLED=false is the escape hatch; default on — it
+  // guards against Dokploy accidentally scaling the worker to two replicas.
+  const lockName = alertConfig.lockEnabled ? LOCK_NAME : null;
 
-  // Overlap guard. If Supabase itself is down we run anyway — there's a
-  // single ticker in practice, and a dead lock table must not silence alerts.
-  let lockHeld = false;
+  let snapshot: TickSnapshot | null = null;
+  let snapshotLatencyMs = 0;
   try {
-    lockHeld = await tryAcquireAlertLock(supabaseAdmin, LOCK_NAME, LOCK_TTL_SECONDS, owner);
-    if (!lockHeld) {
+    const raw = await fetchAlertTickSnapshot(supabaseAdmin, {
+      env: alertEnv,
+      lockName,
+      lockTtlSeconds: LOCK_TTL_SECONDS,
+      owner,
+    });
+    snapshotLatencyMs = performance.now() - started;
+    const parsed = parseTickSnapshot(raw);
+    if (parsed === "not-locked") {
       return { skipped: true, reason: "another evaluation pass holds the lock", envs: [], durationMs: 0 };
     }
+    snapshot = parsed;
   } catch (err) {
-    Sentry.captureException(err, { tags: { stage: "acquire-lock" } });
-  }
-
-  try {
-    let registry: Registry = {
-      obsNodes: [],
-      ingestNodes: [],
-      services: EXPECTED_HTTP_SERVICES,
-      liveIngestSessions: [],
-      anyChannelLive: false,
-    };
-    try {
-      registry = await loadRegistry();
-    } catch (err) {
-      Sentry.captureException(err, { tags: { stage: "load-registry" } });
-    }
-
-    // Admin threshold overrides — fail open to code defaults so a config-read
-    // outage can never stop alerting.
-    let overrides: RuleOverrides = {};
-    try {
-      const rows = await getAlertRuleConfigs(supabaseAdmin);
-      overrides = Object.fromEntries(
-        rows.map((row) => [
-          row.rule_id,
-          {
-            enabled: row.enabled,
-            warn: row.warn,
-            crit: row.crit,
-            forTicks: row.for_ticks,
-            envs: row.envs as Env[] | null,
-          },
-        ]),
-      );
-    } catch (err) {
-      Sentry.captureException(err, { tags: { stage: "load-rule-config" } });
-    }
-
-    // Notification routing — same fail-open policy.
-    let notifyRoute = resolveRoute(homeEnv());
-    try {
-      const rows = await getAlertNotificationConfigs(supabaseAdmin);
-      notifyRoute = resolveRoute(homeEnv(), rows.find((r) => r.env === homeEnv()) ?? null);
-    } catch (err) {
-      Sentry.captureException(err, { tags: { stage: "load-notification-config" } });
-    }
-
-    const summary = await evaluateEnv(homeEnv(), alertConfig.influxdbBucket, registry, now, overrides, notifyRoute);
-    return { skipped: false, envs: [summary], durationMs: Math.round(performance.now() - started) };
-  } finally {
-    if (lockHeld) {
+    snapshotLatencyMs = performance.now() - started;
+    Sentry.captureException(err, { tags: { stage: "tick-snapshot" } });
+    // If the RPC succeeded but validation failed, the lease was acquired and
+    // would block the next couple of ticks — release it best-effort. When the
+    // RPC itself failed the function's transaction rolled back, so this
+    // deletes nothing and its own failure is ignorable.
+    if (lockName) {
       try {
-        await releaseAlertLock(supabaseAdmin, LOCK_NAME, owner);
-      } catch (err) {
-        Sentry.captureException(err, { tags: { stage: "release-lock" } });
+        await persistAlertTick(supabaseAdmin, { states: [], events: [], lockName, owner });
+      } catch {
+        // The lease expires on its own within LOCK_TTL_SECONDS.
       }
     }
   }
+
+  // Fail open on any snapshot failure: empty registry, code-default
+  // overrides, env-default notification route, mirror state — and run the
+  // pass anyway. A Supabase outage must never silence alerting.
+  const registry: Registry = snapshot
+    ? registryFromSnapshot(snapshot)
+    : {
+        obsNodes: [],
+        ingestNodes: [],
+        services: EXPECTED_HTTP_SERVICES,
+        liveIngestSessions: [],
+        anyChannelLive: false,
+      };
+  const overrides: RuleOverrides = snapshot ? overridesFromSnapshot(snapshot) : {};
+  const notifyRoute = resolveRoute(alertEnv, snapshot?.notification_config ?? null);
+  const prev: AlertState[] = snapshot
+    ? (snapshot.alert_states as AlertState[])
+    : [...(stateMirror.get(alertEnv)?.values() ?? [])];
+  if (snapshot) stateMirror.set(alertEnv, new Map(prev.map((s) => [mirrorKey(s), s])));
+
+  // The counts stay in every tick's log line on purpose: a payload quietly
+  // emptying the registry is exactly the failure the zod boundary exists to
+  // catch, and this line is how a human notices if it ever slips through.
+  console.log(
+    `[alerting] snapshot ok=${snapshot !== null} obs=${registry.obsNodes.length} ingest=${registry.ingestNodes.length} states=${prev.length}`,
+  );
+
+  // The old /rest/v1/ HTTP probe sent no apikey, always got a 401, and
+  // okBelowStatus scored that healthy — it would have reported green through
+  // a total Postgres outage. The snapshot RPC already proves gateway +
+  // PostgREST + Postgres + schema, so the probe result derives from it. The
+  // id "supabase" must stay identical or alert_state entity ids change and
+  // the probe alert resolves-then-refires across the deploy.
+  const supabaseProbe: ProbeResult = snapshot
+    ? { id: "supabase", ok: true, latencyMs: snapshotLatencyMs }
+    : { id: "supabase", ok: false, error: "tick snapshot RPC failed", latencyMs: snapshotLatencyMs };
+
+  const summary = await evaluateEnv(alertEnv, alertConfig.influxdbBucket, registry, now, overrides, notifyRoute, {
+    prev,
+    supabaseHealthy: snapshot !== null,
+    supabaseProbe,
+    lockName: snapshot ? lockName : null,
+    owner,
+  });
+  return { skipped: false, envs: [summary], durationMs: Math.round(performance.now() - started) };
 }

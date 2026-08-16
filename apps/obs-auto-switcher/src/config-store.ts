@@ -7,6 +7,7 @@ import {
   type AutoSwitcherThresholds,
 } from "@repo/schemas";
 import { selectEnabledAutoSwitcherConfigs } from "@repo/supabase/queries/auto-switcher";
+import { env } from "./lib/env";
 
 export interface EffectiveConfig {
   row: AutoSwitcherConfig;
@@ -16,11 +17,17 @@ export interface EffectiveConfig {
 export type ConfigChangeHandler = (userId: string, config: EffectiveConfig | null) => void;
 
 // In-memory view of obs_auto_switcher_configs (enabled rows only). The DB is
-// the source of truth: boot + 60s reconciliation load it wholesale; between
-// reconciliations, streamwizard.auto_switcher_config pushes off the consumer
-// feed (sent by the web server actions through /internal/broadcast) apply the
-// same row within ~1s. There is deliberately NO Supabase realtime here.
-const RECONCILE_INTERVAL_MS = 60_000;
+// the source of truth: boot + periodic reconciliation load it wholesale;
+// between reconciliations, streamwizard.auto_switcher_config pushes off the
+// consumer feed (sent by the web server actions through /internal/broadcast)
+// apply the same row within ~1s. There is deliberately NO Supabase realtime here.
+//
+// The interval is tuned for egress, not latency: a config change that lands
+// normally is applied in ~1s by the push, so this poll only exists to heal a
+// dropped one. At 60s it was re-reading the whole table 1,440x/day to catch an
+// event that essentially never happens; 5 minutes costs the same correctness
+// and a fifth of the requests. Override with CONFIG_RECONCILE_INTERVAL_MS.
+const RECONCILE_INTERVAL_MS = env.CONFIG_RECONCILE_INTERVAL_MS;
 
 export class ConfigStore {
   private configs = new Map<string, EffectiveConfig>();
