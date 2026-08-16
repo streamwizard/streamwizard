@@ -105,7 +105,7 @@ export function UserAuthForm({ redirect }: UserAuthFormProps) {
           <span className="bg-background px-2 text-muted-foreground">Or continue with</span>
         </div>
       </div>
-      <TwitchLogin redirect={redirect} />
+      <TwitchLogin redirect={redirect} source="login_form" />
     </div>
   );
 }

@@ -18,7 +18,6 @@ export function initPostHog({ key, host = "https://eu.i.posthog.com" }: PostHogC
     disable_surveys: true,
     disable_web_experiments: true,
     disable_conversations: true,
-    autocapture: false,
     capture_performance: { web_vitals: true },
     advanced_disable_feature_flags: true,
     advanced_disable_flags: true,

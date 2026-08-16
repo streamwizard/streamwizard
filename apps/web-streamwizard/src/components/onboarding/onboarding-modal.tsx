@@ -14,6 +14,7 @@ import { DiscordLinkStep } from "./steps/discord-link-step";
 import { DiscordJoinStep } from "./steps/discord-join-step";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui";
 import { Button } from "@repo/ui";
+import { captureEvent } from "@repo/posthog";
 
 interface OnboardingValues {
   memes_enabled: boolean;
@@ -66,6 +67,15 @@ export function OnboardingModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // The marker guard keeps the Discord OAuth round trip (which remounts this
+  // modal mid-flow) from counting as a second onboarding start.
+  useEffect(() => {
+    if (preferences.onboarding_completed) return;
+    if (searchParams.get("onboarding")) return;
+    captureEvent("onboarding_started");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleChange = useCallback((partial: Partial<OnboardingValues>) => {
     setValues((prev) => ({ ...prev, ...partial }));
   }, []);
@@ -115,6 +125,7 @@ export function OnboardingModal({
     const ok = await completeOnboarding(values);
     setSaving(false);
     if (!ok) return;
+    captureEvent("onboarding_completed");
     setPreferences({ ...preferences, ...values, onboarding_completed: true });
     router.push("/dashboard/clips");
   }, [values, preferences, setPreferences, router]);
