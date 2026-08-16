@@ -24,7 +24,10 @@ export async function onRouterTransitionStart(...args: unknown[]) {
   return (captureRouterTransitionStart as (...a: unknown[]) => unknown)(...args);
 }
 
-if (process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+// Dev gets no analytics (same as Sentry above): the dev Doppler configs carry
+// the staging key, so localhost sessions would pollute the staging project —
+// local supabase resets mint fresh user ids and fragment person profiles.
+if (process.env.NODE_ENV !== "development" && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
   initPostHog({
     key: process.env.NEXT_PUBLIC_POSTHOG_KEY,
     host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
