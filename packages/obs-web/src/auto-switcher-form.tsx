@@ -236,7 +236,7 @@ export function AutoSwitcherForm({ initialConfig, scenes, sceneItems, obsConnect
                   form={form}
                   name="chat_notices_enabled"
                   title="Post in Twitch chat when it switches"
-                  description="The StreamWizard bot tells chat what's going on. {bitrate}, {rtt}, {loss} and {scene} get filled in."
+                  description="Goes out as you, not as a bot. {bitrate}, {rtt}, {loss} and {scene} get filled in with the numbers behind the switch."
                 />
                 {chatNotices ? (
                   <div className="grid gap-3 pl-4 sm:grid-cols-3">
