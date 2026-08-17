@@ -40,7 +40,7 @@ const MIN_LIVE_INTERVAL_MS = 1000;
 /** Picker group holding the events the widget's own source references. */
 const USED_GROUP = "Used by this widget";
 
-type FireMode = "local" | "live";
+export type FireMode = "local" | "live";
 
 function storageKey(storageId: string) {
   return `sw:demo-panel:${storageId}`;
@@ -94,6 +94,12 @@ export interface DemoEventPanelProps {
    */
   wsConnected?: boolean;
   /**
+   * Controlled fire mode. When the host owns one switch for the whole live
+   * story (widget editor), it passes the mode and the panel's own Local/Live
+   * toggle disappears. Omitted, the panel keeps its internal toggle.
+   */
+  mode?: FireMode;
+  /**
    * The widget's JS, used to lead the picker with the events it actually
    * handles. The overlay editor joins every custom widget on the canvas.
    * Omit it and the full catalogue shows flat.
@@ -110,6 +116,7 @@ export function DemoEventPanel({
   storageId,
   sourceJs,
   wsConnected,
+  mode: controlledMode,
   onFireLocal,
   onRunningSimulatorsChange,
   className,
@@ -158,7 +165,7 @@ export function DemoEventPanel({
   // Derived, not stored: losing the socket mid-session must fall back to Local
   // without clobbering the author's choice for when it reconnects.
   const liveAvailable = wsConnected === undefined || wsConnected;
-  const effectiveMode: FireMode = liveAvailable ? mode : "local";
+  const effectiveMode: FireMode = liveAvailable ? (controlledMode ?? mode) : "local";
 
   /**
    * Reading the widget's own source is enough to tell which events it handles,
@@ -346,33 +353,36 @@ export function DemoEventPanel({
         </button>
 
         {/* Local posts into the iframe; Live goes out over ws-server so the real
-            delivery path — and every other open overlay — is exercised too. */}
-        <div className="ml-auto flex items-center rounded-md border border-border overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setMode("local")}
-            className={`text-[11px] px-2 py-0.5 transition-colors ${
-              effectiveMode === "local" ? "bg-accent text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            Local
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("live")}
-            disabled={!liveAvailable}
-            title={
-              liveAvailable
-                ? "Send through the overlay server to every overlay you have open"
-                : "Connect to live events first — Live sends through the overlay server"
-            }
-            className={`text-[11px] px-2 py-0.5 transition-colors disabled:opacity-40 ${
-              effectiveMode === "live" ? "bg-accent text-foreground" : "text-muted-foreground"
-            }`}
-          >
-            Live
-          </button>
-        </div>
+            delivery path — and every other open overlay — is exercised too.
+            A host that passes `mode` owns this choice, so no toggle here. */}
+        {controlledMode === undefined && (
+          <div className="ml-auto flex items-center rounded-md border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setMode("local")}
+              className={`text-[11px] px-2 py-0.5 transition-colors ${
+                effectiveMode === "local" ? "bg-accent text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Local
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode("live")}
+              disabled={!liveAvailable}
+              title={
+                liveAvailable
+                  ? "Send through the overlay server to every overlay you have open"
+                  : "Connect to live events first — Live sends through the overlay server"
+              }
+              className={`text-[11px] px-2 py-0.5 transition-colors disabled:opacity-40 ${
+                effectiveMode === "live" ? "bg-accent text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Live
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Looping sources. A one-shot shows what an event looks like; these show

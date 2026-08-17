@@ -40,9 +40,6 @@ export function useWidgetPreview({ widget, sources }: { widget: Widget; sources:
   const widgetRef = useRef<CustomWidgetIframeHandle>(null);
   const hotReloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Manual mode stops the iframe remounting mid-edit, which is the difference
-  // between debugging an animation and watching it restart every keystroke.
-  const [reloadMode, setReloadMode] = useState<"live" | "manual">("live");
   const [refreshKey, setRefreshKey] = useState(0);
 
   const [srcdoc, setSrcdoc] = useState(() => {
@@ -127,7 +124,6 @@ export function useWidgetPreview({ widget, sources }: { widget: Widget; sources:
    * restart on every edit.
    */
   function scheduleHotReload(tab: EditorTab) {
-    if (reloadMode === "manual") return;
     if (hotReloadTimer.current) clearTimeout(hotReloadTimer.current);
     hotReloadTimer.current = setTimeout(
       tab === "css" ? patchPreviewCss : refreshPreview,
@@ -142,8 +138,6 @@ export function useWidgetPreview({ widget, sources }: { widget: Widget; sources:
 
   return {
     widgetRef,
-    reloadMode,
-    setReloadMode,
     refreshKey,
     srcdoc,
     fieldData,
