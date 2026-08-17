@@ -23,6 +23,7 @@ import { useWidgetPreview, type EditorTab } from "@/hooks/widgets/use-widget-pre
 import { ImagePlus, Info } from "lucide-react";
 import { Button } from "@repo/ui";
 import { Input } from "@repo/ui";
+import { Switch } from "@repo/ui";
 import { Tabs, TabsList, TabsTrigger } from "@repo/ui";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
 import {
@@ -86,8 +87,6 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
   } = draft;
   const {
     widgetRef,
-    reloadMode,
-    setReloadMode,
     refreshKey,
     srcdoc,
     fieldData,
@@ -259,11 +258,15 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
           >
             Docs
           </a>
-          <button
-            type="button"
-            onClick={() => toggleWs()}
-            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border border-border hover:bg-accent transition-colors"
-            title={wsEnabled ? "Disconnect from live events" : "Connect to live Twitch events"}
+          {/* One switch for the whole live story: the ws connection and where
+              the demo panel's events go (through ws-server vs. into the iframe). */}
+          <label
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md border border-border hover:bg-accent transition-colors cursor-pointer"
+            title={
+              wsEnabled
+                ? "Live: real Twitch events stream in, demo events go through the overlay server"
+                : "Go live — stream in real Twitch events and send demo events through the overlay server"
+            }
           >
             <span
               className={
@@ -274,8 +277,9 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
                   : "h-2 w-2 rounded-full bg-zinc-500"
               }
             />
-            {wsStatus === "connected" ? "Live" : wsStatus === "connecting" ? "Connecting…" : "Connect"}
-          </button>
+            {wsStatus === "connecting" ? "Connecting…" : "Live"}
+            <Switch checked={wsEnabled} onCheckedChange={() => toggleWs()} className="scale-75" />
+          </label>
           <Dialog open={publishOpen} onOpenChange={setPublishOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="outline">
@@ -397,28 +401,6 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
           <div className="shrink-0 px-3 py-1.5 border-b bg-background flex items-center justify-between gap-2">
             <span className="text-xs text-muted-foreground">Preview</span>
             <div className="flex items-center gap-1.5">
-              <div className="flex items-center rounded-md border border-border overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setReloadMode("live")}
-                  title="Rebuild the preview as you type"
-                  className={`text-[11px] px-2 py-0.5 transition-colors ${
-                    reloadMode === "live" ? "bg-accent text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  Live
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setReloadMode("manual")}
-                  title="Only rebuild on Refresh or Save — keeps animations and timers running"
-                  className={`text-[11px] px-2 py-0.5 transition-colors ${
-                    reloadMode === "manual" ? "bg-accent text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  Manual
-                </button>
-              </div>
               <Button
                 size="sm"
                 variant="ghost"
@@ -442,6 +424,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
             storageId={widget.id}
             sourceJs={jsSource}
             wsConnected={wsStatus === "connected"}
+            mode={wsEnabled ? "live" : "local"}
             onFireLocal={fireTestEvent}
           />
 
