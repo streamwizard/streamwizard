@@ -4,6 +4,7 @@ export type { Vod, GetVodsParams } from "./vods";
 export type { UpdateChannelParams, ChannelInformation } from "./channels";
 export type { TwitchBadgeSet, TwitchBadgeVersion, SendChatMessageResponse } from "./chat";
 export type { TwitchCheermote, TwitchCheermoteTier } from "./bits";
+export { STREAMWIZARD_BOT_USER_ID } from "./chat";
 
 import { TwitchChatClient } from "./chat";
 import { TwitchBitsClient } from "./bits";

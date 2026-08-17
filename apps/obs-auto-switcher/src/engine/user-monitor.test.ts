@@ -2,6 +2,7 @@ import { test, expect, beforeEach } from "bun:test";
 import { AUTO_SWITCHER_PRESET_THRESHOLDS, type AutoSwitcherConfig, type AutoSwitcherStatus } from "@repo/schemas";
 import type { IngestStatsPayload } from "@repo/types";
 import type { EffectiveConfig } from "../config-store";
+import type { ChatNoticeKind, ChatTemplateVars } from "../actions/chat";
 import { UserMonitor, type MonitorDeps } from "./user-monitor";
 import { clearSwitchLog } from "./switch-log";
 
@@ -15,6 +16,7 @@ const USER = "user-1";
 const THR = AUTO_SWITCHER_PRESET_THRESHOLDS.balanced; // trigger 4, recover 8, startup 6
 
 let published: AutoSwitcherStatus[] = [];
+let chatSent: { kind: ChatNoticeKind; template: string; vars: ChatTemplateVars }[] = [];
 
 function makeDeps(): MonitorDeps {
   return {
@@ -22,7 +24,9 @@ function makeDeps(): MonitorDeps {
     stopStream: async () => ({ ok: true }),
     resolveSceneItemId: async () => 1,
     setSceneItemEnabled: async () => ({ ok: true }),
-    sendChat: async () => {},
+    sendChat: async (_userId, kind, template, vars) => {
+      chatSent.push({ kind, template, vars });
+    },
     logEvent: async () => {},
     clearOverride: async () => {},
     publishStatus: (_userId, status) => {
@@ -105,8 +109,18 @@ function bringLive(monitor: UserMonitor): void {
   published = [];
 }
 
+/**
+ * Chat notices are dispatched from onSwitched, which runs once the setScene
+ * promise resolves — so they land a microtask after the sample that triggered
+ * them, not synchronously like the status publishes above.
+ */
+function flush(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
 beforeEach(() => {
   published = [];
+  chatSent = [];
   clock = 1_000_000;
   clearSwitchLog(USER);
 });
@@ -278,4 +292,98 @@ test("a config push publishes even when nothing else changed", () => {
   published = [];
   monitor.applyConfig(makeConfig({ scene_live_name: "Main" }), clock);
   expect(published).toHaveLength(1);
+});
+
+// ── chat notices ─────────────────────────────────────────────────────────────
+
+const CHAT_CONFIG = {
+  chat_notices_enabled: true,
+  chat_template_degraded: "dropped to {scene} ({bitrate} kbps, {loss}%)",
+  chat_template_offline: "signal lost",
+  chat_template_recovered: "back live",
+} as const;
+
+test("going live off the startup gate posts nothing to chat", async () => {
+  const monitor = new UserMonitor(USER, makeConfig(CHAT_CONFIG), makeDeps());
+  bringLive(monitor);
+  await flush();
+
+  // Chat never saw a problem, so there is nothing to reassure it about. This
+  // used to hang off comparing the switch's detail string to a literal copy of
+  // the sentence evaluate() writes, so rewording either copy would have started
+  // announcing every go-live.
+  expect(chatSent).toEqual([]);
+});
+
+test("a fallback and the recovery after it each post once", async () => {
+  const monitor = new UserMonitor(USER, makeConfig(CHAT_CONFIG), makeDeps());
+  bringLive(monitor);
+
+  for (let i = 0; i < THR.bitrate_trigger_polls; i++) sample(monitor, BAD);
+  await flush();
+  expect(chatSent.map((c) => c.kind)).toEqual(["degraded"]);
+
+  for (let i = 0; i < THR.bitrate_recover_polls; i++) sample(monitor, GOOD);
+  await flush();
+  expect(published.at(-1)!.state).toBe("live");
+  // The all-clear is the whole point: a 30s window keyed on the user alone
+  // swallowed it whenever the link came back inside half a minute.
+  expect(chatSent.map((c) => c.kind)).toEqual(["degraded", "recovered"]);
+  expect(chatSent[1]!.template).toBe(CHAT_CONFIG.chat_template_recovered);
+});
+
+// Regression: this is the flow a real IRL dropout takes, and it used to post
+// exactly one of the three configured messages. A resumed session re-passes the
+// startup gate (onStats), so the go-live carried the startup detail string and
+// the old check suppressed the all-clear as if chat had never been told anything
+// was wrong. Anyone whose link dies outright rather than degrading gradually
+// therefore only ever saw "signal lost".
+test("a signal loss and the reconnect after it each post once", async () => {
+  const monitor = new UserMonitor(USER, makeConfig(CHAT_CONFIG), makeDeps());
+  bringLive(monitor);
+
+  clock += 1_000;
+  monitor.onSessionEnded("sess-1", clock);
+  await flush();
+  expect(chatSent.map((c) => c.kind)).toEqual(["offline"]);
+
+  // Stats resume: back through the startup gate, then live.
+  for (let i = 0; i < THR.bitrate_startup_polls; i++) sample(monitor, GOOD);
+  await flush();
+  expect(published.at(-1)!.state).toBe("live");
+  expect(chatSent.map((c) => c.kind)).toEqual(["offline", "recovered"]);
+});
+
+// Regression: with two scenes, degraded and offline are the same scene, so the
+// drop to offline needed no OBS call — and requestSwitch returned before
+// dispatching anything, swallowing the notice and the event-log entry with it.
+test("in the 2-scene model the drop to offline still posts", async () => {
+  const monitor = new UserMonitor(USER, makeConfig({ ...CHAT_CONFIG, scene_model: "two" }), makeDeps());
+  bringLive(monitor);
+
+  for (let i = 0; i < THR.bitrate_trigger_polls; i++) sample(monitor, BAD);
+  await flush();
+  expect(chatSent.map((c) => c.kind)).toEqual(["degraded"]);
+
+  // Same scene it already switched to, one phase later.
+  clock += THR.offline_timeout_seconds * 1_000 + 1_000;
+  monitor.onTick(clock);
+  await flush();
+  expect(published.at(-1)!.state).toBe("offline");
+  expect(chatSent.map((c) => c.kind)).toEqual(["degraded", "offline"]);
+});
+
+test("{loss} carries the metric the engine judged, not raw link loss", async () => {
+  const monitor = new UserMonitor(USER, makeConfig(CHAT_CONFIG), makeDeps());
+  bringLive(monitor);
+  for (let i = 0; i < THR.bitrate_trigger_polls; i++) sample(monitor, BAD);
+  await flush();
+
+  // BAD carries loss_pct 3 / drop_pct 0 on purpose. Announcing loss_pct told
+  // chat about link loss the switcher had deliberately ignored. (Literals, not
+  // BAD.drop_pct: IngestStatsPayload is a loose zod object, so Omit<> over it
+  // collapses every field to unknown.)
+  expect(chatSent[0]!.vars.loss).toBe(0);
+  expect(chatSent[0]!.vars.bitrate).toBe(200);
+  expect(chatSent[0]!.vars.scene).toBe("Degraded");
 });

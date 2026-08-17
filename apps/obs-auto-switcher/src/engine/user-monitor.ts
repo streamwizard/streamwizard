@@ -7,6 +7,7 @@ import type {
 import type { IngestStatsPayload } from "@repo/types";
 import { trackAutoSwitcherEvent } from "@repo/metrics";
 import type { EffectiveConfig } from "../config-store";
+import type { ChatNoticeKind } from "../actions/chat";
 import { SessionTracker, type TrackedSession } from "./session-tracker";
 import { METRICS, MetricStreaks, pollLimits, type MetricKey } from "./metric-streaks";
 import { recordSwitch, getSwitchLog } from "./switch-log";
@@ -41,7 +42,7 @@ export interface MonitorDeps {
   stopStream(userId: string): Promise<{ ok: boolean; error?: string }>;
   resolveSceneItemId(userId: string, sceneUuid: string, sourceUuid: string | null, sourceName: string | null): Promise<number | null>;
   setSceneItemEnabled(userId: string, sceneUuid: string, sceneItemId: number, enabled: boolean): Promise<{ ok: boolean; error?: string }>;
-  sendChat(userId: string, template: string, vars: { bitrate?: number; rtt?: number; loss?: number; scene?: string }): Promise<void>;
+  sendChat(userId: string, kind: ChatNoticeKind, template: string, vars: { bitrate?: number; rtt?: number; loss?: number; scene?: string }): Promise<void>;
   logEvent(userId: string, entry: AutoSwitcherSwitchEntry, metrics: IngestStatsPayload | null): Promise<void>;
   clearOverride(userId: string): Promise<void>;
   publishStatus(userId: string, status: AutoSwitcherStatus): void;
@@ -60,6 +61,20 @@ export class UserMonitor {
 
   private offlineSince: number | null = null;
   private autoStopDone = false;
+
+  // Whether chat has been told something is wrong and is still owed the
+  // all-clear. This, not the phase we recovered *from*, is what decides whether
+  // a go-live posts "back live":
+  //
+  //   - Cold start, chat heard nothing: nothing to reassure it about, stay quiet.
+  //   - Recovered from a degrade: post.
+  //   - Signal came back after a total loss: post. This is the case the old
+  //     detail-string check got wrong — a resumed session re-passes the startup
+  //     gate (see onStats), so the go-live carried the startup detail string and
+  //     was suppressed as if chat had never heard "signal lost". Users with
+  //     nothing but hard dropouts therefore only ever saw one of their three
+  //     messages.
+  private chatAwaitingAllClear = false;
 
   private warningShown = false;
   private warningItemId: number | null = null;
@@ -331,6 +346,22 @@ export class UserMonitor {
 
   private requestSwitch(target: SceneTarget, reason: AutoSwitcherSwitchReason, detail: string, now: number): void {
     if (this.appliedScene?.uuid === target.uuid && !this.lastError) {
+      // No OBS call needed, but the state transition still happened and still has
+      // to be announced. In the 2-scene model (and any 3-scene config with the
+      // degraded scene unset) degraded and offline are the *same* scene, so the
+      // drop from degraded to offline landed here — and returning early meant its
+      // chat notice and event-log entry were never dispatched at all. Every
+      // requestSwitch call corresponds to one phase transition, so this cannot
+      // fire twice for the same event.
+      this.onSwitched({
+        at: Date.now(),
+        from_scene: this.appliedScene?.name ?? null,
+        to_scene: target.name ?? target.uuid,
+        reason,
+        detail,
+        session_id: this.selectedSessionId,
+        label: this.latestStats?.label ?? null,
+      });
       this.publish(now);
       return;
     }
@@ -404,15 +435,21 @@ export class UserMonitor {
       const vars = {
         bitrate: this.latestStats?.kbps,
         rtt: this.latestStats?.rtt_ms,
-        loss: this.latestStats?.loss_pct,
+        // drop_pct, not loss_pct — {loss} has to be the number the engine
+        // judged, or a switch caused by drops announces raw link loss instead.
+        // Same reason buildStatus maps drop_pct onto its loss_pct field.
+        loss: this.latestStats?.drop_pct,
         scene: entry.to_scene,
       };
       if (entry.reason === "auto_fallback") {
-        void this.deps.sendChat(this.userId, row.chat_template_degraded, vars);
+        this.chatAwaitingAllClear = true;
+        void this.deps.sendChat(this.userId, "degraded", row.chat_template_degraded, vars);
       } else if (entry.reason === "auto_offline") {
-        void this.deps.sendChat(this.userId, row.chat_template_offline, vars);
-      } else if (entry.reason === "auto_recover" && entry.detail !== "startup complete — link stable") {
-        void this.deps.sendChat(this.userId, row.chat_template_recovered, vars);
+        this.chatAwaitingAllClear = true;
+        void this.deps.sendChat(this.userId, "offline", row.chat_template_offline, vars);
+      } else if (entry.reason === "auto_recover" && this.chatAwaitingAllClear) {
+        this.chatAwaitingAllClear = false;
+        void this.deps.sendChat(this.userId, "recovered", row.chat_template_recovered, vars);
       }
     }
   }

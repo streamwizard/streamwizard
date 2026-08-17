@@ -2,6 +2,13 @@ import type { GetChattersResponse } from "@repo/types";
 import { TwitchApiBaseClient } from "./base-client";
 
 /**
+ * StreamWizard's own Twitch account — the `sender_id` when a message speaks as
+ * the bot rather than as the channel owner. A public Twitch user id, not a
+ * secret, so it lives here rather than in every consumer app's env.
+ */
+export const STREAMWIZARD_BOT_USER_ID = "956066753";
+
+/**
  * One version of one badge. `id` is the version string EventSub sends as
  * `badges[].id`; the image URLs are the only place the artwork can come from,
  * since the uuid in them is opaque and not derivable from set_id + version.
@@ -42,7 +49,7 @@ export class TwitchChatClient extends TwitchApiBaseClient {
     const response = await this.appApi().post<SendChatMessageResponse>(`/chat/messages`, {
       message,
       broadcaster_id: this.broadcaster_id,
-      sender_id: sender === "bot" ? "956066753" : this.broadcaster_id ,
+      sender_id: sender === "bot" ? STREAMWIZARD_BOT_USER_ID : this.broadcaster_id,
       reply_parent_message_id: replyToMessageId ? replyToMessageId : null,
       // for_source_only: true,
     });

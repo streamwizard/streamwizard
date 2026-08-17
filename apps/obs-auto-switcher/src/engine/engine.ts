@@ -6,7 +6,7 @@ import type { StatusPublisher } from "../status-publisher";
 import { UserMonitor, type MonitorDeps } from "./user-monitor";
 import { clearSwitchLog } from "./switch-log";
 import { resolveSceneItemId, setScene, setSceneItemEnabledById, stopStream, invalidateInstanceCache } from "../actions/obs-client";
-import { sendChatNotice } from "../actions/chat";
+import { sendChatNotice, clearChatCaches } from "../actions/chat";
 import { logSwitchEvent } from "../actions/event-log";
 import { clearSceneOverride } from "@repo/supabase/queries/auto-switcher";
 
@@ -68,6 +68,10 @@ export class Engine {
     if (!config) {
       if (this.monitors.delete(userId)) {
         clearSwitchLog(userId);
+        // Chat's caches are module-level and keyed by user, so without this they
+        // keep an entry per user who ever had the feature on, for the life of
+        // the process.
+        clearChatCaches(userId);
         console.log(`[engine] monitor removed user=${userId}`);
       }
       return;
