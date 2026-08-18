@@ -1,4 +1,4 @@
-import { test, expect, beforeEach } from "bun:test";
+import { test, expect, beforeEach, setSystemTime } from "bun:test";
 import { AUTO_SWITCHER_PRESET_THRESHOLDS, type AutoSwitcherConfig, type AutoSwitcherStatus } from "@repo/schemas";
 import type { IngestStatsPayload } from "@repo/types";
 import type { EffectiveConfig } from "../config-store";
@@ -122,6 +122,11 @@ beforeEach(() => {
   published = [];
   chatSent = [];
   clock = 1_000_000;
+  // The injected `clock` drives the engine, but a switch entry is stamped with
+  // the wall clock, and that stamp is what the all-clear window is measured
+  // against — so the tests below move both, and every other test gets the real
+  // clock back here.
+  setSystemTime();
   clearSwitchLog(USER);
 });
 
@@ -386,4 +391,73 @@ test("{loss} carries the metric the engine judged, not raw link loss", async () 
   expect(chatSent[0]!.vars.loss).toBe(0);
   expect(chatSent[0]!.vars.bitrate).toBe(200);
   expect(chatSent[0]!.vars.scene).toBe("Degraded");
+});
+
+// Wall-clock anchor for the all-clear window tests below.
+const WALL = new Date("2026-08-18T20:00:00.000Z").getTime();
+
+// Regression: the debt to chat used to be a boolean with no expiry. Ending a
+// stream also ends the ingest session, which posts "signal lost" and left the
+// debt standing for the life of the worker — so the next broadcast's startup
+// gate greeted fresh chat with "back live" for a connection that was never
+// broken. Switching from Starting Soon to the live scene is not a recovery.
+test("an outage older than the all-clear window is not announced as recovered", async () => {
+  setSystemTime(new Date(WALL));
+  const monitor = new UserMonitor(USER, makeConfig(CHAT_CONFIG), makeDeps());
+  bringLive(monitor);
+
+  clock += 1_000;
+  monitor.onSessionEnded("sess-1", clock);
+  await flush();
+  expect(chatSent.map((c) => c.kind)).toEqual(["offline"]);
+
+  // That stream is over; the next one starts 20 minutes later.
+  setSystemTime(new Date(WALL + 20 * 60_000));
+  for (let i = 0; i < THR.bitrate_startup_polls; i++) sample(monitor, GOOD);
+  await flush();
+  expect(published.at(-1)!.state).toBe("live");
+  expect(chatSent.map((c) => c.kind)).toEqual(["offline"]);
+});
+
+test("a dropout inside the window still gets its all-clear", async () => {
+  setSystemTime(new Date(WALL));
+  const monitor = new UserMonitor(USER, makeConfig(CHAT_CONFIG), makeDeps());
+  bringLive(monitor);
+
+  clock += 1_000;
+  monitor.onSessionEnded("sess-1", clock);
+  await flush();
+
+  // A long dead zone is still the same broadcast, and the viewers who waited
+  // it out are the ones the message is for.
+  setSystemTime(new Date(WALL + 9 * 60_000));
+  for (let i = 0; i < THR.bitrate_startup_polls; i++) sample(monitor, GOOD);
+  await flush();
+  expect(chatSent.map((c) => c.kind)).toEqual(["offline", "recovered"]);
+});
+
+test("a stream the switcher stopped itself owes chat nothing when it returns", async () => {
+  setSystemTime(new Date(WALL));
+  const monitor = new UserMonitor(
+    USER,
+    makeConfig({ ...CHAT_CONFIG, auto_stop_enabled: true, auto_stop_minutes: 2 }),
+    makeDeps(),
+  );
+  bringLive(monitor);
+
+  clock += 1_000;
+  monitor.onSessionEnded("sess-1", clock);
+  await flush();
+  expect(chatSent.map((c) => c.kind)).toEqual(["offline"]);
+
+  // Two offline minutes in, auto stop ends the broadcast — inside the window,
+  // but there is no longer a stream for an all-clear to belong to.
+  clock += 2 * 60_000;
+  tick(monitor);
+  await flush();
+
+  setSystemTime(new Date(WALL + 3 * 60_000));
+  for (let i = 0; i < THR.bitrate_startup_polls; i++) sample(monitor, GOOD);
+  await flush();
+  expect(chatSent.map((c) => c.kind)).toEqual(["offline"]);
 });

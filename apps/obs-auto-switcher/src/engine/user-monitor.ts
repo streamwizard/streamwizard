@@ -37,6 +37,15 @@ const SWITCH_RETRY_MS = 5_000;
 
 const STATUS_HEARTBEAT_TICKS = 5;
 
+// How long a pending all-clear stays owed. Chat is owed "back live" only while
+// the outage it belongs to is still the same broadcast: ending a stream also
+// ends the ingest session, which posts "signal lost" and leaves the debt
+// standing, so the next stream's startup gate would greet fresh chat with a
+// recovery notice for a connection that was never broken. Long enough to cover
+// any dropout still worth announcing to the viewers who waited it out, short
+// enough to fall inside a between-stream gap or a break.
+const ALL_CLEAR_TTL_MS = 10 * 60_000;
+
 export interface MonitorDeps {
   setScene(userId: string, sceneUuid: string): Promise<{ ok: boolean; error?: string }>;
   stopStream(userId: string): Promise<{ ok: boolean; error?: string }>;
@@ -62,7 +71,7 @@ export class UserMonitor {
   private offlineSince: number | null = null;
   private autoStopDone = false;
 
-  // Whether chat has been told something is wrong and is still owed the
+  // When chat was last told something is wrong, while it is still owed the
   // all-clear. This, not the phase we recovered *from*, is what decides whether
   // a go-live posts "back live":
   //
@@ -74,7 +83,9 @@ export class UserMonitor {
   //     was suppressed as if chat had never heard "signal lost". Users with
   //     nothing but hard dropouts therefore only ever saw one of their three
   //     messages.
-  private chatAwaitingAllClear = false;
+  //   - The debt went stale (ALL_CLEAR_TTL_MS) or the switcher stopped the
+  //     stream: that outage belongs to a broadcast that is over. Stay quiet.
+  private chatAllClearOwedAt: number | null = null;
 
   private warningShown = false;
   private warningItemId: number | null = null;
@@ -442,16 +453,21 @@ export class UserMonitor {
         scene: entry.to_scene,
       };
       if (entry.reason === "auto_fallback") {
-        this.chatAwaitingAllClear = true;
+        this.chatAllClearOwedAt = entry.at;
         void this.deps.sendChat(this.userId, "degraded", row.chat_template_degraded, vars);
       } else if (entry.reason === "auto_offline") {
-        this.chatAwaitingAllClear = true;
+        this.chatAllClearOwedAt = entry.at;
         void this.deps.sendChat(this.userId, "offline", row.chat_template_offline, vars);
-      } else if (entry.reason === "auto_recover" && this.chatAwaitingAllClear) {
-        this.chatAwaitingAllClear = false;
+      } else if (entry.reason === "auto_recover" && this.allClearOwed(entry.at)) {
+        this.chatAllClearOwedAt = null;
         void this.deps.sendChat(this.userId, "recovered", row.chat_template_recovered, vars);
       }
     }
+  }
+
+  /** Whether chat is still owed an all-clear for an outage recent enough to matter. */
+  private allClearOwed(now: number): boolean {
+    return this.chatAllClearOwedAt !== null && now - this.chatAllClearOwedAt <= ALL_CLEAR_TTL_MS;
   }
 
   // ── warning source (feature d) ─────────────────────────────────────────
@@ -513,6 +529,11 @@ export class UserMonitor {
           label: this.latestStats?.label ?? null,
         };
         recordSwitch(this.userId, entry);
+        if (result.ok) {
+          // The broadcast this outage belongs to is over — whatever chat was
+          // owed died with it, and the next go-live is a new stream.
+          this.chatAllClearOwedAt = null;
+        }
         if (result.ok && this.cfg.row.log_events_enabled) {
           void this.deps.logEvent(this.userId, entry, this.latestStats);
         }

@@ -156,11 +156,15 @@ by default.
 - **Logging** puts every switch in your activity feed and VOD timeline with
   the reason. Useful the morning after, when you want to know whether it
   was you or the connection.
-- **Chat notices** let the StreamWizard bot tell chat what's going on so
-  you don't have to. You write three messages: quality dropped, signal
-  lost, back live. Four placeholders work in all of them: `{bitrate}` in
-  kbps, `{rtt}` in ms, `{loss}` as a percentage, `{scene}` for where it
-  switched. Chat gets told once per switch, not once per second.
+- **Chat notices** post in your channel as you, not as a bot, so chat
+  hears what's going on without you typing. You write three messages:
+  quality dropped, signal lost, back live. Four placeholders work in all
+  of them: `{bitrate}` in kbps, `{rtt}` in ms, `{loss}` as a percentage,
+  `{scene}` for where it switched. Chat gets told once per switch, not
+  once per second. "Back live" only goes out if chat heard about a problem
+  first, and only within 10 minutes of it. Going from Starting Soon to
+  your live scene is not a recovery, and a stream that ended half an hour
+  ago shouldn't open the next one with an all clear.
 - **Warning source** is a source in your live scene, an "unstable
   connection" banner for example, that appears after two bad seconds and
   disappears after five good ones, without any scene switch. The polite
