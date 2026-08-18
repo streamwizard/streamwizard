@@ -18,6 +18,10 @@ export type PublicRoute = {
 
 export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
+  { path: "/cloud-obs", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/overlays", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/clips", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/roadmap", changeFrequency: "weekly", priority: 0.6 },
   { path: "/privacy-policy", changeFrequency: "yearly", priority: 0.3, lastModified: "2026-05-26" },
   { path: "/terms-of-service", changeFrequency: "yearly", priority: 0.3, lastModified: "2026-05-26" },
 ];

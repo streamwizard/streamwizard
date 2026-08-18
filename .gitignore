@@ -67,3 +67,6 @@ Thumbs.db
 
 # Next.js generated type shim (regenerated on every dev/build)
 next-env.d.ts
+
+# impeccable design-plugin scratch (mock screenshots, question state)
+.impeccable/

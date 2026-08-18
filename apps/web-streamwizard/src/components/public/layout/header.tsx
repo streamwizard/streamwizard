@@ -8,6 +8,15 @@ import { discordInviteLink, docsLink, githubLink } from "@/lib/constant";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import { BookOpen, Menu } from "lucide-react";
 
+/* The marketing pages, in reading order of the signal path. */
+const PAGES = [
+  { name: "Cloud OBS", href: "/cloud-obs" },
+  { name: "Overlays", href: "/overlays" },
+  { name: "Clips", href: "/clips" },
+  { name: "Pricing", href: "/cloud-obs#pricing" },
+  { name: "Roadmap", href: "/roadmap" },
+];
+
 export default function Header() {
   return (
     <header className="shadow sticky top-0 z-50 backdrop-blur-xl">
@@ -19,24 +28,28 @@ export default function Header() {
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden md:flex items-center gap-4">
+          <nav className="hidden lg:flex items-center gap-5">
+            {PAGES.map((page) => (
+              <Link key={page.href} href={page.href} className="text-muted-foreground hover:text-foreground transition-colors text-sm">
+                {page.name}
+              </Link>
+            ))}
+            <Separator orientation="vertical" className="h-5" />
             <Link href={docsLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-sm">
               <BookOpen className="h-4 w-4" />
               Docs
             </Link>
-            <Link href={githubLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-sm">
+            <Link href={githubLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors" aria-label="GitHub">
               <FaGithub className="h-4 w-4" />
-              GitHub
             </Link>
-            <Link href={discordInviteLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1.5 text-sm">
+            <Link href={discordInviteLink} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-foreground transition-colors" aria-label="Discord">
               <FaDiscord className="h-4 w-4" />
-              Discord
             </Link>
             <Button className="bg-secondary text-white hover:bg-slate-700" onClick={() => login()}>Log in</Button>
           </nav>
 
           {/* Mobile nav */}
-          <div className="flex md:hidden items-center gap-2">
+          <div className="flex lg:hidden items-center gap-2">
             <Button className="bg-secondary text-white hover:bg-slate-700 text-sm" onClick={() => login()}>Log in</Button>
             <Sheet>
               <SheetTrigger asChild>
@@ -47,6 +60,12 @@ export default function Header() {
               <SheetContent side="right" className="w-64">
                 <SheetTitle className="sr-only">Navigation</SheetTitle>
                 <nav className="flex flex-col gap-2 px-4 pt-2">
+                  {PAGES.map((page) => (
+                    <Link key={page.href} href={page.href} className="text-muted-foreground hover:text-foreground transition-colors text-sm py-1">
+                      {page.name}
+                    </Link>
+                  ))}
+                  <Separator className="my-2" />
                   <Link
                     href={docsLink}
                     target="_blank"

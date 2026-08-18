@@ -6,16 +6,25 @@ import { discordInviteLink, docsClipsLink, docsLink, githubLink } from "@/lib/co
 import { Separator } from "@repo/ui";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 
-const navigation = {
-  // These point at the docs, not /dashboard/clips: that route is behind auth, so
-  // it was a dead end for anyone (and any crawler) not already signed in.
+type FooterLink = { name: string; href: string; external?: boolean };
+
+const navigation: Record<string, FooterLink[]> = {
   product: [
-    { name: "Clip Management", href: docsClipsLink },
-    { name: "Docs", href: docsLink },
+    { name: "Cloud OBS", href: "/cloud-obs" },
+    { name: "Overlays & Widgets", href: "/overlays" },
+    { name: "Clips & VODs", href: "/clips" },
+    { name: "Pricing", href: "/cloud-obs#pricing" },
+    { name: "Roadmap", href: "/roadmap" },
+  ],
+  resources: [
+    { name: "Docs", href: docsLink, external: true },
+    { name: "Clips guide", href: docsClipsLink, external: true },
+    { name: "Widget API", href: `${docsLink}/widgets/overview`, external: true },
+    { name: "Contribute", href: `${docsLink}/contributing/first-contribution`, external: true },
   ],
   community: [
-    { name: "Discord", href: discordInviteLink },
-    { name: "GitHub", href: githubLink },
+    { name: "Discord", href: discordInviteLink, external: true },
+    { name: "GitHub", href: githubLink, external: true },
   ],
   legal: [
     { name: "Terms of Service", href: "/terms-of-service" },
@@ -23,15 +32,36 @@ const navigation = {
   ],
 };
 
+function FooterColumn({ title, links }: { title: string; links: FooterLink[] }) {
+  return (
+    <div className="space-y-4">
+      <h3 className="font-medium text-sm tracking-wider">{title}</h3>
+      <ul className="space-y-3">
+        {links.map((item) => (
+          <li key={item.name}>
+            <Link
+              href={item.href}
+              {...(item.external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              className="text-muted-foreground hover:text-white transition-colors"
+            >
+              {item.name}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
     <footer className="bg-black text-white py-16">
       <div className="container px-4 mx-auto">
-        <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-12">
+        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-12">
           {/* Branding Section */}
-          <div className="space-y-4 md:w-1/3">
+          <div className="space-y-4 lg:w-1/3">
             <div className="flex items-center">
               <Image
                 src="/logo.png"
@@ -44,69 +74,18 @@ export function Footer() {
               <span className="text-xl font-medium ml-4">StreamWizard</span>
             </div>
             <p className="text-muted-foreground max-w-md">
-              StreamWizard helps you organize your Twitch clips effortlessly.
-              Search by category, creator, title, date range, and more. Create
-              custom folders to keep your clips perfectly organized.
+              Clips, overlays, widgets and IRL streaming for Twitch creators. One toolkit instead of four
+              subscriptions.
             </p>
             <p className="text-sm text-muted-foreground/60">Free and open source. Built by the community.</p>
           </div>
 
           {/* Navigation Links */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-8 gap-x-8 md:w-1/2 md:justify-items-end">
-            {/* Product Links */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm tracking-wider">PRODUCT</h3>
-              <ul className="space-y-3">
-                {navigation.product.map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-white transition-colors"
-                    >
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Community Links */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm tracking-wider">COMMUNITY</h3>
-              <ul className="space-y-3">
-                {navigation.community.map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-muted-foreground hover:text-white transition-colors"
-                    >
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Legal Links */}
-            <div className="space-y-4">
-              <h3 className="font-medium text-sm tracking-wider">LEGAL</h3>
-              <ul className="space-y-3">
-                {navigation.legal.map((item) => (
-                  <li key={item.name}>
-                    <Link
-                      href={item.href}
-                      className="text-muted-foreground hover:text-white transition-colors"
-                    >
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          <div className="grid grid-cols-2 gap-y-8 gap-x-8 sm:grid-cols-4 lg:w-3/5">
+            <FooterColumn title="PRODUCT" links={navigation.product} />
+            <FooterColumn title="RESOURCES" links={navigation.resources} />
+            <FooterColumn title="COMMUNITY" links={navigation.community} />
+            <FooterColumn title="LEGAL" links={navigation.legal} />
           </div>
         </div>
 

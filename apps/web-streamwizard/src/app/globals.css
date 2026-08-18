@@ -12,6 +12,15 @@
     animation: none !important;
   }
 }
+
+/* In-page anchors glide instead of snapping. Motion-sensitive visitors keep
+   the instant jump. Landing clear of the sticky header is each anchored
+   section's own job (scroll-mt-*), so programmatic scrolls stay untouched. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
 @source "../../../../packages/ui/src";
 @source "../../../../packages/obs-web/src";
 
@@ -289,6 +298,49 @@
   }
   .maplibregl-popup-tip {
     @apply hidden!;
+  }
+}
+
+/* Text selection carries the brand instead of the browser default. */
+::selection {
+  background-color: color-mix(in srgb, var(--color-three) 30%, transparent);
+}
+
+/*
+ * Signal-path grammar for the public marketing pages. The brand
+ * purple→blue→green gradient lives in these lines and nowhere else; the dash
+ * march is the page's one continuous motion, in phase with the shared 1.2s
+ * clock (components/public/signal/clock.tsx), and it stands still under
+ * prefers-reduced-motion.
+ */
+.signal-grad-x {
+  background-image: linear-gradient(90deg, #9e7aff 0%, #3b82f6 55%, #4ade80 100%);
+}
+.signal-grad-y {
+  background-image: linear-gradient(180deg, #9e7aff 0%, #3b82f6 55%, #4ade80 100%);
+}
+.signal-dash-x {
+  mask-image: repeating-linear-gradient(90deg, #000 0 14px, transparent 14px 28px);
+}
+.signal-dash-y {
+  mask-image: repeating-linear-gradient(180deg, #000 0 14px, transparent 14px 28px);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .signal-dash-x {
+    animation: signal-march-x 1.2s linear infinite;
+  }
+  .signal-dash-y {
+    animation: signal-march-y 1.2s linear infinite;
+  }
+}
+@keyframes signal-march-x {
+  to {
+    mask-position: 28px 0;
+  }
+}
+@keyframes signal-march-y {
+  to {
+    mask-position: 0 28px;
   }
 }
 
