@@ -106,7 +106,7 @@ export function softwareApplicationSchema(): Record<string, unknown> {
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Web",
     description:
-      "Organize your Twitch clips. Search by game, date, or title. Actually find the moment you're looking for.",
+      "Cloud OBS for IRL streaming, overlays, clip management, and stream analytics for Twitch streamers. Open source and built in public.",
     publisher: { "@id": absoluteUrl("/#organization") },
     // Free and MIT licensed, so the price is genuinely zero rather than a trial.
     offers: {

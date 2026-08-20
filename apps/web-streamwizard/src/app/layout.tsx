@@ -22,15 +22,16 @@ const geistMono = localFont({
 });
 
 const SITE_NAME = "StreamWizard";
+const SITE_TITLE = "StreamWizard: Cloud OBS, Clips, and Analytics for Twitch";
 const SITE_DESCRIPTION =
-  "Organize your Twitch clips. Search by game, date, or title. Actually find the moment you're looking for.";
+  "Cloud OBS for IRL streaming, overlays, clip management, and stream analytics for Twitch streamers. Open source and built in public.";
 
 export const metadata: Metadata = {
   // Every relative URL below (and the generated OG image) resolves against this.
   // Without it Next silently emits relative og:image paths, which no scraper follows.
   metadataBase: new URL(siteUrl()),
   title: {
-    default: "StreamWizard: Twitch Clip Manager",
+    default: SITE_TITLE,
     template: `%s – ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
@@ -43,13 +44,13 @@ export const metadata: Metadata = {
     type: "website",
     siteName: SITE_NAME,
     locale: "en_US",
-    title: "StreamWizard: Twitch Clip Manager",
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     url: "/",
   },
   twitter: {
     card: "summary_large_image",
-    title: "StreamWizard: Twitch Clip Manager",
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
   },
 };

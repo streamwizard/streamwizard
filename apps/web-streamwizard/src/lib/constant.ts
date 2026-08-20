@@ -42,7 +42,8 @@ export const TWITCH_SCOPES = [
 
 export const discordInviteLink = "https://discord.gg/29Eq659egv";
 export const discordDocsLink = "https://docs.streamwizard.org/discord";
-export const githubLink = "https://github.com/streamwizard/streamwizard-backend";
+export const githubLink = "https://github.com/streamwizard/streamwizard";
+export const twitchChannelLink = "https://twitch.tv/jochemwhite";
 
 // Hardcoded like the links above rather than read from NEXT_PUBLIC_DOCS_URL,
 // which is optional in the env schema and so can be undefined at render time.

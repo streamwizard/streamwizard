@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font-size",
+        "value": "10px",
+        "createdAt": "2026-08-19T11:43:07.907Z",
+        "reason": "DESIGN.md typography prose documents the 10px mono label step (demo tag / dock labels); frontmatter ramp omits it"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "13px",
+        "files": [
+          "src/app/prototypes/hero/proto.css"
+        ],
+        "createdAt": "2026-08-19T11:47:00.871Z",
+        "reason": "PICKER.md verbatim picker chrome in temporary prototype harness; not project design"
+      }
+    ]
+  }
+}
