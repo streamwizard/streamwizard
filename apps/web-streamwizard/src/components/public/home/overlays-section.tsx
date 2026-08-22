@@ -1,68 +1,67 @@
-import { Bell, Code2, Layers, MapPin } from "lucide-react";
+import { TrackedLink } from "../analytics/tracked-link";
+import { SectionView } from "../analytics/section-view";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@repo/ui";
+import { productLinks } from "@/lib/constant";
 import { Reveal } from "./reveal";
-import { OverlayEditorMock } from "./overlay-editor-mock";
+import { StreamOverlayDemo } from "./stream-overlay-demo";
+import { DemoAlertProvider } from "./overlay-demo-alert";
+import { OverlayWidgetCards } from "./overlay-widget-cards";
 
 /*
- * Overlays are their own pillar: they work in your own OBS just as well as
- * in cloud OBS. Centered composition so the section reads differently from
- * the split rows above it.
+ * Overlays are their own pillar and they are for every streamer, not only the
+ * IRL ones. The section leads with the two scenes every channel has (starting
+ * soon, live) and shows the widget library underneath; the IRL GPS widgets get
+ * one card here and the full treatment on /cloud-obs. Works in cloud OBS and
+ * in the OBS on your PC alike; one browser source either way.
  */
 
-const features = [
-  {
-    icon: Bell,
-    title: "Alert box, your media",
-    body: "Follow, sub, cheer, and raid alerts with your own images, videos, and sounds. No code needed.",
-  },
-  {
-    icon: Layers,
-    title: "A real editor",
-    body: "Canvas with layers, snapping, and drag to resize. Rotating clips, countdowns, clocks, and text.",
-  },
-  {
-    icon: MapPin,
-    title: "Built for IRL too",
-    body: "Live GPS walking stats like speed and altitude, made for outside streams on cloud OBS.",
-  },
-  {
-    icon: Code2,
-    title: "Custom widgets",
-    body: "Write your own in HTML, JavaScript, and Tailwind, with a live preview while you type.",
-  },
-];
-
-export function OverlaysSection() {
+export function OverlaysSection({ showProductLink = true }: { showProductLink?: boolean } = {}) {
   return (
     <section className="py-20">
-      <div className="container mx-auto px-4">
+      <SectionView section="overlays" className="container mx-auto px-4">
         <div className="mx-auto mb-12 max-w-2xl text-center">
-          <h2 className="text-3xl font-bold sm:text-4xl">Overlays for any OBS.</h2>
+          <h2 className="text-3xl font-bold sm:text-4xl">Alerts, chat, clips, countdowns. One browser source.</h2>
           <p className="mt-4 text-muted-foreground">
-            The overlay editor works with the OBS on your PC and with cloud OBS. Build it once, add
-            one browser source, done.
+            Build the overlay in the editor, paste one URL into OBS. Starting screen, BRB, live: same widgets, your
+            media.
           </p>
         </div>
 
-        <Reveal>
-          <div className="mx-auto max-w-3xl">
-            <OverlayEditorMock />
-          </div>
-        </Reveal>
+        {/* One provider over demo and grid: the alert that fires in the
+            frame is the event the alert box card selects. */}
+        <DemoAlertProvider>
+          <Reveal direction="scale">
+            <StreamOverlayDemo />
+          </Reveal>
+
+          <Reveal className="mt-16">
+            <p className="mb-4 font-mono text-xs uppercase tracking-widest text-muted-foreground">The widget library</p>
+            <OverlayWidgetCards />
+          </Reveal>
+        </DemoAlertProvider>
 
         <Reveal>
-          <div className="mx-auto mt-12 grid max-w-4xl gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {features.map(({ icon: Icon, title, body }) => (
-              <div key={title}>
-                <div className="flex items-center gap-2">
-                  <Icon className="h-4 w-4 text-purple-400" aria-hidden="true" />
-                  <h3 className="text-sm font-semibold">{title}</h3>
-                </div>
-                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
-              </div>
-            ))}
+          <div className="mt-10 flex flex-col items-center gap-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              Free and open source, like the rest of the dashboard.
+            </p>
+            {showProductLink ? (
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className="gap-2 border-purple-400/30 bg-purple-400/[0.06] px-7 text-purple-200 shadow-md transition-transform duration-200 hover:-translate-y-0.5 hover:bg-purple-400/[0.12] hover:text-purple-100"
+              >
+                <TrackedLink href={productLinks.overlays} cta="more_about_overlays" section="overlays">
+                  More about overlays
+                  <ArrowRight className="size-4" aria-hidden="true" />
+                </TrackedLink>
+              </Button>
+            ) : null}
           </div>
         </Reveal>
-      </div>
+      </SectionView>
     </section>
   );
 }

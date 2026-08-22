@@ -242,21 +242,25 @@ export const CATEGORIES: MockCategory[] = [
 
 /**
  * A scene preview can play a real clip from the R2 CDN instead of the drawn
- * fallback. Values are paths under NEXT_PUBLIC_CDN_URL, content-hashed the same
- * way the light-mode transition WebM is, e.g.
- *
- *   IRL: "/public/landing/scenes/irl.a3be503ecf4b.webm"
+ * fallback. Values are either absolute URLs or paths under NEXT_PUBLIC_CDN_URL.
+ * Landing-page clips live on the production CDN only (the staging bucket does
+ * not mirror them), so they are absolute and the host is allowed in media-src
+ * explicitly; see LANDING_CDN_URL in lib/csp.ts.
  *
  * Any scene left out here keeps its drawn preview, and a clip that fails to
  * load falls back to the same drawing, so a missing upload degrades quietly.
  */
-export const SCENE_VIDEOS: Record<string, string> = {};
+export const SCENE_VIDEOS: Record<string, string> = {
+  IRL: "https://cdn.streamwizard.org/public/vods/1%20min.webm",
+};
 
 /** Absolute CDN URL for a scene's clip, or null when it has none. */
 export function sceneVideoUrl(scene: string): string | null {
   const path = SCENE_VIDEOS[scene];
+  if (!path) return null;
+  if (/^https?:\/\//.test(path)) return path;
   const base = process.env.NEXT_PUBLIC_CDN_URL;
-  return path && base ? `${base}${path}` : null;
+  return base ? `${base}${path}` : null;
 }
 
 export const DEFAULT_TITLE = "Late night walk through the city, come vibe";

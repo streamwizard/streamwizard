@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useDemoTracking } from "../analytics/use-demo-tracking";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, useAnimationFrame, useMotionValue, useTransform, useReducedMotion } from "motion/react";
@@ -65,7 +66,12 @@ function ClipCard({ clip, onOpen, tabIndex }: { clip: RealClipCard; onOpen: () =
   );
 }
 
-function ClipShowcaseDialog({
+/**
+ * The clip player behind both the marquee and the clips-page demo below it:
+ * Twitch embed, clip metadata, and arrow-key/button paging through the list it
+ * was opened from.
+ */
+export function ClipShowcaseDialog({
   clips,
   index,
   onIndexChange,
@@ -77,13 +83,21 @@ function ClipShowcaseDialog({
   onClose: () => void;
 }) {
   const clip = index == null ? null : clips[index];
+  const track = useDemoTracking("clips");
+
+  // Shared with the folders mock, so the open lands here rather than on each
+  // card: one place, both demos.
+  useEffect(() => {
+    if (index != null) track("clip_opened");
+  }, [index, track]);
 
   const step = useCallback(
     (delta: number) => {
       if (index == null || clips.length === 0) return;
+      track("clip_stepped");
       onIndexChange((index + delta + clips.length) % clips.length);
     },
-    [index, clips.length, onIndexChange],
+    [index, clips.length, onIndexChange, track],
   );
 
   // Window-level so the arrows keep working after the Twitch iframe takes
@@ -175,7 +189,12 @@ function ClipShowcaseDialog({
                 </div>
                 {clip.url && (
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={clip.url} target="_blank" rel="noopener noreferrer">
+                    <Link
+                      href={clip.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => track("clip_opened_on_twitch")}
+                    >
                       <ExternalLink className="mr-2 size-4" aria-hidden="true" />
                       Open on Twitch
                     </Link>

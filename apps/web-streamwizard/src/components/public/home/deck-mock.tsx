@@ -40,6 +40,7 @@ import {
   type MockCategory,
 } from "./obs-demo-data";
 import { handoffKey, useObsDemo } from "./obs-demo-store";
+import { useDemoTracking } from "../analytics/use-demo-tracking";
 
 /*
  * A playable stand-in for /deck: all four tabs, the same shapes, the same
@@ -139,6 +140,7 @@ export function DeckMock() {
   const ring = "ring-2 ring-purple-400/80 ring-offset-2 ring-offset-background";
 
   const [tab, setTab] = useState<MockTab>("deck");
+  const track = useDemoTracking("cloud_obs");
 
   // Chat tab.
   const [draft, setDraft] = useState("");
@@ -202,6 +204,7 @@ export function DeckMock() {
     event.preventDefault();
     const message = draft.trim();
     if (!message) return;
+    track("deck_chat_sent");
     setDraft("");
     appendChat({
       name: "You",
@@ -235,6 +238,7 @@ export function DeckMock() {
 
   const save = () => {
     if (saving) return;
+    track(`deck_${tab}_saved`);
     setSaving(true);
     const savingTab = tab;
     later(() => {
@@ -620,7 +624,10 @@ export function DeckMock() {
                   <button
                     key={value}
                     type="button"
-                    onClick={() => setTab(value)}
+                    onClick={() => {
+                      track(`deck_tab_${value}`);
+                      setTab(value);
+                    }}
                     aria-current={active ? "page" : undefined}
                     className={cn(
                       "relative flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 transition-colors active:bg-accent",

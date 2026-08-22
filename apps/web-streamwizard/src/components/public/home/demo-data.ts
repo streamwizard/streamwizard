@@ -285,8 +285,10 @@ export interface RealClipCard {
   url: string | null;
   /** clips.twitch.tv embed URL (without parent params); null disables playback. */
   embedUrl: string | null;
-  /** ISO timestamp the clip was created on Twitch; absent in snapshot data. */
+  /** ISO timestamp the clip was created on Twitch. */
   createdAt?: string | null;
+  /** Twitch category name, resolved from game_id; null when Twitch has no match. */
+  category?: string | null;
 }
 
 export const fallbackClipCards: RealClipCard[] = [
@@ -301,6 +303,8 @@ export const fallbackClipCards: RealClipCard[] = [
       "https://static-cdn.jtvnw.net/twitch-clips-thumbnails-prod/TalentedCogentSlothKappaWealth-OqcQ7nwuwl3hGU2K/15fc1c99-efaa-4df3-9e5a-61643bfa753a/preview-480x272.jpg",
     url: "https://www.twitch.tv/xpudu/clip/TalentedCogentSlothKappaWealth-OqcQ7nwuwl3hGU2K",
     embedUrl: "https://clips.twitch.tv/embed?clip=TalentedCogentSlothKappaWealth-OqcQ7nwuwl3hGU2K",
+    createdAt: "2024-08-28T10:36:55Z",
+    category: "Just Chatting",
   },
   {
     id: "AltruisticDifficultTireMVGame",
@@ -313,6 +317,8 @@ export const fallbackClipCards: RealClipCard[] = [
       "https://static-cdn.jtvnw.net/twitch-video-assets/twitch-vap-video-assets-prod-us-west-2/08b8bed7-95cb-42c2-b2a1-e9a8b448fed3/landscape/thumb/thumb-0000000000-480x272.jpg",
     url: "https://www.twitch.tv/maisters/clip/AltruisticDifficultTireMVGame",
     embedUrl: "https://clips.twitch.tv/embed?clip=AltruisticDifficultTireMVGame",
+    createdAt: "2018-05-07T15:34:10Z",
+    category: "Fortnite",
   },
   {
     id: "FunEnthusiasticTriangleStrawBeary",
@@ -325,6 +331,8 @@ export const fallbackClipCards: RealClipCard[] = [
       "https://static-cdn.jtvnw.net/twitch-clips/AT-cm%7C283832465-preview-480x272.jpg",
     url: "https://clips.twitch.tv/FunEnthusiasticTriangleStrawBeary",
     embedUrl: "https://clips.twitch.tv/embed?clip=FunEnthusiasticTriangleStrawBeary",
+    createdAt: "2018-08-03T17:24:45Z",
+    category: "Emily Wants to Play",
   },
   {
     id: "GeniusFuriousSpindleKeepo-3ufURdCCQCUT9Nhq",
@@ -337,6 +345,8 @@ export const fallbackClipCards: RealClipCard[] = [
       "https://static-cdn.jtvnw.net/twitch-video-assets/twitch-vap-video-assets-prod-us-west-2/47f50d4d-5867-4d30-a3e5-e511384f9f24/landscape/thumb/thumb-0000000000-480x272.jpg",
     url: "https://www.twitch.tv/coenmeteenc/clip/GeniusFuriousSpindleKeepo-3ufURdCCQCUT9Nhq",
     embedUrl: "https://clips.twitch.tv/embed?clip=GeniusFuriousSpindleKeepo-3ufURdCCQCUT9Nhq",
+    createdAt: "2023-11-20T20:52:08Z",
+    category: "Minecraft",
   },
   {
     id: "RepleteBigSandpiperGivePLZ-cX5ecJPJF5zfduCK",
@@ -349,6 +359,8 @@ export const fallbackClipCards: RealClipCard[] = [
       "https://static-cdn.jtvnw.net/twitch-video-assets/twitch-vap-video-assets-prod-us-west-2/94387d84-03eb-4dda-9dfa-8d523d7d512e/landscape/thumb/thumb-0000000000-480x272.jpg",
     url: "https://www.twitch.tv/ron0x/clip/RepleteBigSandpiperGivePLZ-cX5ecJPJF5zfduCK",
     embedUrl: "https://clips.twitch.tv/embed?clip=RepleteBigSandpiperGivePLZ-cX5ecJPJF5zfduCK",
+    createdAt: "2022-08-05T20:43:33Z",
+    category: "Just Chatting",
   },
   {
     id: "TastyDiligentClintCoolCat-SxId-MhyJbdOi1fM",
@@ -361,6 +373,8 @@ export const fallbackClipCards: RealClipCard[] = [
       "https://static-cdn.jtvnw.net/twitch-clips-thumbnails-prod/TastyDiligentClintCoolCat-SxId-MhyJbdOi1fM/7ece57f9-9e2a-4062-a9a9-f3a1039ebff4/preview-480x272.jpg",
     url: "https://www.twitch.tv/rdggx/clip/TastyDiligentClintCoolCat-SxId-MhyJbdOi1fM",
     embedUrl: "https://clips.twitch.tv/embed?clip=TastyDiligentClintCoolCat-SxId-MhyJbdOi1fM",
+    createdAt: "2025-09-26T11:55:31Z",
+    category: "World of Warcraft",
   },
   {
     id: "VivaciousHungryOcelotMcaT-rjhurfYmPL-o1gpm",
@@ -373,6 +387,8 @@ export const fallbackClipCards: RealClipCard[] = [
       "https://static-cdn.jtvnw.net/twitch-clips/u_s63a44bq32Jjy_qNYKZg/AT-cm%7Cu_s63a44bq32Jjy_qNYKZg-preview-480x272.jpg",
     url: "https://www.twitch.tv/northerng1ant/clip/VivaciousHungryOcelotMcaT-rjhurfYmPL-o1gpm",
     embedUrl: "https://clips.twitch.tv/embed?clip=VivaciousHungryOcelotMcaT-rjhurfYmPL-o1gpm",
+    createdAt: "2023-05-31T18:08:10Z",
+    category: "Grand Theft Auto V",
   },
   {
     id: "RelievedSaltyLionFeelsBadMan-fnE7Gr3Znodzz2MK",
@@ -385,5 +401,90 @@ export const fallbackClipCards: RealClipCard[] = [
       "https://static-cdn.jtvnw.net/twitch-video-assets/twitch-vap-video-assets-prod-us-west-2/edd128ca-3227-42fd-8607-7f9acb993836/landscape/thumb/thumb-0000000000-480x272.jpg",
     url: "https://www.twitch.tv/jochemwhite/clip/RelievedSaltyLionFeelsBadMan-fnE7Gr3Znodzz2MK",
     embedUrl: "https://clips.twitch.tv/embed?clip=RelievedSaltyLionFeelsBadMan-fnE7Gr3Znodzz2MK",
+    createdAt: "2023-08-28T12:15:37Z",
+    category: "Fortnite",
   },
 ];
+
+/*
+ * The same stream the analytics widgets above render, seen from the VOD page:
+ * 4h 12m, raid at 2:10:00, three clips cut out of it. Everything below is
+ * derived from the arrays that already describe it, so a follow marker on the
+ * timeline is the same follow the charts counted.
+ */
+
+export const DEMO_VOD_DURATION_SECONDS = 15120;
+
+export const demoVodMeta = {
+  id: "2451234567",
+  title: "Elden Ring blind run, day 6 (chat picked the build)",
+  category: "Elden Ring",
+  duration: "4h 12m",
+  views: 1842,
+  recordedAt: STREAM_START_ISO,
+} as const;
+
+/** Timeline markers. Labels and colors come from the dashboard's event config. */
+export interface DemoVodEvent {
+  id: string;
+  /** Legend/label text, as the dashboard writes it. */
+  label: string;
+  /** Tailwind background class, matching EVENT_TYPE_CONFIG. */
+  color: string;
+  offsetSeconds: number;
+  detail?: string;
+}
+
+/** Striped bands on the track: the only two the real timeline draws. */
+export interface DemoVodSegment {
+  type: "muted" | "ad_break";
+  startSeconds: number;
+  endSeconds: number;
+}
+
+export const demoVodSegments: DemoVodSegment[] = [
+  { type: "ad_break", startSeconds: 3600, endSeconds: 3780 },
+  { type: "muted", startSeconds: 5400, endSeconds: 5760 },
+  { type: "ad_break", startSeconds: 10800, endSeconds: 10980 },
+];
+
+export const demoVodEvents: DemoVodEvent[] = [
+  ...demoFollowEvents.map((event, index) => ({
+    id: `follow-${index}`,
+    label: "Follow",
+    color: "bg-blue-500",
+    offsetSeconds: event.offsetSeconds,
+  })),
+  ...demoSubEvents.map((event, index) => ({
+    id: `sub-${index}`,
+    label: "Subscription",
+    color: "bg-purple-500",
+    offsetSeconds: event.offsetSeconds,
+    detail: "Tier 1",
+  })),
+  ...demoVodSegments
+    .filter((segment) => segment.type === "ad_break")
+    .map((segment, index) => ({
+      id: `ad-${index}`,
+      label: "Ad Break",
+      color: "bg-amber-500",
+      offsetSeconds: segment.startSeconds,
+      detail: "3m",
+    })),
+  { id: "raid", label: "Raid", color: "bg-indigo-500", offsetSeconds: 7800, detail: "mossy_vt · 62 viewers" },
+  { id: "cheer", label: "Cheer", color: "bg-emerald-500", offsetSeconds: 8100, detail: "pixelpasta · 250 bits" },
+  {
+    id: "redemption",
+    label: "Points Redemption",
+    color: "bg-cyan-500",
+    offsetSeconds: 9000,
+    detail: "sleepy_sre · Hydrate",
+  },
+  ...demoClips.map((clip) => ({
+    id: `clip-${clip.twitch_clip_id}`,
+    label: "Clip",
+    color: "bg-teal-500",
+    offsetSeconds: clip.vod_offset ?? 0,
+    detail: clip.title,
+  })),
+].sort((a, b) => a.offsetSeconds - b.offsetSeconds);

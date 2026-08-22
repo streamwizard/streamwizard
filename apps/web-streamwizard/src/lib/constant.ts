@@ -49,3 +49,16 @@ export const twitchChannelLink = "https://twitch.tv/jochemwhite";
 // which is optional in the env schema and so can be undefined at render time.
 export const docsLink = "https://docs.streamwizard.org";
 export const docsClipsLink = "https://docs.streamwizard.org/clips/overview";
+
+/**
+ * Public product pages, one per pillar. The home page links to these instead of
+ * to the docs: a visitor who wants to know more about clips should land on the
+ * clips page, not in the manual.
+ */
+export const productLinks = {
+  cloudObs: "/cloud-obs",
+  overlays: "/overlays",
+  clips: "/clips",
+  vods: "/vods",
+  analytics: "/analytics",
+} as const;

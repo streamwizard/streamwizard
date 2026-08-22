@@ -1,7 +1,8 @@
-import Link from "next/link";
-import { Check } from "lucide-react";
-import TwitchLogin from "@/components/buttons/twitch-login";
-import { docsLink } from "@/lib/constant";
+import { TrackedLink } from "../analytics/tracked-link";
+import { SectionView } from "../analytics/section-view";
+import { ArrowRight, Check } from "lucide-react";
+import { Button } from "@repo/ui";
+import { productLinks } from "@/lib/constant";
 import { Reveal } from "./reveal";
 import { DeckMock } from "./deck-mock";
 import { ObsWindowMock } from "./obs-window-mock";
@@ -24,10 +25,10 @@ function FeatureItem({ children }: { children: React.ReactNode }) {
  * PC, not a replacement for their own OBS. The deck is the USP, so both it and
  * the OBS window are playable rather than screenshots.
  */
-export function CloudObsShowcase() {
+export function CloudObsShowcase({ showProductLink = true }: { showProductLink?: boolean } = {}) {
   return (
     <section className="py-20">
-      <div className="container mx-auto px-4">
+      <SectionView section="cloud_obs" className="container mx-auto px-4">
         <div className="mx-auto mb-14 max-w-2xl text-center">
           <h2 className="text-3xl font-bold sm:text-4xl">Stream IRL without a PC.</h2>
           <p className="mt-4 text-muted-foreground">
@@ -43,7 +44,7 @@ export function CloudObsShowcase() {
         <ObsDemoProvider>
           <div className="relative">
             {/* Row A: text left, control room right */}
-            <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+            <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
               <Reveal direction="left">
                 <h3 className="text-xl font-semibold">Your stream setup, already running</h3>
                 <ul className="mt-6 space-y-3">
@@ -65,7 +66,7 @@ export function CloudObsShowcase() {
             </div>
 
             {/* Row B: the deck, playable */}
-            <div className="mt-20 grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
+            <div className="mt-20 grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
               <Reveal direction="left" className="order-2 lg:order-1">
                 <DeckMock />
               </Reveal>
@@ -87,27 +88,25 @@ export function CloudObsShowcase() {
           </div>
         </ObsDemoProvider>
 
-        <div className="mt-14 flex flex-col items-center gap-3">
-          <TwitchLogin
-            redirect="/dashboard"
-            text="Connect Twitch"
-            variant="default"
-            size="lg"
-            source="landing_cloud_obs"
-          />
-          <p className="text-sm text-muted-foreground">
-            Your own OBS stays yours. Cloud OBS is there for the streams your PC cannot follow.{" "}
-            <Link
-              href={docsLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-purple-300 transition-colors hover:text-purple-200"
+        <div className="mt-14 flex flex-col items-center gap-4">
+          {showProductLink ? (
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className="gap-2 border-purple-400/30 bg-purple-400/[0.06] px-7 text-purple-200 shadow-md transition-transform duration-200 hover:-translate-y-0.5 hover:bg-purple-400/[0.12] hover:text-purple-100"
             >
-              Read the docs
-            </Link>
+              <TrackedLink href={productLinks.cloudObs} cta="more_about_cloud_obs" section="cloud_obs">
+                More about Cloud OBS
+                <ArrowRight className="size-4" aria-hidden="true" />
+              </TrackedLink>
+            </Button>
+          ) : null}
+          <p className="text-sm text-muted-foreground">
+            Your own OBS stays yours. Cloud OBS is there for the streams your PC cannot follow.
           </p>
         </div>
-      </div>
+      </SectionView>
     </section>
   );
 }

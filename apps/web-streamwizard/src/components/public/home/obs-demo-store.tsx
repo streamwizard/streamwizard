@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { DEMO_SCENES, SCENE_REACTIONS, SEED_CHAT, WENT_LIVE, WENT_OFFLINE, type MockMessage } from "./obs-demo-data";
+import { useDemoTracking } from "../analytics/use-demo-tracking";
 
 /*
  * One demo, two windows. The OBS window and the mobile deck on the cloud OBS
@@ -88,20 +89,24 @@ export function useObsDemo(): ObsDemo {
 }
 
 export function ObsDemoProvider({ children }: { children: ReactNode }) {
-  // The demo opens mid-stream on the IRL scene, the state the deck earns its
-  // place in.
+  // The demo opens on the IRL scene with the stream off, so going live is the
+  // first thing a visitor can do from either window.
   const [currentScene, setCurrentScene] = useState("IRL");
   const [switchingTo, setSwitchingTo] = useState<string | null>(null);
   const [sceneChangedAt, setSceneChangedAt] = useState<Date | null>(null);
   const [heldScene, setHeldScene] = useState<string | null>(null);
   const [releasing, setReleasing] = useState(false);
-  const [streaming, setStreaming] = useState(true);
+  const [streaming, setStreaming] = useState(false);
   const [togglingStream, setTogglingStream] = useState(false);
   const [streamSeconds, setStreamSeconds] = useState(0);
   const [lastSwitch, setLastSwitch] = useState<{ at: number; to: string } | null>(null);
   const [handoff, setHandoff] = useState<Handoff | null>(null);
   const [chat, setChat] = useState<ChatEntry[]>(() => SEED_CHAT.map((message, i) => ({ id: i, ...message })));
   const [unread, setUnread] = useState(0);
+
+  // Shared actions report here so a scene switch counts the same whichever
+  // window it came from; the side is in the action name.
+  const track = useDemoTracking("cloud_obs");
 
   const nextIdRef = useRef(SEED_CHAT.length);
   const handoffIdRef = useRef(0);
@@ -114,7 +119,7 @@ export function ObsDemoProvider({ children }: { children: ReactNode }) {
   const switchingRef = useRef<string | null>(null);
   const releasingRef = useRef(false);
   const togglingRef = useRef(false);
-  const streamingRef = useRef(true);
+  const streamingRef = useRef(false);
   const sceneRef = useRef("IRL");
 
   // Every fake delay goes through here, so nothing fires after unmount.
@@ -165,6 +170,7 @@ export function ObsDemoProvider({ children }: { children: ReactNode }) {
   const switchScene = useCallback(
     (name: string, options: { from: DemoSide; hold?: boolean }) => {
       if (switchingRef.current || name === sceneRef.current) return;
+      track(`${options.from}_scene_switched`, { scene: name });
       switchingRef.current = name;
       setSwitchingTo(name);
       startHandoff("scene", { from: options.from, kind: "scene", scene: name, settleMs: SCENE_SWITCH_MS });
@@ -182,11 +188,12 @@ export function ObsDemoProvider({ children }: { children: ReactNode }) {
         if (reaction) appendChat(reaction);
       }, SCENE_SWITCH_MS);
     },
-    [later, appendChat, startHandoff],
+    [later, appendChat, startHandoff, track],
   );
 
   const releaseHold = useCallback(() => {
     if (releasingRef.current) return;
+    track("deck_hold_released");
     releasingRef.current = true;
     setReleasing(true);
     later(() => {
@@ -194,7 +201,7 @@ export function ObsDemoProvider({ children }: { children: ReactNode }) {
       setReleasing(false);
       setHeldScene(null);
     }, 500);
-  }, [later]);
+  }, [later, track]);
 
   const toggleStream = useCallback(
     (from: DemoSide) => {
@@ -202,6 +209,7 @@ export function ObsDemoProvider({ children }: { children: ReactNode }) {
       togglingRef.current = true;
       setTogglingStream(true);
       const next = !streamingRef.current;
+      track(`${from}_stream_${next ? "started" : "stopped"}`);
       startHandoff(next ? "stream:start" : "stream:stop", { from, kind: "stream", settleMs: STREAM_TOGGLE_MS });
       later(() => {
         togglingRef.current = false;
@@ -212,7 +220,7 @@ export function ObsDemoProvider({ children }: { children: ReactNode }) {
         appendChat(next ? WENT_LIVE : WENT_OFFLINE);
       }, STREAM_TOGGLE_MS);
     },
-    [later, appendChat, startHandoff],
+    [later, appendChat, startHandoff, track],
   );
 
   const value = useMemo<ObsDemo>(

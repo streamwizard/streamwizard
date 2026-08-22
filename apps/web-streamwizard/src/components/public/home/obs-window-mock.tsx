@@ -16,8 +16,9 @@ import {
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
-import { DEMO_SCENES, type DemoScene } from "./obs-demo-data";
+import { DEMO_SCENES, sceneVideoUrl, type DemoScene } from "./obs-demo-data";
 import { handoffKey, useCurrentScene, useObsDemo } from "./obs-demo-store";
+import { useDemoTracking } from "../analytics/use-demo-tracking";
 
 /*
  * The cloud OBS window, rebuilt from the screenshot in the docs
@@ -30,6 +31,12 @@ import { handoffKey, useCurrentScene, useObsDemo } from "./obs-demo-store";
  * client: no OBS websocket, nothing to break when the real one changes. The
  * scene and stream state come from the section's shared store, so this window
  * and the mobile deck beside it move together.
+ *
+ * Below `sm` the three OBS columns do not fit, so the docks reflow: preview on
+ * top at full width, then scenes, sources and controls side by side, then the
+ * mixer row. The two column wrappers become `display: contents` there so their
+ * docks can be placed on one grid with `order`; from `sm` up they are the
+ * columns again and the window reads like the screenshot.
  */
 
 // OBS's Yami dark theme, sampled from the screenshot.
@@ -76,20 +83,61 @@ function DockToolbar({ extra }: { extra?: boolean }) {
   );
 }
 
-function ScenePreview({ kind, scene }: { kind: DemoScene["preview"]; scene: string }) {
-  if (kind === "irl") {
-    return (
-      <div className="relative h-full w-full bg-[linear-gradient(160deg,#1b2440_0%,#2a1c3d_55%,#12161f_100%)]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_35%,rgba(158,122,255,0.35),transparent_60%)]" />
-        <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[9px] text-white/90">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
-          IRL CAM
-        </div>
-        <div className="absolute right-2 bottom-2 rounded bg-black/50 px-1.5 py-0.5 text-[9px] tabular-nums text-white/80">
-          SRT · 6200 kbps
-        </div>
+/**
+ * The IRL scene: a real clip from the CDN when one is configured, over the
+ * drawn evening-street gradient. The gradient shows until the first frame
+ * arrives and takes over for good if the clip fails to load. The clip only
+ * plays while the window is on screen, so the page does not keep decoding
+ * video nobody can see.
+ */
+function IrlPreview({ active }: { active: boolean }) {
+  const src = sceneVideoUrl("IRL");
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (active) {
+      // Muted autoplay is allowed everywhere; the catch is for the odd browser
+      // that still says no, where the poster gradient is the whole preview.
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [active]);
+
+  return (
+    <div className="relative h-full w-full bg-[linear-gradient(160deg,#1b2440_0%,#2a1c3d_55%,#12161f_100%)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_35%,rgba(158,122,255,0.35),transparent_60%)]" />
+      {src && !failed ? (
+        <video
+          ref={videoRef}
+          src={src}
+          muted
+          loop
+          playsInline
+          autoPlay={active}
+          preload={active ? "auto" : "metadata"}
+          onError={() => setFailed(true)}
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : null}
+      <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[9px] text-white/90">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
+        IRL CAM
       </div>
-    );
+      <div className="absolute right-2 bottom-2 rounded bg-black/50 px-1.5 py-0.5 text-[9px] tabular-nums text-white/80">
+        SRT · 6200 kbps
+      </div>
+    </div>
+  );
+}
+
+function ScenePreview({ kind, scene, active }: { kind: DemoScene["preview"]; scene: string; active: boolean }) {
+  if (kind === "irl") {
+    return <IrlPreview active={active} />;
   }
 
   if (kind === "lost") {
@@ -127,6 +175,7 @@ export function ObsWindowMock() {
 
   const [selectedSource, setSelectedSource] = useState<string | null>(null);
   const [studioMode, setStudioMode] = useState(false);
+  const track = useDemoTracking("cloud_obs");
   const [cpu, setCpu] = useState(0.3);
 
   const sources = scene.sources ?? [];
@@ -152,7 +201,7 @@ export function ObsWindowMock() {
   };
 
   const controlButton =
-    "w-full rounded-[2px] px-2 py-[5px] text-[10px] text-[#d3d8e2] transition-colors hover:brightness-125";
+    "w-full rounded-[2px] px-2 py-2 text-[10px] text-[#d3d8e2] transition-colors hover:brightness-125 sm:py-[5px]";
 
   return (
     <div
@@ -191,17 +240,20 @@ export function ObsWindowMock() {
 
       {/* Menu bar */}
       <div className="flex items-center gap-3 px-2 py-1 text-[10px] text-[#aeb5c4]" style={{ background: SURFACE }}>
-        {MENUS.map((item) => (
-          <span key={item} className="whitespace-nowrap">
+        {MENUS.map((item, index) => (
+          <span key={item} className={cn("whitespace-nowrap", index >= 4 && "hidden sm:inline")}>
             {item}
           </span>
         ))}
       </div>
 
-      <div className="flex" style={{ background: SURFACE }}>
+      <div
+        className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_104px] gap-px sm:flex sm:gap-0"
+        style={{ background: SURFACE }}
+      >
         {/* Left column: scenes over sources */}
-        <div className="flex w-[26%] min-w-[112px] shrink-0 flex-col gap-px">
-          <div className="flex h-[168px] flex-col" style={{ background: PANEL }}>
+        <div className="contents sm:flex sm:w-[26%] sm:min-w-[112px] sm:shrink-0 sm:flex-col sm:gap-px">
+          <div className="order-2 flex h-[184px] flex-col sm:order-none sm:h-[168px]" style={{ background: PANEL }}>
             <DockHeader title="Scenes" />
             <div className="min-h-0 flex-1 overflow-y-auto py-0.5">
               {DEMO_SCENES.map((item) =>
@@ -216,7 +268,7 @@ export function ObsWindowMock() {
                     onClick={() => pickScene(item)}
                     data-handoff={handoffKey("obs", { scene: item.name })}
                     className={cn(
-                      "block w-full truncate px-2 py-[3px] text-left text-[#d3d8e2] transition-[color,background-color,box-shadow]",
+                      "block w-full truncate px-2 py-1 text-left text-[#d3d8e2] transition-[color,background-color,box-shadow] sm:py-[3px]",
                       item.name === currentScene ? "text-white" : "hover:bg-white/[0.06]",
                       fromDeck?.kind === "scene" && fromDeck.scene === item.name && cn(ring, "ring-inset"),
                     )}
@@ -231,7 +283,7 @@ export function ObsWindowMock() {
             <DockToolbar />
           </div>
 
-          <div className="flex h-[152px] flex-col" style={{ background: PANEL }}>
+          <div className="order-2 flex h-[184px] flex-col sm:order-none sm:h-[152px]" style={{ background: PANEL }}>
             <DockHeader title="Sources" />
             <div className="min-h-0 flex-1 overflow-y-auto py-0.5">
               {sources.length === 0 ? (
@@ -252,9 +304,12 @@ export function ObsWindowMock() {
                   <button
                     key={source.name}
                     type="button"
-                    onClick={() => setSelectedSource(source.name)}
+                    onClick={() => {
+                      track("obs_source_selected");
+                      setSelectedSource(source.name);
+                    }}
                     className={cn(
-                      "block w-full truncate px-2 py-[3px] text-left text-[#d3d8e2] transition-colors",
+                      "block w-full truncate px-2 py-1 text-left text-[#d3d8e2] transition-colors sm:py-[3px]",
                       source.name === selectedSource ? "text-white" : "hover:bg-white/[0.06]",
                     )}
                     style={source.name === selectedSource ? { background: SELECTED } : undefined}
@@ -269,27 +324,30 @@ export function ObsWindowMock() {
         </div>
 
         {/* Centre: preview, then the mixer and transitions docks */}
-        <div className="flex min-w-0 flex-1 flex-col gap-px px-px">
-          <div className="flex items-center justify-center bg-black p-2">
+        <div className="contents sm:flex sm:min-w-0 sm:flex-1 sm:flex-col sm:gap-px sm:px-px">
+          <div className="order-1 col-span-3 flex items-center justify-center bg-black p-2 sm:order-none sm:col-auto">
             {studioMode ? (
               <div className="grid w-full grid-cols-2 gap-2">
                 {(["Preview", "Program"] as const).map((pane) => (
                   <div key={pane}>
                     <p className="mb-1 text-center text-[9px] text-[#9aa1b2]">{pane}</p>
                     <div className="aspect-video w-full overflow-hidden">
-                      <ScenePreview kind={scene.preview} scene={scene.name} />
+                      <ScenePreview kind={scene.preview} scene={scene.name} active={inView} />
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="aspect-video w-full overflow-hidden">
-                <ScenePreview kind={scene.preview} scene={scene.name} />
+                <ScenePreview kind={scene.preview} scene={scene.name} active={inView} />
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-2 px-2 py-1 text-[9px] text-[#9aa1b2]" style={{ background: PANEL }}>
+          <div
+            className="order-1 col-span-3 flex items-center gap-2 px-2 py-1 text-[9px] text-[#9aa1b2] sm:order-none sm:col-auto"
+            style={{ background: PANEL }}
+          >
             <span className="rounded-[2px] px-1" style={{ background: RAISED }}>
               −
             </span>
@@ -303,7 +361,10 @@ export function ObsWindowMock() {
             </span>
           </div>
 
-          <div className="flex items-center gap-2 px-2 py-1 text-[9px] text-[#c7ccd8]" style={{ background: PANEL }}>
+          <div
+            className="order-1 col-span-3 flex items-center gap-2 px-2 py-1 text-[9px] text-[#c7ccd8] sm:order-none sm:col-auto"
+            style={{ background: PANEL }}
+          >
             <span className="min-w-0 flex-1 truncate">{selectedSource ?? "No source selected"}</span>
             <span
               className={cn("flex items-center gap-1 rounded-[2px] px-1.5 py-0.5", !selectedSource && "opacity-50")}
@@ -321,7 +382,7 @@ export function ObsWindowMock() {
             </span>
           </div>
 
-          <div className="flex gap-px">
+          <div className="order-3 col-span-3 flex gap-px sm:order-none sm:col-auto">
             <div className="flex h-[104px] min-w-0 flex-1 flex-col" style={{ background: SURFACE }}>
               <DockHeader title="Audio Mixer" />
               <div className="min-h-0 flex-1" />
@@ -364,7 +425,10 @@ export function ObsWindowMock() {
         </div>
 
         {/* Right: the controls dock */}
-        <div className="flex w-[20%] min-w-[92px] shrink-0 flex-col" style={{ background: PANEL }}>
+        <div
+          className="order-2 flex flex-col sm:order-none sm:w-[20%] sm:min-w-[92px] sm:shrink-0"
+          style={{ background: PANEL }}
+        >
           <DockHeader title="Controls" />
           <div className="space-y-1 p-1.5">
             <button
@@ -383,7 +447,10 @@ export function ObsWindowMock() {
             </button>
             <button
               type="button"
-              onClick={() => setStudioMode((on) => !on)}
+              onClick={() => {
+                track("obs_studio_mode_toggled");
+                setStudioMode((on) => !on);
+              }}
               className={controlButton}
               style={{ background: studioMode ? SELECTED : RAISED }}
             >

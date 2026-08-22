@@ -1,4 +1,5 @@
-import Link from "next/link";
+import { TrackedLink } from "../analytics/tracked-link";
+import { SectionView } from "../analytics/section-view";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import TwitchLogin from "@/components/buttons/twitch-login";
 import { discordInviteLink, githubLink } from "@/lib/constant";
@@ -7,7 +8,7 @@ import { Reveal } from "./reveal";
 export function FinalCta() {
   return (
     <section className="py-20 md:py-28">
-      <div className="container mx-auto px-4">
+      <SectionView section="final_cta" className="container mx-auto px-4">
         <Reveal direction="scale">
           <div className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] px-6 py-14 text-center sm:px-10 md:py-20">
             {/* Ambient glow */}
@@ -31,29 +32,33 @@ export function FinalCta() {
                   size="lg"
                   source="landing_final_cta"
                 />
-                <Link
+                <TrackedLink
                   href={githubLink}
+                  cta="star_on_github"
+                  section="final_cta"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-transparent px-6 text-sm font-medium text-foreground transition-colors hover:bg-accent"
                 >
                   <FaGithub className="h-4 w-4" aria-hidden="true" />
                   Star on GitHub
-                </Link>
-                <Link
+                </TrackedLink>
+                <TrackedLink
                   href={discordInviteLink}
+                  cta="join_discord"
+                  section="final_cta"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-transparent px-6 text-sm font-medium text-foreground transition-colors hover:bg-accent"
                 >
                   <FaDiscord className="h-4 w-4" aria-hidden="true" />
                   Join the Discord
-                </Link>
+                </TrackedLink>
               </div>
             </div>
           </div>
         </Reveal>
-      </div>
+      </SectionView>
     </section>
   );
 }

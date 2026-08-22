@@ -18,6 +18,11 @@ export type PublicRoute = {
 
 export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
+  { path: "/cloud-obs", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/overlays", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/clips", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/vods", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/analytics", changeFrequency: "monthly", priority: 0.8 },
   { path: "/privacy-policy", changeFrequency: "yearly", priority: 0.3, lastModified: "2026-05-26" },
   { path: "/terms-of-service", changeFrequency: "yearly", priority: 0.3, lastModified: "2026-05-26" },
 ];
@@ -93,6 +98,24 @@ export function organizationSchema(): Record<string, unknown> {
     url: absoluteUrl("/"),
     logo: absoluteUrl("/logo.png"),
     sameAs: [discordInviteLink, githubLink],
+  };
+}
+
+/**
+ * The home page FAQ, as a FAQPage rich result. Questions and answers come from
+ * the section itself so the two can never drift apart.
+ */
+export function faqPageSchema(
+  items: readonly { question: string; answer: string }[]
+): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map(({ question, answer }) => ({
+      "@type": "Question",
+      name: question,
+      acceptedAnswer: { "@type": "Answer", text: answer },
+    })),
   };
 }
 

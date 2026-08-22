@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { TrackedLink } from "../analytics/tracked-link";
 import { FaDiscord } from "react-icons/fa";
 import { BorderBeam } from "@repo/ui";
 import TwitchLogin from "@/components/buttons/twitch-login";
@@ -15,7 +15,7 @@ export function Hero() {
       <div className="container relative z-10 mx-auto px-4">
         <div className="mx-auto max-w-3xl text-center">
           <h1 className="animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards text-4xl font-bold tracking-tight duration-700 motion-reduce:animate-none sm:text-5xl md:text-6xl">
-            Your whole stream, <br /> one application.
+            Streamer tools, <br /> duct-taped together.
           </h1>
           <p className="animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards mx-auto mt-6 max-w-2xl text-lg text-muted-foreground delay-150 duration-700 motion-reduce:animate-none sm:text-xl">
             Cloud OBS, overlays, clip management, and stream analytics for Twitch. Open source and
@@ -23,15 +23,17 @@ export function Hero() {
           </p>
           <div className="animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards mt-8 flex flex-wrap items-center justify-center gap-3 delay-300 duration-700 motion-reduce:animate-none">
             <TwitchLogin redirect="/dashboard" text="Connect Twitch" variant="default" size="lg" source="landing_hero" />
-            <Link
+            <TrackedLink
               href={discordInviteLink}
+              cta="join_discord"
+              section="hero"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-10 items-center gap-2 rounded-md border border-border bg-transparent px-6 text-sm font-medium text-foreground transition-colors hover:bg-accent"
             >
               <FaDiscord className="h-4 w-4" aria-hidden="true" />
               Join the Discord
-            </Link>
+            </TrackedLink>
           </div>
         </div>
 
