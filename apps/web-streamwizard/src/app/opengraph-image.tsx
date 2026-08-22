@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 
-export const alt = "StreamWizard: Twitch Clip Manager";
+export const alt = "StreamWizard: Cloud OBS, Clips, and Analytics for Twitch";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -39,13 +39,13 @@ export default async function Image() {
 
         <div style={{ display: "flex", flexDirection: "column" }}>
           <div style={{ fontSize: 82, fontWeight: 600, color: "#fafafa", lineHeight: 1.05, letterSpacing: -3 }}>
-            No more searching hours
+            Your whole stream,
           </div>
           <div style={{ fontSize: 82, fontWeight: 600, color: TWITCH_PURPLE, lineHeight: 1.05, letterSpacing: -3 }}>
-            for that one clip.
+            one dashboard.
           </div>
           <div style={{ fontSize: 34, color: "#a1a1aa", marginTop: 28, letterSpacing: -0.5 }}>
-            Organize your Twitch clips. Search by game, date, or title.
+            Cloud OBS, clips, and analytics for Twitch. Open source, built in public.
           </div>
         </div>
 

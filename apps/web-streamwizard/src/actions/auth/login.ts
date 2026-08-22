@@ -16,6 +16,10 @@ export async function login(next?: string | null) {
 
   const safeNext = next && next.startsWith("/") && !next.startsWith("//") && !next.includes("://") ? next : "/dashboard";
 
+  // Already signed in: skip the round trip to Supabase and Twitch entirely.
+  const { data: userData } = await supabase.auth.getUser();
+  if (userData.user) redirect(safeNext);
+
   const { error, data } = await supabase.auth.signInWithOAuth({
     provider: "twitch",
     options: {

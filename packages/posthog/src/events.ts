@@ -11,7 +11,13 @@ export type AppEvent =
   | "widget_added"
   | "cloud_obs_launched"
   | "discord_linked"
-  | "discord_guild_joined";
+  | "discord_guild_joined"
+  // Public marketing pages. `$pathname` is on every event, so none of these
+  // carry the page; `section` / `cta` say where on the page.
+  | "cta_clicked"
+  | "section_viewed"
+  | "demo_interacted"
+  | "faq_opened";
 
 export function captureEvent(event: AppEvent, properties?: Record<string, unknown>) {
   posthog.capture(event, properties);

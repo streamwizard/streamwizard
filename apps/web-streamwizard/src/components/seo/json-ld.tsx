@@ -18,5 +18,18 @@ export async function JsonLd({ schema }: { schema: Record<string, unknown> }) {
   // the database.
   const json = JSON.stringify(schema).replace(/</g, "\\u003c");
 
-  return <script type="application/ld+json" nonce={nonce} dangerouslySetInnerHTML={{ __html: json }} />;
+  // suppressHydrationWarning: the CSP spec has browsers move the nonce into an
+  // internal slot and blank the content attribute ("nonce hiding", which stops
+  // attribute exfiltration via CSS selectors). Hydration then reads "" off the
+  // DOM and compares it against the real nonce from the RSC payload, so React
+  // reports a mismatch on every request. The script runs and the CSP still
+  // holds; only the warning is wrong.
+  return (
+    <script
+      type="application/ld+json"
+      nonce={nonce}
+      suppressHydrationWarning
+      dangerouslySetInnerHTML={{ __html: json }}
+    />
+  );
 }

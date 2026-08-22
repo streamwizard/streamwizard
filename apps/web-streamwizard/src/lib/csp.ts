@@ -15,6 +15,9 @@ export type CspOptions = {
   cloudflareAccess?: boolean;
 };
 
+/** Production R2 CDN. The landing page demo clips are served from here only. */
+const LANDING_CDN_URL = "https://cdn.streamwizard.org";
+
 // Built per-request in src/proxy.ts so script-src can carry a fresh nonce —
 // Next.js reads the nonce from the request's Content-Security-Policy header
 // and stamps it on its inline (hydration/RSC) scripts, which is what lets us
@@ -54,8 +57,9 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       .filter(Boolean)
       .join(" "),
     // R2 CDN for video assets (light mode transition WebM) + user-uploaded
-    // media-library assets on their own R2 domain
-    ["media-src 'self'", process.env.NEXT_PUBLIC_CDN_URL, process.env.NEXT_PUBLIC_ASSET_CDN_URL]
+    // media-library assets on their own R2 domain. The landing page demo clips
+    // live on the production CDN in every environment.
+    ["media-src 'self'", LANDING_CDN_URL, process.env.NEXT_PUBLIC_CDN_URL, process.env.NEXT_PUBLIC_ASSET_CDN_URL]
       .filter(Boolean)
       .join(" "),
     // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them.

@@ -42,9 +42,23 @@ export const TWITCH_SCOPES = [
 
 export const discordInviteLink = "https://discord.gg/29Eq659egv";
 export const discordDocsLink = "https://docs.streamwizard.org/discord";
-export const githubLink = "https://github.com/streamwizard/streamwizard-backend";
+export const githubLink = "https://github.com/streamwizard/streamwizard";
+export const twitchChannelLink = "https://twitch.tv/jochemwhite";
 
 // Hardcoded like the links above rather than read from NEXT_PUBLIC_DOCS_URL,
 // which is optional in the env schema and so can be undefined at render time.
 export const docsLink = "https://docs.streamwizard.org";
 export const docsClipsLink = "https://docs.streamwizard.org/clips/overview";
+
+/**
+ * Public product pages, one per pillar. The home page links to these instead of
+ * to the docs: a visitor who wants to know more about clips should land on the
+ * clips page, not in the manual.
+ */
+export const productLinks = {
+  cloudObs: "/cloud-obs",
+  overlays: "/overlays",
+  clips: "/clips",
+  vods: "/vods",
+  analytics: "/analytics",
+} as const;

@@ -18,6 +18,11 @@ export type PublicRoute = {
 
 export const PUBLIC_ROUTES: PublicRoute[] = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
+  { path: "/cloud-obs", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/overlays", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/clips", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/vods", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/analytics", changeFrequency: "monthly", priority: 0.8 },
   { path: "/privacy-policy", changeFrequency: "yearly", priority: 0.3, lastModified: "2026-05-26" },
   { path: "/terms-of-service", changeFrequency: "yearly", priority: 0.3, lastModified: "2026-05-26" },
 ];
@@ -96,6 +101,24 @@ export function organizationSchema(): Record<string, unknown> {
   };
 }
 
+/**
+ * The home page FAQ, as a FAQPage rich result. Questions and answers come from
+ * the section itself so the two can never drift apart.
+ */
+export function faqPageSchema(
+  items: readonly { question: string; answer: string }[]
+): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: items.map(({ question, answer }) => ({
+      "@type": "Question",
+      name: question,
+      acceptedAnswer: { "@type": "Answer", text: answer },
+    })),
+  };
+}
+
 /** The product itself: what AI answers and rich results read to describe us. */
 export function softwareApplicationSchema(): Record<string, unknown> {
   return {
@@ -106,7 +129,7 @@ export function softwareApplicationSchema(): Record<string, unknown> {
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Web",
     description:
-      "Organize your Twitch clips. Search by game, date, or title. Actually find the moment you're looking for.",
+      "Cloud OBS for IRL streaming, overlays, clip management, and stream analytics for Twitch streamers. Open source and built in public.",
     publisher: { "@id": absoluteUrl("/#organization") },
     // Free and MIT licensed, so the price is genuinely zero rather than a trial.
     offers: {

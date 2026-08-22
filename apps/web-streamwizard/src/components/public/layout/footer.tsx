@@ -2,20 +2,25 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { discordInviteLink, docsClipsLink, docsLink, githubLink } from "@/lib/constant";
+import { discordInviteLink, docsLink, githubLink, productLinks } from "@/lib/constant";
+import { TrackedLink } from "../analytics/tracked-link";
 import { Separator } from "@repo/ui";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 
 const navigation = {
-  // These point at the docs, not /dashboard/clips: that route is behind auth, so
-  // it was a dead end for anyone (and any crawler) not already signed in.
+  // The public product pages, not /dashboard/*: those routes are behind auth,
+  // a dead end for anyone (and any crawler) not already signed in.
   product: [
-    { name: "Clip Management", href: docsClipsLink },
-    { name: "Docs", href: docsLink },
+    { name: "Cloud OBS", href: productLinks.cloudObs, cta: "cloud_obs" },
+    { name: "Overlays", href: productLinks.overlays, cta: "overlays" },
+    { name: "Clips", href: productLinks.clips, cta: "clips" },
+    { name: "VOD clipping", href: productLinks.vods, cta: "vods" },
+    { name: "Analytics", href: productLinks.analytics, cta: "analytics" },
+    { name: "Docs", href: docsLink, cta: "docs" },
   ],
   community: [
-    { name: "Discord", href: discordInviteLink },
-    { name: "GitHub", href: githubLink },
+    { name: "Discord", href: discordInviteLink, cta: "discord" },
+    { name: "GitHub", href: githubLink, cta: "github" },
   ],
   legal: [
     { name: "Terms of Service", href: "/terms-of-service" },
@@ -44,9 +49,8 @@ export function Footer() {
               <span className="text-xl font-medium ml-4">StreamWizard</span>
             </div>
             <p className="text-muted-foreground max-w-md">
-              StreamWizard helps you organize your Twitch clips effortlessly.
-              Search by category, creator, title, date range, and more. Create
-              custom folders to keep your clips perfectly organized.
+              Cloud OBS, overlays, clip management, and stream analytics for Twitch. One login, no
+              install, and the code is on GitHub.
             </p>
             <p className="text-sm text-muted-foreground/60">Free and open source. Built by the community.</p>
           </div>
@@ -59,14 +63,15 @@ export function Footer() {
               <ul className="space-y-3">
                 {navigation.product.map((item) => (
                   <li key={item.name}>
-                    <Link
+                    <TrackedLink
                       href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      cta={item.cta}
+                      section="footer"
+                      {...(item.href.startsWith("/") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
                       className="text-muted-foreground hover:text-white transition-colors"
                     >
                       {item.name}
-                    </Link>
+                    </TrackedLink>
                   </li>
                 ))}
               </ul>
@@ -78,14 +83,16 @@ export function Footer() {
               <ul className="space-y-3">
                 {navigation.community.map((item) => (
                   <li key={item.name}>
-                    <Link
+                    <TrackedLink
                       href={item.href}
+                      cta={item.cta}
+                      section="footer"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-muted-foreground hover:text-white transition-colors"
                     >
                       {item.name}
-                    </Link>
+                    </TrackedLink>
                   </li>
                 ))}
               </ul>
@@ -115,24 +122,28 @@ export function Footer() {
         {/* Footer Bottom */}
         <div className="flex text-center flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-4">
-            <Link
+            <TrackedLink
               href={discordInviteLink}
+              cta="discord_icon"
+              section="footer"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-white transition-colors"
             >
               <FaDiscord className="h-6 w-6" />
               <span className="sr-only">Discord</span>
-            </Link>
-            <Link
+            </TrackedLink>
+            <TrackedLink
               href={githubLink}
+              cta="github_icon"
+              section="footer"
               target="_blank"
               rel="noopener noreferrer"
               className="text-muted-foreground hover:text-white transition-colors"
             >
               <FaGithub className="h-6 w-6" />
               <span className="sr-only">GitHub</span>
-            </Link>
+            </TrackedLink>
           </div>
           <p className="text-sm text-muted-foreground">
             &copy; {currentYear} StreamWizard. All rights reserved.
