@@ -1,4 +1,4 @@
-import { discordInviteLink, githubLink } from "@/lib/constant";
+import { discordInviteLink, docsLink, githubLink } from "@/lib/constant";
 import { env } from "@/lib/env";
 
 /**
@@ -102,6 +102,27 @@ export function organizationSchema(): Record<string, unknown> {
 }
 
 /**
+ * The site as an entity, separate from the company that publishes it.
+ *
+ * Rendered on the home page only: WebSite describes the whole domain, so a
+ * second copy on every route would just be the same node repeated. It carries
+ * the @id the other schema blocks can point at.
+ */
+export function webSiteSchema(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": absoluteUrl("/#website"),
+    name: "StreamWizard",
+    url: absoluteUrl("/"),
+    inLanguage: "en",
+    description:
+      "Cloud OBS for IRL streaming, overlays, clip management, and stream analytics for Twitch streamers. Open source and built in public.",
+    publisher: { "@id": absoluteUrl("/#organization") },
+  };
+}
+
+/**
  * The home page FAQ, as a FAQPage rich result. Questions and answers come from
  * the section itself so the two can never drift apart.
  */
@@ -124,19 +145,37 @@ export function softwareApplicationSchema(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
+    "@id": absoluteUrl("/#software"),
     name: "StreamWizard",
     url: absoluteUrl("/"),
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Web",
+    inLanguage: "en",
+    image: absoluteUrl("/logo.png"),
+    screenshot: absoluteUrl("/img/landing-page/hero-dark.webp"),
+    softwareHelp: { "@type": "WebPage", url: docsLink },
+    sameAs: [githubLink],
     description:
       "Cloud OBS for IRL streaming, overlays, clip management, and stream analytics for Twitch streamers. Open source and built in public.",
     publisher: { "@id": absoluteUrl("/#organization") },
-    // Free and MIT licensed, so the price is genuinely zero rather than a trial.
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "USD",
-    },
+    // Every entry is something the landing page actually demonstrates. AI
+    // answers quote this list without the page around it, so nothing here may
+    // be aspirational and the wording has to stand on its own.
+    featureList: [
+      "Cloud OBS: a dedicated OBS for your channel in the cloud, streamed into over SRT or SRTLA",
+      "Mobile deck to go live, switch scenes, and edit stream title and category from your phone",
+      "Auto switcher that swaps to a connection-lost scene when the bitrate drops, and back when it recovers",
+      "Stream overlays with alerts, chat, clips and countdowns in a single browser source",
+      "Automatic Twitch clip sync with nested clip folders, stacking filters, and portrait downloads",
+      "VOD timeline marking follows, subs, cheers, raids and ad breaks, with 5 to 60 second clip creation",
+      "Per-stream analytics with follows, subs and clips plotted on the viewer graph",
+    ],
+    // No `offers` on purpose. An Offer here prices the whole application, and
+    // Cloud OBS, the ingest server and the deck are paid — the FAQ on the same
+    // page says so, and structured data that contradicts the visible page is a
+    // spam-policy problem rather than a missing rich result. Add a real offers
+    // array once pricing is public; until then `license` carries the
+    // open-source half of the story.
     license: "https://opensource.org/licenses/MIT",
   };
 }

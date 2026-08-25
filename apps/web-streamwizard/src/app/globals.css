@@ -20,14 +20,6 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Container configuration */
-  --container-center: true;
-  --container-padding: 1rem;
-  --container-screen-sm: 640px;
-  --container-screen-md: 768px;
-  --container-screen-lg: 1024px;
-  --container-screen-xl: 1280px;
-
   /* Animations */
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
