@@ -17,6 +17,9 @@ export type CspOptions = {
 
 /** Production R2 CDN. The landing page demo clips are served from here only. */
 const LANDING_CDN_URL = "https://cdn.streamwizard.org";
+/* Twitch serves signed clip downloads from CloudFront distributions it owns
+ * and can rotate, so the host is matched by wildcard rather than pinned. */
+const TWITCH_CLIP_CDN = "https://*.cloudfront.net";
 
 // Built per-request in src/proxy.ts so script-src can carry a fresh nonce —
 // Next.js reads the nonce from the request's Content-Security-Policy header
@@ -59,7 +62,21 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     // R2 CDN for video assets (light mode transition WebM) + user-uploaded
     // media-library assets on their own R2 domain. The landing page demo clips
     // live on the production CDN in every environment.
-    ["media-src 'self'", LANDING_CDN_URL, process.env.NEXT_PUBLIC_CDN_URL, process.env.NEXT_PUBLIC_ASSET_CDN_URL]
+    //
+    // CloudFront is where Twitch's signed clip MP4s land: the overlays page's
+    // clips rotator plays the landscape_download_url that /helix/clips/downloads
+    // hands back (see lib/showcase-clip-videos), and that URL is on an opaque
+    // per-distribution CloudFront host, not a twitch.tv one. Wildcarded because
+    // the distribution is Twitch's to change and a pinned host would fail
+    // silently — the rotator treats a blocked load as a dead clip and skips to
+    // the next one, so nothing would surface but thumbnails.
+    [
+      "media-src 'self'",
+      LANDING_CDN_URL,
+      TWITCH_CLIP_CDN,
+      process.env.NEXT_PUBLIC_CDN_URL,
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+    ]
       .filter(Boolean)
       .join(" "),
     // PostHog and Sentry are proxied through /ingest and /monitoring so 'self' covers them.
@@ -108,14 +125,16 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     "frame-ancestors 'none'",
   ];
 
-  // Monaco's language workers (editor, html, css, json, typescript, tailwindcss)
-  // are bundled by Next and served from our own origin. blob: stays allowed
-  // because Monaco falls back to a blob shim when a worker URL is cross-origin,
-  // e.g. once static assets move behind a CDN. Editor route only — no other page
-  // spawns workers.
-  if (monaco) {
-    directives.push("worker-src 'self' blob:");
-  }
+  // Workers, on every route rather than just the editor: Sentry's replay
+  // integration builds its compression worker from a blob URL on any page that
+  // gets sampled, and without worker-src the browser falls back to script-src
+  // and blocks it. Monaco's language workers (editor, html, css, json,
+  // typescript, tailwindcss) are bundled by Next and served from our own
+  // origin; blob: covers those too, since Monaco falls back to a blob shim
+  // when a worker URL is cross-origin, e.g. once static assets move behind a
+  // CDN. blob: here only permits workers from blobs the page itself made, and
+  // the script inside one still has to come from 'self'.
+  directives.push("worker-src 'self' blob:");
 
   // Local dev sends this policy as report-only (see src/proxy.ts), so plain
   // http/ws targets like local Supabase and test nodes still work there.
