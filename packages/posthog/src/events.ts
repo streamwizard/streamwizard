@@ -3,6 +3,7 @@ import posthog from "posthog-js";
 // One place for every custom event name. Add here first, then capture.
 export type AppEvent =
   | "login_clicked"
+  | "login_completed"
   | "onboarding_started"
   | "onboarding_completed"
   | "clips_synced"

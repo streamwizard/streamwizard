@@ -59,7 +59,7 @@ export function EventStripDemo() {
 
   /** Hold a hand-picked chip so the cycle does not yank the readout away mid-read. */
   const pickChip = (index: number) => {
-    track(`chip_${demoEventStripTypes[index].label.toLowerCase().replace(/ /g, "_")}`);
+    track(`chip_${demoEventStripTypes[index].key}`);
     if (holdTimer.current) clearTimeout(holdTimer.current);
     setOverride(index);
     holdTimer.current = setTimeout(() => {

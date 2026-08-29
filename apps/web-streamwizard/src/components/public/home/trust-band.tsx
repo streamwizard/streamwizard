@@ -18,7 +18,7 @@ const items = [
     icon: BsTwitch,
     label: "Built in public on Twitch",
     href: twitchChannelLink,
-    cta: "twitch_channel",
+    cta: "twitch",
   },
   {
     icon: FaDiscord,

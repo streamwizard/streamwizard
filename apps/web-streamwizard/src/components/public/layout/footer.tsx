@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { discordInviteLink, docsLink, githubLink, productLinks } from "@/lib/constant";
+import { resetCookieConsent } from "@repo/posthog";
 import { TrackedLink } from "../analytics/tracked-link";
 import { Separator } from "@repo/ui";
 import { FaDiscord, FaGithub } from "react-icons/fa";
@@ -136,6 +137,17 @@ export function Footer() {
                     </Link>
                   </li>
                 ))}
+                <li>
+                  {/* GDPR wants withdrawing consent as easy as giving it, so the
+                      reset lives one click away instead of "clear your site data". */}
+                  <button
+                    type="button"
+                    onClick={resetCookieConsent}
+                    className="text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                  >
+                    Cookie settings
+                  </button>
+                </li>
               </ul>
             </div>
           </div>
@@ -148,7 +160,7 @@ export function Footer() {
           <div className="flex items-center gap-4">
             <TrackedLink
               href={discordInviteLink}
-              cta="discord_icon"
+              cta="discord"
               section="footer"
               target="_blank"
               rel="noopener noreferrer"
@@ -159,7 +171,7 @@ export function Footer() {
             </TrackedLink>
             <TrackedLink
               href={githubLink}
-              cta="github_icon"
+              cta="github"
               section="footer"
               target="_blank"
               rel="noopener noreferrer"

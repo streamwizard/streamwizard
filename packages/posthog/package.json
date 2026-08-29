@@ -20,7 +20,6 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@posthog/react": "^1.2.3",
     "posthog-js": "^1.382.0",
     "posthog-node": "^5.49.1"
   },

@@ -1,3 +1,4 @@
+import { SectionView } from "@/components/public/analytics/section-view";
 import { TrackedLink } from "@/components/public/analytics/tracked-link";
 import { discordInviteLink } from "@/lib/constant";
 
@@ -9,7 +10,7 @@ import { discordInviteLink } from "@/lib/constant";
 export function BetaNote() {
   return (
     <section className="pt-8">
-      <div className="container mx-auto px-4">
+      <SectionView section="beta_note" className="container mx-auto px-4">
         <div className="mx-auto max-w-2xl rounded-2xl border border-white/[0.08] bg-white/[0.03] p-6 text-center sm:p-8">
           <p className="font-mono text-xs tracking-widest text-purple-300 uppercase">Beta</p>
           <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -28,7 +29,7 @@ export function BetaNote() {
             . Prices land with the plan story. Clips, overlays and analytics stay free and open source either way.
           </p>
         </div>
-      </div>
+      </SectionView>
     </section>
   );
 }

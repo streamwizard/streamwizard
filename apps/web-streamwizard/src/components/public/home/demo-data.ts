@@ -597,6 +597,8 @@ export const demoVodLibraryRows: DemoVodLibraryRow[] = [
  * EVENT_TYPE_CONFIG's classes (lib/utils/stream-events.ts).
  */
 export interface DemoEventStripType {
+  /** Stable id for tracking: analytics property values must not follow copy edits. */
+  key: string;
   /** Legend chip label, plural, as the events section writes it. */
   label: string;
   /** Tailwind background class, matching EVENT_TYPE_CONFIG. */
@@ -608,54 +610,63 @@ export interface DemoEventStripType {
 
 export const demoEventStripTypes: DemoEventStripType[] = [
   {
+    key: "follows",
     label: "Follows",
     color: "bg-blue-500",
     offsets: demoFollowEvents.map((event) => event.offsetSeconds),
     blurb: "14 follows this stream, each one pinned to the second it happened.",
   },
   {
+    key: "subs",
     label: "Subs",
     color: "bg-purple-500",
     offsets: demoSubEvents.map((event) => event.offsetSeconds),
     blurb: "5 subs, tier and all. Click one and the player seeks there.",
   },
   {
+    key: "resubs",
     label: "Resubs",
     color: "bg-purple-500",
     offsets: [6300, 11700],
     blurb: "Resubs land in the same purple, message riding along in the panel.",
   },
   {
+    key: "gift_subs",
     label: "Gift subs",
     color: "bg-pink-500",
     offsets: [5100, 9840],
     blurb: "Gift bombs make a cluster, and clusters are where clips live.",
   },
   {
+    key: "cheers",
     label: "Cheers",
     color: "bg-emerald-500",
     offsets: [8100],
     blurb: "pixelpasta cheered 250 bits at 2:15:00. The dot remembers.",
   },
   {
+    key: "raids",
     label: "Raids",
     color: "bg-indigo-500",
     offsets: [7800],
     blurb: "The raid you half remember: 62 viewers walked in at 2:10:00.",
   },
   {
+    key: "redemptions",
     label: "Redemptions",
     color: "bg-cyan-500",
     offsets: [9000],
     blurb: "sleepy_sre redeemed Hydrate at 2:30:00. Break clip, found.",
   },
   {
+    key: "shoutouts",
     label: "Shoutouts",
     color: "bg-fuchsia-500",
     offsets: [10500],
     blurb: "The shoutout you gave mid-stream, findable without scrubbing.",
   },
   {
+    key: "ad_breaks",
     label: "Ad breaks",
     color: "bg-amber-500",
     offsets: demoVodSegments
@@ -664,18 +675,21 @@ export const demoEventStripTypes: DemoEventStripType[] = [
     blurb: "Two ad breaks, striped on the track. Cut around them, not through them.",
   },
   {
+    key: "markers",
     label: "Markers",
     color: "bg-yellow-500",
     offsets: [4500, 12900],
     blurb: "The markers you or your editors dropped mid-stream sit right here.",
   },
   {
+    key: "scene_switches",
     label: "Scene switches",
     color: "bg-sky-500",
     offsets: [2700, 7900, 11800],
     blurb: "Scene changes from cloud OBS, deck taps and auto switches alike.",
   },
   {
+    key: "clips",
     label: "Clips",
     color: "bg-teal-500",
     offsets: demoClips.map((clip) => clip.vod_offset ?? 0),

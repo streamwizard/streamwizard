@@ -37,7 +37,7 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
  * than merely uncrawled, and a crawler blocked here could never read the
  * noindex tag that does that. It carries `robots: { index: false }` instead.
  */
-export const DISALLOWED_PATHS = ["/api/", "/auth/", "/login", "/unauthorized", "/dashboard", "/deck", "/obs-viewer"];
+export const DISALLOWED_PATHS = ["/api/", "/auth/", "/login", "/unauthorized", "/dashboard", "/deck", "/obs-viewer", "/error"];
 
 /** The one host whose content is the real, indexable site. */
 const CANONICAL_HOST = "streamwizard.org";
