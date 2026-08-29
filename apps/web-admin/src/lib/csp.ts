@@ -52,6 +52,11 @@ export function buildCsp(nonce: string): string {
     ]
       .filter(Boolean)
       .join(" "),
+    // Sentry's replay integration builds its compression worker from a blob
+    // URL, and without worker-src the browser falls back to script-src and
+    // blocks it. blob: only permits workers from blobs the page itself made,
+    // and the script inside one still has to come from 'self'.
+    "worker-src 'self' blob:",
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
