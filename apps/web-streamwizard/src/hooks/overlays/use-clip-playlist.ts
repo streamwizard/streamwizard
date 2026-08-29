@@ -4,33 +4,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import type { PreviewClip } from "@/actions/overlays-preview";
 import { getPreviewClips } from "@/actions/overlays-preview";
 import { DEFAULT_CLIPS_WIDGET_CONFIG, type ClipsWidgetConfig } from "@/types/overlays";
+import { createPlaybackOrder } from "@/lib/clip-playback-order";
 import type { EditorClipPlaybackControls } from "@/components/overlays/registry/overlay-widget-registry.types";
 
 interface ResolvedClip extends PreviewClip {
   videoUrl?: string;
   resolving?: boolean;
   failed?: boolean;
-}
-
-function shuffleIndices(length: number): number[] {
-  const indices = Array.from({ length }, (_, i) => i);
-  for (let i = indices.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [indices[i], indices[j]] = [indices[j], indices[i]];
-  }
-  return indices;
-}
-
-function createPlaybackOrder(length: number, random: boolean, previousFirst?: number): number[] {
-  if (length <= 1) return [0];
-  if (!random) return Array.from({ length }, (_, i) => i);
-
-  const order = shuffleIndices(length);
-  if (previousFirst !== undefined && length > 1 && order[0] === previousFirst) {
-    const swapIndex = 1 + Math.floor(Math.random() * (length - 1));
-    [order[0], order[swapIndex]] = [order[swapIndex], order[0]];
-  }
-  return order;
 }
 
 /**

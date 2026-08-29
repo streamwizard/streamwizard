@@ -23,22 +23,24 @@ export function SectionView({
   className?: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Ref, not a closure variable: an effect re-run (Strict Mode remount, or a
+  // future dynamic `section`) would reset a `let` and fire a second time.
+  const fired = useRef(false);
 
   useEffect(() => {
     const node = ref.current;
     if (!node || typeof IntersectionObserver === "undefined") return;
 
-    let fired = false;
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (fired || !entry.isIntersecting) continue;
+          if (fired.current || !entry.isIntersecting) continue;
           // Tall sections never reach 40% of themselves on a phone, so count
           // them viewed once they fill 40% of the viewport instead.
           const viewportShare =
             entry.intersectionRect.height / Math.max(entry.rootBounds?.height ?? window.innerHeight, 1);
           if (entry.intersectionRatio < 0.4 && viewportShare < 0.4) continue;
-          fired = true;
+          fired.current = true;
           captureEvent("section_viewed", { section });
           observer.disconnect();
         }

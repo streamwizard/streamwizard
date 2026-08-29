@@ -257,6 +257,93 @@ export const demoActivityEvents: ActivityEvent[] = [
   },
 ];
 
+/*
+ * The activity feed window around the raid, for the /analytics feed demo.
+ * Offsets reuse the arrays above (7920/8460/8880 are demoFollowEvents rows,
+ * raid/cheer/sub/redemption are demoActivityEvents, 9600 is the category
+ * boundary from demoCategorySegments); labels and colors are
+ * EVENT_TYPE_CONFIG's (lib/utils/stream-events.ts). Newest first, the way
+ * the real feed lists them. `filter` is ActivityFeedClient's real bucket.
+ */
+export interface DemoFeedRow {
+  id: string;
+  filter: "Follows" | "Subs" | "Bits" | "Raids" | "Rewards" | "Updates";
+  /** Event label, as EVENT_TYPE_CONFIG writes it. */
+  label: string;
+  /** Tailwind background class, matching EVENT_TYPE_CONFIG. */
+  color: string;
+  /** One line, the way ActivityFeedItem summarizes the event. */
+  detail: string;
+  offsetSeconds: number;
+}
+
+export const demoFeedRows: DemoFeedRow[] = [
+  {
+    id: "feed-update",
+    filter: "Updates",
+    label: "Channel Update",
+    color: "bg-slate-400",
+    detail: "Category changed to Just Chatting",
+    offsetSeconds: 9600,
+  },
+  {
+    id: "feed-redemption",
+    filter: "Rewards",
+    label: "Points Redemption",
+    color: "bg-cyan-500",
+    detail: "sleepy_sre · Hydrate",
+    offsetSeconds: 9000,
+  },
+  {
+    id: "feed-follow-3",
+    filter: "Follows",
+    label: "Follow",
+    color: "bg-blue-500",
+    detail: "bramble_kn1ght",
+    offsetSeconds: 8880,
+  },
+  {
+    id: "feed-sub",
+    filter: "Subs",
+    label: "Subscription",
+    color: "bg-purple-500",
+    detail: "grilledcheese_gg · Tier 1",
+    offsetSeconds: 8520,
+  },
+  {
+    id: "feed-follow-2",
+    filter: "Follows",
+    label: "Follow",
+    color: "bg-blue-500",
+    detail: "couch_cryptid",
+    offsetSeconds: 8460,
+  },
+  {
+    id: "feed-cheer",
+    filter: "Bits",
+    label: "Cheer",
+    color: "bg-emerald-500",
+    detail: "pixelpasta · 250 bits",
+    offsetSeconds: 8100,
+  },
+  {
+    id: "feed-follow-1",
+    filter: "Follows",
+    label: "Follow",
+    color: "bg-blue-500",
+    detail: "night_owl_kat",
+    offsetSeconds: 7920,
+  },
+  {
+    id: "feed-raid",
+    filter: "Raids",
+    label: "Raid",
+    color: "bg-indigo-500",
+    detail: "mossy_vt · 62 viewers",
+    offsetSeconds: 7800,
+  },
+];
+
 /* KPI row values. Same stream, same totals as the widgets above. */
 export const demoStats = {
   timeInAds: "4m 30s",
@@ -446,6 +533,168 @@ export const demoVodSegments: DemoVodSegment[] = [
   { type: "ad_break", startSeconds: 3600, endSeconds: 3780 },
   { type: "muted", startSeconds: 5400, endSeconds: 5760 },
   { type: "ad_break", startSeconds: 10800, endSeconds: 10980 },
+];
+
+/*
+ * The VOD library list as /vods stages it: the same channel the demo stream
+ * belongs to, one broadcast still running, day 6 is the VOD every other
+ * section opens. Five archived rows on purpose: the batch-delete story checks
+ * all five, and five is Twitch's per-request delete limit.
+ */
+export interface DemoVodLibraryRow {
+  id: string;
+  title: string;
+  duration: string;
+  recordedLabel: string;
+  live?: boolean;
+}
+
+export const demoVodLibraryRows: DemoVodLibraryRow[] = [
+  {
+    id: "live",
+    title: "Elden Ring blind run, day 7 (no summons, chat's rule)",
+    duration: "1:24:09",
+    recordedLabel: "Right now",
+    live: true,
+  },
+  {
+    id: "day-6",
+    title: "Elden Ring blind run, day 6 (chat picked the build)",
+    duration: "4:12:00",
+    recordedLabel: "Aug 14",
+  },
+  {
+    id: "day-5",
+    title: "Elden Ring blind run, day 5",
+    duration: "3:47:12",
+    recordedLabel: "Aug 12",
+  },
+  {
+    id: "patch-notes",
+    title: "Just Chatting, patch notes and tier lists",
+    duration: "2:05:33",
+    recordedLabel: "Aug 10",
+  },
+  {
+    id: "ranked",
+    title: "Ranked grind, promos at 3 am",
+    duration: "5:01:48",
+    recordedLabel: "Aug 8",
+  },
+  {
+    id: "test",
+    title: "test test mic check (delete me)",
+    duration: "0:04:11",
+    recordedLabel: "Aug 7",
+  },
+];
+
+/*
+ * One entry per event type the timeline legend names, for the /vods event
+ * strip. Where the type already exists in the demo stream the offsets are
+ * derived from it, so the strip cannot drift from the arrays the charts
+ * count; the rest are made-up offsets on the same 4h 12m clock. Colors are
+ * EVENT_TYPE_CONFIG's classes (lib/utils/stream-events.ts).
+ */
+export interface DemoEventStripType {
+  /** Stable id for tracking: analytics property values must not follow copy edits. */
+  key: string;
+  /** Legend chip label, plural, as the events section writes it. */
+  label: string;
+  /** Tailwind background class, matching EVENT_TYPE_CONFIG. */
+  color: string;
+  offsets: number[];
+  /** One line for the strip readout while this type is lit. */
+  blurb: string;
+}
+
+export const demoEventStripTypes: DemoEventStripType[] = [
+  {
+    key: "follows",
+    label: "Follows",
+    color: "bg-blue-500",
+    offsets: demoFollowEvents.map((event) => event.offsetSeconds),
+    blurb: "14 follows this stream, each one pinned to the second it happened.",
+  },
+  {
+    key: "subs",
+    label: "Subs",
+    color: "bg-purple-500",
+    offsets: demoSubEvents.map((event) => event.offsetSeconds),
+    blurb: "5 subs, tier and all. Click one and the player seeks there.",
+  },
+  {
+    key: "resubs",
+    label: "Resubs",
+    color: "bg-purple-500",
+    offsets: [6300, 11700],
+    blurb: "Resubs land in the same purple, message riding along in the panel.",
+  },
+  {
+    key: "gift_subs",
+    label: "Gift subs",
+    color: "bg-pink-500",
+    offsets: [5100, 9840],
+    blurb: "Gift bombs make a cluster, and clusters are where clips live.",
+  },
+  {
+    key: "cheers",
+    label: "Cheers",
+    color: "bg-emerald-500",
+    offsets: [8100],
+    blurb: "pixelpasta cheered 250 bits at 2:15:00. The dot remembers.",
+  },
+  {
+    key: "raids",
+    label: "Raids",
+    color: "bg-indigo-500",
+    offsets: [7800],
+    blurb: "The raid you half remember: 62 viewers walked in at 2:10:00.",
+  },
+  {
+    key: "redemptions",
+    label: "Redemptions",
+    color: "bg-cyan-500",
+    offsets: [9000],
+    blurb: "sleepy_sre redeemed Hydrate at 2:30:00. Break clip, found.",
+  },
+  {
+    key: "shoutouts",
+    label: "Shoutouts",
+    color: "bg-fuchsia-500",
+    offsets: [10500],
+    blurb: "The shoutout you gave mid-stream, findable without scrubbing.",
+  },
+  {
+    key: "ad_breaks",
+    label: "Ad breaks",
+    color: "bg-amber-500",
+    offsets: demoVodSegments
+      .filter((segment) => segment.type === "ad_break")
+      .map((segment) => segment.startSeconds),
+    blurb: "Two ad breaks, striped on the track. Cut around them, not through them.",
+  },
+  {
+    key: "markers",
+    label: "Markers",
+    color: "bg-yellow-500",
+    offsets: [4500, 12900],
+    blurb: "The markers you or your editors dropped mid-stream sit right here.",
+  },
+  {
+    key: "scene_switches",
+    label: "Scene switches",
+    color: "bg-sky-500",
+    offsets: [2700, 7900, 11800],
+    blurb: "Scene changes from cloud OBS, deck taps and auto switches alike.",
+  },
+  {
+    key: "clips",
+    label: "Clips",
+    color: "bg-teal-500",
+    offsets: demoClips.map((clip) => clip.vod_offset ?? 0),
+    blurb: "Three clips already cut. New ones come back as teal dots.",
+  },
 ];
 
 export const demoVodEvents: DemoVodEvent[] = [

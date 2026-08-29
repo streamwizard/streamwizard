@@ -12,20 +12,25 @@ import { AnalyticsStatsRow } from "./analytics-stats-row";
  * Labels, icons, and layout mirror /dashboard exactly; only the data is
  * synthetic, and the frame says so.
  */
-export function AnalyticsDemo({ showProductLink = true }: { showProductLink?: boolean } = {}) {
+export function AnalyticsDemo({
+  showProductLink = true,
+  showHeader = true,
+}: { showProductLink?: boolean; showHeader?: boolean } = {}) {
   return (
     <section className="py-20">
       <SectionView section="analytics" className="container mx-auto px-4">
-        <div className="mx-auto mb-12 max-w-2xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
-            Stream Analytics
-          </span>
-          <h2 className="mt-4 text-3xl font-bold sm:text-4xl">Last stream, explained.</h2>
-          <p className="mt-4 text-muted-foreground">
-            Your latest broadcast, minute by minute. Follows, subs, and clips land on the viewer graph, and the best
-            hour gets called out.
-          </p>
-        </div>
+        {showHeader && (
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300">
+              Stream Analytics
+            </span>
+            <h2 className="mt-4 text-3xl font-bold sm:text-4xl">Last stream, explained.</h2>
+            <p className="mt-4 text-muted-foreground">
+              Your latest broadcast, minute by minute. Follows, subs, and clips land on the viewer graph, and the best
+              hour gets called out.
+            </p>
+          </div>
+        )}
 
         <Reveal>
           <div className="relative rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4 sm:p-6">

@@ -16,17 +16,22 @@ import { OverlayWidgetCards } from "./overlay-widget-cards";
  * in the OBS on your PC alike; one browser source either way.
  */
 
-export function OverlaysSection({ showProductLink = true }: { showProductLink?: boolean } = {}) {
+export function OverlaysSection({
+  showProductLink = true,
+  showHeader = true,
+}: { showProductLink?: boolean; showHeader?: boolean } = {}) {
   return (
     <section className="py-20">
       <SectionView section="overlays" className="container mx-auto px-4">
-        <div className="mx-auto mb-12 max-w-2xl text-center">
-          <h2 className="text-3xl font-bold sm:text-4xl">Alerts, chat, clips, countdowns. One browser source.</h2>
-          <p className="mt-4 text-muted-foreground">
-            Build the overlay in the editor, paste one URL into OBS. Starting screen, BRB, live: same widgets, your
-            media.
-          </p>
-        </div>
+        {showHeader && (
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <h2 className="text-3xl font-bold sm:text-4xl">Alerts, chat, clips, countdowns. One browser source.</h2>
+            <p className="mt-4 text-muted-foreground">
+              Build the overlay in the editor, paste one URL into OBS. Starting screen, BRB, live: same widgets, your
+              media.
+            </p>
+          </div>
+        )}
 
         {/* One provider over demo and grid: the alert that fires in the
             frame is the event the alert box card selects. */}

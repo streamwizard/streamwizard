@@ -187,6 +187,7 @@ export const useVideoPlayerStore = create<VideoPlayerStore>((set, get) => ({
       "channel.moderator.add",
       "channel.moderator.remove",
       "channel.ad_break.begin",
+      "obs.scene_switch",
       "clip",
       "marker",
     ]);

@@ -10,7 +10,7 @@ import { ClipFoldersMock } from "./clip-folders-mock";
 
 /*
  * Full-bleed band: the marquee escapes the container while the copy stays in
- * it. Amber is the product's clip color, reused here as the section accent.
+ * it. Purple is the shared accent across the public pages, clips included.
  */
 
 const folderFeatures = [
@@ -42,7 +42,7 @@ function FeatureList({ items, className }: { items: typeof folderFeatures; class
       {items.map(({ icon: Icon, title, body }) => (
         <div key={title}>
           <div className="flex items-center gap-2">
-            <Icon className="h-4 w-4 text-amber-400" aria-hidden="true" />
+            <Icon className="h-4 w-4 text-purple-400" aria-hidden="true" />
             <h3 className="text-sm font-semibold">{title}</h3>
           </div>
           <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{body}</p>
@@ -52,25 +52,29 @@ function FeatureList({ items, className }: { items: typeof folderFeatures; class
   );
 }
 
-export async function ClipsVods({ showProductLink = true }: { showProductLink?: boolean } = {}) {
+export async function ClipsVods({
+  showProductLink = true,
+  showHeader = true,
+}: { showProductLink?: boolean; showHeader?: boolean } = {}) {
   const clips = await getShowcaseClips();
 
   return (
-    <section className="relative py-20">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
+    <section id="clip-library" className="relative scroll-mt-24 py-20">
       <div className="absolute inset-0 -z-10 bg-white/[0.02]" />
       <SectionView section="clips">
 
-      <div className="container mx-auto px-4">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
-          <h2 className="text-3xl font-bold sm:text-4xl">Every clip from your channel, organized.</h2>
-          <p className="mt-4 text-muted-foreground">
-            StreamWizard syncs every clip from your Twitch channel, including right when your stream
-            ends. Search by title, filter by category or who clipped it, and file them into clip
-            folders you create.
-          </p>
+      {showHeader && (
+        <div className="container mx-auto px-4">
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <h2 className="text-3xl font-bold sm:text-4xl">Every clip from your channel, organized.</h2>
+            <p className="mt-4 text-muted-foreground">
+              StreamWizard syncs every clip from your Twitch channel, including right when your stream
+              ends. Search by title, filter by category or who clipped it, and file them into clip
+              folders you create.
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="container mx-auto px-4">
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-12">
@@ -107,7 +111,7 @@ export async function ClipsVods({ showProductLink = true }: { showProductLink?: 
               asChild
               variant="outline"
               size="lg"
-              className="gap-2 border-amber-400/30 bg-amber-400/[0.06] px-7 text-amber-200 shadow-md transition-transform duration-200 hover:-translate-y-0.5 hover:bg-amber-400/[0.12] hover:text-amber-100"
+              className="gap-2 border-purple-400/30 bg-purple-400/[0.06] px-7 text-purple-200 shadow-md transition-transform duration-200 hover:-translate-y-0.5 hover:bg-purple-400/[0.12] hover:text-purple-100"
             >
               <TrackedLink href={productLinks.clips} cta="more_about_clips" section="clips">
                 More about clips
@@ -119,7 +123,6 @@ export async function ClipsVods({ showProductLink = true }: { showProductLink?: 
       </div>
 
       </SectionView>
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-amber-500/30 to-transparent" />
     </section>
   );
 }

@@ -1,9 +1,16 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@repo/ui";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@repo/ui";
 import { StreamWizardLogo } from "@/components/brand/streamwizard-logo";
 import { discordInviteLink } from "@/lib/constant";
+
+// A dead-end redirect target, not content: keep it out of search results.
+export const metadata: Metadata = {
+  title: "Something went wrong",
+  robots: { index: false, follow: false },
+};
 
 // Generic, safe error page. Several server actions and route handlers bounce
 // here (`redirect("/error")`) when something fails before we can show a nicer,

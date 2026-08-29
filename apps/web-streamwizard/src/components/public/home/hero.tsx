@@ -44,7 +44,11 @@ export function Hero() {
             alt="The StreamWizard dashboard with the clip library open: search, filters, folders, and a grid of synced Twitch clips"
             width={2539}
             height={1271}
-            sizes="100vw"
+            /* Not 100vw: this sits in `container mx-auto px-4`, which caps at
+               96rem, so the real render width is min(100vw - 2rem, 1504px).
+               Claiming the full viewport made wide DPR-1 monitors pull the
+               2539px source to paint 1504px of it, on the LCP element. */
+            sizes="(min-width: 1536px) 1504px, calc(100vw - 2rem)"
             className="h-auto w-full rounded-xl"
             priority
           />

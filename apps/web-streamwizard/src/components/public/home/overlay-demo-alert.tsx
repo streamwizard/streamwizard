@@ -88,9 +88,11 @@ export const ALERTS: DemoAlert[] = [
   {
     kind: "Pay it forward",
     name: "toastcrumb",
-    rest: " is paying a gift sub forward!",
+    // The notification payload names the original gifter (gifter_user_name,
+    // null when anonymous), so the alert can credit both ends of the chain.
+    rest: " is paying sandwichlord's gift sub forward!",
     anim: "slide_down",
-    template: "{name} is paying a gift sub forward!",
+    template: "{name} is paying {gifter}'s gift sub forward!",
     media: "forward.webm",
   },
   {

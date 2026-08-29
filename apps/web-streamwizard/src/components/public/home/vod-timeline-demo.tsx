@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useInView, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import { useDemoTracking } from "../analytics/use-demo-tracking";
 import {
@@ -117,9 +118,18 @@ function rulerLabels(view: View, count = 6): number[] {
 
 export function VodTimelineDemo() {
   const trackRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(rootRef, { margin: "-64px" });
+  const reducedMotion = useReducedMotion();
 
   const [currentTime, setCurrentTime] = useState(7800);
   const [isPlaying, setIsPlaying] = useState(false);
+  /* Autoplay-until-touched: the sweep starts itself the first time the demo
+   * scrolls into view, and the first real interaction hands playback to the
+   * visitor for good. Neither ref change fires analytics; useDemoTracking
+   * stays a touched-it signal. */
+  const touchedRef = useRef(false);
+  const autoStartedRef = useRef(false);
   const [isMuted, setIsMuted] = useState(true);
   const track = useDemoTracking("vods");
   const [view, setView] = useState<View>(FULL_VIEW);
@@ -181,10 +191,24 @@ export function VodTimelineDemo() {
   // A drag that moved the view must not also seek on the click that follows it.
   const suppressClickRef = useRef(false);
 
-  /* Playback. Outside clip mode this is a fast sweep of the whole VOD; inside
-   * it, real time on a loop, the way the player behaves during clip creation. */
+  /* Start the sweep once the demo is on screen, unless the visitor got there
+   * first or asked for reduced motion. The delay keeps a fast scroll-past from
+   * flashing the playhead (cleanup cancels it). */
   useEffect(() => {
-    if (!isPlaying) return;
+    if (!inView || reducedMotion || touchedRef.current || autoStartedRef.current) return;
+    const timer = setTimeout(() => {
+      if (touchedRef.current) return;
+      autoStartedRef.current = true;
+      setIsPlaying(true);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [inView, reducedMotion]);
+
+  /* Playback. Outside clip mode this is a fast sweep of the whole VOD; inside
+   * it, real time on a loop, the way the player behaves during clip creation.
+   * Off screen the clock stops where it is and resumes on re-entry. */
+  useEffect(() => {
+    if (!isPlaying || !inView) return;
     let frame = 0;
     let last: number | null = null;
 
@@ -206,7 +230,7 @@ export function VodTimelineDemo() {
 
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
-  }, [isPlaying, clip]);
+  }, [isPlaying, clip, inView]);
 
   const changeZoom = (factor: number) => {
     const center = clip ? (clip.startTime + clip.endTime) / 2 : currentTime;
@@ -490,7 +514,16 @@ export function VodTimelineDemo() {
   }, {});
 
   return (
-    <div className="overflow-hidden rounded-2xl border bg-card/40">
+    <div
+      ref={rootRef}
+      className="overflow-hidden rounded-2xl border bg-card/40"
+      onPointerDownCapture={() => {
+        touchedRef.current = true;
+      }}
+      onKeyDownCapture={() => {
+        touchedRef.current = true;
+      }}
+    >
       {/* Window chrome */}
       <div className="flex items-center gap-2 border-b border-border/60 px-3 py-2">
         <span className="flex gap-1.5" aria-hidden="true">

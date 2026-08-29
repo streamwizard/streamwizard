@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
 import { absoluteUrl } from "@/lib/seo";
 import { AnalyticsDemo } from "@/components/public/home/analytics-demo";
+import { ViewerGraphSection } from "@/components/public/analytics/viewer-graph-section";
+import { BestHourSection } from "@/components/public/analytics/best-hour-section";
+import { CategoryStatsSection } from "@/components/public/analytics/category-stats-section";
+import { ActivityFeedSection } from "@/components/public/analytics/activity-feed-section";
+import { VodsDoorSection } from "@/components/public/analytics/vods-door-section";
+import { AnalyticsFaqSection } from "@/components/public/analytics/analytics-faq-section";
 import { FinalCta } from "@/components/public/home/final-cta";
 
 /*
- * First pass, same shape as /cloud-obs: a hero of its own, then the landing
- * page's section. The chart-by-chart breakdown and the hourly/category story
- * get their own copy later.
+ * The analytics product page: hero, the landing page's band as the overview
+ * (its demo carries the interaction, switch included), then the deep dives
+ * chart by chart: the viewer graph, the best hour, the category table, the
+ * activity feed. After the reading comes the doing: the door to /vods where
+ * the spike becomes a clip, then the FAQ with the honest caveats about old
+ * streams and chat logs.
  */
 export const metadata: Metadata = {
   title: "Twitch stream analytics",
@@ -32,7 +41,13 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </section>
-      <AnalyticsDemo showProductLink={false} />
+      <AnalyticsDemo showProductLink={false} showHeader={false} />
+      <ViewerGraphSection />
+      <BestHourSection />
+      <CategoryStatsSection />
+      <ActivityFeedSection />
+      <VodsDoorSection />
+      <AnalyticsFaqSection />
       <FinalCta />
     </div>
   );

@@ -4,6 +4,8 @@ import { createClient } from "@repo/supabase/next/server";
 import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
 import { encryptToken } from "@repo/supabase/crypto";
 import { updateTwitchTokens } from "@repo/supabase/queries/user";
+import { captureServerEvent } from "@repo/posthog/server";
+import { reportError } from "@repo/sentry";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -89,6 +91,15 @@ export async function GET(request: Request) {
 
     await checkEventSubscriptions(data.session.user.user_metadata.sub);
     if (!error) {
+      // The other side of `login_clicked`: without this the OAuth funnel has a
+      // click and then silence, and drop-off at Twitch is invisible.
+      try {
+        captureServerEvent(data.session.user.id, "login_completed", {
+          destination: next.includes("onboarding") ? "onboarding" : "dashboard",
+        });
+      } catch (phErr) {
+        reportError(phErr, "auth/callback/twitch: posthog capture failed");
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

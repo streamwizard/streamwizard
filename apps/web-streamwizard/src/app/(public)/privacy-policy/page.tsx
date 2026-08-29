@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/privacy-policy") },
 };
 
-const LAST_UPDATED = "16 August 2026";
+const LAST_UPDATED = "29 August 2026";
 const CONTACT_EMAIL = LEGAL_CONTACT_EMAIL;
 
 function NormalContent() {
@@ -336,7 +336,8 @@ function NormalContent() {
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
           We do not use advertising, remarketing, or third-party tracking
-          cookies.
+          cookies. Changed your mind about analytics? Cookie settings in the
+          footer clears your choice and asks again.
         </p>
       </section>
 
@@ -722,7 +723,8 @@ function GenZContent() {
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
           zero advertising cookies. zero remarketing. zero selling ur attention
-          to randos. that&apos;s loser behavior ngl.
+          to randos. that&apos;s loser behavior ngl. wanna un-consent? cookie
+          settings in the footer, one click, we ask again.
         </p>
       </section>
 

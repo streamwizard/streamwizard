@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { discordInviteLink, docsLink, githubLink, productLinks } from "@/lib/constant";
+import { resetCookieConsent } from "@repo/posthog";
 import { TrackedLink } from "../analytics/tracked-link";
 import { Separator } from "@repo/ui";
 import { FaDiscord, FaGithub } from "react-icons/fa";
@@ -17,6 +18,11 @@ const navigation = {
     { name: "VOD clipping", href: productLinks.vods, cta: "vods" },
     { name: "Analytics", href: productLinks.analytics, cta: "analytics" },
     { name: "Docs", href: docsLink, cta: "docs" },
+  ],
+  company: [
+    { name: "About", href: "/about", cta: "about" },
+    { name: "Contact", href: "/contact", cta: "contact" },
+    { name: "Roadmap", href: "/roadmap", cta: "roadmap" },
   ],
   community: [
     { name: "Discord", href: discordInviteLink, cta: "discord" },
@@ -56,7 +62,7 @@ export function Footer() {
           </div>
 
           {/* Navigation Links */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-8 gap-x-8 md:w-1/2 md:justify-items-end">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-8 gap-x-8 md:w-3/5 md:justify-items-end">
             {/* Product Links */}
             <div className="space-y-4">
               <h3 className="font-medium text-sm tracking-wider">PRODUCT</h3>
@@ -68,6 +74,25 @@ export function Footer() {
                       cta={item.cta}
                       section="footer"
                       {...(item.href.startsWith("/") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+                      className="text-muted-foreground hover:text-white transition-colors"
+                    >
+                      {item.name}
+                    </TrackedLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Company Links */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm tracking-wider">COMPANY</h3>
+              <ul className="space-y-3">
+                {navigation.company.map((item) => (
+                  <li key={item.name}>
+                    <TrackedLink
+                      href={item.href}
+                      cta={item.cta}
+                      section="footer"
                       className="text-muted-foreground hover:text-white transition-colors"
                     >
                       {item.name}
@@ -112,6 +137,17 @@ export function Footer() {
                     </Link>
                   </li>
                 ))}
+                <li>
+                  {/* GDPR wants withdrawing consent as easy as giving it, so the
+                      reset lives one click away instead of "clear your site data". */}
+                  <button
+                    type="button"
+                    onClick={resetCookieConsent}
+                    className="text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                  >
+                    Cookie settings
+                  </button>
+                </li>
               </ul>
             </div>
           </div>
@@ -124,7 +160,7 @@ export function Footer() {
           <div className="flex items-center gap-4">
             <TrackedLink
               href={discordInviteLink}
-              cta="discord_icon"
+              cta="discord"
               section="footer"
               target="_blank"
               rel="noopener noreferrer"
@@ -135,7 +171,7 @@ export function Footer() {
             </TrackedLink>
             <TrackedLink
               href={githubLink}
-              cta="github_icon"
+              cta="github"
               section="footer"
               target="_blank"
               rel="noopener noreferrer"

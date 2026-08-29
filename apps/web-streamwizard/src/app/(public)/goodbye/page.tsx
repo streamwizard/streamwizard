@@ -1,6 +1,6 @@
-import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@repo/ui";
+import { TrackedLink } from "@/components/public/analytics/tracked-link";
 import type { Metadata } from "next";
 
 // Offboarding page: reachable, but nothing here belongs in a search result.
@@ -39,11 +39,11 @@ export default function GoodbyePage() {
 
         <div className="pt-4 border-t border-border space-y-3">
           <p className="text-sm text-muted-foreground">Changed your mind?</p>
-          <Link href="/login">
+          <TrackedLink href="/login" cta="start_over" section="goodbye">
             <Button variant="outline" size="sm">
               Start over
             </Button>
-          </Link>
+          </TrackedLink>
         </div>
       </div>
     </div>

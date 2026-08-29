@@ -396,7 +396,7 @@ export function OverlayScenesList({
                       )}
                     </div>
                     <CardDescription className="text-xs">
-                      {scene.width}x{scene.height} &middot; Updated{" "}
+                      {scene.width}x{scene.height} · Updated{" "}
                       {new Date(scene.updated_at).toLocaleDateString()}
                     </CardDescription>
                   </div>

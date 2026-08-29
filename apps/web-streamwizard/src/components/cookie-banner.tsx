@@ -100,7 +100,7 @@ export function CookieBanner() {
               Privacy policy
             </Link>
             {" · "}
-            You can change this any time in your browser settings.
+            Change your mind any time via Cookie settings in the footer.
           </p>
         </div>
       </div>

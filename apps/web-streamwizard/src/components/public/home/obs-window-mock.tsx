@@ -17,6 +17,16 @@ import {
   Trash2,
 } from "lucide-react";
 import { DEMO_SCENES, sceneVideoUrl, type DemoScene } from "./obs-demo-data";
+import {
+  BrbOverlay,
+  CLOCK_START,
+  ClockWidget,
+  ConnectionLostOverlay,
+  EndingOverlay,
+  StartingSoonOverlay,
+  useOverlayTick,
+} from "./away-overlays";
+import { OverlayLiveChat } from "./overlay-live-chat";
 import { handoffKey, useCurrentScene, useObsDemo } from "./obs-demo-store";
 import { useDemoTracking } from "../analytics/use-demo-tracking";
 
@@ -84,14 +94,14 @@ function DockToolbar({ extra }: { extra?: boolean }) {
 }
 
 /**
- * The IRL scene: a real clip from the CDN when one is configured, over the
- * drawn evening-street gradient. The gradient shows until the first frame
- * arrives and takes over for good if the clip fails to load. The clip only
- * plays while the window is on screen, so the page does not keep decoding
- * video nobody can see.
+ * A scene's real clip from the CDN, laid over whatever that scene draws. The
+ * drawing shows until the first frame arrives and takes over for good if the
+ * clip fails to load, so a scene with no clip (or a missing upload) still has
+ * a preview. The clip only plays while the window is on screen, so the page
+ * does not keep decoding video nobody can see.
  */
-function IrlPreview({ active }: { active: boolean }) {
-  const src = sceneVideoUrl("IRL");
+function SceneClip({ scene, active }: { scene: string; active: boolean }) {
+  const src = sceneVideoUrl(scene);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
 
@@ -100,30 +110,37 @@ function IrlPreview({ active }: { active: boolean }) {
     if (!video) return;
     if (active) {
       // Muted autoplay is allowed everywhere; the catch is for the odd browser
-      // that still says no, where the poster gradient is the whole preview.
+      // that still says no, where the drawn scene is the whole preview.
       video.play().catch(() => {});
     } else {
       video.pause();
     }
   }, [active]);
 
+  if (!src || failed) return null;
+
+  return (
+    <video
+      ref={videoRef}
+      src={src}
+      muted
+      loop
+      playsInline
+      autoPlay={active}
+      preload={active ? "auto" : "metadata"}
+      onError={() => setFailed(true)}
+      aria-hidden
+      className="absolute inset-0 h-full w-full object-cover"
+    />
+  );
+}
+
+/** The IRL scene: the incoming feed, over the drawn evening-street gradient. */
+function IrlPreview({ active }: { active: boolean }) {
   return (
     <div className="relative h-full w-full bg-[linear-gradient(160deg,#1b2440_0%,#2a1c3d_55%,#12161f_100%)]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_35%,rgba(158,122,255,0.35),transparent_60%)]" />
-      {src && !failed ? (
-        <video
-          ref={videoRef}
-          src={src}
-          muted
-          loop
-          playsInline
-          autoPlay={active}
-          preload={active ? "auto" : "metadata"}
-          onError={() => setFailed(true)}
-          aria-hidden
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      ) : null}
+      <SceneClip scene="IRL" active={active} />
       <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[9px] text-white/90">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
         IRL CAM
@@ -135,17 +152,42 @@ function IrlPreview({ active }: { active: boolean }) {
   );
 }
 
+const AWAY_OVERLAYS = {
+  starting: StartingSoonOverlay,
+  brb: BrbOverlay,
+  ending: EndingOverlay,
+  lost: ConnectionLostOverlay,
+};
+
+/**
+ * The away screens are not placards: each is the overlay itself, the same
+ * components the overlays section demos, so what a visitor sees in the OBS
+ * preview is what the browser source actually renders. Their clips rotators are
+ * the only place on the page that plays the real montage.
+ */
+function AwayPreview({
+  kind,
+  scene,
+  active,
+}: {
+  kind: "starting" | "brb" | "ending" | "lost";
+  scene: string;
+  active: boolean;
+}) {
+  const tick = useOverlayTick(active);
+  const Overlay = AWAY_OVERLAYS[kind];
+  return (
+    <div className="@container relative h-full w-full overflow-hidden bg-black">
+      <Overlay tick={tick} clipsVideo chat={<OverlayLiveChat />} />
+      <ClockWidget sec={CLOCK_START + tick} />
+      <span className="sr-only">{scene}</span>
+    </div>
+  );
+}
+
 function ScenePreview({ kind, scene, active }: { kind: DemoScene["preview"]; scene: string; active: boolean }) {
   if (kind === "irl") {
     return <IrlPreview active={active} />;
-  }
-
-  if (kind === "lost") {
-    return (
-      <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(160deg,#2a1214_0%,#12161f_100%)]">
-        <p className="text-[11px] font-semibold tracking-[0.2em] text-red-300/80 uppercase">Connection lost</p>
-      </div>
-    );
   }
 
   if (kind === "empty" || !kind) {
@@ -153,13 +195,7 @@ function ScenePreview({ kind, scene, active }: { kind: DemoScene["preview"]; sce
     return <div className="h-full w-full bg-black" />;
   }
 
-  const label = kind === "starting" ? "Starting soon" : kind === "brb" ? "Be right back" : "Thanks for watching";
-  return (
-    <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(160deg,#161a26_0%,#241a33_100%)]">
-      <p className="text-[11px] font-semibold tracking-[0.2em] text-white/70 uppercase">{label}</p>
-      <span className="sr-only">{scene}</span>
-    </div>
-  );
+  return <AwayPreview kind={kind} scene={scene} active={active} />;
 }
 
 export function ObsWindowMock() {
@@ -325,9 +361,9 @@ export function ObsWindowMock() {
 
         {/* Centre: preview, then the mixer and transitions docks */}
         <div className="contents sm:flex sm:min-w-0 sm:flex-1 sm:flex-col sm:gap-px sm:px-px">
-          <div className="order-1 col-span-3 flex items-center justify-center bg-black p-2 sm:order-none sm:col-auto">
+          <div className="order-1 col-span-3 flex items-center justify-center bg-black sm:order-none sm:col-auto">
             {studioMode ? (
-              <div className="grid w-full grid-cols-2 gap-2">
+              <div className="grid w-full grid-cols-2 gap-2 p-2">
                 {(["Preview", "Program"] as const).map((pane) => (
                   <div key={pane}>
                     <p className="mb-1 text-center text-[9px] text-[#9aa1b2]">{pane}</p>

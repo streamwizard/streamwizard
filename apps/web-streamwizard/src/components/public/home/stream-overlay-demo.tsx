@@ -5,7 +5,7 @@ import { useDemoTracking } from "../analytics/use-demo-tracking";
 import { AnimatePresence, MotionConfig, motion, useInView } from "motion/react";
 import { cn } from "@repo/ui";
 import { OverlayChatWidget } from "./overlay-chat-widget";
-import { ClipsRotatorMini } from "./overlay-widget-demos";
+import { CLOCK_START, ClockWidget, StartingSoonOverlay } from "./away-overlays";
 import { DemoAlertBox, useDemoAlertFrameRef, useDemoAlerts } from "./overlay-demo-alert";
 
 /*
@@ -20,18 +20,6 @@ import { DemoAlertBox, useDemoAlertFrameRef, useDemoAlerts } from "./overlay-dem
  */
 
 type Scene = "starting" | "live";
-
-// Starts at 9:58 so the countdown reads as "almost live", not as a timer nobody set.
-const COUNTDOWN_START = 9 * 60 + 58;
-const CLOCK_START = 19 * 3600 + 42 * 60 + 5;
-
-function pad(n: number) {
-  return String(n).padStart(2, "0");
-}
-
-function clockLabel(sec: number) {
-  return `${pad(Math.floor(sec / 3600) % 24)}:${pad(Math.floor((sec % 3600) / 60))}:${pad(sec % 60)}`;
-}
 
 function SceneToggle({ scene, onChange }: { scene: Scene; onChange: (s: Scene) => void }) {
   const options: { value: Scene; label: string }[] = [
@@ -59,57 +47,6 @@ function SceneToggle({ scene, onChange }: { scene: Scene; onChange: (s: Scene) =
         </button>
       ))}
     </div>
-  );
-}
-
-/** The time widget, top left in both scenes. */
-function ClockWidget({ sec }: { sec: number }) {
-  return (
-    <div className="absolute left-[3%] top-[5%] text-[10px] font-semibold text-white tabular-nums drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)] @md:text-sm @xl:text-base">
-      {clockLabel(sec)}
-    </div>
-  );
-}
-
-/** Starting screen: text widget, countdown, and the clips rotator filling the right half. */
-function StartingScene({ tick }: { tick: number }) {
-  const remaining = Math.max(0, COUNTDOWN_START - tick);
-  return (
-    <>
-      <div className="absolute inset-0 bg-[linear-gradient(160deg,#1a1530_0%,#2b1d4a_55%,#0f1018_100%)]" />
-      <motion.div
-        className="absolute -inset-x-[10%] inset-y-0 bg-[radial-gradient(circle_at_25%_60%,rgba(158,122,255,0.4),transparent_55%),radial-gradient(circle_at_80%_20%,rgba(96,165,250,0.18),transparent_50%)]"
-        animate={{ x: ["0%", "5%", "0%"] }}
-        transition={{ duration: 16, ease: "easeInOut", repeat: Infinity }}
-      />
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:8%_14%]" />
-
-      {/* Text widget + countdown, left half */}
-      <div className="absolute bottom-[10%] left-[5%] top-[32%] flex w-[44%] flex-col justify-center">
-        <p className="hidden text-[7px] font-semibold uppercase tracking-[0.22em] text-[#b9b9c6] @lg:block @lg:text-[9px] @3xl:text-xs">
-          Just chatting · every Tuesday
-        </p>
-        <p className="mt-0.5 whitespace-nowrap text-[16px] font-extrabold leading-none tracking-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] @md:mt-1 @md:text-2xl @2xl:text-4xl @3xl:text-5xl">
-          Starting soon
-        </p>
-        <p className="mt-1 text-[7px] text-[#d4d4d8] @md:mt-2 @md:text-[10px] @3xl:text-sm">
-          Grab a drink. Chat is open.
-        </p>
-        <div className="mt-2 flex items-baseline gap-1 @md:mt-4">
-          <span className="text-[18px] font-bold leading-none tabular-nums text-[#9e7aff] drop-shadow-[0_2px_6px_rgba(0,0,0,0.7)] @md:text-3xl @2xl:text-5xl @3xl:text-6xl">
-            {pad(Math.floor(remaining / 60))}:{pad(remaining % 60)}
-          </span>
-        </div>
-      </div>
-
-      {/* Clips widget, right half */}
-      <div className="absolute right-[5%] top-[36%] w-[42%] @md:top-[33%]">
-        <ClipsRotatorMini />
-        <p className="mt-1 text-right text-[6px] font-semibold uppercase tracking-[0.2em] text-[#b9b9c6] @md:text-[7px] @3xl:mt-1.5 @3xl:text-[10px]">
-          Clips from last stream
-        </p>
-      </div>
-    </>
   );
 }
 
@@ -229,7 +166,7 @@ export function StreamOverlayDemo() {
                   transition={{ duration: 0.45, ease: "easeInOut" }}
                   className="absolute inset-0"
                 >
-                  {scene === "starting" ? <StartingScene tick={tick} /> : <LiveScene />}
+                  {scene === "starting" ? <StartingSoonOverlay tick={tick} /> : <LiveScene />}
                 </motion.div>
               </AnimatePresence>
 

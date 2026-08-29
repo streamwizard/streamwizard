@@ -49,20 +49,20 @@ function isRenderableThumbnail(url: string): boolean {
   }
 }
 
-async function fetchShowcaseClips(): Promise<RealClipCard[]> {
+async function fetchShowcaseClips(size = SHOWCASE_SIZE, perBroadcaster = 2): Promise<RealClipCard[]> {
   try {
     const client = createClient(env.SUPABASE_URL, env.SUPABASE_PUBLIC_KEY, {
       auth: { persistSession: false },
     });
     // Cast until gen-types picks the function up from the deployed schema.
     const { data, error } = await client.rpc("get_showcase_clips" as never, {
-      p_limit: 12,
-      p_per_broadcaster: 2,
+      p_limit: size,
+      p_per_broadcaster: perBroadcaster,
     } as never);
     if (error) throw error;
 
     const rows = (data ?? []) as ShowcaseClipRow[];
-    const usable = rows.filter((row) => isRenderableThumbnail(row.thumbnail_url)).slice(0, SHOWCASE_SIZE);
+    const usable = rows.filter((row) => isRenderableThumbnail(row.thumbnail_url)).slice(0, size);
     /* Clip rows store game_id, never game_name; the clips demo filters by
      * category, so resolve the names once per refresh. */
     const gameNames = await getGameNames(usable.map((row) => row.game_id ?? ""));
@@ -83,14 +83,28 @@ async function fetchShowcaseClips(): Promise<RealClipCard[]> {
 
     // A short marquee looks broken (few broadcasters in the DB, e.g. a fresh
     // local stack), so live clips come first and the snapshot pads the rest.
-    if (live.length >= SHOWCASE_SIZE) return live;
+    if (live.length >= size) return live;
     const seen = new Set(live.map((clip) => clip.id));
-    return [...live, ...fallbackClipCards.filter((clip) => !seen.has(clip.id))].slice(0, SHOWCASE_SIZE);
+    return [...live, ...fallbackClipCards.filter((clip) => !seen.has(clip.id))].slice(0, size);
   } catch {
     return fallbackClipCards;
   }
 }
 
-export const getShowcaseClips = unstable_cache(fetchShowcaseClips, ["showcase-clips", "v5"], {
+export const getShowcaseClips = unstable_cache(() => fetchShowcaseClips(), ["showcase-clips", "v5"], {
+  revalidate: 3600,
+});
+
+/**
+ * A deeper pool for the overlays page's clips rotator, which needs a rotation
+ * rather than a row: it drops every clip Twitch will not hand it a video for,
+ * so it has to start with more than it means to play.
+ *
+ * `p_per_broadcaster` goes to the function's own ceiling of 5. The marquee
+ * keeps its 2 so one channel cannot fill it, but the rotator is showing what
+ * a single streamer's folder looks like, where several clips from the same
+ * channel is the honest picture.
+ */
+export const getRotatorClips = unstable_cache(() => fetchShowcaseClips(24, 5), ["rotator-clips", "v1"], {
   revalidate: 3600,
 });
