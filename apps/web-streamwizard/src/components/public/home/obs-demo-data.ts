@@ -251,7 +251,7 @@ export const CATEGORIES: MockCategory[] = [
  * load falls back to the same drawing, so a missing upload degrades quietly.
  */
 export const SCENE_VIDEOS: Record<string, string> = {
-  IRL: "https://cdn.streamwizard.org/public/vods/1%20min.webm",
+  IRL: "https://cdn.streamwizard.org/public/vods/irl-preview-480p.webm",
 };
 
 /** Absolute CDN URL for a scene's clip, or null when it has none. */

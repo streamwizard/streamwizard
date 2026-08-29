@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { productSectionLinks } from "@/lib/constant";
 import { TrackedLink } from "../analytics/tracked-link";
 import { Bell, Clapperboard, Code2, Layers, Lock, MapPin, Timer } from "lucide-react";
 import { ClipsRotatorMini, CountdownMini, GoalsMini, SubathonMini, WalkingStatsMini } from "./overlay-widget-demos";
@@ -150,8 +151,7 @@ function EditorSketch() {
   );
 }
 
-/** `irlLink` is off on /cloud-obs, where the card would only link to the page it sits on. */
-export function OverlayWidgetCards({ irlLink = true }: { irlLink?: boolean }) {
+export function OverlayWidgetCards() {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
       <Card
@@ -177,16 +177,14 @@ export function OverlayWidgetCards({ irlLink = true }: { irlLink?: boolean }) {
         title="Live GPS stats for IRL"
         body="Speed, distance, the city you are in, and the weather there, from the phone you stream from. No extra hardware. Latitude and longitude are in there too, so maybe do not dox yourself."
         footer={
-          irlLink ? (
-            <TrackedLink
-              href="/cloud-obs"
-              cta="see_irl_setup"
-              section="overlays"
-              className="text-sm text-purple-300 transition-colors hover:text-purple-200"
-            >
-              See the IRL setup
-            </TrackedLink>
-          ) : null
+          <TrackedLink
+            href={productSectionLinks.cloudObsIrlOverlays}
+            cta="see_irl_setup"
+            section="overlays"
+            className="text-sm text-purple-300 transition-colors hover:text-purple-200"
+          >
+            See the IRL setup
+          </TrackedLink>
         }
         className="lg:col-span-2"
       >

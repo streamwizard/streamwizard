@@ -1,17 +1,25 @@
 import type { Metadata } from "next";
 import { absoluteUrl } from "@/lib/seo";
 import { VodClipping } from "@/components/public/home/vod-clipping-section";
+import { VodsLibrarySection } from "@/components/public/vods/vods-library-section";
+import { VodsEventsSection } from "@/components/public/vods/vods-events-section";
+import { SceneSwitchesSection } from "@/components/public/vods/scene-switches-section";
+import { VodsClipCreationSection } from "@/components/public/vods/vods-clip-creation-section";
+import { ClipLibrarySection } from "@/components/public/vods/clip-library-section";
+import { VodsFaqSection } from "@/components/public/vods/vods-faq-section";
 import { FinalCta } from "@/components/public/home/final-cta";
 
 /*
- * First pass, same shape as /cloud-obs: a hero of its own, then the landing
- * page's section. The timeline in detail, the event markers and the download
- * formats get their own copy later.
+ * The VODs product page: hero, the landing page's band as the overview (its
+ * demo carries the interaction), then the deep dives in the order a streamer
+ * meets them: the library, the timeline and its events, the scene-switch band
+ * as the door to /cloud-obs, the clip mechanics, the door to /clips (which
+ * links back here), and the FAQ with the honest caveat about pre-signup VODs.
  */
 export const metadata: Metadata = {
   title: "Clip from your Twitch VODs",
   description:
-    "Find the moment nobody clipped. Follows, subs, raids and ad breaks sit on the VOD timeline, so you can drag a 5 to 60 second selection out of it and save it as a clip.",
+    "Every follow, sub, raid and ad break marked on your VOD timeline. Click an event to jump there, zoom in to 20x, and drag a 5 to 60 second selection into a real Twitch clip.",
   alternates: { canonical: absoluteUrl("/vods") },
 };
 
@@ -29,10 +37,28 @@ export default function VodsPage() {
               Open the VOD, find the moment on a timeline that marks every follow, sub and raid, and
               cut it yourself.
             </p>
+            {/* A quiet timeline motif: four amber marks breathing out of phase. */}
+            <div className="mx-auto mt-8 max-w-xs" aria-hidden="true">
+              <div className="relative h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
+                {["12%", "38%", "57%", "83%"].map((left, index) => (
+                  <span
+                    key={left}
+                    className="absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-amber-400/60 animate-pulse motion-reduce:animate-none"
+                    style={{ left, animationDelay: `${index * 0.45}s` }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
-      <VodClipping showProductLink={false} />
+      <VodClipping showProductLink={false} showHeader={false} />
+      <VodsLibrarySection />
+      <VodsEventsSection />
+      <SceneSwitchesSection />
+      <VodsClipCreationSection />
+      <ClipLibrarySection />
+      <VodsFaqSection />
       <FinalCta />
     </div>
   );

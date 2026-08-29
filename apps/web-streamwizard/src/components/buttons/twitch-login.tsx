@@ -24,8 +24,8 @@ export default function TwitchLogin({ redirect, text, disabled, size, variant, c
   };
 
   return (
-    <Button variant={variant} size={size} type="button" onClick={handleClick} disabled={disabled}>
-      <span className={cn(className, "mr-2 h-4 w-4 flex justify-center items-center ")} aria-hidden="true">
+    <Button variant={variant} size={size} type="button" onClick={handleClick} disabled={disabled} className={className}>
+      <span className={cn("mr-2 h-4 w-4 flex justify-center items-center")} aria-hidden="true">
         <SocialIcon icon="twitch" />
       </span>
       {text || "Twitch"}

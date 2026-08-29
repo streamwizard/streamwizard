@@ -25,17 +25,22 @@ const features = [
   },
 ];
 
-export function VodClipping({ showProductLink = true }: { showProductLink?: boolean } = {}) {
+export function VodClipping({
+  showProductLink = true,
+  showHeader = true,
+}: { showProductLink?: boolean; showHeader?: boolean } = {}) {
   return (
     <section className="relative py-20">
       <SectionView section="vods" className="container mx-auto px-4">
-        <div className="mx-auto mb-10 max-w-2xl text-center">
-          <h2 className="text-3xl font-bold sm:text-4xl">Nobody clipped it. Go get it anyway.</h2>
-          <p className="mt-4 text-muted-foreground">
-            The best moment of the stream is the one chat was too busy to clip. Open the VOD, find it
-            on the timeline, and cut it yourself.
-          </p>
-        </div>
+        {showHeader && (
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <h2 className="text-3xl font-bold sm:text-4xl">Nobody clipped it. Go get it anyway.</h2>
+            <p className="mt-4 text-muted-foreground">
+              The best moment of the stream is the one chat was too busy to clip. Open the VOD, find
+              it on the timeline, and cut it yourself.
+            </p>
+          </div>
+        )}
 
         <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] lg:gap-12">
           <Reveal>
@@ -46,7 +51,7 @@ export function VodClipping({ showProductLink = true }: { showProductLink?: bool
               <h3 className="text-xl font-semibold">Four hours, one moment.</h3>
               <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                 This is the VOD page on a real stream: 4h 12m, a raid at 2:10:00, three clips already
-                cut out of it. Press play, then drag a clip out of the timeline.
+                cut out of it. The playhead is already sweeping. Drag a clip out of the timeline.
               </p>
               <div className="mt-6 grid gap-6">
                 {features.map(({ icon: Icon, title, body }) => (

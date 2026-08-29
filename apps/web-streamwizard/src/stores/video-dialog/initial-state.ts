@@ -35,6 +35,7 @@ export const initialState: VideoPlayerState = {
     "channel.moderator.add",
     "channel.moderator.remove",
     "channel.ad_break.begin",
+    "obs.scene_switch",
     "clip",
     "marker",
   ]),

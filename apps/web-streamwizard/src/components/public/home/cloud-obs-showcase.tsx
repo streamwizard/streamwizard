@@ -1,41 +1,36 @@
 import { TrackedLink } from "../analytics/tracked-link";
 import { SectionView } from "../analytics/section-view";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@repo/ui";
-import { productLinks } from "@/lib/constant";
+import { productLinks, xpuduChannelLink } from "@/lib/constant";
 import { Reveal } from "./reveal";
 import { DeckMock } from "./deck-mock";
 import { ObsWindowMock } from "./obs-window-mock";
 import { ObsDemoProvider } from "./obs-demo-store";
 import { HandoffArrow } from "./handoff-arrow";
-
-function FeatureItem({ children }: { children: React.ReactNode }) {
-  return (
-    <li className="flex items-start gap-3">
-      <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-purple-500/30 bg-purple-500/15">
-        <Check className="h-3 w-3 text-purple-400" aria-hidden="true" />
-      </span>
-      <span className="text-sm leading-relaxed text-muted-foreground">{children}</span>
-    </li>
-  );
-}
+import { CheckItem } from "../layout/check-item";
 
 /*
  * Cloud OBS is the IRL pillar: for streamers who want to go live away from a
  * PC, not a replacement for their own OBS. The deck is the USP, so both it and
  * the OBS window are playable rather than screenshots.
  */
-export function CloudObsShowcase({ showProductLink = true }: { showProductLink?: boolean } = {}) {
+export function CloudObsShowcase({
+  showProductLink = true,
+  showHeader = true,
+}: { showProductLink?: boolean; showHeader?: boolean } = {}) {
   return (
     <section className="py-20">
       <SectionView section="cloud_obs" className="container mx-auto px-4">
-        <div className="mx-auto mb-14 max-w-2xl text-center">
-          <h2 className="text-3xl font-bold sm:text-4xl">Stream IRL without a PC.</h2>
-          <p className="mt-4 text-muted-foreground">
-            Cloud OBS is built for IRL streamers. StreamWizard runs a dedicated OBS for your channel in the cloud, and
-            your phone streams into it. When you want to go live, the only thing you need is your phone.
-          </p>
-        </div>
+        {showHeader && (
+          <div className="mx-auto mb-14 max-w-2xl text-center">
+            <h2 className="text-3xl font-bold sm:text-4xl">Stream IRL without a PC.</h2>
+            <p className="mt-4 text-muted-foreground">
+              Cloud OBS is built for IRL streamers. StreamWizard runs a dedicated OBS for your channel in the cloud, and
+              your phone streams into it. When you want to go live, the only thing you need is your phone.
+            </p>
+          </div>
+        )}
 
         {/* Both rows are one demo: a scene switched in the OBS window moves on
             the deck, and the other way around. A change in either draws an arrow
@@ -48,20 +43,37 @@ export function CloudObsShowcase({ showProductLink = true }: { showProductLink?:
               <Reveal direction="left">
                 <h3 className="text-xl font-semibold">Your stream setup, already running</h3>
                 <ul className="mt-6 space-y-3">
-                  <FeatureItem>A dedicated OBS for your channel, booted in the cloud when you need it.</FeatureItem>
-                  <FeatureItem>Your phone or encoder streams in over SRT or SRTLA.</FeatureItem>
-                  <FeatureItem>
+                  <CheckItem>A dedicated OBS for your channel, booted in the cloud when you need it.</CheckItem>
+                  <CheckItem>Your phone or encoder streams in over SRT or SRTLA.</CheckItem>
+                  <CheckItem>
                     Signal drops mid stream? The auto switcher swaps to your connection-lost scene, tells chat, and
                     swaps back when the bitrate recovers.
-                  </FeatureItem>
-                  <FeatureItem>
+                  </CheckItem>
+                  <CheckItem>
                     Need eyes on OBS itself? Open the live OBS window in a browser on your PC, with CPU, memory, FPS,
                     and frame time next to it.
-                  </FeatureItem>
+                  </CheckItem>
                 </ul>
               </Reveal>
               <Reveal direction="right">
                 <ObsWindowMock />
+                {/* The scene previews and the away screens' clip rotator play
+                    xpudu's streams. Credit sits with the component that shows
+                    the footage, so it travels to /cloud-obs too. */}
+                <p className="mt-3 text-center font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                  Real footage from{" "}
+                  <TrackedLink
+                    href={xpuduChannelLink}
+                    cta="xpudu_channel"
+                    section="cloud_obs"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-foreground/80 transition-colors hover:text-foreground"
+                  >
+                    xpudu
+                  </TrackedLink>
+                  &apos;s IRL streams
+                </p>
               </Reveal>
             </div>
 
@@ -77,10 +89,10 @@ export function CloudObsShowcase({ showProductLink = true }: { showProductLink?:
                   here and watch it land in the OBS window above.
                 </p>
                 <ul className="mt-6 space-y-3">
-                  <FeatureItem>Go live and end the stream from your pocket.</FeatureItem>
-                  <FeatureItem>Switch scenes, or hold one while the auto switcher waits.</FeatureItem>
-                  <FeatureItem>Edit your stream title and category between locations.</FeatureItem>
-                  <FeatureItem>Read and send Twitch chat without leaving the deck.</FeatureItem>
+                  <CheckItem>Go live and end the stream from your pocket.</CheckItem>
+                  <CheckItem>Switch scenes, or hold one while the auto switcher waits.</CheckItem>
+                  <CheckItem>Edit your stream title and category between locations.</CheckItem>
+                  <CheckItem>Read and send Twitch chat without leaving the deck.</CheckItem>
                 </ul>
               </Reveal>
             </div>

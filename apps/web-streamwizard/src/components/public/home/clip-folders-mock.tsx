@@ -1342,7 +1342,7 @@ export function ClipFoldersMock({ clips }: { clips: RealClipCard[] }) {
 
                             <ClipActionsMenu
                               {...clipMenuProps(clip)}
-                              className={cn(index === 0 && !hasOpenedMenu && "text-amber-300 ring-1 ring-amber-400/50")}
+                              className={cn(index === 0 && !hasOpenedMenu && "text-purple-300 ring-1 ring-purple-400/50")}
                             />
                           </div>
                         </div>

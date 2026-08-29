@@ -18,10 +18,21 @@ const CLIPS = [
 
 const CLIP_MS = 3400;
 
-export function ClipsRotatorMini() {
+/** The clips montage on the CDN: real clips from a channel, cut back to back. */
+const CLIPS_MONTAGE_URL = "https://cdn.streamwizard.org/public/vods/streamwizard-clips-480p.webm";
+
+/**
+ * `video` plays the real montage behind the display fields instead of the drawn
+ * stand-in. Only the OBS window's Starting Soon scene asks for it: the marketing
+ * frames stay drawings, so the clip is not on the critical path of a page nobody
+ * scrolled to yet.
+ */
+export function ClipsRotatorMini({ video = false }: { video?: boolean } = {}) {
   const ref = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const inView = useInView(ref, { margin: "-48px" });
   const [idx, setIdx] = useState(0);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!inView) return;
@@ -29,7 +40,21 @@ export function ClipsRotatorMini() {
     return () => clearInterval(id);
   }, [inView]);
 
+  // The montage runs start to finish and loops; only being off screen stops it.
+  useEffect(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (inView) {
+      // Muted autoplay is allowed everywhere; the catch is for the odd browser
+      // that still says no, where the drawn stand-in is the whole widget.
+      el.play().catch(() => {});
+    } else {
+      el.pause();
+    }
+  }, [inView]);
+
   const clip = CLIPS[idx];
+  const playing = video && !failed;
 
   return (
     <div
@@ -38,6 +63,19 @@ export function ClipsRotatorMini() {
       aria-label="A clips widget rotating through clips from the channel, each showing its title, creator, and view count"
       className="@container relative aspect-video overflow-hidden rounded-lg border border-white/[0.07] bg-black"
     >
+      {playing ? (
+        <video
+          ref={videoRef}
+          src={CLIPS_MONTAGE_URL}
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          onError={() => setFailed(true)}
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : null}
       <MotionConfig reducedMotion="user">
         <AnimatePresence initial={false}>
           <motion.div
@@ -47,9 +85,11 @@ export function ClipsRotatorMini() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6, ease: "easeInOut" }}
-            className={`absolute inset-0 bg-linear-to-br ${clip.hue}`}
+            className={playing ? "absolute inset-0" : `absolute inset-0 bg-linear-to-br ${clip.hue}`}
           >
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.12),transparent_55%)]" />
+            {playing ? null : (
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,rgba(255,255,255,0.12),transparent_55%)]" />
+            )}
             {/* Display fields: the bits the editor lets you place anywhere on the clip. */}
             {/* Below 20rem (inside the small demo frame) only the title and views fit. */}
             <div className="absolute left-2 top-2 max-w-[70%] truncate rounded bg-black/55 px-1.5 py-0.5 text-[8px] font-semibold text-white @xs:left-3 @xs:top-3 @xs:text-[10px]">

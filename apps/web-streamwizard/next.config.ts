@@ -36,7 +36,15 @@ const nextConfig = {
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // cdn.streamwizard.org 403s any request whose Referer is not a
+          // streamwizard.org origin, so on localhost every CDN asset (landing
+          // page demo clips, the theme-transition WebMs) fails to load. Sending
+          // no referrer at all passes that check, so dev drops the header.
+          // Staging/production keep the stricter cross-origin policy.
+          {
+            key: "Referrer-Policy",
+            value: process.env.NODE_ENV === "development" ? "no-referrer" : "strict-origin-when-cross-origin",
+          },
         ],
       },
     ];

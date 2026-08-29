@@ -18,6 +18,11 @@ const navigation = {
     { name: "Analytics", href: productLinks.analytics, cta: "analytics" },
     { name: "Docs", href: docsLink, cta: "docs" },
   ],
+  company: [
+    { name: "About", href: "/about", cta: "about" },
+    { name: "Contact", href: "/contact", cta: "contact" },
+    { name: "Roadmap", href: "/roadmap", cta: "roadmap" },
+  ],
   community: [
     { name: "Discord", href: discordInviteLink, cta: "discord" },
     { name: "GitHub", href: githubLink, cta: "github" },
@@ -56,7 +61,7 @@ export function Footer() {
           </div>
 
           {/* Navigation Links */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-y-8 gap-x-8 md:w-1/2 md:justify-items-end">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-8 gap-x-8 md:w-3/5 md:justify-items-end">
             {/* Product Links */}
             <div className="space-y-4">
               <h3 className="font-medium text-sm tracking-wider">PRODUCT</h3>
@@ -68,6 +73,25 @@ export function Footer() {
                       cta={item.cta}
                       section="footer"
                       {...(item.href.startsWith("/") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+                      className="text-muted-foreground hover:text-white transition-colors"
+                    >
+                      {item.name}
+                    </TrackedLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Company Links */}
+            <div className="space-y-4">
+              <h3 className="font-medium text-sm tracking-wider">COMPANY</h3>
+              <ul className="space-y-3">
+                {navigation.company.map((item) => (
+                  <li key={item.name}>
+                    <TrackedLink
+                      href={item.href}
+                      cta={item.cta}
+                      section="footer"
                       className="text-muted-foreground hover:text-white transition-colors"
                     >
                       {item.name}

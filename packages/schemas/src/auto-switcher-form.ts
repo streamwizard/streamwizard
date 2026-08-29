@@ -39,6 +39,18 @@ export const autoSwitcherFormSchema = autoSwitcherConfigSchema
 
 export type AutoSwitcherFormValues = z.infer<typeof autoSwitcherFormSchema>;
 
+/**
+ * The chat notice templates a fresh config starts with, matching the column
+ * defaults in SQL. Exported because the public cloud OBS page shows them as
+ * the shipped defaults, and a marketing page quoting a different string than
+ * the product hands out is the kind of drift nobody notices for a year.
+ */
+export const AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS = {
+  degraded: "Connection unstable — switching to backup scene ({bitrate} kbps, {rtt} ms RTT)",
+  offline: "Stream signal lost — hang tight!",
+  recovered: "Signal restored — back live!",
+} as const;
+
 export const PRESET_COPY: Record<AutoSwitcherSensitivityPreset, { title: string; blurb: string }> = {
   relaxed: { title: "Relaxed", blurb: "Waits ~6s of bad signal before switching, ~15s stable before switching back. Rides out tunnels and dead spots." },
   balanced: { title: "Balanced", blurb: "Switches after ~4s bad, back after ~8s stable. The right pick for most IRL setups." },
@@ -91,9 +103,9 @@ export function defaultsFrom(row: AutoSwitcherConfigRowLike | null): AutoSwitche
     pinned_stream_key_label: row?.pinned_stream_key_label ?? null,
     log_events_enabled: row?.log_events_enabled ?? true,
     chat_notices_enabled: row?.chat_notices_enabled ?? false,
-    chat_template_degraded: row?.chat_template_degraded ?? "Connection unstable — switching to backup scene ({bitrate} kbps, {rtt} ms RTT)",
-    chat_template_offline: row?.chat_template_offline ?? "Stream signal lost — hang tight!",
-    chat_template_recovered: row?.chat_template_recovered ?? "Signal restored — back live!",
+    chat_template_degraded: row?.chat_template_degraded ?? AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS.degraded,
+    chat_template_offline: row?.chat_template_offline ?? AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS.offline,
+    chat_template_recovered: row?.chat_template_recovered ?? AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS.recovered,
     warning_source_enabled: row?.warning_source_enabled ?? false,
     warning_source_uuid: row?.warning_source_uuid ?? null,
     warning_source_name: row?.warning_source_name ?? null,
