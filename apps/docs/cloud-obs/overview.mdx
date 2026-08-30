@@ -1,0 +1,69 @@
+---
+title: "Cloud OBS"
+description: "Stream from your phone with no PC, no capture card, and no OBS running at home. StreamWizard runs the whole thing in the cloud."
+---
+
+Cloud OBS is StreamWizard's whole streaming setup, running in the cloud instead
+of on your computer. Point your phone or IRL backpack at us, and we handle OBS,
+your scenes, your overlays, and the stream out to Twitch. Your PC can be off.
+You can be on a train.
+
+<Frame caption="The Cloud OBS page: a live preview, a Go live button, and your scenes, all in the browser.">
+  <img src="/images/cloud-obs/controls-overview.png" alt="Cloud OBS control page" />
+</Frame>
+
+## How it works
+
+Three pieces do the work. You don't have to think about them much, but here's
+the whole trip your video takes:
+
+1. **Your phone or encoder sends video to us.** It pushes to a private address
+   called your [ingest key](/cloud-obs/ingest). Works great over mobile data.
+2. **Your cloud OBS catches it.** We run a private copy of OBS in the cloud for
+   you. Your video shows up inside it, ready to drop into a scene.
+3. **Cloud OBS streams to Twitch.** You arrange your scenes and hit
+   [Go live](/cloud-obs/controls). The stream goes out from the cloud, not from
+   your house.
+
+The point: you carry a phone, we carry everything else.
+
+## New here? Read these in order
+
+These docs follow the same path you'll take as a new user. Go top to bottom and
+you can't get lost:
+
+<Steps>
+  <Step title="Get set up">
+    Do the one-time setup: make a key, start your cloud OBS. Five steps, a couple
+    of minutes. Start at [Get set up](/cloud-obs/setup).
+  </Step>
+  <Step title="Connect your phone">
+    Copy your streaming URL into your phone app or encoder. That's the
+    [Ingest keys](/cloud-obs/ingest) page.
+  </Step>
+  <Step title="Learn your controls">
+    Go live, switch scenes, check your stream's health. All on
+    [Your controls](/cloud-obs/controls).
+  </Step>
+  <Step title="Set up your safety net">
+    Turn on the [Auto Switcher](/cloud-obs/auto-switcher) so a dead spot doesn't
+    leave your viewers staring at a frozen frame.
+  </Step>
+  <Step title="Put the remote on your phone">
+    Install the [Stream Deck](/cloud-obs/deck) on your home screen and you're
+    ready to head out.
+  </Step>
+</Steps>
+
+Already set up and just looking something up? Jump straight to the page you need
+in the sidebar.
+
+## Who this is for
+
+If you stream IRL (out and about, on mobile data) or you just want OBS running
+somewhere other than your own PC, this is for you. If you only ever stream from
+your desktop with OBS already installed, you probably don't need any of this.
+
+<Card title="Next up: Get set up" icon="rocket" href="/cloud-obs/setup">
+  The one-time setup. Five steps and you're ready to stream.
+</Card>
