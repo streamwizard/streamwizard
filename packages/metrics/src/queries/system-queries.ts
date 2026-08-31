@@ -171,3 +171,78 @@ export async function queryActiveIngestSignals(recentWindow = "2m", opts?: Query
     retransPct: toNum(row.retrans_pct),
   }));
 }
+
+// ── A/V sync of an incoming signal ────────────────────────────────────────────
+//
+// The ingest relay reads PES presentation timestamps off the MPEG-TS it
+// forwards and reports the audio/video skew the streamer's encoder actually
+// sent (ingest-media/av_sync.py). Those fields ride along on the same
+// `ingest_stream` points as the transport stats above.
+//
+// This is the one place the question "did the skew arrive with the feed, or did
+// OBS introduce it?" can be answered — from OBS's side the two look identical.
+// Sign convention: positive av_skew_ms means audio is BEHIND video.
+
+export interface IngestSignalMetricPoint {
+  time: string;
+  streamKeyId: string;
+  value: number;
+}
+
+async function queryIngestStreamFieldByUser(
+  userId: string,
+  field: string,
+  fluxRange: string,
+  window: string,
+  opts?: QueryOpts,
+): Promise<IngestSignalMetricPoint[]> {
+  assertValidFluxDuration(fluxRange, "range");
+  assertValidFluxDuration(window, "window");
+  // userId is interpolated into the Flux source — restrict it to uuid-safe
+  // characters so it can't break out of the string literal.
+  if (!/^[a-zA-Z0-9-]+$/.test(userId)) throw new Error("Invalid user id");
+  const bucket = resolveBucket(opts);
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: -${fluxRange})
+      |> filter(fn: (r) => r._measurement == "ingest_stream")
+      |> filter(fn: (r) => r.user_id == "${userId}")
+      |> filter(fn: (r) => r._field == "${field}")
+      // One series per stream key, not per session: a phone that reconnects
+      // starts a new session_id but is still the same camera, and grouping by
+      // session would redraw it as a separate line on every drop.
+      |> group(columns: ["stream_key_id"])
+      |> aggregateWindow(every: ${window}, fn: mean, createEmpty: false)
+      |> yield(name: "${field}")
+  `;
+  return runFluxQuery(query, (row) => ({
+    time: row._time ?? "",
+    streamKeyId: row.stream_key_id ?? "unknown",
+    value: Number(row._value),
+  }));
+}
+
+/** Corrected skew, the headline number: positive = audio behind video. */
+export function queryIngestAvSkew(userId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts) {
+  return queryIngestStreamFieldByUser(userId, "av_skew_ms", fluxRange, window, opts);
+}
+
+/** Uncorrected video_pts - audio_pts gap. Reads large and positive even on a
+ *  perfectly synced stream — shown so the correction stays auditable. */
+export function queryIngestAvSkewRaw(userId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts) {
+  return queryIngestStreamFieldByUser(userId, "av_skew_raw_ms", fluxRange, window, opts);
+}
+
+/** The interval the correction subtracts, measured off consecutive audio PTS.
+ *  Small (~23ms, one AAC frame per PES) means the reported skew is trustworthy
+ *  whatever the muxer does; large (~320ms, ffmpeg's default aggregation) means
+ *  it leans on the assumption that the muxer leads by exactly one interval. */
+export function queryIngestAudioPesInterval(userId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts) {
+  return queryIngestStreamFieldByUser(userId, "av_audio_pes_interval_ms", fluxRange, window, opts);
+}
+
+/** How many PES pairs the median was taken over. A window with only a handful
+ *  is noise, not a measurement. */
+export function queryIngestAvSkewSamples(userId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts) {
+  return queryIngestStreamFieldByUser(userId, "av_skew_samples", fluxRange, window, opts);
+}
