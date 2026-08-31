@@ -6,6 +6,7 @@ import {
   AreaChart,
   CartesianGrid,
   Legend,
+  ReferenceLine,
   Tooltip,
   XAxis,
   YAxis,
@@ -35,7 +36,7 @@ export interface NodeMetricPoint {
 // A function prop can't cross the server/client boundary (pages that render
 // this are Server Components), so callers pass a format name instead and the
 // actual formatter lives here, client-side.
-export type NodeMetricFormat = "percent" | "bytesPerSec" | "number";
+export type NodeMetricFormat = "percent" | "bytesPerSec" | "ms" | "number";
 
 function formatValue(
   value: number,
@@ -47,6 +48,8 @@ function formatValue(
       return `${value.toFixed(0)}%`;
     case "bytesPerSec":
       return formatBandwidth(value, bandwidthUnit);
+    case "ms":
+      return `${Math.round(value)} ms`;
     default:
       return String(value);
   }
@@ -58,6 +61,9 @@ interface Props {
   apiPath: string;
   dataKey: string;
   format?: NodeMetricFormat;
+  /** Draw a baseline at y=0. For a signed metric (A/V skew) the sign is the
+   * whole point, so the axis needs a visible zero to read against. */
+  zeroLine?: boolean;
   /** Show only these series (matched against the point's nodeId, which is the
    * node *name* after labeling — pass both name and raw id to be safe). Used
    * by the single-node detail page on top of the fleet-wide API payload. */
@@ -114,6 +120,7 @@ export function NodeMetricChart({
   apiPath,
   dataKey,
   format = "number",
+  zeroLine,
   filterNodeIds,
 }: Props) {
   const { interval } = useRefreshInterval();
@@ -187,6 +194,7 @@ export function NodeMetricChart({
           }
         />
         <Legend wrapperStyle={LEGEND_WRAPPER_STYLE} />
+        {zeroLine ? <ReferenceLine y={0} strokeDasharray="4 4" className="stroke-muted-foreground" /> : null}
         {nodeIds.map((nodeId, i) => (
           <Area
             key={nodeId}
