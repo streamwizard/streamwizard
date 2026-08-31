@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Loader2, MonitorOff, RefreshCw } from "lucide-react";
-import { Button } from "@repo/ui";
+import { useEffect, useRef, useState, type ChangeEvent } from "react";
+import { AlertCircle, Clipboard as ClipboardIcon, Loader2, MonitorOff, RefreshCw } from "lucide-react";
+import { Button, Textarea } from "@repo/ui";
 
 type VncStatus = "connecting" | "connected" | "disconnected" | "error";
 
@@ -23,6 +23,18 @@ export function CloudOBSViewer({ getConnection }: { getConnection: () => Promise
   // scheduled the retry timer inside one, which double-fired under StrictMode).
   const retryCountRef = useRef(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Clipboard sync state. Survives reconnects on purpose: lastSent stops the
+  // same local text being re-pasted to the server on every focus/reconnect
+  // (and stops remote text echoing straight back), pendingWrite holds a remote
+  // clipboard update that navigator.clipboard.writeText rejected while the
+  // document was unfocused, and rfbRef lets the manual clipboard panel send
+  // outside the connection effect.
+  const rfbRef = useRef<import("@novnc/novnc").default | null>(null);
+  const lastSentRef = useRef("");
+  const pendingWriteRef = useRef<string | null>(null);
+  const [clipboardOpen, setClipboardOpen] = useState(false);
+  const [clipboardDraft, setClipboardDraft] = useState("");
 
   // When the tab is backgrounded the browser throttles requestAnimationFrame,
   // so noVNC stops painting -- but the socket keeps streaming full-desktop OBS
@@ -51,10 +63,44 @@ export function CloudOBSViewer({ getConnection }: { getConnection: () => Promise
     let rfb: import("@novnc/novnc").default | undefined;
     let cancelled = false;
     let wasConnected = false;
+    let isConnected = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let focusRetryTimer: ReturnType<typeof setTimeout> | null = null;
 
     setStatus("connecting");
     setErrorMessage(null);
+
+    // Pushes the local clipboard to the server. Only meaningful once the RFB
+    // session is connected (noVNC silently drops pastes before that), and
+    // readText demands a focused document -- both are also why this runs again
+    // on "connect", not just on focus events.
+    const pushLocalClipboard = () => {
+      if (!isConnected || !document.hasFocus()) return;
+
+      // First flush a remote clipboard update that writeText rejected while
+      // the document was unfocused.
+      const pending = pendingWriteRef.current;
+      if (pending !== null) {
+        navigator.clipboard
+          .writeText(pending)
+          .then(() => {
+            if (pendingWriteRef.current === pending) pendingWriteRef.current = null;
+          })
+          .catch((err) => console.debug("[cloud-obs] clipboard write failed", err));
+      }
+
+      navigator.clipboard
+        .readText()
+        .then((text) => {
+          if (!text || text === lastSentRef.current) return;
+          lastSentRef.current = text;
+          rfb?.clipboardPasteFrom(text);
+        })
+        // Rejects on Firefox (readText isn't exposed to pages), Safari (needs
+        // a user gesture) and Chromium mid focus-transition. The clipboard
+        // panel is the manual fallback for all of those.
+        .catch((err) => console.debug("[cloud-obs] clipboard read failed", err));
+    };
 
     Promise.all([import("@novnc/novnc"), getConnection()]).then(([{ default: RFB }, { url, password }]) => {
       if (cancelled) return;
@@ -62,16 +108,22 @@ export function CloudOBSViewer({ getConnection }: { getConnection: () => Promise
       rfb = new RFB(container, url, { credentials: { password } });
       rfb.scaleViewport = true;
       rfb.resizeSession = false;
+      rfbRef.current = rfb;
 
       rfb.addEventListener("connect", () => {
         if (cancelled) return;
         wasConnected = true;
+        isConnected = true;
         setStatus("connected");
         retryCountRef.current = 0;
+        // Deliver whatever was copied before/while the connection came up --
+        // focus events fired during connect were no-ops.
+        pushLocalClipboard();
       });
 
       rfb.addEventListener("disconnect", (event: Event) => {
         if (cancelled) return;
+        isConnected = false;
 
         if (wasConnected) {
           setStatus("disconnected");
@@ -100,8 +152,19 @@ export function CloudOBSViewer({ getConnection }: { getConnection: () => Promise
       });
 
       rfb.addEventListener("clipboard", (event: Event) => {
+        if (cancelled) return;
         const text = (event as CustomEvent<{ text: string }>).detail.text;
-        navigator.clipboard.writeText(text).catch(() => {});
+        // Mirror it into the manual panel, and mark it as already-sent so the
+        // next focus push doesn't echo it straight back to the server.
+        lastSentRef.current = text;
+        setClipboardDraft(text);
+        navigator.clipboard.writeText(text).catch((err) => {
+          // Usually NotAllowedError because the document isn't focused (copy
+          // in OBS, then switch away). Retried on the next focus; the panel
+          // has the text either way.
+          pendingWriteRef.current = text;
+          console.debug("[cloud-obs] clipboard write failed", err);
+        });
       });
     }).catch(() => {
       if (cancelled) return;
@@ -109,20 +172,24 @@ export function CloudOBSViewer({ getConnection }: { getConnection: () => Promise
       setErrorMessage("Couldn't get a connection ticket. Please try again.");
     });
 
-    const pushLocalClipboard = () => {
-      navigator.clipboard
-        .readText()
-        .then((text) => rfb?.clipboardPasteFrom(text))
-        .catch(() => {});
+    const onFocusGained = () => {
+      pushLocalClipboard();
+      // readText can still reject right at the focus transition ("Document is
+      // not focused"); one delayed retry after focus settles. Dedupe via
+      // lastSentRef keeps this from double-sending.
+      if (focusRetryTimer) clearTimeout(focusRetryTimer);
+      focusRetryTimer = setTimeout(pushLocalClipboard, 150);
     };
-    container.addEventListener("focusin", pushLocalClipboard);
-    window.addEventListener("focus", pushLocalClipboard);
+    container.addEventListener("focusin", onFocusGained);
+    window.addEventListener("focus", onFocusGained);
 
     return () => {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
-      container.removeEventListener("focusin", pushLocalClipboard);
-      window.removeEventListener("focus", pushLocalClipboard);
+      if (focusRetryTimer) clearTimeout(focusRetryTimer);
+      container.removeEventListener("focusin", onFocusGained);
+      window.removeEventListener("focus", onFocusGained);
+      rfbRef.current = null;
       rfb?.disconnect();
     };
     // `attempt` is intentionally included so incrementing it re-runs this effect
@@ -135,10 +202,49 @@ export function CloudOBSViewer({ getConnection }: { getConnection: () => Promise
     setAttempt((a) => a + 1);
   };
 
+  // Manual clipboard path: works everywhere the automatic navigator.clipboard
+  // sync can't (Firefox has no page readText, Safari wants a user gesture) --
+  // a native paste into the textarea is itself the gesture.
+  const handleClipboardDraftChange = (event: ChangeEvent<HTMLTextAreaElement>) => {
+    const text = event.target.value;
+    setClipboardDraft(text);
+    lastSentRef.current = text;
+    rfbRef.current?.clipboardPasteFrom(text);
+  };
+
   return (
     <div className="relative h-full w-full">
       {/* noVNC mounts its canvas here — always in the DOM so RFB has a stable target */}
       <div ref={containerRef} className="h-full w-full" />
+
+      {visible && status === "connected" && (
+        <div className="absolute right-3 top-3 z-10 flex flex-col items-end gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-white/10 bg-black/60 text-white hover:bg-black/80"
+            onClick={() => setClipboardOpen((open) => !open)}
+            title="Clipboard"
+          >
+            <ClipboardIcon className="h-3.5 w-3.5" />
+          </Button>
+          {clipboardOpen && (
+            <div className="w-72 rounded-md border border-white/10 bg-black/90 p-3 backdrop-blur-sm">
+              <p className="text-xs font-medium text-white">Clipboard</p>
+              <p className="mt-1 text-xs text-white/40">
+                Paste here to send text to OBS. Anything copied inside OBS shows up here too.
+              </p>
+              <Textarea
+                value={clipboardDraft}
+                onChange={handleClipboardDraftChange}
+                rows={4}
+                spellCheck={false}
+                className="mt-2 border-white/10 bg-white/5 text-xs text-white"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {!visible && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/90 backdrop-blur-sm">
