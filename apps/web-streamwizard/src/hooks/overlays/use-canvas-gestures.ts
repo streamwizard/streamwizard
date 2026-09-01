@@ -13,6 +13,7 @@ import {
   resolveDragAxis,
   type DragItemStart,
 } from "@/components/overlays/editor/canvas-resize-math";
+import { snapToGrid } from "@/components/overlays/editor/canvas-preferences";
 
 /** Screen-px snap radius; converted to scene px by dividing by zoom. */
 const SNAP_THRESHOLD_PX = 8;
@@ -49,6 +50,7 @@ export function useCanvasGestures() {
   const scene = useOverlayStore((s) => s.scene);
   const selectedItemIds = useOverlayStore((s) => s.selectedItemIds);
   const zoom = useOverlayStore((s) => s.zoom);
+  const grid = useOverlayStore((s) => s.grid);
   const selectItem = useOverlayStore((s) => s.selectItem);
   const toggleSelectItem = useOverlayStore((s) => s.toggleSelectItem);
   const setSelectedItems = useOverlayStore((s) => s.setSelectedItems);
@@ -260,9 +262,15 @@ export function useCanvasGestures() {
         }
 
         for (const it of dragState.items) {
+          // Grid snapping lands the item itself on the grid, so it is applied to
+          // the final position rather than the delta. Alt opts out of both kinds
+          // of snapping at once.
+          const nextX = it.startX + cdx;
+          const nextY = it.startY + cdy;
+          const onGrid = grid.snap && !e.altKey;
           updateItem(it.id, {
-            x: Math.round(it.startX + cdx),
-            y: Math.round(it.startY + cdy),
+            x: Math.round(onGrid ? snapToGrid(nextX, grid.size) : nextX),
+            y: Math.round(onGrid ? snapToGrid(nextY, grid.size) : nextY),
           });
         }
         return;

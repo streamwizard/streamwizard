@@ -52,6 +52,11 @@ export const EDITOR_SHORTCUT_GROUPS: EditorShortcutGroup[] = [
     title: "Canvas",
     description: "Nudging, and the modifiers you hold while dragging.",
     shortcuts: [
+      { action: "Fit the scene on screen", combos: [["Shift", "1"]] },
+      { action: "Zoom back to 100%", combos: [["Shift", "0"]] },
+      { action: "Show or hide the grid", combos: [["Shift", "G"]] },
+      { action: "Show or hide the rulers", combos: [["Shift", "R"]] },
+      { action: "Snap to the grid, on and off", combos: [["Shift", "S"]] },
       { action: "Nudge by 1 pixel", combos: [["↑", "↓", "←", "→"]] },
       { action: "Nudge by 10 pixels", combos: [["Shift", "↑", "↓", "←", "→"]] },
       { action: "Ignore the snap guides while dragging", combos: [["Alt", "Drag"]] },

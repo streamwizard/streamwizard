@@ -122,7 +122,10 @@ test("setScene without an id map starts a fresh history", () => {
 test("setScene with an id map keeps history and rewrites temp ids", () => {
   useOverlayStore.getState().setScene(makeScene([makeItem("temp-1", { title: "one" })]));
   useOverlayStore.setState({
-    history: { past: [[makeItem("temp-1", { title: "before" })]], future: [] },
+    history: {
+      past: [{ items: [makeItem("temp-1", { title: "before" })], width: 1920, height: 1080 }],
+      future: [],
+    },
   });
 
   useOverlayStore
@@ -131,21 +134,24 @@ test("setScene with an id map keeps history and rewrites temp ids", () => {
 
   const past = useOverlayStore.getState().history.past;
   expect(past).toHaveLength(1);
-  expect(past[0]![0]!.id).toBe("db-1");
+  expect(past[0]!.items[0]!.id).toBe("db-1");
 });
 
 test("a clip child's parent ref follows the remap", () => {
   const child = makeItem("temp-c", { parentClipItemId: "temp-p", fieldKey: "title" });
   useOverlayStore.getState().setScene(makeScene([]));
   useOverlayStore.setState({
-    history: { past: [[makeItem("temp-p", {}), child]], future: [] },
+    history: {
+      past: [{ items: [makeItem("temp-p", {}), child], width: 1920, height: 1080 }],
+      future: [],
+    },
   });
 
   useOverlayStore.getState().setScene(makeScene([]), {
     idMap: { "temp-p": "db-p", "temp-c": "db-c" },
   });
 
-  const restored = useOverlayStore.getState().history.past[0]!;
+  const restored = useOverlayStore.getState().history.past[0]!.items;
   expect(restored[0]!.id).toBe("db-p");
   expect(
     (restored[1]!.config as unknown as { parentClipItemId: string }).parentClipItemId

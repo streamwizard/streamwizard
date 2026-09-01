@@ -6,6 +6,22 @@ import {
   isRootOverlayDefinition,
   OVERLAY_WIDGET_REGISTRY,
 } from "@/components/overlays/registry/overlay-widget-registry";
+import { clampZoom } from "@/components/overlays/editor/canvas-zoom";
+import {
+  clampGridLineWidth,
+  clampGridSize,
+  loadCanvasPreferences,
+  saveCanvasBackground,
+  saveGridSettings,
+  saveRulerCursor,
+  saveRulersVisible,
+  type CanvasBackground,
+  type GridSettings,
+} from "@/components/overlays/editor/canvas-preferences";
+import {
+  rescaleItemsForResolution,
+  type ResolutionChangeMode,
+} from "@/components/overlays/editor/scene-resize";
 import {
   alignUpdates,
   distributeUpdates,
@@ -36,6 +52,17 @@ import { asClipDisplayFieldConfig } from "@/types/overlays";
 
 export type EditorMode = "simple" | "pro";
 
+/**
+ * One undo step. The scene's size rides along with the items because changing
+ * the resolution can reposition everything, and undoing half of that would
+ * leave a layout built for a canvas that is no longer there.
+ */
+export interface EditorSnapshot {
+  items: OverlayItem[];
+  width: number;
+  height: number;
+}
+
 const EDITOR_MODE_STORAGE_KEY = "overlay-editor-mode";
 const HISTORY_LIMIT = 50;
 const NUDGE_HISTORY_COALESCE_MS = 400;
@@ -55,12 +82,25 @@ interface OverlayEditorState {
   isDirty: boolean;
   zoom: number;
   /** Undo/redo snapshots of scene.items. Cleared on every setScene (save remaps temp ids). */
-  history: { past: OverlayItem[][]; future: OverlayItem[][] };
+  history: { past: EditorSnapshot[]; future: EditorSnapshot[] };
   /** Set by the canvas context menu "Rename" — the inspector focuses its Label input, then clears it. */
   renameRequestId: string | null;
   /** Simple hides the layers panel and keeps the calm inspector defaults; pro is the full editor. */
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
+
+  /**
+   * Design-time canvas aids. The streamer's own working preferences: they never
+   * reach the scene, the database or the live overlay.
+   */
+  canvasBackground: CanvasBackground;
+  setCanvasBackground: (background: CanvasBackground) => void;
+  grid: GridSettings;
+  setGrid: (grid: Partial<GridSettings>) => void;
+  rulersVisible: boolean;
+  setRulersVisible: (visible: boolean) => void;
+  rulerCursorVisible: boolean;
+  setRulerCursorVisible: (visible: boolean) => void;
 
   setScene: (
     scene: OverlaySceneWithItems,
@@ -75,6 +115,23 @@ interface OverlayEditorState {
     fieldKey: DisplayFieldKey
   ) => void;
   setZoom: (zoom: number) => void;
+  /**
+   * Changes the scene's resolution in the editor only; the row is written on
+   * the next save. One undo step covers the size and any repositioning.
+   */
+  setSceneResolution: (
+    width: number,
+    height: number,
+    mode: ResolutionChangeMode
+  ) => void;
+  /**
+   * Canvas pan, in screen px, on top of the pane's own scrolling. Cursor-anchored
+   * zoom writes here to hold a focal point that flex centring would otherwise move.
+   */
+  panX: number;
+  panY: number;
+  setPan: (x: number, y: number) => void;
+  nudgePan: (dx: number, dy: number) => void;
   markDirty: () => void;
   markClean: () => void;
   setRenameRequestId: (id: string | null) => void;
@@ -208,21 +265,21 @@ function remapItemConfigRefs(
  * keeps `pushHistory`'s no-op check working.
  */
 function remapHistory(
-  history: { past: OverlayItem[][]; future: OverlayItem[][] },
+  history: { past: EditorSnapshot[]; future: EditorSnapshot[] },
   idMap: Record<string, string>
-): { past: OverlayItem[][]; future: OverlayItem[][] } {
+): { past: EditorSnapshot[]; future: EditorSnapshot[] } {
   if (Object.keys(idMap).length === 0) return history;
 
-  const remapSnapshot = (items: OverlayItem[]): OverlayItem[] => {
+  const remapSnapshot = (snapshot: EditorSnapshot): EditorSnapshot => {
     let changed = false;
-    const next = items.map((item) => {
+    const next = snapshot.items.map((item) => {
       const id = idMap[item.id] ?? item.id;
       const config = remapItemConfigRefs(item.config, idMap);
       if (id === item.id && config === item.config) return item;
       changed = true;
       return { ...item, id, config };
     });
-    return changed ? next : items;
+    return changed ? { ...snapshot, items: next } : snapshot;
   };
 
   return {
@@ -284,9 +341,44 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   selectedItemIds: [],
   isDirty: false,
   zoom: 0.5,
+  panX: 0,
+  panY: 0,
   history: { past: [], future: [] },
   renameRequestId: null,
   editorMode: loadEditorMode(),
+
+  ...(() => {
+    const prefs = loadCanvasPreferences();
+    return {
+      canvasBackground: prefs.background,
+      grid: prefs.grid,
+      rulersVisible: prefs.rulers,
+      rulerCursorVisible: prefs.rulerCursor,
+    };
+  })(),
+
+  setCanvasBackground: (background) => {
+    saveCanvasBackground(background);
+    set({ canvasBackground: background });
+  },
+
+  setGrid: (grid) => {
+    const next = { ...get().grid, ...grid };
+    next.size = clampGridSize(next.size);
+    next.lineWidth = clampGridLineWidth(next.lineWidth);
+    saveGridSettings(next);
+    set({ grid: next });
+  },
+
+  setRulersVisible: (visible) => {
+    saveRulersVisible(visible);
+    set({ rulersVisible: visible });
+  },
+
+  setRulerCursorVisible: (visible) => {
+    saveRulerCursor(visible);
+    set({ rulerCursorVisible: visible });
+  },
   setEditorMode: (mode) => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(EDITOR_MODE_STORAGE_KEY, mode);
@@ -354,7 +446,32 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     if (child) set({ selectedItemIds: [child.id] });
   },
 
-  setZoom: (zoom) => set({ zoom: Math.max(0.1, Math.min(2, zoom)) }),
+  setZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
+
+  setSceneResolution: (width, height, mode) => {
+    const { scene, pushHistory } = get();
+    if (!scene) return;
+    if (scene.width === width && scene.height === height) return;
+
+    pushHistory();
+    set({
+      scene: {
+        ...scene,
+        width,
+        height,
+        items:
+          mode === "scale"
+            ? rescaleItemsForResolution(scene.items, scene, { width, height })
+            : scene.items,
+      },
+      isDirty: true,
+    });
+  },
+
+  setPan: (x, y) => set({ panX: x, panY: y }),
+
+  nudgePan: (dx, dy) =>
+    set((state) => ({ panX: state.panX + dx, panY: state.panY + dy })),
 
   markDirty: () => set({ isDirty: true }),
 
@@ -364,12 +481,24 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
 
   pushHistory: (snapshot) => {
     const { scene, history } = get();
-    const items = snapshot ?? scene?.items;
-    if (!items) return;
+    if (!scene) return;
+    const items = snapshot ?? scene.items;
     // Skip no-op pushes (e.g. focusing an input without editing) so undo never
-    // appears to do nothing; items reference only changes when something mutated.
-    if (history.past[history.past.length - 1] === items) return;
-    const past = [...history.past, items].slice(-HISTORY_LIMIT);
+    // appears to do nothing; the items reference only changes when something
+    // mutated, and the size only when the resolution did.
+    const last = history.past[history.past.length - 1];
+    if (
+      last &&
+      last.items === items &&
+      last.width === scene.width &&
+      last.height === scene.height
+    ) {
+      return;
+    }
+    const past = [
+      ...history.past,
+      { items, width: scene.width, height: scene.height },
+    ].slice(-HISTORY_LIMIT);
     set({ history: { past, future: [] } });
   },
 
@@ -377,12 +506,20 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     const { scene, history, selectedItemIds } = get();
     if (!scene || history.past.length === 0) return;
     const previous = history.past[history.past.length - 1]!;
-    const surviving = new Set(previous.map((i) => i.id));
+    const surviving = new Set(previous.items.map((i) => i.id));
     set({
-      scene: { ...scene, items: previous },
+      scene: {
+        ...scene,
+        items: previous.items,
+        width: previous.width,
+        height: previous.height,
+      },
       history: {
         past: history.past.slice(0, -1),
-        future: [...history.future, scene.items],
+        future: [
+          ...history.future,
+          { items: scene.items, width: scene.width, height: scene.height },
+        ],
       },
       selectedItemIds: selectedItemIds.filter((id) => surviving.has(id)),
       isDirty: true,
@@ -393,11 +530,19 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     const { scene, history, selectedItemIds } = get();
     if (!scene || history.future.length === 0) return;
     const next = history.future[history.future.length - 1]!;
-    const surviving = new Set(next.map((i) => i.id));
+    const surviving = new Set(next.items.map((i) => i.id));
     set({
-      scene: { ...scene, items: next },
+      scene: {
+        ...scene,
+        items: next.items,
+        width: next.width,
+        height: next.height,
+      },
       history: {
-        past: [...history.past, scene.items].slice(-HISTORY_LIMIT),
+        past: [
+          ...history.past,
+          { items: scene.items, width: scene.width, height: scene.height },
+        ].slice(-HISTORY_LIMIT),
         future: history.future.slice(0, -1),
       },
       selectedItemIds: selectedItemIds.filter((id) => surviving.has(id)),
