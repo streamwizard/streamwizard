@@ -7,6 +7,16 @@ import {
   OVERLAY_WIDGET_REGISTRY,
 } from "@/components/overlays/registry/overlay-widget-registry";
 import {
+  alignUpdates,
+  distributeUpdates,
+  matchSizeUpdates,
+  selectionBounds,
+  type AlignEdge,
+  type DistributeAxis,
+  type ItemLayoutUpdate,
+  type MatchDimension,
+} from "@/components/overlays/editor/selection-layout";
+import {
   MIN_ITEM_SIZE,
   applyLayerOrder,
   buildDuplicate,
@@ -85,6 +95,12 @@ interface OverlayEditorState {
   duplicateItem: (id: string) => void;
   duplicateSelectedItems: () => void;
   nudgeSelected: (dx: number, dy: number) => void;
+  /** Multi-selection layout. Each pushes a single undo step. */
+  alignSelected: (edge: AlignEdge) => void;
+  distributeSelected: (axis: DistributeAxis) => void;
+  matchSizeSelected: (dimension: MatchDimension) => void;
+  selectedRootItems: () => OverlayItem[];
+  applyLayoutUpdates: (updates: ItemLayoutUpdate[]) => void;
   reorderItem: (id: string, direction: "up" | "down") => void;
   setLayerOrder: (orderedIdsTopFirst: string[]) => void;
   bringToFront: (id: string) => void;
@@ -611,6 +627,48 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     for (const item of movable) {
       updateItem(item.id, { x: item.x + dx, y: item.y + dy });
     }
+  },
+
+  alignSelected: (edge) => {
+    const { scene, applyLayoutUpdates, selectedRootItems } = get();
+    if (!scene) return;
+    const items = selectedRootItems();
+    // A lone item still aligns to the scene; two or more align to each other.
+    const bounds =
+      items.length > 1
+        ? selectionBounds(items)
+        : { x: 0, y: 0, w: scene.width, h: scene.height };
+    if (!bounds) return;
+    applyLayoutUpdates(alignUpdates(items, edge, bounds));
+  },
+
+  distributeSelected: (axis) => {
+    const { applyLayoutUpdates, selectedRootItems } = get();
+    applyLayoutUpdates(distributeUpdates(selectedRootItems(), axis));
+  },
+
+  matchSizeSelected: (dimension) => {
+    const { applyLayoutUpdates, selectedItemIds, selectedRootItems } = get();
+    const primaryId = selectedItemIds[0];
+    if (!primaryId) return;
+    applyLayoutUpdates(matchSizeUpdates(selectedRootItems(), primaryId, dimension));
+  },
+
+  /** The selected items that can actually be laid out; clip children can't. */
+  selectedRootItems: () => {
+    const { scene, selectedItemIds } = get();
+    if (!scene) return [];
+    return selectedItemIds
+      .map((id) => scene.items.find((i) => i.id === id))
+      .filter((i): i is OverlayItem => !!i && isRootLayerType(i.type));
+  },
+
+  /** One snapshot for the whole operation, then the moves. */
+  applyLayoutUpdates: (updates) => {
+    if (updates.length === 0) return;
+    const { pushHistory, updateItem } = get();
+    pushHistory();
+    for (const { id, updates: patch } of updates) updateItem(id, patch);
   },
 
   reorderItem: (id, direction) => {
