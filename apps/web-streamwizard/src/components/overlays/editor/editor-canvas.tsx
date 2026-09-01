@@ -43,6 +43,7 @@ export function EditorCanvas({ paneRef }: EditorCanvasProps) {
     dragState,
     guides,
     marqueeRect,
+    gaps,
     handleItemMouseDown,
     handleBackgroundMouseDown,
     handleMouseMove,
@@ -326,6 +327,75 @@ export function EditorCanvas({ paneRef }: EditorCanvasProps) {
                   )}
                 </div>
               </LayerContextMenu>
+            );
+          })}
+
+          {gaps.map((gap, idx) => {
+            // Drawn in scene px but sized by 1/zoom, so the marker and its
+            // number stay the same size on screen at any zoom -- same trick the
+            // selection chrome uses.
+            const thickness = 1 / zoom;
+            const tick = 5 / zoom;
+            const horizontal = gap.axis === "x";
+            return (
+              <div
+                key={`gap-${gap.axis}-${gap.start}-${gap.end}-${idx}`}
+                className="absolute pointer-events-none flex items-center justify-center"
+                style={
+                  horizontal
+                    ? {
+                        left: gap.start,
+                        top: gap.cross - tick,
+                        width: Math.max(gap.distance, 0),
+                        height: tick * 2,
+                        zIndex: 9999,
+                      }
+                    : {
+                        top: gap.start,
+                        left: gap.cross - tick,
+                        height: Math.max(gap.distance, 0),
+                        width: tick * 2,
+                        zIndex: 9999,
+                      }
+                }
+              >
+                <span
+                  className="absolute bg-primary"
+                  style={
+                    horizontal
+                      ? { left: 0, right: 0, height: thickness }
+                      : { top: 0, bottom: 0, width: thickness }
+                  }
+                />
+                {/* End caps, so a gap of a few px still reads as a measurement. */}
+                <span
+                  className="absolute bg-primary"
+                  style={
+                    horizontal
+                      ? { left: 0, top: 0, bottom: 0, width: thickness }
+                      : { top: 0, left: 0, right: 0, height: thickness }
+                  }
+                />
+                <span
+                  className="absolute bg-primary"
+                  style={
+                    horizontal
+                      ? { right: 0, top: 0, bottom: 0, width: thickness }
+                      : { bottom: 0, left: 0, right: 0, height: thickness }
+                  }
+                />
+                <span
+                  className="relative rounded bg-primary px-1 font-medium text-primary-foreground tabular-nums"
+                  style={{
+                    fontSize: 10 / zoom,
+                    lineHeight: 1.4,
+                    paddingInline: 3 / zoom,
+                    borderRadius: 3 / zoom,
+                  }}
+                >
+                  {Math.round(gap.distance)}
+                </span>
+              </div>
             );
           })}
 

@@ -4,7 +4,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getCropInsets, getDesignSize, getItemScale } from "@repo/ui/overlay";
 import type { OverlayItem } from "@/types/overlays";
 import { isRootLayerType } from "@/components/overlays/registry/overlay-widget-registry";
-import { computeSnap, type Guide } from "@/components/overlays/editor/snapping";
+import {
+  computeSnap,
+  type GapBadge,
+  type Guide,
+} from "@/components/overlays/editor/snapping";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import {
   computeCropUpdate,
@@ -14,6 +18,7 @@ import {
   type DragItemStart,
 } from "@/components/overlays/editor/canvas-resize-math";
 import { snapToGrid } from "@/components/overlays/editor/canvas-preferences";
+import { extendsSelection } from "@/components/overlays/editor/selection-modifiers";
 
 /** Screen-px snap radius; converted to scene px by dividing by zoom. */
 const SNAP_THRESHOLD_PX = 8;
@@ -65,6 +70,7 @@ export function useCanvasGestures() {
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [guides, setGuides] = useState<Guide[]>([]);
+  const [gaps, setGaps] = useState<GapBadge[]>([]);
   /** Pre-gesture items snapshot — pushed as one history entry on mouseup if geometry changed. */
   const gestureSnapshotRef = useRef<OverlayItem[] | null>(null);
   const movedRef = useRef(false);
@@ -107,7 +113,7 @@ export function useCanvasGestures() {
       const item = scene.items.find((i) => i.id === itemId);
       if (!item) return;
 
-      if (e.shiftKey && mode === "move" && isRootLayerType(item.type)) {
+      if (extendsSelection(e) && mode === "move" && isRootLayerType(item.type)) {
         toggleSelectItem(itemId);
         return;
       }
@@ -170,7 +176,7 @@ export function useCanvasGestures() {
         currentX: point.x,
         currentY: point.y,
         active: false,
-        additive: e.shiftKey,
+        additive: extendsSelection(e),
       });
     },
     [toScenePoint],
@@ -252,6 +258,7 @@ export function useCanvasGestures() {
           if (lockedAxis !== "x" && cdy + snapDy >= minDy && cdy + snapDy <= maxDy) {
             cdy += snapDy;
           }
+          setGaps(snapped.gaps);
           // A vertical guide belongs to the x axis, a horizontal one to y; only
           // show the axis that is actually free to move.
           setGuides(
@@ -263,6 +270,7 @@ export function useCanvasGestures() {
           );
         } else {
           setGuides([]);
+          setGaps([]);
         }
 
         for (const it of dragState.items) {
@@ -345,6 +353,7 @@ export function useCanvasGestures() {
       axisLockRef.current = null;
       setDragState(null);
       setGuides([]);
+      setGaps([]);
     }
   }, [
     marquee,
@@ -374,6 +383,7 @@ export function useCanvasGestures() {
     cropping,
     dragState,
     guides,
+    gaps,
     marqueeRect,
     handleItemMouseDown,
     handleBackgroundMouseDown,

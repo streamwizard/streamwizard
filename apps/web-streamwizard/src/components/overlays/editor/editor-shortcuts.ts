@@ -43,7 +43,7 @@ export const EDITOR_SHORTCUT_GROUPS: EditorShortcutGroup[] = [
     shortcuts: [
       {
         action: "Add a widget to the selection, or drop it back out",
-        combos: [["Shift", "Click"]],
+        combos: [["Shift", "Click"], [MOD_KEY_TOKEN, "Click"]],
       },
       { action: "Deselect everything", combos: [["Esc"]] },
     ],
