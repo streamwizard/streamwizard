@@ -46,10 +46,12 @@ export interface CustomWidgetIframeProps {
   style?: React.CSSProperties;
   className?: string;
   title?: string;
+  /** -1 on the editor canvas: a focusable preview would swallow every shortcut. */
+  tabIndex?: number;
 }
 
 export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWidgetIframeProps>(
-  function CustomWidgetIframe({ srcdoc, fieldData, userId = "", subscriberToken, wsRoom, onWsStatus, onLog, onFieldDataApplied, reloadToken, overlayItemId, style, className, title = "custom widget" }, ref) {
+  function CustomWidgetIframe({ srcdoc, fieldData, userId = "", subscriberToken, wsRoom, onWsStatus, onLog, onFieldDataApplied, reloadToken, overlayItemId, style, className, title = "custom widget", tabIndex }, ref) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const fieldDataRef = useRef(fieldData);
     fieldDataRef.current = fieldData;
@@ -203,6 +205,7 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
         style={{ border: "none", background: "transparent", colorScheme: "normal", ...style }}
         className={className}
         title={title}
+        tabIndex={tabIndex}
       />
     );
   }

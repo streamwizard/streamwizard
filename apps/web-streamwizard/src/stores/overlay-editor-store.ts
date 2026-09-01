@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { FireMode } from "@/components/demo/demo-fire";
 import {
   getOverlayWidgetDefinition,
   isRootLayerType,
@@ -15,6 +16,7 @@ import {
   touchesGeometry,
 } from "@/components/overlays/editor/overlay-item-helpers";
 import type {
+  ClipDisplayFieldItemConfig,
   DisplayFieldKey,
   OverlayItem,
   RootOverlayItemType,
@@ -27,6 +29,8 @@ export type EditorMode = "simple" | "pro";
 const EDITOR_MODE_STORAGE_KEY = "overlay-editor-mode";
 const HISTORY_LIMIT = 50;
 const NUDGE_HISTORY_COALESCE_MS = 400;
+const CONFIG_HISTORY_COALESCE_MS = 400;
+const CONFIG_DIFF_MAX_DEPTH = 4;
 
 export { MIN_ITEM_SIZE };
 
@@ -48,7 +52,10 @@ interface OverlayEditorState {
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
 
-  setScene: (scene: OverlaySceneWithItems) => void;
+  setScene: (
+    scene: OverlaySceneWithItems,
+    options?: { idMap?: Record<string, string> }
+  ) => void;
   selectItem: (id: string | null) => void;
   toggleSelectItem: (id: string) => void;
   setSelectedItems: (ids: string[]) => void;
@@ -68,7 +75,11 @@ interface OverlayEditorState {
 
   addItem: (type: RootOverlayItemType) => void;
   addCustomWidget: (widgetId: string) => void;
-  updateItem: (id: string, updates: Partial<OverlayItem>) => void;
+  updateItem: (
+    id: string,
+    updates: Partial<OverlayItem>,
+    options?: { history?: boolean }
+  ) => void;
   removeItem: (id: string) => void;
   removeSelectedItems: () => void;
   duplicateItem: (id: string) => void;
@@ -103,6 +114,14 @@ interface OverlayEditorState {
    */
   demoEvent: { listener: string; event: Record<string, unknown>; seq: number } | null;
   emitDemoEvent: (listener: string, event: Record<string, unknown>) => void;
+  /**
+   * Where test events go, shared by the demo bar and the alert box's own Test
+   * buttons. It lives here rather than in the demo bar because the two panels
+   * sit in different corners of the editor and must agree: a streamer who set
+   * the bar to Live shouldn't find the alert inspector still firing locally.
+   */
+  demoFireMode: FireMode;
+  setDemoFireMode: (mode: FireMode) => void;
   /** Ids of the simulators currently looping, so the toolbar can badge a count. */
   runningSimulatorIds: string[];
   setRunningSimulatorIds: (ids: string[]) => void;
@@ -113,7 +132,129 @@ export function selectPrimarySelectedId(s: Pick<OverlayEditorState, "selectedIte
   return s.selectedItemIds.length === 1 ? s.selectedItemIds[0]! : null;
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Dotted paths of the values that differ between two configs, descending one
+ * level at a time so nested settings name themselves (`variants.follow.title`,
+ * `layout.x`) instead of collapsing into their container key. Arrays and
+ * non-objects compare as leaves.
+ */
+function changedConfigPaths(
+  prev: unknown,
+  next: unknown,
+  prefix = "",
+  depth = 0
+): string[] {
+  if (Object.is(prev, next)) return [];
+  if (
+    depth >= CONFIG_DIFF_MAX_DEPTH ||
+    !isPlainRecord(prev) ||
+    !isPlainRecord(next)
+  ) {
+    return [prefix || "*"];
+  }
+
+  const paths: string[] = [];
+  for (const key of new Set([...Object.keys(prev), ...Object.keys(next)])) {
+    paths.push(
+      ...changedConfigPaths(
+        prev[key],
+        next[key],
+        prefix ? `${prefix}.${key}` : key,
+        depth + 1
+      )
+    );
+  }
+  return paths;
+}
+
+/** Clip-field children point at their parent by id; re-point them after a save. */
+function remapItemConfigRefs(
+  config: OverlayItem["config"],
+  idMap: Record<string, string>
+): OverlayItem["config"] {
+  if (typeof config !== "object" || !config || !("parentClipItemId" in config)) {
+    return config;
+  }
+  const c = config as ClipDisplayFieldItemConfig;
+  const nextParent = idMap[c.parentClipItemId];
+  if (!nextParent || nextParent === c.parentClipItemId) return config;
+  return { ...c, parentClipItemId: nextParent };
+}
+
+/**
+ * Rewrites the undo/redo stack from temp ids to the DB ids a save handed back,
+ * so a snapshot taken before the save still describes rows the next save can
+ * find. Snapshots that reference nothing in the map keep their identity, which
+ * keeps `pushHistory`'s no-op check working.
+ */
+function remapHistory(
+  history: { past: OverlayItem[][]; future: OverlayItem[][] },
+  idMap: Record<string, string>
+): { past: OverlayItem[][]; future: OverlayItem[][] } {
+  if (Object.keys(idMap).length === 0) return history;
+
+  const remapSnapshot = (items: OverlayItem[]): OverlayItem[] => {
+    let changed = false;
+    const next = items.map((item) => {
+      const id = idMap[item.id] ?? item.id;
+      const config = remapItemConfigRefs(item.config, idMap);
+      if (id === item.id && config === item.config) return item;
+      changed = true;
+      return { ...item, id, config };
+    });
+    return changed ? next : items;
+  };
+
+  return {
+    past: history.past.map(remapSnapshot),
+    future: history.future.map(remapSnapshot),
+  };
+}
+
 let lastNudgeAt = 0;
+let lastConfigEditAt = 0;
+let lastConfigEditKey: string | null = null;
+let configEditTickOpen = false;
+
+/**
+ * One undo step per field interaction. Continuous typing or dragging on the
+ * same field coalesces into a single step, a different field starts a new one,
+ * and everything written inside one handler stays in the same step so undo can
+ * never leave a multi-item edit (swapping two display fields' stack order) half
+ * applied. A write that changes nothing records no step at all.
+ */
+function recordConfigEdit(
+  id: string,
+  prevConfig: unknown,
+  nextConfig: unknown,
+  pushHistory: () => void
+) {
+  const paths = changedConfigPaths(prevConfig, nextConfig);
+  if (paths.length === 0) return;
+
+  const key = `${id}|${paths.sort().join(",")}`;
+  const now = Date.now();
+  const sameBurst =
+    configEditTickOpen ||
+    (key === lastConfigEditKey &&
+      now - lastConfigEditAt <= CONFIG_HISTORY_COALESCE_MS);
+
+  if (!sameBurst) pushHistory();
+
+  lastConfigEditAt = now;
+  lastConfigEditKey = key;
+  if (!configEditTickOpen) {
+    configEditTickOpen = true;
+    queueMicrotask(() => {
+      configEditTickOpen = false;
+    });
+  }
+}
+
 
 export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   scene: null,
@@ -130,14 +271,23 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     set({ editorMode: mode });
   },
 
-  setScene: (scene) =>
-    set({
-      scene,
-      isDirty: false,
-      selectedItemIds: [],
-      // Save remaps temp-N ids to DB ids; undoing across that boundary would
-      // resurrect dead temp ids and duplicate rows on the next full-replace save.
-      history: { past: [], future: [] },
+  setScene: (scene, options) =>
+    set((state) => {
+      const surviving = new Set(scene.items.map((i) => i.id));
+      return {
+        scene,
+        isDirty: false,
+        // A save replaces the scene wholesale, so clearing the selection here
+        // would drop the streamer out of the inspector panel they were editing.
+        // Keep what still exists; callers remap temp ids before calling this.
+        selectedItemIds: state.selectedItemIds.filter((id) => surviving.has(id)),
+        // A save hands back the temp-N -> DB id map, so the stack is rewritten
+        // onto the new ids and undo keeps working across that boundary. Loading
+        // a scene passes no map and starts from an empty stack.
+        history: options?.idMap
+          ? remapHistory(state.history, options.idMap)
+          : { past: [], future: [] },
+      };
     }),
 
   selectItem: (id) => set({ selectedItemIds: id === null ? [] : [id] }),
@@ -271,12 +421,18 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     });
   },
 
-  updateItem: (id, updates) => {
-    const { scene } = get();
+  updateItem: (id, updates, options) => {
+    const { scene, pushHistory } = get();
     if (!scene) return;
 
     const target = scene.items.find((i) => i.id === id);
     if (!target) return;
+
+    // Geometry callers push their own snapshot on gesture start; config edits
+    // arrive straight from the settings panels, so history is recorded here.
+    if (updates.config !== undefined && options?.history !== false) {
+      recordConfigEdit(id, target.config, updates.config, pushHistory);
+    }
 
     const nextUpdates = touchesGeometry(updates)
       ? clampGeometry(target, updates, scene)
@@ -577,6 +733,9 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       editorClipPreviewPaused: false,
       editorClipPreviewResumeTick: s.editorClipPreviewResumeTick + 1,
     })),
+
+  demoFireMode: "local",
+  setDemoFireMode: (mode) => set({ demoFireMode: mode }),
 
   demoEvent: null,
   emitDemoEvent: (listener, event) =>

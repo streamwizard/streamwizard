@@ -177,6 +177,7 @@ function CustomWidgetCanvasInner({ item, scene }: OverlayCanvasProps) {
       overlayItemId={item.id}
       className="w-full h-full"
       style={{ pointerEvents: "none" }}
+      tabIndex={-1}
       title="custom widget preview"
     />
   );

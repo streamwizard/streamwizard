@@ -70,9 +70,17 @@ export type ChannelFollowEvent = z.infer<typeof ChannelFollowEventSchema>;
 // ─── channel.ad_break.begin ─────────────────────────────────────────────────
 
 export const ChannelAdBreakBeginEventSchema = z.object({
-  duration_seconds: z.string(),
+  /*
+   * Twitch's docs once described these two as strings and this schema followed
+   * suit, but they arrive typed: 98 logged ad breaks between Feb and Jun 2026
+   * are number/boolean without exception, the Twitch CLI emits them the same
+   * way, and both dashboard consumers already read duration_seconds with a
+   * `typeof === "number"` check. Declaring them as strings was telling custom
+   * widget authors the wrong type.
+   */
+  duration_seconds: z.number().int(),
   started_at: z.string(),
-  is_automatic: z.string(),
+  is_automatic: z.boolean(),
   broadcaster_user_id: z.string(),
   broadcaster_user_login: z.string(),
   broadcaster_user_name: z.string(),

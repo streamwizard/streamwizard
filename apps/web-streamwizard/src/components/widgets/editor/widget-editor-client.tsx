@@ -9,6 +9,11 @@ import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS, DEMO_EVENT_
 import { CustomWidgetIframe, scanWidgetListeners } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { DemoEventPanel } from "@/components/demo/demo-event-panel";
+import {
+  demoFirePayload,
+  sendDemoEventLive,
+  type DemoFireRequest,
+} from "@/components/demo/demo-fire";
 import { WidgetFieldsPanel } from "@/components/widgets/editor/widget-fields-panel";
 import { WidgetConsolePanel } from "@/components/widgets/editor/widget-console-panel";
 import {
@@ -107,6 +112,23 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     if (legacyDemoDismissed) return null;
     return scanWidgetListeners(jsSource, DEMO_EVENT_TYPES).legacyDemo;
   }, [jsSource, legacyDemoDismissed]);
+
+  /**
+   * Delivery for the demo bar. There is no scene here, only this widget's
+   * preview iframe, so Local posts straight into it. Live goes out over the
+   * same server path the overlay editor uses, and the iframe picks it back up
+   * off the room it is already joined to.
+   */
+  const fireDemo = useCallback(
+    async (request: DemoFireRequest) => {
+      if (!wsEnabled) {
+        fireTestEvent(request.type, demoFirePayload(request));
+        return true;
+      }
+      return sendDemoEventLive(request);
+    },
+    [wsEnabled, fireTestEvent]
+  );
 
   function insertAssetUrl(url: string) {
     const editor = editorRef.current;
@@ -425,7 +447,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
             sourceJs={jsSource}
             wsConnected={wsStatus === "connected"}
             mode={wsEnabled ? "live" : "local"}
-            onFireLocal={fireTestEvent}
+            onFire={fireDemo}
           />
 
           {legacyDemo && (

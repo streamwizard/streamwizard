@@ -10,9 +10,16 @@ import {
   isDemoEventType,
   type DemoEventType,
 } from "@repo/schemas";
-import { WIDGET_SIMULATORS, scanWidgetListeners } from "@repo/ui/overlay";
-import { sendTestEventToOverlay } from "@/actions/overlay-test-alert";
-import { Button, Textarea } from "@repo/ui";
+import type { DemoFireRequest, FireMode } from "./demo-fire";
+import {
+  ALERT_EVENT_CATEGORIES,
+  ALERT_EVENT_LABELS,
+  ALERT_EVENT_SUBSCRIPTION_TYPES,
+  WIDGET_SIMULATORS,
+  scanWidgetListeners,
+  type AlertEventCategoryId,
+} from "@repo/ui/overlay";
+import { Button, Separator, Textarea, ToggleGroup, ToggleGroupItem } from "@repo/ui";
 import {
   Select,
   SelectContent,
@@ -23,13 +30,35 @@ import {
   SelectValue,
 } from "@repo/ui";
 
-/** Kept on the bar itself — the events most widgets are actually built around. */
-const PINNED: DemoEventType[] = [
-  "channel.follow",
-  "channel.subscribe",
-  "channel.cheer",
-  "channel.raid",
-];
+/**
+ * The bar's quick buttons, derived from the alert box rather than hand-picked,
+ * so the two panels can't drift. It matters which event each one fires: the
+ * alert widget treats `channel.chat.notification` as the single source for the
+ * dozen notices and ignores `channel.subscribe`/`channel.raid` outright, so a
+ * hand-written "Sub" button pointed at `channel.subscribe` looks right and does
+ * nothing. `ALERT_EVENT_SUBSCRIPTION_TYPES` already holds the correct
+ * type+variant pair for all 23, and its `type` is a `WidgetTestEventType`,
+ * a subset of `DemoEventType`.
+ *
+ * The picker below still lists the full catalogue -- custom widgets are written
+ * against the dedicated subscription types and need them reachable.
+ */
+const ALERT_BUTTON_GROUPS = ALERT_EVENT_CATEGORIES.map((category) => ({
+  id: category.id,
+  label: category.label,
+  events: category.events.map((event) => {
+    const { type, variant } = ALERT_EVENT_SUBSCRIPTION_TYPES[event];
+    return {
+      type,
+      variant,
+      label: ALERT_EVENT_LABELS[event],
+      // Which listener a custom widget would have to handle. Worth surfacing:
+      // half of these are notice types on a shared subscription, which isn't
+      // guessable from a button that just says "Gift sub".
+      hint: `Fires ${type}${variant ? ` · ${variant}` : ""}`,
+    };
+  }),
+}));
 
 /**
  * Below this, a Live simulator is more round trips than the server action
@@ -39,8 +68,6 @@ const MIN_LIVE_INTERVAL_MS = 1000;
 
 /** Picker group holding the events the widget's own source references. */
 const USED_GROUP = "Used by this widget";
-
-export type FireMode = "local" | "live";
 
 function storageKey(storageId: string) {
   return `sw:demo-panel:${storageId}`;
@@ -94,19 +121,27 @@ export interface DemoEventPanelProps {
    */
   wsConnected?: boolean;
   /**
-   * Controlled fire mode. When the host owns one switch for the whole live
-   * story (widget editor), it passes the mode and the panel's own Local/Live
-   * toggle disappears. Omitted, the panel keeps its internal toggle.
+   * Controlled fire mode. A host that owns one switch for the whole live story
+   * (the widget editor) passes the mode alone and the panel's toggle
+   * disappears. A host that shares the mode with other panels (the overlay
+   * editor, whose alert inspector fires through it too) passes `onModeChange`
+   * as well and keeps the toggle. Omitted, the panel owns the mode itself.
    */
   mode?: FireMode;
+  /** Makes a controlled `mode` writable, so the panel keeps its toggle. */
+  onModeChange?: (mode: FireMode) => void;
   /**
    * The widget's JS, used to lead the picker with the events it actually
    * handles. The overlay editor joins every custom widget on the canvas.
    * Omit it and the full catalogue shows flat.
    */
   sourceJs?: string;
-  /** Local delivery sink: straight into the preview iframe(s), no server round-trip. */
-  onFireLocal: (listener: string, event: Record<string, unknown>) => void;
+  /**
+   * Delivery. The panel picks the event; the host decides where it goes, since
+   * only the host knows what it is previewing into. It is handed the request,
+   * not a built payload, so a Live fire can let the server rebuild the fixture.
+   */
+  onFire: (request: DemoFireRequest) => Promise<boolean>;
   /** Reported so the host can badge its toolbar while simulators loop. */
   onRunningSimulatorsChange?: (ids: string[]) => void;
   className?: string;
@@ -117,13 +152,16 @@ export function DemoEventPanel({
   sourceJs,
   wsConnected,
   mode: controlledMode,
-  onFireLocal,
+  onModeChange,
+  onFire,
   onRunningSimulatorsChange,
   className,
 }: DemoEventPanelProps) {
   const [saved] = useState(() => readSaved(storageId));
   const [mode, setMode] = useState<FireMode>("local");
   const [selected, setSelected] = useState<DemoEventType>(saved.type);
+  /** Same default and same three groups as the alert inspector's tabs. */
+  const [alertCategory, setAlertCategory] = useState<AlertEventCategoryId>("community");
   const [payloadOpen, setPayloadOpen] = useState(false);
   const [payloadText, setPayloadText] = useState(saved.payload);
   /** Untouched payloads are rebuilt per fire so timestamps and ids stay fresh. */
@@ -166,6 +204,9 @@ export function DemoEventPanel({
   // without clobbering the author's choice for when it reconnects.
   const liveAvailable = wsConnected === undefined || wsConnected;
   const effectiveMode: FireMode = liveAvailable ? (controlledMode ?? mode) : "local";
+  // A controlled mode with no setter belongs to the host's own switch, so the
+  // panel shows none. With a setter, the mode is shared and the panel drives it.
+  const changeMode = onModeChange ?? (controlledMode === undefined ? setMode : null);
 
   /**
    * Reading the widget's own source is enough to tell which events it handles,
@@ -198,6 +239,9 @@ export function DemoEventPanel({
     return [...out.entries()];
   }, [detected]);
 
+  const alertGroup =
+    ALERT_BUTTON_GROUPS.find((g) => g.id === alertCategory) ?? ALERT_BUTTON_GROUPS[0];
+
   const variants = useMemo(() => {
     const defined = DEMO_EVENT_DEFS[selected].variants;
     return defined ? Object.entries(defined) : [];
@@ -209,45 +253,36 @@ export function DemoEventPanel({
     setPayloadEdited(false);
   }
 
-  /** The payload for `type`: the author's edit if it applies, otherwise a fresh fixture. */
-  function resolvePayload(type: DemoEventType, variant?: string): Record<string, unknown> | null {
+  /**
+   * The author's edited payload when it applies to this fire, otherwise
+   * undefined so the fixture gets rebuilt fresh (ids, timestamps) at delivery.
+   * `false` means the edit is there but unusable, which stops the fire.
+   */
+  function resolveCustom(
+    type: DemoEventType,
+    variant?: string
+  ): Record<string, unknown> | undefined | false {
     // A variant is a different payload for the same listener, so an edit made
     // against the default doesn't apply to it.
-    if (variant) {
-      const build = DEMO_EVENT_DEFS[type].variants?.[variant]?.build;
-      return build ? build() : null;
-    }
-    if (type !== selected || !payloadEdited) {
-      return DEMO_EVENTS[type].build();
-    }
+    if (variant || type !== selected || !payloadEdited) return undefined;
     try {
       const parsed = JSON.parse(payloadText) as unknown;
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         toast.error("Payload must be a JSON object");
-        return null;
+        return false;
       }
       return parsed as Record<string, unknown>;
     } catch {
       toast.error("Payload isn't valid JSON");
-      return null;
+      return false;
     }
   }
 
   function fire(type: DemoEventType, variant?: string) {
-    const payload = resolvePayload(type, variant);
-    if (!payload) return;
-
-    if (effectiveMode === "local") {
-      onFireLocal(type, payload);
-      return;
-    }
-
+    const custom = resolveCustom(type, variant);
+    if (custom === false) return;
     startSend(async () => {
-      // Anything that isn't the untouched default has to travel as a custom
-      // payload -- the server rebuilds the default otherwise.
-      const custom = variant || (type === selected && payloadEdited) ? payload : undefined;
-      const { ok, error } = await sendTestEventToOverlay(type, custom);
-      if (!ok) toast.error(error ?? "Could not send the demo event");
+      await onFire({ type, variant, custom });
     });
   }
 
@@ -261,19 +296,14 @@ export function DemoEventPanel({
     const def = WIDGET_SIMULATORS[id];
     if (!def || stopFnsRef.current.has(id)) return;
 
-    const live = effectiveMode === "live";
     const stop = def.start((listener, event) => {
-      if (!live) {
-        onFireLocal(listener, event);
-        return;
-      }
+      // A simulator builds its own payload each tick, so it always travels as a
+      // custom one rather than being rebuilt at the far end.
       if (!isDemoEventType(listener)) return;
-      void sendTestEventToOverlay(listener, event).then(({ ok, error }) => {
-        if (ok) return;
-        // A rejected tick means every following tick is rejected too (rate
-        // limit, lost server) -- stop rather than log once a second.
-        toast.error(error ?? "Demo simulator stopped");
-        stopSimulator(id);
+      void onFire({ type: listener, custom: event }).then((ok) => {
+        // Once delivery starts failing every following tick fails too, so stop
+        // rather than log once a second.
+        if (!ok) stopSimulator(id);
       });
     });
 
@@ -283,21 +313,94 @@ export function DemoEventPanel({
 
   return (
     <div className={`shrink-0 border-b bg-background ${className ?? ""}`}>
-      <div className="px-3 py-1.5 flex items-center gap-1.5 flex-wrap">
-        <span className="text-[10px] text-muted-foreground mr-1 shrink-0">Demo:</span>
+      {/* Every alert the alert box can raise. Showing all 23 at once turned the
+          bar into a wall, so they sit behind the same three groups the alert
+          inspector uses -- one row at a time, and a streamer who learned the
+          grouping in the inspector already knows this one. */}
+      <div className="px-3 pt-1.5 pb-1.5 flex items-center gap-1.5 flex-wrap">
+        <span className="text-[10px] text-muted-foreground mr-0.5 shrink-0">Alerts</span>
 
-        {PINNED.map((type) => (
+        <ToggleGroup
+          type="single"
+          value={alertCategory}
+          // Radix hands back "" when the active item is clicked again; keeping
+          // the current group beats emptying the row.
+          onValueChange={(v) => v && setAlertCategory(v as AlertEventCategoryId)}
+          variant="outline"
+          className="h-6"
+        >
+          {ALERT_BUTTON_GROUPS.map((group) => (
+            <ToggleGroupItem
+              key={group.id}
+              value={group.id}
+              className="h-6 px-2 text-[11px]"
+            >
+              {group.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+
+        <Separator
+          orientation="vertical"
+          className="mx-0.5 data-[orientation=vertical]:h-4"
+        />
+
+        {alertGroup.events.map(({ type, variant, label, hint }) => (
           <Button
-            key={type}
+            key={label}
             size="sm"
             variant="outline"
             className="h-6 text-[11px] px-2"
             disabled={isSending}
-            onClick={() => fire(type)}
+            title={hint}
+            aria-label={`Test the ${label} alert`}
+            onClick={() => fire(type, variant)}
           >
-            {DEMO_EVENTS[type].label}
+            {label}
           </Button>
         ))}
+
+        {/* The mode governs every test event in the editor, the alert box's own
+            Test buttons included, so it reads once at the top rather than
+            buried beside the picker.
+            Local posts straight into the canvas previews; Live goes out over
+            ws-server, which the canvas listens to as well, so the preview and
+            every open overlay show the same event from one delivery. */}
+        {changeMode && (
+          <div className="ml-auto flex items-center rounded-md border border-border overflow-hidden">
+            <button
+              type="button"
+              onClick={() => changeMode("local")}
+              className={`text-[11px] px-2 py-0.5 transition-colors ${
+                effectiveMode === "local" ? "bg-accent text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Local
+            </button>
+            <button
+              type="button"
+              onClick={() => changeMode("live")}
+              disabled={!liveAvailable}
+              title={
+                liveAvailable
+                  ? "Send through the overlay server: this canvas and every overlay you have open"
+                  : "Connect to live events first. Live sends through the overlay server."
+              }
+              className={`text-[11px] px-2 py-0.5 transition-colors disabled:opacity-40 ${
+                effectiveMode === "live" ? "bg-accent text-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Live
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Everything else Twitch sends. Separated because it's the escape hatch,
+          not the common path: custom widgets are written against the dedicated
+          subscription types and need them reachable. */}
+      <div className="px-3 py-1.5 flex items-center gap-1.5 flex-wrap border-t border-border/50">
+        <span className="text-[10px] text-muted-foreground mr-0.5 shrink-0">Any event</span>
 
         <Select value={selected} onValueChange={(v) => selectType(v as DemoEventType)}>
           <SelectTrigger className="h-6 text-[11px] w-[190px]">
@@ -351,44 +454,12 @@ export function DemoEventPanel({
           )}
           Payload{payloadEdited ? " (edited)" : ""}
         </button>
-
-        {/* Local posts into the iframe; Live goes out over ws-server so the real
-            delivery path — and every other open overlay — is exercised too.
-            A host that passes `mode` owns this choice, so no toggle here. */}
-        {controlledMode === undefined && (
-          <div className="ml-auto flex items-center rounded-md border border-border overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setMode("local")}
-              className={`text-[11px] px-2 py-0.5 transition-colors ${
-                effectiveMode === "local" ? "bg-accent text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              Local
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("live")}
-              disabled={!liveAvailable}
-              title={
-                liveAvailable
-                  ? "Send through the overlay server to every overlay you have open"
-                  : "Connect to live events first — Live sends through the overlay server"
-              }
-              className={`text-[11px] px-2 py-0.5 transition-colors disabled:opacity-40 ${
-                effectiveMode === "live" ? "bg-accent text-foreground" : "text-muted-foreground"
-              }`}
-            >
-              Live
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Looping sources. A one-shot shows what an event looks like; these show
           what the widget looks like while data keeps arriving. */}
-      <div className="px-3 pb-1.5 flex items-center gap-1.5 flex-wrap">
-        <span className="text-[10px] text-muted-foreground mr-1 shrink-0">Simulate:</span>
+      <div className="px-3 py-1.5 flex items-center gap-1.5 flex-wrap border-t border-border/50">
+        <span className="text-[10px] text-muted-foreground mr-0.5 shrink-0">Simulate</span>
         {Object.values(WIDGET_SIMULATORS).map((def) => {
           const running = runningIds.includes(def.id);
           const tooFastForLive =

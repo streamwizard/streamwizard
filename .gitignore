@@ -67,3 +67,10 @@ Thumbs.db
 
 # Next.js generated type shim (regenerated on every dev/build)
 next-env.d.ts
+
+# Local agent/skill tooling state (per-machine, not part of the product)
+.agents/
+.impeccable/
+**/.impeccable/
+**/.claude/settings.json
+**/.claude/skills/

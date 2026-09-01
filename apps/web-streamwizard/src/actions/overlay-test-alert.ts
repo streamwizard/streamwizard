@@ -3,11 +3,11 @@
 import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";
 import {
-  ALERT_EVENT_SUBSCRIPTION_TYPES,
-  ALERT_EVENT_TYPES,
-  type AlertEventType,
-} from "@repo/ui/overlay";
-import { DEMO_EVENTS, buildDemoEvent, isDemoEventType } from "@repo/schemas";
+  DEMO_EVENTS,
+  DEMO_EVENT_DEFS,
+  buildDemoEvent,
+  isDemoEventType,
+} from "@repo/schemas";
 import { broadcastToUser } from "@repo/ws-client";
 import { env } from "@/lib/env";
 
@@ -51,10 +51,22 @@ export async function sendTestEventToOverlay(
    * event's own zod schema before it goes anywhere, so a typo surfaces as an
    * error instead of a malformed frame reaching live overlays.
    */
-  customPayload?: unknown
+  customPayload?: unknown,
+  /**
+   * Picks an alternate payload for the same listener -- which chat notice to
+   * send, for instance. Checked against the event's own variant table for the
+   * same reason `event` is checked against the catalogue.
+   */
+  variant?: string
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isDemoEventType(event)) {
     return { ok: false, error: "Unknown event type" };
+  }
+
+  // DEMO_EVENT_DEFS is the widened view; DEMO_EVENTS keeps its literal types,
+  // so only some of its members declare `variants` at all.
+  if (variant !== undefined && !DEMO_EVENT_DEFS[event].variants?.[variant]) {
+    return { ok: false, error: "Unknown event variant" };
   }
 
   if (customPayload !== undefined) {
@@ -81,7 +93,7 @@ export async function sendTestEventToOverlay(
 
   const msg =
     customPayload === undefined
-      ? buildDemoEvent(event)
+      ? buildDemoEvent(event, undefined, variant)
       : { type: event, payload: customPayload };
   const result = await broadcastToUser(user.id, msg.type, msg.payload, {
     wsServerUrl: env.WS_SERVER_URL,
@@ -90,14 +102,4 @@ export async function sendTestEventToOverlay(
   if (result.ok) return { ok: true };
   if (result.reason === "network") reportError(result.error, "overlay: test alert broadcast");
   return { ok: false, error: "Could not reach the overlay server" };
-}
-
-/** Alert-inspector entry point: takes a configurable alert category, not an EventSub type. */
-export async function sendTestAlertToOverlay(
-  event: AlertEventType
-): Promise<{ ok: boolean; error?: string }> {
-  if (!ALERT_EVENT_TYPES.includes(event)) {
-    return { ok: false, error: "Unknown alert type" };
-  }
-  return sendTestEventToOverlay(ALERT_EVENT_SUBSCRIPTION_TYPES[event]);
 }

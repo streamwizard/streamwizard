@@ -3,11 +3,13 @@
 import { captureEvent } from "@repo/posthog";
 import { Button } from "@repo/ui";
 import { Database } from "@repo/supabase";
+import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
   ArrowLeft,
   Copy,
   FlaskConical,
   Info,
+  Keyboard,
   LayoutGrid,
   Pause,
   Play,
@@ -20,7 +22,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays/items";
 import type { Widget } from "@/actions/widgets";
@@ -40,6 +42,7 @@ import { EditorLayers } from "./editor-layers";
 import { EditorInspector } from "./editor-inspector";
 import { OverlayWidgetSheet } from "./overlay-widget-sheet";
 import { WidgetLibraryModal } from "./widget-library-modal";
+import { ShortcutsDialog } from "./shortcuts-dialog";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 
 interface OverlayEditorProps {
@@ -48,6 +51,14 @@ interface OverlayEditorProps {
   /** Widget rows for the scene's custom widgets, fetched with the page. */
   initialWidgets: Widget[];
 }
+
+/**
+ * Radix renders dialogs, sheets, menus and popovers into a portal on `body`, so
+ * a button inside one reaches a `window` keydown listener exactly like the
+ * canvas does. Editing shortcuts must not act on the scene behind them.
+ */
+const OVERLAY_SURFACE_SELECTOR =
+  '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]';
 
 export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: OverlayEditorProps) {
   // Before first render, so the canvas never has to fetch what the page already
@@ -63,6 +74,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     addItem,
     addCustomWidget,
     markClean,
+    setSelectedItems,
     history,
     undo,
     redo,
@@ -78,7 +90,6 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     attemptEditorClipPreviewUnblock,
     editorMode,
     setEditorMode,
-    emitDemoEvent,
     runningSimulatorIds,
     setRunningSimulatorIds,
   } = useOverlayStore();
@@ -86,6 +97,9 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
   const [widgetSheetOpen, setWidgetSheetOpen] = useState(false);
   const [widgetLibraryOpen, setWidgetLibraryOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  // Shared with the alert inspector's Test buttons: one switch, one delivery.
+  const { mode: demoFireMode, setMode: setDemoFireMode, fire: fireDemo } = useDemoFire();
 
   // Every custom widget's source, concatenated, so the demo picker can lead
   // with the events anything on this canvas actually listens for. The cache is
@@ -99,7 +113,15 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     [scene?.items]
   );
 
+  // Saving revalidates, so Next hands us a brand-new `initialScene` object for
+  // the scene we're already editing. Re-seeding on that would throw away the
+  // selection and the undo history right after every save, so only seed when
+  // the editor is actually pointed at a different scene.
+  const seededSceneId = useRef<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (seededSceneId.current === initialScene.id) return;
+    seededSceneId.current = initialScene.id;
     setScene(initialScene);
   }, [initialScene, setScene]);
 
@@ -131,18 +153,28 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       config: item.config as OverlayItemConfig,
     }));
 
-    const { success, error, data } = await saveAllOverlayItems(scene.id, items);
+    const { success, error, data, idMap } = await saveAllOverlayItems(scene.id, items);
 
     if (success) {
       toast.success("Overlay saved");
       markClean();
-      if (data) setScene(data);
+      if (data) {
+        // Newly inserted items trade their temp-N id for a DB one; point the
+        // selection at the new ids first so setScene keeps the inspector open
+        // on whatever the streamer was configuring.
+        setSelectedItems(
+          useOverlayStore
+            .getState()
+            .selectedItemIds.map((id) => idMap[id] ?? id)
+        );
+        setScene(data, { idMap });
+      }
     } else {
       toast.error(error ?? "Failed to save");
     }
 
     setIsSaving(false);
-  }, [scene, markClean, setScene]);
+  }, [scene, markClean, setScene, setSelectedItems]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -163,6 +195,26 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         return;
       }
 
+      // An overlay owns the keyboard whenever focus is inside one, or -- for a
+      // modal, which marks everything outside it aria-hidden -- whenever focus
+      // never entered it at all.
+      const inOverlay =
+        !!t?.closest(OVERLAY_SURFACE_SELECTOR) ||
+        !!rootRef.current?.closest('[data-aria-hidden="true"]');
+
+      // ? toggles the reference, checked ahead of the overlay guard so the
+      // dialog it opens can't swallow the key that closes it again. Any other
+      // overlay still wins: ? on top of the widget sheet does nothing.
+      if (e.key === "?" && (shortcutsOpen || !inOverlay)) {
+        e.preventDefault();
+        setShortcutsOpen((open) => !open);
+        return;
+      }
+
+      // Editing shortcuts stay out of it. Escape reaches Radix either way, so
+      // it still closes the overlay before the next one clears the selection.
+      if (inOverlay) return;
+
       if (mod && e.key.toLowerCase() === "z") {
         e.preventDefault();
         if (e.shiftKey) {
@@ -170,6 +222,13 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         } else {
           undo();
         }
+        return;
+      }
+      // Ctrl+Y is the Windows redo convention; Cmd+Y is a Finder shortcut, not
+      // a browser one, so the same branch is safe on macOS.
+      if (mod && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
         return;
       }
       if (mod && e.key.toLowerCase() === "d") {
@@ -200,6 +259,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     handleSave,
+    shortcutsOpen,
     undo,
     redo,
     clearSelection,
@@ -234,7 +294,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
   if (!scene) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] -m-5 md:-m-6">
+    <div ref={rootRef} className="flex flex-col h-[calc(100vh-80px)] -m-5 md:-m-6">
       <div className="flex items-center justify-between border-b px-4 py-2 bg-background shrink-0">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" asChild>
@@ -353,6 +413,16 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
 
           <Button
             variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setShortcutsOpen(true)}
+            title="Keyboard shortcuts (?)"
+          >
+            <Keyboard className="h-3 w-3" />
+          </Button>
+
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => {
               const url = `${env.NEXT_PUBLIC_OVERLAY_URL}/${scene.slug}`;
@@ -445,7 +515,9 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         <DemoEventPanel
           storageId={scene.id}
           sourceJs={canvasWidgetJs}
-          onFireLocal={emitDemoEvent}
+          mode={demoFireMode}
+          onModeChange={setDemoFireMode}
+          onFire={fireDemo}
           onRunningSimulatorsChange={setRunningSimulatorIds}
         />
       </div>
@@ -484,6 +556,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
           addCustomWidget(widgetId);
         }}
       />
+
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
     </div>
   );
 }

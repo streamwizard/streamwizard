@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ChannelAdBreakBeginEventSchema,
   ChannelBanEventSchema,
   ChannelCheerEventSchema,
   ChannelFollowEventSchema,
@@ -18,7 +19,16 @@ import {
   ChannelChatNotificationEventSchema,
 } from "./chat";
 import { ChannelPointsCustomRewardRedemptionAddEventSchema } from "./channel-points";
-import { ChannelShoutoutReceiveEventSchema } from "./misc";
+import {
+  ChannelHypeTrainBeginEventSchema,
+  ChannelHypeTrainEndEventSchema,
+  ChannelShoutoutCreateEventSchema,
+  ChannelShoutoutReceiveEventSchema,
+} from "./misc";
+import {
+  ChannelPollBeginEventSchema,
+  ChannelPollEndEventSchema,
+} from "./polls-predictions";
 import { StreamOfflineEventSchema, StreamOnlineEventSchema } from "./stream";
 
 /**
@@ -44,6 +54,17 @@ export interface WidgetTestEventDef {
   /** The zod schema the built payload must satisfy. */
   schema: z.ZodType;
   build: (opts?: WidgetTestEventOptions) => Record<string, unknown>;
+  /**
+   * Alternate payloads for the same listener, keyed by variant name. Chat
+   * notices need this: `channel.chat.notification` is one subscription type
+   * carrying a dozen different celebrations, and each one has to be testable
+   * on its own. A variant is not a separate map key on purpose -- the key is
+   * the listener string, and ws-server rejects anything that isn't one.
+   */
+  variants?: Record<
+    string,
+    { label: string; build: (opts?: WidgetTestEventOptions) => Record<string, unknown> }
+  >;
 }
 
 const DEFAULT_USER_NAME = "TestUser";
@@ -111,6 +132,70 @@ function uuid(): string {
 
 function now(): string {
   return new Date().toISOString();
+}
+
+/**
+ * Every notice block `channel.chat.notification` can carry, all null. Twitch
+ * sends the full set on every notice with only the matching one populated, and
+ * the schema requires them present -- so a fixture that spreads this and
+ * overrides one key is the same shape a real notice arrives in.
+ */
+const EMPTY_NOTICE_BLOCKS = {
+  sub: null,
+  resub: null,
+  sub_gift: null,
+  community_sub_gift: null,
+  gift_paid_upgrade: null,
+  prime_paid_upgrade: null,
+  pay_it_forward: null,
+  raid: null,
+  unraid: null,
+  announcement: null,
+  bits_badge_tier: null,
+  charity_donation: null,
+  watch_streak: null,
+  modiversary: null,
+} as const;
+
+/** The gifter fields shared by pay_it_forward and gift_paid_upgrade. */
+const DEMO_GIFTER = {
+  gifter_is_anonymous: false,
+  gifter_user_id: "9",
+  gifter_user_login: "sandwichlord",
+  gifter_user_name: "sandwichlord",
+};
+
+/**
+ * Builds one `channel.chat.notification` payload: the chatter envelope every
+ * notice shares, plus the one populated block for `noticeType`.
+ */
+function chatNotice(
+  noticeType: string,
+  blocks: Record<string, unknown>,
+  systemMessage: (userName: string) => string,
+  text = "",
+  opts?: WidgetTestEventOptions
+): Record<string, unknown> {
+  const v = viewer(opts);
+  return {
+    ...BROADCASTER,
+    chatter_user_id: v.user_id,
+    chatter_user_login: v.user_login,
+    chatter_user_name: v.user_name,
+    chatter_is_anonymous: false,
+    color: "#5CE1E6",
+    badges: DEMO_BADGES,
+    user_profile_image_url: v.user_profile_image_url,
+    system_message: systemMessage(v.user_name),
+    message_id: uuid(),
+    message: {
+      text,
+      fragments: text ? [{ type: "text", text }] : [],
+    },
+    notice_type: noticeType,
+    ...EMPTY_NOTICE_BLOCKS,
+    ...blocks,
+  };
 }
 
 export const WIDGET_TEST_EVENTS = {
@@ -270,48 +355,201 @@ export const WIDGET_TEST_EVENTS = {
     label: "Chat notice (resub)",
     group: "Chat",
     schema: ChannelChatNotificationEventSchema,
-    build: (o?) => {
-      const v = viewer(o);
-      return {
-        ...BROADCASTER,
-        chatter_user_id: v.user_id,
-        chatter_user_login: v.user_login,
-        chatter_user_name: v.user_name,
-        chatter_is_anonymous: false,
-        color: "#5CE1E6",
-        badges: DEMO_BADGES,
-        user_profile_image_url: v.user_profile_image_url,
-        system_message: `${v.user_name} subscribed for 6 months in a row!`,
-        message_id: uuid(),
-        message: {
-          text: "Six months, still here!",
-          fragments: [{ type: "text", text: "Six months, still here!" }],
+    build: (o?) =>
+      chatNotice(
+        "resub",
+        {
+          resub: {
+            cumulative_months: 6,
+            duration_months: 1,
+            streak_months: 6,
+            sub_plan: "1000",
+            is_gift: false,
+            gifter_is_anonymous: null,
+            gifter_user_id: null,
+            gifter_user_name: null,
+            gifter_user_login: null,
+          },
         },
-        notice_type: "resub",
-        sub: null,
-        resub: {
-          cumulative_months: 6,
-          duration_months: 1,
-          streak_months: 6,
-          sub_plan: "1000",
-          is_gift: false,
-          gifter_is_anonymous: null,
-          gifter_user_id: null,
-          gifter_user_name: null,
-          gifter_user_login: null,
+        (n) => `${n} subscribed for 6 months in a row!`,
+        "Six months, still here!",
+        o
+      ),
+    /*
+     * One variant per notice type the alert box configures. `resub` is the
+     * default build above rather than a variant, so the picker's plain entry
+     * stays what it always was.
+     */
+    variants: {
+      sub: {
+        label: "Chat notice (sub)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "sub",
+            { sub: { sub_plan: "1000", is_gift: false } },
+            (n) => `${n} subscribed with Prime!`,
+            "",
+            o
+          ),
+      },
+      sub_gift: {
+        label: "Chat notice (gift sub)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "sub_gift",
+            {
+              sub_gift: {
+                duration_months: 1,
+                cumulative_total: 12,
+                recipient_user_id: "7",
+                recipient_user_login: "ninetoad",
+                recipient_user_name: "ninetoad",
+                sub_plan: "1000",
+                // A lone gift, not part of a bomb -- the alert box skips the
+                // per-recipient notices that carry a community_gift_id.
+                community_gift_id: null,
+              },
+            },
+            (n) => `${n} gifted a sub to ninetoad!`,
+            "",
+            o
+          ),
+      },
+      community_sub_gift: {
+        label: "Chat notice (gift bomb)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "community_sub_gift",
+            {
+              community_sub_gift: {
+                id: uuid(),
+                total: 5,
+                sub_plan: "1000",
+                cumulative_total: 20,
+              },
+            },
+            (n) => `${n} is gifting 5 subs to the community!`,
+            "",
+            o
+          ),
+      },
+      gift_paid_upgrade: {
+        label: "Chat notice (gift upgrade)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "gift_paid_upgrade",
+            { gift_paid_upgrade: { ...DEMO_GIFTER } },
+            (n) => `${n} is continuing their gift sub!`,
+            "",
+            o
+          ),
+      },
+      prime_paid_upgrade: {
+        label: "Chat notice (Prime upgrade)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "prime_paid_upgrade",
+            { prime_paid_upgrade: { sub_plan: "1000" } },
+            (n) => `${n} converted their Prime sub to Tier 1!`,
+            "",
+            o
+          ),
+      },
+      pay_it_forward: {
+        label: "Chat notice (pay it forward)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "pay_it_forward",
+            { pay_it_forward: { ...DEMO_GIFTER } },
+            (n) => `${n} is paying forward a gift sub!`,
+            "",
+            o
+          ),
+      },
+      raid: {
+        label: "Chat notice (raid)",
+        build: (o?: WidgetTestEventOptions) => {
+          const v = viewer(o);
+          return chatNotice(
+            "raid",
+            {
+              raid: {
+                user_id: v.user_id,
+                user_login: v.user_login,
+                user_name: v.user_name,
+                viewer_count: 42,
+                profile_image_url: v.user_profile_image_url,
+              },
+            },
+            (n) => `${n} is raiding with 42 viewers!`,
+            "",
+            o
+          );
         },
-        sub_gift: null,
-        community_sub_gift: null,
-        gift_paid_upgrade: null,
-        prime_paid_upgrade: null,
-        pay_it_forward: null,
-        raid: null,
-        unraid: null,
-        announcement: null,
-        bits_badge_tier: null,
-        charity_donation: null,
-        watch_streak: null,
-      };
+      },
+      announcement: {
+        label: "Chat notice (announcement)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "announcement",
+            { announcement: { color: "PRIMARY" } },
+            (n) => `${n} made an announcement`,
+            "Clip contest ends at midnight",
+            o
+          ),
+      },
+      bits_badge_tier: {
+        label: "Chat notice (bits badge)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "bits_badge_tier",
+            { bits_badge_tier: { tier: 10000 } },
+            (n) => `${n} just earned the 10000 bits badge!`,
+            "",
+            o
+          ),
+      },
+      charity_donation: {
+        label: "Chat notice (charity donation)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "charity_donation",
+            {
+              charity_donation: {
+                charity_name: "Cats With Hats",
+                // 2500 minor units at 2 decimal places = $25.00.
+                amount: { value: 2500, decimal_places: 2, currency: "USD" },
+              },
+            },
+            (n) => `${n} donated $25.00 to Cats With Hats!`,
+            "For the cause, and the hydration",
+            o
+          ),
+      },
+      watch_streak: {
+        label: "Chat notice (watch streak)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "watch_streak",
+            { watch_streak: { consecutive_months: 5 } },
+            (n) => `${n} is on a 5 stream watch streak!`,
+            "",
+            o
+          ),
+      },
+      modiversary: {
+        label: "Chat notice (modiversary)",
+        build: (o?: WidgetTestEventOptions) =>
+          chatNotice(
+            "modiversary",
+            // Twitch documents the notice type but no payload object for it,
+            // so there is nothing to populate -- and no year to read back.
+            {},
+            (n) => `${n} is celebrating their modiversary!`,
+            "",
+            o
+          ),
+      },
     },
   },
   "channel.chat.message_delete": {
@@ -364,6 +602,137 @@ export const WIDGET_TEST_EVENTS = {
         started_at: now(),
       };
     },
+  },
+  "channel.shoutout.create": {
+    label: "Shoutout sent",
+    group: "Channel",
+    schema: ChannelShoutoutCreateEventSchema,
+    build: (o?) => {
+      const v = viewer(o);
+      return {
+        ...BROADCASTER,
+        moderator_user_id: BROADCASTER.broadcaster_user_id,
+        moderator_user_login: BROADCASTER.broadcaster_user_login,
+        moderator_user_name: BROADCASTER.broadcaster_user_name,
+        to_broadcaster_user_id: v.user_id,
+        to_broadcaster_user_login: v.user_login,
+        to_broadcaster_user_name: v.user_name,
+        started_at: now(),
+        viewer_count: 128,
+        cooldown_ends_at: now(),
+        target_cooldown_ends_at: now(),
+      };
+    },
+  },
+  "channel.hype_train.begin": {
+    label: "Hype train started",
+    group: "Channel",
+    schema: ChannelHypeTrainBeginEventSchema,
+    build: (o?) => {
+      const v = viewer(o);
+      return {
+        id: uuid(),
+        ...BROADCASTER,
+        total: 1200,
+        top_contributions: [
+          {
+            user_id: v.user_id,
+            user_login: v.user_login,
+            user_name: v.user_name,
+            type: "bits",
+            total: 1200,
+          },
+        ],
+        shared_train_participants: null,
+        level: 1,
+        started_at: now(),
+        is_shared_train: false,
+        type: "regular",
+        progress: 200,
+        goal: 1600,
+        expires_at: now(),
+      };
+    },
+  },
+  "channel.hype_train.end": {
+    label: "Hype train ended",
+    group: "Channel",
+    schema: ChannelHypeTrainEndEventSchema,
+    build: (o?) => {
+      const v = viewer(o);
+      return {
+        id: uuid(),
+        ...BROADCASTER,
+        total: 9400,
+        top_contributions: [
+          {
+            user_id: v.user_id,
+            user_login: v.user_login,
+            user_name: v.user_name,
+            type: "bits",
+            total: 4200,
+          },
+        ],
+        shared_train_participants: null,
+        level: 4,
+        started_at: now(),
+        is_shared_train: false,
+        type: "regular",
+        ended_at: now(),
+        cooldown_ends_at: now(),
+      };
+    },
+  },
+  "channel.ad_break.begin": {
+    label: "Ad break",
+    group: "Channel",
+    schema: ChannelAdBreakBeginEventSchema,
+    build: () => ({
+      duration_seconds: 60,
+      is_automatic: true,
+      started_at: now(),
+      ...BROADCASTER,
+      requester_user_id: BROADCASTER.broadcaster_user_id,
+      requester_user_login: BROADCASTER.broadcaster_user_login,
+      requester_user_name: BROADCASTER.broadcaster_user_name,
+    }),
+  },
+  "channel.poll.begin": {
+    label: "Poll started",
+    group: "Channel",
+    schema: ChannelPollBeginEventSchema,
+    build: () => ({
+      id: uuid(),
+      ...BROADCASTER,
+      title: "Aren't shoes just hard socks?",
+      choices: [
+        { id: "1", title: "Hard socks" },
+        { id: "2", title: "Absolutely not" },
+      ],
+      bits_voting: { is_enabled: false, amount_per_vote: 0 },
+      channel_points_voting: { is_enabled: true, amount_per_vote: 100 },
+      started_at: now(),
+      ends_at: now(),
+    }),
+  },
+  "channel.poll.end": {
+    label: "Poll ended",
+    group: "Channel",
+    schema: ChannelPollEndEventSchema,
+    build: () => ({
+      id: uuid(),
+      ...BROADCASTER,
+      title: "Aren't shoes just hard socks?",
+      choices: [
+        { id: "1", title: "Hard socks", bits_votes: 0, channel_points_votes: 40, votes: 140 },
+        { id: "2", title: "Absolutely not", bits_votes: 0, channel_points_votes: 10, votes: 62 },
+      ],
+      bits_voting: { is_enabled: false, amount_per_vote: 0 },
+      channel_points_voting: { is_enabled: true, amount_per_vote: 100 },
+      status: "completed",
+      started_at: now(),
+      ended_at: now(),
+    }),
   },
   "channel.chat.clear": {
     label: "Chat cleared",
@@ -426,10 +795,20 @@ export function isWidgetTestEventType(value: string): value is WidgetTestEventTy
   return Object.prototype.hasOwnProperty.call(WIDGET_TEST_EVENTS, value);
 }
 
-/** Builds a `{type, payload}` socket message for one test event. */
+/**
+ * Builds a `{type, payload}` socket message for one test event. `variant`
+ * picks an alternate payload for the same listener -- which chat notice to
+ * send, for instance.
+ */
 export function buildWidgetTestEvent(
   type: WidgetTestEventType,
-  opts?: WidgetTestEventOptions
+  opts?: WidgetTestEventOptions,
+  variant?: string
 ): { type: WidgetTestEventType; payload: Record<string, unknown> } {
-  return { type, payload: WIDGET_TEST_EVENTS[type].build(opts) };
+  const def: WidgetTestEventDef = WIDGET_TEST_EVENTS[type];
+  const build = variant ? def.variants?.[variant]?.build : def.build;
+  if (!build) {
+    throw new Error(`Unknown variant "${variant}" for test event "${type}"`);
+  }
+  return { type, payload: build(opts) };
 }
