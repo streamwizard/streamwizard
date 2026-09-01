@@ -164,6 +164,20 @@ export function CanvasViewPopover() {
             />
           </div>
         </div>
+
+        <Separator />
+
+        {/*
+          Stands in for safe-area guides: Twitch scales the stream to each
+          viewer's player and draws its UI over that, so what it covers is a
+          proportion of the player, not a fixed rectangle we could mark out on a
+          1920x1080 canvas. A sentence that is true beats guides that are
+          precisely wrong.
+        */}
+        <p className="text-[11px] text-muted-foreground leading-snug">
+          Twitch draws its own controls over your stream, mostly along the bottom
+          edge. Keep anything that has to stay readable away from the edges.
+        </p>
       </PopoverContent>
     </Popover>
   );

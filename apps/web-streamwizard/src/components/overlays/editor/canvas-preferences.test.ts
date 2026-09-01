@@ -13,6 +13,7 @@ import {
   clampGridLineWidth,
   isHexColor,
   saveRulerCursor,
+  saveSnapToItems,
   saveRulersVisible,
   snapToGrid,
 } from "./canvas-preferences";
@@ -40,6 +41,7 @@ test("preferences default to the editor's previous look", () => {
 
 test("saved preferences come back after a reload", () => {
   saveCanvasBackground("checker");
+  saveSnapToItems(false);
   saveGridSettings({
     visible: false,
     size: 25,
@@ -51,10 +53,19 @@ test("saved preferences come back after a reload", () => {
 
   expect(loadCanvasPreferences()).toEqual({
     background: "checker",
+    snapToItems: false,
     grid: { visible: false, size: 25, snap: true, color: "#22d3ee", lineWidth: 2 },
     rulers: true,
     rulerCursor: true,
   });
+});
+
+test("snapping to other widgets is on unless it was explicitly turned off", () => {
+  expect(loadCanvasPreferences().snapToItems).toBe(true);
+  saveSnapToItems(false);
+  expect(loadCanvasPreferences().snapToItems).toBe(false);
+  saveSnapToItems(true);
+  expect(loadCanvasPreferences().snapToItems).toBe(true);
 });
 
 test("the ruler cursor is on unless it was explicitly turned off", () => {

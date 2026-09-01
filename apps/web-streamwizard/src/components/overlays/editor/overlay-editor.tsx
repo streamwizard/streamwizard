@@ -18,6 +18,7 @@ import {
   Undo2,
   Volume2,
   VolumeX,
+  Magnet,
   Maximize,
   ZoomIn,
   ZoomOut,
@@ -86,6 +87,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     setGrid,
     rulersVisible,
     setRulersVisible,
+    snapToItems,
+    setSnapToItems,
     addItem,
     addCustomWidget,
     markClean,
@@ -319,6 +322,14 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
           });
           return;
         }
+        if (key === "m") {
+          e.preventDefault();
+          setSnapToItems(!snapToItems);
+          toast(snapToItems ? "Snapping off" : "Snapping to other widgets", {
+            id: "canvas-snap-items",
+          });
+          return;
+        }
       }
 
       if (mod && e.key.toLowerCase() === "z") {
@@ -372,6 +383,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     setGrid,
     rulersVisible,
     setRulersVisible,
+    snapToItems,
+    setSnapToItems,
     shortcutsOpen,
     undo,
     redo,
@@ -541,6 +554,21 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
             title="Keyboard shortcuts (?)"
           >
             <Keyboard className="h-3 w-3" />
+          </Button>
+
+          <Button
+            variant={snapToItems ? "secondary" : "outline"}
+            size="icon"
+            className="h-8 w-8"
+            aria-pressed={snapToItems}
+            onClick={() => setSnapToItems(!snapToItems)}
+            title={
+              snapToItems
+                ? "Snapping to other widgets is on (Shift+M)"
+                : "Snapping to other widgets is off (Shift+M)"
+            }
+          >
+            <Magnet className="h-3 w-3" />
           </Button>
 
           <CanvasViewPopover />

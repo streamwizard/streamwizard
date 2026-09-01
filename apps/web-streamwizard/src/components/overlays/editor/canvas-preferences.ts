@@ -22,6 +22,8 @@ export interface GridSettings {
 
 export interface CanvasPreferences {
   background: CanvasBackground;
+  /** Snap dragged items to other items' edges and centres. */
+  snapToItems: boolean;
   grid: GridSettings;
   rulers: boolean;
   /** Track the pointer along the rulers. Only means anything while they are on. */
@@ -32,6 +34,7 @@ export const CANVAS_BACKGROUND_KEY = "overlay-editor-canvas-background";
 export const CANVAS_GRID_KEY = "overlay-editor-canvas-grid";
 export const CANVAS_RULERS_KEY = "overlay-editor-canvas-rulers";
 export const CANVAS_RULER_CURSOR_KEY = "overlay-editor-canvas-ruler-cursor";
+export const CANVAS_SNAP_ITEMS_KEY = "overlay-editor-snap-to-items";
 
 export const GRID_SIZE_MIN = 5;
 export const GRID_SIZE_MAX = 500;
@@ -64,6 +67,8 @@ export function clampGridLineWidth(width: number): number {
 export const DEFAULT_CANVAS_PREFERENCES: CanvasPreferences = {
   // The previous hardcoded look, so nothing changes until it is changed.
   background: "dark",
+  // On: it was always on before there was a switch for it.
+  snapToItems: true,
   grid: {
     visible: true,
     size: 50,
@@ -145,6 +150,8 @@ export function loadCanvasPreferences(): CanvasPreferences {
     background: isCanvasBackground(background)
       ? background
       : DEFAULT_CANVAS_PREFERENCES.background,
+    // Absent means never set, which should read as the default rather than off.
+    snapToItems: readKey(CANVAS_SNAP_ITEMS_KEY) !== "false",
     grid: parseGridSettings(readKey(CANVAS_GRID_KEY)),
     rulers: readKey(CANVAS_RULERS_KEY) === "true",
     // Absent means never set, which should read as the default rather than off.
@@ -162,6 +169,10 @@ export function saveGridSettings(grid: GridSettings) {
 
 export function saveRulersVisible(visible: boolean) {
   writeKey(CANVAS_RULERS_KEY, String(visible));
+}
+
+export function saveSnapToItems(enabled: boolean) {
+  writeKey(CANVAS_SNAP_ITEMS_KEY, String(enabled));
 }
 
 export function saveRulerCursor(visible: boolean) {

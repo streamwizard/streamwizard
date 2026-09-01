@@ -14,6 +14,7 @@ import {
   saveCanvasBackground,
   saveGridSettings,
   saveRulerCursor,
+  saveSnapToItems,
   saveRulersVisible,
   type CanvasBackground,
   type GridSettings,
@@ -95,6 +96,8 @@ interface OverlayEditorState {
    */
   canvasBackground: CanvasBackground;
   setCanvasBackground: (background: CanvasBackground) => void;
+  snapToItems: boolean;
+  setSnapToItems: (enabled: boolean) => void;
   grid: GridSettings;
   setGrid: (grid: Partial<GridSettings>) => void;
   rulersVisible: boolean;
@@ -351,6 +354,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     const prefs = loadCanvasPreferences();
     return {
       canvasBackground: prefs.background,
+      snapToItems: prefs.snapToItems,
       grid: prefs.grid,
       rulersVisible: prefs.rulers,
       rulerCursorVisible: prefs.rulerCursor,
@@ -360,6 +364,11 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   setCanvasBackground: (background) => {
     saveCanvasBackground(background);
     set({ canvasBackground: background });
+  },
+
+  setSnapToItems: (enabled) => {
+    saveSnapToItems(enabled);
+    set({ snapToItems: enabled });
   },
 
   setGrid: (grid) => {

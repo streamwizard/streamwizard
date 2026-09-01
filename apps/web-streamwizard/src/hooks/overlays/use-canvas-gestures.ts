@@ -51,6 +51,7 @@ export function useCanvasGestures() {
   const selectedItemIds = useOverlayStore((s) => s.selectedItemIds);
   const zoom = useOverlayStore((s) => s.zoom);
   const grid = useOverlayStore((s) => s.grid);
+  const snapToItems = useOverlayStore((s) => s.snapToItems);
   const selectItem = useOverlayStore((s) => s.selectItem);
   const toggleSelectItem = useOverlayStore((s) => s.toggleSelectItem);
   const setSelectedItems = useOverlayStore((s) => s.setSelectedItems);
@@ -220,9 +221,12 @@ export function useCanvasGestures() {
         let cdx = Math.min(Math.max(moveDx, minDx), maxDx);
         let cdy = Math.min(Math.max(moveDy, minDy), maxDy);
 
-        // Snap using the grabbed item's rect; Alt disables.
+        // Snap using the grabbed item's rect. Alt inverts whatever the toggle
+        // says rather than only turning snapping off: with snapping off it is
+        // how you snap one drag without going back to the toolbar.
         const grabbed = dragState.items.find((i) => i.id === dragState.grabbedId);
-        if (grabbed && !e.altKey) {
+        const snapping = snapToItems !== e.altKey;
+        if (grabbed && snapping) {
           const draggedIds = new Set(dragState.items.map((i) => i.id));
           const targets = scene.items.filter(
             (i) => isRootLayerType(i.type) && i.is_visible && !draggedIds.has(i.id),
@@ -263,11 +267,11 @@ export function useCanvasGestures() {
 
         for (const it of dragState.items) {
           // Grid snapping lands the item itself on the grid, so it is applied to
-          // the final position rather than the delta. Alt opts out of both kinds
-          // of snapping at once.
+          // the final position rather than the delta. Alt inverts it too, so one
+          // modifier flips every kind of snapping at once.
           const nextX = it.startX + cdx;
           const nextY = it.startY + cdy;
-          const onGrid = grid.snap && !e.altKey;
+          const onGrid = grid.snap !== e.altKey;
           updateItem(it.id, {
             x: Math.round(onGrid ? snapToGrid(nextX, grid.size) : nextX),
             y: Math.round(onGrid ? snapToGrid(nextY, grid.size) : nextY),
@@ -287,7 +291,17 @@ export function useCanvasGestures() {
         );
       }
     },
-    [dragState, marquee, scene, zoom, updateItem, toScenePoint],
+    [
+      dragState,
+      marquee,
+      scene,
+      zoom,
+      updateItem,
+      toScenePoint,
+      snapToItems,
+      grid.snap,
+      grid.size,
+    ],
   );
 
   const handleMouseUp = useCallback(() => {
