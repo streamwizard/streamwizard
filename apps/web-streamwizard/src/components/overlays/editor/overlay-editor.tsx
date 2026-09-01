@@ -21,7 +21,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays/items";
@@ -44,6 +44,10 @@ import { OverlayWidgetSheet } from "./overlay-widget-sheet";
 import { WidgetLibraryModal } from "./widget-library-modal";
 import { ShortcutsDialog } from "./shortcuts-dialog";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
+import { UnsavedChangesDialog } from "@/components/modals/unsaved-changes-dialog";
+import { useOverlayDraft } from "@/hooks/overlays/use-overlay-draft";
+import { RestoreDraftDialog } from "./restore-draft-dialog";
 
 interface OverlayEditorProps {
   initialScene: OverlaySceneWithItems;
@@ -94,6 +98,10 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     setRunningSimulatorIds,
   } = useOverlayStore();
   const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
+  const { requestLeave, dialogProps: unsavedDialogProps } =
+    useUnsavedChangesGuard(isDirty);
+  const draftPrompt = useOverlayDraft(initialScene);
   const [widgetSheetOpen, setWidgetSheetOpen] = useState(false);
   const [widgetLibraryOpen, setWidgetLibraryOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
@@ -297,10 +305,13 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     <div ref={rootRef} className="flex flex-col h-[calc(100vh-80px)] -m-5 md:-m-6">
       <div className="flex items-center justify-between border-b px-4 py-2 bg-background shrink-0">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard/overlays">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => requestLeave(() => router.push("/dashboard/overlays"))}
+            title="Back to your overlays"
+          >
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <h2 className="font-semibold truncate max-w-[200px]">{scene.name}</h2>
           <span className="text-xs text-muted-foreground">
@@ -558,6 +569,10 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       />
 
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+
+      <UnsavedChangesDialog {...unsavedDialogProps} />
+
+      <RestoreDraftDialog {...draftPrompt} />
     </div>
   );
 }

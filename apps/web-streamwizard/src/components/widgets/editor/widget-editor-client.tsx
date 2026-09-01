@@ -8,6 +8,7 @@ import { env } from "@/lib/env";
 import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS, DEMO_EVENT_TYPES } from "@repo/schemas";
 import { CustomWidgetIframe, scanWidgetListeners } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
+import { UnsavedChangesDialog } from "@/components/modals/unsaved-changes-dialog";
 import { DemoEventPanel } from "@/components/demo/demo-event-panel";
 import {
   demoFirePayload,
@@ -89,6 +90,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     handleSave,
     handleSaveRef,
     handleBack,
+    unsavedDialogProps,
   } = draft;
   const {
     widgetRef,
@@ -512,6 +514,8 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
         onSelect={(asset) => insertAssetUrl(asset.url)}
         title="Insert asset"
       />
+
+      <UnsavedChangesDialog {...unsavedDialogProps} />
     </div>
   );
 }

@@ -227,6 +227,13 @@ let configEditTickOpen = false;
  * never leave a multi-item edit (swapping two display fields' stack order) half
  * applied. A write that changes nothing records no step at all.
  */
+/** A scene swap ends any burst in progress; the next edit starts a fresh step. */
+function resetConfigEditCoalescing() {
+  lastConfigEditAt = 0;
+  lastConfigEditKey = null;
+  configEditTickOpen = false;
+}
+
 function recordConfigEdit(
   id: string,
   prevConfig: unknown,
@@ -271,7 +278,8 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     set({ editorMode: mode });
   },
 
-  setScene: (scene, options) =>
+  setScene: (scene, options) => {
+    resetConfigEditCoalescing();
     set((state) => {
       const surviving = new Set(scene.items.map((i) => i.id));
       return {
@@ -288,7 +296,8 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
           ? remapHistory(state.history, options.idMap)
           : { past: [], future: [] },
       };
-    }),
+    });
+  },
 
   selectItem: (id) => set({ selectedItemIds: id === null ? [] : [id] }),
 
