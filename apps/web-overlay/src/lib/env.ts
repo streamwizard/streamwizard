@@ -4,14 +4,26 @@ import { z } from "zod"
 // Derive NEXT_PUBLIC_ vars from their non-prefixed Doppler counterparts so they
 // exist in process.env before createEnv validates them. The next.config.ts env:
 // block does the same derivation to bake them into the client bundle at build time.
-process.env.NEXT_PUBLIC_SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL;
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? process.env.SUPABASE_PUBLIC_KEY;
-process.env.NEXT_PUBLIC_WS_SERVER_URL = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? process.env.WS_SERVER_URL;
-process.env.NEXT_PUBLIC_SENTRY_DSN =
-  process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.env.SENTRY_DSN_WEB_OVERLAY ?? process.env.SENTRY_DSN;
+//
+// Assigned through this helper because `process.env.X = undefined` stores the
+// *string* "undefined" -- a truthy non-URL value that fails validation even for
+// optional vars (dev configs set no SENTRY_DSN). Leave those unset instead.
+function deriveEnv(key: string, ...sources: (string | undefined)[]) {
+  const value = sources.find((v) => v !== undefined && v !== "");
+  if (value !== undefined) process.env[key] = value;
+}
+
+deriveEnv("NEXT_PUBLIC_SUPABASE_URL", process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_URL);
+deriveEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, process.env.SUPABASE_PUBLIC_KEY);
+deriveEnv("NEXT_PUBLIC_WS_SERVER_URL", process.env.NEXT_PUBLIC_WS_SERVER_URL, process.env.WS_SERVER_URL);
+deriveEnv("NEXT_PUBLIC_SENTRY_DSN", process.env.NEXT_PUBLIC_SENTRY_DSN, process.env.SENTRY_DSN_WEB_OVERLAY, process.env.SENTRY_DSN);
 // User media-library assets share the static-CDN bucket; falls back to the CDN URL.
-process.env.NEXT_PUBLIC_ASSET_CDN_URL =
-  process.env.NEXT_PUBLIC_ASSET_CDN_URL ?? process.env.ASSET_CDN_URL ?? process.env.NEXT_PUBLIC_CDN_URL;
+deriveEnv(
+  "NEXT_PUBLIC_ASSET_CDN_URL",
+  process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+  process.env.ASSET_CDN_URL,
+  process.env.NEXT_PUBLIC_CDN_URL,
+);
 
 export const env = createEnv({
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,

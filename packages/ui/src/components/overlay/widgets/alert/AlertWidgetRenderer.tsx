@@ -11,8 +11,9 @@ import type { OverlayItem, OverlayScene } from "../../types";
 import {
   ALERT_EVENT_TYPES,
   ALERT_TEST_BROWSER_EVENT,
+  alertAmountText,
   alertInstanceFromSocketMessage,
-  buildTestAlertSocketMessage,
+  alertSkipReason,
   normalizeAlertWidgetConfig,
   renderAlertTemplate,
   type AlertInstance,
@@ -25,9 +26,9 @@ export interface AlertWidgetRendererProps {
   /** Needed for the live WS subscription; the editor canvas also passes it. */
   scene?: OverlayScene;
   /**
-   * Editor flag: the renderer skips the WS subscription (test alerts arrive via
-   * the `streamwizard:test-alert` browser event) and shows a placeholder while
-   * idle so the box stays visible on the canvas.
+   * Editor flag: shows a placeholder while idle so the box stays visible on the
+   * canvas. The WS subscription runs either way -- only Local-mode tests take
+   * the `streamwizard:test-alert` browser event instead.
    */
   isEditor?: boolean;
 }
@@ -41,6 +42,10 @@ interface ActiveAlert {
 
 const IN_MS = 500;
 const OUT_MS = 350;
+/** Floor for a media-matched hold, so a half-second video does not just blink. */
+const MIN_HOLD_MS = 1000;
+/** Ceiling for a media-matched hold — an hour-long file must not park the overlay. */
+const MAX_HOLD_MS = 60_000;
 
 const KEYFRAMES = `
 @keyframes sw-alert-fade-in { from { opacity: 0 } to { opacity: 1 } }
@@ -89,7 +94,7 @@ function renderAccentedTemplate(
     if (part === "{name}" || part === "{amount}") {
       return (
         <span key={i} style={{ color: accentColor }}>
-          {part === "{name}" ? alert.name : String(alert.amount)}
+          {part === "{name}" ? alert.name : alertAmountText(alert)}
         </span>
       );
     }
@@ -111,15 +116,46 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
 
   const queueRef = useRef<ActiveAlert[]>([]);
   const busyRef = useRef(false);
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const cfgRef = useRef(cfg);
   cfgRef.current = cfg;
+
+  // The out/next pair is rescheduled once a media-matched video reports its
+  // real length, so both live in refs instead of the fire-and-forget list.
+  const startedAtRef = useRef(0);
+  const inTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const outTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const doneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playNextRef = useRef<() => void>(() => {});
 
   const stopAudio = () => {
     audioRef.current?.pause();
     audioRef.current = null;
   };
+
+  /**
+   * Schedules the exit (and the alert after it), `outAtMs` after this alert
+   * started. Safe to call again mid-alert: the pending pair is replaced.
+   */
+  const scheduleOut = useCallback((outAtMs: number) => {
+    const c = cfgRef.current;
+    if (outTimerRef.current) clearTimeout(outTimerRef.current);
+    if (doneTimerRef.current) clearTimeout(doneTimerRef.current);
+
+    const floor = IN_MS + MIN_HOLD_MS;
+    const target = Math.min(IN_MS + MAX_HOLD_MS, Math.max(floor, outAtMs));
+    const outIn = Math.max(0, target - (Date.now() - startedAtRef.current));
+
+    outTimerRef.current = setTimeout(() => setPhase("out"), outIn);
+    doneTimerRef.current = setTimeout(
+      () => {
+        stopAudio();
+        setActive(null);
+        playNextRef.current();
+      },
+      outIn + OUT_MS + c.gapSeconds * 1000
+    );
+  }, []);
 
   const playNext = useCallback(() => {
     const next = queueRef.current.shift();
@@ -130,8 +166,8 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     }
     busyRef.current = true;
     const c = cfgRef.current;
-    const holdSeconds = next.variant.durationSeconds;
 
+    startedAtRef.current = Date.now();
     setActive(next);
     setPhase("in");
 
@@ -143,31 +179,31 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
       audio.play().catch(() => {});
     }
 
-    const t1 = setTimeout(() => setPhase("hold"), IN_MS);
-    const t2 = setTimeout(() => setPhase("out"), IN_MS + holdSeconds * 1000);
-    const t3 = setTimeout(() => {
-      stopAudio();
-      setActive(null);
-      playNext();
-    }, IN_MS + holdSeconds * 1000 + OUT_MS + c.gapSeconds * 1000);
-    timersRef.current.push(t1, t2, t3);
-  }, []);
+    if (inTimerRef.current) clearTimeout(inTimerRef.current);
+    inTimerRef.current = setTimeout(() => setPhase("hold"), IN_MS);
+    // Media-matched alerts start on this too: it is the fallback if the video's
+    // length never resolves, and the cap if playback stalls forever.
+    scheduleOut(IN_MS + next.variant.durationSeconds * 1000);
+  }, [scheduleOut]);
+  playNextRef.current = playNext;
 
   const enqueue = useCallback(
     (alert: AlertInstance) => {
       const c = cfgRef.current;
       const variant = c.variants[alert.event];
-      if (!variant.enabled) return;
-      if (variant.minAmount > 0 && alert.amount < variant.minAmount) return;
+      if (alertSkipReason(alert, variant)) return;
       queueRef.current.push({ alert, variant });
       if (!busyRef.current) playNext();
     },
     [playNext]
   );
 
-  // Live overlay: real + test events over the scene's WS room.
+  // Real + test events over the scene's WS room. The editor canvas joins it
+  // too: custom widgets on the same canvas already do, so an alert box that sat
+  // out read as broken next to one that reacted. It also means a Live test --
+  // and a real sub mid-edit -- plays in the preview and on every open overlay
+  // at once, which is the point of Live.
   useEffect(() => {
-    if (isEditor) return;
     const token = scene?.subscriber_token;
     const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
@@ -177,17 +213,16 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
       );
       if (alert) enqueue(alert);
     });
-  }, [isEditor, scene?.subscriber_token, enqueue]);
+  }, [scene?.subscriber_token, enqueue]);
 
-  // Editor: local test fires from the inspector (no server round-trip).
+  // Editor: local test fires from the inspector and the demo bar (no server
+  // round-trip). Anything that isn't an alert maps to null and is ignored.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const onTest = (e: Event) => {
       const detail = (e as CustomEvent<AlertTestBrowserEventDetail>).detail;
       if (!detail || (scene && detail.sceneId !== scene.id)) return;
-      const alert = alertInstanceFromSocketMessage(
-        buildTestAlertSocketMessage(detail.event)
-      );
+      const alert = alertInstanceFromSocketMessage(detail.message);
       if (alert) enqueue(alert);
     };
     window.addEventListener(ALERT_TEST_BROWSER_EVENT, onTest);
@@ -196,9 +231,9 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
 
   // Cleanup timers/audio on unmount.
   useEffect(() => {
-    const timers = timersRef.current;
+    const timers = [inTimerRef, outTimerRef, doneTimerRef];
     return () => {
-      for (const t of timers) clearTimeout(t);
+      for (const t of timers) if (t.current) clearTimeout(t.current);
       stopAudio();
     };
   }, []);
@@ -244,6 +279,9 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
   const videoVolume = hasSeparateSound
     ? 0
     : Math.min(1, Math.max(0, variant.volume * cfg.masterVolume));
+  // Only a video can drive its own timing; without one the fixed duration
+  // already scheduled in playNext stands.
+  const matchVideo = mediaKind === "video" && variant.durationMode === "media";
 
   const media =
     mediaUrl && mediaKind === "video" ? (
@@ -251,11 +289,23 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
         key={mediaUrl}
         src={mediaUrl}
         autoPlay
-        loop
+        loop={!matchVideo}
         playsInline
         muted={videoVolume === 0}
         ref={(el) => {
           if (el) el.volume = videoVolume;
+        }}
+        onLoadedMetadata={(e) => {
+          if (!matchVideo) return;
+          // Streamed WebM often reports Infinity until it is seeked; leave the
+          // fixed duration in place and let onEnded close the alert instead.
+          const d = e.currentTarget.duration;
+          if (!Number.isFinite(d) || d <= 0) return;
+          scheduleOut(d * 1000);
+        }}
+        onEnded={() => {
+          if (!matchVideo) return;
+          scheduleOut(Date.now() - startedAtRef.current);
         }}
         style={{
           maxWidth: "100%",

@@ -3,11 +3,13 @@
 import { captureEvent } from "@repo/posthog";
 import { Button } from "@repo/ui";
 import { Database } from "@repo/supabase";
+import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
   ArrowLeft,
   Copy,
   FlaskConical,
   Info,
+  Keyboard,
   LayoutGrid,
   Pause,
   Play,
@@ -16,13 +18,15 @@ import {
   Undo2,
   Volume2,
   VolumeX,
+  Maximize,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays/items";
+import { updateOverlayScene } from "@/actions/overlays/scenes";
 import type { Widget } from "@/actions/widgets";
 import {
   getCachedWidget,
@@ -40,7 +44,15 @@ import { EditorLayers } from "./editor-layers";
 import { EditorInspector } from "./editor-inspector";
 import { OverlayWidgetSheet } from "./overlay-widget-sheet";
 import { WidgetLibraryModal } from "./widget-library-modal";
+import { ShortcutsDialog } from "./shortcuts-dialog";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
+import { UnsavedChangesDialog } from "@/components/modals/unsaved-changes-dialog";
+import { useOverlayDraft } from "@/hooks/overlays/use-overlay-draft";
+import { RestoreDraftDialog } from "./restore-draft-dialog";
+import { computeFitZoom } from "./canvas-zoom";
+import { ResolutionDialog } from "./resolution-dialog";
+import { CanvasViewPopover } from "./canvas-view-popover";
 
 interface OverlayEditorProps {
   initialScene: OverlaySceneWithItems;
@@ -48,6 +60,14 @@ interface OverlayEditorProps {
   /** Widget rows for the scene's custom widgets, fetched with the page. */
   initialWidgets: Widget[];
 }
+
+/**
+ * Radix renders dialogs, sheets, menus and popovers into a portal on `body`, so
+ * a button inside one reaches a `window` keydown listener exactly like the
+ * canvas does. Editing shortcuts must not act on the scene behind them.
+ */
+const OVERLAY_SURFACE_SELECTOR =
+  '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]';
 
 export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: OverlayEditorProps) {
   // Before first render, so the canvas never has to fetch what the page already
@@ -60,9 +80,18 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     zoom,
     setScene,
     setZoom,
+    setPan,
+    setSceneResolution,
+    grid,
+    setGrid,
+    rulersVisible,
+    setRulersVisible,
+    snapToItems,
+    setSnapToItems,
     addItem,
     addCustomWidget,
     markClean,
+    setSelectedItems,
     history,
     undo,
     redo,
@@ -78,14 +107,21 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     attemptEditorClipPreviewUnblock,
     editorMode,
     setEditorMode,
-    emitDemoEvent,
     runningSimulatorIds,
     setRunningSimulatorIds,
   } = useOverlayStore();
   const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
+  const { requestLeave, dialogProps: unsavedDialogProps } =
+    useUnsavedChangesGuard(isDirty);
+  const draftPrompt = useOverlayDraft(initialScene);
   const [widgetSheetOpen, setWidgetSheetOpen] = useState(false);
   const [widgetLibraryOpen, setWidgetLibraryOpen] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [resolutionOpen, setResolutionOpen] = useState(false);
+  // Shared with the alert inspector's Test buttons: one switch, one delivery.
+  const { mode: demoFireMode, setMode: setDemoFireMode, fire: fireDemo } = useDemoFire();
 
   // Every custom widget's source, concatenated, so the demo picker can lead
   // with the events anything on this canvas actually listens for. The cache is
@@ -99,7 +135,21 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     [scene?.items]
   );
 
+  // Saving revalidates, so Next hands us a brand-new `initialScene` object for
+  // the scene we're already editing. Re-seeding on that would throw away the
+  // selection and the undo history right after every save, so only seed when
+  // the editor is actually pointed at a different scene.
+  const seededSceneId = useRef<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const canvasPaneRef = useRef<HTMLDivElement>(null);
+  /** What the scene row holds, so a save only writes the size when it changed. */
+  const persistedSizeRef = useRef({
+    width: initialScene.width,
+    height: initialScene.height,
+  });
   useEffect(() => {
+    if (seededSceneId.current === initialScene.id) return;
+    seededSceneId.current = initialScene.id;
     setScene(initialScene);
   }, [initialScene, setScene]);
 
@@ -131,18 +181,61 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       config: item.config as OverlayItemConfig,
     }));
 
-    const { success, error, data } = await saveAllOverlayItems(scene.id, items);
+    // The resolution lives on the scene row, not the items, and is only written
+    // here -- changing it in the editor leaves the live overlay alone until save.
+    const sizeChanged =
+      scene.width !== persistedSizeRef.current.width ||
+      scene.height !== persistedSizeRef.current.height;
+
+    if (sizeChanged) {
+      const { error: sizeError } = await updateOverlayScene({
+        id: scene.id,
+        width: scene.width,
+        height: scene.height,
+      });
+      if (sizeError) {
+        toast.error(sizeError);
+        setIsSaving(false);
+        return;
+      }
+      persistedSizeRef.current = { width: scene.width, height: scene.height };
+    }
+
+    const { success, error, data, idMap } = await saveAllOverlayItems(scene.id, items);
 
     if (success) {
       toast.success("Overlay saved");
       markClean();
-      if (data) setScene(data);
+      if (data) {
+        // Newly inserted items trade their temp-N id for a DB one; point the
+        // selection at the new ids first so setScene keeps the inspector open
+        // on whatever the streamer was configuring.
+        setSelectedItems(
+          useOverlayStore
+            .getState()
+            .selectedItemIds.map((id) => idMap[id] ?? id)
+        );
+        setScene(data, { idMap });
+      }
     } else {
       toast.error(error ?? "Failed to save");
     }
 
     setIsSaving(false);
-  }, [scene, markClean, setScene]);
+  }, [scene, markClean, setScene, setSelectedItems]);
+
+  /**
+   * Measured at click time rather than tracked, so toggling the layers panel or
+   * resizing the window needs no bookkeeping -- the pane is whatever it is when
+   * Fit is pressed.
+   */
+  const fitToScreen = useCallback(() => {
+    const pane = canvasPaneRef.current?.getBoundingClientRect();
+    if (!pane || !scene) return;
+    setZoom(computeFitZoom(pane, scene, zoom));
+    // Fit means "show me everything", which a leftover pan would undo.
+    setPan(0, 0);
+  }, [scene, zoom, setZoom, setPan]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -163,6 +256,84 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         return;
       }
 
+      // An overlay owns the keyboard whenever focus is inside one, or -- for a
+      // modal, which marks everything outside it aria-hidden -- whenever focus
+      // never entered it at all.
+      const inOverlay =
+        !!t?.closest(OVERLAY_SURFACE_SELECTOR) ||
+        !!rootRef.current?.closest('[data-aria-hidden="true"]');
+
+      // ? toggles the reference, checked ahead of the overlay guard so the
+      // dialog it opens can't swallow the key that closes it again. Any other
+      // overlay still wins: ? on top of the widget sheet does nothing.
+      if (e.key === "?" && (shortcutsOpen || !inOverlay)) {
+        e.preventDefault();
+        setShortcutsOpen((open) => !open);
+        return;
+      }
+
+      // Editing shortcuts stay out of it. Escape reaches Radix either way, so
+      // it still closes the overlay before the next one clears the selection.
+      if (inOverlay) return;
+
+      // Shift+1 / Shift+0 rather than Ctrl+1 / Ctrl+0: the Ctrl pair is browser
+      // tab-switching and browser zoom, which a page cannot reliably take over.
+      if (e.shiftKey && !mod && e.code === "Digit1") {
+        e.preventDefault();
+        fitToScreen();
+        return;
+      }
+      if (e.shiftKey && !mod && e.code === "Digit0") {
+        e.preventDefault();
+        setZoom(1);
+        setPan(0, 0);
+        return;
+      }
+
+      // Canvas aids. Shift+letter keeps single letters free for future tools and
+      // stays clear of the browser's own Ctrl bindings.
+      //
+      // Each one says what it did: the switch that would have shown it is behind
+      // a popover, and two of the three are easy to miss on a busy canvas.
+      // A fixed toast id per aid means holding the key replaces the toast
+      // instead of stacking them up.
+      if (e.shiftKey && !mod) {
+        const key = e.key.toLowerCase();
+        if (key === "g") {
+          e.preventDefault();
+          const visible = !grid.visible;
+          setGrid({ visible });
+          toast(visible ? "Grid on" : "Grid off", { id: "canvas-grid" });
+          return;
+        }
+        if (key === "r") {
+          e.preventDefault();
+          setRulersVisible(!rulersVisible);
+          toast(rulersVisible ? "Rulers off" : "Rulers on", { id: "canvas-rulers" });
+          return;
+        }
+        if (key === "s") {
+          e.preventDefault();
+          const snap = !grid.snap;
+          setGrid({ snap });
+          toast(snap ? "Snapping to the grid" : "Grid snapping off", {
+            id: "canvas-grid-snap",
+          });
+          return;
+        }
+        if (key === "m") {
+          e.preventDefault();
+          // The shortcut is the blunt one: all off, or back to both axes. Per-axis
+          // control lives in the canvas view popover.
+          const on = snapToItems.x || snapToItems.y;
+          setSnapToItems({ x: !on, y: !on });
+          toast(on ? "Snapping off" : "Snapping to other widgets", {
+            id: "canvas-snap-items",
+          });
+          return;
+        }
+      }
+
       if (mod && e.key.toLowerCase() === "z") {
         e.preventDefault();
         if (e.shiftKey) {
@@ -170,6 +341,13 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         } else {
           undo();
         }
+        return;
+      }
+      // Ctrl+Y is the Windows redo convention; Cmd+Y is a Finder shortcut, not
+      // a browser one, so the same branch is safe on macOS.
+      if (mod && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
         return;
       }
       if (mod && e.key.toLowerCase() === "d") {
@@ -200,6 +378,17 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
     handleSave,
+    fitToScreen,
+    setZoom,
+    setPan,
+    grid,
+    setGrid,
+    rulersVisible,
+    setRulersVisible,
+    snapToItems.x,
+    snapToItems.y,
+    setSnapToItems,
+    shortcutsOpen,
     undo,
     redo,
     clearSelection,
@@ -234,18 +423,27 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
   if (!scene) return null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-80px)] -m-5 md:-m-6">
+    <div ref={rootRef} className="flex flex-col h-[calc(100vh-80px)] -m-5 md:-m-6">
       <div className="flex items-center justify-between border-b px-4 py-2 bg-background shrink-0">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/dashboard/overlays">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => requestLeave(() => router.push("/dashboard/overlays"))}
+            title="Back to your overlays"
+          >
+            <ArrowLeft className="h-4 w-4" />
           </Button>
           <h2 className="font-semibold truncate max-w-[200px]">{scene.name}</h2>
-          <span className="text-xs text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs font-normal text-muted-foreground"
+            onClick={() => setResolutionOpen(true)}
+            title="Change the canvas size"
+          >
             {scene.width}x{scene.height}
-          </span>
+          </Button>
         </div>
 
         <div className="flex items-center gap-2">
@@ -353,6 +551,18 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
 
           <Button
             variant="outline"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setShortcutsOpen(true)}
+            title="Keyboard shortcuts (?)"
+          >
+            <Keyboard className="h-3 w-3" />
+          </Button>
+
+          <CanvasViewPopover />
+
+          <Button
+            variant="outline"
             size="sm"
             onClick={() => {
               const url = `${env.NEXT_PUBLIC_OVERLAY_URL}/${scene.slug}`;
@@ -397,9 +607,15 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
             >
               <ZoomOut className="h-3 w-3" />
             </Button>
-            <span className="text-xs w-12 text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 w-12 px-0 text-xs font-normal tabular-nums"
+              onClick={() => setZoom(1)}
+              title="Back to 100% (Shift+0)"
+            >
               {Math.round(zoom * 100)}%
-            </span>
+            </Button>
             <Button
               variant="ghost"
               size="icon"
@@ -407,6 +623,15 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
               onClick={() => setZoom(zoom + 0.1)}
             >
               <ZoomIn className="h-3 w-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={fitToScreen}
+              title="Fit the scene on screen (Shift+1)"
+            >
+              <Maximize className="h-3 w-3" />
             </Button>
           </div>
 
@@ -445,7 +670,9 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         <DemoEventPanel
           storageId={scene.id}
           sourceJs={canvasWidgetJs}
-          onFireLocal={emitDemoEvent}
+          mode={demoFireMode}
+          onModeChange={setDemoFireMode}
+          onFire={fireDemo}
           onRunningSimulatorsChange={setRunningSimulatorIds}
         />
       </div>
@@ -457,8 +684,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
           </div>
         )}
 
-        <div className="flex-1 overflow-auto bg-muted/30">
-          <EditorCanvas />
+        <div ref={canvasPaneRef} className="flex-1 overflow-auto bg-muted/30">
+          <EditorCanvas paneRef={canvasPaneRef} />
         </div>
 
         <div className="w-80 border-l overflow-y-auto shrink-0 bg-background">
@@ -483,6 +710,19 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
           captureEvent("widget_added", { custom: true });
           addCustomWidget(widgetId);
         }}
+      />
+
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+
+      <UnsavedChangesDialog {...unsavedDialogProps} />
+
+      <RestoreDraftDialog {...draftPrompt} />
+
+      <ResolutionDialog
+        open={resolutionOpen}
+        onOpenChange={setResolutionOpen}
+        current={{ width: scene.width, height: scene.height }}
+        onApply={setSceneResolution}
       />
     </div>
   );

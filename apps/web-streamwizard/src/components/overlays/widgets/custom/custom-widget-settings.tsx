@@ -38,7 +38,9 @@ export function CustomWidgetSettings({
       // repeat: it sticks once the scene is saved.
       if (!cfg.field_values) patch.field_values = data.field_values ?? {};
       if (Object.keys(patch).length > 0) {
-        updateItem(item.id, { config: { ...cfg, ...patch } });
+        // Adoption runs on load, not on a user edit, so it stays out of
+        // undo history.
+        updateItem(item.id, { config: { ...cfg, ...patch } }, { history: false });
       }
     });
   }, [cfg.widget_id, item.id]);

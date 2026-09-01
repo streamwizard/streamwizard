@@ -8,6 +8,24 @@ import { MIN_ITEM_SIZE } from "./overlay-item-helpers";
  * about (and corrected) without a mouse.
  */
 
+/**
+ * Which axis a Shift-held move drag should follow, or null while the pointer
+ * hasn't travelled far enough to have committed to one.
+ *
+ * Deltas are in scene units, so they are scaled back by `zoom` to measure real
+ * pointer travel — the threshold is about how far the hand moved, not how far
+ * the widget did. A tie goes to the horizontal axis.
+ */
+export function resolveDragAxis(
+  dx: number,
+  dy: number,
+  zoom: number,
+  thresholdPx: number
+): "x" | "y" | null {
+  if (Math.max(Math.abs(dx), Math.abs(dy)) * zoom < thresholdPx) return null;
+  return Math.abs(dx) >= Math.abs(dy) ? "x" : "y";
+}
+
 /** One item's geometry at the moment a drag started. */
 export interface DragItemStart {
   id: string;

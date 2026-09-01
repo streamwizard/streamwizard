@@ -9,6 +9,9 @@ import {
 import { LayerContextMenu } from "./layer-context-menu";
 import { selectPrimarySelectedId, useOverlayStore } from "@/stores/overlay-editor-store";
 import { useCanvasGestures } from "@/hooks/overlays/use-canvas-gestures";
+import { useCanvasViewport } from "@/hooks/overlays/use-canvas-viewport";
+import { CanvasRulers } from "./canvas-rulers";
+import { CANVAS_BACKGROUND_STYLES } from "./canvas-background";
 import { useEditorClipPlayback } from "@/hooks/overlays/use-editor-clip-playback";
 import { WidgetScaleFrame, getItemScale } from "@repo/ui/overlay";
 
@@ -22,8 +25,13 @@ const REFLOW_HINT =
 const CROP_HINT =
   "Drag to crop this edge away. Then resize normally to stretch what's left back out.";
 
-export function EditorCanvas() {
-  const { scene, selectedItemIds, zoom, selectItem, selectClipDisplayFieldForEdit, updateItem, setRenameRequestId } = useOverlayStore();
+interface EditorCanvasProps {
+  /** The scrolling pane around the canvas; wheel zoom is bound to it. */
+  paneRef: React.RefObject<HTMLDivElement | null>;
+}
+
+export function EditorCanvas({ paneRef }: EditorCanvasProps) {
+  const { scene, selectedItemIds, zoom, panX, panY, canvasBackground, grid, rulersVisible, rulerCursorVisible, selectItem, selectClipDisplayFieldForEdit, updateItem, setRenameRequestId } = useOverlayStore();
 
   const primarySelectedId = selectPrimarySelectedId({ selectedItemIds });
 
@@ -35,11 +43,20 @@ export function EditorCanvas() {
     dragState,
     guides,
     marqueeRect,
+    gaps,
     handleItemMouseDown,
     handleBackgroundMouseDown,
     handleMouseMove,
     handleMouseUp,
   } = useCanvasGestures();
+
+  const {
+    panReady,
+    panning,
+    handlePanMouseDown,
+    handlePanMouseMove,
+    handlePanMouseUp,
+  } = useCanvasViewport({ canvasRef, paneRef });
 
   if (!scene) return null;
 
@@ -100,22 +117,52 @@ export function EditorCanvas() {
   return (
     <div
       className="flex items-center justify-center p-8 min-h-full"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onMouseDown={handleBackgroundMouseDown}
+      style={{ cursor: panning ? "grabbing" : panReady ? "grab" : undefined }}
+      onMouseMove={(e) => {
+        // Panning owns the gesture while it runs; item drags never see it.
+        if (handlePanMouseMove(e)) return;
+        handleMouseMove(e);
+      }}
+      onMouseUp={(e) => {
+        if (handlePanMouseUp()) return;
+        handleMouseUp();
+        void e;
+      }}
+      onMouseLeave={() => {
+        handlePanMouseUp();
+        handleMouseUp();
+      }}
+      onMouseDown={(e) => {
+        if (handlePanMouseDown(e)) return;
+        handleBackgroundMouseDown(e);
+      }}
     >
       <div
         ref={canvasRef}
-        className="relative bg-black/90 shadow-2xl border border-border/50"
+        className="relative border border-border/50"
         style={{
           width: scene.width * zoom,
           height: scene.height * zoom,
+          transform: panX !== 0 || panY !== 0 ? `translate(${panX}px, ${panY}px)` : undefined,
+          ...CANVAS_BACKGROUND_STYLES[canvasBackground],
         }}
       >
-        <div className="absolute -top-6 left-0 text-xs text-muted-foreground">
-          {scene.width} x {scene.height}
-        </div>
+        {rulersVisible && (
+          <CanvasRulers
+            width={scene.width}
+            height={scene.height}
+            zoom={zoom}
+            canvasRef={canvasRef}
+            showCursor={rulerCursorVisible}
+          />
+        )}
+        {/* The rulers say the same thing more precisely, and the toolbar carries
+            the size as its own button, so this stands down when they are on. */}
+        {!rulersVisible && (
+          <div className="absolute -top-6 left-0 text-xs text-muted-foreground">
+            {scene.width} x {scene.height}
+          </div>
+        )}
 
         {/*
           Everything inside renders in raw scene px and is scaled once here, so
@@ -131,16 +178,20 @@ export function EditorCanvas() {
             transformOrigin: "top left",
           }}
         >
-          <div
-            className="absolute inset-0 opacity-10"
-            style={{
-              backgroundImage: `
-              linear-gradient(rgba(255,255,255,.1) ${1 / zoom}px, transparent ${1 / zoom}px),
-              linear-gradient(90deg, rgba(255,255,255,.1) ${1 / zoom}px, transparent ${1 / zoom}px)
+          {grid.visible && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                // Thickness is divided by zoom so a 1px line stays 1px on screen
+                // rather than growing with the canvas.
+                backgroundImage: `
+              linear-gradient(${grid.color} ${grid.lineWidth / zoom}px, transparent ${grid.lineWidth / zoom}px),
+              linear-gradient(90deg, ${grid.color} ${grid.lineWidth / zoom}px, transparent ${grid.lineWidth / zoom}px)
             `,
-              backgroundSize: "50px 50px",
-            }}
-          />
+                backgroundSize: `${grid.size}px ${grid.size}px`,
+              }}
+            />
+          )}
 
           {sortedItems.map((item) => {
             if (!item.is_visible) return null;
@@ -189,7 +240,12 @@ export function EditorCanvas() {
                   onContextMenu={() => {
                     if (!selectedItemIds.includes(item.id)) selectItem(item.id);
                   }}
-                  onMouseDown={(e) => handleItemMouseDown(e, item.id, "move")}
+                  onMouseDown={(e) => {
+                    // Space turns the whole canvas into a pan surface, widgets
+                    // included, or holding it over one would drag it instead.
+                    if (handlePanMouseDown(e)) return;
+                    handleItemMouseDown(e, item.id, "move");
+                  }}
                 >
                   <div
                     className={`
@@ -260,9 +316,10 @@ export function EditorCanvas() {
                               zIndex: 10,
                             }}
                             title={cropping ? CROP_HINT : handleHints[handle]}
-                            onMouseDown={(e) =>
-                              handleItemMouseDown(e, item.id, "resize", handle)
-                            }
+                            onMouseDown={(e) => {
+                              if (handlePanMouseDown(e)) return;
+                              handleItemMouseDown(e, item.id, "resize", handle);
+                            }}
                           />
                         );
                       })}
@@ -270,6 +327,75 @@ export function EditorCanvas() {
                   )}
                 </div>
               </LayerContextMenu>
+            );
+          })}
+
+          {gaps.map((gap, idx) => {
+            // Drawn in scene px but sized by 1/zoom, so the marker and its
+            // number stay the same size on screen at any zoom -- same trick the
+            // selection chrome uses.
+            const thickness = 1 / zoom;
+            const tick = 5 / zoom;
+            const horizontal = gap.axis === "x";
+            return (
+              <div
+                key={`gap-${gap.axis}-${gap.start}-${gap.end}-${idx}`}
+                className="absolute pointer-events-none flex items-center justify-center"
+                style={
+                  horizontal
+                    ? {
+                        left: gap.start,
+                        top: gap.cross - tick,
+                        width: Math.max(gap.distance, 0),
+                        height: tick * 2,
+                        zIndex: 9999,
+                      }
+                    : {
+                        top: gap.start,
+                        left: gap.cross - tick,
+                        height: Math.max(gap.distance, 0),
+                        width: tick * 2,
+                        zIndex: 9999,
+                      }
+                }
+              >
+                <span
+                  className="absolute bg-primary"
+                  style={
+                    horizontal
+                      ? { left: 0, right: 0, height: thickness }
+                      : { top: 0, bottom: 0, width: thickness }
+                  }
+                />
+                {/* End caps, so a gap of a few px still reads as a measurement. */}
+                <span
+                  className="absolute bg-primary"
+                  style={
+                    horizontal
+                      ? { left: 0, top: 0, bottom: 0, width: thickness }
+                      : { top: 0, left: 0, right: 0, height: thickness }
+                  }
+                />
+                <span
+                  className="absolute bg-primary"
+                  style={
+                    horizontal
+                      ? { right: 0, top: 0, bottom: 0, width: thickness }
+                      : { bottom: 0, left: 0, right: 0, height: thickness }
+                  }
+                />
+                <span
+                  className="relative rounded bg-primary px-1 font-medium text-primary-foreground tabular-nums"
+                  style={{
+                    fontSize: 10 / zoom,
+                    lineHeight: 1.4,
+                    paddingInline: 3 / zoom,
+                    borderRadius: 3 / zoom,
+                  }}
+                >
+                  {Math.round(gap.distance)}
+                </span>
+              </div>
             );
           })}
 

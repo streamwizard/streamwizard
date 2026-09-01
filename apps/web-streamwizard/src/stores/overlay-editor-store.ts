@@ -1,10 +1,39 @@
 import { create } from "zustand";
+import type { FireMode } from "@/components/demo/demo-fire";
 import {
   getOverlayWidgetDefinition,
   isRootLayerType,
   isRootOverlayDefinition,
   OVERLAY_WIDGET_REGISTRY,
 } from "@/components/overlays/registry/overlay-widget-registry";
+import { clampZoom } from "@/components/overlays/editor/canvas-zoom";
+import {
+  clampGridLineWidth,
+  clampGridSize,
+  loadCanvasPreferences,
+  saveCanvasBackground,
+  saveGridSettings,
+  saveRulerCursor,
+  saveSnapToItems,
+  saveRulersVisible,
+  type CanvasBackground,
+  type GridSettings,
+  type SnapAxes,
+} from "@/components/overlays/editor/canvas-preferences";
+import {
+  rescaleItemsForResolution,
+  type ResolutionChangeMode,
+} from "@/components/overlays/editor/scene-resize";
+import {
+  alignUpdates,
+  distributeUpdates,
+  matchSizeUpdates,
+  selectionBounds,
+  type AlignEdge,
+  type DistributeAxis,
+  type ItemLayoutUpdate,
+  type MatchDimension,
+} from "@/components/overlays/editor/selection-layout";
 import {
   MIN_ITEM_SIZE,
   applyLayerOrder,
@@ -15,6 +44,7 @@ import {
   touchesGeometry,
 } from "@/components/overlays/editor/overlay-item-helpers";
 import type {
+  ClipDisplayFieldItemConfig,
   DisplayFieldKey,
   OverlayItem,
   RootOverlayItemType,
@@ -24,9 +54,22 @@ import { asClipDisplayFieldConfig } from "@/types/overlays";
 
 export type EditorMode = "simple" | "pro";
 
+/**
+ * One undo step. The scene's size rides along with the items because changing
+ * the resolution can reposition everything, and undoing half of that would
+ * leave a layout built for a canvas that is no longer there.
+ */
+export interface EditorSnapshot {
+  items: OverlayItem[];
+  width: number;
+  height: number;
+}
+
 const EDITOR_MODE_STORAGE_KEY = "overlay-editor-mode";
 const HISTORY_LIMIT = 50;
 const NUDGE_HISTORY_COALESCE_MS = 400;
+const CONFIG_HISTORY_COALESCE_MS = 400;
+const CONFIG_DIFF_MAX_DEPTH = 4;
 
 export { MIN_ITEM_SIZE };
 
@@ -41,14 +84,32 @@ interface OverlayEditorState {
   isDirty: boolean;
   zoom: number;
   /** Undo/redo snapshots of scene.items. Cleared on every setScene (save remaps temp ids). */
-  history: { past: OverlayItem[][]; future: OverlayItem[][] };
+  history: { past: EditorSnapshot[]; future: EditorSnapshot[] };
   /** Set by the canvas context menu "Rename" — the inspector focuses its Label input, then clears it. */
   renameRequestId: string | null;
   /** Simple hides the layers panel and keeps the calm inspector defaults; pro is the full editor. */
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
 
-  setScene: (scene: OverlaySceneWithItems) => void;
+  /**
+   * Design-time canvas aids. The streamer's own working preferences: they never
+   * reach the scene, the database or the live overlay.
+   */
+  canvasBackground: CanvasBackground;
+  setCanvasBackground: (background: CanvasBackground) => void;
+  snapToItems: SnapAxes;
+  setSnapToItems: (axes: Partial<SnapAxes>) => void;
+  grid: GridSettings;
+  setGrid: (grid: Partial<GridSettings>) => void;
+  rulersVisible: boolean;
+  setRulersVisible: (visible: boolean) => void;
+  rulerCursorVisible: boolean;
+  setRulerCursorVisible: (visible: boolean) => void;
+
+  setScene: (
+    scene: OverlaySceneWithItems,
+    options?: { idMap?: Record<string, string> }
+  ) => void;
   selectItem: (id: string | null) => void;
   toggleSelectItem: (id: string) => void;
   setSelectedItems: (ids: string[]) => void;
@@ -58,6 +119,23 @@ interface OverlayEditorState {
     fieldKey: DisplayFieldKey
   ) => void;
   setZoom: (zoom: number) => void;
+  /**
+   * Changes the scene's resolution in the editor only; the row is written on
+   * the next save. One undo step covers the size and any repositioning.
+   */
+  setSceneResolution: (
+    width: number,
+    height: number,
+    mode: ResolutionChangeMode
+  ) => void;
+  /**
+   * Canvas pan, in screen px, on top of the pane's own scrolling. Cursor-anchored
+   * zoom writes here to hold a focal point that flex centring would otherwise move.
+   */
+  panX: number;
+  panY: number;
+  setPan: (x: number, y: number) => void;
+  nudgePan: (dx: number, dy: number) => void;
   markDirty: () => void;
   markClean: () => void;
   setRenameRequestId: (id: string | null) => void;
@@ -68,12 +146,22 @@ interface OverlayEditorState {
 
   addItem: (type: RootOverlayItemType) => void;
   addCustomWidget: (widgetId: string) => void;
-  updateItem: (id: string, updates: Partial<OverlayItem>) => void;
+  updateItem: (
+    id: string,
+    updates: Partial<OverlayItem>,
+    options?: { history?: boolean }
+  ) => void;
   removeItem: (id: string) => void;
   removeSelectedItems: () => void;
   duplicateItem: (id: string) => void;
   duplicateSelectedItems: () => void;
   nudgeSelected: (dx: number, dy: number) => void;
+  /** Multi-selection layout. Each pushes a single undo step. */
+  alignSelected: (edge: AlignEdge) => void;
+  distributeSelected: (axis: DistributeAxis) => void;
+  matchSizeSelected: (dimension: MatchDimension) => void;
+  selectedRootItems: () => OverlayItem[];
+  applyLayoutUpdates: (updates: ItemLayoutUpdate[]) => void;
   reorderItem: (id: string, direction: "up" | "down") => void;
   setLayerOrder: (orderedIdsTopFirst: string[]) => void;
   bringToFront: (id: string) => void;
@@ -103,6 +191,14 @@ interface OverlayEditorState {
    */
   demoEvent: { listener: string; event: Record<string, unknown>; seq: number } | null;
   emitDemoEvent: (listener: string, event: Record<string, unknown>) => void;
+  /**
+   * Where test events go, shared by the demo bar and the alert box's own Test
+   * buttons. It lives here rather than in the demo bar because the two panels
+   * sit in different corners of the editor and must agree: a streamer who set
+   * the bar to Live shouldn't find the alert inspector still firing locally.
+   */
+  demoFireMode: FireMode;
+  setDemoFireMode: (mode: FireMode) => void;
   /** Ids of the simulators currently looping, so the toolbar can badge a count. */
   runningSimulatorIds: string[];
   setRunningSimulatorIds: (ids: string[]) => void;
@@ -113,16 +209,187 @@ export function selectPrimarySelectedId(s: Pick<OverlayEditorState, "selectedIte
   return s.selectedItemIds.length === 1 ? s.selectedItemIds[0]! : null;
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Dotted paths of the values that differ between two configs, descending one
+ * level at a time so nested settings name themselves (`variants.follow.title`,
+ * `layout.x`) instead of collapsing into their container key. Arrays and
+ * non-objects compare as leaves.
+ */
+function changedConfigPaths(
+  prev: unknown,
+  next: unknown,
+  prefix = "",
+  depth = 0
+): string[] {
+  if (Object.is(prev, next)) return [];
+  if (
+    depth >= CONFIG_DIFF_MAX_DEPTH ||
+    !isPlainRecord(prev) ||
+    !isPlainRecord(next)
+  ) {
+    return [prefix || "*"];
+  }
+
+  const paths: string[] = [];
+  for (const key of new Set([...Object.keys(prev), ...Object.keys(next)])) {
+    paths.push(
+      ...changedConfigPaths(
+        prev[key],
+        next[key],
+        prefix ? `${prefix}.${key}` : key,
+        depth + 1
+      )
+    );
+  }
+  return paths;
+}
+
+/** Clip-field children point at their parent by id; re-point them after a save. */
+function remapItemConfigRefs(
+  config: OverlayItem["config"],
+  idMap: Record<string, string>
+): OverlayItem["config"] {
+  if (typeof config !== "object" || !config || !("parentClipItemId" in config)) {
+    return config;
+  }
+  const c = config as ClipDisplayFieldItemConfig;
+  const nextParent = idMap[c.parentClipItemId];
+  if (!nextParent || nextParent === c.parentClipItemId) return config;
+  return { ...c, parentClipItemId: nextParent };
+}
+
+/**
+ * Rewrites the undo/redo stack from temp ids to the DB ids a save handed back,
+ * so a snapshot taken before the save still describes rows the next save can
+ * find. Snapshots that reference nothing in the map keep their identity, which
+ * keeps `pushHistory`'s no-op check working.
+ */
+function remapHistory(
+  history: { past: EditorSnapshot[]; future: EditorSnapshot[] },
+  idMap: Record<string, string>
+): { past: EditorSnapshot[]; future: EditorSnapshot[] } {
+  if (Object.keys(idMap).length === 0) return history;
+
+  const remapSnapshot = (snapshot: EditorSnapshot): EditorSnapshot => {
+    let changed = false;
+    const next = snapshot.items.map((item) => {
+      const id = idMap[item.id] ?? item.id;
+      const config = remapItemConfigRefs(item.config, idMap);
+      if (id === item.id && config === item.config) return item;
+      changed = true;
+      return { ...item, id, config };
+    });
+    return changed ? { ...snapshot, items: next } : snapshot;
+  };
+
+  return {
+    past: history.past.map(remapSnapshot),
+    future: history.future.map(remapSnapshot),
+  };
+}
+
 let lastNudgeAt = 0;
+let lastConfigEditAt = 0;
+let lastConfigEditKey: string | null = null;
+let configEditTickOpen = false;
+
+/**
+ * One undo step per field interaction. Continuous typing or dragging on the
+ * same field coalesces into a single step, a different field starts a new one,
+ * and everything written inside one handler stays in the same step so undo can
+ * never leave a multi-item edit (swapping two display fields' stack order) half
+ * applied. A write that changes nothing records no step at all.
+ */
+/** A scene swap ends any burst in progress; the next edit starts a fresh step. */
+function resetConfigEditCoalescing() {
+  lastConfigEditAt = 0;
+  lastConfigEditKey = null;
+  configEditTickOpen = false;
+}
+
+function recordConfigEdit(
+  id: string,
+  prevConfig: unknown,
+  nextConfig: unknown,
+  pushHistory: () => void
+) {
+  const paths = changedConfigPaths(prevConfig, nextConfig);
+  if (paths.length === 0) return;
+
+  const key = `${id}|${paths.sort().join(",")}`;
+  const now = Date.now();
+  const sameBurst =
+    configEditTickOpen ||
+    (key === lastConfigEditKey &&
+      now - lastConfigEditAt <= CONFIG_HISTORY_COALESCE_MS);
+
+  if (!sameBurst) pushHistory();
+
+  lastConfigEditAt = now;
+  lastConfigEditKey = key;
+  if (!configEditTickOpen) {
+    configEditTickOpen = true;
+    queueMicrotask(() => {
+      configEditTickOpen = false;
+    });
+  }
+}
+
 
 export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   scene: null,
   selectedItemIds: [],
   isDirty: false,
   zoom: 0.5,
+  panX: 0,
+  panY: 0,
   history: { past: [], future: [] },
   renameRequestId: null,
   editorMode: loadEditorMode(),
+
+  ...(() => {
+    const prefs = loadCanvasPreferences();
+    return {
+      canvasBackground: prefs.background,
+      snapToItems: prefs.snapToItems,
+      grid: prefs.grid,
+      rulersVisible: prefs.rulers,
+      rulerCursorVisible: prefs.rulerCursor,
+    };
+  })(),
+
+  setCanvasBackground: (background) => {
+    saveCanvasBackground(background);
+    set({ canvasBackground: background });
+  },
+
+  setSnapToItems: (axes) => {
+    const next = { ...get().snapToItems, ...axes };
+    saveSnapToItems(next);
+    set({ snapToItems: next });
+  },
+
+  setGrid: (grid) => {
+    const next = { ...get().grid, ...grid };
+    next.size = clampGridSize(next.size);
+    next.lineWidth = clampGridLineWidth(next.lineWidth);
+    saveGridSettings(next);
+    set({ grid: next });
+  },
+
+  setRulersVisible: (visible) => {
+    saveRulersVisible(visible);
+    set({ rulersVisible: visible });
+  },
+
+  setRulerCursorVisible: (visible) => {
+    saveRulerCursor(visible);
+    set({ rulerCursorVisible: visible });
+  },
   setEditorMode: (mode) => {
     if (typeof window !== "undefined") {
       window.localStorage.setItem(EDITOR_MODE_STORAGE_KEY, mode);
@@ -130,15 +397,26 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     set({ editorMode: mode });
   },
 
-  setScene: (scene) =>
-    set({
-      scene,
-      isDirty: false,
-      selectedItemIds: [],
-      // Save remaps temp-N ids to DB ids; undoing across that boundary would
-      // resurrect dead temp ids and duplicate rows on the next full-replace save.
-      history: { past: [], future: [] },
-    }),
+  setScene: (scene, options) => {
+    resetConfigEditCoalescing();
+    set((state) => {
+      const surviving = new Set(scene.items.map((i) => i.id));
+      return {
+        scene,
+        isDirty: false,
+        // A save replaces the scene wholesale, so clearing the selection here
+        // would drop the streamer out of the inspector panel they were editing.
+        // Keep what still exists; callers remap temp ids before calling this.
+        selectedItemIds: state.selectedItemIds.filter((id) => surviving.has(id)),
+        // A save hands back the temp-N -> DB id map, so the stack is rewritten
+        // onto the new ids and undo keeps working across that boundary. Loading
+        // a scene passes no map and starts from an empty stack.
+        history: options?.idMap
+          ? remapHistory(state.history, options.idMap)
+          : { past: [], future: [] },
+      };
+    });
+  },
 
   selectItem: (id) => set({ selectedItemIds: id === null ? [] : [id] }),
 
@@ -179,7 +457,32 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     if (child) set({ selectedItemIds: [child.id] });
   },
 
-  setZoom: (zoom) => set({ zoom: Math.max(0.1, Math.min(2, zoom)) }),
+  setZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
+
+  setSceneResolution: (width, height, mode) => {
+    const { scene, pushHistory } = get();
+    if (!scene) return;
+    if (scene.width === width && scene.height === height) return;
+
+    pushHistory();
+    set({
+      scene: {
+        ...scene,
+        width,
+        height,
+        items:
+          mode === "scale"
+            ? rescaleItemsForResolution(scene.items, scene, { width, height })
+            : scene.items,
+      },
+      isDirty: true,
+    });
+  },
+
+  setPan: (x, y) => set({ panX: x, panY: y }),
+
+  nudgePan: (dx, dy) =>
+    set((state) => ({ panX: state.panX + dx, panY: state.panY + dy })),
 
   markDirty: () => set({ isDirty: true }),
 
@@ -189,12 +492,24 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
 
   pushHistory: (snapshot) => {
     const { scene, history } = get();
-    const items = snapshot ?? scene?.items;
-    if (!items) return;
+    if (!scene) return;
+    const items = snapshot ?? scene.items;
     // Skip no-op pushes (e.g. focusing an input without editing) so undo never
-    // appears to do nothing; items reference only changes when something mutated.
-    if (history.past[history.past.length - 1] === items) return;
-    const past = [...history.past, items].slice(-HISTORY_LIMIT);
+    // appears to do nothing; the items reference only changes when something
+    // mutated, and the size only when the resolution did.
+    const last = history.past[history.past.length - 1];
+    if (
+      last &&
+      last.items === items &&
+      last.width === scene.width &&
+      last.height === scene.height
+    ) {
+      return;
+    }
+    const past = [
+      ...history.past,
+      { items, width: scene.width, height: scene.height },
+    ].slice(-HISTORY_LIMIT);
     set({ history: { past, future: [] } });
   },
 
@@ -202,12 +517,20 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     const { scene, history, selectedItemIds } = get();
     if (!scene || history.past.length === 0) return;
     const previous = history.past[history.past.length - 1]!;
-    const surviving = new Set(previous.map((i) => i.id));
+    const surviving = new Set(previous.items.map((i) => i.id));
     set({
-      scene: { ...scene, items: previous },
+      scene: {
+        ...scene,
+        items: previous.items,
+        width: previous.width,
+        height: previous.height,
+      },
       history: {
         past: history.past.slice(0, -1),
-        future: [...history.future, scene.items],
+        future: [
+          ...history.future,
+          { items: scene.items, width: scene.width, height: scene.height },
+        ],
       },
       selectedItemIds: selectedItemIds.filter((id) => surviving.has(id)),
       isDirty: true,
@@ -218,11 +541,19 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     const { scene, history, selectedItemIds } = get();
     if (!scene || history.future.length === 0) return;
     const next = history.future[history.future.length - 1]!;
-    const surviving = new Set(next.map((i) => i.id));
+    const surviving = new Set(next.items.map((i) => i.id));
     set({
-      scene: { ...scene, items: next },
+      scene: {
+        ...scene,
+        items: next.items,
+        width: next.width,
+        height: next.height,
+      },
       history: {
-        past: [...history.past, scene.items].slice(-HISTORY_LIMIT),
+        past: [
+          ...history.past,
+          { items: scene.items, width: scene.width, height: scene.height },
+        ].slice(-HISTORY_LIMIT),
         future: history.future.slice(0, -1),
       },
       selectedItemIds: selectedItemIds.filter((id) => surviving.has(id)),
@@ -271,12 +602,18 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     });
   },
 
-  updateItem: (id, updates) => {
-    const { scene } = get();
+  updateItem: (id, updates, options) => {
+    const { scene, pushHistory } = get();
     if (!scene) return;
 
     const target = scene.items.find((i) => i.id === id);
     if (!target) return;
+
+    // Geometry callers push their own snapshot on gesture start; config edits
+    // arrive straight from the settings panels, so history is recorded here.
+    if (updates.config !== undefined && options?.history !== false) {
+      recordConfigEdit(id, target.config, updates.config, pushHistory);
+    }
 
     const nextUpdates = touchesGeometry(updates)
       ? clampGeometry(target, updates, scene)
@@ -448,6 +785,48 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     }
   },
 
+  alignSelected: (edge) => {
+    const { scene, applyLayoutUpdates, selectedRootItems } = get();
+    if (!scene) return;
+    const items = selectedRootItems();
+    // A lone item still aligns to the scene; two or more align to each other.
+    const bounds =
+      items.length > 1
+        ? selectionBounds(items)
+        : { x: 0, y: 0, w: scene.width, h: scene.height };
+    if (!bounds) return;
+    applyLayoutUpdates(alignUpdates(items, edge, bounds));
+  },
+
+  distributeSelected: (axis) => {
+    const { applyLayoutUpdates, selectedRootItems } = get();
+    applyLayoutUpdates(distributeUpdates(selectedRootItems(), axis));
+  },
+
+  matchSizeSelected: (dimension) => {
+    const { applyLayoutUpdates, selectedItemIds, selectedRootItems } = get();
+    const primaryId = selectedItemIds[0];
+    if (!primaryId) return;
+    applyLayoutUpdates(matchSizeUpdates(selectedRootItems(), primaryId, dimension));
+  },
+
+  /** The selected items that can actually be laid out; clip children can't. */
+  selectedRootItems: () => {
+    const { scene, selectedItemIds } = get();
+    if (!scene) return [];
+    return selectedItemIds
+      .map((id) => scene.items.find((i) => i.id === id))
+      .filter((i): i is OverlayItem => !!i && isRootLayerType(i.type));
+  },
+
+  /** One snapshot for the whole operation, then the moves. */
+  applyLayoutUpdates: (updates) => {
+    if (updates.length === 0) return;
+    const { pushHistory, updateItem } = get();
+    pushHistory();
+    for (const { id, updates: patch } of updates) updateItem(id, patch);
+  },
+
   reorderItem: (id, direction) => {
     const { scene, pushHistory } = get();
     if (!scene) return;
@@ -577,6 +956,9 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       editorClipPreviewPaused: false,
       editorClipPreviewResumeTick: s.editorClipPreviewResumeTick + 1,
     })),
+
+  demoFireMode: "local",
+  setDemoFireMode: (mode) => set({ demoFireMode: mode }),
 
   demoEvent: null,
   emitDemoEvent: (listener, event) =>

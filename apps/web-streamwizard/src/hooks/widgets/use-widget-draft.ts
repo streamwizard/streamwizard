@@ -8,6 +8,7 @@ import type { WidgetFieldSchema } from "@repo/ui/overlay";
 import type { Widget } from "@/actions/widgets";
 import { publishWidgetToLibrary, updateWidget } from "@/actions/widgets";
 import { coerceFields } from "@/components/widgets/editor/widget-editor-fields";
+import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 
 /**
  * The four editable sources. They live in refs, not state: Monaco owns the text
@@ -52,6 +53,8 @@ export function useWidgetDraft(
   const [description, setDescription] = useState(widget.description ?? "");
   const [tagsText, setTagsText] = useState(widget.tags?.join(", ") ?? "");
   const [isDirty, setIsDirty] = useState(false);
+  const { requestLeave, dialogProps: unsavedDialogProps } =
+    useUnsavedChangesGuard(isDirty);
   const [isSaving, startSave] = useTransition();
   const [isPublishing, startPublish] = useTransition();
 
@@ -114,24 +117,14 @@ export function useWidgetDraft(
     });
   }
 
-  // Browser-level guard. Next's client router can't be intercepted here, so the
-  // in-app escape hatch (the Back button) confirms separately.
-  useEffect(() => {
-    if (!isDirty) return;
-    function warn(e: BeforeUnloadEvent) {
-      e.preventDefault();
-    }
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [isDirty]);
-
   function handleBack() {
-    if (isDirty && !window.confirm("You have unsaved changes. Leave anyway?")) return;
-    if (fromUrl && fromUrl.startsWith("/") && !fromUrl.startsWith("//") && !fromUrl.includes("\\")) {
-      router.push(fromUrl);
-      return;
-    }
-    router.back();
+    requestLeave(() => {
+      if (fromUrl && fromUrl.startsWith("/") && !fromUrl.startsWith("//") && !fromUrl.includes("\\")) {
+        router.push(fromUrl);
+        return;
+      }
+      router.back();
+    });
   }
 
   return {
@@ -149,5 +142,6 @@ export function useWidgetDraft(
     handleSaveRef,
     publish,
     handleBack,
+    unsavedDialogProps,
   };
 }

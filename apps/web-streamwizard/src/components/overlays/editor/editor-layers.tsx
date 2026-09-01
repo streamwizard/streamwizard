@@ -43,6 +43,7 @@ import {
 } from "../registry/overlay-widget-registry";
 import { DISPLAY_FIELD_LABELS } from "../widgets/clips/nested-fields";
 import { LayerContextMenu } from "./layer-context-menu";
+import { extendsSelection } from "./selection-modifiers";
 import { SortableLayerRow } from "./sortable-layer-row";
 import { selectPrimarySelectedId, useOverlayStore } from "@/stores/overlay-editor-store";
 
@@ -167,7 +168,7 @@ export function EditorLayers() {
                         ${!item.is_visible ? "opacity-50" : ""}
                       `}
                         onClick={(e) => {
-                          if (e.shiftKey) {
+                          if (extendsSelection(e)) {
                             toggleSelectItem(item.id);
                           } else {
                             selectItem(item.id);

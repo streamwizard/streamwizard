@@ -49,7 +49,11 @@ export interface OverlayCanvasProps {
     parentClipItemId: string,
     fieldKey: DisplayFieldKey
   ) => void;
-  updateItem: (id: string, updates: Partial<OverlayItem>) => void;
+  updateItem: (
+    id: string,
+    updates: Partial<OverlayItem>,
+    options?: { history?: boolean }
+  ) => void;
   /** Editor-only: session clip preview (pause / mute / autoplay), not saved. */
   editorClipPlayback?: EditorClipPlaybackControls;
 }
@@ -59,7 +63,11 @@ export type ClipFolderRow = Database["public"]["Tables"]["clip_folders"]["Row"];
 /** Shown below generic “Properties” for root items. */
 export interface OverlayInspectorAppendProps {
   item: OverlayItem;
-  updateItem: (id: string, updates: Partial<OverlayItem>) => void;
+  updateItem: (
+    id: string,
+    updates: Partial<OverlayItem>,
+    options?: { history?: boolean }
+  ) => void;
   clipFolders: ClipFolderRow[];
 }
 

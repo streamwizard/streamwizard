@@ -38,18 +38,20 @@ import { Switch } from "@repo/ui";
 import { Badge } from "@repo/ui";
 import {
   Copy,
+  Download,
   Edit,
   Layers,
   MoreVertical,
   Plus,
   RefreshCw,
   Trash2,
+  Upload,
   Monitor,
   Smartphone,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { env } from "@/lib/env";
 import {
@@ -60,6 +62,7 @@ import {
   updateOverlayScene,
 } from "@/actions/overlays/scenes";
 import { createOverlayFromTemplate } from "@/actions/overlays/templates";
+import { exportOverlayScene, importOverlayScene } from "@/actions/overlays/transfer";
 
 export interface OverlayTemplateOption {
   slug: string;
@@ -98,6 +101,10 @@ export function OverlayScenesList({
   const [createdScene, setCreatedScene] = useState<OverlayScene | null>(null);
   const [resetKeyScene, setResetKeyScene] = useState<OverlayScene | null>(null);
   const [isResettingKey, setIsResettingKey] = useState(false);
+  const [deleteScene, setDeleteScene] = useState<OverlayScene | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   // A template is built for one render mode; "blank" suits both.
   const availableTemplates = templates.filter(
@@ -151,14 +158,57 @@ export function OverlayScenesList({
     }
   }
 
-  async function handleDelete(id: string) {
-    const { success, error } = await deleteOverlayScene(id);
+  async function handleDelete() {
+    if (!deleteScene) return;
+    setIsDeleting(true);
+
+    const { success, error } = await deleteOverlayScene(deleteScene.id);
+
+    setIsDeleting(false);
+
     if (success) {
+      setDeleteScene(null);
       toast.success("Overlay deleted");
       router.refresh();
     } else {
       toast.error(error ?? "Failed to delete");
     }
+  }
+
+  async function handleExport(scene: OverlayScene) {
+    const { data, error } = await exportOverlayScene(scene.id);
+    if (!data) {
+      toast.error(error ?? "Couldn't export that overlay");
+      return;
+    }
+
+    // Handing the file over is a browser job: the action only builds the document.
+    const url = URL.createObjectURL(
+      new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+    );
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${scene.slug || "overlay"}.streamwizard.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+
+    toast.success("Overlay exported");
+  }
+
+  async function handleImportFile(file: File) {
+    setIsImporting(true);
+    const { data, error, notes } = await importOverlayScene(await file.text());
+    setIsImporting(false);
+
+    if (!data) {
+      toast.error(error ?? "Couldn't import that file");
+      return;
+    }
+
+    toast.success(`${data.name} imported`, {
+      description: notes.length > 0 ? notes.join(" ") : undefined,
+    });
+    router.refresh();
   }
 
   async function handleDuplicate(id: string) {
@@ -209,7 +259,27 @@ export function OverlayScenesList({
 
   return (
     <div className="space-y-4">
-      <div className="hidden md:flex justify-end">
+      <div className="hidden md:flex justify-end gap-2">
+        <input
+          ref={importInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            // Reset first, so picking the same file twice still fires.
+            e.target.value = "";
+            if (file) handleImportFile(file);
+          }}
+        />
+        <Button
+          variant="outline"
+          onClick={() => importInputRef.current?.click()}
+          disabled={isImporting}
+        >
+          <Upload className="mr-2 h-4 w-4" />
+          {isImporting ? "Importing..." : "Import"}
+        </Button>
         <Dialog open={dialogOpen} onOpenChange={closeCreateDialog}>
           <DialogTrigger asChild>
             <Button>
@@ -419,12 +489,16 @@ export function OverlayScenesList({
                         <Copy className="mr-2 h-4 w-4" />
                         Duplicate
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleExport(scene)}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Export
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setResetKeyScene(scene)}>
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Reset overlay key
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onClick={() => handleDelete(scene.id)}
+                        onClick={() => setDeleteScene(scene)}
                         className="text-destructive focus:text-destructive"
                       >
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -487,6 +561,37 @@ export function OverlayScenesList({
             <AlertDialogCancel disabled={isResettingKey}>Never mind</AlertDialogCancel>
             <AlertDialogAction onClick={handleResetKey} disabled={isResettingKey}>
               {isResettingKey ? "Resetting..." : "Reset key"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={deleteScene !== null}
+        onOpenChange={(open) => !open && setDeleteScene(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteScene?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This takes the overlay and everything on it. Its browser source
+              stops working, so anywhere you have this URL in OBS goes blank.
+              There is no undo for this one.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Never mind</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(e) => {
+                // Deleting is async; let the dialog stay up under the pending
+                // label instead of closing on the click.
+                e.preventDefault();
+                handleDelete();
+              }}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete overlay"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

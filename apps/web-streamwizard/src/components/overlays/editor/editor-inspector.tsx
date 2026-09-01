@@ -19,6 +19,8 @@ import {
   AlignVerticalJustifyCenter,
   AlignVerticalJustifyEnd,
   AlignVerticalJustifyStart,
+  AlignHorizontalDistributeCenter,
+  AlignVerticalDistributeCenter,
   Copy,
   LayoutTemplate,
   Maximize2,
@@ -30,6 +32,8 @@ import type { OverlayItem } from "@/types/overlays";
 import { NO_CROP, type CropInsets } from "@repo/ui/overlay";
 import { getOverlayWidgetDefinition } from "../registry/overlay-widget-registry";
 import { InspectorSection } from "./inspector-section";
+import { NumberField } from "./number-field";
+import { MIN_DISTRIBUTE_ITEMS } from "./selection-layout";
 import { selectPrimarySelectedId, useOverlayStore } from "@/stores/overlay-editor-store";
 import { useInspectorCommands } from "@/hooks/overlays/use-inspector-commands";
 
@@ -45,6 +49,9 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
     setRenameRequestId,
     duplicateSelectedItems,
     removeSelectedItems,
+    alignSelected,
+    distributeSelected,
+    matchSizeSelected,
   } = useOverlayStore();
 
   const selectedItemId = selectPrimarySelectedId({ selectedItemIds });
@@ -62,6 +69,8 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
   }, [renameRequestId, selectedItemId, setRenameRequestId]);
 
   if (selectedItemIds.length > 1) {
+    const canDistribute = selectedItemIds.length >= MIN_DISTRIBUTE_ITEMS;
+
     return (
       <div className="p-4 space-y-4">
         <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -70,6 +79,115 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
         <p className="text-sm text-foreground">
           {selectedItemIds.length} items selected
         </p>
+
+        <div className="space-y-2">
+          <Label className="text-xs">Align to each other</Label>
+          <div className="grid grid-cols-3 gap-1.5">
+            {(
+              [
+                ["left", "Align left", AlignHorizontalJustifyStart],
+                ["hcenter", "Align horizontal center", AlignHorizontalJustifyCenter],
+                ["right", "Align right", AlignHorizontalJustifyEnd],
+                ["top", "Align top", AlignVerticalJustifyStart],
+                ["vcenter", "Align vertical center", AlignVerticalJustifyCenter],
+                ["bottom", "Align bottom", AlignVerticalJustifyEnd],
+              ] as const
+            ).map(([edge, label, Icon]) => (
+              <Button
+                key={edge}
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9"
+                aria-label={label}
+                title={label}
+                onClick={() => alignSelected(edge)}
+              >
+                <Icon className="h-4 w-4" />
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">Space evenly</Label>
+          <div className="grid grid-cols-2 gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9"
+              disabled={!canDistribute}
+              title={
+                canDistribute
+                  ? "Equal gaps left to right"
+                  : "Select at least three items"
+              }
+              onClick={() => distributeSelected("horizontal")}
+            >
+              <AlignHorizontalDistributeCenter className="mr-2 h-4 w-4" />
+              Across
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9"
+              disabled={!canDistribute}
+              title={
+                canDistribute
+                  ? "Equal gaps top to bottom"
+                  : "Select at least three items"
+              }
+              onClick={() => distributeSelected("vertical")}
+            >
+              <AlignVerticalDistributeCenter className="mr-2 h-4 w-4" />
+              Down
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">Match the first one you picked</Label>
+          <div className="grid grid-cols-3 gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs"
+              title="Match its width"
+              onClick={() => matchSizeSelected("width")}
+            >
+              <StretchHorizontal className="mr-1.5 h-3.5 w-3.5" />
+              Width
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs"
+              title="Match its height"
+              onClick={() => matchSizeSelected("height")}
+            >
+              <StretchVertical className="mr-1.5 h-3.5 w-3.5" />
+              Height
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs"
+              title="Fit inside its box, proportions kept"
+              onClick={() => matchSizeSelected("both")}
+            >
+              <Maximize2 className="mr-1.5 h-3.5 w-3.5" />
+              Both
+            </Button>
+          </div>
+        </div>
+
+        <Separator />
+
         <div className="flex flex-col gap-2">
           <Button
             type="button"
@@ -92,8 +210,8 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
           </Button>
         </div>
         <p className="text-[11px] text-muted-foreground leading-snug">
-          Drag on the canvas to move all selected items together. Select a
-          single item to edit its properties.
+          Drag on the canvas to move all selected items together. Locked items
+          stay put. Select a single item to edit its properties.
         </p>
       </div>
     );
@@ -179,22 +297,18 @@ function SelectedItemInspector({
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Label className="text-xs">X</Label>
-              <Input
-                type="number"
+              <NumberField
                 value={Math.round(item.x)}
                 onFocus={() => pushHistory()}
-                onChange={(e) => handleUpdate({ x: Number(e.target.value) })}
-                className="h-8 text-sm"
+                onCommit={(x) => handleUpdate({ x })}
               />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Y</Label>
-              <Input
-                type="number"
+              <NumberField
                 value={Math.round(item.y)}
                 onFocus={() => pushHistory()}
-                onChange={(e) => handleUpdate({ y: Number(e.target.value) })}
-                className="h-8 text-sm"
+                onCommit={(y) => handleUpdate({ y })}
               />
             </div>
           </div>
@@ -202,22 +316,20 @@ function SelectedItemInspector({
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Width</Label>
-              <Input
-                type="number"
+              <NumberField
                 value={Math.round(item.w)}
+                min={1}
                 onFocus={() => pushHistory()}
-                onChange={(e) => setRenderedWidth(Number(e.target.value))}
-                className="h-8 text-sm"
+                onCommit={setRenderedWidth}
               />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Height</Label>
-              <Input
-                type="number"
+              <NumberField
                 value={Math.round(item.h)}
+                min={1}
                 onFocus={() => pushHistory()}
-                onChange={(e) => setRenderedHeight(Number(e.target.value))}
-                className="h-8 text-sm"
+                onCommit={setRenderedHeight}
               />
             </div>
           </div>
@@ -225,18 +337,18 @@ function SelectedItemInspector({
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Size</Label>
-              <div className="relative">
-                <Input
-                  type="number"
-                  value={Math.round(itemScale * 100)}
-                  onFocus={() => pushHistory()}
-                  onChange={(e) => setScalePercent(Number(e.target.value))}
-                  className="h-8 text-sm pr-6"
-                />
-                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                  %
-                </span>
-              </div>
+              <NumberField
+                value={Math.round(itemScale * 100)}
+                min={1}
+                onFocus={() => pushHistory()}
+                onCommit={setScalePercent}
+                className="pr-6"
+                adornment={
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    %
+                  </span>
+                }
+              />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">&nbsp;</Label>
@@ -262,22 +374,20 @@ function SelectedItemInspector({
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Frame width</Label>
-              <Input
-                type="number"
+              <NumberField
                 value={Math.round(designSize.w)}
+                min={1}
                 onFocus={() => pushHistory()}
-                onChange={(e) => setDesignWidth(Number(e.target.value))}
-                className="h-8 text-sm"
+                onCommit={setDesignWidth}
               />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">Frame height</Label>
-              <Input
-                type="number"
+              <NumberField
                 value={Math.round(designSize.h)}
+                min={1}
                 onFocus={() => pushHistory()}
-                onChange={(e) => setDesignHeight(Number(e.target.value))}
-                className="h-8 text-sm"
+                onCommit={setDesignHeight}
               />
             </div>
           </div>
@@ -312,13 +422,12 @@ function SelectedItemInspector({
                   <Label className="text-[10px] text-muted-foreground">
                     {label}
                   </Label>
-                  <Input
-                    type="number"
+                  <NumberField
                     min={0}
                     value={Math.round(cropInsets[edge])}
                     onFocus={() => pushHistory()}
-                    onChange={(e) => setCropInset(edge, Number(e.target.value))}
-                    className="h-8 text-sm px-2"
+                    onCommit={(inset) => setCropInset(edge, inset)}
+                    className="px-2"
                   />
                 </div>
               ))}
@@ -513,28 +622,20 @@ function SelectedItemInspector({
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Rotation</Label>
-                  <Input
-                    type="number"
+                  <NumberField
                     value={item.rotation}
-                    onFocus={() => pushHistory()}
-                    onChange={(e) =>
-                      handleUpdate({ rotation: Number(e.target.value) })
-                    }
-                    className="h-8 text-sm"
                     min={-360}
                     max={360}
+                    onFocus={() => pushHistory()}
+                    onCommit={(rotation) => handleUpdate({ rotation })}
                   />
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs">Z-Index</Label>
-                  <Input
-                    type="number"
+                  <NumberField
                     value={item.z_index}
                     onFocus={() => pushHistory()}
-                    onChange={(e) =>
-                      handleUpdate({ z_index: Number(e.target.value) })
-                    }
-                    className="h-8 text-sm"
+                    onCommit={(z_index) => handleUpdate({ z_index })}
                   />
                 </div>
               </div>

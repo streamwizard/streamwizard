@@ -8,6 +8,10 @@ import {
   TIME_WINDOW_PRESETS,
   type DisplayFieldKey,
 } from "./components/overlay/types";
+import {
+  ALERT_EVENT_TYPES,
+  type AlertEventType,
+} from "./components/overlay/widgets/alert/alert-widget-config";
 
 const displayFieldLayoutSchema = z.object({
   x: z.number().min(0).max(100),
@@ -190,6 +194,7 @@ const alertVariantConfigSchema = z.object({
   titleTemplate: z.string().max(200).default(""),
   messageTemplate: z.string().max(200).default(""),
   durationSeconds: z.number().min(0).max(60).default(6),
+  durationMode: z.enum(["fixed", "media"]).default("fixed"),
   minAmount: z.number().int().min(0).max(1_000_000).default(0),
   layout: z.enum(["stacked", "row", "overlay"]).default("stacked"),
   animationIn: z
@@ -214,18 +219,23 @@ const alertVariantConfigSchema = z.object({
   textShadow: z.boolean().default(true),
 });
 
-/** Persisted JSON on `alert_widget` rows. */
+/**
+ * Persisted JSON on `alert_widget` rows.
+ *
+ * Built from ALERT_EVENT_TYPES rather than a hand-written list: a z.object
+ * strips keys it does not declare, so every event missing here would be
+ * silently dropped on save and come back on its default at the next load.
+ * Each variant is optional so rows written before an event existed still
+ * validate -- normalizeAlertWidgetConfig fills the gaps on read.
+ */
 export const alertWidgetItemConfigSchema = z.object({
   gapSeconds: z.number().min(0).max(30).default(1),
   masterVolume: z.number().min(0).max(1).default(0.8),
-  variants: z.object({
-    follow: alertVariantConfigSchema,
-    sub: alertVariantConfigSchema,
-    resub: alertVariantConfigSchema,
-    gift_sub: alertVariantConfigSchema,
-    cheer: alertVariantConfigSchema,
-    raid: alertVariantConfigSchema,
-  }),
+  variants: z.object(
+    Object.fromEntries(
+      ALERT_EVENT_TYPES.map((event) => [event, alertVariantConfigSchema.optional()])
+    ) as Record<AlertEventType, z.ZodOptional<typeof alertVariantConfigSchema>>
+  ),
 });
 
 export const overlayItemConfigSchema = z.union([

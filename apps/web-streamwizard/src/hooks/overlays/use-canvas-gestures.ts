@@ -4,19 +4,28 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { getCropInsets, getDesignSize, getItemScale } from "@repo/ui/overlay";
 import type { OverlayItem } from "@/types/overlays";
 import { isRootLayerType } from "@/components/overlays/registry/overlay-widget-registry";
-import { computeSnap, type Guide } from "@/components/overlays/editor/snapping";
+import {
+  computeSnap,
+  type GapBadge,
+  type Guide,
+} from "@/components/overlays/editor/snapping";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import {
   computeCropUpdate,
   computeResizeUpdate,
   groupMoveBounds,
+  resolveDragAxis,
   type DragItemStart,
 } from "@/components/overlays/editor/canvas-resize-math";
+import { snapToGrid } from "@/components/overlays/editor/canvas-preferences";
+import { extendsSelection } from "@/components/overlays/editor/selection-modifiers";
 
 /** Screen-px snap radius; converted to scene px by dividing by zoom. */
 const SNAP_THRESHOLD_PX = 8;
 /** Screen-px movement before a background drag becomes a marquee (below = click-to-deselect). */
 const MARQUEE_THRESHOLD_PX = 4;
+/** Travel before Shift commits the drag to an axis; below this the pointer hasn't said which. */
+const AXIS_LOCK_THRESHOLD_PX = 4;
 
 export interface DragState {
   mode: "move" | "resize";
@@ -46,6 +55,8 @@ export function useCanvasGestures() {
   const scene = useOverlayStore((s) => s.scene);
   const selectedItemIds = useOverlayStore((s) => s.selectedItemIds);
   const zoom = useOverlayStore((s) => s.zoom);
+  const grid = useOverlayStore((s) => s.grid);
+  const snapToItems = useOverlayStore((s) => s.snapToItems);
   const selectItem = useOverlayStore((s) => s.selectItem);
   const toggleSelectItem = useOverlayStore((s) => s.toggleSelectItem);
   const setSelectedItems = useOverlayStore((s) => s.setSelectedItems);
@@ -59,9 +70,12 @@ export function useCanvasGestures() {
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [marquee, setMarquee] = useState<MarqueeState | null>(null);
   const [guides, setGuides] = useState<Guide[]>([]);
+  const [gaps, setGaps] = useState<GapBadge[]>([]);
   /** Pre-gesture items snapshot — pushed as one history entry on mouseup if geometry changed. */
   const gestureSnapshotRef = useRef<OverlayItem[] | null>(null);
   const movedRef = useRef(false);
+  /** Axis a Shift-held drag committed to, kept for the rest of the gesture. */
+  const axisLockRef = useRef<"x" | "y" | null>(null);
 
   useEffect(() => {
     const sync = (e: KeyboardEvent) => setCropModifier(e.altKey);
@@ -99,7 +113,7 @@ export function useCanvasGestures() {
       const item = scene.items.find((i) => i.id === itemId);
       if (!item) return;
 
-      if (e.shiftKey && mode === "move" && isRootLayerType(item.type)) {
+      if (extendsSelection(e) && mode === "move" && isRootLayerType(item.type)) {
         toggleSelectItem(itemId);
         return;
       }
@@ -139,6 +153,7 @@ export function useCanvasGestures() {
 
       gestureSnapshotRef.current = scene.items;
       movedRef.current = false;
+      axisLockRef.current = null;
       setDragState({
         mode,
         grabbedId: itemId,
@@ -161,7 +176,7 @@ export function useCanvasGestures() {
         currentX: point.x,
         currentY: point.y,
         active: false,
-        additive: e.shiftKey,
+        additive: extendsSelection(e),
       });
     },
     [toScenePoint],
@@ -191,13 +206,36 @@ export function useCanvasGestures() {
       if (dx !== 0 || dy !== 0) movedRef.current = true;
 
       if (dragState.mode === "move") {
-        const { minDx, maxDx, minDy, maxDy } = groupMoveBounds(dragState.items, scene);
-        let cdx = Math.min(Math.max(dx, minDx), maxDx);
-        let cdy = Math.min(Math.max(dy, minDy), maxDy);
+        // Shift locks the drag to whichever axis the pointer commits to first.
+        // Decided once, a few pixels in, so a wobble near the diagonal can't
+        // flip it mid-gesture; letting go of Shift frees both axes again.
+        // Shift on mousedown already means "toggle selection" and returns before
+        // any drag starts, so this only ever engages once one is under way.
+        let lockedAxis: "x" | "y" | null = null;
+        if (e.shiftKey) {
+          axisLockRef.current =
+            axisLockRef.current ?? resolveDragAxis(dx, dy, zoom, AXIS_LOCK_THRESHOLD_PX);
+          lockedAxis = axisLockRef.current;
+        } else {
+          axisLockRef.current = null;
+        }
 
-        // Snap using the grabbed item's rect; Alt disables.
+        const moveDx = lockedAxis === "y" ? 0 : dx;
+        const moveDy = lockedAxis === "x" ? 0 : dy;
+
+        const { minDx, maxDx, minDy, maxDy } = groupMoveBounds(dragState.items, scene);
+        let cdx = Math.min(Math.max(moveDx, minDx), maxDx);
+        let cdy = Math.min(Math.max(moveDy, minDy), maxDy);
+
+        // Snap using the grabbed item's rect. Alt inverts whatever the toggle
+        // says rather than only turning snapping off: with snapping off it is
+        // how you snap one drag without going back to the toolbar.
         const grabbed = dragState.items.find((i) => i.id === dragState.grabbedId);
-        if (grabbed && !e.altKey) {
+        const snapAxes = {
+          x: snapToItems.x !== e.altKey,
+          y: snapToItems.y !== e.altKey,
+        };
+        if (grabbed && (snapAxes.x || snapAxes.y)) {
           const draggedIds = new Set(dragState.items.map((i) => i.id));
           const targets = scene.items.filter(
             (i) => isRootLayerType(i.type) && i.is_visible && !draggedIds.has(i.id),
@@ -212,21 +250,43 @@ export function useCanvasGestures() {
             targets,
             scene,
             SNAP_THRESHOLD_PX / zoom,
+            snapAxes,
           );
           const snapDx = snapped.x - (grabbed.startX + cdx);
           const snapDy = snapped.y - (grabbed.startY + cdy);
-          // Only accept a snap that keeps the whole group in bounds.
-          if (cdx + snapDx >= minDx && cdx + snapDx <= maxDx) cdx += snapDx;
-          if (cdy + snapDy >= minDy && cdy + snapDy <= maxDy) cdy += snapDy;
-          setGuides(snapped.guides);
+          // Only accept a snap that keeps the whole group in bounds, and never
+          // one on a locked axis -- that would move what Shift is holding still.
+          if (lockedAxis !== "y" && cdx + snapDx >= minDx && cdx + snapDx <= maxDx) {
+            cdx += snapDx;
+          }
+          if (lockedAxis !== "x" && cdy + snapDy >= minDy && cdy + snapDy <= maxDy) {
+            cdy += snapDy;
+          }
+          setGaps(snapped.gaps);
+          // A vertical guide belongs to the x axis, a horizontal one to y; only
+          // show the axis that is actually free to move.
+          setGuides(
+            lockedAxis === null
+              ? snapped.guides
+              : snapped.guides.filter((guide) =>
+                  lockedAxis === "x" ? guide.orientation === "v" : guide.orientation === "h",
+                ),
+          );
         } else {
           setGuides([]);
+          setGaps([]);
         }
 
         for (const it of dragState.items) {
+          // Grid snapping lands the item itself on the grid, so it is applied to
+          // the final position rather than the delta. Alt inverts it too, so one
+          // modifier flips every kind of snapping at once.
+          const nextX = it.startX + cdx;
+          const nextY = it.startY + cdy;
+          const onGrid = grid.snap !== e.altKey;
           updateItem(it.id, {
-            x: Math.round(it.startX + cdx),
-            y: Math.round(it.startY + cdy),
+            x: Math.round(onGrid ? snapToGrid(nextX, grid.size) : nextX),
+            y: Math.round(onGrid ? snapToGrid(nextY, grid.size) : nextY),
           });
         }
         return;
@@ -243,7 +303,18 @@ export function useCanvasGestures() {
         );
       }
     },
-    [dragState, marquee, scene, zoom, updateItem, toScenePoint],
+    [
+      dragState,
+      marquee,
+      scene,
+      zoom,
+      updateItem,
+      toScenePoint,
+      snapToItems.x,
+      snapToItems.y,
+      grid.snap,
+      grid.size,
+    ],
   );
 
   const handleMouseUp = useCallback(() => {
@@ -284,8 +355,10 @@ export function useCanvasGestures() {
       }
       gestureSnapshotRef.current = null;
       movedRef.current = false;
+      axisLockRef.current = null;
       setDragState(null);
       setGuides([]);
+      setGaps([]);
     }
   }, [
     marquee,
@@ -315,6 +388,7 @@ export function useCanvasGestures() {
     cropping,
     dragState,
     guides,
+    gaps,
     marqueeRect,
     handleItemMouseDown,
     handleBackgroundMouseDown,
