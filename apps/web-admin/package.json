@@ -56,7 +56,7 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5.9.2"
+    "typescript": "^7.0.2"
   },
   "ignoreScripts": [
     "sharp",
