@@ -231,8 +231,11 @@ export function useCanvasGestures() {
         // says rather than only turning snapping off: with snapping off it is
         // how you snap one drag without going back to the toolbar.
         const grabbed = dragState.items.find((i) => i.id === dragState.grabbedId);
-        const snapping = snapToItems !== e.altKey;
-        if (grabbed && snapping) {
+        const snapAxes = {
+          x: snapToItems.x !== e.altKey,
+          y: snapToItems.y !== e.altKey,
+        };
+        if (grabbed && (snapAxes.x || snapAxes.y)) {
           const draggedIds = new Set(dragState.items.map((i) => i.id));
           const targets = scene.items.filter(
             (i) => isRootLayerType(i.type) && i.is_visible && !draggedIds.has(i.id),
@@ -247,6 +250,7 @@ export function useCanvasGestures() {
             targets,
             scene,
             SNAP_THRESHOLD_PX / zoom,
+            snapAxes,
           );
           const snapDx = snapped.x - (grabbed.startX + cdx);
           const snapDy = snapped.y - (grabbed.startY + cdy);
@@ -306,7 +310,8 @@ export function useCanvasGestures() {
       zoom,
       updateItem,
       toScenePoint,
-      snapToItems,
+      snapToItems.x,
+      snapToItems.y,
       grid.snap,
       grid.size,
     ],

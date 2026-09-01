@@ -74,3 +74,32 @@ test("spacing works on the vertical axis too", () => {
   expect(result.y).toBe(250);
   expect(result.gaps.filter((g) => g.axis === "y")).toHaveLength(2);
 });
+
+test("a disabled axis does not move, guide or measure", () => {
+  const result = computeSnap(
+    rect(303, 203),
+    [rect(300, 200)],
+    scene,
+    8,
+    { x: false, y: true }
+  );
+  expect(result.x).toBe(303);
+  expect(result.y).toBe(200);
+  expect(result.guides).toEqual([{ orientation: "h", position: 200 }]);
+});
+
+test("both axes off leaves the rect entirely alone", () => {
+  const result = computeSnap(rect(303, 203), [rect(300, 200)], scene, 8, {
+    x: false,
+    y: false,
+  });
+  expect(result).toMatchObject({ x: 303, y: 203, guides: [], gaps: [] });
+});
+
+test("even spacing respects a disabled axis", () => {
+  const result = computeSnap(rect(245, 0), [rect(0, 0), rect(500, 0)], scene, 8, {
+    x: false,
+    y: true,
+  });
+  expect(result.x).toBe(245);
+});

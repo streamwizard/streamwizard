@@ -8,6 +8,12 @@
 
 export type CanvasBackground = "dark" | "checker" | "light" | "grey" | "green";
 
+/** Which axes a kind of snapping acts on. `x` is left/right, `y` is up/down. */
+export interface SnapAxes {
+  x: boolean;
+  y: boolean;
+}
+
 export interface GridSettings {
   visible: boolean;
   /** Spacing in scene px. */
@@ -22,8 +28,11 @@ export interface GridSettings {
 
 export interface CanvasPreferences {
   background: CanvasBackground;
-  /** Snap dragged items to other items' edges and centres. */
-  snapToItems: boolean;
+  /**
+   * Snap dragged items to other items' edges and centres, per axis. Turning one
+   * off lets you line a row up horizontally without it grabbing vertically too.
+   */
+  snapToItems: SnapAxes;
   grid: GridSettings;
   rulers: boolean;
   /** Track the pointer along the rulers. Only means anything while they are on. */
@@ -68,7 +77,7 @@ export const DEFAULT_CANVAS_PREFERENCES: CanvasPreferences = {
   // The previous hardcoded look, so nothing changes until it is changed.
   background: "dark",
   // On: it was always on before there was a switch for it.
-  snapToItems: true,
+  snapToItems: { x: true, y: true },
   grid: {
     visible: true,
     size: 50,
@@ -150,8 +159,7 @@ export function loadCanvasPreferences(): CanvasPreferences {
     background: isCanvasBackground(background)
       ? background
       : DEFAULT_CANVAS_PREFERENCES.background,
-    // Absent means never set, which should read as the default rather than off.
-    snapToItems: readKey(CANVAS_SNAP_ITEMS_KEY) !== "false",
+    snapToItems: parseSnapAxes(readKey(CANVAS_SNAP_ITEMS_KEY)),
     grid: parseGridSettings(readKey(CANVAS_GRID_KEY)),
     rulers: readKey(CANVAS_RULERS_KEY) === "true",
     // Absent means never set, which should read as the default rather than off.
@@ -171,8 +179,32 @@ export function saveRulersVisible(visible: boolean) {
   writeKey(CANVAS_RULERS_KEY, String(visible));
 }
 
-export function saveSnapToItems(enabled: boolean) {
-  writeKey(CANVAS_SNAP_ITEMS_KEY, String(enabled));
+/**
+ * Reads the per-axis setting, accepting the plain boolean this used to be
+ * stored as so nobody's saved preference is lost by the upgrade. Absent means
+ * never set, which should read as the default rather than off.
+ */
+export function parseSnapAxes(raw: string | null): SnapAxes {
+  const fallback = DEFAULT_CANVAS_PREFERENCES.snapToItems;
+  if (raw === null) return fallback;
+  if (raw === "true") return { x: true, y: true };
+  if (raw === "false") return { x: false, y: false };
+
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) return fallback;
+    const axes = parsed as Partial<SnapAxes>;
+    return {
+      x: typeof axes.x === "boolean" ? axes.x : fallback.x,
+      y: typeof axes.y === "boolean" ? axes.y : fallback.y,
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveSnapToItems(axes: SnapAxes) {
+  writeKey(CANVAS_SNAP_ITEMS_KEY, JSON.stringify(axes));
 }
 
 export function saveRulerCursor(visible: boolean) {

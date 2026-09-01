@@ -9,7 +9,7 @@ import {
   Separator,
   Switch,
 } from "@repo/ui";
-import { Eye } from "lucide-react";
+import { Eye, Magnet } from "lucide-react";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import { NumberField } from "./number-field";
 import {
@@ -34,6 +34,8 @@ export function CanvasViewPopover() {
   const setCanvasBackground = useOverlayStore((s) => s.setCanvasBackground);
   const grid = useOverlayStore((s) => s.grid);
   const setGrid = useOverlayStore((s) => s.setGrid);
+  const snapToItems = useOverlayStore((s) => s.snapToItems);
+  const setSnapToItems = useOverlayStore((s) => s.setSnapToItems);
   const rulersVisible = useOverlayStore((s) => s.rulersVisible);
   const setRulersVisible = useOverlayStore((s) => s.setRulersVisible);
   const rulerCursorVisible = useOverlayStore((s) => s.rulerCursorVisible);
@@ -131,15 +133,44 @@ export function CanvasViewPopover() {
             />
           </div>
 
+        </div>
+
+        <Separator />
+
+        {/* Both kinds of snapping in one place: they are the same idea, and
+            splitting them across sections made the grid look like the only one. */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-1.5 text-xs">
+            <Magnet className="h-3.5 w-3.5 text-muted-foreground" />
+            Snapping
+          </Label>
           <div className="flex items-center justify-between gap-2">
             <Label className="text-xs font-normal text-muted-foreground">
-              Snap to the grid
+              To widgets, left and right
             </Label>
             <Switch
-              checked={grid.snap}
-              onCheckedChange={(snap) => setGrid({ snap })}
+              checked={snapToItems.x}
+              onCheckedChange={(x) => setSnapToItems({ x })}
             />
           </div>
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-xs font-normal text-muted-foreground">
+              To widgets, top and bottom
+            </Label>
+            <Switch
+              checked={snapToItems.y}
+              onCheckedChange={(y) => setSnapToItems({ y })}
+            />
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-xs font-normal text-muted-foreground">
+              To the grid
+            </Label>
+            <Switch checked={grid.snap} onCheckedChange={(snap) => setGrid({ snap })} />
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            Hold Alt while dragging to flip whichever is on, for that drag only.
+          </p>
         </div>
 
         <Separator />

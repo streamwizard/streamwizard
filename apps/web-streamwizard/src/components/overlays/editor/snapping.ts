@@ -116,7 +116,9 @@ export function computeSnap(
   moving: Rect,
   targets: Rect[],
   scene: { width: number; height: number },
-  threshold: number
+  threshold: number,
+  /** Axes to snap on. A disabled axis produces no movement, guide or badge. */
+  axes: { x: boolean; y: boolean } = { x: true, y: true }
 ): SnapResult {
   const vCandidates: Candidate[] = [
     { position: 0 },
@@ -175,22 +177,29 @@ export function computeSnap(
     return best ? best.position : null;
   };
 
-  const sx = snapAxis(moving.x, moving.w, vCandidates);
-  const sy = snapAxis(moving.y, moving.h, hCandidates);
+  // A disabled axis is filtered here rather than at the call site, so the guides
+  // and badges that come back can never describe a snap that did not happen.
+  const idle = { pos: 0, guide: null as number | null };
+  const sx: { pos: number; guide: number | null; target?: Rect } = axes.x
+    ? snapAxis(moving.x, moving.w, vCandidates)
+    : { ...idle, pos: moving.x };
+  const sy: { pos: number; guide: number | null; target?: Rect } = axes.y
+    ? snapAxis(moving.y, moving.h, hCandidates)
+    : { ...idle, pos: moving.y };
 
   let x = sx.pos;
   let y = sy.pos;
   let evenX = false;
   let evenY = false;
 
-  if (sx.guide === null) {
+  if (axes.x && sx.guide === null) {
     const spaced = spacingAxis(moving.x, "x");
     if (spaced !== null) {
       x = spaced;
       evenX = true;
     }
   }
-  if (sy.guide === null) {
+  if (axes.y && sy.guide === null) {
     const spaced = spacingAxis(moving.y, "y");
     if (spaced !== null) {
       y = spaced;

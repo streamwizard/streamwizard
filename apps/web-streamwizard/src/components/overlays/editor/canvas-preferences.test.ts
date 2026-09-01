@@ -5,6 +5,7 @@ import {
   isCanvasBackground,
   loadCanvasPreferences,
   parseGridSettings,
+  parseSnapAxes,
   rulerStep,
   rulerTicks,
   saveCanvasBackground,
@@ -41,7 +42,7 @@ test("preferences default to the editor's previous look", () => {
 
 test("saved preferences come back after a reload", () => {
   saveCanvasBackground("checker");
-  saveSnapToItems(false);
+  saveSnapToItems({ x: false, y: true });
   saveGridSettings({
     visible: false,
     size: 25,
@@ -53,19 +54,29 @@ test("saved preferences come back after a reload", () => {
 
   expect(loadCanvasPreferences()).toEqual({
     background: "checker",
-    snapToItems: false,
+    snapToItems: { x: false, y: true },
     grid: { visible: false, size: 25, snap: true, color: "#22d3ee", lineWidth: 2 },
     rulers: true,
     rulerCursor: true,
   });
 });
 
-test("snapping to other widgets is on unless it was explicitly turned off", () => {
-  expect(loadCanvasPreferences().snapToItems).toBe(true);
-  saveSnapToItems(false);
-  expect(loadCanvasPreferences().snapToItems).toBe(false);
-  saveSnapToItems(true);
-  expect(loadCanvasPreferences().snapToItems).toBe(true);
+test("snapping to other widgets is on for both axes by default", () => {
+  expect(loadCanvasPreferences().snapToItems).toEqual({ x: true, y: true });
+});
+
+test("each snapping axis is remembered on its own", () => {
+  saveSnapToItems({ x: false, y: true });
+  expect(loadCanvasPreferences().snapToItems).toEqual({ x: false, y: true });
+});
+
+test("the boolean this used to be stored as still loads", () => {
+  // Anyone who turned snapping off before it went per-axis keeps that choice.
+  expect(parseSnapAxes("false")).toEqual({ x: false, y: false });
+  expect(parseSnapAxes("true")).toEqual({ x: true, y: true });
+  expect(parseSnapAxes(null)).toEqual({ x: true, y: true });
+  expect(parseSnapAxes("{not json")).toEqual({ x: true, y: true });
+  expect(parseSnapAxes(JSON.stringify({ x: false }))).toEqual({ x: false, y: true });
 });
 
 test("the ruler cursor is on unless it was explicitly turned off", () => {

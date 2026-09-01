@@ -18,6 +18,7 @@ import {
   saveRulersVisible,
   type CanvasBackground,
   type GridSettings,
+  type SnapAxes,
 } from "@/components/overlays/editor/canvas-preferences";
 import {
   rescaleItemsForResolution,
@@ -96,8 +97,8 @@ interface OverlayEditorState {
    */
   canvasBackground: CanvasBackground;
   setCanvasBackground: (background: CanvasBackground) => void;
-  snapToItems: boolean;
-  setSnapToItems: (enabled: boolean) => void;
+  snapToItems: SnapAxes;
+  setSnapToItems: (axes: Partial<SnapAxes>) => void;
   grid: GridSettings;
   setGrid: (grid: Partial<GridSettings>) => void;
   rulersVisible: boolean;
@@ -366,9 +367,10 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     set({ canvasBackground: background });
   },
 
-  setSnapToItems: (enabled) => {
-    saveSnapToItems(enabled);
-    set({ snapToItems: enabled });
+  setSnapToItems: (axes) => {
+    const next = { ...get().snapToItems, ...axes };
+    saveSnapToItems(next);
+    set({ snapToItems: next });
   },
 
   setGrid: (grid) => {
