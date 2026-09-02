@@ -12,7 +12,7 @@
 # Note: do NOT pass --production here. Combined with --frozen-lockfile, Bun
 # re-resolves the tree without devDependencies, which no longer matches the
 # committed lockfile and fails with "lockfile had changes, but lockfile is frozen".
-FROM oven/bun:1.3.12 AS deps
+FROM oven/bun:1.4.0 AS deps
 
 WORKDIR /app
 
@@ -23,7 +23,7 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 # ============================================
 # Stage 2: Runner
 # ============================================
-FROM oven/bun:1.3.12 AS runner
+FROM oven/bun:1.4.0 AS runner
 
 WORKDIR /app
 
