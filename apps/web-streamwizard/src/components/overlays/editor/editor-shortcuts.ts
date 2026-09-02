@@ -54,6 +54,11 @@ export const EDITOR_SHORTCUT_GROUPS: EditorShortcutGroup[] = [
     shortcuts: [
       { action: "Fit the scene on screen", combos: [["Shift", "1"]] },
       { action: "Zoom back to 100%", combos: [["Shift", "0"]] },
+      { action: "Zoom in and out around the cursor", combos: [[MOD_KEY_TOKEN, "Scroll"]] },
+      { action: "Move around the canvas", combos: [["Scroll"], ["Shift", "Scroll"]] },
+      { action: "Hand tool: drag to move around", combos: [["H"]] },
+      { action: "Back to the select tool", combos: [["V"]] },
+      { action: "Move around without switching tools", combos: [["Space", "Drag"], ["Middle button", "Drag"]] },
       { action: "Show or hide the grid", combos: [["Shift", "G"]] },
       { action: "Show or hide the rulers", combos: [["Shift", "R"]] },
       { action: "Snap to the grid, on and off", combos: [["Shift", "S"]] },

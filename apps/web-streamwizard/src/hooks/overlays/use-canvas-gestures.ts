@@ -182,6 +182,9 @@ export function useCanvasGestures() {
   const handleBackgroundMouseDown = useCallback(
     (e: React.MouseEvent) => {
       if (e.button !== 0) return;
+      // A marquee dragged across a text widget would otherwise start a
+      // native text selection and paint it blue.
+      e.preventDefault();
       const point = toScenePoint(e);
       setMarquee({
         startX: point.x,

@@ -5,6 +5,16 @@ export const ZOOM_MAX = 2;
 /** Breathing room around the scene when fitting, in screen px. */
 export const FIT_MARGIN_PX = 32;
 
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface Size {
+  width: number;
+  height: number;
+}
+
 export function clampZoom(zoom: number): number {
   if (!Number.isFinite(zoom)) return 1;
   return Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, zoom));
@@ -19,8 +29,8 @@ export function clampZoom(zoom: number): number {
  * height) leaves the zoom alone by returning the current one.
  */
 export function computeFitZoom(
-  pane: { width: number; height: number },
-  scene: { width: number; height: number },
+  pane: Size,
+  scene: Size,
   currentZoom: number,
   marginPx: number = FIT_MARGIN_PX
 ): number {
@@ -34,28 +44,68 @@ export function computeFitZoom(
   return clampZoom(Math.min(availableW / scene.width, availableH / scene.height));
 }
 
-/** Multiplier per wheel notch. A trackpad pinch arrives as many small deltas. */
+/** Multiplier per notch of a mouse wheel. */
 export const WHEEL_ZOOM_STEP = 1.1;
 
-/** Where a wheel notch lands, given the direction the wheel turned. */
+/** What one notch of a mouse wheel reports as deltaY in Chrome and Firefox. */
+export const WHEEL_NOTCH_PX = 100;
+
+/**
+ * Where the wheel lands. Proportional to the delta rather than one step per
+ * event: a mouse notch is a full step, while a trackpad pinch arrives as a
+ * stream of tiny deltas and would leap a whole step on each of them.
+ */
 export function wheelZoom(zoom: number, deltaY: number, step: number = WHEEL_ZOOM_STEP): number {
-  return clampZoom(zoom * (deltaY < 0 ? step : 1 / step));
+  if (!Number.isFinite(deltaY) || deltaY === 0) return clampZoom(zoom);
+  return clampZoom(zoom * Math.pow(step, -deltaY / WHEEL_NOTCH_PX));
+}
+
+/** The pan that centres a canvas of the given screen size in the pane. */
+export function centerPan(pane: Size, canvas: Size): Point {
+  return {
+    x: (pane.width - canvas.width) / 2,
+    y: (pane.height - canvas.height) / 2,
+  };
 }
 
 /**
- * How far to move the pan so a scene point sits back under the cursor.
+ * The pan that keeps one scene point fixed on screen across a zoom change.
  *
- * Measured after the new zoom has been laid out, because the canvas is
- * flex-centred in a scrolling pane: where the box lands is a fact to read, not
- * a number to predict.
+ * `focal` is pane-relative: the cursor, measured from the pane's top-left. The
+ * scene point under it sits `(focal - pan)` screen px from the canvas origin;
+ * that distance scales with the zoom ratio, and what's left over is the pan.
  */
-export function focalPanCorrection(
-  rect: { left: number; top: number },
-  focus: { clientX: number; clientY: number; sceneX: number; sceneY: number },
-  zoom: number
-): { dx: number; dy: number } {
+export function zoomAboutPoint(pan: Point, zoom: number, nextZoom: number, focal: Point): Point {
+  const ratio = nextZoom / zoom;
   return {
-    dx: focus.clientX - (rect.left + focus.sceneX * zoom),
-    dy: focus.clientY - (rect.top + focus.sceneY * zoom),
+    x: focal.x - (focal.x - pan.x) * ratio,
+    y: focal.y - (focal.y - pan.y) * ratio,
+  };
+}
+
+/** How much of the canvas must stay inside the pane, in screen px. */
+export const MIN_VISIBLE_PX = 48;
+
+/**
+ * Keeps at least a sliver of the canvas inside the pane on both axes.
+ *
+ * Photoshop's rule: you can push the canvas most of the way out of view, never
+ * all of it, so there is always something left to grab and drag back.
+ */
+export function clampPan(
+  pan: Point,
+  pane: Size,
+  canvas: Size,
+  minVisiblePx: number = MIN_VISIBLE_PX
+): Point {
+  const clampAxis = (value: number, paneSize: number, canvasSize: number) => {
+    const visible = Math.min(minVisiblePx, canvasSize, paneSize);
+    const min = visible - canvasSize;
+    const max = paneSize - visible;
+    return Math.min(max, Math.max(min, value));
+  };
+  return {
+    x: clampAxis(pan.x, pane.width, canvas.width),
+    y: clampAxis(pan.y, pane.height, canvas.height),
   };
 }
