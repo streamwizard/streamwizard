@@ -1,6 +1,7 @@
 import { beforeEach, expect, test } from "bun:test";
 import { useOverlayStore } from "./overlay-editor-store";
 import type { OverlayItem, OverlaySceneWithItems } from "@/types/overlays";
+import { resolveAnchoredPosition } from "@repo/ui/overlay";
 
 function makeItem(id: string, config: Record<string, unknown>): OverlayItem {
   return {
@@ -17,6 +18,8 @@ function makeItem(id: string, config: Record<string, unknown>): OverlayItem {
     crop_right: 0,
     crop_bottom: 0,
     crop_left: 0,
+    anchor_x: "left",
+    anchor_y: "top",
     z_index: 1,
     rotation: 0,
     opacity: 1,
@@ -156,4 +159,39 @@ test("a clip child's parent ref follows the remap", () => {
   expect(
     (restored[1]!.config as unknown as { parentClipItemId: string }).parentClipItemId
   ).toBe("db-p");
+});
+
+test("aligning a lone item to the right pins it there", () => {
+  const { alignSelected } = useOverlayStore.getState();
+  useOverlayStore.setState({ selectedItemIds: ["a"] });
+  alignSelected("right");
+  const item = useOverlayStore.getState().scene!.items[0]!;
+  expect(item.anchor_x).toBe("right");
+  expect(item.x).toBe(0);
+  // It is really on the right edge of the 1920-wide scene.
+  expect(resolveAnchoredPosition(item, { width: 1920, height: 1080 }).x).toBe(1820);
+  expect(useOverlayStore.getState().history.past).toHaveLength(1);
+});
+
+test("nudging a right-pinned item moves it the way the arrow points", () => {
+  const { updateItem, nudgeSelected } = useOverlayStore.getState();
+  updateItem("a", { anchor_x: "right", x: 100 });
+  useOverlayStore.setState({ selectedItemIds: ["a"] });
+  const before = resolveAnchoredPosition(useOverlayStore.getState().scene!.items[0]!, {
+    width: 1920,
+    height: 1080,
+  });
+  nudgeSelected(10, 0);
+  const item = useOverlayStore.getState().scene!.items[0]!;
+  expect(resolveAnchoredPosition(item, { width: 1920, height: 1080 }).x).toBe(before.x + 10);
+  // Stored as a smaller gap to the right edge.
+  expect(item.x).toBe(90);
+});
+
+test("a geometry patch never resolves outside the scene, whatever the anchor", () => {
+  const { updateItem } = useOverlayStore.getState();
+  updateItem("a", { anchor_x: "right", anchor_y: "bottom", x: 5000, y: -5000 });
+  const item = useOverlayStore.getState().scene!.items[0]!;
+  const position = resolveAnchoredPosition(item, { width: 1920, height: 1080 });
+  expect(position).toEqual({ x: 0, y: 980 });
 });

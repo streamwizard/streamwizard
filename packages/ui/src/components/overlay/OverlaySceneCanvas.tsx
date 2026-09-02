@@ -3,6 +3,7 @@
 import type { ComponentType } from "react";
 import { useMemo, type ReactNode } from "react";
 import type { OverlayItem, OverlayScene } from "./types";
+import { resolveAnchoredPosition } from "./lib/item-anchor";
 import { useGoogleFonts } from "./hooks/use-google-font";
 import { WidgetScaleFrame } from "./WidgetScaleFrame";
 import { textWidgetBaseDefinition } from "./widgets/text/text-widget-definition";
@@ -76,22 +77,28 @@ function collectFonts(
 
 function OverlayLayerWrapper({
   item,
+  scene,
   children,
 }: {
   item: OverlayItem;
+  scene: OverlayScene;
   children: ReactNode;
 }) {
   const opacity =
     typeof item.opacity === "number" && Number.isFinite(item.opacity)
       ? Math.min(1, Math.max(0, item.opacity))
       : 1;
+  // Same resolution the editor canvas uses, so both agree on where an anchored
+  // item sits. The scene size is the live one, which is what makes a
+  // bottom-right item stay bottom-right in a portrait GPS view.
+  const position = resolveAnchoredPosition(item, scene);
 
   return (
     <div
       style={{
         position: "absolute",
-        left: item.x,
-        top: item.y,
+        left: position.x,
+        top: position.y,
         width: item.w,
         height: item.h,
         zIndex: item.z_index,
@@ -146,7 +153,7 @@ export function OverlaySceneCanvas({
         if (!reg) return null;
         const Widget = reg.Component;
         return (
-          <OverlayLayerWrapper key={item.id} item={item}>
+          <OverlayLayerWrapper key={item.id} item={item} scene={scene}>
             <Widget item={item} scene={scene} />
           </OverlayLayerWrapper>
         );

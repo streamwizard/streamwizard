@@ -198,6 +198,8 @@ export async function createOverlayFromTemplate(formData: {
           type: child.type,
           x: child.x,
           y: child.y,
+          anchor_x: child.anchor_x,
+          anchor_y: child.anchor_y,
           w: child.w,
           h: child.h,
           design_w: child.design_w,

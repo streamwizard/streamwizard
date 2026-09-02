@@ -35,16 +35,16 @@ beforeEach(() => {
   installLocalStorage();
 });
 
-test("preferences default to the editor's previous look", () => {
+test("preferences default to a checkerboard with the grid hidden", () => {
   const prefs = loadCanvasPreferences();
   expect(prefs).toEqual(DEFAULT_CANVAS_PREFERENCES);
 });
 
 test("saved preferences come back after a reload", () => {
-  saveCanvasBackground("checker");
+  saveCanvasBackground("dark");
   saveSnapToItems({ x: false, y: true });
   saveGridSettings({
-    visible: false,
+    visible: true,
     size: 25,
     snap: true,
     color: "#22d3ee",
@@ -53,9 +53,9 @@ test("saved preferences come back after a reload", () => {
   saveRulersVisible(true);
 
   expect(loadCanvasPreferences()).toEqual({
-    background: "checker",
+    background: "dark",
     snapToItems: { x: false, y: true },
-    grid: { visible: false, size: 25, snap: true, color: "#22d3ee", lineWidth: 2 },
+    grid: { visible: true, size: 25, snap: true, color: "#22d3ee", lineWidth: 2 },
     rulers: true,
     rulerCursor: true,
   });
@@ -93,7 +93,7 @@ test("a background value that is not one of ours falls back", () => {
     "overlay-editor-canvas-background",
     "magenta"
   );
-  expect(loadCanvasPreferences().background).toBe("dark");
+  expect(loadCanvasPreferences().background).toBe("checker");
 });
 
 test("junk grid settings fall back rather than throwing", () => {
@@ -103,7 +103,7 @@ test("junk grid settings fall back rather than throwing", () => {
 
 test("a partial grid setting keeps the defaults for what is missing", () => {
   expect(parseGridSettings(JSON.stringify({ size: 20 }))).toEqual({
-    visible: true,
+    visible: false,
     size: 20,
     snap: false,
     color: DEFAULT_GRID_COLOR,

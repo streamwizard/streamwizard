@@ -12,6 +12,12 @@ import type {
   TextWidgetItemConfig,
   TimerWidgetItemConfig,
 } from "./widgets";
+import {
+  getAnchor,
+  resolveAnchoredPosition,
+  type AnchorX,
+  type AnchorY,
+} from "../lib/item-anchor";
 
 /** Overlay items and scenes: the persisted row shapes and the type guards that
  *  narrow an item's config union. */
@@ -30,8 +36,19 @@ export interface OverlayItem {
   id: string;
   scene_id: string;
   type: OverlayItemType;
+  /**
+   * Offset from the anchored edge, in scene px. With the default top-left
+   * anchor this is the plain top-left position; anchored `right`, `x` is the
+   * gap to the right edge. Resolve with `lib/item-anchor` before rendering.
+   */
   x: number;
   y: number;
+  /**
+   * Which scene edge (or the centre) `x`/`y` are measured from, so an item can
+   * stay pinned to a corner when the scene's resolution changes.
+   */
+  anchor_x: AnchorX;
+  anchor_y: AnchorY;
   /** Rendered width in scene px — always `design_w * scale`. */
   w: number;
   /** Rendered height in scene px — always `design_h * scale`. */
@@ -131,6 +148,9 @@ export interface OverlayItemDbRow {
   crop_right?: number | null;
   crop_bottom?: number | null;
   crop_left?: number | null;
+  /** Nullable for rows written before the anchor migration landed. */
+  anchor_x?: string | null;
+  anchor_y?: string | null;
   z_index: number;
   rotation: number;
   opacity: number;
@@ -141,6 +161,7 @@ export interface OverlayItemDbRow {
 }
 
 export function overlayItemFromDbRow(row: OverlayItemDbRow): OverlayItem {
+  const anchor = getAnchor(row);
   return {
     ...row,
     type: row.type as OverlayItem["type"],
@@ -151,6 +172,9 @@ export function overlayItemFromDbRow(row: OverlayItemDbRow): OverlayItem {
     crop_right: row.crop_right ?? 0,
     crop_bottom: row.crop_bottom ?? 0,
     crop_left: row.crop_left ?? 0,
+    // A legacy row with no anchor is measured from the top-left, as it always was.
+    anchor_x: anchor.x,
+    anchor_y: anchor.y,
     config: row.config as OverlayItemConfig,
   };
 }
@@ -158,15 +182,23 @@ export function overlayItemFromDbRow(row: OverlayItemDbRow): OverlayItem {
 /**
  * Public overlay API: one row per root widget. Clip display fields are merged
  * into the parent `clips_widget` config; child rows are omitted.
+ *
+ * `x`/`y` are the resolved top-left position for this scene size, so a
+ * consumer that predates anchors keeps placing items correctly. The anchor
+ * rides along for consumers that want to re-flow at another size.
  */
-export function toPublicOverlayApiItems(all: OverlayItem[]) {
+export function toPublicOverlayApiItems(
+  all: OverlayItem[],
+  scene: { width: number; height: number }
+) {
   return all
     .filter((i) => i.type !== "clip_display_field")
     .map((item) => ({
       id: item.id,
       type: item.type,
-      x: item.x,
-      y: item.y,
+      ...resolveAnchoredPosition(item, scene),
+      anchor_x: item.anchor_x,
+      anchor_y: item.anchor_y,
       w: item.w,
       h: item.h,
       z_index: item.z_index,

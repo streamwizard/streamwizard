@@ -10,7 +10,7 @@ import {
   PopoverTrigger,
 } from "@repo/ui";
 import { Separator } from "@repo/ui";
-import { Slider } from "@repo/ui";
+import { TooltipProvider } from "@repo/ui";
 import { Database } from "@repo/supabase";
 import {
   AlignHorizontalJustifyCenter,
@@ -29,8 +29,10 @@ import {
   Trash2,
 } from "lucide-react";
 import type { OverlayItem } from "@/types/overlays";
-import { NO_CROP, type CropInsets } from "@repo/ui/overlay";
+import { NO_CROP, getAnchor, type CropInsets } from "@repo/ui/overlay";
 import { getOverlayWidgetDefinition } from "../registry/overlay-widget-registry";
+import { AnchorPicker } from "./anchor-picker";
+import { InspectorHint } from "./inspector-hint";
 import { InspectorSection } from "./inspector-section";
 import { NumberField } from "./number-field";
 import { MIN_DISTRIBUTE_ITEMS } from "./selection-layout";
@@ -229,13 +231,16 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
   // useInspectorCommands, which needs a non-null item — are never called behind
   // the two early returns above. Keying on the item id resets the panel's own
   // state when the selection changes, no syncing effect needed.
+  // The provider is what lets the panel's "?" hints open; Radix needs one above.
   return (
-    <SelectedItemInspector
-      key={selectedItem.id}
-      item={selectedItem}
-      clipFolders={clipFolders}
-      labelInputRef={labelInputRef}
-    />
+    <TooltipProvider delayDuration={200}>
+      <SelectedItemInspector
+        key={selectedItem.id}
+        item={selectedItem}
+        clipFolders={clipFolders}
+        labelInputRef={labelInputRef}
+      />
+    </TooltipProvider>
   );
 }
 
@@ -271,9 +276,12 @@ function SelectedItemInspector({
     setDesignHeight,
     fit,
     align,
+    setAnchor,
   } = useInspectorCommands(item, scene ?? null);
 
   const Settings = def?.SettingsPanel;
+  // Children mirror their parent's anchor, so the item's own is the one to show.
+  const anchor = getAnchor(item);
 
   return (
     <div className="p-4 space-y-5">
@@ -294,9 +302,19 @@ function SelectedItemInspector({
             />
           </div>
 
+          {/* X and Y are distances from the pinned edge, so the labels say
+              which one whenever it is not the usual top-left. */}
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1.5">
-              <Label className="text-xs">X</Label>
+              <Label className="text-xs">
+                X
+                {anchor.x !== "left" && (
+                  <span className="font-normal text-muted-foreground">
+                    {" "}
+                    from {anchor.x}
+                  </span>
+                )}
+              </Label>
               <NumberField
                 value={Math.round(item.x)}
                 onFocus={() => pushHistory()}
@@ -304,13 +322,41 @@ function SelectedItemInspector({
               />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Y</Label>
+              <Label className="text-xs">
+                Y
+                {anchor.y !== "top" && (
+                  <span className="font-normal text-muted-foreground">
+                    {" "}
+                    from {anchor.y === "center" ? "middle" : anchor.y}
+                  </span>
+                )}
+              </Label>
               <NumberField
                 value={Math.round(item.y)}
                 onFocus={() => pushHistory()}
                 onCommit={(y) => handleUpdate({ y })}
               />
             </div>
+          </div>
+
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Label className="text-xs">Pinned to</Label>
+              <InspectorHint label="About pinning">
+                The edge X and Y are measured from. Pin a widget bottom-right
+                and it stays in that corner when you change the scene&apos;s
+                resolution or view it in portrait. Picking a pin doesn&apos;t
+                move the widget.
+              </InspectorHint>
+            </div>
+            <AnchorPicker
+              value={anchor}
+              disabled={layoutLocked}
+              onChange={(next) => {
+                pushHistory();
+                setAnchor({ anchor_x: next.x, anchor_y: next.y });
+              }}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -334,114 +380,54 @@ function SelectedItemInspector({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Size</Label>
-              <NumberField
-                value={Math.round(itemScale * 100)}
-                min={1}
-                onFocus={() => pushHistory()}
-                onCommit={setScalePercent}
-                className="pr-6"
-                adornment={
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    %
-                  </span>
-                }
-              />
+          {/* Simple mode hides rotation and opacity: essentials only. */}
+          {editorMode === "pro" && (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Rotation</Label>
+                <NumberField
+                  value={item.rotation}
+                  min={-360}
+                  max={360}
+                  onFocus={() => pushHistory()}
+                  onCommit={(rotation) => handleUpdate({ rotation })}
+                  className="pr-6"
+                  adornment={
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      °
+                    </span>
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Opacity</Label>
+                <NumberField
+                  value={Math.round(item.opacity * 100)}
+                  min={0}
+                  max={100}
+                  onFocus={() => pushHistory()}
+                  onCommit={(percent) => handleUpdate({ opacity: percent / 100 })}
+                  className="pr-6"
+                  adornment={
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                      %
+                    </span>
+                  }
+                />
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">&nbsp;</Label>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-8 w-full text-xs"
-                disabled={item.is_locked || itemScale === 1}
-                onClick={() => {
-                  pushHistory();
-                  setScalePercent(100);
-                }}
-              >
-                Reset to 100%
-              </Button>
-            </div>
-          </div>
-
-          {/*
-            The frame is the box the widget lays itself out in. Widening it gives
-            text more room to wrap; it never changes how big the text is.
-          */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Frame width</Label>
-              <NumberField
-                value={Math.round(designSize.w)}
-                min={1}
-                onFocus={() => pushHistory()}
-                onCommit={setDesignWidth}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Frame height</Label>
-              <NumberField
-                value={Math.round(designSize.h)}
-                min={1}
-                onFocus={() => pushHistory()}
-                onCommit={setDesignHeight}
-              />
-            </div>
-          </div>
+          )}
 
           <div className="space-y-2 pt-0.5">
             <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs">Crop</Label>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                disabled={item.is_locked || !isCropped}
-                onClick={() => {
-                  pushHistory();
-                  applyCrop(NO_CROP);
-                }}
-              >
-                Reset
-              </Button>
-            </div>
-            <div className="grid grid-cols-4 gap-2">
-              {(
-                [
-                  ["top", "Top"],
-                  ["right", "Right"],
-                  ["bottom", "Bottom"],
-                  ["left", "Left"],
-                ] as const
-              ).map(([edge, label]) => (
-                <div key={edge} className="space-y-1.5">
-                  <Label className="text-[10px] text-muted-foreground">
-                    {label}
-                  </Label>
-                  <NumberField
-                    min={0}
-                    value={Math.round(cropInsets[edge])}
-                    onFocus={() => pushHistory()}
-                    onCommit={(inset) => setCropInset(edge, inset)}
-                    className="px-2"
-                  />
-                </div>
-              ))}
-            </div>
-            <p className="text-[11px] text-muted-foreground leading-snug">
-              Crop away what you don&apos;t need, then drag a corner to stretch
-              the rest back out — that zooms in without leaving the canvas. Hold
-              Alt and drag a handle to crop on the canvas.
-            </p>
-          </div>
-
-          <div className="space-y-2 pt-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <Label className="text-xs">Scene layout</Label>
+              <div className="flex items-center gap-1.5">
+                <Label className="text-xs">Scene layout</Label>
+                <InspectorHint label="About scene layout">
+                  Pin the widget to a scene edge or the center, or fit the full
+                  width or height. A pinned widget stays on that edge when the
+                  scene&apos;s resolution changes.
+                </InspectorHint>
+              </div>
               <Popover open={sceneLayoutOpen} onOpenChange={setSceneLayoutOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -609,53 +595,137 @@ function SelectedItemInspector({
                 </PopoverContent>
               </Popover>
             </div>
-            <p className="text-[11px] text-muted-foreground leading-snug">
-              Position and size relative to the scene. Open the layout tool
-              for align and fit options.
-            </p>
           </div>
 
-          {/* Simple mode hides rotation/z-index/opacity entirely */}
-          {editorMode === "pro" && (
-          <InspectorSection title="Advanced">
+          {/*
+            Scale, frame and crop all reshape the box that Width and Height
+            already describe, so they wait behind a section until wanted.
+          */}
+          <InspectorSection title="Scale & crop">
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Rotation</Label>
+                  <Label className="text-xs">Size</Label>
                   <NumberField
-                    value={item.rotation}
-                    min={-360}
-                    max={360}
+                    value={Math.round(itemScale * 100)}
+                    min={1}
                     onFocus={() => pushHistory()}
-                    onCommit={(rotation) => handleUpdate({ rotation })}
+                    onCommit={setScalePercent}
+                    className="pr-6"
+                    adornment={
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        %
+                      </span>
+                    }
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Z-Index</Label>
+                  <Label className="text-xs">&nbsp;</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-8 w-full text-xs"
+                    disabled={item.is_locked || itemScale === 1}
+                    onClick={() => {
+                      pushHistory();
+                      setScalePercent(100);
+                    }}
+                  >
+                    Reset to 100%
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-xs">Frame width</Label>
+                    <InspectorHint label="About the frame">
+                      The box the widget lays itself out in. Widen it to give text
+                      more room to wrap. The text itself stays the same size.
+                    </InspectorHint>
+                  </div>
                   <NumberField
-                    value={item.z_index}
+                    value={Math.round(designSize.w)}
+                    min={1}
                     onFocus={() => pushHistory()}
-                    onCommit={(z_index) => handleUpdate({ z_index })}
+                    onCommit={setDesignWidth}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Frame height</Label>
+                  <NumberField
+                    value={Math.round(designSize.h)}
+                    min={1}
+                    onFocus={() => pushHistory()}
+                    onCommit={setDesignHeight}
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs">
-                  Opacity ({Math.round(item.opacity * 100)}%)
-                </Label>
-                <Slider
-                  value={[item.opacity * 100]}
-                  onPointerDown={() => pushHistory()}
-                  onValueChange={([val]) => handleUpdate({ opacity: val / 100 })}
-                  min={0}
-                  max={100}
-                  step={1}
-                  className="py-1"
-                />
+              <div className="space-y-2 pt-0.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-xs">Crop</Label>
+                    <InspectorHint label="About crop">
+                      Trim what you don&apos;t need, then drag a corner to stretch
+                      the rest back out. That zooms in without leaving the canvas.
+                      Hold Alt and drag a handle to crop on the canvas.
+                    </InspectorHint>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    disabled={item.is_locked || !isCropped}
+                    onClick={() => {
+                      pushHistory();
+                      applyCrop(NO_CROP);
+                    }}
+                  >
+                    Reset
+                  </Button>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {(
+                    [
+                      ["top", "Top"],
+                      ["right", "Right"],
+                      ["bottom", "Bottom"],
+                      ["left", "Left"],
+                    ] as const
+                  ).map(([edge, label]) => (
+                    <div key={edge} className="space-y-1.5">
+                      <Label className="text-[10px] text-muted-foreground">
+                        {label}
+                      </Label>
+                      <NumberField
+                        min={0}
+                        value={Math.round(cropInsets[edge])}
+                        onFocus={() => pushHistory()}
+                        onCommit={(inset) => setCropInset(edge, inset)}
+                        className="px-2"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </InspectorSection>
+
+          {/* Simple mode hides z-index entirely; the layers panel orders things. */}
+          {editorMode === "pro" && (
+            <InspectorSection title="Advanced">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Z-Index</Label>
+                <NumberField
+                  value={item.z_index}
+                  onFocus={() => pushHistory()}
+                  onCommit={(z_index) => handleUpdate({ z_index })}
+                />
+              </div>
+            </InspectorSection>
           )}
         </div>
       </div>

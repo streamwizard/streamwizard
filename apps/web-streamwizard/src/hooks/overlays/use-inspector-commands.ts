@@ -12,8 +12,13 @@ import {
 import type { OverlayItem, OverlaySceneWithItems } from "@/types/overlays";
 import { asClipDisplayFieldConfig } from "@/types/overlays";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
+import {
+  pinToSceneEdge,
+  reanchorInPlace,
+  type SceneEdge,
+} from "@/components/overlays/editor/overlay-item-helpers";
 
-export type AlignEdge = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
+export type AlignEdge = SceneEdge;
 export type FitMode = "scene" | "width" | "height";
 
 /**
@@ -127,17 +132,26 @@ export function useInspectorCommands(item: OverlayItem, scene: OverlaySceneWithI
     }
   }
 
+  /**
+   * Pins the widget to a scene edge. This moves the anchor rather than the
+   * offset, so the widget stays on that edge when the scene's resolution
+   * changes instead of being left wherever the old edge used to be.
+   */
   function align(edge: AlignEdge) {
     if (layoutLocked) return;
-    const positions: Record<AlignEdge, Partial<OverlayItem>> = {
-      left: { x: 0 },
-      hcenter: { x: Math.max(0, Math.round((sceneW - layoutTarget.w) / 2)) },
-      right: { x: Math.max(0, Math.round(sceneW - layoutTarget.w)) },
-      top: { y: 0 },
-      vcenter: { y: Math.max(0, Math.round((sceneH - layoutTarget.h) / 2)) },
-      bottom: { y: Math.max(0, Math.round(sceneH - layoutTarget.h)) },
-    };
-    updateItem(layoutTarget.id, positions[edge]);
+    updateItem(layoutTarget.id, pinToSceneEdge(edge));
+  }
+
+  /**
+   * Changes which edge the widget is measured from without moving it. The X/Y
+   * fields re-read as distances from the new edge; the canvas does not change.
+   */
+  function setAnchor(anchor: Partial<Pick<OverlayItem, "anchor_x" | "anchor_y">>) {
+    if (layoutLocked) return;
+    updateItem(
+      layoutTarget.id,
+      reanchorInPlace(layoutTarget, anchor, { width: sceneW, height: sceneH })
+    );
   }
 
   return {
@@ -160,5 +174,6 @@ export function useInspectorCommands(item: OverlayItem, scene: OverlaySceneWithI
     setDesignHeight,
     fit,
     align,
+    setAnchor,
   };
 }

@@ -1734,6 +1734,8 @@ export type Database = {
       }
       overlay_items: {
         Row: {
+          anchor_x: string
+          anchor_y: string
           config: Json
           created_at: string
           crop_bottom: number
@@ -1758,6 +1760,8 @@ export type Database = {
           z_index: number
         }
         Insert: {
+          anchor_x?: string
+          anchor_y?: string
           config?: Json
           created_at?: string
           crop_bottom?: number
@@ -1782,6 +1786,8 @@ export type Database = {
           z_index?: number
         }
         Update: {
+          anchor_x?: string
+          anchor_y?: string
           config?: Json
           created_at?: string
           crop_bottom?: number

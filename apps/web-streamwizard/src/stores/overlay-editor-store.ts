@@ -40,9 +40,12 @@ import {
   buildDuplicate,
   cascadeIds,
   clampGeometry,
+  fromAbsoluteGeometry,
   nextTempId,
+  pinToSceneEdge,
   touchesGeometry,
 } from "@/components/overlays/editor/overlay-item-helpers";
+import { resolveAnchoredPosition, withAbsolutePosition } from "@repo/ui/overlay";
 import type {
   ClipDisplayFieldItemConfig,
   DisplayFieldKey,
@@ -160,7 +163,9 @@ interface OverlayEditorState {
   alignSelected: (edge: AlignEdge) => void;
   distributeSelected: (axis: DistributeAxis) => void;
   matchSizeSelected: (dimension: MatchDimension) => void;
+  /** The selected root items with absolute positions, for layout maths. */
   selectedRootItems: () => OverlayItem[];
+  /** Applies layout patches whose `x`/`y` are absolute scene coordinates. */
   applyLayoutUpdates: (updates: ItemLayoutUpdate[]) => void;
   reorderItem: (id: string, direction: "up" | "down") => void;
   setLayerOrder: (orderedIdsTopFirst: string[]) => void;
@@ -638,6 +643,8 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
           ...ch,
           x: updated!.x,
           y: updated!.y,
+          anchor_x: updated!.anchor_x,
+          anchor_y: updated!.anchor_y,
           w: updated!.w,
           h: updated!.h,
           design_w: updated!.design_w,
@@ -780,20 +787,35 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     }
     lastNudgeAt = now;
 
+    // Arrow keys move on screen, so the step is applied to the absolute
+    // position: bumping a right-anchored offset would send it the wrong way.
     for (const item of movable) {
-      updateItem(item.id, { x: item.x + dx, y: item.y + dy });
+      const position = resolveAnchoredPosition(item, scene);
+      updateItem(
+        item.id,
+        fromAbsoluteGeometry(item, { x: position.x + dx, y: position.y + dy }, scene)
+      );
     }
   },
 
   alignSelected: (edge) => {
-    const { scene, applyLayoutUpdates, selectedRootItems } = get();
+    const { scene, applyLayoutUpdates, selectedRootItems, pushHistory, updateItem } = get();
     if (!scene) return;
     const items = selectedRootItems();
-    // A lone item still aligns to the scene; two or more align to each other.
-    const bounds =
-      items.length > 1
-        ? selectionBounds(items)
-        : { x: 0, y: 0, w: scene.width, h: scene.height };
+    if (items.length === 0) return;
+
+    // A lone item is pinned to the scene edge, same as the inspector's scene
+    // layout tools, so it stays there when the resolution changes. Two or more
+    // align to each other, which is a plain move.
+    if (items.length === 1) {
+      const item = items[0]!;
+      if (item.is_locked) return;
+      pushHistory();
+      updateItem(item.id, pinToSceneEdge(edge));
+      return;
+    }
+
+    const bounds = selectionBounds(items);
     if (!bounds) return;
     applyLayoutUpdates(alignUpdates(items, edge, bounds));
   },
@@ -810,21 +832,31 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     applyLayoutUpdates(matchSizeUpdates(selectedRootItems(), primaryId, dimension));
   },
 
-  /** The selected items that can actually be laid out; clip children can't. */
+  /**
+   * The selected items that can actually be laid out; clip children can't.
+   * Positions are absolute so the layout maths can read rects straight off
+   * them; `applyLayoutUpdates` converts the results back.
+   */
   selectedRootItems: () => {
     const { scene, selectedItemIds } = get();
     if (!scene) return [];
     return selectedItemIds
       .map((id) => scene.items.find((i) => i.id === id))
-      .filter((i): i is OverlayItem => !!i && isRootLayerType(i.type));
+      .filter((i): i is OverlayItem => !!i && isRootLayerType(i.type))
+      .map((i) => withAbsolutePosition(i, scene));
   },
 
   /** One snapshot for the whole operation, then the moves. */
   applyLayoutUpdates: (updates) => {
     if (updates.length === 0) return;
-    const { pushHistory, updateItem } = get();
+    const { scene, pushHistory, updateItem } = get();
+    if (!scene) return;
     pushHistory();
-    for (const { id, updates: patch } of updates) updateItem(id, patch);
+    for (const { id, updates: patch } of updates) {
+      const item = scene.items.find((i) => i.id === id);
+      if (!item) continue;
+      updateItem(id, fromAbsoluteGeometry(item, patch, scene));
+    }
   },
 
   reorderItem: (id, direction) => {

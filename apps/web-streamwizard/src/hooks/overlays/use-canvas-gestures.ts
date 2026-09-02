@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getCropInsets, getDesignSize, getItemScale } from "@repo/ui/overlay";
+import {
+  getCropInsets,
+  getDesignSize,
+  getItemScale,
+  resolveAnchoredPosition,
+  withAbsolutePosition,
+} from "@repo/ui/overlay";
 import type { OverlayItem } from "@/types/overlays";
 import { isRootLayerType } from "@/components/overlays/registry/overlay-widget-registry";
 import {
@@ -18,6 +24,7 @@ import {
   type DragItemStart,
 } from "@/components/overlays/editor/canvas-resize-math";
 import { snapToGrid } from "@/components/overlays/editor/canvas-preferences";
+import { fromAbsoluteGeometry } from "@/components/overlays/editor/overlay-item-helpers";
 import { extendsSelection } from "@/components/overlays/editor/selection-modifiers";
 
 /** Screen-px snap radius; converted to scene px by dividing by zoom. */
@@ -50,6 +57,11 @@ export interface MarqueeState {
  * All pointer handling for the editor canvas: move/resize/crop drags, the
  * rubber-band marquee, snap guides and the one-history-entry-per-gesture rule.
  * The canvas component itself only renders what this returns.
+ *
+ * Everything in here works in absolute scene coordinates. Items store their
+ * position as an offset from an anchor, so a gesture reads its start position
+ * through `resolveAnchoredPosition` and writes back through
+ * `fromAbsoluteGeometry`; the maths in between never sees an anchor.
  */
 export function useCanvasGestures() {
   const scene = useOverlayStore((s) => s.scene);
@@ -137,10 +149,11 @@ export function useCanvasGestures() {
         )
         .map((i) => {
           const design = getDesignSize(i);
+          const position = resolveAnchoredPosition(i, scene);
           return {
             id: i.id,
-            startX: i.x,
-            startY: i.y,
+            startX: position.x,
+            startY: position.y,
             startW: i.w,
             startH: i.h,
             startDesignW: design.w,
@@ -237,9 +250,9 @@ export function useCanvasGestures() {
         };
         if (grabbed && (snapAxes.x || snapAxes.y)) {
           const draggedIds = new Set(dragState.items.map((i) => i.id));
-          const targets = scene.items.filter(
-            (i) => isRootLayerType(i.type) && i.is_visible && !draggedIds.has(i.id),
-          );
+          const targets = scene.items
+            .filter((i) => isRootLayerType(i.type) && i.is_visible && !draggedIds.has(i.id))
+            .map((i) => withAbsolutePosition(i, scene));
           const snapped = computeSnap(
             {
               x: grabbed.startX + cdx,
@@ -278,28 +291,43 @@ export function useCanvasGestures() {
         }
 
         for (const it of dragState.items) {
+          const item = scene.items.find((i) => i.id === it.id);
+          if (!item) continue;
           // Grid snapping lands the item itself on the grid, so it is applied to
           // the final position rather than the delta. Alt inverts it too, so one
           // modifier flips every kind of snapping at once.
           const nextX = it.startX + cdx;
           const nextY = it.startY + cdy;
           const onGrid = grid.snap !== e.altKey;
-          updateItem(it.id, {
-            x: Math.round(onGrid ? snapToGrid(nextX, grid.size) : nextX),
-            y: Math.round(onGrid ? snapToGrid(nextY, grid.size) : nextY),
-          });
+          updateItem(
+            it.id,
+            fromAbsoluteGeometry(
+              item,
+              {
+                x: Math.round(onGrid ? snapToGrid(nextX, grid.size) : nextX),
+                y: Math.round(onGrid ? snapToGrid(nextY, grid.size) : nextY),
+              },
+              scene,
+            ),
+          );
         }
         return;
       }
 
       if (dragState.mode === "resize") {
         const it = dragState.items[0]!;
+        const item = scene.items.find((i) => i.id === it.id);
+        if (!item) return;
         const handle = dragState.handle ?? "se";
         updateItem(
           it.id,
-          e.altKey
-            ? computeCropUpdate(it, handle, dx, dy)
-            : computeResizeUpdate(it, handle, dx, dy, e.shiftKey),
+          fromAbsoluteGeometry(
+            item,
+            e.altKey
+              ? computeCropUpdate(it, handle, dx, dy)
+              : computeResizeUpdate(it, handle, dx, dy, e.shiftKey),
+            scene,
+          ),
         );
       }
     },
@@ -325,16 +353,9 @@ export function useCanvasGestures() {
         const x2 = Math.max(marquee.startX, marquee.currentX);
         const y2 = Math.max(marquee.startY, marquee.currentY);
         const hit = scene.items
-          .filter(
-            (i) =>
-              isRootLayerType(i.type) &&
-              i.is_visible &&
-              !i.is_locked &&
-              i.x < x2 &&
-              i.x + i.w > x1 &&
-              i.y < y2 &&
-              i.y + i.h > y1,
-          )
+          .filter((i) => isRootLayerType(i.type) && i.is_visible && !i.is_locked)
+          .map((i) => withAbsolutePosition(i, scene))
+          .filter((i) => i.x < x2 && i.x + i.w > x1 && i.y < y2 && i.y + i.h > y1)
           .map((i) => i.id);
         setSelectedItems(
           marquee.additive ? Array.from(new Set([...selectedItemIds, ...hit])) : hit,

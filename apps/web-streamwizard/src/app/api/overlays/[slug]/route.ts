@@ -43,7 +43,7 @@ export async function GET(
       slug: scene.slug,
       width: scene.width,
       height: scene.height,
-      items: toPublicOverlayApiItems(overlayItems),
+      items: toPublicOverlayApiItems(overlayItems, scene),
     };
 
     return NextResponse.json(payload, {

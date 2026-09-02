@@ -37,6 +37,8 @@ function makeItem(label: string): OverlayItem {
     crop_right: 0,
     crop_bottom: 0,
     crop_left: 0,
+    anchor_x: "left",
+    anchor_y: "top",
     z_index: 1,
     rotation: 0,
     opacity: 1,

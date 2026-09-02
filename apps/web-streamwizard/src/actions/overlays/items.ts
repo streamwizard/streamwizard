@@ -10,7 +10,7 @@ import {
   updateOverlayItemData,
 } from "@repo/supabase/queries/overlays";
 import { overlayItemSchema } from "@/schemas/overlay";
-import type { OverlayItemConfig, OverlaySceneWithItems } from "@/types/overlays";
+import type { OverlayItem, OverlayItemConfig, OverlaySceneWithItems } from "@/types/overlays";
 import { tryAuthContext } from "@/lib/auth";
 import { getOverlayScene } from "./scenes";
 import {
@@ -26,6 +26,8 @@ interface OverlayItemInput {
   type: string;
   x: number;
   y: number;
+  anchor_x: OverlayItem["anchor_x"];
+  anchor_y: OverlayItem["anchor_y"];
   w: number;
   h: number;
   design_w: number;

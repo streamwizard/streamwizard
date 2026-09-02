@@ -1,4 +1,5 @@
 import type { OverlayItem, OverlayItemConfig } from "./item";
+import { getAnchor } from "../lib/item-anchor";
 
 /** The clips widget: its config, its per-field children, and the helpers that
  *  flatten a parent row plus children into one renderable config. */
@@ -176,11 +177,14 @@ export function createClipDisplayFieldChildItems(
         | "crop_right"
         | "crop_bottom"
         | "crop_left"
+        | "anchor_x"
+        | "anchor_y"
       >
     > &
     Pick<OverlayItem, "z_index">,
   nextId: () => string
 ): OverlayItem[] {
+  const anchor = getAnchor(parent);
   return DISPLAY_FIELD_KEYS.map((fieldKey, stackOrder) => ({
     id: nextId(),
     scene_id: sceneId,
@@ -189,13 +193,16 @@ export function createClipDisplayFieldChildItems(
     y: parent.y,
     w: parent.w,
     h: parent.h,
-    // Children mirror the parent's box exactly, design size and crop included.
+    // Children mirror the parent's box exactly: design size, crop and anchor
+    // included, or they would resolve to a different spot on the scene.
     design_w: parent.design_w ?? parent.w,
     design_h: parent.design_h ?? parent.h,
     crop_top: parent.crop_top ?? 0,
     crop_right: parent.crop_right ?? 0,
     crop_bottom: parent.crop_bottom ?? 0,
     crop_left: parent.crop_left ?? 0,
+    anchor_x: anchor.x,
+    anchor_y: anchor.y,
     z_index: parent.z_index,
     rotation: 0,
     opacity: 1,

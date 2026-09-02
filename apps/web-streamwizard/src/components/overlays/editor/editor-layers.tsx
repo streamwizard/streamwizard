@@ -20,18 +20,8 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Button, Input } from "@repo/ui";
-import {
-  ArrowDown,
-  ArrowUp,
-  Copy,
-  Eye,
-  EyeOff,
-  GripVertical,
-  Lock,
-  Trash2,
-  Unlock,
-} from "lucide-react";
+import { Button, cn, Input } from "@repo/ui";
+import { Eye, EyeOff, GripVertical, Lock, Unlock } from "lucide-react";
 import type { ClipsWidgetConfig, RootOverlayItemType } from "@/types/overlays";
 import {
   asClipDisplayFieldConfig,
@@ -42,7 +32,7 @@ import {
   isRootLayerType,
 } from "../registry/overlay-widget-registry";
 import { DISPLAY_FIELD_LABELS } from "../widgets/clips/nested-fields";
-import { LayerContextMenu } from "./layer-context-menu";
+import { ClipFieldContextMenu, LayerContextMenu } from "./layer-context-menu";
 import { extendsSelection } from "./selection-modifiers";
 import { SortableLayerRow } from "./sortable-layer-row";
 import { selectPrimarySelectedId, useOverlayStore } from "@/stores/overlay-editor-store";
@@ -54,9 +44,6 @@ export function EditorLayers() {
     selectItem,
     toggleSelectItem,
     updateItem,
-    removeItem,
-    duplicateItem,
-    reorderItem,
     renameItem,
     setLayerOrder,
     toggleItemVisibility,
@@ -130,6 +117,7 @@ export function EditorLayers() {
             const parentDef = getRootOverlayWidgetDefinition(
               item.type as RootOverlayItemType
             );
+            const TypeIcon = parentDef.icon;
             const clipChildren = parentDef.getChildItems
               ? parentDef.getChildItems(scene.items, item.id).sort(
                   (a, b) =>
@@ -186,6 +174,11 @@ export function EditorLayers() {
                           <GripVertical className="h-3 w-3" />
                         </button>
 
+                        <TypeIcon
+                          className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                          aria-hidden
+                        />
+
                         {renamingId === item.id ? (
                           <Input
                             autoFocus
@@ -201,7 +194,8 @@ export function EditorLayers() {
                           />
                         ) : (
                           <span
-                            className="flex-1 truncate text-xs"
+                            className="flex-1 min-w-0 truncate text-xs"
+                            title={item.label}
                             onDoubleClick={(e) => {
                               e.stopPropagation();
                               setRenamingId(item.id);
@@ -212,224 +206,107 @@ export function EditorLayers() {
                           </span>
                         )}
 
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5"
-                            title="Bring forward"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              reorderItem(item.id, "up");
-                            }}
-                          >
-                            <ArrowUp className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5"
-                            title="Send backward"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              reorderItem(item.id, "down");
-                            }}
-                          >
-                            <ArrowDown className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5"
-                            title="Duplicate"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              duplicateItem(item.id);
-                            }}
-                          >
-                            <Copy className="h-3 w-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5"
+                        {/*
+                          Only show/lock live on the row. Order, duplicate and
+                          delete sit in the right-click menu, so the name keeps
+                          the width.
+                        */}
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <RowToggle
                             title={item.is_visible ? "Hide" : "Show"}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleItemVisibility(item.id);
-                            }}
+                            active={!item.is_visible}
+                            groupHover="group-hover:opacity-100"
+                            onClick={() => toggleItemVisibility(item.id)}
                           >
                             {item.is_visible ? (
                               <Eye className="h-3 w-3" />
                             ) : (
                               <EyeOff className="h-3 w-3" />
                             )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5"
+                          </RowToggle>
+                          <RowToggle
                             title={item.is_locked ? "Unlock" : "Lock"}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleItemLock(item.id);
-                            }}
+                            active={item.is_locked}
+                            groupHover="group-hover:opacity-100"
+                            onClick={() => toggleItemLock(item.id)}
                           >
                             {item.is_locked ? (
                               <Lock className="h-3 w-3" />
                             ) : (
                               <Unlock className="h-3 w-3" />
                             )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 text-destructive hover:text-destructive"
-                            title="Delete"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeItem(item.id);
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
+                          </RowToggle>
                         </div>
                       </div>
                     </LayerContextMenu>
 
                     {clipComposite &&
-                      clipChildren.map((child, panelIndex) => {
+                      clipChildren.map((child) => {
                         const fc = asClipDisplayFieldConfig(child.config);
                         const field = fc.fieldKey;
                         const locked = fc.isLayoutLocked;
                         const enabled = child.is_visible;
                         const fieldSelected = selectedItemIds.includes(child.id);
-                        const canMoveUp = panelIndex > 0;
-                        const canMoveDown = panelIndex < clipChildren.length - 1;
-
-                        const swapStack = (other: typeof child) => {
-                          const o = asClipDisplayFieldConfig(other.config);
-                          updateItem(child.id, {
-                            config: { ...fc, stackOrder: o.stackOrder },
-                          });
-                          updateItem(other.id, {
-                            config: { ...o, stackOrder: fc.stackOrder },
-                          });
-                        };
 
                         return (
-                          <div
+                          <ClipFieldContextMenu
                             key={child.id}
-                            className={`
-                              ml-2 pl-2 border-l border-border/70 flex items-center gap-1 rounded px-1 py-1 text-[11px] leading-tight
-                              transition-colors group/field
-                              ${fieldSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/40 text-muted-foreground hover:text-foreground"}
-                              ${!enabled ? "opacity-50" : ""}
-                            `}
+                            field={child}
+                            siblings={clipChildren}
                           >
-                            <button
-                              type="button"
-                              className="flex-1 min-w-0 text-left truncate cursor-pointer rounded px-1 py-0.5"
-                              onClick={() => selectItem(child.id)}
+                            <div
+                              className={`
+                                ml-2 pl-2 border-l border-border/70 flex items-center gap-1 rounded px-1 py-1 text-[11px] leading-tight
+                                transition-colors group/field
+                                ${fieldSelected ? "bg-accent text-accent-foreground" : "hover:bg-accent/40 text-muted-foreground hover:text-foreground"}
+                                ${!enabled ? "opacity-50" : ""}
+                              `}
                             >
-                              {DISPLAY_FIELD_LABELS[field]}
-                              {locked ? (
-                                <Lock className="inline h-2.5 w-2.5 ml-1 opacity-70 align-text-bottom" />
-                              ) : null}
-                            </button>
+                              <button
+                                type="button"
+                                className="flex-1 min-w-0 text-left truncate cursor-pointer rounded px-1 py-0.5"
+                                onClick={() => selectItem(child.id)}
+                              >
+                                {DISPLAY_FIELD_LABELS[field]}
+                              </button>
 
-                            <div className="flex items-center gap-0 shrink-0 opacity-0 group-hover/field:opacity-100 transition-opacity">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5"
-                                title="Bring forward"
-                                disabled={!canMoveUp}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  swapStack(clipChildren[panelIndex - 1]!);
-                                }}
-                              >
-                                <ArrowUp className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5"
-                                title="Send backward"
-                                disabled={!canMoveDown}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  swapStack(clipChildren[panelIndex + 1]!);
-                                }}
-                              >
-                                <ArrowDown className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5"
-                                title={
-                                  enabled ? "Hide on overlay" : "Show on overlay"
-                                }
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleItemVisibility(child.id);
-                                  if (enabled && selectedItemIds.includes(child.id)) {
-                                    selectItem(item.id);
-                                  }
-                                }}
-                              >
-                                {enabled ? (
-                                  <Eye className="h-3 w-3" />
-                                ) : (
-                                  <EyeOff className="h-3 w-3" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5"
-                                title={
-                                  locked
-                                    ? "Unlock in editor"
-                                    : "Lock position & size"
-                                }
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateItem(child.id, {
-                                    config: {
-                                      ...fc,
-                                      isLayoutLocked: !locked,
-                                    },
-                                  });
-                                }}
-                              >
-                                {locked ? (
-                                  <Lock className="h-3 w-3" />
-                                ) : (
-                                  <Unlock className="h-3 w-3" />
-                                )}
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 text-destructive hover:text-destructive"
-                                title="Hide field"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (child.is_visible) {
+                              <div className="flex items-center gap-0 shrink-0">
+                                <RowToggle
+                                  title={enabled ? "Hide on overlay" : "Show on overlay"}
+                                  active={!enabled}
+                                  groupHover="group-hover/field:opacity-100"
+                                  onClick={() => {
                                     toggleItemVisibility(child.id);
+                                    if (enabled && selectedItemIds.includes(child.id)) {
+                                      selectItem(item.id);
+                                    }
+                                  }}
+                                >
+                                  {enabled ? (
+                                    <Eye className="h-3 w-3" />
+                                  ) : (
+                                    <EyeOff className="h-3 w-3" />
+                                  )}
+                                </RowToggle>
+                                <RowToggle
+                                  title={locked ? "Unlock in editor" : "Lock position & size"}
+                                  active={locked}
+                                  groupHover="group-hover/field:opacity-100"
+                                  onClick={() =>
+                                    updateItem(child.id, {
+                                      config: { ...fc, isLayoutLocked: !locked },
+                                    })
                                   }
-                                  if (selectedItemIds.includes(child.id)) {
-                                    selectItem(item.id);
-                                  }
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                                >
+                                  {locked ? (
+                                    <Lock className="h-3 w-3" />
+                                  ) : (
+                                    <Unlock className="h-3 w-3" />
+                                  )}
+                                </RowToggle>
+                              </div>
                             </div>
-                          </div>
+                          </ClipFieldContextMenu>
                         );
                       })}
                   </div>
@@ -440,5 +317,45 @@ export function EditorLayers() {
         </SortableContext>
       </DndContext>
     </div>
+  );
+}
+
+/**
+ * Show/lock button on a layer row. Hidden until the row is hovered, unless it
+ * is already switched on: a hidden or locked layer should say so without a
+ * mouse over it.
+ */
+function RowToggle({
+  title,
+  active,
+  groupHover,
+  onClick,
+  children,
+}: {
+  title: string;
+  active: boolean;
+  /** The parent row's hover variant, e.g. `group-hover:opacity-100`. */
+  groupHover: string;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={cn(
+        "h-5 w-5 transition-opacity focus-visible:opacity-100",
+        groupHover,
+        active ? "opacity-100" : "opacity-0"
+      )}
+      title={title}
+      aria-pressed={active}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+    >
+      {children}
+    </Button>
   );
 }

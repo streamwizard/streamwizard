@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  ANCHOR_X_VALUES,
+  ANCHOR_Y_VALUES,
+  DEFAULT_ANCHOR_X,
+  DEFAULT_ANCHOR_Y,
+} from "@repo/ui/overlay";
 
 /**
  * The shape of an exported overlay file.
@@ -43,6 +49,9 @@ export const exportedItemSchema = z.object({
   type: z.string().min(1).max(50),
   x: z.number(),
   y: z.number(),
+  // Files from before anchors existed carry none; top-left is what they meant.
+  anchor_x: z.enum(ANCHOR_X_VALUES).default(DEFAULT_ANCHOR_X),
+  anchor_y: z.enum(ANCHOR_Y_VALUES).default(DEFAULT_ANCHOR_Y),
   w: z.number(),
   h: z.number(),
   design_w: z.number(),

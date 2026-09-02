@@ -22,6 +22,22 @@ export {
   type Size,
   type CropInsets,
 } from "./components/overlay/lib/item-scale";
+export {
+  ANCHOR_X_VALUES,
+  ANCHOR_Y_VALUES,
+  DEFAULT_ANCHOR_X,
+  DEFAULT_ANCHOR_Y,
+  getAnchor,
+  isAnchored,
+  isAnchorX,
+  isAnchorY,
+  resolveAnchoredPosition,
+  toAnchoredOffset,
+  withAbsolutePosition,
+  type Anchor,
+  type AnchorX,
+  type AnchorY,
+} from "./components/overlay/lib/item-anchor";
 export { WidgetScaleFrame } from "./components/overlay/WidgetScaleFrame";
 export { formatCountdownMs } from "./components/overlay/lib/format-countdown";
 export { formatClockWidgetDisplay } from "./components/overlay/lib/format-clock-widget";

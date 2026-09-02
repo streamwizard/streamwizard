@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import type { LucideIcon } from "lucide-react";
 import type { Database } from "@repo/supabase";
 import type {
   ChildOverlayItemType,
@@ -90,6 +91,8 @@ export interface OverlayRootWidgetDefinition extends WidgetBaseDefinition {
   layerScope: "root";
   showInLibrary: boolean;
   category?: WidgetCategory;
+  /** Marks the widget's rows in the layers panel so a type reads at a glance. */
+  icon: LucideIcon;
   library?: {
     title: string;
     description?: string;
