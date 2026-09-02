@@ -38,6 +38,7 @@ export {
   type AnchorX,
   type AnchorY,
 } from "./components/overlay/lib/item-anchor";
+export { itemFlipTransform, itemTransform } from "./components/overlay/lib/item-flip";
 export { WidgetScaleFrame } from "./components/overlay/WidgetScaleFrame";
 export { formatCountdownMs } from "./components/overlay/lib/format-countdown";
 export { formatClockWidgetDisplay } from "./components/overlay/lib/format-clock-widget";

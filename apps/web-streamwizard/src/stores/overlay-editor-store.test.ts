@@ -22,6 +22,8 @@ function makeItem(id: string, config: Record<string, unknown>): OverlayItem {
     anchor_y: "top",
     z_index: 1,
     rotation: 0,
+    flip_h: false,
+    flip_v: false,
     opacity: 1,
     is_visible: true,
     is_locked: false,
@@ -194,4 +196,29 @@ test("a geometry patch never resolves outside the scene, whatever the anchor", (
   const item = useOverlayStore.getState().scene!.items[0]!;
   const position = resolveAnchoredPosition(item, { width: 1920, height: 1080 });
   expect(position).toEqual({ x: 0, y: 980 });
+});
+
+test("flipping a multi-selection is one undo step and skips locked items", () => {
+  const { setScene } = useOverlayStore.getState();
+  setScene(makeScene([makeItem("a", {}), { ...makeItem("b", {}), is_locked: true }]));
+  useOverlayStore.setState({ selectedItemIds: ["a", "b"] });
+
+  useOverlayStore.getState().flipSelected("horizontal");
+  const byId = (id: string) => useOverlayStore.getState().scene!.items.find((i) => i.id === id)!;
+  expect(byId("a").flip_h).toBe(true);
+  expect(byId("b").flip_h).toBe(false);
+  expect(byId("a").flip_v).toBe(false);
+  expect(useOverlayStore.getState().history.past).toHaveLength(1);
+
+  useOverlayStore.getState().undo();
+  expect(byId("a").flip_h).toBe(false);
+});
+
+test("flipping only locked items writes nothing, not even an undo step", () => {
+  const { setScene } = useOverlayStore.getState();
+  setScene(makeScene([{ ...makeItem("a", {}), is_locked: true }]));
+  useOverlayStore.setState({ selectedItemIds: ["a"] });
+  useOverlayStore.getState().flipSelected("vertical");
+  expect(useOverlayStore.getState().scene!.items[0]!.flip_v).toBe(false);
+  expect(useOverlayStore.getState().history.past).toHaveLength(0);
 });

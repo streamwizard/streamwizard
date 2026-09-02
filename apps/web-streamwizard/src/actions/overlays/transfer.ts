@@ -112,6 +112,8 @@ export async function exportOverlayScene(sceneId: string): Promise<{
       crop_left: item.crop_left,
       z_index: item.z_index,
       rotation: item.rotation,
+      flip_h: item.flip_h,
+      flip_v: item.flip_v,
       opacity: item.opacity,
       is_visible: item.is_visible,
       is_locked: item.is_locked,

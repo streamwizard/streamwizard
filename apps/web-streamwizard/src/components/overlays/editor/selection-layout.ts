@@ -4,6 +4,7 @@ import type { OverlayItem } from "@/types/overlays";
 export type AlignEdge = "left" | "hcenter" | "right" | "top" | "vcenter" | "bottom";
 export type DistributeAxis = "horizontal" | "vertical";
 export type MatchDimension = "width" | "height" | "both";
+export type FlipAxis = "horizontal" | "vertical";
 
 export interface LayoutRect {
   x: number;
@@ -143,4 +144,19 @@ export function matchSizeUpdates(
         },
       };
     });
+}
+
+/**
+ * Mirrors every unlocked item across the given axis. Each item toggles its
+ * own flag rather than being forced one way, so flipping a mixed selection
+ * twice puts everything back.
+ */
+export function flipUpdates(items: OverlayItem[], axis: FlipAxis): ItemLayoutUpdate[] {
+  return items
+    .filter((item) => !item.is_locked)
+    .map((item) => ({
+      id: item.id,
+      updates:
+        axis === "horizontal" ? { flip_h: !item.flip_h } : { flip_v: !item.flip_v },
+    }));
 }

@@ -29,6 +29,8 @@ function makeItem(extra: Partial<OverlayItem> = {}): OverlayItem {
     crop_left: 0,
     z_index: 1,
     rotation: 0,
+    flip_h: false,
+    flip_v: false,
     opacity: 1,
     is_visible: true,
     is_locked: false,

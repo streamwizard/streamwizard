@@ -27,10 +27,12 @@ import {
 import {
   alignUpdates,
   distributeUpdates,
+  flipUpdates,
   matchSizeUpdates,
   selectionBounds,
   type AlignEdge,
   type DistributeAxis,
+  type FlipAxis,
   type ItemLayoutUpdate,
   type MatchDimension,
 } from "@/components/overlays/editor/selection-layout";
@@ -163,6 +165,8 @@ interface OverlayEditorState {
   alignSelected: (edge: AlignEdge) => void;
   distributeSelected: (axis: DistributeAxis) => void;
   matchSizeSelected: (dimension: MatchDimension) => void;
+  /** Mirrors the selection; every unlocked item toggles its own flag. */
+  flipSelected: (axis: FlipAxis) => void;
   /** The selected root items with absolute positions, for layout maths. */
   selectedRootItems: () => OverlayItem[];
   /** Applies layout patches whose `x`/`y` are absolute scene coordinates. */
@@ -830,6 +834,11 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     const primaryId = selectedItemIds[0];
     if (!primaryId) return;
     applyLayoutUpdates(matchSizeUpdates(selectedRootItems(), primaryId, dimension));
+  },
+
+  flipSelected: (axis) => {
+    const { applyLayoutUpdates, selectedRootItems } = get();
+    applyLayoutUpdates(flipUpdates(selectedRootItems(), axis));
   },
 
   /**

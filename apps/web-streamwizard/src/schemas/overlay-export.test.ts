@@ -21,6 +21,8 @@ function item(ref: string, type: string, config: Record<string, unknown> = {}) {
     crop_left: 0,
     z_index: 1,
     rotation: 0,
+    flip_h: false,
+    flip_v: false,
     opacity: 1,
     is_visible: true,
     is_locked: false,
@@ -66,6 +68,14 @@ test("a file from before anchors existed reads as top-left", () => {
   // `item()` deliberately carries no anchor fields.
   const parsed = overlayExportDocumentSchema.parse(doc);
   expect(parsed.items[0]).toMatchObject({ anchor_x: "left", anchor_y: "top" });
+});
+
+test("a file from before flipping existed reads as unflipped", () => {
+  const legacy: Record<string, unknown> = { ...item("item-0", "text_widget") };
+  delete legacy.flip_h;
+  delete legacy.flip_v;
+  const parsed = overlayExportDocumentSchema.parse({ ...doc, items: [legacy] });
+  expect(parsed.items[0]).toMatchObject({ flip_h: false, flip_v: false });
 });
 
 test("an anchor the renderer does not know is rejected", () => {

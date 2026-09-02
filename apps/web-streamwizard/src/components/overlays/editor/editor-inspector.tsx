@@ -22,6 +22,8 @@ import {
   AlignHorizontalDistributeCenter,
   AlignVerticalDistributeCenter,
   Copy,
+  FlipHorizontal2,
+  FlipVertical2,
   LayoutTemplate,
   Maximize2,
   StretchHorizontal,
@@ -30,7 +32,7 @@ import {
 } from "lucide-react";
 import type { OverlayItem } from "@/types/overlays";
 import { NO_CROP, getAnchor, type CropInsets } from "@repo/ui/overlay";
-import { getOverlayWidgetDefinition } from "../registry/overlay-widget-registry";
+import { getOverlayWidgetDefinition, isRootLayerType } from "../registry/overlay-widget-registry";
 import { AnchorPicker } from "./anchor-picker";
 import { InspectorHint } from "./inspector-hint";
 import { InspectorSection } from "./inspector-section";
@@ -54,6 +56,7 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
     alignSelected,
     distributeSelected,
     matchSizeSelected,
+    flipSelected,
   } = useOverlayStore();
 
   const selectedItemId = selectPrimarySelectedId({ selectedItemIds });
@@ -188,6 +191,34 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
           </div>
         </div>
 
+        <div className="space-y-2">
+          <Label className="text-xs">Flip</Label>
+          <div className="grid grid-cols-2 gap-1.5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9"
+              title="Mirror each one left to right"
+              onClick={() => flipSelected("horizontal")}
+            >
+              <FlipHorizontal2 className="mr-2 h-4 w-4" />
+              Horizontal
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-9"
+              title="Mirror each one top to bottom"
+              onClick={() => flipSelected("vertical")}
+            >
+              <FlipVertical2 className="mr-2 h-4 w-4" />
+              Vertical
+            </Button>
+          </div>
+        </div>
+
         <Separator />
 
         <div className="flex flex-col gap-2">
@@ -253,7 +284,7 @@ function SelectedItemInspector({
   clipFolders: EditorInspectorProps["clipFolders"];
   labelInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
-  const { scene, updateItem, editorMode, pushHistory } = useOverlayStore();
+  const { scene, updateItem, editorMode, pushHistory, flipSelected } = useOverlayStore();
   const def = getOverlayWidgetDefinition(item.type);
   const [sceneLayoutOpen, setSceneLayoutOpen] = useState(false);
 
@@ -379,6 +410,43 @@ function SelectedItemInspector({
               />
             </div>
           </div>
+
+          {/* Flip goes through the store's selection action, which is what
+              makes it one undo step and skips a locked item. A clip display
+              field mirrors with its parent, so it gets no buttons of its own. */}
+          {isRootLayerType(item.type) && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Flip</Label>
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button
+                  type="button"
+                  variant={item.flip_h ? "secondary" : "outline"}
+                  size="sm"
+                  className="h-8"
+                  aria-pressed={item.flip_h}
+                  disabled={item.is_locked}
+                  title="Mirror left to right"
+                  onClick={() => flipSelected("horizontal")}
+                >
+                  <FlipHorizontal2 className="mr-2 h-4 w-4" />
+                  Horizontal
+                </Button>
+                <Button
+                  type="button"
+                  variant={item.flip_v ? "secondary" : "outline"}
+                  size="sm"
+                  className="h-8"
+                  aria-pressed={item.flip_v}
+                  disabled={item.is_locked}
+                  title="Mirror top to bottom"
+                  onClick={() => flipSelected("vertical")}
+                >
+                  <FlipVertical2 className="mr-2 h-4 w-4" />
+                  Vertical
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* Simple mode hides rotation and opacity: essentials only. */}
           {editorMode === "pro" && (

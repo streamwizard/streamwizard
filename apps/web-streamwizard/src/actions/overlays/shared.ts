@@ -66,6 +66,8 @@ export function overlayItemColumns(parsed: ParsedOverlayItem) {
     crop_left: parsed.crop_left,
     z_index: parsed.z_index,
     rotation: parsed.rotation,
+    flip_h: parsed.flip_h,
+    flip_v: parsed.flip_v,
     opacity: parsed.opacity,
     is_visible: parsed.is_visible,
     is_locked: parsed.is_locked,
