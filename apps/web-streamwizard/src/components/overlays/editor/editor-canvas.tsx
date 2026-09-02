@@ -12,6 +12,7 @@ import { useCanvasGestures } from "@/hooks/overlays/use-canvas-gestures";
 import { useCanvasViewport } from "@/hooks/overlays/use-canvas-viewport";
 import { CanvasRulers } from "./canvas-rulers";
 import { CANVAS_BACKGROUND_STYLES } from "./canvas-background";
+import { EmptyCanvasHint } from "./empty-canvas-hint";
 import { useEditorClipPlayback } from "@/hooks/overlays/use-editor-clip-playback";
 import {
   WidgetScaleFrame,
@@ -33,9 +34,12 @@ const CROP_HINT =
 interface EditorCanvasProps {
   /** The scrolling pane around the canvas; wheel zoom is bound to it. */
   paneRef: React.RefObject<HTMLDivElement | null>;
+  /** Where the empty canvas sends someone looking for a widget. */
+  onAddWidget: () => void;
+  onOpenShortcuts: () => void;
 }
 
-export function EditorCanvas({ paneRef }: EditorCanvasProps) {
+export function EditorCanvas({ paneRef, onAddWidget, onOpenShortcuts }: EditorCanvasProps) {
   const { scene, selectedItemIds, zoom, panX, panY, canvasBackground, grid, rulersVisible, rulerCursorVisible, selectItem, selectClipDisplayFieldForEdit, updateItem, setRenameRequestId } = useOverlayStore();
 
   const primarySelectedId = selectPrimarySelectedId({ selectedItemIds });
@@ -452,6 +456,19 @@ export function EditorCanvas({ paneRef }: EditorCanvasProps) {
             />
           )}
         </div>
+
+        {/* Outside the scaled layer on purpose: the copy reads at screen size
+            whatever the zoom. Hidden layers still count as something on the
+            canvas; the layers panel is the place that explains those. */}
+        {sortedItems.length === 0 && (
+          <EmptyCanvasHint
+            background={canvasBackground}
+            screenWidth={scene.width * zoom}
+            screenHeight={scene.height * zoom}
+            onAddWidget={onAddWidget}
+            onOpenShortcuts={onOpenShortcuts}
+          />
+        )}
       </div>
     </div>
   );

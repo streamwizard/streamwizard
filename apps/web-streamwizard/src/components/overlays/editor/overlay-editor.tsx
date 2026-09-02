@@ -687,7 +687,11 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         )}
 
         <div ref={canvasPaneRef} className="flex-1 overflow-auto bg-muted/30">
-          <EditorCanvas paneRef={canvasPaneRef} />
+          <EditorCanvas
+            paneRef={canvasPaneRef}
+            onAddWidget={() => setWidgetSheetOpen(true)}
+            onOpenShortcuts={() => setShortcutsOpen(true)}
+          />
         </div>
 
         <div className="w-80 border-l overflow-y-auto shrink-0 bg-background">
