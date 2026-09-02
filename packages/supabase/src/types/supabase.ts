@@ -1821,6 +1821,7 @@ export type Database = {
           height: number
           id: string
           is_active: boolean
+          is_favourite: boolean
           name: string
           render_mode: string
           slug: string
@@ -1834,6 +1835,7 @@ export type Database = {
           height?: number
           id?: string
           is_active?: boolean
+          is_favourite?: boolean
           name: string
           render_mode?: string
           slug: string
@@ -1847,6 +1849,7 @@ export type Database = {
           height?: number
           id?: string
           is_active?: boolean
+          is_favourite?: boolean
           name?: string
           render_mode?: string
           slug?: string

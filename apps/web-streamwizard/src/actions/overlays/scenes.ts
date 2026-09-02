@@ -90,6 +90,7 @@ export async function updateOverlayScene(formData: {
   width?: number;
   height?: number;
   is_active?: boolean;
+  is_favourite?: boolean;
 }) {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };

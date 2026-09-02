@@ -9,6 +9,7 @@ export type AppEvent =
   | "clips_synced"
   | "clip_folder_created"
   | "overlay_created"
+  | "overlay_favourite_toggled"
   | "widget_added"
   | "cloud_obs_launched"
   | "discord_linked"
