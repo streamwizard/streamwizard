@@ -1,6 +1,5 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,9 +13,7 @@ import {
   MOD_KEY_TOKEN,
   SHORTCUTS_DIALOG_KEY,
 } from "./editor-shortcuts";
-
-/** The platform never changes mid-session, so there is nothing to subscribe to. */
-const subscribeToNothing = () => () => {};
+import { useModKeyLabel } from "./use-mod-key";
 
 interface ShortcutsDialogProps {
   open: boolean;
@@ -24,14 +21,7 @@ interface ShortcutsDialogProps {
 }
 
 export function ShortcutsDialog({ open, onOpenChange }: ShortcutsDialogProps) {
-  // The platform is only known in the browser, so the server and the first
-  // client render both fall back to Ctrl and the Mac label lands on hydration.
-  const isMac = useSyncExternalStore(
-    subscribeToNothing,
-    () => /Mac|iPhone|iPad|iPod/.test(navigator.userAgent),
-    () => false
-  );
-  const modKey = isMac ? "Cmd" : "Ctrl";
+  const modKey = useModKeyLabel();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
