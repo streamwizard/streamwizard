@@ -9,7 +9,7 @@
 # Copy the whole monorepo and install with the frozen lockfile. Copying the
 # full repo (instead of enumerating every workspace package.json) keeps this
 # resilient when apps or packages are added — no Dockerfile edits required.
-FROM oven/bun:1.3.12 AS builder
+FROM oven/bun:1.4.0 AS builder
 
 WORKDIR /app
 
@@ -44,7 +44,7 @@ RUN doppler run --token "$DOPPLER_TOKEN" -- bun run build
 # ============================================
 # Stage 2: Runner
 # ============================================
-FROM oven/bun:1.3.12 AS runner
+FROM oven/bun:1.4.0 AS runner
 
 WORKDIR /app
 
