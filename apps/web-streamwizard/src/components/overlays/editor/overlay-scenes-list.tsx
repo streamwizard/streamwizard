@@ -37,6 +37,13 @@ import { Label } from "@repo/ui";
 import { Switch } from "@repo/ui";
 import { Badge } from "@repo/ui";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui";
+import {
   Copy,
   Download,
   Edit,
@@ -44,6 +51,8 @@ import {
   MoreVertical,
   Plus,
   RefreshCw,
+  Search,
+  Star,
   Trash2,
   Upload,
   Monitor,
@@ -51,7 +60,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { env } from "@/lib/env";
 import {
@@ -63,6 +72,16 @@ import {
 } from "@/actions/overlays/scenes";
 import { createOverlayFromTemplate } from "@/actions/overlays/templates";
 import { exportOverlayScene, importOverlayScene } from "@/actions/overlays/transfer";
+import {
+  DEFAULT_OVERLAY_SORT,
+  OVERLAY_SORT_OPTIONS,
+  filterScenes,
+  isOverlaySortKey,
+  readOverlaySort,
+  saveOverlaySort,
+  sortScenes,
+  subscribeOverlaySort,
+} from "./overlay-list";
 
 export interface OverlayTemplateOption {
   slug: string;
@@ -78,6 +97,7 @@ interface OverlayScene {
   width: number;
   height: number;
   is_active: boolean;
+  is_favourite: boolean;
   render_mode?: string;
   created_at: string;
   updated_at: string;
@@ -105,6 +125,26 @@ export function OverlayScenesList({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch] = useState("");
+  // The saved sort lives in localStorage; the server snapshot is the default so
+  // hydration matches, and the real choice lands right after.
+  const sort = useSyncExternalStore(subscribeOverlaySort, readOverlaySort, () => DEFAULT_OVERLAY_SORT);
+  // A star flips the moment it is clicked. The server's answer arrives with the
+  // next refresh; until then the override is what the card shows.
+  const [favouriteOverrides, setFavouriteOverrides] = useState<Record<string, boolean>>({});
+
+  const visibleScenes = useMemo(() => {
+    const withOverrides = scenes.map((scene) =>
+      scene.id in favouriteOverrides
+        ? { ...scene, is_favourite: favouriteOverrides[scene.id] ?? scene.is_favourite }
+        : scene
+    );
+    return sortScenes(filterScenes(withOverrides, search), sort);
+  }, [scenes, favouriteOverrides, search, sort]);
+
+  function changeSort(value: string) {
+    if (isOverlaySortKey(value)) saveOverlaySort(value);
+  }
 
   // A template is built for one render mode; "blank" suits both.
   const availableTemplates = templates.filter(
@@ -243,6 +283,25 @@ export function OverlayScenesList({
     }
   }
 
+  async function handleToggleFavourite(scene: OverlayScene) {
+    const next = !scene.is_favourite;
+    setFavouriteOverrides((current) => ({ ...current, [scene.id]: next }));
+
+    const { error } = await updateOverlayScene({ id: scene.id, is_favourite: next });
+    if (error) {
+      setFavouriteOverrides((current) => {
+        const rest = { ...current };
+        delete rest[scene.id];
+        return rest;
+      });
+      toast.error(error);
+      return;
+    }
+
+    captureEvent("overlay_favourite_toggled", { favourite: next });
+    router.refresh();
+  }
+
   async function handleToggleActive(id: string, isActive: boolean) {
     const { error } = await updateOverlayScene({ id, is_active: isActive });
     if (error) {
@@ -259,7 +318,42 @@ export function OverlayScenesList({
 
   return (
     <div className="space-y-4">
-      <div className="hidden md:flex justify-end gap-2">
+      <div
+        className={
+          scenes.length > 0
+            ? "flex items-center gap-2"
+            : "hidden md:flex items-center gap-2"
+        }
+      >
+        {scenes.length > 0 && (
+          <>
+            <div className="relative flex-1 md:w-64 md:flex-none">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search overlays"
+                aria-label="Search overlays by name"
+                className="pl-8"
+              />
+            </div>
+            <Select value={sort} onValueChange={changeSort}>
+              <SelectTrigger className="w-36 shrink-0" aria-label="Sort overlays">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {OVERLAY_SORT_OPTIONS.map((option) => (
+                  <SelectItem key={option.key} value={option.key}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </>
+        )}
+        {/* Pushes the desktop-only actions to the right edge. */}
+        <div className="hidden flex-1 md:block" />
         <input
           ref={importInputRef}
           type="file"
@@ -274,6 +368,7 @@ export function OverlayScenesList({
         />
         <Button
           variant="outline"
+          className="hidden md:inline-flex"
           onClick={() => importInputRef.current?.click()}
           disabled={isImporting}
         >
@@ -282,7 +377,7 @@ export function OverlayScenesList({
         </Button>
         <Dialog open={dialogOpen} onOpenChange={closeCreateDialog}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="hidden md:inline-flex">
               <Plus className="mr-2 h-4 w-4" />
               New Overlay
             </Button>
@@ -442,9 +537,29 @@ export function OverlayScenesList({
             </p>
           </CardContent>
         </Card>
+      ) : visibleScenes.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+            <Search className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium">
+              No overlay called &ldquo;{search.trim()}&rdquo;
+            </h3>
+            <p className="text-muted-foreground text-sm mt-1">
+              Check the spelling, or clear the search to see all {scenes.length}.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4"
+              onClick={() => setSearch("")}
+            >
+              Clear search
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {scenes.map((scene) => (
+          {visibleScenes.map((scene) => (
             <Card key={scene.id} className="group relative">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
@@ -470,6 +585,25 @@ export function OverlayScenesList({
                       {new Date(scene.updated_at).toLocaleDateString()}
                     </CardDescription>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 shrink-0"
+                    aria-pressed={scene.is_favourite}
+                    aria-label={
+                      scene.is_favourite ? "Remove from favourites" : "Add to favourites"
+                    }
+                    title={scene.is_favourite ? "Remove from favourites" : "Add to favourites"}
+                    onClick={() => handleToggleFavourite(scene)}
+                  >
+                    <Star
+                      className={`h-4 w-4 ${
+                        scene.is_favourite
+                          ? "fill-yellow-400 text-yellow-400"
+                          : "text-muted-foreground"
+                      }`}
+                    />
+                  </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8">

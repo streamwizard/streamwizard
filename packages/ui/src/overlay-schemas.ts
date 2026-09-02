@@ -382,6 +382,7 @@ export const updateSceneSchema = z.object({
   width: z.number().int().min(100).max(7680).optional(),
   height: z.number().int().min(100).max(4320).optional(),
   is_active: z.boolean().optional(),
+  is_favourite: z.boolean().optional(),
 });
 
 /** Alias / API validation for merged clip widget config. */
