@@ -273,6 +273,9 @@ const overlayItemBoxFields = {
   crop_right: z.number().min(0).max(20000),
   crop_bottom: z.number().min(0).max(20000),
   crop_left: z.number().min(0).max(20000),
+  // Payloads from before flipping existed carry neither; unflipped is what they meant.
+  flip_h: z.boolean().default(false),
+  flip_v: z.boolean().default(false),
 };
 
 export const overlayItemSchema = z.discriminatedUnion("type", [

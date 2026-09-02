@@ -205,6 +205,8 @@ export function createClipDisplayFieldChildItems(
     anchor_y: anchor.y,
     z_index: parent.z_index,
     rotation: 0,
+    flip_h: false,
+    flip_v: false,
     opacity: 1,
     is_visible: DEFAULT_CLIPS_WIDGET_CONFIG.displayFields[fieldKey],
     is_locked: false,

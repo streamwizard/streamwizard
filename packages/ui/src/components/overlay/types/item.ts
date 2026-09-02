@@ -71,6 +71,13 @@ export interface OverlayItem {
   crop_left: number;
   z_index: number;
   rotation: number;
+  /**
+   * Mirror the widget across its own vertical (`flip_h`) or horizontal
+   * (`flip_v`) axis. Composed after rotation, so a flipped and rotated item
+   * mirrors its content rather than its rotation. See `lib/item-flip`.
+   */
+  flip_h: boolean;
+  flip_v: boolean;
   opacity: number;
   is_visible: boolean;
   is_locked: boolean;
@@ -153,6 +160,9 @@ export interface OverlayItemDbRow {
   anchor_y?: string | null;
   z_index: number;
   rotation: number;
+  /** Nullable for rows written before the flip migration landed. */
+  flip_h?: boolean | null;
+  flip_v?: boolean | null;
   opacity: number;
   is_visible: boolean;
   is_locked: boolean;
@@ -172,6 +182,9 @@ export function overlayItemFromDbRow(row: OverlayItemDbRow): OverlayItem {
     crop_right: row.crop_right ?? 0,
     crop_bottom: row.crop_bottom ?? 0,
     crop_left: row.crop_left ?? 0,
+    // A legacy row predates flipping, so it is not flipped.
+    flip_h: row.flip_h ?? false,
+    flip_v: row.flip_v ?? false,
     // A legacy row with no anchor is measured from the top-left, as it always was.
     anchor_x: anchor.x,
     anchor_y: anchor.y,
@@ -203,6 +216,8 @@ export function toPublicOverlayApiItems(
       h: item.h,
       z_index: item.z_index,
       rotation: item.rotation,
+      flip_h: item.flip_h,
+      flip_v: item.flip_v,
       opacity: item.opacity,
       is_visible: item.is_visible,
       label: item.label,

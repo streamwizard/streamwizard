@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
   alignUpdates,
   distributeUpdates,
+  flipUpdates,
   matchSizeUpdates,
   selectionBounds,
 } from "./selection-layout";
@@ -30,6 +31,8 @@ function makeItem(
     anchor_y: "top",
     z_index: 1,
     rotation: 0,
+    flip_h: false,
+    flip_v: false,
     opacity: 1,
     is_visible: true,
     is_locked: false,
@@ -190,4 +193,27 @@ test("match size accounts for crop when scaling", () => {
   // Source is 100 wide after the crop, so matching 200 means scale 2.
   expect(updates[0]!.updates.w).toBe(200);
   expect(updates[0]!.updates.h).toBe(200);
+});
+
+test("flipping toggles each item's own flag and skips locked ones", () => {
+  const updates = flipUpdates(
+    [
+      makeItem("a", { x: 0, y: 0, w: 10, h: 10 }),
+      makeItem("b", { x: 20, y: 0, w: 10, h: 10 }, { flip_h: true }),
+      makeItem("c", { x: 40, y: 0, w: 10, h: 10 }, { is_locked: true }),
+    ],
+    "horizontal"
+  );
+  expect(updates).toEqual([
+    { id: "a", updates: { flip_h: true } },
+    { id: "b", updates: { flip_h: false } },
+  ]);
+});
+
+test("flipping vertically leaves the horizontal flag alone", () => {
+  const updates = flipUpdates(
+    [makeItem("a", { x: 0, y: 0, w: 10, h: 10 }, { flip_h: true })],
+    "vertical"
+  );
+  expect(updates).toEqual([{ id: "a", updates: { flip_v: true } }]);
 });

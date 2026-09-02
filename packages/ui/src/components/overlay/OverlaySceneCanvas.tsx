@@ -4,6 +4,7 @@ import type { ComponentType } from "react";
 import { useMemo, type ReactNode } from "react";
 import type { OverlayItem, OverlayScene } from "./types";
 import { resolveAnchoredPosition } from "./lib/item-anchor";
+import { itemTransform } from "./lib/item-flip";
 import { useGoogleFonts } from "./hooks/use-google-font";
 import { WidgetScaleFrame } from "./WidgetScaleFrame";
 import { textWidgetBaseDefinition } from "./widgets/text/text-widget-definition";
@@ -103,7 +104,7 @@ function OverlayLayerWrapper({
         height: item.h,
         zIndex: item.z_index,
         opacity,
-        transform: `rotate(${item.rotation}deg)`,
+        transform: itemTransform(item),
         transformOrigin: "center center",
         pointerEvents: "none",
         boxSizing: "border-box",

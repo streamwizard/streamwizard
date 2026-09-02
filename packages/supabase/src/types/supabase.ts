@@ -1744,6 +1744,8 @@ export type Database = {
           crop_top: number
           design_h: number
           design_w: number
+          flip_h: boolean
+          flip_v: boolean
           h: number
           id: string
           is_locked: boolean
@@ -1770,6 +1772,8 @@ export type Database = {
           crop_top?: number
           design_h?: number
           design_w?: number
+          flip_h?: boolean
+          flip_v?: boolean
           h?: number
           id?: string
           is_locked?: boolean
@@ -1796,6 +1800,8 @@ export type Database = {
           crop_top?: number
           design_h?: number
           design_w?: number
+          flip_h?: boolean
+          flip_v?: boolean
           h?: number
           id?: string
           is_locked?: boolean

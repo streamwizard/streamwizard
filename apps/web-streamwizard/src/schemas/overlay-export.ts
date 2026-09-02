@@ -62,6 +62,9 @@ export const exportedItemSchema = z.object({
   crop_left: z.number(),
   z_index: z.number(),
   rotation: z.number(),
+  // Files from before flipping existed carry neither; unflipped is what they meant.
+  flip_h: z.boolean().default(false),
+  flip_v: z.boolean().default(false),
   opacity: z.number(),
   is_visible: z.boolean(),
   is_locked: z.boolean(),

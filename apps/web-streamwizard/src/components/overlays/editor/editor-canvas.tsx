@@ -13,7 +13,12 @@ import { useCanvasViewport } from "@/hooks/overlays/use-canvas-viewport";
 import { CanvasRulers } from "./canvas-rulers";
 import { CANVAS_BACKGROUND_STYLES } from "./canvas-background";
 import { useEditorClipPlayback } from "@/hooks/overlays/use-editor-clip-playback";
-import { WidgetScaleFrame, getItemScale, resolveAnchoredPosition } from "@repo/ui/overlay";
+import {
+  WidgetScaleFrame,
+  getItemScale,
+  itemFlipTransform,
+  resolveAnchoredPosition,
+} from "@repo/ui/overlay";
 
 /** On-screen size of a resize handle; divided by zoom because the canvas is scaled. */
 const HANDLE_SIZE_PX = 8;
@@ -255,7 +260,14 @@ export function EditorCanvas({ paneRef }: EditorCanvasProps) {
                     w-full h-full border-solid transition-colors overflow-hidden
                     ${isSelected ? "border-primary" : "border-white/20 hover:border-white/40"}
                   `}
-                    style={{ borderWidth: 2 / zoom, borderRadius: 4 / zoom }}
+                    style={{
+                      borderWidth: 2 / zoom,
+                      borderRadius: 4 / zoom,
+                      // Mirrored in here, inside the rotated wrapper, so the
+                      // resize handles stay where the cursor expects them.
+                      // Same maths as the live renderer's rotate-then-scale.
+                      transform: itemFlipTransform(item),
+                    }}
                   >
                     {Canvas ? (
                       <WidgetScaleFrame item={item}>

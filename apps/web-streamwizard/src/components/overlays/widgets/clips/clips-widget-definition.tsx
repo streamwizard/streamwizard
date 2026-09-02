@@ -34,6 +34,8 @@ export function createClipsWidgetRootItems(
     anchor_y: "top",
     z_index: ctx.maxZ + 1,
     rotation: 0,
+    flip_h: false,
+    flip_v: false,
     opacity: 1,
     is_visible: true,
     is_locked: false,
