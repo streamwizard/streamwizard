@@ -32,7 +32,7 @@ const CROP_HINT =
   "Drag to crop this edge away. Then resize normally to stretch what's left back out.";
 
 interface EditorCanvasProps {
-  /** The scrolling pane around the canvas; wheel zoom is bound to it. */
+  /** The pane the canvas floats in; wheel zoom and panning are bound to it. */
   paneRef: React.RefObject<HTMLDivElement | null>;
   /** Where the empty canvas sends someone looking for a widget. */
   onAddWidget: () => void;
@@ -59,13 +59,7 @@ export function EditorCanvas({ paneRef, onAddWidget, onOpenShortcuts }: EditorCa
     handleMouseUp,
   } = useCanvasGestures();
 
-  const {
-    panReady,
-    panning,
-    handlePanMouseDown,
-    handlePanMouseMove,
-    handlePanMouseUp,
-  } = useCanvasViewport({ canvasRef, paneRef });
+  const { panReady, panning, handlePanMouseDown } = useCanvasViewport({ paneRef });
 
   if (!scene) return null;
 
@@ -125,34 +119,31 @@ export function EditorCanvas({ paneRef, onAddWidget, onOpenShortcuts }: EditorCa
 
   return (
     <div
-      className="flex items-center justify-center p-8 min-h-full"
+      className="absolute inset-0"
       style={{ cursor: panning ? "grabbing" : panReady ? "grab" : undefined }}
       onMouseMove={(e) => {
         // Panning owns the gesture while it runs; item drags never see it.
-        if (handlePanMouseMove(e)) return;
+        if (panning) return;
         handleMouseMove(e);
       }}
-      onMouseUp={(e) => {
-        if (handlePanMouseUp()) return;
-        handleMouseUp();
-        void e;
-      }}
-      onMouseLeave={() => {
-        handlePanMouseUp();
-        handleMouseUp();
-      }}
+      onMouseUp={() => handleMouseUp()}
+      onMouseLeave={() => handleMouseUp()}
       onMouseDown={(e) => {
         if (handlePanMouseDown(e)) return;
         handleBackgroundMouseDown(e);
       }}
     >
+      {/*
+        The canvas floats in the pane at the pan offset; nothing here scrolls.
+        A transform rather than left/top so a drag never triggers layout.
+      */}
       <div
         ref={canvasRef}
-        className="relative border border-border/50"
+        className="absolute left-0 top-0 border border-border/50"
         style={{
           width: scene.width * zoom,
           height: scene.height * zoom,
-          transform: panX !== 0 || panY !== 0 ? `translate(${panX}px, ${panY}px)` : undefined,
+          transform: `translate(${panX}px, ${panY}px)`,
           ...CANVAS_BACKGROUND_STYLES[canvasBackground],
         }}
       >
@@ -244,7 +235,8 @@ export function EditorCanvas({ paneRef, onAddWidget, onOpenShortcuts }: EditorCa
                       item.rotation !== 0
                         ? `rotate(${item.rotation}deg)`
                         : undefined,
-                    cursor: item.is_locked ? "not-allowed" : "move",
+                    // While a drag would pan, the hand from the pane shows through.
+                    cursor: panReady ? undefined : item.is_locked ? "not-allowed" : "move",
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -331,7 +323,7 @@ export function EditorCanvas({ paneRef, onAddWidget, onOpenShortcuts }: EditorCa
                               height: HANDLE_SIZE_PX / zoom,
                               borderWidth: 1 / zoom,
                               borderRadius: cropping ? 0 : 2 / zoom,
-                              cursor: handleCursors[handle],
+                              cursor: panReady ? undefined : handleCursors[handle],
                               zIndex: 10,
                             }}
                             title={cropping ? CROP_HINT : handleHints[handle]}

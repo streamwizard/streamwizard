@@ -30,9 +30,7 @@ export function EditorSection() {
                 Shrink a widget and its text scales with it instead of cropping. Crop it on purpose when you want to.
               </CheckItem>
               <CheckItem>Google Fonts on any text, and your own gifs and sounds from the media library.</CheckItem>
-              <CheckItem>
-                Simple mode for placing things, Pro mode when you want rotation, z-index and opacity too.
-              </CheckItem>
+              <CheckItem>Rotation, opacity and z-index on every widget. No mode switch to find them.</CheckItem>
               <CheckItem>
                 Fire fake follows, cheers and a simulated walk through Amsterdam to test it before you go live.
               </CheckItem>

@@ -284,7 +284,7 @@ function SelectedItemInspector({
   clipFolders: EditorInspectorProps["clipFolders"];
   labelInputRef: React.RefObject<HTMLInputElement | null>;
 }) {
-  const { scene, updateItem, editorMode, pushHistory, flipSelected } = useOverlayStore();
+  const { scene, updateItem, pushHistory, flipSelected } = useOverlayStore();
   const def = getOverlayWidgetDefinition(item.type);
   const [sceneLayoutOpen, setSceneLayoutOpen] = useState(false);
 
@@ -448,43 +448,40 @@ function SelectedItemInspector({
             </div>
           )}
 
-          {/* Simple mode hides rotation and opacity: essentials only. */}
-          {editorMode === "pro" && (
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Rotation</Label>
-                <NumberField
-                  value={item.rotation}
-                  min={-360}
-                  max={360}
-                  onFocus={() => pushHistory()}
-                  onCommit={(rotation) => handleUpdate({ rotation })}
-                  className="pr-6"
-                  adornment={
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      °
-                    </span>
-                  }
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Opacity</Label>
-                <NumberField
-                  value={Math.round(item.opacity * 100)}
-                  min={0}
-                  max={100}
-                  onFocus={() => pushHistory()}
-                  onCommit={(percent) => handleUpdate({ opacity: percent / 100 })}
-                  className="pr-6"
-                  adornment={
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                      %
-                    </span>
-                  }
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Rotation</Label>
+              <NumberField
+                value={item.rotation}
+                min={-360}
+                max={360}
+                onFocus={() => pushHistory()}
+                onCommit={(rotation) => handleUpdate({ rotation })}
+                className="pr-6"
+                adornment={
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    °
+                  </span>
+                }
+              />
             </div>
-          )}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Opacity</Label>
+              <NumberField
+                value={Math.round(item.opacity * 100)}
+                min={0}
+                max={100}
+                onFocus={() => pushHistory()}
+                onCommit={(percent) => handleUpdate({ opacity: percent / 100 })}
+                className="pr-6"
+                adornment={
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                    %
+                  </span>
+                }
+              />
+            </div>
+          </div>
 
           <div className="space-y-2 pt-0.5">
             <div className="flex items-center justify-between gap-2">
@@ -782,19 +779,16 @@ function SelectedItemInspector({
             </div>
           </InspectorSection>
 
-          {/* Simple mode hides z-index entirely; the layers panel orders things. */}
-          {editorMode === "pro" && (
-            <InspectorSection title="Advanced">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Z-Index</Label>
-                <NumberField
-                  value={item.z_index}
-                  onFocus={() => pushHistory()}
-                  onCommit={(z_index) => handleUpdate({ z_index })}
-                />
-              </div>
-            </InspectorSection>
-          )}
+          <InspectorSection title="Advanced">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Z-Index</Label>
+              <NumberField
+                value={item.z_index}
+                onFocus={() => pushHistory()}
+                onCommit={(z_index) => handleUpdate({ z_index })}
+              />
+            </div>
+          </InspectorSection>
         </div>
       </div>
 

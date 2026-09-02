@@ -57,8 +57,6 @@ import type {
 } from "@/types/overlays";
 import { asClipDisplayFieldConfig } from "@/types/overlays";
 
-export type EditorMode = "simple" | "pro";
-
 /**
  * One undo step. The scene's size rides along with the items because changing
  * the resolution can reposition everything, and undoing half of that would
@@ -70,7 +68,6 @@ export interface EditorSnapshot {
   height: number;
 }
 
-const EDITOR_MODE_STORAGE_KEY = "overlay-editor-mode";
 const HISTORY_LIMIT = 50;
 const NUDGE_HISTORY_COALESCE_MS = 400;
 const CONFIG_HISTORY_COALESCE_MS = 400;
@@ -78,10 +75,8 @@ const CONFIG_DIFF_MAX_DEPTH = 4;
 
 export { MIN_ITEM_SIZE };
 
-function loadEditorMode(): EditorMode {
-  if (typeof window === "undefined") return "simple";
-  return window.localStorage.getItem(EDITOR_MODE_STORAGE_KEY) === "pro" ? "pro" : "simple";
-}
+/** What a plain left-drag on the canvas does: select drags widgets, hand drags the view. */
+export type EditorTool = "select" | "hand";
 
 interface OverlayEditorState {
   scene: OverlaySceneWithItems | null;
@@ -92,9 +87,6 @@ interface OverlayEditorState {
   history: { past: EditorSnapshot[]; future: EditorSnapshot[] };
   /** Set by the canvas context menu "Rename" — the inspector focuses its Label input, then clears it. */
   renameRequestId: string | null;
-  /** Simple hides the layers panel and keeps the calm inspector defaults; pro is the full editor. */
-  editorMode: EditorMode;
-  setEditorMode: (mode: EditorMode) => void;
 
   /**
    * Design-time canvas aids. The streamer's own working preferences: they never
@@ -134,13 +126,16 @@ interface OverlayEditorState {
     mode: ResolutionChangeMode
   ) => void;
   /**
-   * Canvas pan, in screen px, on top of the pane's own scrolling. Cursor-anchored
-   * zoom writes here to hold a focal point that flex centring would otherwise move.
+   * Where the canvas's top-left sits inside the pane, in screen px. The pane
+   * never scrolls: pan and zoom are the whole viewport, so the hand tool, the
+   * wheel and cursor-anchored zoom all move the same two numbers.
    */
   panX: number;
   panY: number;
   setPan: (x: number, y: number) => void;
-  nudgePan: (dx: number, dy: number) => void;
+  /** Space and the middle button pan whatever the tool; this decides the plain left-drag. */
+  activeTool: EditorTool;
+  setActiveTool: (tool: EditorTool) => void;
   markDirty: () => void;
   markClean: () => void;
   setRenameRequestId: (id: string | null) => void;
@@ -356,9 +351,9 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   zoom: 0.5,
   panX: 0,
   panY: 0,
+  activeTool: "select",
   history: { past: [], future: [] },
   renameRequestId: null,
-  editorMode: loadEditorMode(),
 
   ...(() => {
     const prefs = loadCanvasPreferences();
@@ -398,12 +393,6 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   setRulerCursorVisible: (visible) => {
     saveRulerCursor(visible);
     set({ rulerCursorVisible: visible });
-  },
-  setEditorMode: (mode) => {
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(EDITOR_MODE_STORAGE_KEY, mode);
-    }
-    set({ editorMode: mode });
   },
 
   setScene: (scene, options) => {
@@ -490,8 +479,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
 
   setPan: (x, y) => set({ panX: x, panY: y }),
 
-  nudgePan: (dx, dy) =>
-    set((state) => ({ panX: state.panX + dx, panY: state.panY + dy })),
+  setActiveTool: (tool) => set({ activeTool: tool }),
 
   markDirty: () => set({ isDirty: true }),
 

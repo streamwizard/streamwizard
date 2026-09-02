@@ -1,7 +1,7 @@
 "use client";
 
 import { captureEvent } from "@repo/posthog";
-import { Button } from "@repo/ui";
+import { Button, Separator, SidebarTrigger, useSidebar } from "@repo/ui";
 import { Database } from "@repo/supabase";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
@@ -18,7 +18,9 @@ import {
   Undo2,
   Volume2,
   VolumeX,
+  Hand,
   Maximize,
+  MousePointer2,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -50,7 +52,7 @@ import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import { UnsavedChangesDialog } from "@/components/modals/unsaved-changes-dialog";
 import { useOverlayDraft } from "@/hooks/overlays/use-overlay-draft";
 import { RestoreDraftDialog } from "./restore-draft-dialog";
-import { computeFitZoom } from "./canvas-zoom";
+import { centerPan, computeFitZoom } from "./canvas-zoom";
 import { ResolutionDialog } from "./resolution-dialog";
 import { CanvasViewPopover } from "./canvas-view-popover";
 
@@ -81,6 +83,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     setScene,
     setZoom,
     setPan,
+    activeTool,
+    setActiveTool,
     setSceneResolution,
     grid,
     setGrid,
@@ -105,13 +109,26 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     setEditorClipPreviewForceMute,
     editorClipPreviewAutoplayBlocked,
     attemptEditorClipPreviewUnblock,
-    editorMode,
-    setEditorMode,
     runningSimulatorIds,
     setRunningSimulatorIds,
   } = useOverlayStore();
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
+
+  // The canvas wants the width. Tuck the app sidebar away while the editor is
+  // up and put it back how it was on the way out, so the overlay list never
+  // reopens with the sidebar missing. Read through a ref: `setOpen` changes
+  // identity with `open`, and this must run exactly once per mount.
+  const sidebar = useSidebar();
+  const sidebarRef = useRef(sidebar);
+  useEffect(() => {
+    sidebarRef.current = sidebar;
+  });
+  useEffect(() => {
+    const wasOpen = sidebarRef.current.open;
+    sidebarRef.current.setOpen(false);
+    return () => sidebarRef.current.setOpen(wasOpen);
+  }, []);
   const { requestLeave, dialogProps: unsavedDialogProps } =
     useUnsavedChangesGuard(isDirty);
   const draftPrompt = useOverlayDraft(initialScene);
@@ -227,17 +244,32 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
   }, [scene, markClean, setScene, setSelectedItems]);
 
   /**
-   * Measured at click time rather than tracked, so toggling the layers panel or
-   * resizing the window needs no bookkeeping -- the pane is whatever it is when
-   * Fit is pressed.
+   * Zoom to a level with the scene centred in the pane. Measured at call time
+   * rather than tracked, so toggling the layers panel or resizing the window
+   * needs no bookkeeping -- the pane is whatever it is right now.
    */
+  const viewAt = useCallback(
+    (nextZoom: number) => {
+      const pane = canvasPaneRef.current;
+      if (!pane || !scene) return;
+      setZoom(nextZoom);
+      // Both Fit and 100% mean "show me the scene", which a leftover pan would undo.
+      const centred = centerPan(
+        { width: pane.clientWidth, height: pane.clientHeight },
+        { width: scene.width * nextZoom, height: scene.height * nextZoom }
+      );
+      setPan(Math.round(centred.x), Math.round(centred.y));
+    },
+    [scene, setZoom, setPan]
+  );
+
   const fitToScreen = useCallback(() => {
-    const pane = canvasPaneRef.current?.getBoundingClientRect();
+    const pane = canvasPaneRef.current;
     if (!pane || !scene) return;
-    setZoom(computeFitZoom(pane, scene, zoom));
-    // Fit means "show me everything", which a leftover pan would undo.
-    setPan(0, 0);
-  }, [scene, zoom, setZoom, setPan]);
+    viewAt(computeFitZoom({ width: pane.clientWidth, height: pane.clientHeight }, scene, zoom));
+  }, [scene, zoom, viewAt]);
+
+  const resetView = useCallback(() => viewAt(1), [viewAt]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -287,9 +319,24 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       }
       if (e.shiftKey && !mod && e.code === "Digit0") {
         e.preventDefault();
-        setZoom(1);
-        setPan(0, 0);
+        resetView();
         return;
+      }
+
+      // Tools, Photoshop's letters: H for the hand, V back to select. Bare
+      // keys, so they stay clear of the Shift+letter canvas aids below.
+      if (!mod && !e.shiftKey && !e.altKey) {
+        const key = e.key.toLowerCase();
+        if (key === "h") {
+          e.preventDefault();
+          setActiveTool(activeTool === "hand" ? "select" : "hand");
+          return;
+        }
+        if (key === "v") {
+          e.preventDefault();
+          setActiveTool("select");
+          return;
+        }
       }
 
       // Canvas aids. Shift+letter keeps single letters free for future tools and
@@ -381,8 +428,9 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
   }, [
     handleSave,
     fitToScreen,
-    setZoom,
-    setPan,
+    resetView,
+    activeTool,
+    setActiveTool,
     grid,
     setGrid,
     rulersVisible,
@@ -425,9 +473,13 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
   if (!scene) return null;
 
   return (
-    <div ref={rootRef} className="flex flex-col h-[calc(100vh-80px)] -m-5 md:-m-6">
+    <div ref={rootRef} className="flex flex-col flex-1 min-h-0">
       <div className="flex items-center justify-between border-b px-4 py-2 bg-background shrink-0">
         <div className="flex items-center gap-3">
+          {/* The dashboard's own header stays out of the editor, so the app
+              sidebar toggle lives here. */}
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="data-[orientation=vertical]:h-4" />
           <Button
             variant="ghost"
             size="icon"
@@ -449,30 +501,6 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Simple keeps the calm layout for new users; Pro shows everything */}
-          <div className="flex items-center border rounded-md p-0.5 text-xs">
-            <button
-              type="button"
-              onClick={() => setEditorMode("simple")}
-              className={`px-2 py-1 rounded transition-colors ${
-                editorMode === "simple" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-              title="Fewer panels, the essentials only"
-            >
-              Simple
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditorMode("pro")}
-              className={`px-2 py-1 rounded transition-colors ${
-                editorMode === "pro" ? "bg-accent text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-              title="Full editor with layers panel"
-            >
-              Pro
-            </button>
-          </div>
-
           <div className="flex items-center gap-1 border rounded-md p-0.5">
             {editorClipPreviewAutoplayBlocked ? (
               <Button
@@ -600,6 +628,29 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
             </Button>
           </div>
 
+          <div className="flex items-center gap-1 border rounded-md p-0.5">
+            <Button
+              variant={activeTool === "select" ? "secondary" : "ghost"}
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setActiveTool("select")}
+              aria-pressed={activeTool === "select"}
+              title="Select tool: click and drag widgets (V)"
+            >
+              <MousePointer2 className="h-3 w-3" />
+            </Button>
+            <Button
+              variant={activeTool === "hand" ? "secondary" : "ghost"}
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setActiveTool("hand")}
+              aria-pressed={activeTool === "hand"}
+              title="Hand tool: drag to move around the canvas (H). Or hold Space."
+            >
+              <Hand className="h-3 w-3" />
+            </Button>
+          </div>
+
           <div className="flex items-center gap-1 border rounded-md px-1">
             <Button
               variant="ghost"
@@ -613,7 +664,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
               variant="ghost"
               size="sm"
               className="h-7 w-12 px-0 text-xs font-normal tabular-nums"
-              onClick={() => setZoom(1)}
+              onClick={resetView}
               title="Back to 100% (Shift+0)"
             >
               {Math.round(zoom * 100)}%
@@ -680,13 +731,12 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        {editorMode === "pro" && (
-          <div className="w-56 border-r overflow-y-auto shrink-0 bg-background">
-            <EditorLayers />
-          </div>
-        )}
+        <div className="w-56 border-r overflow-y-auto shrink-0 bg-background">
+          <EditorLayers />
+        </div>
 
-        <div ref={canvasPaneRef} className="flex-1 overflow-auto bg-muted/30">
+        {/* No scrolling here: pan and zoom own where the canvas sits. */}
+        <div ref={canvasPaneRef} className="relative flex-1 overflow-hidden bg-muted/30">
           <EditorCanvas
             paneRef={canvasPaneRef}
             onAddWidget={() => setWidgetSheetOpen(true)}

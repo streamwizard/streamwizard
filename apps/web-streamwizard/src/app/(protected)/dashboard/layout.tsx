@@ -1,6 +1,6 @@
 import { AppSidebar } from "@/components/nav/sidebar-app";
-import { SiteHeader } from "@/components/site-header";
-import { SidebarInset, SidebarProvider } from "@repo/ui";
+import { DashboardFrame } from "@/components/dashboard-frame";
+import { SidebarProvider } from "@repo/ui";
 import { createClient } from "@repo/supabase/next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { ClipFolderProvider } from "@/providers/clips-provider";
@@ -73,10 +73,7 @@ export default async function layout({
               hasCloudObsAccess={!!hasCloudObsAccess}
               variant="inset"
             />
-            <SidebarInset>
-              <SiteHeader />
-              <div className="w-full p-3 sm:p-5 mx-auto md:gap-6 md:py-6">{children}</div>
-            </SidebarInset>
+            <DashboardFrame>{children}</DashboardFrame>
           </ClipFolderDialogProvider>
         </ModalProvider>
       </ClipFolderProvider>
