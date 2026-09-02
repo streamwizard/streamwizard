@@ -13,7 +13,7 @@ import { useCanvasViewport } from "@/hooks/overlays/use-canvas-viewport";
 import { CanvasRulers } from "./canvas-rulers";
 import { CANVAS_BACKGROUND_STYLES } from "./canvas-background";
 import { useEditorClipPlayback } from "@/hooks/overlays/use-editor-clip-playback";
-import { WidgetScaleFrame, getItemScale } from "@repo/ui/overlay";
+import { WidgetScaleFrame, getItemScale, resolveAnchoredPosition } from "@repo/ui/overlay";
 
 /** On-screen size of a resize handle; divided by zoom because the canvas is scaled. */
 const HANDLE_SIZE_PX = 8;
@@ -209,6 +209,9 @@ export function EditorCanvas({ paneRef }: EditorCanvasProps) {
               isSelected &&
               !item.is_locked &&
               (selectedItemIds.length <= 1 || !!childOfThis);
+            // The same resolution the live overlay uses, so the editor is a
+            // faithful preview of where an anchored item ends up.
+            const position = resolveAnchoredPosition(item, scene);
 
             return (
               <LayerContextMenu
@@ -222,8 +225,8 @@ export function EditorCanvas({ paneRef }: EditorCanvasProps) {
                 <div
                   className="absolute group"
                   style={{
-                    left: item.x,
-                    top: item.y,
+                    left: position.x,
+                    top: position.y,
                     width: item.w,
                     height: item.h,
                     zIndex: item.z_index,

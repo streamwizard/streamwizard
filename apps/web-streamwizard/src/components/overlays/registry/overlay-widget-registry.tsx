@@ -10,6 +10,19 @@
 
 "use client";
 
+import {
+  Bell,
+  Clapperboard,
+  Clock,
+  Code2,
+  Compass,
+  Crosshair,
+  Gauge,
+  MapPin,
+  Mountain,
+  Timer,
+  Type,
+} from "lucide-react";
 import type { ChildOverlayItemType, OverlayItemType, RootOverlayItemType } from "@/types/overlays";
 import {
   getClipDisplayChildren,
@@ -88,6 +101,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   clips_widget: {
     type: "clips_widget",
     layerScope: "root",
+    icon: Clapperboard,
     showInLibrary: true,
     category: "media",
     library: {
@@ -111,6 +125,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   alert_widget: {
     type: "alert_widget",
     layerScope: "root",
+    icon: Bell,
     showInLibrary: true,
     category: "alerts",
     library: {
@@ -126,6 +141,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   text_widget: {
     type: "text_widget",
     layerScope: "root",
+    icon: Type,
     showInLibrary: true,
     category: "layout",
     library: {
@@ -140,6 +156,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   timer_widget: {
     type: "timer_widget",
     layerScope: "root",
+    icon: Timer,
     showInLibrary: true,
     category: "layout",
     library: {
@@ -155,6 +172,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   clock_widget: {
     type: "clock_widget",
     layerScope: "root",
+    icon: Clock,
     showInLibrary: true,
     category: "layout",
     library: {
@@ -170,6 +188,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   irl_speed_widget: {
     type: "irl_speed_widget",
     layerScope: "root",
+    icon: Gauge,
     showInLibrary: true,
     category: "other",
     library: { title: "IRL · Speed", description: "Live GPS speed from an IRL stream." },
@@ -181,6 +200,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   irl_heading_widget: {
     type: "irl_heading_widget",
     layerScope: "root",
+    icon: Compass,
     showInLibrary: true,
     category: "other",
     library: { title: "IRL · Heading", description: "Live GPS heading direction from an IRL stream." },
@@ -192,6 +212,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   irl_altitude_widget: {
     type: "irl_altitude_widget",
     layerScope: "root",
+    icon: Mountain,
     showInLibrary: true,
     category: "other",
     library: { title: "IRL · Altitude", description: "Live GPS altitude from an IRL stream." },
@@ -203,6 +224,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   irl_latitude_widget: {
     type: "irl_latitude_widget",
     layerScope: "root",
+    icon: MapPin,
     showInLibrary: true,
     category: "other",
     library: { title: "IRL · Latitude", description: "Live GPS latitude from an IRL stream." },
@@ -214,6 +236,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   irl_longitude_widget: {
     type: "irl_longitude_widget",
     layerScope: "root",
+    icon: MapPin,
     showInLibrary: true,
     category: "other",
     library: { title: "IRL · Longitude", description: "Live GPS longitude from an IRL stream." },
@@ -225,6 +248,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   irl_accuracy_widget: {
     type: "irl_accuracy_widget",
     layerScope: "root",
+    icon: Crosshair,
     showInLibrary: true,
     category: "other",
     library: { title: "IRL · Accuracy", description: "Live GPS accuracy from an IRL stream." },
@@ -236,6 +260,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   custom_widget: {
     type: "custom_widget",
     layerScope: "root",
+    icon: Code2,
     showInLibrary: false,
     category: "other",
     library: {

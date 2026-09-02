@@ -54,6 +54,8 @@ export function overlayItemColumns(parsed: ParsedOverlayItem) {
     type: parsed.type,
     x: parsed.x,
     y: parsed.y,
+    anchor_x: parsed.anchor_x,
+    anchor_y: parsed.anchor_y,
     w: parsed.w,
     h: parsed.h,
     design_w: parsed.design_w,

@@ -62,6 +62,17 @@ test("a truncated document is rejected", () => {
   expect(overlayExportDocumentSchema.safeParse(truncated).success).toBe(false);
 });
 
+test("a file from before anchors existed reads as top-left", () => {
+  // `item()` deliberately carries no anchor fields.
+  const parsed = overlayExportDocumentSchema.parse(doc);
+  expect(parsed.items[0]).toMatchObject({ anchor_x: "left", anchor_y: "top" });
+});
+
+test("an anchor the renderer does not know is rejected", () => {
+  const broken = { ...doc, items: [{ ...doc.items[0], anchor_x: "middle" }] };
+  expect(overlayExportDocumentSchema.safeParse(broken).success).toBe(false);
+});
+
 test("a hand-edited item is rejected, not coerced", () => {
   const broken = { ...doc, items: [{ ...doc.items[0], w: "wide" }] };
   expect(overlayExportDocumentSchema.safeParse(broken).success).toBe(false);

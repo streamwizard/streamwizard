@@ -100,6 +100,8 @@ export async function exportOverlayScene(sceneId: string): Promise<{
       type: item.type,
       x: item.x,
       y: item.y,
+      anchor_x: item.anchor_x,
+      anchor_y: item.anchor_y,
       w: item.w,
       h: item.h,
       design_w: item.design_w,

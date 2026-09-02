@@ -74,12 +74,12 @@ export function clampGridLineWidth(width: number): number {
 }
 
 export const DEFAULT_CANVAS_PREFERENCES: CanvasPreferences = {
-  // The previous hardcoded look, so nothing changes until it is changed.
-  background: "dark",
+  // Checkerboard shows transparency the way it will look in OBS.
+  background: "checker",
   // On: it was always on before there was a switch for it.
   snapToItems: { x: true, y: true },
   grid: {
-    visible: true,
+    visible: false,
     size: 50,
     snap: false,
     color: DEFAULT_GRID_COLOR,

@@ -5,6 +5,7 @@ import {
   resolutionScale,
 } from "./scene-resize";
 import type { OverlayItem } from "@/types/overlays";
+import { resolveAnchoredPosition } from "@repo/ui/overlay";
 
 function makeItem(rect: { x: number; y: number; w: number; h: number }): OverlayItem {
   return {
@@ -21,6 +22,8 @@ function makeItem(rect: { x: number; y: number; w: number; h: number }): Overlay
     crop_right: 0,
     crop_bottom: 0,
     crop_left: 0,
+    anchor_x: "left",
+    anchor_y: "top",
     z_index: 1,
     rotation: 0,
     opacity: 1,
@@ -89,4 +92,53 @@ test("the summary names the scale factor", () => {
 
 test("a no-op change says so", () => {
   expect(describeResolutionChange("scale", hd, hd)).toContain("already");
+});
+
+test("a bottom-right pinned item stays in the corner through a uniform change", () => {
+  const item = makeItem({ x: 0, y: 0, w: 400, h: 200 });
+  const pinned = { ...item, anchor_x: "right" as const, anchor_y: "bottom" as const };
+  const [scaled] = rescaleItemsForResolution([pinned], hd, qhd);
+
+  // Offsets scale (0 stays 0); the resolved rect is flush with the new corner.
+  expect(scaled!.x).toBe(0);
+  expect(scaled!.y).toBe(0);
+  expect(scaled!.w).toBe(533);
+  expect(scaled!.h).toBe(267);
+  expect(resolveAnchoredPosition(scaled!, qhd)).toEqual({ x: 2560 - 533, y: 1440 - 267 });
+});
+
+test("a pinned item keeps its scaled gap to the edge", () => {
+  const item = makeItem({ x: 40, y: 20, w: 400, h: 200 });
+  const pinned = { ...item, anchor_x: "right" as const, anchor_y: "bottom" as const };
+  const [scaled] = rescaleItemsForResolution([pinned], hd, { width: 960, height: 540 });
+
+  expect(scaled!.x).toBe(20);
+  expect(scaled!.y).toBe(10);
+});
+
+test("pinning lands on the same pixel as the default for a uniform change", () => {
+  // Same absolute rect, expressed from the top-left and from the bottom-right.
+  const topLeft = makeItem({ x: 1500, y: 870, w: 400, h: 200 });
+  const bottomRight = {
+    ...makeItem({ x: 20, y: 10, w: 400, h: 200 }),
+    anchor_x: "right" as const,
+    anchor_y: "bottom" as const,
+  };
+  const [a, b] = rescaleItemsForResolution([topLeft, bottomRight], hd, qhd);
+
+  expect(resolveAnchoredPosition(b!, qhd)).toEqual({ x: a!.x, y: a!.y });
+});
+
+test("a bottom-right pinned item is still bottom-right when the scene goes portrait", () => {
+  const pinned = {
+    ...makeItem({ x: 0, y: 0, w: 400, h: 200 }),
+    anchor_x: "right" as const,
+    anchor_y: "bottom" as const,
+  };
+  const portrait = { width: 1080, height: 1920 };
+  const [scaled] = rescaleItemsForResolution([pinned], hd, portrait);
+  const position = resolveAnchoredPosition(scaled!, portrait);
+
+  expect(position.x + scaled!.w).toBe(1080);
+  expect(position.y + scaled!.h).toBe(1920);
 });
