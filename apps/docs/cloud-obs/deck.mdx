@@ -1,0 +1,88 @@
+---
+title: "Stream Deck"
+description: "A big-button remote for your phone. Switch scenes with one thumb while you walk, no fumbling with a tiny dashboard."
+---
+
+The **Stream Deck** is StreamWizard on your phone, stripped down to just the
+buttons you need mid-stream. Big scene buttons, a Go live button, and not much
+else. Built for changing scenes with one thumb while you're walking around.
+
+You reach it at **streamwizard.org/deck** on your phone.
+
+<Frame caption="The Stream Deck: big buttons, one thumb, made for the move.">
+  <img src="/images/cloud-obs/deck.png" alt="Stream Deck on a phone" style={{ maxWidth: "360px" }} />
+</Frame>
+
+## Put it on your home screen
+
+The deck can live on your phone's home screen like a real app. Open it in your
+phone's browser and you'll get an **Install** prompt ("put the deck on your home
+screen"). Tap it, and now the deck is one tap away, full screen, no browser bars
+in the way.
+
+Do this before you head out. Fishing through browser tabs while you're live is no
+fun.
+
+## What's on it
+
+<Frame caption="Scenes as big buttons. Tap one to switch. The live one is highlighted.">
+  <img src="/images/cloud-obs/deck-scenes.png" alt="Stream Deck scenes grid" style={{ maxWidth: "360px" }} />
+</Frame>
+
+- **Go live** at the top starts and stops your stream. It turns red while you're
+  live.
+- **Current scene** shows which scene is on air right now.
+- **Your scenes** are big buttons in a grid. Tap one to switch to it. The scene
+  that's live has a green dot and stays highlighted.
+
+## Switching scenes
+
+Tap a scene button. That's the whole thing. It switches right away, no confirm,
+no menu. This is the reason the deck exists: you're on the move, you tap, the
+scene changes.
+
+## Holding a scene
+
+Here's the clever bit. If you have the [Auto Switcher](/cloud-obs/auto-switcher)
+running, tapping a scene on the deck also **holds** it. That means the Auto
+Switcher won't switch you away from it, even if your signal wobbles.
+
+Why that matters: say you stop to chat on a static scene. Your camera feed isn't
+moving, so the Auto Switcher might think you dropped signal and cut to
+"Connection lost". By tapping the scene on your deck, you tell it "no, stay here,
+I meant to do this."
+
+<Frame caption="Tap a scene to hold it. The deck shows what's held and lets you release it.">
+  <img src="/images/cloud-obs/deck.png" alt="Holding a scene on the deck" style={{ maxWidth: "360px" }} />
+</Frame>
+
+While a scene is held, the deck shows **Holding [scene name]** and says auto
+switching is paused. When you're ready to let the Auto Switcher take over again,
+tap **Resume auto switching**.
+
+<Tip>
+  Tapping a different scene just moves the hold to that new scene. So you can
+  walk, tap, walk, tap, and the Auto Switcher stays out of your way the whole
+  time.
+</Tip>
+
+## If OBS isn't running
+
+If your cloud OBS is off, the deck tells you and gives you a **Start** button to
+turn it on right there. If it's still booting, you'll see a little progress
+countdown. If the connection drops, the deck reconnects itself when your phone
+wakes up or gets signal back, so you're not hunting for a reconnect button.
+
+## No Cloud OBS yet?
+
+If you haven't set up Cloud OBS at all, the deck points you to the dashboard to
+get started. Do the [setup steps](/cloud-obs/setup) once on a bigger screen, then
+the deck is ready for you on the go.
+
+## That's the whole tour
+
+You made it. Key created, cloud OBS running, controls learned, Auto Switcher
+watching your back, and the deck on your phone. Go stream something.
+
+Stuck on any of it? Ask in the [Discord](https://discord.gg/streamwizard) and
+someone will point you the right way.

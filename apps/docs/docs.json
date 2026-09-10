@@ -57,6 +57,17 @@
               },
               "settings"
             ]
+          },
+          {
+            "group": "Cloud OBS",
+            "pages": [
+              "cloud-obs/overview",
+              "cloud-obs/setup",
+              "cloud-obs/ingest",
+              "cloud-obs/controls",
+              "cloud-obs/auto-switcher",
+              "cloud-obs/deck"
+            ]
           }
         ]
       },

@@ -1,0 +1,110 @@
+---
+title: "Your controls"
+description: "Start your cloud OBS, switch scenes, go live, and keep an eye on how it's running. All from one page in your browser."
+---
+
+The **Cloud OBS** page is your home base. Everything you need to run a stream is
+here: start OBS, pick a scene, go live, and check that it's healthy.
+
+<Frame caption="The Cloud OBS page: preview, Go live, and your scenes as buttons.">
+  <img src="/images/cloud-obs/controls-overview.png" alt="Cloud OBS controls" />
+</Frame>
+
+## Turning OBS on and off
+
+At the top you'll see a **Container** section. Your container is the machine in
+the cloud that runs your OBS.
+
+- **Launch Cloud OBS** / **Start container** turns it on. Give it 10 to 30
+  seconds to boot. The badge turns green and reads **OBS Connected** when it's
+  ready.
+- **Stop container** turns it off when you're done for the day.
+
+<Tip>
+  Turn your container off when you're not streaming. There's no reason to leave
+  it running overnight.
+</Tip>
+
+If the connection ever drops, a **Reconnect** button shows up. If OBS crashes or
+your container gets shut down, a banner appears with a **Restart** button. One
+click and you're back.
+
+## Seeing your OBS
+
+The black preview box shows what OBS is putting out. Click **Open OBS** (the
+"Click to open OBS" box) to open the full thing in your browser. It looks and
+works just like the OBS on your desktop: check your camera, move things around,
+build scenes. It's a live window into your cloud OBS.
+
+## Going live
+
+The **Go live** button starts streaming to your platform. The status next to it
+tells you where you stand: **Not streaming** or **Streaming**. Hit it again to
+stop. That's the whole thing.
+
+## Switching scenes
+
+The **Scenes** card lists every scene you've built, each as a button. Tap one to
+switch to it. The scene that's on air right now has a little green dot. While
+it's changing you'll see "Switching..." for a second.
+
+This is your main control mid-stream: tap **Starting Soon**, tap **IRL**, tap
+**BRB**, tap **Ending**. Done.
+
+## Dropping your camera feed into a scene
+
+Under **Your incoming signal** you can take the video coming from your phone and
+drop it into any scene as a source. Hit **Add source**, give it a name, and pick
+the scene it should live in. Now your camera shows up in that scene.
+
+Most of the time this is already done for you in your "IRL" scene, so you only
+need this if you want your feed in extra scenes too.
+
+## Adding alerts
+
+Want follow, sub, and donation alerts on screen? Add your alert link (from
+StreamElements, Streamlabs, Sound Alerts, or wherever you set them up) and it
+gets added as a source you can drop into your scenes.
+
+## Checking how it's running
+
+Below your scenes are a few tabs. Two of them tell you how healthy your stream
+is.
+
+### Sources
+
+<Frame caption="The Sources tab: every scene and source, and how hard each one is working.">
+  <img src="/images/cloud-obs/controls-full.png" alt="Sources tab" />
+</Frame>
+
+The **Sources** tab lists everything in your OBS and shows how much work each
+piece is doing. You can flip individual sources on and off from here, and turn
+effects (filters) on a source on or off. If your stream feels heavy, this is
+where you spot the source that's hogging everything.
+
+### Performance
+
+<Frame caption="The Performance tab: is your cloud OBS keeping up? These numbers tell you.">
+  <img src="/images/cloud-obs/performance.png" alt="Performance tab" />
+</Frame>
+
+The **Performance** tab is the health check for your cloud OBS itself. The big
+numbers to care about:
+
+- **FPS** should sit at your target (usually 60). If it drops, your stream looks
+  choppy.
+- **Frame Time** and **dropped/skipped frames** should stay low. High numbers
+  mean OBS is struggling to keep up.
+
+Green and steady means you're good. You don't need to stare at this, just glance
+at it if something looks off.
+
+## Got the hang of it?
+
+You can stream now. But before you head out into the world of tunnels and dead
+spots, set up your safety net.
+
+<Card title="Next up: Auto Switcher" icon="shuffle" href="/cloud-obs/auto-switcher">
+  When your signal drops, it switches to a backup scene for you. Set it once,
+  forget about it.
+</Card>
