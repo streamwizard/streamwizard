@@ -58,6 +58,12 @@ export function initPostHog({ key, host = "https://eu.i.posthog.com" }: PostHogC
     capture_pageleave: true,
     person_profiles: "identified_only",
     cookieless_mode: "on_reject",
+    // No analytics cookie at all. PostHog identifies events by the distinct_id
+    // in the request body, never by cookie; the default "localStorage+cookie"
+    // only exists for cross-subdomain sharing (nothing else on
+    // *.streamwizard.org runs PostHog) and rode along on every request to the
+    // CDN, docs, staging and cloud OBS nodes for no reason.
+    persistence: "localStorage",
     disable_session_recording: true,
     disable_surveys: true,
     disable_web_experiments: true,

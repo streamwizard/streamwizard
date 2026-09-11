@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import posthog from "posthog-js";
+import { denyConsent, getConsentStatus, grantConsent } from "@repo/posthog";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { enableSentryReplay } from "@/lib/sentry-replay";
 
 const content = {
   normal: {
@@ -35,18 +36,18 @@ export function CookieBanner() {
 
   useEffect(() => {
     setMounted(true);
-    setVisible(posthog.get_explicit_consent_status() === "pending");
+    setVisible(getConsentStatus() === "pending");
   }, []);
 
   function accept() {
-    posthog.opt_in_capturing();
-    posthog.capture("$pageview", { $current_url: window.location.href });
+    grantConsent();
+    void enableSentryReplay();
     setVisible(false);
     toast(content[tab].acceptToast.title, { description: content[tab].acceptToast.description });
   }
 
   function decline() {
-    posthog.opt_out_capturing();
+    denyConsent();
     setVisible(false);
     toast(content[tab].declineToast.title, { description: content[tab].declineToast.description });
   }

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/privacy-policy") },
 };
 
-const LAST_UPDATED = "29 August 2026";
+const LAST_UPDATED = "11 September 2026";
 const CONTACT_EMAIL = LEGAL_CONTACT_EMAIL;
 
 function NormalContent() {
@@ -66,15 +66,17 @@ function NormalContent() {
         <p className="text-muted-foreground leading-relaxed mb-4">
           We use PostHog (EU region) to collect page-view events and click
           interactions. Your IP address is discarded at ingestion and is never
-          stored with analytics events. If you accept analytics cookies and sign
-          in, your PostHog analytics profile is linked to your StreamWizard
+          stored with analytics events. If you accept analytics and sign in,
+          your PostHog analytics profile is linked to your StreamWizard
           account ID so we can understand how the product is used. If you
           decline, we count page views in cookieless mode instead: no cookies,
           no identifiers, no profile. Only anonymous, aggregated statistics
           that cannot be tied to you. We also record a few account-level
-          product events on our servers (for example linking your Discord
-          account or joining our Discord server), tied to your account under
-          legitimate interest. PostHog stores data on EU infrastructure.
+          product events on our servers (for example signing in, linking your
+          Discord account or joining our Discord server), tied to your account
+          ID under legitimate interest. Those server-side events never create
+          an analytics profile on their own; one only exists if you accepted
+          analytics. PostHog stores data on EU infrastructure.
         </p>
 
         <h3 className="text-lg font-medium mb-2">
@@ -84,7 +86,10 @@ function NormalContent() {
           We use Sentry to capture application errors. Error reports may contain
           your account ID, browser type, operating system, and the URL where the
           error occurred. No passwords or payment data are included in error
-          reports.
+          reports. If you accept analytics, Sentry may also record a session
+          replay for a small sample of visits, and for visits where an error
+          occurs, so we can see what led up to a bug. Replays mask all text and
+          block images and video. If you decline, no replay is recorded.
         </p>
 
         <h3 className="text-lg font-medium mb-2">Server Logs</h3>
@@ -231,7 +236,11 @@ function NormalContent() {
             account closure, your account and app data are explicitly purged
             from active systems and backups within 3 months.
           </li>
-          <li>Analytics data (PostHog): retained for 12 months.</li>
+          <li>
+            Analytics data (PostHog): data linked to your account is deleted 12
+            months after your last activity. Anonymous, aggregated statistics
+            that cannot be tied to you may be kept for up to 7 years.
+          </li>
           <li>Error reports (Sentry): retained for 90 days.</li>
           <li>Server logs: retained for 30 days.</li>
         </ul>
@@ -327,18 +336,36 @@ function NormalContent() {
           </li>
           <li>
             <span className="text-foreground font-medium">
-              Analytics cookies
+              Analytics storage
             </span>{" "}
-            (PostHog) — only set if you accept analytics; used to recognise your
-            browser across sessions. Stored under our own domain via a reverse
-            proxy to prevent ad-blocker interference. If you decline, no
-            analytics cookies or identifiers are stored at all.
+            (PostHog) — not a cookie: one entry in your browser&apos;s local
+            storage holding a random device ID, only written if you accept
+            analytics. It is how we recognise your browser on your next visit.
+            It never leaves your browser as a cookie; analytics requests go to
+            our own domain and carry the ID in the request body. If you
+            decline, no analytics storage or identifier is written at all.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Consent record</span>{" "}
+            (PostHog) — one entry in your browser&apos;s local storage that
+            remembers whether you accepted or declined analytics, so we do not
+            ask on every visit. Stored either way you answer; it contains no
+            identifier.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">
+              Preference cookie
+            </span>{" "}
+            (StreamWizard) — <code>sidebar_state</code> remembers whether you
+            collapsed the dashboard sidebar. Kept for 7 days, used for nothing
+            else.
           </li>
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
           We do not use advertising, remarketing, or third-party tracking
-          cookies. Changed your mind about analytics? Cookie settings in the
-          footer clears your choice and asks again.
+          cookies, and PostHog sets no cookies of its own. Changed your mind
+          about analytics? Cookie settings in the footer clears your choice
+          and asks again.
         </p>
       </section>
 
@@ -468,15 +495,20 @@ function GenZContent() {
           understand what&apos;s cooked vs what slaps. EU region only. said no to
           cookies? then it&apos;s cookieless mode: no cookies, no profile, ur just
           an anonymous +1 in the page stats. nothing traces back to u. our
-          servers also log a few account moments (like linking Discord or
-          joining our Discord server) so we know the community is growing.
+          servers also log a few account moments (like logging in, linking
+          Discord or joining our Discord server) so we know the community is
+          growing. those don&apos;t build a profile on their own. no yes to
+          cookies = no profile, period.
         </p>
 
         <h3 className="text-lg font-medium mb-2">when things go wrong 💀</h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
           Sentry catches app errors. it might grab ur account ID, browser type,
           OS, and the URL that caused the chaos. no passwords, no payment info.
-          just vibes and stack traces.
+          just vibes and stack traces. said yes to cookies? Sentry might also
+          record a replay of a small slice of visits (and any visit where
+          something breaks) so we can see how the bug happened. all text is
+          masked, images + video blocked. said no? zero replays.
         </p>
 
         <h3 className="text-lg font-medium mb-2">server logs</h3>
@@ -621,7 +653,11 @@ function GenZContent() {
             it, we purge it from active systems AND backups within 3 months.
             actually gone, not vibes.
           </li>
-          <li>analytics (PostHog): 12 months.</li>
+          <li>
+            analytics (PostHog): anything tied to ur account gets deleted 12
+            months after u last showed up. anonymous aggregate stats that
+            can&apos;t trace back to u can stick around up to 7 years.
+          </li>
           <li>error reports (Sentry): 90 days.</li>
           <li>server logs: 30 days.</li>
         </ul>
@@ -716,17 +752,31 @@ function GenZContent() {
           </li>
           <li>
             <span className="text-foreground font-medium">
-              analytics cookies
+              analytics storage
             </span>{" "}
-            (PostHog) — only set if u accepted. recognises ur browser across
-            sessions. runs through our own domain so ad blockers don&apos;t clap
-            it. declined? zero analytics cookies, zero identifiers. fr.
+            (PostHog) — not even a cookie. one local storage entry with a
+            random device ID, only if u accepted. that&apos;s how we know
+            it&apos;s u again next time. stays in ur browser, the ID travels in
+            the request body to our own domain. declined? zero analytics
+            storage, zero identifiers. fr.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">consent record</span>{" "}
+            (PostHog) — one local storage entry that remembers if u said yes or
+            no, so we don&apos;t ask every single time. saved either way. no
+            identifier in it.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">preference cookie</span>{" "}
+            (StreamWizard) — <code>sidebar_state</code> remembers if u collapsed
+            the dashboard sidebar. 7 days. that&apos;s literally it.
           </li>
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
-          zero advertising cookies. zero remarketing. zero selling ur attention
-          to randos. that&apos;s loser behavior ngl. wanna un-consent? cookie
-          settings in the footer, one click, we ask again.
+          zero advertising cookies. zero remarketing. zero PostHog cookies,
+          period. zero selling ur attention to randos. that&apos;s loser
+          behavior ngl. wanna un-consent? cookie settings in the footer, one
+          click, we ask again.
         </p>
       </section>
 
