@@ -66,8 +66,8 @@ function NormalContent() {
         <p className="text-muted-foreground leading-relaxed mb-4">
           We use PostHog (EU region) to collect page-view events and click
           interactions. Your IP address is discarded at ingestion and is never
-          stored with analytics events. If you accept analytics cookies and sign
-          in, your PostHog analytics profile is linked to your StreamWizard
+          stored with analytics events. If you accept analytics and sign in,
+          your PostHog analytics profile is linked to your StreamWizard
           account ID so we can understand how the product is used. If you
           decline, we count page views in cookieless mode instead: no cookies,
           no identifiers, no profile. Only anonymous, aggregated statistics
@@ -336,12 +336,14 @@ function NormalContent() {
           </li>
           <li>
             <span className="text-foreground font-medium">
-              Analytics cookies
+              Analytics storage
             </span>{" "}
-            (PostHog) — only set if you accept analytics; used to recognise your
-            browser across sessions. Stored under our own domain via a reverse
-            proxy to prevent ad-blocker interference. If you decline, no
-            analytics cookies or identifiers are stored at all.
+            (PostHog) — not a cookie: one entry in your browser&apos;s local
+            storage holding a random device ID, only written if you accept
+            analytics. It is how we recognise your browser on your next visit.
+            It never leaves your browser as a cookie; analytics requests go to
+            our own domain and carry the ID in the request body. If you
+            decline, no analytics storage or identifier is written at all.
           </li>
           <li>
             <span className="text-foreground font-medium">Consent record</span>{" "}
@@ -361,8 +363,9 @@ function NormalContent() {
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
           We do not use advertising, remarketing, or third-party tracking
-          cookies. Changed your mind about analytics? Cookie settings in the
-          footer clears your choice and asks again.
+          cookies, and PostHog sets no cookies of its own. Changed your mind
+          about analytics? Cookie settings in the footer clears your choice
+          and asks again.
         </p>
       </section>
 
@@ -749,11 +752,13 @@ function GenZContent() {
           </li>
           <li>
             <span className="text-foreground font-medium">
-              analytics cookies
+              analytics storage
             </span>{" "}
-            (PostHog) — only set if u accepted. recognises ur browser across
-            sessions. runs through our own domain so ad blockers don&apos;t clap
-            it. declined? zero analytics cookies, zero identifiers. fr.
+            (PostHog) — not even a cookie. one local storage entry with a
+            random device ID, only if u accepted. that&apos;s how we know
+            it&apos;s u again next time. stays in ur browser, the ID travels in
+            the request body to our own domain. declined? zero analytics
+            storage, zero identifiers. fr.
           </li>
           <li>
             <span className="text-foreground font-medium">consent record</span>{" "}
@@ -768,9 +773,10 @@ function GenZContent() {
           </li>
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
-          zero advertising cookies. zero remarketing. zero selling ur attention
-          to randos. that&apos;s loser behavior ngl. wanna un-consent? cookie
-          settings in the footer, one click, we ask again.
+          zero advertising cookies. zero remarketing. zero PostHog cookies,
+          period. zero selling ur attention to randos. that&apos;s loser
+          behavior ngl. wanna un-consent? cookie settings in the footer, one
+          click, we ask again.
         </p>
       </section>
 
