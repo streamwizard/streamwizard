@@ -58,6 +58,10 @@ export function initPostHog({ key, host = "https://eu.i.posthog.com" }: PostHogC
     capture_pageleave: true,
     person_profiles: "identified_only",
     cookieless_mode: "on_reject",
+    // Host-only identity cookie. Nothing else on *.streamwizard.org runs
+    // PostHog, so the default `.streamwizard.org` scope only leaked the id to
+    // the CDN, docs, staging and cloud OBS nodes.
+    cross_subdomain_cookie: false,
     disable_session_recording: true,
     disable_surveys: true,
     disable_web_experiments: true,
