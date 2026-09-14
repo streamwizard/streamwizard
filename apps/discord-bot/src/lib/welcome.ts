@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, EmbedBuilder } from "discord.js";
+import { ChannelType, EmbedBuilder } from "discord.js";
 import type { Guild, GuildMember, TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
 import {
@@ -9,9 +9,7 @@ import {
 } from "@repo/supabase/queries/discord";
 import type { PublicTwitchIntegration } from "@repo/supabase/queries/discord";
 import { Sentry } from "../sentry";
-import { env } from "./env";
-
-const LINK_URL = `${env.NEXT_PUBLIC_BASE_URL}/dashboard/settings/integrations`;
+import { buildLinkRow } from "./account";
 
 const BROADCASTER_TYPE_LABEL: Record<string, string> = {
   partner: "Twitch Partner",
@@ -90,10 +88,7 @@ export function buildWelcomeMessage(member: GuildMember, joinNumber: number | nu
     return { embeds: [embed] };
   }
 
-  const button = new ButtonBuilder().setLabel("Connect your account").setStyle(ButtonStyle.Link).setURL(LINK_URL);
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
-
-  return { embeds: [embed], components: [row] };
+  return { embeds: [embed], components: [buildLinkRow("Connect your account")] };
 }
 
 export async function getGuildWelcomeSettings(guild: Guild) {

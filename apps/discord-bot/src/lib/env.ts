@@ -14,7 +14,9 @@ const schema = z.object({
   // Omit in staging/production to register commands globally.
   DISCORD_GUILD_ID: z.string().min(1).optional(),
 
-  NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
+  // Required: link buttons are built from it, and an undefined base makes
+  // discord.js reject the button URL at runtime.
+  NEXT_PUBLIC_BASE_URL: z.string().url(),
 
   // GitHub App (ticket → issue sync)
   GITHUB_APP_ID: z.string().min(1),
