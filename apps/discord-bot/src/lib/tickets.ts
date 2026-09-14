@@ -101,21 +101,27 @@ export function buildPanelMessage() {
   return { embeds: [embed], components: [row] };
 }
 
+type PanelLocation = Pick<DiscordTicketSettings, "panel_channel_id" | "panel_message_id">;
+
+// Removes a previously posted panel message. Errors are swallowed: the message
+// or its channel may already be gone.
+export async function deleteTicketPanel(guild: Guild, previous: PanelLocation | null): Promise<void> {
+  if (!previous?.panel_channel_id || !previous.panel_message_id) return;
+  const oldChannel = await guild.channels.fetch(previous.panel_channel_id).catch(() => null);
+  if (oldChannel?.isTextBased()) {
+    await oldChannel.messages.delete(previous.panel_message_id).catch(() => {});
+  }
+}
+
 // Posts a fresh panel and removes the one from a previous setup run, so
 // re-running setup doesn't leave duplicate "Create Ticket" panels around.
 // Returns the new panel's message id.
 export async function postTicketPanel(
   guild: Guild,
   channel: SendableChannels,
-  previous: DiscordTicketSettings | null
+  previous: PanelLocation | null
 ): Promise<string> {
-  if (previous?.panel_channel_id && previous.panel_message_id) {
-    const oldChannel = await guild.channels.fetch(previous.panel_channel_id).catch(() => null);
-    if (oldChannel?.isTextBased()) {
-      await oldChannel.messages.delete(previous.panel_message_id).catch(() => {});
-    }
-  }
-
+  await deleteTicketPanel(guild, previous);
   const message = await channel.send(buildPanelMessage());
   return message.id;
 }
@@ -346,6 +352,12 @@ export async function handleGithubButton(interaction: ButtonInteraction): Promis
     return;
   }
 
+  const { GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, GITHUB_APP_INSTALLATION_ID, GITHUB_ISSUES_REPO } = env;
+  if (!GITHUB_APP_ID || !GITHUB_APP_PRIVATE_KEY || !GITHUB_APP_INSTALLATION_ID || !GITHUB_ISSUES_REPO) {
+    await interaction.reply({ content: "GitHub isn't set up for this bot, so tickets can't be moved there.", flags: MessageFlags.Ephemeral });
+    return;
+  }
+
   await interaction.deferUpdate();
 
   // The issue may live in a public repo, so it never carries the opener's name
@@ -359,11 +371,11 @@ export async function handleGithubButton(interaction: ButtonInteraction): Promis
   ].join("\n");
 
   const octokit = getInstallationOctokit({
-    appId: env.GITHUB_APP_ID,
-    privateKey: env.GITHUB_APP_PRIVATE_KEY,
-    installationId: env.GITHUB_APP_INSTALLATION_ID,
+    appId: GITHUB_APP_ID,
+    privateKey: GITHUB_APP_PRIVATE_KEY,
+    installationId: GITHUB_APP_INSTALLATION_ID,
   });
-  const issue = await createTicketIssue(octokit, env.GITHUB_ISSUES_REPO, { title: ticket.subject, body });
+  const issue = await createTicketIssue(octokit, GITHUB_ISSUES_REPO, { title: ticket.subject, body });
 
   await setTicketGithubIssue(supabase, ticket.channel_id, issue.number, issue.url);
 

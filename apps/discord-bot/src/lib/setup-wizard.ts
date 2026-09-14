@@ -25,6 +25,7 @@ import {
 } from "@repo/supabase/queries/discord-activity";
 import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
 import { postTicketPanel } from "./tickets";
+import { cleanUpOldWelcomeChannel } from "./welcome";
 import { closeGuildSessions, invalidateSettingsCache } from "./activity-tracker";
 import { Sentry } from "../sentry";
 import { TWITCH_PURPLE } from "./branding";
@@ -246,7 +247,7 @@ function stepTicketLogChannel() {
 // Swaps the verified role on everyone who already holds the old one. Without
 // this, changing the verified role in /setup only affects future grants —
 // members verified under the previous role would keep it forever.
-async function migrateVerifiedRole(guild: Guild, oldRoleId: string, newRoleId: string) {
+export async function migrateVerifiedRole(guild: Guild, oldRoleId: string, newRoleId: string) {
   try {
     const members = await guild.members.fetch();
     const holders = members.filter((member) => member.roles.cache.has(oldRoleId));
@@ -327,10 +328,14 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
   switch (interaction.customId) {
     case SETUP_IDS.welcomeChannel: {
       const channelId = interaction.isChannelSelectMenu() ? interaction.values[0] : undefined;
+      const previous = channelId ? await getGuildSettings(supabase, guildId) : null;
       if (channelId) {
         await setWelcomeChannel(supabase, guildId, channelId);
       }
       await interaction.update(stepWelcomeToggle());
+      // After the reply, to stay inside Discord's 3-second window. Removes
+      // welcome posts from the old channel; reports its own errors.
+      if (channelId) void cleanUpOldWelcomeChannel(interaction.guild, previous?.welcome_channel_id ?? null);
       return;
     }
     case SETUP_IDS.welcomeChannelSkip: {

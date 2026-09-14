@@ -1,5 +1,5 @@
 import { MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
-import { buildWelcomeMessage, getConnectionInfo, getGuildWelcomeSettings, resolveWelcomeChannel } from "../lib/welcome";
+import { sendTestWelcome } from "../lib/welcome";
 import type { Command } from "../types/discord";
 
 export default {
@@ -18,10 +18,8 @@ export default {
 
     const member = interaction.options.getMember("member") ?? interaction.member;
 
-    const settings = await getGuildWelcomeSettings(interaction.guild);
-    const channel = await resolveWelcomeChannel(interaction.guild, settings?.welcome_channel_id);
-
-    if (!channel) {
+    const result = await sendTestWelcome(member);
+    if (!result.ok) {
       await interaction.reply({
         content: "No usable welcome channel is configured. Run `/setup` to set one, or set a system channel.",
         flags: MessageFlags.Ephemeral,
@@ -29,14 +27,9 @@ export default {
       return;
     }
 
-    // A real join's number is the live member count (record_guild_member_join),
-    // so read it directly — a preview must not overwrite the member's stored row.
-    const connection = await getConnectionInfo(member);
-    await channel.send(buildWelcomeMessage(member, member.guild.memberCount, connection));
-
-    const disabledNote = settings?.welcome_enabled === false ? "\n⚠️ Welcome messages are currently disabled, so this won't fire on real joins." : "";
+    const disabledNote = result.welcomeEnabled ? "" : "\n⚠️ Welcome messages are currently disabled, so this won't fire on real joins.";
     await interaction.reply({
-      content: `✅ Sent a mock welcome message in <#${channel.id}>.${disabledNote}`,
+      content: `✅ Sent a mock welcome message in <#${result.channelId}>.${disabledNote}`,
       flags: MessageFlags.Ephemeral,
     });
   },

@@ -1,5 +1,5 @@
 import { Events } from "discord.js";
-import { buildWelcomeMessage, getConnectionInfo, getGuildWelcomeSettings, getJoinNumber, resolveWelcomeChannel } from "../lib/welcome";
+import { buildWelcomeMessage, getConnectionInfo, getGuildWelcomeSettings, getJoinNumber, grantJoinRole, resolveWelcomeChannel } from "../lib/welcome";
 import type { BotEvent } from "../types/discord";
 import { Sentry } from "../sentry";
 import { captureServerEvent } from "@repo/posthog/server";
@@ -21,6 +21,9 @@ export default {
     }
 
     const settings = await getGuildWelcomeSettings(member.guild);
+    // The join role doesn't depend on welcome messages being on.
+    await grantJoinRole(member, settings?.join_role_id);
+
     if (settings?.welcome_enabled === false) {
       console.warn(`[guildMemberAdd] Guild "${member.guild.name}" has welcome messages disabled, skipping welcome message`);
       return;

@@ -36,6 +36,14 @@ export function invalidateCommandPermissionCache(guildId: string, commandName: s
   cache.delete(cacheKey(guildId, commandName));
 }
 
+// Drops every cached command for the guild — used when web-admin saves and
+// can't say which command changed.
+export function invalidateGuildPermissionCache(guildId: string) {
+  for (const key of cache.keys()) {
+    if (key.startsWith(`${guildId}:`)) cache.delete(key);
+  }
+}
+
 // A command with no configured roles is open to everyone in the guild.
 // Outside a guild (DMs) there's no role context to check against, so commands
 // run unrestricted there. The server owner bypasses allowlists entirely, so

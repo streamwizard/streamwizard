@@ -41,6 +41,7 @@
         "@repo/supabase": "workspace:*",
         "@sentry/bun": "^10",
         "discord.js": "^14.26.4",
+        "hono": "^4.12.28",
         "zod": "^4.4.3",
       },
       "devDependencies": {

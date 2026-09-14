@@ -10,6 +10,7 @@ A Discord bot for the StreamWizard server, built on Bun + discord.js v14.
 - `src/lib/discord-client.ts` — the `Client` singleton and its gateway intents. Start minimal; add intents only when a feature needs them (each one may require re-approval for verified bots).
 - `src/lib/env.ts` — zod-validated environment variables.
 - `src/lib/permissions.ts` — per-command role allowlists, checked in `events/interactionCreate.ts` before any command runs.
+- `src/http/server.ts` — internal Hono API that web-admin's Discord dashboard calls after a save (see below).
 - `src/scripts/deploy-commands.ts` — registers slash commands with Discord. Run after adding/changing/removing a command.
 
 ## Adding a command
@@ -57,6 +58,8 @@ Permissions are per-command, per-guild role allowlists — not a global tier sys
 
 `/permissions` itself can only be run by the **server owner**. Discord has no "owner" permission flag, so this is checked in code (`interaction.user.id === interaction.guild.ownerId`) rather than via `setDefaultMemberPermissions` — the `ManageGuild` default on the command just hides it from members without Manage Server in their client, it isn't the actual gate. No bootstrap problem either way: the owner always exists and always has access — `canRunCommand` skips role allowlists for the owner on every command, so even restricting `/permissions` itself can't lock them out.
 
+The web-admin Discord dashboard (`/discord/permissions`) edits the same table and refreshes the cache through the internal API.
+
 Mappings live in the `discord_command_permissions` table in Supabase (`guild_id`, `command_name`, `role_id`) and are cached in-memory per `guild+command` for 5 minutes (`src/lib/permissions.ts`); `/permissions set`/`remove` invalidate the cache immediately so changes apply right away. Commands run outside a guild (DMs) are always unrestricted, since there's no guild role context to check.
 
 The `command` option autocompletes against the currently loaded command names (`Command.autocomplete` in `permissions.ts`, dispatched from `events/interactionCreate.ts`'s `isAutocomplete()` branch) — there's no fixed list to maintain, it always reflects whatever's in `src/commands/`.
@@ -78,6 +81,26 @@ export default {
 ```
 
 Picked up automatically on next start — no registration needed in `index.ts`.
+
+## Internal API (web-admin dashboard)
+
+web-admin's `/discord` pages write settings straight to Supabase, then call the bot so changes land without a restart. The bot starts a small Hono server (`src/http/server.ts`) when `DISCORD_BOT_INTERNAL_SECRET` is set; without it the server stays off and saves still apply once the in-memory caches expire (permissions 5 min, activity 60 s).
+
+| Env var | Where | Notes |
+|---|---|---|
+| `DISCORD_BOT_INTERNAL_SECRET` | bot + web-admin | 16+ chars, same value on both sides. |
+| `DISCORD_BOT_INTERNAL_PORT` | bot | Defaults to `3010`. |
+| `DISCORD_BOT_INTERNAL_URL` | web-admin | e.g. `http://discord-bot:3010` on the internal Docker network. |
+
+Don't publish the port on a public domain. Every route except `GET /health` needs `Authorization: Bearer <secret>`, and all live under `/internal/guilds/:guildId` (the bot must be in that guild):
+
+| Route | Does |
+|---|---|
+| `POST /cache/permissions` `{ commandName? }` | Drops cached role allowlists (one command, or all). |
+| `POST /cache/activity` `{ trackingDisabled }` | Drops cached activity settings; closes open voice sessions when tracking was turned off. |
+| `POST /verified-role` `{ oldRoleId, newRoleId }` | Moves members from the old verified role to the new one, in the background. |
+| `POST /ticket-panel` | Posts the ticket panel in the stored panel channel and removes the previous one. |
+| `POST /test-welcome` `{ discordUserId }` | Posts a mock welcome for that member without touching `join_number`. |
 
 ## Running locally
 
