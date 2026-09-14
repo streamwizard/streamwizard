@@ -65,6 +65,16 @@ export async function setVerifiedRoleId(client: DBClient, guildId: string, roleI
   if (error) throw error;
 }
 
+type GuildSettingsPatch = Partial<Omit<Database["public"]["Tables"]["discord_guild_settings"]["Insert"], "guild_id">>;
+
+// Multi-field write for the web-admin dashboard; unlike the single setters it
+// accepts null, so a channel or role can be cleared.
+export async function upsertGuildSettings(client: DBClient, guildId: string, patch: GuildSettingsPatch): Promise<void> {
+  const { error } = await client.from("discord_guild_settings").upsert({ guild_id: guildId, ...patch }, { onConflict: "guild_id" });
+
+  if (error) throw error;
+}
+
 export async function setWelcomeEnabled(client: DBClient, guildId: string, enabled: boolean): Promise<void> {
   const { error } = await client
     .from("discord_guild_settings")
@@ -88,6 +98,13 @@ export async function recordGuildMemberJoin(client: DBClient, guildId: string, u
 
 export async function getDiscordIntegrationByDiscordUserId(client: DBClient, discordUserId: string) {
   return client.from("integrations_discord").select("user_id, discord_username").eq("discord_user_id", discordUserId).maybeSingle();
+}
+
+export async function getDiscordUserIdForUser(client: DBClient, userId: string): Promise<string | null> {
+  const { data, error } = await client.from("integrations_discord").select("discord_user_id").eq("user_id", userId).maybeSingle();
+
+  if (error) throw error;
+  return data?.discord_user_id ?? null;
 }
 
 export type PublicTwitchIntegration = {

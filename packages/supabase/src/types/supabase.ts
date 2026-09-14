@@ -642,6 +642,7 @@ export type Database = {
           created_at: string
           guild_id: string
           id: string
+          join_role_id: string | null
           updated_at: string
           verified_role_id: string | null
           welcome_channel_id: string | null
@@ -651,6 +652,7 @@ export type Database = {
           created_at?: string
           guild_id: string
           id?: string
+          join_role_id?: string | null
           updated_at?: string
           verified_role_id?: string | null
           welcome_channel_id?: string | null
@@ -660,10 +662,47 @@ export type Database = {
           created_at?: string
           guild_id?: string
           id?: string
+          join_role_id?: string | null
           updated_at?: string
           verified_role_id?: string | null
           welcome_channel_id?: string | null
           welcome_enabled?: boolean
+        }
+        Relationships: []
+      }
+      discord_settings_audit: {
+        Row: {
+          action: string
+          changed_by: string | null
+          changed_by_discord_id: string | null
+          created_at: string
+          guild_id: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          section: string
+        }
+        Insert: {
+          action?: string
+          changed_by?: string | null
+          changed_by_discord_id?: string | null
+          created_at?: string
+          guild_id: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          section: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          changed_by_discord_id?: string | null
+          created_at?: string
+          guild_id?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          section?: string
         }
         Relationships: []
       }

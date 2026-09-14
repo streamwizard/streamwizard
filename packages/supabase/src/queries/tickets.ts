@@ -27,6 +27,17 @@ export async function upsertTicketSettings(client: DBClient, guildId: string, pa
   return data;
 }
 
+export async function countOpenTickets(client: DBClient, guildId: string): Promise<number> {
+  const { count, error } = await client
+    .from("discord_tickets")
+    .select("id", { count: "exact", head: true })
+    .eq("guild_id", guildId)
+    .eq("status", "open");
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
 // Atomically allocates the next per-guild ticket number (creates the settings
 // row on first use). See the next_ticket_number migration.
 export async function nextTicketNumber(client: DBClient, guildId: string): Promise<number> {
