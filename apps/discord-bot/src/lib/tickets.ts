@@ -14,8 +14,10 @@ import {
 } from "discord.js";
 import type {
   ButtonInteraction,
+  Guild,
   GuildMember,
   ModalSubmitInteraction,
+  SendableChannels,
   TextChannel,
 } from "discord.js";
 import { supabase } from "@repo/supabase";
@@ -97,6 +99,25 @@ export function buildPanelMessage() {
   const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
 
   return { embeds: [embed], components: [row] };
+}
+
+// Posts a fresh panel and removes the one from a previous setup run, so
+// re-running setup doesn't leave duplicate "Create Ticket" panels around.
+// Returns the new panel's message id.
+export async function postTicketPanel(
+  guild: Guild,
+  channel: SendableChannels,
+  previous: DiscordTicketSettings | null
+): Promise<string> {
+  if (previous?.panel_channel_id && previous.panel_message_id) {
+    const oldChannel = await guild.channels.fetch(previous.panel_channel_id).catch(() => null);
+    if (oldChannel?.isTextBased()) {
+      await oldChannel.messages.delete(previous.panel_message_id).catch(() => {});
+    }
+  }
+
+  const message = await channel.send(buildPanelMessage());
+  return message.id;
 }
 
 function buildTicketModal(): ModalBuilder {
@@ -250,18 +271,31 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction): Pr
     ],
   });
 
-  const ticket = await createTicket(supabase, {
-    guildId: interaction.guildId,
-    ticketNumber,
-    channelId: channel.id,
-    openerDiscordUserId: interaction.user.id,
-    openerUserId,
-    subject,
-    description,
-    category,
-  });
+  // If the ticket row or intro message fails, the channel would be left behind
+  // with nothing tracking it — remove it (and close the row, if it got that far)
+  // and let the handler report the error. The allocated ticket number is skipped.
+  let ticketCreated = false;
+  try {
+    const ticket = await createTicket(supabase, {
+      guildId: interaction.guildId,
+      ticketNumber,
+      channelId: channel.id,
+      openerDiscordUserId: interaction.user.id,
+      openerUserId,
+      subject,
+      description,
+      category,
+    });
+    ticketCreated = true;
 
-  await channel.send(buildTicketIntroMessage(ticket, settings, openerProfile));
+    await channel.send(buildTicketIntroMessage(ticket, settings, openerProfile));
+  } catch (error) {
+    if (ticketCreated) {
+      await closeTicket(supabase, channel.id, interaction.client.user.id).catch(() => {});
+    }
+    await channel.delete("Ticket creation failed").catch(() => {});
+    throw error;
+  }
 
   await interaction.editReply({ content: `✅ Your ticket is open: <#${channel.id}>` });
 }
@@ -314,13 +348,14 @@ export async function handleGithubButton(interaction: ButtonInteraction): Promis
 
   await interaction.deferUpdate();
 
-  const opener = ticket.opener_user_id ? await getTicketOpenerProfile(supabase, ticket.opener_user_id) : null;
+  // The issue may live in a public repo, so it never carries the opener's name
+  // or email — staff can match the ticket to a user from the Discord channel.
   const body = [
     ticket.description,
     "",
     `**Category:** ${categoryLabel(ticket.category)}`,
     `**Discord ticket:** #${String(ticket.ticket_number).padStart(4, "0")}`,
-    `**Opened by:** ${opener ? `${opener.name} (${opener.email})` : `Discord user <@${ticket.opener_discord_user_id}>`}`,
+    `**StreamWizard account:** ${ticket.opener_user_id ? "linked" : "not linked"}`,
   ].join("\n");
 
   const octokit = getInstallationOctokit({
@@ -334,6 +369,7 @@ export async function handleGithubButton(interaction: ButtonInteraction): Promis
 
   const updated = await getTicketByChannelId(supabase, ticket.channel_id);
   if (updated) {
+    const opener = updated.opener_user_id ? await getTicketOpenerProfile(supabase, updated.opener_user_id) : null;
     await interaction.editReply(buildTicketIntroMessage(updated, settings, opener));
   }
   await interaction.followUp({ content: `🐙 Created GitHub issue #${issue.number}: ${issue.url}`, flags: MessageFlags.Ephemeral });

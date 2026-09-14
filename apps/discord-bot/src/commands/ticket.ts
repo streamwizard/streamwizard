@@ -2,14 +2,15 @@ import { ChannelType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } f
 import { supabase } from "@repo/supabase";
 import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
 import type { Command } from "../types/discord";
-import { buildPanelMessage, closeTicketChannel, isStaff } from "../lib/tickets";
+import { closeTicketChannel, isStaff, postTicketPanel } from "../lib/tickets";
 
 export default {
   data: new SlashCommandBuilder()
     .setName("ticket")
     .setDescription("Manage the support ticket system")
-    // Hides setup/settings from members without Manage Server; close is staff-gated in execute().
-    .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    // No default member permissions: Discord can't set them per subcommand, and
+    // hiding the whole command would hide `close` from staff without Manage
+    // Server. setup/settings are gated on Manage Server in execute() instead.
     .addSubcommand((sub) =>
       sub
         .setName("setup")
@@ -47,20 +48,26 @@ export default {
 
     const subcommand = interaction.options.getSubcommand();
 
+    if (subcommand !== "close" && !interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
+      await interaction.reply({ content: "You need Manage Server to configure ticketing.", flags: MessageFlags.Ephemeral });
+      return;
+    }
+
     if (subcommand === "setup") {
       const staffRole = interaction.options.getRole("staff-role", true);
       const category = interaction.options.getChannel("category", true);
       const panelChannel = interaction.options.getChannel("panel-channel", true, [ChannelType.GuildText]);
       const logChannel = interaction.options.getChannel("log-channel", false, [ChannelType.GuildText]);
 
-      const panelMessage = await panelChannel.send(buildPanelMessage());
+      const previous = await getTicketSettings(supabase, interaction.guildId);
+      const panelMessageId = await postTicketPanel(interaction.guild, panelChannel, previous);
 
       await upsertTicketSettings(supabase, interaction.guildId, {
         enabled: true,
         staff_role_id: staffRole.id,
         category_id: category.id,
         panel_channel_id: panelChannel.id,
-        panel_message_id: panelMessage.id,
+        panel_message_id: panelMessageId,
         log_channel_id: logChannel?.id ?? null,
       });
 
