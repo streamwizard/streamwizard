@@ -167,10 +167,12 @@ function humanCount(channel: VoiceBasedChannel): number {
   return channel.members.filter((m) => !m.user.bot).size;
 }
 
-function isVoiceEligible(member: GuildMember, settings: DiscordActivitySettings): boolean {
+function isVoiceEligible(member: GuildMember, ctx: TrackingContext): boolean {
+  const { settings } = ctx;
   const voice = member.voice;
   const channel = voice.channel;
   if (!channel) return false;
+  if (isChannelIgnored(ctx, channel.id, channel.parentId)) return false;
   if (settings.voice_ignore_afk && (voice.selfMute || voice.selfDeaf || voice.serverMute || voice.serverDeaf)) return false;
   if (settings.voice_require_others && humanCount(channel) < 2) return false;
   return true;
@@ -186,6 +188,25 @@ async function openSession(guildId: string, member: GuildMember, channelId: stri
   }
 }
 
+// Splits [start, end) into per-UTC-day second counts, so a call that crosses
+// midnight credits each day with the time actually spent on it.
+export function splitByUtcDay(start: Date, end: Date): { date: string; seconds: number }[] {
+  const chunks: { date: string; seconds: number }[] = [];
+  let cursor = start.getTime();
+  const endMs = end.getTime();
+
+  while (cursor < endMs) {
+    const day = new Date(cursor);
+    const nextMidnight = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 1);
+    const chunkEnd = Math.min(nextMidnight, endMs);
+    const seconds = Math.floor(chunkEnd / 1000) - Math.floor(cursor / 1000);
+    if (seconds > 0) chunks.push({ date: utcDate(day), seconds });
+    cursor = chunkEnd;
+  }
+
+  return chunks;
+}
+
 async function closeSession(guildId: string, userId: string): Promise<void> {
   const key = `${guildId}:${userId}`;
   const open = openSessions.get(key);
@@ -196,21 +217,29 @@ async function closeSession(guildId: string, userId: string): Promise<void> {
   const durationSeconds = Math.max(0, Math.floor((leftAt.getTime() - open.startedAt.getTime()) / 1000));
   try {
     await closeVoiceSession(supabase, open.sessionId, leftAt, durationSeconds);
-    if (durationSeconds > 0) {
-      await recordIncrement(guildId, userId, utcDate(open.startedAt), { voiceSeconds: durationSeconds });
+    for (const { date, seconds } of splitByUtcDay(open.startedAt, leftAt)) {
+      await recordIncrement(guildId, userId, date, { voiceSeconds: seconds });
     }
   } catch (error) {
     Sentry.captureException(error);
   }
 }
 
+// Closes every open voice session in a guild (crediting elapsed time) — used
+// when tracking is turned off, so nobody keeps accruing time afterwards.
+export async function closeGuildSessions(guildId: string): Promise<void> {
+  const prefix = `${guildId}:`;
+  const userIds = [...openSessions.keys()].filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length));
+  await Promise.all(userIds.map((userId) => closeSession(guildId, userId)));
+}
+
 // Reconciles one member's open/closed state against their current eligibility.
-async function reevaluateMember(member: GuildMember, settings: DiscordActivitySettings): Promise<void> {
+async function reevaluateMember(member: GuildMember, ctx: TrackingContext): Promise<void> {
   if (member.user.bot) return;
   const guildId = member.guild.id;
   const key = `${guildId}:${member.id}`;
   const open = openSessions.get(key);
-  const eligible = isVoiceEligible(member, settings);
+  const eligible = isVoiceEligible(member, ctx);
   const channelId = member.voice.channelId;
 
   if (eligible && channelId) {
@@ -233,8 +262,8 @@ export async function handleVoiceStateUpdate(oldState: VoiceState, newState: Voi
   try {
     const ctx = await getContext(guild.id);
     if (!ctx.settings.tracking_enabled || !ctx.settings.track_voice) {
-      // Tracking turned off mid-session — close anything still open for the mover.
-      await closeSession(guild.id, mover.id);
+      // Tracking turned off mid-session — close everything still open in the guild.
+      await closeGuildSessions(guild.id);
       return;
     }
 
@@ -249,11 +278,11 @@ export async function handleVoiceStateUpdate(oldState: VoiceState, newState: Voi
     for (const channel of channels) {
       for (const member of channel.members.values()) {
         seen.add(member.id);
-        await reevaluateMember(member, ctx.settings);
+        await reevaluateMember(member, ctx);
       }
     }
     if (!seen.has(mover.id)) {
-      await reevaluateMember(mover, ctx.settings);
+      await reevaluateMember(mover, ctx);
     }
   } catch (error) {
     Sentry.captureException(error);
@@ -276,7 +305,7 @@ export async function reconcileVoiceSessions(client: Client): Promise<void> {
       for (const channel of guild.channels.cache.values()) {
         if (!channel.isVoiceBased()) continue;
         for (const member of channel.members.values()) {
-          await reevaluateMember(member, ctx.settings);
+          await reevaluateMember(member, ctx);
         }
       }
     } catch (error) {

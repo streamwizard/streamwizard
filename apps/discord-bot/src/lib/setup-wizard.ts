@@ -24,8 +24,8 @@ import {
   upsertActivitySettings,
 } from "@repo/supabase/queries/discord-activity";
 import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
-import { buildPanelMessage } from "./tickets";
-import { invalidateSettingsCache } from "./activity-tracker";
+import { postTicketPanel } from "./tickets";
+import { closeGuildSessions, invalidateSettingsCache } from "./activity-tracker";
 import { Sentry } from "../sentry";
 import { TWITCH_PURPLE } from "./branding";
 
@@ -133,13 +133,13 @@ function stepActivityIgnoredChannels(currentChannelIds: string[]) {
     .setColor(TWITCH_PURPLE)
     .setTitle("StreamWizard Setup — Untracked Channels")
     .setDescription(
-      "Pick any channels to leave out of activity tracking — think `#bot-spam` or `#commands`. Messages and reactions there won't count.\n\nLeave it empty to track everything, then continue."
+      "Pick any channels or categories to leave out of activity tracking — think `#bot-spam` or `#commands`. Messages, reactions, and voice time there won't count. Picking a category covers every channel in it.\n\nLeave it empty to track everything, then continue."
     );
 
   const select = new ChannelSelectMenuBuilder()
     .setCustomId(SETUP_IDS.activityIgnoredChannels)
     .setPlaceholder("Select channels to ignore")
-    .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice)
+    .addChannelTypes(ChannelType.GuildText, ChannelType.GuildVoice, ChannelType.GuildCategory)
     .setMinValues(0)
     .setMaxValues(25);
 
@@ -354,10 +354,15 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
         const oldRoleId = previousSettings?.verified_role_id;
 
         await setVerifiedRoleId(supabase, guildId, roleId);
+        await interaction.update(stepActivityPrompt());
 
+        // Runs after the reply: fetching every member and swapping roles one by
+        // one can outlast Discord's 3-second interaction window on big servers.
+        // migrateVerifiedRole reports its own errors.
         if (oldRoleId && oldRoleId !== roleId) {
-          await migrateVerifiedRole(interaction.guild, oldRoleId, roleId);
+          void migrateVerifiedRole(interaction.guild, oldRoleId, roleId);
         }
+        return;
       }
       await interaction.update(stepActivityPrompt());
       return;
@@ -377,6 +382,9 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
       await upsertActivitySettings(supabase, guildId, { tracking_enabled: false });
       invalidateSettingsCache(guildId);
       await interaction.update(stepTicketsPrompt());
+      // After the reply, so a busy voice server can't push this past the
+      // interaction window. closeSession reports its own errors.
+      void closeGuildSessions(guildId);
       return;
     }
     case SETUP_IDS.activityIgnoredChannels: {
@@ -426,10 +434,11 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
       if (channelId) {
         const channel = await interaction.guild.channels.fetch(channelId);
         if (channel?.isTextBased()) {
-          const panelMessage = await channel.send(buildPanelMessage());
+          const previous = await getTicketSettings(supabase, guildId);
+          const panelMessageId = await postTicketPanel(interaction.guild, channel, previous);
           await upsertTicketSettings(supabase, guildId, {
             panel_channel_id: channelId,
-            panel_message_id: panelMessage.id,
+            panel_message_id: panelMessageId,
           });
         }
       }
