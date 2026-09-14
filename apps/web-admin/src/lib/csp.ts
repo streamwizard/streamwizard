@@ -20,6 +20,8 @@ export function buildCsp(nonce: string): string {
     [
       "img-src 'self' data: https://static-cdn.jtvnw.net",
       "https://cdn.7tv.app https://cdn.betterttv.net https://cdn.frankerfacez.com",
+      // Discord guild icons on /discord.
+      "https://cdn.discordapp.com",
       process.env.NEXT_PUBLIC_CDN_URL,
       process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]

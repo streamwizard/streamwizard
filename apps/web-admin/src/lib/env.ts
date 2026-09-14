@@ -35,6 +35,15 @@ export const env = createEnv({
     ALERT_ENV: z.enum(["prod", "staging", "dev"]).optional(),
     ALERT_DISCORD_CHANNEL_ID: z.string().min(1).optional(),
     DISCORD_BOT_TOKEN: z.string().min(1).optional(),
+    // Discord dashboard (/discord). The pages show a "not configured" card
+    // until the guild id and bot token are set. CLIENT_ID lists deployed
+    // slash commands; the INTERNAL pair reaches the bot's Hono server for
+    // cache refreshes and actions — without it saves still land in the DB and
+    // the bot's cache TTLs pick them up.
+    DISCORD_GUILD_ID: z.string().regex(/^\d{17,20}$/).optional(),
+    DISCORD_CLIENT_ID: z.string().regex(/^\d{17,20}$/).optional(),
+    DISCORD_BOT_INTERNAL_URL: z.string().url().optional(),
+    DISCORD_BOT_INTERNAL_SECRET: z.string().min(16).optional(),
     TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
     TELEGRAM_CHAT_ID: z.string().min(1).optional(),
     // Same var the rest of the stack uses for the rest-api base URL; the
@@ -72,6 +81,10 @@ export const env = createEnv({
     ALERT_ENV: process.env.ALERT_ENV,
     ALERT_DISCORD_CHANNEL_ID: process.env.ALERT_DISCORD_CHANNEL_ID,
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
+    DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID,
+    DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
+    DISCORD_BOT_INTERNAL_URL: process.env.DISCORD_BOT_INTERNAL_URL,
+    DISCORD_BOT_INTERNAL_SECRET: process.env.DISCORD_BOT_INTERNAL_SECRET,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
