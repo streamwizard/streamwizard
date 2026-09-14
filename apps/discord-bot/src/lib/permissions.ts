@@ -38,9 +38,11 @@ export function invalidateCommandPermissionCache(guildId: string, commandName: s
 
 // A command with no configured roles is open to everyone in the guild.
 // Outside a guild (DMs) there's no role context to check against, so commands
-// run unrestricted there.
+// run unrestricted there. The server owner bypasses allowlists entirely, so
+// restricting /permissions itself can never lock them out of undoing it.
 export async function canRunCommand(member: GuildMember | null, commandName: string): Promise<boolean> {
   if (!member) return true;
+  if (member.id === member.guild.ownerId) return true;
 
   const allowedRoleIds = await getAllowedRoleIds(member.guild.id, commandName);
   if (allowedRoleIds.length === 0) return true;
