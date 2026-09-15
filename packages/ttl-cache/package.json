@@ -1,5 +1,5 @@
 {
-  "name": "@repo/twitch-assets",
+  "name": "@repo/ttl-cache",
   "version": "0.0.0",
   "private": true,
   "license": "MIT",
@@ -13,16 +13,13 @@
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@types/bun": "^1.3.6",
     "@types/node": "^25.0.8",
     "typescript": "^5.9.2"
-  },
-  "dependencies": {
-    "@repo/supabase": "workspace:*",
-    "@repo/ttl-cache": "workspace:*",
-    "@repo/twitch-api": "workspace:*"
   }
 }

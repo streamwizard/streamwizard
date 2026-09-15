@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import type { MiddlewareHandler } from "hono";
 import { supabase } from "@repo/supabase";
 import { lookupIngestNodeByApiKeyHash } from "@repo/supabase/queries/ingest-nodes";
-import { TtlCache } from "../lib/ttl-cache";
+import { TtlCache } from "@repo/ttl-cache";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -47,9 +47,7 @@ export const ingestNodeAuth = (): MiddlewareHandler => {
     }
 
     const keyHash = createHash("sha256").update(token).digest("hex");
-    const nodeId = await ingestNodeIdByKeyHash.fetch(keyHash, () =>
-      lookupIngestNodeByApiKeyHash(supabase, keyHash),
-    );
+    const nodeId = await ingestNodeIdByKeyHash.fetch(keyHash, () => lookupIngestNodeByApiKeyHash(supabase, keyHash));
 
     if (!nodeId) {
       return c.json({ error: "Node API key not recognised — re-run the claim step or contact an admin" }, 401);

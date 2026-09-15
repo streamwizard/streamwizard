@@ -2,6 +2,7 @@ import type { Guild, Message, PartialMessage } from "discord.js";
 import type { PlatformEventPayloads, PlatformEventType } from "@repo/types";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
+import { TtlCache } from "@repo/ttl-cache";
 import {
   emitPlatformEvent,
   isLogRouteActive,
@@ -24,36 +25,32 @@ interface LinkedAccount {
   twitch_user_id: string | null;
 }
 
-const linkCache = new Map<string, { value: LinkedAccount | null; fetchedAt: number }>();
+/** Bounded: a busy server sees thousands of distinct members. Unlinked users are a cached null. */
+const linkCache = new TtlCache<LinkedAccount>({ ttlMs: LINK_TTL_MS });
 
 /** The StreamWizard account linked to a Discord user, cached for 5 minutes. */
-async function linkedAccount(discordUserId: string): Promise<LinkedAccount | null> {
-  const cached = linkCache.get(discordUserId);
-  if (cached && Date.now() - cached.fetchedAt < LINK_TTL_MS) return cached.value;
+function linkedAccount(discordUserId: string): Promise<LinkedAccount | null> {
+  return linkCache.fetch(discordUserId, async () => {
+    const { data: link, error } = await supabase
+      .from("integrations_discord")
+      .select("user_id")
+      .eq("discord_user_id", discordUserId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!link) return null;
 
-  const { data: link, error } = await supabase
-    .from("integrations_discord")
-    .select("user_id")
-    .eq("discord_user_id", discordUserId)
-    .maybeSingle();
-  if (error) throw error;
-
-  let value: LinkedAccount | null = null;
-  if (link) {
     const { data: twitch, error: twitchError } = await supabase
       .from("integrations_twitch")
       .select("twitch_username, twitch_user_id")
       .eq("user_id", link.user_id)
       .maybeSingle();
     if (twitchError) throw twitchError;
-    value = {
+    return {
       userId: link.user_id,
       twitch_username: twitch?.twitch_username ?? null,
       twitch_user_id: twitch?.twitch_user_id ?? null,
     };
-  }
-  linkCache.set(discordUserId, { value, fetchedAt: Date.now() });
-  return value;
+  });
 }
 
 /**

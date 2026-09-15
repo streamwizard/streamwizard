@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { TtlCache } from "./ttl-cache";
+import { TtlCache } from "./index";
 
 /** Injectable clock so the TTL assertions don't need real sleeps. */
 function fakeClock(start = 1_000_000) {
@@ -153,5 +153,31 @@ describe("TtlCache", () => {
     expect(stats.misses).toBe(1);
     expect(stats.hits).toBe(2);
     expect(stats.hitRate).toBeCloseTo(2 / 3);
+  });
+
+  it("deleteWhere drops the matching keys only", () => {
+    const cache = new TtlCache<number>({ ttlMs: 1000 });
+    cache.set("g1:a", 1);
+    cache.set("g1:b", 2);
+    cache.set("g2:a", 3);
+    cache.deleteWhere((key) => key.startsWith("g1:"));
+    expect(cache.get("g1:a")).toBeUndefined();
+    expect(cache.get("g1:b")).toBeUndefined();
+    expect(cache.get("g2:a")).toBe(3);
+  });
+
+  it("set accepts a per-entry ttl or an absolute expiry", () => {
+    const clock = fakeClock();
+    const cache = new TtlCache<string>({ ttlMs: 1000, now: clock.now });
+    cache.set("short", "a", { ttlMs: 10 });
+    cache.set("abs", "b", { expiresAt: clock.now() + 5000 });
+    cache.set("default", "c");
+    clock.advance(11);
+    expect(cache.get("short")).toBeUndefined();
+    expect(cache.get("abs")).toBe("b");
+    expect(cache.get("default")).toBe("c");
+    clock.advance(1000);
+    expect(cache.get("default")).toBeUndefined();
+    expect(cache.get("abs")).toBe("b");
   });
 });

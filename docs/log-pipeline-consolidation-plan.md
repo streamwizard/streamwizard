@@ -5,7 +5,7 @@ duplicated helpers the review found. Four mechanical passes, each independently 
 each ending with the same checks: `bunx tsc --noEmit` in the touched apps and `bun test` in
 `apps/discord-bot` and `packages/ttl-cache`.
 
-## Pass A: `@repo/ttl-cache`
+## Pass A: `@repo/ttl-cache` (done 2026-09-15)
 
 Seven hand-rolled TTL caches, none with single-flight except the one in rest-api.
 

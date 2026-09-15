@@ -2,32 +2,28 @@ import type { GuildMember } from "discord.js";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { getCommandRoles } from "@repo/supabase/queries/discord";
+import { TtlCache } from "@repo/ttl-cache";
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
-const cache = new Map<string, { roleIds: string[]; expiresAt: number }>();
+const cache = new TtlCache<string[]>({ ttlMs: CACHE_TTL_MS });
 
 function cacheKey(guildId: string, commandName: string) {
   return `${guildId}:${commandName}`;
 }
 
 async function getAllowedRoleIds(guildId: string, commandName: string): Promise<string[]> {
-  const key = cacheKey(guildId, commandName);
-  const cached = cache.get(key);
-  if (cached && cached.expiresAt > Date.now()) return cached.roleIds;
-
-  let roleIds: string[];
   try {
-    const rows = await getCommandRoles(supabase, guildId, commandName);
-    roleIds = rows.map((row) => row.role_id);
+    const roleIds = await cache.fetch(cacheKey(guildId, commandName), async () => {
+      const rows = await getCommandRoles(supabase, guildId, commandName);
+      return rows.map((row) => row.role_id);
+    });
+    return roleIds ?? [];
   } catch (error) {
-    // Fails open for this one call only: nothing is cached, so the next call
-    // retries instead of leaving the allowlist off for the whole TTL.
+    // Fails open for this one call only: a throwing loader is never cached, so
+    // the next call retries instead of leaving the allowlist off for the TTL.
     reportError(error, "permissions.load-role-config", { guildId, commandName });
     return [];
   }
-
-  cache.set(key, { roleIds, expiresAt: Date.now() + CACHE_TTL_MS });
-  return roleIds;
 }
 
 // Call after add/remove so the change takes effect immediately instead of
@@ -39,9 +35,7 @@ export function invalidateCommandPermissionCache(guildId: string, commandName: s
 // Drops every cached command for the guild — used when web-admin saves and
 // can't say which command changed.
 export function invalidateGuildPermissionCache(guildId: string) {
-  for (const key of cache.keys()) {
-    if (key.startsWith(`${guildId}:`)) cache.delete(key);
-  }
+  cache.deleteWhere((key) => key.startsWith(`${guildId}:`));
 }
 
 // A command with no configured roles is open to everyone in the guild.

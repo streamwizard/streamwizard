@@ -1,6 +1,7 @@
 import type { DiscordTicketActivityPayload } from "@repo/types";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
+import { TtlCache } from "@repo/ttl-cache";
 import { broadcastToUser } from "@repo/ws-client";
 import { env } from "./env";
 
@@ -11,29 +12,30 @@ import { env } from "./env";
 const ADMINS_TTL_MS = 5 * 60 * 1000;
 const OPEN_TICKETS_TTL_MS = 60 * 1000;
 
-let admins: { ids: string[]; fetchedAt: number } | null = null;
-const openTickets = new Map<string, { byChannel: Map<string, number>; fetchedAt: number }>();
+const admins = new TtlCache<string[]>({ ttlMs: ADMINS_TTL_MS });
+/** Open tickets per guild, channel id → ticket number. */
+const openTickets = new TtlCache<Map<string, number>>({ ttlMs: OPEN_TICKETS_TTL_MS });
 
 async function getAdminUserIds(): Promise<string[]> {
-  if (admins && Date.now() - admins.fetchedAt < ADMINS_TTL_MS) return admins.ids;
-  const { data, error } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
-  if (error) throw error;
-  admins = { ids: [...new Set(data.map((row) => row.user_id))], fetchedAt: Date.now() };
-  return admins.ids;
+  const ids = await admins.fetch("all", async () => {
+    const { data, error } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
+    if (error) throw error;
+    return [...new Set(data.map((row) => row.user_id))];
+  });
+  return ids ?? [];
 }
 
 async function getOpenTickets(guildId: string): Promise<Map<string, number>> {
-  const cached = openTickets.get(guildId);
-  if (cached && Date.now() - cached.fetchedAt < OPEN_TICKETS_TTL_MS) return cached.byChannel;
-  const { data, error } = await supabase
-    .from("discord_tickets")
-    .select("channel_id, ticket_number")
-    .eq("guild_id", guildId)
-    .eq("status", "open");
-  if (error) throw error;
-  const byChannel = new Map(data.map((row) => [row.channel_id, row.ticket_number]));
-  openTickets.set(guildId, { byChannel, fetchedAt: Date.now() });
-  return byChannel;
+  const byChannel = await openTickets.fetch(guildId, async () => {
+    const { data, error } = await supabase
+      .from("discord_tickets")
+      .select("channel_id, ticket_number")
+      .eq("guild_id", guildId)
+      .eq("status", "open");
+    if (error) throw error;
+    return new Map(data.map((row) => [row.channel_id, row.ticket_number]));
+  });
+  return byChannel ?? new Map();
 }
 
 /** Whether a channel is an open ticket. The server log skips those: the transcript covers them. */
@@ -45,8 +47,8 @@ export async function isOpenTicketChannel(guildId: string, channelId: string): P
 export function trackTicketChannel(guildId: string, channelId: string, ticketNumber: number | null): void {
   const cached = openTickets.get(guildId);
   if (!cached) return;
-  if (ticketNumber === null) cached.byChannel.delete(channelId);
-  else cached.byChannel.set(channelId, ticketNumber);
+  if (ticketNumber === null) cached.delete(channelId);
+  else cached.set(channelId, ticketNumber);
 }
 
 /**
@@ -68,7 +70,9 @@ export async function notifyTicketActivity(
     const payload: DiscordTicketActivityPayload = { ticketNumber: number, channelId, kind };
     const config = { wsServerUrl: env.WS_SERVER_URL, consumerSecret: env.CONSUMER_SECRET };
     const results = await Promise.all(
-      (await getAdminUserIds()).map((userId) => broadcastToUser(userId, "streamwizard.discord_ticket_activity", payload, config)),
+      (await getAdminUserIds()).map((userId) =>
+        broadcastToUser(userId, "streamwizard.discord_ticket_activity", payload, config),
+      ),
     );
     const failed = results.find((result) => !result.ok && result.reason === "network");
     if (failed && !failed.ok && failed.reason === "network") throw failed.error;

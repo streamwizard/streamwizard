@@ -1,6 +1,7 @@
 import type { Client, SendableChannels } from "discord.js";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
+import { TtlCache } from "@repo/ttl-cache";
 import {
   claimPlatformEvents,
   completePlatformEvent,
@@ -32,11 +33,11 @@ let loop: Promise<void> | null = null;
 let wake: (() => void) | undefined;
 let wakeRequested = false;
 let realtime: ReturnType<typeof supabase.channel> | null = null;
-let routingCache: { value: LogRouting[]; fetchedAt: number } | null = null;
+const routingCache = new TtlCache<LogRouting[]>({ ttlMs: SETTINGS_TTL_MS });
 
 /** Call after the dashboard saves log settings so the next event re-reads them. */
 export function invalidateLogSettingsCache(): void {
-  routingCache = null;
+  routingCache.clear();
 }
 
 function requestDrain(): void {
@@ -57,10 +58,7 @@ function sleep(ms: number): Promise<void> {
 }
 
 async function getRoutings(): Promise<LogRouting[]> {
-  if (routingCache && Date.now() - routingCache.fetchedAt < SETTINGS_TTL_MS) return routingCache.value;
-  const value = await listLogRoutings(supabase);
-  routingCache = { value, fetchedAt: Date.now() };
-  return value;
+  return (await routingCache.fetch("all", () => listLogRoutings(supabase))) ?? [];
 }
 
 /**
@@ -70,7 +68,10 @@ async function getRoutings(): Promise<LogRouting[]> {
 export async function getLogRoutingFor(client: Client, guildId?: string | null): Promise<LogRouting | null> {
   const routings = (await getRoutings()).filter((routing) => client.guilds.cache.has(routing.guildId));
   if (guildId) return routings.find((routing) => routing.guildId === guildId) ?? null;
-  return routings.find((routing) => routing.defaultChannelId || Object.values(routing.events).some((e) => e?.channelId)) ?? null;
+  return (
+    routings.find((routing) => routing.defaultChannelId || Object.values(routing.events).some((e) => e?.channelId)) ??
+    null
+  );
 }
 
 /** Every channel a log posts to, so message events there aren't logged again. */
@@ -78,13 +79,17 @@ export async function getLogChannelIds(client: Client, guildId: string): Promise
   const routing = await getLogRoutingFor(client, guildId);
   if (!routing) return new Set();
   return new Set(
-    [routing.defaultChannelId, ...Object.values(routing.events).map((e) => e?.channelId)].filter((id): id is string => !!id)
+    [routing.defaultChannelId, ...Object.values(routing.events).map((e) => e?.channelId)].filter(
+      (id): id is string => !!id,
+    ),
   );
 }
 
 function payloadGuildId(event: PlatformEvent): string | null {
   const payload = event.payload;
-  return payload && typeof payload === "object" && !Array.isArray(payload) && typeof payload.guild_id === "string" ? payload.guild_id : null;
+  return payload && typeof payload === "object" && !Array.isArray(payload) && typeof payload.guild_id === "string"
+    ? payload.guild_id
+    : null;
 }
 
 export async function deliverPlatformEvent(client: Client, event: PlatformEvent): Promise<PlatformEventOutcome> {
@@ -126,7 +131,7 @@ async function drain(client: Client): Promise<void> {
       }
       // A failure here leaves the lease to run out; the retry is deduplicated by the nonce.
       await completePlatformEvent(supabase, event.id, outcome).catch((error) =>
-        reportError(error, "discord-bot log-channel: complete", { eventId: event.id })
+        reportError(error, "discord-bot log-channel: complete", { eventId: event.id }),
       );
     }
 

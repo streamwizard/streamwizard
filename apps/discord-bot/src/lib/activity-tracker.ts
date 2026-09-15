@@ -11,6 +11,7 @@ import type {
   VoiceState,
 } from "discord.js";
 import { supabase } from "@repo/supabase";
+import { TtlCache } from "@repo/ttl-cache";
 import {
   closeVoiceSession,
   getActivitySettings,
@@ -29,7 +30,6 @@ const SETTINGS_TTL_MS = 60_000;
 type TrackingContext = {
   settings: DiscordActivitySettings;
   ignoredChannelIds: Set<string>;
-  fetchedAt: number;
 };
 
 // Defaults used when a guild has no settings row yet (tracking on).
@@ -49,7 +49,7 @@ function defaultSettings(guildId: string): DiscordActivitySettings {
   };
 }
 
-const settingsCache = new Map<string, TrackingContext>();
+const settingsCache = new TtlCache<TrackingContext>({ ttlMs: SETTINGS_TTL_MS });
 
 // Open voice sessions in memory, keyed by `${guildId}:${userId}`.
 type OpenSession = { sessionId: string; channelId: string; startedAt: Date };
@@ -60,17 +60,15 @@ const openSessions = new Map<string, OpenSession>();
 // ---------------------------------------------------------------------------
 
 async function getContext(guildId: string): Promise<TrackingContext> {
-  const cached = settingsCache.get(guildId);
-  if (cached && Date.now() - cached.fetchedAt < SETTINGS_TTL_MS) return cached;
-
-  const [settings, ignored] = await Promise.all([getActivitySettings(supabase, guildId), getIgnoredChannelIds(supabase, guildId)]);
-  const ctx: TrackingContext = {
-    settings: settings ?? defaultSettings(guildId),
-    ignoredChannelIds: new Set(ignored),
-    fetchedAt: Date.now(),
-  };
-  settingsCache.set(guildId, ctx);
-  return ctx;
+  const ctx = await settingsCache.fetch(guildId, async () => {
+    const [settings, ignored] = await Promise.all([
+      getActivitySettings(supabase, guildId),
+      getIgnoredChannelIds(supabase, guildId),
+    ]);
+    return { settings: settings ?? defaultSettings(guildId), ignoredChannelIds: new Set(ignored) };
+  });
+  // The loader never returns null; this only narrows the type.
+  return ctx ?? { settings: defaultSettings(guildId), ignoredChannelIds: new Set() };
 }
 
 // Call after staff change a guild's tracking config so the next event re-reads it.
@@ -92,7 +90,7 @@ async function recordIncrement(
   guildId: string,
   userId: string,
   date: string,
-  deltas: { messages?: number; reactionsAdded?: number; reactionsReceived?: number; voiceSeconds?: number }
+  deltas: { messages?: number; reactionsAdded?: number; reactionsReceived?: number; voiceSeconds?: number },
 ): Promise<void> {
   try {
     await incrementDailyActivity(supabase, { guildId, userId, date, ...deltas });
@@ -117,14 +115,18 @@ export async function recordMessage(message: Message): Promise<void> {
   try {
     const ctx = await getContext(message.guildId);
     if (!ctx.settings.tracking_enabled || !ctx.settings.track_messages) return;
-    if (isChannelIgnored(ctx, message.channelId, "parentId" in message.channel ? message.channel.parentId : null)) return;
+    if (isChannelIgnored(ctx, message.channelId, "parentId" in message.channel ? message.channel.parentId : null))
+      return;
     await recordIncrement(message.guildId, message.author.id, utcDate(), { messages: 1 });
   } catch (error) {
     Sentry.captureException(error);
   }
 }
 
-export async function recordReaction(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser): Promise<void> {
+export async function recordReaction(
+  reaction: MessageReaction | PartialMessageReaction,
+  user: User | PartialUser,
+): Promise<void> {
   if (user.bot) return;
   const guildId = reaction.message.guildId;
   if (!guildId) return;
@@ -173,7 +175,8 @@ function isVoiceEligible(member: GuildMember, ctx: TrackingContext): boolean {
   const channel = voice.channel;
   if (!channel) return false;
   if (isChannelIgnored(ctx, channel.id, channel.parentId)) return false;
-  if (settings.voice_ignore_afk && (voice.selfMute || voice.selfDeaf || voice.serverMute || voice.serverDeaf)) return false;
+  if (settings.voice_ignore_afk && (voice.selfMute || voice.selfDeaf || voice.serverMute || voice.serverDeaf))
+    return false;
   if (settings.voice_require_others && humanCount(channel) < 2) return false;
   return true;
 }
@@ -229,7 +232,9 @@ async function closeSession(guildId: string, userId: string): Promise<void> {
 // when tracking is turned off, so nobody keeps accruing time afterwards.
 export async function closeGuildSessions(guildId: string): Promise<void> {
   const prefix = `${guildId}:`;
-  const userIds = [...openSessions.keys()].filter((key) => key.startsWith(prefix)).map((key) => key.slice(prefix.length));
+  const userIds = [...openSessions.keys()]
+    .filter((key) => key.startsWith(prefix))
+    .map((key) => key.slice(prefix.length));
   await Promise.all(userIds.map((userId) => closeSession(guildId, userId)));
 }
 
@@ -297,7 +302,9 @@ export async function reconcileVoiceSessions(client: Client): Promise<void> {
     try {
       const orphans = await getOpenVoiceSessions(supabase, guild.id);
       const now = new Date();
-      await Promise.all(orphans.map((s) => closeVoiceSession(supabase, s.id, now, 0).catch((e) => Sentry.captureException(e))));
+      await Promise.all(
+        orphans.map((s) => closeVoiceSession(supabase, s.id, now, 0).catch((e) => Sentry.captureException(e))),
+      );
 
       const ctx = await getContext(guild.id);
       if (!ctx.settings.tracking_enabled || !ctx.settings.track_voice) continue;
@@ -323,6 +330,6 @@ export async function shutdownTracker(): Promise<void> {
     open.map((key) => {
       const [guildId, userId] = key.split(":");
       return guildId && userId ? closeSession(guildId, userId) : Promise.resolve();
-    })
+    }),
   );
 }

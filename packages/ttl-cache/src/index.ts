@@ -1,10 +1,12 @@
 /**
- * A bounded per-process TTL cache.
+ * A bounded per-process TTL cache, shared by rest-api, twitch-assets and the
+ * Discord bot. One implementation instead of one per call site.
  *
- * Exists because every `/api/nodes/*` request used to cost an uncached Supabase
- * round trip just to resolve the caller's API key — at the node agent's poll
- * rate that was ~45k requests/day against `obs_node_api_keys` alone, and
- * Supabase meters egress per request rather than per byte.
+ * Started life in rest-api: every `/api/nodes/*` request used to cost an
+ * uncached Supabase round trip just to resolve the caller's API key — at the
+ * node agent's poll rate that was ~45k requests/day against
+ * `obs_node_api_keys` alone, and Supabase meters egress per request rather
+ * than per byte.
  *
  * Two deliberate choices:
  *
@@ -12,8 +14,7 @@
  *   is no timer to leak and no work done for keys nobody asks about again.
  * - Eviction is oldest-insertion-first once `maxEntries` is reached. Close
  *   enough to LRU for entries that all expire anyway, and it bounds memory
- *   against a caller hammering the endpoint with random keys. Same reasoning as
- *   `packages/twitch-assets/src/cache.ts`.
+ *   against a caller hammering the endpoint with random keys.
  *
  * Misses are cacheable too (`negativeTtlMs`). Without that, a wrong or revoked
  * key retried in a hot loop is an uncapped Supabase amplifier — the exact
@@ -75,17 +76,28 @@ export class TtlCache<V> {
     return hit.value;
   }
 
-  set(key: string, value: V | null): void {
+  /**
+   * `options` overrides the TTL for this one entry: `ttlMs` from now, or an
+   * absolute `expiresAt` (a row's own expiry from the database, say).
+   */
+  set(key: string, value: V | null, options: { ttlMs?: number; expiresAt?: number } = {}): void {
     if (this.entries.size >= this.maxEntries && !this.entries.has(key)) {
       const oldest = this.entries.keys().next();
       if (!oldest.done) this.entries.delete(oldest.value);
     }
-    const ttl = value === null ? this.negativeTtlMs : this.ttlMs;
-    this.entries.set(key, { value, expiresAt: this.now() + ttl });
+    const ttl = options.ttlMs ?? (value === null ? this.negativeTtlMs : this.ttlMs);
+    this.entries.set(key, { value, expiresAt: options.expiresAt ?? this.now() + ttl });
   }
 
   delete(key: string): void {
     this.entries.delete(key);
+  }
+
+  /** Drops every entry whose key matches, e.g. all commands of one guild. */
+  deleteWhere(predicate: (key: string) => boolean): void {
+    for (const key of this.entries.keys()) {
+      if (predicate(key)) this.entries.delete(key);
+    }
   }
 
   clear(): void {

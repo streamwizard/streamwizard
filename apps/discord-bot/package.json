@@ -15,6 +15,7 @@
     "@repo/posthog": "workspace:*",
     "@repo/sentry": "workspace:*",
     "@repo/storage": "workspace:*",
+    "@repo/ttl-cache": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/types": "workspace:*",
     "@repo/ws-client": "workspace:*",
