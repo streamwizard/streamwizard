@@ -12,7 +12,7 @@ import { toastResult } from "./toast-result";
 type Toggle = Exclude<keyof ActivitySettingsInput, "ignoredChannelIds">;
 
 const TRACKED: { key: Toggle; label: string; hint: string; voiceOnly?: boolean }[] = [
-  { key: "trackMessages", label: "Count messages", hint: "Only the count. The bot never reads message content." },
+  { key: "trackMessages", label: "Count messages", hint: "Only the count. Message text is only used for the server log and ticket transcripts." },
   { key: "trackReactions", label: "Count reactions", hint: "Reactions members add." },
   { key: "trackVoice", label: "Track voice time", hint: "Time spent in voice channels." },
   {

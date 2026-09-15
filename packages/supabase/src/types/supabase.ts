@@ -643,6 +643,8 @@ export type Database = {
           guild_id: string
           id: string
           join_role_id: string | null
+          log_channel_id: string | null
+          log_ignored_channel_ids: string[]
           updated_at: string
           verified_role_id: string | null
           welcome_channel_id: string | null
@@ -653,6 +655,8 @@ export type Database = {
           guild_id: string
           id?: string
           join_role_id?: string | null
+          log_channel_id?: string | null
+          log_ignored_channel_ids?: string[]
           updated_at?: string
           verified_role_id?: string | null
           welcome_channel_id?: string | null
@@ -663,10 +667,36 @@ export type Database = {
           guild_id?: string
           id?: string
           join_role_id?: string | null
+          log_channel_id?: string | null
+          log_ignored_channel_ids?: string[]
           updated_at?: string
           verified_role_id?: string | null
           welcome_channel_id?: string | null
           welcome_enabled?: boolean
+        }
+        Relationships: []
+      }
+      discord_log_event_settings: {
+        Row: {
+          channel_id: string | null
+          enabled: boolean
+          event_type: string
+          guild_id: string
+          updated_at: string
+        }
+        Insert: {
+          channel_id?: string | null
+          enabled: boolean
+          event_type: string
+          guild_id: string
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string | null
+          enabled?: boolean
+          event_type?: string
+          guild_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -713,7 +743,6 @@ export type Database = {
           enabled: boolean
           guild_id: string
           id: string
-          log_channel_id: string | null
           panel_channel_id: string | null
           panel_message_id: string | null
           staff_role_id: string | null
@@ -726,7 +755,6 @@ export type Database = {
           enabled?: boolean
           guild_id: string
           id?: string
-          log_channel_id?: string | null
           panel_channel_id?: string | null
           panel_message_id?: string | null
           staff_role_id?: string | null
@@ -739,7 +767,6 @@ export type Database = {
           enabled?: boolean
           guild_id?: string
           id?: string
-          log_channel_id?: string | null
           panel_channel_id?: string | null
           panel_message_id?: string | null
           staff_role_id?: string | null
@@ -748,8 +775,103 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_ticket_events: {
+        Row: {
+          actor_discord_id: string | null
+          actor_name: string | null
+          created_at: string
+          id: string
+          ticket_id: string
+          type: string
+        }
+        Insert: {
+          actor_discord_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          id?: string
+          ticket_id: string
+          type: string
+        }
+        Update: {
+          actor_discord_id?: string | null
+          actor_name?: string | null
+          created_at?: string
+          id?: string
+          ticket_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_ticket_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "discord_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_ticket_messages: {
+        Row: {
+          attachments: Json
+          author_avatar_url: string | null
+          author_discord_id: string | null
+          author_is_bot: boolean
+          author_name: string
+          content: string
+          created_at: string
+          edited_at: string | null
+          embeds: Json
+          id: string
+          message_id: string
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: Json
+          author_avatar_url?: string | null
+          author_discord_id?: string | null
+          author_is_bot?: boolean
+          author_name: string
+          content?: string
+          created_at: string
+          edited_at?: string | null
+          embeds?: Json
+          id?: string
+          message_id: string
+          ticket_id: string
+        }
+        Update: {
+          attachments?: Json
+          author_avatar_url?: string | null
+          author_discord_id?: string | null
+          author_is_bot?: boolean
+          author_name?: string
+          content?: string
+          created_at?: string
+          edited_at?: string | null
+          embeds?: Json
+          id?: string
+          message_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "discord_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discord_tickets: {
         Row: {
+          product: string | null
+          claimed_by_name: string | null
+          closed_by_name: string | null
+          opener_name: string | null
+          transcript_message_count: number | null
+          transcript_purged_at: string | null
+          transcript_saved_at: string | null
           category: Database["public"]["Enums"]["discord_ticket_category"]
           channel_id: string
           claimed_at: string | null
@@ -771,6 +893,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          product?: string | null
+          claimed_by_name?: string | null
+          closed_by_name?: string | null
+          opener_name?: string | null
+          transcript_message_count?: number | null
+          transcript_purged_at?: string | null
+          transcript_saved_at?: string | null
           category: Database["public"]["Enums"]["discord_ticket_category"]
           channel_id: string
           claimed_at?: string | null
@@ -792,6 +921,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          product?: string | null
+          claimed_by_name?: string | null
+          closed_by_name?: string | null
+          opener_name?: string | null
+          transcript_message_count?: number | null
+          transcript_purged_at?: string | null
+          transcript_saved_at?: string | null
           category?: Database["public"]["Enums"]["discord_ticket_category"]
           channel_id?: string
           claimed_at?: string | null
@@ -2234,6 +2370,54 @@ export type Database = {
           },
         ]
       }
+      platform_events: {
+        Row: {
+          actor_user_id: string | null
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          discord_message_id: string | null
+          event_type: string
+          id: number
+          last_error: string | null
+          locked_until: string | null
+          next_attempt_at: string
+          payload: Json
+          status: string
+          subject_user_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          discord_message_id?: string | null
+          event_type: string
+          id?: never
+          last_error?: string | null
+          locked_until?: string | null
+          next_attempt_at?: string
+          payload?: Json
+          status?: string
+          subject_user_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          discord_message_id?: string | null
+          event_type?: string
+          id?: never
+          last_error?: string | null
+          locked_until?: string | null
+          next_attempt_at?: string
+          payload?: Json
+          status?: string
+          subject_user_id?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           created_at: string
@@ -2497,6 +2681,7 @@ export type Database = {
           clip_count: number
           created_at: string | null
           id: string
+          last_error: string | null
           last_sync: string
           sync_status: Database["public"]["Enums"]["clip_sync_status"]
           updated_at: string | null
@@ -2506,6 +2691,7 @@ export type Database = {
           clip_count: number
           created_at?: string | null
           id?: string
+          last_error?: string | null
           last_sync: string
           sync_status: Database["public"]["Enums"]["clip_sync_status"]
           updated_at?: string | null
@@ -2515,6 +2701,7 @@ export type Database = {
           clip_count?: number
           created_at?: string | null
           id?: string
+          last_error?: string | null
           last_sync?: string
           sync_status?: Database["public"]["Enums"]["clip_sync_status"]
           updated_at?: string | null
@@ -2779,7 +2966,56 @@ export type Database = {
       check_user_role:
         | { Args: { p_role: string }; Returns: boolean }
         | { Args: { p_role: string; p_user_id: string }; Returns: boolean }
-      delete_user_data: { Args: { p_twitch_user_id: string }; Returns: string }
+      claim_platform_events: {
+        Args: { p_lease_seconds: number; p_limit: number }
+        Returns: {
+          actor_user_id: string | null
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          discord_message_id: string | null
+          event_type: string
+          id: number
+          last_error: string | null
+          locked_until: string | null
+          next_attempt_at: string
+          payload: Json
+          status: string
+          subject_user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "platform_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      purge_old_discord_ticket_transcripts: { Args: never; Returns: number }
+      complete_platform_event: {
+        Args: {
+          p_discord_message_id?: string
+          p_error?: string
+          p_id: number
+          p_max_attempts?: number
+          p_status: string
+        }
+        Returns: undefined
+      }
+      delete_user_data: { Args: { p_twitch_user_id: string; p_reason?: string }; Returns: string }
+      platform_event_identity: { Args: { p_user_id: string }; Returns: Json }
+      emit_twitch_token_refresh_failed: {
+        Args: { p_twitch_user_id: string; p_error: string; p_status?: number }
+        Returns: number
+      }
+      emit_platform_event: {
+        Args: {
+          p_actor_user_id?: string
+          p_event_type: string
+          p_payload?: Json
+          p_subject_user_id?: string
+        }
+        Returns: number
+      }
       get_all_clips_with_folders: {
         Args: never
         Returns: {
@@ -2887,6 +3123,7 @@ export type Database = {
         Args: { p_guild_id: string; p_member_count: number; p_user_id: string }
         Returns: number
       }
+      release_platform_event_locks: { Args: never; Returns: number }
       remove_clip_from_folder: {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined

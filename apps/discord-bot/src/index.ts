@@ -8,6 +8,7 @@ import { env } from "./lib/env";
 import { loadCommands } from "./handlers/commandHandler";
 import { loadEvents } from "./handlers/eventHandler";
 import { shutdownTracker } from "./lib/activity-tracker";
+import { stopLogWorker } from "./lib/log-channel/worker";
 import { startInternalServer } from "./http/server";
 
 async function main() {
@@ -19,6 +20,7 @@ async function main() {
   // we don't lose in-flight data on deploys/restarts.
   const shutdown = async () => {
     stopInternalServer?.();
+    await stopLogWorker();
     await shutdownTracker();
     await client.destroy();
     await flushSentry();

@@ -8,14 +8,14 @@ import {
   MessageFlags,
   RoleSelectMenuBuilder,
 } from "discord.js";
-import type {
-  AnySelectMenuInteraction,
-  ButtonInteraction,
-  ChatInputCommandInteraction,
-  Guild,
-} from "discord.js";
+import type { AnySelectMenuInteraction, ButtonInteraction, ChatInputCommandInteraction, Guild } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { getGuildSettings, setVerifiedRoleId, setWelcomeChannel, setWelcomeEnabled } from "@repo/supabase/queries/discord";
+import {
+  getGuildSettings,
+  setVerifiedRoleId,
+  setWelcomeChannel,
+  setWelcomeEnabled,
+} from "@repo/supabase/queries/discord";
 import {
   addIgnoredChannel,
   getActivitySettings,
@@ -50,23 +50,25 @@ export const SETUP_IDS = {
   ticketStaffRole: "setup:ticket-staff-role",
   ticketCategory: "setup:ticket-category",
   ticketPanelChannel: "setup:ticket-panel-channel",
-  ticketLogChannel: "setup:ticket-log-channel",
-  ticketLogChannelSkip: "setup:ticket-log-channel-skip",
 } as const;
-
 
 function stepWelcomeChannel() {
   const embed = new EmbedBuilder()
     .setColor(TWITCH_PURPLE)
     .setTitle("StreamWizard Setup — Welcome Channel")
-    .setDescription("Which channel should new-member welcome messages be posted in?\n\nPick a channel below, or skip to leave it on the server's default system channel.");
+    .setDescription(
+      "Which channel should new-member welcome messages be posted in?\n\nPick a channel below, or skip to leave it on the server's default system channel.",
+    );
 
   const select = new ChannelSelectMenuBuilder()
     .setCustomId(SETUP_IDS.welcomeChannel)
     .setPlaceholder("Select a welcome channel")
     .addChannelTypes(ChannelType.GuildText);
 
-  const skip = new ButtonBuilder().setCustomId(SETUP_IDS.welcomeChannelSkip).setLabel("Skip").setStyle(ButtonStyle.Secondary);
+  const skip = new ButtonBuilder()
+    .setCustomId(SETUP_IDS.welcomeChannelSkip)
+    .setLabel("Skip")
+    .setStyle(ButtonStyle.Secondary);
 
   return {
     embeds: [embed],
@@ -83,8 +85,14 @@ function stepWelcomeToggle() {
     .setTitle("StreamWizard Setup — Welcome Messages")
     .setDescription("Should welcome messages be posted at all?");
 
-  const enable = new ButtonBuilder().setCustomId(SETUP_IDS.welcomeEnable).setLabel("Enable").setStyle(ButtonStyle.Success);
-  const disable = new ButtonBuilder().setCustomId(SETUP_IDS.welcomeDisable).setLabel("Disable").setStyle(ButtonStyle.Danger);
+  const enable = new ButtonBuilder()
+    .setCustomId(SETUP_IDS.welcomeEnable)
+    .setLabel("Enable")
+    .setStyle(ButtonStyle.Success);
+  const disable = new ButtonBuilder()
+    .setCustomId(SETUP_IDS.welcomeDisable)
+    .setLabel("Disable")
+    .setStyle(ButtonStyle.Danger);
 
   return {
     embeds: [embed],
@@ -96,11 +104,18 @@ function stepVerifiedRole() {
   const embed = new EmbedBuilder()
     .setColor(TWITCH_PURPLE)
     .setTitle("StreamWizard Setup — Verified Role")
-    .setDescription("Which role should members get when they link their StreamWizard account?\n\nPick a role below, or skip to leave verification role-granting off.");
+    .setDescription(
+      "Which role should members get when they link their StreamWizard account?\n\nPick a role below, or skip to leave verification role-granting off.",
+    );
 
-  const select = new RoleSelectMenuBuilder().setCustomId(SETUP_IDS.verifiedRole).setPlaceholder("Select a verified role");
+  const select = new RoleSelectMenuBuilder()
+    .setCustomId(SETUP_IDS.verifiedRole)
+    .setPlaceholder("Select a verified role");
 
-  const skip = new ButtonBuilder().setCustomId(SETUP_IDS.verifiedRoleSkip).setLabel("Skip").setStyle(ButtonStyle.Secondary);
+  const skip = new ButtonBuilder()
+    .setCustomId(SETUP_IDS.verifiedRoleSkip)
+    .setLabel("Skip")
+    .setStyle(ButtonStyle.Secondary);
 
   return {
     embeds: [embed],
@@ -117,11 +132,17 @@ function stepActivityPrompt() {
     .setTitle("StreamWizard Setup — Activity Tracking")
     .setDescription(
       "Track how active your members are — messages, reactions, and voice time — so they can check `/rank`, `/leaderboard`, and an end-of-year `/recap`.\n\n" +
-        "We only count activity. We never store message text. Voice time doesn't count while someone is muted, deafened, or alone in a channel."
+        "We only count activity. We never store message text. Voice time doesn't count while someone is muted, deafened, or alone in a channel.",
     );
 
-  const enable = new ButtonBuilder().setCustomId(SETUP_IDS.activityEnable).setLabel("Track activity").setStyle(ButtonStyle.Success);
-  const disable = new ButtonBuilder().setCustomId(SETUP_IDS.activityDisable).setLabel("Don't track").setStyle(ButtonStyle.Danger);
+  const enable = new ButtonBuilder()
+    .setCustomId(SETUP_IDS.activityEnable)
+    .setLabel("Track activity")
+    .setStyle(ButtonStyle.Success);
+  const disable = new ButtonBuilder()
+    .setCustomId(SETUP_IDS.activityDisable)
+    .setLabel("Don't track")
+    .setStyle(ButtonStyle.Danger);
 
   return {
     embeds: [embed],
@@ -134,7 +155,7 @@ function stepActivityIgnoredChannels(currentChannelIds: string[]) {
     .setColor(TWITCH_PURPLE)
     .setTitle("StreamWizard Setup — Untracked Channels")
     .setDescription(
-      "Pick any channels or categories to leave out of activity tracking — think `#bot-spam` or `#commands`. Messages, reactions, and voice time there won't count. Picking a category covers every channel in it.\n\nLeave it empty to track everything, then continue."
+      "Pick any channels or categories to leave out of activity tracking — think `#bot-spam` or `#commands`. Messages, reactions, and voice time there won't count. Picking a category covers every channel in it.\n\nLeave it empty to track everything, then continue.",
     );
 
   const select = new ChannelSelectMenuBuilder()
@@ -148,7 +169,10 @@ function stepActivityIgnoredChannels(currentChannelIds: string[]) {
     select.setDefaultChannels(...currentChannelIds);
   }
 
-  const skip = new ButtonBuilder().setCustomId(SETUP_IDS.activityIgnoredSkip).setLabel("Continue").setStyle(ButtonStyle.Secondary);
+  const skip = new ButtonBuilder()
+    .setCustomId(SETUP_IDS.activityIgnoredSkip)
+    .setLabel("Continue")
+    .setStyle(ButtonStyle.Secondary);
 
   return {
     embeds: [embed],
@@ -163,9 +187,14 @@ function stepTicketsPrompt() {
   const embed = new EmbedBuilder()
     .setColor(TWITCH_PURPLE)
     .setTitle("StreamWizard Setup — Support Tickets")
-    .setDescription("Want to set up the support ticket system? This posts a \"Create Ticket\" panel and lets members open private support channels.");
+    .setDescription(
+      'Want to set up the support ticket system? This posts a "Create Ticket" panel and lets members open private support channels.',
+    );
 
-  const yes = new ButtonBuilder().setCustomId(SETUP_IDS.ticketsYes).setLabel("Yes, set it up").setStyle(ButtonStyle.Success);
+  const yes = new ButtonBuilder()
+    .setCustomId(SETUP_IDS.ticketsYes)
+    .setLabel("Yes, set it up")
+    .setStyle(ButtonStyle.Success);
   const no = new ButtonBuilder().setCustomId(SETUP_IDS.ticketsNo).setLabel("No, skip").setStyle(ButtonStyle.Secondary);
 
   return {
@@ -180,7 +209,9 @@ function stepTicketStaffRole() {
     .setTitle("StreamWizard Setup — Ticket Staff Role")
     .setDescription("Which role can see and manage support tickets?");
 
-  const select = new RoleSelectMenuBuilder().setCustomId(SETUP_IDS.ticketStaffRole).setPlaceholder("Select a staff role");
+  const select = new RoleSelectMenuBuilder()
+    .setCustomId(SETUP_IDS.ticketStaffRole)
+    .setPlaceholder("Select a staff role");
 
   return {
     embeds: [embed],
@@ -209,7 +240,7 @@ function stepTicketPanelChannel() {
   const embed = new EmbedBuilder()
     .setColor(TWITCH_PURPLE)
     .setTitle("StreamWizard Setup — Ticket Panel Channel")
-    .setDescription("Which channel should the \"Create Ticket\" panel be posted in?");
+    .setDescription('Which channel should the "Create Ticket" panel be posted in?');
 
   const select = new ChannelSelectMenuBuilder()
     .setCustomId(SETUP_IDS.ticketPanelChannel)
@@ -219,28 +250,6 @@ function stepTicketPanelChannel() {
   return {
     embeds: [embed],
     components: [new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(select)],
-  };
-}
-
-function stepTicketLogChannel() {
-  const embed = new EmbedBuilder()
-    .setColor(TWITCH_PURPLE)
-    .setTitle("StreamWizard Setup — Ticket Log Channel")
-    .setDescription("Optional: pick a channel to log closed tickets in, or skip.");
-
-  const select = new ChannelSelectMenuBuilder()
-    .setCustomId(SETUP_IDS.ticketLogChannel)
-    .setPlaceholder("Select a log channel")
-    .addChannelTypes(ChannelType.GuildText);
-
-  const skip = new ButtonBuilder().setCustomId(SETUP_IDS.ticketLogChannelSkip).setLabel("Skip").setStyle(ButtonStyle.Secondary);
-
-  return {
-    embeds: [embed],
-    components: [
-      new ActionRowBuilder<ChannelSelectMenuBuilder>().addComponents(select),
-      new ActionRowBuilder<ButtonBuilder>().addComponents(skip),
-    ],
   };
 }
 
@@ -289,14 +298,13 @@ async function summary(guildId: string) {
         `**Staff role:** ${ticketSettings.staff_role_id ? `<@&${ticketSettings.staff_role_id}>` : "not set"}`,
         `**Category:** ${ticketSettings.category_id ? `<#${ticketSettings.category_id}>` : "not set"}`,
         `**Panel channel:** ${ticketSettings.panel_channel_id ? `<#${ticketSettings.panel_channel_id}>` : "not set"}`,
-        `**Log channel:** ${ticketSettings.log_channel_id ? `<#${ticketSettings.log_channel_id}>` : "not set"}`,
+        "**Ticket log:** set up in the web-admin dashboard under Discord, Logs.",
       ].join("\n")
     : "Not set up — run `/setup` again to configure.";
 
   // No settings row means tracking is on by default.
   const activityStatus = activitySettings?.tracking_enabled === false ? "Disabled" : "Enabled";
-  const ignoredLine =
-    ignoredChannels.length > 0 ? ignoredChannels.map((id) => `<#${id}>`).join(", ") : "none";
+  const ignoredLine = ignoredChannels.length > 0 ? ignoredChannels.map((id) => `<#${id}>`).join(", ") : "none";
   const activityLines = `**Status:** ${activityStatus}\n**Untracked channels:** ${ignoredLine}`;
 
   const embed = new EmbedBuilder()
@@ -307,7 +315,7 @@ async function summary(guildId: string) {
         `**Verification**\nRole: ${roleLine}\n\n` +
         `**Activity tracking**\n${activityLines}\n\n` +
         `**Support tickets**\n${ticketLines}\n\n` +
-        "Run `/setup` again any time to change these."
+        "Run `/setup` again any time to change these.",
     );
 
   return { embeds: [embed], components: [] };
@@ -447,18 +455,6 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
           });
         }
       }
-      await interaction.update(stepTicketLogChannel());
-      return;
-    }
-    case SETUP_IDS.ticketLogChannel: {
-      const channelId = interaction.isChannelSelectMenu() ? interaction.values[0] : undefined;
-      if (channelId) {
-        await upsertTicketSettings(supabase, guildId, { log_channel_id: channelId });
-      }
-      await interaction.update(await summary(guildId));
-      return;
-    }
-    case SETUP_IDS.ticketLogChannelSkip: {
       await interaction.update(await summary(guildId));
       return;
     }

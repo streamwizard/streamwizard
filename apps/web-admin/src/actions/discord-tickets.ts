@@ -16,7 +16,6 @@ const ticketSchema = z
     staffRoleId: nullableSnowflakeSchema,
     categoryId: nullableSnowflakeSchema,
     panelChannelId: nullableSnowflakeSchema,
-    logChannelId: nullableSnowflakeSchema,
   })
   .refine((v) => !v.enabled || (v.staffRoleId && v.categoryId && v.panelChannelId), {
     message: "Tickets need a staff role, a category and a panel channel before you can turn them on.",
@@ -39,24 +38,22 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       staff_role_id: current?.staff_role_id ?? null,
       category_id: current?.category_id ?? null,
       panel_channel_id: current?.panel_channel_id ?? null,
-      log_channel_id: current?.log_channel_id ?? null,
     };
     const after = {
       enabled: next.enabled,
       staff_role_id: next.staffRoleId,
       category_id: next.categoryId,
       panel_channel_id: next.panelChannelId,
-      log_channel_id: next.logChannelId,
     };
 
     // Only validate ids that changed, so a channel deleted in Discord doesn't
     // block saving an unrelated field.
     if (after.staff_role_id && after.staff_role_id !== before.staff_role_id) await assertRole(after.staff_role_id);
-    if (after.category_id && after.category_id !== before.category_id) await assertChannel(after.category_id, ["category"]);
+    if (after.category_id && after.category_id !== before.category_id)
+      await assertChannel(after.category_id, ["category"]);
     if (after.panel_channel_id && after.panel_channel_id !== before.panel_channel_id) {
       await assertChannel(after.panel_channel_id, ["text"]);
     }
-    if (after.log_channel_id && after.log_channel_id !== before.log_channel_id) await assertChannel(after.log_channel_id, ["text"]);
 
     // The bot owns the panel columns: it removes the old panel message (found
     // through the stored location), posts the new one and stores where it
@@ -83,7 +80,6 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       enabled: saved.enabled,
       staff_role_id: saved.staff_role_id,
       category_id: saved.category_id,
-      log_channel_id: saved.log_channel_id,
     });
 
     await recordChange({ userId, guildId, section: "tickets", before, after: saved });

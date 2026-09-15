@@ -7,11 +7,13 @@ const SECTION_LABELS: Record<string, string> = {
   activity: "Activity",
   tickets: "Tickets",
   permissions: "Permissions",
+  logs: "Log channel",
 };
 
 const ACTION_LABELS: Record<string, string> = {
   repost_panel: "Re-posted the ticket panel",
   test_welcome: "Sent a test welcome",
+  test_log: "Sent a test log event",
 };
 
 function formatValue(value: Json | undefined, names: Map<string, string>): string {

@@ -1,15 +1,24 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { Hono, type MiddlewareHandler } from "hono";
 import { z } from "zod";
-import type { Client, Guild } from "discord.js";
+import { ChannelType, EmbedBuilder, type Client, type Guild } from "discord.js";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
+import { getTicketByChannelId, getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
+import { TWITCH_PURPLE } from "../lib/branding";
 import { closeGuildSessions, invalidateSettingsCache } from "../lib/activity-tracker";
 import { env } from "../lib/env";
+import { invalidateLogSettingsCache } from "../lib/log-channel/worker";
 import { invalidateCommandPermissionCache, invalidateGuildPermissionCache } from "../lib/permissions";
 import { migrateVerifiedRole } from "../lib/setup-wizard";
-import { deleteTicketPanel, postTicketPanel } from "../lib/tickets";
+import {
+  CLOSE_RESULT_MESSAGES,
+  claimTicketAs,
+  closeTicketChannel,
+  deleteTicketPanel,
+  logTicketReply,
+  postTicketPanel,
+} from "../lib/tickets";
 import { cleanUpOldWelcomeChannel, sendTestWelcome } from "../lib/welcome";
 
 // Internal API for web-admin's Discord dashboard. web-admin writes settings to
@@ -59,11 +68,18 @@ export function createInternalApp(client: Client, secret: string) {
   });
 
   guilds.post("/:guildId/cache/permissions", async (c) => {
-    const body = z.object({ commandName: z.string().min(1).max(32).optional() }).safeParse(await c.req.json().catch(() => ({})));
+    const body = z
+      .object({ commandName: z.string().min(1).max(32).optional() })
+      .safeParse(await c.req.json().catch(() => ({})));
     if (!body.success) return c.json({ error: "Invalid body" }, 400);
     const guildId = c.get("guild").id;
     if (body.data.commandName) invalidateCommandPermissionCache(guildId, body.data.commandName);
     else invalidateGuildPermissionCache(guildId);
+    return c.json({ ok: true });
+  });
+
+  guilds.post("/:guildId/cache/log-settings", (c) => {
+    invalidateLogSettingsCache();
     return c.json({ ok: true });
   });
 
@@ -79,7 +95,9 @@ export function createInternalApp(client: Client, secret: string) {
   });
 
   guilds.post("/:guildId/verified-role", async (c) => {
-    const body = z.object({ oldRoleId: snowflake, newRoleId: snowflake }).safeParse(await c.req.json().catch(() => null));
+    const body = z
+      .object({ oldRoleId: snowflake, newRoleId: snowflake })
+      .safeParse(await c.req.json().catch(() => null));
     if (!body.success) return c.json({ error: "Invalid body" }, 400);
     // Fetching every member and swapping roles one by one can take a while on
     // big servers; migrateVerifiedRole reports its own errors, so don't wait.
@@ -92,7 +110,9 @@ export function createInternalApp(client: Client, secret: string) {
   // the panel is re-posted where it is. The old message is found through the
   // stored location, so callers must not write panel_channel_id themselves.
   guilds.post("/:guildId/ticket-panel", async (c) => {
-    const body = z.object({ channelId: snowflake.nullable().optional() }).safeParse(await c.req.json().catch(() => ({})));
+    const body = z
+      .object({ channelId: snowflake.nullable().optional() })
+      .safeParse(await c.req.json().catch(() => ({})));
     if (!body.success) return c.json({ error: "Invalid body" }, 400);
 
     const guild = c.get("guild");
@@ -115,6 +135,75 @@ export function createInternalApp(client: Client, secret: string) {
     return c.json({ ok: true, channelId: channel.id, messageId: panelMessageId });
   });
 
+  // Claim or close a ticket from the dashboard, acting as the admin's linked
+  // Discord account. web-admin has already checked they're an admin.
+  const ticketAction = z.object({ discordUserId: snowflake });
+  async function resolveTicketActor(guild: Guild, channelId: string, body: unknown) {
+    const parsed = ticketAction.safeParse(body);
+    if (!parsed.success) return { error: "Invalid body", status: 400 as const };
+    const channel = await guild.channels.fetch(channelId).catch(() => null);
+    if (channel?.type !== ChannelType.GuildText) return { error: "The ticket channel is gone", status: 404 as const };
+    const member = await guild.members.fetch(parsed.data.discordUserId).catch(() => null);
+    if (!member) return { error: "Your Discord account isn't in the server", status: 403 as const };
+    return { channel, member };
+  }
+
+  guilds.post("/:guildId/tickets/:channelId/claim", async (c) => {
+    const actor = await resolveTicketActor(
+      c.get("guild"),
+      c.req.param("channelId"),
+      await c.req.json().catch(() => null),
+    );
+    if ("error" in actor) return c.json({ error: actor.error }, actor.status);
+    const result = await claimTicketAs(actor.channel, actor.member, "dashboard");
+    if (result.status === "not_a_ticket") return c.json({ error: "That channel isn't a tracked ticket" }, 404);
+    if (result.status === "already_claimed") return c.json({ error: `Already claimed by ${result.claimedBy}` }, 409);
+    return c.json({ ok: true });
+  });
+
+  guilds.post("/:guildId/tickets/:channelId/close", async (c) => {
+    const actor = await resolveTicketActor(
+      c.get("guild"),
+      c.req.param("channelId"),
+      await c.req.json().catch(() => null),
+    );
+    if ("error" in actor) return c.json({ error: actor.error }, actor.status);
+    const result = await closeTicketChannel(actor.channel, actor.member, "dashboard");
+    if (result !== "closed") {
+      const status = result === "not_a_ticket" ? 404 : result === "already_closed" ? 409 : 500;
+      return c.json({ error: CLOSE_RESULT_MESSAGES[result] }, status);
+    }
+    return c.json({ ok: true });
+  });
+
+  // A staff reply typed in the dashboard. Discord has no way to post as the
+  // user, so the bot posts it with the sender's name and avatar as credit.
+  const ticketMessage = z.object({
+    authorName: z.string().min(1).max(80),
+    authorAvatarUrl: z.string().url().nullable(),
+    content: z.string().trim().min(1).max(2000),
+  });
+
+  guilds.post("/:guildId/tickets/:channelId/message", async (c) => {
+    const body = ticketMessage.safeParse(await c.req.json().catch(() => null));
+    if (!body.success) return c.json({ error: "Invalid message" }, 400);
+
+    const guild = c.get("guild");
+    const channel = await guild.channels.fetch(c.req.param("channelId")).catch(() => null);
+    if (channel?.type !== ChannelType.GuildText) return c.json({ error: "The ticket channel is gone" }, 404);
+    const ticket = await getTicketByChannelId(supabase, channel.id);
+    if (!ticket || ticket.status !== "open") return c.json({ error: "That channel isn't an open ticket" }, 404);
+
+    const embed = new EmbedBuilder()
+      .setColor(TWITCH_PURPLE)
+      .setAuthor({ name: `${body.data.authorName} (via dashboard)`, iconURL: body.data.authorAvatarUrl ?? undefined })
+      .setDescription(body.data.content)
+      .setTimestamp();
+    const message = await channel.send({ embeds: [embed] });
+    void logTicketReply(guild, ticket, body.data.authorName);
+    return c.json({ ok: true, messageId: message.id });
+  });
+
   // Called after web-admin moves the welcome channel: deletes the bot's
   // welcome posts from the previous one in the background.
   guilds.post("/:guildId/welcome-cleanup", async (c) => {
@@ -128,11 +217,15 @@ export function createInternalApp(client: Client, secret: string) {
     const body = z.object({ discordUserId: snowflake }).safeParse(await c.req.json().catch(() => null));
     if (!body.success) return c.json({ error: "Invalid body" }, 400);
 
-    const member = await c.get("guild").members.fetch(body.data.discordUserId).catch(() => null);
+    const member = await c
+      .get("guild")
+      .members.fetch(body.data.discordUserId)
+      .catch(() => null);
     if (!member) return c.json({ error: "Your Discord account isn't a member of the server" }, 404);
 
     const result = await sendTestWelcome(member);
-    if (!result.ok) return c.json({ error: "No usable welcome channel is set, and the server has no system channel" }, 409);
+    if (!result.ok)
+      return c.json({ error: "No usable welcome channel is set, and the server has no system channel" }, 409);
     return c.json(result);
   });
 

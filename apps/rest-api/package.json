@@ -15,6 +15,7 @@
     "@repo/metrics": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",
+    "@repo/storage": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/types": "workspace:*",

@@ -15,15 +15,15 @@ async function getAllowedRoleIds(guildId: string, commandName: string): Promise<
   const cached = cache.get(key);
   if (cached && cached.expiresAt > Date.now()) return cached.roleIds;
 
-  let roleIds: string[] = [];
+  let roleIds: string[];
   try {
     const rows = await getCommandRoles(supabase, guildId, commandName);
     roleIds = rows.map((row) => row.role_id);
   } catch (error) {
-    // Fails open — an unreadable role config means every role may run the
-    // command, and the empty result is then cached for the full TTL. That is a
-    // permission check quietly turning itself off; it belongs in Sentry.
+    // Fails open for this one call only: nothing is cached, so the next call
+    // retries instead of leaving the allowlist off for the whole TTL.
     reportError(error, "permissions.load-role-config", { guildId, commandName });
+    return [];
   }
 
   cache.set(key, { roleIds, expiresAt: Date.now() + CACHE_TTL_MS });

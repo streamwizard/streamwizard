@@ -107,6 +107,10 @@
       "types": "./src/queries/discord-audit.ts",
       "default": "./src/queries/discord-audit.ts"
     },
+    "./queries/platform-events": {
+      "types": "./src/queries/platform-events.ts",
+      "default": "./src/queries/platform-events.ts"
+    },
     "./queries/alerts": {
       "types": "./src/queries/alerts.ts",
       "default": "./src/queries/alerts.ts"
@@ -166,6 +170,7 @@
   },
   "dependencies": {
     "@repo/metrics": "workspace:*",
+    "@repo/types": "workspace:*",
     "@supabase/supabase-js": "^2.105.1",
     "@supabase/ssr": "^0.12.0"
   },

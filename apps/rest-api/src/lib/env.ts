@@ -1,9 +1,7 @@
 import { z } from "zod";
 
 const schema = z.object({
-  NODE_ENV: z
-    .enum(["development", "staging", "production"])
-    .default("development"),
+  NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
 
   // Supabase
   SUPABASE_URL: z.string().url(),
@@ -41,6 +39,14 @@ const schema = z.object({
   // Sentry
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_RELEASE: z.string().optional(),
+
+  // Shared CDN bucket, for removing a user's ticket attachments when Twitch
+  // revokes StreamWizard (user.authorization.revoke). Optional: without all
+  // four the account is still deleted and the skipped purge is reported.
+  R2_ACCOUNT_ID: z.string().min(1).optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_ASSETS_BUCKET: z.string().min(1).optional(),
 
   // InfluxDB — relayed to ingest/OBS nodes in the /claim response so they can
   // report host + instance metrics without a separate manual .env edit per

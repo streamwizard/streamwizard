@@ -55,8 +55,9 @@ export async function syncTwitch(broadcaster_id: string, TwitchAPI: TwitchApi, o
     return { clipsCount: totalClips };
   } catch (error) {
     console.error("Sync failed:", error);
-    // Mark as failed
-    await updateClipSyncStatus(supabase, user.user_id, "failed");
+    // Mark as failed; the status trigger posts clips.sync_failed with the message.
+    const message = error instanceof Error ? error.message : String(error);
+    await updateClipSyncStatus(supabase, user.user_id, "failed", undefined, message);
     throw error;
   }
 }

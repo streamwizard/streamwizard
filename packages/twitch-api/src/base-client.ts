@@ -9,6 +9,7 @@ import {
 import { trackTwitchApiRequest, normalizeEndpoint } from "@repo/metrics";
 import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import axios from "axios";
+import { logTokenRefreshFailure } from "./token-refresh-log";
 
 export abstract class TwitchApiBaseClient {
   private readonly MAX_RETRIES = 2;
@@ -228,6 +229,7 @@ export abstract class TwitchApiBaseClient {
       return response.data.access_token;
     } catch (error) {
       console.error("❌ Token refresh failed:", error);
+      void logTokenRefreshFailure(broadcaster_id, error);
       throw error;
     }
   }

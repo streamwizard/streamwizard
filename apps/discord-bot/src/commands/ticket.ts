@@ -2,7 +2,7 @@ import { ChannelType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } f
 import { supabase } from "@repo/supabase";
 import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
 import type { Command } from "../types/discord";
-import { closeTicketChannel, isStaff, postTicketPanel } from "../lib/tickets";
+import { CLOSE_RESULT_MESSAGES, closeTicketChannel, isStaff, postTicketPanel } from "../lib/tickets";
 
 export default {
   data: new SlashCommandBuilder()
@@ -15,28 +15,23 @@ export default {
       sub
         .setName("setup")
         .setDescription("Configure ticketing and post the ticket panel")
-        .addRoleOption((opt) => opt.setName("staff-role").setDescription("Role that can see and manage tickets").setRequired(true))
+        .addRoleOption((opt) =>
+          opt.setName("staff-role").setDescription("Role that can see and manage tickets").setRequired(true),
+        )
         .addChannelOption((opt) =>
           opt
             .setName("category")
             .setDescription("Category that new ticket channels are created under")
             .addChannelTypes(ChannelType.GuildCategory)
-            .setRequired(true)
+            .setRequired(true),
         )
         .addChannelOption((opt) =>
           opt
             .setName("panel-channel")
             .setDescription("Channel to post the 'Create Ticket' panel in")
             .addChannelTypes(ChannelType.GuildText)
-            .setRequired(true)
-        )
-        .addChannelOption((opt) =>
-          opt
-            .setName("log-channel")
-            .setDescription("Optional channel to log closed tickets in")
-            .addChannelTypes(ChannelType.GuildText)
-            .setRequired(false)
-        )
+            .setRequired(true),
+        ),
     )
     .addSubcommand((sub) => sub.setName("close").setDescription("Close the ticket in this channel"))
     .addSubcommand((sub) => sub.setName("settings").setDescription("Show the current ticket configuration")),
@@ -49,7 +44,10 @@ export default {
     const subcommand = interaction.options.getSubcommand();
 
     if (subcommand !== "close" && !interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
-      await interaction.reply({ content: "You need Manage Server to configure ticketing.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: "You need Manage Server to configure ticketing.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
@@ -57,7 +55,6 @@ export default {
       const staffRole = interaction.options.getRole("staff-role", true);
       const category = interaction.options.getChannel("category", true);
       const panelChannel = interaction.options.getChannel("panel-channel", true, [ChannelType.GuildText]);
-      const logChannel = interaction.options.getChannel("log-channel", false, [ChannelType.GuildText]);
 
       const previous = await getTicketSettings(supabase, interaction.guildId);
       const panelMessageId = await postTicketPanel(interaction.guild, panelChannel, previous);
@@ -68,7 +65,6 @@ export default {
         category_id: category.id,
         panel_channel_id: panelChannel.id,
         panel_message_id: panelMessageId,
-        log_channel_id: logChannel?.id ?? null,
       });
 
       await interaction.reply({
@@ -92,9 +88,9 @@ export default {
 
       // Acknowledge before deleting the channel, otherwise the reply target disappears.
       await interaction.reply({ content: "Closing this ticket…", flags: MessageFlags.Ephemeral });
-      const closed = await closeTicketChannel(interaction.channel, interaction.member);
-      if (!closed) {
-        await interaction.editReply({ content: "This channel isn't a tracked ticket." });
+      const result = await closeTicketChannel(interaction.channel, interaction.member);
+      if (result !== "closed") {
+        await interaction.editReply({ content: CLOSE_RESULT_MESSAGES[result] });
       }
       return;
     }
@@ -102,7 +98,10 @@ export default {
     // settings
     const settings = await getTicketSettings(supabase, interaction.guildId);
     if (!settings) {
-      await interaction.reply({ content: "Ticketing isn't set up yet. Run `/ticket setup`.", flags: MessageFlags.Ephemeral });
+      await interaction.reply({
+        content: "Ticketing isn't set up yet. Run `/ticket setup`.",
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
@@ -111,8 +110,8 @@ export default {
       `**Staff role:** ${settings.staff_role_id ? `<@&${settings.staff_role_id}>` : "not set"}`,
       `**Category:** ${settings.category_id ? `<#${settings.category_id}>` : "not set"}`,
       `**Panel channel:** ${settings.panel_channel_id ? `<#${settings.panel_channel_id}>` : "not set"}`,
-      `**Log channel:** ${settings.log_channel_id ? `<#${settings.log_channel_id}>` : "not set"}`,
       `**Tickets opened:** ${settings.ticket_counter}`,
+      "**Ticket log:** set up in the web-admin dashboard under Discord, Logs.",
     ];
     await interaction.reply({ content: lines.join("\n"), flags: MessageFlags.Ephemeral });
   },

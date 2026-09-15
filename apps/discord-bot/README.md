@@ -9,6 +9,7 @@ A Discord bot for the StreamWizard server, built on Bun + discord.js v14.
 - `src/handlers/` — the loaders that scan `commands/` and `events/` and attach everything to the client.
 - `src/lib/discord-client.ts` — the `Client` singleton and its gateway intents. Start minimal; add intents only when a feature needs them (each one may require re-approval for verified bots).
 - `src/lib/env.ts` — zod-validated environment variables.
+- `src/lib/ticket-transcript.ts` — saves a ticket channel's messages before it's deleted, for the web-admin ticket history. Images up to 500 KB (max 20 per ticket) are copied to R2 when the `R2_*` vars and `NEXT_PUBLIC_CDN_URL` are set; other files keep metadata only.
 - `src/lib/permissions.ts` — per-command role allowlists, checked in `events/interactionCreate.ts` before any command runs.
 - `src/http/server.ts` — internal Hono API that web-admin's Discord dashboard calls after a save (see below).
 - `src/scripts/deploy-commands.ts` — registers slash commands with Discord. Run after adding/changing/removing a command.
@@ -98,9 +99,35 @@ Don't publish the port on a public domain. Every route except `GET /health` need
 |---|---|
 | `POST /cache/permissions` `{ commandName? }` | Drops cached role allowlists (one command, or all). |
 | `POST /cache/activity` `{ trackingDisabled }` | Drops cached activity settings; closes open voice sessions when tracking was turned off. |
+| `POST /cache/log-settings` | Drops cached log channel settings. |
 | `POST /verified-role` `{ oldRoleId, newRoleId }` | Moves members from the old verified role to the new one, in the background. |
 | `POST /ticket-panel` | Posts the ticket panel in the stored panel channel and removes the previous one. |
 | `POST /test-welcome` `{ discordUserId }` | Posts a mock welcome for that member without touching `join_number`. |
+
+## Log channels (platform and server events)
+
+`src/lib/log-channel/` posts events to the log channels picked in web-admin under `/discord/logs/settings`. Each event type can go to its own channel; types without one use the default channel.
+
+Four groups of events share one pipeline:
+- **Platform events**: new user, Discord linked or unlinked, account deleted (with the reason: requested, or revoked on Twitch), plan granted, changed or revoked, admin role granted or revoked, feedback submitted, dashboard setting changed. Emitted by SQL triggers (`emit_platform_event`) and web-admin (`emitPlatformEvent`). Always stored, even when turned off.
+- **Twitch events**: clip sync started, completed (count and duration) or failed (with the error), Twitch token refresh failed (one per user per 6 hours, `emit_twitch_token_refresh_failed`), stream online failed (the rest-api EventSub handler couldn't find the stream or its VOD). Clip sync events come from a trigger on `twitch_clip_syncs.sync_status`; the sync stores its error in `twitch_clip_syncs.last_error`. Always stored.
+- **Ticket events**: opened, claimed, closed, and staff replies sent from the dashboard. Emitted by the bot from the same place the ticket timeline is written (`recordTicketEvent` in `src/lib/tickets.ts`), with `source` set to `discord` or `dashboard`. Always stored. These replaced the old per-close embed and its `log_channel_id` ticket setting; the migration moved that channel into the per-type routing. Set `WEB_ADMIN_URL` so the embeds link the ticket's dashboard page.
+- **Server events** (`src/events/server-log/`): members joining, leaving, kicked, banned, unbanned, timed out, nickname and role changes; messages edited, deleted, bulk deleted; roles, channels and server settings changed; invites and voice (off by default). Emitted by the bot through `emitServerEvent` (`src/lib/server-log/emit.ts`), which skips types that are turned off. Moderators and reasons come from the audit log (`src/lib/server-log/audit.ts`).
+
+How delivery works:
+- `platform_events` in Supabase is the queue. The bot claims pending rows, posts one embed each and marks them delivered. Events queue up while the bot is offline and go out when it's back.
+- A Realtime insert subscription wakes the worker right away, and a 30 s poll catches anything Realtime missed. Failed posts retry with backoff (5 s doubling, capped at 30 min, 12 attempts).
+- Messages are sent with `nonce` = event id and `enforceNonce`, so a crash between posting and marking doesn't post twice, and with no allowed mentions, so logged text never pings.
+- The bot runs as a single instance and releases leftover leases on startup.
+- Routing lives in `discord_guild_settings.log_channel_id` (default channel), `log_ignored_channel_ids` (no message logs there) and `discord_log_event_settings` (per-type on/off and channel). No channel means the event is marked `skipped`.
+- Message edits and deletes aren't logged in log channels, ignored channels, open tickets, or for bots and webhooks. Old text is only known for messages the bot saw since its last restart.
+- Message text in `platform_events` is removed after 30 days (`purge_platform_event_message_text`, pg_cron) and when the author deletes their account. Feedback descriptions and ticket subjects on a user's events go when they delete their account.
+
+Setup in Discord:
+- Developer portal: turn on the **Server Members** and **Message Content** privileged intents.
+- Server: give the bot's role **View Audit Log** (without it, moderators show as unknown and kicks show as leaves) and access to the channels you want logged.
+
+Adding an event type: add it to `PLATFORM_EVENTS` in `packages/types/src/platform-events.ts` (label, group, default), emit it once, and add its style in `embed-kit.ts` and its formatter in `formatters.ts` or `server-formatters.ts` (the bot doesn't type-check until you do). Run `bun test` for the formatter and diff tests.
 
 ## Running locally
 

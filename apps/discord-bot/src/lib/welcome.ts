@@ -1,4 +1,5 @@
 import { ChannelType, EmbedBuilder, PermissionFlagsBits } from "discord.js";
+import { markSelfAction } from "./server-log/self-actions";
 import type { Guild, GuildMember, Message, TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
 import {
@@ -64,7 +65,7 @@ export function buildWelcomeMessage(member: GuildMember, joinNumber: number | nu
   if (isConnected && twitch) {
     embed
       .setDescription(
-        `Hey ${member}, welcome in! Your StreamWizard account is linked to **${twitch.twitch_username}** on Twitch, so your roles are good to go.`
+        `Hey ${member}, welcome in! Your StreamWizard account is linked to **${twitch.twitch_username}** on Twitch, so your roles are good to go.`,
       )
       .setFooter({ text: "Glad you're here.", iconURL: member.user.displayAvatarURL() });
 
@@ -76,7 +77,9 @@ export function buildWelcomeMessage(member: GuildMember, joinNumber: number | nu
     });
   } else if (isConnected) {
     embed
-      .setDescription(`Hey ${member}, welcome in. Your StreamWizard account is connected, so your roles are good to go.`)
+      .setDescription(
+        `Hey ${member}, welcome in. Your StreamWizard account is connected, so your roles are good to go.`,
+      )
       .setFooter({ text: "Glad you're here.", iconURL: member.user.displayAvatarURL() });
   } else {
     embed
@@ -111,7 +114,9 @@ export async function resolveWelcomeChannel(guild: Guild, channelId?: string | n
   return channel?.type === ChannelType.GuildText ? channel : null;
 }
 
-export type TestWelcomeResult = { ok: true; channelId: string; welcomeEnabled: boolean } | { ok: false; reason: "no_channel" };
+export type TestWelcomeResult =
+  | { ok: true; channelId: string; welcomeEnabled: boolean }
+  | { ok: false; reason: "no_channel" };
 
 /**
  * Posts a mock welcome for `member` in the configured channel. Shared by
@@ -182,6 +187,7 @@ export async function grantJoinRole(member: GuildMember, joinRoleId: string | nu
   if (!joinRoleId || member.user.bot || member.pending) return;
   if (member.roles.cache.has(joinRoleId)) return;
   try {
+    markSelfAction("roles", member.id);
     await member.roles.add(joinRoleId, "Join role");
   } catch (error) {
     Sentry.captureException(error);
@@ -204,7 +210,9 @@ export async function cleanUpOldWelcomeChannel(guild: Guild, previousChannelId: 
   if (!previous || previous.id === current?.id) return false;
 
   void purgeWelcomeMessages(previous)
-    .then((count) => console.log(`[welcome] Removed ${count} old welcome message(s) from #${previous.name} in "${guild.name}"`))
+    .then((count) =>
+      console.log(`[welcome] Removed ${count} old welcome message(s) from #${previous.name} in "${guild.name}"`),
+    )
     .catch((error) => {
       Sentry.captureException(error);
       console.error(`[welcome] Failed to clean up old welcome messages in "${guild.name}":`, error);

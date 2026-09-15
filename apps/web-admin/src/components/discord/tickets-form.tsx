@@ -43,7 +43,9 @@ export function TicketsForm({ initial, textChannels, categories, roles, hasPanel
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div className="space-y-1">
           <CardTitle className="text-base">Ticket setup</CardTitle>
-          <CardDescription>Members open tickets from the panel. Each ticket gets a private channel in the category.</CardDescription>
+          <CardDescription>
+            Members open tickets from the panel. Each ticket gets a private channel in the category.
+          </CardDescription>
         </div>
         <Button
           size="sm"
@@ -59,7 +61,11 @@ export function TicketsForm({ initial, textChannels, categories, roles, hasPanel
         <SettingRow
           htmlFor="tickets-enabled"
           label="Accept new tickets"
-          hint={complete ? "Open tickets keep working when this is off." : "Pick a staff role, category and panel channel first."}
+          hint={
+            complete
+              ? "Open tickets keep working when this is off."
+              : "Pick a staff role, category and panel channel first."
+          }
         >
           <Switch
             id="tickets-enabled"
@@ -90,24 +96,17 @@ export function TicketsForm({ initial, textChannels, categories, roles, hasPanel
             disabled={saving}
           />
         </SettingRow>
-        <SettingRow htmlFor="panel-channel" label="Panel channel" hint="Changing it posts a fresh panel there and removes the old one.">
+        <SettingRow
+          htmlFor="panel-channel"
+          label="Panel channel"
+          hint="Changing it posts a fresh panel there and removes the old one."
+        >
           <Picker
             id="panel-channel"
             options={textChannels}
             value={values.panelChannelId}
             onChange={(v) => set("panelChannelId", v)}
             placeholder="Pick a channel"
-            emptyText="No text channels match"
-            disabled={saving}
-          />
-        </SettingRow>
-        <SettingRow htmlFor="log-channel" label="Log channel" hint="Closed tickets get logged here. Leave empty to skip logging.">
-          <Picker
-            id="log-channel"
-            options={textChannels}
-            value={values.logChannelId}
-            onChange={(v) => set("logChannelId", v)}
-            placeholder="No log channel"
             emptyText="No text channels match"
             disabled={saving}
           />
