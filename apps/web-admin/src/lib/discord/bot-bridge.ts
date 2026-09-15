@@ -10,7 +10,12 @@ export type BotCallResult<T> =
   | { ok: true; data: T }
   | { ok: false; reason: "unconfigured" | "network" | "http"; status?: number; error: string };
 
-export async function callBot<T = { ok: true }>(guildId: string, path: string, body: unknown = {}): Promise<BotCallResult<T>> {
+export async function callBot<T = { ok: true }>(
+  guildId: string,
+  path: string,
+  body: unknown = {},
+  { timeoutMs = 5_000 }: { timeoutMs?: number } = {},
+): Promise<BotCallResult<T>> {
   if (!env.DISCORD_BOT_INTERNAL_URL || !env.DISCORD_BOT_INTERNAL_SECRET) {
     return { ok: false, reason: "unconfigured", error: "The bot's internal API isn't configured" };
   }
@@ -24,7 +29,7 @@ export async function callBot<T = { ok: true }>(guildId: string, path: string, b
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(5_000),
+      signal: AbortSignal.timeout(timeoutMs),
       cache: "no-store",
     });
   } catch (error) {

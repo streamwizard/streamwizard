@@ -12,7 +12,11 @@ export {
 export { sendDiscordChannelMessage, DiscordRateLimitError } from "./channel";
 export {
   DiscordChannelType,
+  DiscordNotFoundError,
   type DiscordGuild,
+  type DiscordMember,
+  type DiscordMessage,
+  type DiscordUser,
   type DiscordChannel,
   type DiscordRole,
   type DiscordApplicationCommand,

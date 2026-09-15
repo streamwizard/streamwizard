@@ -42,12 +42,47 @@ export interface DiscordRole {
   permissions: string;
 }
 
+export interface DiscordUser {
+  id: string;
+  username: string;
+  global_name: string | null;
+  avatar: string | null;
+}
+
+export interface DiscordMember {
+  nick: string | null;
+  avatar: string | null;
+  user: DiscordUser;
+}
+
+export interface DiscordMessage {
+  id: string;
+  author: DiscordUser & { bot?: boolean };
+  content: string;
+  embeds: Record<string, unknown>[];
+  attachments: { id: string; filename: string; size: number; content_type?: string; url: string }[];
+  timestamp: string;
+  edited_timestamp: string | null;
+}
+
 export interface DiscordApplicationCommand {
   id: string;
   name: string;
   description: string;
   /** Present on guild-scoped commands, absent on global ones. */
   guild_id?: string;
+}
+
+export class DiscordNotFoundError extends Error {
+  constructor(path: string) {
+    super(`Discord GET ${path}: not found`);
+    this.name = "DiscordNotFoundError";
+  }
+}
+
+function nullOnNotFound(error: unknown): null {
+  if (error instanceof DiscordNotFoundError) return null;
+  throw error;
 }
 
 /**
@@ -63,6 +98,7 @@ export class DiscordGuildsClient {
       headers: { Authorization: `Bot ${this.config.botToken}` },
       signal: AbortSignal.timeout(10_000),
     });
+    if (res.status === 404) throw new DiscordNotFoundError(path);
     if (res.status === 429) {
       const body = (await res.json().catch(() => ({}))) as { retry_after?: number };
       throw new DiscordRateLimitError(body.retry_after ?? 1);
@@ -71,6 +107,37 @@ export class DiscordGuildsClient {
       throw new Error(`Discord GET ${path} failed: ${res.status} ${await res.text()}`);
     }
     return (await res.json()) as T;
+  }
+
+  /** The guild member, or null when they're not in the server. */
+  async getMember(userId: string): Promise<DiscordMember | null> {
+    return this.get<DiscordMember>(`/guilds/${this.config.guildId}/members/${userId}`).catch(nullOnNotFound);
+  }
+
+  /** Any Discord user by id (works for people who left the server), or null. */
+  async getUser(userId: string): Promise<DiscordUser | null> {
+    return this.get<DiscordUser>(`/users/${userId}`).catch(nullOnNotFound);
+  }
+
+  /**
+   * A channel's messages, oldest first, up to `max` (newest kept). Null when
+   * the channel no longer exists.
+   */
+  async listChannelMessages(channelId: string, max = 1000): Promise<DiscordMessage[] | null> {
+    const messages: DiscordMessage[] = [];
+    let before: string | undefined;
+    try {
+      while (messages.length < max) {
+        const query = `limit=100${before ? `&before=${before}` : ""}`;
+        const batch = await this.get<DiscordMessage[]>(`/channels/${channelId}/messages?${query}`);
+        messages.push(...batch);
+        if (batch.length < 100) break;
+        before = batch[batch.length - 1]?.id;
+      }
+    } catch (error) {
+      return nullOnNotFound(error);
+    }
+    return messages.slice(0, max).reverse();
   }
 
   getGuild(): Promise<DiscordGuild> {

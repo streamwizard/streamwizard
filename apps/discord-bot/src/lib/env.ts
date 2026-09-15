@@ -20,9 +20,26 @@ const schema = z.object({
   DISCORD_BOT_INTERNAL_SECRET: z.string().min(16).optional(),
   DISCORD_BOT_INTERNAL_PORT: z.coerce.number().int().positive().default(3010),
 
+  // Realtime ticket updates for web-admin go through ws-server's
+  // /internal/broadcast. Without both, the dashboard falls back to polling.
+  WS_SERVER_URL: z.string().min(1).optional(),
+  CONSUMER_SECRET: z.string().min(1).optional(),
+
+  // Ticket transcripts copy small images here (shared CDN bucket). Without all
+  // of them transcripts still save, with attachment metadata only.
+  R2_ACCOUNT_ID: z.string().min(1).optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_ASSETS_BUCKET: z.string().min(1).optional(),
+  NEXT_PUBLIC_CDN_URL: z.string().url().optional(),
+
   // Required: link buttons are built from it, and an undefined base makes
   // discord.js reject the button URL at runtime.
   NEXT_PUBLIC_BASE_URL: z.string().url(),
+
+  // web-admin, for ticket links in the log channel. Optional: without it the
+  // ticket embeds mention the channel instead.
+  WEB_ADMIN_URL: z.string().url().optional(),
 
   // GitHub App (ticket → issue sync)
   // Optional: without all four the bot still starts and "Move to GitHub"

@@ -125,7 +125,11 @@ export type StreamWizardEventType =
   // user_states mutation: whichever process applied the write (bot via its
   // socket, rest-api/web-overlay via /internal/broadcast) → user room, one
   // message per changed key, so overlays track counters without polling
-  | "streamwizard.user_state";
+  | "streamwizard.user_state"
+  // discord-bot: something happened in a support ticket (message, claim,
+  // close) → /internal/broadcast → each admin's room, so the web-admin ticket
+  // pages refetch. Signal only, never message content.
+  | "streamwizard.discord_ticket_activity";
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 
@@ -133,6 +137,12 @@ export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 // redeclared so the wire type and the validator can't drift apart. Their docs
 // live on the schemas.
 export type { ObsInstanceLifecyclePayload, IngestStatsPayload, ObsSceneChangedPayload, UserStateUpdatePayload };
+
+export interface DiscordTicketActivityPayload {
+  ticketNumber: number;
+  channelId: string;
+  kind: "opened" | "message" | "claimed" | "closed";
+}
 
 // Host NIC totals only — cpu/ram/disk deliberately stay on the InfluxDB
 // polling path; the WS carries just the network signal.

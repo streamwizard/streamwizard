@@ -22,6 +22,7 @@
     "@repo/sentry": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/telegram-api": "workspace:*",
+    "@repo/types": "workspace:*",
     "@repo/ui": "workspace:*",
     "@repo/ws-client": "workspace:*",
     "@sentry/nextjs": "^10",

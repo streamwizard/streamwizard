@@ -137,3 +137,48 @@ export async function getPublicTwitchIntegrationByDiscordUserId(
   if (twitchError) throw twitchError;
   return twitchIntegration;
 }
+
+export interface LinkedStreamWizardAccount {
+  userId: string;
+  name: string;
+  email: string;
+  twitchUsername: string | null;
+  twitchAvatarUrl: string | null;
+}
+
+/**
+ * The StreamWizard account a Discord user is linked to right now (falls back
+ * to `fallbackUserId`, e.g. the opener recorded on a ticket, when the link
+ * was since removed). Null when neither resolves to a user.
+ */
+export async function getLinkedStreamWizardAccount(
+  client: DBClient,
+  discordUserId: string,
+  fallbackUserId: string | null = null
+): Promise<LinkedStreamWizardAccount | null> {
+  const { data: link, error: linkError } = await client
+    .from("integrations_discord")
+    .select("user_id")
+    .eq("discord_user_id", discordUserId)
+    .maybeSingle();
+  if (linkError) throw linkError;
+
+  const userId = link?.user_id ?? fallbackUserId;
+  if (!userId) return null;
+
+  const [user, twitch] = await Promise.all([
+    client.from("users").select("id, name, email").eq("id", userId).maybeSingle(),
+    client.from("integrations_twitch").select("twitch_username, profile_image_url").eq("user_id", userId).maybeSingle(),
+  ]);
+  if (user.error) throw user.error;
+  if (twitch.error) throw twitch.error;
+  if (!user.data) return null;
+
+  return {
+    userId: user.data.id,
+    name: user.data.name,
+    email: user.data.email,
+    twitchUsername: twitch.data?.twitch_username ?? null,
+    twitchAvatarUrl: twitch.data?.profile_image_url ?? null,
+  };
+}

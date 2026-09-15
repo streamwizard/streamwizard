@@ -166,3 +166,18 @@ export async function updateUserPreferences(
 
   if (error) throw error;
 }
+
+/** Name and Twitch avatar for showing who did something, or null for an unknown user. */
+export async function getUserDisplayProfile(
+  client: DBClient,
+  userId: string
+): Promise<{ name: string; avatarUrl: string | null } | null> {
+  const [user, twitch] = await Promise.all([
+    client.from("users").select("name").eq("id", userId).maybeSingle(),
+    client.from("integrations_twitch").select("profile_image_url").eq("user_id", userId).maybeSingle(),
+  ]);
+  if (user.error) throw user.error;
+  if (twitch.error) throw twitch.error;
+  if (!user.data) return null;
+  return { name: user.data.name, avatarUrl: twitch.data?.profile_image_url ?? null };
+}
