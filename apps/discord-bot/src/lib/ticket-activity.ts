@@ -1,6 +1,8 @@
 import type { DiscordTicketActivityPayload } from "@repo/types";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
+import { getAdminUserIds as queryAdminUserIds } from "@repo/supabase/queries/obs-nodes";
+import { listOpenTicketChannels } from "@repo/supabase/queries/tickets";
 import { TtlCache } from "@repo/ttl-cache";
 import { broadcastToUser } from "@repo/ws-client";
 import { env } from "./env";
@@ -17,24 +19,12 @@ const admins = new TtlCache<string[]>({ ttlMs: ADMINS_TTL_MS });
 const openTickets = new TtlCache<Map<string, number>>({ ttlMs: OPEN_TICKETS_TTL_MS });
 
 async function getAdminUserIds(): Promise<string[]> {
-  const ids = await admins.fetch("all", async () => {
-    const { data, error } = await supabase.from("user_roles").select("user_id").eq("role", "admin");
-    if (error) throw error;
-    return [...new Set(data.map((row) => row.user_id))];
-  });
+  const ids = await admins.fetch("all", () => queryAdminUserIds(supabase));
   return ids ?? [];
 }
 
 async function getOpenTickets(guildId: string): Promise<Map<string, number>> {
-  const byChannel = await openTickets.fetch(guildId, async () => {
-    const { data, error } = await supabase
-      .from("discord_tickets")
-      .select("channel_id, ticket_number")
-      .eq("guild_id", guildId)
-      .eq("status", "open");
-    if (error) throw error;
-    return new Map(data.map((row) => [row.channel_id, row.ticket_number]));
-  });
+  const byChannel = await openTickets.fetch(guildId, () => listOpenTicketChannels(supabase, guildId));
   return byChannel ?? new Map();
 }
 

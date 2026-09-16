@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createAnonClient } from "@repo/supabase/anon";
+import { getShowcaseClips as queryShowcaseClips } from "@repo/supabase/queries/clips";
 import { formatClipDuration } from "@/lib/format";
 import { getGameNames } from "@/lib/twitch-games";
 import { fallbackClipCards, type RealClipCard } from "@/components/public/home/demo-data";
@@ -15,20 +16,6 @@ import { fallbackClipCards, type RealClipCard } from "@/components/public/home/d
  * client cannot be used inside unstable_cache, and anon is all the
  * world-readable clips table needs.
  */
-
-interface ShowcaseClipRow {
-  twitch_clip_id: string;
-  title: string;
-  creator_name: string;
-  broadcaster_name: string;
-  view_count: number;
-  duration: number | string | null;
-  thumbnail_url: string;
-  url: string | null;
-  embed_url: string | null;
-  created_at_twitch: string | null;
-  game_id: string | null;
-}
 
 /* Clips the marquee scrolls and the filter demo below it works on. */
 const SHOWCASE_SIZE = 12;
@@ -50,15 +37,7 @@ function isRenderableThumbnail(url: string): boolean {
 
 async function fetchShowcaseClips(size = SHOWCASE_SIZE, perBroadcaster = 2): Promise<RealClipCard[]> {
   try {
-    const client = createAnonClient();
-    // Cast until gen-types picks the function up from the deployed schema.
-    const { data, error } = await client.rpc("get_showcase_clips" as never, {
-      p_limit: size,
-      p_per_broadcaster: perBroadcaster,
-    } as never);
-    if (error) throw error;
-
-    const rows = (data ?? []) as ShowcaseClipRow[];
+    const rows = await queryShowcaseClips(createAnonClient(), size, perBroadcaster);
     const usable = rows.filter((row) => isRenderableThumbnail(row.thumbnail_url)).slice(0, size);
     /* Clip rows store game_id, never game_name; the clips demo filters by
      * category, so resolve the names once per refresh. */

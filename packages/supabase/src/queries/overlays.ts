@@ -105,6 +105,17 @@ export async function getActiveOverlaySceneBySlugMaybe(client: DBClient, slug: s
     .maybeSingle();
 }
 
+/** Whether an item sits in the given scene; the overlay API's ownership check. */
+export async function overlayItemBelongsToScene(client: DBClient, itemId: string, sceneId: string): Promise<boolean> {
+  const { data } = await client
+    .from("overlay_items")
+    .select("id")
+    .eq("id", itemId)
+    .eq("scene_id", sceneId)
+    .maybeSingle();
+  return !!data;
+}
+
 export async function getOverlayItemById(client: DBClient, itemId: string, sceneId: string) {
   return client
     .from("overlay_items")
@@ -143,7 +154,7 @@ export async function insertOverlayItems(
 export async function getOverlaySceneBySubscriberToken(client: DBClient, token: string) {
   return client
     .from("overlay_scenes")
-    .select("user_id")
+    .select("id, user_id")
     .eq("subscriber_token", token)
     .maybeSingle();
 }

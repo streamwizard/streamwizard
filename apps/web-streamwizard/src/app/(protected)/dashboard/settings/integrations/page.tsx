@@ -1,5 +1,5 @@
 import { getAuthContext } from "@/lib/auth";
-import { getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
+import { getDiscordIntegrationByUserId, getTwitchUsernameByUserId } from "@repo/supabase/queries/user";
 import { DiscordIntegrationSection } from "@/components/settings/discord-integration-section";
 import { TwitchIntegrationSection } from "@/components/settings/twitch-integration-section";
 
@@ -11,11 +11,7 @@ export default async function IntegrationsSettingsPage({
   const { supabase, user } = await getAuthContext();
   const { discordRole } = await searchParams;
 
-  const { data: twitch } = await supabase
-    .from("integrations_twitch")
-    .select("twitch_username")
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const twitchUsername = await getTwitchUsernameByUserId(supabase, user.id);
   const { data: discord } = await getDiscordIntegrationByUserId(supabase, user.id);
 
   return (
@@ -25,7 +21,7 @@ export default async function IntegrationsSettingsPage({
         <p className="text-sm text-muted-foreground">Where StreamWizard plugs into the rest of your stack.</p>
       </div>
 
-      <TwitchIntegrationSection twitchUsername={twitch?.twitch_username ?? null} />
+      <TwitchIntegrationSection twitchUsername={twitchUsername} />
       <DiscordIntegrationSection
         discordUsername={discord?.discord_username ?? null}
         roleStatus={

@@ -2,7 +2,7 @@ import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord";
 import { deleteTicketAttachments } from "@repo/supabase/queries/tickets";
-import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/user";
+import { getTwitchIntegrationByBroadcasterId, deleteUserData } from "@repo/supabase/queries/user";
 import { R2Storage } from "@repo/storage";
 import type { UserAuthorizationRevokeEvent } from "@repo/schemas";
 import { env } from "../../lib/env";
@@ -46,10 +46,7 @@ async function purgeTicketAttachments(twitchUserId: string): Promise<void> {
 export const handleUserAuthorizationRevoke = async (event: UserAuthorizationRevokeEvent) => {
   await purgeTicketAttachments(event.user_id);
 
-  const { data: userId, error } = await supabase.rpc("delete_user_data", {
-    p_twitch_user_id: event.user_id,
-    p_reason: "twitch_revoked",
-  });
+  const { data: userId, error } = await deleteUserData(supabase, event.user_id, "twitch_revoked");
 
   if (error) throw error;
 

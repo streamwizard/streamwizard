@@ -1,5 +1,7 @@
 import { queryLastWriteByTag } from "@repo/metrics";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { listNodes } from "@repo/supabase/queries/obs-nodes";
+import { listIngestNodes } from "@repo/supabase/queries/ingest-nodes";
 
 // Fleet overview for the /ingest and /obs dashboards: every REGISTERED node
 // (the registry is the source of truth, not Influx) with a live /health probe
@@ -38,22 +40,26 @@ interface RegistryRow {
 
 async function loadRegistryRows(kind: "ingest" | "obs"): Promise<RegistryRow[]> {
   if (kind === "obs") {
-    const { data, error } = await supabaseAdmin
-      .from("obs_nodes")
-      .select("id, name, status, maintenance, created_at, api_url");
-    if (error) throw new Error(`Couldn't load obs_nodes: ${error.message}`);
+    const { data, error } = await listNodes(supabaseAdmin);
+    if (error || !data) throw new Error(`Couldn't load obs_nodes: ${error}`);
     return data.map((n) => ({
-      ...n,
+      id: n.id,
+      name: n.name,
+      status: n.status,
+      maintenance: n.maintenance,
+      created_at: n.created_at,
       address: n.api_url ? n.api_url.replace(/^https?:\/\//, "").replace(/\/$/, "") : null,
       healthUrl: n.api_url ? `${n.api_url.replace(/\/$/, "")}/health` : null,
     }));
   }
-  const { data, error } = await supabaseAdmin
-    .from("ingest_nodes")
-    .select("id, name, status, maintenance, created_at, tailscale_ip");
-  if (error) throw new Error(`Couldn't load ingest_nodes: ${error.message}`);
+  const { data, error } = await listIngestNodes(supabaseAdmin);
+  if (error || !data) throw new Error(`Couldn't load ingest_nodes: ${error}`);
   return data.map((n) => ({
-    ...n,
+    id: n.id,
+    name: n.name,
+    status: n.status,
+    maintenance: n.maintenance,
+    created_at: n.created_at,
     address: n.tailscale_ip ?? null,
     healthUrl: n.tailscale_ip ? `http://${n.tailscale_ip}:8090/health` : null,
   }));

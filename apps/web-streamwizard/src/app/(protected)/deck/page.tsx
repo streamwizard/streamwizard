@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { createClient } from "@repo/supabase/next/server";
+import { getTwitchProfile } from "@repo/supabase/queries/user";
 import { requireProductAccess } from "@/lib/require-product-access";
 import { getAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
 import { DeckContent } from "@/components/deck/deck-content";
@@ -28,10 +29,10 @@ export default async function DeckPage() {
   const supabase = await createClient();
   // The chat tab needs the channel's own identity: to highlight mentions of the
   // streamer, and to label the message it echoes back after sending one.
-  const [access, autoSwitcherConfig, { data: twitch }] = await Promise.all([
+  const [access, autoSwitcherConfig, twitch] = await Promise.all([
     requireProductAccess("cloud_obs"),
     getAutoSwitcherConfig(),
-    supabase.from("integrations_twitch").select("twitch_user_id, twitch_username").maybeSingle(),
+    getTwitchProfile(supabase),
   ]);
 
   return (

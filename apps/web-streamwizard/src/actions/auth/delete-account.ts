@@ -3,7 +3,7 @@
 import { reportError } from "@repo/sentry";
 
 import { tryAuthContext } from "@/lib/auth";
-import { getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
+import { getDiscordIntegrationByUserId, deleteUserData } from "@repo/supabase/queries/user";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { deleteTicketAttachments } from "@repo/supabase/queries/tickets";
 import { R2Storage } from "@repo/storage";
@@ -82,9 +82,7 @@ export async function deleteAccount() {
     reportError(ticketErr, "actions/delete-account: ticket attachments");
   }
 
-  const { error: rpcError } = await supabase.rpc("delete_user_data", {
-    p_twitch_user_id: broadcasterId,
-  });
+  const { error: rpcError } = await deleteUserData(supabase, broadcasterId);
   if (rpcError) {
     reportError(rpcError, "actions/delete-account");
     return { success: false, error: rpcError.message };

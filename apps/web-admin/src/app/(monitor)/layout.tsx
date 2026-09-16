@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@repo/supabase/next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { isUserAdmin } from "@repo/supabase/queries/obs-nodes";
 import { MonitorHeader } from "@/components/monitor-header";
 import { MonitorSidebar } from "@/components/monitor-sidebar";
 import { SidebarInset, SidebarProvider } from "@repo/ui";
@@ -24,14 +25,7 @@ export default async function MonitorLayout({ children }: { children: React.Reac
     redirect("/login?error=signin_required");
   }
 
-  const { data: roleRow } = await supabaseAdmin
-    .from("user_roles")
-    .select("id")
-    .eq("user_id", data.user.id)
-    .eq("role", "admin")
-    .maybeSingle();
-
-  if (!roleRow) {
+  if (!(await isUserAdmin(supabaseAdmin, data.user.id))) {
     redirect("/no-access");
   }
 

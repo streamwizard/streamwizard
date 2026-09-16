@@ -38,6 +38,26 @@ export async function getUserPreferences(client: DBClient) {
   return data;
 }
 
+/** The signed-in user's Twitch identity (RLS-scoped), for UI that names the channel. */
+export async function getTwitchProfile(client: DBClient) {
+  const { data } = await client.from("integrations_twitch").select("twitch_user_id, twitch_username").maybeSingle();
+  return data;
+}
+
+export async function getTwitchUsernameByUserId(client: DBClient, userId: string): Promise<string | null> {
+  const { data } = await client.from("integrations_twitch").select("twitch_username").eq("user_id", userId).maybeSingle();
+  return data?.twitch_username ?? null;
+}
+
+/**
+ * Wipes every row the user owns (see the delete_user_data function) and
+ * returns the auth user id so the caller can delete the account itself.
+ * Null data means no such Twitch user, already gone or never registered.
+ */
+export async function deleteUserData(client: DBClient, twitchUserId: string, reason?: string) {
+  return client.rpc("delete_user_data", { p_twitch_user_id: twitchUserId, ...(reason ? { p_reason: reason } : {}) });
+}
+
 export async function getTwitchIntegrationByUserId(client: DBClient, userId: string) {
   return client.from("integrations_twitch").select("twitch_user_id").eq("user_id", userId).single();
 }

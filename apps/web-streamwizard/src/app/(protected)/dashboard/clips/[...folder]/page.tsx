@@ -2,6 +2,7 @@ import { ClipsDisplay } from "@/components/clips/clips-display";
 import { ClipsPaginationBar } from "@/components/nav/clips-pagination-bar";
 import { Button } from "@repo/ui";
 import { createClient } from "@repo/supabase/next/server";
+import { getClipFolders } from "@repo/supabase/queries/clips";
 import buildClipQuery from "@/lib/utils/build-clip-query";
 import { parseClipPageSize } from "@/lib/utils/clip-pagination";
 import { parseClipView } from "@/lib/utils/clip-view";
@@ -25,7 +26,7 @@ export default async function Page({ params, searchParams }: PageProps) {
   const { data: auth } = await supabase.auth.getUser();
 
   const { data: folders } = auth.user
-    ? await supabase.from("clip_folders").select("*").eq("user_id", auth.user.id)
+    ? await getClipFolders(supabase, auth.user.id)
     : { data: null };
   const currentFolder = folders ? findFolderByUrlSegments(folderSegments, folders) : undefined;
   const folderHref = currentFolder?.href;

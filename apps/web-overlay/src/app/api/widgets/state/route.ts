@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
 import { Json } from "@repo/supabase";
+import { getOverlaySceneBySubscriberToken, overlayItemBelongsToScene } from "@repo/supabase/queries/overlays";
+import { selectWidgetInstanceStateByItem, updateWidgetInstanceState } from "@repo/supabase/queries/overlay-widgets";
 // Was a second copy of the same allowlist. Shared now so the sandboxed-iframe
 // origin can't be handled in one route and forgotten in the other.
 import { corsHeaders } from "@/lib/widget-api";
@@ -12,32 +14,14 @@ export function OPTIONS(req: NextRequest) {
 
 async function resolveInstance(token: string, itemId: string) {
   // Step 1: resolve subscriber_token → scene_id
-
-  const { data: scene } = await supabaseAdmin
-    .from("overlay_scenes")
-    .select("id")
-    .eq("subscriber_token", token)
-    .maybeSingle();
-
+  const { data: scene } = await getOverlaySceneBySubscriberToken(supabaseAdmin, token);
   if (!scene) return null;
 
   // Step 2: confirm the item belongs to that scene
-  const { data: item } = await supabaseAdmin
-    .from("overlay_items")
-    .select("id")
-    .eq("id", itemId)
-    .eq("scene_id", scene.id)
-    .maybeSingle();
-
-  if (!item) return null;
+  if (!(await overlayItemBelongsToScene(supabaseAdmin, itemId, scene.id))) return null;
 
   // Step 3: fetch the widget instance row
-  const { data: instance } = await supabaseAdmin
-    .from("overlay_widget_instances")
-    .select("id, widget_state")
-    .eq("overlay_item_id", itemId)
-    .maybeSingle();
-
+  const { data: instance } = await selectWidgetInstanceStateByItem(supabaseAdmin, itemId);
   return instance ?? null;
 }
 
@@ -86,10 +70,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Not found or unauthorized" }, { status: 403, headers: corsHeaders(req) });
   }
 
-  const { error } = await supabaseAdmin
-    .from("overlay_widget_instances")
-    .update({ widget_state: state as Json, updated_at: new Date().toISOString() })
-    .eq("id", instance.id);
+  const { error } = await updateWidgetInstanceState(supabaseAdmin, instance.id, state as Json);
 
   if (error) {
     reportError(error, "api/widgets/state: widget_state update");

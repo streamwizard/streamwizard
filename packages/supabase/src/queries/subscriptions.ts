@@ -120,6 +120,17 @@ export async function getProductAccess(
   };
 }
 
+/** Boolean form of the access check, for gates that only need yes/no. */
+export async function checkProductAccess(client: DBClient, productId: string): Promise<boolean> {
+  const { data } = await client.rpc("check_product_access", { p_product_id: productId });
+  return data ?? false;
+}
+
+export async function getProductName(client: DBClient, productId: string): Promise<string | null> {
+  const { data } = await client.from("products").select("name").eq("id", productId).maybeSingle();
+  return data?.name ?? null;
+}
+
 // ── Admin grants ─────────────────────────────────────────────────────────────
 // Service-role only: web-admin grants and revokes access independently of
 // Stripe, so these bypass RLS by design.

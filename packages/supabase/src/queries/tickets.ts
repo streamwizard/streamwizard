@@ -77,6 +77,18 @@ export async function countOpenTickets(client: DBClient, guildId: string): Promi
   return count ?? 0;
 }
 
+/** Open tickets in a guild as channel id → ticket number. */
+export async function listOpenTicketChannels(client: DBClient, guildId: string): Promise<Map<string, number>> {
+  const { data, error } = await client
+    .from("discord_tickets")
+    .select("channel_id, ticket_number")
+    .eq("guild_id", guildId)
+    .eq("status", "open");
+
+  if (error) throw error;
+  return new Map(data.map((row) => [row.channel_id, row.ticket_number]));
+}
+
 // Atomically allocates the next per-guild ticket number (creates the settings
 // row on first use). See the next_ticket_number migration.
 export async function nextTicketNumber(client: DBClient, guildId: string): Promise<number> {

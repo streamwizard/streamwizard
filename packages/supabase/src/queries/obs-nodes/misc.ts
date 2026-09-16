@@ -18,6 +18,13 @@ export async function isUserAdmin(client: DBClient, userId: string): Promise<boo
   return !!data;
 }
 
+/** Every user holding the admin role, for fan-out to admin-only surfaces. */
+export async function getAdminUserIds(client: DBClient): Promise<string[]> {
+  const { data, error } = await client.from("user_roles").select("user_id").eq("role", "admin");
+  if (error) throw error;
+  return [...new Set(data.map((row) => row.user_id))];
+}
+
 // ── Instance detail with owner (admin UI) ─────────────────────────────────────
 
 /** Single instance with owner name/email, for the admin-only instance detail
