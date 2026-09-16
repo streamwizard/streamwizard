@@ -1,15 +1,12 @@
 // middleware/auth.ts
-import { createServerClient, parseCookieHeader } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { setCookie } from "hono/cookie";
-import { env } from "../lib/env";
 import { reportError } from "@repo/sentry";
-import type { Database } from "@repo/supabase";
+import { createRequestClient, type RequestClient } from "@repo/supabase/request-client";
 
 declare module "hono" {
   interface ContextVariableMap {
-    supabase: SupabaseClient;
+    supabase: RequestClient;
     user: {
       id: string;
       email?: string;
@@ -28,14 +25,14 @@ export const getSupabase = (c: Context) => {
 
 /**
  * Supabase SSR Middleware
- * 
- * Creates a Supabase client with proper cookie and Authorization header handling.
- * This middleware should be applied before routes that need Supabase.
- * 
+ *
+ * Creates a per-request Supabase client with cookie and Authorization header
+ * handling. This middleware should be applied before routes that need Supabase.
+ *
  * Handles authentication from:
  * - Authorization: Bearer <token> headers
  * - Cookies (for SSR)
- * 
+ *
  * Usage:
  * ```typescript
  * app.use("/api/*", supabaseMiddleware());
@@ -43,41 +40,15 @@ export const getSupabase = (c: Context) => {
  */
 export const supabaseMiddleware = (): MiddlewareHandler => {
   return async (c, next) => {
-    const supabaseUrl = env.SUPABASE_URL;
-    const supabaseAnonKey = env.SUPABASE_PUBLIC_KEY;
-
-    if (!supabaseUrl) {
-      throw new Error("SUPABASE_URL missing!");
-    }
-
-    if (!supabaseAnonKey) {
-      throw new Error("SUPABASE_PUBLIC_KEY missing!");
-    }
-
-    // Create SSR client with cookie handling
-    const supabase = createServerClient<Database>(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        getAll() {
-          const cookies = parseCookieHeader(c.req.header("Cookie") ?? "");
-          // Filter out cookies with undefined values and ensure value is always a string
-          return cookies
-            .filter((cookie): cookie is { name: string; value: string } =>
-              cookie.value !== undefined
-            );
-        },
-        setAll(cookiesToSet: Array<{ name: string; value: string; options?: any }>) {
-          cookiesToSet.forEach(({ name, value, options }) => setCookie(c, name, value, options));
-        },
-      },
-      // Important: Configure auth to work with Authorization headers
-      global: {
-        headers: {
-          Authorization: c.req.header("Authorization") ?? "",
-        },
-      },
+    const supabase = createRequestClient({
+      cookieHeader: c.req.header("Cookie"),
+      authorizationHeader: c.req.header("Authorization"),
+      // Same shape, two declarations: @supabase/ssr's options type is
+      // cookie's SerializeOptions, hono's is its own copy of the same fields.
+      setCookie: (name, value, options) => setCookie(c, name, value, options as Parameters<typeof setCookie>[3]),
     });
 
-    c.set("supabase", supabase as any);
+    c.set("supabase", supabase);
 
     await next();
   };

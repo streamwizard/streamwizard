@@ -135,6 +135,14 @@
       "types": "./src/crypto.ts",
       "default": "./src/crypto.ts"
     },
+    "./anon": {
+      "types": "./src/anon.ts",
+      "default": "./src/anon.ts"
+    },
+    "./request-client": {
+      "types": "./src/request-client.ts",
+      "default": "./src/request-client.ts"
+    },
     "./queries/query-stats": {
       "types": "./src/queries/query-stats.ts",
       "default": "./src/queries/query-stats.ts"

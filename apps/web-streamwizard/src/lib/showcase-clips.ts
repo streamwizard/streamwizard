@@ -1,6 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { createClient } from "@supabase/supabase-js";
-import { env } from "@/lib/env";
+import { createAnonClient } from "@repo/supabase/anon";
 import { formatClipDuration } from "@/lib/format";
 import { getGameNames } from "@/lib/twitch-games";
 import { fallbackClipCards, type RealClipCard } from "@/components/public/home/demo-data";
@@ -12,7 +11,7 @@ import { fallbackClipCards, type RealClipCard } from "@/components/public/home/d
  * The public routes render dynamically (the CSP nonce in JsonLd reads
  * headers()), so the hourly refresh lives on this data call, not the page:
  * unstable_cache serves the same result to every visitor and re-runs the RPC
- * at most once an hour. Bare anon client on purpose: the cookie-bound server
+ * at most once an hour. Anon client on purpose: the cookie-bound server
  * client cannot be used inside unstable_cache, and anon is all the
  * world-readable clips table needs.
  */
@@ -51,9 +50,7 @@ function isRenderableThumbnail(url: string): boolean {
 
 async function fetchShowcaseClips(size = SHOWCASE_SIZE, perBroadcaster = 2): Promise<RealClipCard[]> {
   try {
-    const client = createClient(env.SUPABASE_URL, env.SUPABASE_PUBLIC_KEY, {
-      auth: { persistSession: false },
-    });
+    const client = createAnonClient();
     // Cast until gen-types picks the function up from the deployed schema.
     const { data, error } = await client.rpc("get_showcase_clips" as never, {
       p_limit: size,
