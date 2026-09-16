@@ -1,6 +1,9 @@
 import { TwitchApiBaseClient } from "./base-client";
 import type { Stream, GetStreamsParams, GetStreamsResponse } from "@repo/types";
 
+interface GetStreamKeyResponse {
+    data: { stream_key: string }[];
+}
 
 export class TwitchStreamsClient extends TwitchApiBaseClient {
     constructor(broadcaster_id: string | null = null) {
@@ -47,5 +50,19 @@ export class TwitchStreamsClient extends TwitchApiBaseClient {
             params: params,
         });
         return response.data;
+    }
+
+    /**
+     * The broadcaster's primary stream key. A live broadcast credential:
+     * callers must gate who gets to see it. Needs the channel:read:stream_key
+     * scope on the stored user token.
+     */
+    async getStreamKey(): Promise<string> {
+        const response = await this.clientApi().get<GetStreamKeyResponse>(`/streams/key`, {
+            params: { broadcaster_id: this.broadcaster_id },
+        });
+        const key = response.data.data[0]?.stream_key;
+        if (!key) throw new Error("No stream key returned by Twitch API");
+        return key;
     }
 }

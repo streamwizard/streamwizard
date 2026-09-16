@@ -3,7 +3,6 @@
 import { reportError } from "@repo/sentry";
 
 import { tryAuthContext } from "@/lib/auth";
-import { getChannelAccessToken } from "@repo/supabase";
 import { getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { deleteTicketAttachments } from "@repo/supabase/queries/tickets";
@@ -11,7 +10,6 @@ import { R2Storage } from "@repo/storage";
 import { createAdminClient, supabaseAdmin } from "@repo/supabase/next/admin";
 import { TwitchApi } from "@repo/twitch-api";
 import { redirect } from "next/navigation";
-import axios from "axios";
 import { removeRole } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 
@@ -24,15 +22,7 @@ export async function deleteAccount() {
   // This cannot remove the app from the user's Twitch authorized connections
   // UI — they must do that manually from Twitch Settings → Connections.
   try {
-    const accessToken = await getChannelAccessToken(broadcasterId);
-    await axios.post(
-      "https://id.twitch.tv/oauth2/revoke",
-      new URLSearchParams({
-        client_id: process.env.TWITCH_CLIENT_ID!,
-        token: accessToken,
-      }),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
-    );
+    await new TwitchApi(broadcasterId).auth.revokeUserToken();
   } catch {
     // Non-fatal: token may already be expired; proceed with deletion.
   }

@@ -5,8 +5,8 @@ import type { ObsNodeInstanceDetail } from "./nodes";
 
 type DBClient = SupabaseClient<Database>;
 
-/** Odds and ends the node API needs: the admin check, the Twitch token pair
- *  behind the stream-key endpoint, and the admin UI's instance-with-owner read. */
+/** Odds and ends the node API needs: the admin check and the admin UI's
+ *  instance-with-owner read. */
 
 export async function isUserAdmin(client: DBClient, userId: string): Promise<boolean> {
   const { data } = await client
@@ -16,44 +16,6 @@ export async function isUserAdmin(client: DBClient, userId: string): Promise<boo
     .eq("role", "admin")
     .maybeSingle();
   return !!data;
-}
-
-// ── Twitch integration (for stream key endpoint) ──────────────────────────────
-
-export interface TwitchIntegration {
-  twitch_user_id: string;
-  access_token_ciphertext: string | null;
-  access_token_iv: string | null;
-  access_token_tag: string | null;
-  refresh_token_ciphertext: string | null;
-  refresh_token_iv: string | null;
-  refresh_token_tag: string | null;
-}
-
-export async function getTwitchIntegration(client: DBClient, userId: string): Promise<TwitchIntegration | null> {
-  const { data } = await client
-    .from("integrations_twitch")
-    .select(
-      "twitch_user_id, access_token_ciphertext, access_token_iv, access_token_tag, refresh_token_ciphertext, refresh_token_iv, refresh_token_tag",
-    )
-    .eq("user_id", userId)
-    .maybeSingle();
-  return data;
-}
-
-export async function updateTwitchTokens(
-  client: DBClient,
-  userId: string,
-  fields: {
-    access_token_ciphertext: string;
-    access_token_iv: string;
-    access_token_tag: string;
-    refresh_token_ciphertext: string;
-    refresh_token_iv: string;
-    refresh_token_tag: string;
-  },
-): Promise<void> {
-  await client.from("integrations_twitch").update(fields).eq("user_id", userId);
 }
 
 // ── Instance detail with owner (admin UI) ─────────────────────────────────────
