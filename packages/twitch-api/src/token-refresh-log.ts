@@ -1,9 +1,11 @@
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import axios from "axios";
 
 // Posts twitch.token_refresh_failed to the Discord log channel (SW-334) when a
 // user's refresh token is dead, so support sees it before the user does.
-// Deduplicated per user in SQL (emit_twitch_token_refresh_failed, 6 hours).
+// Deduplicated per user in SQL (emit_twitch_token_refresh_failed, 6 hours,
+// under a per-user advisory lock so parallel refreshes can't both pass the check).
 
 const ERROR_MAX = 500;
 
@@ -35,6 +37,6 @@ export async function logTokenRefreshFailure(broadcasterId: string, error: unkno
     });
     if (rpcError) throw rpcError;
   } catch (logError) {
-    console.error("❌ Couldn't log the token refresh failure:", logError);
+    reportError(logError, "twitch-api: token refresh log", { broadcasterId });
   }
 }

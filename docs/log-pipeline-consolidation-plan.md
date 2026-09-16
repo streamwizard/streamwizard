@@ -57,7 +57,7 @@ Plan:
 5. Not in scope: replacing the TS rule with an RPC to `platform_event_identity`. The grant is
    there if wanted later; keep TS and SQL side by side for now and note the rule in both.
 
-## Pass C: one never-throw emit
+## Pass C: one never-throw emit (done 2026-09-16)
 
 Four copies of "emit, report on error, never throw": web-admin `lib/platform-events.ts`,
 rest-api `lib/platform-events.ts`, bot `server-log/emit.ts`, twitch-api `token-refresh-log.ts`
@@ -75,6 +75,13 @@ rest-api `lib/platform-events.ts`, bot `server-log/emit.ts`, twitch-api `token-r
    `pg_advisory_xact_lock(hashtext(v_user_id::text))` before the EXISTS, and `refreshUserToken`
    in `base-client.ts` single-flights per broadcaster (`Map<string, Promise<string | null>>`).
    Closes the "dedupe that doesn't dedupe" item.
+
+Outcome: `logPlatformEvent(client, event, context, extra?)` in `queries/platform-events.ts`;
+web-admin `lib/platform-events.ts` keeps only the identity helpers, rest-api keeps only
+`logStreamOnlineFailed`; the bot and twitch-api use `reportError`. The lock is a new migration
+(`20260916100000_token_refresh_dedupe_lock.sql`, namespaced two-key `pg_advisory_xact_lock`);
+`refreshUserToken` single-flights through a static map on `TwitchApiBaseClient`. `sendTestLogEvent`
+in web-admin still calls `emitPlatformEvent` directly on purpose: it surfaces the error to the admin.
 
 ## Pass D: `emitAuditedEvent` and embed-kit helpers
 

@@ -1,19 +1,9 @@
 import { reportError } from "@repo/sentry";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import {
-  emitPlatformEvent,
-  getPlatformEventIdentity,
-  type EmitPlatformEventInput,
-  type PlatformEventIdentity,
-} from "@repo/supabase/queries/platform-events";
+import { getPlatformEventIdentity, type PlatformEventIdentity } from "@repo/supabase/queries/platform-events";
 
-// Server-only. Emits platform events (SW-334) from web-admin actions. Never
-// throws: the change the event describes has already been saved.
-
-export async function logPlatformEvent(event: EmitPlatformEventInput): Promise<void> {
-  const { error } = await emitPlatformEvent(supabaseAdmin, event);
-  if (error) reportError(error, "web-admin platform-events", { type: event.type });
-}
+// Server-only. Identity lookups for platform events (SW-334) emitted from
+// web-admin actions. Emitting itself is `logPlatformEvent` in @repo/supabase.
 
 const EMPTY_IDENTITY: PlatformEventIdentity = {
   display_name: null,
@@ -34,7 +24,9 @@ export async function eventIdentity(userId: string): Promise<PlatformEventIdenti
 }
 
 /** The acting admin, for `actor_twitch_username` and `actor_avatar_url`. */
-export async function actorIdentity(userId: string): Promise<{ actor_twitch_username: string | null; actor_avatar_url: string | null }> {
+export async function actorIdentity(
+  userId: string,
+): Promise<{ actor_twitch_username: string | null; actor_avatar_url: string | null }> {
   const identity = await eventIdentity(userId);
   return { actor_twitch_username: identity.twitch_username, actor_avatar_url: identity.avatar_url };
 }

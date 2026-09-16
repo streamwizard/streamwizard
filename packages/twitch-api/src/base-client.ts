@@ -13,6 +13,13 @@ import { logTokenRefreshFailure } from "./token-refresh-log";
 
 export abstract class TwitchApiBaseClient {
   private readonly MAX_RETRIES = 2;
+  /**
+   * One refresh per broadcaster at a time, across every client instance.
+   * Parallel 401s (a burst of requests on an expired token) would each read
+   * the same refresh token, and Twitch rotates it on use: the second refresh
+   * fails with invalid_grant and logs a false "token dead" event.
+   */
+  private static readonly refreshInFlight = new Map<string, Promise<string | null>>();
   protected broadcaster_id: string | null = null;
 
   constructor(broadcaster_id: string | null = null) {
@@ -208,7 +215,17 @@ export abstract class TwitchApiBaseClient {
     return isExpired;
   }
 
-  private async refreshUserToken(broadcaster_id: string): Promise<string | null> {
+  private refreshUserToken(broadcaster_id: string): Promise<string | null> {
+    const inFlight = TwitchApiBaseClient.refreshInFlight.get(broadcaster_id);
+    if (inFlight) return inFlight;
+    const refresh = this.doRefreshUserToken(broadcaster_id).finally(() => {
+      TwitchApiBaseClient.refreshInFlight.delete(broadcaster_id);
+    });
+    TwitchApiBaseClient.refreshInFlight.set(broadcaster_id, refresh);
+    return refresh;
+  }
+
+  private async doRefreshUserToken(broadcaster_id: string): Promise<string | null> {
     try {
       // get the refresh token from the database
       const refreshToken = await getChannelRefreshToken(broadcaster_id);

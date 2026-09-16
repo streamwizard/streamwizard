@@ -5,6 +5,7 @@ import {
   type PlatformEventStatus,
   type PlatformEventType,
 } from "@repo/types";
+import { reportError } from "@repo/sentry";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "../types/supabase";
 import { getUserIdentity, identityAvatarUrl, identityDisplayName, type UserIdentity } from "./identity";
@@ -48,6 +49,21 @@ export async function emitPlatformEvent(
   } catch (error) {
     return { error: error instanceof Error ? error : new Error(String(error)) };
   }
+}
+
+/**
+ * Emits and reports on failure, never throws. For every emitter that has
+ * nothing to decide when the log row doesn't land: the thing being logged
+ * already happened. `context` is the Sentry tag, `extra` the per-call detail.
+ */
+export async function logPlatformEvent(
+  client: DBClient,
+  event: EmitPlatformEventInput,
+  context: string,
+  extra?: Record<string, unknown>,
+): Promise<void> {
+  const { error } = await emitPlatformEvent(client, event);
+  if (error) reportError(error, context, { type: event.type, ...extra });
 }
 
 /** Claims up to `limit` due events and leases them for `leaseSeconds`. */

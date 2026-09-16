@@ -5,8 +5,8 @@ import { supabase } from "@repo/supabase";
 import { getUserIdentity } from "@repo/supabase/queries/identity";
 import { TtlCache } from "@repo/ttl-cache";
 import {
-  emitPlatformEvent,
   isLogRouteActive,
+  logPlatformEvent,
   type EmitPlatformEventInput,
 } from "@repo/supabase/queries/platform-events";
 import { getLogChannelIds, getLogRoutingFor } from "../log-channel/worker";
@@ -94,8 +94,7 @@ export async function emitServerEvent<T extends PlatformEventType>(
       },
     } as EmitPlatformEventInput;
 
-    const { error } = await emitPlatformEvent(supabase, event);
-    if (error) throw error;
+    await logPlatformEvent(supabase, event, "discord-bot server-log: emit", { guildId: guild.id });
   } catch (error) {
     reportError(error, "discord-bot server-log: emit", { type, guildId: guild.id });
   }

@@ -3,8 +3,9 @@
 import { reportError } from "@repo/sentry";
 
 import { assertAdmin } from "@/lib/assert-admin";
-import { actorIdentity, eventIdentity, logPlatformEvent } from "@/lib/platform-events";
-import { createAdminClient } from "@repo/supabase/next/admin";
+import { actorIdentity, eventIdentity } from "@/lib/platform-events";
+import { createAdminClient, supabaseAdmin } from "@repo/supabase/next/admin";
+import { logPlatformEvent } from "@repo/supabase/queries/platform-events";
 import {
   cancelSubscription,
   cancelSubscriptions,
@@ -34,7 +35,7 @@ export async function grantSubscriptionAction(
   planId: string,
   status: "active" | "trialing",
   expiresAt: string | null,
-  note: string | null
+  note: string | null,
 ) {
   const { adminClient, adminUserId } = await requireAdminContext();
 
@@ -46,7 +47,10 @@ export async function grantSubscriptionAction(
   const toCancel = (existing ?? []).filter((s) => (s.plans as { product_id: string }).product_id === productId);
 
   if (toCancel.length > 0) {
-    await cancelSubscriptions(adminClient, toCancel.map((s) => s.id));
+    await cancelSubscriptions(
+      adminClient,
+      toCancel.map((s) => s.id),
+    );
   }
 
   const { error } = await upsertSubscriptionGrant(adminClient, {
@@ -108,21 +112,25 @@ export async function revokeSubscriptionAction(subscriptionId: string) {
   if (before && before.status !== "canceled") {
     const plan = firstPlan(before.plans);
     const [identity, actor] = await Promise.all([eventIdentity(before.user_id), actorIdentity(adminUserId)]);
-    await logPlatformEvent({
-      type: "subscription.revoked",
-      subjectUserId: before.user_id,
-      actorUserId: adminUserId,
-      payload: {
-        ...identity,
-        ...actor,
-        subscription_id: subscriptionId,
-        product_id: plan?.product_id ?? "",
-        plan_id: before.plan_id,
-        plan_name: plan?.name ?? null,
-        status: "canceled",
-        expires_at: before.current_period_end,
+    await logPlatformEvent(
+      supabaseAdmin,
+      {
+        type: "subscription.revoked",
+        subjectUserId: before.user_id,
+        actorUserId: adminUserId,
+        payload: {
+          ...identity,
+          ...actor,
+          subscription_id: subscriptionId,
+          product_id: plan?.product_id ?? "",
+          plan_id: before.plan_id,
+          plan_name: plan?.name ?? null,
+          status: "canceled",
+          expires_at: before.current_period_end,
+        },
       },
-    });
+      "web-admin subscriptions",
+    );
   }
   revalidatePath(SUBSCRIPTIONS_PATH);
   return { error: null };
@@ -134,7 +142,7 @@ export async function updateSubscriptionAction(
     status: "active" | "trialing" | "past_due";
     expiresAt: string | null;
     note: string | null;
-  }
+  },
 ) {
   const { adminClient, adminUserId } = await requireAdminContext();
 
@@ -162,22 +170,26 @@ export async function updateSubscriptionAction(
     if (Object.keys(changes).length > 0) {
       const plan = firstPlan(before.plans);
       const [identity, actor] = await Promise.all([eventIdentity(before.user_id), actorIdentity(adminUserId)]);
-      await logPlatformEvent({
-        type: "subscription.changed",
-        subjectUserId: before.user_id,
-        actorUserId: adminUserId,
-        payload: {
-          ...identity,
-          ...actor,
-          subscription_id: subscriptionId,
-          product_id: plan?.product_id ?? "",
-          plan_id: before.plan_id,
-          plan_name: plan?.name ?? null,
-          status: updates.status,
-          expires_at: expiresAt,
-          changes,
+      await logPlatformEvent(
+        supabaseAdmin,
+        {
+          type: "subscription.changed",
+          subjectUserId: before.user_id,
+          actorUserId: adminUserId,
+          payload: {
+            ...identity,
+            ...actor,
+            subscription_id: subscriptionId,
+            product_id: plan?.product_id ?? "",
+            plan_id: before.plan_id,
+            plan_name: plan?.name ?? null,
+            status: updates.status,
+            expires_at: expiresAt,
+            changes,
+          },
         },
-      });
+        "web-admin subscriptions",
+      );
     }
   }
   revalidatePath(SUBSCRIPTIONS_PATH);
@@ -225,19 +237,23 @@ async function logGrant(
     reportError(e, "actions/subscriptions:load-for-log");
   }
   const [identity, actor] = await Promise.all([eventIdentity(grant.userId), actorIdentity(grant.adminUserId)]);
-  await logPlatformEvent({
-    type: "subscription.granted",
-    subjectUserId: grant.userId,
-    actorUserId: grant.adminUserId,
-    payload: {
-      ...identity,
-      ...actor,
-      product_id: grant.productId,
-      plan_id: grant.planId,
-      plan_name: planName,
-      status: grant.status,
-      expires_at: grant.expiresAt || null,
-      replaced_plan_ids: grant.toCancel.map((s) => s.plan_id).filter((id) => id !== grant.planId),
+  await logPlatformEvent(
+    supabaseAdmin,
+    {
+      type: "subscription.granted",
+      subjectUserId: grant.userId,
+      actorUserId: grant.adminUserId,
+      payload: {
+        ...identity,
+        ...actor,
+        product_id: grant.productId,
+        plan_id: grant.planId,
+        plan_name: planName,
+        status: grant.status,
+        expires_at: grant.expiresAt || null,
+        replaced_plan_ids: grant.toCancel.map((s) => s.plan_id).filter((id) => id !== grant.planId),
+      },
     },
-  });
+    "web-admin subscriptions",
+  );
 }

@@ -175,6 +175,7 @@
   },
   "dependencies": {
     "@repo/metrics": "workspace:*",
+    "@repo/sentry": "workspace:*",
     "@repo/types": "workspace:*",
     "@supabase/supabase-js": "^2.105.1",
     "@supabase/ssr": "^0.12.0"

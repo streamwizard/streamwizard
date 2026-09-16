@@ -3,7 +3,8 @@ import { reportError } from "@repo/sentry";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord";
 import { insertDiscordSettingsAudit } from "@repo/supabase/queries/discord-audit";
-import { actorIdentity, logPlatformEvent } from "@/lib/platform-events";
+import { logPlatformEvent } from "@repo/supabase/queries/platform-events";
+import { actorIdentity } from "@/lib/platform-events";
 
 // Server-only. One place to record dashboard changes: the audit row for the
 // overview, and a discord_settings.changed event for the log channel (SW-334).
@@ -29,7 +30,14 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
  * recorded; actions always are. Never throws — a lost audit row shouldn't
  * fail a save that already landed.
  */
-export async function recordChange({ userId, guildId, section, action = "update", before = {}, after = {} }: ChangeInput) {
+export async function recordChange({
+  userId,
+  guildId,
+  section,
+  action = "update",
+  before = {},
+  after = {},
+}: ChangeInput) {
   const changedKeys = [...new Set([...Object.keys(before), ...Object.keys(after)])].filter(
     (key) => !same(before[key], after[key]),
   );
@@ -55,15 +63,21 @@ export async function recordChange({ userId, guildId, section, action = "update"
 
   // A test log event is its own entry in the log; don't announce it twice.
   if (action === "test_log") return;
-  await logPlatformEvent({
-    type: "discord_settings.changed",
-    actorUserId: userId,
-    payload: {
-      ...(await actorIdentity(userId)),
-      guild_id: guildId,
-      section,
-      action,
-      changes: Object.fromEntries(changedKeys.map((key) => [key, { from: before[key] ?? null, to: after[key] ?? null }])),
+  await logPlatformEvent(
+    supabaseAdmin,
+    {
+      type: "discord_settings.changed",
+      actorUserId: userId,
+      payload: {
+        ...(await actorIdentity(userId)),
+        guild_id: guildId,
+        section,
+        action,
+        changes: Object.fromEntries(
+          changedKeys.map((key) => [key, { from: before[key] ?? null, to: after[key] ?? null }]),
+        ),
+      },
     },
-  });
+    "web-admin discord: audit event",
+  );
 }
