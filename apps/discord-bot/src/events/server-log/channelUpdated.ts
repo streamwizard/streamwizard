@@ -1,7 +1,6 @@
 import { AuditLogEvent, Events, type NonThreadGuildBasedChannel } from "discord.js";
-import { findAuditEntry } from "../../lib/server-log/audit";
-import { emitServerEvent, isServerEventEnabled } from "../../lib/server-log/emit";
-import { serverLogEvent } from "../../lib/server-log/handler";
+import { emitAuditedEvent } from "../../lib/server-log/emit";
+import type { BotEvent } from "../../types/discord";
 import { channelRef, diffFields } from "../../lib/server-log/refs";
 
 const snapshot = (channel: NonThreadGuildBasedChannel) => ({
@@ -22,31 +21,25 @@ const overwrites = (channel: NonThreadGuildBasedChannel) =>
   );
 
 // Position changes (reordering the sidebar) touch many channels; not logged.
-export default serverLogEvent(Events.ChannelUpdate, async (oldChannel, newChannel) => {
-  if (oldChannel.isDMBased() || newChannel.isDMBased()) return;
-  const changes = diffFields(snapshot(oldChannel), snapshot(newChannel));
-  const overwritesChanged = overwrites(oldChannel) !== overwrites(newChannel);
-  if (!Object.keys(changes).length && !overwritesChanged) return;
-  if (!(await isServerEventEnabled(newChannel.guild, "channel.updated"))) return;
+export default {
+  name: Events.ChannelUpdate,
+  async execute(oldChannel, newChannel) {
+    if (oldChannel.isDMBased() || newChannel.isDMBased()) return;
+    const changes = diffFields(snapshot(oldChannel), snapshot(newChannel));
+    const overwritesChanged = overwrites(oldChannel) !== overwrites(newChannel);
+    if (!Object.keys(changes).length && !overwritesChanged) return;
 
-  const audit = await findAuditEntry(
-    newChannel.guild,
-    overwritesChanged && !Object.keys(changes).length
-      ? AuditLogEvent.ChannelOverwriteUpdate
-      : AuditLogEvent.ChannelUpdate,
-    { targetId: newChannel.id },
-  );
-  if (audit?.bySelf) return;
-  await emitServerEvent(
-    newChannel.guild,
-    "channel.updated",
-    {
-      channel: channelRef(newChannel)!,
-      changes,
-      overwrites_changed: overwritesChanged,
-      moderator: audit?.moderator ?? null,
-      reason: audit?.reason ?? null,
-    },
-    { actorDiscordId: audit?.moderator?.id },
-  );
-});
+    await emitAuditedEvent(
+      newChannel.guild,
+      "channel.updated",
+      {
+        type:
+          overwritesChanged && !Object.keys(changes).length
+            ? AuditLogEvent.ChannelOverwriteUpdate
+            : AuditLogEvent.ChannelUpdate,
+        targetId: newChannel.id,
+      },
+      { channel: channelRef(newChannel)!, changes, overwrites_changed: overwritesChanged },
+    );
+  },
+} satisfies BotEvent<typeof Events.ChannelUpdate>;

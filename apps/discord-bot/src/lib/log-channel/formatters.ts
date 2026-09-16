@@ -1,11 +1,7 @@
 import { escapeMarkdown, type APIEmbedField, type EmbedBuilder } from "discord.js";
-import {
-  isPlatformEventType,
-  type DiscordUserRef,
-  type PlatformEventPayloads,
-  type PlatformEventType,
-} from "@repo/types";
+import { isPlatformEventType, type PlatformEventPayloads, type PlatformEventType } from "@repo/types";
 import type { PlatformEvent } from "@repo/supabase/queries/platform-events";
+import { formatTicketNumber } from "@repo/supabase/queries/tickets";
 import {
   DESCRIPTION_MAX,
   base,
@@ -13,17 +9,23 @@ import {
   changeLines,
   channelMention,
   code,
+  codeList,
+  describeLines,
   discordDate,
   discordMention,
+  discordUser,
   duration,
   field,
+  formatNumber,
   httpsUrl,
+  plain,
   quote,
   sentenceCase,
   setAuthor,
   truncate,
   twitchLink,
   twitchUrl,
+  withMember,
   type Formatter,
 } from "./embed-kit";
 import { SERVER_FORMATTERS } from "./server-formatters";
@@ -77,7 +79,7 @@ function withActor(embed: EmbedBuilder, payload: Identity): EmbedBuilder {
 // StreamWizard user id from the row.
 function identityFields(payload: Identity, event: PlatformEvent): APIEmbedField[] {
   const twitch = twitchLink(payload.twitch_username);
-  const account = twitch || !payload.display_name ? null : escapeMarkdown(payload.display_name);
+  const account = twitch ? null : plain(payload.display_name);
   return [
     ...field("Twitch", twitch),
     ...field("Twitch ID", code(payload.twitch_user_id)),
@@ -101,7 +103,7 @@ function planName(payload: PlanPayload): string {
 
 function planFields(payload: PlanPayload): APIEmbedField[] {
   return [
-    ...field("Plan", payload.plan_name ? escapeMarkdown(payload.plan_name) : code(payload.plan_id)),
+    ...field("Plan", plain(payload.plan_name) ?? code(payload.plan_id)),
     ...field("Product", code(payload.product_id)),
     ...field("Status", sentenceCase(payload.status)),
     ...field("Expires", discordDate(payload.expires_at), false),
@@ -117,7 +119,7 @@ function byField(label: string, payload: Identity): APIEmbedField[] {
 type TicketPayload = Partial<PlatformEventPayloads["ticket.opened"]>;
 
 const ticketNumber = (payload: TicketPayload) =>
-  payload.ticket_number ? `#${String(payload.ticket_number).padStart(4, "0")}` : "a ticket";
+  payload.ticket_number ? formatTicketNumber(payload.ticket_number) : "a ticket";
 
 /** "ticket #0012" linked to the dashboard page when the bot knows it, else the channel mention. */
 function ticketLink(payload: TicketPayload): string {
@@ -127,28 +129,14 @@ function ticketLink(payload: TicketPayload): string {
   return channelMention(payload.channel?.id) ? `${label} (${channelMention(payload.channel?.id)})` : label;
 }
 
-function ticketWho(member: DiscordUserRef | null | undefined, fallback: string): string {
-  return discordMention(member?.id) ?? bold(member?.display_name ?? member?.username, fallback);
-}
-
 const fromDashboard = (payload: TicketPayload) => (payload.source === "dashboard" ? " from the dashboard" : "");
-
-function withTicketOpener(embed: EmbedBuilder, payload: TicketPayload): EmbedBuilder {
-  const opener = payload.opener;
-  if (!opener) return embed;
-  const name = opener.display_name ?? opener.username ?? null;
-  setAuthor(embed, opener.username && name ? `${name} (@${opener.username})` : name, opener.avatar_url);
-  const avatar = httpsUrl(opener.avatar_url);
-  if (avatar) embed.setThumbnail(avatar);
-  return embed;
-}
 
 function ticketFields(payload: TicketPayload, event: PlatformEvent): APIEmbedField[] {
   return [
-    ...field("Subject", payload.subject ? escapeMarkdown(payload.subject) : null, false),
+    ...field("Subject", plain(payload.subject), false),
     ...field("Category", sentenceCase(payload.category)),
     ...field("Product", sentenceCase(payload.product)),
-    ...field("Opened by", ticketWho(payload.opener, "Unknown")),
+    ...field("Opened by", discordUser(payload.opener, "Unknown")),
     ...field(
       "StreamWizard",
       twitchLink(payload.twitch_username) ?? (payload.opener ? null : code(event.subject_user_id)),
@@ -186,25 +174,16 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
       .addFields([...identityFields(payload, event), ...field("By", "Database")]),
 
   "feedback.submitted": (payload, event) =>
-    withSubject(base(event, "feedback.submitted"), payload)
-      .setDescription(
-        truncate(
-          [
-            `${bold(subjectName(payload), "Someone")} sent feedback: **${escapeMarkdown(payload.title ?? "Untitled")}**`,
-            payload.description ? quote(payload.description, "No description") : "",
-          ]
-            .filter(Boolean)
-            .join("\n"),
-          DESCRIPTION_MAX,
-        ),
-      )
-      .addFields([
-        ...field("Category", sentenceCase(payload.category)),
-        ...field("Priority", sentenceCase(payload.priority)),
-        ...field("Contact", payload.contact ? escapeMarkdown(payload.contact) : null),
-        ...identityFields(payload, event),
-        ...field("Feedback ID", code(payload.feedback_id)),
-      ]),
+    describeLines(withSubject(base(event, "feedback.submitted"), payload), [
+      `${bold(subjectName(payload), "Someone")} sent feedback: **${escapeMarkdown(payload.title ?? "Untitled")}**`,
+      payload.description ? quote(payload.description, "No description") : "",
+    ]).addFields([
+      ...field("Category", sentenceCase(payload.category)),
+      ...field("Priority", sentenceCase(payload.priority)),
+      ...field("Contact", plain(payload.contact)),
+      ...identityFields(payload, event),
+      ...field("Feedback ID", code(payload.feedback_id)),
+    ]),
 
   "clips.sync_started": (payload, event) =>
     withSubject(base(event, "clips.sync_started"), payload)
@@ -217,7 +196,7 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
   "clips.sync_completed": (payload, event) =>
     withSubject(base(event, "clips.sync_completed"), payload)
       .setDescription(
-        `Synced ${payload.clip_count?.toLocaleString("en-US") ?? "some"} clip${payload.clip_count === 1 ? "" : "s"} for ${bold(subjectName(payload), "a user")}.`,
+        `Synced ${typeof payload.clip_count === "number" ? formatNumber(payload.clip_count) : "some"} clip${payload.clip_count === 1 ? "" : "s"} for ${bold(subjectName(payload), "a user")}.`,
       )
       .addFields([...identityFields(payload, event), ...field("Took", duration(payload.duration_seconds))]),
 
@@ -242,50 +221,45 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
       ]),
 
   "stream.online_failed": (payload, event) =>
-    withSubject(base(event, "stream.online_failed"), payload)
-      .setDescription(
-        truncate(
-          [
-            `${bold(subjectName(payload), "A user")} went live, but StreamWizard couldn't start tracking the stream.`,
-            payload.reason === "vod_not_found"
-              ? "No VOD was found for this stream. VODs may be turned off on Twitch, so no stream page or clip markers this time."
-              : payload.reason === "stream_not_found"
-                ? "Twitch reported the stream online, then didn't return it. It may have ended straight away."
-                : "",
-          ]
-            .filter(Boolean)
-            .join("\n"),
-          DESCRIPTION_MAX,
-        ),
-      )
-      .addFields([
-        ...field("Reason", code(payload.reason)),
-        ...field("Stream ID", code(payload.stream_id)),
-        ...identityFields(payload, event),
-      ]),
+    describeLines(withSubject(base(event, "stream.online_failed"), payload), [
+      `${bold(subjectName(payload), "A user")} went live, but StreamWizard couldn't start tracking the stream.`,
+      payload.reason === "vod_not_found"
+        ? "No VOD was found for this stream. VODs may be turned off on Twitch, so no stream page or clip markers this time."
+        : payload.reason === "stream_not_found"
+          ? "Twitch reported the stream online, then didn't return it. It may have ended straight away."
+          : "",
+    ]).addFields([
+      ...field("Reason", code(payload.reason)),
+      ...field("Stream ID", code(payload.stream_id)),
+      ...identityFields(payload, event),
+    ]),
 
   "ticket.opened": (payload, event) =>
-    withTicketOpener(base(event, "ticket.opened"), payload)
-      .setDescription(`${ticketWho(payload.opener, "Someone")} opened ${ticketLink(payload)}.`)
+    withMember(base(event, "ticket.opened"), payload.opener)
+      .setDescription(`${discordUser(payload.opener, "Someone")} opened ${ticketLink(payload)}.`)
       .addFields(ticketFields(payload, event)),
 
   "ticket.claimed": (payload, event) =>
-    withTicketOpener(base(event, "ticket.claimed"), payload)
-      .setDescription(`${ticketWho(payload.actor, "Someone")} claimed ${ticketLink(payload)}${fromDashboard(payload)}.`)
+    withMember(base(event, "ticket.claimed"), payload.opener)
+      .setDescription(
+        `${discordUser(payload.actor, "Someone")} claimed ${ticketLink(payload)}${fromDashboard(payload)}.`,
+      )
       .addFields(ticketFields(payload, event)),
 
   "ticket.closed": (payload, event) =>
-    withTicketOpener(base(event, "ticket.closed"), payload)
-      .setDescription(`${ticketWho(payload.actor, "Someone")} closed ${ticketLink(payload)}${fromDashboard(payload)}.`)
+    withMember(base(event, "ticket.closed"), payload.opener)
+      .setDescription(
+        `${discordUser(payload.actor, "Someone")} closed ${ticketLink(payload)}${fromDashboard(payload)}.`,
+      )
       .addFields([
         ...ticketFields(payload, event),
-        ...field("Claimed by", payload.claimer ? ticketWho(payload.claimer, "Unknown") : "Unclaimed"),
+        ...field("Claimed by", payload.claimer ? discordUser(payload.claimer, "Unknown") : "Unclaimed"),
         ...field("Open for", duration(payload.duration_seconds)),
-        ...field("Messages", payload.message_count?.toLocaleString("en-US") ?? null),
+        ...field("Messages", typeof payload.message_count === "number" ? formatNumber(payload.message_count) : null),
       ]),
 
   "ticket.replied": (payload, event) =>
-    withTicketOpener(base(event, "ticket.replied"), payload)
+    withMember(base(event, "ticket.replied"), payload.opener)
       .setDescription(`${bold(payload.author_name, "Staff")} replied to ${ticketLink(payload)} from the dashboard.`)
       .addFields(ticketFields(payload, event)),
 
@@ -310,10 +284,7 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
       .addFields([
         ...identityFields(payload, event),
         ...planFields(payload),
-        ...field(
-          "Replaced",
-          payload.replaced_plan_ids?.length ? payload.replaced_plan_ids.map((id) => code(id)).join(", ") : null,
-        ),
+        ...field("Replaced", codeList(payload.replaced_plan_ids)),
         ...byField("Granted by", payload),
       ]),
 
@@ -324,9 +295,11 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
         : `**${sentenceCase(key)}** ${sentenceCase(change.from) ?? "none"} → ${sentenceCase(change.to) ?? "none"}`,
     );
     const summary = `${bold(subjectName(payload), "A user")}'s **${planName(payload)}** plan changed.`;
-    return withSubject(base(event, "subscription.changed"), payload)
-      .setDescription(truncate([summary, ...changes].join("\n"), DESCRIPTION_MAX))
-      .addFields([...identityFields(payload, event), ...planFields(payload), ...byField("Changed by", payload)]);
+    return describeLines(withSubject(base(event, "subscription.changed"), payload), [summary, ...changes]).addFields([
+      ...identityFields(payload, event),
+      ...planFields(payload),
+      ...byField("Changed by", payload),
+    ]);
   },
 
   "subscription.revoked": (payload, event) =>
@@ -341,9 +314,7 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
     const summary = changes.length
       ? `${who} changed the **${section}** settings.`
       : `${who} ran \`${payload.action}\` in **${section}**.`;
-    return withActor(base(event, "discord_settings.changed"), payload).setDescription(
-      truncate([summary, ...changes].join("\n"), DESCRIPTION_MAX),
-    );
+    return describeLines(withActor(base(event, "discord_settings.changed"), payload), [summary, ...changes]);
   },
 
   "log.test": (payload, event) =>

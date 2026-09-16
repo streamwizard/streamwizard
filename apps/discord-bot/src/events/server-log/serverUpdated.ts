@@ -1,7 +1,6 @@
 import { AuditLogEvent, Events, type Guild } from "discord.js";
-import { findAuditEntry } from "../../lib/server-log/audit";
-import { emitServerEvent, isServerEventEnabled } from "../../lib/server-log/emit";
-import { serverLogEvent } from "../../lib/server-log/handler";
+import { emitAuditedEvent } from "../../lib/server-log/emit";
+import type { BotEvent } from "../../types/discord";
 import { diffFields } from "../../lib/server-log/refs";
 
 const channelName = (guild: Guild, id: string | null) => (id ? (guild.channels.cache.get(id)?.name ?? id) : null);
@@ -20,15 +19,11 @@ const snapshot = (guild: Guild) => ({
   vanity_url: guild.vanityURLCode,
 });
 
-export default serverLogEvent(Events.GuildUpdate, async (oldGuild, newGuild) => {
-  const changes = diffFields(snapshot(oldGuild), snapshot(newGuild));
-  if (!Object.keys(changes).length) return;
-  if (!(await isServerEventEnabled(newGuild, "server.updated"))) return;
-  const audit = await findAuditEntry(newGuild, AuditLogEvent.GuildUpdate);
-  await emitServerEvent(
-    newGuild,
-    "server.updated",
-    { changes, moderator: audit?.moderator ?? null, reason: audit?.reason ?? null },
-    { actorDiscordId: audit?.moderator?.id },
-  );
-});
+export default {
+  name: Events.GuildUpdate,
+  async execute(oldGuild, newGuild) {
+    const changes = diffFields(snapshot(oldGuild), snapshot(newGuild));
+    if (!Object.keys(changes).length) return;
+    await emitAuditedEvent(newGuild, "server.updated", { type: AuditLogEvent.GuildUpdate }, { changes });
+  },
+} satisfies BotEvent<typeof Events.GuildUpdate>;

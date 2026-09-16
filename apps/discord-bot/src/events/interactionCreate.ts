@@ -1,6 +1,6 @@
 import { Events, MessageFlags } from "discord.js";
 import type { BotEvent } from "../types/discord";
-import { Sentry } from "../sentry";
+import { reportError } from "@repo/sentry";
 import { canRunCommand } from "../lib/permissions";
 import { handleTicketInteraction } from "../lib/tickets";
 import { handleSetupInteraction } from "../lib/setup-wizard";
@@ -13,8 +13,7 @@ export default {
       try {
         await command?.autocomplete?.(interaction);
       } catch (error) {
-        Sentry.captureException(error);
-        console.error(`[commands] Error in autocomplete for "${interaction.commandName}":`, error);
+        reportError(error, "discord-bot commands: autocomplete", { command: interaction.commandName });
       }
       return;
     }
@@ -38,10 +37,13 @@ export default {
       // Discord knows a command the bot doesn't — deploy-commands ran against a
       // different build, or a command file failed to load. The user just sees
       // the interaction hang.
-      Sentry.captureException(new Error(`No command matching "${interaction.commandName}" was found`), {
-        tags: { context: "commands.unknown-command" },
-      });
-      console.error(`[commands] No command matching "${interaction.commandName}" was found`);
+      reportError(
+        new Error(`No command matching "${interaction.commandName}" was found`),
+        "discord-bot commands: unknown",
+        {
+          command: interaction.commandName,
+        },
+      );
       return;
     }
 
@@ -58,8 +60,7 @@ export default {
     try {
       await command.execute(interaction);
     } catch (error) {
-      Sentry.captureException(error);
-      console.error(`[commands] Error executing "${interaction.commandName}":`, error);
+      reportError(error, "discord-bot commands: execute", { command: interaction.commandName });
 
       const payload = { content: "Something went wrong running that command.", flags: MessageFlags.Ephemeral } as const;
       if (interaction.replied || interaction.deferred) {

@@ -8,13 +8,17 @@ import {
   type User,
 } from "discord.js";
 import type { DiscordChannelRef, DiscordRoleRef, DiscordUserRef } from "@repo/types";
+import { truncate } from "../log-channel/embed-kit";
 
 // Plain, serialisable snapshots of Discord objects for event payloads, plus
 // the diff helpers the server log uses. No env, no network: tested directly.
 
 const AVATAR_SIZE = 128;
 
-export function userRef(user: User | PartialUser | null | undefined, member?: GuildMember | PartialGuildMember | null): DiscordUserRef | null {
+export function userRef(
+  user: User | PartialUser | null | undefined,
+  member?: GuildMember | PartialGuildMember | null,
+): DiscordUserRef | null {
   const source = user ?? member?.user;
   if (!source) return member ? { id: member.id } : null;
   return {
@@ -28,6 +32,14 @@ export function userRef(user: User | PartialUser | null | undefined, member?: Gu
 
 export function memberRef(member: GuildMember | PartialGuildMember): DiscordUserRef {
   return userRef(member.user, member) ?? { id: member.id };
+}
+
+/** What Discord shows for them in this server: nickname, then global name, then username. */
+export function displayNameOf(
+  user: User | PartialUser,
+  member?: GuildMember | PartialGuildMember | null,
+): string | null {
+  return member?.nickname ?? user.globalName ?? user.username ?? null;
 }
 
 const CHANNEL_TYPE_LABELS: Partial<Record<ChannelType, string>> = {
@@ -50,7 +62,10 @@ interface ChannelLike {
   parent?: { name: string } | null;
 }
 
-export function channelRef(channel: ChannelLike | null | undefined, fallbackId?: string | null): DiscordChannelRef | null {
+export function channelRef(
+  channel: ChannelLike | null | undefined,
+  fallbackId?: string | null,
+): DiscordChannelRef | null {
   if (!channel) return fallbackId ? { id: fallbackId } : null;
   return {
     id: channel.id,
@@ -114,5 +129,5 @@ const MAX_TEXT = 1900;
 /** Message text for a payload: trimmed and capped. Null stays null (not cached). */
 export function messageText(content: string | null | undefined): string | null {
   if (content === null || content === undefined) return null;
-  return content.length > MAX_TEXT ? `${content.slice(0, MAX_TEXT - 1)}…` : content;
+  return truncate(content, MAX_TEXT);
 }

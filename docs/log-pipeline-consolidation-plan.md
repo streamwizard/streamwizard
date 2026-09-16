@@ -83,7 +83,7 @@ web-admin `lib/platform-events.ts` keeps only the identity helpers, rest-api kee
 `refreshUserToken` single-flights through a static map on `TwitchApiBaseClient`. `sendTestLogEvent`
 in web-admin still calls `emitPlatformEvent` directly on purpose: it surfaces the error to the admin.
 
-## Pass D: `emitAuditedEvent` and embed-kit helpers
+## Pass D: `emitAuditedEvent` and embed-kit helpers (done 2026-09-16)
 
 ### D1. The audit ritual (12 copies in `events/server-log/*.ts`)
 
@@ -131,6 +131,18 @@ Replace every `Sentry.captureException(...)` + `console.error(...)` pair in
 with `reportError(error, "discord-bot <area>", extra)`. `../sentry` stays imported only by
 `index.ts` for init. Optional: move the try/catch from `server-log/handler.ts` into
 `handlers/eventHandler.ts` so every listener gets it and `serverLogEvent` goes away.
+
+Outcome: `emitAuditedEvent(guild, type, audit | null, payload | () => payload | null, options)` in
+`server-log/emit.ts` (payload as a function keeps the channel and ticket checks behind the enabled
+check; `fallbackReason` for bans); `isLoggedChannel` now also gates bulk deletes. Embed helpers
+moved into `embed-kit.ts` (`memberName`, `discordUser`, `withMember`, `describeLines`, `codeList`,
+`plain`, `formatNumber`, `duration` over `formatDuration`); `formatTicketNumber` and
+`ticketChannelName` in `packages/supabase/queries/tickets.ts` replace six padStart copies (web-admin's
+`ticketLabel` gone); `displayNameOf` in `refs.ts`. Every `Sentry.captureException` + `console.error`
+pair in the bot is `reportError` with a context tag and ids as extra; `../sentry` is imported by
+`index.ts` only. The optional part was done too: `handlers/eventHandler.ts` wraps every listener in
+the catch, `server-log/handler.ts` and `serverLogEvent` are gone, and the server-log handlers use the
+same `{ name, execute } satisfies BotEvent` shape as the rest.
 
 ## Order
 

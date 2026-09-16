@@ -23,6 +23,16 @@ export const TICKET_PRODUCTS = [
 
 export type TicketProduct = (typeof TICKET_PRODUCTS)[number]["value"];
 
+/** "#0012": the ticket number as shown everywhere. */
+export function formatTicketNumber(ticketNumber: number): string {
+  return `#${String(ticketNumber).padStart(4, "0")}`;
+}
+
+/** "ticket-0012": the ticket's Discord channel name. */
+export function ticketChannelName(ticketNumber: number): string {
+  return `ticket-${String(ticketNumber).padStart(4, "0")}`;
+}
+
 export function ticketProductLabel(value: string | null | undefined): string | null {
   if (!value) return null;
   return TICKET_PRODUCTS.find((p) => p.value === value)?.label ?? value;

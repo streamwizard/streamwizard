@@ -1,4 +1,4 @@
-import type { Guild, Message, PartialMessage } from "discord.js";
+import type { AuditLogEvent, Guild, GuildAuditLogsEntry, Message, PartialMessage } from "discord.js";
 import type { PlatformEventPayloads, PlatformEventType } from "@repo/types";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
@@ -11,6 +11,7 @@ import {
 } from "@repo/supabase/queries/platform-events";
 import { getLogChannelIds, getLogRoutingFor } from "../log-channel/worker";
 import { isOpenTicketChannel } from "../ticket-activity";
+import { findAuditEntry } from "./audit";
 import { isIgnoredChannel } from "./refs";
 
 // Queues Discord server events into platform_events, the same table and
@@ -100,20 +101,82 @@ export async function emitServerEvent<T extends PlatformEventType>(
   }
 }
 
+interface AuditLookup {
+  type: AuditLogEvent;
+  targetId?: string | null;
+  /** For message and member-move entries, `extra.channel`. */
+  channelId?: string | null;
+  /** Extra check on the entry, e.g. that a MemberUpdate entry touched timeouts. */
+  where?: (entry: GuildAuditLogsEntry) => boolean;
+}
+
+type AuditedPayload<T extends PlatformEventType> = Omit<ServerPayload<T>, "moderator" | "reason">;
+
+interface AuditedOptions extends EmitOptions {
+  /** Reason when the audit log has none, e.g. the ban's own reason. */
+  fallbackReason?: string | null;
+}
+
+/**
+ * The moderation ritual shared by most server events: check the type is on,
+ * build the payload, look up who did it in the audit log, skip when that was
+ * the bot itself, then emit with `moderator`, `reason` and the actor filled
+ * in. `payload` may be a function so channel and ticket checks only run for
+ * an enabled type; returning null skips the event. `audit` null means no
+ * lookup (the event has no audit entry).
+ */
+export async function emitAuditedEvent<T extends PlatformEventType>(
+  guild: Guild,
+  type: T,
+  audit: AuditLookup | null,
+  payload: AuditedPayload<T> | (() => AuditedPayload<T> | null | Promise<AuditedPayload<T> | null>),
+  options: AuditedOptions = {},
+): Promise<void> {
+  try {
+    if (!(await isServerEventEnabled(guild, type))) return;
+    const body = typeof payload === "function" ? await payload() : payload;
+    if (!body) return;
+
+    const match = audit ? await findAuditEntry(guild, audit.type, audit) : null;
+    if (match?.bySelf) return;
+
+    const { fallbackReason = null, ...emitOptions } = options;
+    await emitServerEvent(
+      guild,
+      type,
+      {
+        ...body,
+        moderator: match?.moderator ?? null,
+        reason: match?.reason ?? fallbackReason,
+      } as unknown as ServerPayload<T>,
+      { ...emitOptions, actorDiscordId: match?.moderator?.id ?? emitOptions.actorDiscordId },
+    );
+  } catch (error) {
+    reportError(error, "discord-bot server-log: audited emit", { type, guildId: guild.id });
+  }
+}
+
+/**
+ * Whether messages in this channel are logged at all: a guild with routing,
+ * the channel and its category not ignored, not a log channel, not an open
+ * ticket.
+ */
+export async function isLoggedChannel(guild: Guild, channelId: string, parentId?: string | null): Promise<boolean> {
+  const routing = await getLogRoutingFor(guild.client, guild.id);
+  if (!routing) return false;
+  if (isIgnoredChannel(routing.ignoredChannelIds, channelId, parentId)) return false;
+  if ((await getLogChannelIds(guild.client, guild.id)).has(channelId)) return false;
+  if (await isOpenTicketChannel(guild.id, channelId).catch(() => false)) return false;
+  return true;
+}
+
 /**
  * Whether a message edit or delete should be logged: guild messages from
- * people (not bots or webhooks), outside ignored channels, log channels and
- * open tickets.
+ * people (not bots or webhooks), in a logged channel.
  */
 export async function shouldLogMessage(guild: Guild, message: Message | PartialMessage): Promise<boolean> {
   if (message.author?.bot || message.webhookId) return false;
   const channel = message.channel;
   const parentId = channel && "parentId" in channel ? channel.parentId : null;
-
-  const routing = await getLogRoutingFor(guild.client, guild.id);
-  if (!routing) return false;
-  if (isIgnoredChannel(routing.ignoredChannelIds, message.channelId, parentId)) return false;
-  if ((await getLogChannelIds(guild.client, guild.id)).has(message.channelId)) return false;
-  if (await isOpenTicketChannel(guild.id, message.channelId).catch(() => false)) return false;
-  return true;
+  return isLoggedChannel(guild, message.channelId, parentId);
 }

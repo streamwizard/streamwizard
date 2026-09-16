@@ -1,7 +1,6 @@
 import { AuditLogEvent, Events, type Role } from "discord.js";
-import { findAuditEntry } from "../../lib/server-log/audit";
-import { emitServerEvent, isServerEventEnabled } from "../../lib/server-log/emit";
-import { serverLogEvent } from "../../lib/server-log/handler";
+import { emitAuditedEvent } from "../../lib/server-log/emit";
+import type { BotEvent } from "../../types/discord";
 import { diffFields, diffPermissions, hexColor, roleRef } from "../../lib/server-log/refs";
 
 const snapshot = (role: Role) => ({
@@ -14,24 +13,23 @@ const snapshot = (role: Role) => ({
 
 // Position changes (dragging roles around) touch every role in between; they
 // aren't logged.
-export default serverLogEvent(Events.GuildRoleUpdate, async (oldRole, newRole) => {
-  const changes = diffFields(snapshot(oldRole), snapshot(newRole));
-  const permissions = diffPermissions(oldRole.permissions.bitfield, newRole.permissions.bitfield);
-  if (!Object.keys(changes).length && !permissions.added.length && !permissions.removed.length) return;
-  if (!(await isServerEventEnabled(newRole.guild, "role.updated"))) return;
+export default {
+  name: Events.GuildRoleUpdate,
+  async execute(oldRole, newRole) {
+    const changes = diffFields(snapshot(oldRole), snapshot(newRole));
+    const permissions = diffPermissions(oldRole.permissions.bitfield, newRole.permissions.bitfield);
+    if (!Object.keys(changes).length && !permissions.added.length && !permissions.removed.length) return;
 
-  const audit = await findAuditEntry(newRole.guild, AuditLogEvent.RoleUpdate, { targetId: newRole.id });
-  await emitServerEvent(
-    newRole.guild,
-    "role.updated",
-    {
-      role: roleRef(newRole),
-      changes,
-      permissions_added: permissions.added,
-      permissions_removed: permissions.removed,
-      moderator: audit?.moderator ?? null,
-      reason: audit?.reason ?? null,
-    },
-    { actorDiscordId: audit?.moderator?.id },
-  );
-});
+    await emitAuditedEvent(
+      newRole.guild,
+      "role.updated",
+      { type: AuditLogEvent.RoleUpdate, targetId: newRole.id },
+      {
+        role: roleRef(newRole),
+        changes,
+        permissions_added: permissions.added,
+        permissions_removed: permissions.removed,
+      },
+    );
+  },
+} satisfies BotEvent<typeof Events.GuildRoleUpdate>;

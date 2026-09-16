@@ -7,6 +7,7 @@ import {
   ticketProductLabel,
   type DiscordTicketCategory,
   type TicketListFilters,
+  formatTicketNumber,
 } from "@repo/supabase/queries/tickets";
 import {
   Badge,
@@ -26,7 +27,7 @@ import {
 import { AutoRefresh } from "@/components/discord/auto-refresh";
 import { PageHeader } from "@/components/widgets/page-header";
 import { requireDiscordContext } from "@/lib/discord/api";
-import { formatDateTime, TICKET_CATEGORY_LABELS, ticketLabel } from "@/lib/discord/tickets";
+import { formatDateTime, TICKET_CATEGORY_LABELS } from "@/lib/discord/tickets";
 import { displayName, resolveDiscordProfiles } from "@/lib/discord/users";
 
 export const dynamic = "force-dynamic";
@@ -157,7 +158,7 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
                 <TableRow key={ticket.id} className="relative">
                   <TableCell className="font-mono text-xs">
                     <Link href={`/discord/tickets/${ticket.ticket_number}`} className="after:absolute after:inset-0">
-                      {ticketLabel(ticket.ticket_number)}
+                      {formatTicketNumber(ticket.ticket_number)}
                     </Link>
                   </TableCell>
                   <TableCell className="max-w-72 truncate font-medium">{ticket.subject}</TableCell>

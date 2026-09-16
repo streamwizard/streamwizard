@@ -4,7 +4,13 @@ import { ExternalLink } from "lucide-react";
 import { getDiscordUserIdForUser, getLinkedStreamWizardAccount } from "@repo/supabase/queries/discord";
 import { reportError } from "@repo/sentry";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getTicketByNumber, getTicketHistory, ticketProductLabel, type DiscordTicketEvent } from "@repo/supabase/queries/tickets";
+import {
+  formatTicketNumber,
+  getTicketByNumber,
+  getTicketHistory,
+  ticketProductLabel,
+  type DiscordTicketEvent,
+} from "@repo/supabase/queries/tickets";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { AutoRefresh } from "@/components/discord/auto-refresh";
 import { TicketActions } from "@/components/discord/ticket-actions";
@@ -15,7 +21,7 @@ import { getLiveTranscript } from "@/lib/discord/live-transcript";
 import { PageHeader } from "@/components/widgets/page-header";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { buildNameMap } from "@/lib/discord/names";
-import { formatDateTime, TICKET_CATEGORY_LABELS, ticketLabel } from "@/lib/discord/tickets";
+import { formatDateTime, TICKET_CATEGORY_LABELS } from "@/lib/discord/tickets";
 import { displayName, resolveDiscordProfiles, type DiscordProfile } from "@/lib/discord/users";
 
 export const dynamic = "force-dynamic";
@@ -136,7 +142,7 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-6">
-      <PageHeader title={`${ticketLabel(ticket.ticket_number)} ${ticket.subject}`} description={[ticketProductLabel(ticket.product), TICKET_CATEGORY_LABELS[ticket.category]].filter(Boolean).join(" · ")}>
+      <PageHeader title={`${formatTicketNumber(ticket.ticket_number)} ${ticket.subject}`} description={[ticketProductLabel(ticket.product), TICKET_CATEGORY_LABELS[ticket.category]].filter(Boolean).join(" · ")}>
         <Button variant="outline" size="sm" asChild>
           <Link href="/discord/tickets">All tickets</Link>
         </Button>

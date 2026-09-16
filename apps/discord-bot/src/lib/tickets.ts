@@ -31,7 +31,9 @@ import {
   getTicketSettings,
   insertTicketEvent,
   nextTicketNumber,
+  formatTicketNumber,
   setTicketGithubIssue,
+  ticketChannelName,
   TICKET_PRODUCTS,
   type TicketProduct,
   type DiscordTicket,
@@ -46,14 +48,12 @@ import { env } from "./env";
 import { emitServerEvent } from "./server-log/emit";
 import { memberRef } from "./server-log/refs";
 import { markSelfAction } from "./server-log/self-actions";
-import { Sentry } from "../sentry";
+import { reportError } from "@repo/sentry";
 import { TWITCH_PURPLE } from "./branding";
 import { notifyTicketActivity, trackTicketChannel } from "./ticket-activity";
 import { captureTicketTranscript } from "./ticket-transcript";
 
 const TICKET_SUBJECT_MAX = 100;
-
-const ticketChannelName = (ticket: DiscordTicket) => `ticket-${String(ticket.ticket_number).padStart(4, "0")}`;
 
 /** A member as a log payload ref, falling back to the name stored on the ticket when they left. */
 async function ticketMemberRef(
@@ -83,7 +83,7 @@ async function ticketEventPayload(
     category: ticket.category,
     product: ticket.product,
     opener,
-    channel: { id: ticket.channel_id, name: ticketChannelName(ticket), type: "text" },
+    channel: { id: ticket.channel_id, name: ticketChannelName(ticket.ticket_number), type: "text" },
     source,
     dashboard_url: env.WEB_ADMIN_URL
       ? `${env.WEB_ADMIN_URL.replace(/\/$/, "")}/discord/tickets/${ticket.ticket_number}`
@@ -110,8 +110,7 @@ async function recordTicketEvent(
       actorName: actor?.displayName ?? null,
     });
   } catch (error) {
-    Sentry.captureException(error);
-    console.error(`[tickets] Failed to record "${type}" event for ticket ${ticket.id}:`, error);
+    reportError(error, "discord-bot tickets: record event", { type, ticketId: ticket.id });
   }
 
   const base = await ticketEventPayload(guild, ticket, source);
@@ -308,7 +307,7 @@ function buildTicketIntroMessage(
 ) {
   const embed = new EmbedBuilder()
     .setColor(TWITCH_PURPLE)
-    .setAuthor({ name: `Ticket #${String(ticket.ticket_number).padStart(4, "0")}` })
+    .setAuthor({ name: `Ticket ${formatTicketNumber(ticket.ticket_number)}` })
     .setTitle(ticket.subject)
     .setDescription(ticket.description)
     .addFields(
@@ -394,7 +393,7 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction): Pr
   const ticketNumber = await nextTicketNumber(supabase, interaction.guildId);
 
   const channel = await interaction.guild.channels.create({
-    name: `ticket-${String(ticketNumber).padStart(4, "0")}`,
+    name: ticketChannelName(ticketNumber),
     type: ChannelType.GuildText,
     parent: settings.category_id,
     permissionOverwrites: [
@@ -542,7 +541,7 @@ export async function claimTicketAs(
     const opener = claimed.opener_user_id ? await getTicketOpenerProfile(supabase, claimed.opener_user_id) : null;
     await intro
       .edit(buildTicketIntroMessage(claimed, settings, opener))
-      .catch((error) => Sentry.captureException(error));
+      .catch((error) => reportError(error, "discord-bot tickets: update intro", { ticketId: claimed.id }));
   }
   await channel.send({ content: `🙋 ${member} claimed this ticket.`, allowedMentions: { parse: [] } }).catch(() => {});
   return { status: "claimed" };
@@ -588,7 +587,7 @@ export async function handleGithubButton(interaction: ButtonInteraction): Promis
     "",
     `**Product:** ${productLabel(ticket.product)}`,
     `**Category:** ${categoryLabel(ticket.category)}`,
-    `**Discord ticket:** #${String(ticket.ticket_number).padStart(4, "0")}`,
+    `**Discord ticket:** ${formatTicketNumber(ticket.ticket_number)}`,
     `**StreamWizard account:** ${ticket.opener_user_id ? "linked" : "not linked"}`,
   ].join("\n");
 
@@ -667,8 +666,7 @@ export async function closeTicketChannel(
   try {
     messageCount = await captureTicketTranscript(channel, ticket);
   } catch (error) {
-    Sentry.captureException(error);
-    console.error(`[tickets] Failed to save transcript for ticket #${ticket.ticket_number}:`, error);
+    reportError(error, "discord-bot tickets: transcript", { ticketId: ticket.id, ticketNumber: ticket.ticket_number });
     return "transcript_failed";
   }
 
@@ -741,8 +739,7 @@ export async function handleTicketInteraction(interaction: ButtonInteraction | M
         break;
     }
   } catch (error) {
-    Sentry.captureException(error);
-    console.error(`[tickets] Error handling "${interaction.customId}":`, error);
+    reportError(error, "discord-bot tickets: interaction", { customId: interaction.customId });
 
     const payload = {
       content: "Something went wrong with that ticket action.",

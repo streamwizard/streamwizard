@@ -27,7 +27,7 @@ import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/
 import { postTicketPanel } from "./tickets";
 import { cleanUpOldWelcomeChannel } from "./welcome";
 import { closeGuildSessions, invalidateSettingsCache } from "./activity-tracker";
-import { Sentry } from "../sentry";
+import { reportError } from "@repo/sentry";
 import { TWITCH_PURPLE } from "./branding";
 
 // customId namespace for the /setup wizard's components. interactionCreate
@@ -266,15 +266,13 @@ export async function migrateVerifiedRole(guild: Guild, oldRoleId: string, newRo
         await member.roles.remove(oldRoleId);
         await member.roles.add(newRoleId);
       } catch (error) {
-        Sentry.captureException(error);
-        console.error(`[setup] Failed to migrate verified role for "${member.user.tag}" in "${guild.name}":`, error);
+        reportError(error, "discord-bot setup: migrate verified role", { memberId: member.id, guildId: guild.id });
       }
     }
 
     console.log(`[setup] Migrated verified role for ${holders.size} member(s) in "${guild.name}"`);
   } catch (error) {
-    Sentry.captureException(error);
-    console.error(`[setup] Failed to fetch members for verified role migration in "${guild.name}":`, error);
+    reportError(error, "discord-bot setup: fetch members", { guildId: guild.id });
   }
 }
 

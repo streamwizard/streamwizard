@@ -7,10 +7,6 @@ export const TICKET_CATEGORY_LABELS: Record<DiscordTicketCategory, string> = {
   other: "Other",
 };
 
-export function ticketLabel(ticketNumber: number): string {
-  return `#${String(ticketNumber).padStart(4, "0")}`;
-}
-
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
 }

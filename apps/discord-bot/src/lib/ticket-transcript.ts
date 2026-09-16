@@ -2,9 +2,14 @@ import { randomUUID } from "node:crypto";
 import type { Collection, Message, TextChannel } from "discord.js";
 import { R2Storage } from "@repo/storage";
 import { supabase } from "@repo/supabase";
-import { saveTicketTranscript, type DiscordTicket, type DiscordTicketMessageInsert } from "@repo/supabase/queries/tickets";
-import { Sentry } from "../sentry";
+import {
+  saveTicketTranscript,
+  type DiscordTicket,
+  type DiscordTicketMessageInsert,
+} from "@repo/supabase/queries/tickets";
+import { reportError } from "@repo/sentry";
 import { env } from "./env";
+import { displayNameOf } from "./server-log/refs";
 
 // Saves a ticket channel's messages before the channel is deleted (SW-346).
 // Small images are copied to R2 so screenshots survive Discord's expiring CDN
@@ -54,7 +59,10 @@ async function fetchAllMessages(channel: TextChannel): Promise<Message[]> {
   return messages.sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 }
 
-async function copyImage(ticket: DiscordTicket, attachment: Message["attachments"] extends Collection<string, infer A> ? A : never) {
+async function copyImage(
+  ticket: DiscordTicket,
+  attachment: Message["attachments"] extends Collection<string, infer A> ? A : never,
+) {
   const storage = getR2();
   if (!storage || !env.NEXT_PUBLIC_CDN_URL) return null;
 
@@ -85,7 +93,7 @@ export async function captureTicketTranscript(channel: TextChannel, ticket: Disc
       if (isSmallImage && imagesCopied < MAX_IMAGES_PER_TICKET) {
         // A failed copy only loses the preview, never the transcript.
         copied = await copyImage(ticket, attachment).catch((error) => {
-          Sentry.captureException(error);
+          reportError(error, "discord-bot tickets: copy image", { ticketId: ticket.id, attachmentId: attachment.id });
           return null;
         });
         if (copied) imagesCopied++;
@@ -104,7 +112,7 @@ export async function captureTicketTranscript(channel: TextChannel, ticket: Disc
       ticket_id: ticket.id,
       message_id: message.id,
       author_discord_id: message.author.id,
-      author_name: message.member?.displayName ?? message.author.globalName ?? message.author.username,
+      author_name: displayNameOf(message.author, message.member) ?? message.author.username,
       author_avatar_url: message.author.displayAvatarURL({ size: 64 }),
       author_is_bot: message.author.bot,
       content: message.content,

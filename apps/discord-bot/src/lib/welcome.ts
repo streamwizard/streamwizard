@@ -5,7 +5,7 @@ import { supabase } from "@repo/supabase";
 import { getGuildSettings, recordGuildMemberJoin, toPublicTwitchIntegration } from "@repo/supabase/queries/discord";
 import type { PublicTwitchIntegration } from "@repo/supabase/queries/discord";
 import { getUserIdentity } from "@repo/supabase/queries/identity";
-import { Sentry } from "../sentry";
+import { reportError } from "@repo/sentry";
 import { buildLinkRow } from "./account";
 
 const BROADCASTER_TYPE_LABEL: Record<string, string> = {
@@ -24,8 +24,7 @@ export async function getJoinNumber(member: GuildMember): Promise<number | null>
   try {
     return await recordGuildMemberJoin(supabase, member.guild.id, member.id, member.guild.memberCount);
   } catch (error) {
-    Sentry.captureException(error);
-    console.error(`[welcome] Failed to record join number for "${member.user.tag}" in "${member.guild.name}":`, error);
+    reportError(error, "discord-bot welcome: join number", { memberId: member.id, guildId: member.guild.id });
     return null;
   }
 }
@@ -36,8 +35,7 @@ export async function getConnectionInfo(member: GuildMember): Promise<Connection
     if (!identity) return { isConnected: false, twitch: null, userId: null };
     return { isConnected: true, twitch: toPublicTwitchIntegration(identity), userId: identity.userId };
   } catch (error) {
-    Sentry.captureException(error);
-    console.error(`[welcome] Failed to check connection status for "${member.user.tag}":`, error);
+    reportError(error, "discord-bot welcome: connection", { memberId: member.id });
     return { isConnected: false, twitch: null, userId: null };
   }
 }
@@ -95,8 +93,7 @@ export async function getGuildWelcomeSettings(guild: Guild) {
   try {
     return await getGuildSettings(supabase, guild.id);
   } catch (error) {
-    Sentry.captureException(error);
-    console.error(`[welcome] Failed to load settings for "${guild.name}":`, error);
+    reportError(error, "discord-bot welcome: settings", { guildId: guild.id });
     return null;
   }
 }
@@ -183,8 +180,7 @@ export async function grantJoinRole(member: GuildMember, joinRoleId: string | nu
     markSelfAction("roles", member.id);
     await member.roles.add(joinRoleId, "Join role");
   } catch (error) {
-    Sentry.captureException(error);
-    console.error(`[welcome] Failed to give join role to "${member.user.tag}" in "${member.guild.name}":`, error);
+    reportError(error, "discord-bot welcome: join role", { memberId: member.id, guildId: member.guild.id });
   }
 }
 
@@ -206,9 +202,6 @@ export async function cleanUpOldWelcomeChannel(guild: Guild, previousChannelId: 
     .then((count) =>
       console.log(`[welcome] Removed ${count} old welcome message(s) from #${previous.name} in "${guild.name}"`),
     )
-    .catch((error) => {
-      Sentry.captureException(error);
-      console.error(`[welcome] Failed to clean up old welcome messages in "${guild.name}":`, error);
-    });
+    .catch((error) => reportError(error, "discord-bot welcome: cleanup", { guildId: guild.id }));
   return true;
 }

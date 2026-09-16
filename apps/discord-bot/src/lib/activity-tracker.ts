@@ -21,7 +21,7 @@ import {
   openVoiceSession,
   type DiscordActivitySettings,
 } from "@repo/supabase/queries/discord-activity";
-import { Sentry } from "../sentry";
+import { reportError } from "@repo/sentry";
 
 // How long a guild's settings + ignored-channel list stays cached before we
 // re-read it. Messages are high-frequency, so we must not hit the DB per event.
@@ -95,8 +95,7 @@ async function recordIncrement(
   try {
     await incrementDailyActivity(supabase, { guildId, userId, date, ...deltas });
   } catch (error) {
-    Sentry.captureException(error);
-    console.error(`[activity] Failed to record counts for ${guildId}/${userId}:`, error);
+    reportError(error, "discord-bot activity: record counts", { guildId, userId });
   }
 }
 
@@ -119,7 +118,7 @@ export async function recordMessage(message: Message): Promise<void> {
       return;
     await recordIncrement(message.guildId, message.author.id, utcDate(), { messages: 1 });
   } catch (error) {
-    Sentry.captureException(error);
+    reportError(error, "discord-bot activity: message");
   }
 }
 
@@ -157,7 +156,7 @@ export async function recordReaction(
 
     await Promise.all(writes);
   } catch (error) {
-    Sentry.captureException(error);
+    reportError(error, "discord-bot activity: reaction");
   }
 }
 
@@ -187,7 +186,7 @@ async function openSession(guildId: string, member: GuildMember, channelId: stri
     const sessionId = await openVoiceSession(supabase, { guildId, userId: member.id, channelId, joinedAt: startedAt });
     openSessions.set(`${guildId}:${member.id}`, { sessionId, channelId, startedAt });
   } catch (error) {
-    Sentry.captureException(error);
+    reportError(error, "discord-bot activity: open voice session", { guildId, memberId: member.id });
   }
 }
 
@@ -224,7 +223,7 @@ async function closeSession(guildId: string, userId: string): Promise<void> {
       await recordIncrement(guildId, userId, date, { voiceSeconds: seconds });
     }
   } catch (error) {
-    Sentry.captureException(error);
+    reportError(error, "discord-bot activity: close voice session", { guildId, userId });
   }
 }
 
@@ -290,7 +289,7 @@ export async function handleVoiceStateUpdate(oldState: VoiceState, newState: Voi
       await reevaluateMember(mover, ctx);
     }
   } catch (error) {
-    Sentry.captureException(error);
+    reportError(error, "discord-bot activity: voice state");
   }
 }
 
@@ -303,7 +302,11 @@ export async function reconcileVoiceSessions(client: Client): Promise<void> {
       const orphans = await getOpenVoiceSessions(supabase, guild.id);
       const now = new Date();
       await Promise.all(
-        orphans.map((s) => closeVoiceSession(supabase, s.id, now, 0).catch((e) => Sentry.captureException(e))),
+        orphans.map((s) =>
+          closeVoiceSession(supabase, s.id, now, 0).catch((error) =>
+            reportError(error, "discord-bot activity: close orphan session", { sessionId: s.id }),
+          ),
+        ),
       );
 
       const ctx = await getContext(guild.id);
@@ -316,8 +319,7 @@ export async function reconcileVoiceSessions(client: Client): Promise<void> {
         }
       }
     } catch (error) {
-      Sentry.captureException(error);
-      console.error(`[activity] Failed to reconcile voice sessions for "${guild.name}":`, error);
+      reportError(error, "discord-bot activity: reconcile", { guildId: guild.id });
     }
   }
 }

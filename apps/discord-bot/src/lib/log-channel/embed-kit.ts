@@ -1,7 +1,15 @@
 import { EmbedBuilder, escapeMarkdown, type APIEmbedField } from "discord.js";
-import { PLATFORM_EVENT_LABELS, type PlatformEventPayloads, type PlatformEventType } from "@repo/types";
+import {
+  PLATFORM_EVENT_LABELS,
+  type DiscordUserRef,
+  type PlatformEventPayloads,
+  type PlatformEventType,
+} from "@repo/types";
 import type { PlatformEvent } from "@repo/supabase/queries/platform-events";
+import { formatDuration, formatNumber } from "../activity-format";
 import { DANGER_RED, DISCORD_BLURPLE, TWITCH_PURPLE } from "../branding";
+
+export { formatNumber };
 
 // Shared pieces for log embeds. Pure: no env, no Discord or DB calls.
 // Wording follows docs/tone_of_voice.md (sentence case, no em dashes, one
@@ -111,6 +119,16 @@ export function code(value?: string | null): string | null {
   return value ? `\`${value.replace(/`/g, "")}\`` : null;
 }
 
+/** Comma-separated code spans, capped for a field. Null when empty. */
+export function codeList(items?: string[] | null): string | null {
+  return items?.length ? truncate(items.map((item) => code(item)).join(", "), FIELD_MAX) : null;
+}
+
+/** User-written text as plain text: escaped, or null when empty. */
+export function plain(text?: string | null): string | null {
+  return text ? escapeMarkdown(text) : null;
+}
+
 export function bold(name: string | null | undefined, fallback: string): string {
   return name ? `**${escapeMarkdown(name)}**` : fallback;
 }
@@ -136,16 +154,10 @@ export function discordDate(iso: string | null | undefined, fallback = "Never"):
   return `<t:${unix}:D> (<t:${unix}:R>)`;
 }
 
-/** "1h 4m", "2m 13s", "45s". Null for missing or negative values. */
+/** "1h 4m", "2m 13s", "45s" (activity-format's rule). Null for missing or negative values. */
 export function duration(seconds?: number | null): string | null {
   if (seconds === null || seconds === undefined || !Number.isFinite(seconds) || seconds < 0) return null;
-  const total = Math.round(seconds);
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  if (h) return `${h}h ${m}m`;
-  if (m) return `${m}m ${s}s`;
-  return `${s}s`;
+  return formatDuration(Math.round(seconds));
 }
 
 export function sentenceCase(value?: string | null): string | null {
@@ -171,6 +183,33 @@ export function setAuthor(
   url?: string,
 ): EmbedBuilder {
   if (name) embed.setAuthor({ name: truncate(name, AUTHOR_MAX), iconURL: httpsUrl(iconUrl), url });
+  return embed;
+}
+
+/** The description as lines; empty lines are dropped and the whole is capped. */
+export function describeLines(embed: EmbedBuilder, lines: string[]): EmbedBuilder {
+  return embed.setDescription(truncate(lines.filter(Boolean).join("\n"), DESCRIPTION_MAX));
+}
+
+// ── Discord members in payloads ─────────────────────────────────────────────
+
+export function memberName(member?: DiscordUserRef | null): string | null {
+  return member ? (member.display_name ?? member.username ?? null) : null;
+}
+
+/** "<@id>", or the bold name when the id isn't usable. */
+export function discordUser(member: DiscordUserRef | null | undefined, fallback: string): string {
+  return discordMention(member?.id) ?? bold(memberName(member), fallback);
+}
+
+/** Author line "Name (@username)" and thumbnail from a member's Discord avatar. */
+export function withMember(embed: EmbedBuilder, member?: DiscordUserRef | null): EmbedBuilder {
+  if (!member) return embed;
+  const name = memberName(member);
+  const label = name && member.username && name !== member.username ? `${name} (@${member.username})` : name;
+  setAuthor(embed, label, member.avatar_url);
+  const avatar = httpsUrl(member.avatar_url);
+  if (avatar) embed.setThumbnail(avatar);
   return embed;
 }
 

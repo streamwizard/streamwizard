@@ -1,20 +1,17 @@
 import { AuditLogEvent, Events } from "discord.js";
-import { findAuditEntry } from "../../lib/server-log/audit";
-import { emitServerEvent, isServerEventEnabled } from "../../lib/server-log/emit";
-import { serverLogEvent } from "../../lib/server-log/handler";
+import { emitAuditedEvent } from "../../lib/server-log/emit";
+import type { BotEvent } from "../../types/discord";
 import { userRef } from "../../lib/server-log/refs";
 
-export default serverLogEvent(Events.GuildBanAdd, async (ban) => {
-  if (!(await isServerEventEnabled(ban.guild, "member.banned"))) return;
-  const audit = await findAuditEntry(ban.guild, AuditLogEvent.MemberBanAdd, { targetId: ban.user.id });
-  await emitServerEvent(
-    ban.guild,
-    "member.banned",
-    {
-      member: userRef(ban.user) ?? { id: ban.user.id },
-      moderator: audit?.moderator ?? null,
-      reason: audit?.reason ?? ban.reason ?? null,
-    },
-    { subjectDiscordId: ban.user.id, actorDiscordId: audit?.moderator?.id },
-  );
-});
+export default {
+  name: Events.GuildBanAdd,
+  async execute(ban) {
+    await emitAuditedEvent(
+      ban.guild,
+      "member.banned",
+      { type: AuditLogEvent.MemberBanAdd, targetId: ban.user.id },
+      { member: userRef(ban.user) ?? { id: ban.user.id } },
+      { subjectDiscordId: ban.user.id, fallbackReason: ban.reason },
+    );
+  },
+} satisfies BotEvent<typeof Events.GuildBanAdd>;

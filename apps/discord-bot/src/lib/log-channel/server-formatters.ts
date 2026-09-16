@@ -1,4 +1,4 @@
-import { escapeMarkdown, type APIEmbedField, type EmbedBuilder } from "discord.js";
+import type { APIEmbedField } from "discord.js";
 import type { DiscordChannelRef, DiscordRoleRef, DiscordUserRef } from "@repo/types";
 import type { PlatformEvent } from "@repo/supabase/queries/platform-events";
 import {
@@ -9,15 +9,18 @@ import {
   changeLines,
   channelMention,
   code,
+  codeList,
+  describeLines,
   discordDate,
-  discordMention,
+  discordUser,
   field,
-  httpsUrl,
+  formatNumber,
+  plain,
   quote,
   roleMention,
-  setAuthor,
   truncate,
   twitchLink,
+  withMember,
   type Formatter,
 } from "./embed-kit";
 
@@ -35,31 +38,14 @@ interface Moderation {
   reason?: string | null;
 }
 
-function memberName(member?: DiscordUserRef | null): string | null {
-  return member ? (member.display_name ?? member.username ?? null) : null;
-}
-
-/** "<@id>", or the name when the id isn't usable. */
-function who(member: DiscordUserRef | null | undefined, fallback: string): string {
-  return discordMention(member?.id) ?? bold(memberName(member), fallback);
-}
-
-function withMember(embed: EmbedBuilder, member?: DiscordUserRef | null): EmbedBuilder {
-  if (!member) return embed;
-  setAuthor(embed, member.username ? `${memberName(member) ?? member.username} (@${member.username})` : memberName(member), member.avatar_url);
-  const avatar = httpsUrl(member.avatar_url);
-  if (avatar) embed.setThumbnail(avatar);
-  return embed;
-}
-
 function memberFields(member: DiscordUserRef | null | undefined, payload: Linked): APIEmbedField[] {
   return [...field("Discord ID", code(member?.id)), ...field("StreamWizard", twitchLink(payload.twitch_username))];
 }
 
 function moderationFields(payload: Moderation, label = "Moderator"): APIEmbedField[] {
   return [
-    ...field(label, payload.moderator ? who(payload.moderator, "Unknown") : "Unknown"),
-    ...field("Reason", payload.reason ? escapeMarkdown(payload.reason) : null, false),
+    ...field(label, payload.moderator ? discordUser(payload.moderator, "Unknown") : "Unknown"),
+    ...field("Reason", plain(payload.reason), false),
   ];
 }
 
@@ -77,8 +63,6 @@ function channelLabel(channel?: DiscordChannelRef | null): string {
 function goneChannel(channel?: DiscordChannelRef | null): string {
   return bold(channel?.name ? `#${channel.name}` : null, "A channel");
 }
-
-const summary = (embed: EmbedBuilder, lines: string[]) => embed.setDescription(truncate(lines.filter(Boolean).join("\n"), DESCRIPTION_MAX));
 
 type ServerType =
   | "member.joined"
@@ -106,19 +90,20 @@ type ServerType =
   | "voice.left"
   | "voice.moved";
 
-const permissionList = (names?: string[]) => (names?.length ? truncate(names.map((n) => code(n)).join(", "), FIELD_MAX) : null);
-
 export const SERVER_FORMATTERS: { [T in ServerType]: Formatter<T> } = {
   "member.joined": (payload, event: PlatformEvent) =>
     withMember(base(event, "member.joined"), payload.member)
       .setDescription(
-        `${who(payload.member, "Someone")} joined the server.${payload.member_count ? ` Member ${payload.member_count.toLocaleString("en-US")}.` : ""}`
+        `${discordUser(payload.member, "Someone")} joined the server.${payload.member_count ? ` Member ${formatNumber(payload.member_count)}.` : ""}`,
       )
-      .addFields([...field("Account created", discordDate(payload.account_created_at, "Unknown")), ...memberFields(payload.member, payload)]),
+      .addFields([
+        ...field("Account created", discordDate(payload.account_created_at, "Unknown")),
+        ...memberFields(payload.member, payload),
+      ]),
 
   "member.left": (payload, event) =>
     withMember(base(event, "member.left"), payload.member)
-      .setDescription(`${who(payload.member, "Someone")} left the server.`)
+      .setDescription(`${discordUser(payload.member, "Someone")} left the server.`)
       .addFields([
         ...field("Joined", discordDate(payload.joined_at, "Unknown")),
         ...memberFields(payload.member, payload),
@@ -127,7 +112,7 @@ export const SERVER_FORMATTERS: { [T in ServerType]: Formatter<T> } = {
 
   "member.kicked": (payload, event) =>
     withMember(base(event, "member.kicked"), payload.member)
-      .setDescription(`${who(payload.member, "Someone")} was kicked.`)
+      .setDescription(`${discordUser(payload.member, "Someone")} was kicked.`)
       .addFields([
         ...moderationFields(payload),
         ...memberFields(payload.member, payload),
@@ -136,36 +121,38 @@ export const SERVER_FORMATTERS: { [T in ServerType]: Formatter<T> } = {
 
   "member.banned": (payload, event) =>
     withMember(base(event, "member.banned"), payload.member)
-      .setDescription(`${who(payload.member, "Someone")} was banned.`)
+      .setDescription(`${discordUser(payload.member, "Someone")} was banned.`)
       .addFields([...moderationFields(payload), ...memberFields(payload.member, payload)]),
 
   "member.unbanned": (payload, event) =>
     withMember(base(event, "member.unbanned"), payload.member)
-      .setDescription(`${who(payload.member, "Someone")} was unbanned.`)
+      .setDescription(`${discordUser(payload.member, "Someone")} was unbanned.`)
       .addFields([...moderationFields(payload), ...memberFields(payload.member, payload)]),
 
   "member.timed_out": (payload, event) =>
     withMember(base(event, "member.timed_out"), payload.member)
-      .setDescription(`${who(payload.member, "Someone")} is timed out until ${discordDate(payload.until, "later")}.`)
+      .setDescription(
+        `${discordUser(payload.member, "Someone")} is timed out until ${discordDate(payload.until, "later")}.`,
+      )
       .addFields([...moderationFields(payload), ...memberFields(payload.member, payload)]),
 
   "member.timeout_removed": (payload, event) =>
     withMember(base(event, "member.timeout_removed"), payload.member)
-      .setDescription(`${who(payload.member, "Someone")} can talk again.`)
+      .setDescription(`${discordUser(payload.member, "Someone")} can talk again.`)
       .addFields([...moderationFields(payload, "Removed by"), ...memberFields(payload.member, payload)]),
 
   "member.nickname_changed": (payload, event) =>
     withMember(base(event, "member.nickname_changed"), payload.member)
-      .setDescription(`${who(payload.member, "Someone")} has a new nickname.`)
+      .setDescription(`${discordUser(payload.member, "Someone")} has a new nickname.`)
       .addFields([
-        ...field("Before", payload.before ? escapeMarkdown(payload.before) : "*No nickname*"),
-        ...field("After", payload.after ? escapeMarkdown(payload.after) : "*No nickname*"),
+        ...field("Before", plain(payload.before) ?? "*No nickname*"),
+        ...field("After", plain(payload.after) ?? "*No nickname*"),
         ...moderationFields(payload, "Changed by"),
       ]),
 
   "member.roles_changed": (payload, event) =>
     withMember(base(event, "member.roles_changed"), payload.member)
-      .setDescription(`${who(payload.member, "Someone")}'s roles changed.`)
+      .setDescription(`${discordUser(payload.member, "Someone")}'s roles changed.`)
       .addFields([
         ...field("Added", roleList(payload.added)),
         ...field("Removed", roleList(payload.removed)),
@@ -175,7 +162,7 @@ export const SERVER_FORMATTERS: { [T in ServerType]: Formatter<T> } = {
   "message.edited": (payload, event) =>
     withMember(base(event, "message.edited"), payload.member)
       .setDescription(
-        `${who(payload.member, "Someone")} edited a message in ${channelLabel(payload.channel)}.${payload.url ? ` [Jump to message](${payload.url})` : ""}`
+        `${discordUser(payload.member, "Someone")} edited a message in ${channelLabel(payload.channel)}.${payload.url ? ` [Jump to message](${payload.url})` : ""}`,
       )
       .addFields([
         ...field("Before", quote(payload.before, "Not cached, the bot restarted since it was sent"), false),
@@ -187,20 +174,22 @@ export const SERVER_FORMATTERS: { [T in ServerType]: Formatter<T> } = {
     withMember(base(event, "message.deleted"), payload.member)
       .setDescription(
         payload.member
-          ? `A message by ${who(payload.member, "someone")} was deleted in ${channelLabel(payload.channel)}.`
-          : `A message was deleted in ${channelLabel(payload.channel)}.`
+          ? `A message by ${discordUser(payload.member, "someone")} was deleted in ${channelLabel(payload.channel)}.`
+          : `A message was deleted in ${channelLabel(payload.channel)}.`,
       )
       .addFields([
         ...field("Text", quote(payload.content, "Not available, the bot didn't see this message"), false),
-        ...field("Attachments", payload.attachments?.length ? truncate(payload.attachments.map((name) => code(name)).join(", "), FIELD_MAX) : null, false),
+        ...field("Attachments", codeList(payload.attachments), false),
         ...field("Sent", discordDate(payload.sent_at, "Unknown")),
         ...(payload.moderator ? moderationFields(payload, "Deleted by") : []),
         ...field("Message ID", code(payload.message_id)),
       ]),
 
   "message.bulk_deleted": (payload, event) => {
-    const lines = payload.lines?.length ? `\`\`\`\n${truncate(payload.lines.join("\n").replace(/`/g, "'"), DESCRIPTION_MAX - 200)}\n\`\`\`` : "";
-    return summary(base(event, "message.bulk_deleted"), [
+    const lines = payload.lines?.length
+      ? `\`\`\`\n${truncate(payload.lines.join("\n").replace(/`/g, "'"), DESCRIPTION_MAX - 200)}\n\`\`\``
+      : "";
+    return describeLines(base(event, "message.bulk_deleted"), [
       `${payload.count ?? "Several"} messages were deleted in ${channelLabel(payload.channel)}.`,
       lines,
     ]).addFields(moderationFields(payload));
@@ -210,19 +199,19 @@ export const SERVER_FORMATTERS: { [T in ServerType]: Formatter<T> } = {
     base(event, "role.created")
       .setDescription(`${roleMention(payload.role?.id) ?? bold(payload.role?.name, "A role")} was created.`)
       .addFields([
-        ...field("Name", payload.role?.name ? escapeMarkdown(payload.role.name) : null),
+        ...field("Name", plain(payload.role?.name)),
         ...field("Colour", code(payload.role?.color)),
-        ...field("Permissions", permissionList(payload.permissions), false),
+        ...field("Permissions", codeList(payload.permissions), false),
         ...moderationFields(payload, "Created by"),
       ]),
 
   "role.updated": (payload, event) =>
-    summary(base(event, "role.updated"), [
+    describeLines(base(event, "role.updated"), [
       `${roleMention(payload.role?.id) ?? bold(payload.role?.name, "A role")} changed.`,
       ...changeLines(payload.changes),
     ]).addFields([
-      ...field("Permissions added", permissionList(payload.permissions_added), false),
-      ...field("Permissions removed", permissionList(payload.permissions_removed), false),
+      ...field("Permissions added", codeList(payload.permissions_added), false),
+      ...field("Permissions removed", codeList(payload.permissions_removed), false),
       ...moderationFields(payload, "Changed by"),
     ]),
 
@@ -236,12 +225,12 @@ export const SERVER_FORMATTERS: { [T in ServerType]: Formatter<T> } = {
       .setDescription(`${channelLabel(payload.channel)} was created.`)
       .addFields([
         ...field("Type", payload.channel?.type ?? null),
-        ...field("Category", payload.channel?.parent_name ? escapeMarkdown(payload.channel.parent_name) : null),
+        ...field("Category", plain(payload.channel?.parent_name)),
         ...moderationFields(payload, "Created by"),
       ]),
 
   "channel.updated": (payload, event) =>
-    summary(base(event, "channel.updated"), [
+    describeLines(base(event, "channel.updated"), [
       `${channelLabel(payload.channel)} changed.`,
       ...changeLines(payload.changes),
       payload.overwrites_changed ? "**Permissions** overrides changed" : "",
@@ -252,20 +241,21 @@ export const SERVER_FORMATTERS: { [T in ServerType]: Formatter<T> } = {
       .setDescription(`${goneChannel(payload.channel)} was deleted.`)
       .addFields([
         ...field("Type", payload.channel?.type ?? null),
-        ...field("Category", payload.channel?.parent_name ? escapeMarkdown(payload.channel.parent_name) : null),
+        ...field("Category", plain(payload.channel?.parent_name)),
         ...moderationFields(payload, "Deleted by"),
       ]),
 
   "server.updated": (payload, event) =>
-    summary(base(event, "server.updated"), ["The server settings changed.", ...changeLines(payload.changes)]).addFields(
-      moderationFields(payload, "Changed by")
-    ),
+    describeLines(base(event, "server.updated"), [
+      "The server settings changed.",
+      ...changeLines(payload.changes),
+    ]).addFields(moderationFields(payload, "Changed by")),
 
   "invite.created": (payload, event) =>
     base(event, "invite.created")
       .setDescription(`New invite ${code(`discord.gg/${payload.code ?? "?"}`)} for ${channelLabel(payload.channel)}.`)
       .addFields([
-        ...field("Created by", payload.inviter ? who(payload.inviter, "Unknown") : "Unknown"),
+        ...field("Created by", payload.inviter ? discordUser(payload.inviter, "Unknown") : "Unknown"),
         ...field("Max uses", payload.max_uses ? String(payload.max_uses) : "No limit"),
         ...field("Expires", discordDate(payload.expires_at)),
         ...field("Temporary", payload.temporary ? "Yes, members leave when they go offline" : null, false),
@@ -273,17 +263,21 @@ export const SERVER_FORMATTERS: { [T in ServerType]: Formatter<T> } = {
 
   "invite.deleted": (payload, event) =>
     base(event, "invite.deleted").setDescription(
-      `Invite ${code(`discord.gg/${payload.code ?? "?"}`)} for ${channelLabel(payload.channel)} was deleted or expired.`
+      `Invite ${code(`discord.gg/${payload.code ?? "?"}`)} for ${channelLabel(payload.channel)} was deleted or expired.`,
     ),
 
   "voice.joined": (payload, event) =>
-    withMember(base(event, "voice.joined"), payload.member).setDescription(`${who(payload.member, "Someone")} joined ${channelLabel(payload.channel)}.`),
+    withMember(base(event, "voice.joined"), payload.member).setDescription(
+      `${discordUser(payload.member, "Someone")} joined ${channelLabel(payload.channel)}.`,
+    ),
 
   "voice.left": (payload, event) =>
-    withMember(base(event, "voice.left"), payload.member).setDescription(`${who(payload.member, "Someone")} left ${channelLabel(payload.channel)}.`),
+    withMember(base(event, "voice.left"), payload.member).setDescription(
+      `${discordUser(payload.member, "Someone")} left ${channelLabel(payload.channel)}.`,
+    ),
 
   "voice.moved": (payload, event) =>
     withMember(base(event, "voice.moved"), payload.member).setDescription(
-      `${who(payload.member, "Someone")} moved from ${channelLabel(payload.from)} to ${channelLabel(payload.to)}.`
+      `${discordUser(payload.member, "Someone")} moved from ${channelLabel(payload.from)} to ${channelLabel(payload.to)}.`,
     ),
 };

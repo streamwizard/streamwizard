@@ -1,7 +1,7 @@
 import { Events } from "discord.js";
 import { reconcileVoiceSessions } from "../lib/activity-tracker";
 import { startLogWorker } from "../lib/log-channel/worker";
-import { Sentry } from "../sentry";
+import { reportError } from "@repo/sentry";
 import type { BotEvent } from "../types/discord";
 
 export default {
@@ -15,8 +15,7 @@ export default {
     try {
       await reconcileVoiceSessions(client);
     } catch (error) {
-      Sentry.captureException(error);
-      console.error("[discord] Failed to reconcile voice sessions on startup:", error);
+      reportError(error, "discord-bot ready: reconcile voice sessions");
     }
 
     // Post platform events (new users, Discord links, deletions, ...) to the log channel.

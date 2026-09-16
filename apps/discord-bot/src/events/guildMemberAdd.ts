@@ -9,7 +9,7 @@ import {
   resolveWelcomeChannel,
 } from "../lib/welcome";
 import type { BotEvent } from "../types/discord";
-import { Sentry } from "../sentry";
+import { reportError } from "@repo/sentry";
 import { captureServerEvent } from "@repo/posthog/server";
 
 export default {
@@ -24,8 +24,8 @@ export default {
       captureServerEvent(connection.userId ?? `discord:${member.id}`, "discord_guild_joined", {
         linked: connection.isConnected,
       });
-    } catch (phError) {
-      Sentry.captureException(phError);
+    } catch (error) {
+      reportError(error, "discord-bot member add: posthog", { memberId: member.id });
     }
 
     const settings = await getGuildWelcomeSettings(member.guild);
@@ -62,18 +62,16 @@ export default {
           markSelfAction("roles", member.id);
           await member.roles.add(settings.verified_role_id);
         } catch (roleError) {
-          Sentry.captureException(roleError);
-          console.error(
-            `[guildMemberAdd] Failed to grant verified role to "${member.user.tag}" in "${member.guild.name}":`,
-            roleError,
-          );
+          reportError(roleError, "discord-bot member add: verified role", {
+            memberId: member.id,
+            guildId: member.guild.id,
+          });
         }
       }
 
       await channel.send(buildWelcomeMessage(member, joinNumber, connection));
     } catch (error) {
-      Sentry.captureException(error);
-      console.error(`[guildMemberAdd] Failed to send welcome message in "${member.guild.name}":`, error);
+      reportError(error, "discord-bot member add: welcome", { memberId: member.id, guildId: member.guild.id });
     }
   },
 } satisfies BotEvent<typeof Events.GuildMemberAdd>;
