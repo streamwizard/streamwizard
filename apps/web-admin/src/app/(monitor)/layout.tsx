@@ -10,6 +10,7 @@ import { TimeRangeProvider } from "@/lib/time-range-context";
 import { BandwidthUnitProvider } from "@/lib/bandwidth-unit-context";
 import { DASHBOARD_COOKIE } from "@/lib/dashboard-prefs";
 import { homeEnv } from "@/lib/home-env";
+import { getDiscordSetupGaps } from "@/lib/discord/setup-status";
 
 export default async function MonitorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -42,12 +43,15 @@ export default async function MonitorLayout({ children }: { children: React.Reac
   const initialInterval = cookieStore.get(DASHBOARD_COOKIE.refreshInterval)?.value;
   const initialUnit = cookieStore.get(DASHBOARD_COOKIE.bandwidthUnit)?.value;
 
+  // Sidebar "Not set up" badges for Discord features missing a channel.
+  const setupGaps = await getDiscordSetupGaps();
+
   return (
     <TimeRangeProvider initialRange={initialRange}>
       <RefreshIntervalProvider initialInterval={initialInterval}>
         <BandwidthUnitProvider initialUnit={initialUnit}>
           <SidebarProvider>
-            <MonitorSidebar userEmail={data.user.email ?? ""} />
+            <MonitorSidebar userEmail={data.user.email ?? ""} notSetUp={[...setupGaps]} />
             <SidebarInset>
               <MonitorHeader envLabel={homeEnv()} />
               <main className="flex-1 overflow-auto p-6">{children}</main>
