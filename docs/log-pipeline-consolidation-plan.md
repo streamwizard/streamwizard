@@ -27,7 +27,7 @@ copied from `packages/logger` for the boilerplate. rest-api imports change from
 Also fixes, for free: the `linkCache` map that never evicted; permissions retry after a failed
 read (already fixed by hand, `fetch()` guarantees it).
 
-## Pass B: one identity query
+## Pass B: one identity query (done 2026-09-15)
 
 Five fetchers of the same three rows (`users`, `integrations_twitch`, `integrations_discord`):
 
@@ -50,7 +50,8 @@ Plan:
 2. `getPlatformEventIdentity` and `...ByTwitchUserId` become thin wrappers; `platform-events.ts`
    keeps its exports so callers don't change.
 3. Bot `emit.ts`: `linkedAccount` = `TtlCache.fetch(discordUserId, () => getUserIdentity(supabase, { discordUserId }))`.
-   Add `getPlatformEventIdentityByDiscordUserId` next to the Twitch one for the ticket emitter.
+   No `...ByDiscordUserId` helper needed: the ticket emitter goes through `emitServerEvent`, which
+   links `subjectDiscordId`/`actorDiscordId` via that same cache.
 4. `welcome.ts` `getConnectionInfo` and `queries/discord.ts` fetchers call `getUserIdentity`;
    delete the private selects. `getUserDisplayProfile` stays as a mapper over it.
 5. Not in scope: replacing the TS rule with an RPC to `platform_event_identity`. The grant is

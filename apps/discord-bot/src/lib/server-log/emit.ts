@@ -2,6 +2,7 @@ import type { Guild, Message, PartialMessage } from "discord.js";
 import type { PlatformEventPayloads, PlatformEventType } from "@repo/types";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
+import { getUserIdentity } from "@repo/supabase/queries/identity";
 import { TtlCache } from "@repo/ttl-cache";
 import {
   emitPlatformEvent,
@@ -31,24 +32,12 @@ const linkCache = new TtlCache<LinkedAccount>({ ttlMs: LINK_TTL_MS });
 /** The StreamWizard account linked to a Discord user, cached for 5 minutes. */
 function linkedAccount(discordUserId: string): Promise<LinkedAccount | null> {
   return linkCache.fetch(discordUserId, async () => {
-    const { data: link, error } = await supabase
-      .from("integrations_discord")
-      .select("user_id")
-      .eq("discord_user_id", discordUserId)
-      .maybeSingle();
-    if (error) throw error;
-    if (!link) return null;
-
-    const { data: twitch, error: twitchError } = await supabase
-      .from("integrations_twitch")
-      .select("twitch_username, twitch_user_id")
-      .eq("user_id", link.user_id)
-      .maybeSingle();
-    if (twitchError) throw twitchError;
+    const identity = await getUserIdentity(supabase, { discordUserId });
+    if (!identity) return null;
     return {
-      userId: link.user_id,
-      twitch_username: twitch?.twitch_username ?? null,
-      twitch_user_id: twitch?.twitch_user_id ?? null,
+      userId: identity.userId,
+      twitch_username: identity.twitch?.username ?? null,
+      twitch_user_id: identity.twitch?.userId ?? null,
     };
   });
 }

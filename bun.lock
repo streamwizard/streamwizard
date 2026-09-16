@@ -536,6 +536,7 @@
       },
       "devDependencies": {
         "@repo/typescript-config": "workspace:*",
+        "@types/bun": "^1.3.6",
         "@types/node": "^25.0.8",
         "typescript": "^5.9.2",
       },

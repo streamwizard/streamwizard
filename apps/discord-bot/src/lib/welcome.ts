@@ -2,13 +2,9 @@ import { ChannelType, EmbedBuilder, PermissionFlagsBits } from "discord.js";
 import { markSelfAction } from "./server-log/self-actions";
 import type { Guild, GuildMember, Message, TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
-import {
-  getDiscordIntegrationByDiscordUserId,
-  getGuildSettings,
-  getPublicTwitchIntegrationByDiscordUserId,
-  recordGuildMemberJoin,
-} from "@repo/supabase/queries/discord";
+import { getGuildSettings, recordGuildMemberJoin, toPublicTwitchIntegration } from "@repo/supabase/queries/discord";
 import type { PublicTwitchIntegration } from "@repo/supabase/queries/discord";
+import { getUserIdentity } from "@repo/supabase/queries/identity";
 import { Sentry } from "../sentry";
 import { buildLinkRow } from "./account";
 
@@ -36,12 +32,9 @@ export async function getJoinNumber(member: GuildMember): Promise<number | null>
 
 export async function getConnectionInfo(member: GuildMember): Promise<ConnectionInfo> {
   try {
-    const { data, error } = await getDiscordIntegrationByDiscordUserId(supabase, member.id);
-    if (error) throw error;
-    if (!data) return { isConnected: false, twitch: null, userId: null };
-
-    const twitch = await getPublicTwitchIntegrationByDiscordUserId(supabase, member.id);
-    return { isConnected: true, twitch, userId: data.user_id };
+    const identity = await getUserIdentity(supabase, { discordUserId: member.id });
+    if (!identity) return { isConnected: false, twitch: null, userId: null };
+    return { isConnected: true, twitch: toPublicTwitchIntegration(identity), userId: identity.userId };
   } catch (error) {
     Sentry.captureException(error);
     console.error(`[welcome] Failed to check connection status for "${member.user.tag}":`, error);

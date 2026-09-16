@@ -7,6 +7,7 @@ import {
 } from "@repo/types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "../types/supabase";
+import { getUserIdentity, identityAvatarUrl, identityDisplayName, type UserIdentity } from "./identity";
 
 // Platform event log (SW-334). Every emitter and the bot's delivery worker go
 // through here; the event types and payload shapes live in @repo/types.
@@ -237,30 +238,23 @@ export interface PlatformEventIdentity {
 /**
  * The PII-minimal identity events carry for a user: Twitch username and id,
  * Discord id. Users without Twitch (admin-made accounts) get their display
- * name instead, unless it's an email: users.name falls back to the email at
- * signup.
+ * name instead, unless it's an email. Pure; null maps to an empty identity.
  */
-export async function getPlatformEventIdentity(client: DBClient, userId: string): Promise<PlatformEventIdentity> {
-  const [twitch, discord, user] = await Promise.all([
-    client
-      .from("integrations_twitch")
-      .select("twitch_username, twitch_user_id, profile_image_url")
-      .eq("user_id", userId)
-      .maybeSingle(),
-    client.from("integrations_discord").select("discord_user_id").eq("user_id", userId).maybeSingle(),
-    client.from("users").select("name, avatar_url").eq("id", userId).maybeSingle(),
-  ]);
-  if (twitch.error) throw twitch.error;
-  if (discord.error) throw discord.error;
-  if (user.error) throw user.error;
-  const name = user.data?.name?.trim();
+export function toPlatformEventIdentity(identity: UserIdentity | null): PlatformEventIdentity {
+  if (!identity) {
+    return { display_name: null, avatar_url: null, twitch_username: null, twitch_user_id: null, discord_user_id: null };
+  }
   return {
-    display_name: !twitch.data && name && !name.includes("@") ? name : null,
-    avatar_url: twitch.data?.profile_image_url ?? user.data?.avatar_url ?? null,
-    twitch_username: twitch.data?.twitch_username ?? null,
-    twitch_user_id: twitch.data?.twitch_user_id ?? null,
-    discord_user_id: discord.data?.discord_user_id ?? null,
+    display_name: identityDisplayName(identity),
+    avatar_url: identityAvatarUrl(identity),
+    twitch_username: identity.twitch?.username ?? null,
+    twitch_user_id: identity.twitch?.userId ?? null,
+    discord_user_id: identity.discord?.userId ?? null,
   };
+}
+
+export async function getPlatformEventIdentity(client: DBClient, userId: string): Promise<PlatformEventIdentity> {
+  return toPlatformEventIdentity(await getUserIdentity(client, { userId }));
 }
 
 /**
@@ -272,25 +266,9 @@ export async function getPlatformEventIdentityByTwitchUserId(
   client: DBClient,
   twitchUserId: string,
 ): Promise<{ userId: string | null; identity: PlatformEventIdentity }> {
-  const { data, error } = await client
-    .from("integrations_twitch")
-    .select("user_id")
-    .eq("twitch_user_id", twitchUserId)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) {
-    return {
-      userId: null,
-      identity: {
-        display_name: null,
-        avatar_url: null,
-        twitch_username: null,
-        twitch_user_id: twitchUserId,
-        discord_user_id: null,
-      },
-    };
-  }
-  return { userId: data.user_id, identity: await getPlatformEventIdentity(client, data.user_id) };
+  const identity = await getUserIdentity(client, { twitchUserId });
+  if (!identity) return { userId: null, identity: { ...toPlatformEventIdentity(null), twitch_user_id: twitchUserId } };
+  return { userId: identity.userId, identity: toPlatformEventIdentity(identity) };
 }
 
 /** Twitch usernames for a set of user ids, for showing actors in the viewer. */

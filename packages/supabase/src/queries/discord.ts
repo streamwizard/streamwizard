@@ -1,11 +1,16 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { getUserIdentity, type UserIdentity } from "./identity";
 
 type DBClient = SupabaseClient<Database>;
 export type DiscordCommandPermission = Database["public"]["Tables"]["discord_command_permissions"]["Row"];
 export type DiscordGuildSettings = Database["public"]["Tables"]["discord_guild_settings"]["Row"];
 
-export async function getCommandRoles(client: DBClient, guildId: string, commandName: string): Promise<DiscordCommandPermission[]> {
+export async function getCommandRoles(
+  client: DBClient,
+  guildId: string,
+  commandName: string,
+): Promise<DiscordCommandPermission[]> {
   const { data, error } = await client
     .from("discord_command_permissions")
     .select("*")
@@ -16,22 +21,38 @@ export async function getCommandRoles(client: DBClient, guildId: string, command
   return data ?? [];
 }
 
-export async function getGuildCommandPermissions(client: DBClient, guildId: string): Promise<DiscordCommandPermission[]> {
+export async function getGuildCommandPermissions(
+  client: DBClient,
+  guildId: string,
+): Promise<DiscordCommandPermission[]> {
   const { data, error } = await client.from("discord_command_permissions").select("*").eq("guild_id", guildId);
 
   if (error) throw error;
   return data ?? [];
 }
 
-export async function addCommandRole(client: DBClient, guildId: string, commandName: string, roleId: string): Promise<void> {
+export async function addCommandRole(
+  client: DBClient,
+  guildId: string,
+  commandName: string,
+  roleId: string,
+): Promise<void> {
   const { error } = await client
     .from("discord_command_permissions")
-    .upsert({ guild_id: guildId, command_name: commandName, role_id: roleId }, { onConflict: "guild_id,command_name,role_id" });
+    .upsert(
+      { guild_id: guildId, command_name: commandName, role_id: roleId },
+      { onConflict: "guild_id,command_name,role_id" },
+    );
 
   if (error) throw error;
 }
 
-export async function removeCommandRole(client: DBClient, guildId: string, commandName: string, roleId: string): Promise<void> {
+export async function removeCommandRole(
+  client: DBClient,
+  guildId: string,
+  commandName: string,
+  roleId: string,
+): Promise<void> {
   const { error } = await client
     .from("discord_command_permissions")
     .delete()
@@ -70,7 +91,9 @@ type GuildSettingsPatch = Partial<Omit<Database["public"]["Tables"]["discord_gui
 // Multi-field write for the web-admin dashboard; unlike the single setters it
 // accepts null, so a channel or role can be cleared.
 export async function upsertGuildSettings(client: DBClient, guildId: string, patch: GuildSettingsPatch): Promise<void> {
-  const { error } = await client.from("discord_guild_settings").upsert({ guild_id: guildId, ...patch }, { onConflict: "guild_id" });
+  const { error } = await client
+    .from("discord_guild_settings")
+    .upsert({ guild_id: guildId, ...patch }, { onConflict: "guild_id" });
 
   if (error) throw error;
 }
@@ -85,7 +108,12 @@ export async function setWelcomeEnabled(client: DBClient, guildId: string, enabl
 
 // Snapshots the guild's live member count as the member's join number.
 // Idempotent: calling it again for the same guild/user returns their original number.
-export async function recordGuildMemberJoin(client: DBClient, guildId: string, userId: string, memberCount: number): Promise<number> {
+export async function recordGuildMemberJoin(
+  client: DBClient,
+  guildId: string,
+  userId: string,
+  memberCount: number,
+): Promise<number> {
   const { data, error } = await client.rpc("record_guild_member_join", {
     p_guild_id: guildId,
     p_user_id: userId,
@@ -97,11 +125,19 @@ export async function recordGuildMemberJoin(client: DBClient, guildId: string, u
 }
 
 export async function getDiscordIntegrationByDiscordUserId(client: DBClient, discordUserId: string) {
-  return client.from("integrations_discord").select("user_id, discord_username").eq("discord_user_id", discordUserId).maybeSingle();
+  return client
+    .from("integrations_discord")
+    .select("user_id, discord_username")
+    .eq("discord_user_id", discordUserId)
+    .maybeSingle();
 }
 
 export async function getDiscordUserIdForUser(client: DBClient, userId: string): Promise<string | null> {
-  const { data, error } = await client.from("integrations_discord").select("discord_user_id").eq("user_id", userId).maybeSingle();
+  const { data, error } = await client
+    .from("integrations_discord")
+    .select("discord_user_id")
+    .eq("user_id", userId)
+    .maybeSingle();
 
   if (error) throw error;
   return data?.discord_user_id ?? null;
@@ -113,29 +149,23 @@ export type PublicTwitchIntegration = {
   profile_image_url: string | null;
 };
 
+/** The public Twitch profile (no tokens, no email) of an identity, or null without Twitch. */
+export function toPublicTwitchIntegration(identity: UserIdentity | null): PublicTwitchIntegration | null {
+  if (!identity?.twitch) return null;
+  return {
+    twitch_username: identity.twitch.username,
+    broadcaster_type: identity.twitch.broadcasterType,
+    profile_image_url: identity.twitch.profileImageUrl,
+  };
+}
+
 // Looks up the public Twitch profile (no tokens/email) linked to the same
 // StreamWizard account as the given Discord user, if any.
 export async function getPublicTwitchIntegrationByDiscordUserId(
   client: DBClient,
-  discordUserId: string
+  discordUserId: string,
 ): Promise<PublicTwitchIntegration | null> {
-  const { data: discordIntegration, error: discordError } = await client
-    .from("integrations_discord")
-    .select("user_id")
-    .eq("discord_user_id", discordUserId)
-    .maybeSingle();
-
-  if (discordError) throw discordError;
-  if (!discordIntegration) return null;
-
-  const { data: twitchIntegration, error: twitchError } = await client
-    .from("integrations_twitch")
-    .select("twitch_username, broadcaster_type, profile_image_url")
-    .eq("user_id", discordIntegration.user_id)
-    .maybeSingle();
-
-  if (twitchError) throw twitchError;
-  return twitchIntegration;
+  return toPublicTwitchIntegration(await getUserIdentity(client, { discordUserId }));
 }
 
 export interface LinkedStreamWizardAccount {
@@ -154,31 +184,18 @@ export interface LinkedStreamWizardAccount {
 export async function getLinkedStreamWizardAccount(
   client: DBClient,
   discordUserId: string,
-  fallbackUserId: string | null = null
+  fallbackUserId: string | null = null,
 ): Promise<LinkedStreamWizardAccount | null> {
-  const { data: link, error: linkError } = await client
-    .from("integrations_discord")
-    .select("user_id")
-    .eq("discord_user_id", discordUserId)
-    .maybeSingle();
-  if (linkError) throw linkError;
-
-  const userId = link?.user_id ?? fallbackUserId;
-  if (!userId) return null;
-
-  const [user, twitch] = await Promise.all([
-    client.from("users").select("id, name, email").eq("id", userId).maybeSingle(),
-    client.from("integrations_twitch").select("twitch_username, profile_image_url").eq("user_id", userId).maybeSingle(),
-  ]);
-  if (user.error) throw user.error;
-  if (twitch.error) throw twitch.error;
-  if (!user.data) return null;
+  const identity =
+    (await getUserIdentity(client, { discordUserId })) ??
+    (fallbackUserId ? await getUserIdentity(client, { userId: fallbackUserId }) : null);
+  if (!identity) return null;
 
   return {
-    userId: user.data.id,
-    name: user.data.name,
-    email: user.data.email,
-    twitchUsername: twitch.data?.twitch_username ?? null,
-    twitchAvatarUrl: twitch.data?.profile_image_url ?? null,
+    userId: identity.userId,
+    name: identity.name,
+    email: identity.email,
+    twitchUsername: identity.twitch?.username ?? null,
+    twitchAvatarUrl: identity.twitch?.profileImageUrl ?? null,
   };
 }

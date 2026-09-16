@@ -111,6 +111,10 @@
       "types": "./src/queries/platform-events.ts",
       "default": "./src/queries/platform-events.ts"
     },
+    "./queries/identity": {
+      "types": "./src/queries/identity.ts",
+      "default": "./src/queries/identity.ts"
+    },
     "./queries/alerts": {
       "types": "./src/queries/alerts.ts",
       "default": "./src/queries/alerts.ts"
@@ -165,6 +169,7 @@
     }
   },
   "scripts": {
+    "test": "bun test",
     "check-types": "tsc --noEmit",
     "gen-types": "supabase gen types typescript --project-id jgxdrljoqployiyjedst --schema public > src/types/supabase.ts"
   },
@@ -184,6 +189,7 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@types/bun": "^1.3.6",
     "@types/node": "^25.0.8",
     "typescript": "^5.9.2"
   }

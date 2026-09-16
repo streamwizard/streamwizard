@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { getUserIdentity } from "./identity";
 
 type DBClient = SupabaseClient<Database>;
 
@@ -38,17 +39,10 @@ export async function getUserPreferences(client: DBClient) {
 }
 
 export async function getTwitchIntegrationByUserId(client: DBClient, userId: string) {
-  return client
-    .from("integrations_twitch")
-    .select("twitch_user_id")
-    .eq("user_id", userId)
-    .single();
+  return client.from("integrations_twitch").select("twitch_user_id").eq("user_id", userId).single();
 }
 
-export async function getTwitchUserIdByUserIdMaybe(
-  client: DBClient,
-  userId: string
-): Promise<string | null> {
+export async function getTwitchUserIdByUserIdMaybe(client: DBClient, userId: string): Promise<string | null> {
   const { data, error } = await client
     .from("integrations_twitch")
     .select("twitch_user_id")
@@ -69,7 +63,7 @@ export async function updateTwitchTokens(
     refresh_token_ciphertext: string;
     refresh_token_iv: string;
     refresh_token_tag: string;
-  }
+  },
 ) {
   return client.from("integrations_twitch").update(tokens).eq("user_id", userId);
 }
@@ -93,17 +87,10 @@ export async function getTwitchIntegrationByBroadcasterId(client: DBClient, broa
 }
 
 export async function getDiscordIntegrationByUserId(client: DBClient, userId: string) {
-  return client
-    .from("integrations_discord")
-    .select("discord_user_id, discord_username")
-    .eq("user_id", userId)
-    .single();
+  return client.from("integrations_discord").select("discord_user_id, discord_username").eq("user_id", userId).single();
 }
 
-export async function getDiscordUserIdByUserIdMaybe(
-  client: DBClient,
-  userId: string
-): Promise<string | null> {
+export async function getDiscordUserIdByUserIdMaybe(client: DBClient, userId: string): Promise<string | null> {
   const { data, error } = await client
     .from("integrations_discord")
     .select("discord_user_id")
@@ -127,7 +114,7 @@ export async function linkDiscordIntegration(
     discord_username: string;
     avatar: string | null;
     email: string | null;
-  }
+  },
 ) {
   const { error } = await client.rpc("link_discord_integration", {
     p_discord_user_id: profile.discord_user_id,
@@ -156,7 +143,7 @@ export async function getUserPreferencesByUserId(client: DBClient, userId: strin
 export async function updateUserPreferences(
   client: DBClient,
   userId: string,
-  formData: Omit<Database["public"]["Tables"]["user_preferences"]["Insert"], "user_id">
+  formData: Omit<Database["public"]["Tables"]["user_preferences"]["Insert"], "user_id">,
 ) {
   const { error } = await client
     .from("user_preferences")
@@ -170,14 +157,9 @@ export async function updateUserPreferences(
 /** Name and Twitch avatar for showing who did something, or null for an unknown user. */
 export async function getUserDisplayProfile(
   client: DBClient,
-  userId: string
+  userId: string,
 ): Promise<{ name: string; avatarUrl: string | null } | null> {
-  const [user, twitch] = await Promise.all([
-    client.from("users").select("name").eq("id", userId).maybeSingle(),
-    client.from("integrations_twitch").select("profile_image_url").eq("user_id", userId).maybeSingle(),
-  ]);
-  if (user.error) throw user.error;
-  if (twitch.error) throw twitch.error;
-  if (!user.data) return null;
-  return { name: user.data.name, avatarUrl: twitch.data?.profile_image_url ?? null };
+  const identity = await getUserIdentity(client, { userId });
+  if (!identity) return null;
+  return { name: identity.name, avatarUrl: identity.twitch?.profileImageUrl ?? null };
 }
