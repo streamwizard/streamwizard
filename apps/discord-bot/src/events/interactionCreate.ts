@@ -19,9 +19,12 @@ export default {
       return;
     }
 
-    // Ticket buttons and modal submits route to their own handler (which does its
+    // Ticket buttons, selects and modal submits route to their own handler (which does its
     // own error handling). Dispatched purely by customId, so they survive restarts.
-    if ((interaction.isButton() || interaction.isModalSubmit()) && interaction.customId.startsWith("ticket:")) {
+    if (
+      (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) &&
+      interaction.customId.startsWith("ticket:")
+    ) {
       await handleTicketInteraction(interaction);
       return;
     }

@@ -1,4 +1,5 @@
 import {
+  ActionRowBuilder,
   ChannelType,
   LabelBuilder,
   MessageFlags,
@@ -8,27 +9,39 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import type { ButtonInteraction, ModalSubmitInteraction } from "discord.js";
+import type { ButtonInteraction, ModalSubmitInteraction, StringSelectMenuInteraction } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
+import type { TicketCategory, TicketProduct } from "@repo/supabase/queries/ticket-config";
 import {
   closeTicket,
   createTicket,
   getTicketOpenerProfile,
-  getTicketSettings,
   nextTicketNumber,
   ticketChannelName,
-  TICKET_PRODUCTS,
-  type DiscordTicketCategory,
-  type TicketProduct,
 } from "@repo/supabase/queries/tickets";
 import { markSelfAction } from "../server-log/self-actions";
 import { notifyTicketActivity, trackTicketChannel } from "../ticket-activity";
+import { activeCategories, activeProducts, getTicketConfig, ticketsReady, type TicketConfig } from "./config";
 import { recordTicketEvent } from "./events";
-import { FIELD_IDS, TICKET_IDS } from "./ids";
-import { buildTicketIntroMessage, CATEGORY_CHOICES } from "./intro";
+import { FIELD_IDS, TICKET_IDS, ticketId } from "./ids";
+import { buildTicketIntroMessage } from "./intro";
 
-function buildTicketModal(): ModalBuilder {
+const NOT_SET_UP = "Ticketing isn't set up in this server yet.";
+const CATEGORY_GONE = "That ticket category isn't available anymore. Hit Create Ticket again to pick another.";
+
+/** A category or product as a select option. Discord rejects an empty description, so it is left off. */
+function selectOption(option: { slug: string; emoji: string | null; description: string }, label: string) {
+  return {
+    label,
+    value: option.slug,
+    ...(option.description ? { description: option.description } : {}),
+    ...(option.emoji ? { emoji: option.emoji } : {}),
+  };
+}
+
+/** The form for one category. The product question is skipped when the guild has no products. */
+export function buildTicketModal(category: TicketCategory, products: TicketProduct[]): ModalBuilder {
   const subject = new LabelBuilder()
     .setLabel("Subject")
     .setTextInputComponent(
@@ -51,62 +64,122 @@ function buildTicketModal(): ModalBuilder {
         .setRequired(true),
     );
 
-  const category = new LabelBuilder().setLabel("Category").setStringSelectMenuComponent(
-    new StringSelectMenuBuilder()
-      .setCustomId(FIELD_IDS.category)
-      .setPlaceholder("Pick a category")
-      .setMinValues(1)
-      .setMaxValues(1)
-      .setRequired(true)
-      .addOptions(
-        CATEGORY_CHOICES.map((c) => ({ label: c.label, value: c.value, description: c.description, emoji: c.emoji })),
-      ),
-  );
+  const modal = new ModalBuilder()
+    .setCustomId(ticketId(TICKET_IDS.submit, category.slug))
+    .setTitle(category.name.slice(0, 45))
+    .addLabelComponents(subject, description);
 
-  const product = new LabelBuilder().setLabel("Product").setStringSelectMenuComponent(
-    new StringSelectMenuBuilder()
-      .setCustomId(FIELD_IDS.product)
-      .setPlaceholder("What is this about?")
-      .setMinValues(1)
-      .setMaxValues(1)
-      .setRequired(true)
-      .addOptions(
-        TICKET_PRODUCTS.map((p) => ({ label: p.label, value: p.value, description: p.description, emoji: p.emoji })),
+  if (products.length > 0) {
+    modal.addLabelComponents(
+      new LabelBuilder().setLabel("Product").setStringSelectMenuComponent(
+        new StringSelectMenuBuilder()
+          .setCustomId(FIELD_IDS.product)
+          .setPlaceholder("What is this about?")
+          .setMinValues(1)
+          .setMaxValues(1)
+          .setRequired(true)
+          .addOptions(products.map((product) => selectOption(product, product.label))),
       ),
-  );
+    );
+  }
 
-  return new ModalBuilder()
-    .setCustomId(TICKET_IDS.submit)
-    .setTitle("Create a ticket")
-    .addLabelComponents(subject, description, product, category);
+  return modal;
 }
 
-export async function handleCreateButton(interaction: ButtonInteraction): Promise<void> {
+function buildCategoryPicker(categories: TicketCategory[]) {
+  const select = new StringSelectMenuBuilder()
+    .setCustomId(TICKET_IDS.pickCategory)
+    .setPlaceholder("Pick a category")
+    .setMinValues(1)
+    .setMaxValues(1)
+    .addOptions(categories.map((category) => selectOption(category, category.name)));
+
+  return {
+    content: "What kind of ticket is this?",
+    components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select)],
+    flags: MessageFlags.Ephemeral,
+  } as const;
+}
+
+/**
+ * The panel button. With a category slug it opens that category's form. Bare
+ * (the single Create Ticket button, including panels posted before categories
+ * were configurable) it asks which category first, unless there is only one.
+ */
+export async function handleCreateButton(interaction: ButtonInteraction, slug: string | null): Promise<void> {
   if (!interaction.inCachedGuild()) return;
 
-  const settings = await getTicketSettings(supabase, interaction.guildId);
-  if (!settings?.enabled || !settings.category_id || !settings.staff_role_id) {
-    await interaction.reply({ content: "Ticketing isn't set up in this server yet.", flags: MessageFlags.Ephemeral });
+  const config = await getTicketConfig(interaction.guildId);
+  const categories = activeCategories(config);
+  if (!ticketsReady(config.settings) || categories.length === 0) {
+    await interaction.reply({ content: NOT_SET_UP, flags: MessageFlags.Ephemeral });
     return;
   }
 
-  await interaction.showModal(buildTicketModal());
+  if (slug === null && categories.length > 1) {
+    await interaction.reply(buildCategoryPicker(categories));
+    return;
+  }
+
+  const category = slug === null ? categories[0] : categories.find((c) => c.slug === slug);
+  if (!category) {
+    await interaction.reply({ content: CATEGORY_GONE, flags: MessageFlags.Ephemeral });
+    return;
+  }
+  await interaction.showModal(buildTicketModal(category, activeProducts(config)));
 }
 
-export async function handleModalSubmit(interaction: ModalSubmitInteraction): Promise<void> {
+export async function handleCategoryPick(interaction: StringSelectMenuInteraction): Promise<void> {
   if (!interaction.inCachedGuild()) return;
 
-  const settings = await getTicketSettings(supabase, interaction.guildId);
-  if (!settings?.enabled || !settings.category_id || !settings.staff_role_id) {
-    await interaction.reply({ content: "Ticketing isn't set up in this server yet.", flags: MessageFlags.Ephemeral });
+  const config = await getTicketConfig(interaction.guildId);
+  const category = activeCategories(config).find((c) => c.slug === interaction.values[0]);
+  if (!ticketsReady(config.settings) || !category) {
+    await interaction.update({ content: CATEGORY_GONE, components: [] });
+    return;
+  }
+  await interaction.showModal(buildTicketModal(category, activeProducts(config)));
+}
+
+/** The category a submitted form belongs to: from the customId, or from the form itself for one opened before the deploy that moved it. */
+function submittedCategory(interaction: ModalSubmitInteraction, config: TicketConfig, slug: string | null) {
+  const fromForm = interaction.fields.fields.has(FIELD_IDS.category)
+    ? interaction.fields.getStringSelectValues(FIELD_IDS.category)[0]
+    : null;
+  const picked = slug ?? fromForm;
+  return activeCategories(config).find((category) => category.slug === picked);
+}
+
+export async function handleModalSubmit(interaction: ModalSubmitInteraction, slug: string | null): Promise<void> {
+  if (!interaction.inCachedGuild()) return;
+
+  const config = await getTicketConfig(interaction.guildId);
+  const { settings } = config;
+  if (!ticketsReady(settings)) {
+    await interaction.reply({ content: NOT_SET_UP, flags: MessageFlags.Ephemeral });
+    return;
+  }
+
+  const category = submittedCategory(interaction, config, slug);
+  if (!category) {
+    await interaction.reply({ content: CATEGORY_GONE, flags: MessageFlags.Ephemeral });
+    return;
+  }
+
+  // Where the channel goes: the category's own Discord category, else the server-wide one.
+  const parent = category.discord_category_id ?? settings.category_id;
+  if (!parent) {
+    await interaction.reply({ content: NOT_SET_UP, flags: MessageFlags.Ephemeral });
     return;
   }
 
   const subject = interaction.fields.getTextInputValue(FIELD_IDS.subject);
   const description = interaction.fields.getTextInputValue(FIELD_IDS.description);
-  const category = interaction.fields.getStringSelectValues(FIELD_IDS.category)[0] as DiscordTicketCategory;
-  const pickedProduct = interaction.fields.getStringSelectValues(FIELD_IDS.product)[0];
-  const product: TicketProduct = TICKET_PRODUCTS.find((p) => p.value === pickedProduct)?.value ?? "other";
+  // A product archived while the form was open is dropped rather than stored.
+  const pickedProduct = interaction.fields.fields.has(FIELD_IDS.product)
+    ? interaction.fields.getStringSelectValues(FIELD_IDS.product)[0]
+    : null;
+  const product = activeProducts(config).find((p) => p.slug === pickedProduct)?.slug ?? null;
 
   // Defer ephemerally: channel creation + DB writes can take a moment.
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -119,7 +192,7 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction): Pr
   const channel = await interaction.guild.channels.create({
     name: ticketChannelName(ticketNumber),
     type: ChannelType.GuildText,
-    parent: settings.category_id,
+    parent,
     permissionOverwrites: [
       { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
       {
@@ -165,7 +238,7 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction): Pr
       openerUserId,
       subject,
       description,
-      category,
+      category: category.slug,
       product,
       openerName: interaction.member.displayName,
     });
@@ -174,7 +247,7 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction): Pr
     trackTicketChannel(interaction.guildId, channel.id, ticket.ticket_number);
     void notifyTicketActivity(interaction.guildId, channel.id, "opened", ticket.ticket_number);
 
-    await channel.send(buildTicketIntroMessage(ticket, settings, openerProfile));
+    await channel.send(buildTicketIntroMessage(ticket, config, openerProfile));
   } catch (error) {
     if (ticketCreated) {
       // Closed straight in the DB, not through finalizeTicketClose: a ticket

@@ -17,6 +17,9 @@ const ACTION_LABELS: Record<string, string> = {
   test_log: "Sent a test log event",
   publish: "Published a message",
   delete: "Deleted a message",
+  // Section-specific wording wins over the plain action.
+  "tickets:create": "Added a ticket category or product",
+  "tickets:delete": "Removed a ticket category or product",
 };
 
 function formatValue(value: Json | undefined, names: Map<string, string>): string {
@@ -57,7 +60,9 @@ export function AuditList({ entries, names }: { entries: DiscordSettingsAuditWit
                       <span className="font-medium">{entry.changed_by_user?.name ?? "Unknown admin"}</span>
                       <span className="text-muted-foreground">
                         {" · "}
-                        {ACTION_LABELS[entry.action] ?? `Updated ${SECTION_LABELS[entry.section] ?? entry.section}`}
+                        {ACTION_LABELS[`${entry.section}:${entry.action}`] ??
+                          ACTION_LABELS[entry.action] ??
+                          `Updated ${SECTION_LABELS[entry.section] ?? entry.section}`}
                       </span>
                     </span>
                     <time className="text-xs text-muted-foreground tabular-nums" dateTime={entry.created_at}>

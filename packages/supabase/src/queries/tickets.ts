@@ -5,23 +5,6 @@ type DBClient = SupabaseClient<Database>;
 
 export type DiscordTicketSettings = Database["public"]["Tables"]["discord_ticket_settings"]["Row"];
 export type DiscordTicket = Database["public"]["Tables"]["discord_tickets"]["Row"];
-export type DiscordTicketCategory = Database["public"]["Enums"]["discord_ticket_category"];
-
-// Products a ticket can be about, shown in the Discord ticket modal and the
-// dashboard. Stored as text, so entries can be added here without a
-// migration; keep existing values stable.
-export const TICKET_PRODUCTS = [
-  { value: "cloud_obs", label: "Cloud OBS", emoji: "☁️", description: "Your OBS in the cloud and the deck" },
-  { value: "overlays", label: "Overlays & widgets", emoji: "🎨", description: "Overlay editor, widgets and alerts" },
-  { value: "clips", label: "Clip management", emoji: "🎬", description: "Clip folders, syncing and search" },
-  { value: "vods", label: "VODs", emoji: "📼", description: "Past broadcasts and markers" },
-  { value: "analytics", label: "Analytics", emoji: "📊", description: "Stream stats and viewer numbers" },
-  { value: "discord_bot", label: "Discord bot", emoji: "🤖", description: "This bot and its commands" },
-  { value: "account", label: "Account & billing", emoji: "👤", description: "Login, linking and subscriptions" },
-  { value: "other", label: "Something else", emoji: "❔", description: "Not sure, or none of the above" },
-] as const;
-
-export type TicketProduct = (typeof TICKET_PRODUCTS)[number]["value"];
 
 /** "#0012": the ticket number as shown everywhere. */
 export function formatTicketNumber(ticketNumber: number): string {
@@ -31,11 +14,6 @@ export function formatTicketNumber(ticketNumber: number): string {
 /** "ticket-0012": the ticket's Discord channel name. */
 export function ticketChannelName(ticketNumber: number): string {
   return `ticket-${String(ticketNumber).padStart(4, "0")}`;
-}
-
-export function ticketProductLabel(value: string | null | undefined): string | null {
-  if (!value) return null;
-  return TICKET_PRODUCTS.find((p) => p.value === value)?.label ?? value;
 }
 
 export async function getTicketSettings(client: DBClient, guildId: string): Promise<DiscordTicketSettings | null> {
@@ -106,8 +84,8 @@ interface CreateTicketInput {
   openerUserId: string | null;
   subject: string;
   description: string;
-  category: DiscordTicketCategory;
-  product: TicketProduct;
+  category: string;
+  product: string | null;
   openerName: string;
 }
 
@@ -288,7 +266,7 @@ export async function insertTicketEvent(client: DBClient, event: TicketEventInpu
 
 export interface TicketListFilters {
   status?: "open" | "closed";
-  category?: DiscordTicketCategory;
+  category?: string;
   product?: string;
   /** Matches the opener's stored name or Discord id. */
   opener?: string;

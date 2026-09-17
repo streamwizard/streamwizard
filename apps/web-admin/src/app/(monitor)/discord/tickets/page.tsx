@@ -1,14 +1,8 @@
 import Link from "next/link";
 import { Settings } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import {
-  listTickets,
-  TICKET_PRODUCTS,
-  ticketProductLabel,
-  type DiscordTicketCategory,
-  type TicketListFilters,
-  formatTicketNumber,
-} from "@repo/supabase/queries/tickets";
+import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
+import { listTickets, type TicketListFilters, formatTicketNumber } from "@repo/supabase/queries/tickets";
 import {
   Badge,
   Button,
@@ -27,7 +21,7 @@ import {
 import { AutoRefresh } from "@/components/discord/auto-refresh";
 import { PageHeader } from "@/components/widgets/page-header";
 import { requireDiscordContext } from "@/lib/discord/api";
-import { formatDateTime, TICKET_CATEGORY_LABELS } from "@/lib/discord/tickets";
+import { formatDateTime } from "@/lib/discord/tickets";
 import { displayName, resolveDiscordProfiles } from "@/lib/discord/users";
 
 export const dynamic = "force-dynamic";
@@ -47,11 +41,12 @@ type Params = {
   page?: string;
 };
 
-function parseFilters(params: Params): TicketListFilters {
+/** `slugs` are the guild's categories and products: a filter value outside them is ignored. */
+function parseFilters(params: Params, slugs: { categories: Set<string>; products: Set<string> }): TicketListFilters {
   return {
     status: params.status === "open" || params.status === "closed" ? params.status : undefined,
-    category: params.category && params.category in TICKET_CATEGORY_LABELS ? (params.category as DiscordTicketCategory) : undefined,
-    product: TICKET_PRODUCTS.some((p) => p.value === params.product) ? params.product : undefined,
+    category: params.category && slugs.categories.has(params.category) ? params.category : undefined,
+    product: params.product && slugs.products.has(params.product) ? params.product : undefined,
     opener: params.opener?.trim() || undefined,
     claimer: params.claimer?.trim() || undefined,
     search: params.q?.trim() || undefined,
@@ -64,7 +59,18 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
   const params = await searchParams;
   const { guildId } = requireDiscordContext();
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
-  const { tickets, total } = await listTickets(supabaseAdmin, guildId, parseFilters(params), page, PAGE_SIZE);
+  // Archived categories and products stay in the filters: closed tickets still use them.
+  const [categories, products] = await Promise.all([
+    listTicketCategories(supabaseAdmin, guildId),
+    listTicketProducts(supabaseAdmin, guildId),
+  ]);
+  const categoryNames = new Map(categories.map((c) => [c.slug, c.name]));
+  const productLabels = new Map(products.map((p) => [p.slug, p.label]));
+  const filters = parseFilters(params, {
+    categories: new Set(categoryNames.keys()),
+    products: new Set(productLabels.keys()),
+  });
+  const { tickets, total } = await listTickets(supabaseAdmin, guildId, filters, page, PAGE_SIZE);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const profiles = await resolveDiscordProfiles(
     tickets.flatMap((t) => [t.opener_name ? null : t.opener_discord_user_id, t.claimed_by_name ? null : t.claimed_by_discord_user_id]),
@@ -100,17 +106,17 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
           </NativeSelect>
           <NativeSelect name="product" defaultValue={params.product ?? ""} aria-label="Product" className="w-full sm:w-48">
             <NativeSelectOption value="">Any product</NativeSelectOption>
-            {TICKET_PRODUCTS.map((product) => (
-              <NativeSelectOption key={product.value} value={product.value}>
+            {products.map((product) => (
+              <NativeSelectOption key={product.slug} value={product.slug}>
                 {product.label}
               </NativeSelectOption>
             ))}
           </NativeSelect>
           <NativeSelect name="category" defaultValue={params.category ?? ""} aria-label="Category" className="w-full sm:w-44">
             <NativeSelectOption value="">Any category</NativeSelectOption>
-            {Object.entries(TICKET_CATEGORY_LABELS).map(([value, label]) => (
-              <NativeSelectOption key={value} value={value}>
-                {label}
+            {categories.map((category) => (
+              <NativeSelectOption key={category.slug} value={category.slug}>
+                {category.name}
               </NativeSelectOption>
             ))}
           </NativeSelect>
@@ -162,8 +168,8 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
                     </Link>
                   </TableCell>
                   <TableCell className="max-w-72 truncate font-medium">{ticket.subject}</TableCell>
-                  <TableCell className="whitespace-nowrap">{ticketProductLabel(ticket.product) ?? <span className="text-muted-foreground">Not set</span>}</TableCell>
-                  <TableCell>{TICKET_CATEGORY_LABELS[ticket.category]}</TableCell>
+                  <TableCell className="whitespace-nowrap">{ticket.product ? (productLabels.get(ticket.product) ?? ticket.product) : <span className="text-muted-foreground">Not set</span>}</TableCell>
+                  <TableCell>{categoryNames.get(ticket.category) ?? ticket.category}</TableCell>
                   <TableCell>
                     <Badge variant={ticket.status === "open" ? "default" : "outline"}>
                       {ticket.status === "open" ? "Open" : "Closed"}

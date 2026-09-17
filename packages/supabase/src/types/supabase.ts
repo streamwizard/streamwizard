@@ -785,6 +785,7 @@ export type Database = {
         Row: {
           category_id: string | null
           created_at: string
+          defaults_seeded_at: string | null
           enabled: boolean
           guild_id: string
           id: string
@@ -797,6 +798,7 @@ export type Database = {
         Insert: {
           category_id?: string | null
           created_at?: string
+          defaults_seeded_at?: string | null
           enabled?: boolean
           guild_id: string
           id?: string
@@ -809,6 +811,7 @@ export type Database = {
         Update: {
           category_id?: string | null
           created_at?: string
+          defaults_seeded_at?: string | null
           enabled?: boolean
           guild_id?: string
           id?: string
@@ -816,6 +819,90 @@ export type Database = {
           panel_message_id?: string | null
           staff_role_id?: string | null
           ticket_counter?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      discord_ticket_categories: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          description: string
+          discord_category_id: string | null
+          emoji: string | null
+          enabled: boolean
+          guild_id: string
+          id: string
+          name: string
+          position: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          description?: string
+          discord_category_id?: string | null
+          emoji?: string | null
+          enabled?: boolean
+          guild_id: string
+          id?: string
+          name: string
+          position?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          description?: string
+          discord_category_id?: string | null
+          emoji?: string | null
+          enabled?: boolean
+          guild_id?: string
+          id?: string
+          name?: string
+          position?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      discord_ticket_products: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          description: string
+          emoji: string | null
+          guild_id: string
+          id: string
+          label: string
+          position: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          description?: string
+          emoji?: string | null
+          guild_id: string
+          id?: string
+          label: string
+          position?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          description?: string
+          emoji?: string | null
+          guild_id?: string
+          id?: string
+          label?: string
+          position?: number
+          slug?: string
           updated_at?: string
         }
         Relationships: []
@@ -928,7 +1015,7 @@ export type Database = {
           transcript_message_count: number | null
           transcript_purged_at: string | null
           transcript_saved_at: string | null
-          category: Database["public"]["Enums"]["discord_ticket_category"]
+          category: string
           channel_id: string
           claimed_at: string | null
           claimed_by_discord_user_id: string | null
@@ -957,7 +1044,7 @@ export type Database = {
           transcript_message_count?: number | null
           transcript_purged_at?: string | null
           transcript_saved_at?: string | null
-          category: Database["public"]["Enums"]["discord_ticket_category"]
+          category: string
           channel_id: string
           claimed_at?: string | null
           claimed_by_discord_user_id?: string | null
@@ -986,7 +1073,7 @@ export type Database = {
           transcript_message_count?: number | null
           transcript_purged_at?: string | null
           transcript_saved_at?: string | null
-          category?: Database["public"]["Enums"]["discord_ticket_category"]
+          category?: string
           channel_id?: string
           claimed_at?: string | null
           claimed_by_discord_user_id?: string | null
@@ -3203,7 +3290,6 @@ export type Database = {
     }
     Enums: {
       clip_sync_status: "completed" | "failed" | "syncing"
-      discord_ticket_category: "bug" | "feature" | "support" | "other"
       discord_ticket_status: "open" | "closed"
       feedback_category: "bug" | "feature" | "general"
       feedback_priority: "low" | "medium" | "high" | "critical"
@@ -3347,7 +3433,6 @@ export const Constants = {
   public: {
     Enums: {
       clip_sync_status: ["completed", "failed", "syncing"],
-      discord_ticket_category: ["bug", "feature", "support", "other"],
       discord_ticket_status: ["open", "closed"],
       feedback_category: ["bug", "feature", "general"],
       feedback_priority: ["low", "medium", "high", "critical"],

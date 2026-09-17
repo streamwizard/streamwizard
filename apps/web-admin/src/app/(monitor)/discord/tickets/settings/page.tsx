@@ -1,11 +1,8 @@
-import Link from "next/link";
 import { Ticket, TicketCheck } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets";
 import { TicketsForm } from "@/components/discord/tickets-form";
-import { PageHeader } from "@/components/widgets/page-header";
 import { StatCard } from "@/components/widgets/stat-card";
-import { Button } from "@repo/ui";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toChannelOptions, toRoleOptions } from "@/lib/discord/options";
 
@@ -29,11 +26,6 @@ export default async function DiscordTicketSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Ticket settings" description="How support tickets work in the StreamWizard server.">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/discord/tickets">All tickets</Link>
-        </Button>
-      </PageHeader>
       <div className="grid gap-4 sm:grid-cols-2">
         <StatCard title="Open tickets" value={openTickets} icon={Ticket} />
         <StatCard title="Tickets opened all time" value={settings?.ticket_counter ?? 0} icon={TicketCheck} />

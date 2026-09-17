@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { z } from "zod";
 import { ChannelType, EmbedBuilder, type Guild } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { getTicketByChannelId, getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
+import { getTicketByChannelId, getTicketSettings } from "@repo/supabase/queries/tickets";
 import { TWITCH_PURPLE } from "../../lib/branding";
 import {
   CLOSE_RESULT_MESSAGES,
@@ -11,6 +11,7 @@ import {
   deleteTicketPanel,
   logTicketReply,
   postTicketPanel,
+  saveTicketSettings,
 } from "../../lib/tickets";
 import type { AppEnv } from "../types";
 import { readJson, snowflake } from "../validation";
@@ -31,7 +32,7 @@ ticketRoutes.post("/ticket-panel", async (c) => {
 
   if (!targetChannelId) {
     await deleteTicketPanel(guild, settings);
-    await upsertTicketSettings(supabase, guild.id, { panel_channel_id: null, panel_message_id: null });
+    await saveTicketSettings(guild.id, { panel_channel_id: null, panel_message_id: null });
     return c.json({ ok: true, channelId: null, messageId: null });
   }
 
@@ -41,7 +42,7 @@ ticketRoutes.post("/ticket-panel", async (c) => {
   }
 
   const panelMessageId = await postTicketPanel(guild, channel, settings);
-  await upsertTicketSettings(supabase, guild.id, { panel_channel_id: channel.id, panel_message_id: panelMessageId });
+  await saveTicketSettings(guild.id, { panel_channel_id: channel.id, panel_message_id: panelMessageId });
   return c.json({ ok: true, channelId: channel.id, messageId: panelMessageId });
 });
 

@@ -1,15 +1,11 @@
 import { MessageFlags } from "discord.js";
 import type { ButtonInteraction, GuildMember, TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
-import {
-  claimTicket,
-  getTicketByChannelId,
-  getTicketOpenerProfile,
-  getTicketSettings,
-} from "@repo/supabase/queries/tickets";
+import { claimTicket, getTicketByChannelId, getTicketOpenerProfile } from "@repo/supabase/queries/tickets";
 import type { TicketEventSource } from "@repo/types";
 import { reportError } from "@repo/sentry";
 import { notifyTicketActivity } from "../ticket-activity";
+import { getTicketConfig } from "./config";
 import { recordTicketEvent } from "./events";
 import { TICKET_IDS } from "./ids";
 import { buildTicketIntroMessage } from "./intro";
@@ -18,8 +14,8 @@ import { isStaff } from "./staff";
 export async function handleClaimButton(interaction: ButtonInteraction): Promise<void> {
   if (!interaction.inCachedGuild()) return;
 
-  const settings = await getTicketSettings(supabase, interaction.guildId);
-  if (!isStaff(interaction.member, settings)) {
+  const config = await getTicketConfig(interaction.guildId);
+  if (!isStaff(interaction.member, config.settings)) {
     await interaction.reply({ content: "Only staff can claim tickets.", flags: MessageFlags.Ephemeral });
     return;
   }
@@ -46,7 +42,7 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
 
   const opener = claimed.opener_user_id ? await getTicketOpenerProfile(supabase, claimed.opener_user_id) : null;
   // Edit the intro message in place so the claim state + disabled button update for everyone.
-  await interaction.update(buildTicketIntroMessage(claimed, settings, opener));
+  await interaction.update(buildTicketIntroMessage(claimed, config, opener));
   await interaction.followUp({ content: `🙋 You claimed this ticket.`, flags: MessageFlags.Ephemeral });
 }
 
@@ -88,10 +84,10 @@ export async function claimTicketAs(
       ),
   );
   if (intro) {
-    const settings = await getTicketSettings(supabase, channel.guild.id);
+    const config = await getTicketConfig(channel.guild.id);
     const opener = claimed.opener_user_id ? await getTicketOpenerProfile(supabase, claimed.opener_user_id) : null;
     await intro
-      .edit(buildTicketIntroMessage(claimed, settings, opener))
+      .edit(buildTicketIntroMessage(claimed, config, opener))
       .catch((error) => reportError(error, "discord-bot tickets: update intro", { ticketId: claimed.id }));
   }
   await channel.send({ content: `🙋 ${member} claimed this ticket.`, allowedMentions: { parse: [] } }).catch(() => {});

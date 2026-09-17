@@ -1,10 +1,10 @@
 import { MessageFlags } from "discord.js";
-import type { ButtonInteraction, ModalSubmitInteraction } from "discord.js";
+import type { ButtonInteraction, ModalSubmitInteraction, StringSelectMenuInteraction } from "discord.js";
 import { reportError } from "@repo/sentry";
 import { handleClaimButton } from "./claim";
 import { handleCloseButton, handleCloseCancel, handleCloseConfirm } from "./close";
-import { RETIRED_GITHUB_ID, TICKET_IDS } from "./ids";
-import { handleCreateButton, handleModalSubmit } from "./open";
+import { parseTicketId, RETIRED_GITHUB_ID, TICKET_IDS } from "./ids";
+import { handleCategoryPick, handleCreateButton, handleModalSubmit } from "./open";
 
 export { claimTicketAs, type ClaimTicketResult } from "./claim";
 export {
@@ -14,22 +14,31 @@ export {
   finalizeTicketClose,
   type CloseTicketResult,
 } from "./close";
+export { getTicketConfig, invalidateTicketConfig, saveTicketSettings } from "./config";
 export { logTicketReply } from "./events";
 export { TICKET_IDS } from "./ids";
 export { buildPanelMessage, deleteTicketPanel, postTicketPanel } from "./panel";
 export { isStaff } from "./staff";
 
+export type TicketInteraction = ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction;
+
 // Single entry point used by interactionCreate for all ticket: component interactions.
-export async function handleTicketInteraction(interaction: ButtonInteraction | ModalSubmitInteraction): Promise<void> {
+export async function handleTicketInteraction(interaction: TicketInteraction): Promise<void> {
+  const { action, arg } = parseTicketId(interaction.customId);
   try {
     if (interaction.isModalSubmit()) {
-      if (interaction.customId === TICKET_IDS.submit) await handleModalSubmit(interaction);
+      if (action === TICKET_IDS.submit) await handleModalSubmit(interaction, arg);
       return;
     }
 
-    switch (interaction.customId) {
+    if (interaction.isStringSelectMenu()) {
+      if (action === TICKET_IDS.pickCategory) await handleCategoryPick(interaction);
+      return;
+    }
+
+    switch (action) {
       case TICKET_IDS.create:
-        await handleCreateButton(interaction);
+        await handleCreateButton(interaction, arg);
         break;
       case TICKET_IDS.claim:
         await handleClaimButton(interaction);

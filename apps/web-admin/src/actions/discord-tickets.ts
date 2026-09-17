@@ -3,11 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { ensureTicketDefaults } from "@repo/supabase/queries/ticket-config";
 import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
 import { assertChannel, assertRole } from "@/lib/discord/api";
 import { DashboardError, requireDiscordAdmin, toActionError, type DiscordActionResult } from "@/lib/discord/action";
 import { recordChange } from "@/lib/discord/audit";
-import { callBot } from "@/lib/discord/bot-bridge";
+import { callBot, staleWarning } from "@/lib/discord/bot-bridge";
 import { nullableSnowflakeSchema } from "@/schemas/discord";
 
 const ticketSchema = z
@@ -81,6 +82,11 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       staff_role_id: saved.staff_role_id,
       category_id: saved.category_id,
     });
+    // A guild's first save: give it the starting categories and products.
+    await ensureTicketDefaults(supabaseAdmin, guildId);
+    // Always, even after a panel call: that one ran before the write above.
+    const refreshed = await callBot(guildId, "/cache/tickets");
+    warning ??= staleWarning(refreshed);
 
     await recordChange({ userId, guildId, section: "tickets", before, after: saved });
     revalidatePath("/discord", "layout");

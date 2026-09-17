@@ -1,8 +1,14 @@
 import { ChannelType, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
+import { getTicketSettings } from "@repo/supabase/queries/tickets";
 import type { Command } from "../types/discord";
-import { CLOSE_RESULT_MESSAGES, closeTicketChannel, isStaff, postTicketPanel } from "../lib/tickets";
+import {
+  CLOSE_RESULT_MESSAGES,
+  closeTicketChannel,
+  isStaff,
+  postTicketPanel,
+  saveTicketSettings,
+} from "../lib/tickets";
 
 export default {
   data: new SlashCommandBuilder()
@@ -60,7 +66,7 @@ export default {
       const previous = await getTicketSettings(supabase, interaction.guildId);
       const panelMessageId = await postTicketPanel(interaction.guild, panelChannel, previous);
 
-      await upsertTicketSettings(supabase, interaction.guildId, {
+      await saveTicketSettings(interaction.guildId, {
         enabled: true,
         staff_role_id: staffRole.id,
         category_id: category.id,

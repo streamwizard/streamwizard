@@ -4,7 +4,6 @@ import { supabase } from "@repo/supabase";
 import {
   closeTicket,
   getTicketByChannelId,
-  getTicketSettings,
   type DiscordTicket,
   type DiscordTicketCloseCode,
 } from "@repo/supabase/queries/tickets";
@@ -12,6 +11,7 @@ import type { TicketEventSource } from "@repo/types";
 import { reportError } from "@repo/sentry";
 import { notifyTicketActivity, trackTicketChannel } from "../ticket-activity";
 import { captureTicketTranscript } from "../ticket-transcript";
+import { getTicketConfig } from "./config";
 import { recordTicketEvent } from "./events";
 import { TICKET_IDS } from "./ids";
 import { isStaff } from "./staff";
@@ -121,7 +121,7 @@ export async function closeOrphanedTicket(guild: Guild, channelId: string): Prom
 export async function handleCloseButton(interaction: ButtonInteraction): Promise<void> {
   if (!interaction.inCachedGuild()) return;
 
-  const settings = await getTicketSettings(supabase, interaction.guildId);
+  const { settings } = await getTicketConfig(interaction.guildId);
   if (!isStaff(interaction.member, settings)) {
     await interaction.reply({ content: "Only staff can close tickets.", flags: MessageFlags.Ephemeral });
     return;
@@ -151,7 +151,7 @@ export async function handleCloseCancel(interaction: ButtonInteraction): Promise
 export async function handleCloseConfirm(interaction: ButtonInteraction): Promise<void> {
   if (!interaction.inCachedGuild()) return;
 
-  const settings = await getTicketSettings(supabase, interaction.guildId);
+  const { settings } = await getTicketConfig(interaction.guildId);
   if (!isStaff(interaction.member, settings)) {
     await interaction.update({ content: "Only staff can close tickets.", components: [] });
     return;

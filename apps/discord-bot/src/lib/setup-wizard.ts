@@ -23,8 +23,8 @@ import {
   removeIgnoredChannel,
   upsertActivitySettings,
 } from "@repo/supabase/queries/discord-activity";
-import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
-import { postTicketPanel } from "./tickets";
+import { getTicketSettings } from "@repo/supabase/queries/tickets";
+import { postTicketPanel, saveTicketSettings } from "./tickets";
 import { cleanUpOldWelcomeChannel } from "./welcome";
 import { closeGuildSessions, invalidateSettingsCache } from "./activity-tracker";
 import { reportError } from "@repo/sentry";
@@ -416,7 +416,9 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
       return;
     }
     case SETUP_IDS.ticketsYes: {
-      await upsertTicketSettings(supabase, guildId, { enabled: true });
+      // Tickets only switch on once the last step posted the panel: a wizard
+      // abandoned halfway would otherwise leave them on without a staff role.
+      await saveTicketSettings(guildId, {});
       await interaction.update(stepTicketStaffRole());
       return;
     }
@@ -427,7 +429,7 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
     case SETUP_IDS.ticketStaffRole: {
       const roleId = interaction.isRoleSelectMenu() ? interaction.values[0] : undefined;
       if (roleId) {
-        await upsertTicketSettings(supabase, guildId, { staff_role_id: roleId });
+        await saveTicketSettings(guildId, { staff_role_id: roleId });
       }
       await interaction.update(stepTicketCategory());
       return;
@@ -435,7 +437,7 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
     case SETUP_IDS.ticketCategory: {
       const categoryId = interaction.isChannelSelectMenu() ? interaction.values[0] : undefined;
       if (categoryId) {
-        await upsertTicketSettings(supabase, guildId, { category_id: categoryId });
+        await saveTicketSettings(guildId, { category_id: categoryId });
       }
       await interaction.update(stepTicketPanelChannel());
       return;
@@ -447,9 +449,10 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
         if (channel?.isTextBased()) {
           const previous = await getTicketSettings(supabase, guildId);
           const panelMessageId = await postTicketPanel(interaction.guild, channel, previous);
-          await upsertTicketSettings(supabase, guildId, {
+          await saveTicketSettings(guildId, {
             panel_channel_id: channelId,
             panel_message_id: panelMessageId,
+            enabled: Boolean(previous?.staff_role_id && previous.category_id),
           });
         }
       }

@@ -8,9 +8,9 @@ import {
   formatTicketNumber,
   getTicketByNumber,
   getTicketHistory,
-  ticketProductLabel,
   type DiscordTicketEvent,
 } from "@repo/supabase/queries/tickets";
+import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { AutoRefresh } from "@/components/discord/auto-refresh";
 import { TicketActions } from "@/components/discord/ticket-actions";
@@ -21,7 +21,7 @@ import { getLiveTranscript } from "@/lib/discord/live-transcript";
 import { PageHeader } from "@/components/widgets/page-header";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { buildNameMap } from "@/lib/discord/names";
-import { formatDateTime, TICKET_CATEGORY_LABELS, TICKET_CLOSE_CAUSES } from "@/lib/discord/tickets";
+import { formatDateTime, TICKET_CLOSE_CAUSES } from "@/lib/discord/tickets";
 import { displayName, resolveDiscordProfiles, type DiscordProfile } from "@/lib/discord/users";
 
 export const dynamic = "force-dynamic";
@@ -77,11 +77,15 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
   if (!ticket) notFound();
 
   const adminUserId = await assertAdmin();
-  const [{ messages, events }, linkedAccount, adminDiscordId] = await Promise.all([
+  const [{ messages, events }, linkedAccount, adminDiscordId, categories, products] = await Promise.all([
     getTicketHistory(supabaseAdmin, ticket.id),
     getLinkedStreamWizardAccount(supabaseAdmin, ticket.opener_discord_user_id, ticket.opener_user_id),
     getDiscordUserIdForUser(supabaseAdmin, adminUserId),
+    listTicketCategories(supabaseAdmin, guildId),
+    listTicketProducts(supabaseAdmin, guildId),
   ]);
+  const productLabel = products.find((p) => p.slug === ticket.product)?.label ?? ticket.product;
+  const categoryName = categories.find((c) => c.slug === ticket.category)?.name ?? ticket.category;
   // Open tickets aren't saved yet: read the channel live. Closed ones use the
   // stored transcript.
   const isOpen = ticket.status === "open";
@@ -142,7 +146,7 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
 
   return (
     <div className="space-y-6">
-      <PageHeader title={`${formatTicketNumber(ticket.ticket_number)} ${ticket.subject}`} description={[ticketProductLabel(ticket.product), TICKET_CATEGORY_LABELS[ticket.category]].filter(Boolean).join(" · ")}>
+      <PageHeader title={`${formatTicketNumber(ticket.ticket_number)} ${ticket.subject}`} description={[productLabel, categoryName].filter(Boolean).join(" · ")}>
         <Button variant="outline" size="sm" asChild>
           <Link href="/discord/tickets">All tickets</Link>
         </Button>

@@ -103,6 +103,10 @@
       "types": "./src/queries/tickets.ts",
       "default": "./src/queries/tickets.ts"
     },
+    "./queries/ticket-config": {
+      "types": "./src/queries/ticket-config.ts",
+      "default": "./src/queries/ticket-config.ts"
+    },
     "./queries/discord-audit": {
       "types": "./src/queries/discord-audit.ts",
       "default": "./src/queries/discord-audit.ts"
