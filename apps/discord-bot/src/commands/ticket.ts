@@ -1,4 +1,4 @@
-import { ChannelType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { ChannelType, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
 import type { Command } from "../types/discord";
@@ -11,6 +11,7 @@ export default {
     // No default member permissions: Discord can't set them per subcommand, and
     // hiding the whole command would hide `close` from staff without Manage
     // Server. setup/settings are gated on Manage Server in execute() instead.
+    .setContexts(InteractionContextType.Guild)
     .addSubcommand((sub) =>
       sub
         .setName("setup")

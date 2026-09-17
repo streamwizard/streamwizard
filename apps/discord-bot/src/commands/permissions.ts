@@ -1,4 +1,4 @@
-import { MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { addCommandRole, getCommandRoles, getGuildCommandPermissions, removeCommandRole } from "@repo/supabase/queries/discord";
 import type { Command } from "../types/discord";
@@ -12,6 +12,7 @@ export default {
     // The actual enforcement is the server-owner check in execute() below —
     // Discord has no "owner" permission flag to set here.
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setContexts(InteractionContextType.Guild)
     .addSubcommand((sub) =>
       sub
         .setName("set")

@@ -1,4 +1,4 @@
-import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, InteractionContextType, MessageFlags, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getLeaderboard, type LeaderboardMetric } from "@repo/supabase/queries/discord-activity";
 import type { Command } from "../types/discord";
@@ -16,6 +16,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName("leaderboard")
     .setDescription("See the most active members")
+    .setContexts(InteractionContextType.Guild)
     .addStringOption((opt) =>
       opt.setName("metric").setDescription("What to rank by (defaults to messages)").addChoices(...METRIC_CHOICES)
     )
