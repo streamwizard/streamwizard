@@ -824,6 +824,9 @@ export type Database = {
         Row: {
           actor_discord_id: string | null
           actor_name: string | null
+          detail: Json
+          target_discord_id: string | null
+          target_name: string | null
           created_at: string
           id: string
           ticket_id: string
@@ -832,6 +835,9 @@ export type Database = {
         Insert: {
           actor_discord_id?: string | null
           actor_name?: string | null
+          detail?: Json
+          target_discord_id?: string | null
+          target_name?: string | null
           created_at?: string
           id?: string
           ticket_id: string
@@ -840,6 +846,9 @@ export type Database = {
         Update: {
           actor_discord_id?: string | null
           actor_name?: string | null
+          detail?: Json
+          target_discord_id?: string | null
+          target_name?: string | null
           created_at?: string
           id?: string
           ticket_id?: string
@@ -912,6 +921,8 @@ export type Database = {
         Row: {
           product: string | null
           claimed_by_name: string | null
+          close_code: string | null
+          close_reason: string | null
           closed_by_name: string | null
           opener_name: string | null
           transcript_message_count: number | null
@@ -931,7 +942,6 @@ export type Database = {
           id: string
           opener_discord_user_id: string
           opener_user_id: string | null
-          scheduled_deletion_at: string | null
           status: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
@@ -940,6 +950,8 @@ export type Database = {
         Insert: {
           product?: string | null
           claimed_by_name?: string | null
+          close_code?: string | null
+          close_reason?: string | null
           closed_by_name?: string | null
           opener_name?: string | null
           transcript_message_count?: number | null
@@ -959,7 +971,6 @@ export type Database = {
           id?: string
           opener_discord_user_id: string
           opener_user_id?: string | null
-          scheduled_deletion_at?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
@@ -968,6 +979,8 @@ export type Database = {
         Update: {
           product?: string | null
           claimed_by_name?: string | null
+          close_code?: string | null
+          close_reason?: string | null
           closed_by_name?: string | null
           opener_name?: string | null
           transcript_message_count?: number | null
@@ -987,7 +1000,6 @@ export type Database = {
           id?: string
           opener_discord_user_id?: string
           opener_user_id?: string | null
-          scheduled_deletion_at?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject?: string
           ticket_number?: number

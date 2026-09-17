@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@repo/discord-message": "workspace:*",
-    "@repo/github-api": "workspace:*",
     "@repo/posthog": "workspace:*",
     "@repo/sentry": "workspace:*",
     "@repo/storage": "workspace:*",

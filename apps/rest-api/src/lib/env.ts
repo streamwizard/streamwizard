@@ -15,11 +15,6 @@ const schema = z.object({
   TWITCH_CLIENT_SECRET: z.string().min(1),
   TWITCH_WEBHOOK_SECRET: z.string().min(1),
 
-  // GitHub (ticket → issue sync webhook)
-  GITHUB_WEBHOOK_SECRET: z.string().min(1),
-  GITHUB_ISSUES_REPO: z.string().min(1), // "owner/repo"
-  DISCORD_BOT_TOKEN: z.string().min(1),
-
   // Public URL returned to nodes during /claim so they know where to send requests
   STREAMWIZARD_API_URL: z.string().url(),
 

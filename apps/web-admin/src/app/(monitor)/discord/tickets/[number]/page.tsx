@@ -21,7 +21,7 @@ import { getLiveTranscript } from "@/lib/discord/live-transcript";
 import { PageHeader } from "@/components/widgets/page-header";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { buildNameMap } from "@/lib/discord/names";
-import { formatDateTime, TICKET_CATEGORY_LABELS } from "@/lib/discord/tickets";
+import { formatDateTime, TICKET_CATEGORY_LABELS, TICKET_CLOSE_CAUSES } from "@/lib/discord/tickets";
 import { displayName, resolveDiscordProfiles, type DiscordProfile } from "@/lib/discord/users";
 
 export const dynamic = "force-dynamic";
@@ -193,6 +193,10 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
               </p>
             ) : messages.length > 0 ? (
               <TicketTranscript messages={messages} names={names} />
+            ) : ticket.close_code === "channel_deleted" ? (
+              <p className="text-sm text-muted-foreground">
+                No transcript. The channel was deleted in Discord before the ticket was closed, and the conversation went with it.
+              </p>
             ) : (
               <p className="text-sm text-muted-foreground">No transcript. This ticket closed before transcripts were saved.</p>
             )}
@@ -221,9 +225,14 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
                 </Detail>
                 {ticket.closed_at && (
                   <Detail label="Closed by">
-                    <DiscordPerson id={ticket.closed_by_discord_user_id} stored={ticket.closed_by_name} profiles={profiles} />
+                    {ticket.closed_by_discord_user_id || ticket.closed_by_name ? (
+                      <DiscordPerson id={ticket.closed_by_discord_user_id} stored={ticket.closed_by_name} profiles={profiles} />
+                    ) : (
+                      (TICKET_CLOSE_CAUSES[ticket.close_code ?? ""] ?? "Nobody")
+                    )}
                   </Detail>
                 )}
+                {ticket.close_reason && <Detail label="Close reason">{ticket.close_reason}</Detail>}
                 <Detail label="StreamWizard account">
                   {linkedAccount ? (
                     <span className="mt-1 flex items-center gap-2.5">

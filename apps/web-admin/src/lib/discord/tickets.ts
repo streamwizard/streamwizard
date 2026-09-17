@@ -7,6 +7,15 @@ export const TICKET_CATEGORY_LABELS: Record<DiscordTicketCategory, string> = {
   other: "Other",
 };
 
+// Why a ticket ended, for closes no person clicked for. "manual" has a closer
+// to show instead, so it has no label here.
+export const TICKET_CLOSE_CAUSES: Record<string, string> = {
+  channel_deleted: "Channel was deleted",
+  member_left: "Opener left the server",
+  inactivity: "Went quiet",
+  force: "Force closed",
+};
+
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
 }

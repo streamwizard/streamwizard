@@ -385,6 +385,26 @@ describe("server log formatters", () => {
     expect(fieldValue(closed, "Claimed by")).toBe("Unclaimed");
     expect(fieldValue(closed, "Open for")).toBe("1h 30m");
     expect(fieldValue(closed, "Messages")).toBe("17");
+    expect(fieldValue(closed, "Reason")).toBeUndefined();
+
+    // Nobody clicked Close: the sentence names the cause instead of a person.
+    const orphaned = formatPlatformEvent(
+      event("ticket.closed", {
+        ...ticket,
+        source: "discord" as const,
+        actor: null,
+        close_code: "channel_deleted",
+        dashboard_url: "https://admin.example/discord/tickets/12",
+      }),
+    ).toJSON();
+    expect(orphaned.description).toBe(
+      "[Ticket #0012](https://admin.example/discord/tickets/12) was closed because its channel was deleted.",
+    );
+
+    const withReason = formatPlatformEvent(
+      event("ticket.closed", { ...ticket, source: "discord" as const, actor: staff, close_reason: "Fixed in v2" }),
+    ).toJSON();
+    expect(fieldValue(withReason, "Reason")).toBe("Fixed in v2");
 
     const replied = formatPlatformEvent(
       event("ticket.replied", { ...ticket, source: "dashboard" as const, author_name: "Jochem" }),

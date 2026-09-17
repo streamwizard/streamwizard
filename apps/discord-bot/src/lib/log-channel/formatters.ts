@@ -131,6 +131,16 @@ function ticketLink(payload: TicketPayload): string {
 
 const fromDashboard = (payload: TicketPayload) => (payload.source === "dashboard" ? " from the dashboard" : "");
 
+// A close nobody clicked for has no actor, so the sentence says why instead of who.
+const SYSTEM_CLOSE_CAUSES: Record<string, string> = {
+  channel_deleted: " because its channel was deleted",
+  member_left: " because the opener left the server",
+  inactivity: " after going quiet",
+};
+
+// Leaves a leading "[" alone, so a linked "[ticket #0012](…)" still starts with a capital.
+const upperFirst = (text: string) => text.replace(/[a-z]/, (letter) => letter.toUpperCase());
+
 function ticketFields(payload: TicketPayload, event: PlatformEvent): APIEmbedField[] {
   return [
     ...field("Subject", plain(payload.subject), false),
@@ -249,10 +259,13 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
   "ticket.closed": (payload, event) =>
     withMember(base(event, "ticket.closed"), payload.opener)
       .setDescription(
-        `${discordUser(payload.actor, "Someone")} closed ${ticketLink(payload)}${fromDashboard(payload)}.`,
+        payload.actor
+          ? `${discordUser(payload.actor, "Someone")} closed ${ticketLink(payload)}${fromDashboard(payload)}.`
+          : `${upperFirst(ticketLink(payload))} was closed${SYSTEM_CLOSE_CAUSES[payload.close_code ?? ""] ?? ""}.`,
       )
       .addFields([
         ...ticketFields(payload, event),
+        ...field("Reason", plain(payload.close_reason), false),
         ...field("Claimed by", payload.claimer ? discordUser(payload.claimer, "Unknown") : "Unclaimed"),
         ...field("Open for", duration(payload.duration_seconds)),
         ...field("Messages", typeof payload.message_count === "number" ? formatNumber(payload.message_count) : null),

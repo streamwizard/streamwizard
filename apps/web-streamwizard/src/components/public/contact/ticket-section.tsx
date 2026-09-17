@@ -16,7 +16,7 @@ const STEPS = [
   },
   {
     number: "03",
-    text: "You get a private channel, just you and staff. Bugs worth tracking get moved to a public GitHub issue, so you can watch the fix land.",
+    text: "You get a private channel, just you and staff. It stays open until the thing is sorted.",
   },
 ];
 

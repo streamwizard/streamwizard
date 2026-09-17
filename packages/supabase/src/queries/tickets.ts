@@ -178,19 +178,32 @@ export async function claimTicket(
   return data;
 }
 
+// Why a ticket ended. "manual" is a person closing it; the rest are closes
+// nobody clicked for, so they carry no closer.
+export type DiscordTicketCloseCode = "manual" | "inactivity" | "member_left" | "channel_deleted" | "force";
+
+export interface CloseTicketInput {
+  code: DiscordTicketCloseCode;
+  /** Null for a close no person triggered (the channel was deleted, the opener left). */
+  closedByDiscordUserId: string | null;
+  closedByName: string | null;
+  reason?: string | null;
+}
+
 /** Race-safe: returns the closed row, or null when the ticket was already closed (or isn't one). */
 export async function closeTicket(
   client: DBClient,
   channelId: string,
-  closedByDiscordUserId: string,
-  closedByName: string,
+  input: CloseTicketInput,
 ): Promise<DiscordTicket | null> {
   const { data, error } = await client
     .from("discord_tickets")
     .update({
       status: "closed",
-      closed_by_discord_user_id: closedByDiscordUserId,
-      closed_by_name: closedByName,
+      close_code: input.code,
+      close_reason: input.reason?.trim() || null,
+      closed_by_discord_user_id: input.closedByDiscordUserId,
+      closed_by_name: input.closedByName,
       closed_at: new Date().toISOString(),
     })
     .eq("channel_id", channelId)
@@ -202,51 +215,6 @@ export async function closeTicket(
   return data;
 }
 
-// Phase 2 (GitHub sync): links a ticket to its created GitHub issue.
-export async function setTicketGithubIssue(
-  client: DBClient,
-  channelId: string,
-  issueNumber: number,
-  issueUrl: string,
-): Promise<void> {
-  const { error } = await client
-    .from("discord_tickets")
-    .update({ github_issue_number: issueNumber, github_issue_url: issueUrl })
-    .eq("channel_id", channelId);
-
-  if (error) throw error;
-}
-
-// The GitHub issues repo is a single fixed repo (env-configured), so the issue
-// number alone is enough to find the ticket it belongs to.
-export async function getTicketByGithubIssue(client: DBClient, issueNumber: number): Promise<DiscordTicket | null> {
-  const { data, error } = await client
-    .from("discord_tickets")
-    .select("*")
-    .eq("github_issue_number", issueNumber)
-    .maybeSingle();
-
-  if (error) throw error;
-  return data;
-}
-
-// Applies a GitHub issue status change to the ticket. Closing sets
-// scheduled_deletion_at (a Supabase cron job deletes the channel once that
-// time passes); reopening clears it so the channel survives.
-export async function syncTicketStatusFromGithub(
-  client: DBClient,
-  channelId: string,
-  status: "open" | "closed",
-  scheduledDeletionAt: string | null,
-): Promise<void> {
-  const { error } = await client
-    .from("discord_tickets")
-    .update({ status, scheduled_deletion_at: scheduledDeletionAt })
-    .eq("channel_id", channelId);
-
-  if (error) throw error;
-}
-
 // ---------------------------------------------------------------------------
 // History: transcripts, timeline and the dashboard's list/detail reads
 // ---------------------------------------------------------------------------
@@ -254,7 +222,24 @@ export async function syncTicketStatusFromGithub(
 export type DiscordTicketMessage = Database["public"]["Tables"]["discord_ticket_messages"]["Row"];
 export type DiscordTicketMessageInsert = Database["public"]["Tables"]["discord_ticket_messages"]["Insert"];
 export type DiscordTicketEvent = Database["public"]["Tables"]["discord_ticket_events"]["Row"];
-export type DiscordTicketEventType = "opened" | "claimed" | "closed";
+// Mirrors discord_ticket_events_type_check.
+export type DiscordTicketEventType =
+  | "opened"
+  | "claimed"
+  | "unclaimed"
+  | "closed"
+  | "close_requested"
+  | "close_rejected"
+  | "member_added"
+  | "member_removed"
+  | "moved"
+  | "transferred"
+  | "priority_changed"
+  | "renamed"
+  | "topic_edited"
+  | "stale_warned"
+  | "feedback_submitted"
+  | "tag_replied";
 
 /** Stores a transcript and marks the ticket as saved. Upserts, so a retried close doesn't fail on duplicates. */
 export async function saveTicketTranscript(
@@ -275,15 +260,28 @@ export async function saveTicketTranscript(
   if (error) throw error;
 }
 
-export async function insertTicketEvent(
-  client: DBClient,
-  event: { ticketId: string; type: DiscordTicketEventType; actorDiscordId: string | null; actorName: string | null },
-): Promise<void> {
+export interface TicketEventInput {
+  ticketId: string;
+  type: DiscordTicketEventType;
+  /** Null when nobody did it: the bot closing a ticket whose channel is gone. */
+  actorDiscordId: string | null;
+  actorName: string | null;
+  /** Who the action was about (the member added, the new owner). Kept out of `detail` so account deletion can blank it. */
+  targetDiscordId?: string | null;
+  targetName?: string | null;
+  /** Non-personal specifics: a close code, a from/to category. Never user ids. */
+  detail?: Record<string, string | number | boolean | null>;
+}
+
+export async function insertTicketEvent(client: DBClient, event: TicketEventInput): Promise<void> {
   const { error } = await client.from("discord_ticket_events").insert({
     ticket_id: event.ticketId,
     type: event.type,
     actor_discord_id: event.actorDiscordId,
     actor_name: event.actorName,
+    target_discord_id: event.targetDiscordId ?? null,
+    target_name: event.targetName ?? null,
+    detail: event.detail ?? {},
   });
   if (error) throw error;
 }

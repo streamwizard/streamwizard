@@ -248,7 +248,11 @@ export interface PlatformEventPayloads {
   "ticket.opened": TicketEvent;
   "ticket.claimed": TicketEvent & { actor: DiscordUserRef };
   "ticket.closed": TicketEvent & {
-    actor: DiscordUserRef;
+    /** Null when no person closed it: the channel was deleted, the opener left. */
+    actor: DiscordUserRef | null;
+    /** manual, inactivity, member_left, channel_deleted or force. */
+    close_code?: string | null;
+    close_reason?: string | null;
     claimer?: DiscordUserRef | null;
     duration_seconds?: number | null;
     message_count?: number | null;

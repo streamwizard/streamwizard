@@ -41,14 +41,6 @@ const schema = z.object({
   // ticket embeds mention the channel instead.
   WEB_ADMIN_URL: z.string().url().optional(),
 
-  // GitHub App (ticket → issue sync)
-  // Optional: without all four the bot still starts and "Move to GitHub"
-  // replies that GitHub isn't set up.
-  GITHUB_APP_ID: z.string().min(1).optional(),
-  GITHUB_APP_PRIVATE_KEY: z.string().min(1).optional(),
-  GITHUB_APP_INSTALLATION_ID: z.string().min(1).optional(),
-  GITHUB_ISSUES_REPO: z.string().min(1).optional(), // "owner/repo"
-
   // Sentry
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_RELEASE: z.string().optional(),
