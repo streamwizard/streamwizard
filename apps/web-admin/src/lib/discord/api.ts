@@ -50,6 +50,20 @@ export const getGuildRoles = cache(async (): Promise<DiscordRole[]> => {
 
 export const getGuild = cache(async () => requireDiscordContext().api.guilds.getGuild());
 
+/** Name and avatar for the message builder's preview. Falls back to a plain name: a preview isn't worth failing a page over. */
+export const getBotProfile = cache(async (): Promise<{ name: string; avatarUrl: string | null }> => {
+  const fallback = { name: "StreamWizard", avatarUrl: null };
+  if (!env.DISCORD_CLIENT_ID) return fallback;
+  const user = await requireDiscordContext()
+    .api.guilds.getUser(env.DISCORD_CLIENT_ID)
+    .catch(() => null);
+  if (!user) return fallback;
+  return {
+    name: user.global_name ?? user.username,
+    avatarUrl: user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=80` : null,
+  };
+});
+
 /** Throws unless `id` is a channel in the guild of one of the allowed kinds. */
 export async function assertChannel(id: string, kinds: ChannelKind[]): Promise<void> {
   const channel = (await getGuildChannels()).find((c) => c.id === id);

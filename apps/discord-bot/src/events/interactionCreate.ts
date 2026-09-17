@@ -4,6 +4,7 @@ import { reportError } from "@repo/sentry";
 import { canRunCommand } from "../lib/permissions";
 import { handleTicketInteraction } from "../lib/tickets";
 import { handleSetupInteraction } from "../lib/setup-wizard";
+import { handleBuiltButton, isBuiltButton } from "../lib/built-buttons";
 
 export default {
   name: Events.InteractionCreate,
@@ -27,6 +28,12 @@ export default {
 
     if ((interaction.isButton() || interaction.isAnySelectMenu()) && interaction.customId.startsWith("setup:")) {
       await handleSetupInteraction(interaction);
+      return;
+    }
+
+    // Buttons on messages from web-admin's message builder.
+    if (interaction.isButton() && isBuiltButton(interaction.customId)) {
+      await handleBuiltButton(interaction);
       return;
     }
 

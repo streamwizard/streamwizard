@@ -107,6 +107,10 @@
       "types": "./src/queries/discord-audit.ts",
       "default": "./src/queries/discord-audit.ts"
     },
+    "./queries/discord-built-messages": {
+      "types": "./src/queries/discord-built-messages.ts",
+      "default": "./src/queries/discord-built-messages.ts"
+    },
     "./queries/platform-events": {
       "types": "./src/queries/platform-events.ts",
       "default": "./src/queries/platform-events.ts"

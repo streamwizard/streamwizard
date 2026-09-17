@@ -9,8 +9,8 @@ import { actorIdentity } from "@/lib/platform-events";
 // Server-only. One place to record dashboard changes: the audit row for the
 // overview, and a discord_settings.changed event for the log channel (SW-334).
 
-export type AuditSection = "welcome" | "activity" | "tickets" | "permissions" | "logs";
-export type AuditAction = "update" | "repost_panel" | "test_welcome" | "test_log";
+export type AuditSection = "welcome" | "activity" | "tickets" | "permissions" | "logs" | "messages";
+export type AuditAction = "update" | "repost_panel" | "test_welcome" | "test_log" | "publish" | "delete";
 
 type Values = Record<string, Json | undefined>;
 

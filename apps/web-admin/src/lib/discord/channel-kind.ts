@@ -1,11 +1,13 @@
 import { DiscordChannelType } from "@repo/discord-api";
 
-export type ChannelKind = "text" | "voice" | "category";
+export type ChannelKind = "text" | "announcement" | "voice" | "category";
 
 const CHANNEL_TYPES: Record<ChannelKind, number[]> = {
   // Plain text only: the bot resolves welcome channels as GuildText, and
   // announcement channels don't make sense for tickets or logs.
   text: [DiscordChannelType.GuildText],
+  // Only the message builder posts here.
+  announcement: [DiscordChannelType.GuildAnnouncement],
   voice: [DiscordChannelType.GuildVoice, DiscordChannelType.GuildStageVoice],
   category: [DiscordChannelType.GuildCategory],
 };

@@ -14,6 +14,7 @@ import {
   MonitorDot,
   Network,
   Package,
+  PanelTop,
   Radio,
   ScrollText,
   Server,
@@ -95,6 +96,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/discord", label: "Server", icon: Bot, exact: true },
       { href: "/discord/welcome", label: "Welcome", icon: DoorOpen },
+      { href: "/discord/messages", label: "Messages", icon: PanelTop },
       { href: "/discord/activity", label: "Activity", icon: Activity },
       { href: "/discord/tickets", label: "Tickets", icon: Ticket },
       { href: "/discord/logs", label: "Log", icon: ScrollText },

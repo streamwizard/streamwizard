@@ -556,6 +556,51 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_built_messages: {
+        Row: {
+          channel_id: string | null
+          created_at: string
+          draft: Json
+          draft_channel_id: string | null
+          draft_create_channel: boolean
+          guild_id: string
+          id: string
+          message_ids: string[]
+          name: string
+          published: Json | null
+          published_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel_id?: string | null
+          created_at?: string
+          draft: Json
+          draft_channel_id?: string | null
+          draft_create_channel?: boolean
+          guild_id: string
+          id?: string
+          message_ids?: string[]
+          name: string
+          published?: Json | null
+          published_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string | null
+          created_at?: string
+          draft?: Json
+          draft_channel_id?: string | null
+          draft_create_channel?: boolean
+          guild_id?: string
+          id?: string
+          message_ids?: string[]
+          name?: string
+          published?: Json | null
+          published_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       discord_command_permissions: {
         Row: {
           command_name: string

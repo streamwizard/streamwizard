@@ -11,7 +11,7 @@ A Discord bot for the StreamWizard server, built on Bun + discord.js v14.
 - `src/lib/env.ts` — zod-validated environment variables.
 - `src/lib/ticket-transcript.ts` — saves a ticket channel's messages before it's deleted, for the web-admin ticket history. Images up to 500 KB (max 20 per ticket) are copied to R2 when the `R2_*` vars and `NEXT_PUBLIC_CDN_URL` are set; other files keep metadata only.
 - `src/lib/permissions.ts` — per-command role allowlists, checked in `events/interactionCreate.ts` before any command runs.
-- `src/http/server.ts` — internal Hono API that web-admin's Discord dashboard calls after a save (see below).
+- `src/http/` — internal Hono API that web-admin's Discord dashboard calls after a save (see below). `server.ts` starts it, `app.ts` wires middleware and routers, `middleware/` holds the bearer-secret and guild checks, `routes/` has one router per feature.
 - `src/scripts/deploy-commands.ts` — registers slash commands with Discord. Run after adding/changing/removing a command.
 
 ## Adding a command
@@ -85,7 +85,7 @@ Picked up automatically on next start — no registration needed in `index.ts`.
 
 ## Internal API (web-admin dashboard)
 
-web-admin's `/discord` pages write settings straight to Supabase, then call the bot so changes land without a restart. The bot starts a small Hono server (`src/http/server.ts`) when `DISCORD_BOT_INTERNAL_SECRET` is set; without it the server stays off and saves still apply once the in-memory caches expire (permissions 5 min, activity 60 s).
+web-admin's `/discord` pages write settings straight to Supabase, then call the bot so changes land without a restart. The bot starts a small Hono server (`src/http/`) when `DISCORD_BOT_INTERNAL_SECRET` is set; without it the server stays off and saves still apply once the in-memory caches expire (permissions 5 min, activity 60 s).
 
 | Env var | Where | Notes |
 |---|---|---|
@@ -101,8 +101,17 @@ Don't publish the port on a public domain. Every route except `GET /health` need
 | `POST /cache/activity` `{ trackingDisabled }` | Drops cached activity settings; closes open voice sessions when tracking was turned off. |
 | `POST /cache/log-settings` | Drops cached log channel settings. |
 | `POST /verified-role` `{ oldRoleId, newRoleId }` | Moves members from the old verified role to the new one, in the background. |
-| `POST /ticket-panel` | Posts the ticket panel in the stored panel channel and removes the previous one. |
+| `POST /ticket-panel` `{ channelId? }` | Posts the ticket panel and removes the previous one. `channelId` moves it, `null` removes it, omitted re-posts it in place. |
+| `POST /tickets/:channelId/claim` `{ discordUserId }` | Claims the ticket as that admin's Discord account. |
+| `POST /tickets/:channelId/close` `{ discordUserId }` | Closes the ticket as that admin's Discord account. |
+| `POST /tickets/:channelId/message` `{ authorName, authorAvatarUrl, content }` | Posts a staff reply in the ticket, credited to the sender. |
+| `POST /welcome-cleanup` `{ previousChannelId }` | Deletes the bot's welcome posts from the previous welcome channel, in the background. |
 | `POST /test-welcome` `{ discordUserId }` | Posts a mock welcome for that member without touching `join_number`. |
+| `POST /built-messages/:id/publish` `{ channelId }` | Sends the saved message-builder draft to that channel, or updates what an earlier publish left there. |
+| `POST /built-messages/:id/delete` | Removes the published message from Discord and deletes the row. |
+| `POST /channels` `{ name }` | Creates a read-only text channel. 409 with `code: "name_taken"` when the name exists. |
+
+To add a route: create or extend a router in `src/http/routes/`, read the guild with `c.get("guild")`, and mount new routers in `src/http/app.ts`.
 
 ## Log channels (platform and server events)
 

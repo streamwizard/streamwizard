@@ -44,6 +44,13 @@ export const env = createEnv({
     DISCORD_CLIENT_ID: z.string().regex(/^\d{17,20}$/).optional(),
     DISCORD_BOT_INTERNAL_URL: z.string().url().optional(),
     DISCORD_BOT_INTERNAL_SECRET: z.string().min(16).optional(),
+    // Banner uploads in the Discord message builder go to the shared CDN
+    // bucket under discord-banners/. Without all four plus NEXT_PUBLIC_CDN_URL
+    // the upload button is off and banners use theme images only.
+    R2_ACCOUNT_ID: z.string().min(1).optional(),
+    R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+    R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    R2_ASSETS_BUCKET: z.string().min(1).optional(),
     TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
     TELEGRAM_CHAT_ID: z.string().min(1).optional(),
     // Same var the rest of the stack uses for the rest-api base URL; the
@@ -65,6 +72,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
     NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
+    NEXT_PUBLIC_CDN_URL: z.string().url().optional(),
   },
   runtimeEnv: {
     INFLUXDB_URL: process.env.INFLUXDB_URL,
@@ -85,6 +93,10 @@ export const env = createEnv({
     DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
     DISCORD_BOT_INTERNAL_URL: process.env.DISCORD_BOT_INTERNAL_URL,
     DISCORD_BOT_INTERNAL_SECRET: process.env.DISCORD_BOT_INTERNAL_SECRET,
+    R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
+    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
+    R2_ASSETS_BUCKET: process.env.R2_ASSETS_BUCKET,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
@@ -96,5 +108,6 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+    NEXT_PUBLIC_CDN_URL: process.env.NEXT_PUBLIC_CDN_URL,
   },
 });
