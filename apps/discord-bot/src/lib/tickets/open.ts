@@ -1,5 +1,10 @@
-import { ActionRowBuilder, ChannelType, MessageFlags, PermissionFlagsBits, StringSelectMenuBuilder } from "discord.js";
-import type { ButtonInteraction, ModalSubmitInteraction, StringSelectMenuInteraction } from "discord.js";
+import { ActionRowBuilder, ChannelType, MessageFlags, StringSelectMenuBuilder } from "discord.js";
+import type {
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+  ModalSubmitInteraction,
+  StringSelectMenuInteraction,
+} from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
 import { insertTicketAnswers, type TicketCategory } from "@repo/supabase/queries/ticket-config";
@@ -10,8 +15,10 @@ import {
   nextTicketNumber,
   ticketChannelName,
 } from "@repo/supabase/queries/tickets";
+import { countOpenTicketsInCategory, getOpenerTicketStats } from "@repo/supabase/queries/ticket-lifecycle";
 import { reportError } from "@repo/sentry";
 import { markSelfAction } from "../server-log/self-actions";
+import { computeTicketOverwrites, renderChannelName, whyCannotOpen } from "./access";
 import { notifyTicketActivity, trackTicketChannel } from "../ticket-activity";
 import {
   activeCategories,
@@ -30,7 +37,11 @@ const NOT_SET_UP = "Ticketing isn't set up in this server yet.";
 const CATEGORY_GONE = "That ticket category isn't available anymore. Hit Create Ticket again to pick another.";
 const FORM_CHANGED = "The ticket form changed while you had it open. Hit Create Ticket again, it only takes a moment.";
 
-type OpenInteraction = ButtonInteraction<"cached"> | StringSelectMenuInteraction<"cached">;
+/** Where a ticket can start: a panel button, a category select, or `/ticket new`. All three can show the form. */
+type OpenInteraction =
+  | ButtonInteraction<"cached">
+  | StringSelectMenuInteraction<"cached">
+  | ChatInputCommandInteraction<"cached">;
 
 function buildCategoryPicker(categories: TicketCategory[]) {
   const select = new StringSelectMenuBuilder()
@@ -95,7 +106,39 @@ export async function handleCreate(interaction: OpenInteraction, slug: string | 
     await interaction.reply({ content: CATEGORY_GONE, flags: MessageFlags.Ephemeral });
     return;
   }
+
+  // Checked before the form, so nobody fills one in only to be turned away.
+  const refusal = await whyNot(interaction, config, category);
+  if (refusal) {
+    await interaction.reply({ content: refusal, flags: MessageFlags.Ephemeral });
+    return;
+  }
   await startTicket(interaction, config, category);
+}
+
+/** Why this member can't open a ticket in `category` right now. Null when they can. */
+async function whyNot(
+  interaction: OpenInteraction | ModalSubmitInteraction<"cached">,
+  config: TicketConfig,
+  category: TicketCategory,
+): Promise<string | null> {
+  if (!config.settings) return NOT_SET_UP;
+  const parentId = category.discord_category_id ?? config.settings.category_id;
+  const [stats, openInCategory] = await Promise.all([
+    getOpenerTicketStats(supabase, interaction.guildId, interaction.user.id),
+    countOpenTicketsInCategory(supabase, interaction.guildId, category.slug),
+  ]);
+  return whyCannotOpen({
+    member: {
+      roleIds: [...interaction.member.roles.cache.keys()],
+      timedOut: interaction.member.isCommunicationDisabled(),
+    },
+    settings: config.settings,
+    category,
+    stats,
+    openInCategory,
+    channelsInParent: interaction.guild.channels.cache.filter((channel) => channel.parentId === parentId).size,
+  });
 }
 
 export async function handleCreateButton(interaction: ButtonInteraction, slug: string | null): Promise<void> {
@@ -195,43 +238,76 @@ async function openTicket(
     return;
   }
 
+  // Again, now that it counts: the form can sit open for minutes, and a
+  // double-click submits twice. The second submit waits here for the first.
+  const refusal = await serialised(interaction.user.id, async () => {
+    const reason = await whyNot(interaction, config, category);
+    if (!reason) reserved.add(interaction.user.id);
+    return reason;
+  });
+  if (refusal) {
+    await interaction.editReply({ content: refusal });
+    return;
+  }
+
+  try {
+    await createTicketChannel(interaction, config, category, form, parent);
+  } finally {
+    reserved.delete(interaction.user.id);
+  }
+}
+
+// One open attempt per member at a time. `reserved` covers the gap between
+// passing the checks and the ticket row existing, which is what the next
+// attempt's count would otherwise miss.
+const queues = new Map<string, Promise<unknown>>();
+const reserved = new Set<string>();
+
+async function serialised<T>(userId: string, task: () => Promise<T>): Promise<T | string> {
+  if (reserved.has(userId)) return "Your ticket is being opened. Give it a second.";
+  const previous = queues.get(userId) ?? Promise.resolve();
+  const run = previous.catch(() => {}).then(task);
+  queues.set(userId, run);
+  try {
+    return await run;
+  } finally {
+    if (queues.get(userId) === run) queues.delete(userId);
+  }
+}
+
+async function createTicketChannel(
+  interaction: OpenInteraction | ModalSubmitInteraction<"cached">,
+  config: TicketConfig,
+  category: TicketCategory,
+  form: TicketFormResult,
+  parent: string,
+): Promise<void> {
   const { data: integration } = await getDiscordIntegrationByDiscordUserId(supabase, interaction.user.id);
   const openerUserId = integration?.user_id ?? null;
   const openerProfile = openerUserId ? await getTicketOpenerProfile(supabase, openerUserId) : null;
   const ticketNumber = await nextTicketNumber(supabase, interaction.guildId);
 
   const channel = await interaction.guild.channels.create({
-    name: ticketChannelName(ticketNumber),
+    name: renderChannelName(
+      category.channel_name_template,
+      {
+        "ticket.number": String(ticketNumber).padStart(4, "0"),
+        "ticket.category": category.name,
+        "member.name": interaction.member.displayName,
+      },
+      ticketChannelName(ticketNumber),
+    ),
     type: ChannelType.GuildText,
     parent,
-    permissionOverwrites: [
-      { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-      {
-        id: interaction.user.id,
-        allow: [
-          PermissionFlagsBits.ViewChannel,
-          PermissionFlagsBits.SendMessages,
-          PermissionFlagsBits.ReadMessageHistory,
-        ],
-      },
-      {
-        id: settings.staff_role_id,
-        allow: [
-          PermissionFlagsBits.ViewChannel,
-          PermissionFlagsBits.SendMessages,
-          PermissionFlagsBits.ReadMessageHistory,
-        ],
-      },
-      {
-        id: interaction.client.user.id,
-        allow: [
-          PermissionFlagsBits.ViewChannel,
-          PermissionFlagsBits.SendMessages,
-          PermissionFlagsBits.ReadMessageHistory,
-          PermissionFlagsBits.ManageChannels,
-        ],
-      },
-    ],
+    rateLimitPerUser: category.slowmode_seconds || undefined,
+    permissionOverwrites: computeTicketOverwrites({
+      everyoneRoleId: interaction.guild.roles.everyone.id,
+      botId: interaction.client.user.id,
+      settings: config.settings,
+      category,
+      ticket: { opener_discord_user_id: interaction.user.id, claimed_by_discord_user_id: null },
+      memberIds: [],
+    }),
   });
   // The server log would otherwise report the new channel as a staff action.
   markSelfAction("channel", channel.id);

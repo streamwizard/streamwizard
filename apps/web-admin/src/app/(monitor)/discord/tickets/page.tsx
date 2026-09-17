@@ -29,10 +29,22 @@ export const dynamic = "force-dynamic";
 const PAGE_SIZE = 25;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+const CLOSE_CODE_LABELS = {
+  manual: "Closed by staff",
+  inactivity: "Went quiet",
+  member_left: "Opener left",
+  channel_deleted: "Channel deleted",
+  force: "Force closed",
+} as const;
+
+const PRIORITY_LABELS: Record<string, string> = { low: "Low", medium: "Medium", high: "High" };
+
 type Params = {
   status?: string;
   category?: string;
   product?: string;
+  priority?: string;
+  closed?: string;
   opener?: string;
   claimer?: string;
   q?: string;
@@ -49,6 +61,8 @@ function parseFilters(params: Params, slugs: { categories: Set<string>; products
     product: params.product && slugs.products.has(params.product) ? params.product : undefined,
     opener: params.opener?.trim() || undefined,
     claimer: params.claimer?.trim() || undefined,
+    priority: params.priority === "low" || params.priority === "medium" || params.priority === "high" ? params.priority : undefined,
+    closeCode: params.closed && params.closed in CLOSE_CODE_LABELS ? (params.closed as keyof typeof CLOSE_CODE_LABELS) : undefined,
     search: params.q?.trim() || undefined,
     from: params.from && DATE.test(params.from) ? `${params.from}T00:00:00.000Z` : undefined,
     to: params.to && DATE.test(params.to) ? `${params.to}T23:59:59.999Z` : undefined,
@@ -120,6 +134,20 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
               </NativeSelectOption>
             ))}
           </NativeSelect>
+          <NativeSelect name="priority" defaultValue={params.priority ?? ""} aria-label="Priority" className="w-full sm:w-36">
+            <NativeSelectOption value="">Any priority</NativeSelectOption>
+            <NativeSelectOption value="high">High</NativeSelectOption>
+            <NativeSelectOption value="medium">Medium</NativeSelectOption>
+            <NativeSelectOption value="low">Low</NativeSelectOption>
+          </NativeSelect>
+          <NativeSelect name="closed" defaultValue={params.closed ?? ""} aria-label="How it closed" className="w-full sm:w-44">
+            <NativeSelectOption value="">Closed any way</NativeSelectOption>
+            {Object.entries(CLOSE_CODE_LABELS).map(([code, label]) => (
+              <NativeSelectOption key={code} value={code}>
+                {label}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Input name="opener" defaultValue={params.opener} placeholder="Opened by (name or Discord id)" aria-label="Opened by" className="w-full sm:w-64" />
@@ -152,6 +180,7 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
                 <TableHead>Subject</TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead>Category</TableHead>
+                <TableHead>Priority</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Opened by</TableHead>
                 <TableHead>Claimed by</TableHead>
@@ -170,6 +199,7 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
                   <TableCell className="max-w-72 truncate font-medium">{ticket.subject}</TableCell>
                   <TableCell className="whitespace-nowrap">{ticket.product ? (productLabels.get(ticket.product) ?? ticket.product) : <span className="text-muted-foreground">Not set</span>}</TableCell>
                   <TableCell>{categoryNames.get(ticket.category) ?? ticket.category}</TableCell>
+                  <TableCell>{ticket.priority ? (PRIORITY_LABELS[ticket.priority] ?? ticket.priority) : <span className="text-muted-foreground">None</span>}</TableCell>
                   <TableCell>
                     <Badge variant={ticket.status === "open" ? "default" : "outline"}>
                       {ticket.status === "open" ? "Open" : "Closed"}
@@ -187,7 +217,7 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
               ))}
               {tickets.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="p-8 text-center text-muted-foreground">
+                  <TableCell colSpan={10} className="p-8 text-center text-muted-foreground">
                     {filtered ? "No tickets match these filters." : "No tickets yet. Quiet in support, for now."}
                   </TableCell>
                 </TableRow>

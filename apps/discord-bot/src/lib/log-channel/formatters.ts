@@ -276,6 +276,29 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
       .setDescription(`${bold(payload.author_name, "Staff")} replied to ${ticketLink(payload)} from the dashboard.`)
       .addFields(ticketFields(payload, event)),
 
+  "ticket.updated": (payload, event) => {
+    const actor = payload.actor ? discordUser(payload.actor, "Someone") : "StreamWizard";
+    const ticket = ticketLink(payload);
+    const target = discordUser(payload.target, "someone");
+    const sentences: Record<string, string> = {
+      unclaimed: `${actor} released ${ticket}`,
+      priority_changed: payload.to
+        ? `${actor} set ${ticket} to ${plain(payload.to)} priority`
+        : `${actor} cleared the priority of ${ticket}`,
+      member_added: `${actor} added ${target} to ${ticket}`,
+      member_removed: `${actor} removed ${target} from ${ticket}`,
+      moved: `${actor} moved ${ticket} to ${plain(payload.to) ?? "another category"}`,
+      transferred: `${actor} handed ${ticket} to ${target}`,
+      renamed: `${actor} changed the subject of ${ticket}`,
+    };
+    return withMember(base(event, "ticket.updated"), payload.opener)
+      .setDescription(`${sentences[payload.change ?? ""] ?? `${actor} changed ${ticket}`}${fromDashboard(payload)}.`)
+      .addFields([
+        ...ticketFields(payload, event),
+        ...field("Was", payload.change === "unclaimed" ? null : plain(payload.from)),
+      ]);
+  },
+
   "discord.linked": (payload, event) =>
     withSubject(base(event, "discord.linked"), payload)
       .setDescription(

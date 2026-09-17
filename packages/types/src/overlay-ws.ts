@@ -141,7 +141,7 @@ export type { ObsInstanceLifecyclePayload, IngestStatsPayload, ObsSceneChangedPa
 export interface DiscordTicketActivityPayload {
   ticketNumber: number;
   channelId: string;
-  kind: "opened" | "message" | "claimed" | "closed";
+  kind: "opened" | "message" | "claimed" | "closed" | "updated";
 }
 
 // Host NIC totals only — cpu/ram/disk deliberately stay on the InfluxDB

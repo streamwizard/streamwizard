@@ -10,7 +10,7 @@ A Discord bot for the StreamWizard server, built on Bun + discord.js v14.
 - `src/lib/discord-client.ts` — the `Client` singleton and its gateway intents. Start minimal; add intents only when a feature needs them (each one may require re-approval for verified bots).
 - `src/lib/env.ts` — zod-validated environment variables.
 - `src/lib/ticket-transcript.ts` — saves a ticket channel's messages before it's deleted, for the web-admin ticket history. Images up to 500 KB (max 20 per ticket) are copied to R2 when the `R2_*` vars and `NEXT_PUBLIC_CDN_URL` are set; other files keep metadata only.
-- `src/lib/tickets/` — the ticket system. `config.ts` is the cached read of everything web-admin configures (settings, categories, products; dropped by `POST /cache/tickets`), `open.ts` the category picker and form, `close.ts` the single close path. `form.ts` builds a category's modal from its configured questions and reads the answers back by field id; `panel.ts` posts the panel designed in web-admin (a `BuiltMessage`) with the Create Ticket controls from `panel-rows.ts` underneath; `intro.ts` is the opening message plus the ticket card.
+- `src/lib/tickets/` — the ticket system. `config.ts` is the cached read of everything web-admin configures (settings, categories, products; dropped by `POST /cache/tickets`), `open.ts` the category picker and form, `close.ts` the single close path. `form.ts` builds a category's modal from its configured questions and reads the answers back by field id; `panel.ts` posts the panel designed in web-admin (a `BuiltMessage`) with the Create Ticket controls from `panel-rows.ts` underneath; `intro.ts` is the opening message plus the ticket card. `access.ts` holds the pure rules (who may open a ticket, who is staff on it, the channel's full permission set); `actions.ts` the staff actions shared by `/ticket`, the intro buttons and the dashboard routes.
 - `src/lib/permissions.ts` — per-command role allowlists, checked in `events/interactionCreate.ts` before any command runs.
 - `src/http/` — internal Hono API that web-admin's Discord dashboard calls after a save (see below). `server.ts` starts it, `app.ts` wires middleware and routers, `middleware/` holds the bearer-secret and guild checks, `routes/` has one router per feature.
 - `src/scripts/deploy-commands.ts` — registers slash commands with Discord. Run after adding/changing/removing a command.
@@ -105,7 +105,13 @@ Don't publish the port on a public domain. Every route except `GET /health` need
 | `POST /verified-role` `{ oldRoleId, newRoleId }` | Moves members from the old verified role to the new one, in the background. |
 | `POST /ticket-panel` `{ channelId? }` | Posts the ticket panel and removes the previous one. `channelId` moves it, `null` removes it, omitted re-posts it in place. |
 | `POST /tickets/:channelId/claim` `{ discordUserId }` | Claims the ticket as that admin's Discord account. |
-| `POST /tickets/:channelId/close` `{ discordUserId }` | Closes the ticket as that admin's Discord account. |
+| `POST /tickets/:channelId/close` `{ discordUserId, reason? }` | Closes the ticket as that admin's Discord account, with an optional reason. |
+| `POST /tickets/:channelId/release` `{ discordUserId }` | Gives a claimed ticket back. |
+| `POST /tickets/:channelId/priority` `{ discordUserId, priority }` | Sets `low`, `medium`, `high` or `null`. |
+| `POST /tickets/:channelId/subject` `{ discordUserId, subject }` | Rewords the subject. |
+| `POST /tickets/:channelId/move` `{ discordUserId, category }` | Files the ticket under another category (slug): moves the channel when that category has its own Discord category and rewrites its permissions. |
+| `POST /tickets/:channelId/members/add` / `members/remove` `{ discordUserId, targetDiscordUserId }` | Lets someone into the ticket, or takes them out. |
+| `POST /tickets/:channelId/transfer` `{ discordUserId, targetDiscordUserId }` | Makes another member the ticket's owner; the previous owner stays as an added member. |
 | `POST /tickets/:channelId/message` `{ authorName, authorAvatarUrl, content }` | Posts a staff reply in the ticket, credited to the sender. |
 | `POST /welcome-cleanup` `{ previousChannelId }` | Deletes the bot's welcome posts from the previous welcome channel, in the background. |
 | `POST /test-welcome` `{ discordUserId }` | Posts a mock welcome for that member without touching `join_number`. |

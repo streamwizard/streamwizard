@@ -138,12 +138,32 @@ export async function createTicketCategory(
   return data;
 }
 
+/** Who works a category's tickets, who may open them, and how many. Edited on the category's own page. */
+export interface TicketCategoryRules {
+  staff_role_ids: string[];
+  ping_role_ids: string[];
+  required_role_ids: string[];
+  member_limit: number | null;
+  total_limit: number | null;
+  cooldown_seconds: number;
+  slowmode_seconds: number;
+  claiming_enabled: boolean;
+  channel_name_template: string;
+}
+
+/** A Discord category holds 50 channels, so no limit can promise more. */
+export const TICKET_LIMIT_MAX = 50;
+export const TICKET_COOLDOWN_MAX_SECONDS = 30 * 24 * 60 * 60;
+/** Discord's slowmode ceiling: six hours. */
+export const TICKET_SLOWMODE_MAX_SECONDS = 6 * 60 * 60;
+export const DEFAULT_CHANNEL_NAME_TEMPLATE = "ticket-[ticket.number]";
+
 /** Null when the category is gone. The slug is never part of an update. */
 export async function updateTicketCategory(
   client: DBClient,
   guildId: string,
   id: string,
-  patch: Partial<TicketCategoryInput> & { archived_at?: string | null },
+  patch: Partial<TicketCategoryInput> & Partial<TicketCategoryRules> & { archived_at?: string | null },
 ): Promise<TicketCategory | null> {
   const { data, error } = await client
     .from("discord_ticket_categories")

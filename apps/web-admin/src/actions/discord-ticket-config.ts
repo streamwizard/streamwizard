@@ -16,7 +16,10 @@ import {
   reorderTicketProducts,
   seedCategoryForm,
   TICKET_ACTIVE_LIMIT,
+  TICKET_COOLDOWN_MAX_SECONDS,
   TICKET_DESCRIPTION_MAX,
+  TICKET_LIMIT_MAX,
+  TICKET_SLOWMODE_MAX_SECONDS,
   TICKET_NAME_MAX,
   uniqueTicketSlug,
   updateTicketCategory,
@@ -24,12 +27,12 @@ import {
 } from "@repo/supabase/queries/ticket-config";
 import { parseTicketPanel } from "@repo/discord-message";
 import { getTicketSettings } from "@repo/supabase/queries/tickets";
-import { assertChannel } from "@/lib/discord/api";
+import { assertChannel, assertRole } from "@/lib/discord/api";
 import { DashboardError, requireDiscordAdmin, toActionError, type DiscordActionResult } from "@/lib/discord/action";
 import { recordChange } from "@/lib/discord/audit";
 import { callBot, staleWarning } from "@/lib/discord/bot-bridge";
 import { ticketEmojiSchema } from "@/lib/discord/ticket-options";
-import { nullableSnowflakeSchema } from "@/schemas/discord";
+import { nullableSnowflakeSchema, snowflakeSchema } from "@/schemas/discord";
 
 // Ticket categories and products: what a ticket is filed under and what it is
 // about. Every action ends the same way: audit row, bot cache refresh (a
@@ -165,6 +168,67 @@ export async function updateTicketCategoryAction(
     return finish(guildId, true);
   } catch (error) {
     return toActionError(error, "update ticket category", "Couldn't save the category. Try again?");
+  }
+}
+
+const roleList = z.array(snowflakeSchema).max(25);
+const limit = z.number().int().min(1).max(TICKET_LIMIT_MAX).nullable();
+
+const rulesSchema = z.object({
+  staffRoleIds: roleList,
+  pingRoleIds: roleList,
+  requiredRoleIds: roleList,
+  memberLimit: limit,
+  totalLimit: limit,
+  cooldownSeconds: z.number().int().min(0).max(TICKET_COOLDOWN_MAX_SECONDS),
+  slowmodeSeconds: z.number().int().min(0).max(TICKET_SLOWMODE_MAX_SECONDS),
+  claimingEnabled: z.boolean(),
+  channelNameTemplate: z
+    .string()
+    .trim()
+    .min(1, "The channel name can't be empty.")
+    .max(100)
+    // Discord would make these dashes anyway; saying so now beats a surprise in the channel list.
+    .regex(/^[a-z0-9_\-[\].]+$/, "Channel names take lowercase letters, digits, dashes and the [variables]."),
+});
+export type TicketCategoryRulesInput = z.infer<typeof rulesSchema>;
+
+/** Who works a category's tickets, who may open them, how many, and what the channel is called. */
+export async function saveTicketCategoryRulesAction(id: string, input: TicketCategoryRulesInput): Promise<DiscordActionResult> {
+  try {
+    const { userId, guildId } = await requireDiscordAdmin();
+    const next = parse(rulesSchema, input);
+    const current = (await listTicketCategories(supabaseAdmin, guildId)).find((c) => c.id === parse(idSchema, id));
+    if (!current) throw new DashboardError(GONE);
+
+    // Only roles that are new to the category are checked, so one deleted in Discord doesn't block the save.
+    const known = new Set([...current.staff_role_ids, ...current.ping_role_ids, ...current.required_role_ids]);
+    const added = new Set([...next.staffRoleIds, ...next.pingRoleIds, ...next.requiredRoleIds].filter((role) => !known.has(role)));
+    for (const role of added) await assertRole(role);
+
+    const after = {
+      staff_role_ids: next.staffRoleIds,
+      ping_role_ids: next.pingRoleIds,
+      required_role_ids: next.requiredRoleIds,
+      member_limit: next.memberLimit,
+      total_limit: next.totalLimit,
+      cooldown_seconds: next.cooldownSeconds,
+      slowmode_seconds: next.slowmodeSeconds,
+      claiming_enabled: next.claimingEnabled,
+      channel_name_template: next.channelNameTemplate,
+    };
+    if (!(await updateTicketCategory(supabaseAdmin, guildId, current.id, after))) throw new DashboardError(GONE);
+
+    await recordChange({
+      userId,
+      guildId,
+      section: "tickets",
+      before: Object.fromEntries(Object.keys(after).map((key) => [key, current[key as keyof typeof after]])),
+      after,
+    });
+    return finish(guildId);
+  } catch (error) {
+    return toActionError(error, "save ticket category rules", "Couldn't save the category. Try again?");
   }
 }
 

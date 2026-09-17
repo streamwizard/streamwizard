@@ -103,8 +103,37 @@ export async function recordTicketEvent(
       },
       options,
     );
+  } else if (UPDATE_TYPES.has(type)) {
+    const target = extra.targetDiscordId
+      ? ((await ticketMemberRef(guild, extra.targetDiscordId, extra.targetName ?? null)) ?? null)
+      : null;
+    const detail = extra.detail ?? {};
+    await emitServerEvent(
+      guild,
+      "ticket.updated",
+      {
+        ...base,
+        actor: actor ? memberRef(actor) : null,
+        change: type,
+        target,
+        from: typeof detail.from === "string" ? detail.from : null,
+        to: typeof detail.to === "string" ? detail.to : null,
+      },
+      options,
+    );
   }
 }
+
+/** Timeline types that reach the log channel as ticket.updated. The rest (close requests, stale warnings) stay on the timeline. */
+const UPDATE_TYPES: ReadonlySet<DiscordTicketEventType> = new Set([
+  "unclaimed",
+  "priority_changed",
+  "member_added",
+  "member_removed",
+  "moved",
+  "transferred",
+  "renamed",
+]);
 
 /** Logs a staff reply sent from the web-admin dashboard. No message content. */
 export async function logTicketReply(guild: Guild, ticket: DiscordTicket, authorName: string): Promise<void> {

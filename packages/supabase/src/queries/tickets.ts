@@ -268,6 +268,9 @@ export interface TicketListFilters {
   status?: "open" | "closed";
   category?: string;
   product?: string;
+  priority?: "low" | "medium" | "high";
+  /** How it ended: manual, inactivity, member_left, channel_deleted or force. */
+  closeCode?: DiscordTicketCloseCode;
   /** Matches the opener's stored name or Discord id. */
   opener?: string;
   /** Matches the claimer's stored name or Discord id. */
@@ -297,6 +300,8 @@ export async function listTickets(
   if (filters.status) query = query.eq("status", filters.status);
   if (filters.category) query = query.eq("category", filters.category);
   if (filters.product) query = query.eq("product", filters.product);
+  if (filters.priority) query = query.eq("priority", filters.priority);
+  if (filters.closeCode) query = query.eq("close_code", filters.closeCode);
   if (filters.search) query = query.ilike("subject", `%${orSafe(filters.search)}%`);
   if (filters.opener) {
     const v = orSafe(filters.opener);

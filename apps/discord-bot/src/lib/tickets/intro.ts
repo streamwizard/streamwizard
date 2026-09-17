@@ -1,5 +1,5 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, escapeMarkdown } from "discord.js";
-import type { APIEmbed, GuildMember, Message } from "discord.js";
+import type { APIEmbed, GuildMember, Message, TextChannel } from "discord.js";
 import {
   parseTicketOpening,
   resolveMessage,
@@ -29,23 +29,28 @@ function accountFieldValue(opener: TicketOpenerProfile | null): string {
 const claimedByValue = (ticket: DiscordTicket) =>
   ticket.claimed_by_discord_user_id ? `<@${ticket.claimed_by_discord_user_id}>` : "Unclaimed";
 
-function buttonRow(ticket: DiscordTicket): ActionRowBuilder<ButtonBuilder> {
-  // Once claimed, the button becomes a disabled marker showing it's taken.
-  const claim = new ButtonBuilder()
-    .setCustomId(TICKET_IDS.claim)
-    .setEmoji("🙋")
-    .setStyle(ButtonStyle.Success)
-    .setLabel(ticket.claimed_by_discord_user_id ? "Claimed" : "Claim")
-    .setDisabled(Boolean(ticket.claimed_by_discord_user_id));
+function buttonRow(ticket: DiscordTicket, config: TicketConfig): ActionRowBuilder<ButtonBuilder> {
+  const row = new ActionRowBuilder<ButtonBuilder>();
 
-  const close = new ButtonBuilder()
-    .setCustomId(TICKET_IDS.close)
-    .setLabel("Close Ticket")
-    .setEmoji("🔒")
-    .setStyle(ButtonStyle.Danger);
+  // A category can switch claiming off; its tickets then have no button for it.
+  if (findCategory(config, ticket.category)?.claiming_enabled !== false) {
+    row.addComponents(
+      ticket.claimed_by_discord_user_id
+        ? new ButtonBuilder()
+            .setCustomId(TICKET_IDS.release)
+            .setEmoji("🙌")
+            .setStyle(ButtonStyle.Secondary)
+            .setLabel("Release")
+        : new ButtonBuilder().setCustomId(TICKET_IDS.claim).setEmoji("🙋").setStyle(ButtonStyle.Success).setLabel("Claim"),
+    );
+  }
 
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(claim, close);
+  return row.addComponents(
+    new ButtonBuilder().setCustomId(TICKET_IDS.close).setLabel("Close Ticket").setEmoji("🔒").setStyle(ButtonStyle.Danger),
+  );
 }
+
+const PRIORITY_LABELS: Record<string, string> = { low: "🟢 Low", medium: "🟠 Medium", high: "🔴 High" };
 
 /** What [ticket.*] placeholders in a category's opening message turn into. */
 export function ticketVariableValues(ticket: DiscordTicket, config: TicketConfig): VariableValues {
@@ -108,30 +113,62 @@ export function buildTicketIntroMessage(
   opener: TicketOpenerProfile | null,
   { member, ...form }: { answers: TicketAnswerInput[]; description: string; member: GuildMember },
 ) {
-  const mentions = [`<@${ticket.opener_discord_user_id}>`];
-  if (config.settings?.staff_role_id) mentions.push(`<@&${config.settings.staff_role_id}>`);
+  // The category's ping roles, or the server-wide staff role when it has none.
+  const category = findCategory(config, ticket.category);
+  const pingRoles = category?.ping_role_ids.length
+    ? category.ping_role_ids
+    : config.settings?.staff_role_id
+      ? [config.settings.staff_role_id]
+      : [];
 
   return {
-    content: mentions.join(" "),
+    content: [`<@${ticket.opener_discord_user_id}>`, ...pingRoles.map((id) => `<@&${id}>`)].join(" "),
     embeds: [...openingEmbeds(ticket, config, member), ticketCard(ticket, config, opener, form)],
-    components: [buttonRow(ticket)],
+    components: [buttonRow(ticket, config)],
+    allowedMentions: { users: [ticket.opener_discord_user_id], roles: pingRoles },
   };
 }
 
 /**
- * The intro message with its claim state brought up to date. Everything else
- * is kept as posted, so a category or form edited since doesn't rewrite an
- * open ticket's first message.
+ * The intro message brought up to date with the ticket row: subject, category,
+ * priority and who has it. The opening embeds and the answers are kept as
+ * posted, so a category or form edited since doesn't rewrite an open ticket's
+ * first message.
  */
-export function withClaimState(intro: Message, ticket: DiscordTicket) {
+export function withTicketState(intro: Message, ticket: DiscordTicket, config: TicketConfig) {
   const embeds = intro.embeds.map((embed) => embed.toJSON());
   const card = embeds.at(-1);
   if (card) {
+    card.title = ticket.subject.slice(0, 256);
     const fields = card.fields ?? [];
-    const claimedBy = fields.find((field) => field.name === CLAIMED_BY);
-    if (claimedBy) claimedBy.value = claimedByValue(ticket);
-    else fields.push({ name: CLAIMED_BY, value: claimedByValue(ticket), inline: true });
+    const setField = (name: string, value: string | null) => {
+      const index = fields.findIndex((field) => field.name === name);
+      if (value === null) {
+        if (index >= 0) fields.splice(index, 1);
+      } else if (index >= 0) {
+        fields[index]!.value = value;
+      } else {
+        fields.push({ name, value, inline: true });
+      }
+    };
+    setField("Category", ticketOptionLabel(findCategory(config, ticket.category), ticket.category));
+    setField(CLAIMED_BY, claimedByValue(ticket));
+    setField("Priority", ticket.priority ? (PRIORITY_LABELS[ticket.priority] ?? ticket.priority) : null);
     card.fields = fields;
   }
-  return { embeds, components: [buttonRow(ticket)] };
+  return { embeds, components: [buttonRow(ticket, config)] };
+}
+
+/** The intro is the bot's oldest message carrying the Close button. Null when it was deleted. */
+export async function findIntroMessage(channel: TextChannel): Promise<Message | null> {
+  const firstMessages = await channel.messages.fetch({ after: "0", limit: 10 }).catch(() => null);
+  return (
+    firstMessages?.find(
+      (message) =>
+        message.author.id === channel.client.user.id &&
+        message.components.some(
+          (row) => "components" in row && row.components.some((c) => "customId" in c && c.customId === TICKET_IDS.close),
+        ),
+    ) ?? null
+  );
 }

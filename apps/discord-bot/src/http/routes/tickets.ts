@@ -1,17 +1,28 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { ChannelType, EmbedBuilder, type Guild } from "discord.js";
+import { ChannelType, EmbedBuilder, type Guild, type GuildMember, type TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
+import { TICKET_PRIORITIES } from "@repo/supabase/queries/ticket-lifecycle";
 import { getTicketByChannelId, getTicketSettings } from "@repo/supabase/queries/tickets";
 import { TWITCH_PURPLE } from "../../lib/branding";
 import { BuiltMessageError, BuiltMessageSendError } from "../../lib/built-message";
 import {
+  addMember,
+  changePriority,
+  changeSubject,
+  CLOSE_REASON_MAX,
   CLOSE_RESULT_MESSAGES,
   claimTicketAs,
   closeTicketChannel,
   deleteTicketPanel,
+  describeDiscordError,
   invalidateTicketConfig,
   logTicketReply,
+  moveTicket,
+  releaseTicket,
+  removeMember,
+  transferTicket,
+  type TicketActionResult,
   NO_PANEL,
   panelLocation,
   postTicketPanel,
@@ -91,14 +102,80 @@ ticketRoutes.post("/tickets/:channelId/claim", async (c) => {
 });
 
 ticketRoutes.post("/tickets/:channelId/close", async (c) => {
-  const actor = await resolveTicketActor(c.get("guild"), c.req.param("channelId"), await readJson(c));
+  const body = await readJson(c);
+  const actor = await resolveTicketActor(c.get("guild"), c.req.param("channelId"), body);
   if ("error" in actor) return c.json({ error: actor.error }, actor.status);
-  const result = await closeTicketChannel(actor.channel, actor.member, "dashboard");
+  const reason = z.object({ reason: z.string().trim().max(CLOSE_REASON_MAX).nullish() }).safeParse(body);
+  if (!reason.success) return c.json({ error: "Invalid body" }, 400);
+
+  const result = await closeTicketChannel(actor.channel, actor.member, "dashboard", reason.data.reason || null);
   if (result !== "closed") {
     const status = result === "not_a_ticket" ? 404 : result === "already_closed" ? 409 : 500;
     return c.json({ error: CLOSE_RESULT_MESSAGES[result] }, status);
   }
   return c.json({ ok: true });
+});
+
+// The rest of what staff can do to an open ticket, from the dashboard. Each
+// takes the acting admin's Discord id plus its own fields, runs the same
+// action the slash command does, and answers 409 with the action's own
+// sentence when it couldn't be done.
+function ticketActionRoute<T extends z.ZodRawShape>(
+  path: string,
+  shape: T,
+  run: (channel: TextChannel, actor: GuildMember, input: z.infer<z.ZodObject<T>>, guild: Guild) => Promise<TicketActionResult>,
+): void {
+  const schema = z.object(shape);
+  ticketRoutes.post(`/tickets/:channelId/${path}`, async (c) => {
+    const body = await readJson(c);
+    const guild = c.get("guild");
+    const actor = await resolveTicketActor(guild, c.req.param("channelId"), body);
+    if ("error" in actor) return c.json({ error: actor.error }, actor.status);
+    const input = schema.safeParse(body);
+    if (!input.success) return c.json({ error: "Invalid body" }, 400);
+
+    try {
+      const result = await run(actor.channel, actor.member, input.data, guild);
+      return result.ok ? c.json({ ok: true }) : c.json({ error: result.message }, 409);
+    } catch (error) {
+      const known = describeDiscordError(error);
+      if (!known) throw error;
+      return c.json({ error: known }, 409);
+    }
+  });
+}
+
+const NOT_IN_SERVER: TicketActionResult = { ok: false, message: "That person isn't in the server." };
+
+ticketActionRoute("release", {}, (channel, actor) => releaseTicket(channel, actor, "dashboard"));
+
+ticketActionRoute("priority", { priority: z.enum(TICKET_PRIORITIES).nullable() }, (channel, actor, input) =>
+  changePriority(channel, actor, input.priority, "dashboard"),
+);
+
+ticketActionRoute("subject", { subject: z.string().trim().min(1).max(100) }, (channel, actor, input) =>
+  changeSubject(channel, actor, input.subject, "dashboard"),
+);
+
+ticketActionRoute("move", { category: z.string().regex(/^[a-z0-9_]{1,32}$/) }, (channel, actor, input) =>
+  moveTicket(channel, actor, input.category, "dashboard"),
+);
+
+ticketActionRoute("members/add", { targetDiscordUserId: snowflake }, async (channel, actor, input, guild) => {
+  const target = await guild.members.fetch(input.targetDiscordUserId).catch(() => null);
+  return target ? addMember(channel, actor, target, "dashboard") : NOT_IN_SERVER;
+});
+
+ticketActionRoute(
+  "members/remove",
+  { targetDiscordUserId: snowflake, targetName: z.string().max(100).optional() },
+  (channel, actor, input) =>
+    removeMember(channel, actor, { id: input.targetDiscordUserId, displayName: input.targetName || "them" }, "dashboard"),
+);
+
+ticketActionRoute("transfer", { targetDiscordUserId: snowflake }, async (channel, actor, input, guild) => {
+  const target = await guild.members.fetch(input.targetDiscordUserId).catch(() => null);
+  return target ? transferTicket(channel, actor, target, "dashboard") : NOT_IN_SERVER;
 });
 
 // A staff reply typed in the dashboard. Discord has no way to post as the

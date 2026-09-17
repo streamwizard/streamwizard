@@ -9,7 +9,7 @@ import { assertChannel, assertRole } from "@/lib/discord/api";
 import { DashboardError, requireDiscordAdmin, toActionError, type DiscordActionResult } from "@/lib/discord/action";
 import { recordChange } from "@/lib/discord/audit";
 import { callBot, staleWarning } from "@/lib/discord/bot-bridge";
-import { nullableSnowflakeSchema } from "@/schemas/discord";
+import { nullableSnowflakeSchema, snowflakeSchema } from "@/schemas/discord";
 
 const ticketSchema = z
   .object({
@@ -17,6 +17,10 @@ const ticketSchema = z
     staffRoleId: nullableSnowflakeSchema,
     categoryId: nullableSnowflakeSchema,
     panelChannelId: nullableSnowflakeSchema,
+    blockedRoleIds: z.array(snowflakeSchema).max(25),
+    maxOpenPerUser: z.number().int().min(1).max(50).nullable(),
+    claimHidesFromOtherStaff: z.boolean(),
+    closeOnMemberLeave: z.boolean(),
   })
   .refine((v) => !v.enabled || (v.staffRoleId && v.categoryId && v.panelChannelId), {
     message: "Tickets need a staff role, a category and a panel channel before you can turn them on.",
@@ -39,13 +43,24 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       staff_role_id: current?.staff_role_id ?? null,
       category_id: current?.category_id ?? null,
       panel_channel_id: current?.panel_channel_id ?? null,
+      blocked_role_ids: current?.blocked_role_ids ?? [],
+      max_open_per_user: current?.max_open_per_user ?? null,
+      claim_hides_from_other_staff: current?.claim_hides_from_other_staff ?? false,
+      close_on_member_leave: current?.close_on_member_leave ?? false,
     };
     const after = {
       enabled: next.enabled,
       staff_role_id: next.staffRoleId,
       category_id: next.categoryId,
       panel_channel_id: next.panelChannelId,
+      blocked_role_ids: next.blockedRoleIds,
+      max_open_per_user: next.maxOpenPerUser,
+      claim_hides_from_other_staff: next.claimHidesFromOtherStaff,
+      close_on_member_leave: next.closeOnMemberLeave,
     };
+    for (const roleId of after.blocked_role_ids) {
+      if (!before.blocked_role_ids.includes(roleId)) await assertRole(roleId);
+    }
 
     // Only validate ids that changed, so a channel deleted in Discord doesn't
     // block saving an unrelated field.
@@ -81,6 +96,10 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       enabled: saved.enabled,
       staff_role_id: saved.staff_role_id,
       category_id: saved.category_id,
+      blocked_role_ids: saved.blocked_role_ids,
+      max_open_per_user: saved.max_open_per_user,
+      claim_hides_from_other_staff: saved.claim_hides_from_other_staff,
+      close_on_member_leave: saved.close_on_member_leave,
     });
     // A guild's first save: give it the starting categories and products.
     await ensureTicketDefaults(supabaseAdmin, guildId);

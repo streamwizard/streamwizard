@@ -10,10 +10,17 @@ import {
   getTicketHistory,
   type DiscordTicketEvent,
 } from "@repo/supabase/queries/tickets";
-import { listTicketAnswers, listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
+import {
+  isActiveCategory,
+  listTicketAnswers,
+  listTicketCategories,
+  listTicketProducts,
+} from "@repo/supabase/queries/ticket-config";
+import { listTicketMembers } from "@repo/supabase/queries/ticket-lifecycle";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { AutoRefresh } from "@/components/discord/auto-refresh";
 import { TicketActions } from "@/components/discord/ticket-actions";
+import { TicketManage } from "@/components/discord/ticket-manage";
 import { TicketReply } from "@/components/discord/ticket-reply";
 import { assertAdmin } from "@/lib/assert-admin";
 import { TicketTranscript, type TranscriptMessage } from "@/components/discord/ticket-transcript";
@@ -29,8 +36,26 @@ export const dynamic = "force-dynamic";
 const EVENT_LABELS: Record<string, string> = {
   opened: "Opened",
   claimed: "Claimed",
+  unclaimed: "Released",
   closed: "Closed",
+  member_added: "Added",
+  member_removed: "Removed",
+  moved: "Moved",
+  transferred: "Handed to",
+  priority_changed: "Priority changed",
+  renamed: "Subject changed",
 };
+
+/** "Bug → Feature" for timeline entries that carry an old and a new value. Close codes and the like stay out. */
+function eventChange(detail: unknown): string | null {
+  if (!detail || typeof detail !== "object") return null;
+  const { from, to } = detail as { from?: unknown; to?: unknown };
+  if (typeof from !== "string" && typeof to !== "string") return null;
+  return `${typeof from === "string" ? from : "none"} → ${typeof to === "string" ? to : "none"}`;
+}
+
+type TimelineEntry = Pick<DiscordTicketEvent, "id" | "type" | "actor_name" | "created_at"> &
+  Partial<Pick<DiscordTicketEvent, "target_name" | "detail">>;
 
 /** Name first, with the Discord username and id underneath for lookups. */
 function DiscordPerson({
@@ -77,13 +102,14 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
   if (!ticket) notFound();
 
   const adminUserId = await assertAdmin();
-  const [{ messages, events }, linkedAccount, adminDiscordId, categories, products, answers] = await Promise.all([
+  const [{ messages, events }, linkedAccount, adminDiscordId, categories, products, answers, members] = await Promise.all([
     getTicketHistory(supabaseAdmin, ticket.id),
     getLinkedStreamWizardAccount(supabaseAdmin, ticket.opener_discord_user_id, ticket.opener_user_id),
     getDiscordUserIdForUser(supabaseAdmin, adminUserId),
     listTicketCategories(supabaseAdmin, guildId),
     listTicketProducts(supabaseAdmin, guildId),
     listTicketAnswers(supabaseAdmin, ticket.id),
+    listTicketMembers(supabaseAdmin, ticket.id),
   ]);
   const productLabel = products.find((p) => p.slug === ticket.product)?.label ?? ticket.product;
   const categoryName = categories.find((c) => c.slug === ticket.category)?.name ?? ticket.category;
@@ -132,7 +158,7 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
   if (ticket.opener_name) names.set(ticket.opener_discord_user_id, ticket.opener_name);
   if (ticket.claimed_by_discord_user_id && ticket.claimed_by_name) names.set(ticket.claimed_by_discord_user_id, ticket.claimed_by_name);
 
-  const timeline: Pick<DiscordTicketEvent, "id" | "type" | "actor_name" | "created_at">[] = events.length
+  const timeline: TimelineEntry[] = events.length
     ? events
     : // Tickets from before the timeline existed: rebuild what the row knows.
       [
@@ -152,7 +178,12 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
           <Link href="/discord/tickets">All tickets</Link>
         </Button>
         {ticket.status === "open" && (
-          <TicketActions ticketNumber={ticket.ticket_number} claimed={!!ticket.claimed_by_discord_user_id} linked={!!adminDiscordId} />
+          <TicketActions
+            ticketNumber={ticket.ticket_number}
+            claimed={!!ticket.claimed_by_discord_user_id}
+            claiming={categories.find((c) => c.slug === ticket.category)?.claiming_enabled !== false}
+            linked={!!adminDiscordId}
+          />
         )}
         {ticket.status === "open" && (
           <Button size="sm" variant="outline" asChild>
@@ -288,6 +319,22 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
             </CardContent>
           </Card>
 
+          {isOpen && (
+            <TicketManage
+              // The server copy is the truth after every change: start over from it.
+              key={`${ticket.subject}|${ticket.priority}|${ticket.category}`}
+              ticketNumber={ticket.ticket_number}
+              subject={ticket.subject}
+              priority={ticket.priority}
+              category={ticket.category}
+              categories={categories
+                .filter((c) => isActiveCategory(c) || c.slug === ticket.category)
+                .map((c) => ({ slug: c.slug, name: c.name }))}
+              members={members.map((m) => ({ id: m.discord_user_id, name: m.name ?? m.discord_user_id }))}
+              linked={!!adminDiscordId}
+            />
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Timeline</CardTitle>
@@ -299,8 +346,10 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
                     <span className="absolute -left-[1.3rem] top-1.5 size-2 rounded-full bg-foreground/60" aria-hidden />
                     <p>
                       <span className="font-medium">{EVENT_LABELS[event.type] ?? event.type}</span>
+                      {event.target_name && <span>: {event.target_name}</span>}
                       {event.actor_name && <span className="text-muted-foreground"> by {event.actor_name}</span>}
                     </p>
+                    {eventChange(event.detail) && <p className="text-xs text-muted-foreground">{eventChange(event.detail)}</p>}
                     <time className="text-xs text-muted-foreground tabular-nums" dateTime={event.created_at}>
                       {formatDateTime(event.created_at)}
                     </time>

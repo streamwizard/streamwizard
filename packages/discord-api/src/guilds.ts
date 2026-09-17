@@ -47,6 +47,7 @@ export interface DiscordUser {
   username: string;
   global_name: string | null;
   avatar: string | null;
+  bot?: boolean;
 }
 
 export interface DiscordMember {
@@ -112,6 +113,12 @@ export class DiscordGuildsClient {
   /** The guild member, or null when they're not in the server. */
   async getMember(userId: string): Promise<DiscordMember | null> {
     return this.get<DiscordMember>(`/guilds/${this.config.guildId}/members/${userId}`).catch(nullOnNotFound);
+  }
+
+  /** Members whose username or nickname starts with `query`. Discord matches prefixes only and returns at most 1000. */
+  async searchMembers(query: string, limit = 10): Promise<DiscordMember[]> {
+    const params = new URLSearchParams({ query, limit: String(Math.min(Math.max(limit, 1), 1000)) });
+    return this.get<DiscordMember[]>(`/guilds/${this.config.guildId}/members/search?${params}`);
   }
 
   /** Any Discord user by id (works for people who left the server), or null. */

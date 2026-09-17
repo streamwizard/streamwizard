@@ -16,6 +16,12 @@ export interface CommandView {
   roleIds: string[];
 }
 
+// A rule here covers the whole command. Where that would bite, the row says so.
+const COMMAND_NOTES: Record<string, string> = {
+  ticket:
+    "Leave this one open to everyone. Members use it to open and list tickets, and its staff subcommands already check for ticket staff on their own.",
+};
+
 export function CommandPermissionRow({ command, roles }: { command: CommandView; roles: PickerOption[] }) {
   const router = useRouter();
   const [roleIds, setRoleIds] = useState(command.roleIds);
@@ -42,6 +48,7 @@ export function CommandPermissionRow({ command, roles }: { command: CommandView;
           )}
         </div>
         {command.description && <p className="mt-0.5 text-xs text-muted-foreground">{command.description}</p>}
+        {COMMAND_NOTES[command.name] && <p className="mt-1 text-xs text-muted-foreground">{COMMAND_NOTES[command.name]}</p>}
       </TableCell>
       <TableCell className="w-[min(28rem,50%)] align-top">
         <MultiPicker

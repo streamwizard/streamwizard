@@ -48,19 +48,98 @@ export async function claimTicketFromDashboard(ticketNumber: number): Promise<Di
   }
 }
 
-export async function closeTicketFromDashboard(ticketNumber: number): Promise<DiscordActionResult> {
+const closeReasonSchema = z.string().trim().max(1000, "Keep the reason under 1000 characters").nullable();
+
+export async function closeTicketFromDashboard(ticketNumber: number, reason: string | null = null): Promise<DiscordActionResult> {
   try {
     const { guildId, discordUserId, ticket } = await prepare(ticketNumber);
+    const parsedReason = closeReasonSchema.safeParse(reason);
+    if (!parsedReason.success) throw new DashboardError(parsedReason.error.issues[0]?.message ?? "Invalid reason");
 
     // Saving the transcript (and copying images) happens before the channel
     // goes, which can take a while on long tickets.
-    const result = await callBot(guildId, `/tickets/${ticket.channel_id}/close`, { discordUserId }, { timeoutMs: 60_000 });
+    const result = await callBot(
+      guildId,
+      `/tickets/${ticket.channel_id}/close`,
+      { discordUserId, reason: parsedReason.data || null },
+      { timeoutMs: 60_000 },
+    );
     if (!result.ok) throw new DashboardError(result.error);
 
     revalidate(ticketNumber);
     return { error: null };
   } catch (error) {
     return toActionError(error, "close ticket", "Couldn't close the ticket. Try again?");
+  }
+}
+
+// Everything else staff can do to an open ticket. The bot runs the same action
+// the slash command does, as the admin's linked Discord account; its answer,
+// when it says no, is already a sentence for the person who asked.
+const snowflake = z.string().regex(/^\d{17,20}$/, "That isn't a Discord id");
+
+const TICKET_CHANGES = {
+  release: z.object({}),
+  priority: z.object({ priority: z.enum(["low", "medium", "high"]).nullable() }),
+  subject: z.object({ subject: z.string().trim().min(1, "The subject can't be empty").max(100) }),
+  move: z.object({ category: z.string().regex(/^[a-z0-9_]{1,32}$/) }),
+  "members/add": z.object({ targetDiscordUserId: snowflake }),
+  "members/remove": z.object({ targetDiscordUserId: snowflake, targetName: z.string().max(100).optional() }),
+  transfer: z.object({ targetDiscordUserId: snowflake }),
+} as const;
+
+export type TicketChange = keyof typeof TICKET_CHANGES;
+
+export async function changeTicketFromDashboard<K extends TicketChange>(
+  ticketNumber: number,
+  change: K,
+  input: z.input<(typeof TICKET_CHANGES)[K]>,
+): Promise<DiscordActionResult> {
+  try {
+    const { guildId, discordUserId, ticket } = await prepare(ticketNumber);
+    const schema = TICKET_CHANGES[change];
+    if (!schema) throw new DashboardError("Unknown ticket action");
+    const parsed = schema.safeParse(input);
+    if (!parsed.success) throw new DashboardError(parsed.error.issues[0]?.message ?? "Invalid input");
+
+    // Moving a channel and rewriting its permissions can take a few round trips to Discord.
+    const result = await callBot(guildId, `/tickets/${ticket.channel_id}/${change}`, { discordUserId, ...parsed.data }, { timeoutMs: 20_000 });
+    if (!result.ok) throw new DashboardError(result.error);
+
+    revalidate(ticketNumber);
+    return { error: null };
+  } catch (error) {
+    return toActionError(error, `ticket ${change}`, "Couldn't change the ticket. Try again?");
+  }
+}
+
+export interface MemberSearchResult {
+  id: string;
+  name: string;
+  username: string;
+}
+
+/** Server members whose name starts with `query`, for adding someone to a ticket or handing it over. */
+export async function searchGuildMembers(query: string): Promise<MemberSearchResult[]> {
+  try {
+    const { api } = await requireDiscordAdmin();
+    const trimmed = query.trim().slice(0, 32);
+    if (!trimmed) return [];
+
+    // A pasted id finds exactly that member, which also works for names Discord's prefix search misses.
+    if (snowflake.safeParse(trimmed).success) {
+      const member = await api.guilds.getMember(trimmed);
+      return member?.user ? [{ id: member.user.id, name: member.nick ?? member.user.global_name ?? member.user.username, username: member.user.username }] : [];
+    }
+
+    const members = await api.guilds.searchMembers(trimmed, 10);
+    return members.flatMap((member) =>
+      member.user && !member.user.bot
+        ? [{ id: member.user.id, name: member.nick ?? member.user.global_name ?? member.user.username, username: member.user.username }]
+        : [],
+    );
+  } catch {
+    return [];
   }
 }
 

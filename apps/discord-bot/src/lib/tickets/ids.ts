@@ -12,8 +12,13 @@ export const TICKET_IDS = {
   /** The form. Carries the category slug; a bare one is a form opened before categories left the modal. */
   submit: "ticket:submit",
   claim: "ticket:claim",
+  release: "ticket:release",
   close: "ticket:close",
   closeConfirm: "ticket:close-confirm",
+  /** Opens the reason form instead of closing straight away. */
+  closeReason: "ticket:close-reason",
+  /** The reason form. */
+  closeSubmit: "ticket:close-submit",
   closeCancel: "ticket:close-cancel",
 } as const;
 

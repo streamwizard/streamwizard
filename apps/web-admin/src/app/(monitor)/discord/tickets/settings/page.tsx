@@ -22,6 +22,10 @@ export default async function DiscordTicketSettingsPage() {
     staffRoleId: settings?.staff_role_id ?? null,
     categoryId: settings?.category_id ?? null,
     panelChannelId: settings?.panel_channel_id ?? null,
+    blockedRoleIds: settings?.blocked_role_ids ?? [],
+    maxOpenPerUser: settings?.max_open_per_user ?? null,
+    claimHidesFromOtherStaff: settings?.claim_hides_from_other_staff ?? false,
+    closeOnMemberLeave: settings?.close_on_member_leave ?? false,
   };
 
   return (

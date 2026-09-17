@@ -77,6 +77,7 @@ export const PLATFORM_EVENTS = {
   "ticket.claimed": { label: "Ticket claimed", group: "tickets", defaultEnabled: true },
   "ticket.closed": { label: "Ticket closed", group: "tickets", defaultEnabled: true },
   "ticket.replied": { label: "Ticket reply from dashboard", group: "tickets", defaultEnabled: true },
+  "ticket.updated": { label: "Ticket changed by staff", group: "tickets", defaultEnabled: false },
 
   "member.joined": { label: "Member joined", group: "members", defaultEnabled: true },
   "member.left": { label: "Member left", group: "members", defaultEnabled: true },
@@ -258,6 +259,19 @@ export interface PlatformEventPayloads {
     message_count?: number | null;
   };
   "ticket.replied": TicketEvent & { author_name: string };
+  /**
+   * A staff action on an open ticket. `change` is the timeline event type
+   * (unclaimed, priority_changed, member_added, member_removed, moved,
+   * transferred, renamed); `target` is the member it was about, `from`/`to`
+   * the old and new value (a priority, a category name, a subject).
+   */
+  "ticket.updated": TicketEvent & {
+    actor: DiscordUserRef | null;
+    change: string;
+    target?: DiscordUserRef | null;
+    from?: string | null;
+    to?: string | null;
+  };
   "discord.linked": SubjectIdentity & { discord_username?: string | null; previous_discord_user_id?: string | null };
   "discord.unlinked": SubjectIdentity;
   "subscription.granted": SubjectIdentity & ActorIdentity & SubscriptionFields & { replaced_plan_ids?: string[] };

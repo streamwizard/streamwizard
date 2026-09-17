@@ -1,5 +1,15 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, ChannelType, MessageFlags } from "discord.js";
-import type { ButtonInteraction, Guild, GuildMember, TextChannel } from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  ChannelType,
+  LabelBuilder,
+  MessageFlags,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+} from "discord.js";
+import type { ButtonInteraction, Guild, GuildMember, ModalSubmitInteraction, TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
 import {
   closeTicket,
@@ -7,11 +17,12 @@ import {
   type DiscordTicket,
   type DiscordTicketCloseCode,
 } from "@repo/supabase/queries/tickets";
+import { listOpenTicketsByOpener } from "@repo/supabase/queries/ticket-lifecycle";
 import type { TicketEventSource } from "@repo/types";
 import { reportError } from "@repo/sentry";
 import { notifyTicketActivity, trackTicketChannel } from "../ticket-activity";
 import { captureTicketTranscript } from "../ticket-transcript";
-import { getTicketConfig } from "./config";
+import { findCategory, getTicketConfig } from "./config";
 import { recordTicketEvent } from "./events";
 import { TICKET_IDS } from "./ids";
 import { isStaff } from "./staff";
@@ -118,11 +129,41 @@ export async function closeOrphanedTicket(guild: Guild, channelId: string): Prom
   return closed !== null;
 }
 
+/**
+ * The opener left the server. When the server is set to close on that, each of
+ * their open tickets is saved and closed; a ticket whose transcript can't be
+ * saved stays open for staff, like any other close.
+ */
+export async function closeTicketsOfDepartedMember(guild: Guild, discordUserId: string): Promise<void> {
+  const config = await getTicketConfig(guild.id);
+  if (!config.settings?.close_on_member_leave) return;
+
+  for (const ticket of await listOpenTicketsByOpener(supabase, guild.id, discordUserId)) {
+    const fetched = await guild.channels.fetch(ticket.channel_id).catch(() => null);
+    const channel = fetched?.type === ChannelType.GuildText ? fetched : null;
+    let messageCount: number | undefined;
+    if (channel) {
+      try {
+        messageCount = await captureTicketTranscript(channel, ticket);
+      } catch (error) {
+        reportError(error, "discord-bot tickets: transcript", { ticketId: ticket.id, ticketNumber: ticket.ticket_number });
+        continue;
+      }
+    }
+    await finalizeTicketClose(guild, ticket, { code: "member_left", actor: null, channel, messageCount });
+  }
+}
+
+/** Staff on the ticket in this channel. Looks the ticket up, because staff is per category. */
+async function isTicketStaff(member: GuildMember, channelId: string): Promise<boolean> {
+  const [config, ticket] = await Promise.all([getTicketConfig(member.guild.id), getTicketByChannelId(supabase, channelId)]);
+  return isStaff(member, config.settings, findCategory(config, ticket?.category));
+}
+
 export async function handleCloseButton(interaction: ButtonInteraction): Promise<void> {
   if (!interaction.inCachedGuild()) return;
 
-  const { settings } = await getTicketConfig(interaction.guildId);
-  if (!isStaff(interaction.member, settings)) {
+  if (!(await isTicketStaff(interaction.member, interaction.channelId))) {
     await interaction.reply({ content: "Only staff can close tickets.", flags: MessageFlags.Ephemeral });
     return;
   }
@@ -131,11 +172,15 @@ export async function handleCloseButton(interaction: ButtonInteraction): Promise
     .setCustomId(TICKET_IDS.closeConfirm)
     .setLabel("Close it")
     .setStyle(ButtonStyle.Danger);
+  const withReason = new ButtonBuilder()
+    .setCustomId(TICKET_IDS.closeReason)
+    .setLabel("Close with a reason")
+    .setStyle(ButtonStyle.Secondary);
   const cancel = new ButtonBuilder()
     .setCustomId(TICKET_IDS.closeCancel)
     .setLabel("Cancel")
     .setStyle(ButtonStyle.Secondary);
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirm, cancel);
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(confirm, withReason, cancel);
 
   await interaction.reply({
     content: "Close this ticket? The channel will be deleted.",
@@ -148,24 +193,62 @@ export async function handleCloseCancel(interaction: ButtonInteraction): Promise
   await interaction.update({ content: "Cancelled — the ticket stays open.", components: [] });
 }
 
-export async function handleCloseConfirm(interaction: ButtonInteraction): Promise<void> {
-  if (!interaction.inCachedGuild()) return;
+export const CLOSE_REASON_MAX = 1000;
+const REASON_FIELD = "reason";
 
-  const { settings } = await getTicketConfig(interaction.guildId);
-  if (!isStaff(interaction.member, settings)) {
+/** "Close with a reason": the reason goes on the ticket, the log and (later) the opener's closing DM. */
+export async function handleCloseReasonButton(interaction: ButtonInteraction): Promise<void> {
+  if (!interaction.inCachedGuild()) return;
+  if (!(await isTicketStaff(interaction.member, interaction.channelId))) {
     await interaction.update({ content: "Only staff can close tickets.", components: [] });
     return;
   }
 
+  const reason = new LabelBuilder()
+    .setLabel("Why is this ticket closing?")
+    .setTextInputComponent(
+      new TextInputBuilder()
+        .setCustomId(REASON_FIELD)
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder("Fixed in the latest update")
+        .setMaxLength(CLOSE_REASON_MAX)
+        .setRequired(true),
+    );
+  await interaction.showModal(
+    new ModalBuilder().setCustomId(TICKET_IDS.closeSubmit).setTitle("Close ticket").addLabelComponents(reason),
+  );
+}
+
+async function closeFromInteraction(
+  interaction: ButtonInteraction<"cached"> | ModalSubmitInteraction<"cached">,
+  reason: string | null,
+): Promise<void> {
+  // Both arrive from the ephemeral confirm message, so both can rewrite it in place.
+  const acknowledge = (content: string) =>
+    interaction.isButton() || interaction.isFromMessage()
+      ? interaction.update({ content, components: [] })
+      : interaction.reply({ content, flags: MessageFlags.Ephemeral });
+
+  if (!(await isTicketStaff(interaction.member, interaction.channelId ?? ""))) {
+    await acknowledge("Only staff can close tickets.");
+    return;
+  }
   if (interaction.channel?.type !== ChannelType.GuildText) {
-    await interaction.update({ content: "This isn't a ticket channel.", components: [] });
+    await acknowledge("This isn't a ticket channel.");
     return;
   }
 
-  await interaction.update({ content: "Closing this ticket…", components: [] });
+  // Acknowledge before the channel goes: afterwards there is nothing left to reply in.
+  await acknowledge("Closing this ticket…");
+  const result = await closeTicketChannel(interaction.channel, interaction.member, "discord", reason);
+  if (result !== "closed") await interaction.editReply({ content: CLOSE_RESULT_MESSAGES[result] });
+}
 
-  const result = await closeTicketChannel(interaction.channel, interaction.member);
-  if (result !== "closed") {
-    await interaction.editReply({ content: CLOSE_RESULT_MESSAGES[result] });
-  }
+export async function handleCloseConfirm(interaction: ButtonInteraction): Promise<void> {
+  if (interaction.inCachedGuild()) await closeFromInteraction(interaction, null);
+}
+
+export async function handleCloseSubmit(interaction: ModalSubmitInteraction): Promise<void> {
+  if (!interaction.inCachedGuild()) return;
+  await closeFromInteraction(interaction, interaction.fields.getTextInputValue(REASON_FIELD).trim() || null);
 }
