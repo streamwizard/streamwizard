@@ -19,6 +19,7 @@ import {
   builtMessageStatus,
   channelNameFor,
 } from "@/lib/discord/built-messages";
+import { uploadBanner } from "@/lib/discord/banner-upload-client";
 import type { PickerOption } from "@/lib/discord/options";
 import { DeleteBuiltMessageButton } from "./built-message-delete";
 import { Picker } from "./pickers";
@@ -46,15 +47,6 @@ function SaveStatus({ status }: { status: AutosaveStatus }) {
       {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : "Couldn't save"}
     </span>
   );
-}
-
-async function uploadBanner(file: File): Promise<string> {
-  const body = new FormData();
-  body.set("file", file);
-  const res = await fetch("/api/discord/banner-upload", { method: "POST", body });
-  const payload = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-  if (!res.ok || !payload.url) throw new Error(payload.error ?? "Couldn't upload that image. Try again?");
-  return payload.url;
 }
 
 /** One message: header with Publish and save status, name and channel, the builder. */

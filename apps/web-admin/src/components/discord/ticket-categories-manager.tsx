@@ -33,6 +33,7 @@ export function TicketCategoriesManager(props: TicketCategoriesManagerProps) {
       title="Categories"
       description="What a ticket is filed under. Members pick one before they fill in the form. Drag to change the order they see."
       {...props}
+      detailHref={(item) => `/discord/tickets/settings/categories/${item.id}`}
       onCreate={(draft) => createTicketCategoryAction(toInput(draft))}
       onUpdate={(id, draft) => updateTicketCategoryAction(id, toInput(draft))}
       onRemove={removeTicketCategoryAction}

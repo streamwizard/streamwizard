@@ -1,14 +1,14 @@
 import { MessageFlags } from "discord.js";
 import type { ButtonInteraction, GuildMember, TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { claimTicket, getTicketByChannelId, getTicketOpenerProfile } from "@repo/supabase/queries/tickets";
+import { claimTicket, getTicketByChannelId } from "@repo/supabase/queries/tickets";
 import type { TicketEventSource } from "@repo/types";
 import { reportError } from "@repo/sentry";
 import { notifyTicketActivity } from "../ticket-activity";
 import { getTicketConfig } from "./config";
 import { recordTicketEvent } from "./events";
 import { TICKET_IDS } from "./ids";
-import { buildTicketIntroMessage } from "./intro";
+import { withClaimState } from "./intro";
 import { isStaff } from "./staff";
 
 export async function handleClaimButton(interaction: ButtonInteraction): Promise<void> {
@@ -40,9 +40,8 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
   await recordTicketEvent(interaction.guild, claimed, "claimed", interaction.member, "discord");
   void notifyTicketActivity(interaction.guildId, claimed.channel_id, "claimed", claimed.ticket_number);
 
-  const opener = claimed.opener_user_id ? await getTicketOpenerProfile(supabase, claimed.opener_user_id) : null;
   // Edit the intro message in place so the claim state + disabled button update for everyone.
-  await interaction.update(buildTicketIntroMessage(claimed, config, opener));
+  await interaction.update(withClaimState(interaction.message, claimed));
   await interaction.followUp({ content: `🙋 You claimed this ticket.`, flags: MessageFlags.Ephemeral });
 }
 
@@ -84,10 +83,8 @@ export async function claimTicketAs(
       ),
   );
   if (intro) {
-    const config = await getTicketConfig(channel.guild.id);
-    const opener = claimed.opener_user_id ? await getTicketOpenerProfile(supabase, claimed.opener_user_id) : null;
     await intro
-      .edit(buildTicketIntroMessage(claimed, config, opener))
+      .edit(withClaimState(intro, claimed))
       .catch((error) => reportError(error, "discord-bot tickets: update intro", { ticketId: claimed.id }));
   }
   await channel.send({ content: `🙋 ${member} claimed this ticket.`, allowedMentions: { parse: [] } }).catch(() => {});

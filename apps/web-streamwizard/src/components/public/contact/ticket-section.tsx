@@ -12,7 +12,7 @@ const STEPS = [
   },
   {
     number: "02",
-    text: "Say what broke or what you want. Pick Bug, Feature, Support or Other.",
+    text: "Pick Bug, Feature, Support or Other. Then say what broke or what you want.",
   },
   {
     number: "03",

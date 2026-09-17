@@ -8,6 +8,7 @@ const BASE = "/discord/tickets/settings";
 
 const TABS = [
   { href: BASE, label: "General" },
+  { href: `${BASE}/panel`, label: "Panel" },
   { href: `${BASE}/categories`, label: "Categories" },
   { href: `${BASE}/products`, label: "Products" },
 ];

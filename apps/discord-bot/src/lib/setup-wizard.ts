@@ -24,7 +24,7 @@ import {
   upsertActivitySettings,
 } from "@repo/supabase/queries/discord-activity";
 import { getTicketSettings } from "@repo/supabase/queries/tickets";
-import { postTicketPanel, saveTicketSettings } from "./tickets";
+import { panelLocation, postTicketPanel, saveTicketSettings } from "./tickets";
 import { cleanUpOldWelcomeChannel } from "./welcome";
 import { closeGuildSessions, invalidateSettingsCache } from "./activity-tracker";
 import { reportError } from "@repo/sentry";
@@ -448,10 +448,9 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
         const channel = await interaction.guild.channels.fetch(channelId);
         if (channel?.isTextBased()) {
           const previous = await getTicketSettings(supabase, guildId);
-          const panelMessageId = await postTicketPanel(interaction.guild, channel, previous);
+          const posted = await postTicketPanel(interaction.guild, channel, previous);
           await saveTicketSettings(guildId, {
-            panel_channel_id: channelId,
-            panel_message_id: panelMessageId,
+            ...panelLocation(channelId, posted),
             enabled: Boolean(previous?.staff_role_id && previous.category_id),
           });
         }

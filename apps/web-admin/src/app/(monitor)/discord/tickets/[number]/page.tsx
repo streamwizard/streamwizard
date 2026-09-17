@@ -10,7 +10,7 @@ import {
   getTicketHistory,
   type DiscordTicketEvent,
 } from "@repo/supabase/queries/tickets";
-import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
+import { listTicketAnswers, listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { AutoRefresh } from "@/components/discord/auto-refresh";
 import { TicketActions } from "@/components/discord/ticket-actions";
@@ -77,12 +77,13 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
   if (!ticket) notFound();
 
   const adminUserId = await assertAdmin();
-  const [{ messages, events }, linkedAccount, adminDiscordId, categories, products] = await Promise.all([
+  const [{ messages, events }, linkedAccount, adminDiscordId, categories, products, answers] = await Promise.all([
     getTicketHistory(supabaseAdmin, ticket.id),
     getLinkedStreamWizardAccount(supabaseAdmin, ticket.opener_discord_user_id, ticket.opener_user_id),
     getDiscordUserIdForUser(supabaseAdmin, adminUserId),
     listTicketCategories(supabaseAdmin, guildId),
     listTicketProducts(supabaseAdmin, guildId),
+    listTicketAnswers(supabaseAdmin, ticket.id),
   ]);
   const productLabel = products.find((p) => p.slug === ticket.product)?.label ?? ticket.product;
   const categoryName = categories.find((c) => c.slug === ticket.category)?.name ?? ticket.category;
@@ -272,11 +273,17 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
                     </a>
                   </Detail>
                 )}
-                {ticket.description && (
+                {/* A form without a description field stores the answers written out instead; they follow below. */}
+                {ticket.description && !(answers[0] && ticket.description.startsWith(`**${answers[0].label}**`)) && (
                   <Detail label="Description">
                     <span className="whitespace-pre-wrap">{ticket.description}</span>
                   </Detail>
                 )}
+                {answers.map((answer) => (
+                  <Detail key={answer.id} label={answer.label}>
+                    <span className="whitespace-pre-wrap">{answer.value || "Removed"}</span>
+                  </Detail>
+                ))}
               </dl>
             </CardContent>
           </Card>

@@ -23,6 +23,13 @@ export const BUTTON_ACTIONS = [
       "Answers privately, only the member who pressed it sees it: a link to connect their Discord account to StreamWizard, or a note that they are already linked.",
     defaultLabel: "Check link status",
   },
+  {
+    key: "create_ticket",
+    label: "Open a support ticket",
+    description:
+      "Starts a ticket the same way the ticket panel does: the member picks a category, fills in the form, and gets a private channel. Tickets have to be set up under Discord, Tickets.",
+    defaultLabel: "Create Ticket",
+  },
 ] as const satisfies readonly ButtonActionDefinition[];
 
 export type ButtonActionKey = (typeof BUTTON_ACTIONS)[number]["key"];

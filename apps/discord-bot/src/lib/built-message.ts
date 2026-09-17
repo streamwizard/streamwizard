@@ -1,5 +1,11 @@
 import { fileURLToPath } from "node:url";
-import { escapeMarkdown, type Guild, type GuildMember } from "discord.js";
+import {
+  escapeMarkdown,
+  type APIActionRowComponent,
+  type APIComponentInMessageActionRow,
+  type Guild,
+  type GuildMember,
+} from "discord.js";
 import {
   planDiscordMessages,
   resolveMessage,
@@ -19,10 +25,13 @@ import {
 // DMs, level-ups. Pure apart from the channel it is handed (no env, no DB), so
 // callers store the returned ids and tests run against a fake channel.
 
+/** A row the calling feature adds itself, as Discord API JSON (a builder's toJSON()). */
+export type ExtraActionRow = APIActionRowComponent<APIComponentInMessageActionRow>;
+
 export interface BuiltMessagePayload {
   embeds: ApiEmbed[];
   /** Always sent, empty included: on an edit that is what takes removed buttons away. */
-  components: ApiActionRow[];
+  components: (ApiActionRow | ExtraActionRow)[];
   files: { attachment: string; name: string; description?: string }[];
   allowedMentions: AllowedMentions;
 }
@@ -50,6 +59,12 @@ export interface PublishBuiltMessageInput {
   /** Nothing pings by default. A join message passes `{ parse: [], users: [member.id] }`. */
   allowedMentions?: AllowedMentions;
   validate?: ValidateOptions;
+  /**
+   * Rows the feature owns, outside the designed message: a ticket panel's
+   * Create Ticket button. They go under the last embeds when there is room,
+   * else in a message of their own at the end.
+   */
+  extraRows?: ExtraActionRow[];
   /** Uploaded banners must live under this URL (the CDN). Unset refuses every upload. */
   allowedUploadBase?: string;
   /** Local path or URL for a banner image. Tests swap it out. */
@@ -105,6 +120,19 @@ function toPayload(
   };
 }
 
+const MAX_ROWS_PER_MESSAGE = 5;
+
+/** A banner message takes no components, and a message holds five rows; past either, the rows get their own message. */
+function addExtraRows(payloads: BuiltMessagePayload[], rows: ExtraActionRow[], allowedMentions: AllowedMentions): void {
+  if (rows.length === 0) return;
+  const last = payloads.at(-1);
+  if (last && last.files.length === 0 && last.components.length + rows.length <= MAX_ROWS_PER_MESSAGE) {
+    last.components = [...last.components, ...rows];
+    return;
+  }
+  payloads.push({ embeds: [], components: rows, files: [], allowedMentions });
+}
+
 function checkUploads(planned: PlannedMessage[], allowedUploadBase: string | undefined): MessageIssue[] {
   const base = allowedUploadBase ? `${allowedUploadBase.replace(/\/$/, "")}/` : null;
   return planned.flatMap((item) => {
@@ -138,6 +166,7 @@ export async function publishBuiltMessage(input: PublishBuiltMessageInput): Prom
   if (issues.length > 0) throw new BuiltMessageError(issues);
 
   const payloads = planned.map((item, i) => toPayload(item, i, allowedMentions, resolveBannerFile));
+  addExtraRows(payloads, input.extraRows ?? [], allowedMentions);
   const oldIds = previous?.messageIds ?? [];
   const sameChannel = previous?.channel?.id === channel.id;
   const deleteOld = async (ids: string[]) => {

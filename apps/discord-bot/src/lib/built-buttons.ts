@@ -4,6 +4,7 @@ import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
 import { buildLinkRow } from "./account";
+import { handleCreateButton } from "./tickets/open";
 
 // Action buttons on messages from web-admin's message builder. The builder
 // only offers the actions in @repo/discord-message's BUTTON_ACTIONS, and the
@@ -33,6 +34,11 @@ const HANDLERS: Record<ButtonActionKey, ButtonHandler> = {
       components: [buildLinkRow()],
       flags: MessageFlags.Ephemeral,
     });
+  },
+
+  // Same flow as the ticket panel's Create Ticket button.
+  async create_ticket(interaction) {
+    await handleCreateButton(interaction, null);
   },
 };
 

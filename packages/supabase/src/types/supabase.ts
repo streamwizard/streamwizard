@@ -789,8 +789,10 @@ export type Database = {
           enabled: boolean
           guild_id: string
           id: string
+          panel: Json | null
           panel_channel_id: string | null
           panel_message_id: string | null
+          panel_message_ids: string[]
           staff_role_id: string | null
           ticket_counter: number
           updated_at: string
@@ -802,8 +804,10 @@ export type Database = {
           enabled?: boolean
           guild_id: string
           id?: string
+          panel?: Json | null
           panel_channel_id?: string | null
           panel_message_id?: string | null
+          panel_message_ids?: string[]
           staff_role_id?: string | null
           ticket_counter?: number
           updated_at?: string
@@ -815,13 +819,109 @@ export type Database = {
           enabled?: boolean
           guild_id?: string
           id?: string
+          panel?: Json | null
           panel_channel_id?: string | null
           panel_message_id?: string | null
+          panel_message_ids?: string[]
           staff_role_id?: string | null
           ticket_counter?: number
           updated_at?: string
         }
         Relationships: []
+      }
+      discord_ticket_answers: {
+        Row: {
+          created_at: string
+          field_id: string | null
+          id: string
+          label: string
+          position: number
+          ticket_id: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          field_id?: string | null
+          id?: string
+          label: string
+          position?: number
+          ticket_id: string
+          value?: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string | null
+          id?: string
+          label?: string
+          position?: number
+          ticket_id?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_ticket_answers_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "discord_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_ticket_form_fields: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          max_length: number | null
+          min_length: number | null
+          options: Json
+          placeholder: string
+          position: number
+          required: boolean
+          style: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          label: string
+          max_length?: number | null
+          min_length?: number | null
+          options?: Json
+          placeholder?: string
+          position?: number
+          required?: boolean
+          style?: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          max_length?: number | null
+          min_length?: number | null
+          options?: Json
+          placeholder?: string
+          position?: number
+          required?: boolean
+          style?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_ticket_form_fields_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "discord_ticket_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       discord_ticket_categories: {
         Row: {
@@ -834,6 +934,7 @@ export type Database = {
           guild_id: string
           id: string
           name: string
+          opening_message: Json | null
           position: number
           slug: string
           updated_at: string
@@ -848,6 +949,7 @@ export type Database = {
           guild_id: string
           id?: string
           name: string
+          opening_message?: Json | null
           position?: number
           slug: string
           updated_at?: string
@@ -862,6 +964,7 @@ export type Database = {
           guild_id?: string
           id?: string
           name?: string
+          opening_message?: Json | null
           position?: number
           slug?: string
           updated_at?: string

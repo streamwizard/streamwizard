@@ -274,9 +274,221 @@ export async function ensureTicketDefaults(client: DBClient, guildId: string): P
   );
   if (products.error) throw products.error;
 
+  // Each starting category gets the standard form, unless it somehow has one.
+  const [seeded, existingForms] = await Promise.all([
+    listTicketCategories(client, guildId),
+    listTicketFormFields(client, guildId),
+  ]);
+  for (const category of seeded) {
+    if (!existingForms.has(category.id)) await seedCategoryForm(client, category.id);
+  }
+
   const stamped = await client
     .from("discord_ticket_settings")
     .upsert({ guild_id: guildId, defaults_seeded_at: new Date().toISOString() }, { onConflict: "guild_id" });
   if (stamped.error) throw stamped.error;
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// Form fields: what a category's ticket form asks
+// ---------------------------------------------------------------------------
+
+export type TicketFormField = Database["public"]["Tables"]["discord_ticket_form_fields"]["Row"];
+export type TicketAnswer = Database["public"]["Tables"]["discord_ticket_answers"]["Row"];
+
+/** subject, description and product fill the ticket's own columns; text and select become answers. */
+export const TICKET_FIELD_KINDS = ["subject", "description", "product", "text", "select"] as const;
+export type TicketFieldKind = (typeof TICKET_FIELD_KINDS)[number];
+
+/** Kinds a form can hold only once, because each maps onto one ticket column. */
+export const SINGLE_TICKET_FIELD_KINDS: readonly TicketFieldKind[] = ["subject", "description", "product"];
+
+/** A Discord modal holds 5 components. */
+export const TICKET_FORM_MAX_FIELDS = 5;
+export const TICKET_FIELD_LABEL_MAX = 45;
+export const TICKET_FIELD_PLACEHOLDER_MAX = 100;
+/** Discord allows 4000 in a text input. A subject also has to fit an embed title and a log line. */
+export const TICKET_FIELD_TEXT_MAX = 4000;
+export const TICKET_SUBJECT_MAX = 100;
+export const TICKET_SELECT_MAX_OPTIONS = 25;
+export const TICKET_SELECT_OPTION_MAX = 100;
+
+export interface TicketSelectOption {
+  label: string;
+  value: string;
+  description?: string;
+  emoji?: string | null;
+}
+
+/** The options of a select field. Anything malformed in the stored JSON is dropped. */
+export function ticketSelectOptions(field: Pick<TicketFormField, "options">): TicketSelectOption[] {
+  if (!Array.isArray(field.options)) return [];
+  return field.options.flatMap((option) => {
+    if (!option || typeof option !== "object" || Array.isArray(option)) return [];
+    const { label, value, description, emoji } = option as Record<string, unknown>;
+    if (typeof label !== "string" || typeof value !== "string" || !label || !value) return [];
+    return [
+      {
+        label,
+        value,
+        ...(typeof description === "string" && description ? { description } : {}),
+        ...(typeof emoji === "string" && emoji ? { emoji } : {}),
+      },
+    ];
+  });
+}
+
+/** The form a new category starts with: what the bot asked before forms were configurable. */
+export const DEFAULT_TICKET_FORM = [
+  { kind: "subject", label: "Subject", placeholder: "A short summary of your issue", style: "short", max_length: 100 },
+  {
+    kind: "description",
+    label: "Description",
+    placeholder: "Tell us what's going on, with as much detail as you can",
+    style: "paragraph",
+    max_length: 2000,
+  },
+  { kind: "product", label: "Product", placeholder: "What is this about?", style: "short", max_length: null },
+] as const;
+
+/** Every form field of a guild, grouped by category id, in form order. */
+export async function listTicketFormFields(client: DBClient, guildId: string): Promise<Map<string, TicketFormField[]>> {
+  const { data, error } = await client
+    .from("discord_ticket_form_fields")
+    .select("*, discord_ticket_categories!inner(guild_id)")
+    .eq("discord_ticket_categories.guild_id", guildId)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+
+  const byCategory = new Map<string, TicketFormField[]>();
+  for (const { discord_ticket_categories: _guild, ...field } of data) {
+    const fields = byCategory.get(field.category_id) ?? [];
+    fields.push(field);
+    byCategory.set(field.category_id, fields);
+  }
+  return byCategory;
+}
+
+export async function listCategoryFormFields(client: DBClient, categoryId: string): Promise<TicketFormField[]> {
+  const { data, error } = await client
+    .from("discord_ticket_form_fields")
+    .select("*")
+    .eq("category_id", categoryId)
+    .order("position", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return data;
+}
+
+export interface TicketFormFieldInput {
+  /** Set for a field that already exists; new fields get an id from the database. */
+  id?: string;
+  kind: TicketFieldKind;
+  label: string;
+  placeholder: string;
+  style: "short" | "paragraph";
+  required: boolean;
+  min_length: number | null;
+  max_length: number | null;
+  options: TicketSelectOption[];
+}
+
+/**
+ * Replaces a category's form with `fields`, in that order. Fields that keep
+ * their id are updated in place, so answers on old tickets stay linked to
+ * them; fields left out are deleted (their answers keep the label snapshot).
+ */
+export async function saveCategoryForm(client: DBClient, categoryId: string, fields: TicketFormFieldInput[]): Promise<void> {
+  const keptIds = fields.flatMap((field) => (field.id ? [field.id] : []));
+  const stale = client.from("discord_ticket_form_fields").delete().eq("category_id", categoryId);
+  const { error: deleteError } = await (keptIds.length > 0 ? stale.not("id", "in", `(${keptIds.join(",")})`) : stale);
+  if (deleteError) throw deleteError;
+
+  // Deleting first matters: replacing the subject field with a new one would
+  // otherwise trip the one-subject-per-form index. A kept field never changes
+  // kind (the editor doesn't offer it), so updates can't collide on it.
+  for (const [position, field] of fields.entries()) {
+    const row = {
+      category_id: categoryId,
+      kind: field.kind,
+      label: field.label,
+      placeholder: field.placeholder,
+      style: field.style,
+      required: field.required,
+      min_length: field.min_length,
+      max_length: field.max_length,
+      options: field.options as unknown as Database["public"]["Tables"]["discord_ticket_form_fields"]["Insert"]["options"],
+      position,
+    };
+    const { kind: _kind, ...changes } = row;
+    const { error } = field.id
+      ? await client.from("discord_ticket_form_fields").update(changes).eq("id", field.id).eq("category_id", categoryId)
+      : await client.from("discord_ticket_form_fields").insert(row);
+    if (error) throw error;
+  }
+}
+
+/** A new category's starting form. */
+export async function seedCategoryForm(client: DBClient, categoryId: string): Promise<void> {
+  const { error } = await client.from("discord_ticket_form_fields").insert(
+    DEFAULT_TICKET_FORM.map((field, position) => ({
+      category_id: categoryId,
+      kind: field.kind,
+      label: field.label,
+      placeholder: field.placeholder,
+      style: field.style,
+      max_length: field.max_length,
+      position,
+    })),
+  );
+  if (error) throw error;
+}
+
+export async function setCategoryOpeningMessage(
+  client: DBClient,
+  guildId: string,
+  categoryId: string,
+  openingMessage: Database["public"]["Tables"]["discord_ticket_categories"]["Update"]["opening_message"],
+): Promise<boolean> {
+  const { data, error } = await client
+    .from("discord_ticket_categories")
+    .update({ opening_message: openingMessage })
+    .eq("guild_id", guildId)
+    .eq("id", categoryId)
+    .select("id");
+  if (error) throw error;
+  return data.length > 0;
+}
+
+export interface TicketAnswerInput {
+  fieldId: string;
+  label: string;
+  value: string;
+}
+
+/** Stores what the opener answered, in form order, with each question's label as asked. */
+export async function insertTicketAnswers(client: DBClient, ticketId: string, answers: TicketAnswerInput[]): Promise<void> {
+  if (answers.length === 0) return;
+  const { error } = await client.from("discord_ticket_answers").insert(
+    answers.map((answer, position) => ({
+      ticket_id: ticketId,
+      field_id: answer.fieldId,
+      label: answer.label,
+      value: answer.value,
+      position,
+    })),
+  );
+  if (error) throw error;
+}
+
+export async function listTicketAnswers(client: DBClient, ticketId: string): Promise<TicketAnswer[]> {
+  const { data, error } = await client
+    .from("discord_ticket_answers")
+    .select("*")
+    .eq("ticket_id", ticketId)
+    .order("position", { ascending: true });
+  if (error) throw error;
+  return data;
 }

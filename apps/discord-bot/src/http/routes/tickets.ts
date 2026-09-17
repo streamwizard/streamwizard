@@ -4,12 +4,16 @@ import { ChannelType, EmbedBuilder, type Guild } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getTicketByChannelId, getTicketSettings } from "@repo/supabase/queries/tickets";
 import { TWITCH_PURPLE } from "../../lib/branding";
+import { BuiltMessageError, BuiltMessageSendError } from "../../lib/built-message";
 import {
   CLOSE_RESULT_MESSAGES,
   claimTicketAs,
   closeTicketChannel,
   deleteTicketPanel,
+  invalidateTicketConfig,
   logTicketReply,
+  NO_PANEL,
+  panelLocation,
   postTicketPanel,
   saveTicketSettings,
 } from "../../lib/tickets";
@@ -32,7 +36,7 @@ ticketRoutes.post("/ticket-panel", async (c) => {
 
   if (!targetChannelId) {
     await deleteTicketPanel(guild, settings);
-    await saveTicketSettings(guild.id, { panel_channel_id: null, panel_message_id: null });
+    await saveTicketSettings(guild.id, NO_PANEL);
     return c.json({ ok: true, channelId: null, messageId: null });
   }
 
@@ -41,9 +45,26 @@ ticketRoutes.post("/ticket-panel", async (c) => {
     return c.json({ error: "The panel channel is gone or the bot can't post in it" }, 409);
   }
 
-  const panelMessageId = await postTicketPanel(guild, channel, settings);
-  await saveTicketSettings(guild.id, { panel_channel_id: channel.id, panel_message_id: panelMessageId });
-  return c.json({ ok: true, channelId: channel.id, messageId: panelMessageId });
+  // web-admin may have just saved a new design or category list: post from what is stored now.
+  invalidateTicketConfig(guild.id);
+  try {
+    const posted = await postTicketPanel(guild, channel, settings);
+    await saveTicketSettings(guild.id, panelLocation(channel.id, posted));
+    return c.json({ ok: true, channelId: channel.id, messageId: posted.controlsMessageId });
+  } catch (error) {
+    // The design can't be sent as it is; the message says what to change.
+    if (error instanceof BuiltMessageError) return c.json({ error: error.message, issues: error.issues }, 422);
+    if (error instanceof BuiltMessageSendError) {
+      // Remember what made it into the channel, so the next post cleans up instead of doubling.
+      await saveTicketSettings(guild.id, {
+        panel_channel_id: channel.id,
+        panel_message_id: error.messageIds.at(-1) ?? null,
+        panel_message_ids: error.messageIds,
+      });
+      return c.json({ error: "Discord rejected the panel. Check the bot's permissions in that channel." }, 502);
+    }
+    throw error;
+  }
 });
 
 // Claim or close a ticket from the dashboard, acting as the admin's linked

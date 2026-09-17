@@ -6,6 +6,7 @@ import {
   CLOSE_RESULT_MESSAGES,
   closeTicketChannel,
   isStaff,
+  panelLocation,
   postTicketPanel,
   saveTicketSettings,
 } from "../lib/tickets";
@@ -63,16 +64,15 @@ export default {
       const category = interaction.options.getChannel("category", true);
       const panelChannel = interaction.options.getChannel("panel-channel", true, [ChannelType.GuildText]);
 
+      // Settings first: a guild's first save seeds its categories, and the panel is built from them.
       const previous = await getTicketSettings(supabase, interaction.guildId);
-      const panelMessageId = await postTicketPanel(interaction.guild, panelChannel, previous);
-
       await saveTicketSettings(interaction.guildId, {
         enabled: true,
         staff_role_id: staffRole.id,
         category_id: category.id,
-        panel_channel_id: panelChannel.id,
-        panel_message_id: panelMessageId,
       });
+      const posted = await postTicketPanel(interaction.guild, panelChannel, previous);
+      await saveTicketSettings(interaction.guildId, panelLocation(panelChannel.id, posted));
 
       await interaction.reply({
         content: `✅ Ticketing is set up. Panel posted in <#${panelChannel.id}>, staff role <@&${staffRole.id}>.`,

@@ -17,7 +17,7 @@ export {
 export { getTicketConfig, invalidateTicketConfig, saveTicketSettings } from "./config";
 export { logTicketReply } from "./events";
 export { TICKET_IDS } from "./ids";
-export { buildPanelMessage, deleteTicketPanel, postTicketPanel } from "./panel";
+export { deleteTicketPanel, NO_PANEL, panelLocation, postTicketPanel } from "./panel";
 export { isStaff } from "./staff";
 
 export type TicketInteraction = ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction;

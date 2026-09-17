@@ -33,6 +33,8 @@ export interface MessageBuilderProps {
   onUploadImage?: (file: File) => Promise<string>;
   /** Called when a locked preset or theme is clicked, e.g. to open an upgrade page. */
   onLockedClick?: (item: BuilderPreset | BuilderTheme) => void;
+  /** Set where an empty message is a valid choice. Shown in place of the "add something" prompt, and the empty-message error stays away. */
+  emptyText?: string;
   /** One embed and nothing else: no banners, no add menu, no reordering. */
   singleEmbed?: boolean;
   maxElements?: number;

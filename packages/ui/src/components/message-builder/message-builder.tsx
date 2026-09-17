@@ -60,6 +60,7 @@ export function MessageBuilder({
   onUploadImage,
   onLockedClick,
   singleEmbed = false,
+  emptyText,
   maxElements = DEFAULT_MAX_ELEMENTS,
   disabled = false,
 }: MessageBuilderProps) {
@@ -77,7 +78,9 @@ export function MessageBuilder({
     () => validateMessage(value, { maxElements, singleEmbed, allowedVariables: variables.map((v) => v.key) }),
     [value, maxElements, singleEmbed, variables],
   );
-  const messageIssues = issues.filter((issue) => issue.elementId === null);
+  const messageIssues = issues.filter(
+    (issue) => issue.elementId === null && !(emptyText !== undefined && issue.code === "no_elements"),
+  );
 
   const themeImage = (themes.find((t) => t.id === value.themeId) ?? themes[0])?.imageUrl;
   const hasBanners = value.elements.some((el) => el.type === "banner") || presets.some((p) => p.draft.type === "banner");
@@ -186,7 +189,7 @@ export function MessageBuilder({
 
           {value.elements.length === 0 && (
             <p className="py-6 text-sm" style={{ color: DISCORD.muted }}>
-              Nothing here yet. Add a banner, an embed or buttons below.
+              {emptyText ?? "Nothing here yet. Add a banner, an embed or buttons below."}
             </p>
           )}
         </div>

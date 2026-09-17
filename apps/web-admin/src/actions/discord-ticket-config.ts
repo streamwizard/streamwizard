@@ -14,6 +14,7 @@ import {
   removeTicketProduct,
   reorderTicketCategories,
   reorderTicketProducts,
+  seedCategoryForm,
   TICKET_ACTIVE_LIMIT,
   TICKET_DESCRIPTION_MAX,
   TICKET_NAME_MAX,
@@ -21,6 +22,8 @@ import {
   updateTicketCategory,
   updateTicketProduct,
 } from "@repo/supabase/queries/ticket-config";
+import { parseTicketPanel } from "@repo/discord-message";
+import { getTicketSettings } from "@repo/supabase/queries/tickets";
 import { assertChannel } from "@/lib/discord/api";
 import { DashboardError, requireDiscordAdmin, toActionError, type DiscordActionResult } from "@/lib/discord/action";
 import { recordChange } from "@/lib/discord/audit";
@@ -60,10 +63,25 @@ function parse<T>(schema: z.ZodType<T>, input: unknown): T {
   return parsed.data;
 }
 
-async function finish(guildId: string): Promise<DiscordActionResult> {
-  const refreshed = await callBot(guildId, "/cache/tickets");
+/**
+ * `categoriesChanged`: a posted panel that lists the categories (a button
+ * each, or a menu) is brought in line, which also makes the bot re-read.
+ */
+async function finish(guildId: string, categoriesChanged = false): Promise<DiscordActionResult> {
   revalidatePath("/discord", "layout");
-  return { error: null, warning: staleWarning(refreshed) };
+
+  if (categoriesChanged) {
+    const settings = await getTicketSettings(supabaseAdmin, guildId);
+    if (settings?.panel_channel_id && parseTicketPanel(settings.panel).layout !== "button") {
+      const posted = await callBot(guildId, "/ticket-panel", {}, { timeoutMs: 60_000 });
+      return {
+        error: null,
+        warning: posted.ok ? null : `Saved, but the panel in Discord wasn't updated (${posted.error}).`,
+      };
+    }
+  }
+
+  return { error: null, warning: staleWarning(await callBot(guildId, "/cache/tickets")) };
 }
 
 // Categories ------------------------------------------------------------------
@@ -98,7 +116,9 @@ export async function createTicketCategoryAction(input: TicketCategoryFormInput)
       action: "create",
       after: { category: created.name, slug: created.slug },
     });
-    return finish(guildId);
+    // Starts with the standard questions; the category's page changes them.
+    await seedCategoryForm(supabaseAdmin, created.id);
+    return finish(guildId, true);
   } catch (error) {
     return toActionError(error, "create ticket category", "Couldn't add the category. Try again?");
   }
@@ -142,7 +162,7 @@ export async function updateTicketCategoryAction(
       },
       after,
     });
-    return finish(guildId);
+    return finish(guildId, true);
   } catch (error) {
     return toActionError(error, "update ticket category", "Couldn't save the category. Try again?");
   }
@@ -170,7 +190,7 @@ export async function removeTicketCategoryAction(id: string): Promise<RemoveResu
       before: { category: current.name, slug: current.slug },
       after: { category: outcome === "archived" ? "archived" : null },
     });
-    return { ...(await finish(guildId)), outcome };
+    return { ...(await finish(guildId, true)), outcome };
   } catch (error) {
     return toActionError(error, "remove ticket category", "Couldn't remove the category. Try again?");
   }
@@ -192,7 +212,7 @@ export async function restoreTicketCategoryAction(id: string): Promise<DiscordAc
       before: { [`category ${current.name}`]: "archived" },
       after: { [`category ${current.name}`]: "restored" },
     });
-    return finish(guildId);
+    return finish(guildId, true);
   } catch (error) {
     return toActionError(error, "restore ticket category", "Couldn't restore the category. Try again?");
   }
@@ -202,7 +222,7 @@ export async function reorderTicketCategoriesAction(orderedIds: string[]): Promi
   try {
     const { guildId } = await requireDiscordAdmin();
     await reorderTicketCategories(supabaseAdmin, guildId, parse(z.array(idSchema).max(200), orderedIds));
-    return finish(guildId);
+    return finish(guildId, true);
   } catch (error) {
     return toActionError(error, "reorder ticket categories", "Couldn't save the new order. Try again?");
   }

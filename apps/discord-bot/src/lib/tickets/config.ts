@@ -4,8 +4,10 @@ import {
   isActiveCategory,
   isActiveProduct,
   listTicketCategories,
+  listTicketFormFields,
   listTicketProducts,
   type TicketCategory,
+  type TicketFormField,
   type TicketProduct,
 } from "@repo/supabase/queries/ticket-config";
 import { getTicketSettings, upsertTicketSettings, type DiscordTicketSettings } from "@repo/supabase/queries/tickets";
@@ -23,21 +25,27 @@ export interface TicketConfig {
   /** Every category, archived ones included: old tickets still need their label. */
   categories: TicketCategory[];
   products: TicketProduct[];
+  /** Each category's form, by category id, in form order. */
+  fields: Map<string, TicketFormField[]>;
 }
 
 const cache = new TtlCache<TicketConfig>({ ttlMs: CONFIG_TTL_MS });
 
 export async function getTicketConfig(guildId: string): Promise<TicketConfig> {
   const config = await cache.fetch(guildId, async () => {
-    const [settings, categories, products] = await Promise.all([
+    const [settings, categories, products, fields] = await Promise.all([
       getTicketSettings(supabase, guildId),
       listTicketCategories(supabase, guildId),
       listTicketProducts(supabase, guildId),
+      listTicketFormFields(supabase, guildId),
     ]);
-    return { settings, categories, products };
+    return { settings, categories, products, fields };
   });
-  return config ?? { settings: null, categories: [], products: [] };
+  return config ?? { settings: null, categories: [], products: [], fields: new Map() };
 }
+
+export const categoryFields = (config: TicketConfig, category: TicketCategory): TicketFormField[] =>
+  config.fields.get(category.id) ?? [];
 
 export function invalidateTicketConfig(guildId: string): void {
   cache.delete(guildId);

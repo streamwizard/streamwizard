@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArchiveRestore, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -71,6 +72,8 @@ interface TicketOptionsManagerProps {
   descriptionMax: number;
   /** Discord category channels, for a category's "create tickets under". Categories only. */
   discordCategories?: PickerOption[];
+  /** A page with more to set up for one item: a category's form and opening message. */
+  detailHref?: (item: TicketOption) => string;
   onCreate: (draft: TicketOptionDraft) => Promise<DiscordActionResult>;
   onUpdate: (id: string, draft: TicketOptionDraft) => Promise<DiscordActionResult>;
   onRemove: (id: string) => Promise<RemoveResult>;
@@ -162,6 +165,11 @@ export function TicketOptionsManager(props: TicketOptionsManagerProps) {
           >
             {(item) => (
               <OptionRow item={item}>
+                {props.detailHref && (
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={props.detailHref(item)}>Form and message</Link>
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
