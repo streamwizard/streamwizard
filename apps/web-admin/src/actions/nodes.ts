@@ -116,7 +116,11 @@ export async function updateNodeAction(
   const parsed = obsNodeCapacitySchema.safeParse(fields);
   if (!parsed.success) return { data: null, error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
-  const { data, error } = await updateNodeCapacity(adminClient, id, parsed.data);
+  // A blank API URL on edit means "leave it alone", not "clear it": the node
+  // filled that column in itself when it linked, and wiping it would make the
+  // node unreachable from the panel until it re-reports.
+  const { api_url, ...rest } = parsed.data;
+  const { data, error } = await updateNodeCapacity(adminClient, id, api_url === null ? rest : parsed.data);
   if (error) return { data: null, error };
 
   revalidatePath(NODES_PATH);

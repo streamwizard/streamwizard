@@ -17,7 +17,13 @@ export const obsNodeCapacitySchema = z.object({
       hostnamePattern,
       "Lowercase letters, numbers, and hyphens only -- can't start or end with a hyphen (this becomes the node's hostname)",
     ),
-  api_url: z.string().min(1, "API URL is required").url("Must be a valid URL"),
+  // Optional: a blank field becomes null and the node fills it in itself
+  // (http://<tailscale_ip>:3000) when it links. Set it here only to override
+  // that, e.g. with a Cloudflare Tunnel hostname for browsers off the tailnet.
+  api_url: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? null : v),
+    z.string().url("Must be a valid URL").nullable(),
+  ),
   max_instances: z.number().int().min(1, "Must be at least 1"),
 });
 

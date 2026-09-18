@@ -10,7 +10,11 @@ export type ObsNode = Database["public"]["Tables"]["obs_nodes"]["Row"];
 export interface ObsNodeCapacity {
   name: string;
   max_instances: number;
-  api_url: string;
+  /** Where callers reach the node's API. Optional at creation: the node fills
+   *  it in itself (http://<tailscale_ip>:3000) when it links, see
+   *  updateNodeTailscaleIp. An admin can still override it, e.g. with a
+   *  Cloudflare Tunnel hostname for browser access from outside the tailnet. */
+  api_url: string | null;
 }
 
 export interface ObsNodeInstanceOwner {
@@ -85,10 +89,38 @@ export async function createNode(
 export async function updateNodeCapacity(
   client: DBClient,
   id: string,
-  fields: ObsNodeCapacity,
+  fields: Partial<ObsNodeCapacity>,
 ): Promise<{ data: ObsNode | null; error: string | null }> {
   const { data, error } = await client.from("obs_nodes").update(fields).eq("id", id).select("*").single();
   return { data, error: describeNodeError(error) };
+}
+
+/** Self-reported by the node itself once it actually has a Tailscale IP --
+ *  at /claim time (deferred-join case) the node hasn't joined the tailnet
+ *  yet, since the auth key it needs to join comes back IN the claim
+ *  response, so tailscale_ip is unknown until after that response lands.
+ *
+ *  Fills api_url only when it is still blank: docker-compose.yml binds the
+ *  node's API to loopback and `${TAILSCALE_IP}:3000`, so the tailnet URL is
+ *  the one default reachable from other hosts -- unless an admin deliberately
+ *  pointed api_url elsewhere (the node's Cloudflare Tunnel hostname, for
+ *  browser access), and that choice must win. The port is fixed at 3000 for
+ *  the same reason. Read-then-update
+ *  rather than one conditional statement because PostgREST can't express
+ *  COALESCE(NULLIF(api_url, ''), ...) without an RPC. */
+export async function updateNodeTailscaleIp(
+  client: DBClient,
+  id: string,
+  tailscaleIp: string,
+): Promise<{ data: ObsNode | null; error: string | null }> {
+  const current = await getNodeById(client, id);
+  if (!current) return { data: null, error: "Node not found" };
+
+  const patch: Database["public"]["Tables"]["obs_nodes"]["Update"] = { tailscale_ip: tailscaleIp };
+  if (!current.api_url?.trim()) patch.api_url = `http://${tailscaleIp}:3000`;
+
+  const { data, error } = await client.from("obs_nodes").update(patch).eq("id", id).select("*").single();
+  return { data, error: error?.message ?? null };
 }
 
 export async function deleteNode(client: DBClient, id: string): Promise<{ error: string | null }> {
