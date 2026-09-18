@@ -9,3 +9,4 @@ export * from './helix';
 export * from './irl';
 export * from './overlay-ws';
 export * as Helix from './helix';
+export * from './platform-events';

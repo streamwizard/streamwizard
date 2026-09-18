@@ -1,4 +1,5 @@
 import { createClient } from "@repo/supabase/next/server";
+import { getProductName } from "@repo/supabase/queries/subscriptions";
 import { Lock } from "lucide-react";
 
 const PRODUCT_LABELS: Record<string, string> = {
@@ -17,8 +18,7 @@ export default async function UpgradePage({
   let productName = feature ? (PRODUCT_LABELS[feature] ?? feature) : null;
 
   if (feature && !productName) {
-    const { data } = await supabase.from("products").select("name").eq("id", feature).maybeSingle();
-    if (data) productName = data.name;
+    productName = (await getProductName(supabase, feature)) ?? productName;
   }
 
   return (

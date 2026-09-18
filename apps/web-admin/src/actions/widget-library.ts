@@ -6,6 +6,11 @@ import { assertAdmin } from "@/lib/assert-admin";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
+import {
+  selectPendingLibraryEntries,
+  approveLibraryEntry as approveEntry,
+  deleteLibraryEntry,
+} from "@repo/supabase/queries/overlay-widgets";
 
 const WIDGET_LIBRARY_PATH = "/widget-library";
 
@@ -49,11 +54,7 @@ export async function getPendingLibraryEntries() {
   } catch {
     return { data: null, error: "Forbidden" };
   }
-  const { data, error } = await adminClient
-    .from("overlay_widget_library_entries")
-    .select("*, overlay_widgets(*)")
-    .eq("is_approved", false)
-    .order("created_at", { ascending: true });
+  const { data, error } = await selectPendingLibraryEntries(adminClient);
   if (error) reportError(error, "actions/widget-library");
   return { data, error: error?.message ?? null };
 }
@@ -65,10 +66,7 @@ export async function approveLibraryEntry(entryId: string) {
   } catch {
     return { error: "Forbidden" };
   }
-  const { error } = await adminClient
-    .from("overlay_widget_library_entries")
-    .update({ is_approved: true })
-    .eq("id", entryId);
+  const { error } = await approveEntry(adminClient, entryId);
   revalidatePath(WIDGET_LIBRARY_PATH);
   if (error) reportError(error, "actions/widget-library");
   return { error: error?.message ?? null };
@@ -81,10 +79,7 @@ export async function rejectLibraryEntry(entryId: string) {
   } catch {
     return { error: "Forbidden" };
   }
-  const { error } = await adminClient
-    .from("overlay_widget_library_entries")
-    .delete()
-    .eq("id", entryId);
+  const { error } = await deleteLibraryEntry(adminClient, entryId);
   revalidatePath(WIDGET_LIBRARY_PATH);
   if (error) reportError(error, "actions/widget-library");
   return { error: error?.message ?? null };

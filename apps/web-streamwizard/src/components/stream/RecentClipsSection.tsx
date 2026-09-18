@@ -1,4 +1,5 @@
 import { createClient } from "@repo/supabase/next/server";
+import { getRecentClipsByBroadcaster } from "@repo/supabase/queries/clips";
 import { Film } from "lucide-react";
 import { Database } from "@repo/supabase";
 import TwitchClipCard from "@/components/cards/clip-card";
@@ -12,11 +13,7 @@ interface RecentClipsSectionProps {
 export async function RecentClipsSection({ broadcasterId, compact = false }: RecentClipsSectionProps) {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .rpc("get_all_clips_with_folders")
-    .eq("broadcaster_id", broadcasterId)
-    .order("created_at_twitch", { ascending: false })
-    .limit(10);
+  const { data, error } = await getRecentClipsByBroadcaster(supabase, broadcasterId, 10);
 
   if (error) console.error("[RecentClipsSection]", error.message);
 

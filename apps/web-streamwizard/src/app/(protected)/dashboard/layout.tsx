@@ -8,7 +8,8 @@ import { ModalProvider } from "@/providers/modal-provider";
 import { ClipFolderDialogProvider } from "@/providers/clip-folder-dialog-provider";
 import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
 import { redirect } from "next/navigation";
-import { getClipFolders } from "@repo/supabase/queries/clips";
+import { getClipFolders, countClipsByUserId } from "@repo/supabase/queries/clips";
+import { checkProductAccess } from "@repo/supabase/queries/subscriptions";
 import { getUserPreferences, getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { getGuildMemberRoleIds } from "@/server/discord/roles";
@@ -32,10 +33,7 @@ export default async function layout({
   }
 
   const { data: folders } = await getClipFolders(supabase, data.user.id);
-  const { count: clipCount } = await supabase
-    .from("clips")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", data.user.id);
+  const clipCount = await countClipsByUserId(supabase, data.user.id);
 
   // Only checked while onboarding is still in progress — avoids an extra
   // Discord REST call on every dashboard page load for everyone past it.
@@ -53,14 +51,12 @@ export default async function layout({
     }
   }
 
-  const { data: hasCloudObsAccess } = await supabase.rpc("check_product_access", {
-    p_product_id: "cloud_obs",
-  });
+  const hasCloudObsAccess = await checkProductAccess(supabase, "cloud_obs");
 
   return (
     <SidebarProvider>
       <OnboardingModal
-        clipCount={clipCount ?? 0}
+        clipCount={clipCount}
         discordStatus={discordStatus}
         initialOnboardingCompleted={!!prefs?.onboarding_completed}
       />

@@ -9,21 +9,19 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@repo/discord-api": "workspace:*",
-    "@repo/github-api": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/metrics": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",
+    "@repo/storage": "workspace:*",
     "@repo/supabase": "workspace:*",
+    "@repo/ttl-cache": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/types": "workspace:*",
     "@repo/user-state": "workspace:*",
     "@repo/ws-client": "workspace:*",
     "@sentry/bun": "^10",
     "@sentry/hono": "^10",
-    "@supabase/ssr": "^0.12.0",
-    "@supabase/supabase-js": "^2.105.1",
     "hono": "^4.12.28",
     "zod": "^4.4.3"
   },

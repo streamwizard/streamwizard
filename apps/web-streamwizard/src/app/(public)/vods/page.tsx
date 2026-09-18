@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
 import { VodClipping } from "@/components/public/home/vod-clipping-section";
 import { VodsLibrarySection } from "@/components/public/vods/vods-library-section";
 import { VodsEventsSection } from "@/components/public/vods/vods-events-section";
 import { SceneSwitchesSection } from "@/components/public/vods/scene-switches-section";
 import { VodsClipCreationSection } from "@/components/public/vods/vods-clip-creation-section";
 import { ClipLibrarySection } from "@/components/public/vods/clip-library-section";
-import { VodsFaqSection } from "@/components/public/vods/vods-faq-section";
+import { VodsFaqSection, VODS_FAQ_ITEMS } from "@/components/public/vods/vods-faq-section";
 import { FinalCta } from "@/components/public/home/final-cta";
+import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-strip";
 
 /*
  * The VODs product page: hero, the landing page's band as the overview (its
@@ -19,13 +21,16 @@ import { FinalCta } from "@/components/public/home/final-cta";
 export const metadata: Metadata = {
   title: "Clip from your Twitch VODs",
   description:
-    "Every follow, sub, raid and ad break marked on your VOD timeline. Click an event to jump there, zoom in to 20x, and drag a 5 to 60 second selection into a real Twitch clip.",
+    "Every follow, sub, raid and ad break marked on your VOD timeline. Jump to an event, zoom to 20x, and drag a 5 to 60 second selection into a real Twitch clip.",
   alternates: { canonical: absoluteUrl("/vods") },
 };
 
 export default function VodsPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+      <JsonLd schema={breadcrumbSchema("VODs", "/vods")} />
+      <JsonLd schema={softwareApplicationSchema()} />
+      <JsonLd schema={faqPageSchema(VODS_FAQ_ITEMS)} />
       <section className="pt-16 md:pt-20">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl text-center">
@@ -59,6 +64,7 @@ export default function VodsPage() {
       <VodsClipCreationSection />
       <ClipLibrarySection />
       <VodsFaqSection />
+      <FeatureTrustStrip path="/vods" tone="amber" />
       <FinalCta />
     </div>
   );

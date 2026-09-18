@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
 import { AnalyticsDemo } from "@/components/public/home/analytics-demo";
 import { ViewerGraphSection } from "@/components/public/analytics/viewer-graph-section";
 import { BestHourSection } from "@/components/public/analytics/best-hour-section";
 import { CategoryStatsSection } from "@/components/public/analytics/category-stats-section";
+import { HowItReadsSection } from "@/components/public/analytics/how-it-reads-section";
 import { ActivityFeedSection } from "@/components/public/analytics/activity-feed-section";
 import { VodsDoorSection } from "@/components/public/analytics/vods-door-section";
-import { AnalyticsFaqSection } from "@/components/public/analytics/analytics-faq-section";
+import { AnalyticsFaqSection, ANALYTICS_FAQ_ITEMS } from "@/components/public/analytics/analytics-faq-section";
 import { FinalCta } from "@/components/public/home/final-cta";
+import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-strip";
 
 /*
  * The analytics product page: hero, the landing page's band as the overview
  * (its demo carries the interaction, switch included), then the deep dives
- * chart by chart: the viewer graph, the best hour, the category table, the
- * activity feed. After the reading comes the doing: the door to /vods where
+ * chart by chart: the viewer graph, the best hour, the category table, then
+ * the method behind them (sampling, scoring, retention, two worked reads),
+ * then the activity feed. After the reading comes the doing: the door to /vods where
  * the spike becomes a clip, then the FAQ with the honest caveats about old
  * streams and chat logs.
  */
@@ -27,6 +31,9 @@ export const metadata: Metadata = {
 export default function AnalyticsPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+      <JsonLd schema={breadcrumbSchema("Analytics", "/analytics")} />
+      <JsonLd schema={softwareApplicationSchema()} />
+      <JsonLd schema={faqPageSchema(ANALYTICS_FAQ_ITEMS)} />
       <section className="pt-16 md:pt-20">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl text-center">
@@ -45,9 +52,11 @@ export default function AnalyticsPage() {
       <ViewerGraphSection />
       <BestHourSection />
       <CategoryStatsSection />
+      <HowItReadsSection />
       <ActivityFeedSection />
       <VodsDoorSection />
       <AnalyticsFaqSection />
+      <FeatureTrustStrip path="/analytics" />
       <FinalCta />
     </div>
   );

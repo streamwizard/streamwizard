@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@dagrejs/dagre": "^3.0.0",
@@ -16,12 +17,16 @@
     "@novnc/novnc": "^1.7.0",
     "@repo/alerting": "workspace:*",
     "@repo/discord-api": "workspace:*",
+    "@repo/discord-message": "workspace:*",
     "@repo/metrics": "workspace:*",
     "@repo/obs-web": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",
+    "@repo/storage": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/telegram-api": "workspace:*",
+    "@repo/ttl-cache": "workspace:*",
+    "@repo/types": "workspace:*",
     "@repo/ui": "workspace:*",
     "@repo/ws-client": "workspace:*",
     "@sentry/nextjs": "^10",

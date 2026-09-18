@@ -1,4 +1,4 @@
-import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, InteractionContextType, MessageFlags, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getUserRank, getUserTotals } from "@repo/supabase/queries/discord-activity";
 import type { Command } from "../types/discord";
@@ -8,6 +8,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName("rank")
     .setDescription("See a member's activity stats and rank")
+    .setContexts(InteractionContextType.Guild)
     .addUserOption((opt) => opt.setName("user").setDescription("Whose stats to show (defaults to you)"))
     .addStringOption((opt) =>
       opt.setName("timeframe").setDescription("Time window (defaults to last 30 days)").addChoices(...TIMEFRAME_CHOICES)

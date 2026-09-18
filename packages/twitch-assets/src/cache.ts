@@ -1,4 +1,5 @@
 import { supabase } from "@repo/supabase";
+import { TtlCache } from "@repo/ttl-cache";
 import { selectCachedAsset, upsertCachedAsset } from "@repo/supabase/queries/asset-cache";
 
 const SECOND = 1000;
@@ -29,29 +30,20 @@ export type AssetKind = keyof typeof ASSET_TTL;
 /**
  * Per-process layer in front of Supabase. Without it a chat burst is one DB
  * round trip per message even on a warm cache. Bounded so a long-running bot
- * seeing thousands of chatters doesn't grow without limit; eviction is oldest
- * insertion first, which is close enough to LRU for a cache whose entries all
- * expire anyway.
+ * seeing thousands of chatters doesn't grow without limit. Each entry keeps
+ * the expiry of its database row, so the TTL on the cache itself is only a
+ * fallback.
  */
 const MEMORY_MAX_ENTRIES = 5000;
-const memory = new Map<string, { payload: unknown; expiresAt: number }>();
+const memory = new TtlCache<unknown>({ ttlMs: HOUR, maxEntries: MEMORY_MAX_ENTRIES });
 
+/** Payloads are never null, so a null read (a cached negative) counts as a miss here. */
 function memoryGet(key: string): unknown | undefined {
-  const hit = memory.get(key);
-  if (!hit) return undefined;
-  if (hit.expiresAt <= Date.now()) {
-    memory.delete(key);
-    return undefined;
-  }
-  return hit.payload;
+  return memory.get(key) ?? undefined;
 }
 
 function memorySet(key: string, payload: unknown, expiresAt: number): void {
-  if (memory.size >= MEMORY_MAX_ENTRIES) {
-    const oldest = memory.keys().next();
-    if (!oldest.done) memory.delete(oldest.value);
-  }
-  memory.set(key, { payload, expiresAt });
+  memory.set(key, payload, { expiresAt });
 }
 
 /** Memory, then Supabase. Expired rows read as a miss. */
@@ -91,7 +83,7 @@ export function peekMemory<T>(key: string): T | undefined {
  * per-message storm the memory layer exists to prevent, one tier down.
  */
 const DB_MISS_TTL = 30 * SECOND;
-const dbMisses = new Map<string, number>();
+const dbMisses = new TtlCache<true>({ ttlMs: DB_MISS_TTL, maxEntries: MEMORY_MAX_ENTRIES });
 
 /**
  * Memory, then Supabase. Never Helix.
@@ -105,25 +97,12 @@ export async function peekCached<T>(key: string): Promise<T | undefined> {
   const local = memoryGet(key);
   if (local !== undefined) return local as T;
 
-  const missedAt = dbMisses.get(key);
-  if (missedAt !== undefined) {
-    if (Date.now() - missedAt < DB_MISS_TTL) return undefined;
-    dbMisses.delete(key);
-  }
+  if (dbMisses.get(key)) return undefined;
 
   // Prefixed so this never joins a resolve*() flight for the same key — that
   // promise can be waiting on Helix, which is exactly what this must not do.
   const hit = await singleFlight(`peek:${key}`, () => getCached<T>(key));
-  if (hit === undefined) {
-    // Same bound as the memory layer: a channel full of one-message chatters
-    // must not grow this map forever.
-    if (dbMisses.size >= MEMORY_MAX_ENTRIES) {
-      const cutoff = Date.now() - DB_MISS_TTL;
-      for (const [k, at] of dbMisses) if (at < cutoff) dbMisses.delete(k);
-      if (dbMisses.size >= MEMORY_MAX_ENTRIES) dbMisses.clear();
-    }
-    dbMisses.set(key, Date.now());
-  }
+  if (hit === undefined) dbMisses.set(key, true);
   return hit;
 }
 

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@repo/supabase/next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { isUserAdmin } from "@repo/supabase/queries/obs-nodes";
 import { MonitorHeader } from "@/components/monitor-header";
 import { MonitorSidebar } from "@/components/monitor-sidebar";
 import { SidebarInset, SidebarProvider } from "@repo/ui";
@@ -10,6 +11,7 @@ import { TimeRangeProvider } from "@/lib/time-range-context";
 import { BandwidthUnitProvider } from "@/lib/bandwidth-unit-context";
 import { DASHBOARD_COOKIE } from "@/lib/dashboard-prefs";
 import { homeEnv } from "@/lib/home-env";
+import { getDiscordSetupGaps } from "@/lib/discord/setup-status";
 
 export default async function MonitorLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -23,14 +25,7 @@ export default async function MonitorLayout({ children }: { children: React.Reac
     redirect("/login?error=signin_required");
   }
 
-  const { data: roleRow } = await supabaseAdmin
-    .from("user_roles")
-    .select("id")
-    .eq("user_id", data.user.id)
-    .eq("role", "admin")
-    .maybeSingle();
-
-  if (!roleRow) {
+  if (!(await isUserAdmin(supabaseAdmin, data.user.id))) {
     redirect("/no-access");
   }
 
@@ -42,12 +37,15 @@ export default async function MonitorLayout({ children }: { children: React.Reac
   const initialInterval = cookieStore.get(DASHBOARD_COOKIE.refreshInterval)?.value;
   const initialUnit = cookieStore.get(DASHBOARD_COOKIE.bandwidthUnit)?.value;
 
+  // Sidebar "Not set up" badges for Discord features missing a channel.
+  const setupGaps = await getDiscordSetupGaps();
+
   return (
     <TimeRangeProvider initialRange={initialRange}>
       <RefreshIntervalProvider initialInterval={initialInterval}>
         <BandwidthUnitProvider initialUnit={initialUnit}>
           <SidebarProvider>
-            <MonitorSidebar userEmail={data.user.email ?? ""} />
+            <MonitorSidebar userEmail={data.user.email ?? ""} notSetUp={[...setupGaps]} />
             <SidebarInset>
               <MonitorHeader envLabel={homeEnv()} />
               <main className="flex-1 overflow-auto p-6">{children}</main>

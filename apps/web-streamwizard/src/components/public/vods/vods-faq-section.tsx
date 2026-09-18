@@ -1,15 +1,18 @@
 import { SectionView } from "../analytics/section-view";
 import { Reveal } from "../home/reveal";
 import { FaqAccordion } from "../home/faq-accordion";
+import { PRICING_FAQ_LINK } from "@/lib/pricing";
 
 /*
  * The page's FAQ, and the canonical home of the honest caveat: events are
  * recorded live, so VODs from before you connected have a bare timeline.
  * Its own section id so the funnel dashboard can tell it apart from the home
- * FAQ; no JSON-LD, the FAQPage schema stays a home-page-only thing.
+ * FAQ. VODS_FAQ_ITEMS also feeds the page's FAQPage JSON-LD, so answers must
+ * stand on their own: AI answers quote them without the page around them.
+ * The cost answer is one sentence pointing at /pricing (SW-303).
  */
 
-const VODS_FAQ_ITEMS = [
+export const VODS_FAQ_ITEMS = [
   {
     question: "Why is the timeline empty on my older VODs?",
     answer:
@@ -32,8 +35,8 @@ const VODS_FAQ_ITEMS = [
   },
   {
     question: "What does it cost?",
-    answer:
-      "Nothing. VOD clipping is free, along with clip sync, folders, overlays and analytics. Cloud OBS is the paid part of StreamWizard, and none of this needs it.",
+    answer: "Nothing. VOD clipping is free and never needs Cloud OBS, the paid part of StreamWizard.",
+    link: PRICING_FAQ_LINK,
   },
 ] as const;
 

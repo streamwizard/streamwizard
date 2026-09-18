@@ -556,6 +556,51 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_built_messages: {
+        Row: {
+          channel_id: string | null
+          created_at: string
+          draft: Json
+          draft_channel_id: string | null
+          draft_create_channel: boolean
+          guild_id: string
+          id: string
+          message_ids: string[]
+          name: string
+          published: Json | null
+          published_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel_id?: string | null
+          created_at?: string
+          draft: Json
+          draft_channel_id?: string | null
+          draft_create_channel?: boolean
+          guild_id: string
+          id?: string
+          message_ids?: string[]
+          name: string
+          published?: Json | null
+          published_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string | null
+          created_at?: string
+          draft?: Json
+          draft_channel_id?: string | null
+          draft_create_channel?: boolean
+          guild_id?: string
+          id?: string
+          message_ids?: string[]
+          name?: string
+          published?: Json | null
+          published_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       discord_command_permissions: {
         Row: {
           command_name: string
@@ -642,6 +687,9 @@ export type Database = {
           created_at: string
           guild_id: string
           id: string
+          join_role_id: string | null
+          log_channel_id: string | null
+          log_ignored_channel_ids: string[]
           updated_at: string
           verified_role_id: string | null
           welcome_channel_id: string | null
@@ -651,6 +699,9 @@ export type Database = {
           created_at?: string
           guild_id: string
           id?: string
+          join_role_id?: string | null
+          log_channel_id?: string | null
+          log_ignored_channel_ids?: string[]
           updated_at?: string
           verified_role_id?: string | null
           welcome_channel_id?: string | null
@@ -660,10 +711,109 @@ export type Database = {
           created_at?: string
           guild_id?: string
           id?: string
+          join_role_id?: string | null
+          log_channel_id?: string | null
+          log_ignored_channel_ids?: string[]
           updated_at?: string
           verified_role_id?: string | null
           welcome_channel_id?: string | null
           welcome_enabled?: boolean
+        }
+        Relationships: []
+      }
+      discord_log_event_settings: {
+        Row: {
+          channel_id: string | null
+          enabled: boolean
+          event_type: string
+          guild_id: string
+          updated_at: string
+        }
+        Insert: {
+          channel_id?: string | null
+          enabled: boolean
+          event_type: string
+          guild_id: string
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string | null
+          enabled?: boolean
+          event_type?: string
+          guild_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      discord_settings_audit: {
+        Row: {
+          action: string
+          changed_by: string | null
+          changed_by_discord_id: string | null
+          created_at: string
+          guild_id: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          section: string
+        }
+        Insert: {
+          action?: string
+          changed_by?: string | null
+          changed_by_discord_id?: string | null
+          created_at?: string
+          guild_id: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          section: string
+        }
+        Update: {
+          action?: string
+          changed_by?: string | null
+          changed_by_discord_id?: string | null
+          created_at?: string
+          guild_id?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          section?: string
+        }
+        Relationships: []
+      }
+      discord_ticket_tags: {
+        Row: {
+          auto_reply: boolean
+          content: string
+          created_at: string
+          guild_id: string
+          id: string
+          name: string
+          position: number
+          trigger_keywords: string[]
+          updated_at: string
+        }
+        Insert: {
+          auto_reply?: boolean
+          content: string
+          created_at?: string
+          guild_id: string
+          id?: string
+          name: string
+          position?: number
+          trigger_keywords?: string[]
+          updated_at?: string
+        }
+        Update: {
+          auto_reply?: boolean
+          content?: string
+          created_at?: string
+          guild_id?: string
+          id?: string
+          name?: string
+          position?: number
+          trigger_keywords?: string[]
+          updated_at?: string
         }
         Relationships: []
       }
@@ -671,47 +821,444 @@ export type Database = {
         Row: {
           category_id: string | null
           created_at: string
+          defaults_seeded_at: string | null
+          dm_on_close: boolean
+          dm_open_enabled: boolean
           enabled: boolean
           guild_id: string
           id: string
-          log_channel_id: string | null
+          blocked_role_ids: string[]
+          claim_hides_from_other_staff: boolean
+          close_on_member_leave: boolean
+          max_open_per_user: number | null
+          messages: Json
+          panel: Json | null
           panel_channel_id: string | null
           panel_message_id: string | null
+          panel_message_ids: string[]
           staff_role_id: string | null
+          stale_after_hours: number | null
+          auto_close_after_hours: number | null
+          close_mode: string
+          close_request_hours: number
+          working_hours: Json
           ticket_counter: number
           updated_at: string
         }
         Insert: {
           category_id?: string | null
           created_at?: string
+          defaults_seeded_at?: string | null
+          dm_on_close?: boolean
+          dm_open_enabled?: boolean
           enabled?: boolean
           guild_id: string
           id?: string
-          log_channel_id?: string | null
+          blocked_role_ids?: string[]
+          claim_hides_from_other_staff?: boolean
+          close_on_member_leave?: boolean
+          max_open_per_user?: number | null
+          messages?: Json
+          panel?: Json | null
           panel_channel_id?: string | null
           panel_message_id?: string | null
+          panel_message_ids?: string[]
           staff_role_id?: string | null
+          stale_after_hours?: number | null
+          auto_close_after_hours?: number | null
+          close_mode?: string
+          close_request_hours?: number
+          working_hours?: Json
           ticket_counter?: number
           updated_at?: string
         }
         Update: {
           category_id?: string | null
           created_at?: string
+          defaults_seeded_at?: string | null
+          dm_on_close?: boolean
+          dm_open_enabled?: boolean
           enabled?: boolean
           guild_id?: string
           id?: string
-          log_channel_id?: string | null
+          blocked_role_ids?: string[]
+          claim_hides_from_other_staff?: boolean
+          close_on_member_leave?: boolean
+          max_open_per_user?: number | null
+          messages?: Json
+          panel?: Json | null
           panel_channel_id?: string | null
           panel_message_id?: string | null
+          panel_message_ids?: string[]
           staff_role_id?: string | null
+          stale_after_hours?: number | null
+          auto_close_after_hours?: number | null
+          close_mode?: string
+          close_request_hours?: number
+          working_hours?: Json
           ticket_counter?: number
           updated_at?: string
         }
         Relationships: []
       }
+      discord_ticket_answers: {
+        Row: {
+          created_at: string
+          field_id: string | null
+          id: string
+          label: string
+          position: number
+          ticket_id: string
+          value: string
+        }
+        Insert: {
+          created_at?: string
+          field_id?: string | null
+          id?: string
+          label: string
+          position?: number
+          ticket_id: string
+          value?: string
+        }
+        Update: {
+          created_at?: string
+          field_id?: string | null
+          id?: string
+          label?: string
+          position?: number
+          ticket_id?: string
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_ticket_answers_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "discord_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_ticket_form_fields: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          kind: string
+          label: string
+          max_length: number | null
+          min_length: number | null
+          options: Json
+          placeholder: string
+          position: number
+          required: boolean
+          style: string
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          kind: string
+          label: string
+          max_length?: number | null
+          min_length?: number | null
+          options?: Json
+          placeholder?: string
+          position?: number
+          required?: boolean
+          style?: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          label?: string
+          max_length?: number | null
+          min_length?: number | null
+          options?: Json
+          placeholder?: string
+          position?: number
+          required?: boolean
+          style?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_ticket_form_fields_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "discord_ticket_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_ticket_categories: {
+        Row: {
+          archived_at: string | null
+          channel_name_template: string
+          claiming_enabled: boolean
+          cooldown_seconds: number
+          created_at: string
+          description: string
+          discord_category_id: string | null
+          emoji: string | null
+          enabled: boolean
+          feedback_enabled: boolean
+          guild_id: string
+          id: string
+          member_limit: number | null
+          name: string
+          opening_message: Json | null
+          ping_role_ids: string[]
+          position: number
+          required_role_ids: string[]
+          slowmode_seconds: number
+          slug: string
+          staff_role_ids: string[]
+          total_limit: number | null
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          channel_name_template?: string
+          claiming_enabled?: boolean
+          cooldown_seconds?: number
+          created_at?: string
+          description?: string
+          discord_category_id?: string | null
+          emoji?: string | null
+          enabled?: boolean
+          feedback_enabled?: boolean
+          guild_id: string
+          id?: string
+          member_limit?: number | null
+          name: string
+          opening_message?: Json | null
+          ping_role_ids?: string[]
+          position?: number
+          required_role_ids?: string[]
+          slowmode_seconds?: number
+          slug: string
+          staff_role_ids?: string[]
+          total_limit?: number | null
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          channel_name_template?: string
+          claiming_enabled?: boolean
+          cooldown_seconds?: number
+          created_at?: string
+          description?: string
+          discord_category_id?: string | null
+          emoji?: string | null
+          enabled?: boolean
+          feedback_enabled?: boolean
+          guild_id?: string
+          id?: string
+          member_limit?: number | null
+          name?: string
+          opening_message?: Json | null
+          ping_role_ids?: string[]
+          position?: number
+          required_role_ids?: string[]
+          slowmode_seconds?: number
+          slug?: string
+          staff_role_ids?: string[]
+          total_limit?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      discord_ticket_products: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          description: string
+          emoji: string | null
+          guild_id: string
+          id: string
+          label: string
+          position: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          description?: string
+          emoji?: string | null
+          guild_id: string
+          id?: string
+          label: string
+          position?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          description?: string
+          emoji?: string | null
+          guild_id?: string
+          id?: string
+          label?: string
+          position?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      discord_ticket_events: {
+        Row: {
+          actor_discord_id: string | null
+          actor_name: string | null
+          detail: Json
+          target_discord_id: string | null
+          target_name: string | null
+          created_at: string
+          id: string
+          ticket_id: string
+          type: string
+        }
+        Insert: {
+          actor_discord_id?: string | null
+          actor_name?: string | null
+          detail?: Json
+          target_discord_id?: string | null
+          target_name?: string | null
+          created_at?: string
+          id?: string
+          ticket_id: string
+          type: string
+        }
+        Update: {
+          actor_discord_id?: string | null
+          actor_name?: string | null
+          detail?: Json
+          target_discord_id?: string | null
+          target_name?: string | null
+          created_at?: string
+          id?: string
+          ticket_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_ticket_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "discord_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_ticket_members: {
+        Row: {
+          added_at: string
+          added_by_discord_user_id: string | null
+          discord_user_id: string
+          name: string | null
+          ticket_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by_discord_user_id?: string | null
+          discord_user_id: string
+          name?: string | null
+          ticket_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by_discord_user_id?: string | null
+          discord_user_id?: string
+          name?: string | null
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_ticket_members_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "discord_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_ticket_messages: {
+        Row: {
+          attachments: Json
+          author_avatar_url: string | null
+          author_discord_id: string | null
+          author_is_bot: boolean
+          author_name: string
+          content: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          embeds: Json
+          id: string
+          message_id: string
+          pinned: boolean
+          ticket_id: string
+        }
+        Insert: {
+          attachments?: Json
+          author_avatar_url?: string | null
+          author_discord_id?: string | null
+          author_is_bot?: boolean
+          author_name: string
+          content?: string
+          created_at: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          embeds?: Json
+          id?: string
+          message_id: string
+          pinned?: boolean
+          ticket_id: string
+        }
+        Update: {
+          attachments?: Json
+          author_avatar_url?: string | null
+          author_discord_id?: string | null
+          author_is_bot?: boolean
+          author_name?: string
+          content?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          embeds?: Json
+          id?: string
+          message_id?: string
+          pinned?: boolean
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_ticket_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "discord_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       discord_tickets: {
         Row: {
-          category: Database["public"]["Enums"]["discord_ticket_category"]
+          product: string | null
+          claimed_by_name: string | null
+          close_code: string | null
+          close_reason: string | null
+          closed_by_name: string | null
+          opener_name: string | null
+          transcript_message_count: number | null
+          transcript_purged_at: string | null
+          transcript_saved_at: string | null
+          category: string
           channel_id: string
           claimed_at: string | null
           claimed_by_discord_user_id: string | null
@@ -719,20 +1266,41 @@ export type Database = {
           closed_by_discord_user_id: string | null
           created_at: string
           description: string
+          first_response_at: string | null
           github_issue_number: number | null
           github_issue_url: string | null
           guild_id: string
           id: string
+          last_message_at: string | null
+          last_message_by_staff: boolean | null
           opener_discord_user_id: string
           opener_user_id: string | null
-          scheduled_deletion_at: string | null
+          priority: string | null
+          stale_warned_at: string | null
+          close_requested_at: string | null
+          close_requested_by: string | null
+          close_request_expires_at: string | null
+          feedback_rating: number | null
+          feedback_comment: string | null
+          feedback_at: string | null
+          references_message_url: string | null
+          created_by_discord_user_id: string | null
           status: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
           updated_at: string
         }
         Insert: {
-          category: Database["public"]["Enums"]["discord_ticket_category"]
+          product?: string | null
+          claimed_by_name?: string | null
+          close_code?: string | null
+          close_reason?: string | null
+          closed_by_name?: string | null
+          opener_name?: string | null
+          transcript_message_count?: number | null
+          transcript_purged_at?: string | null
+          transcript_saved_at?: string | null
+          category: string
           channel_id: string
           claimed_at?: string | null
           claimed_by_discord_user_id?: string | null
@@ -740,20 +1308,41 @@ export type Database = {
           closed_by_discord_user_id?: string | null
           created_at?: string
           description: string
+          first_response_at?: string | null
           github_issue_number?: number | null
           github_issue_url?: string | null
           guild_id: string
           id?: string
+          last_message_at?: string | null
+          last_message_by_staff?: boolean | null
           opener_discord_user_id: string
           opener_user_id?: string | null
-          scheduled_deletion_at?: string | null
+          priority?: string | null
+          stale_warned_at?: string | null
+          close_requested_at?: string | null
+          close_requested_by?: string | null
+          close_request_expires_at?: string | null
+          feedback_rating?: number | null
+          feedback_comment?: string | null
+          feedback_at?: string | null
+          references_message_url?: string | null
+          created_by_discord_user_id?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
           updated_at?: string
         }
         Update: {
-          category?: Database["public"]["Enums"]["discord_ticket_category"]
+          product?: string | null
+          claimed_by_name?: string | null
+          close_code?: string | null
+          close_reason?: string | null
+          closed_by_name?: string | null
+          opener_name?: string | null
+          transcript_message_count?: number | null
+          transcript_purged_at?: string | null
+          transcript_saved_at?: string | null
+          category?: string
           channel_id?: string
           claimed_at?: string | null
           claimed_by_discord_user_id?: string | null
@@ -761,13 +1350,25 @@ export type Database = {
           closed_by_discord_user_id?: string | null
           created_at?: string
           description?: string
+          first_response_at?: string | null
           github_issue_number?: number | null
           github_issue_url?: string | null
           guild_id?: string
           id?: string
+          last_message_at?: string | null
+          last_message_by_staff?: boolean | null
           opener_discord_user_id?: string
           opener_user_id?: string | null
-          scheduled_deletion_at?: string | null
+          priority?: string | null
+          stale_warned_at?: string | null
+          close_requested_at?: string | null
+          close_requested_by?: string | null
+          close_request_expires_at?: string | null
+          feedback_rating?: number | null
+          feedback_comment?: string | null
+          feedback_at?: string | null
+          references_message_url?: string | null
+          created_by_discord_user_id?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject?: string
           ticket_number?: number
@@ -2195,6 +2796,54 @@ export type Database = {
           },
         ]
       }
+      platform_events: {
+        Row: {
+          actor_user_id: string | null
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          discord_message_id: string | null
+          event_type: string
+          id: number
+          last_error: string | null
+          locked_until: string | null
+          next_attempt_at: string
+          payload: Json
+          status: string
+          subject_user_id: string | null
+        }
+        Insert: {
+          actor_user_id?: string | null
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          discord_message_id?: string | null
+          event_type: string
+          id?: never
+          last_error?: string | null
+          locked_until?: string | null
+          next_attempt_at?: string
+          payload?: Json
+          status?: string
+          subject_user_id?: string | null
+        }
+        Update: {
+          actor_user_id?: string | null
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          discord_message_id?: string | null
+          event_type?: string
+          id?: never
+          last_error?: string | null
+          locked_until?: string | null
+          next_attempt_at?: string
+          payload?: Json
+          status?: string
+          subject_user_id?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           created_at: string
@@ -2458,6 +3107,7 @@ export type Database = {
           clip_count: number
           created_at: string | null
           id: string
+          last_error: string | null
           last_sync: string
           sync_status: Database["public"]["Enums"]["clip_sync_status"]
           updated_at: string | null
@@ -2467,6 +3117,7 @@ export type Database = {
           clip_count: number
           created_at?: string | null
           id?: string
+          last_error?: string | null
           last_sync: string
           sync_status: Database["public"]["Enums"]["clip_sync_status"]
           updated_at?: string | null
@@ -2476,6 +3127,7 @@ export type Database = {
           clip_count?: number
           created_at?: string | null
           id?: string
+          last_error?: string | null
           last_sync?: string
           sync_status?: Database["public"]["Enums"]["clip_sync_status"]
           updated_at?: string | null
@@ -2722,6 +3374,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ticket_stats_summary: {
+        Args: { p_guild_id: string; p_from: string; p_to: string }
+        Returns: {
+          opened: number
+          closed: number
+          avg_first_response_seconds: number | null
+          avg_resolution_seconds: number | null
+          avg_rating: number | null
+          rating_count: number
+        }[]
+      }
+      ticket_stats_by_day: {
+        Args: { p_guild_id: string; p_from: string; p_to: string }
+        Returns: { day: string; opened: number; closed: number }[]
+      }
+      ticket_stats_by_category: {
+        Args: { p_guild_id: string; p_from: string; p_to: string }
+        Returns: { category: string; opened: number; closed: number; avg_rating: number | null; rating_count: number }[]
+      }
+      archive_ticket_message: {
+        Args: { p_by_staff: boolean; p_counts: boolean; p_message: Json; p_ticket_id: string }
+        Returns: undefined
+      }
       add_clip_to_folder: {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
@@ -2740,7 +3415,56 @@ export type Database = {
       check_user_role:
         | { Args: { p_role: string }; Returns: boolean }
         | { Args: { p_role: string; p_user_id: string }; Returns: boolean }
-      delete_user_data: { Args: { p_twitch_user_id: string }; Returns: string }
+      claim_platform_events: {
+        Args: { p_lease_seconds: number; p_limit: number }
+        Returns: {
+          actor_user_id: string | null
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          discord_message_id: string | null
+          event_type: string
+          id: number
+          last_error: string | null
+          locked_until: string | null
+          next_attempt_at: string
+          payload: Json
+          status: string
+          subject_user_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "platform_events"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      purge_old_discord_ticket_transcripts: { Args: never; Returns: number }
+      complete_platform_event: {
+        Args: {
+          p_discord_message_id?: string
+          p_error?: string
+          p_id: number
+          p_max_attempts?: number
+          p_status: string
+        }
+        Returns: undefined
+      }
+      delete_user_data: { Args: { p_twitch_user_id: string; p_reason?: string }; Returns: string }
+      platform_event_identity: { Args: { p_user_id: string }; Returns: Json }
+      emit_twitch_token_refresh_failed: {
+        Args: { p_twitch_user_id: string; p_error: string; p_status?: number }
+        Returns: number
+      }
+      emit_platform_event: {
+        Args: {
+          p_actor_user_id?: string
+          p_event_type: string
+          p_payload?: Json
+          p_subject_user_id?: string
+        }
+        Returns: number
+      }
       get_all_clips_with_folders: {
         Args: never
         Returns: {
@@ -2848,6 +3572,7 @@ export type Database = {
         Args: { p_guild_id: string; p_member_count: number; p_user_id: string }
         Returns: number
       }
+      release_platform_event_locks: { Args: never; Returns: number }
       remove_clip_from_folder: {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined
@@ -2870,7 +3595,6 @@ export type Database = {
     }
     Enums: {
       clip_sync_status: "completed" | "failed" | "syncing"
-      discord_ticket_category: "bug" | "feature" | "support" | "other"
       discord_ticket_status: "open" | "closed"
       feedback_category: "bug" | "feature" | "general"
       feedback_priority: "low" | "medium" | "high" | "critical"
@@ -3014,7 +3738,6 @@ export const Constants = {
   public: {
     Enums: {
       clip_sync_status: ["completed", "failed", "syncing"],
-      discord_ticket_category: ["bug", "feature", "support", "other"],
       discord_ticket_status: ["open", "closed"],
       feedback_category: ["bug", "feature", "general"],
       feedback_priority: ["low", "medium", "high", "critical"],

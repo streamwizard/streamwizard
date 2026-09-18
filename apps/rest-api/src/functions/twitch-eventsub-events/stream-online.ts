@@ -8,6 +8,7 @@ import { streamEventsLogger } from "@repo/logger";
 import { viewerCountPoller } from "../../services/viewer-count-poller";
 import { notifyStreamStatus } from "../../lib/ws-server";
 import { setStreamUserState } from "../../lib/user-state";
+import { logStreamOnlineFailed } from "../../lib/platform-events";
 
 export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: TwitchApi) => {
   //   check if the stream is of type "live"
@@ -18,12 +19,14 @@ export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: Tw
   const video = await TwitchAPI.videos.getVodByBroadcasterId(event.broadcaster_user_id);
 
   // Both bail-outs abandon the whole stream.online pipeline — no vod row, no
-  // live status, no user_state, no viewer polling — while returning normally,
-  // so nothing downstream can tell this apart from a handled event.
+  // live status, no user_state, no viewer polling — while returning normally.
+  // Sentry gets the error and the Discord log channel gets stream.online_failed
+  // so staff can see it without digging.
   if (!stream) {
     reportError(new Error("stream.online: stream not found"), "eventsub.stream-online", {
       broadcasterUserId: event.broadcaster_user_id,
     });
+    await logStreamOnlineFailed(event.broadcaster_user_id, "stream_not_found", null);
     return;
   }
 
@@ -34,6 +37,7 @@ export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: Tw
       broadcasterUserId: event.broadcaster_user_id,
       streamId: stream.id,
     });
+    await logStreamOnlineFailed(event.broadcaster_user_id, "vod_not_found", stream.id);
     return;
   }
 

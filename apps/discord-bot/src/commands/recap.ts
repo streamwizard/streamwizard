@@ -1,4 +1,4 @@
-import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, InteractionContextType, MessageFlags, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getUserDailyRows, getUserRank, getUserTotals } from "@repo/supabase/queries/discord-activity";
 import type { Command } from "../types/discord";
@@ -10,6 +10,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName("recap")
     .setDescription("Your year on this server, wrapped up")
+    .setContexts(InteractionContextType.Guild)
     .addUserOption((opt) => opt.setName("user").setDescription("Whose recap to show (defaults to you)"))
     .addIntegerOption((opt) =>
       opt.setName("year").setDescription("Which year (defaults to this one)").setMinValue(2020).setMaxValue(2100)

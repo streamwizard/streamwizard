@@ -125,7 +125,11 @@ export type StreamWizardEventType =
   // user_states mutation: whichever process applied the write (bot via its
   // socket, rest-api/web-overlay via /internal/broadcast) → user room, one
   // message per changed key, so overlays track counters without polling
-  | "streamwizard.user_state";
+  | "streamwizard.user_state"
+  // discord-bot: something happened in a support ticket (message, claim,
+  // close) → /internal/broadcast → each admin's room, so the web-admin ticket
+  // pages refetch. Signal only, never message content.
+  | "streamwizard.discord_ticket_activity";
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 

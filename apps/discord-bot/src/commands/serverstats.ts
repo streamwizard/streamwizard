@@ -1,4 +1,4 @@
-import { EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { EmbedBuilder, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getLeaderboard, getServerTotals } from "@repo/supabase/queries/discord-activity";
 import type { Command } from "../types/discord";
@@ -9,12 +9,19 @@ export default {
     .setName("serverstats")
     .setDescription("Server-wide activity overview")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .setContexts(InteractionContextType.Guild)
     .addStringOption((opt) =>
       opt.setName("timeframe").setDescription("Time window (defaults to last 30 days)").addChoices(...TIMEFRAME_CHOICES)
     ),
   async execute(interaction) {
-    if (!interaction.guildId) {
+    if (!interaction.inCachedGuild()) {
       await interaction.reply({ content: "This command only works in a server.", flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    // Default member permissions are overridable per server; re-check here.
+    if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
+      await interaction.reply({ content: "You need Manage Server to use this command.", flags: MessageFlags.Ephemeral });
       return;
     }
 

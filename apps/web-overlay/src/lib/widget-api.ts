@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
+import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
 
 /**
  * Shared plumbing for the API routes overlay widgets call from inside their
@@ -72,25 +73,14 @@ export function bearerToken(req: NextRequest): string | null {
  * only ever come from the token — never from the request.
  */
 export async function userIdForToken(token: string): Promise<string | null> {
-  const { data: scene } = await supabaseAdmin
-    .from("overlay_scenes")
-    .select("user_id")
-    .eq("subscriber_token", token)
-    .maybeSingle();
-
+  const { data: scene } = await getOverlaySceneBySubscriberToken(supabaseAdmin, token);
   return scene?.user_id ?? null;
 }
 
 export async function broadcasterIdForToken(token: string): Promise<string | null> {
-  const { data: scene } = await supabaseAdmin
-    .from("overlay_scenes")
-    .select("user_id")
-    .eq("subscriber_token", token)
-    .maybeSingle();
-
-  if (!scene?.user_id) return null;
-
-  return getTwitchUserIdByUserIdMaybe(supabaseAdmin, scene.user_id);
+  const userId = await userIdForToken(token);
+  if (!userId) return null;
+  return getTwitchUserIdByUserIdMaybe(supabaseAdmin, userId);
 }
 
 /**

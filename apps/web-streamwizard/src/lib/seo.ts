@@ -1,33 +1,40 @@
 import { discordInviteLink, docsLink, githubLink, twitchChannelLink } from "@/lib/constant";
+import { LEGAL_OPERATOR } from "@/lib/legal";
 import { env } from "@/lib/env";
+import { FREE_TIER_OFFER_DESCRIPTION } from "@/lib/pricing";
+import type { FaqItem } from "@/components/public/home/faq-accordion";
 
 /**
  * Single source of truth for what search engines may see.
  *
  * This is an explicit allowlist, not a filesystem crawl: every public route is
  * listed by hand so a new route under (protected) or (auth) can never leak into
- * the sitemap by accident.
+ * the sitemap by accident. lib/llms.ts (the /llms.txt index) may only link paths
+ * on this list; llms.test.ts enforces it.
  */
 export type PublicRoute = {
   path: string;
-  changeFrequency: "yearly" | "monthly" | "weekly" | "daily";
-  priority: number;
-  /** ISO date, or undefined to fall back to build time. */
-  lastModified?: string;
+  /**
+   * ISO date of the last real copy change on the page. Google only trusts
+   * lastmod when it moves with content, so bump this by hand when the page
+   * text changes; a build timestamp on every route teaches it to ignore the
+   * field. changefreq and priority are deliberately absent: Google ignores both.
+   */
+  lastModified: string;
 };
 
 export const PUBLIC_ROUTES: PublicRoute[] = [
-  { path: "/", changeFrequency: "weekly", priority: 1 },
-  { path: "/cloud-obs", changeFrequency: "monthly", priority: 0.8 },
-  { path: "/overlays", changeFrequency: "monthly", priority: 0.8 },
-  { path: "/clips", changeFrequency: "monthly", priority: 0.8 },
-  { path: "/vods", changeFrequency: "monthly", priority: 0.8 },
-  { path: "/analytics", changeFrequency: "monthly", priority: 0.8 },
-  { path: "/about", changeFrequency: "monthly", priority: 0.5 },
-  { path: "/contact", changeFrequency: "monthly", priority: 0.5 },
-  { path: "/roadmap", changeFrequency: "weekly", priority: 0.5 },
-  { path: "/privacy-policy", changeFrequency: "yearly", priority: 0.3, lastModified: "2026-05-26" },
-  { path: "/terms-of-service", changeFrequency: "yearly", priority: 0.3, lastModified: "2026-05-26" },
+  { path: "/", lastModified: "2026-09-07" },
+  { path: "/cloud-obs", lastModified: "2026-09-07" },
+  { path: "/overlays", lastModified: "2026-09-07" },
+  { path: "/clips", lastModified: "2026-09-07" },
+  { path: "/vods", lastModified: "2026-09-07" },
+  { path: "/analytics", lastModified: "2026-09-07" },
+  { path: "/pricing", lastModified: "2026-09-07" },
+  { path: "/about", lastModified: "2026-09-07" },
+  { path: "/contact", lastModified: "2026-09-07" },
+  { path: "/privacy-policy", lastModified: "2026-05-26" },
+  { path: "/terms-of-service", lastModified: "2026-05-26" },
 ];
 
 /**
@@ -38,7 +45,10 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
  * stay *out of the index* rather than merely uncrawled, and a crawler blocked
  * here could never read the noindex tag that does that. Each carries
  * `robots: { index: false }` instead. /login is absent because it is meant to
- * be found: it is the answer to a "streamwizard login" search.
+ * be found: it is the answer to a "streamwizard login" search. /roadmap is
+ * also absent here and from PUBLIC_ROUTES: it carries `noindex, follow`
+ * because it is too thin to rank (SW-308), and a crawler still has to be able
+ * to read that tag.
  */
 export const DISALLOWED_PATHS = ["/api/", "/auth/", "/dashboard", "/deck", "/obs-viewer"];
 
@@ -86,9 +96,18 @@ export function isIndexableEnvironment(): boolean {
   return new URL(configured).hostname === CANONICAL_HOST;
 }
 
-/** Absolute URL for a public path, built off the environment's own base URL. */
+/**
+ * Absolute URL for a public path, built off the environment's own base URL.
+ *
+ * The bare root comes back as the origin with no trailing slash. `URL` would
+ * serialise it as `https://streamwizard.org/`, while Next normalises the
+ * canonical tag to the slash-less form, so the sitemap, JSON-LD `url` fields
+ * and the canonical disagreed on which home URL is the real one.
+ */
 export function absoluteUrl(path: string): string {
-  return new URL(path, siteUrl()).toString();
+  const url = new URL(path, siteUrl());
+  if (url.pathname === "/" && !url.search && !url.hash) return url.origin;
+  return url.toString();
 }
 
 /**
@@ -104,16 +123,31 @@ export function organizationSchema(): Record<string, unknown> {
     url: absoluteUrl("/"),
     logo: absoluteUrl("/logo.png"),
     foundingDate: "2024",
+    /* The same operator the legal notice discloses, so the entity has a named
+     * person behind it (SW-305). */
+    founder: {
+      "@type": "Person",
+      name: LEGAL_OPERATOR,
+      alternateName: "Jochemwhite",
+      sameAs: [twitchChannelLink],
+    },
     address: { "@type": "PostalAddress", addressCountry: "NL" },
     sameAs: [discordInviteLink, githubLink, twitchChannelLink],
   };
 }
 
+/** lastModified for a public route, so schema dates and the sitemap agree. */
+export function routeLastModified(path: string): string | undefined {
+  return PUBLIC_ROUTES.find((route) => route.path === path)?.lastModified;
+}
+
 /**
- * The about page as an entity. It only points at the organization and website
- * nodes rendered elsewhere; the facts live on those nodes, not here.
+ * The about page as an entity. It points at the organization and website
+ * nodes rendered elsewhere; the facts live on those nodes, not here. The
+ * description is the page's own meta description, passed in so the two
+ * cannot drift.
  */
-export function aboutPageSchema(): Record<string, unknown> {
+export function aboutPageSchema({ description }: { description: string }): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "AboutPage",
@@ -121,8 +155,52 @@ export function aboutPageSchema(): Record<string, unknown> {
     name: "About StreamWizard",
     url: absoluteUrl("/about"),
     inLanguage: "en",
+    description,
+    dateModified: routeLastModified("/about"),
     about: { "@id": absoluteUrl("/#organization") },
     isPartOf: { "@id": absoluteUrl("/#website") },
+  };
+}
+
+/**
+ * The contact page as an entity. Support is a Discord ticket, not an email
+ * address or a phone number, so the contact point carries the invite URL.
+ * No `email` on purpose (SW-305): the page has none, and a schema field the
+ * page contradicts is worse than none. The operator lives on the
+ * organization node's `founder`.
+ */
+export function contactPageSchema(): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    "@id": absoluteUrl("/contact#contact"),
+    name: "Contact StreamWizard",
+    url: absoluteUrl("/contact"),
+    inLanguage: "en",
+    dateModified: routeLastModified("/contact"),
+    about: { "@id": absoluteUrl("/#organization") },
+    isPartOf: { "@id": absoluteUrl("/#website") },
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      url: discordInviteLink,
+      availableLanguage: "en",
+    },
+  };
+}
+
+/**
+ * Home → page, for the pillar pages that sit one level under home. Two items
+ * is the whole trail, and still a supported rich result.
+ */
+export function breadcrumbSchema(name: string, path: string): Record<string, unknown> {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
+      { "@type": "ListItem", position: 2, name, item: absoluteUrl(path) },
+    ],
   };
 }
 
@@ -148,24 +226,34 @@ export function webSiteSchema(): Record<string, unknown> {
 }
 
 /**
- * The home page FAQ, as a FAQPage rich result. Questions and answers come from
- * the section itself so the two can never drift apart.
+ * A page's FAQ, as a FAQPage rich result. Questions and answers come from the
+ * section itself so the two can never drift apart. An item's link becomes an
+ * anchor at the end of the answer: Google allows <a> inside Answer text, and
+ * the pointer to /pricing is part of the answer, not decoration around it.
  */
-export function faqPageSchema(
-  items: readonly { question: string; answer: string }[]
-): Record<string, unknown> {
+export function faqPageSchema(items: readonly FaqItem[]): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: items.map(({ question, answer }) => ({
+    mainEntity: items.map(({ question, answer, link }) => ({
       "@type": "Question",
       name: question,
-      acceptedAnswer: { "@type": "Answer", text: answer },
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: link ? `${answer} <a href="${absoluteUrl(link.href)}">${link.label}</a>` : answer,
+      },
     })),
   };
 }
 
-/** The product itself: what AI answers and rich results read to describe us. */
+/**
+ * The product itself: what AI answers and rich results read to describe us.
+ *
+ * Rendered on the home page, on the four free pillar pages (overlays,
+ * clips, vods, analytics) and on /pricing, always under the same @id so it is
+ * one node however many pages carry it. Not on /cloud-obs: that page sells the paid
+ * tier, and the free-tier offer below would sit oddly next to it.
+ */
 export function softwareApplicationSchema(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
@@ -198,12 +286,21 @@ export function softwareApplicationSchema(): Record<string, unknown> {
       "VOD timeline marking follows, subs, cheers, raids and ad breaks, with 5 to 60 second clip creation",
       "Per-stream analytics with follows, subs and clips plotted on the viewer graph",
     ],
-    // No `offers` on purpose. An Offer here prices the whole application, and
-    // Cloud OBS, the ingest server and the deck are paid — the FAQ on the same
-    // page says so, and structured data that contradicts the visible page is a
-    // spam-policy problem rather than a missing rich result. Add a real offers
-    // array once pricing is public; until then `license` carries the
-    // open-source half of the story.
     license: "https://opensource.org/licenses/MIT",
+    // Google wants offers, review or aggregateRating before it shows a software
+    // rich result. The one honest offer is the free tier, so the description
+    // spells out what the zero covers and names the paid part; a bare "0" would
+    // contradict the FAQ on the same page, which says Cloud OBS is paid. The
+    // text is shared with /pricing through lib/pricing.ts so the two cannot
+    // drift. No second Offer for Cloud OBS: Google requires a price on every
+    // Offer, and there is no public price yet.
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "EUR",
+      availability: "https://schema.org/InStock",
+      url: absoluteUrl("/pricing"),
+      description: FREE_TIER_OFFER_DESCRIPTION,
+    },
   };
 }

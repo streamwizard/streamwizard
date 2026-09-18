@@ -1,6 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: "github-actions"
+    open-pull-requests-limit: 0
     directory: "/"
     schedule:
       interval: "weekly"
@@ -13,6 +14,7 @@ updates:
           - "*"
 
   - package-ecosystem: "npm"
+    open-pull-requests-limit: 0
     directory: "/"
     schedule:
       interval: "weekly"
@@ -32,6 +34,7 @@ updates:
           - "patch"
 
   - package-ecosystem: "docker"
+    open-pull-requests-limit: 0
     directories:
       - "/apps/rest-api"
       - "/apps/streamwizard-bot"

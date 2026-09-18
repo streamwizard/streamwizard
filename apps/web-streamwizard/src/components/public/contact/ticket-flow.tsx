@@ -78,7 +78,7 @@ const ROWS = [
     id: "buttons",
     node: (
       <div className="flex flex-wrap gap-2" aria-hidden="true">
-        {["Claim", "Close Ticket 🔒", "Move to GitHub 🐙"].map((label) => (
+        {["Claim", "Close Ticket 🔒"].map((label) => (
           <span
             key={label}
             className="rounded-md bg-white/[0.06] px-2.5 py-1 text-xs text-muted-foreground"

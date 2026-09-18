@@ -54,6 +54,8 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     [
       "img-src 'self' data: https://static-cdn.jtvnw.net https://vod-secure.twitch.tv https://clips-media-assets2.twitch.tv",
       "https://cdn.7tv.app https://cdn.betterttv.net https://cdn.frankerfacez.com",
+      // Klipy: the GIF provider behind Discord's GIF picker.
+      "https://klipy.com https://*.klipy.com",
       process.env.NEXT_PUBLIC_CDN_URL,
       process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
@@ -74,6 +76,8 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       "media-src 'self'",
       LANDING_CDN_URL,
       TWITCH_CLIP_CDN,
+      // Discord GIFs (Klipy) play as looping mp4s.
+      "https://klipy.com https://*.klipy.com",
       process.env.NEXT_PUBLIC_CDN_URL,
       process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]

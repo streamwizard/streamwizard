@@ -21,6 +21,7 @@
 | `/ingest` | Ingest fleet monitoring **+ "Manage Nodes"** (SRT/SRTLA boxes, claim-token install) |
 | `/subscriptions` | Grant/revoke/edit product subscriptions per user (independent of Stripe) |
 | `/widget-library` | Moderation queue for community widget submissions (sandboxed iframe previews) |
+| `/discord/messages`, `/discord/messages/[id]` | Discord messages built visually (banners + embeds, themes, drag to reorder). A server has as many as it likes, each with a name and any text or announcement channel. Draft autosaves to `discord_built_messages`; **Publish** has the bot send or update the message, **Delete** has it remove the message from Discord too. The builder is `MessageBuilder` from `@repo/ui/message-builder`, the data model, limits, presets and starting templates are `@repo/discord-message` |
 | `/vnc?nodeId&instanceId&name` | noVNC popup onto an instance's OBS desktop (opened from node/instance pages) |
 
 ## How it talks to obs-instance-manager
@@ -57,6 +58,7 @@ Scene pickers populate only while the instance's OBS is running (obsws session);
 | `STREAMWIZARD_API_URL` | yes | embedded in node install commands (`/obs`, `/ingest`) |
 | `TOKEN_ENCRYPTION_KEY` | yes | encrypt/decrypt OBS WS passwords — **must be byte-identical to web-streamwizard's** |
 | `WS_SERVER_URL`, `CONSUMER_SECRET` | no | ~1s auto-switcher config pushes (fallback: 60s reconcile) |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ASSETS_BUCKET`, `NEXT_PUBLIC_CDN_URL` | no | banner image uploads in the Discord message builder (`discord-banners/` prefix). Without them banners use theme images only. The bot needs the same `NEXT_PUBLIC_CDN_URL`: it only attaches uploads that start with it |
 | `SENTRY_DSN`, `ALERT_*`, `DISCORD_BOT_TOKEN`, `TELEGRAM_*`, `MONITOR_SECRET` | no | observability + alert routing |
 
 ## Known gaps / roadmap

@@ -1,8 +1,8 @@
 import type { Collection } from "discord.js";
-import type { Command } from "./discord";
+import type { AnyCommand } from "./discord";
 
 declare module "discord.js" {
   interface Client {
-    commands: Collection<string, Command>;
+    commands: Collection<string, AnyCommand>;
   }
 }

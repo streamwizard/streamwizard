@@ -2,7 +2,7 @@ import { createHash } from "crypto";
 import type { MiddlewareHandler } from "hono";
 import { supabase } from "@repo/supabase";
 import { lookupNodeByApiKeyHash } from "@repo/supabase/queries/obs-nodes";
-import { TtlCache } from "../lib/ttl-cache";
+import { TtlCache } from "@repo/ttl-cache";
 
 declare module "hono" {
   interface ContextVariableMap {

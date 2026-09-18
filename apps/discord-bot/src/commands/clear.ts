@@ -1,4 +1,4 @@
-import { MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import type { Command } from "../types/discord";
 
 const MAX_BULK_DELETE = 100;
@@ -10,6 +10,7 @@ export default {
     .setName("clear")
     .setDescription("Delete messages from this channel")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
+    .setContexts(InteractionContextType.Guild)
     .addIntegerOption((opt) =>
       opt
         .setName("amount")
@@ -22,6 +23,19 @@ export default {
 
     if (!interaction.inCachedGuild() || !channel || !channel.isTextBased() || channel.isDMBased()) {
       await interaction.reply({ content: "This command can only be used in a server text channel.", flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    // The default member permission is only a default: admins can open the
+    // command to anyone under Server Settings > Integrations. Re-check here so
+    // bulk deletion never runs for someone without Manage Messages.
+    if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageMessages)) {
+      await interaction.reply({ content: "You need Manage Messages to use this command.", flags: MessageFlags.Ephemeral });
+      return;
+    }
+
+    if (!channel.permissionsFor(interaction.client.user)?.has(PermissionFlagsBits.ManageMessages)) {
+      await interaction.reply({ content: "I need Manage Messages in this channel to delete messages.", flags: MessageFlags.Ephemeral });
       return;
     }
 

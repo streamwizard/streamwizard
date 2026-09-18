@@ -77,6 +77,36 @@ export async function selectWidgetInstanceByItem(client: DBClient, overlayItemId
     .single();
 }
 
+/** Field values saved on an instance row, for items placed before values moved into the item config. */
+export async function selectWidgetInstanceFieldValues(client: DBClient, instanceId: string, userId: string) {
+  return client
+    .from("overlay_widget_instances")
+    .select("field_values")
+    .eq("id", instanceId)
+    .eq("user_id", userId)
+    .single();
+}
+
+/**
+ * Runtime state for the widget placed on one overlay item. No user filter:
+ * the overlay API has already proven the item belongs to the caller's scene
+ * through the subscriber token.
+ */
+export async function selectWidgetInstanceStateByItem(client: DBClient, overlayItemId: string) {
+  return client
+    .from("overlay_widget_instances")
+    .select("id, widget_state")
+    .eq("overlay_item_id", overlayItemId)
+    .maybeSingle();
+}
+
+export async function updateWidgetInstanceState(client: DBClient, instanceId: string, state: Json) {
+  return client
+    .from("overlay_widget_instances")
+    .update({ widget_state: state, updated_at: new Date().toISOString() })
+    .eq("id", instanceId);
+}
+
 /** Per-item widget state (field values, runtime state) for one placed widget. */
 export async function insertOverlayWidgetInstance(client: DBClient, payload: OverlayWidgetInstanceInsert) {
   return client.from("overlay_widget_instances").insert(payload).select().single();
@@ -110,6 +140,24 @@ export async function insertLibraryEntry(
   entry: { widget_id: string; user_id: string; title: string; description: string; tags: string[] },
 ) {
   return client.from("overlay_widget_library_entries").insert({ ...entry, is_approved: false });
+}
+
+// ── Library moderation (service role, web-admin) ─────────────────────────────
+
+export async function selectPendingLibraryEntries(client: DBClient) {
+  return client
+    .from("overlay_widget_library_entries")
+    .select("*, overlay_widgets(*)")
+    .eq("is_approved", false)
+    .order("created_at", { ascending: true });
+}
+
+export async function approveLibraryEntry(client: DBClient, entryId: string) {
+  return client.from("overlay_widget_library_entries").update({ is_approved: true }).eq("id", entryId);
+}
+
+export async function deleteLibraryEntry(client: DBClient, entryId: string) {
+  return client.from("overlay_widget_library_entries").delete().eq("id", entryId);
 }
 
 export async function incrementWidgetInstalls(client: DBClient, entryId: string) {

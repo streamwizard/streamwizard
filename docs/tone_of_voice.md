@@ -121,3 +121,9 @@ No, we're not saving your embarrassing moments. Probably.
 - **Over-explaining.** If the UI is clear, the copy doesn't need to re-explain it.
 - **Hedging.** "Sort of like a clip manager but also more than that" → just say what it is.
 - **Stacking emoji.** 🎮🔥✨💯 is not a vibe, it's noise.
+
+---
+
+## Everything that isn't copy
+
+This file owns wording. For the visual side (the name and its casing, the logo, color tokens, typography, screenshots, motion, social cards, channels, and third-party use of the mark), see [`branding.md`](./branding.md).
