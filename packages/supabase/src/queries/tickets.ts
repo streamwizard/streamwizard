@@ -283,6 +283,8 @@ export interface TicketListFilters {
   status?: "open" | "closed";
   /** Open tickets the sweeper has reminded and nobody answered since. */
   stale?: boolean;
+  /** Open tickets where the opener wrote last (or nobody has written yet): someone is waiting on staff. */
+  awaitingStaff?: boolean;
   category?: string;
   product?: string;
   priority?: "low" | "medium" | "high";
@@ -316,6 +318,7 @@ export async function listTickets(
 
   if (filters.status) query = query.eq("status", filters.status);
   if (filters.stale) query = query.eq("status", "open").not("stale_warned_at", "is", null);
+  if (filters.awaitingStaff) query = query.eq("status", "open").or("last_message_by_staff.is.null,last_message_by_staff.eq.false");
   if (filters.category) query = query.eq("category", filters.category);
   if (filters.product) query = query.eq("product", filters.product);
   if (filters.priority) query = query.eq("priority", filters.priority);
@@ -338,6 +341,29 @@ export async function listTickets(
     .range(start, start + pageSize - 1);
   if (error) throw error;
   return { tickets: data, total: count ?? 0 };
+}
+
+export interface OpenTicketCounts {
+  open: number;
+  /** Open, and the opener wrote last or nobody has written yet. */
+  awaitingStaff: number;
+  /** Open, reminded by the sweeper, and nobody answered since. */
+  stale: number;
+}
+
+/** The open-ticket counts the list page shows next to its views. One read: open tickets are few. */
+export async function getOpenTicketCounts(client: DBClient, guildId: string): Promise<OpenTicketCounts> {
+  const { data, error } = await client
+    .from("discord_tickets")
+    .select("last_message_by_staff, stale_warned_at")
+    .eq("guild_id", guildId)
+    .eq("status", "open");
+  if (error) throw error;
+  return {
+    open: data.length,
+    awaitingStaff: data.filter((row) => row.last_message_by_staff !== true).length,
+    stale: data.filter((row) => row.stale_warned_at !== null).length,
+  };
 }
 
 export async function getTicketByNumber(
