@@ -800,6 +800,8 @@ export type Database = {
           panel_message_id: string | null
           panel_message_ids: string[]
           staff_role_id: string | null
+          stale_after_hours: number | null
+          auto_close_after_hours: number | null
           ticket_counter: number
           updated_at: string
         }
@@ -821,6 +823,8 @@ export type Database = {
           panel_message_id?: string | null
           panel_message_ids?: string[]
           staff_role_id?: string | null
+          stale_after_hours?: number | null
+          auto_close_after_hours?: number | null
           ticket_counter?: number
           updated_at?: string
         }
@@ -842,6 +846,8 @@ export type Database = {
           panel_message_id?: string | null
           panel_message_ids?: string[]
           staff_role_id?: string | null
+          stale_after_hours?: number | null
+          auto_close_after_hours?: number | null
           ticket_counter?: number
           updated_at?: string
         }
@@ -1219,6 +1225,7 @@ export type Database = {
           opener_discord_user_id: string
           opener_user_id: string | null
           priority: string | null
+          stale_warned_at: string | null
           status: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
@@ -1252,6 +1259,7 @@ export type Database = {
           opener_discord_user_id: string
           opener_user_id?: string | null
           priority?: string | null
+          stale_warned_at?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
@@ -1285,6 +1293,7 @@ export type Database = {
           opener_discord_user_id?: string
           opener_user_id?: string | null
           priority?: string | null
+          stale_warned_at?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject?: string
           ticket_number?: number

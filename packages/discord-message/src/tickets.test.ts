@@ -5,6 +5,8 @@ import {
   DEFAULT_TICKET_MESSAGES,
   defaultTicketPanel,
   parseTicketMessages,
+  TICKET_MESSAGE_VARIABLES,
+  type TicketMessageKey,
   parseTicketOpening,
   parseTicketPanel,
   TICKET_CLOSE_VARIABLES,
@@ -58,8 +60,11 @@ describe("parseTicketMessages", () => {
     expect(parseTicketMessages({ closeDm: 42 }).closeDm).toBe(DEFAULT_TICKET_MESSAGES.closeDm);
   });
 
-  test("every default only uses close variables", () => {
-    const allowed = TICKET_CLOSE_VARIABLES.map((v) => v.key);
-    for (const text of Object.values(DEFAULT_TICKET_MESSAGES)) expect(findUnknownVariables(text, allowed)).toEqual([]);
+  test("every default only uses the placeholders its text may use", () => {
+    for (const [key, text] of Object.entries(DEFAULT_TICKET_MESSAGES)) {
+      const allowed = TICKET_MESSAGE_VARIABLES[key as TicketMessageKey].map((v) => v.key);
+      expect(findUnknownVariables(text, allowed)).toEqual([]);
+    }
+    expect(TICKET_MESSAGE_VARIABLES.closeDm).toBe(TICKET_CLOSE_VARIABLES);
   });
 });

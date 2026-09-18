@@ -2,6 +2,7 @@ import { Events } from "discord.js";
 import { reconcileVoiceSessions } from "../lib/activity-tracker";
 import { startLogWorker } from "../lib/log-channel/worker";
 import { reconcileOpenTickets } from "../lib/tickets/reconcile";
+import { startTicketSweeper } from "../lib/tickets/sweeper";
 import { reportError } from "@repo/sentry";
 import type { BotEvent } from "../types/discord";
 
@@ -23,7 +24,11 @@ export default {
     await startLogWorker(client);
 
     // Fill whatever the ticket archive missed while the bot was down, and
-    // close tickets whose channel is gone. Off the ready path: it walks channels.
-    void reconcileOpenTickets(client).catch((error) => reportError(error, "discord-bot ready: reconcile tickets"));
+    // close tickets whose channel is gone. Off the ready path: it walks
+    // channels. The stale sweeper starts once that has run, so it never
+    // reminds a ticket the reconcile is about to close.
+    void reconcileOpenTickets(client)
+      .catch((error) => reportError(error, "discord-bot ready: reconcile tickets"))
+      .finally(() => startTicketSweeper(client));
   },
 } satisfies BotEvent<typeof Events.ClientReady>;

@@ -43,6 +43,7 @@ const EVENT_LABELS: Record<string, string> = {
   transferred: "Handed to",
   priority_changed: "Priority changed",
   renamed: "Subject changed",
+  stale_warned: "Reminded: gone quiet",
 };
 
 /** "Bug → Feature" for timeline entries that carry an old and a new value. Close codes and the like stay out. */
@@ -220,9 +221,16 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
         <div className="order-1 space-y-6 lg:order-2">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between text-base">
+              <CardTitle className="flex items-center justify-between gap-2 text-base">
                 Details
-                <Badge variant={ticket.status === "open" ? "default" : "outline"}>{ticket.status === "open" ? "Open" : "Closed"}</Badge>
+                <span className="flex flex-wrap justify-end gap-1">
+                  {isOpen && ticket.stale_warned_at && (
+                    <Badge variant="secondary" title="The opener was reminded that the ticket went quiet. A reply clears this.">
+                      Quiet since {formatDateTime(ticket.stale_warned_at)}
+                    </Badge>
+                  )}
+                  <Badge variant={ticket.status === "open" ? "default" : "outline"}>{ticket.status === "open" ? "Open" : "Closed"}</Badge>
+                </span>
               </CardTitle>
             </CardHeader>
             <CardContent>

@@ -9,6 +9,7 @@ import { loadCommands } from "./handlers/commandHandler";
 import { loadEvents } from "./handlers/eventHandler";
 import { shutdownTracker } from "./lib/activity-tracker";
 import { stopLogWorker } from "./lib/log-channel/worker";
+import { stopTicketSweeper } from "./lib/tickets/sweeper";
 import { startInternalServer } from "./http/server";
 
 async function main() {
@@ -21,6 +22,7 @@ async function main() {
   const shutdown = async () => {
     stopInternalServer?.();
     await stopLogWorker();
+    await stopTicketSweeper();
     await shutdownTracker();
     await client.destroy();
     await flushSentry();

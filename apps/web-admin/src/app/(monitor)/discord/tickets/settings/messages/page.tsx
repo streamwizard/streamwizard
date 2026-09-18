@@ -11,5 +11,13 @@ export default async function DiscordTicketMessagesPage() {
   const settings = await getTicketSettings(supabaseAdmin, guildId);
   const initial = parseTicketMessages(settings?.messages);
 
-  return <TicketMessagesForm key={JSON.stringify(initial)} initial={initial} dmOnClose={settings?.dm_on_close ?? true} />;
+  return (
+    <TicketMessagesForm
+      key={JSON.stringify(initial)}
+      initial={initial}
+      dmOnClose={settings?.dm_on_close ?? true}
+      staleOn={!!settings?.stale_after_hours}
+      autoCloseOn={!!settings?.stale_after_hours && !!settings?.auto_close_after_hours}
+    />
+  );
 }

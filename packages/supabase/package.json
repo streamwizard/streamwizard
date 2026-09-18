@@ -115,6 +115,10 @@
       "types": "./src/queries/ticket-config.ts",
       "default": "./src/queries/ticket-config.ts"
     },
+    "./queries/ticket-sweep": {
+      "types": "./src/queries/ticket-sweep.ts",
+      "default": "./src/queries/ticket-sweep.ts"
+    },
     "./queries/discord-audit": {
       "types": "./src/queries/discord-audit.ts",
       "default": "./src/queries/discord-audit.ts"

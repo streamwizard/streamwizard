@@ -12,6 +12,7 @@ const TABS = [
   { href: `${BASE}/categories`, label: "Categories" },
   { href: `${BASE}/products`, label: "Products" },
   { href: `${BASE}/messages`, label: "Messages" },
+  { href: `${BASE}/automation`, label: "Automation" },
 ];
 
 /** Section links across the top of every ticket settings page. */

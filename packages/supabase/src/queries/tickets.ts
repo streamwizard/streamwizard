@@ -266,6 +266,8 @@ export async function insertTicketEvent(client: DBClient, event: TicketEventInpu
 
 export interface TicketListFilters {
   status?: "open" | "closed";
+  /** Open tickets the sweeper has reminded and nobody answered since. */
+  stale?: boolean;
   category?: string;
   product?: string;
   priority?: "low" | "medium" | "high";
@@ -298,6 +300,7 @@ export async function listTickets(
   let query = client.from("discord_tickets").select("*", { count: "exact" }).eq("guild_id", guildId);
 
   if (filters.status) query = query.eq("status", filters.status);
+  if (filters.stale) query = query.eq("status", "open").not("stale_warned_at", "is", null);
   if (filters.category) query = query.eq("category", filters.category);
   if (filters.product) query = query.eq("product", filters.product);
   if (filters.priority) query = query.eq("priority", filters.priority);

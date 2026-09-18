@@ -43,6 +43,7 @@ export { TICKET_IDS } from "./ids";
 export { handleCreate } from "./open";
 export { deleteTicketPanel, NO_PANEL, panelLocation, postTicketPanel } from "./panel";
 export { isStaff } from "./staff";
+export { startTicketSweeper, stopTicketSweeper, sweepGuildTickets } from "./sweeper";
 
 export type TicketInteraction = ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction;
 

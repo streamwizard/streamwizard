@@ -57,6 +57,7 @@ type Params = {
 function parseFilters(params: Params, slugs: { categories: Set<string>; products: Set<string> }): TicketListFilters {
   return {
     status: params.status === "open" || params.status === "closed" ? params.status : undefined,
+    stale: params.status === "stale" || undefined,
     category: params.category && slugs.categories.has(params.category) ? params.category : undefined,
     product: params.product && slugs.products.has(params.product) ? params.product : undefined,
     opener: params.opener?.trim() || undefined,
@@ -116,6 +117,7 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
           <NativeSelect name="status" defaultValue={params.status ?? ""} aria-label="Status" className="w-full sm:w-36">
             <NativeSelectOption value="">Any status</NativeSelectOption>
             <NativeSelectOption value="open">Open</NativeSelectOption>
+            <NativeSelectOption value="stale">Open, gone quiet</NativeSelectOption>
             <NativeSelectOption value="closed">Closed</NativeSelectOption>
           </NativeSelect>
           <NativeSelect name="product" defaultValue={params.product ?? ""} aria-label="Product" className="w-full sm:w-48">
@@ -204,6 +206,11 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
                     <Badge variant={ticket.status === "open" ? "default" : "outline"}>
                       {ticket.status === "open" ? "Open" : "Closed"}
                     </Badge>
+                    {ticket.status === "open" && ticket.stale_warned_at && (
+                      <Badge variant="secondary" className="ml-1" title={`Reminded ${formatDateTime(ticket.stale_warned_at)}`}>
+                        Quiet
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="truncate">{displayName(ticket.opener_name, ticket.opener_discord_user_id, profiles)}</TableCell>
                   <TableCell className="truncate text-muted-foreground">

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { findUnknownVariables, TICKET_CLOSE_VARIABLES, ticketMessagesSchema, type TicketMessages } from "@repo/discord-message";
+import { findUnknownVariables, TICKET_MESSAGE_VARIABLES, ticketMessagesSchema, type TicketMessageKey, type TicketMessages } from "@repo/discord-message";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { ensureTicketDefaults } from "@repo/supabase/queries/ticket-config";
 import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
@@ -141,14 +141,14 @@ export async function repostTicketPanel(): Promise<DiscordActionResult> {
   }
 }
 
-/** The short texts the bot sends around a ticket, today the closing DM. Placeholders are checked against the close variables. */
+/** The short texts the bot sends around a ticket. Each is checked against the placeholders it may use. */
 export async function saveTicketMessages(input: TicketMessages): Promise<DiscordActionResult> {
   try {
     const { userId, guildId } = await requireDiscordAdmin();
     const parsed = ticketMessagesSchema.safeParse(input);
     if (!parsed.success) throw new DashboardError(parsed.error.issues[0]?.message ?? "Invalid message");
-    const allowed = TICKET_CLOSE_VARIABLES.map((v) => v.key);
     for (const [key, text] of Object.entries(parsed.data)) {
+      const allowed = TICKET_MESSAGE_VARIABLES[key as TicketMessageKey].map((v) => v.key);
       const unknown = findUnknownVariables(text, allowed);
       if (unknown.length > 0) throw new DashboardError(`${key}: unknown placeholder ${unknown.map((u) => `[${u}]`).join(", ")}`);
     }
@@ -168,5 +168,45 @@ export async function saveTicketMessages(input: TicketMessages): Promise<Discord
     return { error: null, warning: staleWarning(refreshed) };
   } catch (error) {
     return toActionError(error, "save ticket messages", "Couldn't save the messages. Try again?");
+  }
+}
+
+const HOURS_MAX = 24 * 365;
+const hoursSchema = z.number().int().min(1).max(HOURS_MAX).nullable();
+
+const automationSchema = z
+  .object({
+    staleAfterHours: hoursSchema,
+    autoCloseAfterHours: hoursSchema,
+  })
+  // Auto-close counts from the reminder, so it can't exist without one.
+  .transform((v) => (v.staleAfterHours === null ? { ...v, autoCloseAfterHours: null } : v));
+
+export type TicketAutomationInput = z.input<typeof automationSchema>;
+
+/** The stale-ticket timers. The bot's sweeper reads them through its config cache. */
+export async function saveTicketAutomation(input: TicketAutomationInput): Promise<DiscordActionResult> {
+  try {
+    const { userId, guildId } = await requireDiscordAdmin();
+    const parsed = automationSchema.safeParse(input);
+    if (!parsed.success) throw new DashboardError(parsed.error.issues[0]?.message ?? "Invalid settings");
+
+    const current = await getTicketSettings(supabaseAdmin, guildId);
+    const before = {
+      stale_after_hours: current?.stale_after_hours ?? null,
+      auto_close_after_hours: current?.auto_close_after_hours ?? null,
+    };
+    const after = {
+      stale_after_hours: parsed.data.staleAfterHours,
+      auto_close_after_hours: parsed.data.autoCloseAfterHours,
+    };
+    await upsertTicketSettings(supabaseAdmin, guildId, after);
+    const refreshed = await callBot(guildId, "/cache/tickets");
+
+    await recordChange({ userId, guildId, section: "tickets", before, after });
+    revalidatePath("/discord", "layout");
+    return { error: null, warning: staleWarning(refreshed) };
+  } catch (error) {
+    return toActionError(error, "save ticket automation", "Couldn't save the automation settings. Try again?");
   }
 }

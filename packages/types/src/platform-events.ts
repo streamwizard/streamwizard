@@ -133,7 +133,8 @@ export function platformEventTypesInGroup(group: PlatformEventGroup): PlatformEv
 
 export type UserDeletedReason = "requested" | "twitch_revoked";
 export type StreamOnlineFailureReason = "stream_not_found" | "vod_not_found";
-export type TicketEventSource = "discord" | "dashboard";
+/** Where a ticket action came from: a Discord button or command, the web-admin dashboard, or the bot on its own (the stale sweeper). */
+export type TicketEventSource = "discord" | "dashboard" | "system";
 
 // ── Payloads ────────────────────────────────────────────────────────────────
 
