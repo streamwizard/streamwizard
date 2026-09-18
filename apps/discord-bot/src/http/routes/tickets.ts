@@ -5,7 +5,8 @@ import { supabase } from "@repo/supabase";
 import { TICKET_PRIORITIES } from "@repo/supabase/queries/ticket-lifecycle";
 import { getTicketByChannelId, getTicketSettings } from "@repo/supabase/queries/tickets";
 import { TWITCH_PURPLE } from "../../lib/branding";
-import { BuiltMessageError, BuiltMessageSendError } from "../../lib/built-message";
+import { replaceVariables } from "@repo/discord-message";
+import { BuiltMessageError, BuiltMessageSendError, guildVariableValues } from "../../lib/built-message";
 import {
   acceptCloseRequest,
   addMember,
@@ -204,10 +205,17 @@ ticketRoutes.post("/tickets/:channelId/message", async (c) => {
   const ticket = await getTicketByChannelId(supabase, channel.id);
   if (!ticket || ticket.status !== "open") return c.json({ error: "That channel isn't an open ticket" }, 404);
 
+  // A pasted tag may carry [server.*] and [member.*] placeholders; the member is the opener.
+  const opener = await guild.members.fetch(ticket.opener_discord_user_id).catch(() => null);
+  const content = replaceVariables(body.data.content, {
+    ...guildVariableValues(guild),
+    "member.mention": `<@${ticket.opener_discord_user_id}>`,
+    "member.name": opener?.displayName ?? ticket.opener_name ?? "there",
+  });
   const embed = new EmbedBuilder()
     .setColor(TWITCH_PURPLE)
     .setAuthor({ name: `${body.data.authorName} (via dashboard)`, iconURL: body.data.authorAvatarUrl ?? undefined })
-    .setDescription(body.data.content)
+    .setDescription(content.slice(0, 4096))
     .setTimestamp();
   const message = await channel.send({ embeds: [embed] });
   // Posted by the bot, but it is a staff reply: it counts for response times.

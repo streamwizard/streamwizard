@@ -33,7 +33,10 @@ const option = (o: { label: string; value: string; description?: string; emoji?:
   ...(o.emoji ? { emoji: o.emoji } : {}),
 });
 
-function fieldComponent(field: TicketFormField, products: TicketProduct[]): LabelBuilder {
+/** Values to start a form with, by field kind: a quoted message as the description. */
+export type TicketFormPrefill = Partial<Record<"description" | "subject", string>>;
+
+function fieldComponent(field: TicketFormField, products: TicketProduct[], prefill: TicketFormPrefill = {}): LabelBuilder {
   const label = new LabelBuilder().setLabel(field.label.slice(0, 45));
 
   if (field.kind === "product" || field.kind === "select") {
@@ -60,6 +63,8 @@ function fieldComponent(field: TicketFormField, products: TicketProduct[]): Labe
     .setMaxLength(Math.min(field.max_length ?? ceiling, ceiling));
   if (field.min_length) input.setMinLength(Math.min(field.min_length, ceiling));
   if (field.placeholder) input.setPlaceholder(field.placeholder);
+  const preset = field.kind === "description" || field.kind === "subject" ? prefill[field.kind] : undefined;
+  if (preset) input.setValue(preset.slice(0, Math.min(field.max_length ?? ceiling, ceiling)));
   return label.setTextInputComponent(input);
 }
 
@@ -68,13 +73,14 @@ export function buildTicketModal(
   category: TicketCategory,
   fields: TicketFormField[],
   products: TicketProduct[],
+  prefill: TicketFormPrefill = {},
 ): ModalBuilder | null {
   const askable = askableFields(fields, products);
   if (askable.length === 0) return null;
   return new ModalBuilder()
     .setCustomId(ticketId(TICKET_IDS.submit, category.slug))
     .setTitle(category.name.slice(0, 45))
-    .addLabelComponents(...askable.map((field) => fieldComponent(field, products)));
+    .addLabelComponents(...askable.map((field) => fieldComponent(field, products, prefill)));
 }
 
 /** How a submitted form is read. `null` means the form didn't carry that field at all. */

@@ -54,7 +54,9 @@ export {
 export { findCategory, getTicketConfig, invalidateTicketConfig, saveTicketSettings } from "./config";
 export { logTicketReply } from "./events";
 export { TICKET_IDS } from "./ids";
-export { handleCreate } from "./open";
+export { findDmTicketGuild, handleCreate } from "./open";
+export { peekPendingOpen, setPendingOpen, takePendingOpen } from "./pending";
+export { matchTags, searchTags } from "./tags";
 export { deleteTicketPanel, NO_PANEL, panelLocation, postTicketPanel } from "./panel";
 export { isStaff } from "./staff";
 export { ticketStatsValues } from "./stats";

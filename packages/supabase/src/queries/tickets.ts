@@ -87,6 +87,10 @@ interface CreateTicketInput {
   category: string;
   product: string | null;
   openerName: string;
+  /** The message a "Create ticket from message" started from. */
+  referencesMessageUrl?: string | null;
+  /** Staff who opened it on the opener's behalf. Null when the opener did. */
+  createdByDiscordUserId?: string | null;
 }
 
 export async function createTicket(client: DBClient, input: CreateTicketInput): Promise<DiscordTicket> {
@@ -103,6 +107,8 @@ export async function createTicket(client: DBClient, input: CreateTicketInput): 
       category: input.category,
       product: input.product,
       opener_name: input.openerName,
+      references_message_url: input.referencesMessageUrl ?? null,
+      created_by_discord_user_id: input.createdByDiscordUserId ?? null,
     })
     .select()
     .single();

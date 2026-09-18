@@ -20,6 +20,10 @@ export interface CommandView {
 const COMMAND_NOTES: Record<string, string> = {
   ticket:
     "Leave this one open to everyone. Members use it to open and list tickets, and its staff subcommands already check for ticket staff on their own.",
+  tag: "Right-click entries and this one already check for ticket staff on their own.",
+  "Create ticket from message": "A right-click entry on a message. Anyone can use it; the usual ticket limits apply.",
+  "Create ticket for user": "A right-click entry on a member. Checks for ticket staff on its own.",
+  "Pin in ticket": "A right-click entry on a message in a ticket. Checks for ticket staff on its own.",
 };
 
 export function CommandPermissionRow({ command, roles }: { command: CommandView; roles: PickerOption[] }) {

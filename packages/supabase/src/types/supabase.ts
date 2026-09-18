@@ -781,12 +781,49 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_ticket_tags: {
+        Row: {
+          auto_reply: boolean
+          content: string
+          created_at: string
+          guild_id: string
+          id: string
+          name: string
+          position: number
+          trigger_keywords: string[]
+          updated_at: string
+        }
+        Insert: {
+          auto_reply?: boolean
+          content: string
+          created_at?: string
+          guild_id: string
+          id?: string
+          name: string
+          position?: number
+          trigger_keywords?: string[]
+          updated_at?: string
+        }
+        Update: {
+          auto_reply?: boolean
+          content?: string
+          created_at?: string
+          guild_id?: string
+          id?: string
+          name?: string
+          position?: number
+          trigger_keywords?: string[]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       discord_ticket_settings: {
         Row: {
           category_id: string | null
           created_at: string
           defaults_seeded_at: string | null
           dm_on_close: boolean
+          dm_open_enabled: boolean
           enabled: boolean
           guild_id: string
           id: string
@@ -813,6 +850,7 @@ export type Database = {
           created_at?: string
           defaults_seeded_at?: string | null
           dm_on_close?: boolean
+          dm_open_enabled?: boolean
           enabled?: boolean
           guild_id: string
           id?: string
@@ -839,6 +877,7 @@ export type Database = {
           created_at?: string
           defaults_seeded_at?: string | null
           dm_on_close?: boolean
+          dm_open_enabled?: boolean
           enabled?: boolean
           guild_id?: string
           id?: string
@@ -1244,6 +1283,8 @@ export type Database = {
           feedback_rating: number | null
           feedback_comment: string | null
           feedback_at: string | null
+          references_message_url: string | null
+          created_by_discord_user_id: string | null
           status: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
@@ -1284,6 +1325,8 @@ export type Database = {
           feedback_rating?: number | null
           feedback_comment?: string | null
           feedback_at?: string | null
+          references_message_url?: string | null
+          created_by_discord_user_id?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
@@ -1324,6 +1367,8 @@ export type Database = {
           feedback_rating?: number | null
           feedback_comment?: string | null
           feedback_at?: string | null
+          references_message_url?: string | null
+          created_by_discord_user_id?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject?: string
           ticket_number?: number

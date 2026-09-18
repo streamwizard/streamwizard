@@ -21,6 +21,8 @@ const OPEN_TICKETS_TTL_MS = 60 * 1000;
 /** An open ticket as the archive sees it, plus how many images already have an R2 copy (null = not counted yet). */
 export interface TrackedTicket extends OpenTicketRef {
   imagesCopied: number | null;
+  /** Tags that already auto-replied in this ticket (null = not read from the timeline yet). */
+  repliedTagNames: Set<string> | null;
 }
 
 const admins = new TtlCache<string[]>({ ttlMs: ADMINS_TTL_MS });
@@ -35,7 +37,7 @@ async function getAdminUserIds(): Promise<string[]> {
 async function getOpenTickets(guildId: string): Promise<Map<string, TrackedTicket>> {
   const byChannel = await openTickets.fetch(guildId, async () => {
     const refs = await listOpenTicketRefs(supabase, guildId);
-    return new Map([...refs].map(([channelId, ref]) => [channelId, { ...ref, imagesCopied: null }]));
+    return new Map([...refs].map(([channelId, ref]) => [channelId, { ...ref, imagesCopied: null, repliedTagNames: null }]));
   });
   return byChannel ?? new Map();
 }
@@ -55,7 +57,10 @@ export function trackTicketChannel(guildId: string, channelId: string, ticket: O
   const cached = openTickets.get(guildId);
   if (!cached) return;
   if (ticket === null) cached.delete(channelId);
-  else cached.set(channelId, { ...ticket, imagesCopied: cached.get(channelId)?.imagesCopied ?? null });
+  else {
+    const previous = cached.get(channelId);
+    cached.set(channelId, { ...ticket, imagesCopied: previous?.imagesCopied ?? null, repliedTagNames: previous?.repliedTagNames ?? null });
+  }
 }
 
 /** After a move or transfer, the next lookup reloads the guild's tickets. */

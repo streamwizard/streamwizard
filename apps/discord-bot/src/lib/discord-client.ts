@@ -8,6 +8,8 @@ import { Client, Collection, GatewayIntentBits, Partials } from "discord.js";
 //   GuildMessages, GuildMessageReactions, GuildVoiceStates  activity tracker
 //   GuildModeration  ban events and the audit log (who did it)
 //   GuildInvites     invite log events
+//   DirectMessages   a member DMing the bot to open a ticket (only acted on
+//                    when a server has dm_open_enabled; DMs are never stored)
 // The activity tracker still only counts messages; message text is used for
 // the server log and transcripts only.
 //
@@ -23,6 +25,7 @@ export const client = new Client({
     GatewayIntentBits.MessageContent,
     GatewayIntentBits.GuildModeration,
     GatewayIntentBits.GuildInvites,
+    GatewayIntentBits.DirectMessages,
   ],
   partials: [Partials.Message, Partials.Reaction, Partials.Channel, Partials.GuildMember, Partials.User],
 });

@@ -11,8 +11,8 @@ import { callBot, staleWarning } from "@/lib/discord/bot-bridge";
 import { snowflakeSchema } from "@/schemas/discord";
 
 const commandRolesSchema = z.object({
-  // Discord's own rule for slash command names.
-  commandName: z.string().regex(/^[-_\p{L}\p{N}]{1,32}$/u, "Invalid command name"),
+  // Discord's own rule for command names. Context menu entries ("Create ticket from message") may hold spaces.
+  commandName: z.string().regex(/^[-_ \p{L}\p{N}]{1,32}$/u, "Invalid command name"),
   roleIds: z.array(snowflakeSchema).max(100),
 });
 

@@ -17,6 +17,7 @@ import {
   listTicketProducts,
 } from "@repo/supabase/queries/ticket-config";
 import { listTicketMembers } from "@repo/supabase/queries/ticket-lifecycle";
+import { listTicketTags } from "@repo/supabase/queries/ticket-tags";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { AutoRefresh } from "@/components/discord/auto-refresh";
 import { TicketActions } from "@/components/discord/ticket-actions";
@@ -50,13 +51,15 @@ const EVENT_LABELS: Record<string, string> = {
   close_request_rejected: "Kept open",
   close_request_expired: "Close request expired",
   feedback_submitted: "Rated by the opener",
+  tag_replied: "Tag auto-replied",
 };
 
 /** "Bug → Feature" for timeline entries that carry an old and a new value. Close codes and the like stay out. */
 function eventChange(detail: unknown): string | null {
   if (!detail || typeof detail !== "object") return null;
-  const { from, to, rating } = detail as { from?: unknown; to?: unknown; rating?: unknown };
+  const { from, to, rating, tag } = detail as { from?: unknown; to?: unknown; rating?: unknown; tag?: unknown };
   if (typeof rating === "number") return `${rating}/5`;
+  if (typeof tag === "string") return `/tag ${tag}`;
   if (typeof from !== "string" && typeof to !== "string") return null;
   return `${typeof from === "string" ? from : "none"} → ${typeof to === "string" ? to : "none"}`;
 }
@@ -109,7 +112,7 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
   if (!ticket) notFound();
 
   const adminUserId = await assertAdmin();
-  const [{ messages, events }, linkedAccount, adminDiscordId, categories, products, answers, members] = await Promise.all([
+  const [{ messages, events }, linkedAccount, adminDiscordId, categories, products, answers, members, tags] = await Promise.all([
     getTicketHistory(supabaseAdmin, ticket.id),
     getLinkedStreamWizardAccount(supabaseAdmin, ticket.opener_discord_user_id, ticket.opener_user_id),
     getDiscordUserIdForUser(supabaseAdmin, adminUserId),
@@ -117,6 +120,7 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
     listTicketProducts(supabaseAdmin, guildId),
     listTicketAnswers(supabaseAdmin, ticket.id),
     listTicketMembers(supabaseAdmin, ticket.id),
+    ticket.status === "open" ? listTicketTags(supabaseAdmin, guildId) : Promise.resolve([]),
   ]);
   const productLabel = products.find((p) => p.slug === ticket.product)?.label ?? ticket.product;
   const categoryName = categories.find((c) => c.slug === ticket.category)?.name ?? ticket.category;
@@ -138,6 +142,7 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
     ticket.claimed_by_discord_user_id,
     ticket.closed_by_discord_user_id,
     ticket.close_requested_by,
+    ticket.created_by_discord_user_id,
     ...events.filter((e) => !e.actor_name).map((e) => e.actor_discord_id),
     ...mentioned,
   ]);
@@ -208,7 +213,7 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
                 ) : (
                   <TicketTranscript messages={messages} names={names} />
                 )}
-                <TicketReply ticketNumber={ticket.ticket_number} />
+                <TicketReply ticketNumber={ticket.ticket_number} tags={tags.map((tag) => ({ name: tag.name, content: tag.content }))} />
               </div>
             ) : ticket.transcript_purged_at ? (
               <p className="text-sm text-muted-foreground">
@@ -246,6 +251,18 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
                 <Detail label="Opened by">
                   <DiscordPerson id={ticket.opener_discord_user_id} stored={ticket.opener_name} profiles={profiles} />
                 </Detail>
+                {ticket.created_by_discord_user_id && (
+                  <Detail label="Opened for them by">
+                    <DiscordPerson id={ticket.created_by_discord_user_id} stored={null} profiles={profiles} />
+                  </Detail>
+                )}
+                {ticket.references_message_url && (
+                  <Detail label="About">
+                    <a href={ticket.references_message_url} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+                      A message in Discord
+                    </a>
+                  </Detail>
+                )}
                 <Detail label="Claimed by">
                   {ticket.claimed_by_discord_user_id || ticket.claimed_by_name ? (
                     <DiscordPerson id={ticket.claimed_by_discord_user_id} stored={ticket.claimed_by_name} profiles={profiles} />

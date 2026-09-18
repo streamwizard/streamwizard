@@ -173,6 +173,13 @@ export function TicketsForm({ initial, textChannels, categories, roles, hasPanel
         >
           <Switch id="dm-on-close" checked={values.dmOnClose} onCheckedChange={(v) => set("dmOnClose", v)} disabled={saving} />
         </SettingRow>
+        <SettingRow
+          htmlFor="dm-open"
+          label="Open tickets by DM"
+          hint="A member who DMs the bot gets a Create ticket button for this server. The DM text itself is never read or stored."
+        >
+          <Switch id="dm-open" checked={values.dmOpenEnabled} onCheckedChange={(v) => set("dmOpenEnabled", v)} disabled={saving} />
+        </SettingRow>
         <SaveBar dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
       </CardContent>
     </Card>

@@ -73,7 +73,9 @@ function NormalContent() {
           ticket closes you get a copy of the conversation by Discord DM, unless
           the server has turned that off. That DM may ask you to rate the
           ticket; the rating and any comment you add are stored with the
-          ticket. Our team uses this history to follow up on your issue and to
+          ticket. If you send the bot a direct message, it only answers with a
+          button to open a ticket; the text of that message is not read or
+          stored. Our team uses this history to follow up on your issue and to
           see how support is doing.
         </p>
 
@@ -549,8 +551,10 @@ function GenZContent() {
           size. edits update, deletes stay but get a &quot;deleted&quot; tag.
           when it closes you get the chat as a file in your DMs, and maybe a
           &quot;rate this ticket&quot; ask. the stars + your comment get saved
-          with the ticket. it&apos;s so we can actually help if the same bug
-          comes back, and see how we&apos;re doing.
+          with the ticket. DM the bot and all it does is hand you a button to
+          open a ticket, we don&apos;t read or keep the DM. it&apos;s so we can
+          actually help if the same bug comes back, and see how we&apos;re
+          doing.
         </p>
 
         <h3 className="text-lg font-medium mb-2">our Discord mod log 🛡️</h3>

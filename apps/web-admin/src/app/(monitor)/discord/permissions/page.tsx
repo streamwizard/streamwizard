@@ -51,7 +51,7 @@ export default async function DiscordPermissionsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Command permissions"
-        description="Limit who can run each slash command. Empty means everyone. The server owner can always run everything."
+        description="Limit who can run each slash command or right-click entry. Empty means everyone. The server owner can always run everything."
       />
       {deployed === null && (
         <p className="text-sm text-amber-600 dark:text-amber-400">

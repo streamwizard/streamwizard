@@ -2,8 +2,14 @@ import { ActionRowBuilder, ChannelType, MessageFlags, StringSelectMenuBuilder } 
 import type {
   ButtonInteraction,
   ChatInputCommandInteraction,
+  Client,
+  Guild,
+  GuildMember,
+  MessageContextMenuCommandInteraction,
   ModalSubmitInteraction,
   StringSelectMenuInteraction,
+  User,
+  UserContextMenuCommandInteraction,
 } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
@@ -32,17 +38,68 @@ import { recordTicketEvent } from "./events";
 import { buildTicketModal, readTicketForm, storedDescription, type FormReader, type TicketFormResult } from "./form";
 import { FIELD_IDS, TICKET_IDS } from "./ids";
 import { buildTicketIntroMessage } from "./intro";
+import { peekPendingOpen, takePendingOpen } from "./pending";
 import { ticketStatsValues } from "./stats";
 
 const NOT_SET_UP = "Ticketing isn't set up in this server yet.";
+const NOT_FROM_DM = "Tickets can't be opened from a DM here. Head to the server and use the ticket panel.";
 const CATEGORY_GONE = "That ticket category isn't available anymore. Hit Create Ticket again to pick another.";
 const FORM_CHANGED = "The ticket form changed while you had it open. Hit Create Ticket again, it only takes a moment.";
 
-/** Where a ticket can start: a panel button, a category select, or `/ticket new`. All three can show the form. */
+/** Where a ticket can start. All of these can show the form. */
 type OpenInteraction =
-  | ButtonInteraction<"cached">
-  | StringSelectMenuInteraction<"cached">
-  | ChatInputCommandInteraction<"cached">;
+  | ButtonInteraction
+  | StringSelectMenuInteraction
+  | ChatInputCommandInteraction
+  | MessageContextMenuCommandInteraction
+  | UserContextMenuCommandInteraction;
+
+/**
+ * Who is opening a ticket, and for whom. Resolved once per interaction, so
+ * the rest of the flow never asks whether it came from a server or a DM.
+ */
+export interface OpenContext {
+  guild: Guild;
+  config: TicketConfig;
+  /** Who is clicking. */
+  member: GuildMember;
+  /** Whose ticket it becomes: the member, unless staff open one for someone else. */
+  opener: GuildMember;
+}
+
+/**
+ * The single server a DM can open tickets in: the one that turned DM tickets
+ * on and has this person as a member. Null when there is none.
+ */
+export async function findDmTicketGuild(client: Client<true>, user: User): Promise<{ guild: Guild; member: GuildMember; config: TicketConfig } | null> {
+  for (const guild of client.guilds.cache.values()) {
+    const config = await getTicketConfig(guild.id);
+    if (!config.settings?.dm_open_enabled) continue;
+    const member = await guild.members.fetch(user.id).catch(() => null);
+    if (member) return { guild, member, config };
+  }
+  return null;
+}
+
+async function resolveContext(interaction: OpenInteraction | ModalSubmitInteraction): Promise<OpenContext | null> {
+  let guild: Guild;
+  let member: GuildMember;
+  let config: TicketConfig;
+  if (interaction.inCachedGuild()) {
+    guild = interaction.guild;
+    member = interaction.member;
+    config = await getTicketConfig(guild.id);
+  } else {
+    const found = await findDmTicketGuild(interaction.client, interaction.user);
+    if (!found) return null;
+    ({ guild, member, config } = found);
+  }
+
+  // Staff opening a ticket for someone: the pending note says who.
+  const onBehalfOfId = peekPendingOpen(guild.id, member.id)?.onBehalfOfId;
+  const opener = onBehalfOfId ? await guild.members.fetch(onBehalfOfId).catch(() => null) : member;
+  return { guild, config, member, opener: opener ?? member };
+}
 
 function buildCategoryPicker(categories: TicketCategory[]) {
   const select = new StringSelectMenuBuilder()
@@ -68,16 +125,20 @@ function buildCategoryPicker(categories: TicketCategory[]) {
 }
 
 /** Shows the category's form, or opens the ticket straight away when the form asks nothing. */
-async function startTicket(interaction: OpenInteraction, config: TicketConfig, category: TicketCategory): Promise<void> {
-  const modal = buildTicketModal(category, categoryFields(config, category), activeProducts(config));
+async function startTicket(interaction: OpenInteraction, context: OpenContext, category: TicketCategory): Promise<void> {
+  const { config } = context;
+  const pending = peekPendingOpen(context.guild.id, context.member.id);
+  const modal = buildTicketModal(category, categoryFields(config, category), activeProducts(config), {
+    description: pending?.description,
+  });
   if (modal) {
     await interaction.showModal(modal);
     return;
   }
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  await openTicket(interaction, config, category, {
+  await openTicket(interaction, context, category, {
     subject: category.name,
-    description: "",
+    description: pending?.description ?? "",
     product: null,
     answers: [],
   });
@@ -86,11 +147,16 @@ async function startTicket(interaction: OpenInteraction, config: TicketConfig, c
 /**
  * The panel. With a category slug (a per-category button, a select menu
  * option) it goes to that category. Bare (the single Create Ticket button,
- * including panels posted before categories were configurable) it asks which
- * category first, unless there is only one.
+ * including panels posted before categories were configurable, and the DM
+ * button) it asks which category first, unless there is only one.
  */
 export async function handleCreate(interaction: OpenInteraction, slug: string | null): Promise<void> {
-  const config = await getTicketConfig(interaction.guildId);
+  const context = await resolveContext(interaction);
+  if (!context) {
+    await interaction.reply({ content: NOT_FROM_DM, flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const { config } = context;
   const categories = activeCategories(config);
   if (!ticketsReady(config.settings) || categories.length === 0) {
     await interaction.reply({ content: NOT_SET_UP, flags: MessageFlags.Ephemeral });
@@ -109,51 +175,46 @@ export async function handleCreate(interaction: OpenInteraction, slug: string | 
   }
 
   // Checked before the form, so nobody fills one in only to be turned away.
-  const refusal = await whyNot(interaction, config, category);
+  const refusal = await whyNot(context, category);
   if (refusal) {
     await interaction.reply({ content: refusal, flags: MessageFlags.Ephemeral });
     return;
   }
-  await startTicket(interaction, config, category);
+  await startTicket(interaction, context, category);
 }
 
-/** Why this member can't open a ticket in `category` right now. Null when they can. */
-async function whyNot(
-  interaction: OpenInteraction | ModalSubmitInteraction<"cached">,
-  config: TicketConfig,
-  category: TicketCategory,
-): Promise<string | null> {
+/** Why the opener can't have a ticket in `category` right now. Null when they can. */
+async function whyNot({ guild, config, opener }: OpenContext, category: TicketCategory): Promise<string | null> {
   if (!config.settings) return NOT_SET_UP;
   const parentId = category.discord_category_id ?? config.settings.category_id;
   const [stats, openInCategory] = await Promise.all([
-    getOpenerTicketStats(supabase, interaction.guildId, interaction.user.id),
-    countOpenTicketsInCategory(supabase, interaction.guildId, category.slug),
+    getOpenerTicketStats(supabase, guild.id, opener.id),
+    countOpenTicketsInCategory(supabase, guild.id, category.slug),
   ]);
   return whyCannotOpen({
     member: {
-      roleIds: [...interaction.member.roles.cache.keys()],
-      timedOut: interaction.member.isCommunicationDisabled(),
+      roleIds: [...opener.roles.cache.keys()],
+      timedOut: opener.isCommunicationDisabled(),
     },
     settings: config.settings,
     category,
     stats,
     openInCategory,
-    channelsInParent: interaction.guild.channels.cache.filter((channel) => channel.parentId === parentId).size,
+    channelsInParent: guild.channels.cache.filter((channel) => channel.parentId === parentId).size,
   });
 }
 
 export async function handleCreateButton(interaction: ButtonInteraction, slug: string | null): Promise<void> {
-  if (interaction.inCachedGuild()) await handleCreate(interaction, slug);
+  await handleCreate(interaction, slug);
 }
 
 /** A category chosen from a select: the bot's own "which category?" prompt, or a menu-style panel. */
 export async function handleCategoryPick(interaction: StringSelectMenuInteraction): Promise<void> {
-  if (!interaction.inCachedGuild()) return;
   await handleCreate(interaction, interaction.values[0] ?? null);
 
   // A menu on the panel keeps showing this member's pick. Sending the same
   // components again clears it, so the next ticket starts from the placeholder.
-  if (!interaction.message.flags.has(MessageFlags.Ephemeral)) {
+  if (interaction.inGuild() && !interaction.message.flags.has(MessageFlags.Ephemeral)) {
     const rows = interaction.message.components.map((row) => row.toJSON());
     await interaction.message.edit({ components: rows }).catch(() => {});
   }
@@ -187,9 +248,12 @@ function legacyReader(interaction: ModalSubmitInteraction, config: TicketConfig,
 }
 
 export async function handleModalSubmit(interaction: ModalSubmitInteraction, slug: string | null): Promise<void> {
-  if (!interaction.inCachedGuild()) return;
-
-  const config = await getTicketConfig(interaction.guildId);
+  const context = await resolveContext(interaction);
+  if (!context) {
+    await interaction.reply({ content: NOT_FROM_DM, flags: MessageFlags.Ephemeral });
+    return;
+  }
+  const { config } = context;
   if (!ticketsReady(config.settings)) {
     await interaction.reply({ content: NOT_SET_UP, flags: MessageFlags.Ephemeral });
     return;
@@ -221,16 +285,17 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction, slu
 
   // Defer ephemerally: channel creation + DB writes can take a moment.
   await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  await openTicket(interaction, config, category, form);
+  await openTicket(interaction, context, category, form);
 }
 
 /** Creates the channel, the ticket row and the opening message. The interaction is already deferred. */
 async function openTicket(
-  interaction: OpenInteraction | ModalSubmitInteraction<"cached">,
-  config: TicketConfig,
+  interaction: OpenInteraction | ModalSubmitInteraction,
+  context: OpenContext,
   category: TicketCategory,
   form: TicketFormResult,
 ): Promise<void> {
+  const { config, opener } = context;
   const { settings } = config;
   // Where the channel goes: the category's own Discord category, else the server-wide one.
   const parent = category.discord_category_id ?? settings?.category_id;
@@ -241,9 +306,9 @@ async function openTicket(
 
   // Again, now that it counts: the form can sit open for minutes, and a
   // double-click submits twice. The second submit waits here for the first.
-  const refusal = await serialised(interaction.user.id, async () => {
-    const reason = await whyNot(interaction, config, category);
-    if (!reason) reserved.add(interaction.user.id);
+  const refusal = await serialised(opener.id, async () => {
+    const reason = await whyNot(context, category);
+    if (!reason) reserved.add(opener.id);
     return reason;
   });
   if (refusal) {
@@ -252,13 +317,13 @@ async function openTicket(
   }
 
   try {
-    await createTicketChannel(interaction, config, category, form, parent);
+    await createTicketChannel(interaction, context, category, form, parent);
   } finally {
-    reserved.delete(interaction.user.id);
+    reserved.delete(opener.id);
   }
 }
 
-// One open attempt per member at a time. `reserved` covers the gap between
+// One open attempt per opener at a time. `reserved` covers the gap between
 // passing the checks and the ticket row existing, which is what the next
 // attempt's count would otherwise miss.
 const queues = new Map<string, Promise<unknown>>();
@@ -277,24 +342,29 @@ async function serialised<T>(userId: string, task: () => Promise<T>): Promise<T 
 }
 
 async function createTicketChannel(
-  interaction: OpenInteraction | ModalSubmitInteraction<"cached">,
-  config: TicketConfig,
+  interaction: OpenInteraction | ModalSubmitInteraction,
+  context: OpenContext,
   category: TicketCategory,
   form: TicketFormResult,
   parent: string,
 ): Promise<void> {
-  const { data: integration } = await getDiscordIntegrationByDiscordUserId(supabase, interaction.user.id);
+  const { guild, config, member, opener } = context;
+  const forSomeoneElse = opener.id !== member.id;
+  // Consumed now: the ticket is being made, whatever happens next.
+  const pending = takePendingOpen(guild.id, member.id);
+
+  const { data: integration } = await getDiscordIntegrationByDiscordUserId(supabase, opener.id);
   const openerUserId = integration?.user_id ?? null;
   const openerProfile = openerUserId ? await getTicketOpenerProfile(supabase, openerUserId) : null;
-  const ticketNumber = await nextTicketNumber(supabase, interaction.guildId);
+  const ticketNumber = await nextTicketNumber(supabase, guild.id);
 
-  const channel = await interaction.guild.channels.create({
+  const channel = await guild.channels.create({
     name: renderChannelName(
       category.channel_name_template,
       {
         "ticket.number": String(ticketNumber).padStart(4, "0"),
         "ticket.category": category.name,
-        "member.name": interaction.member.displayName,
+        "member.name": opener.displayName,
       },
       ticketChannelName(ticketNumber),
     ),
@@ -302,11 +372,11 @@ async function createTicketChannel(
     parent,
     rateLimitPerUser: category.slowmode_seconds || undefined,
     permissionOverwrites: computeTicketOverwrites({
-      everyoneRoleId: interaction.guild.roles.everyone.id,
-      botId: interaction.client.user.id,
+      everyoneRoleId: guild.roles.everyone.id,
+      botId: guild.client.user.id,
       settings: config.settings,
       category,
-      ticket: { opener_discord_user_id: interaction.user.id, claimed_by_discord_user_id: null },
+      ticket: { opener_discord_user_id: opener.id, claimed_by_discord_user_id: null },
       memberIds: [],
     }),
   });
@@ -319,40 +389,45 @@ async function createTicketChannel(
   let ticketCreated = false;
   try {
     const ticket = await createTicket(supabase, {
-      guildId: interaction.guildId,
+      guildId: guild.id,
       ticketNumber,
       channelId: channel.id,
-      openerDiscordUserId: interaction.user.id,
+      openerDiscordUserId: opener.id,
       openerUserId,
       subject: form.subject,
       description: storedDescription(form),
       category: category.slug,
       product: form.product,
-      openerName: interaction.member.displayName,
+      openerName: opener.displayName,
+      referencesMessageUrl: pending?.referencesMessageUrl ?? null,
+      createdByDiscordUserId: forSomeoneElse ? member.id : null,
     });
     ticketCreated = true;
     // Answers are history for the dashboard; the ticket works without them.
     await insertTicketAnswers(supabase, ticket.id, form.answers).catch((error) =>
       reportError(error, "discord-bot tickets: save answers", { ticketId: ticket.id }),
     );
-    await recordTicketEvent(interaction.guild, ticket, "opened", interaction.member, "discord");
-    trackTicketChannel(interaction.guildId, channel.id, {
+    // Opened by staff for someone: the timeline names the staff member as actor.
+    await recordTicketEvent(guild, ticket, "opened", forSomeoneElse ? member : opener, "discord");
+    trackTicketChannel(guild.id, channel.id, {
       ticketId: ticket.id,
       number: ticket.ticket_number,
       channelId: channel.id,
       openerId: ticket.opener_discord_user_id,
       categorySlug: ticket.category,
     });
-    void notifyTicketActivity(interaction.guildId, channel.id, "opened", ticket.ticket_number);
+    void notifyTicketActivity(guild.id, channel.id, "opened", ticket.ticket_number);
 
-    await channel.send(
-      buildTicketIntroMessage(ticket, config, openerProfile, {
-        answers: form.answers,
-        description: form.description,
-        member: interaction.member,
-        values: await ticketStatsValues(interaction.guildId),
-      }),
-    );
+    const intro = buildTicketIntroMessage(ticket, config, openerProfile, {
+      answers: form.answers,
+      description: form.description,
+      member: opener,
+      values: await ticketStatsValues(guild.id),
+    });
+    const lines = [intro.content];
+    if (pending?.referencesMessageUrl) lines.push(`About this message: ${pending.referencesMessageUrl}`);
+    if (forSomeoneElse) lines.push(`Opened by ${member} on their behalf.`);
+    await channel.send({ ...intro, content: lines.join("\n").slice(0, 2000) });
   } catch (error) {
     if (ticketCreated) {
       // Closed straight in the DB, not through finalizeTicketClose: a ticket
@@ -360,14 +435,16 @@ async function createTicketChannel(
       await closeTicket(supabase, channel.id, {
         code: "force",
         reason: "Ticket creation failed",
-        closedByDiscordUserId: interaction.client.user.id,
-        closedByName: interaction.client.user.username,
+        closedByDiscordUserId: guild.client.user.id,
+        closedByName: guild.client.user.username,
       }).catch(() => {});
-      trackTicketChannel(interaction.guildId, channel.id, null);
+      trackTicketChannel(guild.id, channel.id, null);
     }
     await channel.delete("Ticket creation failed").catch(() => {});
     throw error;
   }
 
-  await interaction.editReply({ content: `✅ Your ticket is open: <#${channel.id}>` });
+  await interaction.editReply({
+    content: forSomeoneElse ? `✅ Opened <#${channel.id}> for ${opener.displayName}.` : `✅ Your ticket is open: <#${channel.id}>`,
+  });
 }

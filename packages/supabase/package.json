@@ -123,6 +123,10 @@
       "types": "./src/queries/ticket-stats.ts",
       "default": "./src/queries/ticket-stats.ts"
     },
+    "./queries/ticket-tags": {
+      "types": "./src/queries/ticket-tags.ts",
+      "default": "./src/queries/ticket-tags.ts"
+    },
     "./queries/ticket-sweep": {
       "types": "./src/queries/ticket-sweep.ts",
       "default": "./src/queries/ticket-sweep.ts"

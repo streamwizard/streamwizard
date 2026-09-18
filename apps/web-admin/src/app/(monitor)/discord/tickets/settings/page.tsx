@@ -27,6 +27,7 @@ export default async function DiscordTicketSettingsPage() {
     claimHidesFromOtherStaff: settings?.claim_hides_from_other_staff ?? false,
     closeOnMemberLeave: settings?.close_on_member_leave ?? false,
     dmOnClose: settings?.dm_on_close ?? true,
+    dmOpenEnabled: settings?.dm_open_enabled ?? false,
   };
 
   return (

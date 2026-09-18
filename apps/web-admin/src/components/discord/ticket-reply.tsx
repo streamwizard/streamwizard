@@ -3,13 +3,18 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button, Textarea } from "@repo/ui";
+import { Button, NativeSelect, NativeSelectOption, Textarea } from "@repo/ui";
 import { sendTicketReply } from "@/actions/discord-ticket-actions";
 
 const MAX = 2000;
 
-/** Reply box under an open ticket's conversation. Ctrl/Cmd+Enter sends. */
-export function TicketReply({ ticketNumber }: { ticketNumber: number }) {
+export interface ReplyTag {
+  name: string;
+  content: string;
+}
+
+/** Reply box under an open ticket's conversation. Ctrl/Cmd+Enter sends; a tag pastes its answer in. */
+export function TicketReply({ ticketNumber, tags = [] }: { ticketNumber: number; tags?: ReplyTag[] }) {
   const router = useRouter();
   const [content, setContent] = useState("");
   const [sending, startSend] = useTransition();
@@ -44,8 +49,30 @@ export function TicketReply({ ticketNumber }: { ticketNumber: number }) {
         rows={3}
         disabled={sending}
       />
-      <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-        <span>The bot posts this with your name and avatar. Ctrl+Enter sends.</span>
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+        <span className="flex flex-wrap items-center gap-2">
+          <span>The bot posts this with your name and avatar. Ctrl+Enter sends.</span>
+          {tags.length > 0 && (
+            <NativeSelect
+              aria-label="Insert a tag"
+              value=""
+              disabled={sending}
+              className="h-7 text-xs"
+              onChange={(event) => {
+                const tag = tags.find((candidate) => candidate.name === event.target.value);
+                if (!tag) return;
+                setContent((current) => `${current.trimEnd()}${current.trim() ? "\n" : ""}${tag.content}`.slice(0, MAX));
+              }}
+            >
+              <NativeSelectOption value="">Insert a tag…</NativeSelectOption>
+              {tags.map((tag) => (
+                <NativeSelectOption key={tag.name} value={tag.name}>
+                  {tag.name}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          )}
+        </span>
         <span className="flex items-center gap-3">
           <span className="tabular-nums">
             {content.length}/{MAX}

@@ -10,6 +10,7 @@ import {
   type TicketFormField,
   type TicketProduct,
 } from "@repo/supabase/queries/ticket-config";
+import { listTicketTags, type TicketTag } from "@repo/supabase/queries/ticket-tags";
 import { getTicketSettings, upsertTicketSettings, type DiscordTicketSettings } from "@repo/supabase/queries/tickets";
 import { TtlCache } from "@repo/ttl-cache";
 
@@ -27,21 +28,24 @@ export interface TicketConfig {
   products: TicketProduct[];
   /** Each category's form, by category id, in form order. */
   fields: Map<string, TicketFormField[]>;
+  /** Canned answers, in display order. Read on every message in a ticket, so they live in the cache too. */
+  tags: TicketTag[];
 }
 
 const cache = new TtlCache<TicketConfig>({ ttlMs: CONFIG_TTL_MS });
 
 export async function getTicketConfig(guildId: string): Promise<TicketConfig> {
   const config = await cache.fetch(guildId, async () => {
-    const [settings, categories, products, fields] = await Promise.all([
+    const [settings, categories, products, fields, tags] = await Promise.all([
       getTicketSettings(supabase, guildId),
       listTicketCategories(supabase, guildId),
       listTicketProducts(supabase, guildId),
       listTicketFormFields(supabase, guildId),
+      listTicketTags(supabase, guildId),
     ]);
-    return { settings, categories, products, fields };
+    return { settings, categories, products, fields, tags };
   });
-  return config ?? { settings: null, categories: [], products: [], fields: new Map() };
+  return config ?? { settings: null, categories: [], products: [], fields: new Map(), tags: [] };
 }
 
 export const categoryFields = (config: TicketConfig, category: TicketCategory): TicketFormField[] =>

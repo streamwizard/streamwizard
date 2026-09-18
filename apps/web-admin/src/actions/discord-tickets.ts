@@ -31,6 +31,7 @@ const ticketSchema = z
     claimHidesFromOtherStaff: z.boolean(),
     closeOnMemberLeave: z.boolean(),
     dmOnClose: z.boolean(),
+    dmOpenEnabled: z.boolean(),
   })
   .refine((v) => !v.enabled || (v.staffRoleId && v.categoryId && v.panelChannelId), {
     message: "Tickets need a staff role, a category and a panel channel before you can turn them on.",
@@ -58,6 +59,7 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       claim_hides_from_other_staff: current?.claim_hides_from_other_staff ?? false,
       close_on_member_leave: current?.close_on_member_leave ?? false,
       dm_on_close: current?.dm_on_close ?? true,
+      dm_open_enabled: current?.dm_open_enabled ?? false,
     };
     const after = {
       enabled: next.enabled,
@@ -69,6 +71,7 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       claim_hides_from_other_staff: next.claimHidesFromOtherStaff,
       close_on_member_leave: next.closeOnMemberLeave,
       dm_on_close: next.dmOnClose,
+      dm_open_enabled: next.dmOpenEnabled,
     };
     for (const roleId of after.blocked_role_ids) {
       if (!before.blocked_role_ids.includes(roleId)) await assertRole(roleId);
@@ -113,6 +116,7 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       claim_hides_from_other_staff: saved.claim_hides_from_other_staff,
       close_on_member_leave: saved.close_on_member_leave,
       dm_on_close: saved.dm_on_close,
+      dm_open_enabled: saved.dm_open_enabled,
     });
     // A guild's first save: give it the starting categories and products.
     await ensureTicketDefaults(supabaseAdmin, guildId);
