@@ -48,7 +48,9 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ nod
           </Link>
         </Button>
         <h1 className="text-2xl font-bold">{node.name}</h1>
-        <p className="text-sm text-muted-foreground mt-1 font-mono">{node.api_url ?? "no API URL set"}</p>
+        <p className="text-sm text-muted-foreground mt-1 font-mono">
+          {node.api_url ?? "no API URL set"} · tailscale {node.tailscale_ip ?? "—"}
+        </p>
       </div>
       <NodeDetailClient node={node} />
 

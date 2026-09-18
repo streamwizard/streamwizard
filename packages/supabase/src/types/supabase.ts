@@ -2227,6 +2227,7 @@ export type Database = {
           ram_total_mb: number | null
           status: string
           storage_total_mb: number | null
+          tailscale_ip: string | null
           total_vram_mb: number | null
           updated_at: string
         }
@@ -2247,6 +2248,7 @@ export type Database = {
           ram_total_mb?: number | null
           status?: string
           storage_total_mb?: number | null
+          tailscale_ip?: string | null
           total_vram_mb?: number | null
           updated_at?: string
         }
@@ -2267,6 +2269,7 @@ export type Database = {
           ram_total_mb?: number | null
           status?: string
           storage_total_mb?: number | null
+          tailscale_ip?: string | null
           total_vram_mb?: number | null
           updated_at?: string
         }
