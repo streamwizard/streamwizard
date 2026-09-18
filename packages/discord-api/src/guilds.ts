@@ -86,15 +86,21 @@ function nullOnNotFound(error: unknown): null {
   throw error;
 }
 
+// A 429 with a short wait is retried in place; anything longer surfaces as
+// DiscordRateLimitError so the caller can decide.
+const RETRY_429_MAX_SECONDS = 3;
+const RETRY_429_ATTEMPTS = 2;
+
 /**
  * Read-only guild lookups over REST with the bot token. Used by web-admin to
- * fill channel/role pickers, so it never touches the gateway. A 429 throws
- * DiscordRateLimitError; any other non-2xx throws a plain Error.
+ * fill channel/role pickers, so it never touches the gateway. A 429 is
+ * retried after Discord's retry_after when that's short; otherwise it throws
+ * DiscordRateLimitError. Any other non-2xx throws a plain Error.
  */
 export class DiscordGuildsClient {
   constructor(private readonly config: DiscordApiConfig) {}
 
-  private async get<T>(path: string): Promise<T> {
+  private async get<T>(path: string, attempt = 0): Promise<T> {
     const res = await fetch(`${DISCORD_API_BASE}${path}`, {
       headers: { Authorization: `Bot ${this.config.botToken}` },
       signal: AbortSignal.timeout(10_000),
@@ -102,7 +108,12 @@ export class DiscordGuildsClient {
     if (res.status === 404) throw new DiscordNotFoundError(path);
     if (res.status === 429) {
       const body = (await res.json().catch(() => ({}))) as { retry_after?: number };
-      throw new DiscordRateLimitError(body.retry_after ?? 1);
+      const retryAfter = body.retry_after ?? 1;
+      if (attempt < RETRY_429_ATTEMPTS && retryAfter <= RETRY_429_MAX_SECONDS) {
+        await new Promise((resolve) => setTimeout(resolve, retryAfter * 1000 + 50));
+        return this.get<T>(path, attempt + 1);
+      }
+      throw new DiscordRateLimitError(retryAfter);
     }
     if (!res.ok) {
       throw new Error(`Discord GET ${path} failed: ${res.status} ${await res.text()}`);

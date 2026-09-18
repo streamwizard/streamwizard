@@ -1,9 +1,6 @@
 import { cache } from "react";
-import {
-  DiscordApi,
-  type DiscordChannel,
-  type DiscordRole,
-} from "@repo/discord-api";
+import { DiscordApi, type DiscordChannel, type DiscordGuild, type DiscordRole } from "@repo/discord-api";
+import { TtlCache } from "@repo/ttl-cache";
 import { env } from "@/lib/env";
 import { DashboardError } from "./errors";
 import { channelKind, type ChannelKind } from "./channel-kind";
@@ -32,14 +29,45 @@ export function requireDiscordContext(): DiscordContext {
   return ctx;
 }
 
-// cache() dedupes within one request: a page and the action validating its
-// submit each hit Discord once, not once per picker.
-export const getGuildChannels = cache(async (): Promise<DiscordChannel[]> => {
-  return requireDiscordContext().api.guilds.listChannels();
-});
+// Two cache layers. The TtlCaches live for the process: channels and roles
+// change rarely, and the ticket page used to fetch both on every poll and
+// websocket ping until Discord rate limited it. React's cache() on top dedupes
+// within one request, so a page and the action validating its submit share
+// one lookup. A failed load rejects and is not stored, so the next request
+// retries. Pickers can be up to GUILD_TTL_MS stale; assertChannel/assertRole
+// refetch once on a miss so a channel made a moment ago still validates.
+const GUILD_TTL_MS = 2 * 60_000;
+const PROFILE_TTL_MS = 10 * 60_000;
+const channelsCache = new TtlCache<DiscordChannel[]>({ ttlMs: GUILD_TTL_MS });
+const rolesCache = new TtlCache<DiscordRole[]>({ ttlMs: GUILD_TTL_MS });
+const guildCache = new TtlCache<DiscordGuild>({ ttlMs: PROFILE_TTL_MS });
+const botProfileCache = new TtlCache<{ name: string; avatarUrl: string | null }>({ ttlMs: PROFILE_TTL_MS });
+
+async function loadChannels(): Promise<DiscordChannel[]> {
+  const { api, guildId } = requireDiscordContext();
+  return (await channelsCache.fetch(guildId, () => api.guilds.listChannels())) ?? [];
+}
+
+async function loadAllRoles(): Promise<DiscordRole[]> {
+  const { api, guildId } = requireDiscordContext();
+  return (await rolesCache.fetch(guildId, () => api.guilds.listRoles())) ?? [];
+}
+
+export const getGuildChannels = cache(loadChannels);
 
 /** Every role, including @everyone and managed ones. */
-const getAllGuildRoles = cache(async (): Promise<DiscordRole[]> => requireDiscordContext().api.guilds.listRoles());
+const getAllGuildRoles = cache(loadAllRoles);
+
+/** Skips the cache: for validating an id that isn't in the cached list. */
+async function refreshGuildChannels(): Promise<DiscordChannel[]> {
+  channelsCache.delete(requireDiscordContext().guildId);
+  return loadChannels();
+}
+
+async function refreshGuildRoles(): Promise<DiscordRole[]> {
+  rolesCache.delete(requireDiscordContext().guildId);
+  return loadAllRoles();
+}
 
 export const getGuildRoles = cache(async (): Promise<DiscordRole[]> => {
   const { guildId } = requireDiscordContext();
@@ -48,25 +76,35 @@ export const getGuildRoles = cache(async (): Promise<DiscordRole[]> => {
   return (await getAllGuildRoles()).filter((role) => role.id !== guildId && !role.managed);
 });
 
-export const getGuild = cache(async () => requireDiscordContext().api.guilds.getGuild());
+export const getGuild = cache(async (): Promise<DiscordGuild> => {
+  const { api, guildId } = requireDiscordContext();
+  const guild = await guildCache.fetch(guildId, () => api.guilds.getGuild());
+  if (!guild) throw new DashboardError("The bot isn't in the server");
+  return guild;
+});
 
 /** Name and avatar for the message builder's preview. Falls back to a plain name: a preview isn't worth failing a page over. */
 export const getBotProfile = cache(async (): Promise<{ name: string; avatarUrl: string | null }> => {
   const fallback = { name: "StreamWizard", avatarUrl: null };
-  if (!env.DISCORD_CLIENT_ID) return fallback;
-  const user = await requireDiscordContext()
-    .api.guilds.getUser(env.DISCORD_CLIENT_ID)
+  const clientId = env.DISCORD_CLIENT_ID;
+  if (!clientId) return fallback;
+  const profile = await botProfileCache
+    .fetch(clientId, async () => {
+      const user = await requireDiscordContext().api.guilds.getUser(clientId);
+      if (!user) return null;
+      return {
+        name: user.global_name ?? user.username,
+        avatarUrl: user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=80` : null,
+      };
+    })
     .catch(() => null);
-  if (!user) return fallback;
-  return {
-    name: user.global_name ?? user.username,
-    avatarUrl: user.avatar ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=80` : null,
-  };
+  return profile ?? fallback;
 });
 
 /** Throws unless `id` is a channel in the guild of one of the allowed kinds. */
 export async function assertChannel(id: string, kinds: ChannelKind[]): Promise<void> {
-  const channel = (await getGuildChannels()).find((c) => c.id === id);
+  const channel =
+    (await getGuildChannels()).find((c) => c.id === id) ?? (await refreshGuildChannels()).find((c) => c.id === id);
   const kind = channel ? channelKind(channel.type) : null;
   if (!kind || !kinds.includes(kind)) {
     throw new DashboardError(`That channel isn't a ${kinds.join(" or ")} channel in the server anymore`);
@@ -75,7 +113,10 @@ export async function assertChannel(id: string, kinds: ChannelKind[]): Promise<v
 
 /** Throws unless `id` is an assignable role in the guild. */
 export async function assertRole(id: string): Promise<void> {
-  if (!(await getGuildRoles()).some((role) => role.id === id)) {
+  const known =
+    (await getGuildRoles()).some((role) => role.id === id) ||
+    (await refreshGuildRoles()).some((role) => role.id === id);
+  if (!known) {
     throw new DashboardError("That role doesn't exist in the server anymore");
   }
 }
