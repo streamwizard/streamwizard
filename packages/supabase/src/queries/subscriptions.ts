@@ -120,6 +120,17 @@ export async function getProductAccess(
   };
 }
 
+/** Boolean form of the access check, for gates that only need yes/no. */
+export async function checkProductAccess(client: DBClient, productId: string): Promise<boolean> {
+  const { data } = await client.rpc("check_product_access", { p_product_id: productId });
+  return data ?? false;
+}
+
+export async function getProductName(client: DBClient, productId: string): Promise<string | null> {
+  const { data } = await client.from("products").select("name").eq("id", productId).maybeSingle();
+  return data?.name ?? null;
+}
+
 // ── Admin grants ─────────────────────────────────────────────────────────────
 // Service-role only: web-admin grants and revokes access independently of
 // Stripe, so these bypass RLS by design.
@@ -201,4 +212,21 @@ export async function getSubscriptionsOverview(client: DBClient) {
     subscriptions: subscriptions.data ?? [],
     products: products.data ?? [],
   };
+}
+
+/** One subscription with its plan, for describing a grant change (platform log). */
+export async function getSubscriptionWithPlan(client: DBClient, subscriptionId: string) {
+  const { data, error } = await client
+    .from("user_subscriptions")
+    .select("id, user_id, plan_id, status, current_period_end, grant_note, plans(name, product_id)")
+    .eq("id", subscriptionId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+export async function getPlanWithProduct(client: DBClient, planId: string) {
+  const { data, error } = await client.from("plans").select("id, name, product_id").eq("id", planId).maybeSingle();
+  if (error) throw error;
+  return data;
 }

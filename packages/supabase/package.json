@@ -103,6 +103,50 @@
       "types": "./src/queries/tickets.ts",
       "default": "./src/queries/tickets.ts"
     },
+    "./queries/ticket-archive": {
+      "types": "./src/queries/ticket-archive.ts",
+      "default": "./src/queries/ticket-archive.ts"
+    },
+    "./queries/ticket-lifecycle": {
+      "types": "./src/queries/ticket-lifecycle.ts",
+      "default": "./src/queries/ticket-lifecycle.ts"
+    },
+    "./queries/ticket-config": {
+      "types": "./src/queries/ticket-config.ts",
+      "default": "./src/queries/ticket-config.ts"
+    },
+    "./queries/ticket-hours": {
+      "types": "./src/queries/ticket-hours.ts",
+      "default": "./src/queries/ticket-hours.ts"
+    },
+    "./queries/ticket-stats": {
+      "types": "./src/queries/ticket-stats.ts",
+      "default": "./src/queries/ticket-stats.ts"
+    },
+    "./queries/ticket-tags": {
+      "types": "./src/queries/ticket-tags.ts",
+      "default": "./src/queries/ticket-tags.ts"
+    },
+    "./queries/ticket-sweep": {
+      "types": "./src/queries/ticket-sweep.ts",
+      "default": "./src/queries/ticket-sweep.ts"
+    },
+    "./queries/discord-audit": {
+      "types": "./src/queries/discord-audit.ts",
+      "default": "./src/queries/discord-audit.ts"
+    },
+    "./queries/discord-built-messages": {
+      "types": "./src/queries/discord-built-messages.ts",
+      "default": "./src/queries/discord-built-messages.ts"
+    },
+    "./queries/platform-events": {
+      "types": "./src/queries/platform-events.ts",
+      "default": "./src/queries/platform-events.ts"
+    },
+    "./queries/identity": {
+      "types": "./src/queries/identity.ts",
+      "default": "./src/queries/identity.ts"
+    },
     "./queries/alerts": {
       "types": "./src/queries/alerts.ts",
       "default": "./src/queries/alerts.ts"
@@ -122,6 +166,14 @@
     "./crypto": {
       "types": "./src/crypto.ts",
       "default": "./src/crypto.ts"
+    },
+    "./anon": {
+      "types": "./src/anon.ts",
+      "default": "./src/anon.ts"
+    },
+    "./request-client": {
+      "types": "./src/request-client.ts",
+      "default": "./src/request-client.ts"
     },
     "./queries/query-stats": {
       "types": "./src/queries/query-stats.ts",
@@ -157,11 +209,14 @@
     }
   },
   "scripts": {
+    "test": "bun test",
     "check-types": "tsc --noEmit",
     "gen-types": "supabase gen types typescript --project-id jgxdrljoqployiyjedst --schema public > src/types/supabase.ts"
   },
   "dependencies": {
     "@repo/metrics": "workspace:*",
+    "@repo/sentry": "workspace:*",
+    "@repo/types": "workspace:*",
     "@supabase/supabase-js": "^2.105.1",
     "@supabase/ssr": "^0.12.0"
   },
@@ -175,6 +230,7 @@
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",
+    "@types/bun": "^1.3.6",
     "@types/node": "^25.0.8",
     "typescript": "^5.9.2"
   }

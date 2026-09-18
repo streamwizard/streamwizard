@@ -14,6 +14,15 @@ export async function getAlertStates(client: DBClient, env: string): Promise<Ale
   return data;
 }
 
+/** silencedUntil = null clears the silence. */
+export async function silenceAlertState(client: DBClient, stateId: string, silencedUntil: string | null): Promise<void> {
+  const { error } = await client
+    .from("alert_state")
+    .update({ silenced_until: silencedUntil, updated_at: new Date().toISOString() })
+    .eq("id", stateId);
+  if (error) throw new Error(`Couldn't update silence: ${error.message}`);
+}
+
 // Keyed on (rule_id, env, entity_id) so the engine can write every touched
 // state row of a tick in one round trip.
 export async function upsertAlertStates(client: DBClient, rows: AlertStateUpsert[]): Promise<void> {

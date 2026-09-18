@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@repo/supabase/next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { isUserAdmin } from "@repo/supabase/queries/obs-nodes";
 
 // /vnc lives outside the (monitor) group so the popup gets a bare full-viewport
 // page without the sidebar chrome — which also means it misses that layout's
@@ -10,13 +11,7 @@ export default async function VncLayout({ children }: { children: React.ReactNod
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) redirect("/login?error=signin_required");
 
-  const { data: roleRow } = await supabaseAdmin
-    .from("user_roles")
-    .select("id")
-    .eq("user_id", data.user.id)
-    .eq("role", "admin")
-    .maybeSingle();
-  if (!roleRow) redirect("/no-access");
+  if (!(await isUserAdmin(supabaseAdmin, data.user.id))) redirect("/no-access");
 
   return children;
 }

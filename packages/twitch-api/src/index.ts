@@ -18,6 +18,7 @@ import { TwitchVodsClient } from "./vods";
 import { TwitchSearchClient } from "./search";
 import { TwitchAdsClient } from "./ads";
 import { TwitchChannelsClient } from "./channels";
+import { TwitchAuthClient } from "./auth";
 
 export class TwitchApi {
   public chat: TwitchChatClient;
@@ -32,6 +33,7 @@ export class TwitchApi {
   public search: TwitchSearchClient;
   public ads: TwitchAdsClient;
   public channels: TwitchChannelsClient;
+  public auth: TwitchAuthClient;
 
   constructor(broadcaster_id: string | null = null) {
     this.chat = new TwitchChatClient(broadcaster_id);
@@ -46,5 +48,6 @@ export class TwitchApi {
     this.search = new TwitchSearchClient(broadcaster_id);
     this.ads = new TwitchAdsClient(broadcaster_id);
     this.channels = new TwitchChannelsClient(broadcaster_id);
+    this.auth = new TwitchAuthClient(broadcaster_id);
   }
 }

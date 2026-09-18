@@ -1,7 +1,7 @@
 "use client";
 
 import { User } from "@supabase/supabase-js";
-import posthog from "posthog-js";
+import { hasGrantedConsent, identifyUser, onConsentGranted } from "@repo/posthog";
 import React, { createContext, useContext, useEffect } from "react";
 
 export const SessionContext = createContext<User | null>(null);
@@ -14,16 +14,21 @@ interface Props {
 // session Provider component
 export const SessionProvider = ({ children, session }: Props) => {
   useEffect(() => {
-    if (session) {
-      posthog.identify(session.id, {
+    if (!session) return;
+    const identify = () =>
+      identifyUser(session.id, {
         email: session.email,
         name: session.user_metadata.full_name,
         twitch_id: session.user_metadata.sub,
         avatar_url: session.user_metadata.avatar_url,
       });
-    } else {
-      posthog.reset();
-    }
+    // Identify only once analytics is accepted: while consent is pending the
+    // SDK drops $identify outright, and opt_in_capturing() then wipes
+    // persistence, so an early identify is lost rather than delayed. Listen
+    // for the grant so a user who accepts after this layout mounted is
+    // linked without a full reload. Logout unlinks via resetUser().
+    if (hasGrantedConsent()) identify();
+    return onConsentGranted(identify);
   }, [session]);
 
   return <SessionContext.Provider value={session}>{children}</SessionContext.Provider>;
@@ -37,5 +42,3 @@ export const useSession = () => {
   }
   return context;
 };
-
-// Example session component

@@ -8,14 +8,21 @@ import { env } from "./lib/env";
 import { loadCommands } from "./handlers/commandHandler";
 import { loadEvents } from "./handlers/eventHandler";
 import { shutdownTracker } from "./lib/activity-tracker";
+import { stopLogWorker } from "./lib/log-channel/worker";
+import { stopTicketSweeper } from "./lib/tickets/sweeper";
+import { startInternalServer } from "./http/server";
 
 async function main() {
   await loadCommands(client);
   await loadEvents(client);
+  const stopInternalServer = startInternalServer(client);
 
   // Flush buffered activity counts and close open voice sessions before exit so
   // we don't lose in-flight data on deploys/restarts.
   const shutdown = async () => {
+    stopInternalServer?.();
+    await stopLogWorker();
+    await stopTicketSweeper();
     await shutdownTracker();
     await client.destroy();
     await flushSentry();

@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
 import { OverlaysSection } from "@/components/public/home/overlays-section";
 import { AlertBoxSection } from "@/components/public/overlays/alert-box-section";
 import { ClipsRotatorSection } from "@/components/public/overlays/clips-rotator-section";
 import { WidgetLibrarySection } from "@/components/public/overlays/widget-library-section";
 import { IrlWidgetsSection } from "@/components/public/overlays/irl-widgets-section";
 import { EditorSection } from "@/components/public/overlays/editor-section";
-import { OverlaysFaqSection } from "@/components/public/overlays/overlays-faq-section";
+import { OverlaysFaqSection, OVERLAY_FAQ_ITEMS } from "@/components/public/overlays/overlays-faq-section";
 import { FinalCta } from "@/components/public/home/final-cta";
+import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-strip";
 
 /*
  * Overlays, same shape as /cloud-obs: the landing page's section is the
@@ -20,13 +22,16 @@ import { FinalCta } from "@/components/public/home/final-cta";
 export const metadata: Metadata = {
   title: "Stream overlays and alerts",
   description:
-    "Alert box, clips rotator, countdowns and live GPS widgets in one browser source. Install widgets other streamers built, or write your own. Free, with no paywall on alerts.",
+    "Alert box, clips rotator, countdowns and GPS widgets in one browser source. Install widgets other streamers built, or write your own. Free, alerts included.",
   alternates: { canonical: absoluteUrl("/overlays") },
 };
 
 export default function OverlaysPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+      <JsonLd schema={breadcrumbSchema("Overlays", "/overlays")} />
+      <JsonLd schema={softwareApplicationSchema()} />
+      <JsonLd schema={faqPageSchema(OVERLAY_FAQ_ITEMS)} />
       <section className="pt-16 md:pt-20">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl text-center">
@@ -49,6 +54,7 @@ export default function OverlaysPage() {
       <IrlWidgetsSection />
       <EditorSection />
       <OverlaysFaqSection />
+      <FeatureTrustStrip path="/overlays" />
       <FinalCta />
     </div>
   );

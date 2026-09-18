@@ -11,6 +11,7 @@ import type {
   VoiceState,
 } from "discord.js";
 import { supabase } from "@repo/supabase";
+import { TtlCache } from "@repo/ttl-cache";
 import {
   closeVoiceSession,
   getActivitySettings,
@@ -20,7 +21,7 @@ import {
   openVoiceSession,
   type DiscordActivitySettings,
 } from "@repo/supabase/queries/discord-activity";
-import { Sentry } from "../sentry";
+import { reportError } from "@repo/sentry";
 
 // How long a guild's settings + ignored-channel list stays cached before we
 // re-read it. Messages are high-frequency, so we must not hit the DB per event.
@@ -29,7 +30,6 @@ const SETTINGS_TTL_MS = 60_000;
 type TrackingContext = {
   settings: DiscordActivitySettings;
   ignoredChannelIds: Set<string>;
-  fetchedAt: number;
 };
 
 // Defaults used when a guild has no settings row yet (tracking on).
@@ -49,7 +49,7 @@ function defaultSettings(guildId: string): DiscordActivitySettings {
   };
 }
 
-const settingsCache = new Map<string, TrackingContext>();
+const settingsCache = new TtlCache<TrackingContext>({ ttlMs: SETTINGS_TTL_MS });
 
 // Open voice sessions in memory, keyed by `${guildId}:${userId}`.
 type OpenSession = { sessionId: string; channelId: string; startedAt: Date };
@@ -60,17 +60,15 @@ const openSessions = new Map<string, OpenSession>();
 // ---------------------------------------------------------------------------
 
 async function getContext(guildId: string): Promise<TrackingContext> {
-  const cached = settingsCache.get(guildId);
-  if (cached && Date.now() - cached.fetchedAt < SETTINGS_TTL_MS) return cached;
-
-  const [settings, ignored] = await Promise.all([getActivitySettings(supabase, guildId), getIgnoredChannelIds(supabase, guildId)]);
-  const ctx: TrackingContext = {
-    settings: settings ?? defaultSettings(guildId),
-    ignoredChannelIds: new Set(ignored),
-    fetchedAt: Date.now(),
-  };
-  settingsCache.set(guildId, ctx);
-  return ctx;
+  const ctx = await settingsCache.fetch(guildId, async () => {
+    const [settings, ignored] = await Promise.all([
+      getActivitySettings(supabase, guildId),
+      getIgnoredChannelIds(supabase, guildId),
+    ]);
+    return { settings: settings ?? defaultSettings(guildId), ignoredChannelIds: new Set(ignored) };
+  });
+  // The loader never returns null; this only narrows the type.
+  return ctx ?? { settings: defaultSettings(guildId), ignoredChannelIds: new Set() };
 }
 
 // Call after staff change a guild's tracking config so the next event re-reads it.
@@ -92,13 +90,12 @@ async function recordIncrement(
   guildId: string,
   userId: string,
   date: string,
-  deltas: { messages?: number; reactionsAdded?: number; reactionsReceived?: number; voiceSeconds?: number }
+  deltas: { messages?: number; reactionsAdded?: number; reactionsReceived?: number; voiceSeconds?: number },
 ): Promise<void> {
   try {
     await incrementDailyActivity(supabase, { guildId, userId, date, ...deltas });
   } catch (error) {
-    Sentry.captureException(error);
-    console.error(`[activity] Failed to record counts for ${guildId}/${userId}:`, error);
+    reportError(error, "discord-bot activity: record counts", { guildId, userId });
   }
 }
 
@@ -117,14 +114,18 @@ export async function recordMessage(message: Message): Promise<void> {
   try {
     const ctx = await getContext(message.guildId);
     if (!ctx.settings.tracking_enabled || !ctx.settings.track_messages) return;
-    if (isChannelIgnored(ctx, message.channelId, "parentId" in message.channel ? message.channel.parentId : null)) return;
+    if (isChannelIgnored(ctx, message.channelId, "parentId" in message.channel ? message.channel.parentId : null))
+      return;
     await recordIncrement(message.guildId, message.author.id, utcDate(), { messages: 1 });
   } catch (error) {
-    Sentry.captureException(error);
+    reportError(error, "discord-bot activity: message");
   }
 }
 
-export async function recordReaction(reaction: MessageReaction | PartialMessageReaction, user: User | PartialUser): Promise<void> {
+export async function recordReaction(
+  reaction: MessageReaction | PartialMessageReaction,
+  user: User | PartialUser,
+): Promise<void> {
   if (user.bot) return;
   const guildId = reaction.message.guildId;
   if (!guildId) return;
@@ -155,7 +156,7 @@ export async function recordReaction(reaction: MessageReaction | PartialMessageR
 
     await Promise.all(writes);
   } catch (error) {
-    Sentry.captureException(error);
+    reportError(error, "discord-bot activity: reaction");
   }
 }
 
@@ -167,11 +168,14 @@ function humanCount(channel: VoiceBasedChannel): number {
   return channel.members.filter((m) => !m.user.bot).size;
 }
 
-function isVoiceEligible(member: GuildMember, settings: DiscordActivitySettings): boolean {
+function isVoiceEligible(member: GuildMember, ctx: TrackingContext): boolean {
+  const { settings } = ctx;
   const voice = member.voice;
   const channel = voice.channel;
   if (!channel) return false;
-  if (settings.voice_ignore_afk && (voice.selfMute || voice.selfDeaf || voice.serverMute || voice.serverDeaf)) return false;
+  if (isChannelIgnored(ctx, channel.id, channel.parentId)) return false;
+  if (settings.voice_ignore_afk && (voice.selfMute || voice.selfDeaf || voice.serverMute || voice.serverDeaf))
+    return false;
   if (settings.voice_require_others && humanCount(channel) < 2) return false;
   return true;
 }
@@ -182,8 +186,27 @@ async function openSession(guildId: string, member: GuildMember, channelId: stri
     const sessionId = await openVoiceSession(supabase, { guildId, userId: member.id, channelId, joinedAt: startedAt });
     openSessions.set(`${guildId}:${member.id}`, { sessionId, channelId, startedAt });
   } catch (error) {
-    Sentry.captureException(error);
+    reportError(error, "discord-bot activity: open voice session", { guildId, memberId: member.id });
   }
+}
+
+// Splits [start, end) into per-UTC-day second counts, so a call that crosses
+// midnight credits each day with the time actually spent on it.
+export function splitByUtcDay(start: Date, end: Date): { date: string; seconds: number }[] {
+  const chunks: { date: string; seconds: number }[] = [];
+  let cursor = start.getTime();
+  const endMs = end.getTime();
+
+  while (cursor < endMs) {
+    const day = new Date(cursor);
+    const nextMidnight = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 1);
+    const chunkEnd = Math.min(nextMidnight, endMs);
+    const seconds = Math.floor(chunkEnd / 1000) - Math.floor(cursor / 1000);
+    if (seconds > 0) chunks.push({ date: utcDate(day), seconds });
+    cursor = chunkEnd;
+  }
+
+  return chunks;
 }
 
 async function closeSession(guildId: string, userId: string): Promise<void> {
@@ -196,21 +219,31 @@ async function closeSession(guildId: string, userId: string): Promise<void> {
   const durationSeconds = Math.max(0, Math.floor((leftAt.getTime() - open.startedAt.getTime()) / 1000));
   try {
     await closeVoiceSession(supabase, open.sessionId, leftAt, durationSeconds);
-    if (durationSeconds > 0) {
-      await recordIncrement(guildId, userId, utcDate(open.startedAt), { voiceSeconds: durationSeconds });
+    for (const { date, seconds } of splitByUtcDay(open.startedAt, leftAt)) {
+      await recordIncrement(guildId, userId, date, { voiceSeconds: seconds });
     }
   } catch (error) {
-    Sentry.captureException(error);
+    reportError(error, "discord-bot activity: close voice session", { guildId, userId });
   }
 }
 
+// Closes every open voice session in a guild (crediting elapsed time) — used
+// when tracking is turned off, so nobody keeps accruing time afterwards.
+export async function closeGuildSessions(guildId: string): Promise<void> {
+  const prefix = `${guildId}:`;
+  const userIds = [...openSessions.keys()]
+    .filter((key) => key.startsWith(prefix))
+    .map((key) => key.slice(prefix.length));
+  await Promise.all(userIds.map((userId) => closeSession(guildId, userId)));
+}
+
 // Reconciles one member's open/closed state against their current eligibility.
-async function reevaluateMember(member: GuildMember, settings: DiscordActivitySettings): Promise<void> {
+async function reevaluateMember(member: GuildMember, ctx: TrackingContext): Promise<void> {
   if (member.user.bot) return;
   const guildId = member.guild.id;
   const key = `${guildId}:${member.id}`;
   const open = openSessions.get(key);
-  const eligible = isVoiceEligible(member, settings);
+  const eligible = isVoiceEligible(member, ctx);
   const channelId = member.voice.channelId;
 
   if (eligible && channelId) {
@@ -233,8 +266,8 @@ export async function handleVoiceStateUpdate(oldState: VoiceState, newState: Voi
   try {
     const ctx = await getContext(guild.id);
     if (!ctx.settings.tracking_enabled || !ctx.settings.track_voice) {
-      // Tracking turned off mid-session — close anything still open for the mover.
-      await closeSession(guild.id, mover.id);
+      // Tracking turned off mid-session — close everything still open in the guild.
+      await closeGuildSessions(guild.id);
       return;
     }
 
@@ -249,14 +282,14 @@ export async function handleVoiceStateUpdate(oldState: VoiceState, newState: Voi
     for (const channel of channels) {
       for (const member of channel.members.values()) {
         seen.add(member.id);
-        await reevaluateMember(member, ctx.settings);
+        await reevaluateMember(member, ctx);
       }
     }
     if (!seen.has(mover.id)) {
-      await reevaluateMember(mover, ctx.settings);
+      await reevaluateMember(mover, ctx);
     }
   } catch (error) {
-    Sentry.captureException(error);
+    reportError(error, "discord-bot activity: voice state");
   }
 }
 
@@ -268,7 +301,13 @@ export async function reconcileVoiceSessions(client: Client): Promise<void> {
     try {
       const orphans = await getOpenVoiceSessions(supabase, guild.id);
       const now = new Date();
-      await Promise.all(orphans.map((s) => closeVoiceSession(supabase, s.id, now, 0).catch((e) => Sentry.captureException(e))));
+      await Promise.all(
+        orphans.map((s) =>
+          closeVoiceSession(supabase, s.id, now, 0).catch((error) =>
+            reportError(error, "discord-bot activity: close orphan session", { sessionId: s.id }),
+          ),
+        ),
+      );
 
       const ctx = await getContext(guild.id);
       if (!ctx.settings.tracking_enabled || !ctx.settings.track_voice) continue;
@@ -276,12 +315,11 @@ export async function reconcileVoiceSessions(client: Client): Promise<void> {
       for (const channel of guild.channels.cache.values()) {
         if (!channel.isVoiceBased()) continue;
         for (const member of channel.members.values()) {
-          await reevaluateMember(member, ctx.settings);
+          await reevaluateMember(member, ctx);
         }
       }
     } catch (error) {
-      Sentry.captureException(error);
-      console.error(`[activity] Failed to reconcile voice sessions for "${guild.name}":`, error);
+      reportError(error, "discord-bot activity: reconcile", { guildId: guild.id });
     }
   }
 }
@@ -294,6 +332,6 @@ export async function shutdownTracker(): Promise<void> {
     open.map((key) => {
       const [guildId, userId] = key.split(":");
       return guildId && userId ? closeSession(guildId, userId) : Promise.resolve();
-    })
+    }),
   );
 }

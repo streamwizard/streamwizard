@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { FaDiscord } from "react-icons/fa";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, contactPageSchema } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
 import { discordInviteLink } from "@/lib/constant";
 import { PageHero } from "@/components/public/layout/page-hero";
 import { TrackedLink } from "@/components/public/analytics/tracked-link";
@@ -13,13 +14,15 @@ import { FinalCta } from "@/components/public/home/final-cta";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "The fastest way to reach StreamWizard is a ticket in the Discord: one button, one private channel with the people who wrote the code. GitHub issues and docs cover the rest.",
+    "Fastest way to reach StreamWizard: a Discord ticket. One button, one private channel with the people who wrote the code. GitHub issues and docs cover the rest.",
   alternates: { canonical: absoluteUrl("/contact") },
 };
 
 export default function ContactPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+      <JsonLd schema={contactPageSchema()} />
+
       <PageHero
         eyebrow="Contact"
         title={

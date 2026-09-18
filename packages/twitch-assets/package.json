@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@repo/supabase": "workspace:*",
+    "@repo/ttl-cache": "workspace:*",
     "@repo/twitch-api": "workspace:*"
   }
 }

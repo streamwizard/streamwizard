@@ -1,10 +1,8 @@
-import { ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags, SlashCommandBuilder } from "discord.js";
+import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
 import type { Command } from "../types/discord";
-import { env } from "../lib/env";
-
-const LINK_URL = `${env.NEXT_PUBLIC_BASE_URL}/auth/link/discord`;
+import { buildLinkRow } from "../lib/account";
 
 export default {
   data: new SlashCommandBuilder().setName("link").setDescription("Link your Discord account to StreamWizard"),
@@ -19,12 +17,9 @@ export default {
       return;
     }
 
-    const button = new ButtonBuilder().setLabel("Link your account").setStyle(ButtonStyle.Link).setURL(LINK_URL);
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
-
     await interaction.reply({
       content: "Your Discord account is not connected to StreamWizard yet.",
-      components: [row],
+      components: [buildLinkRow()],
       flags: MessageFlags.Ephemeral,
     });
   },

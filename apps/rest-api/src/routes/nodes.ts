@@ -25,7 +25,7 @@ import { getSubscriptionLimits } from "@repo/supabase/queries/subscriptions";
 import { env } from "../lib/env";
 import { nodeAuth } from "../middleware/node-auth";
 import { getStreamKeyForUser } from "../lib/twitch-stream-key";
-import { TtlCache } from "../lib/ttl-cache";
+import { TtlCache } from "@repo/ttl-cache";
 
 const nodes = new Hono();
 
@@ -105,10 +105,12 @@ const updateInstanceSchema = z.object({
 // install.sh can apply the exact same string as the machine's hostname,
 // instead of re-deriving it in bash and risking drift.
 function slugifyHostname(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "obs-node";
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "obs-node"
+  );
 }
 
 nodes.post("/claim", async (c) => {
@@ -352,12 +354,7 @@ nodes.patch("/instances/by-container/:containerId", nodeAuth(), async (c) => {
   if (!parsed.success) {
     return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
   }
-  const instance = await updateObsInstanceByContainerIdForNode(
-    supabase,
-    containerId,
-    nodeId,
-    parsed.data,
-  );
+  const instance = await updateObsInstanceByContainerIdForNode(supabase, containerId, nodeId, parsed.data);
   if (!instance) return c.json({ error: "Instance not found" }, 404);
   return c.json(instance);
 });

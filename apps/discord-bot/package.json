@@ -4,18 +4,23 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config dev_discord_bot -- bun --preload ./src/sentry.ts --hot src/index.ts",
+    "dev": "doppler run --config dev_discord_bot -- bun --preload ./src/sentry.ts --watch src/index.ts",
     "start": "bun --preload ./src/sentry.ts src/index.ts",
     "check-types": "tsc --noEmit",
+    "test": "bun test",
     "deploy-commands": "doppler run --config dev_discord_bot -- bun run src/scripts/deploy-commands.ts"
   },
   "dependencies": {
-    "@repo/github-api": "workspace:*",
+    "@repo/discord-message": "workspace:*",
     "@repo/posthog": "workspace:*",
     "@repo/sentry": "workspace:*",
+    "@repo/storage": "workspace:*",
+    "@repo/ttl-cache": "workspace:*",
     "@repo/supabase": "workspace:*",
+    "@repo/types": "workspace:*",
     "@sentry/bun": "^10",
     "discord.js": "^14.26.4",
+    "hono": "^4.12.28",
     "zod": "^4.4.3"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { Client } from "discord.js";
+import { reportError } from "@repo/sentry";
 import type { BotEvent } from "../types/discord";
 
 const eventsDir = path.join(import.meta.dir, "..", "events");
@@ -16,11 +17,17 @@ export async function loadEvents(client: Client) {
       continue;
     }
 
-    if (event.once) {
-      client.once(event.name, (...args) => event.execute(...args));
-    } else {
-      client.on(event.name, (...args) => event.execute(...args));
-    }
+    // Every listener reports instead of leaving an unhandled rejection: one
+    // failing handler must not take the others, or the process, with it.
+    const run = async (...args: Parameters<typeof event.execute>) => {
+      try {
+        await event.execute(...args);
+      } catch (error) {
+        reportError(error, `discord-bot event: ${String(event.name)}`);
+      }
+    };
+    if (event.once) client.once(event.name, run);
+    else client.on(event.name, run);
     count++;
   }
 

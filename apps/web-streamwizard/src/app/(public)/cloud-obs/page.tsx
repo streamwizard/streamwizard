@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, breadcrumbSchema, faqPageSchema } from "@/lib/seo";
+import { JsonLd } from "@/components/seo/json-ld";
 import { CloudObsShowcase } from "@/components/public/home/cloud-obs-showcase";
 import { IngestSection } from "@/components/public/cloud-obs/ingest-section";
 import { AutoSwitcherSection } from "@/components/public/cloud-obs/auto-switcher-section";
@@ -8,9 +9,10 @@ import { ChatNoticesSection } from "@/components/public/cloud-obs/chat-notices-s
 import { DeckSection } from "@/components/public/cloud-obs/deck-section";
 import { SwitcherDemoProvider } from "@/components/public/cloud-obs/switcher-demo-store";
 import { IrlOverlaysSection } from "@/components/public/cloud-obs/irl-overlays-section";
-import { CloudObsFaqSection } from "@/components/public/cloud-obs/cloud-obs-faq-section";
+import { CloudObsFaqSection, CLOUD_OBS_FAQ_ITEMS } from "@/components/public/cloud-obs/cloud-obs-faq-section";
 import { BetaNote } from "@/components/public/cloud-obs/beta-note";
 import { FinalCta } from "@/components/public/home/final-cta";
+import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-strip";
 
 /*
  * Cloud OBS for IRL streamers. The showcase is the summary, shared with the
@@ -26,13 +28,15 @@ import { FinalCta } from "@/components/public/home/final-cta";
 export const metadata: Metadata = {
   title: "Cloud OBS for IRL streaming",
   description:
-    "A dedicated OBS for your channel in the cloud, run from the deck on your phone. SRT and SRTLA ingest, and an auto switcher that moves you to a fallback scene when the connection drops and tells chat why. Stream IRL without a PC.",
+    "OBS for your channel in the cloud, run from your phone. SRT and SRTLA ingest, and an auto switcher that covers for your connection. Stream IRL without a PC.",
   alternates: { canonical: absoluteUrl("/cloud-obs") },
 };
 
 export default function CloudObsPage() {
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+      <JsonLd schema={breadcrumbSchema("Cloud OBS", "/cloud-obs")} />
+      <JsonLd schema={faqPageSchema(CLOUD_OBS_FAQ_ITEMS)} />
       <section className="pt-16 md:pt-20">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-3xl text-center">
@@ -61,6 +65,7 @@ export default function CloudObsPage() {
       <IrlOverlaysSection />
       <CloudObsFaqSection />
       <BetaNote />
+      <FeatureTrustStrip path="/cloud-obs" />
       <FinalCta />
     </div>
   );

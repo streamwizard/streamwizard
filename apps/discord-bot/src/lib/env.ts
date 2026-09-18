@@ -14,13 +14,27 @@ const schema = z.object({
   // Omit in staging/production to register commands globally.
   DISCORD_GUILD_ID: z.string().min(1).optional(),
 
-  NEXT_PUBLIC_BASE_URL: z.string().url().optional(),
+  // Internal HTTP server for web-admin (cache refresh, panel re-post, test
+  // welcome). The server only starts when the secret is set; never expose the
+  // port publicly — web-admin reaches it over the internal network.
+  DISCORD_BOT_INTERNAL_SECRET: z.string().min(16).optional(),
+  DISCORD_BOT_INTERNAL_PORT: z.coerce.number().int().positive().default(3010),
 
-  // GitHub App (ticket → issue sync)
-  GITHUB_APP_ID: z.string().min(1),
-  GITHUB_APP_PRIVATE_KEY: z.string().min(1),
-  GITHUB_APP_INSTALLATION_ID: z.string().min(1),
-  GITHUB_ISSUES_REPO: z.string().min(1), // "owner/repo"
+  // Ticket transcripts copy small images here (shared CDN bucket). Without all
+  // of them transcripts still save, with attachment metadata only.
+  R2_ACCOUNT_ID: z.string().min(1).optional(),
+  R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+  R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+  R2_ASSETS_BUCKET: z.string().min(1).optional(),
+  NEXT_PUBLIC_CDN_URL: z.string().url().optional(),
+
+  // Required: link buttons are built from it, and an undefined base makes
+  // discord.js reject the button URL at runtime.
+  NEXT_PUBLIC_BASE_URL: z.string().url(),
+
+  // web-admin, for ticket links in the log channel. Optional: without it the
+  // ticket embeds mention the channel instead.
+  WEB_ADMIN_URL: z.string().url().optional(),
 
   // Sentry
   SENTRY_DSN: z.string().url().optional(),

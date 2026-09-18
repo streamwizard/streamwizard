@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/privacy-policy") },
 };
 
-const LAST_UPDATED = "29 August 2026";
+const LAST_UPDATED = "15 September 2026";
 const CONTACT_EMAIL = LEGAL_CONTACT_EMAIL;
 
 function NormalContent() {
@@ -62,19 +62,52 @@ function NormalContent() {
           overlay configurations, widget settings, and related metadata.
         </p>
 
+        <h3 className="text-lg font-medium mb-2">Discord Support Tickets</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          If you open a support ticket in the StreamWizard Discord server, we
+          save the conversation as it happens: the messages, the Discord names
+          and avatars of everyone who wrote in it, and images up to 500 KB.
+          Other attachments are kept as file name and size only. A message you
+          edit is updated; a message you delete is kept and marked as deleted,
+          so our team can still follow what the ticket was about. When the
+          ticket closes you get a copy of the conversation by Discord DM, unless
+          the server has turned that off. That DM may ask you to rate the
+          ticket; the rating and any comment you add are stored with the
+          ticket. If you send the bot a direct message, it only answers with a
+          button to open a ticket; the text of that message is not read or
+          stored. Our team uses this history to follow up on your issue and to
+          see how support is doing.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">Discord Server Moderation Log</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          To keep the StreamWizard Discord server safe, our bot keeps a log for
+          our moderators of what happens in the server: members joining,
+          leaving, being kicked, banned or timed out, nickname and role
+          changes, changes to roles and channels, and edited or deleted
+          messages. For edited and deleted messages the log includes the
+          author, the channel and the text of the message. It also records
+          your Discord name, Discord user ID and avatar, and, if you linked
+          Discord to StreamWizard, your Twitch username. The log is posted to
+          staff-only channels in the server and stored with our other
+          platform logs.
+        </p>
+
         <h3 className="text-lg font-medium mb-2">Analytics Data</h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
           We use PostHog (EU region) to collect page-view events and click
           interactions. Your IP address is discarded at ingestion and is never
-          stored with analytics events. If you accept analytics cookies and sign
-          in, your PostHog analytics profile is linked to your StreamWizard
+          stored with analytics events. If you accept analytics and sign in,
+          your PostHog analytics profile is linked to your StreamWizard
           account ID so we can understand how the product is used. If you
           decline, we count page views in cookieless mode instead: no cookies,
           no identifiers, no profile. Only anonymous, aggregated statistics
           that cannot be tied to you. We also record a few account-level
-          product events on our servers (for example linking your Discord
-          account or joining our Discord server), tied to your account under
-          legitimate interest. PostHog stores data on EU infrastructure.
+          product events on our servers (for example signing in, linking your
+          Discord account or joining our Discord server), tied to your account
+          ID under legitimate interest. Those server-side events never create
+          an analytics profile on their own; one only exists if you accepted
+          analytics. PostHog stores data on EU infrastructure.
         </p>
 
         <h3 className="text-lg font-medium mb-2">
@@ -84,7 +117,10 @@ function NormalContent() {
           We use Sentry to capture application errors. Error reports may contain
           your account ID, browser type, operating system, and the URL where the
           error occurred. No passwords or payment data are included in error
-          reports.
+          reports. If you accept analytics, Sentry may also record a session
+          replay for a small sample of visits, and for visits where an error
+          occurs, so we can see what led up to a bug. Replays mask all text and
+          block images and video. If you decline, no replay is recorded.
         </p>
 
         <h3 className="text-lg font-medium mb-2">Server Logs</h3>
@@ -134,6 +170,18 @@ function NormalContent() {
               </tr>
               <tr>
                 <td className="py-2 pr-4">Security &amp; fraud prevention</td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Support ticket history (Discord)
+                </td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Discord server moderation log
+                </td>
                 <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
               </tr>
             </tbody>
@@ -231,7 +279,26 @@ function NormalContent() {
             account closure, your account and app data are explicitly purged
             from active systems and backups within 3 months.
           </li>
-          <li>Analytics data (PostHog): retained for 12 months.</li>
+          <li>
+            Analytics data (PostHog): data linked to your account is deleted 12
+            months after your last activity. Anonymous, aggregated statistics
+            that cannot be tied to you may be kept for up to 7 years.
+          </li>
+          <li>
+            Discord support tickets: conversations, images and your feedback
+            comment are deleted 12 months after the ticket closes; the rating
+            itself stays as an anonymous number. If you delete your account
+            while your Discord account is linked, your messages in tickets are
+            anonymised, your feedback comment and images removed. Replies from
+            our team stay.
+          </li>
+          <li>
+            Discord server moderation log: the text of edited and deleted
+            messages is removed from our database after 30 days, or right away
+            if you delete your account while your Discord account is linked.
+            The rest of the entry (who, where, when) is kept. Copies already
+            posted in our staff channels stay until a moderator removes them.
+          </li>
           <li>Error reports (Sentry): retained for 90 days.</li>
           <li>Server logs: retained for 30 days.</li>
         </ul>
@@ -239,6 +306,7 @@ function NormalContent() {
           You can delete your account at any time from{" "}
           <Link
             href="/dashboard/settings/account"
+            rel="nofollow"
             className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
           >
             Settings → Account
@@ -326,18 +394,36 @@ function NormalContent() {
           </li>
           <li>
             <span className="text-foreground font-medium">
-              Analytics cookies
+              Analytics storage
             </span>{" "}
-            (PostHog) — only set if you accept analytics; used to recognise your
-            browser across sessions. Stored under our own domain via a reverse
-            proxy to prevent ad-blocker interference. If you decline, no
-            analytics cookies or identifiers are stored at all.
+            (PostHog) — not a cookie: one entry in your browser&apos;s local
+            storage holding a random device ID, only written if you accept
+            analytics. It is how we recognise your browser on your next visit.
+            It never leaves your browser as a cookie; analytics requests go to
+            our own domain and carry the ID in the request body. If you
+            decline, no analytics storage or identifier is written at all.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Consent record</span>{" "}
+            (PostHog) — one entry in your browser&apos;s local storage that
+            remembers whether you accepted or declined analytics, so we do not
+            ask on every visit. Stored either way you answer; it contains no
+            identifier.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">
+              Preference cookie
+            </span>{" "}
+            (StreamWizard) — <code>sidebar_state</code> remembers whether you
+            collapsed the dashboard sidebar. Kept for 7 days, used for nothing
+            else.
           </li>
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
           We do not use advertising, remarketing, or third-party tracking
-          cookies. Changed your mind about analytics? Cookie settings in the
-          footer clears your choice and asks again.
+          cookies, and PostHog sets no cookies of its own. Changed your mind
+          about analytics? Cookie settings in the footer clears your choice
+          and asks again.
         </p>
       </section>
 
@@ -457,6 +543,31 @@ function GenZContent() {
           hold it for you.
         </p>
 
+        <h3 className="text-lg font-medium mb-2">support tickets 🎫</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          opened a ticket in our Discord? we save the chat as it happens: the
+          messages, everyone&apos;s Discord name + avatar, and images up to 500
+          KB. anything bigger (or not an image) we only keep the file name and
+          size. edits update, deletes stay but get a &quot;deleted&quot; tag.
+          when it closes you get the chat as a file in your DMs, and maybe a
+          &quot;rate this ticket&quot; ask. the stars + your comment get saved
+          with the ticket. DM the bot and all it does is hand you a button to
+          open a ticket, we don&apos;t read or keep the DM. it&apos;s so we can
+          actually help if the same bug comes back, and see how we&apos;re
+          doing.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">our Discord mod log 🛡️</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          our bot keeps a log for the mods of what happens in the server: who
+          joins, leaves, gets kicked, banned or timed out, nickname and role
+          changes, channel and role changes, and messages that get edited or
+          deleted. for edits and deletes that includes the message text, who
+          wrote it and where. it saves ur Discord name, ID and avatar, plus ur
+          Twitch name if u linked Discord. it goes to staff-only channels and
+          our own logs. nobody else sees it.
+        </p>
+
         <h3 className="text-lg font-medium mb-2">
           analytics (if u said yes to cookies)
         </h3>
@@ -467,15 +578,20 @@ function GenZContent() {
           understand what&apos;s cooked vs what slaps. EU region only. said no to
           cookies? then it&apos;s cookieless mode: no cookies, no profile, ur just
           an anonymous +1 in the page stats. nothing traces back to u. our
-          servers also log a few account moments (like linking Discord or
-          joining our Discord server) so we know the community is growing.
+          servers also log a few account moments (like logging in, linking
+          Discord or joining our Discord server) so we know the community is
+          growing. those don&apos;t build a profile on their own. no yes to
+          cookies = no profile, period.
         </p>
 
         <h3 className="text-lg font-medium mb-2">when things go wrong 💀</h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
           Sentry catches app errors. it might grab ur account ID, browser type,
           OS, and the URL that caused the chaos. no passwords, no payment info.
-          just vibes and stack traces.
+          just vibes and stack traces. said yes to cookies? Sentry might also
+          record a replay of a small slice of visits (and any visit where
+          something breaks) so we can see how the bug happened. all text is
+          masked, images + video blocked. said no? zero replays.
         </p>
 
         <h3 className="text-lg font-medium mb-2">server logs</h3>
@@ -523,6 +639,14 @@ function GenZContent() {
               </tr>
               <tr>
                 <td className="py-2 pr-4">keeping the bad guys out</td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">remembering ur support tickets</td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">keeping our Discord safe (mod log)</td>
                 <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
               </tr>
             </tbody>
@@ -620,7 +744,24 @@ function GenZContent() {
             it, we purge it from active systems AND backups within 3 months.
             actually gone, not vibes.
           </li>
-          <li>analytics (PostHog): 12 months.</li>
+          <li>
+            analytics (PostHog): anything tied to ur account gets deleted 12
+            months after u last showed up. anonymous aggregate stats that
+            can&apos;t trace back to u can stick around up to 7 years.
+          </li>
+          <li>
+            support tickets: chats, images + ur feedback comment get deleted 12
+            months after the ticket closes (the star rating stays, as a
+            number). delete ur account with Discord linked and ur ticket
+            messages get anonymised, ur comment + images removed. our replies
+            stay.
+          </li>
+          <li>
+            Discord mod log: message text gets wiped from our database after
+            30 days, or straight away if u delete ur account with Discord
+            linked. the who/where/when stays. posts already in the staff
+            channels stay until a mod cleans them up.
+          </li>
           <li>error reports (Sentry): 90 days.</li>
           <li>server logs: 30 days.</li>
         </ul>
@@ -628,6 +769,7 @@ function GenZContent() {
           want out? hit{" "}
           <Link
             href="/dashboard/settings/account"
+            rel="nofollow"
             className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
           >
             Settings → Account
@@ -714,17 +856,31 @@ function GenZContent() {
           </li>
           <li>
             <span className="text-foreground font-medium">
-              analytics cookies
+              analytics storage
             </span>{" "}
-            (PostHog) — only set if u accepted. recognises ur browser across
-            sessions. runs through our own domain so ad blockers don&apos;t clap
-            it. declined? zero analytics cookies, zero identifiers. fr.
+            (PostHog) — not even a cookie. one local storage entry with a
+            random device ID, only if u accepted. that&apos;s how we know
+            it&apos;s u again next time. stays in ur browser, the ID travels in
+            the request body to our own domain. declined? zero analytics
+            storage, zero identifiers. fr.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">consent record</span>{" "}
+            (PostHog) — one local storage entry that remembers if u said yes or
+            no, so we don&apos;t ask every single time. saved either way. no
+            identifier in it.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">preference cookie</span>{" "}
+            (StreamWizard) — <code>sidebar_state</code> remembers if u collapsed
+            the dashboard sidebar. 7 days. that&apos;s literally it.
           </li>
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
-          zero advertising cookies. zero remarketing. zero selling ur attention
-          to randos. that&apos;s loser behavior ngl. wanna un-consent? cookie
-          settings in the footer, one click, we ask again.
+          zero advertising cookies. zero remarketing. zero PostHog cookies,
+          period. zero selling ur attention to randos. that&apos;s loser
+          behavior ngl. wanna un-consent? cookie settings in the footer, one
+          click, we ask again.
         </p>
       </section>
 
