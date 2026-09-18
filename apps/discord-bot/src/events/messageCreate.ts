@@ -2,7 +2,6 @@ import { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events } from "discord.js
 import { TtlCache } from "@repo/ttl-cache";
 import { reportError } from "@repo/sentry";
 import { recordMessage } from "../lib/activity-tracker";
-import { notifyTicketActivity } from "../lib/ticket-activity";
 import { archiveNewMessage } from "../lib/tickets/archive";
 import { TICKET_IDS } from "../lib/tickets/ids";
 import { findDmTicketGuild } from "../lib/tickets/open";
@@ -43,7 +42,6 @@ export default {
     void recordMessage(message);
     if (message.guildId) {
       void archiveNewMessage(message);
-      void notifyTicketActivity(message.guildId, message.channelId, "message");
     } else {
       void offerTicketFromDm(message);
     }

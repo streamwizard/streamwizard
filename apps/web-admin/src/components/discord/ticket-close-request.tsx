@@ -1,7 +1,6 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
 import { changeTicketFromDashboard } from "@/actions/discord-ticket-actions";
 import { formatDateTime } from "@/lib/discord/tickets";
@@ -18,12 +17,11 @@ interface TicketCloseRequestProps {
 
 /** The opener asked to close the ticket. Same accept and reject as the buttons in Discord. */
 export function TicketCloseRequest({ ticketNumber, requestedAt, expiresAt, requestedBy, linked }: TicketCloseRequestProps) {
-  const router = useRouter();
   const [pending, start] = useTransition();
 
   const answer = (change: "close-accept" | "close-reject", done: string) =>
     start(async () => {
-      if (toastResult(await changeTicketFromDashboard(ticketNumber, change, {}), done)) router.refresh();
+      toastResult(await changeTicketFromDashboard(ticketNumber, change, {}), done);
     });
 
   return (

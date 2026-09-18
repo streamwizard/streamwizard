@@ -138,12 +138,6 @@ export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 // live on the schemas.
 export type { ObsInstanceLifecyclePayload, IngestStatsPayload, ObsSceneChangedPayload, UserStateUpdatePayload };
 
-export interface DiscordTicketActivityPayload {
-  ticketNumber: number;
-  channelId: string;
-  kind: "opened" | "message" | "claimed" | "closed" | "updated";
-}
-
 // Host NIC totals only — cpu/ram/disk deliberately stay on the InfluxDB
 // polling path; the WS carries just the network signal.
 export interface IngestNodeBandwidthPayload {

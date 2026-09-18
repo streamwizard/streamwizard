@@ -18,7 +18,6 @@
     "@repo/ttl-cache": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/types": "workspace:*",
-    "@repo/ws-client": "workspace:*",
     "@sentry/bun": "^10",
     "discord.js": "^14.26.4",
     "hono": "^4.12.28",

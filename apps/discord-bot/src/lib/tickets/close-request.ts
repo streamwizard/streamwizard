@@ -7,7 +7,6 @@ import { clearTicketCloseRequest, listTicketMembers, requestTicketClose } from "
 import { getTicketByChannelId, type DiscordTicket, type DiscordTicketSettings } from "@repo/supabase/queries/tickets";
 import type { TicketEventSource } from "@repo/types";
 import { guildVariableValues, memberVariableValues } from "../built-message";
-import { notifyTicketActivity } from "../ticket-activity";
 import { loadTicketContext, type TicketActionResult } from "./actions";
 import { CLOSE_RESULT_MESSAGES, closeTicketChannel } from "./close";
 import { findCategory, getTicketConfig, type TicketConfig } from "./config";
@@ -91,7 +90,6 @@ export async function requestClose(
     allowedMentions: { users: [member.id], roles: pingRoles },
   });
   await recordTicketEvent(channel.guild, requested, "close_requested", member, source);
-  void notifyTicketActivity(channel.guild.id, channel.id, "updated", requested.ticket_number);
   return { ok: true, ticket: requested };
 }
 
@@ -132,7 +130,6 @@ export async function rejectCloseRequest(
   await recordTicketEvent(channel.guild, cleared, "close_request_rejected", actor, source, {
     targetDiscordId: ticket.close_requested_by,
   });
-  void notifyTicketActivity(channel.guild.id, channel.id, "updated", cleared.ticket_number);
   return { ok: true, ticket: cleared };
 }
 
@@ -155,7 +152,6 @@ export async function expireCloseRequest(guild: Guild, channelId: string): Promi
   await recordTicketEvent(guild, cleared, "close_request_expired", null, "system", {
     targetDiscordId: ticket.close_requested_by,
   });
-  void notifyTicketActivity(guild.id, channelId, "updated", cleared.ticket_number);
   return true;
 }
 

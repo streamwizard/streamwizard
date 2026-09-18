@@ -4,7 +4,6 @@ import { supabase } from "@repo/supabase";
 import { claimTicket, getTicketByChannelId, type DiscordTicket } from "@repo/supabase/queries/tickets";
 import type { TicketEventSource } from "@repo/types";
 import { reportError } from "@repo/sentry";
-import { notifyTicketActivity } from "../ticket-activity";
 import { applyTicketOverwrites, releaseTicket } from "./actions";
 import { findCategory, getTicketConfig, type TicketConfig } from "./config";
 import { recordTicketEvent } from "./events";
@@ -20,13 +19,14 @@ async function afterClaim(
   source: TicketEventSource,
 ): Promise<void> {
   await recordTicketEvent(channel.guild, claimed, "claimed", member, source);
-  void notifyTicketActivity(channel.guild.id, channel.id, "claimed", claimed.ticket_number);
   if (config.settings?.claim_hides_from_other_staff) {
     // Best effort: a claim stands even when the bot can't hide the channel.
     await applyTicketOverwrites(channel, claimed, config).catch((error) =>
       reportError(error, "discord-bot tickets: hide claimed ticket", { ticketId: claimed.id }),
     );
   }
+}
+
 /**
  * Why a claim wrote nothing. Reads the row again rather than trusting a copy
  * from before the write: when two claims race, the loser's earlier read still
@@ -40,8 +40,6 @@ async function explainFailedClaim(channelId: string, userId: string): Promise<st
   if (current.claimed_by_discord_user_id)
     return `This ticket is already claimed by <@${current.claimed_by_discord_user_id}>.`;
   return "That claim didn't go through. Try again.";
-}
-
 }
 
 export async function handleClaimButton(interaction: ButtonInteraction): Promise<void> {

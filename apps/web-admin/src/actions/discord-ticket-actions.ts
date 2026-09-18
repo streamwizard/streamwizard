@@ -1,11 +1,13 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { reportError } from "@repo/sentry";
 import { z } from "zod";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord";
 import { getTicketByNumber } from "@repo/supabase/queries/tickets";
+import { listTicketMembers } from "@repo/supabase/queries/ticket-lifecycle";
 import { getUserDisplayProfile } from "@repo/supabase/queries/user";
+import { buildTicketSnapshot, toTicketMember, type TicketMember, type TicketSnapshot } from "@/lib/discord/ticket-snapshot";
 import { resolveDiscordProfiles } from "@/lib/discord/users";
 import { DashboardError, requireDiscordAdmin, toActionError, type DiscordActionResult } from "@/lib/discord/action";
 import { callBot } from "@/lib/discord/bot-bridge";
@@ -28,11 +30,9 @@ async function prepare(ticketNumber: number) {
   return { guildId, discordUserId, ticket };
 }
 
-function revalidate(ticketNumber: number) {
-  revalidatePath("/discord/tickets");
-  revalidatePath(`/discord/tickets/${ticketNumber}`);
-}
-
+// No revalidatePath here on purpose. Any revalidation inside a server action
+// makes Next re-render the page the admin is on, and both ticket pages follow
+// their rows over Supabase Realtime instead. The bot's write is the signal.
 export async function claimTicketFromDashboard(ticketNumber: number): Promise<DiscordActionResult> {
   try {
     const { guildId, discordUserId, ticket } = await prepare(ticketNumber);
@@ -41,7 +41,6 @@ export async function claimTicketFromDashboard(ticketNumber: number): Promise<Di
     const result = await callBot(guildId, `/tickets/${ticket.channel_id}/claim`, { discordUserId });
     if (!result.ok) throw new DashboardError(result.error);
 
-    revalidate(ticketNumber);
     return { error: null };
   } catch (error) {
     return toActionError(error, "claim ticket", "Couldn't claim the ticket. Try again?");
@@ -66,7 +65,6 @@ export async function closeTicketFromDashboard(ticketNumber: number, reason: str
     );
     if (!result.ok) throw new DashboardError(result.error);
 
-    revalidate(ticketNumber);
     return { error: null };
   } catch (error) {
     return toActionError(error, "close ticket", "Couldn't close the ticket. Try again?");
@@ -112,7 +110,6 @@ export async function changeTicketFromDashboard<K extends TicketChange>(
     });
     if (!result.ok) throw new DashboardError(result.error);
 
-    revalidate(ticketNumber);
     return { error: null };
   } catch (error) {
     return toActionError(error, `ticket ${change}`, "Couldn't change the ticket. Try again?");
@@ -177,9 +174,64 @@ export async function sendTicketReply(ticketNumber: number, content: string): Pr
     });
     if (!result.ok) throw new DashboardError(result.error);
 
-    revalidate(ticketNumber);
     return { error: null };
   } catch (error) {
     return toActionError(error, "ticket reply", "Couldn't send the message. Try again?");
+  }
+}
+
+// Reads for the ticket page. It renders once from the server and then follows
+// the ticket's rows over Supabase Realtime; these fill the gaps: a resync after
+// the socket dropped, the manual refresh button, members after a
+// member_added/member_removed event, and names for people a new message
+// mentions.
+
+async function loadTicket(ticketNumber: number) {
+  const { guildId } = await requireDiscordAdmin();
+  if (!ticketNumberSchema.safeParse(ticketNumber).success) throw new DashboardError("Invalid ticket");
+  const ticket = await getTicketByNumber(supabaseAdmin, guildId, ticketNumber);
+  if (!ticket) throw new DashboardError("That ticket doesn't exist");
+  return ticket;
+}
+
+function readError(error: unknown, context: string, fallback: string): { error: string } {
+  return { error: toActionError(error, context, fallback).error ?? fallback };
+}
+
+export async function getTicketSnapshot(
+  ticketNumber: number,
+): Promise<({ error: null } & TicketSnapshot) | { error: string }> {
+  try {
+    const ticket = await loadTicket(ticketNumber);
+    return { error: null, ...(await buildTicketSnapshot(ticket)) };
+  } catch (error) {
+    return readError(error, "ticket snapshot", "Couldn't load the ticket.");
+  }
+}
+
+export async function listTicketMembersForDashboard(
+  ticketNumber: number,
+): Promise<{ error: null; members: TicketMember[] } | { error: string }> {
+  try {
+    const ticket = await loadTicket(ticketNumber);
+    const members = await listTicketMembers(supabaseAdmin, ticket.id);
+    return { error: null, members: members.map(toTicketMember) };
+  } catch (error) {
+    return readError(error, "ticket members", "Couldn't load the ticket's members.");
+  }
+}
+
+const SNOWFLAKE = /^\d{17,20}$/;
+
+/** Display names for Discord user ids a new message or event mentions. Cached server side. */
+export async function lookupDiscordNames(ids: string[]): Promise<Record<string, string>> {
+  try {
+    await requireDiscordAdmin();
+    const wanted = [...new Set(ids.filter((id) => SNOWFLAKE.test(id)))].slice(0, 25);
+    const profiles = await resolveDiscordProfiles(wanted);
+    return Object.fromEntries([...profiles].map(([id, profile]) => [id, profile.name]));
+  } catch (error) {
+    reportError(error, "web-admin discord: mention names");
+    return {};
   }
 }

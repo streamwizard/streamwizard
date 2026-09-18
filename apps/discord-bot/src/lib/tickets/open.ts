@@ -25,7 +25,7 @@ import { countOpenTicketsInCategory, getOpenerTicketStats } from "@repo/supabase
 import { reportError } from "@repo/sentry";
 import { markSelfAction } from "../server-log/self-actions";
 import { computeTicketOverwrites, renderChannelName, whyCannotOpen } from "./access";
-import { notifyTicketActivity, trackTicketChannel } from "../ticket-activity";
+import { trackTicketChannel } from "../ticket-activity";
 import {
   activeCategories,
   activeProducts,
@@ -416,7 +416,6 @@ async function createTicketChannel(
       openerId: ticket.opener_discord_user_id,
       categorySlug: ticket.category,
     });
-    void notifyTicketActivity(guild.id, channel.id, "opened", ticket.ticket_number);
 
     const intro = buildTicketIntroMessage(ticket, config, openerProfile, {
       answers: form.answers,

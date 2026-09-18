@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { UserMinus } from "lucide-react";
 import {
   Button,
@@ -41,10 +40,15 @@ interface TicketManageProps {
 
 /** The staff actions on an open ticket that aren't claim or close. Same ones `/ticket` has in Discord. */
 export function TicketManage({ ticketNumber, subject, priority, category, categories, members, linked }: TicketManageProps) {
-  const router = useRouter();
   const id = useId();
   const [pending, start] = useTransition();
   const [draftSubject, setDraftSubject] = useState(subject);
+  // The row is the truth: when the subject changes (here or in Discord) the draft starts over from it.
+  const [seenSubject, setSeenSubject] = useState(subject);
+  if (subject !== seenSubject) {
+    setSeenSubject(subject);
+    setDraftSubject(subject);
+  }
   const [picking, setPicking] = useState<"add" | "transfer" | null>(null);
   const disabled = pending || !linked;
 
@@ -55,10 +59,7 @@ export function TicketManage({ ticketNumber, subject, priority, category, catego
     after?: () => void,
   ) =>
     start(async () => {
-      if (toastResult(await changeTicketFromDashboard(ticketNumber, kind, input), success)) {
-        after?.();
-        router.refresh();
-      }
+      if (toastResult(await changeTicketFromDashboard(ticketNumber, kind, input), success)) after?.();
     });
 
   return (

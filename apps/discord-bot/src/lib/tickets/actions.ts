@@ -17,7 +17,7 @@ import {
 import { getTicketByChannelId, type DiscordTicket } from "@repo/supabase/queries/tickets";
 import type { TicketEventSource } from "@repo/types";
 import { reportError } from "@repo/sentry";
-import { forgetOpenTickets, notifyTicketActivity } from "../ticket-activity";
+import { forgetOpenTickets } from "../ticket-activity";
 import { computeTicketOverwrites } from "./access";
 import { findCategory, getTicketConfig, type TicketConfig } from "./config";
 import { recordTicketEvent } from "./events";
@@ -85,7 +85,6 @@ const say = (channel: TextChannel, content: string, pingUserId?: string) =>
 // Also drops the guild's open-ticket cache: a move or transfer changes what the archive files a message under.
 const nudgeDashboard = (channel: TextChannel, ticket: DiscordTicket) => {
   forgetOpenTickets(channel.guild.id);
-  void notifyTicketActivity(channel.guild.id, channel.id, "updated", ticket.ticket_number);
 };
 
 export async function releaseTicket(

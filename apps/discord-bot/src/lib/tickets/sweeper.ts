@@ -5,7 +5,6 @@ import { supabase } from "@repo/supabase";
 import { claimStaleWarning, listOpenTicketsForSweep, type SweepTicketRow } from "@repo/supabase/queries/ticket-sweep";
 import { getTicketByChannelId, type DiscordTicket } from "@repo/supabase/queries/tickets";
 import { guildVariableValues } from "../built-message";
-import { notifyTicketActivity } from "../ticket-activity";
 import { reconcileTicketTranscript } from "../ticket-transcript";
 import { finalizeTicketClose } from "./close";
 import { expireCloseRequest } from "./close-request";
@@ -87,7 +86,6 @@ async function warnTicket(guild: Guild, row: SweepTicketRow, config: TicketConfi
   await recordTicketEvent(guild, ticket, "stale_warned", null, "system", {
     detail: { stale_hours: settings.staleAfterHours, auto_close_hours: settings.autoCloseAfterHours },
   });
-  void notifyTicketActivity(guild.id, ticket.channel_id, "updated", ticket.ticket_number);
 }
 
 async function closeStaleTicket(guild: Guild, row: SweepTicketRow, config: TicketConfig, settings: SweepSettings): Promise<void> {

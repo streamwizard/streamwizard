@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui";
-import { AutoRefresh } from "@/components/discord/auto-refresh";
+import { TicketListLive } from "@/components/discord/ticket-list-live";
 import { PageHeader } from "@/components/widgets/page-header";
 import { requireDiscordContext } from "@/lib/discord/api";
 import { formatDateTime } from "@/lib/discord/tickets";
@@ -102,7 +102,7 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
     <div className="space-y-6">
       <PageHeader title="Tickets" description="Every support ticket, including closed ones whose channel is gone.">
         {/* New, claimed and closed tickets show up without a reload. */}
-        <AutoRefresh wsUrl={process.env.NEXT_PUBLIC_WS_SERVER_URL ?? null} showStatus={false} />
+        <TicketListLive guildId={guildId} />
         <Button variant="outline" size="sm" asChild>
           <Link href="/discord/tickets/stats">
             <BarChart3 className="size-4" aria-hidden />

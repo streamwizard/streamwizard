@@ -1,3 +1,5 @@
+"use client";
+
 import type { Json } from "@repo/supabase";
 import type { DiscordTicketMessage } from "@repo/supabase/queries/tickets";
 
@@ -44,11 +46,11 @@ interface StoredEmbed {
 }
 
 /** Swaps Discord mention syntax for readable names where we know them. */
-function renderMentions(text: string, names: Map<string, string>): string {
+function renderMentions(text: string, names: Record<string, string>): string {
   return text
-    .replace(/<@!?(\d+)>/g, (_, id: string) => `@${names.get(id)?.replace(/^@/, "") ?? "unknown"}`)
-    .replace(/<@&(\d+)>/g, (_, id: string) => names.get(id) ?? "@role")
-    .replace(/<#(\d+)>/g, (_, id: string) => names.get(id) ?? "#channel");
+    .replace(/<@!?(\d+)>/g, (_, id: string) => `@${names[id]?.replace(/^@/, "") ?? "unknown"}`)
+    .replace(/<@&(\d+)>/g, (_, id: string) => names[id] ?? "@role")
+    .replace(/<#(\d+)>/g, (_, id: string) => names[id] ?? "#channel");
 }
 
 /** GIF (gifv, e.g. Klipy) and plain image link embeds render as media, like in Discord. */
@@ -74,7 +76,7 @@ function MediaEmbed({ embed }: { embed: StoredEmbed }) {
 
 const isMediaEmbed = (embed: StoredEmbed) => embed.type === "gifv" || embed.type === "image";
 
-function Embed({ embed, names }: { embed: StoredEmbed; names: Map<string, string> }) {
+function Embed({ embed, names }: { embed: StoredEmbed; names: Record<string, string> }) {
   if (isMediaEmbed(embed)) return <MediaEmbed embed={embed} />;
   const color = embed.color ? `#${embed.color.toString(16).padStart(6, "0")}` : undefined;
   return (
@@ -121,12 +123,13 @@ function Attachment({ attachment }: { attachment: StoredAttachment }) {
   );
 }
 
-export function TicketTranscript({ messages, names }: { messages: TranscriptMessage[]; names: Map<string, string> }) {
+/** Renders on the client so the ticket page can swap in fresh messages as they arrive. */
+export function TicketTranscript({ messages, names }: { messages: TranscriptMessage[]; names: Record<string, string> }) {
   // Author names from the transcript itself cover mentions of people who wrote in the ticket.
-  const allNames = new Map(names);
+  const allNames: Record<string, string> = { ...names };
   for (const message of messages) {
-    if (message.author_discord_id && !allNames.has(message.author_discord_id)) {
-      allNames.set(message.author_discord_id, message.author_name);
+    if (message.author_discord_id && !(message.author_discord_id in allNames)) {
+      allNames[message.author_discord_id] = message.author_name;
     }
   }
 

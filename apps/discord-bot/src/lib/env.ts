@@ -20,11 +20,6 @@ const schema = z.object({
   DISCORD_BOT_INTERNAL_SECRET: z.string().min(16).optional(),
   DISCORD_BOT_INTERNAL_PORT: z.coerce.number().int().positive().default(3010),
 
-  // Realtime ticket updates for web-admin go through ws-server's
-  // /internal/broadcast. Without both, the dashboard falls back to polling.
-  WS_SERVER_URL: z.string().min(1).optional(),
-  CONSUMER_SECRET: z.string().min(1).optional(),
-
   // Ticket transcripts copy small images here (shared CDN bucket). Without all
   // of them transcripts still save, with attachment metadata only.
   R2_ACCOUNT_ID: z.string().min(1).optional(),

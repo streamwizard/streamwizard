@@ -1,7 +1,6 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,8 +29,9 @@ interface TicketActionsProps {
 
 const REASON_MAX = 1000;
 
+// The bot writes the ticket row for every action; the page sees the change
+// over realtime, so nothing here refreshes.
 export function TicketActions({ ticketNumber, claimed, claiming, linked }: TicketActionsProps) {
-  const router = useRouter();
   const reasonId = useId();
   const [reason, setReason] = useState("");
   const [claimPending, startClaim] = useTransition();
@@ -41,21 +41,17 @@ export function TicketActions({ ticketNumber, claimed, claiming, linked }: Ticke
 
   const claim = () =>
     startClaim(async () => {
-      if (toastResult(await claimTicketFromDashboard(ticketNumber), "Ticket claimed. It's yours now.")) router.refresh();
+      toastResult(await claimTicketFromDashboard(ticketNumber), "Ticket claimed. It's yours now.");
     });
 
   const release = () =>
     startClaim(async () => {
-      if (toastResult(await changeTicketFromDashboard(ticketNumber, "release", {}), "Released. Anyone on staff can claim it.")) {
-        router.refresh();
-      }
+      toastResult(await changeTicketFromDashboard(ticketNumber, "release", {}), "Released. Anyone on staff can claim it.");
     });
 
   const close = () =>
     startClose(async () => {
-      if (toastResult(await closeTicketFromDashboard(ticketNumber, reason.trim() || null), "Ticket closed. Conversation saved.")) {
-        router.refresh();
-      }
+      toastResult(await closeTicketFromDashboard(ticketNumber, reason.trim() || null), "Ticket closed. Conversation saved.");
     });
 
   return (

@@ -20,7 +20,7 @@ import {
 import { listOpenTicketsByOpener } from "@repo/supabase/queries/ticket-lifecycle";
 import type { TicketEventSource } from "@repo/types";
 import { reportError } from "@repo/sentry";
-import { notifyTicketActivity, trackTicketChannel } from "../ticket-activity";
+import { trackTicketChannel } from "../ticket-activity";
 import { reconcileTicketTranscript } from "../ticket-transcript";
 import { stampTicketTranscript } from "@repo/supabase/queries/ticket-archive";
 import { sendCloseDm } from "./close-dm";
@@ -80,7 +80,6 @@ export async function finalizeTicketClose(
     { detail: { code } },
   );
   trackTicketChannel(guild.id, ticket.channel_id, null);
-  void notifyTicketActivity(guild.id, ticket.channel_id, "closed", ticket.ticket_number);
   // The opener's copy. Best effort, and off the close's path.
   void sendCloseDm(guild, closed);
 

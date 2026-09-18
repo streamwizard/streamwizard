@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button, NativeSelect, NativeSelectOption, Textarea } from "@repo/ui";
 import { sendTicketReply } from "@/actions/discord-ticket-actions";
@@ -15,7 +14,6 @@ export interface ReplyTag {
 
 /** Reply box under an open ticket's conversation. Ctrl/Cmd+Enter sends; a tag pastes its answer in. */
 export function TicketReply({ ticketNumber, tags = [] }: { ticketNumber: number; tags?: ReplyTag[] }) {
-  const router = useRouter();
   const [content, setContent] = useState("");
   const [sending, startSend] = useTransition();
   const trimmed = content.trim();
@@ -28,8 +26,8 @@ export function TicketReply({ ticketNumber, tags = [] }: { ticketNumber: number;
         toast.error(result.error);
         return;
       }
+      // The bot archives the message it posted; that row reaches the page over realtime.
       setContent("");
-      router.refresh();
     });
   };
 
