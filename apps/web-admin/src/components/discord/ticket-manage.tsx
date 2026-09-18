@@ -68,10 +68,6 @@ export function TicketManage({ ticketNumber, subject, priority, category, catego
         <CardTitle className="text-base">Manage</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 [&_[data-slot=native-select-wrapper]]:w-full">
-        {!linked && (
-          <p className="text-xs text-muted-foreground">Link your Discord account in StreamWizard to change this ticket.</p>
-        )}
-
         <div className="space-y-1.5">
           <Label htmlFor={`${id}-priority`}>Priority</Label>
           <NativeSelect

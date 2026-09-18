@@ -1,18 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef, useTransition } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useReducer, useRef, useTransition } from "react";
 import Link from "next/link";
-import { ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Link2Off } from "lucide-react";
 import { toast } from "sonner";
 import type { LinkedStreamWizardAccount } from "@repo/supabase/queries/discord";
 import { formatTicketNumber } from "@repo/supabase/queries/tickets";
-import { Button } from "@repo/ui";
+import { Alert, AlertDescription, AlertTitle, Button } from "@repo/ui";
 import { getTicketSnapshot, listTicketMembersForDashboard, lookupDiscordNames } from "@/actions/discord-ticket-actions";
-import { PageHeader } from "@/components/widgets/page-header";
 import { useTicketRealtime, type TicketRealtimeHandlers } from "@/hooks/use-ticket-realtime";
 import { displayName } from "@/lib/discord/profile-names";
 import type { TicketSnapshot } from "@/lib/discord/ticket-snapshot";
 import { toTranscriptMessage } from "@/lib/discord/ticket-snapshot";
+import { PRIORITY_LABELS, TICKET_TONE_DOT, formatDateTime, formatRelativeTime, priorityClass, ticketState } from "@/lib/discord/tickets";
+import { cn } from "@/lib/utils";
 import { TicketActions } from "../ticket-actions";
 import { TicketCloseRequest } from "../ticket-close-request";
 import { TicketManage } from "../ticket-manage";
@@ -119,36 +120,84 @@ export function TicketPage({ snapshot, config }: { snapshot: TicketSnapshot; con
   const productLabel = config.products.find((p) => p.slug === ticket.product)?.label ?? ticket.product;
   const categoryName = category?.name ?? ticket.category;
 
+  const standing = ticketState(ticket);
+  const opener = displayName(ticket.opener_name, ticket.opener_discord_user_id, state.profiles);
+
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={`${formatTicketNumber(ticket.ticket_number)} ${ticket.subject}`}
-        description={[productLabel, categoryName].filter(Boolean).join(" · ")}
-      >
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/discord/tickets">All tickets</Link>
-        </Button>
-        {isOpen && (
-          <TicketActions
-            ticketNumber={ticket.ticket_number}
-            claimed={!!ticket.claimed_by_discord_user_id}
-            claiming={category?.claimingEnabled !== false}
-            linked={config.linked}
-          />
-        )}
-        {isOpen && (
-          <Button size="sm" variant="outline" asChild>
-            <a
-              href={`https://discord.com/channels/${config.guildId}/${ticket.channel_id}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Open in Discord
-              <ExternalLink className="size-3.5" aria-hidden />
-            </a>
-          </Button>
-        )}
-      </PageHeader>
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0 space-y-1">
+          <Link
+            href="/discord/tickets"
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="size-3.5" aria-hidden />
+            All tickets
+          </Link>
+          <h1 className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold">
+            <span className="font-mono text-base font-normal text-muted-foreground">{formatTicketNumber(ticket.ticket_number)}</span>
+            <span className="min-w-0 break-words">{ticket.subject}</span>
+          </h1>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5 text-foreground" title={standing.hint}>
+              <span aria-hidden className={cn("size-2 rounded-full", TICKET_TONE_DOT[standing.tone])} />
+              {standing.label}
+            </span>
+            {ticket.priority && (
+              <>
+                <span aria-hidden>·</span>
+                <span className={priorityClass(ticket.priority)}>{PRIORITY_LABELS[ticket.priority] ?? ticket.priority} priority</span>
+              </>
+            )}
+            {[productLabel, categoryName].filter(Boolean).map((part) => (
+              <Fragment key={part}>
+                <span aria-hidden>·</span>
+                <span>{part}</span>
+              </Fragment>
+            ))}
+            <span aria-hidden>·</span>
+            <span>
+              Opened{" "}
+              <time dateTime={ticket.created_at} title={formatDateTime(ticket.created_at)} suppressHydrationWarning>
+                {formatRelativeTime(ticket.created_at)}
+              </time>
+              {opener && <> by {opener}</>}
+            </span>
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          {isOpen && (
+            <Button size="sm" variant="outline" asChild>
+              <a
+                href={`https://discord.com/channels/${config.guildId}/${ticket.channel_id}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open in Discord
+                <ExternalLink className="size-3.5" aria-hidden />
+              </a>
+            </Button>
+          )}
+          {isOpen && (
+            <TicketActions
+              ticketNumber={ticket.ticket_number}
+              claimed={!!ticket.claimed_by_discord_user_id}
+              claiming={category?.claimingEnabled !== false}
+              linked={config.linked}
+            />
+          )}
+        </div>
+      </div>
+
+      {isOpen && !config.linked && (
+        <Alert>
+          <Link2Off />
+          <AlertTitle>Your Discord account isn&apos;t linked</AlertTitle>
+          <AlertDescription>
+            Link it in StreamWizard and the bot can claim, reply and close as you. Until then this page is read-only.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <TicketConversation
@@ -161,7 +210,7 @@ export function TicketPage({ snapshot, config }: { snapshot: TicketSnapshot; con
           onRefresh={resync}
         />
 
-        <div className="order-1 space-y-6 lg:order-2">
+        <div className="space-y-6">
           <TicketDetails
             ticket={ticket}
             profiles={state.profiles}

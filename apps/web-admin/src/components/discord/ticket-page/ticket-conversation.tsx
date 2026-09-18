@@ -44,7 +44,7 @@ export function TicketConversation({
   const label = STATUS_LABEL[status];
 
   return (
-    <Card className="order-2 lg:order-1">
+    <Card>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
           Conversation

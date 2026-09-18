@@ -2,9 +2,9 @@
 
 import type { LinkedStreamWizardAccount } from "@repo/supabase/queries/discord";
 import type { DiscordTicket } from "@repo/supabase/queries/tickets";
-import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { displayName, type DiscordProfile } from "@/lib/discord/profile-names";
-import { formatDateTime, TICKET_CLOSE_CAUSES } from "@/lib/discord/tickets";
+import { PRIORITY_LABELS, TICKET_CLOSE_CAUSES, formatDateTime, formatRelativeTime, priorityClass } from "@/lib/discord/tickets";
 
 export interface TicketAnswer {
   id: string;
@@ -47,6 +47,15 @@ function Detail({ label, children }: { label: string; children: React.ReactNode 
   );
 }
 
+/** Relative on the page, exact on hover. The client clock differs from the server's, so the text may shift on hydration. */
+function When({ iso }: { iso: string }) {
+  return (
+    <time dateTime={iso} title={formatDateTime(iso)} suppressHydrationWarning>
+      {formatRelativeTime(iso)}
+    </time>
+  );
+}
+
 export function TicketDetails({
   ticket,
   profiles,
@@ -58,27 +67,37 @@ export function TicketDetails({
   linkedAccount: LinkedStreamWizardAccount | null;
   answers: TicketAnswer[];
 }) {
-  const isOpen = ticket.status === "open";
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between gap-2 text-base">
-          Details
-          <span className="flex flex-wrap justify-end gap-1">
-            {isOpen && ticket.stale_warned_at && (
-              <Badge
-                variant="secondary"
-                title="The opener was reminded that the ticket went quiet. A reply clears this."
-              >
-                Quiet since {formatDateTime(ticket.stale_warned_at)}
-              </Badge>
-            )}
-            <Badge variant={isOpen ? "default" : "outline"}>{isOpen ? "Open" : "Closed"}</Badge>
-          </span>
-        </CardTitle>
+        <CardTitle className="text-base">Details</CardTitle>
       </CardHeader>
       <CardContent>
         <dl className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Detail label="Priority">
+              {ticket.priority ? (
+                <span className={priorityClass(ticket.priority)}>{PRIORITY_LABELS[ticket.priority] ?? ticket.priority}</span>
+              ) : (
+                <span className="text-muted-foreground">None</span>
+              )}
+            </Detail>
+            <Detail label="Opened">
+              <When iso={ticket.created_at} />
+            </Detail>
+            {ticket.closed_at && (
+              <Detail label="Closed">
+                <When iso={ticket.closed_at} />
+              </Detail>
+            )}
+            {ticket.status === "open" && ticket.stale_warned_at && (
+              <Detail label="Quiet since">
+                <span title="The opener was reminded that the ticket went quiet. A reply clears this.">
+                  <When iso={ticket.stale_warned_at} />
+                </span>
+              </Detail>
+            )}
+          </div>
           <Detail label="Opened by">
             <DiscordPerson id={ticket.opener_discord_user_id} stored={ticket.opener_name} profiles={profiles} />
           </Detail>

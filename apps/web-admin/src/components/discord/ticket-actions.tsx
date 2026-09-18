@@ -56,7 +56,6 @@ export function TicketActions({ ticketNumber, claimed, claiming, linked }: Ticke
 
   return (
     <>
-      {!linked && <span className="text-xs text-muted-foreground">Link your Discord account to work this ticket</span>}
       {claiming && (
         <Button
           size="sm"

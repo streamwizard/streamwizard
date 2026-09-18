@@ -25,7 +25,7 @@ export function TicketCloseRequest({ ticketNumber, requestedAt, expiresAt, reque
     });
 
   return (
-    <Card className="border-primary/40">
+    <Card className="border-amber-500/50">
       <CardHeader>
         <CardTitle className="text-base">Close request</CardTitle>
         <CardDescription>
@@ -40,7 +40,6 @@ export function TicketCloseRequest({ ticketNumber, requestedAt, expiresAt, reque
         <Button size="sm" variant="outline" disabled={pending || !linked} onClick={() => answer("close-reject", "Kept open.")}>
           Keep it open
         </Button>
-        {!linked && <p className="w-full text-xs text-muted-foreground">Link your Discord account in StreamWizard to answer from here.</p>}
       </CardContent>
     </Card>
   );
