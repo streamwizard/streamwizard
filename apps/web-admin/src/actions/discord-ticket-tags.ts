@@ -40,6 +40,13 @@ export type TicketTagFormInput = z.infer<typeof tagSchema>;
 const GONE = "That tag doesn't exist anymore. Refresh the page?";
 const ALLOWED_VARIABLES = CORE_VARIABLES.map((v) => v.key);
 
+/** A bad id is the caller's mistake, not an incident: it becomes a message, not a Sentry issue. */
+function parseId(id: string): string {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) throw new DashboardError(GONE);
+  return parsed.data;
+}
+
 function parse(input: unknown): TicketTagFormInput {
   const parsed = tagSchema.safeParse(input);
   if (!parsed.success) throw new DashboardError(parsed.error.issues[0]?.message ?? "Invalid input");
@@ -82,7 +89,7 @@ export async function updateTicketTagAction(id: string, input: TicketTagFormInpu
   try {
     const { userId, guildId } = await requireDiscordAdmin();
     const next = parse(input);
-    const tagId = idSchema.parse(id);
+    const tagId = parseId(id);
     const existing = await listTicketTags(supabaseAdmin, guildId);
     const current = existing.find((tag) => tag.id === tagId);
     if (!current) throw new DashboardError(GONE);
@@ -105,7 +112,7 @@ export async function updateTicketTagAction(id: string, input: TicketTagFormInpu
 export async function removeTicketTagAction(id: string): Promise<DiscordActionResult> {
   try {
     const { userId, guildId } = await requireDiscordAdmin();
-    const tagId = idSchema.parse(id);
+    const tagId = parseId(id);
     const current = (await listTicketTags(supabaseAdmin, guildId)).find((tag) => tag.id === tagId);
     if (!current) throw new DashboardError(GONE);
     if (!(await deleteTicketTag(supabaseAdmin, guildId, tagId))) throw new DashboardError(GONE);
@@ -119,7 +126,9 @@ export async function removeTicketTagAction(id: string): Promise<DiscordActionRe
 export async function reorderTicketTagsAction(orderedIds: string[]): Promise<DiscordActionResult> {
   try {
     const { guildId } = await requireDiscordAdmin();
-    await reorderTicketTags(supabaseAdmin, guildId, z.array(idSchema).max(200).parse(orderedIds));
+    const ids = z.array(idSchema).max(200).safeParse(orderedIds);
+    if (!ids.success) throw new DashboardError("That order can't be saved. Refresh the page?");
+    await reorderTicketTags(supabaseAdmin, guildId, ids.data);
     return finish(guildId);
   } catch (error) {
     return toActionError(error, "reorder ticket tags", "Couldn't save the new order. Try again?");

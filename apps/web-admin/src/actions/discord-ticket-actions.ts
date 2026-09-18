@@ -98,8 +98,9 @@ export async function changeTicketFromDashboard<K extends TicketChange>(
 ): Promise<DiscordActionResult> {
   try {
     const { guildId, discordUserId, ticket } = await prepare(ticketNumber);
+    // Own keys only: "constructor" or "toString" would otherwise look up Object's.
+    if (!Object.hasOwn(TICKET_CHANGES, change)) throw new DashboardError("Unknown ticket action");
     const schema = TICKET_CHANGES[change];
-    if (!schema) throw new DashboardError("Unknown ticket action");
     const parsed = schema.safeParse(input);
     if (!parsed.success) throw new DashboardError(parsed.error.issues[0]?.message ?? "Invalid input");
 
@@ -231,7 +232,8 @@ export async function lookupDiscordNames(ids: string[]): Promise<Record<string, 
     const profiles = await resolveDiscordProfiles(wanted);
     return Object.fromEntries([...profiles].map(([id, profile]) => [id, profile.name]));
   } catch (error) {
-    reportError(error, "web-admin discord: mention names");
+    // A missing admin session is a DashboardError and no incident; only the unexpected reaches Sentry.
+    if (!(error instanceof DashboardError)) reportError(error, "web-admin discord: mention names");
     return {};
   }
 }
