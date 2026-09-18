@@ -21,7 +21,9 @@ import { listOpenTicketsByOpener } from "@repo/supabase/queries/ticket-lifecycle
 import type { TicketEventSource } from "@repo/types";
 import { reportError } from "@repo/sentry";
 import { notifyTicketActivity, trackTicketChannel } from "../ticket-activity";
-import { captureTicketTranscript } from "../ticket-transcript";
+import { reconcileTicketTranscript } from "../ticket-transcript";
+import { stampTicketTranscript } from "@repo/supabase/queries/ticket-archive";
+import { sendCloseDm } from "./close-dm";
 import { findCategory, getTicketConfig } from "./config";
 import { recordTicketEvent } from "./events";
 import { TICKET_IDS } from "./ids";
@@ -33,7 +35,7 @@ export const CLOSE_RESULT_MESSAGES: Record<Exclude<CloseTicketResult, "closed">,
   not_a_ticket: "This channel isn't a tracked ticket.",
   already_closed: "This ticket was already closed.",
   transcript_failed:
-    "Couldn't save this ticket's transcript, so the channel stays open. Try closing it again in a minute.",
+    "Couldn't finish saving this ticket's conversation, so the channel stays open. Try closing it again in a minute.",
 };
 
 interface FinalizeCloseOptions {
@@ -79,15 +81,17 @@ export async function finalizeTicketClose(
   );
   trackTicketChannel(guild.id, ticket.channel_id, null);
   void notifyTicketActivity(guild.id, ticket.channel_id, "closed", ticket.ticket_number);
+  // The opener's copy. Best effort, and off the close's path.
+  void sendCloseDm(guild, closed);
 
   if (channel) await channel.delete(actor ? `Ticket closed by ${actor.user.tag}` : `Ticket closed (${code})`);
   return closed;
 }
 
 // Shared by the close-confirm button, the /ticket close command and the
-// dashboard. The transcript is saved before anything else: if that fails the
-// ticket stays open and the channel isn't deleted, so no conversation is ever
-// lost.
+// dashboard. The channel is reconciled against the archive before anything
+// else: if that fails the ticket stays open and the channel isn't deleted, so
+// no conversation is ever lost.
 export async function closeTicketChannel(
   channel: TextChannel,
   closedBy: GuildMember,
@@ -100,7 +104,7 @@ export async function closeTicketChannel(
 
   let messageCount: number;
   try {
-    messageCount = await captureTicketTranscript(channel, ticket);
+    messageCount = await reconcileTicketTranscript(channel, ticket);
   } catch (error) {
     reportError(error, "discord-bot tickets: transcript", { ticketId: ticket.id, ticketNumber: ticket.ticket_number });
     return "transcript_failed";
@@ -119,13 +123,18 @@ export async function closeTicketChannel(
 
 /**
  * A ticket channel deleted by hand, outside the close flow. The row would stay
- * open forever, so it is closed here. The conversation went with the channel:
- * there is no transcript to save. Returns whether the channel was an open ticket.
+ * open forever, so it is closed here. The channel can't be read any more, so
+ * the transcript is whatever the live archive caught, sealed as it stands.
+ * Returns whether the channel was an open ticket.
  */
 export async function closeOrphanedTicket(guild: Guild, channelId: string): Promise<boolean> {
   const ticket = await getTicketByChannelId(supabase, channelId);
   if (!ticket || ticket.status !== "open") return false;
-  const closed = await finalizeTicketClose(guild, ticket, { code: "channel_deleted", actor: null, channel: null });
+  const messageCount = await stampTicketTranscript(supabase, ticket.id).catch((error) => {
+    reportError(error, "discord-bot tickets: seal transcript", { ticketId: ticket.id });
+    return undefined;
+  });
+  const closed = await finalizeTicketClose(guild, ticket, { code: "channel_deleted", actor: null, channel: null, messageCount });
   return closed !== null;
 }
 
@@ -144,7 +153,7 @@ export async function closeTicketsOfDepartedMember(guild: Guild, discordUserId: 
     let messageCount: number | undefined;
     if (channel) {
       try {
-        messageCount = await captureTicketTranscript(channel, ticket);
+        messageCount = await reconcileTicketTranscript(channel, ticket);
       } catch (error) {
         reportError(error, "discord-bot tickets: transcript", { ticketId: ticket.id, ticketNumber: ticket.ticket_number });
         continue;

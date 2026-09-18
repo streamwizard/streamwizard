@@ -2,6 +2,7 @@ import { Events } from "discord.js";
 import { emitServerEvent, shouldLogMessage } from "../../lib/server-log/emit";
 import type { BotEvent } from "../../types/discord";
 import { channelRef, messageText, userRef } from "../../lib/server-log/refs";
+import { archiveMessageUpdate } from "../../lib/tickets/archive";
 
 // Discord also sends MessageUpdate when a link preview unfurls or a message is
 // pinned; only real text edits are logged. The old text is only known when the
@@ -9,6 +10,8 @@ import { channelRef, messageText, userRef } from "../../lib/server-log/refs";
 export default {
   name: Events.MessageUpdate,
   async execute(oldMessage, newMessage) {
+    // Ticket channels keep every change, pins and unfurls included; the log below only wants real edits.
+    void archiveMessageUpdate(newMessage);
     const message = newMessage.partial ? await newMessage.fetch().catch(() => null) : newMessage;
     if (!message?.guild) return;
     // Discord stamps edited_timestamp only for real edits, not unfurls or pins.

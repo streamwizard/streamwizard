@@ -23,8 +23,7 @@ import { TicketActions } from "@/components/discord/ticket-actions";
 import { TicketManage } from "@/components/discord/ticket-manage";
 import { TicketReply } from "@/components/discord/ticket-reply";
 import { assertAdmin } from "@/lib/assert-admin";
-import { TicketTranscript, type TranscriptMessage } from "@/components/discord/ticket-transcript";
-import { getLiveTranscript } from "@/lib/discord/live-transcript";
+import { TicketTranscript } from "@/components/discord/ticket-transcript";
 import { PageHeader } from "@/components/widgets/page-header";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { buildNameMap } from "@/lib/discord/names";
@@ -113,25 +112,14 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
   ]);
   const productLabel = products.find((p) => p.slug === ticket.product)?.label ?? ticket.product;
   const categoryName = categories.find((c) => c.slug === ticket.category)?.name ?? ticket.category;
-  // Open tickets aren't saved yet: read the channel live. Closed ones use the
-  // stored transcript.
+  // The bot archives messages as they happen, so open and closed tickets read
+  // the same rows. An open one refetches when the bot signals activity.
   const isOpen = ticket.status === "open";
-  let liveMessages: TranscriptMessage[] | null = null;
-  let liveFailed = false;
-  if (isOpen) {
-    try {
-      liveMessages = await getLiveTranscript(ticket.channel_id);
-    } catch (error) {
-      liveFailed = true;
-      reportError(error, "web-admin discord: live transcript", { ticket: ticket.ticket_number });
-    }
-  }
 
   // People mentioned in the conversation who didn't write in it (capped, one
   // Discord lookup each).
-  const shown = liveMessages ?? messages;
-  const authors = new Set(shown.map((m) => m.author_discord_id));
-  const mentioned = [...JSON.stringify(shown.map((m) => [m.content, m.embeds])).matchAll(/<@!?(\d{17,20})>/g)]
+  const authors = new Set(messages.map((m) => m.author_discord_id));
+  const mentioned = [...JSON.stringify(messages.map((m) => [m.content, m.embeds])).matchAll(/<@!?(\d{17,20})>/g)]
     .map((match) => match[1] ?? "")
     .filter((id) => id && !authors.has(id))
     .slice(0, 25);
@@ -200,29 +188,19 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
           <CardHeader>
             <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
               Conversation
-              {isOpen && liveMessages && (
-                <AutoRefresh wsUrl={process.env.NEXT_PUBLIC_WS_SERVER_URL ?? null} channelId={ticket.channel_id} />
-              )}
+              {isOpen && <AutoRefresh wsUrl={process.env.NEXT_PUBLIC_WS_SERVER_URL ?? null} channelId={ticket.channel_id} />}
             </CardTitle>
           </CardHeader>
           <CardContent>
             {isOpen ? (
-              liveFailed ? (
-                <p className="text-sm text-muted-foreground">Couldn&apos;t load the conversation from Discord. Try refreshing.</p>
-              ) : liveMessages === null ? (
-                <p className="text-sm text-muted-foreground">
-                  The ticket channel is gone from Discord, but the ticket is still marked open, so nothing was saved.
-                </p>
-              ) : (
-                <div className="space-y-4">
-                  {liveMessages.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No messages in the ticket channel yet.</p>
-                  ) : (
-                    <TicketTranscript messages={liveMessages} names={names} />
-                  )}
-                  <TicketReply ticketNumber={ticket.ticket_number} />
-                </div>
-              )
+              <div className="space-y-4">
+                {messages.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No messages in the ticket channel yet.</p>
+                ) : (
+                  <TicketTranscript messages={messages} names={names} />
+                )}
+                <TicketReply ticketNumber={ticket.ticket_number} />
+              </div>
             ) : ticket.transcript_purged_at ? (
               <p className="text-sm text-muted-foreground">
                 This transcript was deleted on {formatDateTime(ticket.transcript_purged_at)}, 12 months after the ticket closed.
@@ -231,7 +209,7 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
               <TicketTranscript messages={messages} names={names} />
             ) : ticket.close_code === "channel_deleted" ? (
               <p className="text-sm text-muted-foreground">
-                No transcript. The channel was deleted in Discord before the ticket was closed, and the conversation went with it.
+                No transcript. The channel was deleted in Discord before the bot archived anything from it.
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">No transcript. This ticket closed before transcripts were saved.</p>

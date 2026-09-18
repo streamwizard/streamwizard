@@ -335,7 +335,13 @@ async function createTicketChannel(
       reportError(error, "discord-bot tickets: save answers", { ticketId: ticket.id }),
     );
     await recordTicketEvent(interaction.guild, ticket, "opened", interaction.member, "discord");
-    trackTicketChannel(interaction.guildId, channel.id, ticket.ticket_number);
+    trackTicketChannel(interaction.guildId, channel.id, {
+      ticketId: ticket.id,
+      number: ticket.ticket_number,
+      channelId: channel.id,
+      openerId: ticket.opener_discord_user_id,
+      categorySlug: ticket.category,
+    });
     void notifyTicketActivity(interaction.guildId, channel.id, "opened", ticket.ticket_number);
 
     await channel.send(

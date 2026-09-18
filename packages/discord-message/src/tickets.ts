@@ -92,3 +92,44 @@ export function parseTicketOpening(value: unknown): BuiltMessage | null {
   const parsed = ticketOpeningSchema.safeParse(value);
   return parsed.success && parsed.data.elements.length > 0 ? parsed.data : null;
 }
+
+// The short texts the bot sends around a ticket that aren't a designed
+// message: today the DM an opener gets when their ticket closes. Stored in
+// discord_ticket_settings.messages as a partial object; anything missing falls
+// back to these defaults, so an old row keeps working when a key is added.
+
+/** What the closing DM knows: the server, the ticket and why it closed. */
+export const TICKET_CLOSE_VARIABLES: VariableDefinition[] = [
+  ...SERVER_VARIABLES,
+  ...TICKET_VARIABLES,
+  { key: "ticket.close_reason", label: "Close reason", sample: "Fixed in the latest update" },
+  { key: "ticket.closed_by", label: "Who closed it", sample: "Jochem" },
+];
+
+export const TICKET_MESSAGE_MAX = 1500;
+
+export const DEFAULT_TICKET_MESSAGES = {
+  closeDm:
+    "Your ticket [ticket.number] in [server.name] was closed.\n\n**[ticket.subject]**\n[ticket.close_reason]\n\nThe conversation is attached. Open a new ticket any time.",
+} as const;
+
+export type TicketMessageKey = keyof typeof DEFAULT_TICKET_MESSAGES;
+
+export const ticketMessagesSchema = z.object({
+  closeDm: z.string().trim().min(1).max(TICKET_MESSAGE_MAX).default(DEFAULT_TICKET_MESSAGES.closeDm),
+});
+
+export type TicketMessages = z.infer<typeof ticketMessagesSchema>;
+
+/** Always a full set: unknown or broken input falls back to the defaults key by key. */
+export function parseTicketMessages(value: unknown): TicketMessages {
+  const parsed = ticketMessagesSchema.safeParse(value ?? {});
+  if (parsed.success) return parsed.data;
+  const partial = typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {};
+  return Object.fromEntries(
+    Object.keys(DEFAULT_TICKET_MESSAGES).map((key) => {
+      const one = ticketMessagesSchema.shape[key as TicketMessageKey].safeParse(partial[key]);
+      return [key, one.success ? one.data : DEFAULT_TICKET_MESSAGES[key as TicketMessageKey]];
+    }),
+  ) as TicketMessages;
+}

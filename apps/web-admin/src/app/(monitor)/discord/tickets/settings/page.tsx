@@ -26,6 +26,7 @@ export default async function DiscordTicketSettingsPage() {
     maxOpenPerUser: settings?.max_open_per_user ?? null,
     claimHidesFromOtherStaff: settings?.claim_hides_from_other_staff ?? false,
     closeOnMemberLeave: settings?.close_on_member_leave ?? false,
+    dmOnClose: settings?.dm_on_close ?? true,
   };
 
   return (

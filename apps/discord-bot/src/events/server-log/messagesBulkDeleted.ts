@@ -3,6 +3,7 @@ import { emitAuditedEvent, isLoggedChannel } from "../../lib/server-log/emit";
 import type { BotEvent } from "../../types/discord";
 import { truncate } from "../../lib/log-channel/embed-kit";
 import { channelRef, displayNameOf } from "../../lib/server-log/refs";
+import { archiveMessageDeletes } from "../../lib/tickets/archive";
 
 const MAX_LINES = 20;
 const MAX_LINE = 180;
@@ -12,6 +13,7 @@ const MAX_LINE = 180;
 export default {
   name: Events.MessageBulkDelete,
   async execute(messages, channel) {
+    void archiveMessageDeletes(channel.guild.id, channel.id, [...messages.keys()]);
     await emitAuditedEvent(
       channel.guild,
       "message.bulk_deleted",

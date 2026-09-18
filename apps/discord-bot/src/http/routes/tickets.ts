@@ -8,6 +8,7 @@ import { TWITCH_PURPLE } from "../../lib/branding";
 import { BuiltMessageError, BuiltMessageSendError } from "../../lib/built-message";
 import {
   addMember,
+  archiveNewMessage,
   changePriority,
   changeSubject,
   CLOSE_REASON_MAX,
@@ -202,6 +203,8 @@ ticketRoutes.post("/tickets/:channelId/message", async (c) => {
     .setDescription(body.data.content)
     .setTimestamp();
   const message = await channel.send({ embeds: [embed] });
+  // Posted by the bot, but it is a staff reply: it counts for response times.
+  void archiveNewMessage(message, { counts: true, byStaff: true });
   void logTicketReply(guild, ticket, body.data.authorName);
   return c.json({ ok: true, messageId: message.id });
 });

@@ -2,6 +2,7 @@ import { AuditLogEvent, Events } from "discord.js";
 import { emitAuditedEvent, shouldLogMessage } from "../../lib/server-log/emit";
 import type { BotEvent } from "../../types/discord";
 import { channelRef, messageText, userRef } from "../../lib/server-log/refs";
+import { archiveMessageDeletes } from "../../lib/tickets/archive";
 
 // Deletes of uncached messages arrive with only the ids, so author and text are
 // unknown. Discord only writes an audit entry when someone deletes another
@@ -11,6 +12,7 @@ export default {
   async execute(message) {
     const guild = message.guildId ? message.client.guilds.cache.get(message.guildId) : null;
     if (!guild) return;
+    void archiveMessageDeletes(guild.id, message.channelId, [message.id]);
     const author = message.partial ? null : message.author;
 
     await emitAuditedEvent(

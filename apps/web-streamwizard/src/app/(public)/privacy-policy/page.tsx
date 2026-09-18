@@ -65,10 +65,14 @@ function NormalContent() {
         <h3 className="text-lg font-medium mb-2">Discord Support Tickets</h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
           If you open a support ticket in the StreamWizard Discord server, we
-          save the conversation when the ticket closes: the messages, the
-          Discord names and avatars of everyone who wrote in it, and images up
-          to 500 KB. Other attachments are kept as file name and size only.
-          Our team uses this history to follow up on your issue.
+          save the conversation as it happens: the messages, the Discord names
+          and avatars of everyone who wrote in it, and images up to 500 KB.
+          Other attachments are kept as file name and size only. A message you
+          edit is updated; a message you delete is kept and marked as deleted,
+          so our team can still follow what the ticket was about. When the
+          ticket closes you get a copy of the conversation by Discord DM, unless
+          the server has turned that off. Our team uses this history to follow
+          up on your issue.
         </p>
 
         <h3 className="text-lg font-medium mb-2">Discord Server Moderation Log</h3>
@@ -535,10 +539,12 @@ function GenZContent() {
 
         <h3 className="text-lg font-medium mb-2">support tickets 🎫</h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
-          opened a ticket in our Discord? when it closes we save the chat: the
+          opened a ticket in our Discord? we save the chat as it happens: the
           messages, everyone&apos;s Discord name + avatar, and images up to 500
           KB. anything bigger (or not an image) we only keep the file name and
-          size. it&apos;s so we can actually help if the same bug comes back.
+          size. edits update, deletes stay but get a &quot;deleted&quot; tag.
+          when it closes you get the chat as a file in your DMs. it&apos;s so we
+          can actually help if the same bug comes back.
         </p>
 
         <h3 className="text-lg font-medium mb-2">our Discord mod log 🛡️</h3>

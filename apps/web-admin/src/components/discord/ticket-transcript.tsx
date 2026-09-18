@@ -1,10 +1,21 @@
 import type { Json } from "@repo/supabase";
 import type { DiscordTicketMessage } from "@repo/supabase/queries/tickets";
 
-/** What the transcript needs: a saved row, or a live message mapped to the same shape. */
+/** An archived message. Deleted ones are kept and shown as such, so staff can still read what a ticket was about. */
 export type TranscriptMessage = Pick<
   DiscordTicketMessage,
-  "id" | "author_discord_id" | "author_name" | "author_avatar_url" | "author_is_bot" | "content" | "embeds" | "attachments" | "created_at" | "edited_at"
+  | "id"
+  | "author_discord_id"
+  | "author_name"
+  | "author_avatar_url"
+  | "author_is_bot"
+  | "content"
+  | "embeds"
+  | "attachments"
+  | "created_at"
+  | "edited_at"
+  | "deleted_at"
+  | "pinned"
 >;
 import { Badge } from "@repo/ui";
 import { formatBytes, formatDateTime } from "@/lib/discord/tickets";
@@ -14,10 +25,8 @@ interface StoredAttachment {
   name: string;
   size: number;
   content_type: string | null;
-  /** Image preview source (R2 copy, or Discord's own link for live tickets). */
+  /** Image preview source: the R2 copy. Null for files that weren't copied. */
   url: string | null;
-  /** Live tickets only: Discord link for files that aren't previewed. */
-  link_url?: string | null;
 }
 
 interface StoredEmbed {
@@ -105,18 +114,6 @@ function Attachment({ attachment }: { attachment: StoredAttachment }) {
       </a>
     );
   }
-  if (attachment.link_url) {
-    return (
-      <a
-        href={attachment.link_url}
-        target="_blank"
-        rel="noreferrer"
-        className="mt-1.5 block w-fit rounded-md border px-2.5 py-1.5 text-xs text-muted-foreground hover:text-foreground"
-      >
-        {attachment.name} · {formatBytes(attachment.size)}
-      </a>
-    );
-  }
   return (
     <div className="mt-1.5 w-fit rounded-md border px-2.5 py-1.5 text-xs text-muted-foreground">
       {attachment.name} · {formatBytes(attachment.size)} · not saved
@@ -139,7 +136,7 @@ export function TicketTranscript({ messages, names }: { messages: TranscriptMess
         const embeds = (message.embeds as Json[] as StoredEmbed[]) ?? [];
         const attachments = (message.attachments as Json[] as unknown as StoredAttachment[]) ?? [];
         return (
-          <li key={message.id} className="flex gap-3">
+          <li key={message.id} className={message.deleted_at ? "flex gap-3 opacity-60" : "flex gap-3"}>
             {message.author_avatar_url ? (
               // eslint-disable-next-line @next/next/no-img-element -- Discord CDN avatar
               <img src={message.author_avatar_url} alt="" className="size-9 shrink-0 rounded-full" loading="lazy" />
@@ -160,6 +157,16 @@ export function TicketTranscript({ messages, names }: { messages: TranscriptMess
                   {formatDateTime(message.created_at)}
                 </time>
                 {message.edited_at && <span className="text-xs text-muted-foreground">(edited)</span>}
+                {message.pinned && (
+                  <Badge variant="outline" className="px-1 py-0 text-[10px]">
+                    Pinned
+                  </Badge>
+                )}
+                {message.deleted_at && (
+                  <Badge variant="destructive" className="px-1 py-0 text-[10px]" title={`Deleted ${formatDateTime(message.deleted_at)}`}>
+                    Deleted
+                  </Badge>
+                )}
               </div>
               {/* Like Discord: a message that's only a GIF/image link shows the media, not the URL. */}
               {message.content && !embeds.some((e) => isMediaEmbed(e) && e.url === message.content.trim()) && (

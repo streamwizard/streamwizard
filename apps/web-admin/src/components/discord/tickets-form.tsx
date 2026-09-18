@@ -166,6 +166,13 @@ export function TicketsForm({ initial, textChannels, categories, roles, hasPanel
             disabled={saving}
           />
         </SettingRow>
+        <SettingRow
+          htmlFor="dm-on-close"
+          label="Message the opener when their ticket closes"
+          hint="A DM with the conversation as a file. The text is under Messages."
+        >
+          <Switch id="dm-on-close" checked={values.dmOnClose} onCheckedChange={(v) => set("dmOnClose", v)} disabled={saving} />
+        </SettingRow>
         <SaveBar dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
       </CardContent>
     </Card>

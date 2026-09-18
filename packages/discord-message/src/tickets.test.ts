@@ -1,7 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import { createMessage } from "./model";
 import { validateMessage } from "./limits";
-import { defaultTicketPanel, parseTicketOpening, parseTicketPanel, TICKET_PANEL_VARIABLES } from "./tickets";
+import {
+  DEFAULT_TICKET_MESSAGES,
+  defaultTicketPanel,
+  parseTicketMessages,
+  parseTicketOpening,
+  parseTicketPanel,
+  TICKET_CLOSE_VARIABLES,
+  TICKET_PANEL_VARIABLES,
+} from "./tickets";
+import { findUnknownVariables } from "./variables";
 
 describe("ticket panel", () => {
   test("the default passes the same limits a designed panel has to", () => {
@@ -34,5 +43,23 @@ describe("ticket opening message", () => {
     expect(parseTicketOpening(null)).toBeNull();
     expect(parseTicketOpening(createMessage([]))).toBeNull();
     expect(parseTicketOpening(createMessage([embed, { type: "banner", text: "x", image: null }]))).toBeNull();
+  });
+});
+
+describe("parseTicketMessages", () => {
+  test("empty and null give the defaults", () => {
+    expect(parseTicketMessages(null)).toEqual(DEFAULT_TICKET_MESSAGES);
+    expect(parseTicketMessages({})).toEqual(DEFAULT_TICKET_MESSAGES);
+  });
+
+  test("a stored text wins, a broken one falls back on its own", () => {
+    expect(parseTicketMessages({ closeDm: "Bye [ticket.number]" }).closeDm).toBe("Bye [ticket.number]");
+    expect(parseTicketMessages({ closeDm: "   " }).closeDm).toBe(DEFAULT_TICKET_MESSAGES.closeDm);
+    expect(parseTicketMessages({ closeDm: 42 }).closeDm).toBe(DEFAULT_TICKET_MESSAGES.closeDm);
+  });
+
+  test("every default only uses close variables", () => {
+    const allowed = TICKET_CLOSE_VARIABLES.map((v) => v.key);
+    for (const text of Object.values(DEFAULT_TICKET_MESSAGES)) expect(findUnknownVariables(text, allowed)).toEqual([]);
   });
 });

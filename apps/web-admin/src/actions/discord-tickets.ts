@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { findUnknownVariables, TICKET_CLOSE_VARIABLES, ticketMessagesSchema, type TicketMessages } from "@repo/discord-message";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { ensureTicketDefaults } from "@repo/supabase/queries/ticket-config";
 import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
@@ -21,6 +22,7 @@ const ticketSchema = z
     maxOpenPerUser: z.number().int().min(1).max(50).nullable(),
     claimHidesFromOtherStaff: z.boolean(),
     closeOnMemberLeave: z.boolean(),
+    dmOnClose: z.boolean(),
   })
   .refine((v) => !v.enabled || (v.staffRoleId && v.categoryId && v.panelChannelId), {
     message: "Tickets need a staff role, a category and a panel channel before you can turn them on.",
@@ -47,6 +49,7 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       max_open_per_user: current?.max_open_per_user ?? null,
       claim_hides_from_other_staff: current?.claim_hides_from_other_staff ?? false,
       close_on_member_leave: current?.close_on_member_leave ?? false,
+      dm_on_close: current?.dm_on_close ?? true,
     };
     const after = {
       enabled: next.enabled,
@@ -57,6 +60,7 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       max_open_per_user: next.maxOpenPerUser,
       claim_hides_from_other_staff: next.claimHidesFromOtherStaff,
       close_on_member_leave: next.closeOnMemberLeave,
+      dm_on_close: next.dmOnClose,
     };
     for (const roleId of after.blocked_role_ids) {
       if (!before.blocked_role_ids.includes(roleId)) await assertRole(roleId);
@@ -100,6 +104,7 @@ export async function saveTicketSettings(input: TicketSettingsInput): Promise<Di
       max_open_per_user: saved.max_open_per_user,
       claim_hides_from_other_staff: saved.claim_hides_from_other_staff,
       close_on_member_leave: saved.close_on_member_leave,
+      dm_on_close: saved.dm_on_close,
     });
     // A guild's first save: give it the starting categories and products.
     await ensureTicketDefaults(supabaseAdmin, guildId);
@@ -133,5 +138,35 @@ export async function repostTicketPanel(): Promise<DiscordActionResult> {
     return { error: null };
   } catch (error) {
     return toActionError(error, "repost panel", "Couldn't re-post the panel. Try again?");
+  }
+}
+
+/** The short texts the bot sends around a ticket, today the closing DM. Placeholders are checked against the close variables. */
+export async function saveTicketMessages(input: TicketMessages): Promise<DiscordActionResult> {
+  try {
+    const { userId, guildId } = await requireDiscordAdmin();
+    const parsed = ticketMessagesSchema.safeParse(input);
+    if (!parsed.success) throw new DashboardError(parsed.error.issues[0]?.message ?? "Invalid message");
+    const allowed = TICKET_CLOSE_VARIABLES.map((v) => v.key);
+    for (const [key, text] of Object.entries(parsed.data)) {
+      const unknown = findUnknownVariables(text, allowed);
+      if (unknown.length > 0) throw new DashboardError(`${key}: unknown placeholder ${unknown.map((u) => `[${u}]`).join(", ")}`);
+    }
+
+    const current = await getTicketSettings(supabaseAdmin, guildId);
+    await upsertTicketSettings(supabaseAdmin, guildId, { messages: parsed.data });
+    const refreshed = await callBot(guildId, "/cache/tickets");
+
+    await recordChange({
+      userId,
+      guildId,
+      section: "tickets",
+      before: { messages: current?.messages ?? {} },
+      after: { messages: parsed.data },
+    });
+    revalidatePath("/discord", "layout");
+    return { error: null, warning: staleWarning(refreshed) };
+  } catch (error) {
+    return toActionError(error, "save ticket messages", "Couldn't save the messages. Try again?");
   }
 }

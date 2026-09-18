@@ -786,6 +786,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           defaults_seeded_at: string | null
+          dm_on_close: boolean
           enabled: boolean
           guild_id: string
           id: string
@@ -793,6 +794,7 @@ export type Database = {
           claim_hides_from_other_staff: boolean
           close_on_member_leave: boolean
           max_open_per_user: number | null
+          messages: Json
           panel: Json | null
           panel_channel_id: string | null
           panel_message_id: string | null
@@ -805,6 +807,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           defaults_seeded_at?: string | null
+          dm_on_close?: boolean
           enabled?: boolean
           guild_id: string
           id?: string
@@ -812,6 +815,7 @@ export type Database = {
           claim_hides_from_other_staff?: boolean
           close_on_member_leave?: boolean
           max_open_per_user?: number | null
+          messages?: Json
           panel?: Json | null
           panel_channel_id?: string | null
           panel_message_id?: string | null
@@ -824,6 +828,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           defaults_seeded_at?: string | null
+          dm_on_close?: boolean
           enabled?: boolean
           guild_id?: string
           id?: string
@@ -831,6 +836,7 @@ export type Database = {
           claim_hides_from_other_staff?: boolean
           close_on_member_leave?: boolean
           max_open_per_user?: number | null
+          messages?: Json
           panel?: Json | null
           panel_channel_id?: string | null
           panel_message_id?: string | null
@@ -1134,10 +1140,12 @@ export type Database = {
           author_name: string
           content: string
           created_at: string
+          deleted_at: string | null
           edited_at: string | null
           embeds: Json
           id: string
           message_id: string
+          pinned: boolean
           ticket_id: string
         }
         Insert: {
@@ -1148,10 +1156,12 @@ export type Database = {
           author_name: string
           content?: string
           created_at: string
+          deleted_at?: string | null
           edited_at?: string | null
           embeds?: Json
           id?: string
           message_id: string
+          pinned?: boolean
           ticket_id: string
         }
         Update: {
@@ -1162,10 +1172,12 @@ export type Database = {
           author_name?: string
           content?: string
           created_at?: string
+          deleted_at?: string | null
           edited_at?: string | null
           embeds?: Json
           id?: string
           message_id?: string
+          pinned?: boolean
           ticket_id?: string
         }
         Relationships: [
@@ -1197,10 +1209,13 @@ export type Database = {
           closed_by_discord_user_id: string | null
           created_at: string
           description: string
+          first_response_at: string | null
           github_issue_number: number | null
           github_issue_url: string | null
           guild_id: string
           id: string
+          last_message_at: string | null
+          last_message_by_staff: boolean | null
           opener_discord_user_id: string
           opener_user_id: string | null
           priority: string | null
@@ -1227,10 +1242,13 @@ export type Database = {
           closed_by_discord_user_id?: string | null
           created_at?: string
           description: string
+          first_response_at?: string | null
           github_issue_number?: number | null
           github_issue_url?: string | null
           guild_id: string
           id?: string
+          last_message_at?: string | null
+          last_message_by_staff?: boolean | null
           opener_discord_user_id: string
           opener_user_id?: string | null
           priority?: string | null
@@ -1257,10 +1275,13 @@ export type Database = {
           closed_by_discord_user_id?: string | null
           created_at?: string
           description?: string
+          first_response_at?: string | null
           github_issue_number?: number | null
           github_issue_url?: string | null
           guild_id?: string
           id?: string
+          last_message_at?: string | null
+          last_message_by_staff?: boolean | null
           opener_discord_user_id?: string
           opener_user_id?: string | null
           priority?: string | null
@@ -3269,6 +3290,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      archive_ticket_message: {
+        Args: { p_by_staff: boolean; p_counts: boolean; p_message: Json; p_ticket_id: string }
+        Returns: undefined
+      }
       add_clip_to_folder: {
         Args: { p_clip_id: string; p_folder_id: string }
         Returns: undefined

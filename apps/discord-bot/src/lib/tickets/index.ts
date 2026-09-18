@@ -25,7 +25,9 @@ export {
   transferTicket,
   type TicketActionResult,
 } from "./actions";
+export { archiveMessageDeletes, archiveMessageUpdate, archiveNewMessage } from "./archive";
 export { claimTicketAs, type ClaimTicketResult } from "./claim";
+export { buildTranscriptFile } from "./close-dm";
 export {
   CLOSE_REASON_MAX,
   CLOSE_RESULT_MESSAGES,

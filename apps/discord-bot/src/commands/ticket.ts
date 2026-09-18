@@ -7,6 +7,7 @@ import { formatTicketNumber } from "@repo/supabase/queries/tickets";
 import type { Command } from "../types/discord";
 import {
   addMember,
+  buildTranscriptFile,
   changePriority,
   changeSubject,
   claimTicketAs,
@@ -127,7 +128,8 @@ export default {
         .setName("subject")
         .setDescription("Staff: reword this ticket's subject")
         .addStringOption((opt) => opt.setName("text").setDescription("The new subject").setRequired(true).setMaxLength(100)),
-    ),
+    )
+    .addSubcommand((sub) => sub.setName("transcript").setDescription("This ticket's conversation so far, as a file (only you see it)")),
 
   async autocomplete(interaction) {
     if (!interaction.inCachedGuild()) return void (await interaction.respond([]));
@@ -237,6 +239,21 @@ export default {
     if (subcommand === "subject") {
       const text = interaction.options.getString("text", true);
       await staffAction(interaction, "Subject changed.", (channel, actor) => changeSubject(channel, actor, text));
+      return;
+    }
+
+    if (subcommand === "transcript") {
+      if (interaction.channel?.type !== ChannelType.GuildText) return void (await ephemeral(interaction, "This isn't a ticket channel."));
+      const context = await loadTicketContext(interaction.channel);
+      if (!context) return void (await ephemeral(interaction, CLOSE_RESULT_MESSAGES.not_a_ticket));
+      const allowed =
+        context.ticket.opener_discord_user_id === interaction.user.id ||
+        isStaff(interaction.member, context.config.settings, context.category);
+      if (!allowed) return void (await ephemeral(interaction, "Only the opener and staff can get the transcript."));
+
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const file = await buildTranscriptFile(interaction.guild, context.ticket, context.config);
+      await interaction.editReply({ content: "The conversation so far.", files: [file] });
     }
   },
 } satisfies Command;
