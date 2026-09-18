@@ -20,6 +20,11 @@ export const TICKET_IDS = {
   /** The reason form. */
   closeSubmit: "ticket:close-submit",
   closeCancel: "ticket:close-cancel",
+  /** The opener (or an added member) asks staff to close. close_mode = request. */
+  closeRequest: "ticket:close-request",
+  /** Staff's answer to a request, on the request message. */
+  closeAccept: "ticket:close-accept",
+  closeReject: "ticket:close-reject",
 } as const;
 
 // Intro messages posted before the GitHub integration was removed still carry

@@ -1,18 +1,22 @@
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, escapeMarkdown } from "discord.js";
 import type { APIEmbed, GuildMember, Message, TextChannel } from "discord.js";
 import {
+  parseTicketMessages,
   parseTicketOpening,
+  replaceVariables,
   resolveMessage,
   TICKET_OPENING_MAX_EMBEDS,
   toApiEmbed,
   type VariableValues,
 } from "@repo/discord-message";
 import { ticketOptionLabel, type TicketAnswerInput } from "@repo/supabase/queries/ticket-config";
+import { parseWorkingHours } from "@repo/supabase/queries/ticket-hours";
 import { formatTicketNumber, type DiscordTicket, type TicketOpenerProfile } from "@repo/supabase/queries/tickets";
 import { TWITCH_PURPLE } from "../branding";
 import { memberVariableValues } from "../built-message";
 import { findCategory, findProduct, type TicketConfig } from "./config";
 import { TICKET_IDS } from "./ids";
+import { discordRelative, isWithinWorkingHours, nextOpening } from "./working-hours";
 
 const CLAIMED_BY = "Claimed by";
 /** Discord: 25 fields per embed, 1024 characters per field value. */
@@ -45,9 +49,32 @@ function buttonRow(ticket: DiscordTicket, config: TicketConfig): ActionRowBuilde
     );
   }
 
-  return row.addComponents(
+  row.addComponents(
     new ButtonBuilder().setCustomId(TICKET_IDS.close).setLabel("Close Ticket").setEmoji("🔒").setStyle(ButtonStyle.Danger),
   );
+  // In request mode the opener can't close, so they get a button to ask.
+  if (config.settings?.close_mode === "request") {
+    row.addComponents(
+      new ButtonBuilder().setCustomId(TICKET_IDS.closeRequest).setLabel("Request close").setEmoji("🙏").setStyle(ButtonStyle.Secondary),
+    );
+  }
+  return row;
+}
+
+/**
+ * The out-of-hours line under the mentions, when the server has working hours
+ * and the ticket opens outside them. Null otherwise.
+ */
+export function workingHoursNotice(ticket: DiscordTicket, config: TicketConfig, member: GuildMember, now = new Date()): string | null {
+  const hours = parseWorkingHours(config.settings?.working_hours);
+  if (isWithinWorkingHours(hours, now)) return null;
+  const opening = nextOpening(hours, now);
+  if (!opening) return null;
+  return replaceVariables(parseTicketMessages(config.settings?.messages).workingHoursNotice, {
+    ...memberVariableValues(member),
+    ...ticketVariableValues(ticket, config),
+    "hours.next_opening": discordRelative(opening),
+  });
 }
 
 const PRIORITY_LABELS: Record<string, string> = { low: "🟢 Low", medium: "🟠 Medium", high: "🔴 High" };
@@ -121,8 +148,10 @@ export function buildTicketIntroMessage(
       ? [config.settings.staff_role_id]
       : [];
 
+  const mentions = [`<@${ticket.opener_discord_user_id}>`, ...pingRoles.map((id) => `<@&${id}>`)].join(" ");
+  const notice = workingHoursNotice(ticket, config, member);
   return {
-    content: [`<@${ticket.opener_discord_user_id}>`, ...pingRoles.map((id) => `<@&${id}>`)].join(" "),
+    content: notice ? `${mentions}\n${notice}`.slice(0, 2000) : mentions,
     embeds: [...openingEmbeds(ticket, config, member), ticketCard(ticket, config, opener, form)],
     components: [buttonRow(ticket, config)],
     allowedMentions: { users: [ticket.opener_discord_user_id], roles: pingRoles },

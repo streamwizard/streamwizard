@@ -124,7 +124,7 @@ export async function recordTicketEvent(
   }
 }
 
-/** Timeline types that reach the log channel as ticket.updated. The rest (close requests, stale warnings) stay on the timeline. */
+/** Timeline types that reach the log channel as ticket.updated. The rest (stale warnings) stay on the timeline. */
 const UPDATE_TYPES: ReadonlySet<DiscordTicketEventType> = new Set([
   "unclaimed",
   "priority_changed",
@@ -133,6 +133,10 @@ const UPDATE_TYPES: ReadonlySet<DiscordTicketEventType> = new Set([
   "moved",
   "transferred",
   "renamed",
+  "close_requested",
+  "close_request_accepted",
+  "close_request_rejected",
+  "close_request_expired",
 ]);
 
 /** Logs a staff reply sent from the web-admin dashboard. No message content. */

@@ -18,12 +18,15 @@ export interface SweepTicketRow {
   created_at: string;
   last_message_at: string | null;
   stale_warned_at: string | null;
+  close_request_expires_at: string | null;
 }
 
 export async function listOpenTicketsForSweep(client: DBClient, guildId: string): Promise<SweepTicketRow[]> {
   const { data, error } = await client
     .from("discord_tickets")
-    .select("id, ticket_number, channel_id, opener_discord_user_id, category, created_at, last_message_at, stale_warned_at")
+    .select(
+      "id, ticket_number, channel_id, opener_discord_user_id, category, created_at, last_message_at, stale_warned_at, close_request_expires_at",
+    )
     .eq("guild_id", guildId)
     .eq("status", "open");
   if (error) throw error;

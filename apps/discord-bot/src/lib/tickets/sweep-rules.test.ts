@@ -17,7 +17,20 @@ const ids = (tickets: SweepCandidate[]) => tickets.map((t) => t.id);
 describe("selectDueTickets", () => {
   test("both timers off: nothing happens, however old the tickets", () => {
     const plan = selectDueTickets({ staleAfterHours: null, autoCloseAfterHours: 24 }, [ticket("a")], NOW);
-    expect(plan).toEqual({ warn: [], close: [] });
+    expect(plan).toEqual({ warn: [], close: [], expire: [] });
+  });
+
+  test("expired close requests are found whatever the stale timers say", () => {
+    const plan = selectDueTickets(
+      { staleAfterHours: null, autoCloseAfterHours: null },
+      [
+        ticket("expired", { close_request_expires_at: hoursAgo(1) }),
+        ticket("waiting", { close_request_expires_at: hoursAgo(-1) }),
+        ticket("none"),
+      ],
+      NOW,
+    );
+    expect(ids(plan.expire)).toEqual(["expired"]);
   });
 
   test("warns tickets quiet for the stale hours, counting from the last person's message or the opening", () => {
@@ -42,7 +55,7 @@ describe("selectDueTickets", () => {
       [ticket("warned", { last_message_at: hoursAgo(80), stale_warned_at: hoursAgo(30) })],
       NOW,
     );
-    expect(plan).toEqual({ warn: [], close: [] });
+    expect(plan).toEqual({ warn: [], close: [], expire: [] });
   });
 
   test("closes only after the reminder has stood unanswered for the auto-close hours", () => {

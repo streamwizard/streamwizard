@@ -163,17 +163,28 @@ export async function closeTicketsOfDepartedMember(guild: Guild, discordUserId: 
   }
 }
 
-/** Staff on the ticket in this channel. Looks the ticket up, because staff is per category. */
-async function isTicketStaff(member: GuildMember, channelId: string): Promise<boolean> {
+/**
+ * Whether `member` may close the ticket in this channel, with the sentence
+ * for when they may not. Staff always may; the opener may when the server's
+ * close mode says "either", and is pointed at Request close under "request".
+ */
+async function mayClose(member: GuildMember, channelId: string): Promise<{ allowed: boolean; refusal: string }> {
   const [config, ticket] = await Promise.all([getTicketConfig(member.guild.id), getTicketByChannelId(supabase, channelId)]);
-  return isStaff(member, config.settings, findCategory(config, ticket?.category));
+  const category = findCategory(config, ticket?.category);
+  if (isStaff(member, config.settings, category)) return { allowed: true, refusal: "" };
+  const opener = !!ticket && member.id === ticket.opener_discord_user_id;
+  const mode = config.settings?.close_mode ?? "staff_only";
+  if (opener && mode === "either") return { allowed: true, refusal: "" };
+  if (opener && mode === "request") return { allowed: false, refusal: "Only staff can close tickets. Hit Request close and they'll take it from there." };
+  return { allowed: false, refusal: "Only staff can close tickets." };
 }
 
 export async function handleCloseButton(interaction: ButtonInteraction): Promise<void> {
   if (!interaction.inCachedGuild()) return;
 
-  if (!(await isTicketStaff(interaction.member, interaction.channelId))) {
-    await interaction.reply({ content: "Only staff can close tickets.", flags: MessageFlags.Ephemeral });
+  const permission = await mayClose(interaction.member, interaction.channelId);
+  if (!permission.allowed) {
+    await interaction.reply({ content: permission.refusal, flags: MessageFlags.Ephemeral });
     return;
   }
 
@@ -208,8 +219,9 @@ const REASON_FIELD = "reason";
 /** "Close with a reason": the reason goes on the ticket, the log and (later) the opener's closing DM. */
 export async function handleCloseReasonButton(interaction: ButtonInteraction): Promise<void> {
   if (!interaction.inCachedGuild()) return;
-  if (!(await isTicketStaff(interaction.member, interaction.channelId))) {
-    await interaction.update({ content: "Only staff can close tickets.", components: [] });
+  const permission = await mayClose(interaction.member, interaction.channelId);
+  if (!permission.allowed) {
+    await interaction.update({ content: permission.refusal, components: [] });
     return;
   }
 
@@ -238,8 +250,9 @@ async function closeFromInteraction(
       ? interaction.update({ content, components: [] })
       : interaction.reply({ content, flags: MessageFlags.Ephemeral });
 
-  if (!(await isTicketStaff(interaction.member, interaction.channelId ?? ""))) {
-    await acknowledge("Only staff can close tickets.");
+  const permission = await mayClose(interaction.member, interaction.channelId ?? "");
+  if (!permission.allowed) {
+    await acknowledge(permission.refusal);
     return;
   }
   if (interaction.channel?.type !== ChannelType.GuildText) {

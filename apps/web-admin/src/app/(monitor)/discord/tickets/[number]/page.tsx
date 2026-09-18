@@ -20,6 +20,7 @@ import { listTicketMembers } from "@repo/supabase/queries/ticket-lifecycle";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { AutoRefresh } from "@/components/discord/auto-refresh";
 import { TicketActions } from "@/components/discord/ticket-actions";
+import { TicketCloseRequest } from "@/components/discord/ticket-close-request";
 import { TicketManage } from "@/components/discord/ticket-manage";
 import { TicketReply } from "@/components/discord/ticket-reply";
 import { assertAdmin } from "@/lib/assert-admin";
@@ -44,6 +45,10 @@ const EVENT_LABELS: Record<string, string> = {
   priority_changed: "Priority changed",
   renamed: "Subject changed",
   stale_warned: "Reminded: gone quiet",
+  close_requested: "Asked to close",
+  close_request_accepted: "Close request accepted",
+  close_request_rejected: "Kept open",
+  close_request_expired: "Close request expired",
 };
 
 /** "Bug → Feature" for timeline entries that carry an old and a new value. Close codes and the like stay out. */
@@ -130,6 +135,7 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
     ticket.opener_discord_user_id,
     ticket.claimed_by_discord_user_id,
     ticket.closed_by_discord_user_id,
+    ticket.close_requested_by,
     ...events.filter((e) => !e.actor_name).map((e) => e.actor_discord_id),
     ...mentioned,
   ]);
@@ -304,6 +310,16 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
               </dl>
             </CardContent>
           </Card>
+
+          {isOpen && ticket.close_requested_at && (
+            <TicketCloseRequest
+              ticketNumber={ticket.ticket_number}
+              requestedAt={ticket.close_requested_at}
+              expiresAt={ticket.close_request_expires_at}
+              requestedBy={displayName(null, ticket.close_requested_by, profiles) ?? "the opener"}
+              linked={!!adminDiscordId}
+            />
+          )}
 
           {isOpen && (
             <TicketManage

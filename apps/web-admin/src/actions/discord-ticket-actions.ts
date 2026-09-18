@@ -86,6 +86,9 @@ const TICKET_CHANGES = {
   "members/add": z.object({ targetDiscordUserId: snowflake }),
   "members/remove": z.object({ targetDiscordUserId: snowflake, targetName: z.string().max(100).optional() }),
   transfer: z.object({ targetDiscordUserId: snowflake }),
+  // The opener's close request: accepting closes the ticket, rejecting keeps it open.
+  "close-accept": z.object({}),
+  "close-reject": z.object({}),
 } as const;
 
 export type TicketChange = keyof typeof TICKET_CHANGES;
@@ -102,8 +105,11 @@ export async function changeTicketFromDashboard<K extends TicketChange>(
     const parsed = schema.safeParse(input);
     if (!parsed.success) throw new DashboardError(parsed.error.issues[0]?.message ?? "Invalid input");
 
-    // Moving a channel and rewriting its permissions can take a few round trips to Discord.
-    const result = await callBot(guildId, `/tickets/${ticket.channel_id}/${change}`, { discordUserId, ...parsed.data }, { timeoutMs: 20_000 });
+    // Moving a channel and rewriting its permissions can take a few round trips
+    // to Discord; accepting a close request saves the transcript like a close.
+    const result = await callBot(guildId, `/tickets/${ticket.channel_id}/${change}`, { discordUserId, ...parsed.data }, {
+      timeoutMs: change === "close-accept" ? 60_000 : 20_000,
+    });
     if (!result.ok) throw new DashboardError(result.error);
 
     revalidate(ticketNumber);

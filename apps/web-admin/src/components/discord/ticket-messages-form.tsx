@@ -22,6 +22,10 @@ interface TicketMessagesFormProps {
   staleOn: boolean;
   /** Tickets close on their own after the reminder. */
   autoCloseOn: boolean;
+  /** Members ask to close, staff decide. */
+  closeRequestsOn: boolean;
+  /** Working hours are set. */
+  workingHoursOn: boolean;
 }
 
 interface MessageSection {
@@ -38,7 +42,7 @@ const settingsLink = (href: string, label: string) => (
 );
 
 /** The short texts the bot sends around a ticket. Designed messages (panel, opening) have their own pages. */
-export function TicketMessagesForm({ initial, dmOnClose, staleOn, autoCloseOn }: TicketMessagesFormProps) {
+export function TicketMessagesForm({ initial, dmOnClose, staleOn, autoCloseOn, closeRequestsOn, workingHoursOn }: TicketMessagesFormProps) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [saving, startSave] = useTransition();
@@ -93,6 +97,28 @@ export function TicketMessagesForm({ initial, dmOnClose, staleOn, autoCloseOn }:
       title: "Reason for an automatic close",
       description: "Saved as the close reason and shown in the closing message when a ticket closes for inactivity.",
       rows: 2,
+    },
+    {
+      key: "closeRequest",
+      title: "Close request",
+      description: (
+        <>
+          Posted in the ticket when the opener asks to close it, above the Accept and Keep-open buttons for staff.
+          {closeRequestsOn ? null : off("Asking to close", settingsLink("automation", "Automation"))}
+        </>
+      ),
+    },
+    {
+      key: "workingHoursNotice",
+      title: "Outside working hours",
+      description: (
+        <>
+          Added under the opening message of a ticket opened while staff are away. [hours.next_opening] becomes a live
+          countdown to the next working hours.
+          {workingHoursOn ? null : off("This", settingsLink("automation", "Automation"))}
+        </>
+      ),
+      rows: 3,
     },
   ];
 

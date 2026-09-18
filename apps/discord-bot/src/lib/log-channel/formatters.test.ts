@@ -412,6 +412,30 @@ describe("server log formatters", () => {
     expect(replied.description).toBe("**Jochem** replied to ticket #0012 (<#223456789012345678>) from the dashboard.");
   });
 
+  test("tickets: close request steps read as sentences", () => {
+    const ticket = {
+      guild_id: "1",
+      ticket_id: "t1",
+      ticket_number: 12,
+      subject: "Help",
+      category: "bug",
+      opener: member,
+      channel,
+      source: "discord" as const,
+    };
+    const staff = { id: "323456789012345678", username: "mod", display_name: "Mod" };
+    const asked = formatPlatformEvent(event("ticket.updated", { ...ticket, actor: member, change: "close_requested" })).toJSON();
+    expect(asked.description).toBe("<@123456789012345678> asked to close ticket #0012 (<#223456789012345678>).");
+    const rejected = formatPlatformEvent(
+      event("ticket.updated", { ...ticket, actor: staff, change: "close_request_rejected", target: member, source: "dashboard" as const }),
+    ).toJSON();
+    expect(rejected.description).toBe(
+      "<@323456789012345678> kept ticket #0012 (<#223456789012345678>) open after <@123456789012345678> asked to close it from the dashboard.",
+    );
+    const expired = formatPlatformEvent(event("ticket.updated", { ...ticket, actor: null, change: "close_request_expired", source: "system" as const })).toJSON();
+    expect(expired.description).toBe("Nobody answered the request to close ticket #0012 (<#223456789012345678>) in time; it stays open.");
+  });
+
   test("bulk delete shows cached lines in a code block without breaking it", () => {
     const embed = formatPlatformEvent(
       event("message.bulk_deleted", { guild_id: "1", channel, count: 3, lines: ["a: hi", "b: ```oops```"] }),

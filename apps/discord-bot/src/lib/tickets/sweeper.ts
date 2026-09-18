@@ -8,6 +8,7 @@ import { guildVariableValues } from "../built-message";
 import { notifyTicketActivity } from "../ticket-activity";
 import { reconcileTicketTranscript } from "../ticket-transcript";
 import { finalizeTicketClose } from "./close";
+import { expireCloseRequest } from "./close-request";
 import { getTicketConfig, type TicketConfig } from "./config";
 import { recordTicketEvent } from "./events";
 import { ticketVariableValues } from "./intro";
@@ -111,13 +112,24 @@ async function closeStaleTicket(guild: Guild, row: SweepTicketRow, config: Ticke
 }
 
 /** One pass over one server. Each ticket's failure is reported and the rest still get their turn. */
-export async function sweepGuildTickets(guild: Guild, now = new Date()): Promise<{ warned: number; closed: number }> {
+export async function sweepGuildTickets(
+  guild: Guild,
+  now = new Date(),
+): Promise<{ warned: number; closed: number; expired: number }> {
   const config = await getTicketConfig(guild.id);
   const settings = sweepSettings(config);
-  const result = { warned: 0, closed: 0 };
-  if (!settings?.staleAfterHours) return result;
+  const result = { warned: 0, closed: 0, expired: 0 };
+  // Nothing to sweep for: no timers and no close requests to let expire.
+  if (!settings || (!settings.staleAfterHours && config.settings?.close_mode !== "request")) return result;
 
   const plan = selectDueTickets(settings, await listOpenTicketsForSweep(supabase, guild.id), now);
+  for (const row of plan.expire) {
+    try {
+      if (await expireCloseRequest(guild, row.channel_id)) result.expired++;
+    } catch (error) {
+      reportError(error, "discord-bot tickets: expire close request", { ticketId: row.id, ticketNumber: row.ticket_number });
+    }
+  }
   for (const row of plan.warn) {
     try {
       await warnTicket(guild, row, config, settings);
@@ -141,8 +153,10 @@ async function sweep(client: Client<true>): Promise<void> {
   for (const guild of client.guilds.cache.values()) {
     if (stopped) return;
     try {
-      const { warned, closed } = await sweepGuildTickets(guild);
-      if (warned || closed) console.log(`[tickets] Sweep in ${guild.name}: ${warned} reminded, ${closed} closed for inactivity`);
+      const { warned, closed, expired } = await sweepGuildTickets(guild);
+      if (warned || closed || expired) {
+        console.log(`[tickets] Sweep in ${guild.name}: ${warned} reminded, ${closed} closed for inactivity, ${expired} close requests expired`);
+      }
     } catch (error) {
       reportError(error, "discord-bot tickets: sweep", { guildId: guild.id });
     }

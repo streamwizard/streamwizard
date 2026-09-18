@@ -15,6 +15,8 @@ import {
   CLOSE_RESULT_MESSAGES,
   closeTicketChannel,
   describeDiscordError,
+  canCloseDirectly,
+  closeMode,
   getTicketConfig,
   handleCreate,
   isStaff,
@@ -22,6 +24,7 @@ import {
   moveTicket,
   releaseTicket,
   removeMember,
+  requestClose,
   transferTicket,
   type TicketActionResult,
 } from "../lib/tickets";
@@ -75,7 +78,7 @@ export default {
     .addSubcommand((sub) =>
       sub
         .setName("close")
-        .setDescription("Staff: close the ticket in this channel")
+        .setDescription("Close the ticket in this channel (staff), or ask staff to")
         .addStringOption((opt) =>
           opt.setName("reason").setDescription("Why it is closing. Saved on the ticket.").setMaxLength(CLOSE_REASON_MAX),
         ),
@@ -174,8 +177,13 @@ export default {
       if (interaction.channel?.type !== ChannelType.GuildText) return void (await ephemeral(interaction, "This isn't a ticket channel."));
       const context = await loadTicketContext(interaction.channel);
       if (!context) return void (await ephemeral(interaction, CLOSE_RESULT_MESSAGES.not_a_ticket));
-      if (!isStaff(interaction.member, context.config.settings, context.category)) {
-        return void (await ephemeral(interaction, "Only staff can close tickets."));
+      if (!canCloseDirectly(interaction.member, context.ticket, context.config, context.category)) {
+        // Not allowed to close outright. Under "request" this becomes the request instead.
+        if (closeMode(context.config.settings) !== "request") return void (await ephemeral(interaction, "Only staff can close tickets."));
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        const asked = await requestClose(interaction.channel, interaction.member);
+        await interaction.editReply({ content: asked.ok ? "Asked staff to close this ticket. They'll accept or keep it open." : asked.message });
+        return;
       }
 
       // Acknowledge before deleting the channel, otherwise the reply target disappears.

@@ -116,6 +116,22 @@ export const TICKET_STALE_VARIABLES: VariableDefinition[] = [
   { key: "close.hours", label: "Hours after the reminder until auto-close", sample: "24" },
 ];
 
+/** What the close-request line knows: who asked, the ticket, and how long staff have to answer. */
+export const TICKET_CLOSE_REQUEST_VARIABLES: VariableDefinition[] = [
+  ...SERVER_VARIABLES,
+  ...MEMBER_VARIABLES,
+  ...TICKET_VARIABLES,
+  { key: "request.hours", label: "Hours until the request expires", sample: "24" },
+];
+
+/** What the out-of-hours notice knows: the server, the ticket and when staff are next around. */
+export const TICKET_HOURS_VARIABLES: VariableDefinition[] = [
+  ...SERVER_VARIABLES,
+  ...MEMBER_VARIABLES,
+  ...TICKET_VARIABLES,
+  { key: "hours.next_opening", label: "When staff are next around (Discord timestamp)", sample: "in 14 hours" },
+];
+
 export const TICKET_MESSAGE_MAX = 1500;
 
 export const DEFAULT_TICKET_MESSAGES = {
@@ -126,6 +142,9 @@ export const DEFAULT_TICKET_MESSAGES = {
   closingSoon:
     "[member.mention] it's been quiet in here for [stale.hours] hours. Still need a hand? Reply and this ticket stays open. If nobody writes in the next [close.hours] hours it closes on its own.",
   autoClosed: "Closed automatically: no reply for [close.hours] hours after the reminder.",
+  closeRequest:
+    "[member.mention] asked to close this ticket. Staff, is it sorted? Accept to close it or reject to keep it open. Nothing happens if nobody answers within [request.hours] hours.",
+  workingHoursNotice: "Heads up: the team is away right now. Someone will pick this up [hours.next_opening].",
 } as const;
 
 export type TicketMessageKey = keyof typeof DEFAULT_TICKET_MESSAGES;
@@ -136,6 +155,8 @@ export const TICKET_MESSAGE_VARIABLES: Record<TicketMessageKey, VariableDefiniti
   staleWarning: TICKET_STALE_VARIABLES,
   closingSoon: TICKET_STALE_VARIABLES,
   autoClosed: TICKET_STALE_VARIABLES,
+  closeRequest: TICKET_CLOSE_REQUEST_VARIABLES,
+  workingHoursNotice: TICKET_HOURS_VARIABLES,
 };
 
 const messageText = (key: TicketMessageKey) =>
@@ -146,6 +167,8 @@ export const ticketMessagesSchema = z.object({
   staleWarning: messageText("staleWarning"),
   closingSoon: messageText("closingSoon"),
   autoClosed: messageText("autoClosed"),
+  closeRequest: messageText("closeRequest"),
+  workingHoursNotice: messageText("workingHoursNotice"),
 });
 
 export type TicketMessages = z.infer<typeof ticketMessagesSchema>;

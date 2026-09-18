@@ -14,6 +14,8 @@ export interface SweepCandidate {
   created_at: string;
   last_message_at: string | null;
   stale_warned_at: string | null;
+  /** When a pending close request stops waiting for staff. */
+  close_request_expires_at?: string | null;
 }
 
 export interface SweepPlan<T extends SweepCandidate> {
@@ -21,6 +23,8 @@ export interface SweepPlan<T extends SweepCandidate> {
   warn: T[];
   /** Warned long enough ago and still nobody wrote: close as inactivity. */
   close: T[];
+  /** Close requests nobody answered in time: cleared, ticket stays open. */
+  expire: T[];
 }
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -34,7 +38,11 @@ export function selectDueTickets<T extends SweepCandidate>(
   tickets: readonly T[],
   now: Date = new Date(),
 ): SweepPlan<T> {
-  const plan: SweepPlan<T> = { warn: [], close: [] };
+  const plan: SweepPlan<T> = { warn: [], close: [], expire: [] };
+  for (const ticket of tickets) {
+    const expires = ticket.close_request_expires_at ? new Date(ticket.close_request_expires_at).getTime() : null;
+    if (expires !== null && expires <= now.getTime()) plan.expire.push(ticket);
+  }
   if (!settings.staleAfterHours || settings.staleAfterHours <= 0) return plan;
 
   const staleBefore = now.getTime() - settings.staleAfterHours * HOUR_MS;

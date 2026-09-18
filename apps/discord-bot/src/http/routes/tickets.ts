@@ -7,6 +7,7 @@ import { getTicketByChannelId, getTicketSettings } from "@repo/supabase/queries/
 import { TWITCH_PURPLE } from "../../lib/branding";
 import { BuiltMessageError, BuiltMessageSendError } from "../../lib/built-message";
 import {
+  acceptCloseRequest,
   addMember,
   archiveNewMessage,
   changePriority,
@@ -20,6 +21,7 @@ import {
   invalidateTicketConfig,
   logTicketReply,
   moveTicket,
+  rejectCloseRequest,
   releaseTicket,
   removeMember,
   transferTicket,
@@ -173,6 +175,11 @@ ticketActionRoute(
   (channel, actor, input) =>
     removeMember(channel, actor, { id: input.targetDiscordUserId, displayName: input.targetName || "them" }, "dashboard"),
 );
+
+// Answering the opener's close request. Accepting closes the ticket, so it
+// saves the transcript first and can take as long as a close.
+ticketActionRoute("close-accept", {}, (channel, actor) => acceptCloseRequest(channel, actor, "dashboard"));
+ticketActionRoute("close-reject", {}, (channel, actor) => rejectCloseRequest(channel, actor, "dashboard"));
 
 ticketActionRoute("transfer", { targetDiscordUserId: snowflake }, async (channel, actor, input, guild) => {
   const target = await guild.members.fetch(input.targetDiscordUserId).catch(() => null);

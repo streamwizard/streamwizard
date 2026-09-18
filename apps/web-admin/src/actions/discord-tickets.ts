@@ -3,8 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { findUnknownVariables, TICKET_MESSAGE_VARIABLES, ticketMessagesSchema, type TicketMessageKey, type TicketMessages } from "@repo/discord-message";
+import type { Json } from "@repo/supabase";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { ensureTicketDefaults } from "@repo/supabase/queries/ticket-config";
+import {
+  isValidTimeZone,
+  parseWorkingHours,
+  WORKING_DAYS,
+  WORKING_RANGES_PER_DAY,
+  workingHoursIssues,
+} from "@repo/supabase/queries/ticket-hours";
 import { getTicketSettings, upsertTicketSettings } from "@repo/supabase/queries/tickets";
 import { assertChannel, assertRole } from "@/lib/discord/api";
 import { DashboardError, requireDiscordAdmin, toActionError, type DiscordActionResult } from "@/lib/discord/action";
@@ -174,31 +182,49 @@ export async function saveTicketMessages(input: TicketMessages): Promise<Discord
 const HOURS_MAX = 24 * 365;
 const hoursSchema = z.number().int().min(1).max(HOURS_MAX).nullable();
 
+const rangeSchema = z.object({ start: z.string().regex(/^\d{2}:\d{2}$/), end: z.string().regex(/^\d{2}:\d{2}$/) });
+const workingHoursSchema = z.object({
+  timezone: z.string().refine(isValidTimeZone, "Pick a time zone"),
+  days: z.object(Object.fromEntries(WORKING_DAYS.map((day) => [day, z.array(rangeSchema).max(WORKING_RANGES_PER_DAY)]))),
+});
+
 const automationSchema = z
   .object({
     staleAfterHours: hoursSchema,
     autoCloseAfterHours: hoursSchema,
+    closeMode: z.enum(["staff_only", "request", "either"]),
+    closeRequestHours: z.number().int().min(1).max(HOURS_MAX),
+    workingHours: workingHoursSchema,
   })
   // Auto-close counts from the reminder, so it can't exist without one.
   .transform((v) => (v.staleAfterHours === null ? { ...v, autoCloseAfterHours: null } : v));
 
 export type TicketAutomationInput = z.input<typeof automationSchema>;
 
-/** The stale-ticket timers. The bot's sweeper reads them through its config cache. */
+/** The stale-ticket timers, who may close a ticket, and the working hours. The bot reads them through its config cache. */
 export async function saveTicketAutomation(input: TicketAutomationInput): Promise<DiscordActionResult> {
   try {
     const { userId, guildId } = await requireDiscordAdmin();
     const parsed = automationSchema.safeParse(input);
     if (!parsed.success) throw new DashboardError(parsed.error.issues[0]?.message ?? "Invalid settings");
+    const workingHours = parseWorkingHours(parsed.data.workingHours);
+    const issue = workingHoursIssues(workingHours)[0];
+    if (issue) throw new DashboardError(`Working hours: ${issue}`);
 
     const current = await getTicketSettings(supabaseAdmin, guildId);
     const before = {
       stale_after_hours: current?.stale_after_hours ?? null,
       auto_close_after_hours: current?.auto_close_after_hours ?? null,
+      close_mode: current?.close_mode ?? "staff_only",
+      close_request_hours: current?.close_request_hours ?? 24,
+      working_hours: parseWorkingHours(current?.working_hours) as unknown as Json,
     };
     const after = {
       stale_after_hours: parsed.data.staleAfterHours,
       auto_close_after_hours: parsed.data.autoCloseAfterHours,
+      close_mode: parsed.data.closeMode,
+      close_request_hours: parsed.data.closeRequestHours,
+      working_hours: workingHours as unknown as Json,
     };
     await upsertTicketSettings(supabaseAdmin, guildId, after);
     const refreshed = await callBot(guildId, "/cache/tickets");

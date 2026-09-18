@@ -290,6 +290,10 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
       moved: `${actor} moved ${ticket} to ${plain(payload.to) ?? "another category"}`,
       transferred: `${actor} handed ${ticket} to ${target}`,
       renamed: `${actor} changed the subject of ${ticket}`,
+      close_requested: `${actor} asked to close ${ticket}`,
+      close_request_accepted: `${actor} accepted the request to close ${ticket}`,
+      close_request_rejected: `${actor} kept ${ticket} open after ${target} asked to close it`,
+      close_request_expired: `Nobody answered the request to close ${ticket} in time; it stays open`,
     };
     return withMember(base(event, "ticket.updated"), payload.opener)
       .setDescription(`${sentences[payload.change ?? ""] ?? `${actor} changed ${ticket}`}${fromDashboard(payload)}.`)

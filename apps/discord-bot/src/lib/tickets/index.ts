@@ -10,6 +10,11 @@ import {
   handleCloseReasonButton,
   handleCloseSubmit,
 } from "./close";
+import {
+  handleCloseAcceptButton,
+  handleCloseRejectButton,
+  handleCloseRequestButton,
+} from "./close-request";
 import { parseTicketId, RETIRED_GITHUB_ID, TICKET_IDS } from "./ids";
 import { handleCategoryPick, handleCreateButton, handleModalSubmit } from "./open";
 
@@ -37,6 +42,14 @@ export {
   finalizeTicketClose,
   type CloseTicketResult,
 } from "./close";
+export {
+  acceptCloseRequest,
+  canCloseDirectly,
+  closeMode,
+  rejectCloseRequest,
+  requestClose,
+  type CloseMode,
+} from "./close-request";
 export { findCategory, getTicketConfig, invalidateTicketConfig, saveTicketSettings } from "./config";
 export { logTicketReply } from "./events";
 export { TICKET_IDS } from "./ids";
@@ -83,6 +96,15 @@ export async function handleTicketInteraction(interaction: TicketInteraction): P
         break;
       case TICKET_IDS.closeCancel:
         await handleCloseCancel(interaction);
+        break;
+      case TICKET_IDS.closeRequest:
+        await handleCloseRequestButton(interaction);
+        break;
+      case TICKET_IDS.closeAccept:
+        await handleCloseAcceptButton(interaction);
+        break;
+      case TICKET_IDS.closeReject:
+        await handleCloseRejectButton(interaction);
         break;
       case RETIRED_GITHUB_ID:
         await interaction.reply({

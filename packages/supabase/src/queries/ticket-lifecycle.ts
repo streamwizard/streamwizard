@@ -186,3 +186,43 @@ export async function removeTicketMember(client: DBClient, ticketId: string, dis
   if (error) throw error;
   return data.length > 0;
 }
+
+// Close requests (close_mode = request). One pending request per ticket; the
+// claim is the IS NULL guard, so two people asking at once produce one
+// request, and a reject racing an expiry clears it once.
+
+/** Opens a close request. Null when one is already pending, or the ticket isn't open. */
+export async function requestTicketClose(
+  client: DBClient,
+  channelId: string,
+  input: { requestedByDiscordUserId: string; expiresAt: Date },
+): Promise<DiscordTicket | null> {
+  const { data, error } = await client
+    .from("discord_tickets")
+    .update({
+      close_requested_at: new Date().toISOString(),
+      close_requested_by: input.requestedByDiscordUserId,
+      close_request_expires_at: input.expiresAt.toISOString(),
+    })
+    .eq("channel_id", channelId)
+    .eq("status", "open")
+    .is("close_requested_at", null)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Clears the pending request (rejected, expired, or accepted and closed). Null when there was none. */
+export async function clearTicketCloseRequest(client: DBClient, ticketId: string): Promise<DiscordTicket | null> {
+  const { data, error } = await client
+    .from("discord_tickets")
+    .update({ close_requested_at: null, close_requested_by: null, close_request_expires_at: null })
+    .eq("id", ticketId)
+    .eq("status", "open")
+    .not("close_requested_at", "is", null)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}

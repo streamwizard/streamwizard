@@ -802,6 +802,9 @@ export type Database = {
           staff_role_id: string | null
           stale_after_hours: number | null
           auto_close_after_hours: number | null
+          close_mode: string
+          close_request_hours: number
+          working_hours: Json
           ticket_counter: number
           updated_at: string
         }
@@ -825,6 +828,9 @@ export type Database = {
           staff_role_id?: string | null
           stale_after_hours?: number | null
           auto_close_after_hours?: number | null
+          close_mode?: string
+          close_request_hours?: number
+          working_hours?: Json
           ticket_counter?: number
           updated_at?: string
         }
@@ -848,6 +854,9 @@ export type Database = {
           staff_role_id?: string | null
           stale_after_hours?: number | null
           auto_close_after_hours?: number | null
+          close_mode?: string
+          close_request_hours?: number
+          working_hours?: Json
           ticket_counter?: number
           updated_at?: string
         }
@@ -1226,6 +1235,9 @@ export type Database = {
           opener_user_id: string | null
           priority: string | null
           stale_warned_at: string | null
+          close_requested_at: string | null
+          close_requested_by: string | null
+          close_request_expires_at: string | null
           status: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
@@ -1260,6 +1272,9 @@ export type Database = {
           opener_user_id?: string | null
           priority?: string | null
           stale_warned_at?: string | null
+          close_requested_at?: string | null
+          close_requested_by?: string | null
+          close_request_expires_at?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
@@ -1294,6 +1309,9 @@ export type Database = {
           opener_user_id?: string | null
           priority?: string | null
           stale_warned_at?: string | null
+          close_requested_at?: string | null
+          close_requested_by?: string | null
+          close_request_expires_at?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject?: string
           ticket_number?: number
