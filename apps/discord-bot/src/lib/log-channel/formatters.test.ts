@@ -436,6 +436,16 @@ describe("server log formatters", () => {
     expect(expired.description).toBe("Nobody answered the request to close ticket #0012 (<#223456789012345678>) in time; it stays open.");
   });
 
+  test("tickets: a rating shows stars and the comment as a quote", () => {
+    const ticket = { guild_id: "1", ticket_id: "t1", ticket_number: 12, subject: "Help", category: "bug", opener: member, channel, source: "discord" as const };
+    const rated = formatPlatformEvent(event("ticket.feedback", { ...ticket, rating: 4, comment: "Quick and friendly" })).toJSON();
+    expect(rated.title).toBe("⭐ Ticket rated by the opener");
+    expect(rated.description).toBe("<@123456789012345678> rated ticket #0012 (<#223456789012345678>) ★★★★☆ (4/5).");
+    expect(fieldValue(rated, "Comment")).toBe("> Quick and friendly");
+    const bare = formatPlatformEvent(event("ticket.feedback", { ...ticket, rating: 5 })).toJSON();
+    expect(fieldValue(bare, "Comment")).toBeUndefined();
+  });
+
   test("bulk delete shows cached lines in a code block without breaking it", () => {
     const embed = formatPlatformEvent(
       event("message.bulk_deleted", { guild_id: "1", channel, count: 3, lines: ["a: hi", "b: ```oops```"] }),

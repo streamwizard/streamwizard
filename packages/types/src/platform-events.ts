@@ -34,7 +34,7 @@ export const PLATFORM_EVENT_GROUPS: { id: PlatformEventGroup; label: string; hin
     hint: "Signups, Discord links, plans, admin roles, feedback and dashboard changes.",
   },
   { id: "twitch", label: "Twitch", hint: "Clip syncs, token problems and stream events that went wrong." },
-  { id: "tickets", label: "Tickets", hint: "Tickets opened, claimed, closed and replied to from the dashboard." },
+  { id: "tickets", label: "Tickets", hint: "Tickets opened, claimed, closed, rated and replied to from the dashboard." },
   { id: "members", label: "Members", hint: "Joins, leaves, kicks, bans, timeouts, nicknames and roles." },
   { id: "messages", label: "Messages", hint: "Edited and deleted messages, including their text." },
   { id: "roles", label: "Roles", hint: "Roles created, changed or deleted." },
@@ -78,6 +78,7 @@ export const PLATFORM_EVENTS = {
   "ticket.closed": { label: "Ticket closed", group: "tickets", defaultEnabled: true },
   "ticket.replied": { label: "Ticket reply from dashboard", group: "tickets", defaultEnabled: true },
   "ticket.updated": { label: "Ticket changed by staff", group: "tickets", defaultEnabled: false },
+  "ticket.feedback": { label: "Ticket rated by the opener", group: "tickets", defaultEnabled: true },
 
   "member.joined": { label: "Member joined", group: "members", defaultEnabled: true },
   "member.left": { label: "Member left", group: "members", defaultEnabled: true },
@@ -260,6 +261,8 @@ export interface PlatformEventPayloads {
     message_count?: number | null;
   };
   "ticket.replied": TicketEvent & { author_name: string };
+  /** The opener rated the closed ticket from its closing DM. `comment` is their own words, first 300 characters. */
+  "ticket.feedback": TicketEvent & { rating: number; comment?: string | null };
   /**
    * A staff action on an open ticket. `change` is the timeline event type
    * (unclaimed, priority_changed, member_added, member_removed, moved,

@@ -50,6 +50,7 @@ export const STYLE: Record<PlatformEventType, { emoji: string; color: number }> 
   "ticket.closed": { emoji: "✅", color: TWITCH_PURPLE },
   "ticket.replied": { emoji: "💬", color: TWITCH_PURPLE },
   "ticket.updated": { emoji: "🛠️", color: TWITCH_PURPLE },
+  "ticket.feedback": { emoji: "⭐", color: TWITCH_PURPLE },
 
   "member.joined": { emoji: "📥", color: DISCORD_BLURPLE },
   "member.left": { emoji: "📤", color: DANGER_RED },

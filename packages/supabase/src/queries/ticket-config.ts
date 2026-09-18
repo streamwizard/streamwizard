@@ -148,6 +148,8 @@ export interface TicketCategoryRules {
   cooldown_seconds: number;
   slowmode_seconds: number;
   claiming_enabled: boolean;
+  /** The closing DM asks the opener for a rating. */
+  feedback_enabled: boolean;
   channel_name_template: string;
 }
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Settings } from "lucide-react";
+import { BarChart3, Settings } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
 import { listTickets, type TicketListFilters, formatTicketNumber } from "@repo/supabase/queries/tickets";
@@ -103,6 +103,12 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
       <PageHeader title="Tickets" description="Every support ticket, including closed ones whose channel is gone.">
         {/* New, claimed and closed tickets show up without a reload. */}
         <AutoRefresh wsUrl={process.env.NEXT_PUBLIC_WS_SERVER_URL ?? null} showStatus={false} />
+        <Button variant="outline" size="sm" asChild>
+          <Link href="/discord/tickets/stats">
+            <BarChart3 className="size-4" aria-hidden />
+            Stats
+          </Link>
+        </Button>
         <Button variant="outline" size="sm" asChild>
           <Link href="/discord/tickets/settings">
             <Settings className="size-4" aria-hidden />

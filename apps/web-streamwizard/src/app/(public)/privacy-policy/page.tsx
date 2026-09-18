@@ -71,8 +71,10 @@ function NormalContent() {
           edit is updated; a message you delete is kept and marked as deleted,
           so our team can still follow what the ticket was about. When the
           ticket closes you get a copy of the conversation by Discord DM, unless
-          the server has turned that off. Our team uses this history to follow
-          up on your issue.
+          the server has turned that off. That DM may ask you to rate the
+          ticket; the rating and any comment you add are stored with the
+          ticket. Our team uses this history to follow up on your issue and to
+          see how support is doing.
         </p>
 
         <h3 className="text-lg font-medium mb-2">Discord Server Moderation Log</h3>
@@ -281,10 +283,12 @@ function NormalContent() {
             that cannot be tied to you may be kept for up to 7 years.
           </li>
           <li>
-            Discord support tickets: conversations and images are deleted 12
-            months after the ticket closes. If you delete your account while
-            your Discord account is linked, your messages in tickets are
-            anonymised and your images removed. Replies from our team stay.
+            Discord support tickets: conversations, images and your feedback
+            comment are deleted 12 months after the ticket closes; the rating
+            itself stays as an anonymous number. If you delete your account
+            while your Discord account is linked, your messages in tickets are
+            anonymised, your feedback comment and images removed. Replies from
+            our team stay.
           </li>
           <li>
             Discord server moderation log: the text of edited and deleted
@@ -543,8 +547,10 @@ function GenZContent() {
           messages, everyone&apos;s Discord name + avatar, and images up to 500
           KB. anything bigger (or not an image) we only keep the file name and
           size. edits update, deletes stay but get a &quot;deleted&quot; tag.
-          when it closes you get the chat as a file in your DMs. it&apos;s so we
-          can actually help if the same bug comes back.
+          when it closes you get the chat as a file in your DMs, and maybe a
+          &quot;rate this ticket&quot; ask. the stars + your comment get saved
+          with the ticket. it&apos;s so we can actually help if the same bug
+          comes back, and see how we&apos;re doing.
         </p>
 
         <h3 className="text-lg font-medium mb-2">our Discord mod log 🛡️</h3>
@@ -740,9 +746,11 @@ function GenZContent() {
             can&apos;t trace back to u can stick around up to 7 years.
           </li>
           <li>
-            support tickets: chats + images get deleted 12 months after the
-            ticket closes. delete ur account with Discord linked and ur ticket
-            messages get anonymised and ur images removed. our replies stay.
+            support tickets: chats, images + ur feedback comment get deleted 12
+            months after the ticket closes (the star rating stays, as a
+            number). delete ur account with Discord linked and ur ticket
+            messages get anonymised, ur comment + images removed. our replies
+            stay.
           </li>
           <li>
             Discord mod log: message text gets wiped from our database after

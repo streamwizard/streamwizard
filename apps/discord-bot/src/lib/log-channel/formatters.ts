@@ -138,6 +138,12 @@ const SYSTEM_CLOSE_CAUSES: Record<string, string> = {
   inactivity: " after going quiet",
 };
 
+/** "★★★★☆ (4/5)" for a rating; the number alone when it is out of range. */
+function stars(rating: number | undefined): string {
+  if (typeof rating !== "number" || rating < 1 || rating > 5) return String(rating ?? "?");
+  return `${"★".repeat(rating)}${"☆".repeat(5 - rating)} (${rating}/5)`;
+}
+
 // Leaves a leading "[" alone, so a linked "[ticket #0012](…)" still starts with a capital.
 const upperFirst = (text: string) => text.replace(/[a-z]/, (letter) => letter.toUpperCase());
 
@@ -275,6 +281,11 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
     withMember(base(event, "ticket.replied"), payload.opener)
       .setDescription(`${bold(payload.author_name, "Staff")} replied to ${ticketLink(payload)} from the dashboard.`)
       .addFields(ticketFields(payload, event)),
+
+  "ticket.feedback": (payload, event) =>
+    withMember(base(event, "ticket.feedback"), payload.opener)
+      .setDescription(`${discordUser(payload.opener, "The opener")} rated ${ticketLink(payload)} ${stars(payload.rating)}.`)
+      .addFields([...ticketFields(payload, event), ...field("Comment", quote(payload.comment ?? null, ""), false)]),
 
   "ticket.updated": (payload, event) => {
     const actor = payload.actor ? discordUser(payload.actor, "Someone") : "StreamWizard";

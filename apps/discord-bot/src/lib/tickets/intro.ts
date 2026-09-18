@@ -90,10 +90,10 @@ export function ticketVariableValues(ticket: DiscordTicket, config: TicketConfig
 }
 
 /** The category's designed opening embeds, placeholders filled. Empty when it has none. */
-function openingEmbeds(ticket: DiscordTicket, config: TicketConfig, member: GuildMember): APIEmbed[] {
+function openingEmbeds(ticket: DiscordTicket, config: TicketConfig, member: GuildMember, values: VariableValues): APIEmbed[] {
   const opening = parseTicketOpening(findCategory(config, ticket.category)?.opening_message);
   if (!opening) return [];
-  const resolved = resolveMessage(opening, { ...memberVariableValues(member), ...ticketVariableValues(ticket, config) });
+  const resolved = resolveMessage(opening, { ...values, ...memberVariableValues(member), ...ticketVariableValues(ticket, config) });
   return resolved.elements
     .flatMap((element) => (element.type === "embed" ? [toApiEmbed(element)] : []))
     .slice(0, TICKET_OPENING_MAX_EMBEDS);
@@ -138,7 +138,17 @@ export function buildTicketIntroMessage(
   ticket: DiscordTicket,
   config: TicketConfig,
   opener: TicketOpenerProfile | null,
-  { member, ...form }: { answers: TicketAnswerInput[]; description: string; member: GuildMember },
+  {
+    member,
+    values = {},
+    ...form
+  }: {
+    answers: TicketAnswerInput[];
+    description: string;
+    member: GuildMember;
+    /** Extra placeholder values, like the [stats.*] numbers, resolved by the caller. */
+    values?: VariableValues;
+  },
 ) {
   // The category's ping roles, or the server-wide staff role when it has none.
   const category = findCategory(config, ticket.category);
@@ -152,7 +162,7 @@ export function buildTicketIntroMessage(
   const notice = workingHoursNotice(ticket, config, member);
   return {
     content: notice ? `${mentions}\n${notice}`.slice(0, 2000) : mentions,
-    embeds: [...openingEmbeds(ticket, config, member), ticketCard(ticket, config, opener, form)],
+    embeds: [...openingEmbeds(ticket, config, member, values), ticketCard(ticket, config, opener, form)],
     components: [buttonRow(ticket, config)],
     allowedMentions: { users: [ticket.opener_discord_user_id], roles: pingRoles },
   };

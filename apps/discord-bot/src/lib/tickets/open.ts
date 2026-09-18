@@ -32,6 +32,7 @@ import { recordTicketEvent } from "./events";
 import { buildTicketModal, readTicketForm, storedDescription, type FormReader, type TicketFormResult } from "./form";
 import { FIELD_IDS, TICKET_IDS } from "./ids";
 import { buildTicketIntroMessage } from "./intro";
+import { ticketStatsValues } from "./stats";
 
 const NOT_SET_UP = "Ticketing isn't set up in this server yet.";
 const CATEGORY_GONE = "That ticket category isn't available anymore. Hit Create Ticket again to pick another.";
@@ -349,6 +350,7 @@ async function createTicketChannel(
         answers: form.answers,
         description: form.description,
         member: interaction.member,
+        values: await ticketStatsValues(interaction.guildId),
       }),
     );
   } catch (error) {

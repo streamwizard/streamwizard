@@ -57,6 +57,7 @@ export default async function DiscordTicketCategoryPage({ params }: { params: Pr
     cooldownSeconds: category.cooldown_seconds,
     slowmodeSeconds: category.slowmode_seconds,
     claimingEnabled: category.claiming_enabled,
+    feedbackEnabled: category.feedback_enabled,
     channelNameTemplate: category.channel_name_template,
   };
 

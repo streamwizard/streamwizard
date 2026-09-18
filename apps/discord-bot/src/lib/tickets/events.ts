@@ -103,6 +103,19 @@ export async function recordTicketEvent(
       },
       options,
     );
+  } else if (type === "feedback_submitted") {
+    const detail = extra.detail ?? {};
+    // The rating and the (later, optional) comment each reach the log once, so the comment can't be missed.
+    await emitServerEvent(
+      guild,
+      "ticket.feedback",
+      {
+        ...base,
+        rating: typeof detail.rating === "number" ? detail.rating : 0,
+        comment: typeof detail.comment === "string" ? detail.comment : null,
+      },
+      options,
+    );
   } else if (UPDATE_TYPES.has(type)) {
     const target = extra.targetDiscordId
       ? ((await ticketMemberRef(guild, extra.targetDiscordId, extra.targetName ?? null)) ?? null)

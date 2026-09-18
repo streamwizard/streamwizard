@@ -49,12 +49,14 @@ const EVENT_LABELS: Record<string, string> = {
   close_request_accepted: "Close request accepted",
   close_request_rejected: "Kept open",
   close_request_expired: "Close request expired",
+  feedback_submitted: "Rated by the opener",
 };
 
 /** "Bug → Feature" for timeline entries that carry an old and a new value. Close codes and the like stay out. */
 function eventChange(detail: unknown): string | null {
   if (!detail || typeof detail !== "object") return null;
-  const { from, to } = detail as { from?: unknown; to?: unknown };
+  const { from, to, rating } = detail as { from?: unknown; to?: unknown; rating?: unknown };
+  if (typeof rating === "number") return `${rating}/5`;
   if (typeof from !== "string" && typeof to !== "string") return null;
   return `${typeof from === "string" ? from : "none"} → ${typeof to === "string" ? to : "none"}`;
 }
@@ -261,6 +263,15 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
                   </Detail>
                 )}
                 {ticket.close_reason && <Detail label="Close reason">{ticket.close_reason}</Detail>}
+                {ticket.feedback_rating && (
+                  <Detail label="Opener's rating">
+                    <span aria-label={`${ticket.feedback_rating} out of 5`} title={ticket.feedback_at ? formatDateTime(ticket.feedback_at) : undefined}>
+                      {"★".repeat(ticket.feedback_rating)}
+                      <span className="text-muted-foreground">{"★".repeat(5 - ticket.feedback_rating)}</span> {ticket.feedback_rating}/5
+                    </span>
+                    {ticket.feedback_comment && <span className="mt-1 block whitespace-pre-wrap text-muted-foreground">{ticket.feedback_comment}</span>}
+                  </Detail>
+                )}
                 <Detail label="StreamWizard account">
                   {linkedAccount ? (
                     <span className="mt-1 flex items-center gap-2.5">

@@ -25,6 +25,10 @@ export const TICKET_IDS = {
   /** Staff's answer to a request, on the request message. */
   closeAccept: "ticket:close-accept",
   closeReject: "ticket:close-reject",
+  /** Rating buttons in the closing DM. Arg: "<ticketId>:<1-5>". Arrives outside any guild. */
+  feedback: "ticket:feedback",
+  /** The optional comment form after a rating. Arg: the ticket id. */
+  feedbackComment: "ticket:feedback-comment",
 } as const;
 
 // Intro messages posted before the GitHub integration was removed still carry

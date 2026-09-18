@@ -126,6 +126,18 @@ export function TicketCategoryRulesForm({ categoryId, initial, roles, staffRoleN
             disabled={saving}
           />
         </SettingRow>
+        <SettingRow
+          htmlFor="category-feedback"
+          label="Ask for a rating"
+          hint="The closing DM gets five rating buttons and an optional comment. Needs the closing DM to be on."
+        >
+          <Switch
+            id="category-feedback"
+            checked={values.feedbackEnabled}
+            onCheckedChange={(v) => set("feedbackEnabled", v)}
+            disabled={saving}
+          />
+        </SettingRow>
         <SettingRow htmlFor="category-member-limit" label="Open tickets per member" hint="In this category. Empty means no limit.">
           {numberRow("memberLimit", "category-member-limit")}
         </SettingRow>

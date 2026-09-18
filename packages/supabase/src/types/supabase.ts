@@ -967,6 +967,7 @@ export type Database = {
           discord_category_id: string | null
           emoji: string | null
           enabled: boolean
+          feedback_enabled: boolean
           guild_id: string
           id: string
           member_limit: number | null
@@ -991,6 +992,7 @@ export type Database = {
           discord_category_id?: string | null
           emoji?: string | null
           enabled?: boolean
+          feedback_enabled?: boolean
           guild_id: string
           id?: string
           member_limit?: number | null
@@ -1015,6 +1017,7 @@ export type Database = {
           discord_category_id?: string | null
           emoji?: string | null
           enabled?: boolean
+          feedback_enabled?: boolean
           guild_id?: string
           id?: string
           member_limit?: number | null
@@ -1238,6 +1241,9 @@ export type Database = {
           close_requested_at: string | null
           close_requested_by: string | null
           close_request_expires_at: string | null
+          feedback_rating: number | null
+          feedback_comment: string | null
+          feedback_at: string | null
           status: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
@@ -1275,6 +1281,9 @@ export type Database = {
           close_requested_at?: string | null
           close_requested_by?: string | null
           close_request_expires_at?: string | null
+          feedback_rating?: number | null
+          feedback_comment?: string | null
+          feedback_at?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject: string
           ticket_number: number
@@ -1312,6 +1321,9 @@ export type Database = {
           close_requested_at?: string | null
           close_requested_by?: string | null
           close_request_expires_at?: string | null
+          feedback_rating?: number | null
+          feedback_comment?: string | null
+          feedback_at?: string | null
           status?: Database["public"]["Enums"]["discord_ticket_status"]
           subject?: string
           ticket_number?: number
@@ -3317,6 +3329,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ticket_stats_summary: {
+        Args: { p_guild_id: string; p_from: string; p_to: string }
+        Returns: {
+          opened: number
+          closed: number
+          avg_first_response_seconds: number | null
+          avg_resolution_seconds: number | null
+          avg_rating: number | null
+          rating_count: number
+        }[]
+      }
+      ticket_stats_by_day: {
+        Args: { p_guild_id: string; p_from: string; p_to: string }
+        Returns: { day: string; opened: number; closed: number }[]
+      }
+      ticket_stats_by_category: {
+        Args: { p_guild_id: string; p_from: string; p_to: string }
+        Returns: { category: string; opened: number; closed: number; avg_rating: number | null; rating_count: number }[]
+      }
       archive_ticket_message: {
         Args: { p_by_staff: boolean; p_counts: boolean; p_message: Json; p_ticket_id: string }
         Returns: undefined

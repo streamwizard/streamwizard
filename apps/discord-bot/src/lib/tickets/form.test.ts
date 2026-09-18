@@ -24,6 +24,7 @@ const category = (patch: Partial<TicketCategory> = {}): TicketCategory => ({
   cooldown_seconds: 0,
   slowmode_seconds: 0,
   claiming_enabled: true,
+  feedback_enabled: true,
   channel_name_template: "ticket-[ticket.number]",
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",

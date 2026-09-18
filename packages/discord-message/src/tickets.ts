@@ -17,11 +17,17 @@ export const TICKET_VARIABLES: VariableDefinition[] = [
   { key: "ticket.subject", label: "Ticket subject", sample: "OBS won't connect" },
 ];
 
+/** Rolling 30-day numbers, so a message can set expectations ("we usually answer within [stats.avg_response]"). */
+export const TICKET_STATS_VARIABLES: VariableDefinition[] = [
+  { key: "stats.avg_response", label: "Average first response (30 days)", sample: "2h 10m" },
+  { key: "stats.avg_rating", label: "Average rating (30 days)", sample: "4.6/5" },
+];
+
 /** The panel is for everyone, so it knows the server and nothing about a member or a ticket. */
 export const TICKET_PANEL_VARIABLES: VariableDefinition[] = SERVER_VARIABLES;
 
 /** The opening message knows who opened the ticket and what it is. */
-export const TICKET_OPENING_VARIABLES: VariableDefinition[] = [...CORE_VARIABLES, ...TICKET_VARIABLES];
+export const TICKET_OPENING_VARIABLES: VariableDefinition[] = [...CORE_VARIABLES, ...TICKET_VARIABLES, ...TICKET_STATS_VARIABLES];
 
 /**
  * How members pick a category from the panel:
@@ -105,6 +111,7 @@ export const TICKET_CLOSE_VARIABLES: VariableDefinition[] = [
   ...TICKET_VARIABLES,
   { key: "ticket.close_reason", label: "Close reason", sample: "Fixed in the latest update" },
   { key: "ticket.closed_by", label: "Who closed it", sample: "Jochem" },
+  ...TICKET_STATS_VARIABLES,
 ];
 
 /** What the stale reminder knows: the ticket, its opener and the two timers. */
@@ -145,6 +152,7 @@ export const DEFAULT_TICKET_MESSAGES = {
   closeRequest:
     "[member.mention] asked to close this ticket. Staff, is it sorted? Accept to close it or reject to keep it open. Nothing happens if nobody answers within [request.hours] hours.",
   workingHoursNotice: "Heads up: the team is away right now. Someone will pick this up [hours.next_opening].",
+  feedbackPrompt: "How did we do? Tap a star to rate this ticket. You can add a comment after.",
 } as const;
 
 export type TicketMessageKey = keyof typeof DEFAULT_TICKET_MESSAGES;
@@ -157,6 +165,7 @@ export const TICKET_MESSAGE_VARIABLES: Record<TicketMessageKey, VariableDefiniti
   autoClosed: TICKET_STALE_VARIABLES,
   closeRequest: TICKET_CLOSE_REQUEST_VARIABLES,
   workingHoursNotice: TICKET_HOURS_VARIABLES,
+  feedbackPrompt: TICKET_CLOSE_VARIABLES,
 };
 
 const messageText = (key: TicketMessageKey) =>
@@ -169,6 +178,7 @@ export const ticketMessagesSchema = z.object({
   autoClosed: messageText("autoClosed"),
   closeRequest: messageText("closeRequest"),
   workingHoursNotice: messageText("workingHoursNotice"),
+  feedbackPrompt: messageText("feedbackPrompt"),
 });
 
 export type TicketMessages = z.infer<typeof ticketMessagesSchema>;

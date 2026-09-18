@@ -183,6 +183,7 @@ const rulesSchema = z.object({
   cooldownSeconds: z.number().int().min(0).max(TICKET_COOLDOWN_MAX_SECONDS),
   slowmodeSeconds: z.number().int().min(0).max(TICKET_SLOWMODE_MAX_SECONDS),
   claimingEnabled: z.boolean(),
+  feedbackEnabled: z.boolean(),
   channelNameTemplate: z
     .string()
     .trim()
@@ -215,6 +216,7 @@ export async function saveTicketCategoryRulesAction(id: string, input: TicketCat
       cooldown_seconds: next.cooldownSeconds,
       slowmode_seconds: next.slowmodeSeconds,
       claiming_enabled: next.claimingEnabled,
+      feedback_enabled: next.feedbackEnabled,
       channel_name_template: next.channelNameTemplate,
     };
     if (!(await updateTicketCategory(supabaseAdmin, guildId, current.id, after))) throw new DashboardError(GONE);

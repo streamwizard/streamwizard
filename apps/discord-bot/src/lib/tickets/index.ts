@@ -15,6 +15,7 @@ import {
   handleCloseRejectButton,
   handleCloseRequestButton,
 } from "./close-request";
+import { handleFeedbackButton, handleFeedbackCommentSubmit } from "./feedback";
 import { parseTicketId, RETIRED_GITHUB_ID, TICKET_IDS } from "./ids";
 import { handleCategoryPick, handleCreateButton, handleModalSubmit } from "./open";
 
@@ -56,6 +57,7 @@ export { TICKET_IDS } from "./ids";
 export { handleCreate } from "./open";
 export { deleteTicketPanel, NO_PANEL, panelLocation, postTicketPanel } from "./panel";
 export { isStaff } from "./staff";
+export { ticketStatsValues } from "./stats";
 export { startTicketSweeper, stopTicketSweeper, sweepGuildTickets } from "./sweeper";
 
 export type TicketInteraction = ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction;
@@ -64,6 +66,12 @@ export type TicketInteraction = ButtonInteraction | ModalSubmitInteraction | Str
 export async function handleTicketInteraction(interaction: TicketInteraction): Promise<void> {
   const { action, arg } = parseTicketId(interaction.customId);
   try {
+    // The closing DM's rating and comment come from outside any guild; everything below assumes one.
+    if (interaction.isButton() && action === TICKET_IDS.feedback) return void (await handleFeedbackButton(interaction));
+    if (interaction.isModalSubmit() && action === TICKET_IDS.feedbackComment) {
+      return void (await handleFeedbackCommentSubmit(interaction, arg));
+    }
+
     if (interaction.isModalSubmit()) {
       if (action === TICKET_IDS.submit) await handleModalSubmit(interaction, arg);
       else if (action === TICKET_IDS.closeSubmit) await handleCloseSubmit(interaction);

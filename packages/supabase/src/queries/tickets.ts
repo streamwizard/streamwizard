@@ -123,6 +123,12 @@ export async function getTicketOpenerProfile(client: DBClient, userId: string): 
   return data;
 }
 
+export async function getTicketById(client: DBClient, ticketId: string): Promise<DiscordTicket | null> {
+  const { data, error } = await client.from("discord_tickets").select("*").eq("id", ticketId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
 export async function getTicketByChannelId(client: DBClient, channelId: string): Promise<DiscordTicket | null> {
   const { data, error } = await client.from("discord_tickets").select("*").eq("channel_id", channelId).maybeSingle();
 

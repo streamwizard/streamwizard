@@ -226,3 +226,47 @@ export async function clearTicketCloseRequest(client: DBClient, ticketId: string
   if (error) throw error;
   return data;
 }
+
+// Feedback from the closing DM. One rating per ticket, from the opener only:
+// the IS NULL guard makes a second click a no-op instead of an overwrite.
+
+export const TICKET_FEEDBACK_COMMENT_MAX = 1000;
+
+/** Stores the opener's rating. Null when the ticket is already rated, or isn't theirs. */
+export async function rateTicket(
+  client: DBClient,
+  ticketId: string,
+  openerDiscordUserId: string,
+  rating: number,
+): Promise<DiscordTicket | null> {
+  const { data, error } = await client
+    .from("discord_tickets")
+    .update({ feedback_rating: rating, feedback_at: new Date().toISOString() })
+    .eq("id", ticketId)
+    .eq("opener_discord_user_id", openerDiscordUserId)
+    .is("feedback_rating", null)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/** Adds the optional comment to a rating already given. Null when there is no rating to attach it to. */
+export async function commentTicketFeedback(
+  client: DBClient,
+  ticketId: string,
+  openerDiscordUserId: string,
+  comment: string,
+): Promise<DiscordTicket | null> {
+  const { data, error } = await client
+    .from("discord_tickets")
+    .update({ feedback_comment: comment.trim().slice(0, TICKET_FEEDBACK_COMMENT_MAX) || null })
+    .eq("id", ticketId)
+    .eq("opener_discord_user_id", openerDiscordUserId)
+    .not("feedback_rating", "is", null)
+    .is("feedback_comment", null)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}

@@ -6,7 +6,9 @@ import { listTicketMessages } from "@repo/supabase/queries/ticket-archive";
 import type { DiscordTicket } from "@repo/supabase/queries/tickets";
 import { guildVariableValues } from "../built-message";
 import { findCategory, getTicketConfig, type TicketConfig } from "./config";
+import { feedbackRow } from "./feedback";
 import { ticketVariableValues } from "./intro";
+import { ticketStatsValues } from "./stats";
 import { renderTranscriptText, transcriptFileName } from "./transcript-file";
 
 // The opener's copy of a closed ticket: the dashboard-editable text plus the
@@ -28,15 +30,22 @@ export async function sendCloseDm(guild: Guild, ticket: DiscordTicket): Promise<
     const config = await getTicketConfig(guild.id);
     if (!config.settings?.dm_on_close) return;
 
-    const content = replaceVariables(parseTicketMessages(config.settings.messages).closeDm, {
+    const messages = parseTicketMessages(config.settings.messages);
+    const values = {
       ...guildVariableValues(guild),
       ...ticketVariableValues(ticket, config),
+      ...(await ticketStatsValues(guild.id)),
       "ticket.close_reason": ticket.close_reason ?? "",
       "ticket.closed_by": ticket.closed_by_name ?? "StreamWizard",
-    });
+    };
+    // The rating asks once, when the category wants feedback and nobody rated yet (a re-sent DM never re-asks).
+    const asksFeedback = findCategory(config, ticket.category)?.feedback_enabled !== false && ticket.feedback_rating === null;
+    const content = [replaceVariables(messages.closeDm, values), ...(asksFeedback ? [replaceVariables(messages.feedbackPrompt, values)] : [])]
+      .join("\n\n")
+      .slice(0, 2000);
     const file = await buildTranscriptFile(guild, ticket, config);
     const user = await guild.client.users.fetch(ticket.opener_discord_user_id);
-    await user.send({ content: content.slice(0, 2000), files: [file] });
+    await user.send({ content, files: [file], components: asksFeedback ? [feedbackRow(ticket)] : [] });
   } catch (error) {
     // DMs off, or no server in common any more: nothing to do about it.
     if (error instanceof DiscordAPIError && error.code === RESTJSONErrorCodes.CannotSendMessagesToThisUser) return;

@@ -73,6 +73,12 @@ export function TicketMessagesForm({ initial, dmOnClose, staleOn, autoCloseOn, c
       rows: 6,
     },
     {
+      key: "feedbackPrompt",
+      title: "Rating prompt",
+      description: "Added under the closing message, above the five rating buttons, for categories that ask for a rating.",
+      rows: 3,
+    },
+    {
       key: "staleWarning",
       title: "Quiet-ticket reminder",
       description: (

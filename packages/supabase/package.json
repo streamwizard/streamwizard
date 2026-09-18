@@ -119,6 +119,10 @@
       "types": "./src/queries/ticket-hours.ts",
       "default": "./src/queries/ticket-hours.ts"
     },
+    "./queries/ticket-stats": {
+      "types": "./src/queries/ticket-stats.ts",
+      "default": "./src/queries/ticket-stats.ts"
+    },
     "./queries/ticket-sweep": {
       "types": "./src/queries/ticket-sweep.ts",
       "default": "./src/queries/ticket-sweep.ts"
