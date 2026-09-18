@@ -17,12 +17,14 @@ import {
   listObsInstancesByNode,
   listObsInstancesByUserOnNode,
   sumAllocatedVramForNode,
+  updateNodeTailscaleIp,
   updateObsInstanceForNode,
   updateObsInstanceByContainerIdForNode,
   userHasInstanceOnNode,
 } from "@repo/supabase/queries/obs-nodes";
 import { getSubscriptionLimits } from "@repo/supabase/queries/subscriptions";
 import { env } from "../lib/env";
+import { mintTailscaleAuthKey } from "../lib/tailscale";
 import { nodeAuth } from "../middleware/node-auth";
 import { getStreamKeyForUser } from "../lib/twitch-stream-key";
 import { TtlCache } from "@repo/ttl-cache";
@@ -184,10 +186,23 @@ nodes.post("/claim", async (c) => {
     key_tag: commandEnc.authTag,
   });
 
+  // Single-use key so install.sh can `tailscale up` without an admin pasting
+  // one in. The tailnet is how the node's OBS containers pull SRT from an
+  // ingest node, and one of the two addresses its API is bound to (the other
+  // is loopback, for the node's Cloudflare Tunnel). null (Tailscale API down
+  // / OAuth client not scoped to tag:obs-node) is tolerated on the node side
+  // with a warning. See lib/tailscale.ts.
+  const tailscaleAuthKey = await mintTailscaleAuthKey({
+    nodeId: linked.id,
+    tag: "tag:obs-node",
+    description: `obs-node claim ${linked.id}`,
+  });
+
   return c.json({
     node_id: linked.id,
     node_api_key: apiKey,
     hostname: linked.hostname,
+    tailscale_authkey: tailscaleAuthKey,
     rest_api_url: env.STREAMWIZARD_API_URL,
     supabase_url: env.SUPABASE_URL,
     S3_ENDPOINT: env.OBS_S3_ENDPOINT,
@@ -282,6 +297,35 @@ nodes.get("/me", nodeAuth(), async (c) => {
   });
   if (!payload) return c.json({ error: "Node not found" }, 404);
   return c.json(payload);
+});
+
+// ── Self-report ──────────────────────────────────────────────────────────────
+
+const patchMeSchema = z.object({ tailscale_ip: z.string().min(1) });
+
+// Called by obs-instance-manager's install script once it actually has a
+// Tailscale IP -- in the deferred-join case that's only true after /claim
+// already returned (the auth key needed to join comes back IN that response),
+// so it can't ride the original claim body and needs its own round trip.
+// Also fills in api_url as http://<ip>:3000 when the admin left it blank:
+// docker-compose.yml binds the API to loopback and the Tailscale address, so
+// the tailnet URL is the one default that works from other hosts. An admin
+// who has pointed api_url at the node's Cloudflare Tunnel keeps that value.
+nodes.patch("/me", nodeAuth(), async (c) => {
+  const parsed = patchMeSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "tailscale_ip is required" }, 400);
+  }
+
+  const nodeId = c.get("nodeId");
+  const { data, error } = await updateNodeTailscaleIp(supabase, nodeId, parsed.data.tailscale_ip);
+  if (error) {
+    return c.json({ error }, 500);
+  }
+  // The node reads api_url/tailscale_ip back through GET /me, which is
+  // cached for 30s -- evict so its very next poll sees what it just reported.
+  meByNodeId.delete(nodeId);
+  return c.json(data);
 });
 
 // ── Instance queries ──────────────────────────────────────────────────────────

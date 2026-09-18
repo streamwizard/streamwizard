@@ -25,9 +25,10 @@ const schema = z.object({
   OBS_S3_REGION: z.string().min(1),
   OBS_S3_SECRET_KEY: z.string().min(1),
 
-  // Tailscale OAuth client, scoped to auth_keys + tag:ingest-node only.
-  // Used during /api/ingest-nodes/claim to mint a fresh, single-use, tagged
-  // auth key per node instead of requiring an admin to paste one in by hand.
+  // Tailscale OAuth client, scoped to auth_keys for tag:ingest-node and
+  // tag:obs-node. Used by /api/ingest-nodes/claim and /api/nodes/claim (via
+  // lib/tailscale.ts) to mint a fresh, single-use, tagged auth key per node
+  // instead of requiring an admin to paste one in by hand.
   TAILSCALE_OAUTH_CLIENT_ID: z.string().min(1),
   TAILSCALE_OAUTH_CLIENT_SECRET: z.string().min(1),
 
