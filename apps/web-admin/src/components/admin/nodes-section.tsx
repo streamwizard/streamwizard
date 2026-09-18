@@ -66,7 +66,7 @@ function HardwareSummary({ node }: { node: ObsNode }) {
         {node.total_vram_mb != null ? ` · ${formatMb(node.total_vram_mb)} VRAM` : ""}
       </p>
       <p className="text-muted-foreground">
-        {formatMb(node.ram_total_mb)} RAM · {node.cpu_cores ?? "—"} cores
+        {formatMb(node.ram_total_mb)} RAM · {node.cpu_cores ?? "—"} cores · tailscale {node.tailscale_ip ?? "—"}
       </p>
     </div>
   );
@@ -95,13 +95,17 @@ function NodeForm({
         {nameError && <p className="text-xs text-destructive">{nameError}</p>}
       </div>
       <div className="col-span-2 space-y-2">
-        <Label htmlFor="node-api-url">API URL</Label>
+        <Label htmlFor="node-api-url">API URL (optional)</Label>
         <Input
           id="node-api-url"
-          placeholder="http://10.10.10.185:3000"
-          value={form.api_url}
+          placeholder="http://100.64.0.10:3000"
+          value={form.api_url ?? ""}
           onChange={(e) => setForm({ ...form, api_url: e.target.value })}
         />
+        <p className="text-xs text-muted-foreground">
+          Leave blank and the node fills this in with its Tailscale address when it links. Set it only
+          to override that, e.g. a tunnel hostname for browsers outside the tailnet.
+        </p>
       </div>
       <div className="col-span-2 space-y-2">
         <Label htmlFor="node-max-instances">Max instances</Label>
@@ -230,9 +234,9 @@ export function NodesSection({
               <DialogHeader>
                 <DialogTitle>Add node</DialogTitle>
                 <DialogDescription>
-                  Name it, tell it how to reach the node, and cap how many instances it can run.
-                  Hardware details (GPU, VRAM, RAM, CPU, storage, hostname) are self-reported by
-                  the node when you run the one-time install command you&apos;ll get after saving.
+                  Name it and cap how many instances it can run. Hardware details (GPU, VRAM, RAM,
+                  CPU, storage, hostname) and the API URL are self-reported by the node when you run
+                  the one-time install command you&apos;ll get after saving.
                 </DialogDescription>
               </DialogHeader>
               <NodeForm form={createForm} setForm={setCreateForm} />
