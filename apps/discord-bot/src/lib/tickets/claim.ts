@@ -27,6 +27,21 @@ async function afterClaim(
       reportError(error, "discord-bot tickets: hide claimed ticket", { ticketId: claimed.id }),
     );
   }
+/**
+ * Why a claim wrote nothing. Reads the row again rather than trusting a copy
+ * from before the write: when two claims race, the loser's earlier read still
+ * shows the ticket unclaimed, which used to come out as "isn't a tracked ticket".
+ */
+async function explainFailedClaim(channelId: string, userId: string): Promise<string> {
+  const current = await getTicketByChannelId(supabase, channelId);
+  if (!current) return "This channel isn't a tracked ticket.";
+  if (current.status !== "open") return "This ticket is closed.";
+  if (current.claimed_by_discord_user_id === userId) return "You already claimed this ticket.";
+  if (current.claimed_by_discord_user_id)
+    return `This ticket is already claimed by <@${current.claimed_by_discord_user_id}>.`;
+  return "That claim didn't go through. Try again.";
+}
+
 }
 
 export async function handleClaimButton(interaction: ButtonInteraction): Promise<void> {
@@ -48,10 +63,10 @@ export async function handleClaimButton(interaction: ButtonInteraction): Promise
 
   // Race-safe: claimTicket returns null if it was already claimed (or not a ticket).
   if (!claimed) {
-    const message = current?.claimed_by_discord_user_id
-      ? `This ticket is already claimed by <@${current.claimed_by_discord_user_id}>.`
-      : "This channel isn't a tracked ticket.";
-    await interaction.reply({ content: message, flags: MessageFlags.Ephemeral });
+    await interaction.reply({
+      content: await explainFailedClaim(interaction.channelId, interaction.user.id),
+      flags: MessageFlags.Ephemeral,
+    });
     return;
   }
 
@@ -96,7 +111,7 @@ export async function claimTicketAs(
   const claimed = await claimTicket(supabase, channel.id, member.id, member.displayName);
   if (!claimed) {
     const current = await getTicketByChannelId(supabase, channel.id);
-    if (!current) return { status: "not_a_ticket" };
+    if (!current || current.status !== "open") return { status: "not_a_ticket" };
     return {
       status: "already_claimed",
       claimedBy: current.claimed_by_name ?? current.claimed_by_discord_user_id ?? "someone",

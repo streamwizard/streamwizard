@@ -4,7 +4,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "dev": "doppler run --config dev_discord_bot -- bun --preload ./src/sentry.ts --hot src/index.ts",
+    "dev": "doppler run --config dev_discord_bot -- bun --preload ./src/sentry.ts --watch src/index.ts",
     "start": "bun --preload ./src/sentry.ts src/index.ts",
     "check-types": "tsc --noEmit",
     "test": "bun test",
