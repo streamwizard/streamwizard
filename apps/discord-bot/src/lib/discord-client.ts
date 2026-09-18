@@ -1,10 +1,20 @@
 import { Client, Collection, GatewayIntentBits, Partials } from "discord.js";
 
-// GuildMembers is privileged (welcome messages). GuildMessages,
-// GuildMessageReactions and GuildVoiceStates are NOT privileged and power the
-// activity tracker (message/reaction/voice counts). We deliberately omit
-// MessageContent — we only count messages, never read their text. Partials let
-// reaction events fire on uncached messages.
+// Privileged intents (turn them on in the Discord developer portal):
+//   GuildMembers    welcome messages, join role, member log events
+//   MessageContent  message text for the server log (edits, deletes) and
+//                   ticket transcripts
+// Not privileged:
+//   GuildMessages, GuildMessageReactions, GuildVoiceStates  activity tracker
+//   GuildModeration  ban events and the audit log (who did it)
+//   GuildInvites     invite log events
+//   DirectMessages   a member DMing the bot to open a ticket (only acted on
+//                    when a server has dm_open_enabled; DMs are never stored)
+// The activity tracker still only counts messages; message text is used for
+// the server log and transcripts only.
+//
+// Partials let events fire for things the bot hasn't cached: reactions on old
+// messages, deletes of old messages, members who left before a restart.
 export const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -12,8 +22,12 @@ export const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildInvites,
+    GatewayIntentBits.DirectMessages,
   ],
-  partials: [Partials.Message, Partials.Reaction, Partials.Channel],
+  partials: [Partials.Message, Partials.Reaction, Partials.Channel, Partials.GuildMember, Partials.User],
 });
 
 client.commands = new Collection();

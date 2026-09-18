@@ -4,7 +4,14 @@ import { supabase } from "@repo/supabase";
 import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
 import { env } from "./env";
 
-const LINK_URL = `${env.NEXT_PUBLIC_BASE_URL}/auth/link/discord`;
+// Starts the Discord identity link. The route sends signed-out users to login
+// first, so it works for brand-new members as well as existing users.
+export const LINK_URL = `${env.NEXT_PUBLIC_BASE_URL}/auth/link/discord`;
+
+export function buildLinkRow(label = "Link your account") {
+  const button = new ButtonBuilder().setLabel(label).setStyle(ButtonStyle.Link).setURL(LINK_URL);
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(button);
+}
 
 /**
  * Resolves the StreamWizard user id for the interacting Discord user.
@@ -16,12 +23,9 @@ export async function requireLinkedAccount(interaction: ChatInputCommandInteract
 
   if (data?.user_id) return data.user_id;
 
-  const button = new ButtonBuilder().setLabel("Link your account").setStyle(ButtonStyle.Link).setURL(LINK_URL);
-  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(button);
-
   await interaction.reply({
     content: "Your Discord account is not connected to StreamWizard yet.",
-    components: [row],
+    components: [buildLinkRow()],
     flags: MessageFlags.Ephemeral,
   });
 

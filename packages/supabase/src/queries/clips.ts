@@ -302,6 +302,48 @@ export async function upsertClips(client: DBClient, clips: Database["public"]["T
   if (error) throw error;
 }
 
+export interface ShowcaseClipRow {
+  twitch_clip_id: string;
+  title: string;
+  creator_name: string;
+  broadcaster_name: string;
+  view_count: number;
+  duration: number | string | null;
+  thumbnail_url: string;
+  url: string | null;
+  embed_url: string | null;
+  created_at_twitch: string | null;
+  game_id: string | null;
+}
+
+/**
+ * Top clips by views for the public showcase, capped per broadcaster so one
+ * channel cannot fill the row. Anon-readable by design.
+ */
+export async function getShowcaseClips(client: DBClient, limit: number, perBroadcaster: number): Promise<ShowcaseClipRow[]> {
+  // Cast until gen-types picks the function up from the deployed schema.
+  const { data, error } = await client.rpc("get_showcase_clips" as never, {
+    p_limit: limit,
+    p_per_broadcaster: perBroadcaster,
+  } as never);
+  if (error) throw error;
+  return (data ?? []) as ShowcaseClipRow[];
+}
+
+export async function countClipsByUserId(client: DBClient, userId: string): Promise<number> {
+  const { count } = await client.from("clips").select("id", { count: "exact", head: true }).eq("user_id", userId);
+  return count ?? 0;
+}
+
+/** Newest clips of one channel, with folder info, for the stream page strip. */
+export async function getRecentClipsByBroadcaster(client: DBClient, broadcasterId: string, limit: number) {
+  return client
+    .rpc("get_all_clips_with_folders")
+    .eq("broadcaster_id", broadcasterId)
+    .order("created_at_twitch", { ascending: false })
+    .limit(limit);
+}
+
 export async function getLatestClipByUserId(client: DBClient, userId: string) {
   return client
     .from("clips")

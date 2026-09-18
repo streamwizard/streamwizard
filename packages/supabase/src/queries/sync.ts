@@ -30,8 +30,21 @@ export async function startClipSync(client: DBClient, userId: string, lastSync: 
   if (error) throw error;
 }
 
-export async function updateClipSyncStatus(client: DBClient, userId: string, status: Database["public"]["Enums"]["clip_sync_status"], clipCount?: number) {
-  const patch: Database["public"]["Tables"]["twitch_clip_syncs"]["Update"] = { sync_status: status };
+/**
+ * Marks a sync completed or failed. The status change fires the
+ * `clips.sync_*` platform events, so `error` ends up in the log channel.
+ */
+export async function updateClipSyncStatus(
+  client: DBClient,
+  userId: string,
+  status: Database["public"]["Enums"]["clip_sync_status"],
+  clipCount?: number,
+  lastError?: string | null,
+) {
+  const patch: Database["public"]["Tables"]["twitch_clip_syncs"]["Update"] = {
+    sync_status: status,
+    last_error: status === "failed" ? (lastError ?? null) : null,
+  };
   if (clipCount !== undefined) patch.clip_count = clipCount;
   const { error } = await client.from("twitch_clip_syncs").update(patch).eq("user_id", userId);
   if (error) throw error;

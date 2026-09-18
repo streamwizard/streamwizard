@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/privacy-policy") },
 };
 
-const LAST_UPDATED = "11 September 2026";
+const LAST_UPDATED = "15 September 2026";
 const CONTACT_EMAIL = LEGAL_CONTACT_EMAIL;
 
 function NormalContent() {
@@ -60,6 +60,37 @@ function NormalContent() {
         <p className="text-muted-foreground leading-relaxed mb-4">
           We store the content you create inside StreamWizard: clip folders,
           overlay configurations, widget settings, and related metadata.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">Discord Support Tickets</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          If you open a support ticket in the StreamWizard Discord server, we
+          save the conversation as it happens: the messages, the Discord names
+          and avatars of everyone who wrote in it, and images up to 500 KB.
+          Other attachments are kept as file name and size only. A message you
+          edit is updated; a message you delete is kept and marked as deleted,
+          so our team can still follow what the ticket was about. When the
+          ticket closes you get a copy of the conversation by Discord DM, unless
+          the server has turned that off. That DM may ask you to rate the
+          ticket; the rating and any comment you add are stored with the
+          ticket. If you send the bot a direct message, it only answers with a
+          button to open a ticket; the text of that message is not read or
+          stored. Our team uses this history to follow up on your issue and to
+          see how support is doing.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">Discord Server Moderation Log</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          To keep the StreamWizard Discord server safe, our bot keeps a log for
+          our moderators of what happens in the server: members joining,
+          leaving, being kicked, banned or timed out, nickname and role
+          changes, changes to roles and channels, and edited or deleted
+          messages. For edited and deleted messages the log includes the
+          author, the channel and the text of the message. It also records
+          your Discord name, Discord user ID and avatar, and, if you linked
+          Discord to StreamWizard, your Twitch username. The log is posted to
+          staff-only channels in the server and stored with our other
+          platform logs.
         </p>
 
         <h3 className="text-lg font-medium mb-2">Analytics Data</h3>
@@ -139,6 +170,18 @@ function NormalContent() {
               </tr>
               <tr>
                 <td className="py-2 pr-4">Security &amp; fraud prevention</td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Support ticket history (Discord)
+                </td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Discord server moderation log
+                </td>
                 <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
               </tr>
             </tbody>
@@ -240,6 +283,21 @@ function NormalContent() {
             Analytics data (PostHog): data linked to your account is deleted 12
             months after your last activity. Anonymous, aggregated statistics
             that cannot be tied to you may be kept for up to 7 years.
+          </li>
+          <li>
+            Discord support tickets: conversations, images and your feedback
+            comment are deleted 12 months after the ticket closes; the rating
+            itself stays as an anonymous number. If you delete your account
+            while your Discord account is linked, your messages in tickets are
+            anonymised, your feedback comment and images removed. Replies from
+            our team stay.
+          </li>
+          <li>
+            Discord server moderation log: the text of edited and deleted
+            messages is removed from our database after 30 days, or right away
+            if you delete your account while your Discord account is linked.
+            The rest of the entry (who, where, when) is kept. Copies already
+            posted in our staff channels stay until a moderator removes them.
           </li>
           <li>Error reports (Sentry): retained for 90 days.</li>
           <li>Server logs: retained for 30 days.</li>
@@ -485,6 +543,31 @@ function GenZContent() {
           hold it for you.
         </p>
 
+        <h3 className="text-lg font-medium mb-2">support tickets 🎫</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          opened a ticket in our Discord? we save the chat as it happens: the
+          messages, everyone&apos;s Discord name + avatar, and images up to 500
+          KB. anything bigger (or not an image) we only keep the file name and
+          size. edits update, deletes stay but get a &quot;deleted&quot; tag.
+          when it closes you get the chat as a file in your DMs, and maybe a
+          &quot;rate this ticket&quot; ask. the stars + your comment get saved
+          with the ticket. DM the bot and all it does is hand you a button to
+          open a ticket, we don&apos;t read or keep the DM. it&apos;s so we can
+          actually help if the same bug comes back, and see how we&apos;re
+          doing.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">our Discord mod log 🛡️</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          our bot keeps a log for the mods of what happens in the server: who
+          joins, leaves, gets kicked, banned or timed out, nickname and role
+          changes, channel and role changes, and messages that get edited or
+          deleted. for edits and deletes that includes the message text, who
+          wrote it and where. it saves ur Discord name, ID and avatar, plus ur
+          Twitch name if u linked Discord. it goes to staff-only channels and
+          our own logs. nobody else sees it.
+        </p>
+
         <h3 className="text-lg font-medium mb-2">
           analytics (if u said yes to cookies)
         </h3>
@@ -556,6 +639,14 @@ function GenZContent() {
               </tr>
               <tr>
                 <td className="py-2 pr-4">keeping the bad guys out</td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">remembering ur support tickets</td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">keeping our Discord safe (mod log)</td>
                 <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
               </tr>
             </tbody>
@@ -657,6 +748,19 @@ function GenZContent() {
             analytics (PostHog): anything tied to ur account gets deleted 12
             months after u last showed up. anonymous aggregate stats that
             can&apos;t trace back to u can stick around up to 7 years.
+          </li>
+          <li>
+            support tickets: chats, images + ur feedback comment get deleted 12
+            months after the ticket closes (the star rating stays, as a
+            number). delete ur account with Discord linked and ur ticket
+            messages get anonymised, ur comment + images removed. our replies
+            stay.
+          </li>
+          <li>
+            Discord mod log: message text gets wiped from our database after
+            30 days, or straight away if u delete ur account with Discord
+            linked. the who/where/when stays. posts already in the staff
+            channels stay until a mod cleans them up.
           </li>
           <li>error reports (Sentry): 90 days.</li>
           <li>server logs: 30 days.</li>

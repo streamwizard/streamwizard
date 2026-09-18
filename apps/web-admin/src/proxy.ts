@@ -11,6 +11,10 @@ export async function proxy(request: NextRequest) {
   const nonce = btoa(crypto.randomUUID());
   const csp = buildCsp(nonce);
   request.headers.set("content-security-policy", csp);
+  // Next reads the nonce from the CSP header for its own inline scripts, but
+  // next-themes' anti-flash script can't see it. Expose it so the root layout
+  // can pass it to the ThemeProvider.
+  request.headers.set("x-nonce", nonce);
 
   const response = await updateSession(request);
   // In dev the policy is report-only: nothing is blocked (local Supabase and

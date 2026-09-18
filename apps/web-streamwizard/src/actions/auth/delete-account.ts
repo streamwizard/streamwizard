@@ -3,13 +3,13 @@
 import { reportError } from "@repo/sentry";
 
 import { tryAuthContext } from "@/lib/auth";
-import { getChannelAccessToken } from "@repo/supabase";
-import { getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
+import { getDiscordIntegrationByUserId, deleteUserData } from "@repo/supabase/queries/user";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
+import { deleteTicketAttachments } from "@repo/supabase/queries/tickets";
+import { R2Storage } from "@repo/storage";
 import { createAdminClient, supabaseAdmin } from "@repo/supabase/next/admin";
 import { TwitchApi } from "@repo/twitch-api";
 import { redirect } from "next/navigation";
-import axios from "axios";
 import { removeRole } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 
@@ -22,15 +22,7 @@ export async function deleteAccount() {
   // This cannot remove the app from the user's Twitch authorized connections
   // UI — they must do that manually from Twitch Settings → Connections.
   try {
-    const accessToken = await getChannelAccessToken(broadcasterId);
-    await axios.post(
-      "https://id.twitch.tv/oauth2/revoke",
-      new URLSearchParams({
-        client_id: process.env.TWITCH_CLIENT_ID!,
-        token: accessToken,
-      }),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
-    );
+    await new TwitchApi(broadcasterId).auth.revokeUserToken();
   } catch {
     // Non-fatal: token may already be expired; proceed with deletion.
   }
@@ -66,9 +58,31 @@ export async function deleteAccount() {
     captureException(revokeErr);
   }
 
-  const { error: rpcError } = await supabase.rpc("delete_user_data", {
-    p_twitch_user_id: broadcasterId,
-  });
+  // delete_user_data anonymises the user's Discord ticket messages but can't
+  // reach R2, so remove the ticket screenshots they posted first. Best-effort,
+  // like the steps above.
+  try {
+    const { data: integration } = await getDiscordIntegrationByUserId(supabase, user.id);
+    if (
+      integration?.discord_user_id &&
+      env.R2_ACCOUNT_ID &&
+      env.R2_ACCESS_KEY_ID &&
+      env.R2_SECRET_ACCESS_KEY &&
+      env.R2_ASSETS_BUCKET
+    ) {
+      const r2 = new R2Storage({
+        accountId: env.R2_ACCOUNT_ID,
+        accessKeyId: env.R2_ACCESS_KEY_ID,
+        secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+        bucket: env.R2_ASSETS_BUCKET,
+      });
+      await deleteTicketAttachments(supabaseAdmin, integration.discord_user_id, (key) => r2.deleteObject(key));
+    }
+  } catch (ticketErr) {
+    reportError(ticketErr, "actions/delete-account: ticket attachments");
+  }
+
+  const { error: rpcError } = await deleteUserData(supabase, broadcasterId);
   if (rpcError) {
     reportError(rpcError, "actions/delete-account");
     return { success: false, error: rpcError.message };

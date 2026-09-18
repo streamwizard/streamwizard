@@ -1,16 +1,17 @@
 import path from "node:path";
-import { REST, Routes } from "discord.js";
+import { REST, Routes, type RESTPostAPIApplicationCommandsJSONBody } from "discord.js";
 import { env } from "../lib/env";
-import type { Command } from "../types/discord";
+import type { AnyCommand } from "../types/discord";
 
 const commandsDir = path.join(import.meta.dir, "..", "commands");
 
 async function collectCommandData() {
   const glob = new Bun.Glob("**/*.ts");
-  const data: ReturnType<Command["data"]["toJSON"]>[] = [];
+  // Slash commands and context menus alike: every file under commands/ registers one.
+  const data: RESTPostAPIApplicationCommandsJSONBody[] = [];
 
   for await (const file of glob.scan({ cwd: commandsDir, absolute: true })) {
-    const command = (await import(file)).default as Command | undefined;
+    const command = (await import(file)).default as AnyCommand | undefined;
     if (command?.data) data.push(command.data.toJSON());
   }
 

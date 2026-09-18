@@ -20,12 +20,16 @@ export function buildCsp(nonce: string): string {
     [
       "img-src 'self' data: https://static-cdn.jtvnw.net",
       "https://cdn.7tv.app https://cdn.betterttv.net https://cdn.frankerfacez.com",
+      // Discord guild icons, avatars and attachments on /discord, plus Klipy,
+      // the GIF provider behind Discord's GIF picker.
+      "https://cdn.discordapp.com https://klipy.com https://*.klipy.com",
       process.env.NEXT_PUBLIC_CDN_URL,
       process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),
-    ["media-src 'self'", process.env.NEXT_PUBLIC_CDN_URL, process.env.NEXT_PUBLIC_ASSET_CDN_URL]
+    // Klipy: Discord GIFs in ticket conversations play as looping mp4s.
+    ["media-src 'self' https://klipy.com https://*.klipy.com", process.env.NEXT_PUBLIC_CDN_URL, process.env.NEXT_PUBLIC_ASSET_CDN_URL]
       .filter(Boolean)
       .join(" "),
     // Sentry is tunneled through /monitoring so 'self' covers it; the ws

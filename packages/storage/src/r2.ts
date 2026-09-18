@@ -54,6 +54,11 @@ export class R2Storage {
     return getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
   }
 
+  /** Server-side upload of a small object. */
+  async putObject(key: string, body: Uint8Array, contentType: string): Promise<void> {
+    await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, Body: body, ContentType: contentType }));
+  }
+
   /** Returns object metadata, or null when the object does not exist. */
   async headObject(key: string): Promise<{ size: number; contentType?: string } | null> {
     try {
