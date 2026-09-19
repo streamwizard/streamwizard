@@ -32,7 +32,7 @@ export default async function OverlaysPage() {
         </p>
       </div>
       <div className="md:hidden rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-600 dark:text-yellow-400">
-        Overlays need a bigger screen to build. Switch to desktop to create or edit them. You can still turn them on and off here. Mobile support is on the way.
+        Overlays need a bigger screen to build. Switch to desktop to create or edit them. You can still turn them on and off here.
       </div>
       <OverlayScenesList
         scenes={scenes ?? []}

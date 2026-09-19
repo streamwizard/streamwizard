@@ -188,6 +188,17 @@ export async function getClipFolders(client: DBClient, userId: string) {
   return client.from("clip_folders").select("*").eq("user_id", userId);
 }
 
+/** Number of clips filed directly in each folder (subfolders not included), keyed by folder id. */
+export async function getClipFolderClipCounts(client: DBClient, userId: string): Promise<Record<string, number>> {
+  const { data, error } = await client
+    .from("clip_folders")
+    .select("id, clip_folder_junction(count)")
+    .eq("user_id", userId);
+
+  if (error) throw error;
+  return Object.fromEntries((data ?? []).map((folder) => [folder.id, folder.clip_folder_junction[0]?.count ?? 0]));
+}
+
 export async function getClipFolderJunctions(client: DBClient, userId: string, folderIds: string[]) {
   return client
     .from("clip_folder_junction")
