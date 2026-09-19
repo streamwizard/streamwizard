@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
 import type { ObsNode, ObsNodeInstanceDetail } from "@repo/supabase/queries/obs-nodes";
 import { useNodeMetricsStream, type ConnectionStatus } from "@/hooks/use-node-metrics-stream";
-import { toggleInstanceAdmin } from "@/lib/instance-actions";
+import { toggleInstanceAdminAction } from "@/actions/nodes";
 import { formatMb } from "@/lib/format";
 import { ContainerMetricsCharts } from "@/components/admin/metrics-charts";
 
@@ -45,7 +45,8 @@ export function InstanceDetailClient({ node, instance }: { node: ObsNode; instan
     }
     setIsPending(true);
     try {
-      const updated = await toggleInstanceAdmin(node.api_url, instance.id, isRunning ? "stop" : "start");
+      const { data: updated, error } = await toggleInstanceAdminAction(node.id, instance.id, isRunning ? "stop" : "start");
+      if (!updated) throw new Error(error ?? "Request failed.");
       setCurrentStatus(updated.status);
       toast.success(`Container ${isRunning ? "stopped" : "started"}.`);
     } catch (err) {

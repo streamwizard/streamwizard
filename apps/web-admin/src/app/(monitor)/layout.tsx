@@ -1,8 +1,5 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { createClient } from "@repo/supabase/next/server";
-import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { isUserAdmin } from "@repo/supabase/queries/obs-nodes";
+import { requireAdminSession } from "@/lib/admin-session";
 import { MonitorHeader } from "@/components/monitor-header";
 import { MonitorSidebar } from "@/components/monitor-sidebar";
 import { SidebarInset, SidebarProvider } from "@repo/ui";
@@ -14,20 +11,9 @@ import { homeEnv } from "@/lib/home-env";
 import { getDiscordSetupGaps } from "@/lib/discord/setup-status";
 
 export default async function MonitorLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-
-  if (error || !data.user) {
-    // A missing session is normal for a first visit, but a real error here
-    // (bad/expired token, misconfigured Supabase client) is worth logging so
-    // the "silent bounce to /login" has a paper trail in the server logs.
-    if (error) console.warn("[web-admin] getUser failed at dashboard gate:", error.message);
-    redirect("/login?error=signin_required");
-  }
-
-  if (!(await isUserAdmin(supabaseAdmin, data.user.id))) {
-    redirect("/no-access");
-  }
+  // Admin role + strong session (TOTP verified or passkey sign-in). Weak
+  // sessions are bounced to /auth/verify or /auth/setup by the helper.
+  const session = await requireAdminSession();
 
   // Restore the dashboard chrome settings persisted from a previous visit, so
   // the first render already reflects them (no post-hydration flash). The
@@ -45,7 +31,7 @@ export default async function MonitorLayout({ children }: { children: React.Reac
       <RefreshIntervalProvider initialInterval={initialInterval}>
         <BandwidthUnitProvider initialUnit={initialUnit}>
           <SidebarProvider>
-            <MonitorSidebar userEmail={data.user.email ?? ""} notSetUp={[...setupGaps]} />
+            <MonitorSidebar userEmail={session.email} notSetUp={[...setupGaps]} />
             <SidebarInset>
               <MonitorHeader envLabel={homeEnv()} />
               <main className="flex-1 overflow-auto p-6">{children}</main>

@@ -27,6 +27,10 @@
       "types": "./src/next/proxy.ts",
       "default": "./src/next/proxy.ts"
     },
+    "./auth/session-strength": {
+      "types": "./src/auth/session-strength.ts",
+      "default": "./src/auth/session-strength.ts"
+    },
     "./queries/clips": {
       "types": "./src/queries/clips.ts",
       "default": "./src/queries/clips.ts"

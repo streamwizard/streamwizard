@@ -211,6 +211,66 @@ export async function createInstanceAction(
   return { data: instance, error: null };
 }
 
+// Admin-scoped instance lifecycle calls to obs-instance-manager. These used to
+// run in the browser with the admin's raw access token; that let a session
+// that had not passed the second factor (Twitch only) drive containers, since
+// obs-instance-manager checks the JWT and the role but not aal/amr. Routing
+// them through here puts them behind assertAdmin() like every other mutation.
+async function callInstanceManagerAdmin(
+  nodeId: string,
+  path: string,
+  method: "POST" | "DELETE",
+): Promise<{ data: Response | null; error: string | null }> {
+  let adminClient;
+  try {
+    adminClient = await requireAdminContext();
+  } catch {
+    return { data: null, error: "Forbidden" };
+  }
+
+  // Resolve the node's API URL server-side — never trust a client-supplied URL
+  // because the fetch below attaches the acting admin's Bearer token.
+  const node = await getNodeById(adminClient, nodeId);
+  if (!node?.api_url) return { data: null, error: "Node not found or has no API URL." };
+
+  const supabase = await createClient();
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData.session?.access_token;
+  if (!token) return { data: null, error: "No active session." };
+
+  const res = await fetch(`${node.api_url.replace(/\/$/, "")}${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return { data: res, error: null };
+}
+
+export async function toggleInstanceAdminAction(
+  nodeId: string,
+  instanceId: string,
+  action: "start" | "stop",
+): Promise<{ data: { status: string } | null; error: string | null }> {
+  const { data: res, error } = await callInstanceManagerAdmin(nodeId, `/admin/instances/${instanceId}/${action}`, "POST");
+  if (!res) return { data: null, error };
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    return { data: null, error: body.error ?? `Failed to ${action} container (${res.status})` };
+  }
+  return { data: (await res.json()) as { status: string }, error: null };
+}
+
+export async function removeInstanceAdminAction(nodeId: string, instanceId: string): Promise<{ error: string | null }> {
+  const { data: res, error } = await callInstanceManagerAdmin(nodeId, `/admin/instances/${instanceId}`, "DELETE");
+  if (!res) return { error };
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { error?: string };
+    return { error: body.error ?? `Failed to remove instance (${res.status})` };
+  }
+  return { error: null };
+}
+
 // Decrypts an instance's OBS WebSocket password so the admin instance page can
 // open an obsws session (scene list for the auto-switcher editor). Admin-only —
 // no ownership predicate, authority comes from the role check.

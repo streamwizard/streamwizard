@@ -1,16 +1,19 @@
-import { createClient } from "@repo/supabase/next/server";
-import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { isUserAdmin } from "@repo/supabase/queries/obs-nodes";
+import { getAdminSession } from "@/lib/admin-session";
 
 /** Server actions are their own POST endpoints — the layout's guard doesn't
- * cover them, so every alerts mutation re-checks admin here first.
+ * cover them, so every mutation re-checks admin here first. Same rules as the
+ * layout gate (admin role + strong session); throws instead of redirecting.
  * Returns the acting user's id for audit columns. */
 export async function assertAdmin(): Promise<string> {
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
-  if (!data.user) throw new Error("Not signed in");
+  const result = await getAdminSession();
+  if (result.session) return result.session.userId;
 
-  if (!(await isUserAdmin(supabaseAdmin, data.user.id))) throw new Error("Not authorized");
-
-  return data.user.id;
+  switch (result.redirect) {
+    case "/login?error=signin_required":
+      throw new Error("Not signed in");
+    case "/no-access":
+      throw new Error("Not authorized");
+    default:
+      throw new Error("Verification required");
+  }
 }
