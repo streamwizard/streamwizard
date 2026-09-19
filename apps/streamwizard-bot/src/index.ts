@@ -5,7 +5,8 @@ import { flushSentry, reportFatal } from "@repo/sentry";
 import { handlers } from "./handlers/eventHandler";
 import { TwitchEventSubReceiver } from "@repo/twitch-eventsub";
 import { env } from "./lib/env";
-import { createEventSubAlerter } from "./lib/eventsub-alerter";
+import { createEventSubLogger } from "./lib/eventsub-log";
+import { createEventSubTelemetry } from "./lib/eventsub-telemetry";
 import { overlayWsClient } from "./overlay-ws-client";
 import { isMetricsEnabled } from "@repo/metrics";
 
@@ -18,10 +19,17 @@ async function main() {
       overlayWsClient.connect(websocketUrl, env.SUPABASE_SECRET_KEY);
     }
 
+    // Metrics + Sentry trail, and a platform_events row per lifecycle event
+    // for the Discord log channel. Alerting is the fleet engine's job.
+    const telemetry = createEventSubTelemetry();
+    const log = createEventSubLogger();
     const EventSubReceiver = new TwitchEventSubReceiver(handlers, {
       wsUrl: production,
       conduitId: env.TWITCH_CONDUIT_ID,
-      onLifecycleEvent: createEventSubAlerter(),
+      onLifecycleEvent: (event) => {
+        telemetry(event);
+        log(event);
+      },
     });
 
     const shutdown = async () => {

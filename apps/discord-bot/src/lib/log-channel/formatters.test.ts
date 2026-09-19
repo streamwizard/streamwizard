@@ -52,6 +52,36 @@ describe("log channel formatters", () => {
     }
   });
 
+  test("eventsub connection lost: reason, close code and keepalive silence, no author", () => {
+    const embed = formatPlatformEvent(
+      event("eventsub.connection_lost", {
+        service: "streamwizard-bot",
+        reason: "keepalive timeout",
+        close_code: null,
+        keepalive_silent_ms: 15_000,
+      }),
+    ).toJSON();
+    expect(embed.title).toBe("🔴 EventSub connection lost");
+    expect(embed.color).toBe(DANGER_RED);
+    expect(embed.author).toBeUndefined();
+    expect(embed.description).toContain("**streamwizard-bot** lost its EventSub connection");
+    expect(fieldValue(embed, "Reason")).toBe("keepalive timeout");
+    expect(fieldValue(embed, "Close code")).toBeUndefined();
+    expect(fieldValue(embed, "Silent for")).toBe("15s");
+  });
+
+  test("eventsub reconnected: downtime, attempts and session", () => {
+    const embed = formatPlatformEvent(
+      event("eventsub.reconnected", { service: "streamwizard-bot", session_id: "AQoQ1", downtime_ms: 73_400, attempts: 3 }),
+    ).toJSON();
+    expect(embed.title).toBe("🟢 EventSub reconnected");
+    expect(embed.color).toBe(TWITCH_PURPLE);
+    expect(embed.description).toContain("after 1m 13s");
+    expect(fieldValue(embed, "Down for")).toBe("1m 13s");
+    expect(fieldValue(embed, "Attempts")).toBe("3");
+    expect(fieldValue(embed, "Session")).toBe("`AQoQ1`");
+  });
+
   test("new user: avatar as author icon and thumbnail, Twitch link, Discord mention, no email", () => {
     const embed = formatPlatformEvent(event("user.created", { ...identity, email: "x@example.com" })).toJSON();
     expect(embed.title).toBe("👋 New user");
