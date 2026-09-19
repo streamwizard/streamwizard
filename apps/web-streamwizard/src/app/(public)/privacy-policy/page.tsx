@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/privacy-policy") },
 };
 
-const LAST_UPDATED = "15 September 2026";
+const LAST_UPDATED = "19 September 2026";
 const CONTACT_EMAIL = LEGAL_CONTACT_EMAIL;
 
 function NormalContent() {
@@ -105,9 +105,13 @@ function NormalContent() {
           that cannot be tied to you. We also record a few account-level
           product events on our servers (for example signing in, linking your
           Discord account or joining our Discord server), tied to your account
-          ID under legitimate interest. Those server-side events never create
-          an analytics profile on their own; one only exists if you accepted
-          analytics. PostHog stores data on EU infrastructure.
+          ID under legitimate interest. Those server-side events carry your
+          browser&apos;s user-agent string (so PostHog can tell them apart from
+          automated traffic) but never your IP address, and never create an
+          analytics profile on their own; one only exists if you accepted
+          analytics. If your browser sends the Global Privacy Control signal,
+          we treat that as declining analytics and do not show the cookie
+          banner. PostHog stores data on EU infrastructure.
         </p>
 
         <h3 className="text-lg font-medium mb-2">
@@ -421,9 +425,10 @@ function NormalContent() {
         </ul>
         <p className="text-muted-foreground leading-relaxed mt-4">
           We do not use advertising, remarketing, or third-party tracking
-          cookies, and PostHog sets no cookies of its own. Changed your mind
-          about analytics? Cookie settings in the footer clears your choice
-          and asks again.
+          cookies, and PostHog sets no cookies of its own. We honour the
+          Global Privacy Control browser signal as a decline. Changed your
+          mind about analytics? Cookie settings in the footer clears your
+          choice and asks again.
         </p>
       </section>
 
