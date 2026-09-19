@@ -39,7 +39,7 @@ export function createClipsWidgetRootItems(
     opacity: 1,
     is_visible: true,
     is_locked: false,
-    label: `Clips Widget ${ctx.scene.items.filter((i) => i.type === "clips_widget").length + 1}`,
+    label: `Clips ${ctx.scene.items.filter((i) => i.type === "clips_widget").length + 1}`,
     config: { ...DEFAULT_CLIPS_WIDGET_ITEM_CONFIG },
   };
   const children = createClipDisplayFieldChildItems(
