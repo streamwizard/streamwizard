@@ -316,6 +316,34 @@ export async function queryEventsubLastEvent(range = "30m", opts?: QueryOpts): P
   return rows[0] || null;
 }
 
+/** Latest `eventsub_connection` point per service and event tag (rule:
+ * eventsub.disconnected). Written by the EventSub receiver's telemetry on
+ * connect, loss and every reconnect attempt. */
+export interface EventsubConnectionLatest {
+  service: string;
+  event: "connected" | "lost" | "reconnect_attempt" | string;
+  time: string;
+}
+
+export async function queryEventsubConnectionLatest(range = "24h", opts?: QueryOpts): Promise<EventsubConnectionLatest[]> {
+  assertValidFluxDuration(range, "range");
+  const bucket = resolveBucket(opts);
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: -${range})
+      |> filter(fn: (r) => r._measurement == "eventsub_connection")
+      |> filter(fn: (r) => r._field == "count")
+      |> group(columns: ["service", "event"])
+      |> last(column: "_time")
+      |> yield(name: "eventsub_connection_latest")
+  `;
+  return runFluxQuery(query, (row) => ({
+    service: String(row.service ?? ""),
+    event: String(row.event ?? ""),
+    time: row._time ?? "",
+  }));
+}
+
 /** Watchdog lifecycle events per OBS instance (rules: obs.instance_crash,
  * obs.instance_crash_loop). Written by obs-instance-manager on container
  * death and every auto-heal action it takes. */

@@ -1,5 +1,6 @@
 import type { AlertRule, RuleOverrides } from "../types";
 import {
+  queryEventsubConnectionLatest,
   queryEventsubLastEvent,
   queryHttpErrorRateByService,
   queryHttpP95ByService,
@@ -10,6 +11,7 @@ import {
   API_5XX_MIN_REQUESTS,
   API_5XX_RATE_PCT,
   API_P95_WARN_MS,
+  EVENTSUB_DISCONNECTED_MIN,
   EVENTSUB_SILENCE_MIN,
   SERVICE_SILENT_AFTER_MIN,
 } from "./thresholds";
@@ -89,6 +91,51 @@ export function apiRules(overrides: RuleOverrides): AlertRule[] {
               severity: probeAlsoFailing ? "crit" : "warn",
               value: Math.round(silentForMs / 1000),
               message: `${service} hasn't written http_request for ${Math.round(silentForMs / 60000)}m${probeAlsoFailing ? " and its health probe is failing" : ""}`,
+            });
+          }
+          return breaches;
+        },
+      },
+      overrides,
+    ),
+    customRule(
+      {
+        id: "eventsub.disconnected",
+        title: "EventSub connection down",
+        forTicks: 1,
+        envs: ["prod", "staging"],
+        crit: { default: EVENTSUB_DISCONNECTED_MIN, unit: "min", direction: "above" },
+        async evaluate(ctx, t) {
+          // The bot writes one `lost` point per outage, then a `reconnect_attempt`
+          // every few seconds until `connected`. An outage is ongoing when the
+          // last lost/attempt point is newer than the last connected point; it
+          // started at the lost point. The window is wide so a long outage
+          // keeps its start; one that outlives it is reported as "over 24h".
+          const rangeMin = Math.max(24 * 60, Math.ceil(t.crit) * 2);
+          const latest = await queryEventsubConnectionLatest(`${rangeMin}m`, { bucket: ctx.bucket });
+          const byService = new Map<string, Partial<Record<string, number>>>();
+          for (const row of latest) {
+            const at = new Date(row.time).getTime();
+            if (!row.service || Number.isNaN(at)) continue;
+            const points = byService.get(row.service) ?? {};
+            points[row.event] = Math.max(points[row.event] ?? 0, at);
+            byService.set(row.service, points);
+          }
+          const breaches: Breach[] = [];
+          for (const [service, points] of byService) {
+            const connected = points.connected ?? 0;
+            const lost = points.lost ?? 0;
+            const lastDown = Math.max(lost, points.reconnect_attempt ?? 0);
+            if (lastDown <= connected) continue;
+            const downSince = lost > connected ? lost : ctx.now.getTime() - rangeMin * 60_000;
+            const downMs = ctx.now.getTime() - downSince;
+            if (downMs < t.crit * 60_000) continue;
+            const downFor = lost > connected ? `${Math.round(downMs / 60000)}m` : `over ${Math.round(rangeMin / 60)}h`;
+            breaches.push({
+              entityId: service,
+              severity: "crit",
+              value: Math.round(downMs / 1000),
+              message: `${service} has been reconnecting to Twitch EventSub for ${downFor}; no events arrive until it's back`,
             });
           }
           return breaches;

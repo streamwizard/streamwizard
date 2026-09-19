@@ -43,6 +43,9 @@ export const INSTANCE_CRASH_WINDOW_MIN = 10;
 export const INSTANCE_CRASH_LOOP_COUNT = 3;
 export const INSTANCE_CRASH_LOOP_WINDOW_MIN = 30;
 export const EVENTSUB_SILENCE_MIN = 30;
+/** How long the bot may sit in its reconnect loop before it's an incident.
+ * Short blips stay silent; the Discord log channel still gets a row for each. */
+export const EVENTSUB_DISCONNECTED_MIN = 2;
 export const INGEST_STALL_MIN_SESSION_AGE_MS = 2 * 60 * 1000;
 
 // --- Rule constructors ---
