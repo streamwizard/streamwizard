@@ -32,7 +32,7 @@ export function WelcomeStep() {
       <ul className="flex flex-col gap-3">
         {[
           { icon: Clapperboard, text: "Your clips, finally organized." },
-          { icon: Zap, text: "Sync after every stream, automatically." },
+          { icon: Zap, text: "Clips synced while you stream, automatically." },
           { icon: Search, text: "Actually find the moment you're looking for." },
         ].map(({ icon: Icon, text }) => (
           <li key={text} className="flex items-center gap-3 text-sm text-foreground/80">
