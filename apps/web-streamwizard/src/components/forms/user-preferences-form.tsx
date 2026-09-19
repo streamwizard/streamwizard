@@ -67,7 +67,7 @@ export function UserPreferencesForm({ UserPreferences }: UserPreferencesFormProp
                     <div className="flex items-center gap-3">
                       <Clapperboard className="h-5 w-5 shrink-0 text-muted-foreground" />
                       <Label className="text-sm font-medium leading-snug cursor-pointer">
-                        Automatically sync Twitch clips once your stream ends.
+                        Sync Twitch clips automatically: every five minutes while you&apos;re live, and once more when the stream ends.
                       </Label>
                     </div>
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
