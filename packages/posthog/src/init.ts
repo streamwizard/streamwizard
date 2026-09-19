@@ -64,6 +64,11 @@ export function initPostHog({ key, host = "https://eu.i.posthog.com" }: PostHogC
     // *.streamwizard.org runs PostHog) and rode along on every request to the
     // CDN, docs, staging and cloud OBS nodes for no reason.
     persistence: "localStorage",
+    // Autocapture keeps the click counts and element chain (tag, classes,
+    // data-attr, href) but not the element's text: on the dashboard that text
+    // is Twitch names, clip titles and chat. The public pages lose nothing —
+    // their CTAs are named by the cta_clicked / section_viewed events.
+    mask_all_text: true,
     disable_session_recording: true,
     disable_surveys: true,
     disable_web_experiments: true,

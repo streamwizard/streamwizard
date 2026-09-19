@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { denyConsent, getConsentStatus, grantConsent } from "@repo/posthog";
+import { denyConsent, getConsentStatus, grantConsent, hasGlobalPrivacyControl } from "@repo/posthog";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { enableSentryReplay } from "@/lib/sentry-replay";
@@ -36,7 +36,15 @@ export function CookieBanner() {
 
   useEffect(() => {
     setMounted(true);
-    setVisible(getConsentStatus() === "pending");
+    if (getConsentStatus() !== "pending") return;
+    // The browser already answered for them. Same path as the Decline button,
+    // recorded so we don't ask again; Cookie settings in the footer still
+    // lets them change it.
+    if (hasGlobalPrivacyControl()) {
+      denyConsent();
+      return;
+    }
+    setVisible(true);
   }, []);
 
   function accept() {

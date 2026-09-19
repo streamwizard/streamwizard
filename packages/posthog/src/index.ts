@@ -7,6 +7,7 @@ export {
   denyConsent,
   getConsentStatus,
   grantConsent,
+  hasGlobalPrivacyControl,
   hasGrantedConsent,
   onConsentGranted,
   resetCookieConsent,
