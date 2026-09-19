@@ -28,15 +28,28 @@ function getClient(): PostHog | null {
 // anyone who declined. The event still carries the user id as distinct_id,
 // and once a consenting user is identified client-side it attaches to their
 // profile like any other event.
+//
+// `request` is the visitor's own request when the event is a reaction to one
+// (an OAuth callback, say). Only its user agent is forwarded: PostHog derives
+// `$virt_traffic_type` from `$raw_user_agent` at query time, and an event
+// without one is classed as "Automation", which every bot-filtered chart
+// (web analytics included) then hides. Nothing else from the request — no IP,
+// no geo — because these events don't wait for consent.
 export function captureServerEvent(
   distinctId: string,
   event: AppEvent,
   properties?: Record<string, unknown>,
+  request?: Pick<Request, "headers">,
 ) {
+  const userAgent = request?.headers.get("user-agent");
   getClient()?.capture({
     distinctId,
     event,
-    properties: { $process_person_profile: false, ...properties },
+    properties: {
+      $process_person_profile: false,
+      ...(userAgent ? { $raw_user_agent: userAgent } : {}),
+      ...properties,
+    },
   });
 }
 

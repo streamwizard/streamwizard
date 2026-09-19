@@ -93,10 +93,21 @@ export async function GET(request: Request) {
     if (!error) {
       // The other side of `login_clicked`: without this the OAuth funnel has a
       // click and then silence, and drop-off at Twitch is invisible.
+      // `is_new_user` is what makes this a signup count: the event fires on
+      // every login, and the client-side onboarding events only exist for
+      // visitors who accepted analytics. Supabase creates the auth user during
+      // this same exchange, so a minute-old account is a first login.
       try {
-        captureServerEvent(data.session.user.id, "login_completed", {
-          destination: next.includes("onboarding") ? "onboarding" : "dashboard",
-        });
+        const createdAt = Date.parse(data.session.user.created_at);
+        captureServerEvent(
+          data.session.user.id,
+          "login_completed",
+          {
+            destination: next.includes("onboarding") ? "onboarding" : "dashboard",
+            is_new_user: Number.isFinite(createdAt) && Date.now() - createdAt < 60_000,
+          },
+          request,
+        );
       } catch (phErr) {
         reportError(phErr, "auth/callback/twitch: posthog capture failed");
       }
