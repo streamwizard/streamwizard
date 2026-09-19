@@ -1,3 +1,4 @@
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
 import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/user";
@@ -13,6 +14,22 @@ export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: 
   // Stop polling viewer counts for this broadcaster
   viewerCountPoller.stopPolling(event.broadcaster_user_id);
 
+  // Log the offline event while broadcaster_live_status still says live: the
+  // logger stamps the row with the live stream_id and offset, and refuses
+  // once is_live is false. Logging must never block the clip sync below —
+  // rest-api may have missed stream.online (deploy, revoked sub), in which
+  // case there is no live row to stamp against.
+  try {
+    await streamEventsLogger.logTwitchEvent({
+      broadcaster_id: event.broadcaster_user_id,
+      event_type: "stream.offline",
+      event_data: event,
+      metadata: null,
+    });
+  } catch (error) {
+    reportError(error, "eventsub.stream-offline.log-event", { broadcasterUserId: event.broadcaster_user_id });
+  }
+
   // update the database with the stream offline event
   await upsertBroadcasterLiveStatus(supabase, {
     broadcaster_id: event.broadcaster_user_id,
@@ -24,14 +41,6 @@ export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: 
   // after the stream ends aren't attributed to it.
   await notifyStreamStatus(event.broadcaster_user_id, null);
   await setStreamUserState(event.broadcaster_user_id, null);
-
-  // log the stream offline event
-  await streamEventsLogger.logTwitchEvent({
-    broadcaster_id: event.broadcaster_user_id,
-    event_type: "stream.offline",
-    event_data: event,
-    metadata: null,
-  });
 
   const { data: user, error: userError } = await getTwitchIntegrationByBroadcasterId(supabase, event.broadcaster_user_id);
 

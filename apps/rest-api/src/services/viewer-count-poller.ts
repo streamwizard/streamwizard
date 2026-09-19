@@ -1,7 +1,10 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
+import { upsertClips } from "@repo/supabase/queries/clips";
+import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/user";
 import { insertViewerCount } from "@repo/supabase/queries/viewer-counts";
 import { TwitchApi } from "@repo/twitch-api";
+import { formatClipsForDB } from "../functions/sync-twitch";
 
 /**
  * Polling interval in milliseconds (5 minutes)
@@ -9,8 +12,21 @@ import { TwitchApi } from "@repo/twitch-api";
 const POLLING_INTERVAL_MS = 5 * 60 * 1000;
 
 /**
+ * Pages of 100 clips fetched per tick. Only clips created since the stream
+ * started are requested, so one page is the normal case; the cap keeps a
+ * runaway stream from turning a tick into a full sync.
+ */
+const MAX_CLIP_PAGES_PER_TICK = 5;
+
+/**
  * ViewerCountPoller manages periodic polling of viewer counts for active streams.
  * It starts polling when a stream goes online and stops when it goes offline.
+ *
+ * Each tick also pulls the clips made since the stream started and upserts
+ * them, so the dashboard and clip widgets see new clips while live. There is no
+ * EventSub for clip creation. The full sync on stream.offline stays the
+ * reconciliation pass: view counts and vod_offset lag on Twitch for minutes
+ * after a clip is made.
  */
 class ViewerCountPoller {
   private activePollers = new Map<string, NodeJS.Timeout>();
@@ -112,8 +128,58 @@ class ViewerCountPoller {
         `[ViewerCountPoller] Recorded ${stream.viewer_count} viewers for ${broadcasterId} ` +
           `at offset ${Math.floor(offsetSeconds / 60)}m ${offsetSeconds % 60}s`,
       );
+
+      // Clip pull is best-effort and must never cost the viewer sample above.
+      try {
+        await this.syncLiveClips(broadcasterId, streamId, stream.started_at, twitchApi);
+      } catch (error) {
+        reportError(error, "viewer-count-poller.clips", { broadcasterId, streamId });
+      }
     } catch (error) {
       reportError(error, "viewer-count-poller.record", { broadcasterId, streamId });
+    }
+  }
+
+  /**
+   * Upsert the clips created since the stream started. Writes straight to
+   * `clips`; `twitch_clip_syncs` is left alone on purpose, since every status
+   * flip there posts a clips.sync_* event to the Discord log channel.
+   */
+  private async syncLiveClips(
+    broadcasterId: string,
+    streamId: string,
+    streamStartedAt: string,
+    twitchApi: TwitchApi,
+  ): Promise<void> {
+    const { data: integration } = await getTwitchIntegrationByBroadcasterId(supabase, broadcasterId);
+    if (!integration) return;
+
+    // Same opt-out as the sync on stream.offline.
+    const preferences = await getUserPreferencesByUserId(supabase, integration.user_id);
+    if (!preferences?.sync_clips_on_end) return;
+
+    let cursor: string | undefined;
+    let total = 0;
+
+    for (let page = 0; page < MAX_CLIP_PAGES_PER_TICK; page++) {
+      const res = await twitchApi.clips.getClips({
+        broadcaster_id: broadcasterId,
+        started_at: streamStartedAt,
+        first: 100,
+        after: cursor,
+      });
+
+      if (!res.data.length) break;
+
+      await upsertClips(supabase, await formatClipsForDB(res.data, integration.user_id));
+      total += res.data.length;
+
+      cursor = res.pagination?.cursor;
+      if (!cursor) break;
+    }
+
+    if (total > 0) {
+      console.log(`[ViewerCountPoller] Upserted ${total} live clips for ${broadcasterId}, stream ${streamId}`);
     }
   }
 }
