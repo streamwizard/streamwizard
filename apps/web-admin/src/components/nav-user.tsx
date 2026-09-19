@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut, MoonStar, Sun, User } from "lucide-react";
+import Link from "next/link";
+import { LogOut, MoonStar, ShieldCheck, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@repo/ui";
 import { signOut } from "@/lib/auth-actions";
@@ -38,6 +39,12 @@ export function NavUser({ email }: { email: string }) {
             <DropdownMenuItem onSelect={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}>
               {resolvedTheme === "dark" ? <Sun /> : <MoonStar />}
               Toggle theme
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/security">
+                <ShieldCheck />
+                Security
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => void signOut()}>

@@ -103,6 +103,10 @@ export const navGroups: NavGroup[] = [
       { href: "/discord/permissions", label: "Permissions", icon: ShieldCheck },
     ],
   },
+  {
+    label: "Account",
+    items: [{ href: "/security", label: "Security", icon: ShieldCheck }],
+  },
 ];
 
 export function isNavItemActive(item: NavItem, pathname: string): boolean {

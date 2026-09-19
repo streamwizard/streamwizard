@@ -20,10 +20,13 @@ import {
   TableRow,
 } from "@repo/ui";
 import type { ObsNode, ObsNodeInstanceOwner } from "@repo/supabase/queries/obs-nodes";
-import { listNodeInstancesAction } from "@/actions/nodes";
+import {
+  createInstanceAction,
+  listNodeInstancesAction,
+  removeInstanceAdminAction,
+  toggleInstanceAdminAction,
+} from "@/actions/nodes";
 import { useNodeMetricsStream, type ConnectionStatus } from "@/hooks/use-node-metrics-stream";
-import { toggleInstanceAdmin, removeInstance } from "@/lib/instance-actions";
-import { createInstanceAction } from "@/actions/nodes";
 import { HostMetricsCharts } from "@/components/admin/metrics-charts";
 import { formatMb } from "@/lib/format";
 
@@ -95,7 +98,8 @@ export function NodeDetailClient({ node }: { node: ObsNode }) {
     }
     setPendingInstanceId(instance.id);
     try {
-      const updated = await toggleInstanceAdmin(node.api_url, instance.id, action);
+      const { data: updated, error } = await toggleInstanceAdminAction(node.id, instance.id, action);
+      if (!updated) throw new Error(error ?? "Request failed.");
       setInstances((prev) => prev.map((i) => (i.id === instance.id ? { ...i, status: updated.status } : i)));
       toast.success(`Container ${action === "start" ? "started" : "stopped"}.`);
     } catch (err) {
@@ -113,7 +117,8 @@ export function NodeDetailClient({ node }: { node: ObsNode }) {
     if (!confirm(`Remove instance "${instance.container_name}"? This will stop and delete the container.`)) return;
     setRemovingInstanceId(instance.id);
     try {
-      await removeInstance(node.api_url, instance.id);
+      const { error } = await removeInstanceAdminAction(node.id, instance.id);
+      if (error) throw new Error(error);
       setInstances((prev) => prev.filter((i) => i.id !== instance.id));
       toast.success("Instance removed.");
     } catch (err) {
