@@ -33,6 +33,16 @@ export function denyConsent(): void {
   posthog.opt_out_capturing();
 }
 
+// Global Privacy Control (navigator.globalPrivacyControl) is the browser
+// saying "don't track me" before we can ask. posthog-js 1.38x doesn't read
+// it, so the banner does: a visitor with it on is treated as having declined,
+// with no banner. Not Do-Not-Track — that header is deprecated and browsers
+// ship it on by default, so it says nothing about the person.
+export function hasGlobalPrivacyControl(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true;
+}
+
 export function onConsentGranted(callback: () => void): () => void {
   window.addEventListener(CONSENT_GRANTED_EVENT, callback);
   return () => window.removeEventListener(CONSENT_GRANTED_EVENT, callback);
