@@ -28,6 +28,7 @@ import { ObsResourceGraphs } from "@/components/irl/obs-resource-graphs";
 import { ObsFileUploader } from "@/components/irl/obs-file-uploader";
 import { ObsIngestSources } from "@/components/irl/obs-ingest-sources";
 import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
+import { TwitchScopeBanner } from "@/components/ui/twitch-scope-banner";
 import type { ProductAccess } from "@/lib/require-product-access";
 import type { IngestStreamKey } from "@/actions/ingest-keys";
 import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher";
@@ -38,12 +39,21 @@ import { ALERTS_SCENE_NAME, IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl } from "
 interface CloudObsContentProps {
   canInteract: boolean;
   plan: ProductAccess["plan"];
+  /** The Twitch token lacks the stream-key scope; show the prompt to grant it. */
+  needsTwitchScopes: boolean;
   initialIngestKeys: IngestStreamKey[];
   obsPullHost: string;
   autoSwitcherConfig: AutoSwitcherConfigRow | null;
 }
 
-export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, obsPullHost, autoSwitcherConfig }: CloudObsContentProps) {
+export function CloudObsContent({
+  canInteract,
+  plan: _plan,
+  needsTwitchScopes,
+  initialIngestKeys,
+  obsPullHost,
+  autoSwitcherConfig,
+}: CloudObsContentProps) {
   const {
     instanceId,
     apiUrl,
@@ -121,6 +131,9 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
     }
   }
   const showSetupStepper = (onboardingFlow ?? false) && !setupComplete;
+  // A container that boots without the stream-key scope comes up keyless, so
+  // every start path is off until Twitch is connected. Stop stays available.
+  const canStart = canInteract && !needsTwitchScopes;
 
   // Single elapsed timer that spans the whole launch flow. Keying the effect on
   // the boolean keeps it running continuously across provisioning → booting and
@@ -184,6 +197,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
     return (
       <CloudObsSetupScreen
         canInteract={canInteract}
+        needsTwitchScopes={needsTwitchScopes}
         flow={flow}
         obs={obs}
         instanceId={instanceId}
@@ -205,11 +219,12 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
   return (
     <div className="w-full space-y-6">
       {!canInteract && <FeatureDisabledBanner />}
+      {needsTwitchScopes && <TwitchScopeBanner feature="cloud_obs" next="/dashboard/irl/obs" />}
 
       {/* High-signal banner for a crash (stream just dropped) or a delete. */}
       <ObsLifecycleBanner
         reason={stopReason}
-        onRestart={canInteract && instanceId && apiUrl ? handleToggleContainer : undefined}
+        onRestart={canStart && instanceId && apiUrl ? handleToggleContainer : undefined}
         restarting={togglingContainer}
         onDismiss={clearStopReason}
       />
@@ -269,6 +284,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
 
           <ObsContainerControl
             canInteract={canInteract}
+            startBlocked={needsTwitchScopes}
             flow={flow}
             obsStatus={obs.status}
             containerStatus={containerStatus}
@@ -302,7 +318,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
             reason={stopReason ?? "clean"}
             starting={togglingContainer}
             onStart={
-              containerStatus !== "running" && canInteract && instanceId && apiUrl
+              containerStatus !== "running" && canStart && instanceId && apiUrl
                 ? handleToggleContainer
                 : undefined
             }
