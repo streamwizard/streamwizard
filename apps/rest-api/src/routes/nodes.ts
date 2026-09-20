@@ -438,8 +438,9 @@ nodes.get("/users/:userId/is-admin", nodeAuth(), async (c) => {
 
 // ── Stream key ────────────────────────────────────────────────────────────────
 
-// Returns { key: string | null } — null means no Twitch integration or fetch
-// failed, which is non-fatal (OBS will show the "Enter Stream Key" screen).
+// Returns { key: string | null, reason }. See StreamKeyReason: the node
+// refuses to boot on "scope_missing" / "no_integration" and boots keyless on
+// "error" (OBS then shows its "Enter Stream Key" screen).
 nodes.get("/users/:userId/stream-key", nodeAuth(), async (c) => {
   const nodeId = c.get("nodeId");
   const userId = c.req.param("userId");
@@ -451,7 +452,7 @@ nodes.get("/users/:userId/stream-key", nodeAuth(), async (c) => {
     return c.json({ error: "Forbidden" }, 403);
   }
 
-  return c.json({ key: await getStreamKeyForUser(userId) });
+  return c.json(await getStreamKeyForUser(userId));
 });
 
 export default nodes;
