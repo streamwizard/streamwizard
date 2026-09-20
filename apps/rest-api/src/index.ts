@@ -12,6 +12,7 @@ import { rawBodyMiddleware } from "./middleware/raw-body";
 import { twitchEventSubVerification } from "./middleware/twitch-eventsub";
 import { supabaseMiddleware, supabaseAuth } from "./middleware/auth";
 import { handleTwitchEventSub } from "./routes/twitch-eventsub";
+import { viewerCountPoller } from "./services/viewer-count-poller";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
 import nodes from "./routes/nodes";
 import ingestNodes from "./routes/ingest-nodes";
@@ -138,4 +139,7 @@ process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
 console.log(`[rest-api] listening on port ${process.env.PORT ?? 8080}`);
+
+// Pollers live in memory only; pick up streams that were live across the restart.
+void viewerCountPoller.resume();
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

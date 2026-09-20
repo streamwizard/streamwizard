@@ -24,3 +24,21 @@ export async function getLiveStreamIdByBroadcasterId(
     .maybeSingle();
   return data?.stream_id ?? null;
 }
+
+/**
+ * Every broadcaster the table still marks live, with the stream id the
+ * online handler stamped. Used to rebuild in-memory pollers after a restart.
+ */
+export async function getLiveBroadcasters(
+  client: DBClient
+): Promise<{ broadcaster_id: string; stream_id: string }[]> {
+  const { data, error } = await client
+    .from("broadcaster_live_status")
+    .select("broadcaster_id, stream_id")
+    .eq("is_live", true)
+    .not("stream_id", "is", null);
+  if (error) throw error;
+  return (data ?? []).flatMap((row) =>
+    row.stream_id ? [{ broadcaster_id: row.broadcaster_id, stream_id: row.stream_id }] : []
+  );
+}
