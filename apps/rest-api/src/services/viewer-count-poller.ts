@@ -2,10 +2,12 @@ import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { upsertClips } from "@repo/supabase/queries/clips";
 import { getLiveBroadcasters } from "@repo/supabase/queries/live-status";
+import { getVodVideoIdByStreamId, setVodVideoId } from "@repo/supabase/queries/vods";
 import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/user";
 import { insertViewerCount } from "@repo/supabase/queries/viewer-counts";
 import { TwitchApi } from "@repo/twitch-api";
 import { formatClipsForDB } from "../functions/sync-twitch";
+import { findVideoIdForStream } from "../lib/stream-video";
 
 /**
  * Polling interval in milliseconds (5 minutes)
@@ -32,6 +34,14 @@ const CLIP_WINDOW_OVERLAP_MS = 15 * 60 * 1000;
  */
 const MAX_CONSECUTIVE_STREAM_MISSES = 3;
 
+/**
+ * How many ticks look for the stream's archive video when the row was created
+ * without one. Helix lists the archive within minutes of go-live, so 30
+ * minutes covers that; after the budget a VODs-off channel costs nothing
+ * more, and stream.offline makes one last attempt.
+ */
+const MAX_VIDEO_ID_LOOKUPS = 6;
+
 type PollerState = {
   intervalId: NodeJS.Timeout;
   streamId: string;
@@ -40,6 +50,13 @@ type PollerState = {
   consecutiveMisses: number;
   /** End of the last successful clip pull; null until the first one lands. */
   lastClipPullAt: Date | null;
+  /**
+   * Twitch archive video for this stream. null = known missing, keep
+   * looking; undefined = not read from the database yet (resume after a
+   * restart).
+   */
+  videoId: string | null | undefined;
+  videoLookupsLeft: number;
 };
 
 /**
@@ -60,8 +77,10 @@ class ViewerCountPoller {
    * Start polling viewer counts for a broadcaster's stream
    * @param broadcasterId - The broadcaster's Twitch user ID
    * @param streamId - The current stream ID
+   * @param videoId - Twitch archive video id if stream.online already found
+   *   one, null if it didn't, undefined when unknown (resume after restart)
    */
-  startPolling(broadcasterId: string, streamId: string): void {
+  startPolling(broadcasterId: string, streamId: string, videoId?: string | null): void {
     const existing = this.activePollers.get(broadcasterId);
 
     if (existing?.streamId === streamId) {
@@ -96,6 +115,8 @@ class ViewerCountPoller {
       generation,
       consecutiveMisses: 0,
       lastClipPullAt: null,
+      videoId,
+      videoLookupsLeft: MAX_VIDEO_ID_LOOKUPS,
     });
 
     // Record initial viewer count immediately
@@ -227,6 +248,14 @@ class ViewerCountPoller {
           `at offset ${Math.floor(offsetSeconds / 60)}m ${offsetSeconds % 60}s`,
       );
 
+      // Video id first, so the clip pull in this same tick can link its rows
+      // to the archive. Best-effort like the clip pull: never costs the sample.
+      try {
+        await this.backfillVideoId(broadcasterId, generation, twitchApi);
+      } catch (error) {
+        reportError(error, "viewer-count-poller.video-id", { broadcasterId, streamId });
+      }
+
       // Clip pull is best-effort and must never cost the viewer sample above.
       try {
         await this.syncLiveClips(broadcasterId, generation, streamStartedAt, now, twitchApi);
@@ -313,6 +342,44 @@ class ViewerCountPoller {
     if (total > 0) {
       console.log(`[ViewerCountPoller] Upserted ${total} live clips for ${broadcasterId}, stream ${streamId}`);
     }
+  }
+
+  /**
+   * Attach the Twitch archive video to a stream row created without one.
+   * Runs at most MAX_VIDEO_ID_LOOKUPS Helix lookups per start; a stream with
+   * VODs off stops costing anything after that.
+   */
+  private async backfillVideoId(broadcasterId: string, generation: number, twitchApi: TwitchApi): Promise<void> {
+    const state = this.current(broadcasterId, generation);
+    if (!state || typeof state.videoId === "string" || state.videoLookupsLeft <= 0) return;
+    const { streamId } = state;
+
+    // After a restart the poller doesn't know whether the row already has one.
+    if (state.videoId === undefined) {
+      const known = await getVodVideoIdByStreamId(supabase, streamId);
+      if (!this.current(broadcasterId, generation)) return;
+      state.videoId = known;
+      if (known) return;
+    }
+
+    state.videoLookupsLeft--;
+    const attempt = MAX_VIDEO_ID_LOOKUPS - state.videoLookupsLeft;
+
+    const videoId = await findVideoIdForStream(twitchApi, broadcasterId, streamId);
+    if (!this.current(broadcasterId, generation)) return;
+
+    if (!videoId) {
+      console.log(
+        `[ViewerCountPoller] No archive video yet for ${broadcasterId}, stream ${streamId} ` +
+          `(lookup ${attempt}/${MAX_VIDEO_ID_LOOKUPS})`,
+      );
+      return;
+    }
+
+    await setVodVideoId(supabase, streamId, videoId);
+    if (!this.current(broadcasterId, generation)) return;
+    state.videoId = videoId;
+    console.log(`[ViewerCountPoller] Attached video ${videoId} to stream ${streamId} for ${broadcasterId}`);
   }
 
   /** The poller state for this broadcaster, if the given generation still owns it. */

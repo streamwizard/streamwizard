@@ -265,13 +265,13 @@ describe("log channel formatters", () => {
     expect(fieldValue(embed, "Status")).toBe("400");
   });
 
-  test("stream online failed explains a missing VOD", () => {
+  test("stream online failed explains a vanished stream", () => {
     const embed = formatPlatformEvent(
-      event("stream.online_failed", { ...identity, reason: "vod_not_found", stream_id: "42" }),
+      event("stream.online_failed", { ...identity, reason: "stream_not_found", stream_id: "42" }),
     ).toJSON();
     expect(embed.color).toBe(DANGER_RED);
-    expect(embed.description).toContain("VODs may be turned off on Twitch");
-    expect(fieldValue(embed, "Reason")).toBe("`vod_not_found`");
+    expect(embed.description).toContain("then didn't return it");
+    expect(fieldValue(embed, "Reason")).toBe("`stream_not_found`");
     expect(fieldValue(embed, "Stream ID")).toBe("`42`");
   });
 

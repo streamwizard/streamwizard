@@ -3344,7 +3344,7 @@ export type Database = {
           id: string
           started_at: string | null
           stream_id: string | null
-          video_id: string
+          video_id: string | null
         }
         Insert: {
           broadcaster_id: string
@@ -3352,7 +3352,7 @@ export type Database = {
           id?: string
           started_at?: string | null
           stream_id?: string | null
-          video_id: string
+          video_id?: string | null
         }
         Update: {
           broadcaster_id?: string
@@ -3360,7 +3360,7 @@ export type Database = {
           id?: string
           started_at?: string | null
           stream_id?: string | null
-          video_id?: string
+          video_id?: string | null
         }
         Relationships: [
           {

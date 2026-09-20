@@ -1,6 +1,6 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { insertVod } from "@repo/supabase/queries/vods";
+import { setVodVideoId, upsertVod } from "@repo/supabase/queries/vods";
 import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
 import { TwitchApi } from "@repo/twitch-api";
 import type { StreamOnlineEvent } from "@repo/schemas";
@@ -9,6 +9,7 @@ import { viewerCountPoller } from "../../services/viewer-count-poller";
 import { notifyStreamStatus } from "../../lib/ws-server";
 import { setStreamUserState } from "../../lib/user-state";
 import { logStreamOnlineFailed } from "../../lib/platform-events";
+import { findVideoIdForStream } from "../../lib/stream-video";
 
 export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: TwitchApi) => {
   //   check if the stream is of type "live"
@@ -16,9 +17,8 @@ export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: Tw
 
   // get the stream data from the twitch api
   const stream = await TwitchAPI.streams.getStream({ type: "live" });
-  const video = await TwitchAPI.videos.getVodByBroadcasterId(event.broadcaster_user_id);
 
-  // Both bail-outs abandon the whole stream.online pipeline — no vod row, no
+  // Bailing out abandons the whole stream.online pipeline — no stream row, no
   // live status, no user_state, no viewer polling — while returning normally.
   // Sentry gets the error and the Discord log channel gets stream.online_failed
   // so staff can see it without digging.
@@ -30,23 +30,23 @@ export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: Tw
     return;
   }
 
-  const video_id = video.data.find((v) => v.stream_id === stream.id)?.id;
+  // The archive video is optional. VODs may be off for this channel, or Helix
+  // may not list the archive for a few minutes yet. Either way the stream is
+  // tracked; the viewer poller and stream.offline keep trying to fill it in.
+  const videoId = await findVideoIdForStream(TwitchAPI, stream.user_id, stream.id);
 
-  if (!video_id) {
-    reportError(new Error("stream.online: vod not found"), "eventsub.stream-online", {
-      broadcasterUserId: event.broadcaster_user_id,
-      streamId: stream.id,
-    });
-    await logStreamOnlineFailed(event.broadcaster_user_id, "vod_not_found", stream.id);
-    return;
-  }
-
-  await insertVod(supabase, {
+  // vods is the per-stream row every other table hangs off, so it goes first.
+  await upsertVod(supabase, {
     broadcaster_id: stream.user_id,
-    video_id: video_id,
     stream_id: stream.id,
     started_at: stream.started_at,
   });
+
+  if (videoId) {
+    await setVodVideoId(supabase, stream.id, videoId);
+  } else {
+    console.log(`[stream.online] No archive video yet for stream ${stream.id} (${stream.user_id}), will backfill`);
+  }
 
   // update the database with the stream online event
   await upsertBroadcasterLiveStatus(supabase, {
@@ -61,7 +61,7 @@ export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: Tw
   });
 
   // Stamp any already-connected GPS overlay room with the new stream_id.
-  // Must run after insertVod — irl_geo_track.stream_id is an FK onto vods.
+  // Must run after upsertVod — irl_geo_track.stream_id is an FK onto vods.
   await notifyStreamStatus(stream.user_id, stream.id);
 
   // Durable copy for overlays that were NOT connected when this fired.
@@ -75,5 +75,5 @@ export const handleStreamOnline = async (event: StreamOnlineEvent, TwitchAPI: Tw
   });
 
   // Start polling viewer counts for this stream
-  viewerCountPoller.startPolling(stream.user_id, stream.id);
+  viewerCountPoller.startPolling(stream.user_id, stream.id, videoId);
 };
