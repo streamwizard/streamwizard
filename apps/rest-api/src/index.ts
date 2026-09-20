@@ -13,6 +13,7 @@ import { twitchEventSubVerification } from "./middleware/twitch-eventsub";
 import { supabaseMiddleware, supabaseAuth } from "./middleware/auth";
 import { handleTwitchEventSub } from "./routes/twitch-eventsub";
 import { viewerCountPoller } from "./services/viewer-count-poller";
+import { twitchTokenValidator } from "./services/twitch-token-validator";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
 import nodes from "./routes/nodes";
 import ingestNodes from "./routes/ingest-nodes";
@@ -142,4 +143,7 @@ console.log(`[rest-api] listening on port ${process.env.PORT ?? 8080}`);
 
 // Pollers live in memory only; pick up streams that were live across the restart.
 void viewerCountPoller.resume();
+// Twitch wants every user token validated on boot and hourly; the sweep also
+// keeps integrations_twitch.twitch_scopes current for the scope prompts.
+twitchTokenValidator.start();
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
