@@ -4,6 +4,8 @@ import { createClient } from "@repo/supabase/next/server";
 import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
 import { encryptToken } from "@repo/supabase/crypto";
 import { updateTwitchTokens } from "@repo/supabase/queries/user";
+import { setTwitchScopesByUserId } from "@repo/supabase/queries/twitch-scopes";
+import { validateTwitchToken } from "@repo/twitch-api";
 import { captureServerEvent } from "@repo/posthog/server";
 import { reportError } from "@repo/sentry";
 
@@ -87,6 +89,19 @@ export async function GET(request: Request) {
     if (err) {
       console.error("[twitch callback] updateTwitchTokens failed", err);
       return errorRedirect("token_save_failed");
+    }
+
+    // Supabase hands over the token but not its scope list, and Twitch issues
+    // exactly the scopes of this authorization, so ask id.twitch.tv what the
+    // new token carries. The dashboard reads this to decide whether a feature
+    // still has to ask for its scopes. Best-effort: the hourly sweep in
+    // rest-api fills it in if this call fails.
+    try {
+      const validation = await validateTwitchToken(data.session.provider_token);
+      const { error: scopeErr } = await setTwitchScopesByUserId(supabase, data.session.user.id, validation.scopes);
+      if (scopeErr) throw scopeErr;
+    } catch (scopeErr) {
+      reportError(scopeErr, "auth/callback/twitch: scope sync failed");
     }
 
     await checkEventSubscriptions(data.session.user.user_metadata.sub);

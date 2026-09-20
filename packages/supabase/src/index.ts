@@ -70,6 +70,11 @@ export async function updateChannelAccessToken(newToken: RefreshTwitchTokenRespo
       refresh_token_iv: encryptedRefreshToken.iv,
       refresh_token_tag: encryptedRefreshToken.authTag,
       token_expires_at: new Date(Date.now() + newToken.expires_in * 1000).toISOString(),
+      // The refresh response names the scopes on the new grant, so every
+      // refresh is a free scope sync (see twitch_scopes on the table).
+      ...(Array.isArray(newToken.scope)
+        ? { twitch_scopes: newToken.scope, scopes_synced_at: new Date().toISOString() }
+        : {}),
       updated_at: new Date().toISOString(),
     })
     .eq("twitch_user_id", channelId)

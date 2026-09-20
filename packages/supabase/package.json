@@ -31,6 +31,10 @@
       "types": "./src/auth/session-strength.ts",
       "default": "./src/auth/session-strength.ts"
     },
+    "./queries/twitch-scopes": {
+      "types": "./src/queries/twitch-scopes.ts",
+      "default": "./src/queries/twitch-scopes.ts"
+    },
     "./queries/clips": {
       "types": "./src/queries/clips.ts",
       "default": "./src/queries/clips.ts"

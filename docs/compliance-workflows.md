@@ -146,7 +146,8 @@ Twitch ID may appear in breadcrumbs; search `twitch_user_id` if needed.
 
 ## 6. Twitch token security (reference)
 
-- OAuth scopes: `apps/web-streamwizard/src/lib/constant.ts` (`TWITCH_SCOPES`).
+- OAuth scopes: `packages/schemas/src/twitch-scopes.ts` (`TWITCH_SCOPE_SETS`). Sign-in asks for `base` only; a feature set (today: `cloud_obs` → `channel:read:stream_key`) is requested from the page that needs it via `actions/auth/authorize-twitch.ts`, and only when the account holds that product.
+- Granted scopes are stored in `integrations_twitch.twitch_scopes`, written from `/oauth2/validate` on sign-in, from the refresh response, and by the hourly validation sweep in rest-api (`services/twitch-token-validator.ts`), which also satisfies Twitch's hourly token-validation requirement.
 - Tokens encrypted at rest with **AES-256-GCM** before storage in `integrations_twitch` (`packages/supabase/src/crypto.ts`, callback `auth/callback/twitch/route.ts`).
 - Requires `TOKEN_ENCRYPTION_KEY` (64-char hex) in deployment secrets.
 
