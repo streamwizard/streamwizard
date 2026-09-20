@@ -34,6 +34,13 @@ let preferences: { sync_clips_on_end: boolean } | null;
 let liveRows: { broadcaster_id: string; stream_id: string }[];
 let reported: string[];
 let formatGate: Promise<void> | null;
+/** What the vods row already holds; read on the resume path. */
+let dbVideoId: string | null;
+let videoIdWrites: [string, string][];
+let lookupResult: () => Promise<string | null>;
+let lookupCalls: number;
+/** Order of side effects inside one tick. */
+let callLog: string[];
 
 mock.module("@repo/sentry", () => ({
   reportError: (_error: unknown, context: string) => {
@@ -49,6 +56,24 @@ mock.module("@repo/supabase/queries/clips", () => ({
 }));
 mock.module("@repo/supabase/queries/live-status", () => ({
   getLiveBroadcasters: async () => liveRows,
+  upsertBroadcasterLiveStatus: async () => {},
+}));
+// Every export the rest-api tests need: bun's mock.module is process-wide,
+// so a partial mock here would break stream-online.test.ts in the same run.
+mock.module("@repo/supabase/queries/vods", () => ({
+  upsertVod: async () => {},
+  getVodVideoIdByStreamId: async () => dbVideoId,
+  setVodVideoId: async (_client: unknown, streamId: string, videoId: string) => {
+    callLog.push("setVodVideoId");
+    videoIdWrites.push([streamId, videoId]);
+    return true;
+  },
+}));
+mock.module("../lib/stream-video", () => ({
+  findVideoIdForStream: async () => {
+    lookupCalls++;
+    return lookupResult();
+  },
 }));
 mock.module("@repo/supabase/queries/user", () => ({
   getTwitchIntegrationByBroadcasterId: async () => integrationResult,
@@ -64,6 +89,7 @@ mock.module("@repo/twitch-api", () => ({
     streams = { getStream: () => streamResult() };
     clips = {
       getClips: async (params: Record<string, unknown>) => {
+        callLog.push("getClips");
         clipCalls.push(params);
         return clipPages.shift() ?? { data: [], pagination: {} };
       },
@@ -88,9 +114,13 @@ beforeAll(async () => {
 
 const settle = () => new Promise((resolve) => setTimeout(resolve, 5));
 
-/** startPolling fires a tick of its own; wait for it so cases start from a clean slate. */
-const start = async (broadcasterId = BROADCASTER, streamId = STREAM_ID) => {
-  poller.startPolling(broadcasterId, streamId);
+/**
+ * startPolling fires a tick of its own; wait for it so cases start from a
+ * clean slate. Defaults to a stream that already has its video id, so the
+ * backfill stays out of cases that aren't about it.
+ */
+const start = async (broadcasterId = BROADCASTER, streamId = STREAM_ID, videoId: string | null | undefined = "v0") => {
+  poller.startPolling(broadcasterId, streamId, videoId);
   await settle();
 };
 
@@ -108,6 +138,11 @@ beforeEach(() => {
   liveRows = [];
   reported = [];
   formatGate = null;
+  dbVideoId = "v0";
+  videoIdWrites = [];
+  lookupResult = async () => null;
+  lookupCalls = 0;
+  callLog = [];
   setSystemTime(new Date("2026-09-20T11:00:00.000Z"));
 });
 
@@ -304,6 +339,80 @@ describe("stream lookup misses", () => {
 
     expect(poller.isPolling(BROADCASTER)).toBe(false);
     expect(viewerInserts).toHaveLength(1);
+  });
+});
+
+describe("video id backfill", () => {
+  it("attaches the archive once Twitch lists it, then stops looking", async () => {
+    lookupResult = async () => "v1";
+    await start(BROADCASTER, STREAM_ID, null);
+
+    expect(lookupCalls).toBe(1);
+    expect(videoIdWrites).toEqual([[STREAM_ID, "v1"]]);
+
+    await poller.tick(BROADCASTER);
+    expect(lookupCalls).toBe(1);
+    expect(videoIdWrites).toHaveLength(1);
+  });
+
+  it("gives up after the lookup budget when the channel has VODs off", async () => {
+    await start(BROADCASTER, STREAM_ID, null);
+    for (let i = 0; i < 8; i++) await poller.tick(BROADCASTER);
+
+    expect(lookupCalls).toBe(6);
+    expect(videoIdWrites).toHaveLength(0);
+    expect(viewerInserts).toHaveLength(9);
+  });
+
+  it("does nothing when stream.online already found the video", async () => {
+    await start(BROADCASTER, STREAM_ID, "v1");
+    await poller.tick(BROADCASTER);
+
+    expect(lookupCalls).toBe(0);
+    expect(videoIdWrites).toHaveLength(0);
+  });
+
+  it("reads the row after a restart and skips Twitch when it already has a video", async () => {
+    liveRows = [{ broadcaster_id: BROADCASTER, stream_id: STREAM_ID }];
+    dbVideoId = "v1";
+    await poller.resume();
+    await settle();
+    await poller.tick(BROADCASTER);
+
+    expect(lookupCalls).toBe(0);
+    expect(videoIdWrites).toHaveLength(0);
+  });
+
+  it("reads the row after a restart and keeps looking when it has none", async () => {
+    liveRows = [{ broadcaster_id: BROADCASTER, stream_id: STREAM_ID }];
+    dbVideoId = null;
+    lookupResult = async () => "v1";
+    await poller.resume();
+    await settle();
+
+    expect(lookupCalls).toBe(1);
+    expect(videoIdWrites).toEqual([[STREAM_ID, "v1"]]);
+  });
+
+  it("does not write the video id after stopPolling mid-lookup", async () => {
+    await start(BROADCASTER, STREAM_ID, null);
+
+    let release!: () => void;
+    lookupResult = () => new Promise((resolve) => (release = () => resolve("v1")));
+    const inflight = poller.tick(BROADCASTER);
+    await settle();
+    poller.stopPolling(BROADCASTER);
+    release();
+    await inflight;
+
+    expect(videoIdWrites).toHaveLength(0);
+  });
+
+  it("attaches the video before pulling clips in the same tick", async () => {
+    lookupResult = async () => "v1";
+    await start(BROADCASTER, STREAM_ID, null);
+
+    expect(callLog).toEqual(["setVodVideoId", "getClips"]);
   });
 });
 

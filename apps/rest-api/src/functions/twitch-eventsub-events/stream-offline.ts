@@ -1,6 +1,7 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
+import { getCurrentStreamDetails, getVodVideoIdByStreamId, setVodVideoId } from "@repo/supabase/queries/vods";
 import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/user";
 import type { TwitchApi } from "@repo/twitch-api";
 import type { StreamOfflineEvent } from "@repo/schemas";
@@ -9,10 +10,14 @@ import { streamEventsLogger } from "@repo/logger";
 import { viewerCountPoller } from "../../services/viewer-count-poller";
 import { notifyStreamStatus } from "../../lib/ws-server";
 import { setStreamUserState } from "../../lib/user-state";
+import { findVideoIdForStream } from "../../lib/stream-video";
 
 export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: TwitchApi) => {
   // Stop polling viewer counts for this broadcaster
   viewerCountPoller.stopPolling(event.broadcaster_user_id);
+
+  // The event carries no stream id; read it while the live row still says live.
+  const streamId = await getCurrentStreamDetails(supabase, event.broadcaster_user_id);
 
   // Log the offline event while broadcaster_live_status still says live: the
   // logger stamps the row with the live stream_id and offset, and refuses
@@ -41,6 +46,25 @@ export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: 
   // after the stream ends aren't attributed to it.
   await notifyStreamStatus(event.broadcaster_user_id, null);
   await setStreamUserState(event.broadcaster_user_id, null);
+
+  // Last chance to attach the archive video to the stream row. The poller
+  // gives up after a while; this runs before the clip sync below so clips
+  // link to the video when it exists. Best-effort: the stream is tracked
+  // either way.
+  if (streamId) {
+    try {
+      if (!(await getVodVideoIdByStreamId(supabase, streamId))) {
+        const videoId = await findVideoIdForStream(TwitchAPI, event.broadcaster_user_id, streamId);
+        if (videoId) {
+          await setVodVideoId(supabase, streamId, videoId);
+        } else {
+          console.warn(`[stream.offline] Stream ${streamId} (${event.broadcaster_user_id}) ended without an archive video (VODs off?)`);
+        }
+      }
+    } catch (error) {
+      reportError(error, "eventsub.stream-offline.video-id", { broadcasterUserId: event.broadcaster_user_id, streamId });
+    }
+  }
 
   const { data: user, error: userError } = await getTwitchIntegrationByBroadcasterId(supabase, event.broadcaster_user_id);
 

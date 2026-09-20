@@ -242,11 +242,9 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
   "stream.online_failed": (payload, event) =>
     describeLines(withSubject(base(event, "stream.online_failed"), payload), [
       `${bold(subjectName(payload), "A user")} went live, but StreamWizard couldn't start tracking the stream.`,
-      payload.reason === "vod_not_found"
-        ? "No VOD was found for this stream. VODs may be turned off on Twitch, so no stream page or clip markers this time."
-        : payload.reason === "stream_not_found"
-          ? "Twitch reported the stream online, then didn't return it. It may have ended straight away."
-          : "",
+      payload.reason === "stream_not_found"
+        ? "Twitch reported the stream online, then didn't return it. It may have ended straight away."
+        : "",
     ]).addFields([
       ...field("Reason", code(payload.reason)),
       ...field("Stream ID", code(payload.stream_id)),

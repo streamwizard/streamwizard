@@ -8,9 +8,10 @@ import type { StreamOnlineFailureReason } from "@repo/types";
 // fail because a log row didn't land.
 
 /**
- * stream.online arrived but the stream or its VOD couldn't be fetched, so the
- * handler gave up: no VOD row, no live status, no viewer polling. Sentry has
- * the error; this puts it in front of staff.
+ * stream.online arrived but Twitch didn't return the stream, so the handler
+ * gave up: no stream row, no live status, no viewer polling. Sentry has the
+ * error; this puts it in front of staff. A missing VOD is not a failure: the
+ * stream is tracked without one and the video id is backfilled later.
  */
 export async function logStreamOnlineFailed(
   broadcasterId: string,
