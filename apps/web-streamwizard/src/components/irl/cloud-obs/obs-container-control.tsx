@@ -82,10 +82,13 @@ export function ObsContainerControl({
   launching,
   launchError,
   togglingContainer,
+  startBlocked = false,
   onLaunch,
   onToggleContainer,
 }: {
   canInteract: boolean;
+  /** Starting is off until the Twitch token carries the stream-key scope; stopping still works. */
+  startBlocked?: boolean;
   flow: ObsFlowState;
   obsStatus: "closed" | "connecting" | "open";
   containerStatus: "running" | "stopped" | "unknown";
@@ -113,9 +116,12 @@ export function ObsContainerControl({
           })}
         </p>
         {launchError && <p className="text-xs text-destructive mt-1">{launchError}</p>}
+        {startBlocked && !running && (
+          <p className="text-xs text-muted-foreground mt-1">Connect Twitch above before starting.</p>
+        )}
       </div>
       {neverLaunched ? (
-        <Button size="sm" disabled={!canInteract || launching} onClick={onLaunch} className="ml-auto">
+        <Button size="sm" disabled={!canInteract || launching || startBlocked} onClick={onLaunch} className="ml-auto">
           {launching ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
           ) : (
@@ -127,7 +133,7 @@ export function ObsContainerControl({
         <Button
           size="sm"
           variant={running ? "destructive" : "default"}
-          disabled={!canInteract || togglingContainer || !instanceId || !apiUrl}
+          disabled={!canInteract || togglingContainer || !instanceId || !apiUrl || (startBlocked && !running)}
           onClick={onToggleContainer}
           className="ml-auto"
         >

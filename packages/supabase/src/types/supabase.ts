@@ -1842,7 +1842,9 @@ export type Database = {
           refresh_token_ciphertext: string | null
           refresh_token_iv: string | null
           refresh_token_tag: string | null
+          scopes_synced_at: string | null
           token_expires_at: string | null
+          twitch_scopes: string[] | null
           twitch_user_id: string
           twitch_username: string
           updated_at: string
@@ -1861,7 +1863,9 @@ export type Database = {
           refresh_token_ciphertext?: string | null
           refresh_token_iv?: string | null
           refresh_token_tag?: string | null
+          scopes_synced_at?: string | null
           token_expires_at?: string | null
+          twitch_scopes?: string[] | null
           twitch_user_id: string
           twitch_username: string
           updated_at?: string
@@ -1880,7 +1884,9 @@ export type Database = {
           refresh_token_ciphertext?: string | null
           refresh_token_iv?: string | null
           refresh_token_tag?: string | null
+          scopes_synced_at?: string | null
           token_expires_at?: string | null
+          twitch_scopes?: string[] | null
           twitch_user_id?: string
           twitch_username?: string
           updated_at?: string

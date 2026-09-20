@@ -18,6 +18,7 @@ type ObsConnection = ReturnType<typeof useObsWebSocket>;
  */
 export function CloudObsSetupScreen({
   canInteract,
+  needsTwitchScopes,
   flow,
   obs,
   instanceId,
@@ -34,6 +35,7 @@ export function CloudObsSetupScreen({
   onFinishSetup,
 }: {
   canInteract: boolean;
+  needsTwitchScopes: boolean;
   flow: ObsFlowState;
   obs: ObsConnection;
   instanceId: string | null;
@@ -66,6 +68,7 @@ export function CloudObsSetupScreen({
           </div>
           <ObsSetupStepper
             canInteract={canInteract}
+            twitchConnected={!needsTwitchScopes}
             hasKey={ingestKeys.length > 0}
             onKeyCreated={onKeyCreated}
             instanceId={instanceId}
