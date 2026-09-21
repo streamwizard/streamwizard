@@ -8,3 +8,13 @@ export class DiscordMemberNotFoundError extends Error {
     this.name = "DiscordMemberNotFoundError";
   }
 }
+
+// Thrown when the role itself is gone (deleted in Discord after it was
+// configured). Also expected: the caller usually treats "nothing to remove"
+// as done and lets the dashboard show the stale pick.
+export class DiscordRoleNotFoundError extends Error {
+  constructor(roleId: string) {
+    super(`Discord role ${roleId} no longer exists in the guild`);
+    this.name = "DiscordRoleNotFoundError";
+  }
+}

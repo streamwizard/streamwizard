@@ -68,9 +68,9 @@ export async function ClipsVods({
           <div className="mx-auto mb-10 max-w-2xl text-center">
             <h2 className="text-3xl font-bold sm:text-4xl">Every clip from your channel, organized.</h2>
             <p className="mt-4 text-muted-foreground">
-              StreamWizard syncs every clip from your Twitch channel, including right when your stream
-              ends. Search by title, filter by category or who clipped it, and file them into clip
-              folders you create.
+              StreamWizard syncs every clip from your Twitch channel while you&apos;re live, with one
+              last pass when you go offline. Search by title, filter by category or who clipped it, and
+              file them into clip folders you create.
             </p>
           </div>
         </div>

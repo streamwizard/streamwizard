@@ -23,7 +23,7 @@ import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-stri
 export const metadata: Metadata = {
   title: "Twitch clip manager with folders",
   description:
-    "Every Twitch clip synced the moment your stream ends, filed into folders you create. Filter by title, category or clipper, then rotate a folder on stream.",
+    "Every Twitch clip synced within five minutes while you stream, filed into folders you create. Filter by title, category or clipper, then rotate a folder on stream.",
   alternates: { canonical: absoluteUrl("/clips") },
 };
 

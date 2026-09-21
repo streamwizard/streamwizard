@@ -23,6 +23,7 @@ import {
 } from "@repo/supabase/queries/tickets";
 import { countOpenTicketsInCategory, getOpenerTicketStats } from "@repo/supabase/queries/ticket-lifecycle";
 import { reportError } from "@repo/sentry";
+import { expireReply } from "../ephemeral";
 import { markSelfAction } from "../server-log/self-actions";
 import { computeTicketOverwrites, renderChannelName, whyCannotOpen } from "./access";
 import { trackTicketChannel } from "../ticket-activity";
@@ -53,6 +54,58 @@ type OpenInteraction =
   | ChatInputCommandInteraction
   | MessageContextMenuCommandInteraction
   | UserContextMenuCommandInteraction;
+
+type AnyOpenInteraction = OpenInteraction | ModalSubmitInteraction;
+
+/**
+ * Picked from the bot's own ephemeral "which category?" prompt, directly or
+ * through the form it led to. Answers then replace that prompt instead of
+ * stacking a second ephemeral message under it.
+ */
+function fromPicker(interaction: AnyOpenInteraction) {
+  const onMessage = interaction.isStringSelectMenu() || (interaction.isModalSubmit() && interaction.isFromMessage());
+  return onMessage && interaction.message.flags.has(MessageFlags.Ephemeral) ? interaction : null;
+}
+
+/** A one-off ephemeral answer that removes itself after a few minutes. */
+async function answer(interaction: AnyOpenInteraction, content: string): Promise<void> {
+  if (!(await inPlace(interaction, (picker) => picker.update({ content, components: [] })))) {
+    await interaction.reply({ content, flags: MessageFlags.Ephemeral });
+  }
+  expireReply(interaction);
+}
+
+/** Acknowledges before the slow part. `finish` then writes the answer. */
+async function defer(interaction: AnyOpenInteraction): Promise<void> {
+  if (!(await inPlace(interaction, (picker) => picker.deferUpdate()))) {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  }
+}
+
+/**
+ * Runs `respond` on the prompt when there is one. False when there isn't, or
+ * when the prompt already expired while the form was open, so the caller
+ * answers with a fresh message instead.
+ */
+async function inPlace(
+  interaction: AnyOpenInteraction,
+  respond: (picker: NonNullable<ReturnType<typeof fromPicker>>) => Promise<unknown>,
+): Promise<boolean> {
+  const picker = fromPicker(interaction);
+  if (!picker) return false;
+  try {
+    await respond(picker);
+    return true;
+  } catch (error) {
+    if (interaction.replied || interaction.deferred) throw error;
+    return false;
+  }
+}
+
+async function finish(interaction: AnyOpenInteraction, content: string): Promise<void> {
+  await interaction.editReply({ content, components: [] });
+  expireReply(interaction);
+}
 
 /**
  * Who is opening a ticket, and for whom. Resolved once per interaction, so
@@ -135,7 +188,7 @@ async function startTicket(interaction: OpenInteraction, context: OpenContext, c
     await interaction.showModal(modal);
     return;
   }
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  await defer(interaction);
   await openTicket(interaction, context, category, {
     subject: category.name,
     description: pending?.description ?? "",
@@ -153,31 +206,32 @@ async function startTicket(interaction: OpenInteraction, context: OpenContext, c
 export async function handleCreate(interaction: OpenInteraction, slug: string | null): Promise<void> {
   const context = await resolveContext(interaction);
   if (!context) {
-    await interaction.reply({ content: NOT_FROM_DM, flags: MessageFlags.Ephemeral });
+    await answer(interaction, NOT_FROM_DM);
     return;
   }
   const { config } = context;
   const categories = activeCategories(config);
   if (!ticketsReady(config.settings) || categories.length === 0) {
-    await interaction.reply({ content: NOT_SET_UP, flags: MessageFlags.Ephemeral });
+    await answer(interaction, NOT_SET_UP);
     return;
   }
 
   if (slug === null && categories.length > 1) {
     await interaction.reply(buildCategoryPicker(categories));
+    expireReply(interaction);
     return;
   }
 
   const category = slug === null ? categories[0] : categories.find((c) => c.slug === slug);
   if (!category) {
-    await interaction.reply({ content: CATEGORY_GONE, flags: MessageFlags.Ephemeral });
+    await answer(interaction, CATEGORY_GONE);
     return;
   }
 
   // Checked before the form, so nobody fills one in only to be turned away.
   const refusal = await whyNot(context, category);
   if (refusal) {
-    await interaction.reply({ content: refusal, flags: MessageFlags.Ephemeral });
+    await answer(interaction, refusal);
     return;
   }
   await startTicket(interaction, context, category);
@@ -250,12 +304,12 @@ function legacyReader(interaction: ModalSubmitInteraction, config: TicketConfig,
 export async function handleModalSubmit(interaction: ModalSubmitInteraction, slug: string | null): Promise<void> {
   const context = await resolveContext(interaction);
   if (!context) {
-    await interaction.reply({ content: NOT_FROM_DM, flags: MessageFlags.Ephemeral });
+    await answer(interaction, NOT_FROM_DM);
     return;
   }
   const { config } = context;
   if (!ticketsReady(config.settings)) {
-    await interaction.reply({ content: NOT_SET_UP, flags: MessageFlags.Ephemeral });
+    await answer(interaction, NOT_SET_UP);
     return;
   }
 
@@ -268,7 +322,7 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction, slu
       : null);
   const category = activeCategories(config).find((c) => c.slug === pickedSlug);
   if (!category) {
-    await interaction.reply({ content: CATEGORY_GONE, flags: MessageFlags.Ephemeral });
+    await answer(interaction, CATEGORY_GONE);
     return;
   }
 
@@ -279,12 +333,12 @@ export async function handleModalSubmit(interaction: ModalSubmitInteraction, slu
     isLegacy ? legacyReader(interaction, config, category) : modalReader(interaction),
   );
   if (form === "stale") {
-    await interaction.reply({ content: FORM_CHANGED, flags: MessageFlags.Ephemeral });
+    await answer(interaction, FORM_CHANGED);
     return;
   }
 
   // Defer ephemerally: channel creation + DB writes can take a moment.
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  await defer(interaction);
   await openTicket(interaction, context, category, form);
 }
 
@@ -300,7 +354,7 @@ async function openTicket(
   // Where the channel goes: the category's own Discord category, else the server-wide one.
   const parent = category.discord_category_id ?? settings?.category_id;
   if (!ticketsReady(settings) || !parent) {
-    await interaction.editReply({ content: NOT_SET_UP });
+    await finish(interaction, NOT_SET_UP);
     return;
   }
 
@@ -312,7 +366,7 @@ async function openTicket(
     return reason;
   });
   if (refusal) {
-    await interaction.editReply({ content: refusal });
+    await finish(interaction, refusal);
     return;
   }
 
@@ -443,7 +497,8 @@ async function createTicketChannel(
     throw error;
   }
 
-  await interaction.editReply({
-    content: forSomeoneElse ? `✅ Opened <#${channel.id}> for ${opener.displayName}.` : `✅ Your ticket is open: <#${channel.id}>`,
-  });
+  await finish(
+    interaction,
+    forSomeoneElse ? `✅ Opened <#${channel.id}> for ${opener.displayName}.` : `✅ Your ticket is open: <#${channel.id}>`,
+  );
 }

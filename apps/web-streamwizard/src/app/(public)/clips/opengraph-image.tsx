@@ -11,6 +11,6 @@ export default function Image() {
     eyebrow: "Clips",
     title: ["One endless pile of clips.", "Not any more."],
     subline:
-      "Every clip from your Twitch channel, synced the moment your stream ends and filed into folders you create.",
+      "Every clip from your Twitch channel, synced while you stream and filed into folders you create.",
   });
 }

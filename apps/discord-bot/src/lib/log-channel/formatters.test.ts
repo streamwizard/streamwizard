@@ -52,6 +52,36 @@ describe("log channel formatters", () => {
     }
   });
 
+  test("eventsub connection lost: reason, close code and keepalive silence, no author", () => {
+    const embed = formatPlatformEvent(
+      event("eventsub.connection_lost", {
+        service: "streamwizard-bot",
+        reason: "keepalive timeout",
+        close_code: null,
+        keepalive_silent_ms: 15_000,
+      }),
+    ).toJSON();
+    expect(embed.title).toBe("🔴 EventSub connection lost");
+    expect(embed.color).toBe(DANGER_RED);
+    expect(embed.author).toBeUndefined();
+    expect(embed.description).toContain("**streamwizard-bot** lost its EventSub connection");
+    expect(fieldValue(embed, "Reason")).toBe("keepalive timeout");
+    expect(fieldValue(embed, "Close code")).toBeUndefined();
+    expect(fieldValue(embed, "Silent for")).toBe("15s");
+  });
+
+  test("eventsub reconnected: downtime, attempts and session", () => {
+    const embed = formatPlatformEvent(
+      event("eventsub.reconnected", { service: "streamwizard-bot", session_id: "AQoQ1", downtime_ms: 73_400, attempts: 3 }),
+    ).toJSON();
+    expect(embed.title).toBe("🟢 EventSub reconnected");
+    expect(embed.color).toBe(TWITCH_PURPLE);
+    expect(embed.description).toContain("after 1m 13s");
+    expect(fieldValue(embed, "Down for")).toBe("1m 13s");
+    expect(fieldValue(embed, "Attempts")).toBe("3");
+    expect(fieldValue(embed, "Session")).toBe("`AQoQ1`");
+  });
+
   test("new user: avatar as author icon and thumbnail, Twitch link, Discord mention, no email", () => {
     const embed = formatPlatformEvent(event("user.created", { ...identity, email: "x@example.com" })).toJSON();
     expect(embed.title).toBe("👋 New user");
@@ -235,14 +265,31 @@ describe("log channel formatters", () => {
     expect(fieldValue(embed, "Status")).toBe("400");
   });
 
-  test("stream online failed explains a missing VOD", () => {
+  test("stream online failed explains a vanished stream", () => {
     const embed = formatPlatformEvent(
-      event("stream.online_failed", { ...identity, reason: "vod_not_found", stream_id: "42" }),
+      event("stream.online_failed", { ...identity, reason: "stream_not_found", stream_id: "42", waited_seconds: 110 }),
     ).toJSON();
     expect(embed.color).toBe(DANGER_RED);
-    expect(embed.description).toContain("VODs may be turned off on Twitch");
-    expect(fieldValue(embed, "Reason")).toBe("`vod_not_found`");
+    expect(embed.description).toContain("still didn't list it");
+    expect(fieldValue(embed, "Reason")).toBe("`stream_not_found`");
     expect(fieldValue(embed, "Stream ID")).toBe("`42`");
+    expect(fieldValue(embed, "Waited")).toBe("110s");
+  });
+
+  test("stream online failed explains a stream that ended while we waited", () => {
+    const embed = formatPlatformEvent(
+      event("stream.online_failed", { ...identity, reason: "ended_before_tracked", stream_id: "42", waited_seconds: 20 }),
+    ).toJSON();
+    expect(embed.description).toContain("ended before Twitch listed it");
+    expect(fieldValue(embed, "Reason")).toBe("`ended_before_tracked`");
+    expect(fieldValue(embed, "Waited")).toBe("20s");
+  });
+
+  test("stream online failed leaves Waited out for older rows", () => {
+    const embed = formatPlatformEvent(
+      event("stream.online_failed", { ...identity, reason: "stream_not_found", stream_id: "42" }),
+    ).toJSON();
+    expect(fieldValue(embed, "Waited")).toBeUndefined();
   });
 
   test("unknown event types fall back to the raw payload", () => {

@@ -5,6 +5,7 @@ export type { UpdateChannelParams, ChannelInformation } from "./channels";
 export type { TwitchBadgeSet, TwitchBadgeVersion, SendChatMessageResponse } from "./chat";
 export type { TwitchCheermote, TwitchCheermoteTier } from "./bits";
 export { STREAMWIZARD_BOT_USER_ID } from "./chat";
+export { validateTwitchToken, type TwitchTokenValidation } from "./auth";
 
 import { TwitchChatClient } from "./chat";
 import { TwitchBitsClient } from "./bits";

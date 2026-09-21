@@ -5,4 +5,6 @@ export const userPreferencesSchema = z.object({
   memes_enabled: z.boolean().optional(),
   onboarding_completed: z.boolean().optional(),
   show_stream_stats: z.boolean().optional(),
+  discord_live_notifications: z.boolean().optional(),
+  discord_live_role: z.boolean().optional(),
 });

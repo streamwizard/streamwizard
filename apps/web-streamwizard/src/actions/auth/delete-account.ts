@@ -96,5 +96,8 @@ export async function deleteAccount() {
     return { success: false, error: authError.message };
   }
 
+  // PostHog is left alone on purpose: the policy allows analytics linked to
+  // the account for 12 months after last activity, and the scheduled
+  // retention purge removes the person once that window passes.
   redirect("/goodbye");
 }

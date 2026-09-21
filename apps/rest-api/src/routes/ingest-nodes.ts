@@ -129,6 +129,10 @@ ingestNodes.post("/claim", async (c) => {
           influxdb_token: env.INFLUXDB_TOKEN,
         }
       : {}),
+    // Same omit-when-unset rule. ingest-control dials ws-server as a bot
+    // client with SUPABASE_SECRET_KEY as its bearer, so the URL is all it
+    // needs — no CONSUMER_SECRET, unlike the OBS node claim.
+    ...(env.WS_SERVER_URL ? { ws_server_url: env.WS_SERVER_URL } : {}),
   });
 });
 

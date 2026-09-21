@@ -7,6 +7,29 @@ import type {
 import { TwitchApi } from "@repo/twitch-api";
 import { closeReason, revocationReason } from "./reasons";
 
+// While a bind keeps failing, conduit_update_failed goes out once at the start
+// of the outage and then at most this often. Consumers turn every emit into a
+// Sentry issue and a Discord row, so this is what keeps a long outage from
+// becoming thousands of both (the Sept 2026 conduit 404 ran every ~12s for 11 days).
+const BIND_FAILURE_REPORT_INTERVAL_MS = 60 * 60_000;
+
+type BindResult = 'bound' | 'failed' | 'stale';
+
+/** Status + short message from an Axios-style error, without the request dump. */
+export function describeBindError(error: unknown): { status: number | null; text: string } {
+    const response = (error as { response?: { status?: unknown; data?: { message?: unknown } } })?.response;
+    const status = typeof response?.status === 'number' ? response.status : null;
+    const apiMessage = typeof response?.data?.message === 'string' ? response.data.message : null;
+    const text = apiMessage ?? (error instanceof Error ? error.message : String(error));
+    return { status, text: status !== null ? `${status} ${text}` : text };
+}
+
+/** 4xx means the request itself is wrong (conduit gone, bad token): retrying
+ * the same call within seconds can't fix it. 408/429 are the exceptions. */
+function isPermanentBindFailure(status: number | null): boolean {
+    return status !== null && status >= 400 && status < 500 && status !== 408 && status !== 429;
+}
+
 export type {
     ConnectionState,
     EventSubLifecycleEvent,
@@ -51,6 +74,12 @@ export class TwitchEventSubReceiver {
     private readonly keepaliveGraceMs: number;
     private readonly welcomeTimeoutMs: number;
     private readonly onLifecycleEvent?: (event: EventSubLifecycleEvent) => void;
+    private readonly bindRetryDelays: number[];
+    private readonly conduitMissingRetryDelay: number;
+
+    // Shard bind failure tracking, reset when a bind succeeds
+    private conduitMissing: boolean = false;
+    private lastBindFailureReportAt: number | null = null;
 
     // Connection state management
     private connectionState: ConnectionState = 'disconnected';
@@ -71,6 +100,8 @@ export class TwitchEventSubReceiver {
         this.keepaliveGraceMs = options.keepaliveGraceMs ?? 5000;
         this.welcomeTimeoutMs = options.welcomeTimeoutMs ?? 15000;
         this.onLifecycleEvent = options.onLifecycleEvent;
+        this.bindRetryDelays = options.bindRetryDelays ?? [1000, 2000, 4000];
+        this.conduitMissingRetryDelay = options.conduitMissingRetryDelay ?? 300_000;
     }
 
     /**
@@ -268,6 +299,11 @@ export class TwitchEventSubReceiver {
     // --------------------------------------------------------------------------
 
     private getReconnectDelay(): number {
+        // A missing conduit won't come back by itself; someone has to recreate
+        // it. Check back every few minutes instead of hammering Twitch.
+        if (this.conduitMissing) {
+            return this.conduitMissingRetryDelay + Math.random() * 1000;
+        }
         // Clamp the exponent so long outages don't overflow the doubling
         const exponent = Math.min(this.reconnectAttempts, 6);
         const delay = Math.min(
@@ -393,6 +429,23 @@ export class TwitchEventSubReceiver {
         }
         this.armKeepaliveDeadline();
 
+        // A socket whose shard isn't bound receives nothing, so the session
+        // only counts as established once the bind succeeds. Declaring it
+        // earlier reset the backoff on every welcome: a bind that always
+        // failed became a fixed ~12s reconnect loop that never slowed down.
+        // On a Twitch-requested migration the subscriptions carry over to the
+        // new session, so the conduit shard doesn't need to be rebound.
+        if (!isMigration && this.conduitId && this.sessionId) {
+            const result = await this.updateConduitShard(this.sessionId, gen);
+            if (result === 'stale') return;
+            if (result === 'failed') {
+                // Unbound, Twitch closes this socket ~10s after the welcome
+                // anyway (4003). Drop it now; the backoff keeps growing.
+                this.handleConnectionLoss(null, 'conduit shard bind failed');
+                return;
+            }
+        }
+
         this.connectionState = 'connected';
         const attempt = this.reconnectAttempts;
         const downtimeMs = this.disconnectedSince !== null ? Date.now() - this.disconnectedSince : null;
@@ -401,37 +454,54 @@ export class TwitchEventSubReceiver {
 
         console.log(`✅ Session established: ${this.sessionId}${downtimeMs !== null ? ` (recovered after ${downtimeMs}ms)` : ''}`);
         this.emit({ type: 'connected', sessionId: this.sessionId ?? '', attempt, downtimeMs });
-
-        // On a Twitch-requested migration the subscriptions carry over to the
-        // new session, so the conduit shard doesn't need to be rebound.
-        if (!isMigration && this.conduitId && this.sessionId) {
-            await this.updateConduitShard(this.sessionId, gen);
-        }
     }
 
-    private async updateConduitShard(sessionId: string, gen: number): Promise<void> {
-        // A socket whose shard isn't bound receives nothing, so retry a few
-        // times before alerting.
-        const retryDelays = [1000, 2000, 4000];
+    private async updateConduitShard(sessionId: string, gen: number): Promise<BindResult> {
+        // Retry transient failures a few times within this session's ~10s
+        // window before giving up on it.
         for (let attempt = 0; ; attempt++) {
-            if (gen !== this.activeGen || this.disposed) return;
+            if (gen !== this.activeGen || this.disposed) return 'stale';
             try {
                 console.log('Updating conduit shards with session ID:', sessionId);
                 await this.twitchApi.eventsub.updateShardTransport(this.conduitId, '0', {
                     method: 'websocket',
                     session_id: sessionId,
                 });
-                return;
-            } catch (error) {
-                if (attempt >= retryDelays.length) {
-                    console.error('❌ Failed to update conduit shards after retries:', error);
-                    this.emit({ type: 'conduit_update_failed', error });
-                    return;
+                if (this.lastBindFailureReportAt !== null || this.conduitMissing) {
+                    console.log('✅ Conduit shard bound again');
                 }
-                console.warn(`⚠️ Conduit shard update failed, retrying in ${retryDelays[attempt]}ms...`, error);
-                await new Promise((resolve) => setTimeout(resolve, retryDelays[attempt]));
+                this.conduitMissing = false;
+                this.lastBindFailureReportAt = null;
+                return 'bound';
+            } catch (error) {
+                if (gen !== this.activeGen || this.disposed) return 'stale';
+                const { status, text } = describeBindError(error);
+                const permanent = isPermanentBindFailure(status);
+                const retryDelay = this.bindRetryDelays[attempt];
+                if (!permanent && retryDelay !== undefined) {
+                    console.warn(`⚠️ Conduit shard update failed (${text}), retrying in ${retryDelay}ms`);
+                    await new Promise((resolve) => setTimeout(resolve, retryDelay));
+                    continue;
+                }
+                this.conduitMissing = status === 404;
+                console.error(
+                    this.conduitMissing
+                        ? `❌ Conduit ${this.conduitId} does not exist (${text}). Recreate it and update TWITCH_CONDUIT_ID; checking again in ${Math.round(this.conduitMissingRetryDelay / 1000)}s`
+                        : `❌ Failed to update conduit shard: ${text}`,
+                );
+                this.reportBindFailure(error, status);
+                return 'failed';
             }
         }
+    }
+
+    private reportBindFailure(error: unknown, status: number | null): void {
+        const now = Date.now();
+        if (this.lastBindFailureReportAt !== null && now - this.lastBindFailureReportAt < BIND_FAILURE_REPORT_INTERVAL_MS) {
+            return;
+        }
+        this.lastBindFailureReportAt = now;
+        this.emit({ type: 'conduit_update_failed', error, status });
     }
 
     // --------------------------------------------------------------------------

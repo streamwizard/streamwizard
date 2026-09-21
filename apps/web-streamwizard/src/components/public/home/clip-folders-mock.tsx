@@ -1232,7 +1232,7 @@ export function ClipFoldersMock({ clips }: { clips: RealClipCard[] }) {
                         <span className="truncate text-xs text-muted-foreground">{clip.creator}</span>
                         <span className="truncate text-xs text-muted-foreground">{clip.category ?? "—"}</span>
                         <span className="text-xs tabular-nums text-muted-foreground">
-                          {clip.views.toLocaleString()}
+                          {clip.views.toLocaleString("en-US")}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {clip.createdAt ? formatDate(clip.createdAt) : "—"}
@@ -1312,7 +1312,7 @@ export function ClipFoldersMock({ clips }: { clips: RealClipCard[] }) {
                             </span>
                             <span className="flex shrink-0 items-center gap-1">
                               <Eye className="h-2.5 w-2.5" aria-hidden="true" />
-                              {clip.views.toLocaleString()}
+                              {clip.views.toLocaleString("en-US")}
                             </span>
                           </div>
 

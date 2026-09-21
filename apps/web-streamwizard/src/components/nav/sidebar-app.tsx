@@ -29,12 +29,14 @@ import SidebarCommands from "./sidebar-commands";
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User;
   folders: Database["public"]["Tables"]["clip_folders"]["Row"][];
+  folderClipCounts: Record<string, number>;
   hasCloudObsAccess?: boolean;
 }
 
 export function AppSidebar({
   user,
   folders,
+  folderClipCounts,
   hasCloudObsAccess = false,
   ...props
 }: AppSidebarProps) {
@@ -89,7 +91,7 @@ export function AppSidebar({
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
-            <SidebarClips clipFolders={folders} />
+            <SidebarClips clipFolders={folders} clipCounts={folderClipCounts} />
           </SidebarGroupContent>
         </SidebarGroup>
         {hasCloudObsAccess && (

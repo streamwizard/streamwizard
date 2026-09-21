@@ -67,7 +67,7 @@ export const LLMS_SECTIONS: LlmsSection[] = [
         title: "Clips",
         href: productLinks.clips,
         description:
-          "Every Twitch clip from your channel synced automatically into nested folders, with stacking " +
+          "Every Twitch clip from your channel synced automatically while you stream into nested folders, with stacking " +
           "filters by category, streamer and clipper, and portrait downloads.",
       },
       {

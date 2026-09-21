@@ -18,6 +18,7 @@ type ObsConnection = ReturnType<typeof useObsWebSocket>;
  */
 export function CloudObsSetupScreen({
   canInteract,
+  needsTwitchScopes,
   flow,
   obs,
   instanceId,
@@ -27,6 +28,7 @@ export function CloudObsSetupScreen({
   launchError,
   togglingContainer,
   hasOpenedViewer,
+  ingestWired,
   onKeyCreated,
   onLaunch,
   onStartContainer,
@@ -34,6 +36,7 @@ export function CloudObsSetupScreen({
   onFinishSetup,
 }: {
   canInteract: boolean;
+  needsTwitchScopes: boolean;
   flow: ObsFlowState;
   obs: ObsConnection;
   instanceId: string | null;
@@ -43,6 +46,8 @@ export function CloudObsSetupScreen({
   launchError: string | null;
   togglingContainer: boolean;
   hasOpenedViewer: boolean;
+  /** The "IRL" scene already holds the StreamWizard ingest source. */
+  ingestWired: boolean;
   onKeyCreated: (key: IngestStreamKey) => void;
   onLaunch: () => void;
   onStartContainer: () => void;
@@ -66,6 +71,7 @@ export function CloudObsSetupScreen({
           </div>
           <ObsSetupStepper
             canInteract={canInteract}
+            twitchConnected={!needsTwitchScopes}
             hasKey={ingestKeys.length > 0}
             onKeyCreated={onKeyCreated}
             instanceId={instanceId}
@@ -79,6 +85,7 @@ export function CloudObsSetupScreen({
             isBooting={flow.isBooting}
             hasTimedOut={flow.hasTimedOut}
             onReconnect={obs.reconnect}
+            ingestWired={ingestWired}
             hasOpenedViewer={hasOpenedViewer}
             onOpenViewer={onOpenViewer}
             scenes={obs.filteredScenes}

@@ -101,15 +101,23 @@ export function createUserStateService({ client, broadcast }: UserStateServiceOp
       return getUserStates(client, userId);
     },
 
+    /**
+     * A null value clears the key: the op function rejects a NULL set, and a
+     * missing row already reads back as null, so delete is the same outcome.
+     */
     set(userId: string, key: string, value: unknown): Promise<UserStateUpdatePayload> {
-      return mutate(userId, key, "set", value);
+      return value == null ? mutate(userId, key, "delete") : mutate(userId, key, "set", value);
     },
 
-    /** Sequential per key: each write is its own atomic op + broadcast frame. */
+    /** Sequential per key: each write is its own atomic op + broadcast frame. Null clears, as in set(). */
     async setMany(userId: string, entries: UserStateEntry[]): Promise<UserStateUpdatePayload[]> {
       const results: UserStateUpdatePayload[] = [];
       for (const entry of entries) {
-        results.push(await mutate(userId, entry.key, "set", entry.value));
+        results.push(
+          await (entry.value == null
+            ? mutate(userId, entry.key, "delete")
+            : mutate(userId, entry.key, "set", entry.value))
+        );
       }
       return results;
     },

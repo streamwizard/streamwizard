@@ -3,6 +3,7 @@ import { supabase } from "@repo/supabase";
 import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
 import type { Command } from "../types/discord";
 import { buildLinkRow } from "../lib/account";
+import { expireReply } from "../lib/ephemeral";
 
 export default {
   data: new SlashCommandBuilder().setName("link").setDescription("Link your Discord account to StreamWizard"),
@@ -14,6 +15,7 @@ export default {
         content: `Already linked as **${existing.discord_username}**.`,
         flags: MessageFlags.Ephemeral,
       });
+      expireReply(interaction);
       return;
     }
 
@@ -22,5 +24,6 @@ export default {
       components: [buildLinkRow()],
       flags: MessageFlags.Ephemeral,
     });
+    expireReply(interaction);
   },
 } satisfies Command;

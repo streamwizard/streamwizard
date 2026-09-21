@@ -93,10 +93,15 @@ export async function GET(request: Request) {
   }
 
   try {
-    captureServerEvent(data.session.user.id, "discord_linked", {
-      role_status: roleStatus,
-      source: next.includes("onboarding") ? "onboarding" : "settings",
-    });
+    captureServerEvent(
+      data.session.user.id,
+      "discord_linked",
+      {
+        role_status: roleStatus,
+        source: next.includes("onboarding") ? "onboarding" : "settings",
+      },
+      request,
+    );
   } catch (phErr) {
     reportError(phErr, "auth/callback/discord: posthog capture failed");
   }

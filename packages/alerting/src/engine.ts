@@ -182,6 +182,9 @@ export function overridesFromSnapshot(snapshot: TickSnapshot): RuleOverrides {
 // after a deploy mid-outage, alerts may re-fire once. Acceptable.
 const stateMirror = new Map<Env, Map<string, AlertState>>();
 
+// Last snapshot summary logged, so a tick only logs when it changes.
+let lastSnapshotLine: string | null = null;
+
 function mirrorKey(row: { rule_id: string; entity_id?: string | null }): string {
   return `${row.rule_id} ${row.entity_id ?? ""}`;
 }
@@ -208,6 +211,21 @@ function updateMirror(alertEnv: Env, upserts: AlertStateUpsert[], now: Date): vo
     });
   }
   stateMirror.set(alertEnv, envMirror);
+}
+
+// A rule that throws on every 15s tick would otherwise send ~5,760 identical
+// events a day — ALERT-WORKER-1 burned the whole Sentry error quota that way.
+// Report a rule's failure when its message changes, then at most hourly.
+const RULE_ERROR_REPORT_INTERVAL_MS = 60 * 60_000;
+const lastRuleErrorReport = new Map<string, { message: string; at: number }>();
+
+export function shouldReportRuleError(alertEnv: Env, ruleId: string, err: unknown, now: number): boolean {
+  const key = `${alertEnv} ${ruleId}`;
+  const message = err instanceof Error ? err.message : String(err);
+  const last = lastRuleErrorReport.get(key);
+  if (last && last.message === message && now - last.at < RULE_ERROR_REPORT_INTERVAL_MS) return false;
+  lastRuleErrorReport.set(key, { message, at: now });
+  return true;
 }
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
@@ -372,7 +390,9 @@ async function evaluateEnv(
       if (result.value.length > 0) breachesByRule.set(rule.id, result.value);
     } else {
       ruleErrors++;
-      Sentry.captureException(result.reason, { tags: { alertRule: rule.id, alertEnv } });
+      if (shouldReportRuleError(alertEnv, rule.id, result.reason, now.getTime())) {
+        Sentry.captureException(result.reason, { tags: { alertRule: rule.id, alertEnv } });
+      }
     }
   });
 
@@ -498,12 +518,17 @@ export async function runEvaluationPass(): Promise<TickSummary> {
     : [...(stateMirror.get(alertEnv)?.values() ?? [])];
   if (snapshot) stateMirror.set(alertEnv, new Map(prev.map((s) => [mirrorKey(s), s])));
 
-  // The counts stay in every tick's log line on purpose: a payload quietly
-  // emptying the registry is exactly the failure the zod boundary exists to
-  // catch, and this line is how a human notices if it ever slips through.
-  console.log(
-    `[alerting] snapshot ok=${snapshot !== null} obs=${registry.obsNodes.length} ingest=${registry.ingestNodes.length} states=${prev.length}`,
-  );
+  // The counts are logged on purpose: a payload quietly emptying the registry
+  // is exactly the failure the zod boundary exists to catch, and this line is
+  // how a human notices if it ever slips through. Only when they change,
+  // though — every 15s tick was ~80k identical lines a fortnight. A failed
+  // snapshot is a warning so it reaches Sentry Logs.
+  const snapshotLine = `[alerting] snapshot ok=${snapshot !== null} obs=${registry.obsNodes.length} ingest=${registry.ingestNodes.length} states=${prev.length}`;
+  if (snapshotLine !== lastSnapshotLine) {
+    if (snapshot) console.log(snapshotLine);
+    else console.warn(snapshotLine);
+    lastSnapshotLine = snapshotLine;
+  }
 
   // The old /rest/v1/ HTTP probe sent no apikey, always got a 401, and
   // okBelowStatus scored that healthy — it would have reported green through

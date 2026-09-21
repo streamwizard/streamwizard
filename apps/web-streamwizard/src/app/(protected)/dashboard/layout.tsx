@@ -8,7 +8,7 @@ import { ModalProvider } from "@/providers/modal-provider";
 import { ClipFolderDialogProvider } from "@/providers/clip-folder-dialog-provider";
 import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
 import { redirect } from "next/navigation";
-import { getClipFolders, countClipsByUserId } from "@repo/supabase/queries/clips";
+import { getClipFolders, getClipFolderClipCounts, countClipsByUserId } from "@repo/supabase/queries/clips";
 import { checkProductAccess } from "@repo/supabase/queries/subscriptions";
 import { getUserPreferences, getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
@@ -32,7 +32,13 @@ export default async function layout({
     redirect("/login");
   }
 
-  const { data: folders } = await getClipFolders(supabase, data.user.id);
+  const [{ data: folders }, folderClipCounts] = await Promise.all([
+    getClipFolders(supabase, data.user.id),
+    getClipFolderClipCounts(supabase, data.user.id).catch((err) => {
+      console.error("Failed to count clips per folder:", err);
+      return {};
+    }),
+  ]);
   const clipCount = await countClipsByUserId(supabase, data.user.id);
 
   // Only checked while onboarding is still in progress — avoids an extra
@@ -66,6 +72,7 @@ export default async function layout({
             <AppSidebar
               user={data.user}
               folders={folders || []}
+              folderClipCounts={folderClipCounts}
               hasCloudObsAccess={!!hasCloudObsAccess}
               variant="inset"
             />

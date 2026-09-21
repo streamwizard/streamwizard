@@ -18,6 +18,7 @@
 export type PlatformEventGroup =
   | "platform"
   | "twitch"
+  | "eventsub"
   | "tickets"
   | "members"
   | "messages"
@@ -34,6 +35,11 @@ export const PLATFORM_EVENT_GROUPS: { id: PlatformEventGroup; label: string; hin
     hint: "Signups, Discord links, plans, admin roles, feedback and dashboard changes.",
   },
   { id: "twitch", label: "Twitch", hint: "Clip syncs, token problems and stream events that went wrong." },
+  {
+    id: "eventsub",
+    label: "EventSub",
+    hint: "The bot's Twitch EventSub connection: outages, reconnects, session moves and revoked subscriptions.",
+  },
   { id: "tickets", label: "Tickets", hint: "Tickets opened, claimed, closed, rated and replied to from the dashboard." },
   { id: "members", label: "Members", hint: "Joins, leaves, kicks, bans, timeouts, nicknames and roles." },
   { id: "messages", label: "Messages", hint: "Edited and deleted messages, including their text." },
@@ -72,6 +78,13 @@ export const PLATFORM_EVENTS = {
   "clips.sync_failed": { label: "Clip sync failed", group: "twitch", defaultEnabled: true },
   "twitch.token_refresh_failed": { label: "Twitch token refresh failed", group: "twitch", defaultEnabled: true },
   "stream.online_failed": { label: "Stream online failed", group: "twitch", defaultEnabled: true },
+
+  "eventsub.connected": { label: "EventSub connected", group: "eventsub", defaultEnabled: true },
+  "eventsub.connection_lost": { label: "EventSub connection lost", group: "eventsub", defaultEnabled: true },
+  "eventsub.reconnected": { label: "EventSub reconnected", group: "eventsub", defaultEnabled: true },
+  "eventsub.session_migrated": { label: "EventSub session moved by Twitch", group: "eventsub", defaultEnabled: false },
+  "eventsub.subscription_revoked": { label: "EventSub subscription revoked", group: "eventsub", defaultEnabled: true },
+  "eventsub.conduit_update_failed": { label: "EventSub conduit update failed", group: "eventsub", defaultEnabled: true },
 
   "ticket.opened": { label: "Ticket opened", group: "tickets", defaultEnabled: true },
   "ticket.claimed": { label: "Ticket claimed", group: "tickets", defaultEnabled: true },
@@ -133,7 +146,11 @@ export function platformEventTypesInGroup(group: PlatformEventGroup): PlatformEv
 }
 
 export type UserDeletedReason = "requested" | "twitch_revoked";
-export type StreamOnlineFailureReason = "stream_not_found" | "vod_not_found";
+/**
+ * `stream_not_found`: Twitch never listed the stream, even after retrying.
+ * `ended_before_tracked`: stream.offline arrived while we were still waiting.
+ */
+export type StreamOnlineFailureReason = "stream_not_found" | "ended_before_tracked";
 /** Where a ticket action came from: a Discord button or command, the web-admin dashboard, or the bot on its own (the stale sweeper). */
 export type TicketEventSource = "discord" | "dashboard" | "system";
 
@@ -163,6 +180,15 @@ interface SubscriptionFields {
   plan_name?: string | null;
   status?: string | null;
   expires_at?: string | null;
+}
+
+/**
+ * The bot's own EventSub websocket, not a user. `service` names the process
+ * that emitted it (streamwizard-bot today); `session_id` is Twitch's session.
+ */
+interface EventSubEvent {
+  service: string;
+  session_id?: string | null;
 }
 
 /** A Discord user as seen by the bot. */
@@ -246,7 +272,24 @@ export interface PlatformEventPayloads {
   "clips.sync_completed": SubjectIdentity & { sync_id: string; clip_count: number; duration_seconds?: number | null };
   "clips.sync_failed": SubjectIdentity & { sync_id: string; duration_seconds?: number | null; error?: string | null };
   "twitch.token_refresh_failed": SubjectIdentity & { error: string; status?: number | null };
-  "stream.online_failed": SubjectIdentity & { reason: StreamOnlineFailureReason; stream_id?: string | null };
+  "stream.online_failed": SubjectIdentity & {
+    reason: StreamOnlineFailureReason;
+    stream_id?: string | null;
+    /** How long rest-api kept asking Twitch before giving up. */
+    waited_seconds?: number | null;
+  };
+
+  /** First session after the bot started. */
+  "eventsub.connected": EventSubEvent & { session_id: string };
+  /** The socket died. `close_code` is Twitch's close code when there was one; `keepalive_silent_ms` when the bot gave up waiting for a keepalive. */
+  "eventsub.connection_lost": EventSubEvent & { reason: string; close_code?: number | null; keepalive_silent_ms?: number | null };
+  /** Back after an outage. `attempts` counts the reconnects it took. */
+  "eventsub.reconnected": EventSubEvent & { session_id: string; downtime_ms: number; attempts: number };
+  /** Twitch asked the bot to move to a new session and it did, with no gap. */
+  "eventsub.session_migrated": EventSubEvent & { session_id: string };
+  "eventsub.subscription_revoked": EventSubEvent & { subscription_type: string; status: string; reason: string };
+  /** Connected, but the conduit shard could not be bound to the session after retries. Twitch may not deliver events. */
+  "eventsub.conduit_update_failed": EventSubEvent & { error: string };
 
   "ticket.opened": TicketEvent;
   "ticket.claimed": TicketEvent & { actor: DiscordUserRef };

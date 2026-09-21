@@ -4,6 +4,8 @@ import { createClient } from "@repo/supabase/next/server";
 import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
 import { encryptToken } from "@repo/supabase/crypto";
 import { updateTwitchTokens } from "@repo/supabase/queries/user";
+import { setTwitchScopesByUserId } from "@repo/supabase/queries/twitch-scopes";
+import { validateTwitchToken } from "@repo/twitch-api";
 import { captureServerEvent } from "@repo/posthog/server";
 import { reportError } from "@repo/sentry";
 
@@ -89,14 +91,38 @@ export async function GET(request: Request) {
       return errorRedirect("token_save_failed");
     }
 
+    // Supabase hands over the token but not its scope list, and Twitch issues
+    // exactly the scopes of this authorization, so ask id.twitch.tv what the
+    // new token carries. The dashboard reads this to decide whether a feature
+    // still has to ask for its scopes. Best-effort: the hourly sweep in
+    // rest-api fills it in if this call fails.
+    try {
+      const validation = await validateTwitchToken(data.session.provider_token);
+      const { error: scopeErr } = await setTwitchScopesByUserId(supabase, data.session.user.id, validation.scopes);
+      if (scopeErr) throw scopeErr;
+    } catch (scopeErr) {
+      reportError(scopeErr, "auth/callback/twitch: scope sync failed");
+    }
+
     await checkEventSubscriptions(data.session.user.user_metadata.sub);
     if (!error) {
       // The other side of `login_clicked`: without this the OAuth funnel has a
       // click and then silence, and drop-off at Twitch is invisible.
+      // `is_new_user` is what makes this a signup count: the event fires on
+      // every login, and the client-side onboarding events only exist for
+      // visitors who accepted analytics. Supabase creates the auth user during
+      // this same exchange, so a minute-old account is a first login.
       try {
-        captureServerEvent(data.session.user.id, "login_completed", {
-          destination: next.includes("onboarding") ? "onboarding" : "dashboard",
-        });
+        const createdAt = Date.parse(data.session.user.created_at);
+        captureServerEvent(
+          data.session.user.id,
+          "login_completed",
+          {
+            destination: next.includes("onboarding") ? "onboarding" : "dashboard",
+            is_new_user: Number.isFinite(createdAt) && Date.now() - createdAt < 60_000,
+          },
+          request,
+        );
       } catch (phErr) {
         reportError(phErr, "auth/callback/twitch: posthog capture failed");
       }

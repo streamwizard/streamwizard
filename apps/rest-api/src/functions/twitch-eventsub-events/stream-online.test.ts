@@ -1,0 +1,220 @@
+import { beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
+
+/**
+ * Drives handleStreamOnline with every collaborator mocked. The cases pin
+ * down two things: a missing archive video is not a failure (the stream row,
+ * live status and poller all happen without it), and an empty Helix answer is
+ * retried before the handler gives up.
+ */
+
+type Stream = { id: string; user_id: string; user_name: string; started_at: string; title: string; game_id: string; game_name: string };
+
+const stream: Stream = {
+  id: "s1",
+  user_id: "b1",
+  user_name: "Streamer",
+  started_at: "2026-09-20T10:00:00.000Z",
+  title: "Title",
+  game_id: "g",
+  game_name: "Game",
+};
+
+let streamResults: (Stream | undefined)[];
+let lookups: number;
+let offlineDuringLookup: number | null;
+let offline: boolean;
+let lookupResult: string | null;
+let vodUpserts: Record<string, unknown>[];
+let videoIdWrites: [string, string][];
+let liveStatusUpserts: Record<string, unknown>[];
+let pollerStarts: unknown[][];
+let failures: unknown[][];
+let reported: string[];
+let livePosts: unknown[];
+
+mock.module("@repo/sentry", () => ({
+  reportError: (_error: unknown, context: string) => {
+    reported.push(context);
+  },
+}));
+mock.module("@repo/supabase", () => ({ supabase: {} }));
+// Same export set as viewer-count-poller.test.ts: bun's mock.module is
+// process-wide, so both files must agree on the module's shape.
+mock.module("@repo/supabase/queries/vods", () => ({
+  getVodVideoIdByStreamId: async () => null,
+  upsertVod: async (_client: unknown, row: Record<string, unknown>) => {
+    vodUpserts.push(row);
+  },
+  setVodVideoId: async (_client: unknown, streamId: string, videoId: string) => {
+    videoIdWrites.push([streamId, videoId]);
+    return true;
+  },
+}));
+mock.module("@repo/supabase/queries/live-status", () => ({
+  getLiveBroadcasters: async () => [],
+  upsertBroadcasterLiveStatus: async (_client: unknown, row: Record<string, unknown>) => {
+    liveStatusUpserts.push(row);
+  },
+}));
+mock.module("@repo/logger", () => ({
+  streamEventsLogger: { logTwitchEvent: async () => {} },
+}));
+mock.module("@repo/twitch-api", () => ({ TwitchApi: class {} }));
+mock.module("../../services/viewer-count-poller", () => ({
+  viewerCountPoller: {
+    startPolling: (...args: unknown[]) => {
+      pollerStarts.push(args);
+    },
+  },
+}));
+mock.module("../../lib/ws-server", () => ({ notifyStreamStatus: async () => {} }));
+mock.module("../../lib/user-state", () => ({ setStreamUserState: async () => {} }));
+mock.module("../../lib/platform-events", () => ({
+  logStreamOnlineFailed: async (...args: unknown[]) => {
+    failures.push(args);
+  },
+}));
+mock.module("../../lib/stream-video", () => ({
+  findVideoIdForStream: async () => lookupResult,
+}));
+mock.module("../../lib/discord-live", () => ({
+  postGoLive: async (posted: unknown) => {
+    livePosts.push(posted);
+    return "posted";
+  },
+  endGoLive: async () => "skipped",
+}));
+mock.module("../../lib/discord-live-target", () => ({
+  resolveLiveTarget: async () => null,
+}));
+mock.module("../../lib/discord-live-role", () => ({
+  grantLiveRole: async () => "skipped",
+  revokeLiveRole: async () => "skipped",
+}));
+mock.module("../../lib/stream-offline-marker", () => ({
+  markStreamOffline: () => {},
+  wentOfflineSince: () => offline,
+}));
+
+let handleStreamOnline: typeof import("./stream-online").handleStreamOnline;
+
+beforeAll(async () => {
+  ({ handleStreamOnline } = await import("./stream-online"));
+});
+
+beforeEach(() => {
+  streamResults = [stream];
+  lookups = 0;
+  offlineDuringLookup = null;
+  offline = false;
+  lookupResult = null;
+  vodUpserts = [];
+  videoIdWrites = [];
+  liveStatusUpserts = [];
+  pollerStarts = [];
+  failures = [];
+  reported = [];
+  livePosts = [];
+});
+
+// Each lookup takes the next queued answer; the last one repeats.
+const twitchApi = () =>
+  ({
+    streams: {
+      getStream: async () => {
+        lookups++;
+        if (lookups === offlineDuringLookup) offline = true;
+        return streamResults[Math.min(lookups, streamResults.length) - 1];
+      },
+    },
+  }) as never;
+const event = {
+  id: "s1",
+  type: "live",
+  broadcaster_user_id: "b1",
+  broadcaster_user_name: "Streamer",
+  started_at: stream.started_at,
+} as never;
+const noWait = [0, 0, 0, 0];
+
+describe("handleStreamOnline", () => {
+  it("tracks the stream without an archive video", async () => {
+    await handleStreamOnline(event, twitchApi());
+
+    expect(vodUpserts).toEqual([{ broadcaster_id: "b1", stream_id: "s1", started_at: stream.started_at }]);
+    expect(videoIdWrites).toHaveLength(0);
+    expect(liveStatusUpserts).toHaveLength(1);
+    expect(livePosts).toEqual([stream]);
+    expect(pollerStarts).toEqual([["b1", "s1", null]]);
+    expect(failures).toHaveLength(0);
+    expect(reported).toHaveLength(0);
+  });
+
+  it("attaches the archive video when Twitch already lists it", async () => {
+    lookupResult = "v1";
+    await handleStreamOnline(event, twitchApi());
+
+    expect(vodUpserts).toHaveLength(1);
+    expect(videoIdWrites).toEqual([["s1", "v1"]]);
+    expect(pollerStarts).toEqual([["b1", "s1", "v1"]]);
+  });
+
+  it("retries until Twitch lists the stream", async () => {
+    streamResults = [undefined, undefined, stream];
+    await handleStreamOnline(event, twitchApi(), noWait);
+
+    expect(lookups).toBe(3);
+    expect(vodUpserts).toHaveLength(1);
+    expect(liveStatusUpserts).toHaveLength(1);
+    expect(pollerStarts).toEqual([["b1", "s1", null]]);
+    expect(failures).toHaveLength(0);
+    expect(reported).toHaveLength(0);
+  });
+
+  it("gives up when Twitch never lists the stream", async () => {
+    streamResults = [undefined];
+    await handleStreamOnline(event, twitchApi(), noWait);
+
+    expect(lookups).toBe(noWait.length + 1);
+    expect(vodUpserts).toHaveLength(0);
+    expect(liveStatusUpserts).toHaveLength(0);
+    expect(pollerStarts).toHaveLength(0);
+    expect(failures).toEqual([["b1", "stream_not_found", "s1", 0]]);
+    expect(livePosts).toHaveLength(0);
+    expect(reported).toEqual(["eventsub.stream-online"]);
+  });
+
+  it("does not take a different stream for this one", async () => {
+    streamResults = [{ ...stream, id: "older" }];
+    await handleStreamOnline(event, twitchApi(), noWait);
+
+    expect(vodUpserts).toHaveLength(0);
+    expect(failures).toEqual([["b1", "stream_not_found", "s1", 0]]);
+    expect(livePosts).toHaveLength(0);
+  });
+
+  it("backs off without Sentry when the stream goes offline while waiting", async () => {
+    streamResults = [undefined];
+    offlineDuringLookup = 2;
+    await handleStreamOnline(event, twitchApi(), noWait);
+
+    expect(lookups).toBe(2);
+    expect(vodUpserts).toHaveLength(0);
+    expect(liveStatusUpserts).toHaveLength(0);
+    expect(pollerStarts).toHaveLength(0);
+    expect(failures).toEqual([["b1", "ended_before_tracked", "s1", 0]]);
+    expect(livePosts).toHaveLength(0);
+    expect(reported).toHaveLength(0);
+  });
+
+  it("does not mark the channel live when offline beat a late Helix answer", async () => {
+    streamResults = [undefined, stream];
+    offlineDuringLookup = 2;
+    await handleStreamOnline(event, twitchApi(), noWait);
+
+    expect(liveStatusUpserts).toHaveLength(0);
+    expect(pollerStarts).toHaveLength(0);
+    expect(failures).toEqual([["b1", "ended_before_tracked", "s1", 0]]);
+    expect(livePosts).toHaveLength(0);
+  });
+});

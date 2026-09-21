@@ -7,10 +7,10 @@
     "dev": "doppler run --config dev_streamwizard_bot -- bun --preload ./src/sentry.ts --hot src/index.ts",
     "start": "bun --preload ./src/sentry.ts src/index.ts",
     "check-types": "tsc --noEmit",
+    "test": "bun test",
     "eventsub:conduit:sync": "bun run ./src/scripts/sync-conduit-subscriptions.ts"
   },
   "dependencies": {
-    "@repo/discord-api": "workspace:*",
     "@repo/metrics": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",

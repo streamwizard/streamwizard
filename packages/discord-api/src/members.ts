@@ -1,4 +1,7 @@
-import { DiscordMemberNotFoundError } from "./errors";
+import { DiscordMemberNotFoundError, DiscordRoleNotFoundError } from "./errors";
+
+const UNKNOWN_MEMBER = 10007;
+const UNKNOWN_ROLE = 10011;
 
 export interface DiscordApiConfig {
   botToken: string;
@@ -24,7 +27,8 @@ export class DiscordMembersClient {
       const body = await response.text();
 
       // Discord error code 10007 = "Unknown Member": the user hasn't joined
-      // the guild yet, so there's no member to attach a role to.
+      // the guild yet, so there's no member to attach a role to. 10011 =
+      // "Unknown Role": the role was deleted after it was configured.
       const parsedCode: unknown = (() => {
         try {
           return JSON.parse(body).code;
@@ -32,8 +36,11 @@ export class DiscordMembersClient {
           return undefined;
         }
       })();
-      if (response.status === 404 && parsedCode === 10007) {
+      if (response.status === 404 && parsedCode === UNKNOWN_MEMBER) {
         throw new DiscordMemberNotFoundError(discordUserId);
+      }
+      if (response.status === 404 && parsedCode === UNKNOWN_ROLE) {
+        throw new DiscordRoleNotFoundError(roleId);
       }
 
       console.error(`[discord-api/members] Failed to ${action} role ${roleId} for user ${discordUserId}: ${response.status} ${body}`);

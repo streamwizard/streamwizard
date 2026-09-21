@@ -45,6 +45,13 @@ export const STYLE: Record<PlatformEventType, { emoji: string; color: number }> 
   "twitch.token_refresh_failed": { emoji: "🔑", color: DANGER_RED },
   "stream.online_failed": { emoji: "📡", color: DANGER_RED },
 
+  "eventsub.connected": { emoji: "🔌", color: TWITCH_PURPLE },
+  "eventsub.connection_lost": { emoji: "🔴", color: DANGER_RED },
+  "eventsub.reconnected": { emoji: "🟢", color: TWITCH_PURPLE },
+  "eventsub.session_migrated": { emoji: "🔀", color: TWITCH_PURPLE },
+  "eventsub.subscription_revoked": { emoji: "🚫", color: DANGER_RED },
+  "eventsub.conduit_update_failed": { emoji: "⚠️", color: DANGER_RED },
+
   "ticket.opened": { emoji: "🎫", color: TWITCH_PURPLE },
   "ticket.claimed": { emoji: "🙋", color: TWITCH_PURPLE },
   "ticket.closed": { emoji: "✅", color: TWITCH_PURPLE },
