@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { ChannelType, PermissionFlagsBits, type GuildBasedChannel, type NewsChannel, type TextChannel } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
 import { parseBuiltMessage } from "@repo/discord-message";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
@@ -11,6 +11,7 @@ import {
   guildVariableValues,
   publishBuiltMessage,
 } from "../../lib/built-message";
+import { isMessageChannel, missingPermissions } from "../../lib/channel-checks";
 import { env } from "../../lib/env";
 import type { AppEnv } from "../types";
 import { readJson, snowflake } from "../validation";
@@ -19,9 +20,6 @@ export const builtMessageRoutes = new Hono<AppEnv>();
 
 // One publish or delete per message at a time, keyed `guildId:messageId`.
 const publishing = new Set<string>();
-
-const isMessageChannel = (channel: GuildBasedChannel | null): channel is TextChannel | NewsChannel =>
-  channel?.type === ChannelType.GuildText || channel?.type === ChannelType.GuildAnnouncement;
 
 const PUBLISH_PERMISSIONS = [
   [PermissionFlagsBits.ViewChannel, "View Channel"],
@@ -47,8 +45,7 @@ builtMessageRoutes.post("/built-messages/:id/publish", async (c) => {
 
   const channel = await guild.channels.fetch(body.data.channelId).catch(() => null);
   if (!isMessageChannel(channel)) return c.json({ error: "That channel is gone, or it isn't a text channel" }, 409);
-  const permissions = guild.members.me ? channel.permissionsFor(guild.members.me) : null;
-  const missing = PUBLISH_PERMISSIONS.filter(([flag]) => !permissions?.has(flag)).map(([, name]) => name);
+  const missing = missingPermissions(guild, channel, PUBLISH_PERMISSIONS);
   if (missing.length > 0) {
     return c.json({ error: `The bot is missing ${missing.join(", ")} in #${channel.name}` }, 409);
   }

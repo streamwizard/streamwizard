@@ -151,6 +151,10 @@
       "types": "./src/queries/discord-audit.ts",
       "default": "./src/queries/discord-audit.ts"
     },
+    "./queries/discord-announcements": {
+      "types": "./src/queries/discord-announcements.ts",
+      "default": "./src/queries/discord-announcements.ts"
+    },
     "./queries/discord-built-messages": {
       "types": "./src/queries/discord-built-messages.ts",
       "default": "./src/queries/discord-built-messages.ts"

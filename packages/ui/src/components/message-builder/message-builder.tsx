@@ -33,6 +33,7 @@ import { ButtonsElement } from "./buttons-element";
 import { DISCORD } from "./discord-styles";
 import { ElementShell } from "./element-shell";
 import { EmbedElement } from "./embed-element";
+import { DiscordMessageFrame } from "./message-frame";
 import { PresetMenu } from "./preset-menu";
 import { ThemePanel } from "./theme-panel";
 import type { MessageBuilderProps } from "./types";
@@ -86,7 +87,6 @@ export function MessageBuilder({
   const hasBanners = value.elements.some((el) => el.type === "banner") || presets.some((p) => p.draft.type === "banner");
   const showThemes = themePanel && !singleEmbed && hasBanners && themes.length > 1;
   const full = value.elements.length >= maxElements;
-  const time = useMemo(() => new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }), []);
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     if (over && active.id !== over.id) onChange(moveElement(value, String(active.id), String(over.id)));
@@ -121,30 +121,7 @@ export function MessageBuilder({
           )}
         </div>
 
-        <div
-          className="relative rounded-lg py-4 pl-14 pr-10 text-[15px] sm:pl-[72px] sm:pr-12"
-          style={{ backgroundColor: DISCORD.chat, color: DISCORD.text, fontFamily: DISCORD.font }}
-        >
-          {bot.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element -- Discord avatar
-            <img src={bot.avatarUrl} alt="" className="absolute left-2 top-4 size-8 rounded-full sm:left-4 sm:size-10" />
-          ) : (
-            <div className="absolute left-2 top-4 flex size-8 items-center sm:left-4 sm:size-10 justify-center rounded-full text-base font-semibold text-white" style={{ backgroundColor: DISCORD.blurple }}>
-              {bot.name.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="mb-1 flex flex-wrap items-center gap-x-1.5 leading-[1.375]">
-            <span className="font-medium" style={{ color: DISCORD.heading }}>
-              {bot.name}
-            </span>
-            <span className="rounded-[4px] px-1 text-[10px] font-semibold uppercase leading-[15px] text-white" style={{ backgroundColor: DISCORD.blurple }}>
-              Bot
-            </span>
-            <span className="text-xs" style={{ color: DISCORD.muted }} suppressHydrationWarning>
-              Today at {time}
-            </span>
-          </div>
-
+        <DiscordMessageFrame bot={bot}>
           <DndContext id={dndId} sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToVerticalAxis, restrictToParentElement]} onDragEnd={onDragEnd}>
             <SortableContext items={value.elements.map((el) => el.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-2">
@@ -192,7 +169,7 @@ export function MessageBuilder({
               {emptyText ?? "Nothing here yet. Add a banner, an embed or buttons below."}
             </p>
           )}
-        </div>
+        </DiscordMessageFrame>
 
         {messageIssues.length > 0 && (
           <ul className="space-y-0.5 text-sm text-destructive" aria-live="polite">

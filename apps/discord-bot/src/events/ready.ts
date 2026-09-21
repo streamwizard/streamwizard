@@ -1,5 +1,6 @@
 import { Events } from "discord.js";
 import { reconcileVoiceSessions } from "../lib/activity-tracker";
+import { startAnnouncementScheduler } from "../lib/announcements/scheduler";
 import { startLogWorker } from "../lib/log-channel/worker";
 import { reconcileOpenTickets } from "../lib/tickets/reconcile";
 import { startTicketSweeper } from "../lib/tickets/sweeper";
@@ -22,6 +23,9 @@ export default {
 
     // Post platform events (new users, Discord links, deletions, ...) to the log channel.
     await startLogWorker(client);
+
+    // Send announcements staff scheduled in web-admin when their time comes.
+    startAnnouncementScheduler(client);
 
     // Fill whatever the ticket archive missed while the bot was down, and
     // close tickets whose channel is gone. Off the ready path: it walks

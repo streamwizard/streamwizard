@@ -3,6 +3,7 @@ import type { Client } from "discord.js";
 import { reportError } from "@repo/sentry";
 import { bearerSecret } from "./middleware/bearer-secret";
 import { resolveGuild } from "./middleware/guild";
+import { announcementRoutes } from "./routes/announcements";
 import { builtMessageRoutes } from "./routes/built-messages";
 import { cacheRoutes } from "./routes/cache";
 import { channelRoutes } from "./routes/channels";
@@ -35,6 +36,7 @@ export function createInternalApp(client: Client, secret: string) {
   guilds.route("/:guildId", welcomeRoutes);
   guilds.route("/:guildId", builtMessageRoutes);
   guilds.route("/:guildId", channelRoutes);
+  guilds.route("/:guildId", announcementRoutes);
 
   app.route("/internal/guilds", guilds);
 
