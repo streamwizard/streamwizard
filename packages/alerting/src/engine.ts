@@ -210,6 +210,21 @@ function updateMirror(alertEnv: Env, upserts: AlertStateUpsert[], now: Date): vo
   stateMirror.set(alertEnv, envMirror);
 }
 
+// A rule that throws on every 15s tick would otherwise send ~5,760 identical
+// events a day — ALERT-WORKER-1 burned the whole Sentry error quota that way.
+// Report a rule's failure when its message changes, then at most hourly.
+const RULE_ERROR_REPORT_INTERVAL_MS = 60 * 60_000;
+const lastRuleErrorReport = new Map<string, { message: string; at: number }>();
+
+export function shouldReportRuleError(alertEnv: Env, ruleId: string, err: unknown, now: number): boolean {
+  const key = `${alertEnv} ${ruleId}`;
+  const message = err instanceof Error ? err.message : String(err);
+  const last = lastRuleErrorReport.get(key);
+  if (last && last.message === message && now - last.at < RULE_ERROR_REPORT_INTERVAL_MS) return false;
+  lastRuleErrorReport.set(key, { message, at: now });
+  return true;
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return Promise.race([
     promise,
@@ -372,7 +387,9 @@ async function evaluateEnv(
       if (result.value.length > 0) breachesByRule.set(rule.id, result.value);
     } else {
       ruleErrors++;
-      Sentry.captureException(result.reason, { tags: { alertRule: rule.id, alertEnv } });
+      if (shouldReportRuleError(alertEnv, rule.id, result.reason, now.getTime())) {
+        Sentry.captureException(result.reason, { tags: { alertRule: rule.id, alertEnv } });
+      }
     }
   });
 
