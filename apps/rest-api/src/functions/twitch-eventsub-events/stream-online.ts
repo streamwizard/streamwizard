@@ -10,6 +10,9 @@ import { notifyStreamStatus } from "../../lib/ws-server";
 import { setStreamUserState } from "../../lib/user-state";
 import { logStreamOnlineFailed } from "../../lib/platform-events";
 import { findVideoIdForStream } from "../../lib/stream-video";
+import { postGoLive } from "../../lib/discord-live";
+import { grantLiveRole } from "../../lib/discord-live-role";
+import { resolveLiveTarget } from "../../lib/discord-live-target";
 import { wentOfflineSince } from "../../lib/stream-offline-marker";
 
 /**
@@ -117,4 +120,12 @@ export const handleStreamOnline = async (
 
   // Start polling viewer counts for this stream
   viewerCountPoller.startPolling(stream.user_id, stream.id, videoId);
+
+  // Go-live post and live role in the StreamWizard Discord. One lookup of the
+  // guild settings and the linked account feeds both. None of it throws and
+  // nothing here waits on Discord, so a slow or failing API can't hold up
+  // the pipeline.
+  void resolveLiveTarget(stream.user_id).then((target) =>
+    Promise.all([postGoLive(stream, target), grantLiveRole(stream, target)]),
+  );
 };

@@ -35,6 +35,9 @@ export async function getDiscordSetupGaps(): Promise<DiscordSetupGaps> {
     // Every log event falls back to the default channel.
     if (!logRouting.defaultChannelId) gaps.add("/discord/logs");
 
+    // Go-live posts have nowhere to go without a channel. Off on purpose is fine.
+    if (welcome?.live_enabled && !welcome.live_channel_id) gaps.add("/discord/live");
+
     return gaps;
   } catch (error) {
     // The sidebar must never take the dashboard down with it.

@@ -38,8 +38,20 @@ export interface DiscordRole {
   color: number;
   position: number;
   managed: boolean;
+  /** "Display role members separately": holders get their own section at the top of the member list. */
+  hoist: boolean;
   /** Permission bitfield as a decimal string. */
   permissions: string;
+}
+
+export interface DiscordCreateRoleInput {
+  name: string;
+  /** Integer colour, e.g. 0x9146ff. */
+  color?: number;
+  hoist?: boolean;
+  mentionable?: boolean;
+  /** Audit-log reason, shown in Discord's own audit log. */
+  reason?: string;
 }
 
 export interface DiscordUser {
@@ -169,6 +181,33 @@ export class DiscordGuildsClient {
   /** Includes @everyone (id === guild id) and managed bot roles; callers filter. */
   listRoles(): Promise<DiscordRole[]> {
     return this.get(`/guilds/${this.config.guildId}/roles`);
+  }
+
+  /**
+   * Creates a role. Discord places it at the bottom of the list (just above
+   * @everyone), so the bot can always hand it out afterwards. Needs Manage
+   * Roles. Throws on any non-2xx.
+   */
+  async createRole({ reason, ...role }: DiscordCreateRoleInput): Promise<DiscordRole> {
+    const path = `/guilds/${this.config.guildId}/roles`;
+    const res = await fetch(`${DISCORD_API_BASE}${path}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bot ${this.config.botToken}`,
+        "Content-Type": "application/json",
+        ...(reason ? { "X-Audit-Log-Reason": encodeURIComponent(reason) } : {}),
+      },
+      body: JSON.stringify(role),
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (res.status === 429) {
+      const body = (await res.json().catch(() => ({}))) as { retry_after?: number };
+      throw new DiscordRateLimitError(body.retry_after ?? 1);
+    }
+    if (!res.ok) {
+      throw new Error(`Discord POST ${path} failed: ${res.status} ${await res.text()}`);
+    }
+    return (await res.json()) as DiscordRole;
   }
 
   /**

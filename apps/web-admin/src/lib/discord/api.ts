@@ -69,6 +69,11 @@ async function refreshGuildRoles(): Promise<DiscordRole[]> {
   return loadAllRoles();
 }
 
+/** After the dashboard creates a role itself, so the next page load lists it. */
+export function invalidateGuildRoles(): void {
+  rolesCache.delete(requireDiscordContext().guildId);
+}
+
 export const getGuildRoles = cache(async (): Promise<DiscordRole[]> => {
   const { guildId } = requireDiscordContext();
   // @everyone shares the guild id; managed roles belong to integrations and
