@@ -70,6 +70,8 @@ export interface RuleMeta {
   defaultForTicks: number;
   /** undefined = all three envs by default. */
   defaultEnvs?: Env[];
+  /** false = off unless an admin enables it on /alerts/rules. */
+  defaultEnabled?: boolean;
 }
 
 /** A row of alert_rule_config mapped to engine terms. All-null (or a missing

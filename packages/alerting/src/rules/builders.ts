@@ -43,6 +43,8 @@ export function thresholdRule(
     /** false = thresholds are structural (not meaningful to edit) — the UI
      * hides them and overrides are ignored. */
     tunable?: boolean;
+    /** Code default for enabled; an alert_rule_config row still wins. */
+    enabled?: boolean;
     format: (entityId: string, value: number, t: { warn?: number; crit?: number }) => string;
   },
   overrides: RuleOverrides,
@@ -58,12 +60,13 @@ export function thresholdRule(
     title: opts.title,
     envs: o.envs ?? opts.envs,
     forTicks: o.forTicks ?? opts.forTicks,
-    enabled: o.enabled ?? true,
+    enabled: o.enabled ?? opts.enabled ?? true,
     meta: {
       warn: tunable && opts.warn !== undefined ? { default: opts.warn, unit: opts.unit ?? "", direction } : undefined,
       crit: tunable && opts.crit !== undefined ? { default: opts.crit, unit: opts.unit ?? "", direction } : undefined,
       defaultForTicks: opts.forTicks,
       defaultEnvs: opts.envs,
+      defaultEnabled: opts.enabled ?? true,
     },
     async evaluate(ctx) {
       const samples = await opts.fetch(ctx);

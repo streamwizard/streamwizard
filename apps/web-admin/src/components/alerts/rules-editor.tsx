@@ -29,6 +29,7 @@ export interface RuleView {
   group: string;
   defaultForTicks: number;
   defaultEnvs: EnvName[];
+  defaultEnabled: boolean;
   warn?: RuleKnobView;
   crit?: RuleKnobView;
   /** Existing override row, null when the rule runs on code defaults. */
@@ -70,7 +71,7 @@ function RuleRow({ rule }: { rule: RuleView }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const initial: RuleConfigView = rule.config ?? { enabled: true, warn: null, crit: null, forTicks: null, envs: null };
+  const initial: RuleConfigView = rule.config ?? { enabled: rule.defaultEnabled, warn: null, crit: null, forTicks: null, envs: null };
   const [enabled, setEnabled] = useState(initial.enabled);
   const [warnText, setWarnText] = useState(initial.warn?.toString() ?? "");
   const [critText, setCritText] = useState(initial.crit?.toString() ?? "");

@@ -47,6 +47,7 @@ export interface RuleCatalogEntry {
   group: string;
   defaultForTicks: number;
   defaultEnvs: Env[];
+  defaultEnabled: boolean;
   warn?: RuleKnob;
   crit?: RuleKnob;
 }
@@ -60,6 +61,7 @@ export function getRuleCatalog(): RuleCatalogEntry[] {
     group: RULE_GROUPS[rule.id.split(".")[0] ?? ""] ?? "Other",
     defaultForTicks: rule.meta?.defaultForTicks ?? rule.forTicks,
     defaultEnvs: rule.meta?.defaultEnvs ?? ["prod", "staging", "dev"],
+    defaultEnabled: rule.meta?.defaultEnabled ?? true,
     warn: rule.meta?.warn,
     crit: rule.meta?.crit,
   }));

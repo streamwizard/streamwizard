@@ -84,13 +84,16 @@ export function apiRules(overrides: RuleOverrides): AlertRule[] {
             if (lastSeen === undefined) continue; // never wrote in 24h — provisioning, not an outage
             const silentForMs = ctx.now.getTime() - lastSeen;
             if (silentForMs < t.warn * 60_000) continue;
-            // Escalate when the black-box probe agrees the service is down.
-            const probeAlsoFailing = ctx.probeResults.get(service)?.ok === false;
+            // http_request only moves with real traffic (/health is excluded),
+            // so on a quiet service silence alone can't tell idle from broken —
+            // it flapped for hours on prod. Only fire when the black-box probe
+            // agrees the service is down.
+            if (ctx.probeResults.get(service)?.ok !== false) continue;
             breaches.push({
               entityId: service,
-              severity: probeAlsoFailing ? "crit" : "warn",
+              severity: "crit",
               value: Math.round(silentForMs / 1000),
-              message: `${service} hasn't written http_request for ${Math.round(silentForMs / 60000)}m${probeAlsoFailing ? " and its health probe is failing" : ""}`,
+              message: `${service} hasn't written http_request for ${Math.round(silentForMs / 60000)}m and its health probe is failing`,
             });
           }
           return breaches;
@@ -149,18 +152,18 @@ export function apiRules(overrides: RuleOverrides): AlertRule[] {
         title: "EventSub pipeline silent while channels are live",
         forTicks: 1,
         envs: ["prod", "staging"],
-        crit: { default: EVENTSUB_SILENCE_MIN, unit: "min", direction: "above" },
+        warn: { default: EVENTSUB_SILENCE_MIN, unit: "min", direction: "above" },
         async evaluate(ctx, t) {
           if (!ctx.registry.anyChannelLive) return [];
           // Query range tracks the threshold so a raised limit still finds the last event.
-          const rangeMin = Math.max(30, Math.ceil(t.crit));
+          const rangeMin = Math.max(30, Math.ceil(t.warn));
           const lastEvent = await queryEventsubLastEvent(`${rangeMin}m`, { bucket: ctx.bucket });
-          if (lastEvent && ctx.now.getTime() - new Date(lastEvent).getTime() < t.crit * 60_000) return [];
+          if (lastEvent && ctx.now.getTime() - new Date(lastEvent).getTime() < t.warn * 60_000) return [];
           return [
             {
               entityId: "",
-              severity: "crit",
-              message: `No EventSub events received in ${Math.round(t.crit)}m while at least one tracked channel is live`,
+              severity: "warn",
+              message: `No EventSub events received in ${Math.round(t.warn)}m while at least one tracked channel is live`,
             },
           ];
         },
