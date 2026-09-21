@@ -8,6 +8,8 @@ export interface SessionPreferences {
   sync_clips_on_end: boolean;
   onboarding_completed: boolean;
   show_stream_stats: boolean;
+  discord_live_notifications: boolean;
+  discord_live_role: boolean;
 }
 
 export interface Session {
@@ -20,6 +22,8 @@ const defaultPreferences: SessionPreferences = {
   sync_clips_on_end: true,
   onboarding_completed: false,
   show_stream_stats: true,
+  discord_live_notifications: true,
+  discord_live_role: true,
 };
 
 export async function getSession(): Promise<Session> {
@@ -37,6 +41,9 @@ export async function getSession(): Promise<Session> {
       sync_clips_on_end: prefs?.sync_clips_on_end ?? defaultPreferences.sync_clips_on_end,
       onboarding_completed: prefs?.onboarding_completed ?? defaultPreferences.onboarding_completed,
       show_stream_stats: prefs?.show_stream_stats ?? defaultPreferences.show_stream_stats,
+      discord_live_notifications:
+        prefs?.discord_live_notifications ?? defaultPreferences.discord_live_notifications,
+      discord_live_role: prefs?.discord_live_role ?? defaultPreferences.discord_live_role,
     },
   };
 }
