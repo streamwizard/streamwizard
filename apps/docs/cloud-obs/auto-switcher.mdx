@@ -1,0 +1,94 @@
+---
+title: "Auto Switcher"
+description: "Lose signal in a tunnel? The Auto Switcher flips to a 'be right back' scene on its own, then flips back when your signal returns."
+---
+
+When you stream from your phone, your signal will drop sometimes. A tunnel, a
+dead spot, a crowded stadium. Without help, your viewers get a frozen picture and
+have no idea what's going on.
+
+The **Auto Switcher** watches your incoming signal and, the moment it goes bad,
+switches OBS to a scene you picked ("Connection lost", "Be right back", whatever
+you like). When your signal comes back, it switches you back to your live scene.
+You don't touch a thing.
+
+You'll find it on the **Auto Switcher** tab of your [Cloud OBS page](/cloud-obs/controls).
+
+<Frame caption="The Auto Switcher settings: pick your scenes, pick how twitchy it is, done.">
+  <img src="/images/cloud-obs/auto-switcher-settings.png" alt="Auto Switcher settings" />
+</Frame>
+
+## Turning it on
+
+Flip the **Auto switcher** toggle on. Then set two things and you're basically
+done.
+
+### How many scenes should it manage?
+
+- **2 scenes** is the simple option. You have a **Live** scene and a
+  **Connection lost** scene. Your signal is either good enough, or it isn't.
+- **3 scenes** adds a middle **Low bitrate** scene, for when your signal is rough
+  but still alive. Good if you'd rather show a lower-quality picture than cut away
+  completely.
+
+Then pick which of your scenes plays each role, and that's the core of it.
+
+### How twitchy should it be?
+
+Pick how quickly it reacts:
+
+| Setting | What it means |
+|---|---|
+| **Relaxed** | Waits a bit longer before switching. Fewest false alarms. |
+| **Balanced** | The middle ground. The right pick for most setups. |
+| **Fast** | Switches almost instantly. For when a single frozen frame is one too many. |
+
+Not sure? Leave it on **Balanced**.
+
+<Tip>
+  There's an **Advanced mode** if you want to hand-tune every number yourself.
+  Most people never need it. If you're not sure what a threshold is, you don't
+  need advanced mode.
+</Tip>
+
+## Nice extras
+
+A few optional toggles make the switch smoother for you and your chat:
+
+- **Log switches to your stream events** puts each switch in your activity feed,
+  so you can see later exactly when you dropped.
+- **Post in Twitch chat when it switches** has the StreamWizard bot tell chat
+  what's happening ("signal dropped, back in a sec"). You can edit the messages.
+- **Show a warning before switching** flashes a heads-up on screen first.
+- **Stop the stream after a long outage** ends the stream for you if you've been
+  gone too long, so you're not broadcasting a frozen screen for an hour.
+
+## Holding a scene
+
+Sometimes you want the Auto Switcher to leave you alone. Maybe you're parked, on
+wifi, or just chatting on a static scene and you don't want it second-guessing
+your signal.
+
+That's what **Hold a scene** does. Pick a scene, choose how long to hold it (15
+minutes, an hour, or until you release it), and hit **Hold scene**. While a scene
+is held, the Auto Switcher stands down and won't switch away from it.
+
+<Frame caption="Holding a scene pauses the Auto Switcher until you release it.">
+  <img src="/images/cloud-obs/auto-switcher-hold.png" alt="Holding a scene" />
+</Frame>
+
+When you're ready to let it do its job again, hit **Release**.
+
+<Tip>
+  On the [Stream Deck](/cloud-obs/deck), holding is even quicker: just tap a
+  scene and it holds automatically. One thumb, done.
+</Tip>
+
+## One last thing
+
+Your safety net is up. Last step of the tour: put the remote on your phone so
+you can control all of this while you walk.
+
+<Card title="Next up: Stream Deck" icon="mobile" href="/cloud-obs/deck">
+  Big scene buttons on your phone. The last piece before you head out.
+</Card>
