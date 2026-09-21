@@ -8,6 +8,7 @@ import { env } from "./lib/env";
 import { loadCommands } from "./handlers/commandHandler";
 import { loadEvents } from "./handlers/eventHandler";
 import { shutdownTracker } from "./lib/activity-tracker";
+import { stopAnnouncementScheduler } from "./lib/announcements/scheduler";
 import { stopLogWorker } from "./lib/log-channel/worker";
 import { stopTicketSweeper } from "./lib/tickets/sweeper";
 import { startInternalServer } from "./http/server";
@@ -23,6 +24,7 @@ async function main() {
     stopInternalServer?.();
     await stopLogWorker();
     await stopTicketSweeper();
+    await stopAnnouncementScheduler();
     await shutdownTracker();
     await client.destroy();
     await flushSentry();
