@@ -35,7 +35,8 @@ export type EventSubLifecycleEvent =
     | { type: 'keepalive_timeout'; silentForMs: number }
     | { type: 'session_reconnect_requested' }
     | { type: 'subscription_revoked'; subscriptionType: string; status: string; reason: string }
-    | { type: 'conduit_update_failed'; error: unknown };
+    /** Emitted on the first failed bind of an outage, then at most hourly while it lasts. */
+    | { type: 'conduit_update_failed'; error: unknown; status?: number | null };
 
 /**
  * Configuration options for the TwitchEventSubReceiver
@@ -59,6 +60,10 @@ export interface EventSubReceiverOptions {
     keepaliveGraceMs?: number;
     /** Max time to wait for session_welcome after opening a socket (default: 15000ms) */
     welcomeTimeoutMs?: number;
+    /** Delay between shard bind retries within one session (default: [1000, 2000, 4000]) */
+    bindRetryDelays?: number[];
+    /** Reconnect delay while Twitch says the conduit doesn't exist (default: 300000ms) */
+    conduitMissingRetryDelay?: number;
     /** Lifecycle event callback for alerting/metrics; errors thrown here are swallowed */
     onLifecycleEvent?: (event: EventSubLifecycleEvent) => void;
 }
