@@ -25,6 +25,7 @@ export default async function AlertRulesPage() {
       group: entry.group,
       defaultForTicks: entry.defaultForTicks,
       defaultEnvs: entry.defaultEnvs,
+      defaultEnabled: entry.defaultEnabled,
       warn: entry.warn,
       crit: entry.crit,
       config: cfg

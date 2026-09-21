@@ -75,6 +75,10 @@ export function obsNodeRules(overrides: RuleOverrides): AlertRule[] {
         crit: NVENC_FPS_LOW,
         direction: "below",
         unit: "fps",
+        // Off by default: the node collector's nvenc_avg_fps has read 0 on
+        // every prod sample (incl. ~20h with an active session), so this fired
+        // on every stream. Re-enable once the collector reports a real value.
+        enabled: false,
         // Gate on active encode sessions: an idle (non-streaming) instance uses
         // no NVENC and averageFps reads 0, which would false-fire permanently.
         fetch: (ctx) =>

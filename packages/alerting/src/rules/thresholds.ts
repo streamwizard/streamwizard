@@ -42,7 +42,9 @@ export const SERVICE_SILENT_AFTER_MIN = 5;
 export const INSTANCE_CRASH_WINDOW_MIN = 10;
 export const INSTANCE_CRASH_LOOP_COUNT = 3;
 export const INSTANCE_CRASH_LOOP_WINDOW_MIN = 30;
-export const EVENTSUB_SILENCE_MIN = 30;
+/** ~95% of deliveries are chat messages, so a small channel with a quiet chat
+ * goes 30m+ without an event; prod saw 13–180m gaps while healthy. */
+export const EVENTSUB_SILENCE_MIN = 120;
 /** How long the bot may sit in its reconnect loop before it's an incident.
  * Short blips stay silent; the Discord log channel still gets a row for each. */
 export const EVENTSUB_DISCONNECTED_MIN = 2;
