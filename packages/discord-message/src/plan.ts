@@ -18,6 +18,8 @@ export interface ApiEmbed {
   color: number;
   fields?: { name: string; value: string; inline: boolean }[];
   footer?: { text: string };
+  /** A large image under the text. Discord fetches it by URL. */
+  image?: { url: string };
 }
 
 /** Plain Discord API button and action row. */
