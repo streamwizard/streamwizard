@@ -52,12 +52,23 @@ export function scrubLog(log: Log): Log | null {
   return log;
 }
 
-// The alerting env names ("prod") predate Sentry's; map them so a deploy
-// missing SENTRY_ENVIRONMENT still lands in the same environment instead of
-// creating a second "prod" one next to "production".
+const APP_ENVS = ["production", "staging", "development"];
+
+// NODE_ENV from Doppler is the one source for the environment name. Next.js
+// apps can't read it at runtime (the standalone server.js hard-sets
+// NODE_ENV=production and the browser bundle has it baked in), so their
+// next.config copies it into APP_ENV at build time, while `next build` still
+// has Doppler's value. Everything else reads NODE_ENV directly.
+//
+// Throws on anything else: reporting under a wrong or made-up environment
+// splits the issue stream silently, so a misconfigured deploy should fail to
+// boot instead.
 export function sentryEnvironment(): string {
-  const alertEnv = process.env.ALERT_ENV === "prod" ? "production" : process.env.ALERT_ENV;
-  return process.env.SENTRY_ENVIRONMENT || alertEnv || process.env.NODE_ENV || "development";
+  const env = process.env.APP_ENV || process.env.NODE_ENV;
+  if (!env || !APP_ENVS.includes(env)) {
+    throw new Error(`NODE_ENV must be one of ${APP_ENVS.join(", ")} (got ${env ? `"${env}"` : "nothing"})`);
+  }
+  return env;
 }
 
 function scrubEvent<T extends Event>(event: T): T {
@@ -81,15 +92,11 @@ function scrubEvent<T extends Event>(event: T): T {
 }
 
 export function getSentryOptions(config: SentryConfig) {
-  const isProd = process.env.NODE_ENV === "production";
+  const environment = sentryEnvironment();
+  const isProd = environment === "production";
   return {
     dsn: config.dsn,
-    // Next's standalone server.js hard-sets NODE_ENV=production at startup,
-    // so staging deployments would report as "production" without an explicit
-    // override — same reason the alerting package has ALERT_ENV (see
-    // packages/alerting/src/home-env.ts). `||` not `??`: build-time env
-    // inlining can turn unset vars into empty strings.
-    environment: sentryEnvironment(),
+    environment,
     // `||` not `??`, and undefined rather than "": Next inlines unset vars as
     // empty strings, and an empty release is a real release value to Sentry —
     // every event would be tagged with a release that matches no uploaded

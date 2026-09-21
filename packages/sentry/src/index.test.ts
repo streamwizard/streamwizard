@@ -30,25 +30,32 @@ describe("scrubLog", () => {
 });
 
 describe("sentryEnvironment", () => {
-  const saved = { ...process.env };
+  const saved = { APP_ENV: process.env.APP_ENV, NODE_ENV: process.env.NODE_ENV };
   afterEach(() => {
-    for (const key of ["SENTRY_ENVIRONMENT", "ALERT_ENV", "NODE_ENV"]) {
-      if (saved[key] === undefined) delete process.env[key];
-      else process.env[key] = saved[key];
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
     }
   });
 
-  it("maps ALERT_ENV=prod to production when SENTRY_ENVIRONMENT is missing", () => {
-    process.env.SENTRY_ENVIRONMENT = "";
-    process.env.ALERT_ENV = "prod";
-    expect(sentryEnvironment()).toBe("production");
+  it("uses NODE_ENV from Doppler", () => {
+    delete process.env.APP_ENV;
+    process.env.NODE_ENV = "staging";
+    expect(sentryEnvironment()).toBe("staging");
   });
 
-  it("prefers SENTRY_ENVIRONMENT and passes other ALERT_ENV values through", () => {
-    process.env.SENTRY_ENVIRONMENT = "production";
-    process.env.ALERT_ENV = "staging";
-    expect(sentryEnvironment()).toBe("production");
-    process.env.SENTRY_ENVIRONMENT = "";
+  it("prefers the APP_ENV a Next.js build captured over the runtime NODE_ENV", () => {
+    // Next's standalone server forces NODE_ENV=production on a staging box.
+    process.env.APP_ENV = "staging";
+    process.env.NODE_ENV = "production";
     expect(sentryEnvironment()).toBe("staging");
+  });
+
+  it("refuses to run with a missing or unknown environment", () => {
+    process.env.APP_ENV = "";
+    delete process.env.NODE_ENV;
+    expect(() => sentryEnvironment()).toThrow("got nothing");
+    process.env.NODE_ENV = "prod";
+    expect(() => sentryEnvironment()).toThrow('got "prod"');
   });
 });
