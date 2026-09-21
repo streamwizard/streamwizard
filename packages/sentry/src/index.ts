@@ -91,6 +91,68 @@ function scrubEvent<T extends Event>(event: T): T {
   return event;
 }
 
+// The free plan has no per-project rate limits, so one error thrown in a loop
+// used the whole org's monthly quota in days and blinded every other project
+// for three weeks (ALERT-WORKER-1, Aug–Sep 2026). This is the safety net for
+// the next loop nobody has written a limit for yet: per process, the same
+// error goes through at most `perKey` times a day, and all errors together at
+// most `total` times a day. The window is a day, not an hour, because the
+// whole org gets ~167 errors a day on the free plan: 20 a day from one stuck
+// loop in prod and staging is ~1.2k a month, 10 an hour would be ~14k. Code
+// that already throttles its own reports (the alert engine, the EventSub
+// receiver) stays under both.
+export interface ErrorLimiterOptions {
+  perKey: number;
+  total: number;
+  windowMs: number;
+  now?: () => number;
+}
+
+// Two events count as "the same error" when they share type and message once
+// ids and numbers are blanked out, so "clip 123 failed" and "clip 456 failed"
+// share a budget.
+export function errorLimitKey(event: Event): string {
+  const ex = event.exception?.values?.at(-1);
+  const raw = ex ? `${ex.type ?? "Error"}: ${ex.value ?? ""}` : (event.message ?? "unknown");
+  return raw
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>")
+    .replace(/\d+/g, "<n>")
+    .slice(0, 200);
+}
+
+export function createErrorLimiter(options: ErrorLimiterOptions): (event: Event) => boolean {
+  const now = options.now ?? Date.now;
+  let windowStart = now();
+  let total = 0;
+  const perKey = new Map<string, number>();
+  const warned = new Set<string>();
+
+  return (event: Event): boolean => {
+    const t = now();
+    if (t - windowStart >= options.windowMs) {
+      windowStart = t;
+      total = 0;
+      perKey.clear();
+      warned.clear();
+    }
+    const key = errorLimitKey(event);
+    const keyCount = (perKey.get(key) ?? 0) + 1;
+    perKey.set(key, keyCount);
+    total++;
+    if (keyCount <= options.perKey && total <= options.total) return true;
+
+    // One line per key per window, so the log itself can't become the flood.
+    const reason = keyCount > options.perKey ? key : "all errors";
+    if (!warned.has(reason)) {
+      warned.add(reason);
+      console.warn(`[sentry] dropping "${reason}" until the daily error budget resets`);
+    }
+    return false;
+  };
+}
+
+const errorLimiter = createErrorLimiter({ perKey: 20, total: 200, windowMs: 24 * 60 * 60_000 });
+
 export function getSentryOptions(config: SentryConfig) {
   const environment = sentryEnvironment();
   const isProd = environment === "production";
@@ -108,7 +170,7 @@ export function getSentryOptions(config: SentryConfig) {
     initialScope: {
       tags: { service: config.service },
     },
-    beforeSend: (event: ErrorEvent) => scrubEvent(event),
+    beforeSend: (event: ErrorEvent) => (errorLimiter(event) ? scrubEvent(event) : null),
     beforeSendLog: (log: Log) => scrubLog(log),
   };
 }
