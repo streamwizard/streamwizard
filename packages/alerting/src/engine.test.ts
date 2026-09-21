@@ -41,7 +41,7 @@ mock.module("./probes", () => ({
   SSL_HOSTNAMES: [],
 }));
 
-const { runEvaluationPass, parseTickSnapshot, registryFromSnapshot, overridesFromSnapshot } =
+const { runEvaluationPass, parseTickSnapshot, registryFromSnapshot, overridesFromSnapshot, shouldReportRuleError } =
   await import("./engine");
 const { buildRules } = await import("./rules");
 
@@ -245,5 +245,33 @@ describe("runEvaluationPass", () => {
     expect(summary.skipped).toBe(false);
     expect(summary.envs[0]?.resolved).toBe(0);
     expect(summary.envs[0]?.fired).toBe(0);
+  });
+});
+
+describe("shouldReportRuleError", () => {
+  const HOUR = 60 * 60_000;
+  const collision = new Error("last: schema collision: cannot group float and integer types together");
+
+  it("reports the first failure, then suppresses the same error within the hour", () => {
+    expect(shouldReportRuleError("staging", "test.repeat", collision, 0)).toBe(true);
+    expect(shouldReportRuleError("staging", "test.repeat", collision, 15_000)).toBe(false);
+    expect(shouldReportRuleError("staging", "test.repeat", collision, HOUR - 1)).toBe(false);
+  });
+
+  it("reports the same error again once the hour has passed", () => {
+    expect(shouldReportRuleError("staging", "test.hourly", collision, 0)).toBe(true);
+    expect(shouldReportRuleError("staging", "test.hourly", collision, HOUR)).toBe(true);
+    expect(shouldReportRuleError("staging", "test.hourly", collision, HOUR + 15_000)).toBe(false);
+  });
+
+  it("reports immediately when the error message changes", () => {
+    expect(shouldReportRuleError("staging", "test.change", collision, 0)).toBe(true);
+    expect(shouldReportRuleError("staging", "test.change", new Error("rule timed out"), 15_000)).toBe(true);
+  });
+
+  it("tracks each rule and env separately", () => {
+    expect(shouldReportRuleError("staging", "test.split", collision, 0)).toBe(true);
+    expect(shouldReportRuleError("prod", "test.split", collision, 0)).toBe(true);
+    expect(shouldReportRuleError("staging", "test.split-other", collision, 0)).toBe(true);
   });
 });

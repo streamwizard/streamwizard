@@ -202,19 +202,27 @@ export async function queryLastWriteByTag(
   if (!MEASUREMENT_NAME_PATTERN.test(measurement)) throw new Error(`Invalid measurement name: ${measurement}`);
   if (!TAG_NAME_PATTERN.test(tag)) throw new Error(`Invalid tag name: ${tag}`);
   const bucket = resolveBucket(opts);
-  const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
-      |> filter(fn: (r) => r._measurement == "${measurement}")
-      |> group(columns: ["${tag}"])
-      |> last(column: "_time")
-      |> keep(columns: ["${tag}", "_time"])
-      |> yield(name: "last_write")
-  `;
+  const query = buildLastWriteByTagQuery(bucket, measurement, tag, range);
   return runFluxQuery(query, (row) => ({
     tagValue: row[tag] ?? "unknown",
     lastSeen: row._time ?? "",
   }));
+}
+
+// keep() must run before group(): a measurement with mixed field types (obs_node
+// has float disk_used_pct next to integer instance counts) would otherwise merge
+// float and integer _value columns into one table, and last() errors with
+// "schema collision: cannot group float and integer types together".
+export function buildLastWriteByTagQuery(bucket: string, measurement: string, tag: string, range: string): string {
+  return `
+    from(bucket: "${bucket}")
+      |> range(start: -${range})
+      |> filter(fn: (r) => r._measurement == "${measurement}")
+      |> keep(columns: ["${tag}", "_time"])
+      |> group(columns: ["${tag}"])
+      |> last(column: "_time")
+      |> yield(name: "last_write")
+  `;
 }
 
 /** Total points written to the bucket in the window across ALL measurements
