@@ -3,6 +3,7 @@ import { emitAuditedEvent } from "../../lib/server-log/emit";
 import type { BotEvent } from "../../types/discord";
 import { diffRoleIds, memberRef, roleRef } from "../../lib/server-log/refs";
 import { isSelfAction } from "../../lib/server-log/self-actions";
+import { getGuildWelcomeSettings } from "../../lib/welcome";
 
 // Timeouts, nickname and role changes all arrive as GuildMemberUpdate. When the
 // old member wasn't cached there's nothing to compare with, so nothing is logged.
@@ -52,7 +53,18 @@ export default {
       );
     }
 
-    const { added, removed } = diffRoleIds(oldMember.roles.cache.keys(), newMember.roles.cache.keys(), guild.id);
+    let { added, removed } = diffRoleIds(oldMember.roles.cache.keys(), newMember.roles.cache.keys(), guild.id);
+    // The live role comes and goes with every stream. rest-api hands it out
+    // with the bot's own token, so the audit log would name the bot and
+    // emitAuditedEvent would skip it, but only when the bot may read the
+    // audit log. Dropping it from the diff keeps the log quiet either way.
+    if (added.length || removed.length) {
+      const liveRoleId = (await getGuildWelcomeSettings(guild))?.live_role_id;
+      if (liveRoleId) {
+        added = added.filter((id) => id !== liveRoleId);
+        removed = removed.filter((id) => id !== liveRoleId);
+      }
+    }
     // Join and verified roles are given by the bot; not a moderator action.
     if ((added.length || removed.length) && !isSelfAction("roles", newMember.id)) {
       const ref = (id: string) => {

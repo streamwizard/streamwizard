@@ -12,6 +12,8 @@ import { notifyStreamStatus } from "../../lib/ws-server";
 import { setStreamUserState } from "../../lib/user-state";
 import { findVideoIdForStream } from "../../lib/stream-video";
 import { markStreamOffline } from "../../lib/stream-offline-marker";
+import { endGoLive } from "../../lib/discord-live";
+import { revokeLiveRole } from "../../lib/discord-live-role";
 
 export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: TwitchApi) => {
   // First, so a stream.online still waiting on Helix sees it and backs off.
@@ -22,6 +24,12 @@ export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: 
 
   // The event carries no stream id; read it while the live row still says live.
   const streamId = await getCurrentStreamDetails(supabase, event.broadcaster_user_id);
+
+  // Flip the go-live post in Discord to "ended" and take the live role away.
+  // Both key on this broadcaster's rows, never throw, and nothing below
+  // waits on them.
+  void endGoLive(event.broadcaster_user_id);
+  void revokeLiveRole(event.broadcaster_user_id);
 
   // Log the offline event while broadcaster_live_status still says live: the
   // logger stamps the row with the live stream_id and offset, and refuses

@@ -245,10 +245,12 @@ export async function dispatchNotifications(
     const telegramGateOpen = gateAllows(route.telegramSeverity, n.severity);
     if (route.discordId && alertConfig.discordBotToken && discordGateOpen) {
       const discordId = route.discordId;
-      const send =
+      const send: () => Promise<void> =
         route.discordTarget === "dm"
           ? () => sendDiscordDirectMessage(discordId, discordPayload(n))
-          : () => sendDiscordChannelMessage(discordId, discordPayload(n));
+          : async () => {
+              await sendDiscordChannelMessage(discordId, discordPayload(n));
+            };
       sends.push(withRetries(send));
     }
     if (route.telegramChatId && alertConfig.telegramBotToken && telegramGateOpen) {

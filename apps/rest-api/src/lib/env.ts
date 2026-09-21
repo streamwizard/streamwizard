@@ -60,6 +60,13 @@ const schema = z.object({
   // response unless both are set. CONSUMER_SECRET must match the ws-server's.
   WS_SERVER_URL: z.string().optional(),
   CONSUMER_SECRET: z.string().optional(),
+
+  // Go-live posts in the StreamWizard Discord (SW-336): stream.online posts an
+  // embed in the guild's live channel through Discord REST, stream.offline
+  // edits it. Optional and paired: without both, the Discord step is skipped
+  // and everything else in the handlers runs as before.
+  DISCORD_BOT_TOKEN: z.string().min(1).optional(),
+  DISCORD_GUILD_ID: z.string().min(1).optional(),
 });
 
 export const env = schema.parse(process.env);

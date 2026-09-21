@@ -1,15 +1,21 @@
 import { DiscordGuildsClient } from "./guilds";
 import { DiscordMembersClient, type DiscordApiConfig } from "./members";
 
-export { DiscordMemberNotFoundError } from "./errors";
+export { DiscordMemberNotFoundError, DiscordRoleNotFoundError } from "./errors";
 export type { DiscordApiConfig } from "./members";
 export {
   sendDiscordDirectMessage,
   type DiscordMessagePayload,
   type DiscordEmbed,
   type DiscordLinkButton,
+  type DiscordAllowedMentions,
 } from "./dm";
-export { sendDiscordChannelMessage, DiscordRateLimitError } from "./channel";
+export {
+  sendDiscordChannelMessage,
+  editDiscordChannelMessage,
+  DiscordRateLimitError,
+  DiscordUnknownMessageError,
+} from "./channel";
 export {
   DiscordChannelType,
   DiscordNotFoundError,
@@ -19,6 +25,7 @@ export {
   type DiscordUser,
   type DiscordChannel,
   type DiscordRole,
+  type DiscordCreateRoleInput,
   type DiscordApplicationCommand,
 } from "./guilds";
 
