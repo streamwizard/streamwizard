@@ -182,6 +182,9 @@ export function overridesFromSnapshot(snapshot: TickSnapshot): RuleOverrides {
 // after a deploy mid-outage, alerts may re-fire once. Acceptable.
 const stateMirror = new Map<Env, Map<string, AlertState>>();
 
+// Last snapshot summary logged, so a tick only logs when it changes.
+let lastSnapshotLine: string | null = null;
+
 function mirrorKey(row: { rule_id: string; entity_id?: string | null }): string {
   return `${row.rule_id} ${row.entity_id ?? ""}`;
 }
@@ -498,12 +501,17 @@ export async function runEvaluationPass(): Promise<TickSummary> {
     : [...(stateMirror.get(alertEnv)?.values() ?? [])];
   if (snapshot) stateMirror.set(alertEnv, new Map(prev.map((s) => [mirrorKey(s), s])));
 
-  // The counts stay in every tick's log line on purpose: a payload quietly
-  // emptying the registry is exactly the failure the zod boundary exists to
-  // catch, and this line is how a human notices if it ever slips through.
-  console.log(
-    `[alerting] snapshot ok=${snapshot !== null} obs=${registry.obsNodes.length} ingest=${registry.ingestNodes.length} states=${prev.length}`,
-  );
+  // The counts are logged on purpose: a payload quietly emptying the registry
+  // is exactly the failure the zod boundary exists to catch, and this line is
+  // how a human notices if it ever slips through. Only when they change,
+  // though — every 15s tick was ~80k identical lines a fortnight. A failed
+  // snapshot is a warning so it reaches Sentry Logs.
+  const snapshotLine = `[alerting] snapshot ok=${snapshot !== null} obs=${registry.obsNodes.length} ingest=${registry.ingestNodes.length} states=${prev.length}`;
+  if (snapshotLine !== lastSnapshotLine) {
+    if (snapshot) console.log(snapshotLine);
+    else console.warn(snapshotLine);
+    lastSnapshotLine = snapshotLine;
+  }
 
   // The old /rest/v1/ HTTP probe sent no apikey, always got a 401, and
   // okBelowStatus scored that healthy — it would have reported green through

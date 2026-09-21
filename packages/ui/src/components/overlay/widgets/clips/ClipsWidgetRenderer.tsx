@@ -169,7 +169,7 @@ export function ClipsWidgetRenderer({
       const run = async (): Promise<boolean> => {
         try {
           const excluded = recentlyPlayedIds();
-          console.log(`[clips] slot ${slotIndex}: requesting next clip`, {
+          console.debug(`[clips] slot ${slotIndex}: requesting next clip`, {
             excludedCount: excluded.length,
           });
 
@@ -180,7 +180,8 @@ export function ClipsWidgetRenderer({
             return false;
           }
 
-          console.log(`[clips] slot ${slotIndex}: got "${next.clip.title}"`, {
+          console.debug(`[clips] slot ${slotIndex}: got clip`, {
+            title: next.clip.title,
             clipId: next.clip.clipId,
             videoUrl: next.videoUrl,
           });
@@ -205,7 +206,7 @@ export function ClipsWidgetRenderer({
           el.src = next.videoUrl;
           el.load();
           await waitForBuffer(el, slotIndex);
-          console.log(`[clips] slot ${slotIndex}: buffered`, {
+          console.debug(`[clips] slot ${slotIndex}: buffered`, {
             readyState: el.readyState,
             duration: el.duration,
             ...describeMediaError(el),
@@ -229,7 +230,7 @@ export function ClipsWidgetRenderer({
     let cancelled = false;
 
     void (async () => {
-      console.log("[clips] widget mounted, loading first clip");
+      console.debug("[clips] widget mounted, loading first clip");
       const ok = await fillSlot(0);
       if (cancelled || !mountedRef.current) return;
 
@@ -254,7 +255,7 @@ export function ClipsWidgetRenderer({
 
   const advance = useCallback(async () => {
     if (transitioningRef.current) {
-      console.log("[clips] advance ignored — transition already running");
+      console.debug("[clips] advance ignored — transition already running");
       return;
     }
     transitioningRef.current = true;
@@ -263,7 +264,7 @@ export function ClipsWidgetRenderer({
       const current = activeSlot;
       const nextSlot = (current + 1) % SLOT_COUNT;
       const followingSlot = (current + 2) % SLOT_COUNT;
-      console.log(`[clips] advancing ${current} -> ${nextSlot}`);
+      console.debug(`[clips] advancing ${current} -> ${nextSlot}`);
 
       // The buffered slot may be missing if the previous fetch failed — fetch it
       // now. Costs a visible pause, but only in the already-degraded case.
@@ -359,7 +360,7 @@ export function ClipsWidgetRenderer({
           muted={config.clipMuted}
           playsInline
           onEnded={() => {
-            console.log(`[clips] slot ${slotIndex}: ended`);
+            console.debug(`[clips] slot ${slotIndex}: ended`);
             if (activeSlot === slotIndex) void advance();
           }}
           onError={() => {

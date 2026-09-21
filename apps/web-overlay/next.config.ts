@@ -100,7 +100,9 @@ const nextConfig: NextConfig = {
     // real deploy environment (staging vs production) — NODE_ENV is
     // "production" for both. getSentryOptions falls back through ALERT_ENV
     // and NODE_ENV when this is empty.
-    SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT ?? process.env.ALERT_ENV ?? "",
+    // ALERT_ENV says "prod"; Sentry calls it "production" (see sentryEnvironment in @repo/sentry).
+    SENTRY_ENVIRONMENT:
+      process.env.SENTRY_ENVIRONMENT || (process.env.ALERT_ENV === "prod" ? "production" : process.env.ALERT_ENV) || "",
     // Same reason as SENTRY_ENVIRONMENT: without inlining, the client bundle
     // reads process.env.SENTRY_RELEASE as undefined and browser events carry
     // no release, so they never line up with the uploaded source maps.

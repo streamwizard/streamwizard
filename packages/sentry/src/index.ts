@@ -6,6 +6,7 @@ import {
   flush,
   type ErrorEvent,
   type Event,
+  type Log,
 } from "@sentry/core";
 
 export interface SentryConfig {
@@ -24,6 +25,39 @@ const PII_PATTERNS: RegExp[] = [
 
 function redactString(value: string): string {
   return PII_PATTERNS.reduce((s, re) => s.replace(re, "[REDACTED]"), value);
+}
+
+// Log lines that are expected and carry nothing to act on. Keep this short and
+// say why each one is here; anything else belongs in the code that logs it.
+const IGNORED_LOG_PATTERNS: RegExp[] = [
+  // An overlay left open in OBS across a deploy calls server actions that no
+  // longer exist. Next logs it; the overlay recovers on its next reload.
+  /Failed to find Server Action/,
+  /The Server Reference ID did not match the expected format/,
+];
+
+// Logs skip beforeSend entirely, so without this every token or JWT that
+// reaches a console call is stored as-is. Redacts the message and every
+// string attribute (the console integration puts each argument in one), and
+// drops the known-noise lines above.
+export function scrubLog(log: Log): Log | null {
+  const message = String(log.message);
+  if (IGNORED_LOG_PATTERNS.some((re) => re.test(message))) return null;
+  log.message = redactString(message);
+  if (log.attributes) {
+    for (const [key, value] of Object.entries(log.attributes)) {
+      if (typeof value === "string") log.attributes[key] = redactString(value);
+    }
+  }
+  return log;
+}
+
+// The alerting env names ("prod") predate Sentry's; map them so a deploy
+// missing SENTRY_ENVIRONMENT still lands in the same environment instead of
+// creating a second "prod" one next to "production".
+export function sentryEnvironment(): string {
+  const alertEnv = process.env.ALERT_ENV === "prod" ? "production" : process.env.ALERT_ENV;
+  return process.env.SENTRY_ENVIRONMENT || alertEnv || process.env.NODE_ENV || "development";
 }
 
 function scrubEvent<T extends Event>(event: T): T {
@@ -55,7 +89,7 @@ export function getSentryOptions(config: SentryConfig) {
     // override — same reason the alerting package has ALERT_ENV (see
     // packages/alerting/src/home-env.ts). `||` not `??`: build-time env
     // inlining can turn unset vars into empty strings.
-    environment: process.env.SENTRY_ENVIRONMENT || process.env.ALERT_ENV || process.env.NODE_ENV || "development",
+    environment: sentryEnvironment(),
     // `||` not `??`, and undefined rather than "": Next inlines unset vars as
     // empty strings, and an empty release is a real release value to Sentry —
     // every event would be tagged with a release that matches no uploaded
@@ -68,6 +102,7 @@ export function getSentryOptions(config: SentryConfig) {
       tags: { service: config.service },
     },
     beforeSend: (event: ErrorEvent) => scrubEvent(event),
+    beforeSendLog: (log: Log) => scrubLog(log),
   };
 }
 
@@ -127,10 +162,13 @@ export function reportFatal(error: unknown, context: string): void {
 // `docker logs` on one box. Pairs with enableLogs in getSentryOptions, which
 // only opens the transport — without this nothing feeds it.
 //
-// `debug`, `trace` and `assert` are left out: they are the highest-volume and
-// lowest-value levels, and logs are a metered category.
+// Only `warn` and `error` are forwarded. `log`/`info` are routine lifecycle
+// chatter (ticks, reconnects, chat traffic) that made up >95% of the volume,
+// and logs are a metered category; they still print to the container output.
+// Call Sentry.logger.info directly for the rare info line worth keeping. See
+// docs/sentry-log-noise-plan.md for the policy.
 export function createConsoleLogsIntegration() {
-  return consoleLoggingIntegration({ levels: ["log", "info", "warn", "error"] });
+  return consoleLoggingIntegration({ levels: ["warn", "error"] });
 }
 
 export function createSupabaseIntegration(sentry: any) {
