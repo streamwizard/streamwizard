@@ -28,6 +28,7 @@ export function CloudObsSetupScreen({
   launchError,
   togglingContainer,
   hasOpenedViewer,
+  ingestWired,
   onKeyCreated,
   onLaunch,
   onStartContainer,
@@ -45,6 +46,8 @@ export function CloudObsSetupScreen({
   launchError: string | null;
   togglingContainer: boolean;
   hasOpenedViewer: boolean;
+  /** The "IRL" scene already holds the StreamWizard ingest source. */
+  ingestWired: boolean;
   onKeyCreated: (key: IngestStreamKey) => void;
   onLaunch: () => void;
   onStartContainer: () => void;
@@ -82,6 +85,7 @@ export function CloudObsSetupScreen({
             isBooting={flow.isBooting}
             hasTimedOut={flow.hasTimedOut}
             onReconnect={obs.reconnect}
+            ingestWired={ingestWired}
             hasOpenedViewer={hasOpenedViewer}
             onOpenViewer={onOpenViewer}
             scenes={obs.filteredScenes}
