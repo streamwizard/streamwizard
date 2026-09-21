@@ -39,7 +39,7 @@ export const FAQ_ITEMS = [
   {
     question: "What happens to the clips I already have?",
     answer:
-      "They come with you. StreamWizard pulls in your channel's clips, back catalogue included, then keeps up automatically: new clips land the moment your stream ends, so there is nothing to sync by hand. Sorting them into folders is up to you.",
+      "They come with you. StreamWizard pulls in your channel's clips, back catalogue included, then keeps up automatically: new clips land within five minutes while you're live, with a last pass when the stream ends, so there is nothing to sync by hand. Sorting them into folders is up to you.",
   },
   {
     question: "How soon do I see my analytics?",

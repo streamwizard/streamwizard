@@ -22,16 +22,42 @@ export async function getCurrentStreamDetails(client: DBClient, broadcasterId: s
   return data.stream_id;
 }
 
-export async function insertVod(client: DBClient, vod: Database["public"]["Tables"]["vods"]["Insert"]) {
-  const { error } = await client.from("vods").insert(vod);
+/**
+ * Create the per-stream row. Keyed on stream_id so a re-fired stream.online is
+ * a no-op and never nulls a video_id that a later backfill already filled in.
+ */
+export async function upsertVod(client: DBClient, vod: Database["public"]["Tables"]["vods"]["Insert"]) {
+  const { error } = await client.from("vods").upsert(vod, { onConflict: "stream_id", ignoreDuplicates: true });
   if (error) throw error;
+}
+
+/**
+ * Fill in the Twitch video id for a stream that was created without one.
+ * Fill-only: an existing video_id is never overwritten. Returns whether a row
+ * was updated.
+ */
+export async function setVodVideoId(client: DBClient, streamId: string, videoId: string): Promise<boolean> {
+  const { data, error } = await client
+    .from("vods")
+    .update({ video_id: videoId })
+    .eq("stream_id", streamId)
+    .is("video_id", null)
+    .select("id");
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+
+export async function getVodVideoIdByStreamId(client: DBClient, streamId: string): Promise<string | null> {
+  const { data, error } = await client.from("vods").select("video_id").eq("stream_id", streamId).maybeSingle();
+  if (error) throw error;
+  return data?.video_id ?? null;
 }
 
 export async function getVodsByVideoIds(client: DBClient, videoIds: string[]) {
   if (!videoIds.length) return new Set<string>();
   const { data, error } = await client.from("vods").select("video_id").in("video_id", videoIds);
   if (error) throw error;
-  return new Set((data ?? []).map((v) => v.video_id));
+  return new Set((data ?? []).flatMap((v) => (v.video_id ? [v.video_id] : [])));
 }
 
 export async function getPendingClips(client: DBClient, batchSize: number, maxRetries: number) {

@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { Activity, DoorOpen, ScrollText, ShieldCheck, Ticket, type LucideIcon } from "lucide-react";
+import { Activity, DoorOpen, RadioTower, ScrollText, ShieldCheck, Ticket, type LucideIcon } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getGuildCommandPermissions, getGuildSettings } from "@repo/supabase/queries/discord";
 import { getActivitySettings, getIgnoredChannelIds } from "@repo/supabase/queries/discord-activity";
 import { listDiscordSettingsAudit } from "@repo/supabase/queries/discord-audit";
+import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord-live";
 import { getLogRouting, resolveLogRoute } from "@repo/supabase/queries/platform-events";
 import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets";
 import { PLATFORM_EVENT_TYPES } from "@repo/types";
@@ -58,7 +59,7 @@ function FeatureCard({
 export default async function DiscordOverviewPage() {
   const { guildId } = requireDiscordContext();
 
-  const [guild, channels, roles, welcome, activity, ignored, tickets, openTickets, permissions, audit, logRouting] = await Promise.all([
+  const [guild, channels, roles, welcome, activity, ignored, tickets, openTickets, permissions, audit, logRouting, liveOptIns] = await Promise.all([
     getGuild(),
     getGuildChannels(),
     getGuildRoles(),
@@ -70,6 +71,7 @@ export default async function DiscordOverviewPage() {
     getGuildCommandPermissions(supabaseAdmin, guildId),
     listDiscordSettingsAudit(supabaseAdmin, guildId, 10),
     getLogRouting(supabaseAdmin, guildId),
+    listDiscordLiveOptIns(supabaseAdmin),
   ]);
   const postedEventTypes = PLATFORM_EVENT_TYPES.filter((type) => resolveLogRoute(logRouting, type).enabled).length;
 
@@ -103,7 +105,7 @@ export default async function DiscordOverviewPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <FeatureCard
           href="/discord/welcome"
           title="Welcome"
@@ -137,6 +139,17 @@ export default async function DiscordOverviewPage() {
           lines={[
             `Default: ${label(logRouting.defaultChannelId, "not set")}`,
             `${postedEventTypes} of ${PLATFORM_EVENT_TYPES.length} event types posted`,
+          ]}
+        />
+        <FeatureCard
+          href="/discord/live"
+          title="Go-live"
+          icon={RadioTower}
+          enabled={!!welcome?.live_enabled || !!welcome?.live_role_id}
+          lines={[
+            `Posts: ${welcome?.live_enabled ? label(welcome.live_channel_id, "no channel") : "off"}`,
+            `Live role: ${label(welcome?.live_role_id, "off")}`,
+            `${liveOptIns.length} streamer${liveOptIns.length === 1 ? "" : "s"} linked`,
           ]}
         />
         <FeatureCard

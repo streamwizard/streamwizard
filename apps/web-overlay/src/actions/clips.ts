@@ -247,6 +247,21 @@ async function fetchRandomClip(
   return (data as ClipRowShape | null) ?? null;
 }
 
+// Clips Twitch refused a download URL for (deleted, or never downloadable),
+// remembered per server process so every rotation doesn't pick the same dead
+// clip again, burn a Helix call on it and report it again. Expiry lets a clip
+// that was only briefly unavailable come back.
+const DEAD_CLIP_TTL_MS = 6 * 60 * 60 * 1000;
+const deadClips = new Map<string, number>();
+
+function isKnownDeadClip(twitchClipId: string): boolean {
+  const expiresAt = deadClips.get(twitchClipId);
+  if (expiresAt === undefined) return false;
+  if (expiresAt > Date.now()) return true;
+  deadClips.delete(twitchClipId);
+  return false;
+}
+
 /**
  * One clip, ready to play. The widget keeps three players in a ring — one
  * showing, one buffered, one loading — so this is called once per transition
@@ -270,7 +285,7 @@ export async function getNextOverlayClip(
   if (scope.kind === "empty") return null;
 
   let from = cursor;
-  const skipped = [...excludeTwitchClipIds];
+  const skipped = [...excludeTwitchClipIds, ...[...deadClips.keys()].filter(isKnownDeadClip)];
 
   // Twitch refuses a download URL for clips it has deleted. Step past a few of
   // those rather than handing the widget a null and letting it stall on the
@@ -285,6 +300,12 @@ export async function getNextOverlayClip(
 
     const nextCursor = cursorFor(row, c);
 
+    if (isKnownDeadClip(row.twitch_clip_id)) {
+      from = nextCursor;
+      skipped.push(row.twitch_clip_id);
+      continue;
+    }
+
     try {
       const proxyUrl = await getSignedClipProxyUrl(
         row.twitch_clip_id,
@@ -292,7 +313,8 @@ export async function getNextOverlayClip(
       );
       return { clip: toDisplayClip(row), proxyUrl, cursor: nextCursor };
     } catch (err) {
-      reportError(err, "clips.getNextOverlayClip.downloadUrl");
+      reportError(err, "clips.getNextOverlayClip.downloadUrl", { twitch_clip_id: row.twitch_clip_id });
+      deadClips.set(row.twitch_clip_id, Date.now() + DEAD_CLIP_TTL_MS);
       from = nextCursor;
       skipped.push(row.twitch_clip_id);
     }

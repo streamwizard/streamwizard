@@ -147,6 +147,12 @@ export default async function DashboardPage() {
           <p className="mt-0.5 text-sm text-muted-foreground">
             Everything from your last broadcast.
           </p>
+          {!hasVod && !isLive && (
+            <p className="mt-2 max-w-prose text-sm text-muted-foreground">
+              Twitch didn&apos;t keep a VOD for this stream, so there&apos;s no replay to scrub through. Stats, clips
+              and the activity feed are all still here.
+            </p>
+          )}
         </div>
         {broadcasterProfile && (
           <div className="flex items-center gap-2 sm:shrink-0">

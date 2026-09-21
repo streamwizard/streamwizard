@@ -544,7 +544,7 @@ export function VodTimelineDemo() {
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium">{demoVodMeta.title}</p>
                 <p className="mt-0.5 text-[10px] text-muted-foreground">
-                  {demoVodMeta.category} · {demoVodMeta.duration} · {demoVodMeta.views.toLocaleString()} views
+                  {demoVodMeta.category} · {demoVodMeta.duration} · {demoVodMeta.views.toLocaleString("en-US")} views
                 </p>
               </div>
               <Badge variant="secondary" className="h-5 shrink-0 text-[10px]">

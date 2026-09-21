@@ -27,6 +27,14 @@
       "types": "./src/next/proxy.ts",
       "default": "./src/next/proxy.ts"
     },
+    "./auth/session-strength": {
+      "types": "./src/auth/session-strength.ts",
+      "default": "./src/auth/session-strength.ts"
+    },
+    "./queries/twitch-scopes": {
+      "types": "./src/queries/twitch-scopes.ts",
+      "default": "./src/queries/twitch-scopes.ts"
+    },
     "./queries/clips": {
       "types": "./src/queries/clips.ts",
       "default": "./src/queries/clips.ts"
@@ -42,6 +50,14 @@
     "./queries/user": {
       "types": "./src/queries/user.ts",
       "default": "./src/queries/user.ts"
+    },
+    "./queries/discord-live": {
+      "types": "./src/queries/discord-live.ts",
+      "default": "./src/queries/discord-live.ts"
+    },
+    "./queries/discord-live-role": {
+      "types": "./src/queries/discord-live-role.ts",
+      "default": "./src/queries/discord-live-role.ts"
     },
     "./queries/vods": {
       "types": "./src/queries/vods.ts",
@@ -134,6 +150,10 @@
     "./queries/discord-audit": {
       "types": "./src/queries/discord-audit.ts",
       "default": "./src/queries/discord-audit.ts"
+    },
+    "./queries/discord-announcements": {
+      "types": "./src/queries/discord-announcements.ts",
+      "default": "./src/queries/discord-announcements.ts"
     },
     "./queries/discord-built-messages": {
       "types": "./src/queries/discord-built-messages.ts",

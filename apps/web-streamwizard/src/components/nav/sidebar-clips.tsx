@@ -26,7 +26,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@repo/ui";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 
 const BRANCH_TOP = 15;
@@ -40,10 +40,12 @@ function isFolderPathActive(folder: ClipFolderNode, activeFolderHref: string | n
 
 interface Props {
   clipFolders: Database["public"]["Tables"]["clip_folders"]["Row"][];
+  clipCounts: Record<string, number>;
 }
 
 type FolderTreeHandlers = {
   activeFolderHref: string | null;
+  clipCounts: Record<string, number>;
   onCreateSubfolder: (folder: ClipFolderNode) => void;
   onEditFolder: (folder: ClipFolderNode) => void;
   onDeleteFolder: (folder: ClipFolderNode) => void;
@@ -94,6 +96,7 @@ function FolderTreeNode({
   guides,
   isLast,
   activeFolderHref,
+  clipCounts,
   onCreateSubfolder,
   onEditFolder,
   onDeleteFolder,
@@ -102,16 +105,22 @@ function FolderTreeNode({
   guides: boolean[];
   isLast: boolean;
 } & FolderTreeHandlers) {
-  const [isOpen, setIsOpen] = useState(true);
   const isActive = activeFolderHref === folder.href;
-  useEffect(() => {
-    if (isFolderPathActive(folder, activeFolderHref)) {
-      setIsOpen(true);
-    }
-  }, [activeFolderHref, folder]);
+  const pathActive = isFolderPathActive(folder, activeFolderHref);
+  // Open by default when the current route lives inside this folder, and
+  // re-open whenever that becomes true again after a manual collapse. State
+  // is adjusted during render (the React "previous prop" pattern) rather
+  // than in an effect, so there is no extra render pass.
+  const [isOpen, setIsOpen] = useState(pathActive);
+  const [prevPathActive, setPrevPathActive] = useState(pathActive);
+  if (pathActive !== prevPathActive) {
+    setPrevPathActive(pathActive);
+    if (pathActive) setIsOpen(true);
+  }
 
   const hasChildren = folder.children.length > 0;
   const folderUrl = getFolderUrl(folder.href);
+  const clipCount = clipCounts[folder.id] ?? 0;
 
   return (
     <li className="relative list-none">
@@ -132,7 +141,7 @@ function FolderTreeNode({
         <Link
           href={folderUrl}
           className={cn(
-            "flex min-w-0 flex-1 items-center gap-1.5 rounded-md py-1.5 pr-1",
+            "flex min-w-0 flex-1 items-center gap-1.5 rounded-md py-1.5 pr-1.5",
             guides.length > 0 ? "text-[13px]" : "text-sm",
             isActive
               ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
@@ -141,36 +150,57 @@ function FolderTreeNode({
         >
           {isActive ? <FolderOpen className="size-3.5 shrink-0" /> : <Folder className="size-3.5 shrink-0" />}
           <span className="truncate">{folder.name}</span>
-        </Link>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-6 shrink-0 opacity-0 transition-opacity group-hover/folder-row:opacity-100 focus-visible:opacity-100"
-          onClick={() => onCreateSubfolder(folder)}
-        >
-          <Plus className="size-3.5" />
-          <span className="sr-only">New subfolder in {folder.name}</span>
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-6 shrink-0 opacity-0 transition-opacity group-hover/folder-row:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100"
+          {/* Count sits where the actions appear; it fades out when they
+              fade in, so the row never shows both. Empty folders show
+              nothing rather than a 0. */}
+          {clipCount > 0 ? (
+            <span
+              className={cn(
+                "ml-auto shrink-0 rounded-full px-1.5 py-px font-mono text-[10px] leading-4 tabular-nums transition-opacity",
+                "group-hover/folder-row:opacity-0 group-has-[[data-folder-actions]:focus-within]/folder-row:opacity-0 group-has-[[data-state=open]]/folder-row:opacity-0",
+                isActive
+                  ? "bg-sidebar-accent-foreground/10 text-sidebar-accent-foreground/70"
+                  : "bg-sidebar-foreground/[0.07] text-sidebar-foreground/55"
+              )}
+              aria-label={`${clipCount} ${clipCount === 1 ? "clip" : "clips"}`}
             >
-              <EllipsisVertical className="size-3.5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Folder Actions</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onCreateSubfolder(folder)}>New subfolder</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onEditFolder(folder)}>Rename</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDeleteFolder(folder)}>Delete</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {clipCount}
+            </span>
+          ) : null}
+        </Link>
+        <div
+          data-folder-actions
+          className={cn(
+            "absolute inset-y-0 right-0.5 flex items-center gap-px rounded-md bg-sidebar-accent opacity-0 transition-opacity",
+            "group-hover/folder-row:opacity-100 focus-within:opacity-100 has-[[data-state=open]]:opacity-100"
+          )}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-6 shrink-0"
+            onClick={() => onCreateSubfolder(folder)}
+          >
+            <Plus className="size-3.5" />
+            <span className="sr-only">New subfolder in {folder.name}</span>
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button type="button" variant="ghost" size="icon" className="size-6 shrink-0">
+                <EllipsisVertical className="size-3.5" />
+                <span className="sr-only">Folder actions for {folder.name}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Folder Actions</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onCreateSubfolder(folder)}>New subfolder</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onEditFolder(folder)}>Rename</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onDeleteFolder(folder)}>Delete</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {hasChildren && isOpen ? (
@@ -182,6 +212,7 @@ function FolderTreeNode({
               guides={[...guides, !isLast]}
               isLast={index === folder.children.length - 1}
               activeFolderHref={activeFolderHref}
+              clipCounts={clipCounts}
               onCreateSubfolder={onCreateSubfolder}
               onEditFolder={onEditFolder}
               onDeleteFolder={onDeleteFolder}
@@ -193,19 +224,19 @@ function FolderTreeNode({
   );
 }
 
-export default function SidebarClips({ clipFolders }: Props) {
-  const [isOpen, setIsOpen] = useState<boolean>(true);
+export default function SidebarClips({ clipFolders, clipCounts }: Props) {
   const pathname = usePathname();
   const { openCreateFolder, openRenameFolder, openDeleteFolder } = useClipFolderDialog();
   const activeFolderHref = getActiveFolderHref(pathname, clipFolders);
+  const inFolder = !!activeFolderHref;
+  const [isOpen, setIsOpen] = useState<boolean>(inFolder);
+  const [prevInFolder, setPrevInFolder] = useState(inFolder);
+  if (inFolder !== prevInFolder) {
+    setPrevInFolder(inFolder);
+    if (inFolder) setIsOpen(true);
+  }
   const folderTree = buildClipFolderTree(clipFolders);
   const isClipsActive = pathname === "/dashboard/clips";
-
-  useEffect(() => {
-    if (activeFolderHref) {
-      setIsOpen(true);
-    }
-  }, [activeFolderHref]);
 
   const createFolderButton = (parentFolder?: ClipFolderNode) => {
     openCreateFolder(parentFolder?.id, parentFolder?.name);
@@ -221,6 +252,7 @@ export default function SidebarClips({ clipFolders }: Props) {
 
   const folderHandlers: FolderTreeHandlers = {
     activeFolderHref,
+    clipCounts,
     onCreateSubfolder: createFolderButton,
     onEditFolder: editFolderButton,
     onDeleteFolder: deleteFolderButton,

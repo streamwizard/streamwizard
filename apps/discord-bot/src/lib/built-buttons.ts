@@ -5,6 +5,7 @@ import { supabase } from "@repo/supabase";
 import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
 import { buildLinkRow } from "./account";
 import { handleCreateButton } from "./tickets/open";
+import { expireReply } from "./ephemeral";
 
 // Action buttons on messages from web-admin's message builder. The builder
 // only offers the actions in @repo/discord-message's BUTTON_ACTIONS, and the
@@ -26,6 +27,7 @@ const HANDLERS: Record<ButtonActionKey, ButtonHandler> = {
         content: `You're already linked as **${existing.discord_username}**. Nothing left to do.`,
         flags: MessageFlags.Ephemeral,
       });
+      expireReply(interaction);
       return;
     }
 
@@ -34,6 +36,7 @@ const HANDLERS: Record<ButtonActionKey, ButtonHandler> = {
       components: [buildLinkRow()],
       flags: MessageFlags.Ephemeral,
     });
+    expireReply(interaction);
   },
 
   // Same flow as the ticket panel's Create Ticket button.

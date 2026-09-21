@@ -13,6 +13,8 @@ export const useSessionStore = create<SessionStoreState>((set) => ({
     sync_clips_on_end: true,
     onboarding_completed: false,
     show_stream_stats: true,
+    discord_live_notifications: true,
+    discord_live_role: true,
   },
   setPreferences: (preferences) => set({ preferences }),
   setPreference: (key, value) =>

@@ -28,6 +28,7 @@ import { ObsResourceGraphs } from "@/components/irl/obs-resource-graphs";
 import { ObsFileUploader } from "@/components/irl/obs-file-uploader";
 import { ObsIngestSources } from "@/components/irl/obs-ingest-sources";
 import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
+import { TwitchScopeBanner } from "@/components/ui/twitch-scope-banner";
 import type { ProductAccess } from "@/lib/require-product-access";
 import type { IngestStreamKey } from "@/actions/ingest-keys";
 import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher";
@@ -38,12 +39,21 @@ import { ALERTS_SCENE_NAME, IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl } from "
 interface CloudObsContentProps {
   canInteract: boolean;
   plan: ProductAccess["plan"];
+  /** The Twitch token lacks the stream-key scope; show the prompt to grant it. */
+  needsTwitchScopes: boolean;
   initialIngestKeys: IngestStreamKey[];
   obsPullHost: string;
   autoSwitcherConfig: AutoSwitcherConfigRow | null;
 }
 
-export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, obsPullHost, autoSwitcherConfig }: CloudObsContentProps) {
+export function CloudObsContent({
+  canInteract,
+  plan: _plan,
+  needsTwitchScopes,
+  initialIngestKeys,
+  obsPullHost,
+  autoSwitcherConfig,
+}: CloudObsContentProps) {
   const {
     instanceId,
     apiUrl,
@@ -121,6 +131,9 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
     }
   }
   const showSetupStepper = (onboardingFlow ?? false) && !setupComplete;
+  // A container that boots without the stream-key scope comes up keyless, so
+  // every start path is off until Twitch is connected. Stop stays available.
+  const canStart = canInteract && !needsTwitchScopes;
 
   // Single elapsed timer that spans the whole launch flow. Keying the effect on
   // the boolean keeps it running continuously across provisioning → booting and
@@ -138,9 +151,12 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
   // Auto-wire the primary ingest key into the fixed "IRL" scene once OBS is
   // connected and scenes have actually loaded (status flips to "open" slightly
   // before fetchScenes() resolves, so wait for scenes rather than acting on
-  // stale/empty data). Only a key created THIS session gets wired silently —
-  // everything else is left alone, so we never fight a user who deliberately
-  // removed the source. Only the primary (most recent) key is ever auto-wired;
+  // stale/empty data). During the guided setup the source is always added when
+  // it's missing — templates ship without one, so this is what gives a fresh
+  // instance its feed, even if the key was made before a reload. After setup,
+  // only a key created THIS session gets wired silently — everything else is
+  // left alone, so we never fight a user who deliberately removed the source.
+  // Only the primary (most recent) key is ever auto-wired;
   // creating a second key never rewires "StreamWizard Ingest" onto it, since
   // the fixed source name means detection is keyed by name, not by key. That's
   // intentional — additional keys stay manual-only via the list below.
@@ -160,7 +176,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
       if (cancelled || obs.sceneHasSource(IRL_SCENE_NAME, IRL_SOURCE_NAME)) return;
 
       const justCreated = justCreatedKeyIdRef.current === primaryKey.id;
-      if (justCreated) {
+      if (justCreated || showSetupStepper) {
         try {
           await obs.addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(obsPullHost, outputKey.output_key));
           justCreatedKeyIdRef.current = null;
@@ -178,12 +194,13 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
     return () => {
       cancelled = true;
     };
-  }, [obs.status, obs.scenes.length, obs.sceneItems, ingestKeys, obsPullHost]);
+  }, [obs.status, obs.scenes.length, obs.sceneItems, ingestKeys, obsPullHost, showSetupStepper]);
 
   if (showSetupStepper) {
     return (
       <CloudObsSetupScreen
         canInteract={canInteract}
+        needsTwitchScopes={needsTwitchScopes}
         flow={flow}
         obs={obs}
         instanceId={instanceId}
@@ -197,6 +214,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
         onLaunch={handleLaunch}
         onStartContainer={handleToggleContainer}
         onOpenViewer={openViewer}
+        ingestWired={obs.sceneHasSource(IRL_SCENE_NAME, IRL_SOURCE_NAME)}
         onFinishSetup={() => setSetupComplete(true)}
       />
     );
@@ -205,11 +223,12 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
   return (
     <div className="w-full space-y-6">
       {!canInteract && <FeatureDisabledBanner />}
+      {needsTwitchScopes && <TwitchScopeBanner feature="cloud_obs" next="/dashboard/irl/obs" />}
 
       {/* High-signal banner for a crash (stream just dropped) or a delete. */}
       <ObsLifecycleBanner
         reason={stopReason}
-        onRestart={canInteract && instanceId && apiUrl ? handleToggleContainer : undefined}
+        onRestart={canStart && instanceId && apiUrl ? handleToggleContainer : undefined}
         restarting={togglingContainer}
         onDismiss={clearStopReason}
       />
@@ -269,6 +288,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
 
           <ObsContainerControl
             canInteract={canInteract}
+            startBlocked={needsTwitchScopes}
             flow={flow}
             obsStatus={obs.status}
             containerStatus={containerStatus}
@@ -302,7 +322,7 @@ export function CloudObsContent({ canInteract, plan: _plan, initialIngestKeys, o
             reason={stopReason ?? "clean"}
             starting={togglingContainer}
             onStart={
-              containerStatus !== "running" && canInteract && instanceId && apiUrl
+              containerStatus !== "running" && canStart && instanceId && apiUrl
                 ? handleToggleContainer
                 : undefined
             }

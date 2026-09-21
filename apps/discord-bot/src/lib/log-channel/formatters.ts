@@ -162,6 +162,9 @@ function ticketFields(payload: TicketPayload, event: PlatformEvent): APIEmbedFie
 
 type PlatformOnly = Exclude<PlatformEventType, keyof typeof SERVER_FORMATTERS>;
 
+const msToSeconds = (ms?: number | null): number | null =>
+  typeof ms === "number" && Number.isFinite(ms) ? Math.round(ms / 1000) : null;
+
 const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
   "user.created": (payload, event) =>
     withSubject(base(event, "user.created"), payload)
@@ -239,16 +242,63 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
   "stream.online_failed": (payload, event) =>
     describeLines(withSubject(base(event, "stream.online_failed"), payload), [
       `${bold(subjectName(payload), "A user")} went live, but StreamWizard couldn't start tracking the stream.`,
-      payload.reason === "vod_not_found"
-        ? "No VOD was found for this stream. VODs may be turned off on Twitch, so no stream page or clip markers this time."
-        : payload.reason === "stream_not_found"
-          ? "Twitch reported the stream online, then didn't return it. It may have ended straight away."
+      payload.reason === "stream_not_found"
+        ? "Twitch reported the stream online, but still didn't list it after we kept checking."
+        : payload.reason === "ended_before_tracked"
+          ? "The stream ended before Twitch listed it. Probably a quick restart."
           : "",
     ]).addFields([
       ...field("Reason", code(payload.reason)),
       ...field("Stream ID", code(payload.stream_id)),
+      ...field("Waited", payload.waited_seconds != null ? `${payload.waited_seconds}s` : null),
       ...identityFields(payload, event),
     ]),
+
+  // EventSub connection events come from streamwizard-bot, not a user, so no
+  // author or identity fields. `service` names the process.
+  "eventsub.connected": (payload, event) =>
+    describeLines(base(event, "eventsub.connected"), [
+      `${bold(payload.service, "The bot")} started and is listening for Twitch events again.`,
+    ]).addFields([...field("Session", code(payload.session_id))]),
+
+  "eventsub.connection_lost": (payload, event) =>
+    describeLines(base(event, "eventsub.connection_lost"), [
+      `${bold(payload.service, "The bot")} lost its EventSub connection to Twitch. It reconnects on its own; a reconnected row follows once it's back.`,
+    ]).addFields([
+      ...field("Reason", plain(payload.reason)),
+      ...field("Close code", payload.close_code != null ? code(String(payload.close_code)) : null),
+      ...field("Silent for", duration(msToSeconds(payload.keepalive_silent_ms))),
+    ]),
+
+  "eventsub.reconnected": (payload, event) => {
+    const downFor = duration(msToSeconds(payload.downtime_ms));
+    return describeLines(base(event, "eventsub.reconnected"), [
+      `${bold(payload.service, "The bot")} is back on EventSub${downFor ? ` after ${downFor}` : ""}. Events sent while it was down are gone; Twitch doesn't replay them.`,
+    ]).addFields([
+      ...field("Down for", downFor),
+      ...field("Attempts", typeof payload.attempts === "number" ? formatNumber(payload.attempts) : null),
+      ...field("Session", code(payload.session_id)),
+    ]);
+  },
+
+  "eventsub.session_migrated": (payload, event) =>
+    describeLines(base(event, "eventsub.session_migrated"), [
+      `Twitch moved ${bold(payload.service, "the bot")} to a new EventSub session. Routine, not an outage; nothing was missed.`,
+    ]).addFields([...field("Session", code(payload.session_id))]),
+
+  "eventsub.subscription_revoked": (payload, event) =>
+    describeLines(base(event, "eventsub.subscription_revoked"), [
+      "Twitch revoked an EventSub subscription. That channel stops sending this event until the user logs in to StreamWizard again.",
+    ]).addFields([
+      ...field("Subscription", code(payload.subscription_type)),
+      ...field("Status", code(payload.status)),
+      ...field("Reason", plain(payload.reason), false),
+    ]),
+
+  "eventsub.conduit_update_failed": (payload, event) =>
+    describeLines(base(event, "eventsub.conduit_update_failed"), [
+      `${bold(payload.service, "The bot")} is connected but couldn't bind the conduit shard to its session after retries. Twitch may not be delivering events. Check it now.`,
+    ]).addFields([...field("Error", quote(payload.error, "Unknown"), false)]),
 
   "ticket.opened": (payload, event) =>
     withMember(base(event, "ticket.opened"), payload.opener)

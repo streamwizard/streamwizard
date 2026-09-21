@@ -3,6 +3,8 @@
 import { randomUUID } from "crypto";
 import { tryAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
+import { getTwitchScopes } from "@repo/supabase/queries/twitch-scopes";
+import { missingTwitchScopes } from "@repo/schemas";
 import { getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions";
 import {
   type ObsInstance,
@@ -86,13 +88,20 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
 
   const adminClient = createAdminClient();
 
-  const [node, subscriptionId] = await Promise.all([
+  const [node, subscriptionId, twitchScopes] = await Promise.all([
     pickAvailableNode(adminClient),
     getUserActiveSubscriptionId(adminClient, userId, "cloud_obs"),
+    getTwitchScopes(supabase),
   ]);
 
   if (!node?.api_url) return { data: null, error: "No Cloud OBS capacity is available right now. Please try again later." };
   if (!subscriptionId) return { data: null, error: "No active Cloud OBS subscription found." };
+  // The instance goes live with the user's Twitch stream key, which the node
+  // fetches through rest-api. Without the scope that fetch returns nothing and
+  // OBS boots keyless, so refuse here and let the page send them to Twitch.
+  if (missingTwitchScopes(twitchScopes, "cloud_obs").length > 0) {
+    return { data: null, error: "Connect Twitch first so your cloud OBS can stream with your key." };
+  }
 
   const obsWsPassword = randomUUID().replace(/-/g, "");
   const { encryptToken } = await import("@repo/supabase/crypto");

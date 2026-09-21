@@ -105,7 +105,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     showInLibrary: true,
     category: "media",
     library: {
-      title: "Clips widget",
+      title: "Clips",
       description: "Rotating Twitch clips with customizable display fields.",
     },
     defaultSize: { ...CLIPS_WIDGET_DEFAULT_SIZE },

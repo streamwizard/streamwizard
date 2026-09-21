@@ -4,11 +4,39 @@
 
 ## Access model
 
-- Sign-in: Twitch OAuth via Supabase (own cookie/domain — separate session from the main app).
-- Gate: `src/app/(monitor)/layout.tsx` requires a `user_roles` row with `role = 'admin'` (service-role lookup). Non-admins land on `/no-access`.
-- Every server action re-checks via `src/lib/assert-admin.ts` (`assertAdmin()`, returns the acting admin's user id) — actions are their own POST endpoints, the layout guard doesn't cover them.
-- `/vnc` sits outside the `(monitor)` group (bare full-screen popup) and runs the same check in its own `src/app/vnc/layout.tsx`.
+- Sign-in: Twitch OAuth via Supabase (own cookie/domain — separate session from the main app), **or** a passkey (no Twitch redirect).
+- Gate: `src/lib/admin-session.ts` (`getAdminSession()` / `requireAdminSession()`) is the single decision point. It requires a `user_roles` row with `role = 'admin'` (service-role lookup) **and** a strong session (see "Second factor" below). Non-admins land on `/no-access`; admins with a weak session land on `/auth/verify` or `/auth/setup`.
+- `src/app/(monitor)/layout.tsx` and `src/app/vnc/layout.tsx` (bare full-screen popup outside the group) both call `requireAdminSession()`.
+- Every server action re-checks via `src/lib/assert-admin.ts` (`assertAdmin()`, returns the acting admin's user id) — actions are their own POST endpoints, the layout guard doesn't cover them. It applies the same rule and throws `Not signed in` / `Not authorized` / `Verification required`.
+- Calls to obs-instance-manager's `/admin/instances/*` go through server actions in `src/actions/nodes.ts` for the same reason: that service checks the JWT and the role, not the second factor.
 - The old `app_metadata.is_admin` JWT claim is no longer read anywhere; `user_roles` is the single source of admin truth.
+
+## Second factor
+
+Twitch alone is one factor. A session is **strong** when either:
+
+- `aal === 'aal2'`: the admin entered an authenticator-app (TOTP) code after the Twitch redirect, or
+- `amr` contains `passkey`: the session was created by `signInWithPasskey()` (GoTrue leaves `aal` at `aal1` for these).
+
+Helpers live in `packages/supabase/src/auth/session-strength.ts`. Every Supabase client factory in `packages/supabase/src/next/*` opts into the passkeys beta (`auth.experimental.passkey`), which is inert for the main app.
+
+| State after sign-in | Where the admin lands |
+|---|---|
+| Strong session | dashboard |
+| Weak, has a TOTP factor and/or a passkey | `/auth/verify` — enter the code, or sign in with the passkey instead |
+| Weak, has neither | `/auth/setup` — forced enrolment (at least one; both recommended) |
+
+`/security` (sidebar → Account, or the user menu) manages both methods: add/remove the authenticator, add/rename/remove passkeys. Removing the last remaining method is refused server-side (`src/actions/security.ts`). Supabase allows one verified TOTP factor per user; passkeys are one per device.
+
+Passkeys are registered against a Relying Party ID that is baked into each credential, so it is scoped to the admin host and must never change afterwards:
+
+| Env | `rp_id` | `rp_origins` | TOTP |
+|---|---|---|---|
+| local (`supabase/config.toml`) | `localhost` | `http://localhost:3003` | enroll + verify on |
+| staging (dashboard → Authentication → Passkeys / Multi-Factor) | `admin-staging.streamwizard.org` | `https://admin-staging.streamwizard.org` | enroll + verify on |
+| prod (same) | `admin.streamwizard.org` | `https://admin.streamwizard.org` | enroll + verify on |
+
+**Locked out** (lost phone and passkey): in the Supabase dashboard, Authentication → Users → the admin → delete their TOTP factor and/or passkeys. Their next Twitch sign-in lands on `/auth/setup`. There is deliberately no in-app reset.
 
 ## Pages
 
@@ -22,6 +50,7 @@
 | `/subscriptions` | Grant/revoke/edit product subscriptions per user (independent of Stripe) |
 | `/widget-library` | Moderation queue for community widget submissions (sandboxed iframe previews) |
 | `/discord/messages`, `/discord/messages/[id]` | Discord messages built visually (banners + embeds, themes, drag to reorder). A server has as many as it likes, each with a name and any text or announcement channel. Draft autosaves to `discord_built_messages`; **Publish** has the bot send or update the message, **Delete** has it remove the message from Discord too. The builder is `MessageBuilder` from `@repo/ui/message-builder`, the data model, limits, presets and starting templates are `@repo/discord-message` |
+| `/discord/announcements`, `/discord/announcements/[id]` | One-off announcements for the Discord: a simple form (title, text, colour, image, one link button, a ping: nobody, @everyone, @here or a role) next to a Discord-style preview. Rows live in `discord_announcements` with a status (`draft`, `scheduled`, `posting`, `posted`, `failed`). **Post now** has the bot send it, or edit the message in place (no second ping); **Post later** sets a time and the bot's scheduler (30 s tick, conditional claim) sends it; **Delete** removes it from Discord too. The shape, limits and Discord payload are `@repo/discord-message`'s `announcement` module |
 | `/vnc?nodeId&instanceId&name` | noVNC popup onto an instance's OBS desktop (opened from node/instance pages) |
 
 ## How it talks to obs-instance-manager

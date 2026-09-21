@@ -165,7 +165,7 @@ export function ClipShowcaseDialog({
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Eye className="size-4" aria-hidden="true" />
-                  {clip.views.toLocaleString()} views
+                  {clip.views.toLocaleString("en-US")} views
                 </span>
                 {clip.createdAt && (
                   <span className="flex items-center gap-1.5">

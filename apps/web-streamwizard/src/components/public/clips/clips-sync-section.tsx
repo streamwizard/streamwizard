@@ -5,25 +5,26 @@ import { SyncTimeline } from "./sync-timeline";
 
 /*
  * The sync story is the one thing the folders mock above cannot show: clips
- * arrive on their own. The vignette plays the stream-end trigger on loop,
- * the bullets carry the mechanics, including the once-an-hour honesty.
+ * arrive on their own, while the stream is still going. The vignette plays
+ * the five-minute check on loop and the last pass at the end; the bullets
+ * carry the mechanics, including the once-an-hour honesty on the button.
  */
 
 const SYNC_FEATURES = [
   {
     icon: RadioTower,
-    title: "Synced when you go offline",
-    body: "The moment Twitch marks you offline, StreamWizard pulls every clip from the stream. On by default, a toggle if you want it off.",
+    title: "Every five minutes, while live",
+    body: "Chat clips it, and within five minutes it's in your library. Rotate it on an overlay before the stream is over.",
   },
   {
     icon: History,
-    title: "The whole backlog, first sync",
-    body: "Your first sync walks your entire clip history, a hundred at a time. Years of backlog included.",
+    title: "One last pass at the end",
+    body: "View counts and VOD timestamps settle late on Twitch. The end-of-stream sync catches those and any clip from the final minutes. Your first sync also walks the whole backlog, a hundred at a time.",
   },
   {
     icon: RefreshCw,
-    title: "A Sync button for the impatient",
-    body: "Need the mid-stream ace right now? Hit Sync in the filter bar. Once an hour, because Twitch has rate limits and so do we.",
+    title: "A Sync button, still there",
+    body: "Turned auto sync off? Hit Sync in the filter bar. Once an hour, because Twitch has rate limits and so do we.",
   },
 ];
 
@@ -33,10 +34,10 @@ export function ClipsSyncSection() {
       <SectionView section="clips_sync" className="container mx-auto px-4">
         <div className="mx-auto mb-12 max-w-2xl text-center">
           <p className="font-mono text-xs tracking-widest text-purple-300 uppercase">Auto sync</p>
-          <h2 className="mt-3 text-3xl font-bold sm:text-4xl">Your stream ends. Your clips are already here.</h2>
+          <h2 className="mt-3 text-3xl font-bold sm:text-4xl">Clips land while you&apos;re still live.</h2>
           <p className="mt-4 text-muted-foreground">
-            StreamWizard listens for the end of your stream and pulls every clip from it. Nothing to
-            export, nothing to remember.
+            Every five minutes on stream, StreamWizard checks Twitch for new clips and files them. When
+            you go offline it does one last pass. Nothing to export, nothing to remember.
           </p>
         </div>
 

@@ -9,6 +9,7 @@ const SECTION_LABELS: Record<string, string> = {
   permissions: "Permissions",
   logs: "Log channel",
   messages: "Messages",
+  announcements: "Announcements",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -20,6 +21,10 @@ const ACTION_LABELS: Record<string, string> = {
   // Section-specific wording wins over the plain action.
   "tickets:create": "Added a ticket category or product",
   "tickets:delete": "Removed a ticket category or product",
+  "announcements:create": "Started an announcement",
+  "announcements:update": "Changed an announcement's schedule",
+  "announcements:publish": "Posted an announcement",
+  "announcements:delete": "Deleted an announcement",
 };
 
 function formatValue(value: Json | undefined, names: Map<string, string>): string {

@@ -52,7 +52,7 @@ export function SyncNowStep({ clipCount }: SyncNowStepProps) {
     description = "No idea how, but we do. Want to pull in the latest ones while you're here?";
   } else {
     heading = "No clips yet.";
-    description = "Grab your Twitch clips now, or skip it — if you turned on auto-sync, they'll come in automatically after your next stream.";
+    description = "Grab your Twitch clips now, or skip it. If you turned on auto-sync, they come in on their own during your next stream.";
   }
 
   return (

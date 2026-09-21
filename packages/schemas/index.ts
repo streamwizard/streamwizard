@@ -15,6 +15,7 @@ export * from "./src/shared";
 export * from "./src/stream";
 export * from "./src/streamwizard";
 export * from "./src/user";
+export * from "./src/twitch-scopes";
 
 
 

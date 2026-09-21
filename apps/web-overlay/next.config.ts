@@ -96,12 +96,12 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.SUPABASE_PUBLIC_KEY ?? "",
     NEXT_PUBLIC_WS_SERVER_URL: wsServerUrl,
     NEXT_PUBLIC_SENTRY_DSN: process.env.SENTRY_DSN_WEB_OVERLAY ?? process.env.SENTRY_DSN ?? "",
-    // Inlined into the client bundle so browser-side Sentry events carry the
-    // real deploy environment (staging vs production) — NODE_ENV is
-    // "production" for both. getSentryOptions falls back through ALERT_ENV
-    // and NODE_ENV when this is empty.
-    SENTRY_ENVIRONMENT: process.env.SENTRY_ENVIRONMENT ?? process.env.ALERT_ENV ?? "",
-    // Same reason as SENTRY_ENVIRONMENT: without inlining, the client bundle
+    // Doppler's NODE_ENV (production / staging / development), captured while
+    // `next build` still has it: at runtime the standalone server hard-sets
+    // NODE_ENV=production and the browser bundle has it baked in. Sentry reads
+    // this first (sentryEnvironment in @repo/sentry).
+    APP_ENV: process.env.NODE_ENV ?? "",
+    // Same reason as APP_ENV: without inlining, the client bundle
     // reads process.env.SENTRY_RELEASE as undefined and browser events carry
     // no release, so they never line up with the uploaded source maps.
     SENTRY_RELEASE: process.env.SENTRY_RELEASE ?? "",

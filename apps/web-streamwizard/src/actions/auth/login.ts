@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 
 import { createClient } from "@repo/supabase/next/server";
-import { TWITCH_SCOPES } from "@/lib/constant";
+import { twitchScopesFor } from "@repo/schemas";
 import { reportAndRedirect } from "@/lib/report-redirect";
 
 export async function login(next?: string | null) {
@@ -24,7 +24,9 @@ export async function login(next?: string | null) {
     provider: "twitch",
     options: {
       redirectTo: `${origin}/auth/callback/twitch?next=${encodeURIComponent(safeNext)}`,
-      scopes: TWITCH_SCOPES.join(" "),
+      // Base scopes only. Feature scopes (the stream key for cloud OBS) are
+      // asked for on the page that needs them, see actions/auth/authorize-twitch.ts.
+      scopes: twitchScopesFor([]).join(" "),
     },
   });
 

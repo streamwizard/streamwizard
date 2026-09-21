@@ -7,10 +7,13 @@ import { Button, Card, CardContent, Input, Label } from "@repo/ui";
 import { createIngestKey, type IngestStreamKey } from "@/actions/ingest-keys";
 import type { Scene, SceneItem } from "@repo/obs-web";
 import { ObsAlertsSources } from "@/components/irl/obs-alerts-sources";
+import { TwitchConnectButton } from "@/components/ui/twitch-scope-banner";
 import { cn } from "@repo/ui";
 
 interface ObsSetupStepperProps {
   canInteract: boolean;
+  /** The Twitch token carries the stream-key scope; the instance cannot launch without it. */
+  twitchConnected: boolean;
   hasKey: boolean;
   onKeyCreated: (key: IngestStreamKey) => void;
   instanceId: string | null;
@@ -24,6 +27,8 @@ interface ObsSetupStepperProps {
   isBooting: boolean;
   hasTimedOut: boolean;
   onReconnect: () => void;
+  /** The "IRL" scene already holds the StreamWizard ingest source. */
+  ingestWired: boolean;
   hasOpenedViewer: boolean;
   onOpenViewer: () => void;
   scenes: Scene[];
@@ -42,6 +47,7 @@ interface ObsSetupStepperProps {
  */
 export function ObsSetupStepper({
   canInteract,
+  twitchConnected,
   hasKey,
   onKeyCreated,
   instanceId,
@@ -55,6 +61,7 @@ export function ObsSetupStepper({
   isBooting,
   hasTimedOut,
   onReconnect,
+  ingestWired,
   hasOpenedViewer,
   onOpenViewer,
   scenes,
@@ -84,6 +91,7 @@ export function ObsSetupStepper({
 
   const containerRunning = containerStatus === "running";
   const containerBusy = launching || togglingContainer;
+  const canLaunch = twitchConnected && hasKey;
   const containerButtonLabel = !instanceId ? "Launch Cloud OBS" : "Start container";
 
   return (
@@ -97,7 +105,19 @@ export function ObsSetupStepper({
         </div>
 
         <ol className="mx-auto max-w-md space-y-5">
-          <Step number={1} done={hasKey} label="Create an ingest key">
+          <Step number={1} done={twitchConnected} label="Connect Twitch for your stream key">
+            <p className="text-xs text-muted-foreground">
+              Your cloud OBS goes live with your own Twitch stream key. Twitch only hands it over with
+              your say-so, so this is a one-time round trip.
+            </p>
+            {twitchConnected ? (
+              <p className="text-sm text-muted-foreground">Done. Twitch connected.</p>
+            ) : (
+              <TwitchConnectButton feature="cloud_obs" next="/dashboard/irl/obs" disabled={!canInteract} />
+            )}
+          </Step>
+
+          <Step number={2} done={hasKey} label="Create an ingest key">
             <p className="text-xs text-muted-foreground">
               The private address your phone or encoder streams to. Treat it like a password.
             </p>
@@ -122,7 +142,7 @@ export function ObsSetupStepper({
             )}
           </Step>
 
-          <Step number={2} done={containerRunning} label="Launch your cloud container" locked={!hasKey}>
+          <Step number={3} done={containerRunning} label="Launch your cloud container" locked={!canLaunch}>
             <p className="text-xs text-muted-foreground">
               A private OBS instance that runs in the cloud, even when your PC is off.
             </p>
@@ -132,7 +152,7 @@ export function ObsSetupStepper({
               <div>
                 <Button
                   onClick={!instanceId ? onLaunch : onStartContainer}
-                  disabled={!canInteract || !hasKey || containerBusy}
+                  disabled={!canInteract || !canLaunch || containerBusy}
                 >
                   {containerBusy ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
@@ -146,12 +166,23 @@ export function ObsSetupStepper({
             )}
           </Step>
 
-          <Step number={3} done={obsStatus === "open"} label="OBS boots up inside it" locked={!containerRunning}>
+          <Step number={4} done={obsStatus === "open"} label="OBS boots up inside it" locked={!containerRunning}>
             <p className="text-xs text-muted-foreground">
               Automatic. Takes 10 to 30 seconds, nothing to click here.
             </p>
             {obsStatus === "open" ? (
-              <p className="text-sm text-muted-foreground">Done. OBS connected.</p>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Done. OBS connected.</p>
+                {hasKey &&
+                  (ingestWired ? (
+                    <p className="text-sm text-muted-foreground">Your ingest feed is in the IRL scene.</p>
+                  ) : (
+                    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Adding your ingest feed to the IRL scene…
+                    </p>
+                  ))}
+              </div>
             ) : hasTimedOut ? (
               <div>
                 <p className="text-sm text-destructive">OBS never came online.</p>
@@ -168,7 +199,7 @@ export function ObsSetupStepper({
             ) : null}
           </Step>
 
-          <Step number={4} done={alertsStepDone} label="Add alert sources (optional)" locked={obsStatus !== "open"}>
+          <Step number={5} done={alertsStepDone} label="Add alert sources (optional)" locked={obsStatus !== "open"}>
             <p className="text-xs text-muted-foreground">
               Sound alerts for follows, subs, or donations. Add one now, or skip and set it up in
               OBS later.
@@ -198,7 +229,7 @@ export function ObsSetupStepper({
             )}
           </Step>
 
-          <Step number={5} done={hasOpenedViewer} label="Open OBS" locked={!alertsStepDone}>
+          <Step number={6} done={hasOpenedViewer} label="Open OBS" locked={!alertsStepDone}>
             <p className="text-xs text-muted-foreground">
               A live view of your cloud OBS, just like the desktop app. Check your camera,
               arrange your scenes, then hit Go live.

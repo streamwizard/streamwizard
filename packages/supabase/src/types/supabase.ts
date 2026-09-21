@@ -556,6 +556,57 @@ export type Database = {
         }
         Relationships: []
       }
+      discord_announcements: {
+        Row: {
+          channel_id: string | null
+          claimed_at: string | null
+          created_at: string
+          created_by: string | null
+          draft: Json
+          guild_id: string
+          id: string
+          last_error: string | null
+          message_id: string | null
+          posted: Json | null
+          posted_at: string | null
+          scheduled_for: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          channel_id?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          draft: Json
+          guild_id: string
+          id?: string
+          last_error?: string | null
+          message_id?: string | null
+          posted?: Json | null
+          posted_at?: string | null
+          scheduled_for?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string | null
+          claimed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          draft?: Json
+          guild_id?: string
+          id?: string
+          last_error?: string | null
+          message_id?: string | null
+          posted?: Json | null
+          posted_at?: string | null
+          scheduled_for?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       discord_built_messages: {
         Row: {
           channel_id: string | null
@@ -688,6 +739,9 @@ export type Database = {
           guild_id: string
           id: string
           join_role_id: string | null
+          live_channel_id: string | null
+          live_enabled: boolean
+          live_role_id: string | null
           log_channel_id: string | null
           log_ignored_channel_ids: string[]
           updated_at: string
@@ -700,6 +754,9 @@ export type Database = {
           guild_id: string
           id?: string
           join_role_id?: string | null
+          live_channel_id?: string | null
+          live_enabled?: boolean
+          live_role_id?: string | null
           log_channel_id?: string | null
           log_ignored_channel_ids?: string[]
           updated_at?: string
@@ -712,6 +769,9 @@ export type Database = {
           guild_id?: string
           id?: string
           join_role_id?: string | null
+          live_channel_id?: string | null
+          live_enabled?: boolean
+          live_role_id?: string | null
           log_channel_id?: string | null
           log_ignored_channel_ids?: string[]
           updated_at?: string
@@ -720,6 +780,97 @@ export type Database = {
           welcome_enabled?: boolean
         }
         Relationships: []
+      }
+      discord_live_posts: {
+        Row: {
+          broadcaster_id: string
+          channel_id: string
+          created_at: string
+          ended_at: string | null
+          game_name: string | null
+          id: string
+          message_id: string
+          posted_at: string
+          started_at: string
+          stream_id: string | null
+          title: string | null
+          user_id: string | null
+          user_login: string
+          user_name: string
+        }
+        Insert: {
+          broadcaster_id: string
+          channel_id: string
+          created_at?: string
+          ended_at?: string | null
+          game_name?: string | null
+          id?: string
+          message_id: string
+          posted_at?: string
+          started_at: string
+          stream_id?: string | null
+          title?: string | null
+          user_id?: string | null
+          user_login: string
+          user_name: string
+        }
+        Update: {
+          broadcaster_id?: string
+          channel_id?: string
+          created_at?: string
+          ended_at?: string | null
+          game_name?: string | null
+          id?: string
+          message_id?: string
+          posted_at?: string
+          started_at?: string
+          stream_id?: string | null
+          title?: string | null
+          user_id?: string | null
+          user_login?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_live_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_live_roles: {
+        Row: {
+          broadcaster_id: string
+          discord_user_id: string
+          granted_at: string
+          role_id: string
+          user_id: string | null
+        }
+        Insert: {
+          broadcaster_id: string
+          discord_user_id: string
+          granted_at?: string
+          role_id: string
+          user_id?: string | null
+        }
+        Update: {
+          broadcaster_id?: string
+          discord_user_id?: string
+          granted_at?: string
+          role_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_live_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       discord_log_event_settings: {
         Row: {
@@ -1842,7 +1993,9 @@ export type Database = {
           refresh_token_ciphertext: string | null
           refresh_token_iv: string | null
           refresh_token_tag: string | null
+          scopes_synced_at: string | null
           token_expires_at: string | null
+          twitch_scopes: string[] | null
           twitch_user_id: string
           twitch_username: string
           updated_at: string
@@ -1861,7 +2014,9 @@ export type Database = {
           refresh_token_ciphertext?: string | null
           refresh_token_iv?: string | null
           refresh_token_tag?: string | null
+          scopes_synced_at?: string | null
           token_expires_at?: string | null
+          twitch_scopes?: string[] | null
           twitch_user_id: string
           twitch_username: string
           updated_at?: string
@@ -1880,7 +2035,9 @@ export type Database = {
           refresh_token_ciphertext?: string | null
           refresh_token_iv?: string | null
           refresh_token_tag?: string | null
+          scopes_synced_at?: string | null
           token_expires_at?: string | null
+          twitch_scopes?: string[] | null
           twitch_user_id?: string
           twitch_username?: string
           updated_at?: string
@@ -3177,6 +3334,8 @@ export type Database = {
       user_preferences: {
         Row: {
           created_at: string | null
+          discord_live_notifications: boolean
+          discord_live_role: boolean
           id: string
           memes_enabled: boolean
           onboarding_completed: boolean
@@ -3188,6 +3347,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          discord_live_notifications?: boolean
+          discord_live_role?: boolean
           id?: string
           memes_enabled?: boolean
           onboarding_completed?: boolean
@@ -3199,6 +3360,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          discord_live_notifications?: boolean
+          discord_live_role?: boolean
           id?: string
           memes_enabled?: boolean
           onboarding_completed?: boolean
@@ -3344,7 +3507,7 @@ export type Database = {
           id: string
           started_at: string | null
           stream_id: string | null
-          video_id: string
+          video_id: string | null
         }
         Insert: {
           broadcaster_id: string
@@ -3352,7 +3515,7 @@ export type Database = {
           id?: string
           started_at?: string | null
           stream_id?: string | null
-          video_id: string
+          video_id?: string | null
         }
         Update: {
           broadcaster_id?: string
@@ -3360,7 +3523,7 @@ export type Database = {
           id?: string
           started_at?: string | null
           stream_id?: string | null
-          video_id?: string
+          video_id?: string | null
         }
         Relationships: [
           {

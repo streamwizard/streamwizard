@@ -44,6 +44,9 @@ const DESTRUCTIVE = new Set([
   "user.deleted",
   "discord.unlinked",
   "subscription.revoked",
+  "eventsub.connection_lost",
+  "eventsub.subscription_revoked",
+  "eventsub.conduit_update_failed",
   "member.left",
   "member.kicked",
   "member.banned",
@@ -164,6 +167,22 @@ function details(event: PlatformEvent, payload: Payload): string {
     }
     case "discord.linked":
       return str(payload.previous_discord_user_id) ? `Replaced ${payload.previous_discord_user_id}` : "";
+    case "eventsub.connected":
+    case "eventsub.session_migrated":
+      return str(payload.session_id) ? `Session ${payload.session_id}` : "";
+    case "eventsub.connection_lost":
+      return [str(payload.reason), typeof payload.close_code === "number" ? `code ${payload.close_code}` : null]
+        .filter(Boolean)
+        .join(", ");
+    case "eventsub.reconnected": {
+      const seconds = typeof payload.downtime_ms === "number" ? Math.round(payload.downtime_ms / 1000) : null;
+      const attempts = typeof payload.attempts === "number" ? `${payload.attempts} attempt${payload.attempts === 1 ? "" : "s"}` : null;
+      return [seconds !== null ? `${seconds}s down` : null, attempts].filter(Boolean).join(", ");
+    }
+    case "eventsub.subscription_revoked":
+      return [str(payload.subscription_type), str(payload.status)].filter(Boolean).join(" ");
+    case "eventsub.conduit_update_failed":
+      return snippet(payload.error) ?? "";
     default:
       return serverDetails(event, payload);
   }

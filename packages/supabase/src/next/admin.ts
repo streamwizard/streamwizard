@@ -1,12 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { PASSKEY_AUTH_OPTIONS } from "../auth/passkey-options";
 
 export function createAdminClient() {
   // See server.ts: fall back to the non-prefixed var so the admin client works
   // in a standalone server even when NEXT_PUBLIC_SUPABASE_URL wasn't derived.
   return createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SECRET_KEY!
+    process.env.SUPABASE_SECRET_KEY!,
+    { auth: PASSKEY_AUTH_OPTIONS }
   );
 }
 

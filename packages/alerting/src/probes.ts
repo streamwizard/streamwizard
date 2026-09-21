@@ -35,7 +35,7 @@ function publicTargets(alertEnv: Env): ProbeTarget[] {
     case "prod":
       return [
         { id: "site", url: "https://streamwizard.org" },
-        { id: "overlay", url: "https://overlay.streamwizard.org" },
+        { id: "overlay", url: "https://overlay.streamwizard.org/api/health" },
         ...serviceTargets,
       ];
     case "staging":

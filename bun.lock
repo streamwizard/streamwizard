@@ -86,6 +86,7 @@
       "name": "@repo/rest-api",
       "version": "0.0.0",
       "dependencies": {
+        "@repo/discord-api": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/metrics": "workspace:*",
         "@repo/schemas": "workspace:*",
@@ -113,7 +114,6 @@
       "name": "@repo/streamwizard-bot",
       "version": "0.0.0",
       "dependencies": {
-        "@repo/discord-api": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/metrics": "workspace:*",
         "@repo/schemas": "workspace:*",

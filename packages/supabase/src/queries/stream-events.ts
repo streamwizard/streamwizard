@@ -23,7 +23,9 @@ export const selectLiveStreamId = withMetrics(
       .select("stream_id")
       .eq("broadcaster_id", broadcasterId)
       .eq("is_live", true)
-      .single(),
+      // maybeSingle: "not live" is zero rows, not an error — .single() made
+      // every offline lookup count as a failed query in db.query_error_rate.
+      .maybeSingle(),
 );
 
 /** When the broadcaster's current stream started — the origin for event offsets. */

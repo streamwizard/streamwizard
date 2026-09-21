@@ -6,8 +6,6 @@ import type { ChannelChatMessageEvent } from "@repo/schemas";
 import { resolveVariables } from "../../functions/resolveVariables";
 
 export async function handleChatMessage(message: ChannelChatMessageEvent, twitchApi: TwitchApi) {
-  console.log(`[${message.broadcaster_user_name}] ${message.chatter_user_name}: ${message.message.text}`);
-
   // split the message into parts
   const parts = message.message.text.split(" ");
 

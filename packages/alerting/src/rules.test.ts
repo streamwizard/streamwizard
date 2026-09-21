@@ -60,4 +60,12 @@ describe("rule overrides", () => {
     const entry = getRuleCatalog().find((r) => r.id === "gpu.encoder_util_high");
     expect(entry?.warn?.default).toBe(90);
   });
+
+  test("eventsub disconnected rule ships in the EventSub group with a tunable minutes threshold", () => {
+    const entry = getRuleCatalog().find((r) => r.id === "eventsub.disconnected");
+    expect(entry?.group).toBe("EventSub");
+    expect(entry?.defaultEnvs).toEqual(["prod", "staging"]);
+    expect(entry?.crit).toEqual({ default: 2, unit: "min", direction: "above" });
+    expect(entry?.warn).toBeUndefined();
+  });
 });
