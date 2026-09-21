@@ -11,8 +11,12 @@ import { viewerCountPoller } from "../../services/viewer-count-poller";
 import { notifyStreamStatus } from "../../lib/ws-server";
 import { setStreamUserState } from "../../lib/user-state";
 import { findVideoIdForStream } from "../../lib/stream-video";
+import { markStreamOffline } from "../../lib/stream-offline-marker";
 
 export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: TwitchApi) => {
+  // First, so a stream.online still waiting on Helix sees it and backs off.
+  markStreamOffline(event.broadcaster_user_id);
+
   // Stop polling viewer counts for this broadcaster
   viewerCountPoller.stopPolling(event.broadcaster_user_id);
 

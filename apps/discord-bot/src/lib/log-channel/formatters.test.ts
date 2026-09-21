@@ -267,12 +267,29 @@ describe("log channel formatters", () => {
 
   test("stream online failed explains a vanished stream", () => {
     const embed = formatPlatformEvent(
-      event("stream.online_failed", { ...identity, reason: "stream_not_found", stream_id: "42" }),
+      event("stream.online_failed", { ...identity, reason: "stream_not_found", stream_id: "42", waited_seconds: 110 }),
     ).toJSON();
     expect(embed.color).toBe(DANGER_RED);
-    expect(embed.description).toContain("then didn't return it");
+    expect(embed.description).toContain("still didn't list it");
     expect(fieldValue(embed, "Reason")).toBe("`stream_not_found`");
     expect(fieldValue(embed, "Stream ID")).toBe("`42`");
+    expect(fieldValue(embed, "Waited")).toBe("110s");
+  });
+
+  test("stream online failed explains a stream that ended while we waited", () => {
+    const embed = formatPlatformEvent(
+      event("stream.online_failed", { ...identity, reason: "ended_before_tracked", stream_id: "42", waited_seconds: 20 }),
+    ).toJSON();
+    expect(embed.description).toContain("ended before Twitch listed it");
+    expect(fieldValue(embed, "Reason")).toBe("`ended_before_tracked`");
+    expect(fieldValue(embed, "Waited")).toBe("20s");
+  });
+
+  test("stream online failed leaves Waited out for older rows", () => {
+    const embed = formatPlatformEvent(
+      event("stream.online_failed", { ...identity, reason: "stream_not_found", stream_id: "42" }),
+    ).toJSON();
+    expect(fieldValue(embed, "Waited")).toBeUndefined();
   });
 
   test("unknown event types fall back to the raw payload", () => {

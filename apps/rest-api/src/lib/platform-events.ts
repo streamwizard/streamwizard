@@ -8,21 +8,22 @@ import type { StreamOnlineFailureReason } from "@repo/types";
 // fail because a log row didn't land.
 
 /**
- * stream.online arrived but Twitch didn't return the stream, so the handler
- * gave up: no stream row, no live status, no viewer polling. Sentry has the
- * error; this puts it in front of staff. A missing VOD is not a failure: the
- * stream is tracked without one and the video id is backfilled later.
+ * stream.online arrived but the handler gave up: Twitch never listed the
+ * stream, or it went offline while we waited. No stream row, no live status,
+ * no viewer polling. A missing VOD is not a failure: the stream is tracked
+ * without one and the video id is backfilled later.
  */
 export async function logStreamOnlineFailed(
   broadcasterId: string,
   reason: StreamOnlineFailureReason,
   streamId: string | null,
+  waitedSeconds: number | null = null,
 ): Promise<void> {
   try {
     const { userId, identity } = await getPlatformEventIdentityByTwitchUserId(supabase, broadcasterId);
     await logPlatformEvent(
       supabase,
-      { type: "stream.online_failed", subjectUserId: userId, payload: { ...identity, reason, stream_id: streamId } },
+      { type: "stream.online_failed", subjectUserId: userId, payload: { ...identity, reason, stream_id: streamId, waited_seconds: waitedSeconds } },
       "rest-api platform-events: stream.online_failed",
       { broadcasterUserId: broadcasterId, reason },
     );
