@@ -243,11 +243,14 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
     describeLines(withSubject(base(event, "stream.online_failed"), payload), [
       `${bold(subjectName(payload), "A user")} went live, but StreamWizard couldn't start tracking the stream.`,
       payload.reason === "stream_not_found"
-        ? "Twitch reported the stream online, then didn't return it. It may have ended straight away."
-        : "",
+        ? "Twitch reported the stream online, but still didn't list it after we kept checking."
+        : payload.reason === "ended_before_tracked"
+          ? "The stream ended before Twitch listed it. Probably a quick restart."
+          : "",
     ]).addFields([
       ...field("Reason", code(payload.reason)),
       ...field("Stream ID", code(payload.stream_id)),
+      ...field("Waited", payload.waited_seconds != null ? `${payload.waited_seconds}s` : null),
       ...identityFields(payload, event),
     ]),
 

@@ -146,7 +146,11 @@ export function platformEventTypesInGroup(group: PlatformEventGroup): PlatformEv
 }
 
 export type UserDeletedReason = "requested" | "twitch_revoked";
-export type StreamOnlineFailureReason = "stream_not_found";
+/**
+ * `stream_not_found`: Twitch never listed the stream, even after retrying.
+ * `ended_before_tracked`: stream.offline arrived while we were still waiting.
+ */
+export type StreamOnlineFailureReason = "stream_not_found" | "ended_before_tracked";
 /** Where a ticket action came from: a Discord button or command, the web-admin dashboard, or the bot on its own (the stale sweeper). */
 export type TicketEventSource = "discord" | "dashboard" | "system";
 
@@ -268,7 +272,12 @@ export interface PlatformEventPayloads {
   "clips.sync_completed": SubjectIdentity & { sync_id: string; clip_count: number; duration_seconds?: number | null };
   "clips.sync_failed": SubjectIdentity & { sync_id: string; duration_seconds?: number | null; error?: string | null };
   "twitch.token_refresh_failed": SubjectIdentity & { error: string; status?: number | null };
-  "stream.online_failed": SubjectIdentity & { reason: StreamOnlineFailureReason; stream_id?: string | null };
+  "stream.online_failed": SubjectIdentity & {
+    reason: StreamOnlineFailureReason;
+    stream_id?: string | null;
+    /** How long rest-api kept asking Twitch before giving up. */
+    waited_seconds?: number | null;
+  };
 
   /** First session after the bot started. */
   "eventsub.connected": EventSubEvent & { session_id: string };
