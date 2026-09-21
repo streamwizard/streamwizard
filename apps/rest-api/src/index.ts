@@ -14,6 +14,7 @@ import { supabaseMiddleware, supabaseAuth } from "./middleware/auth";
 import { handleTwitchEventSub } from "./routes/twitch-eventsub";
 import { viewerCountPoller } from "./services/viewer-count-poller";
 import { twitchTokenValidator } from "./services/twitch-token-validator";
+import { liveRoleSweeper } from "./services/discord-live-role-sweeper";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
 import nodes from "./routes/nodes";
 import ingestNodes from "./routes/ingest-nodes";
@@ -146,4 +147,7 @@ void viewerCountPoller.resume();
 // Twitch wants every user token validated on boot and hourly; the sweep also
 // keeps integrations_twitch.twitch_scopes current for the scope prompts.
 twitchTokenValidator.start();
+// The Discord live role is event-driven; this pass fixes what a restart or a
+// settings change in web-admin left behind. No-op without the Discord env.
+liveRoleSweeper.start();
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

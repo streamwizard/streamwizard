@@ -51,6 +51,14 @@
       "types": "./src/queries/user.ts",
       "default": "./src/queries/user.ts"
     },
+    "./queries/discord-live": {
+      "types": "./src/queries/discord-live.ts",
+      "default": "./src/queries/discord-live.ts"
+    },
+    "./queries/discord-live-role": {
+      "types": "./src/queries/discord-live-role.ts",
+      "default": "./src/queries/discord-live-role.ts"
+    },
     "./queries/vods": {
       "types": "./src/queries/vods.ts",
       "default": "./src/queries/vods.ts"

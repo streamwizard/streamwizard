@@ -30,6 +30,7 @@ let liveStatusUpserts: Record<string, unknown>[];
 let pollerStarts: unknown[][];
 let failures: unknown[][];
 let reported: string[];
+let livePosts: unknown[];
 
 mock.module("@repo/sentry", () => ({
   reportError: (_error: unknown, context: string) => {
@@ -76,6 +77,20 @@ mock.module("../../lib/platform-events", () => ({
 mock.module("../../lib/stream-video", () => ({
   findVideoIdForStream: async () => lookupResult,
 }));
+mock.module("../../lib/discord-live", () => ({
+  postGoLive: async (posted: unknown) => {
+    livePosts.push(posted);
+    return "posted";
+  },
+  endGoLive: async () => "skipped",
+}));
+mock.module("../../lib/discord-live-target", () => ({
+  resolveLiveTarget: async () => null,
+}));
+mock.module("../../lib/discord-live-role", () => ({
+  grantLiveRole: async () => "skipped",
+  revokeLiveRole: async () => "skipped",
+}));
 mock.module("../../lib/stream-offline-marker", () => ({
   markStreamOffline: () => {},
   wentOfflineSince: () => offline,
@@ -99,6 +114,7 @@ beforeEach(() => {
   pollerStarts = [];
   failures = [];
   reported = [];
+  livePosts = [];
 });
 
 // Each lookup takes the next queued answer; the last one repeats.
@@ -128,6 +144,7 @@ describe("handleStreamOnline", () => {
     expect(vodUpserts).toEqual([{ broadcaster_id: "b1", stream_id: "s1", started_at: stream.started_at }]);
     expect(videoIdWrites).toHaveLength(0);
     expect(liveStatusUpserts).toHaveLength(1);
+    expect(livePosts).toEqual([stream]);
     expect(pollerStarts).toEqual([["b1", "s1", null]]);
     expect(failures).toHaveLength(0);
     expect(reported).toHaveLength(0);
@@ -163,6 +180,7 @@ describe("handleStreamOnline", () => {
     expect(liveStatusUpserts).toHaveLength(0);
     expect(pollerStarts).toHaveLength(0);
     expect(failures).toEqual([["b1", "stream_not_found", "s1", 0]]);
+    expect(livePosts).toHaveLength(0);
     expect(reported).toEqual(["eventsub.stream-online"]);
   });
 
@@ -172,6 +190,7 @@ describe("handleStreamOnline", () => {
 
     expect(vodUpserts).toHaveLength(0);
     expect(failures).toEqual([["b1", "stream_not_found", "s1", 0]]);
+    expect(livePosts).toHaveLength(0);
   });
 
   it("backs off without Sentry when the stream goes offline while waiting", async () => {
@@ -184,6 +203,7 @@ describe("handleStreamOnline", () => {
     expect(liveStatusUpserts).toHaveLength(0);
     expect(pollerStarts).toHaveLength(0);
     expect(failures).toEqual([["b1", "ended_before_tracked", "s1", 0]]);
+    expect(livePosts).toHaveLength(0);
     expect(reported).toHaveLength(0);
   });
 
@@ -195,5 +215,6 @@ describe("handleStreamOnline", () => {
     expect(liveStatusUpserts).toHaveLength(0);
     expect(pollerStarts).toHaveLength(0);
     expect(failures).toEqual([["b1", "ended_before_tracked", "s1", 0]]);
+    expect(livePosts).toHaveLength(0);
   });
 });

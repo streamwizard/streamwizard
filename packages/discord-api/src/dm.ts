@@ -6,11 +6,27 @@ const DISCORD_API_BASE = "https://discord.com/api/v10";
 export interface DiscordEmbed {
   title?: string;
   description?: string;
+  /** Makes the title a link. */
+  url?: string;
   color?: number;
+  author?: { name: string; url?: string; icon_url?: string };
+  thumbnail?: { url: string };
+  image?: { url: string };
   fields?: { name: string; value: string; inline?: boolean }[];
   footer?: { text: string };
   /** ISO 8601 — Discord renders it localized under the embed. */
   timestamp?: string;
+}
+
+/**
+ * Who a message may ping. `parse: []` plus explicit ids is the safe shape:
+ * only the listed users and roles get a notification, whatever the content
+ * says.
+ */
+export interface DiscordAllowedMentions {
+  parse?: ("users" | "roles" | "everyone")[];
+  users?: string[];
+  roles?: string[];
 }
 
 export interface DiscordLinkButton {
@@ -24,6 +40,7 @@ export interface DiscordMessagePayload {
   content?: string;
   embeds?: DiscordEmbed[];
   components?: { type: 1; components: DiscordLinkButton[] }[]; // ActionRow
+  allowed_mentions?: DiscordAllowedMentions;
 }
 
 /**

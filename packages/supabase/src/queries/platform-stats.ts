@@ -14,7 +14,10 @@ async function countRows(
   table: keyof Database["public"]["Tables"],
   filter?: { column: string; value: string | boolean },
 ): Promise<number> {
-  const query = client.from(table).select("*", { count: "exact", head: true });
+  // Untyped client on purpose: instantiating the query builder over the union
+  // of every table name is too deep for TypeScript, and a head-only count
+  // returns no rows to type anyway.
+  const query = (client as SupabaseClient).from(table).select("*", { count: "exact", head: true });
   const { count } = await (filter ? query.eq(filter.column, filter.value) : query);
   return count ?? 0;
 }
