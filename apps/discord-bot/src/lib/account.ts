@@ -3,6 +3,7 @@ import type { ChatInputCommandInteraction } from "discord.js";
 import { supabase } from "@repo/supabase";
 import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
 import { env } from "./env";
+import { expireReply } from "./ephemeral";
 
 // Starts the Discord identity link. The route sends signed-out users to login
 // first, so it works for brand-new members as well as existing users.
@@ -28,6 +29,7 @@ export async function requireLinkedAccount(interaction: ChatInputCommandInteract
     components: [buildLinkRow()],
     flags: MessageFlags.Ephemeral,
   });
+  expireReply(interaction);
 
   return null;
 }
