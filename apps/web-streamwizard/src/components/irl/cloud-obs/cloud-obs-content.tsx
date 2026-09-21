@@ -151,9 +151,12 @@ export function CloudObsContent({
   // Auto-wire the primary ingest key into the fixed "IRL" scene once OBS is
   // connected and scenes have actually loaded (status flips to "open" slightly
   // before fetchScenes() resolves, so wait for scenes rather than acting on
-  // stale/empty data). Only a key created THIS session gets wired silently —
-  // everything else is left alone, so we never fight a user who deliberately
-  // removed the source. Only the primary (most recent) key is ever auto-wired;
+  // stale/empty data). During the guided setup the source is always added when
+  // it's missing — templates ship without one, so this is what gives a fresh
+  // instance its feed, even if the key was made before a reload. After setup,
+  // only a key created THIS session gets wired silently — everything else is
+  // left alone, so we never fight a user who deliberately removed the source.
+  // Only the primary (most recent) key is ever auto-wired;
   // creating a second key never rewires "StreamWizard Ingest" onto it, since
   // the fixed source name means detection is keyed by name, not by key. That's
   // intentional — additional keys stay manual-only via the list below.
@@ -173,7 +176,7 @@ export function CloudObsContent({
       if (cancelled || obs.sceneHasSource(IRL_SCENE_NAME, IRL_SOURCE_NAME)) return;
 
       const justCreated = justCreatedKeyIdRef.current === primaryKey.id;
-      if (justCreated) {
+      if (justCreated || showSetupStepper) {
         try {
           await obs.addMediaSourceToScene(IRL_SCENE_NAME, IRL_SOURCE_NAME, obsPullUrl(obsPullHost, outputKey.output_key));
           justCreatedKeyIdRef.current = null;
@@ -191,7 +194,7 @@ export function CloudObsContent({
     return () => {
       cancelled = true;
     };
-  }, [obs.status, obs.scenes.length, obs.sceneItems, ingestKeys, obsPullHost]);
+  }, [obs.status, obs.scenes.length, obs.sceneItems, ingestKeys, obsPullHost, showSetupStepper]);
 
   if (showSetupStepper) {
     return (
@@ -211,6 +214,7 @@ export function CloudObsContent({
         onLaunch={handleLaunch}
         onStartContainer={handleToggleContainer}
         onOpenViewer={openViewer}
+        ingestWired={obs.sceneHasSource(IRL_SCENE_NAME, IRL_SOURCE_NAME)}
         onFinishSetup={() => setSetupComplete(true)}
       />
     );

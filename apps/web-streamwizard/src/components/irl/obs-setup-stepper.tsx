@@ -27,6 +27,8 @@ interface ObsSetupStepperProps {
   isBooting: boolean;
   hasTimedOut: boolean;
   onReconnect: () => void;
+  /** The "IRL" scene already holds the StreamWizard ingest source. */
+  ingestWired: boolean;
   hasOpenedViewer: boolean;
   onOpenViewer: () => void;
   scenes: Scene[];
@@ -59,6 +61,7 @@ export function ObsSetupStepper({
   isBooting,
   hasTimedOut,
   onReconnect,
+  ingestWired,
   hasOpenedViewer,
   onOpenViewer,
   scenes,
@@ -168,7 +171,18 @@ export function ObsSetupStepper({
               Automatic. Takes 10 to 30 seconds, nothing to click here.
             </p>
             {obsStatus === "open" ? (
-              <p className="text-sm text-muted-foreground">Done. OBS connected.</p>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Done. OBS connected.</p>
+                {hasKey &&
+                  (ingestWired ? (
+                    <p className="text-sm text-muted-foreground">Your ingest feed is in the IRL scene.</p>
+                  ) : (
+                    <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Adding your ingest feed to the IRL scene…
+                    </p>
+                  ))}
+              </div>
             ) : hasTimedOut ? (
               <div>
                 <p className="text-sm text-destructive">OBS never came online.</p>
