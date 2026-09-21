@@ -93,14 +93,14 @@ export abstract class TwitchApiBaseClient {
             if (!this.broadcaster_id) {
               throw new Error("Broadcaster ID is required in Twitch client interceptor");
             }
-            console.log("🔄 Token expired, attempting to refresh for broadcaster:", this.broadcaster_id);
+            console.debug("🔄 Token expired, attempting to refresh for broadcaster:", this.broadcaster_id);
             const newToken = await this.refreshUserToken(this.broadcaster_id);
             if (!newToken) {
               return Promise.reject(error);
             }
             config.headers = config.headers || {};
             config.headers["Authorization"] = `Bearer ${newToken}`;
-            console.log("✅ Token refreshed, retrying request");
+            console.debug("✅ Token refreshed, retrying request");
             return api(config);
           } catch (refreshError) {
             console.error("❌ Token refresh failed:", refreshError);
@@ -188,14 +188,14 @@ export abstract class TwitchApiBaseClient {
         if (statusCode === 401 && currentRetryCount < this.MAX_RETRIES) {
           config.__retryCount = currentRetryCount + 1;
           try {
-            console.log("🔄 Token invalid, attempting to refresh for app token");
+            console.debug("🔄 Token invalid, attempting to refresh for app token");
             const newToken = await this.refreshAppToken();
             if (!newToken) {
               return Promise.reject(new Error("Failed to refresh app token"));
             }
             config.headers = config.headers || {};
             config.headers["Authorization"] = `Bearer ${newToken}`;
-            console.log("✅ Token refreshed, retrying request");
+            console.debug("✅ Token refreshed, retrying request");
             return api(config);
           } catch (refreshError) {
             console.error("❌ Token refresh failed:", refreshError);

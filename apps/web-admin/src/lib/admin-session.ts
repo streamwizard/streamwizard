@@ -41,6 +41,12 @@ export type AdminSessionResult =
  * if they already have a factor to prove, `/auth/setup` if they have none.
  * Layouts redirect; server actions throw (see assert-admin.ts).
  */
+// "Auth session missing!" is a logged-out visit, not a failure; logging it as a
+// warning sent every visit to the login page to Sentry Logs.
+function isMissingSession(error: { name?: string }): boolean {
+  return error.name === "AuthSessionMissingError";
+}
+
 export async function getAdminSession(): Promise<AdminSessionResult> {
   const inventory = await loadAdminInventory();
   if (inventory.redirect) return inventory;
@@ -80,14 +86,18 @@ async function loadAdminInventory(): Promise<
   if (claimsError || !claims) {
     // A missing session is normal for a first visit, but a real error (bad or
     // expired token, misconfigured client) deserves a paper trail.
-    if (claimsError) console.warn("[web-admin] getClaims failed at admin gate:", claimsError.message);
+    if (claimsError && !isMissingSession(claimsError)) {
+      console.warn("[web-admin] getClaims failed at admin gate:", claimsError.message);
+    }
     return { session: null, redirect: "/login?error=signin_required" };
   }
 
   // getUser() is what carries `factors`; getClaims() is what carries aal/amr.
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) {
-    if (userError) console.warn("[web-admin] getUser failed at admin gate:", userError.message);
+    if (userError && !isMissingSession(userError)) {
+      console.warn("[web-admin] getUser failed at admin gate:", userError.message);
+    }
     return { session: null, redirect: "/login?error=signin_required" };
   }
   const user = userData.user;
