@@ -54,14 +54,19 @@ class StreameventsLogger {
     return offsetSeconds;
   }
 
-  // build the database event object
-  protected async buildStreamEvent(event: StreamEvent): Promise<Database["public"]["Tables"]["stream_events"]["Insert"]> {
+  // build the database event object, or null when the broadcaster isn't
+  // live: stream_id/offset_seconds only exist during a stream, and EventSub
+  // keeps delivering events (reward edits, channel.update, ads) while offline
+  protected async buildStreamEvent(event: StreamEvent): Promise<Database["public"]["Tables"]["stream_events"]["Insert"] | null> {
     const streamId = await this.getStreamId(event.broadcaster_id);
-    if (!streamId) {
-      throw new Error("Streamer is not live");
-    }
+    if (!streamId) return null;
 
-    const offset = await this.getOffset(event.broadcaster_id);
+    let offset: number;
+    try {
+      offset = await this.getOffset(event.broadcaster_id);
+    } catch {
+      return null;
+    }
 
     const streamEvent: Database["public"]["Tables"]["stream_events"]["Insert"] = {
       broadcaster_id: event.broadcaster_id,
@@ -76,9 +81,11 @@ class StreameventsLogger {
     return streamEvent;
   }
 
-  // log a twitch event
+  // log a twitch event. Returns null (no insert, no throw) when the
+  // broadcaster is offline; insert errors still throw.
   public async logTwitchEvent(event: StreamEvent) {
     const streamEvent = await this.buildStreamEvent(event);
+    if (!streamEvent) return null;
 
     return await this.logEvent(streamEvent);
   }
