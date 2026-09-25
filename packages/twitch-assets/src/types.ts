@@ -64,3 +64,79 @@ export interface ThirdPartyEmote {
 
 /** Emote code → emote. Codes are case-sensitive, as chat matches them. */
 export type ThirdPartyEmoteMap = Record<string, ThirdPartyEmote>;
+
+export type PublicGoalType =
+  | "follow"
+  | "subscription"
+  | "subscription_count"
+  | "new_subscription"
+  | "new_subscription_count"
+  | "new_bit"
+  | "new_cheerer";
+
+/** An active Creator Goal, in the same shape as the channel.goal.* events. */
+export interface PublicGoal {
+  id: string;
+  type: PublicGoalType;
+  description: string;
+  current_amount: number;
+  target_amount: number;
+  started_at: string;
+}
+
+export interface LiveGoals {
+  goals: PublicGoal[];
+  /** The stored token lacks channel:read:goals; the user has to reconnect. */
+  missing_scope: boolean;
+}
+
+export type PublicPollStatus = "active" | "completed" | "terminated" | "archived";
+
+export interface PublicPollChoice {
+  id: string;
+  title: string;
+  votes: number;
+  channel_points_votes: number;
+  bits_votes: number;
+}
+
+/** A poll in the same shape as the channel.poll.* events, running or just ended. */
+export interface PublicPoll {
+  id: string;
+  title: string;
+  choices: PublicPollChoice[];
+  status: PublicPollStatus;
+  started_at: string;
+  /** When a running poll closes. */
+  ends_at: string;
+  /** Null while it runs. */
+  ended_at: string | null;
+  bits_voting: { is_enabled: boolean; amount_per_vote: number };
+  channel_points_voting: { is_enabled: boolean; amount_per_vote: number };
+}
+
+export interface LivePoll {
+  /** The running poll, or one that ended in the last minute; otherwise null. */
+  poll: PublicPoll | null;
+  /** The stored token lacks channel:read:polls; the user has to reconnect. */
+  missing_scope: boolean;
+}
+
+/** The channel's ad schedule, with Twitch's mixed formats settled. */
+export interface PublicAdSchedule {
+  /** ISO time of the next scheduled ad; null when none is scheduled or the channel is offline. */
+  next_ad_at: string | null;
+  last_ad_at: string | null;
+  /** Seconds the next ad break runs. */
+  duration: number;
+  /** Seconds of pre-roll-free time left. */
+  preroll_free_time: number;
+  snooze_count: number;
+  snooze_refresh_at: string | null;
+}
+
+export interface LiveAdSchedule {
+  schedule: PublicAdSchedule | null;
+  /** The stored token lacks channel:read:ads; the user has to reconnect. */
+  missing_scope: boolean;
+}

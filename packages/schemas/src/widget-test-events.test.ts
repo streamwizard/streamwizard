@@ -18,6 +18,31 @@ describe("widget test events", () => {
     });
   }
 
+  for (const type of ["channel.goal.begin", "channel.goal.progress", "channel.goal.end"] as const) {
+    it(`${type} variants match the schema and carry their goal type`, () => {
+      for (const [variant, { build }] of Object.entries(WIDGET_TEST_EVENTS[type].variants)) {
+        const payload = build();
+        expect(WIDGET_TEST_EVENTS[type].schema.safeParse(payload).success).toBe(true);
+        expect(payload.type).toBe(variant);
+      }
+    });
+  }
+
+  it("the test ad break is marked as a test", () => {
+    expect(WIDGET_TEST_EVENTS["channel.ad_break.begin"].build().demo).toBe(true);
+  });
+
+  it("demo poll fires share one poll and one countdown", () => {
+    const begin = WIDGET_TEST_EVENTS["channel.poll.begin"].build();
+    const close = WIDGET_TEST_EVENTS["channel.poll.progress"].variants.close.build();
+    const end = WIDGET_TEST_EVENTS["channel.poll.end"].build();
+    expect(WIDGET_TEST_EVENTS["channel.poll.progress"].schema.safeParse(close).success).toBe(true);
+    expect(close.id).toBe(begin.id);
+    expect(end.id).toBe(begin.id);
+    expect(close.ends_at).toBe(begin.ends_at);
+    expect(Date.parse(begin.ends_at as string)).toBeGreaterThan(Date.now());
+  });
+
   it("builds fresh values per call", () => {
     const a = buildWidgetTestEvent("channel.chat.message");
     const b = buildWidgetTestEvent("channel.chat.message");

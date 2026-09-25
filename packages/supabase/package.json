@@ -223,6 +223,10 @@
       "types": "./src/queries/stream-events.ts",
       "default": "./src/queries/stream-events.ts"
     },
+    "./queries/credits": {
+      "types": "./src/queries/credits.ts",
+      "default": "./src/queries/credits.ts"
+    },
     "./queries/asset-cache": {
       "types": "./src/queries/asset-cache.ts",
       "default": "./src/queries/asset-cache.ts"
@@ -235,6 +239,7 @@
   },
   "dependencies": {
     "@repo/metrics": "workspace:*",
+    "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",
     "@repo/types": "workspace:*",
     "@supabase/supabase-js": "^2.105.1",

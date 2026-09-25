@@ -128,6 +128,11 @@ export type EventSubSubscriptionType =
   | "channel.hype_train.progress"
   | "channel.hype_train.end"
 
+  // Goal Topics
+  | "channel.goal.begin"
+  | "channel.goal.progress"
+  | "channel.goal.end"
+
   // Shield Mode Topics
   | "channel.shield_mode.begin"
   | "channel.shield_mode.end"

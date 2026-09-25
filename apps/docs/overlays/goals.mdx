@@ -1,0 +1,99 @@
+---
+title: "Goals"
+description: "Your Twitch follower, sub and Bits goals on stream as live progress bars."
+---
+
+The goal widgets show the goals you run on Twitch. Make a goal in your
+Twitch Creator Dashboard, and the bar on your overlay fills as followers,
+subs and cheers come in. No refreshing, no typing numbers in by hand.
+
+## Pick your goal
+
+In the overlay editor, open **Widgets → Goals**:
+
+- **Follower goal**: new followers toward your follower goal.
+- **Sub goal**: your sub goal, whichever kind you run. Twitch runs one sub
+  goal at a time and lets you pick how it counts under **Sub Count**:
+
+| Twitch's Sub Count | What it counts |
+|---|---|
+| Total Subs | All your active subs. Goes down when a sub runs out. |
+| Total Sub Points | The same, weighted by tier: Prime and tier 1 are 1 point, tier 2 is 2, tier 3 is 6. |
+| New Subs | Subs bought while the goal runs, starting at 0. Never goes down. |
+| New Sub Points | New subs, weighted by tier. |
+
+The widget follows whatever you pick and labels the numbers to match, like
+`1 / 10 subs` or `8 / 50 sub points`.
+
+- **Bits goal**: your Bits goal. On Twitch it counts either Bits cheered or
+  cheerers (each person who cheers counts once). Both start at 0 when the goal
+  starts. The widget follows whichever you pick: `1,200 / 5,000 Bits` or
+  `8 / 25 cheerers`.
+
+Twitch runs one goal per kind at a time, so you can have a follower, a sub and
+a Bits bar on screen together. Add a widget for each.
+
+## Making and changing goals
+
+Goals live on Twitch. Twitch doesn't let other apps create or edit them, so
+you start, change, and end goals in your Creator Dashboard. **Manage goals on
+Twitch** in the widget settings takes you there. The widget picks up the
+change on its own.
+
+If there's no active goal of its kind, the widget shows nothing on stream.
+In the editor it tells you so.
+
+## Reconnect Twitch (accounts from before goals)
+
+Reading goals needs a Twitch permission StreamWizard didn't ask for before.
+If you connected Twitch before the goal widgets existed, the widget settings
+show a **Connect Twitch** button. One trip to Twitch and you're set. Until
+then the bar can't load or update.
+
+## Designs
+
+Pick a look under **Design**. Every goal widget can use every design, and
+switching resizes the box to fit.
+
+| Design | What it looks like | Good for |
+|---|---|---|
+| **Bar** | Title and numbers over a rounded bar | The all-rounder |
+| **Strip** | One line of text with a thin line of progress under it | Tickers, corners, tight spots |
+| **Ring** | A circle filling up, the current number big in the middle | Next to your camera |
+| **Blocks** | The bar in segments that light up, like a health bar | Small goals: with 20 or fewer, every follow or sub gets its own block |
+| **Tube** | A thermometer filling from the bottom | Side columns |
+| **Arcade** | A pixel XP bar with LEVEL UP when you hit the goal | Games, obviously |
+| **Liquid** | A card of water that never sits quite still. New follows, subs or Bits pour in from a tap above, and bigger jumps pour longer | When the goal is the star |
+
+Arcade switches the font to Press Start 2P when you pick it. Change it back
+if you like.
+
+## See it before you go live
+
+The settings have four test buttons: **Start**, **Progress**, **Almost
+there** (90%) and **Reached**. They play a fake goal on the canvas, or on
+your live overlay when the demo bar is set to Live. After a test, **Back to
+your Twitch goal** puts the real numbers back. A Live test on your stream
+clears itself after 15 seconds.
+
+## Settings
+
+- **Title**: leave it empty to use the goal's name from Twitch, or type your
+  own. If neither has one, the widget shows no title.
+- **When the goal ends**: keep the full bar up, or hide it a few seconds
+  after the goal ends.
+- **Show**: title, numbers (`120 / 500 subs`), percentage, how many to go
+  (`12 subs to go`), and an icon: a heart for followers, a star for subs, a
+  gem for Bits, or your own image.
+- **Colors**: a solid fill or a two-color gradient, the track behind it, the
+  text, and corner radius.
+- **Text**: font, weight, size, and a shadow that keeps it readable over
+  bright games.
+- **Motion**:
+  - **Flash on progress**: a short glow each time the number goes up.
+  - **When the goal is reached**: shine, glow, confetti, or nothing.
+  - **Goal starts** and **Goal hides**: fade, slide, pop or shrink.
+
+If reduced motion is switched on in the system settings of the computer
+running OBS, the widget plays it still: no confetti, no pouring or waves, and
+fills jump straight to the new number.

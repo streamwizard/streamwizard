@@ -73,7 +73,13 @@ export abstract class TwitchApiBaseClient {
         if (!config) return Promise.reject(error);
 
         const statusCode = error.response?.status;
-        const currentRetryCount = config.__retryCount || 0;
+        // A 401 for a scope the token was never granted won't be fixed by a
+        // refresh (the new token keeps the old scopes), so fail it straight away.
+        const message = (error.response?.data as { message?: unknown } | undefined)?.message;
+        const currentRetryCount =
+          typeof message === "string" && message.startsWith("Missing scope")
+            ? this.MAX_RETRIES
+            : config.__retryCount || 0;
 
         // Track error request (sync, never throws) - only on final failure
         if (!(statusCode === 401 && currentRetryCount < this.MAX_RETRIES)) {

@@ -12,7 +12,7 @@ import type {
 } from "@/types/overlays";
 import type { WidgetBaseDefinition } from "@repo/ui/overlay";
 
-export type WidgetCategory = "media" | "alerts" | "layout" | "other";
+export type WidgetCategory = "media" | "alerts" | "goals" | "polls" | "ads" | "credits" | "layout" | "other";
 
 export type LayerScope = "root" | "child";
 

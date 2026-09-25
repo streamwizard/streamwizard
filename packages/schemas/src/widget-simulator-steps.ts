@@ -1,5 +1,5 @@
 import type { OverlayGeoEvent } from "./streamwizard";
-import { WIDGET_TEST_EVENTS } from "./widget-test-events";
+import { DEMO_POLL_ID, WIDGET_TEST_EVENTS } from "./widget-test-events";
 import { AUTO_SWITCHER_PRESET_THRESHOLDS, type AutoSwitcherStatus } from "./auto-switcher";
 import { buildDemoSwitcherStatus } from "./widget-demo-events";
 
@@ -266,4 +266,134 @@ export function stepSwitcherDegrade(
 
 function status(patch: Partial<AutoSwitcherStatus>): Record<string, unknown> {
   return buildDemoSwitcherStatus(patch) as unknown as Record<string, unknown>;
+}
+
+export interface PollCycleOptions {
+  /** Seconds (ticks) the poll takes votes for. */
+  voteTicks?: number;
+  /** Ticks of quiet after the close, so the result shows and hides before the next poll. */
+  pauseTicks?: number;
+}
+
+export interface PollCycleState {
+  /** Which poll of the run this is; picks the question and the id. */
+  cycle: number;
+  /** Tick within the cycle: 0 begins, then votes, then the close, then the pause. */
+  tick: number;
+  votes: number[];
+  startedAt: number;
+  /** Pseudo-random seed, so a run replays exactly. */
+  seed: number;
+}
+
+const POLL_CYCLE_QUESTIONS: readonly { title: string; choices: readonly string[]; favourite: number }[] = [
+  { title: "What do we play next?", choices: ["Elden Ring", "Hades II", "Balatro"], favourite: 2 },
+  { title: "Aren't shoes just hard socks?", choices: ["Hard socks", "Absolutely not"], favourite: 0 },
+  { title: "Pick tonight's challenge", choices: ["No healing", "Only pistols", "Blindfolded boss", "Speedrun"], favourite: 1 },
+];
+
+const POLL_CYCLE_DEFAULTS = { voteTicks: 20, pauseTicks: 13 };
+
+export function initPollCycle(now = Date.now(), seed = 1): PollCycleState {
+  return { cycle: 0, tick: 0, votes: [], startedAt: now, seed };
+}
+
+function nextRand(seed: number): { seed: number; value: number } {
+  // Park–Miller: small, deterministic, good enough for vote noise.
+  const next = (seed * 48271) % 2147483647;
+  return { seed: next, value: next / 2147483647 };
+}
+
+/**
+ * One second of a looping poll: it begins, votes trickle in (one choice
+ * pulls ahead, the rest keep it close), it closes with a winner, and after a
+ * pause the next poll begins with a new question. `listener: null` is a quiet
+ * tick with nothing to send.
+ *
+ * Each poll gets its own `demo-poll-…` id, so widgets treat it as a test poll
+ * and play the entrance again for every new one.
+ */
+export function stepPollCycle(
+  state: PollCycleState,
+  now = Date.now(),
+  opts?: PollCycleOptions
+): { state: PollCycleState; listener: string | null; event: Record<string, unknown> | null } {
+  const voteTicks = opts?.voteTicks ?? POLL_CYCLE_DEFAULTS.voteTicks;
+  const pauseTicks = opts?.pauseTicks ?? POLL_CYCLE_DEFAULTS.pauseTicks;
+  const question = POLL_CYCLE_QUESTIONS[state.cycle % POLL_CYCLE_QUESTIONS.length]!;
+  const id = `${DEMO_POLL_ID}-sim-${state.cycle}`;
+  const tick = state.tick;
+  const advance = (patch: Partial<PollCycleState>): PollCycleState => ({ ...state, tick: tick + 1, ...patch });
+
+  const base = {
+    id,
+    broadcaster_user_id: "2",
+    broadcaster_user_login: "broadcaster",
+    broadcaster_user_name: "Broadcaster",
+    title: question.title,
+    bits_voting: { is_enabled: false, amount_per_vote: 0 },
+    channel_points_voting: { is_enabled: true, amount_per_vote: 100 },
+  };
+  const withVotes = (votes: number[]) =>
+    question.choices.map((title, i) => ({
+      id: String(i + 1),
+      title,
+      bits_votes: 0,
+      channel_points_votes: Math.round(votes[i]! * 0.2),
+      votes: votes[i]!,
+    }));
+
+  if (tick === 0) {
+    const startedAt = now;
+    return {
+      state: advance({ votes: question.choices.map(() => 0), startedAt }),
+      listener: "channel.poll.begin",
+      event: {
+        ...base,
+        choices: question.choices.map((title, i) => ({ id: String(i + 1), title })),
+        started_at: new Date(startedAt).toISOString(),
+        ends_at: new Date(startedAt + (voteTicks + 1) * 1000).toISOString(),
+      },
+    };
+  }
+
+  if (tick <= voteTicks) {
+    let seed = state.seed;
+    const votes = state.votes.map((v, i) => {
+      const r = nextRand(seed);
+      seed = r.seed;
+      // The favourite gets a little more on average, so there is a winner
+      // but the race stays close enough to watch.
+      const weight = i === question.favourite ? 5 : 3.5;
+      return v + Math.floor(r.value * weight);
+    });
+    return {
+      state: advance({ votes, seed }),
+      listener: "channel.poll.progress",
+      event: {
+        ...base,
+        choices: withVotes(votes),
+        started_at: new Date(state.startedAt).toISOString(),
+        ends_at: new Date(state.startedAt + (voteTicks + 1) * 1000).toISOString(),
+      },
+    };
+  }
+
+  if (tick === voteTicks + 1) {
+    return {
+      state: advance({}),
+      listener: "channel.poll.end",
+      event: {
+        ...base,
+        choices: withVotes(state.votes),
+        status: "completed",
+        started_at: new Date(state.startedAt).toISOString(),
+        ended_at: new Date(now).toISOString(),
+      },
+    };
+  }
+
+  // The pause, then the next poll.
+  if (tick < voteTicks + 1 + pauseTicks) return { state: advance({}), listener: null, event: null };
+  return { state: { ...state, cycle: state.cycle + 1, tick: 0 }, listener: null, event: null };
 }

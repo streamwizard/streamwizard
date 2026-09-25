@@ -9,6 +9,13 @@ import {
 import { OverlayGeoEventSchema } from "./streamwizard";
 import { ChannelChatMessageEventSchema } from "./chat";
 import {
+  ChannelPollBeginEventSchema,
+  ChannelPollEndEventSchema,
+  ChannelPollProgressEventSchema,
+} from "./polls-predictions";
+import {
+  initPollCycle,
+  stepPollCycle,
   initChatStream,
   initGeoWalk,
   stepChatStream,
@@ -146,6 +153,57 @@ describe("chat stream simulator", () => {
       texts.push((stepped.event.message as { text: string }).text);
     }
     expect(new Set(texts).size).toBe(3);
+  });
+});
+
+describe("poll cycle simulator", () => {
+  const SCHEMAS = {
+    "channel.poll.begin": ChannelPollBeginEventSchema,
+    "channel.poll.progress": ChannelPollProgressEventSchema,
+    "channel.poll.end": ChannelPollEndEventSchema,
+  } as const;
+
+  function run(ticks: number) {
+    let state = initPollCycle(0, 7);
+    const out: { listener: string | null; event: Record<string, unknown> | null }[] = [];
+    for (let i = 0; i < ticks; i++) {
+      const stepped = stepPollCycle(state, i * 1000, { voteTicks: 5, pauseTicks: 3 });
+      state = stepped.state;
+      out.push({ listener: stepped.listener, event: stepped.event });
+    }
+    return out;
+  }
+
+  it("begins, votes, closes, pauses and starts the next poll", () => {
+    const listeners = run(20).map((t) => t.listener);
+    expect(listeners.slice(0, 8)).toEqual([
+      "channel.poll.begin",
+      ...Array(5).fill("channel.poll.progress"),
+      "channel.poll.end",
+      null,
+    ]);
+    // Begin, 5 votes, end, 3 quiet ticks (the last one rolls over), then poll two.
+    expect(listeners[10]).toBe("channel.poll.begin");
+  });
+
+  it("every event matches its schema, votes only go up, and each poll has its own demo id", () => {
+    const ticks = run(20).filter((t) => t.listener);
+    let last = -1;
+    for (const { listener, event } of ticks) {
+      expect(SCHEMAS[listener as keyof typeof SCHEMAS].safeParse(event).success).toBe(true);
+      if (listener === "channel.poll.progress") {
+        const total = (event!.choices as { votes: number }[]).reduce((s, c) => s + c.votes, 0);
+        expect(total).toBeGreaterThanOrEqual(last);
+        last = total;
+      }
+      if (listener === "channel.poll.begin") last = -1;
+    }
+    const ids = new Set(ticks.map((t) => t.event!.id));
+    expect([...ids]).toEqual(["demo-poll-sim-0", "demo-poll-sim-1"]);
+  });
+
+  it("replays exactly", () => {
+    expect(run(12)).toEqual(run(12));
   });
 });
 

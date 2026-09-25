@@ -189,6 +189,7 @@ type ChannelFollowEvent = {
     broadcaster_user_login: string;
     broadcaster_user_name: string;
     followed_at: string;
+    user_profile_image_url?: string | undefined;
 };
 ```
 
@@ -196,9 +197,9 @@ type ChannelFollowEvent = {
 
 ```ts
 type ChannelAdBreakBeginEvent = {
-    duration_seconds: string;
+    duration_seconds: number;
     started_at: string;
-    is_automatic: string;
+    is_automatic: boolean;
     broadcaster_user_id: string;
     broadcaster_user_login: string;
     broadcaster_user_name: string;
@@ -220,6 +221,7 @@ type ChannelSubscribeEvent = {
     broadcaster_user_name: string;
     tier: "1000" | "2000" | "3000";
     is_gift: boolean;
+    user_profile_image_url?: string | undefined;
 };
 ```
 
@@ -252,6 +254,7 @@ type ChannelSubscriptionGiftEvent = {
     tier: "1000" | "2000" | "3000";
     cumulative_total: number | null;
     is_anonymous: boolean;
+    user_profile_image_url?: string | undefined;
 };
 ```
 
@@ -277,6 +280,7 @@ type ChannelSubscriptionMessageEvent = {
     cumulative_months: number;
     streak_months: number | null;
     duration_months: number;
+    user_profile_image_url?: string | undefined;
 };
 ```
 
@@ -293,6 +297,7 @@ type ChannelCheerEvent = {
     broadcaster_user_name: string;
     message: string;
     bits: number;
+    user_profile_image_url?: string | undefined;
 };
 ```
 
@@ -307,6 +312,7 @@ type ChannelRaidEvent = {
     to_broadcaster_user_login: string;
     to_broadcaster_user_name: string;
     viewers: number;
+    user_profile_image_url?: string | undefined;
 };
 ```
 
@@ -470,7 +476,7 @@ type ChannelChatMessageEvent = {
     message: {
         text: string;
         fragments: {
-            type: "text" | "cheermote" | "emote" | "mention";
+            type: "text" | "cheermote" | "emote" | "mention" | "gif";
             text: string;
             cheermote?: ({
                 prefix: string;
@@ -480,11 +486,18 @@ type ChannelChatMessageEvent = {
             emote?: ({
                 id: string;
                 emote_set_id: string;
+                owner_id?: string | undefined;
+                format?: string[] | undefined;
             } | null) | undefined;
             mention?: ({
                 user_id: string;
                 user_name: string;
                 user_login: string;
+            } | null) | undefined;
+            gif?: ({
+                id?: string | undefined;
+                gif_id?: string | undefined;
+                url: string;
             } | null) | undefined;
         }[];
     };
@@ -493,7 +506,12 @@ type ChannelChatMessageEvent = {
         set_id: string;
         id: string;
         info: string;
+        url?: string | undefined;
+        url_1x?: string | undefined;
+        url_2x?: string | undefined;
+        url_4x?: string | undefined;
     }[];
+    user_profile_image_url?: string | undefined;
     message_type: "text" | "channel_points_highlighted" | "channel_points_sub_only" | "user_intro" | "power_ups_message_effect" | "power_ups_gigantified_emote";
     cheer?: ({
         bits: number;
@@ -518,6 +536,10 @@ type ChannelChatMessageEvent = {
         set_id: string;
         id: string;
         info: string;
+        url?: string | undefined;
+        url_1x?: string | undefined;
+        url_2x?: string | undefined;
+        url_4x?: string | undefined;
     }[] | null) | undefined;
     is_source_only?: (boolean | null) | undefined;
 };
@@ -553,13 +575,18 @@ type ChannelChatNotificationEvent = {
         set_id: string;
         id: string;
         info: string;
+        url?: string | undefined;
+        url_1x?: string | undefined;
+        url_2x?: string | undefined;
+        url_4x?: string | undefined;
     }[];
+    user_profile_image_url?: string | undefined;
     system_message: string;
     message_id: string;
     message: {
         text: string;
         fragments: {
-            type: "text" | "cheermote" | "emote" | "mention";
+            type: "text" | "cheermote" | "emote" | "mention" | "gif";
             text: string;
             cheermote?: ({
                 prefix: string;
@@ -569,15 +596,22 @@ type ChannelChatNotificationEvent = {
             emote?: ({
                 id: string;
                 emote_set_id: string;
+                owner_id?: string | undefined;
+                format?: string[] | undefined;
             } | null) | undefined;
             mention?: ({
                 user_id: string;
                 user_name: string;
                 user_login: string;
             } | null) | undefined;
+            gif?: ({
+                id?: string | undefined;
+                gif_id?: string | undefined;
+                url: string;
+            } | null) | undefined;
         }[];
     };
-    notice_type: "sub" | "resub" | "sub_gift" | "community_sub_gift" | "gift_paid_upgrade" | "prime_paid_upgrade" | "pay_it_forward" | "raid" | "unraid" | "announcement" | "bits_badge_tier" | "charity_donation" | "watch_streak" | "shared_chat_sub" | "shared_chat_resub" | "shared_chat_sub_gift" | "shared_chat_community_sub_gift" | "shared_chat_gift_paid_upgrade" | "shared_chat_prime_paid_upgrade" | "shared_chat_pay_it_forward" | "shared_chat_raid" | "shared_chat_announcement";
+    notice_type: string;
     sub: {
         sub_plan: string;
         is_gift: boolean;
@@ -648,6 +682,8 @@ type ChannelChatNotificationEvent = {
     watch_streak: {
         consecutive_months: number;
     } | null;
+    modiversary?: (unknown | null) | undefined;
+    shared_chat_modiversary?: (unknown | null) | undefined;
     shared_chat_sub?: ({
         sub_plan: string;
         is_gift: boolean;
@@ -723,6 +759,10 @@ type ChannelChatNotificationEvent = {
         set_id: string;
         id: string;
         info: string;
+        url?: string | undefined;
+        url_1x?: string | undefined;
+        url_2x?: string | undefined;
+        url_4x?: string | undefined;
     }[] | null) | undefined;
     is_source_only?: (boolean | null) | undefined;
 };
@@ -759,7 +799,7 @@ type ChannelChatUserMessageHoldEvent = {
     message: {
         text: string;
         fragments: {
-            type: "text" | "cheermote" | "emote" | "mention";
+            type: "text" | "cheermote" | "emote" | "mention" | "gif";
             text: string;
             cheermote?: ({
                 prefix: string;
@@ -769,11 +809,18 @@ type ChannelChatUserMessageHoldEvent = {
             emote?: ({
                 id: string;
                 emote_set_id: string;
+                owner_id?: string | undefined;
+                format?: string[] | undefined;
             } | null) | undefined;
             mention?: ({
                 user_id: string;
                 user_name: string;
                 user_login: string;
+            } | null) | undefined;
+            gif?: ({
+                id?: string | undefined;
+                gif_id?: string | undefined;
+                url: string;
             } | null) | undefined;
         }[];
     };
@@ -795,7 +842,7 @@ type ChannelChatUserMessageUpdateEvent = {
     message: {
         text: string;
         fragments: {
-            type: "text" | "cheermote" | "emote" | "mention";
+            type: "text" | "cheermote" | "emote" | "mention" | "gif";
             text: string;
             cheermote?: ({
                 prefix: string;
@@ -805,11 +852,18 @@ type ChannelChatUserMessageUpdateEvent = {
             emote?: ({
                 id: string;
                 emote_set_id: string;
+                owner_id?: string | undefined;
+                format?: string[] | undefined;
             } | null) | undefined;
             mention?: ({
                 user_id: string;
                 user_name: string;
                 user_login: string;
+            } | null) | undefined;
+            gif?: ({
+                id?: string | undefined;
+                gif_id?: string | undefined;
+                url: string;
             } | null) | undefined;
         }[];
     };
@@ -1639,7 +1693,7 @@ type ChannelGoalBeginEvent = {
     broadcaster_user_id: string;
     broadcaster_user_name: string;
     broadcaster_user_login: string;
-    type: "follow" | "subscription" | "subscription_count" | "new_subscription" | "new_subscription_count";
+    type: "follow" | "follower" | "subscription" | "subscription_count" | "new_subscription" | "new_subscription_count" | "new_bit" | "new_cheerer";
     description: string;
     current_amount: number;
     target_amount: number;
@@ -1655,7 +1709,7 @@ type ChannelGoalProgressEvent = {
     broadcaster_user_id: string;
     broadcaster_user_name: string;
     broadcaster_user_login: string;
-    type: "follow" | "subscription" | "subscription_count" | "new_subscription" | "new_subscription_count";
+    type: "follow" | "follower" | "subscription" | "subscription_count" | "new_subscription" | "new_subscription_count" | "new_bit" | "new_cheerer";
     description: string;
     current_amount: number;
     target_amount: number;
@@ -1671,7 +1725,7 @@ type ChannelGoalEndEvent = {
     broadcaster_user_id: string;
     broadcaster_user_name: string;
     broadcaster_user_login: string;
-    type: "follow" | "subscription" | "subscription_count" | "new_subscription" | "new_subscription_count";
+    type: "follow" | "follower" | "subscription" | "subscription_count" | "new_subscription" | "new_subscription_count" | "new_bit" | "new_cheerer";
     description: string;
     current_amount: number;
     target_amount: number;

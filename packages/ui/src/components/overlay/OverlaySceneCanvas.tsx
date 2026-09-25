@@ -19,6 +19,19 @@ import {
 } from "./widgets/irl/irl-field-widget-definition";
 import { alertWidgetBaseDefinition } from "./widgets/alert/alert-widget-definition";
 import { AlertWidgetRenderer } from "./widgets/alert/AlertWidgetRenderer";
+import { chatWidgetBaseDefinition } from "./widgets/chat/chat-widget-definition";
+import { ChatWidgetRenderer } from "./widgets/chat/ChatWidgetRenderer";
+import { followerGoalWidgetBaseDefinition } from "./widgets/goal/goal-widget-definition";
+import { GoalWidgetRenderer } from "./widgets/goal/GoalWidgetRenderer";
+import { GOAL_WIDGET_TYPES } from "./widgets/goal/goal-widget-config";
+import { pollWidgetBaseDefinition } from "./widgets/poll/poll-widget-definition";
+import { PollWidgetRenderer } from "./widgets/poll/PollWidgetRenderer";
+import { adWidgetBaseDefinition } from "./widgets/ads/ad-widget-definition";
+import { AdWidgetRenderer } from "./widgets/ads/AdWidgetRenderer";
+import { uptimeWidgetBaseDefinition } from "./widgets/uptime/uptime-widget-definition";
+import { UptimeWidgetRenderer } from "./widgets/uptime/UptimeWidgetRenderer";
+import { creditsWidgetBaseDefinition } from "./widgets/credits/credits-widget-definition";
+import { CreditsWidgetRenderer } from "./widgets/credits/CreditsWidgetRenderer";
 import { IRL_FIELD_WIDGET_TYPES } from "./types";
 
 export type OverlayWidgetProps = {
@@ -54,6 +67,36 @@ const CORE_WIDGETS: OverlayWidgetRegistration[] = [
     id: "alert_widget",
     Component: AlertWidgetRenderer as W,
     collectFontFamilies: alertWidgetBaseDefinition.collectFontFamilies,
+  },
+  {
+    id: "chat_widget",
+    Component: ChatWidgetRenderer as W,
+    collectFontFamilies: chatWidgetBaseDefinition.collectFontFamilies,
+  },
+  ...GOAL_WIDGET_TYPES.map((type) => ({
+    id: type,
+    Component: GoalWidgetRenderer as W,
+    collectFontFamilies: followerGoalWidgetBaseDefinition.collectFontFamilies,
+  })),
+  {
+    id: "poll_widget",
+    Component: PollWidgetRenderer as W,
+    collectFontFamilies: pollWidgetBaseDefinition.collectFontFamilies,
+  },
+  {
+    id: "ad_widget",
+    Component: AdWidgetRenderer as W,
+    collectFontFamilies: adWidgetBaseDefinition.collectFontFamilies,
+  },
+  {
+    id: "uptime_widget",
+    Component: UptimeWidgetRenderer as W,
+    collectFontFamilies: uptimeWidgetBaseDefinition.collectFontFamilies,
+  },
+  {
+    id: "credits_widget",
+    Component: CreditsWidgetRenderer as W,
+    collectFontFamilies: creditsWidgetBaseDefinition.collectFontFamilies,
   },
   ...IRL_FIELD_WIDGET_TYPES.map((type) => ({
     id: type,

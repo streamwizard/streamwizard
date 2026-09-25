@@ -69,6 +69,8 @@ const widgetImageHosts = [
   "https://cdn.7tv.app",
   "https://cdn.betterttv.net",
   "https://cdn.frankerfacez.com",
+  // Chat GIFs (channel.chat.message `gif` fragments) come from GIPHY.
+  "https://*.giphy.com",
 ].join(" ");
 
 // Media-library uploads. Hardcoded host kept as a fallback for deployments that

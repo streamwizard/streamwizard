@@ -1,4 +1,10 @@
 import type { AlertWidgetItemConfig } from "../widgets/alert/alert-widget-config";
+import type { ChatWidgetItemConfig } from "../widgets/chat/chat-widget-config";
+import type { GoalWidgetItemConfig } from "../widgets/goal/goal-widget-config";
+import type { PollWidgetItemConfig } from "../widgets/poll/poll-widget-config";
+import type { AdWidgetItemConfig } from "../widgets/ads/ad-widget-config";
+import type { UptimeWidgetItemConfig } from "../widgets/uptime/uptime-widget-config";
+import type { CreditsWidgetItemConfig } from "../widgets/credits/credits-widget-config";
 import type { OverlayItemType } from "./base";
 import {
   buildCompositeClipsConfig,
@@ -30,7 +36,13 @@ export type OverlayItemConfig =
   | ClockWidgetItemConfig
   | IrlFieldWidgetItemConfig
   | CustomWidgetItemConfig
-  | AlertWidgetItemConfig;
+  | AlertWidgetItemConfig
+  | ChatWidgetItemConfig
+  | GoalWidgetItemConfig
+  | PollWidgetItemConfig
+  | AdWidgetItemConfig
+  | UptimeWidgetItemConfig
+  | CreditsWidgetItemConfig;
 
 export interface OverlayItem {
   id: string;

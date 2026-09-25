@@ -62,11 +62,12 @@ export const EMPTY_CHAT_ASSETS: ChatAssets = {
 
 /** One EventSub message fragment. Structurally `ChatFragment` from @repo/schemas. */
 export interface ChatFragment {
-  type: "text" | "cheermote" | "emote" | "mention";
+  type: "text" | "cheermote" | "emote" | "mention" | "gif";
   text: string;
   cheermote?: { prefix: string; bits: number; tier: number } | null;
   emote?: { id: string; emote_set_id: string } | null;
   mention?: { user_id: string; user_name: string; user_login: string } | null;
+  gif?: { id?: string; gif_id?: string; url: string } | null;
 }
 
 export type ChatToken =
@@ -82,6 +83,8 @@ export type ChatToken =
     }
   | { kind: "cheermote"; prefix: string; bits: number; url?: string; color?: string }
   | { kind: "mention"; text: string; userId?: string; isBroadcaster: boolean }
+  /** A Twitch GIF: taller than an emote, `alt` is the fragment text. */
+  | { kind: "gif"; url: string; alt: string }
   | { kind: "link"; text: string; href: string };
 
 export interface ChatRenderOptions {

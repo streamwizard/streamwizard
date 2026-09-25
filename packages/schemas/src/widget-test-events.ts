@@ -20,6 +20,9 @@ import {
 } from "./chat";
 import { ChannelPointsCustomRewardRedemptionAddEventSchema } from "./channel-points";
 import {
+  ChannelGoalBeginEventSchema,
+  ChannelGoalEndEventSchema,
+  ChannelGoalProgressEventSchema,
   ChannelHypeTrainBeginEventSchema,
   ChannelHypeTrainEndEventSchema,
   ChannelShoutoutCreateEventSchema,
@@ -28,6 +31,7 @@ import {
 import {
   ChannelPollBeginEventSchema,
   ChannelPollEndEventSchema,
+  ChannelPollProgressEventSchema,
 } from "./polls-predictions";
 import { StreamOfflineEventSchema, StreamOnlineEventSchema } from "./stream";
 
@@ -198,6 +202,123 @@ function chatNotice(
   };
 }
 
+/** The Creator Goal types, one demo variant each. */
+const DEMO_GOAL_TYPES = {
+  follow: { label: "Follower goal", description: "Road to 1,000 followers", target: 1000 },
+  subscription: { label: "Sub goal (points)", description: "Sub points for the new emote", target: 500 },
+  subscription_count: { label: "Sub goal (subs)", description: "Sub goal", target: 250 },
+  new_subscription: { label: "New sub goal (points)", description: "New sub points this month", target: 100 },
+  new_subscription_count: { label: "New sub goal (subs)", description: "New subs this stream", target: 50 },
+  new_bit: { label: "Bits goal", description: "Bits for the new camera", target: 5000 },
+  new_cheerer: { label: "Cheerers goal", description: "Cheerers this stream", target: 25 },
+} as const;
+
+type DemoGoalType = keyof typeof DEMO_GOAL_TYPES;
+type DemoGoalStage = "begin" | "progress" | "end";
+
+/**
+ * One `channel.goal.*` payload. The id is fixed per goal type so a begin,
+ * a few progress fires and an end all land on the same goal. Progress picks a
+ * fresh amount each fire so the bar visibly moves.
+ */
+function demoGoal(type: DemoGoalType, stage: DemoGoalStage): Record<string, unknown> {
+  const { description, target } = DEMO_GOAL_TYPES[type];
+  const current =
+    stage === "begin" ? 0 : stage === "end" ? target : Math.round(target * (0.1 + Math.random() * 0.8));
+  const payload: Record<string, unknown> = {
+    id: `demo-goal-${type}`,
+    ...BROADCASTER,
+    type,
+    description,
+    current_amount: current,
+    target_amount: target,
+    started_at: now(),
+  };
+  if (stage === "end") {
+    payload.is_achieved = true;
+    payload.ended_at = now();
+  }
+  return payload;
+}
+
+function demoGoalVariants(stage: DemoGoalStage) {
+  return Object.fromEntries(
+    (Object.keys(DEMO_GOAL_TYPES) as DemoGoalType[]).map((type) => [
+      type,
+      { label: DEMO_GOAL_TYPES[type].label, build: () => demoGoal(type, stage) },
+    ]),
+  );
+}
+
+/** The id every demo poll fire uses; widgets use it to tell test polls from real ones. */
+export const DEMO_POLL_ID = "demo-poll";
+
+const DEMO_POLL_TITLE = "Aren't shoes just hard socks?";
+const DEMO_POLL_CHOICES = ["Hard socks", "Absolutely not", "Depends on the shoe"] as const;
+const DEMO_POLL_SECONDS = 60;
+const DEMO_POLL_VOTING = {
+  bits_voting: { is_enabled: false, amount_per_vote: 0 },
+  channel_points_voting: { is_enabled: true, amount_per_vote: 100 },
+};
+
+/**
+ * When the demo poll started. A begin sets it; progress and end reuse it, so
+ * the countdown keeps running across fires instead of restarting each time.
+ */
+let demoPollStartedAt = 0;
+
+function demoPollClock() {
+  const t = Date.now();
+  if (t - demoPollStartedAt > DEMO_POLL_SECONDS * 1000) demoPollStartedAt = t;
+  return {
+    started_at: new Date(demoPollStartedAt).toISOString(),
+    ends_at: new Date(demoPollStartedAt + DEMO_POLL_SECONDS * 1000).toISOString(),
+  };
+}
+
+type DemoPollVotes = "random" | "close" | "final";
+
+/**
+ * One `channel.poll.*` payload. The id is fixed so begin, progress and end all
+ * land on the same poll. "close" puts the first two choices a vote apart.
+ */
+function demoPoll(stage: "begin" | "progress" | "end", votes: DemoPollVotes = "random"): Record<string, unknown> {
+  if (stage === "begin") demoPollStartedAt = Date.now();
+  const clock = demoPollClock();
+  const counts =
+    votes === "close"
+      ? [41, 40, 12]
+      : votes === "final"
+        ? [140, 62, 35]
+        : DEMO_POLL_CHOICES.map(() => Math.round(5 + Math.random() * 60));
+  const choices = DEMO_POLL_CHOICES.map((title, i) =>
+    stage === "begin"
+      ? { id: String(i + 1), title }
+      : {
+          id: String(i + 1),
+          title,
+          bits_votes: 0,
+          channel_points_votes: Math.round(counts[i]! * 0.2),
+          votes: counts[i]!,
+        },
+  );
+  const payload: Record<string, unknown> = {
+    id: DEMO_POLL_ID,
+    ...BROADCASTER,
+    title: DEMO_POLL_TITLE,
+    choices,
+    ...DEMO_POLL_VOTING,
+    started_at: clock.started_at,
+  };
+  if (stage === "end") {
+    payload.status = "completed";
+    payload.ended_at = now();
+  } else {
+    payload.ends_at = clock.ends_at;
+  }
+  return payload;
+}
+
 export const WIDGET_TEST_EVENTS = {
   "channel.follow": {
     label: "Follow",
@@ -349,6 +470,38 @@ export const WIDGET_TEST_EVENTS = {
           thread_user_login: "broadcaster",
         },
       };
+    },
+    variants: {
+      gif: {
+        label: "Chat message (GIF)",
+        build: (o?: WidgetTestEventOptions) => {
+          const v = viewer(o);
+          return {
+            ...BROADCASTER,
+            chatter_user_id: v.user_id,
+            chatter_user_login: v.user_login,
+            chatter_user_name: v.user_name,
+            message_id: uuid(),
+            // A GIF is the whole message: one fragment, `text` is its alt text.
+            message: {
+              text: "hype",
+              fragments: [
+                {
+                  type: "gif",
+                  text: "hype",
+                  gif: { id: "3o7aCTPPm4OHfRLSH6", url: "https://media.giphy.com/media/3o7aCTPPm4OHfRLSH6/giphy.gif" },
+                },
+              ],
+            },
+            color: "#FF6B6B",
+            badges: DEMO_BADGES,
+            user_profile_image_url: v.user_profile_image_url,
+            message_type: "text",
+            cheer: null,
+            reply: null,
+          };
+        },
+      },
     },
   },
   "channel.chat.notification": {
@@ -683,11 +836,35 @@ export const WIDGET_TEST_EVENTS = {
       };
     },
   },
+  "channel.goal.begin": {
+    label: "Goal started",
+    group: "Channel",
+    schema: ChannelGoalBeginEventSchema,
+    build: () => demoGoal("follow", "begin"),
+    variants: demoGoalVariants("begin"),
+  },
+  "channel.goal.progress": {
+    label: "Goal progress",
+    group: "Channel",
+    schema: ChannelGoalProgressEventSchema,
+    build: () => demoGoal("follow", "progress"),
+    variants: demoGoalVariants("progress"),
+  },
+  "channel.goal.end": {
+    label: "Goal reached",
+    group: "Channel",
+    schema: ChannelGoalEndEventSchema,
+    build: () => demoGoal("follow", "end"),
+    variants: demoGoalVariants("end"),
+  },
   "channel.ad_break.begin": {
     label: "Ad break",
     group: "Channel",
     schema: ChannelAdBreakBeginEventSchema,
+    // `demo` is ours, not Twitch's: the ad break has no id of its own, so this
+    // is how the ad widget tells a test break from a real one.
     build: () => ({
+      demo: true,
       duration_seconds: 60,
       is_automatic: true,
       started_at: now(),
@@ -701,38 +878,22 @@ export const WIDGET_TEST_EVENTS = {
     label: "Poll started",
     group: "Channel",
     schema: ChannelPollBeginEventSchema,
-    build: () => ({
-      id: uuid(),
-      ...BROADCASTER,
-      title: "Aren't shoes just hard socks?",
-      choices: [
-        { id: "1", title: "Hard socks" },
-        { id: "2", title: "Absolutely not" },
-      ],
-      bits_voting: { is_enabled: false, amount_per_vote: 0 },
-      channel_points_voting: { is_enabled: true, amount_per_vote: 100 },
-      started_at: now(),
-      ends_at: now(),
-    }),
+    build: () => demoPoll("begin"),
+  },
+  "channel.poll.progress": {
+    label: "Poll votes",
+    group: "Channel",
+    schema: ChannelPollProgressEventSchema,
+    build: () => demoPoll("progress"),
+    variants: {
+      close: { label: "Close race", build: () => demoPoll("progress", "close") },
+    },
   },
   "channel.poll.end": {
     label: "Poll ended",
     group: "Channel",
     schema: ChannelPollEndEventSchema,
-    build: () => ({
-      id: uuid(),
-      ...BROADCASTER,
-      title: "Aren't shoes just hard socks?",
-      choices: [
-        { id: "1", title: "Hard socks", bits_votes: 0, channel_points_votes: 40, votes: 140 },
-        { id: "2", title: "Absolutely not", bits_votes: 0, channel_points_votes: 10, votes: 62 },
-      ],
-      bits_voting: { is_enabled: false, amount_per_vote: 0 },
-      channel_points_voting: { is_enabled: true, amount_per_vote: 100 },
-      status: "completed",
-      started_at: now(),
-      ended_at: now(),
-    }),
+    build: () => demoPoll("end", "final"),
   },
   "channel.chat.clear": {
     label: "Chat cleared",

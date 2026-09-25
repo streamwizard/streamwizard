@@ -28,6 +28,14 @@ export const OVERLAY_ITEM_TYPES = [
   "clock_widget",
   "custom_widget",
   "alert_widget",
+  "chat_widget",
+  "follower_goal_widget",
+  "sub_goal_widget",
+  "bits_goal_widget",
+  "poll_widget",
+  "ad_widget",
+  "uptime_widget",
+  "credits_widget",
   ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 
@@ -41,6 +49,14 @@ export const ROOT_OVERLAY_ITEM_TYPES = [
   "clock_widget",
   "custom_widget",
   "alert_widget",
+  "chat_widget",
+  "follower_goal_widget",
+  "sub_goal_widget",
+  "bits_goal_widget",
+  "poll_widget",
+  "ad_widget",
+  "uptime_widget",
+  "credits_widget",
   ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 
