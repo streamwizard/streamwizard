@@ -20,9 +20,9 @@ export function ClockWidgetRenderer({ item }: WidgetRenderProps) {
   const fontFamily = resolvedTextWidgetFontFamily(cfg);
   useGoogleFont(fontFamily);
 
-  const [display, setDisplay] = useState(() =>
-    formatClockWidgetDisplay(cfg, new Date())
-  );
+  // Empty until the browser formats it: the server's locale and clock are
+  // not the viewer's, and a first paint that differs fails hydration.
+  const [display, setDisplay] = useState("");
 
   useEffect(() => {
     const c = normalizeClockWidgetConfig(item.config);
