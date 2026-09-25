@@ -17,7 +17,10 @@ export function CreditsArcade({ sections, cfg, playback, contentRef }: CreditsPr
   // A `>` in front of every name and heading, the arcade menu's cursor.
   const bullets = sections.map((section) => ({
     ...section,
-    label: section.kind === "names" || section.kind === "stat" || section.kind === "text" ? `> ${section.label}` : section.label,
+    label:
+      section.kind === "names" || section.kind === "stat" || section.kind === "text" || section.kind === "socials"
+        ? `> ${section.label}`
+        : section.label,
   }));
 
   return (

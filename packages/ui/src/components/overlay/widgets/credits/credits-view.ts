@@ -1,5 +1,11 @@
 import type { CreditsData, CreditsPerson } from "@repo/schemas";
-import type { CreditsSectionId, CreditsWidgetItemConfig } from "./credits-widget-config";
+import {
+  CREDITS_HERO_LABELS,
+  type CreditsHeroCategory,
+  type CreditsSectionId,
+  type CreditsSocial,
+  type CreditsWidgetItemConfig,
+} from "./credits-widget-config";
 
 /** One name on the roll, with the text the design prints after it. */
 export interface CreditsViewName {
@@ -10,7 +16,7 @@ export interface CreditsViewName {
   valueText: string;
 }
 
-export type CreditsViewKind = "title" | "names" | "stat" | "text" | "outro";
+export type CreditsViewKind = "title" | "names" | "stat" | "text" | "outro" | "hero" | "socials";
 
 export interface CreditsViewSection {
   id: CreditsSectionId;
@@ -28,6 +34,8 @@ export interface CreditsViewSection {
   stat: string;
   /** Free text under a text section. */
   text: string;
+  /** Platforms and handles, socials sections only. Blank handles are left out. */
+  socials: CreditsSocial[];
 }
 
 const numberFormat = new Intl.NumberFormat("en-US");
@@ -117,6 +125,7 @@ export function buildCreditsView(data: CreditsData, cfg: CreditsWidgetItemConfig
     count: null,
     stat: "",
     text: "",
+    socials: [],
   });
 
   for (const section of cfg.sections) {
@@ -137,6 +146,12 @@ export function buildCreditsView(data: CreditsData, cfg: CreditsWidgetItemConfig
       const body = cfg.thanksText.trim();
       if (!body) continue;
       out.push({ ...base(id, "text", section.label), text: body });
+      continue;
+    }
+    if (id === "socials") {
+      const socials = cfg.socials.filter((s) => s.handle.trim() !== "");
+      if (socials.length === 0) continue;
+      out.push({ ...base(id, "socials", section.label), socials });
       continue;
     }
     if (id === "peak_viewers") {
@@ -176,4 +191,90 @@ export function buildCreditsView(data: CreditsData, cfg: CreditsWidgetItemConfig
   }
 
   return out;
+}
+
+// ─── Hybrid: hero cards, then the roll ──────────────────────────────────────
+
+const HERO_DATA_KEY: Record<CreditsHeroCategory, keyof CreditsData> = {
+  gifters: "gifters",
+  cheerers: "cheerers",
+  raids: "raids",
+  resubs: "resubs",
+  redemptions: "redeemers",
+};
+
+export interface CreditsHybridView {
+  /** One `hero` section per card, in section order. Empty when nobody qualifies. */
+  heroes: CreditsViewSection[];
+  /** Everyone else, as the plain roll shows them. */
+  roll: CreditsViewSection[];
+}
+
+/**
+ * Splits the credits for the Hybrid design. Hero cards take the top people
+ * from each hero category (over the threshold, at most `heroTopCount`,
+ * `heroGroupSize` to a card); the roll gets the rest. Rules:
+ * - Only enabled sections make heroes, in the streamer's section order.
+ * - Someone at the top of two categories is a hero once, under the first.
+ * - A hero is left out of that category in the roll, but still listed under
+ *   any other role they had (a top gifter who also followed is a new follower).
+ * - Anonymous entries can't be heroes.
+ */
+export function buildCreditsHybridView(data: CreditsData, cfg: CreditsWidgetItemConfig): CreditsHybridView {
+  const heroes: CreditsViewSection[] = [];
+  const removed = new Map<CreditsHeroCategory, Set<string>>();
+  const taken = new Set<string>();
+
+  for (const section of cfg.sections) {
+    if (!section.enabled) continue;
+    const id = section.id as CreditsHeroCategory;
+    if (!cfg.heroCategories.includes(id)) continue;
+    const floor = cfg.heroThresholds[id] ?? 0;
+    const ranked = (data[HERO_DATA_KEY[id]] as CreditsPerson[])
+      .filter((p) => p.user_id !== null && !taken.has(p.user_id) && (p.value ?? 0) > 0 && (p.value ?? 0) >= floor)
+      .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+      .slice(0, cfg.heroTopCount);
+    if (ranked.length === 0) continue;
+
+    const gone = new Set<string>();
+    for (const p of ranked) {
+      taken.add(p.user_id!);
+      gone.add(p.user_id!);
+    }
+    removed.set(id, gone);
+
+    const size = Math.max(1, cfg.heroGroupSize);
+    for (let i = 0; i < ranked.length; i += size) {
+      const group = ranked.slice(i, i + size);
+      const labels = CREDITS_HERO_LABELS[id];
+      heroes.push({
+        id,
+        kind: "hero",
+        label: group.length === 1 ? labels.one : labels.many,
+        names: group.map((p) => ({
+          key: p.user_id!,
+          name: p.name,
+          avatar: cfg.showAvatars ? p.profile_image_url : undefined,
+          valueText: cfg.showValues ? valueText(id, p) : "",
+        })),
+        overflow: 0,
+        overflowText: "",
+        count: null,
+        stat: "",
+        text: "",
+        socials: [],
+      });
+    }
+  }
+
+  if (removed.size === 0) return { heroes, roll: buildCreditsView(data, cfg) };
+
+  const rest: CreditsData = { ...data };
+  for (const [id, gone] of removed) {
+    const key = HERO_DATA_KEY[id];
+    (rest as Record<string, unknown>)[key] = (data[key] as CreditsPerson[]).filter(
+      (p) => p.user_id === null || !gone.has(p.user_id),
+    );
+  }
+  return { heroes, roll: buildCreditsView(rest, cfg) };
 }

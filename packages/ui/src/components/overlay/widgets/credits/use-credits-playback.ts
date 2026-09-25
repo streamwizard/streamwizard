@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
-import { LOOP_HOLD_MS, progressAt, stepIndexAt, type CreditsMeasured, type CreditsTimeline } from "./credits-playback";
+import { progressAt, stepIndexAt, type CreditsMeasured, type CreditsTimeline } from "./credits-playback";
 
 /** Redraws per second while a roll plays. Transforms are cheap; React renders aren't. */
 const FRAME_MS = 1000 / 30;
@@ -17,15 +17,15 @@ export interface CreditsPlayback {
 /**
  * Runs the clock for a roll. `playKey` restarts from zero whenever it
  * changes; `playing` false freezes wherever it is. A finished roll holds its
- * last frame; with `loop` on it starts over after `holdMs` (0 for a scroll,
- * which wraps in one motion).
+ * last frame; with `loop` on it starts over after `holdMs` (0 wraps a scroll
+ * in one motion).
  */
 export function useCreditsPlayback({
   timeline,
   playing,
   playKey,
   loop,
-  holdMs = LOOP_HOLD_MS,
+  holdMs = 0,
 }: {
   timeline: CreditsTimeline;
   playing: boolean;

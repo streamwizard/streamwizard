@@ -48,8 +48,12 @@ import {
 } from "./components/overlay/widgets/ads/ad-widget-config";
 import { UPTIME_WIDGET_LAYOUTS, UPTIME_WIDGET_LIMITS } from "./components/overlay/widgets/uptime/uptime-widget-config";
 import {
+  CREDITS_DEFAULT_HERO_THRESHOLDS,
   CREDITS_DEFAULT_SECTIONS,
+  CREDITS_HERO_CATEGORIES,
   CREDITS_SECTION_IDS,
+  CREDITS_SOCIAL_PLATFORMS,
+  CREDITS_SOCIALS_LAYOUTS,
   CREDITS_WIDGET_LIMITS,
   CREDITS_WIDGET_PRESETS,
 } from "./components/overlay/widgets/credits/credits-widget-config";
@@ -578,6 +582,32 @@ export const creditsWidgetItemConfigSchema = z.object({
     .max(CREDITS_WIDGET_LIMITS.startDelaySeconds.max)
     .default(1),
   loop: z.boolean().default(false),
+  loopDelaySeconds: z
+    .number()
+    .min(CREDITS_WIDGET_LIMITS.loopDelaySeconds.min)
+    .max(CREDITS_WIDGET_LIMITS.loopDelaySeconds.max)
+    .default(3),
+  heroCategories: z.array(z.enum(CREDITS_HERO_CATEGORIES)).default(["gifters", "cheerers", "raids"]),
+  heroThresholds: z
+    .object(
+      Object.fromEntries(
+        CREDITS_HERO_CATEGORIES.map((id) => [
+          id,
+          z.number().int().min(CREDITS_WIDGET_LIMITS.heroThreshold.min).max(CREDITS_WIDGET_LIMITS.heroThreshold.max).default(CREDITS_DEFAULT_HERO_THRESHOLDS[id]),
+        ]),
+      ) as Record<(typeof CREDITS_HERO_CATEGORIES)[number], z.ZodDefault<z.ZodNumber>>,
+    )
+    .default(() => ({ ...CREDITS_DEFAULT_HERO_THRESHOLDS })),
+  heroTopCount: z.number().int().min(CREDITS_WIDGET_LIMITS.heroTopCount.min).max(CREDITS_WIDGET_LIMITS.heroTopCount.max).default(3),
+  heroGroupSize: z.number().int().min(CREDITS_WIDGET_LIMITS.heroGroupSize.min).max(CREDITS_WIDGET_LIMITS.heroGroupSize.max).default(1),
+  heroHoldSeconds: z.number().min(CREDITS_WIDGET_LIMITS.heroHoldSeconds.min).max(CREDITS_WIDGET_LIMITS.heroHoldSeconds.max).default(3),
+  heroFadeMs: z.number().int().min(CREDITS_WIDGET_LIMITS.heroFadeMs.min).max(CREDITS_WIDGET_LIMITS.heroFadeMs.max).default(700),
+  socials: z
+    .array(z.object({ platform: z.enum(CREDITS_SOCIAL_PLATFORMS), handle: z.string().max(CREDITS_WIDGET_LIMITS.socialHandle) }))
+    .max(CREDITS_WIDGET_LIMITS.socials)
+    .default([]),
+  socialsBrandColors: z.boolean().default(true),
+  socialsLayout: z.enum(CREDITS_SOCIALS_LAYOUTS).default("list"),
   fontFamily: z.preprocess(
     (val) =>
       typeof val === "string" && isValidGoogleFontFamilyName(val)

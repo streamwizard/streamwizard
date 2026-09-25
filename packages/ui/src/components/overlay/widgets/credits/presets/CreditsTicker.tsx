@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment } from "react";
-import { ScrollStage, StepStage, headingStyle, headingText, nameStyle, plateStyle, valueStyle, type CreditsPresetProps } from "./shared";
+import { ScrollStage, SocialIcon, StepStage, headingStyle, headingText, nameStyle, plateStyle, socialIconColor, valueStyle, type CreditsPresetProps } from "./shared";
 
 /**
  * One line along the bottom: `NEW FOLLOWERS · 12   sandwichlord, ninetoad, …
@@ -23,6 +23,13 @@ export function CreditsTicker({ sections, cfg, playback, contentRef }: CreditsPr
         <span style={heading}>{headingText(section)}</span>
         {section.kind === "stat" && <span style={name}>{section.stat}</span>}
         {section.kind === "text" && <span style={name}>{section.text.replace(/\s+/g, " ")}</span>}
+        {section.kind === "socials" &&
+          section.socials.map((entry) => (
+            <span key={entry.platform} style={{ ...name, display: "inline-flex", alignItems: "center", gap: Math.round(cfg.fontSize * 0.35) }}>
+              <SocialIcon platform={entry.platform} size={Math.round(cfg.fontSize * 1.05)} color={socialIconColor(entry.platform, cfg)} />
+              {entry.handle}
+            </span>
+          ))}
         {section.kind === "names" && (
           <span style={name}>
             {section.names.map((entry, i) => (

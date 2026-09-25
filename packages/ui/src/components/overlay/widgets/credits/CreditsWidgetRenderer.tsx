@@ -17,8 +17,8 @@ import {
   type CreditsRollBrowserEventDetail,
   type CreditsWidgetFrame,
 } from "./credits-widget-state";
-import { buildCreditsView } from "./credits-view";
-import { creditsTimeline, scrollOffsetAt } from "./credits-playback";
+import { buildCreditsHybridView, buildCreditsView, type CreditsViewSection } from "./credits-view";
+import { creditsTimeline, heroIndexAt, scrollOffsetAt, scrollProgressAt } from "./credits-playback";
 import { useCreditsMeasured, useCreditsPlayback, useReducedMotion, useRollOnVisible } from "./use-credits-playback";
 import { CREDITS_KEYFRAMES, CREDITS_PRESET_COMPONENTS } from "./presets";
 
@@ -146,24 +146,33 @@ export function CreditsWidgetRenderer({ item, scene, isEditor = false }: Credits
   const staleRef = useRef(false);
 
   const data = demo ?? fetched.data;
-  const sections = useMemo(() => (data ? buildCreditsView(data, cfg) : []), [data, cfg]);
-
   const reducedMotion = useReducedMotion();
+  // Hybrid opens with hero cards; under reduced motion they become the first
+  // steps of a plain stepped roll instead.
+  const { sections, heroes } = useMemo(() => {
+    if (!data) return { sections: [] as CreditsViewSection[], heroes: [] as CreditsViewSection[] };
+    if (cfg.preset !== "hybrid") return { sections: buildCreditsView(data, cfg), heroes: [] as CreditsViewSection[] };
+    const view = buildCreditsHybridView(data, cfg);
+    return reducedMotion
+      ? { sections: [...view.heroes, ...view.roll], heroes: [] as CreditsViewSection[] }
+      : { sections: view.roll, heroes: view.heroes };
+  }, [data, cfg, reducedMotion]);
+
   const rootRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const horizontal = cfg.preset === "ticker";
   const measured = useCreditsMeasured(rootRef, contentRef, horizontal, [sections, cfg.fontSize, cfg.fontFamily, cfg.preset]);
   const timeline = useMemo(
-    () => creditsTimeline(sections, cfg, measured, reducedMotion),
-    [sections, cfg, measured, reducedMotion],
+    () => creditsTimeline(sections, cfg, measured, reducedMotion, heroes),
+    [sections, cfg, measured, reducedMotion, heroes],
   );
   const playback = useCreditsPlayback({
     timeline,
     playing,
     playKey,
     loop: cfg.loop,
-    // A scroll wraps in one motion; a stepped roll holds its last section first.
-    holdMs: timeline.mode === "scroll" ? 0 : undefined,
+    // The pause before the next pass. 0 wraps a scroll in one motion.
+    holdMs: cfg.loopDelaySeconds * 1000,
   });
 
   const start = useCallback(() => {
@@ -248,7 +257,7 @@ export function CreditsWidgetRenderer({ item, scene, isEditor = false }: Credits
     stop();
   }, [isEditor, demo, playback.ended, cfg.loop, stop]);
 
-  if (sections.length === 0) {
+  if (sections.length === 0 && heroes.length === 0) {
     if (!isEditor) return null;
     const body =
       fetched.status === "loading"
@@ -283,9 +292,19 @@ export function CreditsWidgetRenderer({ item, scene, isEditor = false }: Credits
           mode: timeline.mode,
           progress: playback.progress,
           stepIndex: playback.stepIndex,
-          offsetPx: scrollOffsetAt(timeline, playback.progress),
+          offsetPx: scrollOffsetAt(timeline, scrollProgressAt(timeline, playback.elapsedMs)),
           idle,
         }}
+        hero={
+          cfg.preset === "hybrid"
+            ? {
+                sections: heroes,
+                index: heroIndexAt(timeline, playback.elapsedMs),
+                holdMs: cfg.heroHoldSeconds * 1000,
+                fadeMs: cfg.heroFadeMs,
+              }
+            : undefined
+        }
         contentRef={contentRef}
       />
       {isEditor && idle && <PosterHint />}

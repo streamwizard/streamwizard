@@ -26,8 +26,10 @@ on a scene you only switch to at the end.
 
 ## What rolls
 
-Every section can be turned off, renamed and moved. A section with nothing in
-it is skipped, so a stream with no raids never shows an empty "Raids" heading.
+Every section can be turned off, renamed and moved. The pencil next to a
+section opens its settings: the heading, the title and outro lines, your
+thank-you note, your platforms. A section with nothing in it is skipped, so a
+stream with no raids never shows an empty "Raids" heading.
 
 | Section | What it shows |
 |---|---|
@@ -43,12 +45,21 @@ it is skipped, so a stream with no raids never shows an empty "Raids" heading.
 | Peak viewers | Your highest viewer count. |
 | Stream length | How long you were live. |
 | Thank-you note | Your own words, a few lines. Blank hides it. |
+| Socials | Your other platforms, logo and handle: Instagram, TikTok, YouTube, Twitch, X, Kick, Discord, Bluesky. |
 | Outro | One line at the end. "See you next stream" unless you change it. |
 
 Under **Sections** you can also show counts in the headings ("New followers
 · 12"), amounts after names ("sandwichlord · 500 Bits"), and profile pictures.
 **Names per section** caps long lists; the rest become one line, "and 12 more",
 which you can reword.
+
+### Socials
+
+Under **Sections**, turn on **Socials**, press its pencil and add a platform with your handle,
+typed the way you'd say it: `@yourname`, `yourchannel`, `discord.gg/yours`.
+One entry per platform, up to eight. Logos come in each brand's colour, or in
+your heading colour with **Brand colours** off. **List** stacks them; **Row**
+puts them side by side.
 
 ## Designs
 
@@ -60,9 +71,30 @@ which you can reword.
 | Arcade | Pixel font, square border, scanlines. | Scrolls up in whole pixels. |
 | Minimal | Left-aligned, no plate, quiet headings. | Scrolls up. |
 | Cinematic | Letterbox bars and big type, made to fill the screen. | Slow crossfade between sections. |
+| Hybrid | Film credits: hero cards for your biggest contributors, then the classic roll for everyone else. | Cards fade in and out one by one; the roll comes in under the last card. |
 
 Picking a design resizes the widget to a size that suits it. Arcade brings its
 own font and hands yours back when you pick another design.
+
+### Hybrid: hero cards
+
+Hybrid opens with hero cards, centred one at a time: a role line ("TOP
+GIFTER", "BIGGEST RAID") with the name under it. Then the roll takes over
+for everyone else. Under **Hero cards** you choose:
+
+- **Which categories** make heroes: gifters, cheerers, raids, resubs, channel
+  points. Followers and new subs never do; there's no "top follower".
+- **A floor per category**: 5 subs gifted, 500 Bits, 10 raid viewers, and so
+  on. 0 means no floor.
+- **Heroes per category**, **names per card**, how long a card **stays up**
+  and how long it **fades**.
+
+A hero is left out of that category in the roll, so nobody is thanked twice
+for the same thing. They still show under any other role they had: a top
+gifter who also followed is a new follower. Someone at the top of two
+categories gets one card, for the first category in your section order.
+Anonymous gifts and cheers never make a card. With nobody over the floor,
+the cards are skipped and the roll starts straight away.
 
 ## Playback
 
@@ -70,8 +102,9 @@ own font and hands yours back when you pick another design.
   section** (Cards, Cinematic). Long lists get a little extra time.
 - **Start delay**: the pause between the scene coming up and the first line.
 - **When it ends**: play once, or loop. A scrolling design runs all the way
-  out of the box and, when looping, comes straight back in from the bottom in
-  one motion. Cards and Cinematic hold the last section, then start over.
+  out of the box; Cards and Cinematic hold the last section. With loop on,
+  **Pause between loops** sets how long the box stays empty before the next
+  pass. 0 runs a scrolling design straight round in one motion.
 
 Viewers with "reduce motion" turned on in their system see every design as a
 gentle crossfade instead of a scroll.

@@ -335,6 +335,18 @@ export {
   CREDITS_SECTION_NAMES,
   CREDITS_DEFAULT_SECTIONS,
   CREDITS_WIDGET_LIMITS,
+  CREDITS_HERO_CATEGORIES,
+  CREDITS_HERO_LABELS,
+  CREDITS_HERO_THRESHOLD_UNITS,
+  CREDITS_DEFAULT_HERO_THRESHOLDS,
+  isCreditsHeroCategory,
+  CREDITS_SOCIAL_PLATFORMS,
+  CREDITS_SOCIAL_PLATFORM_LABELS,
+  CREDITS_SOCIAL_BRAND_COLORS,
+  CREDITS_SOCIAL_PLACEHOLDERS,
+  CREDITS_SOCIALS_LAYOUTS,
+  isCreditsSocialPlatform,
+  normalizeCreditsSocials,
   createDefaultCreditsWidgetConfig,
   normalizeCreditsWidgetConfig,
   normalizeCreditsSections,
@@ -347,6 +359,11 @@ export {
   type CreditsSectionId,
   type CreditsSection,
   type CreditsWidgetItemConfig,
+  type CreditsHeroCategory,
+  type CreditsHeroThresholds,
+  type CreditsSocial,
+  type CreditsSocialPlatform,
+  type CreditsSocialsLayout,
 } from "./components/overlay/widgets/credits/credits-widget-config";
 export {
   CREDITS_ROLL_BROWSER_EVENT,
@@ -358,10 +375,12 @@ export {
 } from "./components/overlay/widgets/credits/credits-widget-state";
 export {
   buildCreditsView,
+  buildCreditsHybridView,
   formatCreditsDuration,
   formatCreditsNumber,
   type CreditsViewSection,
   type CreditsViewName,
+  type CreditsHybridView,
 } from "./components/overlay/widgets/credits/credits-view";
 export { CreditsWidgetRenderer } from "./components/overlay/widgets/credits/CreditsWidgetRenderer";
 export type { CreditsWidgetRendererProps } from "./components/overlay/widgets/credits/CreditsWidgetRenderer";

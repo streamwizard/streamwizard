@@ -6,10 +6,11 @@ import {
   createDefaultCreditsWidgetConfig,
   creditsPresetChange,
   normalizeCreditsSections,
+  normalizeCreditsSocials,
   normalizeCreditsWidgetConfig,
 } from "./credits-widget-config";
-import { applyNameLimit, buildCreditsView, formatCreditsDuration, overflowLine } from "./credits-view";
-import { creditsTimeline, progressAt, scrollOffsetAt, stepIndexAt } from "./credits-playback";
+import { applyNameLimit, buildCreditsHybridView, buildCreditsView, formatCreditsDuration, overflowLine } from "./credits-view";
+import { creditsTimeline, heroCardMs, heroIndexAt, progressAt, scrollOffsetAt, scrollProgressAt, stepIndexAt } from "./credits-playback";
 import { streamChangedFromFrame } from "./credits-widget-state";
 
 const NOW = Date.parse("2026-09-24T21:30:00.000Z");
@@ -31,6 +32,16 @@ describe("credits widget config", () => {
     expect(cfg.titleText).toHaveLength(80);
     expect(cfg.maxNamesPerSection).toBe(0);
     expect(cfg.scrollSpeed).toBe(240);
+    expect(normalizeCreditsWidgetConfig({ loopDelaySeconds: 99 }).loopDelaySeconds).toBe(60);
+    expect(normalizeCreditsWidgetConfig({ loopDelaySeconds: -1 }).loopDelaySeconds).toBe(0);
+    const hero = normalizeCreditsWidgetConfig({
+      heroCategories: ["raids", "bogus", "raids", "gifters"],
+      heroThresholds: { gifters: -3, cheerers: "x" },
+      heroTopCount: 99,
+    });
+    expect(hero.heroCategories).toEqual(["raids", "gifters"]);
+    expect(hero.heroThresholds).toEqual({ gifters: 0, cheerers: 500, raids: 10, resubs: 12, redemptions: 5 });
+    expect(hero.heroTopCount).toBe(10);
   });
 
   it("repairs a stored section list", () => {
@@ -47,6 +58,29 @@ describe("credits widget config", () => {
     expect(sections[2]!.label).toBe("");
     expect(sections.map((s) => s.id).sort()).toEqual([...CREDITS_SECTION_IDS].sort());
     expect(new Set(sections.map((s) => s.id)).size).toBe(CREDITS_SECTION_IDS.length);
+    // A widget saved before Socials existed picks the section up, before the outro.
+    const ids = sections.map((s) => s.id);
+    expect(ids.indexOf("socials")).toBeGreaterThan(-1);
+    expect(CREDITS_SECTION_IDS.indexOf("socials")).toBe(CREDITS_SECTION_IDS.indexOf("outro") - 1);
+  });
+
+  it("keeps one handle per platform and drops the rest", () => {
+    expect(
+      normalizeCreditsSocials([
+        { platform: "instagram", handle: "  @me  " },
+        { platform: "instagram", handle: "@dupe" },
+        { platform: "myspace", handle: "x" },
+        { platform: "x", handle: "x".repeat(100) },
+        { platform: "kick" },
+        "junk",
+      ]),
+    ).toEqual([
+      { platform: "instagram", handle: "@me" },
+      { platform: "x", handle: "x".repeat(60) },
+      { platform: "kick", handle: "" },
+    ]);
+    expect(normalizeCreditsSocials(undefined)).toEqual([]);
+    expect(normalizeCreditsWidgetConfig({ socialsLayout: "grid" }).socialsLayout).toBe("list");
   });
 
   it("swaps the font for Arcade and puts it back afterwards", () => {
@@ -109,6 +143,23 @@ describe("credits view", () => {
     expect(view.map((s) => s.id)).toEqual(["title", "outro"]);
   });
 
+  it("lists socials with a handle and skips the section without any", () => {
+    const cfg = createDefaultCreditsWidgetConfig();
+    expect(buildCreditsView(data, cfg).find((s) => s.id === "socials")).toBeUndefined();
+    cfg.socials = [
+      { platform: "twitch", handle: "" },
+      { platform: "youtube", handle: "@chan" },
+    ];
+    const socials = buildCreditsView(data, cfg).find((s) => s.id === "socials")!;
+    expect(socials.kind).toBe("socials");
+    expect(socials.label).toBe("Find me on");
+    expect(socials.socials).toEqual([{ platform: "youtube", handle: "@chan" }]);
+    // Never a hero.
+    const hybrid = buildCreditsHybridView(data, { ...cfg, preset: "hybrid" });
+    expect(hybrid.heroes.some((h) => h.id === "socials")).toBe(false);
+    expect(hybrid.roll.find((s) => s.id === "socials")).toBeDefined();
+  });
+
   it("formats durations", () => {
     expect(formatCreditsDuration(30)).toBe("1m");
     expect(formatCreditsDuration(48 * 60)).toBe("48m");
@@ -166,5 +217,95 @@ describe("streamChangedFromFrame", () => {
     expect(streamChangedFromFrame({ type: "streamwizard.user_state", payload: { key: "sys.is_live", value: false } })).toBe(true);
     expect(streamChangedFromFrame({ type: "streamwizard.user_state", payload: { key: "my.counter", value: 3 } })).toBe(false);
     expect(streamChangedFromFrame({ type: "channel.follow", payload: {} })).toBe(false);
+  });
+});
+
+describe("credits hybrid view", () => {
+  const data = buildDemoCreditsData(NOW);
+
+  it("opens with the top people over the threshold and leaves them out of that list in the roll", () => {
+    const cfg = { ...createDefaultCreditsWidgetConfig(), preset: "hybrid" as const, heroTopCount: 1 };
+    const { heroes, roll } = buildCreditsHybridView(data, cfg);
+    // Section order: gifters, cheerers, raids. Demo raids are 42 and 118 viewers, threshold 10.
+    const biggestRaid = [...data.raids].sort((a, b) => (b.value ?? 0) - (a.value ?? 0))[0]!;
+    expect(biggestRaid.value).toBe(118);
+    expect(heroes.map((h) => [h.id, h.label, h.names[0]!.name])).toEqual([
+      ["gifters", "Top gifter", data.gifters[0]!.name],
+      ["cheerers", "Top cheerer", data.cheerers[0]!.name],
+      ["raids", "Biggest raid", biggestRaid.name],
+    ]);
+    expect(heroes[0]!.kind).toBe("hero");
+    expect(heroes[1]!.names[0]!.valueText).toBe("1,750 Bits");
+    const rollGifters = roll.find((s) => s.id === "gifters")!;
+    expect(rollGifters.names.map((n) => n.name)).not.toContain(data.gifters[0]!.name);
+    expect(rollGifters.count).toBe(data.gifters.length - 1);
+    // Still a new follower: a different role.
+    expect(roll.find((s) => s.id === "followers")!.names.map((n) => n.name)).toContain(data.gifters[0]!.name);
+  });
+
+  it("groups heroes onto cards, honours the floor and never picks anonymous", () => {
+    const cfg = {
+      ...createDefaultCreditsWidgetConfig(),
+      preset: "hybrid" as const,
+      heroCategories: ["cheerers" as const],
+      heroTopCount: 10,
+      heroGroupSize: 2,
+      heroThresholds: { ...createDefaultCreditsWidgetConfig().heroThresholds, cheerers: 200 },
+    };
+    const { heroes } = buildCreditsHybridView(data, cfg);
+    // Demo cheerers: 1750, 500, 100 and Anonymous 300. Floor 200 keeps two.
+    expect(heroes).toHaveLength(1);
+    expect(heroes[0]!.label).toBe("Top cheerers");
+    expect(heroes[0]!.names.map((n) => n.name)).not.toContain("Anonymous");
+    expect(heroes[0]!.names).toHaveLength(2);
+  });
+
+  it("names a hero once when they top two categories", () => {
+    const cfg = {
+      ...createDefaultCreditsWidgetConfig(),
+      preset: "hybrid" as const,
+      heroCategories: ["gifters" as const, "redemptions" as const],
+      heroTopCount: 1,
+      heroThresholds: { ...createDefaultCreditsWidgetConfig().heroThresholds, gifters: 0, redemptions: 0 },
+    };
+    // In the demo, index 2 (pixelpenny) gifts 1 sub and redeems 3 times: top redeemer, not top gifter.
+    const { heroes } = buildCreditsHybridView(data, cfg);
+    const names = heroes.flatMap((h) => h.names.map((n) => n.name));
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("skips the cards when nobody qualifies, and the roll when everyone is a hero", () => {
+    const cfg = { ...createDefaultCreditsWidgetConfig(), preset: "hybrid" as const };
+    const none = buildCreditsHybridView(emptyCredits("stream"), cfg);
+    expect(none.heroes).toEqual([]);
+    expect(none.roll.map((s) => s.id)).toEqual(["title", "outro"]);
+    const off = buildCreditsHybridView(data, { ...cfg, heroCategories: [] });
+    expect(off.heroes).toEqual([]);
+    expect(off.roll).toEqual(buildCreditsView(data, cfg));
+  });
+
+  it("times the cards first and starts the roll under the last fade", () => {
+    const cfg = { ...createDefaultCreditsWidgetConfig(), preset: "hybrid" as const, heroTopCount: 1, scrollSpeed: 100, heroHoldSeconds: 3, heroFadeMs: 500 };
+    const { heroes, roll } = buildCreditsHybridView(data, cfg);
+    const t = creditsTimeline(roll, cfg, { contentPx: 2000, viewportPx: 900 }, false, heroes);
+    expect(t.mode).toBe("hybrid");
+    expect(heroCardMs(cfg)).toBe(4000);
+    expect(t.steps).toHaveLength(3);
+    expect(t.scrollStartMs).toBe(3 * 4000 - 500);
+    expect(t.scrollMs).toBe(29_000);
+    expect(t.totalMs).toBe(t.scrollStartMs + 29_000);
+    expect(heroIndexAt(t, 0)).toBe(0);
+    expect(heroIndexAt(t, 4500)).toBe(1);
+    expect(heroIndexAt(t, 12_000)).toBe(-1);
+    expect(scrollProgressAt(t, 0)).toBe(0);
+    expect(scrollProgressAt(t, t.scrollStartMs)).toBe(0);
+    expect(scrollProgressAt(t, t.totalMs)).toBe(1);
+    // No heroes: the roll starts at once. No roll: the cards are the whole thing.
+    expect(creditsTimeline(roll, cfg, { contentPx: 2000, viewportPx: 900 }, false, []).scrollStartMs).toBe(0);
+    const cardsOnly = creditsTimeline([], cfg, { contentPx: 0, viewportPx: 900 }, false, heroes);
+    expect(cardsOnly.scrollMs).toBe(0);
+    expect(cardsOnly.totalMs).toBe(12_000);
+    // Reduced motion: a plain step through everything.
+    expect(creditsTimeline([...heroes, ...roll], cfg, { contentPx: 0, viewportPx: 0 }, true).mode).toBe("step");
   });
 });

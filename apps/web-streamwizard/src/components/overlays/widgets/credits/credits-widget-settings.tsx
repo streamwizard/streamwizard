@@ -3,14 +3,41 @@
 import { useCallback, useEffect, useState } from "react";
 import { env } from "@/lib/env";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
-import { Loader2, Play, RefreshCw, Sparkles, Square } from "lucide-react";
+import { Loader2, Pencil, Play, Plus, RefreshCw, Sparkles, Square, X } from "lucide-react";
 import { buildDemoCreditsData, type CreditsData } from "@repo/schemas";
-import { Button, cn, ColorPicker, Input, Label, Switch, Textarea, ToggleGroup, ToggleGroupItem } from "@repo/ui";
+import {
+  Button,
+  cn,
+  ColorPicker,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+  Textarea,
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@repo/ui";
 import { SortableList } from "@repo/ui/components/sortable-list";
 import {
+  CREDITS_HERO_CATEGORIES,
+  CREDITS_HERO_LABELS,
+  CREDITS_HERO_THRESHOLD_UNITS,
   CREDITS_RESET_BROWSER_EVENT,
   CREDITS_ROLL_BROWSER_EVENT,
   CREDITS_SECTION_NAMES,
+  CREDITS_SOCIAL_PLACEHOLDERS,
+  CREDITS_SOCIAL_PLATFORM_LABELS,
+  CREDITS_SOCIAL_PLATFORMS,
   CREDITS_WIDGET_LIMITS,
   CREDITS_WIDGET_PRESET_LABELS,
   CREDITS_WIDGET_PRESET_SIZES,
@@ -23,9 +50,13 @@ import {
   normalizeCreditsWidgetConfig,
   streamChangedFromFrame,
   subscribeToWsRoom,
+  type CreditsHeroCategory,
   type CreditsResetBrowserEventDetail,
   type CreditsRollBrowserEventDetail,
   type CreditsSection,
+  type CreditsSocial,
+  type CreditsSocialPlatform,
+  type CreditsSocialsLayout,
   type CreditsWidgetFrame,
   type CreditsWidgetItemConfig,
   type CreditsWidgetPreset,
@@ -43,6 +74,29 @@ import {
   type SegmentedOption,
 } from "@/components/overlays/inspector-fields";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
+
+/** One line of help at the top of each section's edit dialog. */
+const SECTION_HELP: Record<CreditsSection["id"], string> = {
+  title: "The first line of the credits.",
+  followers: "Everyone who followed during the stream.",
+  subs: "New subs, bought by the person themselves.",
+  resubs: "Everyone who resubbed, with their month count.",
+  gifters: "Who gifted subs, and how many.",
+  cheerers: "Who cheered, and how many Bits.",
+  raids: "Who raided you, and how many viewers they brought.",
+  redemptions: "Who redeemed channel point rewards.",
+  hype_train: "How many trains ran and the top level reached.",
+  peak_viewers: "Your highest viewer count.",
+  duration: "How long you were live.",
+  thanks: "Your own words. Blank hides the section.",
+  socials: "Your other platforms, logo and handle.",
+  outro: "The last line of the credits.",
+};
+
+const SOCIALS_LAYOUT_OPTIONS: readonly SegmentedOption<CreditsSocialsLayout>[] = [
+  { value: "list", label: "List" },
+  { value: "row", label: "Row" },
+];
 
 const LOOP_OPTIONS: readonly SegmentedOption<"once" | "loop">[] = [
   { value: "once", label: "Play once" },
@@ -103,6 +157,21 @@ function PresetSketch({ preset }: { preset: CreditsWidgetPreset }) {
             <div className={cn("h-1.5 w-8 rounded-full", ink)} />
           </div>
           <div className="h-1.5 w-full bg-foreground/80" />
+        </div>
+      );
+    case "hybrid":
+      return (
+        <div className="flex w-full items-center gap-1.5">
+          <div className="flex flex-1 flex-col items-center gap-1 rounded-sm border border-primary/60 p-1">
+            <div className={cn("h-0.5 w-4 rounded-full", accent)} />
+            <div className={cn("h-1.5 w-6 rounded-full", ink)} />
+          </div>
+          <div className="flex flex-1 flex-col items-center gap-0.5">
+            <div className={cn("h-0.5 w-3 rounded-full", accent)} />
+            <div className={cn("h-0.5 w-5 rounded-full", ink)} />
+            <div className={cn("h-0.5 w-4 rounded-full", ink)} />
+            <div className={cn("h-0.5 w-5 rounded-full", ink)} />
+          </div>
         </div>
       );
   }
@@ -209,7 +278,49 @@ export function CreditsWidgetSettings({ item, updateItem }: OverlayInspectorAppe
   }
 
   const scrolls = isCreditsScrollPreset(cfg.preset);
-  const thanksOn = cfg.sections.some((s) => s.id === "thanks" && s.enabled);
+  const hybrid = cfg.preset === "hybrid";
+
+  function toggleHero(id: CreditsHeroCategory, on: boolean) {
+    const without = cfg.heroCategories.filter((c) => c !== id);
+    patchConfig({ heroCategories: on ? [...without, id] : without });
+  }
+  const [editing, setEditing] = useState<CreditsSection["id"] | null>(null);
+  const editingSection = editing ? cfg.sections.find((s) => s.id === editing) : undefined;
+
+  /** The one line under a section's name: what it will say, or that it's empty. */
+  function sectionSummary(section: CreditsSection): string {
+    switch (section.id) {
+      case "title":
+        return cfg.titleText.trim() || "No title";
+      case "outro":
+        return cfg.outroText.trim() || "No outro";
+      case "thanks":
+        return cfg.thanksText.trim().split("\n")[0] || "No note yet";
+      case "socials": {
+        const n = cfg.socials.filter((s) => s.handle.trim()).length;
+        return n === 0 ? "No platforms yet" : `${n} ${n === 1 ? "platform" : "platforms"}`;
+      }
+      default:
+        return section.label.trim() || "No heading";
+    }
+  }
+
+  const usedPlatforms = new Set(cfg.socials.map((s) => s.platform));
+  const freePlatforms = CREDITS_SOCIAL_PLATFORMS.filter((p) => !usedPlatforms.has(p));
+
+  function patchSocial(index: number, updates: Partial<CreditsSocial>) {
+    patchConfig({ socials: cfg.socials.map((s, i) => (i === index ? { ...s, ...updates } : s)) });
+  }
+
+  function addSocial() {
+    const platform = freePlatforms[0];
+    if (!platform) return;
+    patchConfig({ socials: [...cfg.socials, { platform, handle: "" }] });
+  }
+
+  function removeSocial(index: number) {
+    patchConfig({ socials: cfg.socials.filter((_, i) => i !== index) });
+  }
   const hasRealData = source.status === "ready" && !source.data.missing.stream;
 
   return (
@@ -299,6 +410,85 @@ export function CreditsWidgetSettings({ item, updateItem }: OverlayInspectorAppe
         </ToggleGroup>
       </InspectorSection>
 
+      {hybrid && (
+        <InspectorSection title="Hero cards" defaultOpen>
+          <div className="space-y-4">
+            <p className="text-[11px] text-muted-foreground">
+              The biggest contributors open the credits on their own cards, then everyone else rolls.
+              Someone on a card is left out of that list in the roll.
+            </p>
+            <div className="rounded-md border border-input divide-y divide-border/60">
+              {CREDITS_HERO_CATEGORIES.map((id) => {
+                const on = cfg.heroCategories.includes(id);
+                return (
+                  <div key={id} className="flex items-center gap-2 px-2 py-1.5">
+                    <Switch checked={on} onCheckedChange={(v) => toggleHero(id, v)} aria-label={`${CREDITS_HERO_LABELS[id].many} as hero cards`} />
+                    <span className={cn("w-24 shrink-0 truncate text-xs", !on && "text-muted-foreground")}>
+                      {CREDITS_HERO_LABELS[id].many}
+                    </span>
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                      <span className="shrink-0 text-[11px] text-muted-foreground">from</span>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={CREDITS_WIDGET_LIMITS.heroThreshold.min}
+                        max={CREDITS_WIDGET_LIMITS.heroThreshold.max}
+                        value={cfg.heroThresholds[id]}
+                        disabled={!on}
+                        className="h-7 w-20 text-xs"
+                        aria-label={`${CREDITS_HERO_LABELS[id].many} threshold`}
+                        onChange={(e) => {
+                          const n = Number.parseInt(e.target.value, 10);
+                          patchConfig({ heroThresholds: { ...cfg.heroThresholds, [id]: Number.isFinite(n) ? Math.max(0, n) : 0 } });
+                        }}
+                      />
+                      <span className="truncate text-[11px] text-muted-foreground">{CREDITS_HERO_THRESHOLD_UNITS[id]}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-muted-foreground">0 means no floor: the top people qualify whatever they gave.</p>
+            <SliderField
+              id="credits-widget-hero-top"
+              label="Heroes per category"
+              value={cfg.heroTopCount}
+              min={CREDITS_WIDGET_LIMITS.heroTopCount.min}
+              max={CREDITS_WIDGET_LIMITS.heroTopCount.max}
+              onChange={(heroTopCount) => patchConfig({ heroTopCount })}
+            />
+            <SliderField
+              id="credits-widget-hero-group"
+              label="Names per card"
+              value={cfg.heroGroupSize}
+              min={CREDITS_WIDGET_LIMITS.heroGroupSize.min}
+              max={CREDITS_WIDGET_LIMITS.heroGroupSize.max}
+              hint="1 gives every hero their own card."
+              onChange={(heroGroupSize) => patchConfig({ heroGroupSize })}
+            />
+            <SliderField
+              id="credits-widget-hero-hold"
+              label="Card stays up"
+              unit="s"
+              value={cfg.heroHoldSeconds}
+              min={CREDITS_WIDGET_LIMITS.heroHoldSeconds.min}
+              max={CREDITS_WIDGET_LIMITS.heroHoldSeconds.max}
+              onChange={(heroHoldSeconds) => patchConfig({ heroHoldSeconds })}
+            />
+            <SliderField
+              id="credits-widget-hero-fade"
+              label="Fade"
+              unit="ms"
+              value={cfg.heroFadeMs}
+              min={CREDITS_WIDGET_LIMITS.heroFadeMs.min}
+              max={CREDITS_WIDGET_LIMITS.heroFadeMs.max}
+              step={50}
+              onChange={(heroFadeMs) => patchConfig({ heroFadeMs })}
+            />
+          </div>
+        </InspectorSection>
+      )}
+
       <InspectorSection title="Sections" defaultOpen>
         <div className="space-y-4">
           <div className="rounded-md border border-input">
@@ -316,34 +506,20 @@ export function CreditsWidgetSettings({ item, updateItem }: OverlayInspectorAppe
                     onCheckedChange={(enabled) => patchSection(section.id, { enabled })}
                     aria-label={`Show ${CREDITS_SECTION_NAMES[section.id]}`}
                   />
-                  <span className={cn("w-24 shrink-0 truncate text-xs", !section.enabled && "text-muted-foreground")}>
-                    {CREDITS_SECTION_NAMES[section.id]}
-                  </span>
-                  {section.id === "title" ? (
-                    <Input
-                      value={cfg.titleText}
-                      maxLength={CREDITS_WIDGET_LIMITS.titleText}
-                      placeholder="Thanks for watching"
-                      className="h-7 text-xs"
-                      onChange={(e) => patchConfig({ titleText: e.target.value })}
-                    />
-                  ) : section.id === "outro" ? (
-                    <Input
-                      value={cfg.outroText}
-                      maxLength={CREDITS_WIDGET_LIMITS.outroText}
-                      placeholder="See you next stream"
-                      className="h-7 text-xs"
-                      onChange={(e) => patchConfig({ outroText: e.target.value })}
-                    />
-                  ) : creditsSectionHasLabel(section.id) ? (
-                    <Input
-                      value={section.label}
-                      maxLength={CREDITS_WIDGET_LIMITS.sectionLabel}
-                      placeholder="Heading"
-                      className="h-7 text-xs"
-                      onChange={(e) => patchSection(section.id, { label: e.target.value })}
-                    />
-                  ) : null}
+                  <div className="min-w-0 flex-1">
+                    <div className={cn("truncate text-xs", !section.enabled && "text-muted-foreground")}>
+                      {CREDITS_SECTION_NAMES[section.id]}
+                    </div>
+                    <div className="truncate text-[11px] text-muted-foreground">{sectionSummary(section)}</div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => setEditing(section.id)}
+                    aria-label={`Edit ${CREDITS_SECTION_NAMES[section.id]}`}
+                  >
+                    <Pencil />
+                  </Button>
                 </div>
               )}
             </SortableList>
@@ -351,22 +527,6 @@ export function CreditsWidgetSettings({ item, updateItem }: OverlayInspectorAppe
           <p className="text-[11px] text-muted-foreground">
             Drag to reorder. A section with nothing in it is skipped on stream.
           </p>
-
-          <InspectorReveal show={thanksOn} marginTop={0}>
-            <div className="space-y-1.5">
-              <Label htmlFor="credits-widget-thanks" className="text-xs">
-                Thank-you note
-              </Label>
-              <Textarea
-                id="credits-widget-thanks"
-                value={cfg.thanksText}
-                maxLength={CREDITS_WIDGET_LIMITS.thanksText}
-                rows={3}
-                placeholder="A few words for everyone who stopped by."
-                onChange={(e) => patchConfig({ thanksText: e.target.value })}
-              />
-            </div>
-          </InspectorReveal>
 
           <div className="space-y-1">
             <SwitchField
@@ -460,11 +620,23 @@ export function CreditsWidgetSettings({ item, updateItem }: OverlayInspectorAppe
             options={LOOP_OPTIONS}
             hint={
               scrolls
-                ? "Play once runs off the top and leaves the box empty. Loop keeps it moving, round and round."
-                : "Play once keeps the last section up until you switch scenes. Loop starts over after a short hold."
+                ? "Play once runs off the top and leaves the box empty. Loop runs it again."
+                : "Play once keeps the last section up until you switch scenes. Loop runs it again."
             }
             onChange={(v) => patchConfig({ loop: v === "loop" })}
           />
+          <InspectorReveal show={cfg.loop} marginTop={0}>
+            <SliderField
+              id="credits-widget-loop-delay"
+              label="Pause between loops"
+              unit="s"
+              value={cfg.loopDelaySeconds}
+              min={CREDITS_WIDGET_LIMITS.loopDelaySeconds.min}
+              max={CREDITS_WIDGET_LIMITS.loopDelaySeconds.max}
+              hint="How long the box stays empty before the credits roll again. 0 runs them back to back."
+              onChange={(loopDelaySeconds) => patchConfig({ loopDelaySeconds })}
+            />
+          </InspectorReveal>
         </div>
       </InspectorSection>
 
@@ -520,6 +692,133 @@ export function CreditsWidgetSettings({ item, updateItem }: OverlayInspectorAppe
           />
         </div>
       </InspectorSection>
+
+      <Dialog open={editing !== null} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent className="sm:max-w-md">
+          {editingSection && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{CREDITS_SECTION_NAMES[editingSection.id]}</DialogTitle>
+                <DialogDescription>{SECTION_HELP[editingSection.id]}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {editingSection.id === "title" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="credits-edit-title">Title line</Label>
+                    <Input
+                      id="credits-edit-title"
+                      value={cfg.titleText}
+                      maxLength={CREDITS_WIDGET_LIMITS.titleText}
+                      placeholder="Thanks for watching"
+                      autoFocus
+                      onChange={(e) => patchConfig({ titleText: e.target.value })}
+                    />
+                  </div>
+                )}
+                {editingSection.id === "outro" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="credits-edit-outro">Outro line</Label>
+                    <Input
+                      id="credits-edit-outro"
+                      value={cfg.outroText}
+                      maxLength={CREDITS_WIDGET_LIMITS.outroText}
+                      placeholder="See you next stream"
+                      autoFocus
+                      onChange={(e) => patchConfig({ outroText: e.target.value })}
+                    />
+                  </div>
+                )}
+                {creditsSectionHasLabel(editingSection.id) && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="credits-edit-label">Heading</Label>
+                    <Input
+                      id="credits-edit-label"
+                      value={editingSection.label}
+                      maxLength={CREDITS_WIDGET_LIMITS.sectionLabel}
+                      placeholder="Heading"
+                      autoFocus={editingSection.id !== "socials"}
+                      onChange={(e) => patchSection(editingSection.id, { label: e.target.value })}
+                    />
+                  </div>
+                )}
+                {editingSection.id === "thanks" && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="credits-edit-thanks">Your note</Label>
+                    <Textarea
+                      id="credits-edit-thanks"
+                      value={cfg.thanksText}
+                      maxLength={CREDITS_WIDGET_LIMITS.thanksText}
+                      rows={6}
+                      placeholder="A few words for everyone who stopped by."
+                      onChange={(e) => patchConfig({ thanksText: e.target.value })}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      {cfg.thanksText.length} / {CREDITS_WIDGET_LIMITS.thanksText}
+                    </p>
+                  </div>
+                )}
+                {editingSection.id === "socials" && (
+                  <div className="space-y-3">
+                    <Label>Your platforms</Label>
+                    {cfg.socials.length > 0 && (
+                      <div className="space-y-2">
+                        {cfg.socials.map((entry, index) => (
+                          <div key={entry.platform} className="flex items-center gap-2">
+                            <Select value={entry.platform} onValueChange={(v) => patchSocial(index, { platform: v as CreditsSocialPlatform })}>
+                              <SelectTrigger className="w-32 shrink-0" aria-label="Platform">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {CREDITS_SOCIAL_PLATFORMS.filter((p) => p === entry.platform || !usedPlatforms.has(p)).map((p) => (
+                                  <SelectItem key={p} value={p}>
+                                    {CREDITS_SOCIAL_PLATFORM_LABELS[p]}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              value={entry.handle}
+                              maxLength={CREDITS_WIDGET_LIMITS.socialHandle}
+                              placeholder={CREDITS_SOCIAL_PLACEHOLDERS[entry.platform]}
+                              aria-label={`${CREDITS_SOCIAL_PLATFORM_LABELS[entry.platform]} handle`}
+                              onChange={(e) => patchSocial(index, { handle: e.target.value })}
+                            />
+                            <Button variant="ghost" size="icon" onClick={() => removeSocial(index)} aria-label={`Remove ${CREDITS_SOCIAL_PLATFORM_LABELS[entry.platform]}`}>
+                              <X />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <Button variant="outline" size="sm" onClick={addSocial} disabled={freePlatforms.length === 0}>
+                      <Plus />
+                      Add platform
+                    </Button>
+                    <p className="text-[11px] text-muted-foreground">Type the handle the way you say it on stream. Shown as is.</p>
+                    <SegmentedField
+                      id="credits-edit-socials-layout"
+                      label="Layout"
+                      value={cfg.socialsLayout}
+                      options={SOCIALS_LAYOUT_OPTIONS}
+                      onChange={(socialsLayout) => patchConfig({ socialsLayout })}
+                    />
+                    <SwitchField
+                      id="credits-edit-socials-brand"
+                      label="Brand colours"
+                      hint="Each logo in its own colour. Off draws them in your heading colour."
+                      checked={cfg.socialsBrandColors}
+                      onCheckedChange={(socialsBrandColors) => patchConfig({ socialsBrandColors })}
+                    />
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button onClick={() => setEditing(null)}>Done</Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
