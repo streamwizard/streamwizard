@@ -2,7 +2,7 @@ export type { ChannelSearchResult, TwitchUser, TwitchGame, TwitchCategory } from
 export type { ClipDownloadUrl } from "./clips";
 export type { Vod, GetVodsParams } from "./vods";
 export type { UpdateChannelParams, ChannelInformation } from "./channels";
-export type { TwitchBadgeSet, TwitchBadgeVersion, SendChatMessageResponse } from "./chat";
+export type { TwitchBadgeSet, TwitchBadgeVersion, TwitchChannelEmote, SendChatMessageResponse } from "./chat";
 export type { TwitchCheermote, TwitchCheermoteTier } from "./bits";
 export type { CreatorGoal, CreatorGoalType } from "./goals";
 export type { AdSchedule } from "./ads";

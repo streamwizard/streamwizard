@@ -25,6 +25,7 @@ import {
   ChannelGoalProgressEventSchema,
   ChannelHypeTrainBeginEventSchema,
   ChannelHypeTrainEndEventSchema,
+  ChannelHypeTrainProgressEventSchema,
   ChannelShoutoutCreateEventSchema,
   ChannelShoutoutReceiveEventSchema,
 } from "./misc";
@@ -319,6 +320,32 @@ function demoPoll(stage: "begin" | "progress" | "end", votes: DemoPollVotes = "r
   return payload;
 }
 
+/**
+ * The fields every hype train event shares. The fake viewer is the top
+ * contributor, so single-contributor widgets (the alert box) keep showing
+ * them; two regulars fill the other contribution types so a widget that lists
+ * contributors has more than one to show.
+ */
+function demoHypeTrain(opts: WidgetTestEventOptions | undefined, level: number) {
+  const v = viewer(opts);
+  const scale = level * 600;
+  return {
+    id: uuid(),
+    ...BROADCASTER,
+    total: scale * 2,
+    top_contributions: [
+      { user_id: v.user_id, user_login: v.user_login, user_name: v.user_name, type: "bits", total: scale },
+      { user_id: "11", user_login: "sandwichlord", user_name: "sandwichlord", type: "subscription", total: scale / 2 },
+      { user_id: "12", user_login: "pixelpenguin", user_name: "PixelPenguin", type: "other", total: scale / 4 },
+    ],
+    shared_train_participants: null,
+    level,
+    started_at: now(),
+    is_shared_train: false,
+    type: "regular",
+  };
+}
+
 export const WIDGET_TEST_EVENTS = {
   "channel.follow": {
     label: "Follow",
@@ -491,6 +518,41 @@ export const WIDGET_TEST_EVENTS = {
                   text: "hype",
                   gif: { id: "3o7aCTPPm4OHfRLSH6", url: "https://media.giphy.com/media/3o7aCTPPm4OHfRLSH6/giphy.gif" },
                 },
+              ],
+            },
+            color: "#FF6B6B",
+            badges: DEMO_BADGES,
+            user_profile_image_url: v.user_profile_image_url,
+            message_type: "text",
+            cheer: null,
+            reply: null,
+          };
+        },
+      },
+      emotes: {
+        label: "Chat message (emotes)",
+        build: (o?: WidgetTestEventOptions) => {
+          const v = viewer(o);
+          // Emote-heavy, for the emote widget: three Twitch emotes and a word.
+          const emote = (text: string, id: string) => ({
+            type: "emote" as const,
+            text,
+            emote: { id, emote_set_id: "0" },
+          });
+          return {
+            ...BROADCASTER,
+            chatter_user_id: v.user_id,
+            chatter_user_login: v.user_login,
+            chatter_user_name: v.user_name,
+            message_id: uuid(),
+            message: {
+              text: "Kappa LUL let's go <3",
+              fragments: [
+                emote("Kappa", "25"),
+                { type: "text", text: " " },
+                emote("LUL", "425618"),
+                { type: "text", text: " let's go " },
+                emote("<3", "9"),
               ],
             },
             color: "#FF6B6B",
@@ -781,60 +843,33 @@ export const WIDGET_TEST_EVENTS = {
     label: "Hype train started",
     group: "Channel",
     schema: ChannelHypeTrainBeginEventSchema,
-    build: (o?) => {
-      const v = viewer(o);
-      return {
-        id: uuid(),
-        ...BROADCASTER,
-        total: 1200,
-        top_contributions: [
-          {
-            user_id: v.user_id,
-            user_login: v.user_login,
-            user_name: v.user_name,
-            type: "bits",
-            total: 1200,
-          },
-        ],
-        shared_train_participants: null,
-        level: 1,
-        started_at: now(),
-        is_shared_train: false,
-        type: "regular",
-        progress: 200,
-        goal: 1600,
-        expires_at: now(),
-      };
-    },
+    build: (o?) => ({
+      ...demoHypeTrain(o, 1),
+      progress: 200,
+      goal: 1600,
+      expires_at: now(),
+    }),
+  },
+  "channel.hype_train.progress": {
+    label: "Hype train progress",
+    group: "Channel",
+    schema: ChannelHypeTrainProgressEventSchema,
+    build: (o?) => ({
+      ...demoHypeTrain(o, 2),
+      progress: 900,
+      goal: 2200,
+      expires_at: now(),
+    }),
   },
   "channel.hype_train.end": {
     label: "Hype train ended",
     group: "Channel",
     schema: ChannelHypeTrainEndEventSchema,
-    build: (o?) => {
-      const v = viewer(o);
-      return {
-        id: uuid(),
-        ...BROADCASTER,
-        total: 9400,
-        top_contributions: [
-          {
-            user_id: v.user_id,
-            user_login: v.user_login,
-            user_name: v.user_name,
-            type: "bits",
-            total: 4200,
-          },
-        ],
-        shared_train_participants: null,
-        level: 4,
-        started_at: now(),
-        is_shared_train: false,
-        type: "regular",
-        ended_at: now(),
-        cooldown_ends_at: now(),
-      };
-    },
+    build: (o?) => ({
+      ...demoHypeTrain(o, 4),
+      ended_at: now(),
+      cooldown_ends_at: now(),
+    }),
   },
   "channel.goal.begin": {
     label: "Goal started",

@@ -17,6 +17,8 @@ import {
   Code2,
   Compass,
   Crosshair,
+  Flame,
+  TrainFront,
   Gauge,
   Goal,
   MapPin,
@@ -25,6 +27,8 @@ import {
   Mountain,
   Radio,
   ScrollText,
+  Sparkles,
+  Tag,
   Timer,
   Type,
   Vote,
@@ -107,6 +111,17 @@ import {
   createCreditsWidgetRootItems,
 } from "../widgets/credits/credits-widget-definition";
 import { CreditsWidgetSettings } from "../widgets/credits/credits-widget-settings";
+import { LABEL_WIDGET_DEFAULT_SIZE, createLabelWidgetRootItems } from "../widgets/label/label-widget-definition";
+import { LabelWidgetSettings } from "../widgets/label/label-widget-settings";
+import { EMOTE_WIDGET_DEFAULT_SIZE, createEmoteWidgetRootItems } from "../widgets/emote/emote-widget-definition";
+import { EmoteWidgetSettings } from "../widgets/emote/emote-widget-settings";
+import { COMBO_WIDGET_DEFAULT_SIZE, createComboWidgetRootItems } from "../widgets/combo/combo-widget-definition";
+import { ComboWidgetSettings } from "../widgets/combo/combo-widget-settings";
+import {
+  HYPE_TRAIN_WIDGET_DEFAULT_SIZE,
+  createHypeTrainWidgetRootItems,
+} from "../widgets/hype-train/hype-train-widget-definition";
+import { HypeTrainWidgetSettings } from "../widgets/hype-train/hype-train-widget-settings";
 import {
   AlertWidgetRenderer,
   ChatWidgetRenderer,
@@ -115,6 +130,10 @@ import {
   AdWidgetRenderer,
   UptimeWidgetRenderer,
   CreditsWidgetRenderer,
+  LabelWidgetRenderer,
+  EmoteWidgetRenderer,
+  ComboWidgetRenderer,
+  HypeTrainWidgetRenderer,
   TextWidgetRenderer,
   TimerWidgetRenderer,
   ClockWidgetRenderer,
@@ -154,6 +173,26 @@ function PollWidgetCanvas({ item, scene }: OverlayCanvasProps) {
 /** The ad widget reads the channel's ad schedule through the dashboard session on the canvas. */
 function AdWidgetCanvas({ item, scene }: OverlayCanvasProps) {
   return <AdWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** Labels read through the dashboard session and fill empty values with sample data. */
+function LabelWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <LabelWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The emote wall loads the channel's emotes through the dashboard session and drifts a few while idle. */
+function EmoteWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <EmoteWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The combo counter reads emote sets through the dashboard session and shows a sample while chat is quiet. */
+function ComboWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <ComboWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The hype train parks a sample train on the canvas until one rides. */
+function HypeTrainWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <HypeTrainWidgetRenderer item={item} scene={scene} isEditor />;
 }
 
 /** The uptime widget reads the stream through the dashboard session and previews a time while offline. */
@@ -225,6 +264,54 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     createRootItems: createChatWidgetRootItems,
     CanvasContent: ChatWidgetCanvas,
     SettingsPanel: ChatWidgetSettings,
+  },
+  emote_widget: {
+    type: "emote_widget",
+    layerScope: "root",
+    icon: Sparkles,
+    showInLibrary: true,
+    category: "alerts",
+    library: {
+      title: "Emote wall",
+      description:
+        "Chat emotes fly across your stream, and follows, subs, cheers and raids set off a big burst. Works with 7TV, BTTV and FFZ.",
+    },
+    defaultSize: { ...EMOTE_WIDGET_DEFAULT_SIZE },
+    createRootItems: createEmoteWidgetRootItems,
+    CanvasContent: EmoteWidgetCanvas,
+    SettingsPanel: EmoteWidgetSettings,
+  },
+  combo_widget: {
+    type: "combo_widget",
+    layerScope: "root",
+    icon: Flame,
+    showInLibrary: true,
+    category: "alerts",
+    library: {
+      title: "Emote combo",
+      description:
+        "When chat spams the same emote, a counter shows it on stream and punches up with every hit. Works with 7TV, BTTV and FFZ.",
+    },
+    defaultSize: { ...COMBO_WIDGET_DEFAULT_SIZE },
+    createRootItems: createComboWidgetRootItems,
+    CanvasContent: ComboWidgetCanvas,
+    SettingsPanel: ComboWidgetSettings,
+  },
+  hype_train_widget: {
+    type: "hype_train_widget",
+    layerScope: "root",
+    icon: TrainFront,
+    showInLibrary: true,
+    category: "alerts",
+    library: {
+      title: "Hype train",
+      description:
+        "During a hype train, a train bounces around your stream with a wagon for everyone who cheered, subbed or gifted. Picture and name on every one.",
+    },
+    defaultSize: { ...HYPE_TRAIN_WIDGET_DEFAULT_SIZE },
+    createRootItems: createHypeTrainWidgetRootItems,
+    CanvasContent: HypeTrainWidgetCanvas,
+    SettingsPanel: HypeTrainWidgetSettings,
   },
   follower_goal_widget: {
     type: "follower_goal_widget",
@@ -336,6 +423,22 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     createRootItems: createCreditsWidgetRootItems,
     CanvasContent: CreditsWidgetCanvas,
     SettingsPanel: CreditsWidgetSettings,
+  },
+  label_widget: {
+    type: "label_widget",
+    layerScope: "root",
+    icon: Tag,
+    showInLibrary: true,
+    category: "labels",
+    library: {
+      title: "Label",
+      description:
+        "Latest follower, top cheerer, sub count, recent raids and more. Pick one and it updates the second it happens.",
+    },
+    defaultSize: { ...LABEL_WIDGET_DEFAULT_SIZE },
+    createRootItems: createLabelWidgetRootItems,
+    CanvasContent: LabelWidgetCanvas,
+    SettingsPanel: LabelWidgetSettings,
   },
   text_widget: {
     type: "text_widget",
@@ -533,6 +636,7 @@ export function groupLibraryWidgetsByCategory(): Record<
     polls: [],
     ads: [],
     credits: [],
+    labels: [],
     layout: [],
     other: [],
   };

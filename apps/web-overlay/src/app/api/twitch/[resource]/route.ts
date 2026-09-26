@@ -7,12 +7,14 @@ import {
   livePoll,
   liveAdSchedule,
   liveCredits,
+  liveLabels,
   liveStream,
   liveSubscriberTotal,
   resolveBadges,
   resolveCheermotes,
   resolveGame,
   resolveThirdPartyEmotes,
+  resolveChannelEmotes,
   resolveUsers,
 } from "@repo/twitch-assets";
 import {
@@ -36,7 +38,7 @@ import {
  *   Assets (badges, cheermotes, users, game, emotes) — Supabase-cached, and
  *   safe to let the browser hold briefly. A stale badge is an old picture.
  *
- *   Live counters (followers, subscribers, stream, goals, poll, ads) — `no-store`, never cached
+ *   Live counters (followers, subscribers, stream, goals, poll, ads, labels) — `no-store`, never cached
  *   anywhere. A goal widget refreshing mid-stream must come back with the true
  *   number, not the one that was true when some cache filled.
  *
@@ -51,7 +53,7 @@ const LIVE_CACHE_CONTROL = "no-store";
 /** Credits for a finished stream: the roll-up can't change any more. */
 const ENDED_CREDITS_CACHE_CONTROL = "private, max-age=300";
 
-const LIVE_RESOURCES = new Set(["followers", "subscribers", "stream", "goals", "poll", "ads"]);
+const LIVE_RESOURCES = new Set(["followers", "subscribers", "stream", "goals", "poll", "ads", "labels"]);
 
 type Resource =
   | "badges"
@@ -65,7 +67,8 @@ type Resource =
   | "goals"
   | "poll"
   | "ads"
-  | "credits";
+  | "credits"
+  | "labels";
 
 const RESOURCES = new Set<Resource>([
   "badges",
@@ -80,6 +83,7 @@ const RESOURCES = new Set<Resource>([
   "poll",
   "ads",
   "credits",
+  "labels",
 ]);
 
 function isResource(value: string): value is Resource {
@@ -172,6 +176,10 @@ async function handle(
 
     case "emotes": {
       const provider = params.get("provider")?.trim() ?? "";
+      // The channel's own Twitch emotes, for the emote widget's event bursts.
+      if (provider === "twitch") {
+        return { data: { emotes: await resolveChannelEmotes(broadcasterId) } };
+      }
       if (!isThirdPartyProvider(provider)) {
         return { error: "Unknown provider", status: 400 };
       }
@@ -205,5 +213,8 @@ async function handle(
       if (stream && data.missing.stream) return { error: "Stream not found", status: 404 };
       return { data, cacheControl: data.is_live ? LIVE_CACHE_CONTROL : ENDED_CREDITS_CACHE_CONTROL };
     }
+
+    case "labels":
+      return { data: await liveLabels(broadcasterId) };
   }
 }

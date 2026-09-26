@@ -28,6 +28,7 @@ const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   polls: "Polls",
   ads: "Ads",
   credits: "Credits",
+  labels: "Labels",
   layout: "Layout",
   other: "Other",
 };

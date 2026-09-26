@@ -5,6 +5,10 @@ import type { PollWidgetItemConfig } from "../widgets/poll/poll-widget-config";
 import type { AdWidgetItemConfig } from "../widgets/ads/ad-widget-config";
 import type { UptimeWidgetItemConfig } from "../widgets/uptime/uptime-widget-config";
 import type { CreditsWidgetItemConfig } from "../widgets/credits/credits-widget-config";
+import type { LabelWidgetItemConfig } from "../widgets/label/label-widget-config";
+import type { EmoteWidgetItemConfig } from "../widgets/emote/emote-widget-config";
+import type { ComboWidgetItemConfig } from "../widgets/combo/combo-widget-config";
+import type { HypeTrainWidgetItemConfig } from "../widgets/hype-train/hype-train-widget-config";
 import type { OverlayItemType } from "./base";
 import {
   buildCompositeClipsConfig,
@@ -42,7 +46,11 @@ export type OverlayItemConfig =
   | PollWidgetItemConfig
   | AdWidgetItemConfig
   | UptimeWidgetItemConfig
-  | CreditsWidgetItemConfig;
+  | CreditsWidgetItemConfig
+  | LabelWidgetItemConfig
+  | EmoteWidgetItemConfig
+  | ComboWidgetItemConfig
+  | HypeTrainWidgetItemConfig;
 
 export interface OverlayItem {
   id: string;

@@ -47,6 +47,37 @@ import {
   AD_WIDGET_PRESETS,
 } from "./components/overlay/widgets/ads/ad-widget-config";
 import { UPTIME_WIDGET_LAYOUTS, UPTIME_WIDGET_LIMITS } from "./components/overlay/widgets/uptime/uptime-widget-config";
+import { LABEL_PERIODS } from "@repo/schemas";
+import {
+  LABEL_WIDGET_ANIMATIONS,
+  LABEL_WIDGET_DIRECTIONS,
+  LABEL_WIDGET_IDS,
+  LABEL_WIDGET_LAYOUTS,
+  LABEL_WIDGET_LIMITS,
+} from "./components/overlay/widgets/label/label-widget-config";
+import {
+  EMOTE_ANIMATIONS,
+  EMOTE_WIDGET_LIMITS,
+  DEFAULT_EMOTE_WIDGET_BURSTS,
+  DEFAULT_EMOTE_WIDGET_HIDDEN_USERS,
+  EMOTE_WIDGET_EVENTS,
+  createDefaultEmoteWidgetConfig,
+  type EmoteWidgetEvent,
+} from "./components/overlay/widgets/emote/emote-widget-config";
+import {
+  COMBO_WIDGET_COUNT_MODES,
+  COMBO_WIDGET_LAYOUTS,
+  COMBO_WIDGET_LIMITS,
+  COMBO_WIDGET_MODES,
+  COMBO_WIDGET_PRESETS,
+} from "./components/overlay/widgets/combo/combo-widget-config";
+import {
+  HYPE_TRAIN_WIDGET_DIRECTIONS,
+  HYPE_TRAIN_WIDGET_JOIN_EFFECTS,
+  HYPE_TRAIN_WIDGET_LIMITS,
+  HYPE_TRAIN_WIDGET_MOVEMENTS,
+  HYPE_TRAIN_WIDGET_PRESETS,
+} from "./components/overlay/widgets/hype-train/hype-train-widget-config";
 import {
   CREDITS_DEFAULT_HERO_THRESHOLDS,
   CREDITS_DEFAULT_SECTIONS,
@@ -545,6 +576,274 @@ export const uptimeWidgetItemConfigSchema = z.object({
   textShadow: z.boolean().default(true),
 });
 
+/** Persisted JSON on `label_widget` rows. Defaults mirror createDefaultLabelWidgetConfig. */
+export const labelWidgetItemConfigSchema = z.object({
+  labelId: z.enum(LABEL_WIDGET_IDS as [string, ...string[]]).default("latest_follower"),
+  // Optional: the default depends on the label, normalizeLabelWidgetConfig fills it.
+  period: z.enum(LABEL_PERIODS).optional(),
+  template: z.string().max(LABEL_WIDGET_LIMITS.template).default(""),
+  prefix: z.string().max(LABEL_WIDGET_LIMITS.prefix).default("Latest follower"),
+  layout: z.enum(LABEL_WIDGET_LAYOUTS).default("inline"),
+  emptyText: z.string().max(LABEL_WIDGET_LIMITS.emptyText).default(""),
+  count: z.number().int().min(LABEL_WIDGET_LIMITS.count.min).max(LABEL_WIDGET_LIMITS.count.max).default(5),
+  direction: z.enum(LABEL_WIDGET_DIRECTIONS).default("vertical"),
+  separator: z.string().max(LABEL_WIDGET_LIMITS.separator).default("•"),
+  marquee: z.boolean().default(false),
+  marqueeSpeed: z
+    .number()
+    .min(LABEL_WIDGET_LIMITS.marqueeSpeed.min)
+    .max(LABEL_WIDGET_LIMITS.marqueeSpeed.max)
+    .default(60),
+  animation: z.enum(LABEL_WIDGET_ANIMATIONS).default("pop"),
+  animationDuration: z
+    .number()
+    .min(LABEL_WIDGET_LIMITS.animationDuration.min)
+    .max(LABEL_WIDGET_LIMITS.animationDuration.max)
+    .default(500),
+  fontFamily: z.preprocess(
+    (val) =>
+      typeof val === "string" && isValidGoogleFontFamilyName(val)
+        ? val.trim()
+        : DEFAULT_GOOGLE_FONT_FAMILY,
+    googleFontFamilySchema
+  ),
+  fontSize: z.number().min(LABEL_WIDGET_LIMITS.fontSize.min).max(LABEL_WIDGET_LIMITS.fontSize.max).default(28),
+  fontWeight: z
+    .union([z.literal(400), z.literal(500), z.literal(600), z.literal(700)])
+    .default(600),
+  color: hexColorSchema.default("#ffffff"),
+  prefixColor: hexColorSchema.default("#c4b5fd"),
+  align: z.enum(["left", "center", "right"]).default("center"),
+  textShadow: z.boolean().default(true),
+});
+
+const emoteBurstSchema = (enabled: boolean, animation: (typeof EMOTE_ANIMATIONS)[number], count: number) =>
+  z
+    .object({
+      enabled: z.boolean().default(enabled),
+      animation: z.enum(EMOTE_ANIMATIONS).default(animation),
+      count: z
+        .number()
+        .int()
+        .min(EMOTE_WIDGET_LIMITS.burstCount.min)
+        .max(EMOTE_WIDGET_LIMITS.burstCount.max)
+        .default(count),
+      emotes: z
+        .array(
+          z.union([
+            // Older rows: code only.
+            z.string().min(1).max(EMOTE_WIDGET_LIMITS.emoteCodeLength),
+            z.object({
+              code: z.string().min(1).max(EMOTE_WIDGET_LIMITS.emoteCodeLength),
+              url: z.string().max(EMOTE_WIDGET_LIMITS.emoteUrlLength),
+            }),
+          ])
+        )
+        .max(EMOTE_WIDGET_LIMITS.emoteCodes)
+        .default([]),
+    })
+    .default({ enabled, animation, count, emotes: [] });
+
+/**
+ * Persisted JSON on `emote_widget` rows. Every key is declared, nested maps
+ * included, or it is dropped on save. Defaults mirror createDefaultEmoteWidgetConfig.
+ */
+export const emoteWidgetItemConfigSchema = z.object({
+  chatEnabled: z.boolean().default(true),
+  animation: z.enum(EMOTE_ANIMATIONS).default("float_up"),
+  emoteSize: z
+    .number()
+    .int()
+    .min(EMOTE_WIDGET_LIMITS.emoteSize.min)
+    .max(EMOTE_WIDGET_LIMITS.emoteSize.max)
+    .default(56),
+  duration: z
+    .number()
+    .int()
+    .min(EMOTE_WIDGET_LIMITS.duration.min)
+    .max(EMOTE_WIDGET_LIMITS.duration.max)
+    .default(5000),
+  maxOnScreen: z
+    .number()
+    .int()
+    .min(EMOTE_WIDGET_LIMITS.maxOnScreen.min)
+    .max(EMOTE_WIDGET_LIMITS.maxOnScreen.max)
+    .default(150),
+  maxPerMessage: z
+    .number()
+    .int()
+    .min(EMOTE_WIDGET_LIMITS.maxPerMessage.min)
+    .max(EMOTE_WIDGET_LIMITS.maxPerMessage.max)
+    .default(5),
+  emoteProviders: z
+    .object({
+      "7tv": z.boolean().default(true),
+      bttv: z.boolean().default(true),
+      ffz: z.boolean().default(true),
+    })
+    .default({ "7tv": true, bttv: true, ffz: true }),
+  hiddenUsers: z
+    .array(
+      z
+        .string()
+        .max(EMOTE_WIDGET_LIMITS.hiddenUserLength)
+        .regex(/^[a-z0-9_]+$/, "Expected a lowercase Twitch login")
+    )
+    .max(EMOTE_WIDGET_LIMITS.hiddenUsers)
+    .default([...DEFAULT_EMOTE_WIDGET_HIDDEN_USERS]),
+  hideCommands: z.boolean().default(true),
+  blockedEmotes: z
+    .array(z.string().min(1).max(EMOTE_WIDGET_LIMITS.emoteCodeLength))
+    .max(EMOTE_WIDGET_LIMITS.emoteCodes)
+    .default([]),
+  userCooldown: z
+    .number()
+    .int()
+    .min(EMOTE_WIDGET_LIMITS.userCooldown.min)
+    .max(EMOTE_WIDGET_LIMITS.userCooldown.max)
+    .default(0),
+  events: z
+    .object(
+      Object.fromEntries(
+        EMOTE_WIDGET_EVENTS.map((e) => {
+          const d = DEFAULT_EMOTE_WIDGET_BURSTS[e];
+          return [e, emoteBurstSchema(d.enabled, d.animation, d.count)];
+        }),
+      ) as Record<EmoteWidgetEvent, ReturnType<typeof emoteBurstSchema>>,
+    )
+    .default(() => createDefaultEmoteWidgetConfig().events),
+});
+
+/** Persisted JSON on `combo_widget` rows. Defaults mirror createDefaultComboWidgetConfig. */
+export const comboWidgetItemConfigSchema = z.object({
+  mode: z.enum(COMBO_WIDGET_MODES).default("time_window"),
+  windowSeconds: z
+    .number()
+    .int()
+    .min(COMBO_WIDGET_LIMITS.windowSeconds.min)
+    .max(COMBO_WIDGET_LIMITS.windowSeconds.max)
+    .default(8),
+  threshold: z
+    .number()
+    .int()
+    .min(COMBO_WIDGET_LIMITS.threshold.min)
+    .max(COMBO_WIDGET_LIMITS.threshold.max)
+    .default(3),
+  countMode: z.enum(COMBO_WIDGET_COUNT_MODES).default("unique"),
+  maxCombos: z
+    .number()
+    .int()
+    .min(COMBO_WIDGET_LIMITS.maxCombos.min)
+    .max(COMBO_WIDGET_LIMITS.maxCombos.max)
+    .default(1),
+  lingerSeconds: z
+    .number()
+    .int()
+    .min(COMBO_WIDGET_LIMITS.lingerSeconds.min)
+    .max(COMBO_WIDGET_LIMITS.lingerSeconds.max)
+    .default(3),
+  preset: z.enum(COMBO_WIDGET_PRESETS).default("punch"),
+  layout: z.enum(COMBO_WIDGET_LAYOUTS).default("vertical"),
+  text: z.string().max(COMBO_WIDGET_LIMITS.text).default("x{count} COMBO"),
+  emoteSize: z
+    .number()
+    .int()
+    .min(COMBO_WIDGET_LIMITS.emoteSize.min)
+    .max(COMBO_WIDGET_LIMITS.emoteSize.max)
+    .default(72),
+  fontFamily: z.preprocess(
+    (val) =>
+      typeof val === "string" && isValidGoogleFontFamilyName(val)
+        ? val.trim()
+        : DEFAULT_GOOGLE_FONT_FAMILY,
+    googleFontFamilySchema
+  ),
+  fontSize: z
+    .number()
+    .int()
+    .min(COMBO_WIDGET_LIMITS.fontSize.min)
+    .max(COMBO_WIDGET_LIMITS.fontSize.max)
+    .default(44),
+  fontWeight: z
+    .union([z.literal(400), z.literal(500), z.literal(600), z.literal(700)])
+    .default(700),
+  color: hexColorSchema.default("#ffffff"),
+  accentColor: hexColorSchema.default("#9e7aff"),
+  milestones: z
+    .array(
+      z.number().int().min(COMBO_WIDGET_LIMITS.milestone.min).max(COMBO_WIDGET_LIMITS.milestone.max)
+    )
+    .max(COMBO_WIDGET_LIMITS.milestones)
+    .default([10, 25, 50]),
+  textShadow: z.boolean().default(true),
+  emoteProviders: z
+    .object({
+      "7tv": z.boolean().default(true),
+      bttv: z.boolean().default(true),
+      ffz: z.boolean().default(true),
+    })
+    .default({ "7tv": true, bttv: true, ffz: true }),
+  hiddenUsers: z
+    .array(
+      z
+        .string()
+        .max(EMOTE_WIDGET_LIMITS.hiddenUserLength)
+        .regex(/^[a-z0-9_]+$/, "Expected a lowercase Twitch login")
+    )
+    .max(EMOTE_WIDGET_LIMITS.hiddenUsers)
+    .default([...DEFAULT_EMOTE_WIDGET_HIDDEN_USERS]),
+  hideCommands: z.boolean().default(true),
+  blockedEmotes: z
+    .array(z.string().min(1).max(EMOTE_WIDGET_LIMITS.emoteCodeLength))
+    .max(EMOTE_WIDGET_LIMITS.emoteCodes)
+    .default([]),
+});
+
+/** Persisted JSON on `hype_train_widget` rows. Defaults mirror createDefaultHypeTrainWidgetConfig. */
+export const hypeTrainWidgetItemConfigSchema = z.object({
+  preset: z.enum(HYPE_TRAIN_WIDGET_PRESETS).default("steam"),
+  movement: z.enum(HYPE_TRAIN_WIDGET_MOVEMENTS).default("bounce"),
+  direction: z.enum(HYPE_TRAIN_WIDGET_DIRECTIONS).default("ltr"),
+  trainSize: z
+    .number()
+    .int()
+    .min(HYPE_TRAIN_WIDGET_LIMITS.trainSize.min)
+    .max(HYPE_TRAIN_WIDGET_LIMITS.trainSize.max)
+    .default(150),
+  speed: z
+    .number()
+    .int()
+    .min(HYPE_TRAIN_WIDGET_LIMITS.speed.min)
+    .max(HYPE_TRAIN_WIDGET_LIMITS.speed.max)
+    .default(420),
+  speedPerLevel: z
+    .number()
+    .int()
+    .min(HYPE_TRAIN_WIDGET_LIMITS.speedPerLevel.min)
+    .max(HYPE_TRAIN_WIDGET_LIMITS.speedPerLevel.max)
+    .default(15),
+  maxWagons: z
+    .number()
+    .int()
+    .min(HYPE_TRAIN_WIDGET_LIMITS.maxWagons.min)
+    .max(HYPE_TRAIN_WIDGET_LIMITS.maxWagons.max)
+    .default(20),
+  joinEffect: z.enum(HYPE_TRAIN_WIDGET_JOIN_EFFECTS).default("drop"),
+  showAvatars: z.boolean().default(true),
+  showAmounts: z.boolean().default(true),
+  showLevel: z.boolean().default(true),
+  fontFamily: z.preprocess(
+    (val) =>
+      typeof val === "string" && isValidGoogleFontFamilyName(val)
+        ? val.trim()
+        : DEFAULT_GOOGLE_FONT_FAMILY,
+    googleFontFamilySchema
+  ),
+  color: hexColorSchema.default("#ffffff"),
+  trainColor: hexColorSchema.default("#7c5cff"),
+  accentColor: hexColorSchema.default("#ffd166"),
+});
+
 /** Persisted JSON on `credits_widget` rows. Defaults mirror createDefaultCreditsWidgetConfig. */
 export const creditsWidgetItemConfigSchema = z.object({
   preset: z.enum(CREDITS_WIDGET_PRESETS).default("classic"),
@@ -642,6 +941,10 @@ export const overlayItemConfigSchema = z.union([
   adWidgetItemConfigSchema,
   uptimeWidgetItemConfigSchema,
   creditsWidgetItemConfigSchema,
+  labelWidgetItemConfigSchema,
+  emoteWidgetItemConfigSchema,
+  comboWidgetItemConfigSchema,
+  hypeTrainWidgetItemConfigSchema,
 ]);
 
 /**
@@ -748,6 +1051,10 @@ export const overlayItemSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("poll_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: pollWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("ad_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: adWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("uptime_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: uptimeWidgetItemConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("label_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: labelWidgetItemConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("emote_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: emoteWidgetItemConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("combo_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: comboWidgetItemConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("hype_train_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: hypeTrainWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("credits_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: creditsWidgetItemConfigSchema }),
 ]);
 

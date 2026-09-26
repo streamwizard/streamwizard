@@ -25,3 +25,11 @@ export { InspectorReveal, InspectorSection } from "../editor/inspector-section";
 export { InspectorHint } from "../editor/inspector-hint";
 export { NumberField } from "../editor/number-field";
 export { presetGeometry } from "./preset-geometry";
+export {
+  EmotePicker,
+  EmoteCodePicker,
+  useEmoteLibrary,
+  type EmotePickerProps,
+  type EmoteCodePickerProps,
+  type EmoteSection,
+} from "./emote-picker";

@@ -30,6 +30,14 @@ import { adWidgetBaseDefinition } from "./widgets/ads/ad-widget-definition";
 import { AdWidgetRenderer } from "./widgets/ads/AdWidgetRenderer";
 import { uptimeWidgetBaseDefinition } from "./widgets/uptime/uptime-widget-definition";
 import { UptimeWidgetRenderer } from "./widgets/uptime/UptimeWidgetRenderer";
+import { labelWidgetBaseDefinition } from "./widgets/label/label-widget-definition";
+import { LabelWidgetRenderer } from "./widgets/label/LabelWidgetRenderer";
+import { emoteWidgetBaseDefinition } from "./widgets/emote/emote-widget-definition";
+import { EmoteWidgetRenderer } from "./widgets/emote/EmoteWidgetRenderer";
+import { comboWidgetBaseDefinition } from "./widgets/combo/combo-widget-definition";
+import { ComboWidgetRenderer } from "./widgets/combo/ComboWidgetRenderer";
+import { hypeTrainWidgetBaseDefinition } from "./widgets/hype-train/hype-train-widget-definition";
+import { HypeTrainWidgetRenderer } from "./widgets/hype-train/HypeTrainWidgetRenderer";
 import { creditsWidgetBaseDefinition } from "./widgets/credits/credits-widget-definition";
 import { CreditsWidgetRenderer } from "./widgets/credits/CreditsWidgetRenderer";
 import { IRL_FIELD_WIDGET_TYPES } from "./types";
@@ -97,6 +105,26 @@ const CORE_WIDGETS: OverlayWidgetRegistration[] = [
     id: "credits_widget",
     Component: CreditsWidgetRenderer as W,
     collectFontFamilies: creditsWidgetBaseDefinition.collectFontFamilies,
+  },
+  {
+    id: "label_widget",
+    Component: LabelWidgetRenderer as W,
+    collectFontFamilies: labelWidgetBaseDefinition.collectFontFamilies,
+  },
+  {
+    id: "emote_widget",
+    Component: EmoteWidgetRenderer as W,
+    collectFontFamilies: emoteWidgetBaseDefinition.collectFontFamilies,
+  },
+  {
+    id: "combo_widget",
+    Component: ComboWidgetRenderer as W,
+    collectFontFamilies: comboWidgetBaseDefinition.collectFontFamilies,
+  },
+  {
+    id: "hype_train_widget",
+    Component: HypeTrainWidgetRenderer as W,
+    collectFontFamilies: hypeTrainWidgetBaseDefinition.collectFontFamilies,
   },
   ...IRL_FIELD_WIDGET_TYPES.map((type) => ({
     id: type,

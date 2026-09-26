@@ -36,6 +36,10 @@ export const OVERLAY_ITEM_TYPES = [
   "ad_widget",
   "uptime_widget",
   "credits_widget",
+  "label_widget",
+  "emote_widget",
+  "combo_widget",
+  "hype_train_widget",
   ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 
@@ -57,6 +61,10 @@ export const ROOT_OVERLAY_ITEM_TYPES = [
   "ad_widget",
   "uptime_widget",
   "credits_widget",
+  "label_widget",
+  "emote_widget",
+  "combo_widget",
+  "hype_train_widget",
   ...IRL_FIELD_WIDGET_TYPES,
 ] as const;
 

@@ -324,6 +324,101 @@ export { UptimeWidgetRenderer } from "./components/overlay/widgets/uptime/Uptime
 export type { UptimeWidgetRendererProps } from "./components/overlay/widgets/uptime/UptimeWidgetRenderer";
 export { uptimeWidgetBaseDefinition, UPTIME_WIDGET_DEFAULT_SIZE } from "./components/overlay/widgets/uptime/uptime-widget-definition";
 export {
+  LABEL_WIDGET_TYPE,
+  LABEL_WIDGET_LAYOUTS,
+  LABEL_WIDGET_DIRECTIONS,
+  LABEL_WIDGET_LIMITS,
+  LABEL_WIDGET_ANIMATIONS,
+  LABEL_WIDGET_ANIMATION_LABELS,
+  LABEL_ANIMATE_PREVIEW_EVENT,
+  type LabelAnimatePreviewDetail,
+  type LabelWidgetAnimation,
+  createDefaultLabelWidgetConfig,
+  normalizeLabelWidgetConfig,
+  effectiveLabelTemplate,
+  type LabelWidgetType,
+  type LabelWidgetItemConfig,
+  type LabelWidgetLayout,
+  type LabelWidgetDirection,
+} from "./components/overlay/widgets/label/label-widget-config";
+export { LabelWidgetRenderer } from "./components/overlay/widgets/label/LabelWidgetRenderer";
+export type { LabelWidgetRendererProps } from "./components/overlay/widgets/label/LabelWidgetRenderer";
+export { labelWidgetBaseDefinition, LABEL_WIDGET_DEFAULT_SIZE } from "./components/overlay/widgets/label/label-widget-definition";
+export { LABELS_RESET_BROWSER_EVENT, type LabelsResetBrowserEventDetail } from "./components/overlay/widgets/label/use-stream-labels";
+export {
+  EMOTE_WIDGET_TYPE,
+  EMOTE_ANIMATIONS,
+  EMOTE_ANIMATION_LABELS,
+  EMOTE_WIDGET_EVENTS,
+  EMOTE_WIDGET_EVENT_LABELS,
+  EMOTE_WIDGET_EMOTE_PROVIDERS,
+  EMOTE_WIDGET_LIMITS,
+  EMOTE_PREVIEW_EVENT,
+  type EmotePreviewDetail,
+  type EmoteAnimation,
+  type EmoteWidgetEvent,
+  type EmoteWidgetBurst,
+  type EmoteWidgetType,
+  type EmoteWidgetItemConfig,
+  createDefaultEmoteWidgetConfig,
+  normalizeEmoteWidgetConfig,
+  normalizeEmoteCodes,
+  normalizeEmotePicks,
+  normalizeEmoteWidgetHiddenUsers,
+  type EmotePick,
+} from "./components/overlay/widgets/emote/emote-widget-config";
+export { EmoteWidgetRenderer } from "./components/overlay/widgets/emote/EmoteWidgetRenderer";
+export type { EmoteWidgetRendererProps } from "./components/overlay/widgets/emote/EmoteWidgetRenderer";
+export { emoteWidgetBaseDefinition, EMOTE_WIDGET_DEFAULT_SIZE } from "./components/overlay/widgets/emote/emote-widget-definition";
+export {
+  COMBO_WIDGET_TYPE,
+  COMBO_WIDGET_MODES,
+  COMBO_WIDGET_COUNT_MODES,
+  COMBO_WIDGET_PRESETS,
+  COMBO_WIDGET_PRESET_LABELS,
+  COMBO_WIDGET_LAYOUTS,
+  COMBO_WIDGET_LIMITS,
+  COMBO_WIDGET_TEXT_TOKENS,
+  COMBO_PREVIEW_EVENT,
+  type ComboPreviewDetail,
+  type ComboWidgetMode,
+  type ComboWidgetCountMode,
+  type ComboWidgetPreset,
+  type ComboWidgetLayout,
+  type ComboWidgetType,
+  type ComboWidgetItemConfig,
+  createDefaultComboWidgetConfig,
+  normalizeComboWidgetConfig,
+  normalizeComboMilestones,
+} from "./components/overlay/widgets/combo/combo-widget-config";
+export { ComboWidgetRenderer } from "./components/overlay/widgets/combo/ComboWidgetRenderer";
+export type { ComboWidgetRendererProps } from "./components/overlay/widgets/combo/ComboWidgetRenderer";
+export { comboWidgetBaseDefinition, COMBO_WIDGET_DEFAULT_SIZE } from "./components/overlay/widgets/combo/combo-widget-definition";
+export {
+  HYPE_TRAIN_WIDGET_TYPE,
+  HYPE_TRAIN_WIDGET_PRESETS,
+  HYPE_TRAIN_WIDGET_PRESET_LABELS,
+  HYPE_TRAIN_WIDGET_DIRECTIONS,
+  HYPE_TRAIN_WIDGET_MOVEMENTS,
+  HYPE_TRAIN_WIDGET_JOIN_EFFECTS,
+  HYPE_TRAIN_WIDGET_JOIN_EFFECT_LABELS,
+  HYPE_TRAIN_WIDGET_LIMITS,
+  HYPE_TRAIN_PREVIEW_EVENT,
+  type HypeTrainPreviewDetail,
+  type HypeTrainWidgetPreset,
+  type HypeTrainWidgetDirection,
+  type HypeTrainWidgetMovement,
+  type HypeTrainWidgetJoinEffect,
+  type HypeTrainWidgetType,
+  type HypeTrainWidgetItemConfig,
+  createDefaultHypeTrainWidgetConfig,
+  normalizeHypeTrainWidgetConfig,
+  hypeTrainSpeed,
+} from "./components/overlay/widgets/hype-train/hype-train-widget-config";
+export { HypeTrainWidgetRenderer } from "./components/overlay/widgets/hype-train/HypeTrainWidgetRenderer";
+export type { HypeTrainWidgetRendererProps } from "./components/overlay/widgets/hype-train/HypeTrainWidgetRenderer";
+export { hypeTrainWidgetBaseDefinition, HYPE_TRAIN_WIDGET_DEFAULT_SIZE } from "./components/overlay/widgets/hype-train/hype-train-widget-definition";
+export {
   CREDITS_WIDGET_TYPE,
   CREDITS_WIDGET_PRESETS,
   CREDITS_WIDGET_PRESET_LABELS,

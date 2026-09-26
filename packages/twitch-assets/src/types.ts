@@ -65,6 +65,18 @@ export interface ThirdPartyEmote {
 /** Emote code → emote. Codes are case-sensitive, as chat matches them. */
 export type ThirdPartyEmoteMap = Record<string, ThirdPartyEmote>;
 
+/** One of the channel's own Twitch emotes, in the same url shape as the third-party ones. */
+export interface ChannelEmote {
+  id: string;
+  name: string;
+  url_1x: string;
+  url_2x: string;
+  url_4x: string;
+}
+
+/** Emote code → emote. */
+export type ChannelEmoteMap = Record<string, ChannelEmote>;
+
 export type PublicGoalType =
   | "follow"
   | "subscription"
