@@ -23,7 +23,12 @@ import { filterLibraryWidgets } from "./widget-search";
 
 const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   media: "Media",
-  alerts: "Alerts",
+  alerts: "Alerts & chat",
+  goals: "Goals",
+  polls: "Polls",
+  ads: "Ads",
+  credits: "Credits",
+  labels: "Labels",
   layout: "Layout",
   other: "Other",
 };

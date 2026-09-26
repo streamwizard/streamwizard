@@ -1,12 +1,15 @@
 import {
   initChatStream,
   initGeoWalk,
+  initPollCycle,
   initSwitcherDegrade,
   stepChatStream,
   stepGeoWalk,
+  stepPollCycle,
   stepSwitcherDegrade,
   type ChatStreamState,
   type GeoWalkState,
+  type PollCycleState,
   type SwitcherDegradeState,
 } from "@repo/schemas";
 
@@ -42,16 +45,17 @@ export interface SimulatorDef {
 
 /**
  * Wraps the tick bookkeeping every simulator shares: fire immediately, then on
- * an interval, and never leave a timer behind.
+ * an interval, and never leave a timer behind. A tick that returns null is a
+ * quiet one: nothing is sent.
  */
 function loop(
   emit: SimulatorEmit,
   intervalMs: number,
-  tick: () => { listener: string; event: Record<string, unknown> }
+  tick: () => { listener: string; event: Record<string, unknown> } | null
 ): () => void {
   const fire = () => {
-    const { listener, event } = tick();
-    emit(listener, event);
+    const next = tick();
+    if (next) emit(next.listener, next.event);
   };
 
   fire();
@@ -96,6 +100,23 @@ export const WIDGET_SIMULATORS: Record<string, SimulatorDef> = {
         const stepped = stepChatStream(state);
         state = stepped.state;
         return { listener: "channel.chat.message", event: stepped.event };
+      });
+    },
+  },
+  "poll.cycle": {
+    id: "poll.cycle",
+    label: "Poll",
+    description:
+      "Runs a 20-second poll on a loop: it begins, votes trickle in, it closes with a winner, and after a pause the next poll starts with a new question.",
+    listeners: ["channel.poll.begin", "channel.poll.progress", "channel.poll.end"],
+    // One tick is one second of the poll; its countdown runs on real time.
+    defaultIntervalMs: 1000,
+    start(emit, opts) {
+      let state: PollCycleState = initPollCycle(Date.now(), Math.floor(Math.random() * 2147483646) + 1);
+      return loop(emit, opts?.intervalMs ?? this.defaultIntervalMs, () => {
+        const stepped = stepPollCycle(state);
+        state = stepped.state;
+        return stepped.listener && stepped.event ? { listener: stepped.listener, event: stepped.event } : null;
       });
     },
   },

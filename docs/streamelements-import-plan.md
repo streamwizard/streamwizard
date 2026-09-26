@@ -130,7 +130,7 @@ A typical SE overlay contains, in rough order of frequency:
 | Static text | `text_widget` | Direct map. Font/size/colour/align/shadow/line-height convert; scrolling text does not (drop, note it). |
 | Alertbox | `alert_widget` | Map per-event, see §4E. |
 | Custom widget | `custom_widget` | Map, with the compat layer in §4C. |
-| Chat box | missing | Needs chat relayed to the overlay. Separate feature, out of scope for import v1 — skip with a note. |
+| Chat box | `chat_widget` | Built-in now (chat already reaches the overlay room). Import mapping not written yet: font/size/colours/hide-commands/hidden users map; SE themes don't, fall back to a preset. |
 | Event list | missing | Buildable as a first-party custom widget from our EventSub feed. Phase 6. |
 | Labels / session data (latest follower, top donator…) | missing | Depends on session counters (§4D). Phase 6. |
 | Goals (follow/sub/cheer/custom) | missing | Same dependency. Phase 6. |

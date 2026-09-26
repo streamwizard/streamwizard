@@ -1,0 +1,138 @@
+---
+title: "End credits"
+description: "Roll the names from your stream when your ending scene comes up: followers, subs, gifts, Bits, raids and more."
+---
+
+The end credits widget thanks everyone who showed up. When your ending scene
+comes on, it rolls the followers, subs, gifters, cheerers and raiders from the
+stream you just did, plus a few numbers like peak viewers and how long you were
+live. Nothing to type in: StreamWizard kept count while you streamed.
+
+## Set it up
+
+1. In the overlay editor, open **Widgets → Credits** and add **End credits**.
+2. Pick a design, turn sections on or off, drag them into the order you want.
+3. Add the overlay to the scene you end on in OBS, the one you switch to before
+   you hit **Stop Streaming**.
+
+That's it. The credits start on their own when that scene becomes visible.
+They work whether or not **Shutdown source when not visible** is on for the
+browser source. Switching away and back starts them from the top.
+
+<Note>
+The credits are for your ending scene, not a scene you sit on. Put the widget
+on a scene you only switch to at the end.
+</Note>
+
+## What rolls
+
+Every section can be turned off, renamed and moved. The pencil next to a
+section opens its settings: the heading, the title and outro lines, your
+thank-you note, your platforms. A section with nothing in it is skipped, so a
+stream with no raids never shows an empty "Raids" heading.
+
+| Section | What it shows |
+|---|---|
+| Title | One line at the top. "Thanks for watching" unless you change it. |
+| Followers | Everyone who followed during the stream. |
+| Subs | New subs, bought by the person themselves. |
+| Resubs | Everyone who resubbed, with their month count. |
+| Gifters | Who gifted subs and how many. Anonymous gifts show as one "Anonymous" line. |
+| Cheerers | Who cheered and how many Bits, biggest first. Anonymous cheers roll up the same way. |
+| Raids | Who raided you and how many viewers they brought. |
+| Channel points | Who redeemed rewards, and how often. |
+| Hype trains | How many trains ran and the top level reached. |
+| Peak viewers | Your highest viewer count. |
+| Stream length | How long you were live. |
+| Thank-you note | Your own words, a few lines. Blank hides it. |
+| Socials | Your other platforms, logo and handle: Instagram, TikTok, YouTube, Twitch, X, Kick, Discord, Bluesky. |
+| Outro | One line at the end. "See you next stream" unless you change it. |
+
+Under **Sections** you can also show counts in the headings ("New followers
+· 12"), amounts after names ("sandwichlord · 500 Bits"), and profile pictures.
+**Names per section** caps long lists; the rest become one line, "and 12 more",
+which you can reword.
+
+### Socials
+
+Under **Sections**, turn on **Socials**, press its pencil and add a platform with your handle,
+typed the way you'd say it: `@yourname`, `yourchannel`, `discord.gg/yours`.
+One entry per platform, up to eight. Logos come in each brand's colour, or in
+your heading colour with **Brand colours** off. **List** stacks them; **Row**
+puts them side by side.
+
+## Designs
+
+| Design | Look | Motion |
+|---|---|---|
+| Classic | One centred column, movie style. | Scrolls up from the bottom. |
+| Cards | One section at a time on a rounded card. | Cards slide in, one after another. |
+| Ticker | A single line for the bottom of the screen. | Slides right to left. |
+| Arcade | Pixel font, square border, scanlines. | Scrolls up in whole pixels. |
+| Minimal | Left-aligned, no plate, quiet headings. | Scrolls up. |
+| Cinematic | Letterbox bars and big type, made to fill the screen. | Slow crossfade between sections. |
+| Hybrid | Film credits: hero cards for your biggest contributors, then the classic roll for everyone else. | Cards fade in and out one by one; the roll comes in under the last card. |
+
+Picking a design resizes the widget to a size that suits it. Arcade brings its
+own font and hands yours back when you pick another design.
+
+### Hybrid: hero cards
+
+Hybrid opens with hero cards, centred one at a time: a role line ("TOP
+GIFTER", "BIGGEST RAID") with the name under it. Then the roll takes over
+for everyone else. Under **Hero cards** you choose:
+
+- **Which categories** make heroes: gifters, cheerers, raids, resubs, channel
+  points. Followers and new subs never do; there's no "top follower".
+- **A floor per category**: 5 subs gifted, 500 Bits, 10 raid viewers, and so
+  on. 0 means no floor.
+- **Heroes per category**, **names per card**, how long a card **stays up**
+  and how long it **fades**.
+
+A hero is left out of that category in the roll, so nobody is thanked twice
+for the same thing. They still show under any other role they had: a top
+gifter who also followed is a new follower. Someone at the top of two
+categories gets one card, for the first category in your section order.
+Anonymous gifts and cheers never make a card. With nobody over the floor,
+the cards are skipped and the roll starts straight away.
+
+## Playback
+
+- **Scroll speed** (Classic, Arcade, Minimal, Ticker) or **Seconds per
+  section** (Cards, Cinematic). Long lists get a little extra time.
+- **Start delay**: the pause between the scene coming up and the first line.
+- **When it ends**: play once, or loop. A scrolling design runs all the way
+  out of the box; Cards and Cinematic hold the last section. With loop on,
+  **Pause between loops** sets how long the box stays empty before the next
+  pass. 0 runs a scrolling design straight round in one motion.
+
+Viewers with "reduce motion" turned on in their system see every design as a
+gentle crossfade instead of a scroll.
+
+## Testing in the editor
+
+The canvas shows the first screen of the roll, dimmed, until you press a test
+button in the widget settings:
+
+- **Roll credits** plays the real credits from your last stream.
+- **Sample data** plays a made-up stream with every section filled, so you can
+  judge the layout before you've streamed with the widget.
+- **Stop** puts the canvas back.
+
+These previews stay on your canvas. On stream the credits start on their own.
+
+## Where the names come from
+
+StreamWizard saves the events Twitch sends while you're live: follows, subs,
+gifts, cheers, raids, redemptions, hype trains. The credits read that log for
+the stream that's running, or the last one when you're offline. A few things
+to know:
+
+- **Someone's missing.** StreamWizard has to see your stream start before it
+  saves anything. Events from the first moments of a stream, or from a stream
+  StreamWizard didn't see start, aren't in the log.
+- **Anonymous gifts and cheers** show as one "Anonymous" line per section.
+- **Chatters aren't listed.** StreamWizard doesn't store chat, so there's no
+  "top chatters" section.
+- **Nothing shows on the canvas.** Go live once with StreamWizard connected,
+  or use **Sample data** to preview.

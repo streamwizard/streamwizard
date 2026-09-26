@@ -17,7 +17,7 @@ import { reportAndRedirect } from "@/lib/report-redirect";
  *
  * The callback route overwrites the stored tokens and records the new scopes.
  */
-export async function authorizeTwitchFeature(feature: TwitchScopeFeature, next?: string | null) {
+export async function authorizeTwitchFeature(feature: TwitchScopeFeature | "base", next?: string | null) {
   const supabase = await createClient();
 
   const { data: userData } = await supabase.auth.getUser();
@@ -32,7 +32,9 @@ export async function authorizeTwitchFeature(feature: TwitchScopeFeature, next?:
   for (const candidate of TWITCH_SCOPE_FEATURES) {
     if (await checkProductAccess(supabase, TWITCH_SCOPE_FEATURE_PRODUCTS[candidate])) entitled.push(candidate);
   }
-  if (!entitled.includes(feature)) redirect(safeNext);
+  // "base" is a scope every account gets; it comes up when base grew after the
+  // token was issued (channel:read:goals for the goal widgets).
+  if (feature !== "base" && !entitled.includes(feature)) redirect(safeNext);
 
   const headersList = await headers();
   const origin = headersList.get("origin");

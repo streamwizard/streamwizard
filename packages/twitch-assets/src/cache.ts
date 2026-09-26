@@ -23,6 +23,9 @@ export const ASSET_TTL = {
   user: 6 * HOUR,
   game: 7 * DAY,
   thirdPartyEmotes: HOUR,
+  channelEmotes: HOUR,
+  globalEmotes: DAY,
+  emoteLibrary: HOUR,
 } as const;
 
 export type AssetKind = keyof typeof ASSET_TTL;

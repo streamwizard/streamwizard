@@ -109,6 +109,14 @@ export function tokenizeChatMessage(
         break;
       }
 
+      case "gif":
+        if (!fragment.gif?.url) {
+          pushText(tokens, fragment.text);
+          break;
+        }
+        tokens.push({ kind: "gif", url: fragment.gif.url, alt: fragment.text });
+        break;
+
       case "mention":
         tokens.push({
           kind: "mention",

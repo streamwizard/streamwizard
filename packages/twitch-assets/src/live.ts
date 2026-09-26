@@ -1,6 +1,8 @@
 import { TwitchApi } from "@repo/twitch-api";
 import { singleFlight } from "./cache";
-import type { PublicStream } from "./types";
+import { toPublicAdSchedule } from "./ads";
+import { toPublicPoll } from "./polls";
+import type { LiveAdSchedule, LiveGoals, LivePoll, PublicGoal, PublicStream } from "./types";
 
 /**
  * Class B: live counters.
@@ -66,4 +68,74 @@ export async function liveStream(broadcasterId: string): Promise<PublicStream> {
       thumbnail_url: stream.thumbnail_url ?? null,
     };
   });
+}
+
+/**
+ * The channel's active Creator Goals. A token signed in before
+ * channel:read:goals joined base gets a 401 "Missing scope"; that comes back as
+ * `missing_scope` so the editor can offer a reconnect instead of an error.
+ */
+export async function liveGoals(broadcasterId: string): Promise<LiveGoals> {
+  return singleFlight(`live:goals:${broadcasterId}`, async () => {
+    try {
+      const goals = await new TwitchApi(broadcasterId).goals.getCreatorGoals();
+      return {
+        missing_scope: false,
+        goals: goals.map(
+          (g): PublicGoal => ({
+            id: g.id,
+            // Helix says "follower", the events say "follow"; widgets get one spelling.
+            type: g.type === "follower" ? "follow" : g.type,
+            description: g.description,
+            current_amount: g.current_amount,
+            target_amount: g.target_amount,
+            started_at: g.created_at,
+          }),
+        ),
+      };
+    } catch (error) {
+      if (isMissingScope(error)) return { missing_scope: true, goals: [] };
+      throw error;
+    }
+  });
+}
+
+/**
+ * The channel's running poll, or the one that just ended (see
+ * `toPublicPoll`). Missing channel:read:polls comes back as `missing_scope`,
+ * like goals.
+ */
+export async function livePoll(broadcasterId: string): Promise<LivePoll> {
+  return singleFlight(`live:poll:${broadcasterId}`, async () => {
+    try {
+      const poll = await new TwitchApi(broadcasterId).polls.getLatestPoll();
+      return { missing_scope: false, poll: toPublicPoll(poll) };
+    } catch (error) {
+      if (isMissingScope(error)) return { missing_scope: true, poll: null };
+      throw error;
+    }
+  });
+}
+
+/**
+ * The channel's ad schedule (next ad, length, snoozes left). Nothing tells us
+ * when a streamer snoozes, so the ad widget asks again every so often; see
+ * AdWidgetRenderer. Missing channel:read:ads comes back as `missing_scope`.
+ */
+export async function liveAdSchedule(broadcasterId: string): Promise<LiveAdSchedule> {
+  return singleFlight(`live:ads:${broadcasterId}`, async () => {
+    try {
+      const schedule = await new TwitchApi(broadcasterId).ads.getAdSchedule();
+      return { missing_scope: false, schedule: toPublicAdSchedule(schedule) };
+    } catch (error) {
+      if (isMissingScope(error)) return { missing_scope: true, schedule: null };
+      throw error;
+    }
+  });
+}
+
+function isMissingScope(error: unknown): boolean {
+  const response = (error as { response?: { status?: number; data?: { message?: unknown } } }).response;
+  const message = response?.data?.message;
+  return response?.status === 401 && typeof message === "string" && message.startsWith("Missing scope");
 }

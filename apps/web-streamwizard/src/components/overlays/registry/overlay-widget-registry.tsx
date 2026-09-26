@@ -17,11 +17,21 @@ import {
   Code2,
   Compass,
   Crosshair,
+  Flame,
+  TrainFront,
   Gauge,
+  Goal,
   MapPin,
+  Megaphone,
+  MessagesSquare,
   Mountain,
+  Radio,
+  ScrollText,
+  Sparkles,
+  Tag,
   Timer,
   Type,
+  Vote,
 } from "lucide-react";
 import type { ChildOverlayItemType, OverlayItemType, RootOverlayItemType } from "@/types/overlays";
 import {
@@ -72,7 +82,58 @@ import {
 } from "../widgets/alert/alert-widget-definition";
 import { AlertWidgetSettings } from "../widgets/alert/alert-widget-settings";
 import {
+  CHAT_WIDGET_DEFAULT_SIZE,
+  createChatWidgetRootItems,
+} from "../widgets/chat/chat-widget-definition";
+import { ChatWidgetSettings } from "../widgets/chat/chat-widget-settings";
+import {
+  GOAL_WIDGET_DEFAULT_SIZE,
+  createGoalWidgetRootItems,
+} from "../widgets/goal/goal-widget-definition";
+import { GoalWidgetSettings } from "../widgets/goal/goal-widget-settings";
+import {
+  POLL_WIDGET_DEFAULT_SIZE,
+  createPollWidgetRootItems,
+} from "../widgets/poll/poll-widget-definition";
+import { PollWidgetSettings } from "../widgets/poll/poll-widget-settings";
+import {
+  AD_WIDGET_DEFAULT_SIZE,
+  createAdWidgetRootItems,
+} from "../widgets/ads/ad-widget-definition";
+import { AdWidgetSettings } from "../widgets/ads/ad-widget-settings";
+import {
+  UPTIME_WIDGET_DEFAULT_SIZE,
+  createUptimeWidgetRootItems,
+} from "../widgets/uptime/uptime-widget-definition";
+import { UptimeWidgetSettings } from "../widgets/uptime/uptime-widget-settings";
+import {
+  CREDITS_WIDGET_DEFAULT_SIZE,
+  createCreditsWidgetRootItems,
+} from "../widgets/credits/credits-widget-definition";
+import { CreditsWidgetSettings } from "../widgets/credits/credits-widget-settings";
+import { LABEL_WIDGET_DEFAULT_SIZE, createLabelWidgetRootItems } from "../widgets/label/label-widget-definition";
+import { LabelWidgetSettings } from "../widgets/label/label-widget-settings";
+import { EMOTE_WIDGET_DEFAULT_SIZE, createEmoteWidgetRootItems } from "../widgets/emote/emote-widget-definition";
+import { EmoteWidgetSettings } from "../widgets/emote/emote-widget-settings";
+import { COMBO_WIDGET_DEFAULT_SIZE, createComboWidgetRootItems } from "../widgets/combo/combo-widget-definition";
+import { ComboWidgetSettings } from "../widgets/combo/combo-widget-settings";
+import {
+  HYPE_TRAIN_WIDGET_DEFAULT_SIZE,
+  createHypeTrainWidgetRootItems,
+} from "../widgets/hype-train/hype-train-widget-definition";
+import { HypeTrainWidgetSettings } from "../widgets/hype-train/hype-train-widget-settings";
+import {
   AlertWidgetRenderer,
+  ChatWidgetRenderer,
+  GoalWidgetRenderer,
+  PollWidgetRenderer,
+  AdWidgetRenderer,
+  UptimeWidgetRenderer,
+  CreditsWidgetRenderer,
+  LabelWidgetRenderer,
+  EmoteWidgetRenderer,
+  ComboWidgetRenderer,
+  HypeTrainWidgetRenderer,
   TextWidgetRenderer,
   TimerWidgetRenderer,
   ClockWidgetRenderer,
@@ -92,6 +153,56 @@ import type {
  */
 function AlertWidgetCanvas({ item, scene }: OverlayCanvasProps) {
   return <AlertWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The chat box shows a how-to-preview hint on the canvas until chat arrives. */
+function ChatWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <ChatWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** Goal widgets read the channel's goals through the dashboard session on the canvas. */
+function GoalWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <GoalWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The poll widget reads the channel's poll through the dashboard session on the canvas. */
+function PollWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <PollWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The ad widget reads the channel's ad schedule through the dashboard session on the canvas. */
+function AdWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <AdWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** Labels read through the dashboard session and fill empty values with sample data. */
+function LabelWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <LabelWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The emote wall loads the channel's emotes through the dashboard session and drifts a few while idle. */
+function EmoteWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <EmoteWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The combo counter reads emote sets through the dashboard session and shows a sample while chat is quiet. */
+function ComboWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <ComboWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The hype train parks a sample train on the canvas until one rides. */
+function HypeTrainWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <HypeTrainWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The uptime widget reads the stream through the dashboard session and previews a time while offline. */
+function UptimeWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <UptimeWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The credits widget reads the last stream through the dashboard session and rolls only when the settings say so. */
+function CreditsWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <CreditsWidgetRenderer item={item} scene={scene} isEditor />;
 }
 
 export const OVERLAY_WIDGET_REGISTRY: Record<
@@ -137,6 +248,197 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     createRootItems: createAlertWidgetRootItems,
     CanvasContent: AlertWidgetCanvas,
     SettingsPanel: AlertWidgetSettings,
+  },
+  chat_widget: {
+    type: "chat_widget",
+    layerScope: "root",
+    icon: MessagesSquare,
+    showInLibrary: true,
+    category: "alerts",
+    library: {
+      title: "Chat box",
+      description:
+        "Your Twitch chat on stream, with badges and 7TV, BTTV and FFZ emotes. Deleted messages disappear.",
+    },
+    defaultSize: { ...CHAT_WIDGET_DEFAULT_SIZE },
+    createRootItems: createChatWidgetRootItems,
+    CanvasContent: ChatWidgetCanvas,
+    SettingsPanel: ChatWidgetSettings,
+  },
+  emote_widget: {
+    type: "emote_widget",
+    layerScope: "root",
+    icon: Sparkles,
+    showInLibrary: true,
+    category: "alerts",
+    library: {
+      title: "Emote wall",
+      description:
+        "Chat emotes fly across your stream, and follows, subs, cheers and raids set off a big burst. Works with 7TV, BTTV and FFZ.",
+    },
+    defaultSize: { ...EMOTE_WIDGET_DEFAULT_SIZE },
+    createRootItems: createEmoteWidgetRootItems,
+    CanvasContent: EmoteWidgetCanvas,
+    SettingsPanel: EmoteWidgetSettings,
+  },
+  combo_widget: {
+    type: "combo_widget",
+    layerScope: "root",
+    icon: Flame,
+    showInLibrary: true,
+    category: "alerts",
+    library: {
+      title: "Emote combo",
+      description:
+        "When chat spams the same emote, a counter shows it on stream and punches up with every hit. Works with 7TV, BTTV and FFZ.",
+    },
+    defaultSize: { ...COMBO_WIDGET_DEFAULT_SIZE },
+    createRootItems: createComboWidgetRootItems,
+    CanvasContent: ComboWidgetCanvas,
+    SettingsPanel: ComboWidgetSettings,
+  },
+  hype_train_widget: {
+    type: "hype_train_widget",
+    layerScope: "root",
+    icon: TrainFront,
+    showInLibrary: true,
+    category: "alerts",
+    library: {
+      title: "Hype train",
+      description:
+        "During a hype train, a train bounces around your stream with a wagon for everyone who cheered, subbed or gifted. Picture and name on every one.",
+    },
+    defaultSize: { ...HYPE_TRAIN_WIDGET_DEFAULT_SIZE },
+    createRootItems: createHypeTrainWidgetRootItems,
+    CanvasContent: HypeTrainWidgetCanvas,
+    SettingsPanel: HypeTrainWidgetSettings,
+  },
+  follower_goal_widget: {
+    type: "follower_goal_widget",
+    layerScope: "root",
+    icon: Goal,
+    showInLibrary: true,
+    category: "goals",
+    library: {
+      title: "Follower goal",
+      description:
+        "Your Twitch follower goal as a live progress bar. Make the goal on Twitch, watch it fill here.",
+    },
+    defaultSize: { ...GOAL_WIDGET_DEFAULT_SIZE },
+    createRootItems: createGoalWidgetRootItems("follower_goal_widget"),
+    CanvasContent: GoalWidgetCanvas,
+    SettingsPanel: GoalWidgetSettings,
+  },
+  sub_goal_widget: {
+    type: "sub_goal_widget",
+    layerScope: "root",
+    icon: Goal,
+    showInLibrary: true,
+    category: "goals",
+    library: {
+      title: "Sub goal",
+      description:
+        "Your Twitch sub goal, whichever kind you run: total or new, subs or sub points.",
+    },
+    defaultSize: { ...GOAL_WIDGET_DEFAULT_SIZE },
+    createRootItems: createGoalWidgetRootItems("sub_goal_widget"),
+    CanvasContent: GoalWidgetCanvas,
+    SettingsPanel: GoalWidgetSettings,
+  },
+  bits_goal_widget: {
+    type: "bits_goal_widget",
+    layerScope: "root",
+    icon: Goal,
+    showInLibrary: true,
+    category: "goals",
+    library: {
+      title: "Bits goal",
+      description:
+        "Your Twitch Bits goal, counting Bits or cheerers. Fills with every cheer.",
+    },
+    defaultSize: { ...GOAL_WIDGET_DEFAULT_SIZE },
+    createRootItems: createGoalWidgetRootItems("bits_goal_widget"),
+    CanvasContent: GoalWidgetCanvas,
+    SettingsPanel: GoalWidgetSettings,
+  },
+  poll_widget: {
+    type: "poll_widget",
+    layerScope: "root",
+    icon: Vote,
+    showInLibrary: true,
+    category: "polls",
+    library: {
+      title: "Poll",
+      description:
+        "Your Twitch poll with live votes, a countdown and the winner when it closes. Start the poll on Twitch.",
+    },
+    defaultSize: { ...POLL_WIDGET_DEFAULT_SIZE },
+    createRootItems: createPollWidgetRootItems,
+    CanvasContent: PollWidgetCanvas,
+    SettingsPanel: PollWidgetSettings,
+  },
+  ad_widget: {
+    type: "ad_widget",
+    layerScope: "root",
+    icon: Megaphone,
+    showInLibrary: true,
+    category: "ads",
+    library: {
+      title: "Ads",
+      description:
+        "A heads-up before your ad break and a countdown while it runs, so viewers know when you're back.",
+    },
+    defaultSize: { ...AD_WIDGET_DEFAULT_SIZE },
+    createRootItems: createAdWidgetRootItems,
+    CanvasContent: AdWidgetCanvas,
+    SettingsPanel: AdWidgetSettings,
+  },
+  uptime_widget: {
+    type: "uptime_widget",
+    layerScope: "root",
+    icon: Radio,
+    showInLibrary: true,
+    category: "layout",
+    library: {
+      title: "Uptime",
+      description: "How long you have been live, straight from Twitch. Hides itself when you are offline.",
+    },
+    defaultSize: { ...UPTIME_WIDGET_DEFAULT_SIZE },
+    createRootItems: createUptimeWidgetRootItems,
+    CanvasContent: UptimeWidgetCanvas,
+    SettingsPanel: UptimeWidgetSettings,
+  },
+  credits_widget: {
+    type: "credits_widget",
+    layerScope: "root",
+    icon: ScrollText,
+    showInLibrary: true,
+    category: "credits",
+    library: {
+      title: "End credits",
+      description:
+        "Rolls the names from your stream when your ending scene comes up: followers, subs, gifts, Bits, raids and more.",
+    },
+    defaultSize: { ...CREDITS_WIDGET_DEFAULT_SIZE },
+    createRootItems: createCreditsWidgetRootItems,
+    CanvasContent: CreditsWidgetCanvas,
+    SettingsPanel: CreditsWidgetSettings,
+  },
+  label_widget: {
+    type: "label_widget",
+    layerScope: "root",
+    icon: Tag,
+    showInLibrary: true,
+    category: "labels",
+    library: {
+      title: "Label",
+      description:
+        "Latest follower, top cheerer, sub count, recent raids and more. Pick one and it updates the second it happens.",
+    },
+    defaultSize: { ...LABEL_WIDGET_DEFAULT_SIZE },
+    createRootItems: createLabelWidgetRootItems,
+    CanvasContent: LabelWidgetCanvas,
+    SettingsPanel: LabelWidgetSettings,
   },
   text_widget: {
     type: "text_widget",
@@ -330,6 +632,11 @@ export function groupLibraryWidgetsByCategory(): Record<
   const grouped: Record<WidgetCategory, OverlayRootWidgetDefinition[]> = {
     media: [],
     alerts: [],
+    goals: [],
+    polls: [],
+    ads: [],
+    credits: [],
+    labels: [],
     layout: [],
     other: [],
   };

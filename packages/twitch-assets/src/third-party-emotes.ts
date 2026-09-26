@@ -1,5 +1,6 @@
+import { TwitchApi } from "@repo/twitch-api";
 import { ASSET_TTL, getCached, setCached, singleFlight } from "./cache";
-import type { ThirdPartyEmote, ThirdPartyEmoteMap, ThirdPartyProvider } from "./types";
+import type { ChannelEmoteMap, ThirdPartyEmote, ThirdPartyEmoteMap, ThirdPartyProvider } from "./types";
 
 /**
  * 7TV / BTTV / FrankerFaceZ emote maps.
@@ -165,4 +166,55 @@ export async function resolveThirdPartyEmotes(
     await setCached(key, map, ASSET_TTL.thirdPartyEmotes);
     return map;
   });
+}
+
+// --------------------------------------------------------- channel's own
+
+function twitchEmoteUrl(id: string, scale: "1.0" | "2.0" | "3.0"): string {
+  return `https://static-cdn.jtvnw.net/emoticons/v2/${id}/default/dark/${scale}`;
+}
+
+/**
+ * The channel's own Twitch emotes (sub tiers, follower, bits). The emote
+ * widget bursts these on events when the streamer hasn't picked any. Chat
+ * rendering never needs this map, because EventSub already marks Twitch
+ * emotes by id.
+ */
+export async function resolveChannelEmotes(broadcasterId: string): Promise<ChannelEmoteMap> {
+  const key = `channelemotes:${broadcasterId}`;
+  const cached = await getCached<ChannelEmoteMap>(key);
+  if (cached) return cached;
+
+  return singleFlight(key, async () => {
+    const map = toEmoteMap(await new TwitchApi(broadcasterId).chat.getChannelEmotes());
+    await setCached(key, map, ASSET_TTL.channelEmotes);
+    return map;
+  });
+}
+
+/** Twitch's global emotes, for the editor's emote picker. Same for every channel. */
+export async function resolveGlobalTwitchEmotes(): Promise<ChannelEmoteMap> {
+  const key = "globalemotes:twitch";
+  const cached = await getCached<ChannelEmoteMap>(key);
+  if (cached) return cached;
+
+  return singleFlight(key, async () => {
+    const map = toEmoteMap(await new TwitchApi(null).chat.getGlobalEmotes());
+    await setCached(key, map, ASSET_TTL.globalEmotes);
+    return map;
+  });
+}
+
+function toEmoteMap(emotes: { id: string; name: string }[]): ChannelEmoteMap {
+  const map: ChannelEmoteMap = {};
+  for (const e of emotes) {
+    map[e.name] = {
+      id: e.id,
+      name: e.name,
+      url_1x: twitchEmoteUrl(e.id, "1.0"),
+      url_2x: twitchEmoteUrl(e.id, "2.0"),
+      url_4x: twitchEmoteUrl(e.id, "3.0"),
+    };
+  }
+  return map;
 }
