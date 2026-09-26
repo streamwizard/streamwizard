@@ -21,6 +21,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "@repo/schemas": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/ttl-cache": "workspace:*",
     "@repo/twitch-api": "workspace:*"

@@ -1,0 +1,76 @@
+---
+title: "Polls"
+description: "Your Twitch poll on stream, with live votes, a countdown and the winner."
+---
+
+The poll widget shows the poll you run on Twitch. Start a poll, and it shows
+up on your overlay with the question, every choice and a countdown. Votes
+come in live, and when the poll closes the winner lights up. A few seconds
+later the widget gets out of the way until your next poll.
+
+## Add it
+
+In the overlay editor, open **Widgets → Polls** and add **Poll**.
+
+## Starting polls
+
+Polls live on Twitch. Start one from Stream Manager or with `/poll` in your
+chat. **Start a poll on Twitch** in the widget settings takes you to Stream
+Manager. The widget picks up the poll on its own, and if you refresh your
+overlay mid-poll, it comes back with the current votes.
+
+When no poll is running, the widget shows nothing on stream. In the editor it
+tells you so.
+
+If the settings show a **Connect Twitch** button, StreamWizard can't read
+your polls yet. One trip to Twitch and you're set.
+
+## Designs
+
+Pick a look under **Design**. Switching resizes the box to fit.
+
+| Design | What it looks like | Good for |
+|---|---|---|
+| **Bars** | A bar per choice, filling with its share of the votes | The all-rounder |
+| **Columns** | Columns side by side, rising like a live chart | Two or three choices |
+| **Donut** | A ring split by votes, the leader's percentage in the middle | Next to your camera |
+| **Strip** | One line: the question, who's ahead and the countdown, over a thin split bar | Tickers, corners, tight spots |
+| **Race** | A lane per choice, each runner moving toward the finish line. The winner crosses when the poll closes | When chat is really split |
+
+## When the poll closes
+
+The winning choice lights up and the others fade back. On a tie, every tied
+choice lights up. The result stays up for as long as **Show the result for**
+says (10 seconds by default), then the widget hides.
+
+## See it before you go live
+
+The widget settings have four test buttons: **Start**, **Votes**, **Close
+race** and **End**. The same four sit in the **Poll** row of the editor's
+**Demo** bar. To watch polls come and go, press **Poll** under **Simulate**
+in the Demo bar: it runs a 20-second poll, closes it with a winner, pauses,
+and starts the next one until you press it again. They play a fake poll on the canvas, or on your live overlay when
+the demo bar is set to Live. After a test, **Back to your Twitch poll** puts
+the real one back. A Live test on your stream clears itself after 15 seconds.
+
+## Settings
+
+- **Title**: leave it empty to use your poll's question from Twitch, or type
+  your own.
+- **Show the result for**: how long the winner stays up after the poll
+  closes, from 3 to 60 seconds.
+- **Show**: title, percentage, vote count and countdown.
+- **Colors**: a color for each choice, or **Leader only** to color just the
+  choice in the lead and keep the rest muted. Also the track, the text and
+  corner radius.
+- **Text**: font, weight, size, and a shadow that keeps it readable over
+  bright games.
+- **Motion**:
+  - **Flash on votes**: a short flash on a choice every time it gets votes.
+  - **When the poll closes**: a glow, confetti, or nothing. A tie gets no
+    celebration.
+  - **Poll starts** and **Poll hides**: fade, slide, pop or shrink.
+
+If reduced motion is switched on in the system settings of the computer
+running OBS, the widget plays it still: no confetti or flashes, and bars jump
+straight to the new numbers.

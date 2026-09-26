@@ -82,6 +82,19 @@ export function ChatTokens({ tokens }: { tokens: ChatToken[] }) {
               </span>
             );
 
+          case "gif":
+            return (
+              <img
+                key={index}
+                src={token.url}
+                alt={token.alt}
+                title={token.alt}
+                loading="lazy"
+                decoding="async"
+                className="inline-block h-24 max-w-[16rem] rounded object-contain align-middle"
+              />
+            );
+
           case "mention":
             return (
               <span

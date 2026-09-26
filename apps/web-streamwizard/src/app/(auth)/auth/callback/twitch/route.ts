@@ -96,15 +96,17 @@ export async function GET(request: Request) {
     // new token carries. The dashboard reads this to decide whether a feature
     // still has to ask for its scopes. Best-effort: the hourly sweep in
     // rest-api fills it in if this call fails.
+    let grantedScopes: string[] | null = null;
     try {
       const validation = await validateTwitchToken(data.session.provider_token);
+      grantedScopes = validation.scopes;
       const { error: scopeErr } = await setTwitchScopesByUserId(supabase, data.session.user.id, validation.scopes);
       if (scopeErr) throw scopeErr;
     } catch (scopeErr) {
       reportError(scopeErr, "auth/callback/twitch: scope sync failed");
     }
 
-    await checkEventSubscriptions(data.session.user.user_metadata.sub);
+    await checkEventSubscriptions(data.session.user.user_metadata.sub, grantedScopes);
     if (!error) {
       // The other side of `login_clicked`: without this the OAuth funnel has a
       // click and then silence, and drop-off at Twitch is invisible.

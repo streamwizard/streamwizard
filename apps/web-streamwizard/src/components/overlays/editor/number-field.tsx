@@ -32,6 +32,7 @@ interface NumberFieldProps {
   className?: string;
   /** Rendered inside the field's own wrapper, e.g. a "%" suffix. */
   adornment?: React.ReactNode;
+  "aria-label"?: string;
 }
 
 /**
@@ -57,6 +58,7 @@ export function NumberField({
   disabled,
   className,
   adornment,
+  "aria-label": ariaLabel,
 }: NumberFieldProps) {
   const [draft, setDraft] = useState<string | null>(null);
 
@@ -71,6 +73,7 @@ export function NumberField({
       min={min}
       max={max}
       disabled={disabled}
+      aria-label={ariaLabel}
       aria-invalid={invalid || undefined}
       onFocus={onFocus}
       onChange={(e) => {

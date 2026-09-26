@@ -15,7 +15,8 @@ const COPY: Record<TwitchScopeFeature, { title: string; body: string }> = {
 
 /**
  * Re-runs the Twitch authorization with the feature's scopes added and brings
- * the user back to `next`. Used by the banner and by the cloud OBS setup step.
+ * the user back to `next`. Used by the banner, the cloud OBS setup step, and
+ * the goal widgets ("base", for a token from before goals joined base).
  */
 export function TwitchConnectButton({
   feature,
@@ -24,7 +25,7 @@ export function TwitchConnectButton({
   size = "sm",
   className,
 }: {
-  feature: TwitchScopeFeature;
+  feature: TwitchScopeFeature | "base";
   next: string;
   disabled?: boolean;
   size?: "sm" | "default";

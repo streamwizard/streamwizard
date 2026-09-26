@@ -51,6 +51,11 @@
                   "overlays/overview",
                   "overlays/quickstart",
                   "overlays/alerts",
+                  "overlays/chat",
+                  "overlays/goals",
+                  "overlays/polls",
+                  "overlays/ads",
+                  "overlays/credits",
                   "overlays/media-library",
                   "overlays/obs-setup"
                 ]

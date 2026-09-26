@@ -57,7 +57,7 @@ export const CurrencyAmountSchema = z.object({
 });
 
 export const MessageFragmentSchema = z.object({
-  type: z.enum(["text", "cheermote", "emote", "mention"]),
+  type: z.enum(["text", "cheermote", "emote", "mention", "gif"]),
   text: z.string(),
   cheermote: z
     .object({
@@ -71,6 +71,19 @@ export const MessageFragmentSchema = z.object({
     .object({
       id: z.string(),
       emote_set_id: z.string(),
+    })
+    .nullable()
+    .optional(),
+  /**
+   * Twitch GIF (from the GIF picker); `text` is its alt text. The reference
+   * names the id `id`, the changelog `gif_id`, and live payloads carry `id`,
+   * so both are optional and only `url` is required.
+   */
+  gif: z
+    .object({
+      id: z.string().optional(),
+      gif_id: z.string().optional(),
+      url: z.string(),
     })
     .nullable()
     .optional(),

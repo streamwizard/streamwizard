@@ -26,7 +26,7 @@ export const OVERLAY_FAQ_ITEMS = [
   },
   {
     question: "What does it cost?",
-    answer: `Nothing. The alert box, the editor, the widget library and custom widgets are free, with ${FREE_MAX_FILE_MB}MB per file and ${FREE_MEDIA_QUOTA_MB}MB total of media storage.`,
+    answer: `Nothing. The alert box, the chat box, the editor, the widget library and custom widgets are free, with ${FREE_MAX_FILE_MB}MB per file and ${FREE_MEDIA_QUOTA_MB}MB total of media storage.`,
     link: PRICING_FAQ_LINK,
   },
   {
