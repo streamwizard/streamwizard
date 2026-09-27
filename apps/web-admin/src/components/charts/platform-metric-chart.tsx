@@ -4,6 +4,7 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  ReferenceLine,
   Tooltip,
   XAxis,
   YAxis,
@@ -16,6 +17,12 @@ import {
   ChartCard,
   useMetricsPoll,
 } from "./chart-kit";
+import { formatPlatformValue, type PlatformValueFormat } from "./platform-format";
+
+export interface ChartReference {
+  value: number;
+  label: string;
+}
 
 interface Props {
   title: string;
@@ -25,9 +32,15 @@ interface Props {
   endpoint?: string;
   initialData: PlatformPoint[];
   unit?: string;
+  format?: PlatformValueFormat;
   /** Chart color CSS var index (1-5), maps to --chart-N. */
   color?: number;
   yMax?: number;
+  /** Lower bound of the y axis. The axis still extends below it when the
+   * data does, so a drop is never clipped. */
+  yMin?: number;
+  /** Dashed threshold line, e.g. the alert warn level. */
+  reference?: ChartReference;
 }
 
 export function PlatformMetricChart({
@@ -36,8 +49,11 @@ export function PlatformMetricChart({
   endpoint = "/api/metrics/supabase",
   initialData,
   unit = "",
+  format = "number",
   color = 1,
   yMax,
+  yMin,
+  reference,
 }: Props) {
   const raw = useMetricsPoll<Record<string, PlatformPoint[]>>(
     endpoint,
@@ -51,6 +67,10 @@ export function PlatformMetricChart({
   }));
   const stroke = `var(--chart-${color})`;
   const gradientId = `gPlatform${seriesKey}`;
+  const dataMin = chartData.length > 0 ? Math.min(...chartData.map((d) => d.value)) : undefined;
+  const lower = yMin === undefined ? 0 : Math.min(yMin, Math.floor(dataMin ?? yMin));
+  const domain: [number, number | "auto"] | undefined =
+    yMax !== undefined || yMin !== undefined ? [lower, yMax ?? "auto"] : undefined;
 
   return (
     <ChartCard title={title} isEmpty={chartData.length === 0}>
@@ -70,13 +90,24 @@ export function PlatformMetricChart({
         <YAxis
           tick={AXIS_TICK}
           className="fill-muted-foreground"
-          domain={yMax !== undefined ? [0, yMax] : undefined}
-          tickFormatter={(v: number) => `${Math.round(v)}${unit}`}
+          width={format === "bytesPerSec" ? 72 : undefined}
+          domain={domain}
+          allowDataOverflow={false}
+          tickFormatter={(v: number) => formatPlatformValue(v, format, unit, true)}
         />
         <Tooltip
           contentStyle={CHART_TOOLTIP_STYLE}
-          formatter={(value) => [`${Number(value).toFixed(1)}${unit}`, title]}
+          formatter={(value) => [formatPlatformValue(Number(value), format, unit), title]}
         />
+        {reference && (
+          <ReferenceLine
+            y={reference.value}
+            stroke="var(--muted-foreground)"
+            strokeDasharray="4 4"
+            ifOverflow="extendDomain"
+            label={{ value: reference.label, position: "insideTopRight", fontSize: 11, fill: "var(--muted-foreground)" }}
+          />
+        )}
         {/* An area series needs 2+ points to draw anything — show dots
             while the series is sparse (young bucket, wide windows). */}
         <Area
