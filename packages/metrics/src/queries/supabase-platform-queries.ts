@@ -56,7 +56,9 @@ export function querySupabaseDbMemoryPct(fluxRange = "24h", window = "5m"): Prom
   return runFluxQuery(query, point);
 }
 
-/** Fullest filesystem usage % over time (max across mountpoints). */
+/** Database volume usage % over time. Only the /data mount: the host also
+ * reports its root filesystem (/), a small OS disk Supabase manages that sits
+ * far fuller than the database and isn't ours to act on. */
 export function querySupabaseDbDiskPct(fluxRange = "24h", window = "5m"): Promise<PlatformPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
@@ -64,6 +66,7 @@ export function querySupabaseDbDiskPct(fluxRange = "24h", window = "5m"): Promis
     ${fluxFrom("prometheus", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "node_filesystem_avail_bytes" or r._field == "node_filesystem_size_bytes")
+      |> filter(fn: (r) => r.mountpoint == "/data")
       |> keep(columns: ["_time", "_field", "_value", "mountpoint"])
       |> pivot(rowKey: ["_time", "mountpoint"], columnKey: ["_field"], valueColumn: "_value")
       |> map(fn: (r) => ({ _time: r._time, _value: if r.node_filesystem_size_bytes == 0.0 then 0.0 else 100.0 * (1.0 - r.node_filesystem_avail_bytes / r.node_filesystem_size_bytes) }))
