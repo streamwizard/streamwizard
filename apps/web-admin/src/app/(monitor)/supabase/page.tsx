@@ -116,7 +116,7 @@ export default async function SupabasePlatformPage() {
         <PlatformMetricChart title="Memory %" seriesKey="memory" initialData={memory} unit="%" color={2} yMax={100} />
         <PlatformMetricChart title="Disk % (fullest mount)" seriesKey="disk" initialData={disk} unit="%" color={3} yMax={100} />
         <PlatformMetricChart title="Connections" seriesKey="connections" initialData={connections} color={4} />
-        <PlatformMetricChart title="Cache hit %" seriesKey="cacheHit" initialData={cacheHit} unit="%" color={5} yMax={100} />
+        <PlatformMetricChart title="Cache hit %" seriesKey="cacheHit" initialData={cacheHit} unit="%" color={2} yMax={100} />
         <PlatformMetricChart title="Mean query time" seriesKey="meanQueryMs" initialData={meanQueryMs} unit="ms" color={1} />
         <PlatformMetricChart title="Queries / sec" seriesKey="queryRate" initialData={queryRate} color={2} />
         <PlatformMetricChart title="Auth API latency" seriesKey="authApiMs" initialData={authApiMs} unit="ms" color={4} />
