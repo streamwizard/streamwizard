@@ -31,6 +31,10 @@
       "types": "./src/state.ts",
       "default": "./src/state.ts"
     },
+    "./thresholds": {
+      "types": "./src/rules/thresholds.ts",
+      "default": "./src/rules/thresholds.ts"
+    },
     "./types": {
       "types": "./src/types.ts",
       "default": "./src/types.ts"
