@@ -34,6 +34,9 @@ export const SUPABASE_DB_CONN_CRIT_PCT = 95;
 export const SUPABASE_DB_DISK_WARN_PCT = 80;
 export const SUPABASE_DB_DISK_CRIT_PCT = 90;
 export const SUPABASE_SCRAPE_SILENT_MIN = 10;
+/** Deadlocks in the last 15 min above which supabase.deadlocks warns. 0 means
+ * any deadlock at all — a healthy app should never produce one. */
+export const SUPABASE_DEADLOCKS_WARN = 0;
 /** Node agents write every 10s; 45s (4.5 missed samples) is decisively dead
  * without false-firing on a single hiccup. */
 export const NODE_SILENT_AFTER_MS = 45 * 1000;

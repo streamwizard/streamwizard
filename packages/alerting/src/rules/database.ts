@@ -5,6 +5,7 @@ import {
   querySupabaseDbConnections,
   querySupabaseDbCpuPct,
   querySupabaseDbDiskPct,
+  querySupabaseDeadlocks,
   querySupabaseLastScrape,
   querySupabaseMaxConnections,
 } from "@repo/metrics";
@@ -17,6 +18,7 @@ import {
   SUPABASE_DB_CPU_WARN_PCT,
   SUPABASE_DB_DISK_CRIT_PCT,
   SUPABASE_DB_DISK_WARN_PCT,
+  SUPABASE_DEADLOCKS_WARN,
   SUPABASE_SCRAPE_SILENT_MIN,
 } from "./thresholds";
 import {
@@ -73,7 +75,7 @@ export function databaseRules(overrides: RuleOverrides): AlertRule[] {
       },
       overrides,
     ),
-    // Supabase platform (rules 25–28) — data comes from Telegraf scraping the
+    // Supabase platform (rules 25–28, plus deadlocks) — data comes from Telegraf scraping the
     // per-project privileged metrics endpoint. When Telegraf hasn't written
     // recently the fetchers return no samples, so these stay quiet instead of
     // false-firing; scrape_silent is what notices that condition.
@@ -121,6 +123,21 @@ export function databaseRules(overrides: RuleOverrides): AlertRule[] {
         unit: "%",
         fetch: (ctx) => supabaseLatest(querySupabaseDbDiskPct, ctx),
         format: (_e, v, t) => `Supabase DB disk at ${v.toFixed(0)}% (warn > ${t.warn}%)`,
+      },
+      overrides,
+    ),
+    thresholdRule(
+      {
+        id: "supabase.deadlocks",
+        title: "Supabase deadlocks",
+        forTicks: 1,
+        warn: SUPABASE_DEADLOCKS_WARN,
+        unit: "",
+        fetch: async (ctx) => {
+          const count = await querySupabaseDeadlocks("15m", { bucket: ctx.bucket });
+          return count === null ? [] : [{ entityId: "supabase", value: count }];
+        },
+        format: (_e, v) => `${v.toFixed(0)} Postgres deadlock${v === 1 ? "" : "s"} in the last 15 min`,
       },
       overrides,
     ),
