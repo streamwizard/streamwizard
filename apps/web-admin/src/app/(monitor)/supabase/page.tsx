@@ -91,7 +91,7 @@ export default async function SupabasePlatformPage() {
         <StatCard
           title="Disk"
           value={pct(snapshot?.diskPct ?? null)}
-          description="Fullest filesystem"
+          description="Database volume (/data)"
           className={(snapshot?.diskPct ?? 0) > 80 ? "border-destructive/50" : undefined}
         />
         <StatCard
@@ -114,7 +114,7 @@ export default async function SupabasePlatformPage() {
       <div className="grid grid-cols-2 gap-6">
         <PlatformMetricChart title="DB CPU %" seriesKey="cpu" initialData={cpu} unit="%" color={1} yMax={100} />
         <PlatformMetricChart title="Memory %" seriesKey="memory" initialData={memory} unit="%" color={2} yMax={100} />
-        <PlatformMetricChart title="Disk % (fullest mount)" seriesKey="disk" initialData={disk} unit="%" color={3} yMax={100} />
+        <PlatformMetricChart title="Disk % (/data)" seriesKey="disk" initialData={disk} unit="%" color={3} yMax={100} />
         <PlatformMetricChart title="Connections" seriesKey="connections" initialData={connections} color={4} />
         <PlatformMetricChart title="Cache hit %" seriesKey="cacheHit" initialData={cacheHit} unit="%" color={2} yMax={100} />
         <PlatformMetricChart title="Mean query time" seriesKey="meanQueryMs" initialData={meanQueryMs} unit="ms" color={1} />
