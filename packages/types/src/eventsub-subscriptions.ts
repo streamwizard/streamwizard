@@ -187,3 +187,54 @@ export const WEBHOOK_SUBSCRIPTIONS: readonly EventSubSubscriptionConfig[] = [
     condition: (userId) => ({ broadcaster_user_id: userId }),
   },
 ];
+
+/** A Create EventSub Subscription body for one channel. */
+export type NeededEventSubscription = {
+  type: EventSubSubscriptionType;
+  version: string;
+  condition: Record<string, unknown>;
+  transport:
+    | { method: "conduit"; conduit_id: string }
+    | { method: "webhook"; callback: string; secret?: string };
+};
+
+/**
+ * The subscriptions one channel should have. `grantedScopes` is the token's
+ * scope list: a subscription with a `requiredScope` is left out when the list
+ * lacks it or is unknown (null), so a token from before that scope existed
+ * doesn't fail the create on every login. `webhook` null skips the webhook
+ * set (development has no HTTPS callback). `secret` is only needed to create;
+ * comparing against Twitch needs just the callback.
+ */
+export function buildNeededEventSubscriptions(options: {
+  twitchUserId: string;
+  grantedScopes: readonly string[] | null;
+  conduitId: string;
+  webhook: { callback: string; secret?: string } | null;
+}): NeededEventSubscription[] {
+  const { twitchUserId, conduitId, webhook } = options;
+  const granted = new Set(options.grantedScopes ?? []);
+
+  const conduit = CONDUIT_SUBSCRIPTIONS.filter(({ requiredScope }) => !requiredScope || granted.has(requiredScope)).map(
+    ({ type, version, condition }): NeededEventSubscription => ({
+      type,
+      version,
+      condition: condition(twitchUserId),
+      transport: { method: "conduit", conduit_id: conduitId },
+    }),
+  );
+  if (!webhook) return conduit;
+
+  const webhooks = WEBHOOK_SUBSCRIPTIONS.map(
+    ({ type, version, condition }): NeededEventSubscription => ({
+      type,
+      version,
+      condition: condition(twitchUserId),
+      transport: { method: "webhook", ...webhook },
+    }),
+  );
+  return [...webhooks, ...conduit];
+}
+
+/** rest-api's EventSub webhook route, from its base URL. */
+export const eventSubWebhookCallback = (apiUrl: string) => `${apiUrl}/webhooks/twitch/eventsub`;

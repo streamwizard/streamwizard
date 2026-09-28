@@ -3616,7 +3616,11 @@ export type Database = {
         }
         Returns: undefined
       }
-      delete_user_data: { Args: { p_twitch_user_id: string; p_reason?: string }; Returns: string }
+      admin_revoke_user_sessions: { Args: { p_user_id: string }; Returns: number }
+      delete_user_data: {
+        Args: { p_actor_user_id?: string; p_reason?: string; p_twitch_user_id: string }
+        Returns: string
+      }
       platform_event_identity: { Args: { p_user_id: string }; Returns: Json }
       emit_twitch_token_refresh_failed: {
         Args: { p_twitch_user_id: string; p_error: string; p_status?: number }

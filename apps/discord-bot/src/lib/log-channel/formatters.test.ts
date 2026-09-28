@@ -191,6 +191,24 @@ describe("log channel formatters", () => {
     expect(fieldValue(revoked, "Reason")).toBe("Twitch revoked");
   });
 
+  test("admin deletion and bans name the admin", () => {
+    const admin = { actor_twitch_username: "jochem" };
+    const deleted = formatPlatformEvent(event("user.deleted", { ...identity, ...admin, reason: "admin" })).toJSON();
+    expect(deleted.description).toBe("An admin removed **logtester**'s account and data.");
+    expect(fieldValue(deleted, "Deleted by")).toContain("jochem");
+
+    const banned = formatPlatformEvent(
+      event("user.banned", { ...identity, ...admin, reason: "spam bot", discord_banned: true }),
+    ).toJSON();
+    expect(banned.title).toBe("⛔ User banned");
+    expect(banned.description).toBe("**logtester** is banned from StreamWizard and the Discord server.");
+    expect(fieldValue(banned, "Reason")).toBe("spam bot");
+    expect(fieldValue(banned, "Banned by")).toContain("jochem");
+
+    const unbanned = formatPlatformEvent(event("user.unbanned", { ...identity, ...admin, discord_unbanned: false })).toJSON();
+    expect(unbanned.description).toBe("**logtester** can sign in again.");
+  });
+
   test("admin roles: granted purple, revoked red, by the database", () => {
     const granted = formatPlatformEvent(event("admin.role_granted", { ...identity, role: "admin" })).toJSON();
     expect(granted.title).toBe("🛡️ Admin role granted");

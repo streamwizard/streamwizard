@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import {
@@ -133,7 +134,9 @@ export function SubscriptionsClient({ users, subscriptions: initialSubs, product
                         <AvatarFallback className="text-xs">{initials(user.name)}</AvatarFallback>
                       </Avatar>
                       <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{user.name}</p>
+                        <Link href={`/users/${user.id}`} className="block font-medium text-sm truncate hover:underline">
+                          {user.name}
+                        </Link>
                         <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                       </div>
                     </div>

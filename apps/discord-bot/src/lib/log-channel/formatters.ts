@@ -181,9 +181,37 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
       .setDescription(
         payload.reason === "twitch_revoked"
           ? `Removed ${bold(subjectName(payload), "a user")}'s account and data. They disconnected StreamWizard on Twitch.`
-          : `Removed ${bold(subjectName(payload), "a user")}'s account and data.`,
+          : payload.reason === "admin"
+            ? `An admin removed ${bold(subjectName(payload), "a user")}'s account and data.`
+            : `Removed ${bold(subjectName(payload), "a user")}'s account and data.`,
       )
-      .addFields([...identityFields(payload, event), ...field("Reason", sentenceCase(payload.reason))]),
+      .addFields([
+        ...identityFields(payload, event),
+        ...field("Reason", sentenceCase(payload.reason)),
+        ...byField("Deleted by", payload),
+      ]),
+
+  "user.banned": (payload, event) =>
+    withSubject(base(event, "user.banned"), payload)
+      .setDescription(
+        payload.discord_banned
+          ? `${bold(subjectName(payload), "A user")} is banned from StreamWizard and the Discord server.`
+          : `${bold(subjectName(payload), "A user")} is banned from StreamWizard.`,
+      )
+      .addFields([
+        ...field("Reason", plain(payload.reason), false),
+        ...identityFields(payload, event),
+        ...byField("Banned by", payload),
+      ]),
+
+  "user.unbanned": (payload, event) =>
+    withSubject(base(event, "user.unbanned"), payload)
+      .setDescription(
+        payload.discord_unbanned
+          ? `${bold(subjectName(payload), "A user")} can sign in again and rejoin the Discord server.`
+          : `${bold(subjectName(payload), "A user")} can sign in again.`,
+      )
+      .addFields([...identityFields(payload, event), ...byField("Unbanned by", payload)]),
 
   "admin.role_granted": (payload, event) =>
     withSubject(base(event, "admin.role_granted"), payload)
