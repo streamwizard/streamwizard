@@ -183,6 +183,81 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_events: {
+        Row: {
+          dedupe_key: string
+          event_type: string
+          fields: Json
+          guests: Json | null
+          id: string
+          job_id: string | null
+          matched: boolean
+          message: string
+          occurred_at: string
+          received_at: string
+          severity: string
+          source: string
+          title: string
+        }
+        Insert: {
+          dedupe_key: string
+          event_type: string
+          fields?: Json
+          guests?: Json | null
+          id?: string
+          job_id?: string | null
+          matched?: boolean
+          message?: string
+          occurred_at: string
+          received_at?: string
+          severity: string
+          source: string
+          title: string
+        }
+        Update: {
+          dedupe_key?: string
+          event_type?: string
+          fields?: Json
+          guests?: Json | null
+          id?: string
+          job_id?: string | null
+          matched?: boolean
+          message?: string
+          occurred_at?: string
+          received_at?: string
+          severity?: string
+          source?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      backup_poll_state: {
+        Row: {
+          claimed_at: string | null
+          claimed_by: string | null
+          data: Json
+          id: string
+          polled_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          data?: Json
+          id: string
+          polled_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by?: string | null
+          data?: Json
+          id?: string
+          polled_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       broadcaster_live_status: {
         Row: {
           broadcaster_id: string
