@@ -157,6 +157,20 @@ describe("computeBackupOverview", () => {
     expect(computeBackupOverview(p, [okEvent], NOW).vms[0]!.name).toBe("pfsense");
   });
 
+  it("stretches staleness and verify checks to a 6 h poll interval", () => {
+    const twoHoursAgo = new Date(NOW.getTime() - 2 * H * 1000).toISOString();
+    const p = poll([snap("100", 8, null), ...threeGood.slice(1)], { pollSeconds: 6 * H });
+    p.pbs.health = { okAt: twoHoursAgo, attemptAt: twoHoursAgo, error: null, failingSince: null };
+    p.pve.pve1!.health = p.pbs.health;
+    const o = computeBackupOverview(p, [okEvent], NOW);
+    // 2 h since the last poll is normal at 6 h; 8 h unverified is within 2 polls.
+    expect(o.checks.find((c) => c.id === "pbs-poll")!.status).toBe("ok");
+    expect(o.vms[0]).toMatchObject({ status: "ok", verification: "pending" });
+    // The same data at the 5-minute default is stale and unverified.
+    const fast = computeBackupOverview({ ...p, pollSeconds: undefined }, [okEvent], NOW);
+    expect(fast.checks.find((c) => c.id === "pbs-poll")!.status).toBe("error");
+  });
+
   it("is unknown with no poll data at all", () => {
     const o = computeBackupOverview(null, [], NOW);
     expect(o.status).toBe("error");

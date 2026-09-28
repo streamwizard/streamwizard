@@ -7,7 +7,7 @@ import { loadBackupPoll } from "./backup-store";
 /**
  * Short-lived read cache for the backup state. web-admin's /backups page
  * refreshes every few seconds while open, and the data only changes when the
- * poller saves (every 5 min) or a webhook arrives, so without this every
+ * poller saves or a webhook arrives, so without this every
  * refresh re-reads the poll row and the event list from Supabase (egress).
  * Both writers in this process call invalidateBackupCache().
  */

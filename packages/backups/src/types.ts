@@ -103,6 +103,8 @@ export interface BackupPollData {
   version: 1;
   datastore: string;
   namespace: string;
+  /** The poller's interval. Staleness checks scale with it; older rows lack it (5 min). */
+  pollSeconds?: number;
   pbs: { health: SourceHealth; data: PbsData | null };
   /** Keyed by the configured host name (e.g. "pve1"). */
   pve: Record<string, { health: SourceHealth; data: PveHostData | null }>;
@@ -198,6 +200,8 @@ export interface BackupOverview {
   namespace: string;
   checks: BackupCheck[];
   pbs: { health: SourceHealth; stale: boolean };
+  /** Poll interval the checks were computed with. */
+  pollSeconds: number;
   usage: { totalBytes: number; usedBytes: number; availBytes: number; usedPct: number } | null;
   jobs: { gc: BackupJobView | null; verify: BackupJobView[]; prune: BackupJobView[] };
   hosts: BackupHostView[];

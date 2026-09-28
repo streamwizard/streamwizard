@@ -28,11 +28,12 @@ import {
 const EVENT_WINDOW_MS = 8 * 24 * 60 * 60 * 1000;
 
 /**
- * The poll row and events only change every 5 minutes (or on a webhook), but
- * the engine ticks every 15 s. Re-reading them each tick cost ~2-3 GB of
- * Supabase egress a month, so the raw rows are kept for 3 minutes per env.
- * The overview itself is recomputed every tick against ctx.now, so ages and
- * "not polled for 15 min" stay exact; only fresh data can lag by <=3 min.
+ * The poll row and events only change on a poll (every 6 h, or a minute after
+ * a webhook) or when a webhook arrives, but the engine ticks every 15 s.
+ * Re-reading them each tick cost ~2-3 GB of Supabase egress a month, so the
+ * raw rows are kept for 3 minutes per env. The overview itself is recomputed
+ * every tick against ctx.now, so backup ages stay exact; new data can lag by
+ * at most 3 minutes.
  */
 const RAW_TTL_MS = 3 * 60 * 1000;
 
@@ -207,11 +208,14 @@ export function backupRules(overrides: RuleOverrides): AlertRule[] {
         async evaluate(ctx, t) {
           const o = await overview(ctx);
           if (!o) return [];
+          // Two missed polls plus slack, never less than the knob: at a 6 h
+          // poll interval "15 min without a poll" is just the normal gap.
+          const limitMin = Math.max(t.crit, (2 * o.pollSeconds) / 60 + 10);
           const sources = [{ name: "pbs", health: o.pbs.health }, ...o.hosts.map((h) => ({ name: h.name, health: h.health }))];
           const breaches: Breach[] = [];
           for (const { name, health } of sources) {
             const silentMin = health.okAt ? (ctx.now.getTime() - Date.parse(health.okAt)) / 60_000 : Infinity;
-            if (silentMin <= t.crit) continue;
+            if (silentMin <= limitMin) continue;
             breaches.push({
               entityId: name,
               severity: "crit",

@@ -10,6 +10,7 @@ Status: **built 2026-09-28** on `feat/backup-monitoring` (phases 1–5). Tested 
 - Thresholds as proposed below.
 - Alerts are normal `packages/alerting` rules: shown in `/alerts`, overridable in `/alerts/rules`, delivered through `/alerts/notifications`. No extra Discord log-channel events in v1.
 - TLS: PBS gets a real certificate from `tailscale cert`. No pinning code.
+- Poll interval: every **6 h** (`BACKUP_POLL_SECONDS`, default 21600), plus a poll a minute after each webhook and the "Poll now" button. Staleness and "not verified yet" checks scale with the interval (decided 2026-09-29).
 - Per-VM webhook parsing: TBD. v1 parses the default text, falls back to job-level status, and gets reworked once real samples exist.
 
 ## Context
@@ -58,7 +59,7 @@ pve  ──webhook (vzdump)──┼──► rest-api POST /webhooks/proxmox �
 PBS  ──webhook (gc/verify/prune)┘                                        │
                                                                          ▼
 PBS API ─┐
-pve1 API ─┼─◄─poll every 5 min── rest-api backup poller ──► backup_poll_state (Supabase)
+pve1 API ─┼─◄─poll every 6 h ─── rest-api backup poller ──► backup_poll_state (Supabase)
 pve API  ─┘   (over Tailscale)
                                                                          │
                          status = pure function(poll state, events, now) ◄┘
@@ -169,7 +170,7 @@ Per VM:
 | warning | Snapshot count below **3** (prune keeps last 3 + dailies, so fewer means missed runs) |
 | warning | Webhook said success but no matching snapshot after 1 poll |
 | error | VM is in a discovered job, but the job is disabled |
-| unknown | No successful poll in **15 min** |
+| unknown | No successful poll in **15 min**, or two poll intervals + 10 min when polling less often |
 | ok | None of the above |
 
 Overall / PBS:
@@ -183,8 +184,8 @@ Overall / PBS:
 | error | `monthly-reverify` last run failed |
 | warning | `monthly-reverify` last run older than **33 days** |
 | warning | No webhook from a host for **26 h** while its VMs exist (host or webhook path silent) |
-| error | PBS poll failing for **15 min** |
-| error | A PVE host API unreachable for **15 min** (only that host's VMs go `unknown`) |
+| error | PBS poll failing for **15 min** (scaled to two poll intervals + 10 min) |
+| error | A PVE host API unreachable for **15 min** (scaled like above; only that host's VMs go `unknown`) |
 | error | A vzdump task failed in the last 48 h (from the PVE task list, even without a webhook) |
 
 Overall status = worst of all checks (same as `/supabase`).
@@ -385,7 +386,7 @@ Same as every other alert: rules in `packages/alerting`, group `backup`, listed 
   - `backup.job_disabled` — a discovered PVE job is disabled
   - `backup.datastore_usage` — warn 80 % / crit 90 %
   - `backup.pbs_jobs` — GC / prune / re-verify failed or overdue
-  - `backup.source_unreachable` — PBS or a PVE host not polled for 15 min
+  - `backup.source_unreachable` — PBS or a PVE host not polled for 15 min (scaled to the poll interval)
 - Resolves by itself once healthy, like the other rules.
 
 Later, optional: Influx `pbs_*` points for long-range charts, Discord log-channel events, weekly summary.

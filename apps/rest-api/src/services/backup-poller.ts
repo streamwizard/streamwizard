@@ -79,6 +79,7 @@ export function createBackupPoller(deps: BackupPollerDeps) {
       version: 1,
       datastore: deps.datastore,
       namespace: deps.namespace,
+      pollSeconds: deps.intervalSeconds,
       pbs:
         pbsResult!.status === "fulfilled"
           ? { data: pbsResult!.value.data, health: nextHealth(prev?.pbs.health, nowIso, { ok: true, warnings: pbsResult!.value.warnings }) }

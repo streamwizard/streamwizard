@@ -4,7 +4,7 @@ import type { BackupSeries } from "@/lib/backup-series";
 
 const ENDPOINT = "/api/metrics/backups";
 
-/** History from Influx: one point per poll (5 min), following the range selector. */
+/** History from Influx: one point per poll (every 6 h, and a minute after each webhook), following the range selector. */
 export function BackupCharts({ initial }: { initial: BackupSeries }) {
   return (
     <div className="grid gap-4 lg:grid-cols-3">
