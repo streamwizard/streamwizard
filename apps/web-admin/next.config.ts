@@ -7,7 +7,7 @@ const turbopackRoot = path.resolve(__dirname, "../..");
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core", "@repo/metrics", "@repo/alerting"],
+  transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core", "@repo/metrics", "@repo/alerting", "@repo/backups"],
   turbopack: {
     root: turbopackRoot,
   },
