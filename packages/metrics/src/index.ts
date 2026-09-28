@@ -5,6 +5,7 @@ export { trackHttpRequest, metricsMiddleware } from "./http-metrics";
 export { trackSupabaseQuery } from "./supabase-metrics";
 export { trackEventSubReceived, trackEventSubRevocation, trackEventSubConnection } from "./eventsub-metrics";
 export { trackAutoSwitcherEvent } from "./auto-switcher-metrics";
+export { trackBackupPoll, type BackupPollMetrics } from "./backup-metrics";
 
 // Query (read) exports — server-only, InfluxDB read path
 export { runFluxQuery } from "./query-client";
@@ -15,3 +16,4 @@ export * from "./queries/system-queries";
 export * from "./queries/obs-queries";
 export * from "./queries/alert-queries";
 export * from "./queries/supabase-platform-queries";
+export * from "./queries/backup-queries";

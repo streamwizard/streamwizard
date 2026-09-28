@@ -19,3 +19,16 @@ export function formatElapsed(ms: number): string {
   const h = Math.floor(m / 60);
   return `${h}h ${m % 60}m`;
 }
+
+/** Binary units: "4.7 GiB". */
+export function formatBytes(bytes: number | null | undefined): string {
+  if (bytes == null) return "—";
+  const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit++;
+  }
+  return `${value >= 100 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`;
+}
