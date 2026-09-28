@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { LinkedStreamWizardAccount } from "@repo/supabase/queries/discord";
 import type { DiscordTicket } from "@repo/supabase/queries/tickets";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
@@ -166,7 +167,9 @@ export function TicketDetails({
                   <img src={linkedAccount.twitchAvatarUrl} alt="" className="size-8 rounded-full" />
                 )}
                 <span className="min-w-0">
-                  <span className="block truncate font-medium">{linkedAccount.name}</span>
+                  <Link href={`/users/${linkedAccount.userId}`} className="block truncate font-medium hover:underline">
+                    {linkedAccount.name}
+                  </Link>
                   <a
                     href={`mailto:${linkedAccount.email}`}
                     className="block truncate text-xs text-muted-foreground hover:underline"

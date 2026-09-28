@@ -230,3 +230,14 @@ export async function getPlanWithProduct(client: DBClient, planId: string) {
   if (error) throw error;
   return data;
 }
+
+/** The product/plan catalog for grant pickers, plans in their sort order. */
+export async function listProductsWithPlans(client: DBClient) {
+  const { data, error } = await client.from("products").select("id, name, plans(id, name, sort_order)").order("id");
+  if (error) throw error;
+  return (data ?? []).map((product) => ({
+    id: product.id,
+    name: product.name,
+    plans: [...(product.plans ?? [])].sort((a, b) => a.sort_order - b.sort_order).map(({ id, name }) => ({ id, name })),
+  }));
+}

@@ -42,6 +42,7 @@ const PAGE_SIZE = 25;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const DESTRUCTIVE = new Set([
   "user.deleted",
+  "user.banned",
   "discord.unlinked",
   "subscription.revoked",
   "eventsub.connection_lost",

@@ -53,9 +53,14 @@ export async function getTwitchUsernameByUserId(client: DBClient, userId: string
  * Wipes every row the user owns (see the delete_user_data function) and
  * returns the auth user id so the caller can delete the account itself.
  * Null data means no such Twitch user, already gone or never registered.
+ * `actorUserId` names the admin in the user.deleted event (reason "admin").
  */
-export async function deleteUserData(client: DBClient, twitchUserId: string, reason?: string) {
-  return client.rpc("delete_user_data", { p_twitch_user_id: twitchUserId, ...(reason ? { p_reason: reason } : {}) });
+export async function deleteUserData(client: DBClient, twitchUserId: string, reason?: string, actorUserId?: string) {
+  return client.rpc("delete_user_data", {
+    p_twitch_user_id: twitchUserId,
+    ...(reason ? { p_reason: reason } : {}),
+    ...(actorUserId ? { p_actor_user_id: actorUserId } : {}),
+  });
 }
 
 export async function getTwitchIntegrationByUserId(client: DBClient, userId: string) {

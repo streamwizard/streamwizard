@@ -10,7 +10,16 @@ import { useRouter } from "next/navigation";
  * only the fields that hold a value, so URLs stay shareable. Without
  * JavaScript it degrades to a plain form submit.
  */
-export function TicketFiltersForm({ children, className }: { children: React.ReactNode; className?: string }) {
+export function TicketFiltersForm({
+  children,
+  className,
+  action = "/discord/tickets",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /** The list page the filters belong to; /users reuses this form. */
+  action?: string;
+}) {
   const router = useRouter();
 
   const onSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -31,7 +40,7 @@ export function TicketFiltersForm({ children, className }: { children: React.Rea
   };
 
   return (
-    <form method="get" action="/discord/tickets" onSubmit={onSubmit} onChange={onChange} className={className}>
+    <form method="get" action={action} onSubmit={onSubmit} onChange={onChange} className={className}>
       {children}
     </form>
   );

@@ -4,6 +4,7 @@ import {
   BellRing,
   Bot,
   Cloud,
+  CreditCard,
   Cpu,
   Database,
   DatabaseBackup,
@@ -83,7 +84,8 @@ export const navGroups: NavGroup[] = [
   {
     label: "Platform",
     items: [
-      { href: "/subscriptions", label: "Subscriptions", icon: Users },
+      { href: "/users", label: "Users", icon: Users },
+      { href: "/subscriptions", label: "Subscriptions", icon: CreditCard },
       { href: "/widget-library", label: "Widget Review", icon: Package },
     ],
   },
