@@ -1,0 +1,76 @@
+---
+title: "Chat box"
+description: "Your Twitch chat on stream, with badges, 7TV/BTTV/FFZ emotes, and deleted messages gone for real."
+---
+
+The chat box puts your Twitch chat on your overlay. No extra login, no
+third-party URL: it reads the same chat StreamWizard already sees.
+
+## Add it
+
+In the overlay editor: **Widgets → Alerts & chat → Chat box**. Drag it where
+you want it and resize it. The box is the area chat fills; older messages
+drop off the edge.
+
+## See it before you go live
+
+An empty chat box shows a hint on the canvas. To fill it:
+
+- Click **Demo**, then start **Chat messages** under **Simulate**. Fake
+  chatters keep talking until you stop it.
+- Or hit **Send a test message** at the bottom of the chat box settings.
+- Or just type in your own Twitch chat. Real messages show up in the editor
+  too.
+
+## Look
+
+Pick a starting look, then tweak it:
+
+- **Plain**: text straight on your stream, with a shadow so it stays readable.
+- **Bubbles**: each message on its own rounded background.
+- **Card**: name on top, message below, full width.
+
+Then set the font, size, text color, and whether names use each chatter's
+Twitch color or one color for everyone. Bubbles and Card also get a
+background color, opacity, and corner radius.
+
+## Messages
+
+- **Layout**: vertical (a normal chat column) or horizontal (one line per
+  message, side by side, like a ticker). Switching to horizontal shrinks the
+  box to one row and keeps its bottom edge where it was; switching back
+  restores a normal column. To make the strip longer, change **Frame width**
+  under **Scale & crop**. Dragging the corners scales the whole box, text
+  included.
+- **Newest message**: at the bottom (like Twitch) or at the top. In horizontal
+  layout: on the right or on the left.
+- **Max on screen**: how many messages stay up at once.
+- **Fade out**: messages disappear after this many seconds. Off keeps them
+  up until newer ones push them out.
+- **Animate in**: fade, slide up, slide from either side, pop, or none.
+- **Animate out**: fade, slide away, shrink, or none. Plays when a message
+  fades out, so turn on **Fade out** to use it.
+- **Slide messages along**: when a new message comes in, the others glide to
+  their new spot instead of jumping. On by default.
+- **Badges** and **profile pictures**: on or off.
+
+## What gets hidden
+
+- **!commands** are hidden by default, so `!uptime` spam stays off stream.
+- **Bots**: StreamWizardBot, Nightbot, StreamElements, Streamlabs, Moobot, Fossabot, WizeBot
+  and Sery_Bot are hidden out of the box. Add or remove usernames, one per
+  line.
+- **Deleted messages** disappear from the overlay the moment a mod deletes
+  them. Timeouts and bans remove that chatter's messages, and clearing chat
+  clears the box.
+
+## Subs, raids and announcements
+
+Twitch posts subs, resubs, gift subs, raids and announcements in chat. Each
+type has its own switch, so you can keep raids and drop the rest. Notices
+relayed from another channel during shared chat never show.
+
+## Emotes
+
+Twitch emotes and cheermotes always work. Your channel's 7TV, BTTV and FFZ
+sets load too, and you can switch each provider off.

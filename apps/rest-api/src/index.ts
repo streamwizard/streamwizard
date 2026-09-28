@@ -15,6 +15,8 @@ import { handleTwitchEventSub } from "./routes/twitch-eventsub";
 import { viewerCountPoller } from "./services/viewer-count-poller";
 import { twitchTokenValidator } from "./services/twitch-token-validator";
 import { liveRoleSweeper } from "./services/discord-live-role-sweeper";
+import { backupPoller } from "./services/backup-poller";
+import { internalBackups, proxmoxWebhook } from "./routes/backups";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
 import nodes from "./routes/nodes";
 import ingestNodes from "./routes/ingest-nodes";
@@ -90,6 +92,14 @@ app.post(
   handleTwitchEventSub,
 );
 
+// Proxmox VE / PBS notification webhooks (backup monitoring). Token header
+// auth inside the route; 404 unless configured (prod only).
+app.route("/webhooks/proxmox", proxmoxWebhook);
+
+// Backup status for web-admin's server side (bearer secret). Before the
+// "/api/*" CORS + Supabase middleware: no browser and no user session here.
+app.route("/internal/backups", internalBackups);
+
 // Node claim handshake -- called by obs-instance-manager's install script
 // from a fresh, untrusted VM with a one-time token, no Supabase session
 // involved. Registered before the cookie/CORS-oriented "/api/*" middleware
@@ -150,4 +160,9 @@ twitchTokenValidator.start();
 // The Discord live role is event-driven; this pass fixes what a restart or a
 // settings change in web-admin left behind. No-op without the Discord env.
 liveRoleSweeper.start();
+// Proxmox backup monitoring; null (off) unless the PBS env vars are set.
+if (backupPoller) {
+  backupPoller.start();
+  console.log("[backup-poller] active");
+}
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

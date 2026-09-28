@@ -9,6 +9,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@repo/backups": "workspace:*",
     "@repo/discord-api": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/metrics": "workspace:*",

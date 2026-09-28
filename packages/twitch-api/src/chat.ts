@@ -41,6 +41,14 @@ export interface SendChatMessageResponse {
   }[];
 }
 
+/** One of the channel's own emotes (sub, follower and bits tier emotes). */
+export interface TwitchChannelEmote {
+  id: string;
+  name: string;
+  emote_type: string;
+  format: string[];
+}
+
 export class TwitchChatClient extends TwitchApiBaseClient {
   constructor(broadcaster_id: string | null = null) {
     super(broadcaster_id);
@@ -89,6 +97,23 @@ export class TwitchChatClient extends TwitchApiBaseClient {
     const response = await this.appApi().get("/chat/badges", {
       params: { broadcaster_id: this.broadcaster_id },
     });
+    return response.data.data ?? [];
+  }
+
+  /**
+   * The channel's own emotes: sub tiers, follower emotes and bits tiers.
+   * App token: public data, no scopes.
+   */
+  async getChannelEmotes(): Promise<TwitchChannelEmote[]> {
+    const response = await this.appApi().get("/chat/emotes", {
+      params: { broadcaster_id: this.broadcaster_id },
+    });
+    return response.data.data ?? [];
+  }
+
+  /** Twitch's global emotes (Kappa, LUL, ...). App token: public data, no scopes. */
+  async getGlobalEmotes(): Promise<TwitchChannelEmote[]> {
+    const response = await this.appApi().get("/chat/emotes/global");
     return response.data.data ?? [];
   }
 

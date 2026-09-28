@@ -35,4 +35,10 @@ describe("missingTwitchScopes", () => {
   it("ignores scopes outside the feature set", () => {
     expect(missingTwitchScopes(["channel:read:stream_key"], "cloud_obs")).toEqual([]);
   });
+
+  it("reports base scopes a token from before they were added lacks", () => {
+    const old = TWITCH_SCOPE_SETS.base.filter((scope) => scope !== "channel:read:goals");
+    expect(missingTwitchScopes(old, "base")).toEqual(["channel:read:goals"]);
+    expect(missingTwitchScopes([...TWITCH_SCOPE_SETS.base], "base")).toEqual([]);
+  });
 });

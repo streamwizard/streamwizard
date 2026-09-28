@@ -4,10 +4,10 @@ import CreateEventSubSubscription from "./create-event-subscription";
 import getSubscriptionFromTwitch from "./get-subscriptions-from-twitch";
 import NeededEventSubscriptions from "./needed-event-subscriptions";
 
-export default async function checkEventSubscriptions(twitchUserId: string) {
+export default async function checkEventSubscriptions(twitchUserId: string, grantedScopes: readonly string[] | null) {
   try {
     const currentSubscriptions = await getSubscriptionFromTwitch(twitchUserId);
-    const neededSubscriptions = await NeededEventSubscriptions(twitchUserId);
+    const neededSubscriptions = await NeededEventSubscriptions(twitchUserId, grantedScopes);
 
     const missingSubscriptions = neededSubscriptions.filter((needed) => {
       const isMet = currentSubscriptions.some((current) => {

@@ -21,6 +21,14 @@ export { resolveUserColor } from "./components/chat/user-color";
 export { ChatMessage, ChatTokens, type ChatMessageProps } from "./components/chat/ChatMessage";
 export { ChatNotice, type ChatNoticeProps } from "./components/chat/ChatNotice";
 export {
+  CHAT_ASSET_PROVIDERS,
+  createChatAssetFetcher,
+  useChatAssets,
+  type ChatAssetFetcher,
+  type ChatAssetResource,
+  type UseChatAssetsOptions,
+} from "./components/chat/use-chat-assets";
+export {
   EMPTY_CHAT_ASSETS,
   type BadgeImage,
   type BadgeMap,

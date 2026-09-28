@@ -22,7 +22,7 @@ import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-stri
 export const metadata: Metadata = {
   title: "Stream overlays and alerts",
   description:
-    "Alert box, clips rotator, countdowns and GPS widgets in one browser source. Install widgets other streamers built, or write your own. Free, alerts included.",
+    "Alert box, chat box, clips, countdowns and GPS widgets in one browser source. Install widgets other streamers built, or write your own. Free, alerts included.",
   alternates: { canonical: absoluteUrl("/overlays") },
 };
 
@@ -40,7 +40,7 @@ export default function OverlaysPage() {
               One browser source. <br /> Everything you put on stream.
             </h1>
             <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-              Alerts, clips, countdowns, GPS widgets, and whatever you install from the library. Build the scene here,
+              Alerts, chat, clips, countdowns, GPS widgets, and whatever you install from the library. Build the scene here,
               paste one URL into OBS, and change it without opening OBS again.
             </p>
           </div>

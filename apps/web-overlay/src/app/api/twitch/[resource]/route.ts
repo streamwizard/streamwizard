@@ -3,12 +3,18 @@ import { reportError } from "@repo/sentry";
 import {
   isThirdPartyProvider,
   liveFollowerTotal,
+  liveGoals,
+  livePoll,
+  liveAdSchedule,
+  liveCredits,
+  liveLabels,
   liveStream,
   liveSubscriberTotal,
   resolveBadges,
   resolveCheermotes,
   resolveGame,
   resolveThirdPartyEmotes,
+  resolveChannelEmotes,
   resolveUsers,
 } from "@repo/twitch-assets";
 import {
@@ -32,17 +38,22 @@ import {
  *   Assets (badges, cheermotes, users, game, emotes) — Supabase-cached, and
  *   safe to let the browser hold briefly. A stale badge is an old picture.
  *
- *   Live counters (followers, subscribers, stream) — `no-store`, never cached
+ *   Live counters (followers, subscribers, stream, goals, poll, ads, labels) — `no-store`, never cached
  *   anywhere. A goal widget refreshing mid-stream must come back with the true
  *   number, not the one that was true when some cache filled.
+ *
+ *   Credits sit between the two: no-store while the stream runs, a few minutes
+ *   once it has ended (nothing changes after that). The handler picks per call.
  */
 
 // Asset responses may sit in the browser for a bit; the server-side TTLs are far
 // longer, so this only smooths repeat calls within a single page load.
 const ASSET_CACHE_CONTROL = "private, max-age=60";
 const LIVE_CACHE_CONTROL = "no-store";
+/** Credits for a finished stream: the roll-up can't change any more. */
+const ENDED_CREDITS_CACHE_CONTROL = "private, max-age=300";
 
-const LIVE_RESOURCES = new Set(["followers", "subscribers", "stream"]);
+const LIVE_RESOURCES = new Set(["followers", "subscribers", "stream", "goals", "poll", "ads", "labels"]);
 
 type Resource =
   | "badges"
@@ -52,7 +63,12 @@ type Resource =
   | "emotes"
   | "followers"
   | "subscribers"
-  | "stream";
+  | "stream"
+  | "goals"
+  | "poll"
+  | "ads"
+  | "credits"
+  | "labels";
 
 const RESOURCES = new Set<Resource>([
   "badges",
@@ -63,6 +79,11 @@ const RESOURCES = new Set<Resource>([
   "followers",
   "subscribers",
   "stream",
+  "goals",
+  "poll",
+  "ads",
+  "credits",
+  "labels",
 ]);
 
 function isResource(value: string): value is Resource {
@@ -103,13 +124,13 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/twitch/[reso
     );
   }
 
-  const cacheControl = LIVE_RESOURCES.has(resource) ? LIVE_CACHE_CONTROL : ASSET_CACHE_CONTROL;
-
   try {
     const body = await handle(resource, broadcasterId, req.nextUrl.searchParams);
     if ("error" in body) {
       return NextResponse.json(body, { status: body.status ?? 400, headers });
     }
+    const cacheControl =
+      body.cacheControl ?? (LIVE_RESOURCES.has(resource) ? LIVE_CACHE_CONTROL : ASSET_CACHE_CONTROL);
     return NextResponse.json(body.data, {
       headers: { ...headers, "Cache-Control": cacheControl },
     });
@@ -119,7 +140,7 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/twitch/[reso
   }
 }
 
-type Handled = { data: unknown } | { error: string; status?: number };
+type Handled = { data: unknown; cacheControl?: string } | { error: string; status?: number };
 
 async function handle(
   resource: Resource,
@@ -155,6 +176,10 @@ async function handle(
 
     case "emotes": {
       const provider = params.get("provider")?.trim() ?? "";
+      // The channel's own Twitch emotes, for the emote widget's event bursts.
+      if (provider === "twitch") {
+        return { data: { emotes: await resolveChannelEmotes(broadcasterId) } };
+      }
       if (!isThirdPartyProvider(provider)) {
         return { error: "Unknown provider", status: 400 };
       }
@@ -169,5 +194,27 @@ async function handle(
 
     case "stream":
       return { data: { stream: await liveStream(broadcasterId) } };
+
+    case "goals":
+      return { data: await liveGoals(broadcasterId) };
+
+    case "poll":
+      return { data: await livePoll(broadcasterId) };
+
+    case "ads":
+      return { data: await liveAdSchedule(broadcasterId) };
+
+    case "credits": {
+      // `stream` picks one of the broadcaster's own streams; the query is
+      // scoped by broadcaster underneath, so a stranger's id comes back 404.
+      const stream = params.get("stream")?.trim() || undefined;
+      if (stream && !/^\d+$/.test(stream)) return { error: "Stream must be a numeric stream id", status: 400 };
+      const data = await liveCredits(broadcasterId, { streamId: stream, avatars: params.get("avatars") === "1" });
+      if (stream && data.missing.stream) return { error: "Stream not found", status: 404 };
+      return { data, cacheControl: data.is_live ? LIVE_CACHE_CONTROL : ENDED_CREDITS_CACHE_CONTROL };
+    }
+
+    case "labels":
+      return { data: await liveLabels(broadcasterId) };
   }
 }

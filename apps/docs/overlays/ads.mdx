@@ -1,0 +1,72 @@
+---
+title: "Ads"
+description: "Warn viewers before an ad break and count down while it runs."
+---
+
+The ad widget tells your viewers what's happening with ads. A few minutes
+before an ad, it gives them a heads-up. While the ads run, it counts down
+to when you're back. After the break, it says thanks. The rest of the time
+it stays out of sight.
+
+## Add it
+
+In the overlay editor, open **Widgets → Ads** and add **Ads**.
+
+## Where the timing comes from
+
+- **Before an ad:** from your ad schedule in Twitch's Ads Manager. The widget
+  checks it every minute, and every 15 seconds once an ad is close. If you
+  snooze an ad, the countdown moves within about 15 seconds.
+- **During the break:** Twitch tells StreamWizard the moment an ad break
+  starts and how long it runs. The countdown starts right then, for scheduled
+  ads and ones you run yourself.
+
+Twitch only schedules ads while you're live and have ads switched on in Ads
+Manager. **Open Ads Manager on Twitch** in the widget settings takes you
+there. If no ad is scheduled, there's no heads-up, but ad breaks still show
+when they start.
+
+If the settings show a **Connect Twitch** button, StreamWizard can't read
+your ad schedule yet. One trip to Twitch and you're set.
+
+## Designs
+
+| Design | What it looks like | Good for |
+|---|---|---|
+| **Pill** | A small badge with the countdown and a thin line running down | Corners |
+| **Bar** | The line of text over a bar that runs down | Under your camera, tickers |
+| **Card** | A bigger card with the countdown and a message for viewers | A small "be right back" screen during ads |
+| **Ring** | A ring that runs down around the time left | Next to your camera |
+
+In the last 10 seconds before an ad, the accent pulses so the heads-up is
+hard to miss.
+
+## See it before you go live
+
+The settings have three test buttons:
+
+- **Ad coming** shows the heads-up. It plays on the editor canvas only:
+  Twitch has no event for an upcoming ad, so there's nothing to send to your
+  live overlay.
+- **30 s break** and **60 s break** play an ad break. They follow the demo
+  bar's Local and Live switch.
+
+The same buttons sit in the **Ads** row of the editor's **Demo** bar. After a
+test, **Back to your Twitch schedule** puts the real schedule back.
+
+## Settings
+
+- **When**: show it before an ad (and how many minutes before, from 30
+  seconds to 10 minutes), during the break, and a welcome back for 5 seconds
+  after.
+- **Text**: the line before an ad, during the break and after it. `{time}`
+  becomes the countdown, like `1:30`. The Card also has a message line for
+  the break.
+- **Colors**: accent, background, text, background opacity and corner radius.
+- **Font**: font, weight, size, and a shadow that keeps it readable over
+  bright games.
+- **Motion**: how it appears and hides.
+
+If reduced motion is switched on in the system settings of the computer
+running OBS, the widget plays it still: no pulse, and the countdown line
+jumps instead of running down smoothly.

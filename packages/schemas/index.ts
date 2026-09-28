@@ -24,3 +24,5 @@ export * from "./src/widget-demo-events";
 export * from "./src/widget-simulator-steps";
 export * from "./src/widget-editor-declarations";
 export * from "./src/widget-editor-lib-declarations";
+export * from "./src/credits";
+export * from "./src/stream-labels";

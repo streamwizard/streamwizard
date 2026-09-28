@@ -39,6 +39,8 @@ export const TWITCH_SCOPE_SETS = {
     "channel:read:redemptions",
     "channel:read:polls",
     "moderator:manage:shoutouts",
+    // Goal widgets: Get Creator Goals and channel.goal.*.
+    "channel:read:goals",
     // Bot variables and actions: Get Chatters, Send Chat Announcement.
     "moderator:read:chatters",
     "moderator:manage:announcements",
@@ -82,14 +84,16 @@ export function twitchScopesFor(features: readonly TwitchScopeFeature[]): Twitch
 }
 
 /**
- * Which of a feature's scopes the stored token lacks.
+ * Which of a feature's scopes (or base's) the stored token lacks. Base grows
+ * too, and a token from before a base scope was added lacks it until the user
+ * signs in again.
  *
  * `granted` is null for an account whose token has not been validated since
  * the scope column was added. Those tokens were issued under the old sign-in,
  * which asked for everything, so null reads as "nothing missing" rather than
  * nagging every existing user until the hourly sweep reaches them.
  */
-export function missingTwitchScopes(granted: readonly string[] | null | undefined, feature: TwitchScopeFeature): TwitchScope[] {
+export function missingTwitchScopes(granted: readonly string[] | null | undefined, feature: TwitchScopeFeature | "base"): TwitchScope[] {
   if (granted == null) return [];
   const have = new Set(granted);
   return TWITCH_SCOPE_SETS[feature].filter((scope) => !have.has(scope));

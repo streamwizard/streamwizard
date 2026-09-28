@@ -6,6 +6,7 @@ import {
   Cloud,
   Cpu,
   Database,
+  DatabaseBackup,
   DoorOpen,
   Globe,
   History,
@@ -75,6 +76,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/obs", label: "OBS Nodes", icon: Cpu },
       { href: "/ingest", label: "Ingest Servers", icon: Server },
+      { href: "/backups", label: "Backups", icon: DatabaseBackup },
     ],
   },
   {
