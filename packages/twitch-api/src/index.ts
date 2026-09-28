@@ -7,6 +7,17 @@ export type { TwitchCheermote, TwitchCheermoteTier } from "./bits";
 export type { CreatorGoal, CreatorGoalType } from "./goals";
 export type { AdSchedule } from "./ads";
 export type { HelixPoll, HelixPollChoice, HelixPollStatus } from "./polls";
+export type {
+  Conduit,
+  ConduitShard,
+  ConduitShardError,
+  ConduitShardStatus,
+  EventSubSubscription,
+  SubscriptionsPage,
+  SubscriptionsPageOptions,
+  Transport,
+  UpdateShardsResult,
+} from "./eventsub";
 export { STREAMWIZARD_BOT_USER_ID } from "./chat";
 export { validateTwitchToken, type TwitchTokenValidation } from "./auth";
 

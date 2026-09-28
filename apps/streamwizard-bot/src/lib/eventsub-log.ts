@@ -20,8 +20,10 @@ function errorText(error: unknown): string {
  * the first session after boot, the session after an outage (downtimeMs set),
  * and the session Twitch moved us to (no gap, after session_reconnect_requested).
  */
-export function createEventSubLogger(): (event: EventSubLifecycleEvent) => void {
+export function createEventSubLogger(shardId?: string): (event: EventSubLifecycleEvent) => void {
   let booted = false;
+  // Every row names the process and, once the bot runs shards, which one.
+  const origin = shardId !== undefined ? { service: SERVICE, shard_id: shardId } : { service: SERVICE };
   let migrating = false;
   let keepaliveSilentMs: number | null = null;
 
@@ -42,7 +44,7 @@ export function createEventSubLogger(): (event: EventSubLifecycleEvent) => void 
         migrating = false;
         emit({
           type: "eventsub.connection_lost",
-          payload: { service: SERVICE, reason: event.reason, close_code: event.code, keepalive_silent_ms: silentMs },
+          payload: { ...origin, reason: event.reason, close_code: event.code, keepalive_silent_ms: silentMs },
         });
         break;
       }
@@ -57,7 +59,7 @@ export function createEventSubLogger(): (event: EventSubLifecycleEvent) => void 
           emit({
             type: "eventsub.reconnected",
             payload: {
-              service: SERVICE,
+              ...origin,
               session_id: event.sessionId,
               downtime_ms: event.downtimeMs,
               attempts: event.attempt,
@@ -65,9 +67,9 @@ export function createEventSubLogger(): (event: EventSubLifecycleEvent) => void 
           });
         } else if (migrating) {
           migrating = false;
-          emit({ type: "eventsub.session_migrated", payload: { service: SERVICE, session_id: event.sessionId } });
+          emit({ type: "eventsub.session_migrated", payload: { ...origin, session_id: event.sessionId } });
         } else if (!booted) {
-          emit({ type: "eventsub.connected", payload: { service: SERVICE, session_id: event.sessionId } });
+          emit({ type: "eventsub.connected", payload: { ...origin, session_id: event.sessionId } });
         }
         booted = true;
         break;
@@ -77,7 +79,7 @@ export function createEventSubLogger(): (event: EventSubLifecycleEvent) => void 
         emit({
           type: "eventsub.subscription_revoked",
           payload: {
-            service: SERVICE,
+            ...origin,
             subscription_type: event.subscriptionType,
             status: event.status,
             reason: event.reason,
@@ -86,7 +88,7 @@ export function createEventSubLogger(): (event: EventSubLifecycleEvent) => void 
         break;
 
       case "conduit_update_failed":
-        emit({ type: "eventsub.conduit_update_failed", payload: { service: SERVICE, error: errorText(event.error) } });
+        emit({ type: "eventsub.conduit_update_failed", payload: { ...origin, error: errorText(event.error) } });
         break;
 
       case "reconnect_scheduled":

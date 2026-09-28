@@ -8,6 +8,8 @@ export const DASHBOARD_COOKIE = {
   bandwidthUnit: "monitor.bandwidthUnit",
   timeRange: "monitor.timeRange",
   refreshInterval: "monitor.refreshInterval",
+  /** /eventsub shard grid: "grid" (tiles or strip by shard count) or "heatmap". */
+  eventsubShardView: "monitor.eventsubShardView",
 } as const;
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;

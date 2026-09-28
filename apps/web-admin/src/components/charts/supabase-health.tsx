@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { StatCard } from "@/components/widgets/stat-card";
 import { StatusIndicator, type IndicatorStatus } from "@/components/widgets/status-indicator";
 import { useMetricsPoll } from "./chart-kit";
+import { BANNER_BORDER, SEVERITY, TILE_TONE, band, worstStatus } from "./health-kit";
 
 // Tile and banner colours use the same numbers as the alert rules (code
 // defaults — a per-rule override on /alerts/rules isn't reflected here).
@@ -41,16 +42,6 @@ interface Check {
   hint: string;
   /** Short text for the banner when the check fails, e.g. "CPU 91% > 80%". */
   problem: string;
-}
-
-type Band = { warn: number; crit: number; direction: "above" | "below" };
-
-function band(value: number | null, b: Band): IndicatorStatus {
-  if (value === null) return "muted";
-  const over = (limit: number) => (b.direction === "above" ? value > limit : value < limit);
-  if (over(b.crit)) return "crit";
-  if (over(b.warn)) return "warn";
-  return "ok";
 }
 
 const pct = (v: number | null, digits = 1) => (v === null ? "—" : `${v.toFixed(digits)}%`);
@@ -124,17 +115,6 @@ function buildChecks(s: SupabasePlatformSnapshot | null): Check[] {
   ];
 }
 
-const SEVERITY: Record<IndicatorStatus, number> = { muted: 0, ok: 1, warn: 2, crit: 3 };
-
-const TILE_TONE = { ok: "default", muted: "default", warn: "warning", crit: "danger" } as const;
-
-const BANNER_BORDER: Record<IndicatorStatus, string> = {
-  ok: "border-emerald-500/40",
-  warn: "border-amber-500/50",
-  crit: "border-red-500/60",
-  muted: "",
-};
-
 /** Minutes since the last scrape, ticking every 30 s. null until mounted so
  * server and client render the same markup. */
 function useScrapeAge(lastScrape: string | null | undefined): number | null {
@@ -165,10 +145,7 @@ export function SupabaseHealthBanner({ initialSnapshot }: { initialSnapshot: Sup
 
   const stale = ageMin !== null && ageMin > SCRAPE_STALE_MIN;
   const staleStatus: IndicatorStatus = ageMin !== null && ageMin > SUPABASE_SCRAPE_SILENT_MIN ? "crit" : "warn";
-  const worst = checks.reduce<IndicatorStatus>(
-    (acc, c) => (SEVERITY[c.status] > SEVERITY[acc] ? c.status : acc),
-    "muted",
-  );
+  const worst = worstStatus(checks.map((c) => c.status));
   const noData = !snapshot?.lastScrape;
   const status: IndicatorStatus = noData
     ? "muted"
