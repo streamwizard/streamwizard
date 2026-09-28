@@ -30,7 +30,7 @@ export function queryBackupDatastoreUsedPct(fluxRange = "24h", window = "1h", op
   return runFluxQuery(query, (row) => ({ time: row._time ?? "", value: Number(row._value) }));
 }
 
-async function queryBackupVmField(field: "age_s" | "size_bytes", fluxRange: string, window: string, opts?: QueryOpts) {
+async function queryBackupVmField(field: "age_s" | "ondisk_est_bytes", fluxRange: string, window: string, opts?: QueryOpts) {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
   const query = `
@@ -54,7 +54,7 @@ export async function queryBackupVmAgeHours(fluxRange = "24h", window = "1h", op
   return points.map((p) => ({ ...p, value: p.value / 3600 }));
 }
 
-/** Logical size of the newest backup per VM, in bytes. */
-export function queryBackupVmSizeBytes(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<BackupVmSeriesPoint[]> {
-  return queryBackupVmField("size_bytes", fluxRange, window, opts);
+/** Estimated bytes each VM's kept backups take on PBS (deduplicated, compressed). */
+export function queryBackupVmOnDiskBytes(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<BackupVmSeriesPoint[]> {
+  return queryBackupVmField("ondisk_est_bytes", fluxRange, window, opts);
 }
