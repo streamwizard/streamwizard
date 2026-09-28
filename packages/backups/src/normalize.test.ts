@@ -53,6 +53,15 @@ describe("toPbsSnapshots", () => {
     ]);
     expect(snap).toEqual({ type: "vm", id: "103", time: 1000, sizeBytes: 42, comment: "obs-node-1", verification: "failed", protected: false });
   });
+
+  it("marks a snapshot without a manifest as unfinished", () => {
+    const [running, done] = toPbsSnapshots([
+      { "backup-type": "vm", "backup-id": "102", "backup-time": 1, files: [{ filename: "qemu-server.conf.blob" }, { filename: "drive-scsi0.img.fidx" }] },
+      { "backup-type": "vm", "backup-id": "102", "backup-time": 0, files: [{ filename: "index.json.blob" }] },
+    ]);
+    expect(running!.unfinished).toBe(true);
+    expect(done!.unfinished).toBeUndefined();
+  });
 });
 
 describe("PVE discovery", () => {

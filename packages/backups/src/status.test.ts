@@ -177,4 +177,40 @@ describe("computeBackupOverview", () => {
     expect(o.vms).toEqual([]);
     expect(o.checks.find((c) => c.id === "vms")!.status).toBe("unknown");
   });
+
+  it("fills disk and deduplicated sizes from the poll data", () => {
+    const newest = { ...snap("100", 9), usage: { exclusiveBytes: 7, uploadedBytes: 42, uploadedRawBytes: 84 } };
+    const groupUsage = { logicalBytes: 300, uniqueBytes: 120, uniqueChunks: 3, sharedBytes: 20, compression: 0.5, onDiskEstBytes: 50 };
+    const namespace = { logicalBytes: 300, uniqueBytes: 120, uniqueChunks: 3, compression: 0.5, onDiskEstBytes: 60, dedupFactor: 2.5 };
+    const data = poll([newest, snap("100", 33), snap("100", 57)]);
+    data.pbs.data!.usage = { fingerprint: "3:x", computedAt: nowSec, groups: { "vm/100": groupUsage }, namespace };
+    data.pve.pve1!.data!.guests[0]!.disks = [
+      { key: "scsi0", sizeBytes: 8 * 1024 ** 3, backedUp: true },
+      { key: "scsi1", sizeBytes: 1024 ** 3, backedUp: false },
+    ];
+
+    const o = computeBackupOverview(data, [okEvent], NOW);
+    const vm = o.vms[0]!;
+    expect(vm.diskBytes).toBe(8 * 1024 ** 3);
+    expect(vm.disks).toHaveLength(2);
+    expect(vm.lastUploadedBytes).toBe(42);
+    expect(vm.usage).toEqual(groupUsage);
+    expect(o.namespaceUsage).toEqual(namespace);
+  });
+
+  it("leaves sizes empty before the usage pass ran", () => {
+    const o = computeBackupOverview(poll(threeGood), [okEvent], NOW);
+    expect(o.vms[0]).toMatchObject({ diskBytes: null, disks: null, lastUploadedBytes: null, usage: null });
+    expect(o.namespaceUsage).toBeNull();
+  });
+
+  it("never counts an unfinished snapshot as a backup", () => {
+    const running = { ...snap("100", 1), unfinished: true };
+    const o = computeBackupOverview(poll([running, ...threeGood]), [okEvent], NOW);
+    const vm = o.vms[0]!;
+    expect(vm.snapshotCount).toBe(3);
+    expect(vm.ageSeconds).toBe(9 * H);
+    expect(vm.reasons).toContain("Backup in progress since 2026-09-28 11:00 UTC");
+    expect(vm.status).toBe("ok");
+  });
 });
