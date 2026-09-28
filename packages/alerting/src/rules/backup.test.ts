@@ -1,7 +1,7 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import type { BackupPollData } from "@repo/backups";
 import type { EnvContext } from "../types";
-import { backupRules } from "./backup";
+import { backupRules, resetBackupRuleCache } from "./backup";
 
 const NOW = new Date("2026-09-28T12:00:00Z");
 const nowSec = NOW.getTime() / 1000;
@@ -40,7 +40,7 @@ function poll(): BackupPollData {
 }
 
 // Just enough of the Supabase client for the two reads the rules make.
-function ctxWith(rows: { data: unknown }[]): EnvContext {
+function ctxWith(rows: { data: unknown }[], now: Date = NOW, onRead?: () => void): EnvContext {
   const chain = {
     select: () => chain,
     eq: () => chain,
@@ -50,14 +50,23 @@ function ctxWith(rows: { data: unknown }[]): EnvContext {
   };
   const supabase = {
     from: (table: string) =>
-      table === "backup_poll_state" ? { select: async () => ({ data: rows, error: null }) } : chain,
+      table === "backup_poll_state"
+        ? {
+            select: async () => {
+              onRead?.();
+              return { data: rows, error: null };
+            },
+          }
+        : chain,
   };
-  return { env: "prod", bucket: "b", now: NOW, supabase, registry: {}, probeResults: new Map() } as unknown as EnvContext;
+  return { env: "prod", bucket: "b", now, supabase, registry: {}, probeResults: new Map() } as unknown as EnvContext;
 }
 
 const rule = (id: string) => backupRules({}).find((r) => r.id === id)!;
 
 describe("backup rules", () => {
+  beforeEach(() => resetBackupRuleCache());
+
   test("stay quiet when monitoring isn't set up", async () => {
     const ctx = ctxWith([]);
     for (const r of backupRules({})) expect(await r.evaluate(ctx)).toEqual([]);
@@ -79,6 +88,18 @@ describe("backup rules", () => {
     const unreachable = await rule("backup.source_unreachable").evaluate(ctx);
     expect(unreachable.map((b) => b.entityId)).toEqual(["pve1"]);
     expect(unreachable[0]!.message).toContain("timed out");
+  });
+
+  test("reuse the rows for 3 minutes", async () => {
+    let reads = 0;
+    const counting = (now: Date) => ctxWith([{ data: poll() }], now, () => reads++);
+    const stale = rule("backup.vm_stale");
+    await stale.evaluate(counting(NOW));
+    const later = await stale.evaluate(counting(new Date(NOW.getTime() + 2 * 60_000)));
+    expect(reads).toBe(1);
+    expect(later[0]?.entityId).toBe("108");
+    await stale.evaluate(counting(new Date(NOW.getTime() + 4 * 60_000)));
+    expect(reads).toBe(2);
   });
 
   test("run only in prod by default", () => {

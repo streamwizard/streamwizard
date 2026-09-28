@@ -1,6 +1,7 @@
 import {
   computeBackupOverview,
   type BackupEventGuest,
+  type BackupEventLite,
   type BackupOverview,
   type BackupPollData,
   type BackupVmIssueCode,
@@ -26,10 +27,28 @@ import {
 
 const EVENT_WINDOW_MS = 8 * 24 * 60 * 60 * 1000;
 
-// Every rule in a tick shares one load (the engine hands all rules the same ctx).
-const overviewByTick = new WeakMap<EnvContext, Promise<BackupOverview | null>>();
+/**
+ * The poll row and events only change every 5 minutes (or on a webhook), but
+ * the engine ticks every 15 s. Re-reading them each tick cost ~2-3 GB of
+ * Supabase egress a month, so the raw rows are kept for 3 minutes per env.
+ * The overview itself is recomputed every tick against ctx.now, so ages and
+ * "not polled for 15 min" stay exact; only fresh data can lag by <=3 min.
+ */
+const RAW_TTL_MS = 3 * 60 * 1000;
 
-async function loadOverview(ctx: EnvContext): Promise<BackupOverview | null> {
+interface RawBackupState {
+  poll: BackupPollData;
+  events: BackupEventLite[];
+}
+
+const rawByEnv = new Map<string, { loadedAt: number; value: Promise<RawBackupState | null> }>();
+
+/** Tests only: forget cached rows between cases. */
+export function resetBackupRuleCache(): void {
+  rawByEnv.clear();
+}
+
+async function loadRaw(ctx: EnvContext): Promise<RawBackupState | null> {
   const { data, error } = await ctx.supabase.from("backup_poll_state").select("data");
   if (error) throw new Error(`Couldn't load backup poll state: ${error.message}`);
   const poll = data.map((row) => row.data as unknown as BackupPollData).find((d) => d?.version === 1);
@@ -47,13 +66,27 @@ async function loadOverview(ctx: EnvContext): Promise<BackupOverview | null> {
     receivedAt: row.received_at,
     guests: (row.guests as BackupEventGuest[] | null) ?? null,
   }));
-  return computeBackupOverview(poll, events, ctx.now);
+  return { poll, events };
 }
+
+function raw(ctx: EnvContext): Promise<RawBackupState | null> {
+  const cached = rawByEnv.get(ctx.env);
+  if (cached && ctx.now.getTime() - cached.loadedAt < RAW_TTL_MS) return cached.value;
+  const value = loadRaw(ctx);
+  rawByEnv.set(ctx.env, { loadedAt: ctx.now.getTime(), value });
+  // A failed load must not be served for 3 minutes.
+  value.catch(() => rawByEnv.delete(ctx.env));
+  return value;
+}
+
+// Every rule in a tick shares one computed overview (the engine hands all
+// rules the same ctx).
+const overviewByTick = new WeakMap<EnvContext, Promise<BackupOverview | null>>();
 
 function overview(ctx: EnvContext): Promise<BackupOverview | null> {
   let pending = overviewByTick.get(ctx);
   if (!pending) {
-    pending = loadOverview(ctx);
+    pending = raw(ctx).then((r) => (r ? computeBackupOverview(r.poll, r.events, ctx.now) : null));
     overviewByTick.set(ctx, pending);
   }
   return pending;
