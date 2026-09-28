@@ -48,6 +48,7 @@ a chat feed can't be judged from a single event.
 | --- | --- |
 | **Moving GPS track** | A `streamwizard.geo` fix every second, walking through Amsterdam at a varying speed |
 | **Chat messages** | A `channel.chat.message` every few seconds, cycling through a handful of chatters |
+| **Poll** | A 20-second poll on a loop: `channel.poll.begin`, a `channel.poll.progress` every second as votes come in, `channel.poll.end` with a winner, then a pause and a new question |
 
 Press to start, press again to stop. They keep running while the panel is
 collapsed — the toolbar button shows a count so you don't forget one is going.

@@ -45,6 +45,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@repo/backups": "workspace:*",
     "@repo/discord-api": "workspace:*",
     "@repo/metrics": "workspace:*",
     "@repo/supabase": "workspace:*",

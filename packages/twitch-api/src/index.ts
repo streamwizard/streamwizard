@@ -2,8 +2,11 @@ export type { ChannelSearchResult, TwitchUser, TwitchGame, TwitchCategory } from
 export type { ClipDownloadUrl } from "./clips";
 export type { Vod, GetVodsParams } from "./vods";
 export type { UpdateChannelParams, ChannelInformation } from "./channels";
-export type { TwitchBadgeSet, TwitchBadgeVersion, SendChatMessageResponse } from "./chat";
+export type { TwitchBadgeSet, TwitchBadgeVersion, TwitchChannelEmote, SendChatMessageResponse } from "./chat";
 export type { TwitchCheermote, TwitchCheermoteTier } from "./bits";
+export type { CreatorGoal, CreatorGoalType } from "./goals";
+export type { AdSchedule } from "./ads";
+export type { HelixPoll, HelixPollChoice, HelixPollStatus } from "./polls";
 export { STREAMWIZARD_BOT_USER_ID } from "./chat";
 export { validateTwitchToken, type TwitchTokenValidation } from "./auth";
 
@@ -20,6 +23,8 @@ import { TwitchSearchClient } from "./search";
 import { TwitchAdsClient } from "./ads";
 import { TwitchChannelsClient } from "./channels";
 import { TwitchAuthClient } from "./auth";
+import { TwitchGoalsClient } from "./goals";
+import { TwitchPollsClient } from "./polls";
 
 export class TwitchApi {
   public chat: TwitchChatClient;
@@ -35,6 +40,8 @@ export class TwitchApi {
   public ads: TwitchAdsClient;
   public channels: TwitchChannelsClient;
   public auth: TwitchAuthClient;
+  public goals: TwitchGoalsClient;
+  public polls: TwitchPollsClient;
 
   constructor(broadcaster_id: string | null = null) {
     this.chat = new TwitchChatClient(broadcaster_id);
@@ -50,5 +57,7 @@ export class TwitchApi {
     this.ads = new TwitchAdsClient(broadcaster_id);
     this.channels = new TwitchChannelsClient(broadcaster_id);
     this.auth = new TwitchAuthClient(broadcaster_id);
+    this.goals = new TwitchGoalsClient(broadcaster_id);
+    this.polls = new TwitchPollsClient(broadcaster_id);
   }
 }

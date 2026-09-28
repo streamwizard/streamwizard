@@ -6,6 +6,8 @@ type SubscriptionConfig = {
   type: EventSubSubscriptionType;
   version: string;
   condition: (userId: string) => Record<string, unknown>;
+  /** Scope added to base after launch; skipped until the token carries it. */
+  requiredScope?: string;
 };
 
 // Configure all conduit subscriptions with their conditions
@@ -109,16 +111,19 @@ const conduitSubscriptions: SubscriptionConfig[] = [
     type: "channel.poll.begin",
     version: "1",
     condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:polls",
   },
   {
     type: "channel.poll.progress",
     version: "1",
     condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:polls",
   },
   {
     type: "channel.poll.end",
     version: "1",
     condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:polls",
   },
   {
     type: "channel.hype_train.begin",
@@ -139,6 +144,25 @@ const conduitSubscriptions: SubscriptionConfig[] = [
     type: "channel.ad_break.begin",
     version: "1",
     condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:ads",
+  },
+  {
+    type: "channel.goal.begin",
+    version: "1",
+    condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:goals",
+  },
+  {
+    type: "channel.goal.progress",
+    version: "1",
+    condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:goals",
+  },
+  {
+    type: "channel.goal.end",
+    version: "1",
+    condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:goals",
   },
 ];
 
@@ -161,7 +185,16 @@ const webhookSubscriptions: SubscriptionConfig[] = [
   },
 ];
 
-export default async function NeededEventSubscriptions(twitchUserId: string): Promise<CreateEventSubSubscriptionRequest[]> {
+/**
+ * `grantedScopes` is the token's scope list. A subscription with a
+ * `requiredScope` is left out when the list lacks it or is unknown (null), so
+ * a token from before that scope existed doesn't fail the create on every
+ * login.
+ */
+export default async function NeededEventSubscriptions(
+  twitchUserId: string,
+  grantedScopes: readonly string[] | null,
+): Promise<CreateEventSubSubscriptionRequest[]> {
   const conduitId = env.TWITCH_CONDUIT_ID;
   const apiUrl = env.STREAMWIZARD_API_URL;
 
@@ -177,7 +210,10 @@ export default async function NeededEventSubscriptions(twitchUserId: string): Pr
   };
 
   // Generate conduit subscriptions with conditions
-  const conduitRequests = conduitSubscriptions.map(({ type, version, condition }) => ({
+  const granted = new Set(grantedScopes ?? []);
+  const conduitRequests = conduitSubscriptions
+    .filter(({ requiredScope }) => !requiredScope || granted.has(requiredScope))
+    .map(({ type, version, condition }) => ({
     type,
     version,
     condition: condition(twitchUserId),

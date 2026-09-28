@@ -4,6 +4,7 @@ import { z } from "zod";
 import { registerTwitchHandlers } from "./twitch";
 import { streamEventsLogger } from "@repo/logger";
 import { broadcastOverlayEvent } from "../functions/broadcastOverlayEvent";
+import { recordStreamLabels } from "../functions/recordStreamLabels";
 import { trackEventSubReceived } from "@repo/metrics";
 
 /**
@@ -73,15 +74,23 @@ export class HandlerRegistry {
     }
 
     if (eventType !== "channel.chat.message") {
-      streamEventsLogger.logTwitchEvent({
-        broadcaster_id: broadcasterId,
-        event_type: eventType,
-        event_data: data.payload.event,
-        metadata: data.metadata,
-      });
+      // Fire-and-forget so the overlay broadcast isn't held up by the insert.
+      streamEventsLogger
+        .logTwitchEvent({
+          broadcaster_id: broadcasterId,
+          event_type: eventType,
+          event_data: data.payload.event,
+          metadata: data.metadata,
+        })
+        .catch((error) => {
+          console.error(`Failed to log Twitch event ${eventType}:`, error);
+        });
 
+      // Latest follower/sub/cheer/... for the overlay labels, live or not.
+      // Not awaited either: it catches and reports its own errors.
+      void recordStreamLabels(broadcasterId, eventType, data.payload.event);
     }
-    
+
     await broadcastOverlayEvent(broadcasterId, eventType, data.payload.event);
     const twitchApi = new TwitchApi(broadcasterId);
 
@@ -89,10 +98,9 @@ export class HandlerRegistry {
       twitchApi,
     };
 
-    if (!handler) {
-      console.log("No Twitch handler found for event type:", eventType);
-      return;
-    }
+    // Overlay-only event types have no bot handler; trackEventSubReceived
+    // above already records that.
+    if (!handler) return;
 
     await handler(data.payload.event, context);
   }

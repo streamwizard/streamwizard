@@ -216,7 +216,18 @@ const GoalBaseSchema = z.object({
   broadcaster_user_id: z.string(),
   broadcaster_user_name: z.string(),
   broadcaster_user_login: z.string(),
-  type: z.enum(["follow", "subscription", "subscription_count", "new_subscription", "new_subscription_count"]),
+  // Twitch documents "follow" for these events, but Get Creator Goals says
+  // "follower" for the same goal; accept both.
+  type: z.enum([
+    "follow",
+    "follower",
+    "subscription",
+    "subscription_count",
+    "new_subscription",
+    "new_subscription_count",
+    "new_bit",
+    "new_cheerer",
+  ]),
   description: z.string(),
   current_amount: z.number().int(),
   target_amount: z.number().int(),

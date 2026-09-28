@@ -67,6 +67,27 @@ const schema = z.object({
   // and everything else in the handlers runs as before.
   DISCORD_BOT_TOKEN: z.string().min(1).optional(),
   DISCORD_GUILD_ID: z.string().min(1).optional(),
+
+  // Proxmox backup monitoring (docs/backup-monitoring-plan.md). Prod only:
+  // without PBS_URL + PBS_NAMESPACE + both token vars the poller never starts.
+  // The token only holds DatastoreAudit, so it can read backup metadata but
+  // never change, restore or delete anything.
+  PBS_URL: z.string().url().optional(),
+  PBS_DATASTORE: z.string().min(1).default("nas-backups"),
+  PBS_NAMESPACE: z.string().min(1).optional(),
+  PBS_TOKEN_ID: z.string().min(1).optional(),
+  PBS_TOKEN_SECRET: z.string().min(1).optional(),
+  // JSON array of {name, url, tokenId, tokenSecret}, one per PVE host
+  // (PVEAuditor tokens). Parsed in lib/backup-config.ts.
+  PVE_HOSTS: z.string().optional(),
+  BACKUP_POLL_SECONDS: z.coerce.number().int().min(60).default(300),
+  // Shared secret the Proxmox webhook targets send in X-Proxmox-Webhook-Token
+  // (stored as a notification secret on each host). Unset = receiver off.
+  BACKUP_WEBHOOK_SECRET: z.string().min(32).optional(),
+
+  // Bearer secret for /internal/* (server-to-server from web-admin). Unset =
+  // those routes answer 404.
+  REST_API_INTERNAL_SECRET: z.string().min(32).optional(),
 });
 
 export const env = schema.parse(process.env);

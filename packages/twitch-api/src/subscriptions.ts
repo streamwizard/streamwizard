@@ -54,6 +54,14 @@ export class TwitchSubscriptionsClient extends TwitchApiBaseClient {
     return response.data.total;
   }
 
+  /** Subscriber count plus sub points (tier 2 = 2, tier 3 = 6), both from one call. */
+  async getSubscriberTotals(): Promise<{ total: number; points: number }> {
+    const response = await this.clientApi().get("/subscriptions", {
+      params: { broadcaster_id: this.broadcaster_id, first: 1 },
+    });
+    return { total: response.data.total, points: response.data.points };
+  }
+
   async isSubscriber(userId: string): Promise<boolean> {
     if (!this.broadcaster_id) {
       throw new Error("Broadcaster ID is required");

@@ -7,6 +7,8 @@ import {
   DEMO_EVENTS,
   DEMO_EVENT_DEFS,
   DEMO_EVENT_TYPES,
+  buildDemoCreditsData,
+  buildDemoEvent,
   isDemoEventType,
   type DemoEventType,
 } from "@repo/schemas";
@@ -15,6 +17,12 @@ import {
   ALERT_EVENT_CATEGORIES,
   ALERT_EVENT_LABELS,
   ALERT_EVENT_SUBSCRIPTION_TYPES,
+  AD_SCHEDULE_TEST_BROWSER_EVENT,
+  type AdScheduleTestBrowserEventDetail,
+  CREDITS_RESET_BROWSER_EVENT,
+  CREDITS_ROLL_BROWSER_EVENT,
+  type CreditsResetBrowserEventDetail,
+  type CreditsRollBrowserEventDetail,
   WIDGET_SIMULATORS,
   scanWidgetListeners,
   type AlertEventCategoryId,
@@ -59,6 +67,18 @@ const ALERT_BUTTON_GROUPS = ALERT_EVENT_CATEGORIES.map((category) => ({
     };
   }),
 }));
+
+/**
+ * A poll in four steps: begin, two kinds of vote, and the close. Every step
+ * uses the same demo poll id, so they land on one poll in the poll widget
+ * (and a poll alert, if the alert box has one set up).
+ */
+const POLL_BUTTONS: { label: string; type: DemoEventType; variant?: string; hint: string }[] = [
+  { label: "Start", type: "channel.poll.begin", hint: "Fires channel.poll.begin" },
+  { label: "Votes", type: "channel.poll.progress", hint: "Fires channel.poll.progress with random votes" },
+  { label: "Close race", type: "channel.poll.progress", variant: "close", hint: "Fires channel.poll.progress · close" },
+  { label: "End", type: "channel.poll.end", hint: "Fires channel.poll.end" },
+];
 
 /**
  * Below this, a Live simulator is more round trips than the server action
@@ -394,6 +414,100 @@ export function DemoEventPanel({
             </button>
           </div>
         )}
+      </div>
+
+      <div className="px-3 py-1.5 flex items-center gap-1.5 flex-wrap border-t border-border/50">
+        <span className="text-[10px] text-muted-foreground mr-0.5 shrink-0">Poll</span>
+        {POLL_BUTTONS.map(({ label, type, variant, hint }) => (
+          <Button
+            key={label}
+            size="sm"
+            variant="outline"
+            className="h-6 text-[11px] px-2"
+            disabled={isSending}
+            title={hint}
+            aria-label={`Test poll: ${label}`}
+            onClick={() => fire(type, variant)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+
+      <div className="px-3 py-1.5 flex items-center gap-1.5 flex-wrap border-t border-border/50">
+        <span className="text-[10px] text-muted-foreground mr-0.5 shrink-0">Ads</span>
+        {/* Twitch has no event for an upcoming ad, so this one only reaches the
+            ad widgets on this canvas; the ad widget reads the real one from
+            Twitch's schedule. */}
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 text-[11px] px-2"
+          title="Ads in 2 minutes, on this canvas only"
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent<AdScheduleTestBrowserEventDetail>(AD_SCHEDULE_TEST_BROWSER_EVENT, {
+                detail: { sceneId: storageId, nextAdAt: Date.now() + 118_000, duration: 60 },
+              })
+            )
+          }
+        >
+          Ad coming
+        </Button>
+        {[30, 60].map((seconds) => (
+          <Button
+            key={seconds}
+            size="sm"
+            variant="outline"
+            className="h-6 text-[11px] px-2"
+            disabled={isSending}
+            title="Fires channel.ad_break.begin"
+            onClick={() =>
+              startSend(async () => {
+                const { payload } = buildDemoEvent("channel.ad_break.begin");
+                await onFire({ type: "channel.ad_break.begin", custom: { ...payload, duration_seconds: seconds } });
+              })
+            }
+          >
+            {seconds} s break
+          </Button>
+        ))}
+      </div>
+
+      <div className="px-3 py-1.5 flex items-center gap-1.5 flex-wrap border-t border-border/50">
+        <span className="text-[10px] text-muted-foreground mr-0.5 shrink-0">Credits</span>
+        {/* Credits aren't a Twitch event: the widget rolls when its scene comes
+            up. These reach the credits widgets on this canvas only. */}
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 text-[11px] px-2"
+          title="Roll sample credits, on this canvas only"
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent<CreditsRollBrowserEventDetail>(CREDITS_ROLL_BROWSER_EVENT, {
+                detail: { sceneId: storageId, data: buildDemoCreditsData() },
+              })
+            )
+          }
+        >
+          Roll credits
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-6 text-[11px] px-2"
+          title="Stop the credits and read the real stream again"
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent<CreditsResetBrowserEventDetail>(CREDITS_RESET_BROWSER_EVENT, {
+                detail: { sceneId: storageId },
+              })
+            )
+          }
+        >
+          Stop
+        </Button>
       </div>
 
       {/* Everything else Twitch sends. Separated because it's the escape hatch,
