@@ -1,5 +1,6 @@
 import type { AlertRule, Env, RuleKnob, RuleOverrides } from "./types";
 import { apiRules } from "./rules/api";
+import { backupRules } from "./rules/backup";
 import { databaseRules } from "./rules/database";
 import { ingestRules } from "./rules/ingest";
 import { obsNodeRules } from "./rules/obs-nodes";
@@ -23,6 +24,7 @@ export function buildRules(overrides: RuleOverrides = {}): AlertRule[] {
     ...websocketRules(overrides),
     ...databaseRules(overrides),
     ...probeRules(overrides),
+    ...backupRules(overrides),
   ];
 }
 
@@ -39,6 +41,7 @@ const RULE_GROUPS: Record<string, string> = {
   supabase: "Supabase platform",
   meta: "Meta",
   probe: "Probes",
+  backup: "Backups",
 };
 
 export interface RuleCatalogEntry {

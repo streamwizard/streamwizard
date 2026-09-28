@@ -1,3 +1,5 @@
+import { BACKUP_THRESHOLDS } from "@repo/backups";
+
 // The rule catalog (monitoring plan v2.2 §4). The constants below are CODE
 // DEFAULTS; admins can override warn/crit/forTicks/envs/enabled per rule via
 // the alert_rule_config table (edited on /alerts/rules), which the engine
@@ -49,6 +51,13 @@ export const EVENTSUB_SILENCE_MIN = 120;
  * Short blips stay silent; the Discord log channel still gets a row for each. */
 export const EVENTSUB_DISCONNECTED_MIN = 2;
 export const INGEST_STALL_MIN_SESSION_AGE_MS = 2 * 60 * 1000;
+// Proxmox backups: the defaults live in @repo/backups so the /backups page
+// and these rules share one source (docs/backup-monitoring-plan.md).
+export const BACKUP_STALE_WARN_HOURS = BACKUP_THRESHOLDS.staleWarnHours;
+export const BACKUP_STALE_CRIT_HOURS = BACKUP_THRESHOLDS.staleCritHours;
+export const BACKUP_DATASTORE_WARN_PCT = BACKUP_THRESHOLDS.datastoreWarnPct;
+export const BACKUP_DATASTORE_CRIT_PCT = BACKUP_THRESHOLDS.datastoreCritPct;
+export const BACKUP_SOURCE_STALE_MIN = BACKUP_THRESHOLDS.sourceStaleMinutes;
 
 // --- Rule constructors ---
 // Each takes the full overrides record and resolves its own row by opts.id:
