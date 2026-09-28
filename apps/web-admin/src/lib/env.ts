@@ -65,6 +65,10 @@ export const env = createEnv({
     // reconcile picks them up.
     WS_SERVER_URL: z.string().min(1).optional(),
     CONSUMER_SECRET: z.string().min(1).optional(),
+    // Bearer secret for rest-api's /internal/backups (the /backups page).
+    // Must match rest-api's REST_API_INTERNAL_SECRET; without it the page
+    // shows a "not configured" card.
+    REST_API_INTERNAL_SECRET: z.string().min(32).optional(),
   },
   client: {
     NEXT_PUBLIC_WS_SERVER_URL: z.string().min(1).optional(),
@@ -103,6 +107,7 @@ export const env = createEnv({
     TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY,
     WS_SERVER_URL: process.env.WS_SERVER_URL,
     CONSUMER_SECRET: process.env.CONSUMER_SECRET,
+    REST_API_INTERNAL_SECRET: process.env.REST_API_INTERNAL_SECRET,
     NEXT_PUBLIC_WS_SERVER_URL: process.env.NEXT_PUBLIC_WS_SERVER_URL,
     NEXT_PUBLIC_MONITOR_SECRET: process.env.NEXT_PUBLIC_MONITOR_SECRET,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

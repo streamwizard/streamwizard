@@ -234,6 +234,10 @@
     "./queries/asset-cache": {
       "types": "./src/queries/asset-cache.ts",
       "default": "./src/queries/asset-cache.ts"
+    },
+    "./queries/backups": {
+      "types": "./src/queries/backups.ts",
+      "default": "./src/queries/backups.ts"
     }
   },
   "scripts": {
