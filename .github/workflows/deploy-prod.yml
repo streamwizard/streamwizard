@@ -10,12 +10,17 @@ on:
 
 permissions: {}
 
+# Both upstream workflows trigger this one; run them one at a time so two
+# green completions can't race to open or merge the same deploy PR.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     permissions:
       actions: read
-      contents: write
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       # This job runs once per completed upstream workflow. Merge only when the
@@ -37,22 +42,47 @@ jobs:
           done
           echo "ready=$ready" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout code
+      # production is protected by a ruleset: changes only through a merge-
+      # commit PR, which the repo owner may merge without review. The Actions
+      # token can do neither, so the PR is opened and merged with the owner's
+      # fine-grained token (PROD_DEPLOY_TOKEN: this repo only, contents +
+      # pull requests read/write).
+      - name: Merge main into production through a PR
         if: steps.gate.outputs.ready == 'true'
-        uses: actions/checkout@v7
-        with:
-          ref: main
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Merge main into production
-        if: steps.gate.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.PROD_DEPLOY_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git fetch origin production
-          git checkout production
-          # Use --no-ff so the deploy still succeeds when production has its own
-          # commits (e.g. older staging merges) and can't be fast-forwarded.
-          git merge origin/main --no-ff -m "Deploy: merge main into production"
-          git push origin production
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::PROD_DEPLOY_TOKEN secret is not set"
+            exit 1
+          fi
+
+          ahead=$(gh api "repos/$REPO/compare/production...main" --jq '.ahead_by')
+          if [ "$ahead" = "0" ]; then
+            echo "production already contains main, nothing to deploy"
+            exit 0
+          fi
+
+          pr=$(gh pr list --repo "$REPO" --base production --head main --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr" ]; then
+            url=$(gh pr create --repo "$REPO" --base production --head main \
+              --title "Deploy: main → production" \
+              --body "Automated deploy after Build Check and production database migrations passed on main (\`${SHA:0:8}\`).")
+            pr=${url##*/}
+          fi
+
+          # Merge commit only: a squash would make production diverge from main.
+          # GitHub computes mergeability a moment after the PR opens, so an
+          # immediate merge can be refused once; retry briefly.
+          for attempt in 1 2 3 4 5; do
+            if gh pr merge "$pr" --repo "$REPO" --merge --admin; then
+              echo "merged #$pr into production"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::could not merge #$pr into production"
+          exit 1
