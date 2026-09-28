@@ -274,6 +274,20 @@ Pure status logic lives in the shared module with tests. UI only renders.
   - Run one manual backup per host afterwards to confirm it works.
 - Same approach for the PVE hosts' API (port 8006): `tailscale cert` + `pvenode cert set`, so rest-api can verify them too. Nothing pins PVE certs, so there is no backup risk there.
 
+### Resolving `*.ts.net` inside containers (Dokploy host, set up 2026-09-28)
+The certs only hold the `*.ts.net` names, so rest-api must use those names, not the Tailscale IPs. Containers could not resolve them at first. The fix is on the host, not in the app, so every Dokploy app gets tailnet names.
+
+- **Cause:** the host's `/etc/resolv.conf` points at the systemd-resolved stub `127.0.0.53`. Docker skips loopback and copies resolved's uplinks from `/run/systemd/resolve/resolv.conf` (`1.1.1.1`, `1.0.0.1`). That skips the Tailscale split DNS on `tailscale0`, so `*.ts.net` returns NXDOMAIN in containers.
+- **Fix:** dnsmasq listens on the docker bridge IP and is resolved's first uplink:
+  - `/etc/dnsmasq.d/tailscale-docker.conf`: `listen-address=172.17.0.1`, `bind-dynamic`, `no-resolv`, `server=/tail98b586.ts.net/100.100.100.100`, `server=1.1.1.1`, `server=1.0.0.1`.
+  - `/etc/systemd/resolved.conf.d/docker-dns.conf`: `[Resolve]` `DNS=172.17.0.1`.
+  - Containers get it when they are recreated (redeploy). Check: `/etc/resolv.conf` in the container shows `ExtServers: [host(172.17.0.1) ...]`.
+- **Don't:**
+  - Point `/etc/resolv.conf` at a non-loopback address. tailscaled then stops using resolved and overwrites the file.
+  - Use `100.100.100.100` as a container's only DNS server. It returns SERVFAIL for public names.
+  - Change Docker's daemon-wide `dns`. It needs a Docker restart.
+- **Rollback:** remove the resolved drop-in, `systemctl restart systemd-resolved`, `systemctl disable --now dnsmasq`, then redeploy the apps.
+
 ## Setup you need to do
 
 ### 1. PBS: read-only user + token
@@ -434,5 +448,6 @@ Later, optional: Influx `pbs_*` points for long-range charts, Discord log-channe
 2. Proxmox side (see "Setup you need to do"): PBS token, PVE tokens, `tailscale cert` on PBS + PVE (**remove the PBS fingerprint from both PVE storage configs first**), webhook targets + matchers.
 3. Doppler prod rest-api: `PBS_URL`, `PBS_NAMESPACE`, `PBS_TOKEN_ID`, `PBS_TOKEN_SECRET`, `PVE_HOSTS`, `BACKUP_WEBHOOK_SECRET`, `REST_API_INTERNAL_SECRET` (`PBS_DATASTORE` defaults to `nas-backups`, `BACKUP_POLL_SECONDS` to 300).
 4. Doppler prod web-admin: `REST_API_INTERNAL_SECRET` (same value).
-5. Deploy rest-api, then web-admin, then alert-worker (new rules).
-6. Check: rest-api log shows `[backup-poller] poll done`, `/backups` shows all 5 VMs, a PVE "Test" notification logs `ignored` in rest-api, and the next 03:00 / 05:30 runs appear as webhook events.
+5. Dokploy host: container DNS for `*.ts.net` (see "Resolving `*.ts.net` inside containers"). Done on prod 2026-09-28.
+6. Deploy rest-api, then web-admin, then alert-worker (new rules).
+7. Check: rest-api log shows `[backup-poller] poll done`, `/backups` shows all 5 VMs, a PVE "Test" notification logs `ignored` in rest-api, and the next 03:00 / 05:30 runs appear as webhook events.
