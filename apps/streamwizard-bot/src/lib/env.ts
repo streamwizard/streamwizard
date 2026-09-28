@@ -13,6 +13,10 @@ const schema = z.object({
   TWITCH_CLIENT_SECRET: z.string().min(1),
   TWITCH_WEBHOOK_SECRET: z.string().min(1),
   TWITCH_CONDUIT_ID: z.string().min(1),
+  /** Shards the conduit should have. The bot grows the conduit to this, never shrinks it. */
+  EVENTSUB_SHARD_COUNT: z.coerce.number().int().min(1).max(20_000).default(1),
+  /** Which shards this process runs ("0-9", "0,2,4"); unset runs all of them. For splitting across processes. */
+  EVENTSUB_SHARD_IDS: z.string().optional(),
 
   // Internal
   WS_SERVER_URL: z.string().url(),

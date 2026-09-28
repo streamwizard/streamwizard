@@ -26,6 +26,7 @@
     "@repo/supabase": "workspace:*",
     "@repo/telegram-api": "workspace:*",
     "@repo/ttl-cache": "workspace:*",
+    "@repo/twitch-api": "workspace:*",
     "@repo/types": "workspace:*",
     "@repo/ui": "workspace:*",
     "@repo/ws-client": "workspace:*",

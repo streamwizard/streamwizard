@@ -9,6 +9,10 @@ export interface Transport {
   session_id?: string;
   conduit_id?: string;
   shard_id?: string;
+  /** WebSocket transports only: when the session connected. */
+  connected_at?: string;
+  /** WebSocket transports only: when the session disconnected. */
+  disconnected_at?: string;
 }
 
 export interface EventSubSubscription {
@@ -36,10 +40,51 @@ export interface CreateEventSubSubscriptionOptions {
   transport: Transport;
 }
 
+export type ConduitShardStatus =
+  | "enabled"
+  | "webhook_callback_verification_pending"
+  | "webhook_callback_verification_failed"
+  | "notification_failures_exceeded"
+  | "websocket_disconnected"
+  | "websocket_failed_ping_pong"
+  | "websocket_received_inbound_traffic"
+  | "websocket_internal_error"
+  | "websocket_network_timeout"
+  | "websocket_network_error"
+  | "websocket_failed_to_reconnect";
+
 export interface ConduitShard {
   id: string;
-  status: "enabled" | "disabled";
+  status: ConduitShardStatus;
   transport: Transport;
+}
+
+/** A shard Twitch refused to update. Update Conduit Shards still answers 202 when this happens. */
+export interface ConduitShardError {
+  id: string;
+  message: string;
+  code: string;
+}
+
+export interface UpdateShardsResult {
+  data: ConduitShard[];
+  errors: ConduitShardError[];
+}
+
+export interface SubscriptionsPageOptions {
+  status?: EventSubSubscription["status"];
+  type?: string;
+  user_id?: string;
+  after?: string;
+}
+
+/** One page of Get EventSub Subscriptions. The totals cover every page, not just this one. */
+export interface SubscriptionsPage {
+  data: EventSubSubscription[];
+  total: number;
+  total_cost: number;
+  max_total_cost: number;
+  pagination: { cursor?: string };
 }
 
 export interface CreateConduitOptions {
@@ -75,6 +120,12 @@ export class TwitchEventSubClient extends TwitchApiBaseClient {
     return response.data;
   }
 
+  /** One page of subscriptions with Twitch's totals. Filter by at most one of status, type or user_id. */
+  async getSubscriptionsPage(options: SubscriptionsPageOptions = {}): Promise<SubscriptionsPage> {
+    const response = await this.appApi().get("/eventsub/subscriptions", { params: options });
+    return response.data;
+  }
+
   // Conduit-specific methods
   async createConduit(options: CreateConduitOptions): Promise<{ data: Conduit[] }> {
     const response = await this.appApi().post("/eventsub/conduits", options);
@@ -86,18 +137,31 @@ export class TwitchEventSubClient extends TwitchApiBaseClient {
     return response.data;
   }
 
-  async getConduitShards(conduitId: string): Promise<{ data: ConduitShard[] }> {
+  async getConduitShards(
+    conduitId: string,
+    options: { status?: ConduitShardStatus; after?: string } = {},
+  ): Promise<{ data: ConduitShard[]; pagination: { cursor?: string } }> {
     const response = await this.appApi().get("/eventsub/conduits/shards", {
-      params: {
-        conduit_id: conduitId,
-      },
+      params: { conduit_id: conduitId, ...options },
     });
     return response.data;
   }
 
+  /** Every shard of a conduit, following the cursor across pages. */
+  async getAllConduitShards(conduitId: string, options: { status?: ConduitShardStatus } = {}): Promise<ConduitShard[]> {
+    const shards: ConduitShard[] = [];
+    let after: string | undefined;
+    do {
+      const page = await this.getConduitShards(conduitId, { ...options, after });
+      shards.push(...page.data);
+      after = page.pagination?.cursor || undefined;
+    } while (after);
+    return shards;
+  }
+
   async getConduitWithShards(conduitId: string): Promise<Conduit | null> {
     try {
-      const [conduitResponse, shardsResponse] = await Promise.all([this.getConduits(), this.getConduitShards(conduitId)]);
+      const [conduitResponse, shardsResponse] = await Promise.all([this.getConduits(), this.getAllConduitShards(conduitId)]);
 
       const conduit = conduitResponse.data.find((c) => c.id === conduitId);
       if (!conduit) {
@@ -106,7 +170,7 @@ export class TwitchEventSubClient extends TwitchApiBaseClient {
 
       return {
         ...conduit,
-        shards: shardsResponse.data,
+        shards: shardsResponse,
       };
     } catch (error) {
       console.error(`❌ Failed to get conduit ${conduitId} with shards:`, error);
@@ -114,14 +178,25 @@ export class TwitchEventSubClient extends TwitchApiBaseClient {
     }
   }
 
-  async updateConduitShards(conduitId: string, shardCount: number): Promise<{ data: Conduit[] }> {
-    const response = await this.appApi().patch(`/eventsub/conduits/${conduitId}/shards`, {
+  /** Sets a conduit's shard count. Shards above the new count are removed along with their subscriptions' delivery. */
+  async updateConduit(conduitId: string, shardCount: number): Promise<{ data: Conduit[] }> {
+    const response = await this.appApi().patch("/eventsub/conduits", {
+      id: conduitId,
       shard_count: shardCount,
     });
     return response.data;
   }
 
-  async updateShardTransport(conduitId: string, shardId: string, transport: Transport): Promise<{ data: Conduit[] }> {
+  /** @deprecated use updateConduit */
+  async updateConduitShards(conduitId: string, shardCount: number): Promise<{ data: Conduit[] }> {
+    return this.updateConduit(conduitId, shardCount);
+  }
+
+  /**
+   * Points one shard at a transport. Twitch answers 202 even when the shard
+   * was refused, so check `errors` for the shard id as well as the status.
+   */
+  async updateShardTransport(conduitId: string, shardId: string, transport: Transport): Promise<UpdateShardsResult> {
     const response = await this.appApi().patch("/eventsub/conduits/shards", {
       conduit_id: conduitId,
       shards: [
@@ -131,6 +206,6 @@ export class TwitchEventSubClient extends TwitchApiBaseClient {
         },
       ],
     });
-    return response.data;
+    return { data: response.data?.data ?? [], errors: response.data?.errors ?? [] };
   }
 }

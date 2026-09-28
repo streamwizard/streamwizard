@@ -20,6 +20,8 @@ export abstract class TwitchApiBaseClient {
    * fails with invalid_grant and logs a false "token dead" event.
    */
   private static readonly refreshInFlight = new Map<string, Promise<string | null>>();
+  /** Same for the app token: N conduit shards binding at boot would each mint one. */
+  private static appRefreshInFlight: Promise<string | null> | null = null;
   protected broadcaster_id: string | null = null;
 
   constructor(broadcaster_id: string | null = null) {
@@ -257,7 +259,16 @@ export abstract class TwitchApiBaseClient {
     }
   }
 
-  private async refreshAppToken(): Promise<string | null> {
+  private refreshAppToken(): Promise<string | null> {
+    if (TwitchApiBaseClient.appRefreshInFlight) return TwitchApiBaseClient.appRefreshInFlight;
+    const refresh = this.doRefreshAppToken().finally(() => {
+      TwitchApiBaseClient.appRefreshInFlight = null;
+    });
+    TwitchApiBaseClient.appRefreshInFlight = refresh;
+    return refresh;
+  }
+
+  private async doRefreshAppToken(): Promise<string | null> {
     try {
       const response = await axios.post("https://id.twitch.tv/oauth2/token", null, {
         params: {

@@ -189,6 +189,8 @@ interface SubscriptionFields {
 interface EventSubEvent {
   service: string;
   session_id?: string | null;
+  /** Conduit shard the socket is bound to; missing on rows from before the bot ran shards */
+  shard_id?: string;
 }
 
 /** A Discord user as seen by the bot. */

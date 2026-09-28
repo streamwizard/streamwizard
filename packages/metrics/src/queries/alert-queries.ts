@@ -324,11 +324,13 @@ export async function queryEventsubLastEvent(range = "30m", opts?: QueryOpts): P
   return rows[0] || null;
 }
 
-/** Latest `eventsub_connection` point per service and event tag (rule:
+/** Latest `eventsub_connection` point per service, shard and event tag (rule:
  * eventsub.disconnected). Written by the EventSub receiver's telemetry on
- * connect, loss and every reconnect attempt. */
+ * connect, loss and every reconnect attempt. Points from before shards had a
+ * tag count as shard "0", which is the only shard the bot ran back then. */
 export interface EventsubConnectionLatest {
   service: string;
+  shardId: string;
   event: "connected" | "lost" | "reconnect_attempt" | string;
   time: string;
 }
@@ -341,13 +343,46 @@ export async function queryEventsubConnectionLatest(range = "24h", opts?: QueryO
       |> range(start: -${range})
       |> filter(fn: (r) => r._measurement == "eventsub_connection")
       |> filter(fn: (r) => r._field == "count")
-      |> group(columns: ["service", "event"])
+      |> map(fn: (r) => ({ r with shard_id: if exists r.shard_id then r.shard_id else "0" }))
+      |> group(columns: ["service", "shard_id", "event"])
       |> last(column: "_time")
       |> yield(name: "eventsub_connection_latest")
   `;
   return runFluxQuery(query, (row) => ({
     service: String(row.service ?? ""),
+    shardId: String(row.shard_id ?? "0"),
     event: String(row.event ?? ""),
+    time: row._time ?? "",
+  }));
+}
+
+/** Latest `eventsub_shard` heartbeat per service and shard (rules:
+ * eventsub.heartbeat_stale, eventsub.shards_degraded). The bot writes one
+ * point per shard every 30s whatever the connection state, so a gap means
+ * the process is gone, not the socket. */
+export interface EventsubShardLatest {
+  service: string;
+  shardId: string;
+  connected: boolean;
+  time: string;
+}
+
+export async function queryEventsubShardLatest(range = "24h", opts?: QueryOpts): Promise<EventsubShardLatest[]> {
+  assertValidFluxDuration(range, "range");
+  const bucket = resolveBucket(opts);
+  const query = `
+    from(bucket: "${bucket}")
+      |> range(start: -${range})
+      |> filter(fn: (r) => r._measurement == "eventsub_shard")
+      |> filter(fn: (r) => r._field == "connected")
+      |> group(columns: ["service", "shard_id"])
+      |> last(column: "_time")
+      |> yield(name: "eventsub_shard_latest")
+  `;
+  return runFluxQuery(query, (row) => ({
+    service: String(row.service ?? ""),
+    shardId: String(row.shard_id ?? ""),
+    connected: Number(row._value) === 1,
     time: row._time ?? "",
   }));
 }

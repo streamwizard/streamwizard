@@ -3,10 +3,10 @@ process.on("uncaughtException", (err) => { reportFatal(err, "streamwizard-bot");
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import { flushSentry, reportFatal } from "@repo/sentry";
 import { handlers } from "./handlers/eventHandler";
-import { TwitchEventSubReceiver } from "@repo/twitch-eventsub";
+import { ConduitShardManager, parseShardIds, type EventSubLifecycleEvent } from "@repo/twitch-eventsub";
 import { env } from "./lib/env";
 import { createEventSubLogger } from "./lib/eventsub-log";
-import { createEventSubTelemetry } from "./lib/eventsub-telemetry";
+import { createEventSubTelemetry, createShardHeartbeat } from "./lib/eventsub-telemetry";
 import { overlayWsClient } from "./overlay-ws-client";
 import { isMetricsEnabled } from "@repo/metrics";
 
@@ -19,22 +19,38 @@ async function main() {
       overlayWsClient.connect(websocketUrl, env.SUPABASE_SECRET_KEY);
     }
 
+    // One receiver per conduit shard. Each shard gets its own logger and
+    // telemetry: both keep per-socket state (boot, migration in flight).
     // Metrics + Sentry trail, and a platform_events row per lifecycle event
     // for the Discord log channel. Alerting is the fleet engine's job.
-    const telemetry = createEventSubTelemetry();
-    const log = createEventSubLogger();
-    const EventSubReceiver = new TwitchEventSubReceiver(handlers, {
+    const shardIds = env.EVENTSUB_SHARD_IDS ? parseShardIds(env.EVENTSUB_SHARD_IDS) : undefined;
+    const perShard = new Map<string, (event: EventSubLifecycleEvent) => void>();
+    const onShardEvent = (shardId: string, event: EventSubLifecycleEvent) => {
+      let handle = perShard.get(shardId);
+      if (!handle) {
+        const telemetry = createEventSubTelemetry(shardId);
+        const log = createEventSubLogger(shardId);
+        handle = (e) => {
+          telemetry(e);
+          log(e);
+        };
+        perShard.set(shardId, handle);
+      }
+      handle(event);
+    };
+
+    const shards = new ConduitShardManager(handlers, {
       wsUrl: production,
       conduitId: env.TWITCH_CONDUIT_ID,
-      onLifecycleEvent: (event) => {
-        telemetry(event);
-        log(event);
-      },
+      shardCount: env.EVENTSUB_SHARD_COUNT,
+      shardIds,
+      onLifecycleEvent: onShardEvent,
+      onHeartbeat: createShardHeartbeat(),
     });
 
     const shutdown = async () => {
       overlayWsClient.disconnect();
-      await EventSubReceiver.disconnect();
+      await shards.stop();
       await flushSentry();
       process.exit(0);
     };
@@ -43,7 +59,8 @@ async function main() {
     process.on("SIGTERM", shutdown);
 
     console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
-    await EventSubReceiver.connect();
+    console.log(`[eventsub] running shards ${shards.getShardIds().join(", ")} of ${env.EVENTSUB_SHARD_COUNT}`);
+    await shards.start();
   } catch (error) {
     // Caught here, so the unhandledRejection hook above never sees it —
     // capture explicitly or a failed startup is invisible in Sentry.

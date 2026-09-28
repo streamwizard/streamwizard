@@ -86,7 +86,7 @@ async function handleNotification(
   notification: EventSubNotificationPayload,
 ) {
   await handleEventsub(notification);
-  trackEventSubReceived(notification.subscription.type, true);
+  trackEventSubReceived("rest-api", notification.subscription.type, true, "webhook");
   return c.body(null, 204);
 }
 
@@ -119,7 +119,7 @@ function handleRevocation(c: Context, notification: EventSubRevocationPayload) {
     });
   });
 
-  trackEventSubRevocation(subscription.type);
+  trackEventSubRevocation("rest-api", subscription.type, "webhook");
 
   return c.body(null, 204);
 }
