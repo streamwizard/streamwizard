@@ -18,7 +18,7 @@ export function BackupCharts({ initial }: { initial: BackupSeries }) {
         yMax={100}
       />
       <NodeMetricChart title="Backup age per VM" apiPath={ENDPOINT} dataKey="vmAgeHours" initialData={initial.vmAgeHours} format="hours" />
-      <NodeMetricChart title="Backup size per VM" apiPath={ENDPOINT} dataKey="vmSizeBytes" initialData={initial.vmSizeBytes} format="bytes" />
+      <NodeMetricChart title="On disk per VM (estimate)" apiPath={ENDPOINT} dataKey="vmOnDiskBytes" initialData={initial.vmOnDiskBytes} format="bytes" />
     </div>
   );
 }
