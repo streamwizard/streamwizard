@@ -213,12 +213,12 @@ nodes.post("/claim", async (c) => {
     TOKEN_ENCRYPTION_KEY: env.TOKEN_ENCRYPTION_KEY,
     // Present only when rest-api itself has InfluxDB configured for this
     // environment — omitted otherwise, same as the ingest-node claim route.
-    ...(env.INFLUXDB_URL && env.INFLUXDB_ORG && env.INFLUXDB_BUCKET && env.INFLUXDB_TOKEN
+    // The token is write-only on the obs-nodes bucket, never rest-api's own.
+    ...(env.INFLUXDB_URL && env.INFLUXDB_ORG && env.INFLUXDB_OBS_NODE_TOKEN
       ? {
           INFLUXDB_URL: env.INFLUXDB_URL,
           INFLUXDB_ORG: env.INFLUXDB_ORG,
-          INFLUXDB_BUCKET: env.INFLUXDB_BUCKET,
-          INFLUXDB_TOKEN: env.INFLUXDB_TOKEN,
+          INFLUXDB_TOKEN: env.INFLUXDB_OBS_NODE_TOKEN,
         }
       : {}),
     // Present only when both are configured on rest-api — lets the node push

@@ -5,7 +5,7 @@ import "./lib/env";
 import { Hono } from "hono";
 import { sentry } from "@sentry/hono/bun";
 import { getSentryOptions, createSupabaseIntegration, createConsoleLogsIntegration, flushSentry, reportFatal } from "@repo/sentry";
-import { metricsMiddleware, isMetricsEnabled } from "@repo/metrics";
+import { metricsMiddleware, isMetricsEnabled, initMetrics, BUCKETS } from "@repo/metrics";
 import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
 import { rawBodyMiddleware } from "./middleware/raw-body";
@@ -22,6 +22,8 @@ import nodes from "./routes/nodes";
 import ingestNodes from "./routes/ingest-nodes";
 import { nodeAuthCacheStats } from "./middleware/node-auth";
 import { ingestNodeAuthCacheStats } from "./middleware/ingest-node-auth";
+
+initMetrics(BUCKETS.restApi);
 
 const app = new Hono();
 

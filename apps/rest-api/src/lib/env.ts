@@ -44,15 +44,19 @@ const schema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
   R2_ASSETS_BUCKET: z.string().min(1).optional(),
 
-  // InfluxDB — relayed to ingest/OBS nodes in the /claim response so they can
-  // report host + instance metrics without a separate manual .env edit per
-  // node. Optional: a claim still succeeds without these, it just omits them
-  // from the response (see ingest-nodes.ts / nodes.ts), same as install.sh
-  // already tolerates a missing tailscale_authkey.
+  // InfluxDB — one org per environment, buckets are fixed in @repo/metrics.
+  // INFLUXDB_TOKEN is rest-api's own write token (rest-api + vm-backups).
+  // The node tokens are write-only on the obs-nodes / ingest-nodes bucket and are
+  // relayed to nodes in the /claim response so they can report host +
+  // instance metrics without a manual .env edit per node. Optional: a claim
+  // still succeeds without these, it just omits them from the response (see
+  // ingest-nodes.ts / nodes.ts), same as install.sh already tolerates a
+  // missing tailscale_authkey.
   INFLUXDB_URL: z.string().url().optional(),
   INFLUXDB_ORG: z.string().optional(),
-  INFLUXDB_BUCKET: z.string().optional(),
   INFLUXDB_TOKEN: z.string().optional(),
+  INFLUXDB_OBS_NODE_TOKEN: z.string().optional(),
+  INFLUXDB_INGEST_NODE_TOKEN: z.string().optional(),
 
   // ws-server broadcast — relayed to OBS nodes in the /claim response so the
   // obs-instance-manager can push container lifecycle events to the owning
