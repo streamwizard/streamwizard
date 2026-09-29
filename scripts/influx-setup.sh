@@ -6,7 +6,8 @@
 #
 # Usage: scripts/influx-setup.sh <dev|staging|prod>
 # Needs the influx CLI with an active config whose token can create orgs
-# (an operator token). New tokens are printed once; put them in Doppler.
+# (an operator token), or an All Access token of an org you created in the UI.
+# New tokens are printed once; put them in Doppler.
 set -euo pipefail
 
 ENV="${1:-}"
@@ -32,17 +33,14 @@ BUCKETS=(
   "vm-backups:400d"
 )
 
-# token description -> buckets it may write. Doppler var in the comment.
-declare -A WRITE_TOKENS=(
-  ["rest-api"]="rest-api vm-backups"        # rest-api INFLUXDB_TOKEN
-  ["ws-server"]="ws-server"                 # ws-server INFLUXDB_TOKEN
-  ["bot"]="bot"                             # streamwizard-bot INFLUXDB_TOKEN
-  ["auto-switcher"]="auto-switcher"         # obs-auto-switcher INFLUXDB_TOKEN
-  ["obs-node"]="obs-nodes"                  # rest-api INFLUXDB_OBS_NODE_TOKEN
-  ["ingest-node"]="ingest-nodes"            # rest-api INFLUXDB_INGEST_NODE_TOKEN
-  ["supabase-telegraf"]="supabase-platform" # supabase-telegraf INFLUXDB_TOKEN
+# Doppler has one shared config per environment, so every service in it reads
+# the same INFLUXDB_TOKEN: the "apps" token writes the service buckets and
+# reads all of them. Nodes get tokens that can only write their own bucket.
+APP_WRITE_BUCKETS="rest-api ws-server bot auto-switcher supabase-platform vm-backups"
+declare -A NODE_TOKENS=(
+  ["obs-node"]="obs-nodes"       # rest-api INFLUXDB_OBS_NODE_TOKEN
+  ["ingest-node"]="ingest-nodes" # rest-api INFLUXDB_INGEST_NODE_TOKEN
 )
-READ_TOKEN="read-all" # web-admin + alert-worker INFLUXDB_TOKEN
 
 if ! influx org list --name "$ORG" --hide-headers >/dev/null 2>&1; then
   echo "creating org $ORG"
@@ -76,16 +74,16 @@ create_token() {
   echo "token $ORG/$description: $token"
 }
 
-for description in "${!WRITE_TOKENS[@]}"; do
-  args=()
-  for bucket in ${WRITE_TOKENS[$description]}; do
-    args+=(--write-bucket "$(bucket_id "$bucket")")
-  done
-  create_token "$ORG-$description" "${args[@]}"
+# INFLUXDB_TOKEN in the environment's shared Doppler config
+app_args=()
+for bucket in $APP_WRITE_BUCKETS; do
+  app_args+=(--write-bucket "$(bucket_id "$bucket")")
 done
-
-read_args=()
 for entry in "${BUCKETS[@]}"; do
-  read_args+=(--read-bucket "$(bucket_id "${entry%%:*}")")
+  app_args+=(--read-bucket "$(bucket_id "${entry%%:*}")")
 done
-create_token "$ORG-$READ_TOKEN" "${read_args[@]}"
+create_token "$ORG-apps" "${app_args[@]}"
+
+for description in "${!NODE_TOKENS[@]}"; do
+  create_token "$ORG-$description" --write-bucket "$(bucket_id "${NODE_TOKENS[$description]}")"
+done

@@ -45,7 +45,7 @@ const schema = z.object({
   R2_ASSETS_BUCKET: z.string().min(1).optional(),
 
   // InfluxDB — one org per environment, buckets are fixed in @repo/metrics.
-  // INFLUXDB_TOKEN is rest-api's own write token (rest-api + vm-backups).
+  // INFLUXDB_TOKEN is the env's shared "apps" token (scripts/influx-setup.sh).
   // The node tokens are write-only on the obs-nodes / ingest-nodes bucket and are
   // relayed to nodes in the /claim response so they can report host +
   // instance metrics without a manual .env edit per node. Optional: a claim
