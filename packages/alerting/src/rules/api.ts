@@ -30,7 +30,7 @@ export function apiRules(overrides: RuleOverrides): AlertRule[] {
         forTicks: 1,
         crit: { default: API_5XX_RATE_PCT, unit: "%", direction: "above" },
         async evaluate(ctx, t) {
-          const services = await queryHttpErrorRateByService("5m", { bucket: ctx.bucket });
+          const services = await queryHttpErrorRateByService("5m");
           const breaches: Breach[] = [];
           for (const svc of services) {
             if (svc.total < API_5XX_MIN_REQUESTS) continue;
@@ -55,7 +55,7 @@ export function apiRules(overrides: RuleOverrides): AlertRule[] {
         forTicks: 2,
         warn: { default: API_P95_WARN_MS, unit: "ms", direction: "above" },
         async evaluate(ctx, t) {
-          const services = await queryHttpP95ByService("10m", { bucket: ctx.bucket });
+          const services = await queryHttpP95ByService("10m");
           return services
             .filter((svc) => svc.p95Ms > t.warn)
             .map((svc) => ({
@@ -76,7 +76,7 @@ export function apiRules(overrides: RuleOverrides): AlertRule[] {
         envs: ["prod", "staging"],
         warn: { default: SERVICE_SILENT_AFTER_MIN, unit: "min", direction: "above" },
         async evaluate(ctx, t) {
-          const lastWrites = await queryLastWriteByTag("http_request", "service", "24h", { bucket: ctx.bucket });
+          const lastWrites = await queryLastWriteByTag("http_request", "service", "24h");
           const lastSeenByService = new Map(lastWrites.map((w) => [w.tagValue, new Date(w.lastSeen).getTime()]));
           const breaches: Breach[] = [];
           for (const service of ctx.registry.services) {
@@ -115,7 +115,7 @@ export function apiRules(overrides: RuleOverrides): AlertRule[] {
           // started at the lost point. The window is wide so a long outage
           // keeps its start; one that outlives it is reported as "over 24h".
           const rangeMin = Math.max(24 * 60, Math.ceil(t.crit) * 2);
-          const latest = await queryEventsubConnectionLatest(`${rangeMin}m`, { bucket: ctx.bucket });
+          const latest = await queryEventsubConnectionLatest(`${rangeMin}m`);
           const byService = new Map<string, Partial<Record<string, number>>>();
           for (const row of latest) {
             const at = new Date(row.time).getTime();
@@ -157,7 +157,7 @@ export function apiRules(overrides: RuleOverrides): AlertRule[] {
           if (!ctx.registry.anyChannelLive) return [];
           // Query range tracks the threshold so a raised limit still finds the last event.
           const rangeMin = Math.max(30, Math.ceil(t.warn));
-          const lastEvent = await queryEventsubLastEvent(`${rangeMin}m`, { bucket: ctx.bucket });
+          const lastEvent = await queryEventsubLastEvent(`${rangeMin}m`);
           if (lastEvent && ctx.now.getTime() - new Date(lastEvent).getTime() < t.warn * 60_000) return [];
           return [
             {

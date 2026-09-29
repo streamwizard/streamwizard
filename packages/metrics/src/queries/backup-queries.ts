@@ -1,5 +1,5 @@
 import { assertValidFluxDuration, runFluxQuery } from "../query-client";
-import { resolveBucket, type QueryOpts } from "./query-opts";
+import { fluxFrom } from "../buckets";
 
 // Read side of backup-metrics.ts (written by rest-api's backup poller).
 
@@ -16,12 +16,11 @@ export interface BackupVmSeriesPoint {
 }
 
 /** Datastore used % over time. */
-export function queryBackupDatastoreUsedPct(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<BackupSeriesPoint[]> {
+export function queryBackupDatastoreUsedPct(fluxRange = "24h", window = "1h"): Promise<BackupSeriesPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
   const query = `
-    from(bucket: "${resolveBucket(opts)}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("backup_datastore", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "backup_datastore" and r._field == "used_pct")
       |> group()
       |> aggregateWindow(every: ${window}, fn: max, createEmpty: false)
@@ -30,12 +29,11 @@ export function queryBackupDatastoreUsedPct(fluxRange = "24h", window = "1h", op
   return runFluxQuery(query, (row) => ({ time: row._time ?? "", value: Number(row._value) }));
 }
 
-async function queryBackupVmField(field: "age_s" | "size_bytes", fluxRange: string, window: string, opts?: QueryOpts) {
+async function queryBackupVmField(field: "age_s" | "ondisk_est_bytes", fluxRange: string, window: string) {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
   const query = `
-    from(bucket: "${resolveBucket(opts)}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("backup_vm", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "backup_vm" and r._field == "${field}")
       |> group(columns: ["vmid", "name"])
       |> aggregateWindow(every: ${window}, fn: max, createEmpty: false)
@@ -49,12 +47,12 @@ async function queryBackupVmField(field: "age_s" | "size_bytes", fluxRange: stri
 }
 
 /** Age of the newest backup per VM, in hours (a sawtooth: resets at each run). */
-export async function queryBackupVmAgeHours(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<BackupVmSeriesPoint[]> {
-  const points = await queryBackupVmField("age_s", fluxRange, window, opts);
+export async function queryBackupVmAgeHours(fluxRange = "24h", window = "1h"): Promise<BackupVmSeriesPoint[]> {
+  const points = await queryBackupVmField("age_s", fluxRange, window);
   return points.map((p) => ({ ...p, value: p.value / 3600 }));
 }
 
-/** Logical size of the newest backup per VM, in bytes. */
-export function queryBackupVmSizeBytes(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<BackupVmSeriesPoint[]> {
-  return queryBackupVmField("size_bytes", fluxRange, window, opts);
+/** Estimated bytes each VM's kept backups take on PBS (deduplicated, compressed). */
+export function queryBackupVmOnDiskBytes(fluxRange = "24h", window = "1h"): Promise<BackupVmSeriesPoint[]> {
+  return queryBackupVmField("ondisk_est_bytes", fluxRange, window);
 }

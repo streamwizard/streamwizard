@@ -59,7 +59,7 @@ function ctxWith(rows: { data: unknown }[], now: Date = NOW, onRead?: () => void
           }
         : chain,
   };
-  return { env: "prod", bucket: "b", now, supabase, registry: {}, probeResults: new Map() } as unknown as EnvContext;
+  return { env: "prod", now, supabase, registry: {}, probeResults: new Map() } as unknown as EnvContext;
 }
 
 const rule = (id: string) => backupRules({}).find((r) => r.id === id)!;

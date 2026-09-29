@@ -1,5 +1,5 @@
 import { runFluxQuery, assertValidFluxDuration } from "../query-client";
-import { resolveBucket, type QueryOpts } from "./query-opts";
+import { fluxFrom } from "../buckets";
 
 export interface HttpRequestPoint {
   time: string;
@@ -24,13 +24,11 @@ export interface HttpRouteStatPoint {
   avgDurationMs: number;
 }
 
-export async function queryHttpRequests(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<HttpRequestPoint[]> {
+export async function queryHttpRequests(fluxRange = "24h", window = "1h"): Promise<HttpRequestPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("http_request", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "http_request")
       |> filter(fn: (r) => r._field == "duration_ms")
       |> aggregateWindow(every: ${window}, fn: mean, createEmpty: false)
@@ -46,12 +44,10 @@ export async function queryHttpRequests(fluxRange = "24h", window = "1h", opts?:
   }));
 }
 
-export async function queryHttpRequestCount(fluxRange = "24h", opts?: QueryOpts): Promise<{ time: string; count: number; status: string }[]> {
+export async function queryHttpRequestCount(fluxRange = "24h"): Promise<{ time: string; count: number; status: string }[]> {
   assertValidFluxDuration(fluxRange, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("http_request", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "http_request")
       |> filter(fn: (r) => r._field == "duration_ms")
       |> aggregateWindow(every: 1h, fn: count, createEmpty: false)
@@ -64,12 +60,10 @@ export async function queryHttpRequestCount(fluxRange = "24h", opts?: QueryOpts)
   }));
 }
 
-export async function queryHttpRouteStats(fluxRange = "24h", opts?: QueryOpts): Promise<HttpRouteStatPoint[]> {
+export async function queryHttpRouteStats(fluxRange = "24h"): Promise<HttpRouteStatPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("http_request", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "http_request")
       |> filter(fn: (r) => r._field == "duration_ms")
       |> group(columns: ["route", "method"])

@@ -48,7 +48,6 @@ export interface Registry {
 
 export interface EnvContext {
   env: Env;
-  bucket: string;
   now: Date;
   supabase: SupabaseClient<Database>;
   registry: Registry;

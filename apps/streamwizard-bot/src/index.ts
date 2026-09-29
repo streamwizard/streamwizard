@@ -8,7 +8,9 @@ import { env } from "./lib/env";
 import { createEventSubLogger } from "./lib/eventsub-log";
 import { createEventSubTelemetry } from "./lib/eventsub-telemetry";
 import { overlayWsClient } from "./overlay-ws-client";
-import { isMetricsEnabled } from "@repo/metrics";
+import { isMetricsEnabled, initMetrics, BUCKETS } from "@repo/metrics";
+
+initMetrics(BUCKETS.bot);
 
 const production = "wss://eventsub.wss.twitch.tv/ws";
 const websocketUrl = env.WS_SERVER_URL;

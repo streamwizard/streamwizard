@@ -8,8 +8,10 @@ import { websocketHandlers } from "./handlers/ws";
 import { rooms } from "./rooms";
 import { monitors, broadcastSnapshot, getBotSockets } from "./monitor";
 import { consumers } from "./consumers";
-import { isMetricsEnabled } from "@repo/metrics";
+import { isMetricsEnabled, initMetrics, BUCKETS } from "@repo/metrics";
 import type { ConnectionData } from "./types";
+
+initMetrics(BUCKETS.wsServer);
 
 const PORT = Number(process.env.PORT ?? 8000);
 

@@ -151,7 +151,7 @@ export function obsNodeRules(overrides: RuleOverrides): AlertRule[] {
         title: "OBS fleet at container capacity",
         forTicks: 2,
         async evaluate(ctx) {
-          const nodes = await queryLatestObsNodeFields("10m", { bucket: ctx.bucket });
+          const nodes = await queryLatestObsNodeFields("10m");
           let running = 0;
           let max = 0;
           for (const node of nodes) {
@@ -211,7 +211,7 @@ export function obsNodeRules(overrides: RuleOverrides): AlertRule[] {
         warn: { default: INSTANCE_CRASH_WINDOW_MIN, unit: "min lookback", direction: "above" },
         async evaluate(ctx, t) {
           const windowMin = Math.max(1, Math.round(t.warn));
-          const events = await queryObsInstanceEvents(`${windowMin}m`, { bucket: ctx.bucket });
+          const events = await queryObsInstanceEvents(`${windowMin}m`);
           const byInstance = new Map<
             string,
             { nodeId: string; crashes: number; restored: boolean; restartFailed: boolean }
@@ -266,9 +266,7 @@ export function obsNodeRules(overrides: RuleOverrides): AlertRule[] {
           direction: "above",
         },
         async evaluate(ctx, t) {
-          const events = await queryObsInstanceEvents(`${INSTANCE_CRASH_LOOP_WINDOW_MIN}m`, {
-            bucket: ctx.bucket,
-          });
+          const events = await queryObsInstanceEvents(`${INSTANCE_CRASH_LOOP_WINDOW_MIN}m`);
           return events
             .filter((e) => e.event === "crash" && e.count >= t.crit)
             .map((e) => ({

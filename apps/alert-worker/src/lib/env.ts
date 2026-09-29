@@ -17,7 +17,6 @@ const schema = z.object({
   INFLUXDB_URL: z.string().url(),
   INFLUXDB_TOKEN: z.string().min(1),
   INFLUXDB_ORG: z.string().min(1),
-  INFLUXDB_BUCKET: z.string().min(1),
 
   // Notification channels — optional so a dev alert-worker (alert_events only)
   // boots without them.

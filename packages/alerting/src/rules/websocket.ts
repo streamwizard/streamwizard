@@ -19,7 +19,7 @@ export function websocketRules(overrides: RuleOverrides): AlertRule[] {
         forTicks: 1,
         warn: { default: WS_AUTH_FAILURE_SPIKE, unit: "count / 5m", direction: "above" },
         async evaluate(ctx, t) {
-          const count = await queryWsEventTotal("ws_auth_failure", "5m", { bucket: ctx.bucket });
+          const count = await queryWsEventTotal("ws_auth_failure", "5m");
           if (count <= t.warn) return [];
           return [
             {
@@ -46,7 +46,7 @@ export function websocketRules(overrides: RuleOverrides): AlertRule[] {
           // it here made every unwatched stream page an operator. What's left
           // — malformed payloads — always indicates a protocol bug or version
           // skew between a bot client and ws-server, so the threshold stays 0.
-          const count = await queryWsEventTotal("ws_message_drop", "5m", { bucket: ctx.bucket }, ["room_not_found"]);
+          const count = await queryWsEventTotal("ws_message_drop", "5m", ["room_not_found"]);
           if (count <= t.warn) return [];
           return [
             {

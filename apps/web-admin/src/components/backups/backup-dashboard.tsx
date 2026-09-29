@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useTransition } from "react";
 import useSWR from "swr";
 import { toast } from "sonner";
-import { Clock, DatabaseBackup, HardDrive, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { Archive, Clock, DatabaseBackup, HardDrive, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import type { BackupJobView, BackupOverviewResponse, BackupStatus } from "@repo/backups";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { refreshBackups } from "@/actions/backups";
@@ -14,7 +14,7 @@ import { StatusIndicator } from "@/components/widgets/status-indicator";
 import type { BackupFetch } from "@/lib/backups";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { cn, fetcher } from "@/lib/utils";
-import { BANNER_BORDER, STATUS_DISPLAY, formatAge, formatBytes, formatWhen, relative } from "./backup-format";
+import { BANNER_BORDER, SIZE_HELP, STATUS_DISPLAY, formatAge, formatApprox, formatBytes, formatWhen, relative } from "./backup-format";
 
 const VERIFICATION_LABEL = { ok: "Verified", failed: "Failed", pending: "Pending", none: "Not verified" } as const;
 
@@ -48,6 +48,17 @@ function jobTile(title: string, icon: typeof Clock, jobs: BackupJobView[]) {
 }
 
 const rank = (s: BackupStatus) => ({ ok: 0, unknown: 1, warning: 2, error: 3 })[s];
+
+/** A column header whose meaning is explained on hover. */
+export function HelpHead({ help, className, children }: { help: string; className?: string; children: React.ReactNode }) {
+  return (
+    <TableHead className={className}>
+      <span title={help} className="cursor-help underline decoration-dotted underline-offset-4">
+        {children}
+      </span>
+    </TableHead>
+  );
+}
 
 export function BackupDashboard({
   initial,
@@ -127,7 +138,7 @@ export function BackupDashboard({
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="VMs OK"
           value={`${okCount}/${o.vms.length}`}
@@ -136,11 +147,21 @@ export function BackupDashboard({
         />
         <StatCard title="Oldest last backup" value={formatAge(oldest)} description="Across all VMs" icon={Clock} />
         <StatCard
-          title="Datastore used"
+          title="NAS disk used"
           value={o.usage ? `${o.usage.usedPct.toFixed(0)} %` : "—"}
-          description={o.usage ? `${formatBytes(o.usage.availBytes)} free of ${formatBytes(o.usage.totalBytes)}` : undefined}
+          description={o.usage ? `${formatBytes(o.usage.availBytes)} free of ${formatBytes(o.usage.totalBytes)}, whole NAS` : undefined}
           tone={STATUS_DISPLAY[o.checks.find((c) => c.id === "datastore-usage")?.status ?? "unknown"].tone}
           icon={HardDrive}
+        />
+        <StatCard
+          title="Our backups on disk"
+          value={formatApprox(o.namespaceUsage?.onDiskEstBytes)}
+          description={
+            o.namespaceUsage
+              ? `${formatBytes(o.namespaceUsage.logicalBytes)} of snapshots, ${o.namespaceUsage.dedupFactor?.toFixed(1) ?? "—"}× dedup`
+              : "Worked out after the next poll"
+          }
+          icon={Archive}
         />
         {jobTile("Garbage collection", Trash2, o.jobs.gc ? [o.jobs.gc] : [])}
         {jobTile("Prune", Trash2, o.jobs.prune)}
@@ -161,7 +182,15 @@ export function BackupDashboard({
                   <TableHead>Host</TableHead>
                   <TableHead>Last backup</TableHead>
                   <TableHead className="text-right">Snapshots</TableHead>
-                  <TableHead className="text-right">Size</TableHead>
+                  <HelpHead help={SIZE_HELP.disk} className="text-right">
+                    Disk
+                  </HelpHead>
+                  <HelpHead help={SIZE_HELP.lastUpload} className="text-right">
+                    Last upload
+                  </HelpHead>
+                  <HelpHead help={SIZE_HELP.onDisk} className="text-right">
+                    On disk
+                  </HelpHead>
                   <TableHead>Verification</TableHead>
                   <TableHead>Last webhook</TableHead>
                 </TableRow>
@@ -169,7 +198,7 @@ export function BackupDashboard({
               <TableBody>
                 {o.vms.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-8 text-center text-muted-foreground">
+                    <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
                       No VMs found yet. They appear after the first successful poll.
                     </TableCell>
                   </TableRow>
@@ -199,7 +228,9 @@ export function BackupDashboard({
                         {vm.lastSuccessAt ? relative(vm.lastSuccessAt) : "never"}
                       </TableCell>
                       <TableCell className="text-right align-top tabular-nums">{vm.snapshotCount}</TableCell>
-                      <TableCell className="text-right align-top tabular-nums">{formatBytes(vm.lastSizeBytes)}</TableCell>
+                      <TableCell className="text-right align-top tabular-nums">{formatBytes(vm.diskBytes)}</TableCell>
+                      <TableCell className="text-right align-top tabular-nums">{formatBytes(vm.lastUploadedBytes)}</TableCell>
+                      <TableCell className="text-right align-top tabular-nums">{formatApprox(vm.usage?.onDiskEstBytes)}</TableCell>
                       <TableCell className="align-top">
                         <VerificationBadge state={vm.verification} />
                       </TableCell>

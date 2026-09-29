@@ -5,12 +5,18 @@ describe("buildLastWriteByTagQuery", () => {
   // Grouping by tag before dropping _value merges float and integer fields into
   // one table, and last() fails with a schema collision (ALERT-WORKER-1).
   it("drops _value before grouping so mixed field types never share a table", () => {
-    const query = buildLastWriteByTagQuery("bucket", "obs_node", "node_id", "24h");
+    const query = buildLastWriteByTagQuery("obs_node", "node_id", "24h");
     const keepAt = query.indexOf('keep(columns: ["node_id", "_time"])');
     const groupAt = query.indexOf('group(columns: ["node_id"])');
     const lastAt = query.indexOf('last(column: "_time")');
     expect(keepAt).toBeGreaterThan(-1);
     expect(keepAt).toBeLessThan(groupAt);
     expect(groupAt).toBeLessThan(lastAt);
+  });
+
+  // Flux rejects union() over an unbounded from(), so every branch carries its own range.
+  it("bounds every bucket of a multi-bucket measurement", () => {
+    const query = buildLastWriteByTagQuery("http_request", "service", "24h");
+    expect(query).toContain('union(tables: [from(bucket: "rest-api") |> range(start: -24h), from(bucket: "ingest-nodes") |> range(start: -24h)])');
   });
 });

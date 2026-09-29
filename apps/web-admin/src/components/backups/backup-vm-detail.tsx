@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import useSWR from "swr";
-import { ArrowLeft, ChevronDown, Clock, HardDrive, Layers, ShieldCheck } from "lucide-react";
+import { Archive, ArrowLeft, ChevronDown, Clock, HardDrive, Layers, ShieldCheck, Upload } from "lucide-react";
 import type { BackupVmDetailResponse, PbsSnapshot } from "@repo/backups";
 import {
   Card,
@@ -25,43 +25,43 @@ import { StatusIndicator } from "@/components/widgets/status-indicator";
 import type { BackupFetch } from "@/lib/backups";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { cn, fetcher } from "@/lib/utils";
-import { VerificationBadge } from "./backup-dashboard";
-import { BANNER_BORDER, STATUS_DISPLAY, epochToIso, formatAge, formatBytes, formatWhen, relative } from "./backup-format";
+import { HelpHead, VerificationBadge } from "./backup-dashboard";
+import { BANNER_BORDER, SIZE_HELP, STATUS_DISPLAY, epochToIso, formatAge, formatApprox, formatBytes, formatWhen, relative } from "./backup-format";
 
-/** Logical snapshot size over time, oldest left. Plain SVG; a handful of points. */
-function SizeSparkline({ snapshots }: { snapshots: PbsSnapshot[] }) {
-  const points = snapshots.filter((s) => s.sizeBytes !== null).sort((a, b) => a.time - b.time);
-  if (points.length < 2) return <p className="text-sm text-muted-foreground">Needs at least two snapshots.</p>;
+/** What each kept backup run uploaded, oldest left. Plain SVG bars; a few dozen at most. */
+function UploadBars({ snapshots }: { snapshots: PbsSnapshot[] }) {
+  const points = snapshots.filter((s) => s.usage?.uploadedBytes != null).sort((a, b) => a.time - b.time);
+  if (points.length === 0) return <p className="text-sm text-muted-foreground">Shows up after the next poll.</p>;
 
   const width = 600;
   const height = 80;
-  const sizes = points.map((p) => p.sizeBytes!);
-  const min = Math.min(...sizes);
-  const max = Math.max(...sizes);
-  // At least 10 % of the largest size as the vertical range, so a few bytes of
-  // difference don't read as a big swing.
-  const floor = Math.min(min, max - max * 0.1);
-  const span = max - floor || 1;
-  const t0 = points[0]!.time;
-  const tSpan = points[points.length - 1]!.time - t0 || 1;
-  const coords = points.map((p) => [((p.time - t0) / tSpan) * (width - 8) + 4, height - 4 - ((p.sizeBytes! - floor) / span) * (height - 8)] as const);
+  const max = Math.max(...points.map((p) => p.usage!.uploadedBytes!)) || 1;
+  const slot = width / points.length;
+  const bar = Math.max(2, Math.min(24, slot * 0.7));
 
   return (
     <div>
-      <svg viewBox={`0 0 ${width} ${height}`} className="h-20 w-full text-primary" preserveAspectRatio="none" role="img" aria-label="Snapshot size over time">
-        <polyline fill="none" stroke="currentColor" strokeWidth={2} vectorEffect="non-scaling-stroke" points={coords.map(([x, y]) => `${x},${y}`).join(" ")} />
-        {coords.map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r={3} fill="currentColor">
-            <title>{`${formatWhen(epochToIso(points[i]!.time))}: ${formatBytes(points[i]!.sizeBytes)}`}</title>
-          </circle>
-        ))}
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-20 w-full text-primary" preserveAspectRatio="none" role="img" aria-label="Uploaded per backup run">
+        {points.map((p, i) => {
+          const h = Math.max(1, (p.usage!.uploadedBytes! / max) * (height - 4));
+          return (
+            <rect key={p.time} x={i * slot + (slot - bar) / 2} y={height - h} width={bar} height={h} rx={1} fill="currentColor">
+              <title>{`${formatWhen(epochToIso(p.time))}: ${formatBytes(p.usage!.uploadedBytes)}`}</title>
+            </rect>
+          );
+        })}
       </svg>
       <div className="mt-1 flex justify-between text-xs text-muted-foreground">
-        <span>min {formatBytes(min)}</span>
+        <span suppressHydrationWarning>{formatWhen(epochToIso(points[0]!.time))}</span>
         <span>max {formatBytes(max)}</span>
       </div>
     </div>
   );
+}
+
+function diskSummary(vm: BackupVmDetailResponse["vm"]): string | undefined {
+  if (!vm.disks?.length) return undefined;
+  return vm.disks.map((d) => `${d.key} ${formatBytes(d.sizeBytes)}${d.backedUp ? "" : " (skipped)"}`).join(" · ");
 }
 
 export function BackupVmDetail({ vmid, initial }: { vmid: number; initial: BackupFetch<BackupVmDetailResponse> }) {
@@ -112,24 +112,35 @@ export function BackupVmDetail({ vmid, initial }: { vmid: number; initial: Backu
         </CardContent>
       </Card>
 
-      <div className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-4", pbsStale && "opacity-70")}>
+      <div className={cn("grid gap-4 sm:grid-cols-2 lg:grid-cols-3", pbsStale && "opacity-70")}>
         <StatCard title="Last backup" value={formatAge(vm.ageSeconds)} description={formatWhen(vm.lastSuccessAt)} icon={Clock} />
         <StatCard title="Snapshots" value={vm.snapshotCount} icon={Layers} />
-        <StatCard title="Newest size" value={formatBytes(vm.lastSizeBytes)} description="Logical size, before deduplication" icon={HardDrive} />
         <StatCard
           title="Verification"
           value={vm.verification === "ok" ? "Verified" : vm.verification === "failed" ? "Failed" : vm.verification === "pending" ? "Pending" : "None"}
           tone={vm.verification === "ok" ? "positive" : vm.verification === "failed" ? "danger" : "default"}
           icon={ShieldCheck}
         />
+        <StatCard title="Disk" value={formatBytes(vm.diskBytes)} description={diskSummary(vm) ?? "Backed-up disks, from the PVE config"} icon={HardDrive} />
+        <StatCard title="Last upload" value={formatBytes(vm.lastUploadedBytes)} description="Sent to PBS by the newest run, compressed" icon={Upload} />
+        <StatCard
+          title="On disk"
+          value={formatApprox(vm.usage?.onDiskEstBytes)}
+          description={
+            vm.usage
+              ? `${formatBytes(vm.usage.uniqueBytes)} unique before compression${vm.usage.sharedBytes > 0 ? `, ${formatBytes(vm.usage.sharedBytes)} shared with other VMs` : ""}`
+              : "Worked out after the next poll"
+          }
+          icon={Archive}
+        />
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Snapshot size</CardTitle>
+          <CardTitle className="text-base">Uploaded per run</CardTitle>
         </CardHeader>
         <CardContent>
-          <SizeSparkline snapshots={snapshots} />
+          <UploadBars snapshots={snapshots} />
         </CardContent>
       </Card>
 
@@ -142,7 +153,12 @@ export function BackupVmDetail({ vmid, initial }: { vmid: number; initial: Backu
             <TableHeader>
               <TableRow>
                 <TableHead>Time</TableHead>
-                <TableHead className="text-right">Size</TableHead>
+                <HelpHead help={SIZE_HELP.uploaded} className="text-right">
+                  Uploaded
+                </HelpHead>
+                <HelpHead help={SIZE_HELP.onlyHere} className="text-right">
+                  Only in this snapshot
+                </HelpHead>
                 <TableHead>Verification</TableHead>
                 <TableHead>Protected</TableHead>
               </TableRow>
@@ -150,7 +166,7 @@ export function BackupVmDetail({ vmid, initial }: { vmid: number; initial: Backu
             <TableBody>
               {snapshots.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="py-6 text-center text-muted-foreground">
+                  <TableCell colSpan={5} className="py-6 text-center text-muted-foreground">
                     No snapshots in PBS
                   </TableCell>
                 </TableRow>
@@ -160,10 +176,19 @@ export function BackupVmDetail({ vmid, initial }: { vmid: number; initial: Backu
                     <TableCell suppressHydrationWarning>
                       {formatWhen(epochToIso(s.time))} <span className="text-xs text-muted-foreground">({relative(epochToIso(s.time))})</span>
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{formatBytes(s.sizeBytes)}</TableCell>
-                    <TableCell>
-                      <VerificationBadge state={s.verification ?? "none"} />
-                    </TableCell>
+                    {s.unfinished ? (
+                      <TableCell colSpan={3} className="text-muted-foreground">
+                        Backup still running
+                      </TableCell>
+                    ) : (
+                      <>
+                        <TableCell className="text-right tabular-nums">{formatBytes(s.usage?.uploadedBytes)}</TableCell>
+                        <TableCell className="text-right tabular-nums">{formatBytes(s.usage?.exclusiveBytes)}</TableCell>
+                        <TableCell>
+                          <VerificationBadge state={s.verification ?? "none"} />
+                        </TableCell>
+                      </>
+                    )}
                     <TableCell>{s.protected ? "Yes" : "No"}</TableCell>
                   </TableRow>
                 ))
