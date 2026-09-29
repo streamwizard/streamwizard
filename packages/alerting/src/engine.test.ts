@@ -142,6 +142,20 @@ describe("parseTickSnapshot", () => {
   });
 });
 
+describe("registryFromSnapshot: proxmox", () => {
+  it("defaults the VM alert settings to empty on a database without them", () => {
+    const parsed = parseTickSnapshot(makeSnapshot());
+    if (parsed === "not-locked") throw new Error("unexpected");
+    expect(registryFromSnapshot(parsed).proxmoxVmAlertSettings).toEqual([]);
+  });
+
+  it("carries the per-VM alert settings", () => {
+    const parsed = parseTickSnapshot(makeSnapshot({ proxmox_vm_alert_settings: [{ host: "pve1", vmid: 100, rules: ["vm.down"] }] }));
+    if (parsed === "not-locked") throw new Error("unexpected");
+    expect(registryFromSnapshot(parsed).proxmoxVmAlertSettings).toEqual([{ host: "pve1", vmid: 100, rules: ["vm.down"] }]);
+  });
+});
+
 /**
  * The pass tests share the engine's module-global state mirror and run in
  * declaration order — the fail-open test goes first while the mirror is

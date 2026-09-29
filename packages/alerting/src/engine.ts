@@ -13,6 +13,7 @@ import { alertConfig } from "./config";
 import { homeEnv } from "./home-env";
 import { queryLatestObsNodeFields, queryLatestHostSystemFields } from "@repo/metrics";
 import { buildRules } from "./rules";
+import { proxmoxGuestName } from "./rules/proxmox";
 import { runProbes } from "./probes";
 import { computeTransitions } from "./state";
 import { dispatchNotifications, resolveRoute, type EnvRoute } from "./notify";
@@ -120,6 +121,11 @@ const tickSnapshotSchema = z.object({
       updated_at: z.string(),
     }),
   ),
+  // Defaults to [] so the worker still parses a database that hasn't run
+  // 20260929150100_alert_snapshot_proxmox yet.
+  proxmox_vm_alert_settings: z
+    .array(z.object({ host: z.string(), vmid: z.number(), rules: z.array(z.string()) }))
+    .default([]),
 });
 
 type TickSnapshot = z.infer<typeof tickSnapshotSchema>;
@@ -158,6 +164,7 @@ export function registryFromSnapshot(snapshot: TickSnapshot): Registry {
       startedAt: s.started_at,
     })),
     anyChannelLive: snapshot.any_channel_live,
+    proxmoxVmAlertSettings: snapshot.proxmox_vm_alert_settings,
   };
 }
 
@@ -243,6 +250,17 @@ async function enrichNodeNotifications(
   notifications: AlertNotification[],
   registry: Registry,
 ): Promise<void> {
+  // vm.* VM rules key on "<host>:<vmid>"; the rules recorded each guest's
+  // name while evaluating, so no extra lookup. Host rules key on the bare host
+  // name and keep the plain Entity field.
+  for (const n of notifications) {
+    if (!n.ruleId.startsWith("vm.")) continue;
+    const vm = proxmoxGuestName(n.entityId);
+    if (!vm) continue;
+    n.entityLabel = vm.name;
+    n.node = { kind: "vm", name: vm.name, host: vm.host };
+  }
+
   const findNode = (entityId: string) => {
     const obs = registry.obsNodes.find((x) => x.id === entityId);
     if (obs) return { kind: "obs" as const, name: obs.name, address: obs.apiUrl ?? undefined };
@@ -508,6 +526,7 @@ export async function runEvaluationPass(): Promise<TickSummary> {
         services: EXPECTED_HTTP_SERVICES,
         liveIngestSessions: [],
         anyChannelLive: false,
+        proxmoxVmAlertSettings: [],
       };
   const overrides: RuleOverrides = snapshot ? overridesFromSnapshot(snapshot) : {};
   const notifyRoute = resolveRoute(alertEnv, snapshot?.notification_config ?? null);
@@ -521,7 +540,7 @@ export async function runEvaluationPass(): Promise<TickSummary> {
   // how a human notices if it ever slips through. Only when they change,
   // though — every 15s tick was ~80k identical lines a fortnight. A failed
   // snapshot is a warning so it reaches Sentry Logs.
-  const snapshotLine = `[alerting] snapshot ok=${snapshot !== null} obs=${registry.obsNodes.length} ingest=${registry.ingestNodes.length} states=${prev.length}`;
+  const snapshotLine = `[alerting] snapshot ok=${snapshot !== null} obs=${registry.obsNodes.length} ingest=${registry.ingestNodes.length} vm_settings=${registry.proxmoxVmAlertSettings.length} states=${prev.length}`;
   if (snapshotLine !== lastSnapshotLine) {
     if (snapshot) console.log(snapshotLine);
     else console.warn(snapshotLine);

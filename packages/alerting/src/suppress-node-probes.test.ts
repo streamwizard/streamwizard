@@ -24,6 +24,7 @@ const registry = (over: Partial<Registry> = {}): Registry => ({
   services: [],
   liveIngestSessions: [],
   anyChannelLive: false,
+  proxmoxVmAlertSettings: [],
   ...over,
 });
 

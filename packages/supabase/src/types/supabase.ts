@@ -3100,6 +3100,30 @@ export type Database = {
         }
         Relationships: []
       }
+      proxmox_vm_alert_settings: {
+        Row: {
+          host: string
+          rules: string[]
+          updated_at: string
+          updated_by: string | null
+          vmid: number
+        }
+        Insert: {
+          host: string
+          rules?: string[]
+          updated_at?: string
+          updated_by?: string | null
+          vmid: number
+        }
+        Update: {
+          host?: string
+          rules?: string[]
+          updated_at?: string
+          updated_by?: string | null
+          vmid?: number
+        }
+        Relationships: []
+      }
       stream_events: {
         Row: {
           broadcaster_id: string
