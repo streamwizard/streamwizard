@@ -1,11 +1,11 @@
 import { runFluxQuery, assertValidFluxDuration } from "../query-client";
-import { resolveBucket, type QueryOpts } from "./query-opts";
+import { fluxFrom, fluxFromAll, type Measurement } from "../buckets";
 
 // Read side of the web-admin alert engine. Unlike the dashboard queries
 // (time series for charts), every builder here answers one rule-evaluation
 // question per entity: "what is the latest/aggregate value in the window?".
-// All of them take an explicit QueryOpts bucket so one engine pass can
-// evaluate prod, staging and dev in turn.
+// Each environment has its own org, so the alert-worker only ever reads its
+// own; the buckets come from buckets.ts.
 
 /** Latest reading of every obs_node field, one row per node. */
 export interface ObsNodeLatest {
@@ -32,12 +32,10 @@ const OBS_NODE_ALERT_FIELDS = [
   "disk_used_pct",
 ] as const;
 
-export async function queryLatestObsNodeFields(range = "10m", opts?: QueryOpts): Promise<ObsNodeLatest[]> {
+export async function queryLatestObsNodeFields(range = "10m"): Promise<ObsNodeLatest[]> {
   assertValidFluxDuration(range, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom("obs_node", `-${range}`)}
       |> filter(fn: (r) => r._measurement == "obs_node")
       |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
       |> group(columns: ["node_id"])
@@ -69,12 +67,10 @@ const HOST_SYSTEM_ALERT_FIELDS = [
   "disk_used_pct",
 ] as const;
 
-export async function queryLatestHostSystemFields(range = "10m", opts?: QueryOpts): Promise<HostSystemLatest[]> {
+export async function queryLatestHostSystemFields(range = "10m"): Promise<HostSystemLatest[]> {
   assertValidFluxDuration(range, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom("host_system", `-${range}`)}
       |> filter(fn: (r) => r._measurement == "host_system")
       |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
       |> group(columns: ["node_id"])
@@ -100,12 +96,10 @@ export interface IngestSessionActivity {
   lastSeen: string;
 }
 
-export async function queryIngestStreamActivity(range = "2m", opts?: QueryOpts): Promise<IngestSessionActivity[]> {
+export async function queryIngestStreamActivity(range = "2m"): Promise<IngestSessionActivity[]> {
   assertValidFluxDuration(range, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom("ingest_stream", `-${range}`)}
       |> filter(fn: (r) => r._measurement == "ingest_stream")
       |> filter(fn: (r) => r._field == "kbps")
       |> group(columns: ["session_id"])
@@ -128,12 +122,10 @@ export interface HttpServiceErrorRate {
   errors5xx: number;
 }
 
-export async function queryHttpErrorRateByService(range = "5m", opts?: QueryOpts): Promise<HttpServiceErrorRate[]> {
+export async function queryHttpErrorRateByService(range = "5m"): Promise<HttpServiceErrorRate[]> {
   assertValidFluxDuration(range, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom("http_request", `-${range}`)}
       |> filter(fn: (r) => r._measurement == "http_request")
       |> filter(fn: (r) => r._field == "duration_ms")
       |> group(columns: ["service", "status"])
@@ -161,12 +153,10 @@ export interface HttpServiceP95 {
   p95Ms: number;
 }
 
-export async function queryHttpP95ByService(range = "10m", opts?: QueryOpts): Promise<HttpServiceP95[]> {
+export async function queryHttpP95ByService(range = "10m"): Promise<HttpServiceP95[]> {
   assertValidFluxDuration(range, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom("http_request", `-${range}`)}
       |> filter(fn: (r) => r._measurement == "http_request")
       |> filter(fn: (r) => r._field == "duration_ms")
       |> group(columns: ["service"])
@@ -193,16 +183,14 @@ export interface LastWriteByTag {
 }
 
 export async function queryLastWriteByTag(
-  measurement: string,
+  measurement: Measurement,
   tag: string,
   range = "10m",
-  opts?: QueryOpts,
 ): Promise<LastWriteByTag[]> {
   assertValidFluxDuration(range, "range");
   if (!MEASUREMENT_NAME_PATTERN.test(measurement)) throw new Error(`Invalid measurement name: ${measurement}`);
   if (!TAG_NAME_PATTERN.test(tag)) throw new Error(`Invalid tag name: ${tag}`);
-  const bucket = resolveBucket(opts);
-  const query = buildLastWriteByTagQuery(bucket, measurement, tag, range);
+  const query = buildLastWriteByTagQuery(measurement, tag, range);
   return runFluxQuery(query, (row) => ({
     tagValue: row[tag] ?? "unknown",
     lastSeen: row._time ?? "",
@@ -213,10 +201,9 @@ export async function queryLastWriteByTag(
 // has float disk_used_pct next to integer instance counts) would otherwise merge
 // float and integer _value columns into one table, and last() errors with
 // "schema collision: cannot group float and integer types together".
-export function buildLastWriteByTagQuery(bucket: string, measurement: string, tag: string, range: string): string {
+export function buildLastWriteByTagQuery(measurement: Measurement, tag: string, range: string): string {
   return `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom(measurement, `-${range}`)}
       |> filter(fn: (r) => r._measurement == "${measurement}")
       |> keep(columns: ["${tag}", "_time"])
       |> group(columns: ["${tag}"])
@@ -225,14 +212,12 @@ export function buildLastWriteByTagQuery(bucket: string, measurement: string, ta
   `;
 }
 
-/** Total points written to the bucket in the window across ALL measurements
+/** Total points written to every bucket in the window across ALL measurements
  * (rule: meta.pipeline_silent — 0 means the whole write path is dead). */
-export async function queryBucketPointCount(range = "5m", opts?: QueryOpts): Promise<number> {
+export async function queryBucketPointCount(range = "5m"): Promise<number> {
   assertValidFluxDuration(range, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFromAll(`-${range}`)}
       |> group()
       |> count(column: "_time")
       |> yield(name: "bucket_points")
@@ -250,20 +235,17 @@ export async function queryBucketPointCount(range = "5m", opts?: QueryOpts): Pro
 export async function queryWsEventTotal(
   measurement: "ws_auth_failure" | "ws_message_drop",
   range = "5m",
-  opts?: QueryOpts,
   excludeReasons: readonly string[] = [],
 ): Promise<number> {
   assertValidFluxDuration(range, "range");
   for (const reason of excludeReasons) {
     if (!/^[a-z_]+$/.test(reason)) throw new Error(`Invalid reason tag: ${reason}`);
   }
-  const bucket = resolveBucket(opts);
   const reasonFilter = excludeReasons.length
     ? `|> filter(fn: (r) => ${excludeReasons.map((r) => `r.reason != "${r}"`).join(" and ")})`
     : "";
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom(measurement, `-${range}`)}
       |> filter(fn: (r) => r._measurement == "${measurement}")
       |> filter(fn: (r) => r._field == "count")
       ${reasonFilter}
@@ -282,12 +264,10 @@ export interface DbQueryErrorRate {
   errors: number;
 }
 
-export async function queryDbQueryErrorRate(range = "5m", opts?: QueryOpts): Promise<DbQueryErrorRate> {
+export async function queryDbQueryErrorRate(range = "5m"): Promise<DbQueryErrorRate> {
   assertValidFluxDuration(range, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom("supabase_query", `-${range}`)}
       |> filter(fn: (r) => r._measurement == "supabase_query")
       |> filter(fn: (r) => r._field == "duration_ms")
       |> group(columns: ["success"])
@@ -308,12 +288,10 @@ export async function queryDbQueryErrorRate(range = "5m", opts?: QueryOpts): Pro
 }
 
 /** Timestamp of the most recent EventSub delivery (rule: eventsub.silence). */
-export async function queryEventsubLastEvent(range = "30m", opts?: QueryOpts): Promise<string | null> {
+export async function queryEventsubLastEvent(range = "30m"): Promise<string | null> {
   assertValidFluxDuration(range, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom("eventsub_event", `-${range}`)}
       |> filter(fn: (r) => r._measurement == "eventsub_event")
       |> filter(fn: (r) => r._field == "count")
       |> group()
@@ -333,12 +311,10 @@ export interface EventsubConnectionLatest {
   time: string;
 }
 
-export async function queryEventsubConnectionLatest(range = "24h", opts?: QueryOpts): Promise<EventsubConnectionLatest[]> {
+export async function queryEventsubConnectionLatest(range = "24h"): Promise<EventsubConnectionLatest[]> {
   assertValidFluxDuration(range, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom("eventsub_connection", `-${range}`)}
       |> filter(fn: (r) => r._measurement == "eventsub_connection")
       |> filter(fn: (r) => r._field == "count")
       |> group(columns: ["service", "event"])
@@ -362,12 +338,10 @@ export interface ObsInstanceEventCount {
   count: number;
 }
 
-export async function queryObsInstanceEvents(range = "10m", opts?: QueryOpts): Promise<ObsInstanceEventCount[]> {
+export async function queryObsInstanceEvents(range = "10m"): Promise<ObsInstanceEventCount[]> {
   assertValidFluxDuration(range, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${range})
+    ${fluxFrom("obs_instance_event", `-${range}`)}
       |> filter(fn: (r) => r._measurement == "obs_instance_event")
       |> filter(fn: (r) => r._field == "count")
       |> group(columns: ["instance_id", "node_id", "event"])

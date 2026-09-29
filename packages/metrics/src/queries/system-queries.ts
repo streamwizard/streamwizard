@@ -1,5 +1,5 @@
 import { runFluxQuery, assertValidFluxDuration } from "../query-client";
-import { resolveBucket, type QueryOpts } from "./query-opts";
+import { fluxFrom } from "../buckets";
 
 // Ingest node host metrics (host_system, written by ingest-control) and
 // per-signal ("camera") ingest stream stats (ingest_stream, written by
@@ -16,14 +16,11 @@ async function queryHostSystemField(
   field: string,
   fluxRange: string,
   window: string,
-  opts?: QueryOpts,
 ): Promise<HostSystemPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("host_system", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "host_system")
       |> filter(fn: (r) => r._field == "${field}")
       |> aggregateWindow(every: ${window}, fn: mean, createEmpty: false)
@@ -36,40 +33,40 @@ async function queryHostSystemField(
   }));
 }
 
-export function queryHostCpu(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<HostSystemPoint[]> {
-  return queryHostSystemField("cpu_pct", fluxRange, window, opts);
+export function queryHostCpu(fluxRange = "24h", window = "5m"): Promise<HostSystemPoint[]> {
+  return queryHostSystemField("cpu_pct", fluxRange, window);
 }
 
-export function queryHostMemUsed(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<HostSystemPoint[]> {
-  return queryHostSystemField("mem_used_mb", fluxRange, window, opts);
+export function queryHostMemUsed(fluxRange = "24h", window = "5m"): Promise<HostSystemPoint[]> {
+  return queryHostSystemField("mem_used_mb", fluxRange, window);
 }
 
-export function queryHostRxBandwidth(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<HostSystemPoint[]> {
-  return queryHostSystemField("rx_bytes_per_sec", fluxRange, window, opts);
+export function queryHostRxBandwidth(fluxRange = "24h", window = "5m"): Promise<HostSystemPoint[]> {
+  return queryHostSystemField("rx_bytes_per_sec", fluxRange, window);
 }
 
-export function queryHostTxBandwidth(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<HostSystemPoint[]> {
-  return queryHostSystemField("tx_bytes_per_sec", fluxRange, window, opts);
+export function queryHostTxBandwidth(fluxRange = "24h", window = "5m"): Promise<HostSystemPoint[]> {
+  return queryHostSystemField("tx_bytes_per_sec", fluxRange, window);
 }
 
-export function queryHostDiskUsed(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<HostSystemPoint[]> {
-  return queryHostSystemField("disk_used_pct", fluxRange, window, opts);
+export function queryHostDiskUsed(fluxRange = "24h", window = "5m"): Promise<HostSystemPoint[]> {
+  return queryHostSystemField("disk_used_pct", fluxRange, window);
 }
 
-export function queryHostCpuSteal(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<HostSystemPoint[]> {
-  return queryHostSystemField("cpu_steal_pct", fluxRange, window, opts);
+export function queryHostCpuSteal(fluxRange = "24h", window = "5m"): Promise<HostSystemPoint[]> {
+  return queryHostSystemField("cpu_steal_pct", fluxRange, window);
 }
 
-export function queryHostLoadAvg(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<HostSystemPoint[]> {
-  return queryHostSystemField("load_avg_1", fluxRange, window, opts);
+export function queryHostLoadAvg(fluxRange = "24h", window = "5m"): Promise<HostSystemPoint[]> {
+  return queryHostSystemField("load_avg_1", fluxRange, window);
 }
 
-export function queryHostTailscaleRx(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<HostSystemPoint[]> {
-  return queryHostSystemField("tailscale_rx_bytes_per_sec", fluxRange, window, opts);
+export function queryHostTailscaleRx(fluxRange = "24h", window = "5m"): Promise<HostSystemPoint[]> {
+  return queryHostSystemField("tailscale_rx_bytes_per_sec", fluxRange, window);
 }
 
-export function queryHostTailscaleTx(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<HostSystemPoint[]> {
-  return queryHostSystemField("tailscale_tx_bytes_per_sec", fluxRange, window, opts);
+export function queryHostTailscaleTx(fluxRange = "24h", window = "5m"): Promise<HostSystemPoint[]> {
+  return queryHostSystemField("tailscale_tx_bytes_per_sec", fluxRange, window);
 }
 
 export interface HostNodeSnapshot {
@@ -88,11 +85,9 @@ export interface HostNodeSnapshot {
 
 // Latest per-node reading across host_system fields — the "fleet at a glance"
 // row for each ingest box, mirroring queryObsNodeSnapshot.
-export async function queryHostSnapshot(opts?: QueryOpts): Promise<HostNodeSnapshot[]> {
-  const bucket = resolveBucket(opts);
+export async function queryHostSnapshot(): Promise<HostNodeSnapshot[]> {
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -10m)
+    ${fluxFrom("host_system", `-10m`)}
       |> filter(fn: (r) => r._measurement == "host_system")
       |> pivot(rowKey: ["_time"], columnKey: ["_field"], valueColumn: "_value")
       |> group(columns: ["node_id"])
@@ -137,12 +132,10 @@ export interface ActiveIngestSignal {
 // using the most recent sample in the window as a liveness + throughput
 // snapshot. A user with two simultaneous cameras gets two rows here, one per
 // stream_key_id.
-export async function queryActiveIngestSignals(recentWindow = "2m", opts?: QueryOpts): Promise<ActiveIngestSignal[]> {
+export async function queryActiveIngestSignals(recentWindow = "2m"): Promise<ActiveIngestSignal[]> {
   assertValidFluxDuration(recentWindow, "recentWindow");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${recentWindow})
+    ${fluxFrom("ingest_stream", `-${recentWindow}`)}
       |> filter(fn: (r) => r._measurement == "ingest_stream")
       |> filter(fn: (r) => r._field == "kbps" or r._field == "label"
           or r._field == "rtt_ms" or r._field == "loss_pct" or r._field == "retrans_pct")
@@ -194,17 +187,14 @@ async function queryIngestStreamFieldByUser(
   field: string,
   fluxRange: string,
   window: string,
-  opts?: QueryOpts,
 ): Promise<IngestSignalMetricPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
   // userId is interpolated into the Flux source — restrict it to uuid-safe
   // characters so it can't break out of the string literal.
   if (!/^[a-zA-Z0-9-]+$/.test(userId)) throw new Error("Invalid user id");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("ingest_stream", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "ingest_stream")
       |> filter(fn: (r) => r.user_id == "${userId}")
       |> filter(fn: (r) => r._field == "${field}")
@@ -223,26 +213,26 @@ async function queryIngestStreamFieldByUser(
 }
 
 /** Corrected skew, the headline number: positive = audio behind video. */
-export function queryIngestAvSkew(userId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts) {
-  return queryIngestStreamFieldByUser(userId, "av_skew_ms", fluxRange, window, opts);
+export function queryIngestAvSkew(userId: string, fluxRange = "24h", window = "5m") {
+  return queryIngestStreamFieldByUser(userId, "av_skew_ms", fluxRange, window);
 }
 
 /** Uncorrected video_pts - audio_pts gap. Reads large and positive even on a
  *  perfectly synced stream — shown so the correction stays auditable. */
-export function queryIngestAvSkewRaw(userId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts) {
-  return queryIngestStreamFieldByUser(userId, "av_skew_raw_ms", fluxRange, window, opts);
+export function queryIngestAvSkewRaw(userId: string, fluxRange = "24h", window = "5m") {
+  return queryIngestStreamFieldByUser(userId, "av_skew_raw_ms", fluxRange, window);
 }
 
 /** The interval the correction subtracts, measured off consecutive audio PTS.
  *  Small (~23ms, one AAC frame per PES) means the reported skew is trustworthy
  *  whatever the muxer does; large (~320ms, ffmpeg's default aggregation) means
  *  it leans on the assumption that the muxer leads by exactly one interval. */
-export function queryIngestAudioPesInterval(userId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts) {
-  return queryIngestStreamFieldByUser(userId, "av_audio_pes_interval_ms", fluxRange, window, opts);
+export function queryIngestAudioPesInterval(userId: string, fluxRange = "24h", window = "5m") {
+  return queryIngestStreamFieldByUser(userId, "av_audio_pes_interval_ms", fluxRange, window);
 }
 
 /** How many PES pairs the median was taken over. A window with only a handful
  *  is noise, not a measurement. */
-export function queryIngestAvSkewSamples(userId: string, fluxRange = "24h", window = "5m", opts?: QueryOpts) {
-  return queryIngestStreamFieldByUser(userId, "av_skew_samples", fluxRange, window, opts);
+export function queryIngestAvSkewSamples(userId: string, fluxRange = "24h", window = "5m") {
+  return queryIngestStreamFieldByUser(userId, "av_skew_samples", fluxRange, window);
 }

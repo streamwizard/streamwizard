@@ -5,6 +5,9 @@
 //   - BackupOverview / BackupVm: what computeBackupOverview() derives from it
 //     plus the webhook events (ISO strings, ready for the UI).
 
+import type { GuestDisk } from "./pve-config";
+import type { GroupUsage, NamespaceUsage, PbsUsage, SnapshotUsage } from "./usage";
+
 export type BackupStatus = "ok" | "warning" | "error" | "unknown";
 
 /** Normalised Proxmox task/job result: "OK", "WARNINGS: n", an error text, or nothing yet. */
@@ -36,6 +39,10 @@ export interface PbsSnapshot {
   comment: string | null;
   verification: "ok" | "failed" | null;
   protected: boolean;
+  /** Listed by PBS but no manifest yet: the backup is still running (or died). Never counts as a backup. */
+  unfinished?: boolean;
+  /** Uploaded and only-here bytes. Missing until the usage pass ran, null for a backup still running. */
+  usage?: SnapshotUsage | null;
 }
 
 export interface PbsJob {
@@ -57,6 +64,8 @@ export interface PbsData {
   /** Verify/prune jobs that cover our namespace (whole store or streamwizard). */
   verifyJobs: PbsJob[];
   pruneJobs: PbsJob[];
+  /** Deduplicated sizes from the chunk indexes (docs/backup-sizes-plan.md). */
+  usage?: PbsUsage | null;
 }
 
 // --- PVE (one per host) ---
@@ -77,6 +86,8 @@ export interface PveGuest {
   vmid: number;
   name: string | null;
   type: "qemu" | "lxc";
+  /** Only read for guests in our backup jobs. */
+  disks?: GuestDisk[];
 }
 
 /** A vzdump task in the last 48 h that did not end OK and touched our guests. */
@@ -188,7 +199,13 @@ export interface BackupVm {
   lastSuccessAt: string | null;
   ageSeconds: number | null;
   snapshotCount: number;
-  lastSizeBytes: number | null;
+  /** Configured size of the disks vzdump backs up (PVE config). */
+  diskBytes: number | null;
+  disks: GuestDisk[] | null;
+  /** Newest snapshot: bytes the backup run sent to PBS (compressed). */
+  lastUploadedBytes: number | null;
+  /** Deduplicated usage of all kept snapshots; null until the usage pass ran. */
+  usage: GroupUsage | null;
   verification: "ok" | "failed" | "pending" | "none";
   lastEvent: { at: string; status: "ok" | "failed"; source: string } | null;
 }
@@ -203,6 +220,8 @@ export interface BackupOverview {
   /** Poll interval the checks were computed with. */
   pollSeconds: number;
   usage: { totalBytes: number; usedBytes: number; availBytes: number; usedPct: number } | null;
+  /** Deduplicated usage of our namespace only (no homelab numbers). */
+  namespaceUsage: NamespaceUsage | null;
   jobs: { gc: BackupJobView | null; verify: BackupJobView[]; prune: BackupJobView[] };
   hosts: BackupHostView[];
   vms: BackupVm[];

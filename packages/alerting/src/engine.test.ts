@@ -7,7 +7,6 @@ process.env.ALERT_ENV = "staging";
 process.env.INFLUXDB_URL = "http://127.0.0.1:1";
 process.env.INFLUXDB_TOKEN = "test";
 process.env.INFLUXDB_ORG = "test";
-process.env.INFLUXDB_BUCKET = "test-bucket";
 process.env.SUPABASE_URL = "http://127.0.0.1:1";
 process.env.SUPABASE_SECRET_KEY = "test";
 

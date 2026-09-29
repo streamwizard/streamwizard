@@ -119,7 +119,7 @@ export function ingestRules(overrides: RuleOverrides): AlertRule[] {
         envs: ["prod", "staging"],
         async evaluate(ctx) {
           if (ctx.registry.liveIngestSessions.length === 0) return [];
-          const activity = await queryIngestStreamActivity("2m", { bucket: ctx.bucket });
+          const activity = await queryIngestStreamActivity("2m");
           const activeSessionIds = new Set(activity.filter((a) => a.kbps > 0).map((a) => a.sessionId));
           const breaches: Breach[] = [];
           for (const session of ctx.registry.liveIngestSessions) {

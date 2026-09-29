@@ -192,12 +192,18 @@ function buildPoller(config: BackupConfig): BackupPoller {
  * Status needs the webhook events, so it isn't written; the numbers are.
  */
 export function recordBackupMetrics(data: BackupPollData, now = new Date()): void {
-  if (!data.pbs.data || !data.pbs.health.okAt || data.pbs.health.okAt !== data.pbs.health.attemptAt) return;
+  const pbs = data.pbs.data;
+  if (!pbs || !data.pbs.health.okAt || data.pbs.health.okAt !== data.pbs.health.attemptAt) return;
   const overview = computeBackupOverview(data, [], now);
+  const names = new Map(overview.vms.map((vm) => [vm.vmid, vm.name]));
+  // Snapshot sizes only in the poll that worked them out (a new backup or a
+  // prune), not every 6 h: the usage pass stamps computedAt after the poll began.
+  const freshUsage = pbs.usage && pbs.usage.computedAt >= Math.floor(Date.parse(data.pbs.health.attemptAt!) / 1000);
   trackBackupPoll({
     datastore: data.datastore,
     namespace: data.namespace,
-    usage: data.pbs.data.datastore,
+    usage: pbs.datastore,
+    namespaceUsage: pbs.usage?.namespace ?? null,
     vms: overview.vms
       .filter((vm) => vm.snapshotCount > 0)
       .map((vm) => ({
@@ -205,9 +211,24 @@ export function recordBackupMetrics(data: BackupPollData, now = new Date()): voi
         name: vm.name,
         ageSeconds: vm.ageSeconds,
         snapshotCount: vm.snapshotCount,
-        lastSizeBytes: vm.lastSizeBytes,
         verified: vm.verification === "ok",
+        diskBytes: vm.diskBytes,
+        lastUploadedBytes: vm.lastUploadedBytes,
+        uniqueBytes: vm.usage?.uniqueBytes ?? null,
+        sharedBytes: vm.usage?.sharedBytes ?? null,
+        onDiskEstBytes: vm.usage?.onDiskEstBytes ?? null,
       })),
+    snapshots: freshUsage
+      ? pbs.snapshots
+          .filter((s) => s.usage?.uploadedBytes != null && s.usage.uploadedRawBytes != null && Number.isInteger(Number(s.id)))
+          .map((s) => ({
+            vmid: Number(s.id),
+            name: names.get(Number(s.id)) ?? null,
+            time: s.time,
+            uploadedBytes: s.usage!.uploadedBytes!,
+            uploadedRawBytes: s.usage!.uploadedRawBytes!,
+          }))
+      : [],
   });
 }
 

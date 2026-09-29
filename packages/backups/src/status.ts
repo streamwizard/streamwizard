@@ -25,6 +25,8 @@ import type {
   PbsSnapshot,
   SourceHealth,
 } from "./types";
+import { backedUpDiskBytes, type GuestDisk } from "./pve-config";
+import { groupKey } from "./usage";
 
 const RANK: Record<BackupStatus, number> = { ok: 0, unknown: 1, warning: 2, error: 3 };
 
@@ -98,8 +100,13 @@ export function computeBackupOverview(
 
   // --- Index guests, jobs, failed runs, events by VMID ---
   const snapshotsByVm = new Map<number, PbsSnapshot[]>();
+  const runningByVm = new Map<number, number>();
   for (const snap of pbs?.snapshots ?? []) {
     if (snap.type !== "vm" && snap.type !== "ct") continue;
+    if (snap.unfinished) {
+      runningByVm.set(Number(snap.id), snap.time);
+      continue;
+    }
     const vmid = Number(snap.id);
     if (!Number.isInteger(vmid)) continue;
     const list = snapshotsByVm.get(vmid) ?? [];
@@ -109,6 +116,7 @@ export function computeBackupOverview(
 
   const jobsByVm = new Map<number, VmContext[]>();
   const nameByVm = new Map<number, string>();
+  const disksByVm = new Map<number, GuestDisk[]>();
   const hostStale = new Map<string, boolean>();
   let unresolvedSelection = false;
   let everyHostPolled = hostEntries.length > 0;
@@ -122,7 +130,11 @@ export function computeBackupOverview(
     // VMIDs are per host, so another host's VM 100 (homelab) must not lend
     // its name to ours.
     const jobVmids = new Set(entry.data.jobs.flatMap((j) => j.vmids));
-    for (const guest of entry.data.guests) if (guest.name && jobVmids.has(guest.vmid)) nameByVm.set(guest.vmid, guest.name);
+    for (const guest of entry.data.guests) {
+      if (!jobVmids.has(guest.vmid)) continue;
+      if (guest.name) nameByVm.set(guest.vmid, guest.name);
+      if (guest.disks) disksByVm.set(guest.vmid, guest.disks);
+    }
     for (const job of entry.data.jobs) {
       if (job.selection === "pool") unresolvedSelection = true;
       for (const vmid of job.vmids) {
@@ -144,7 +156,7 @@ export function computeBackupOverview(
     }
   }
 
-  const vmids = new Set<number>([...snapshotsByVm.keys(), ...jobsByVm.keys(), ...lastEventByVm.keys()]);
+  const vmids = new Set<number>([...snapshotsByVm.keys(), ...runningByVm.keys(), ...jobsByVm.keys(), ...lastEventByVm.keys()]);
 
   // --- Per VM ---
   const vms: BackupVm[] = [...vmids].map((vmid) => {
@@ -205,6 +217,8 @@ export function computeBackupOverview(
       bump("warning", "not_in_job", "Not in any backup job for this namespace");
     }
 
+    const running = runningByVm.get(vmid);
+    if (running !== undefined) reasons.push(`Backup in progress since ${timeText(running)}`);
     if (pbsStale) reasons.push("PBS data is not current");
     if (host && hostStale.get(host)) reasons.push(`${host} API is not reachable`);
     if (status === "ok" && (pbsStale || (host && hostStale.get(host)))) status = "unknown";
@@ -224,7 +238,10 @@ export function computeBackupOverview(
       lastSuccessAt: newest ? iso(newest.time) : null,
       ageSeconds: age === null ? null : Math.round(age),
       snapshotCount: snaps.length,
-      lastSizeBytes: newest?.sizeBytes ?? null,
+      diskBytes: disksByVm.has(vmid) ? backedUpDiskBytes(disksByVm.get(vmid)!) : null,
+      disks: disksByVm.get(vmid) ?? null,
+      lastUploadedBytes: newest?.usage?.uploadedBytes ?? null,
+      usage: newest ? (pbs?.usage?.groups[groupKey(newest.type, newest.id)] ?? null) : null,
       verification,
       lastEvent: lastEvent ? { at: lastEvent.event.occurredAt, status: lastEvent.status, source: lastEvent.event.source } : null,
     };
@@ -324,6 +341,7 @@ export function computeBackupOverview(
     pbs: { health: pbsHealth, stale: pbsStale },
     pollSeconds,
     usage,
+    namespaceUsage: pbs?.usage?.namespace ?? null,
     jobs: { gc, verify, prune },
     hosts,
     vms,

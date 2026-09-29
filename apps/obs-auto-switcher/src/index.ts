@@ -12,6 +12,7 @@ import { ConfigStore } from "./config-store";
 import { StatsFeed } from "./stats-feed";
 import { StatusPublisher } from "./status-publisher";
 import { Engine } from "./engine/engine";
+import { initMetrics, BUCKETS } from "@repo/metrics";
 
 // IRL auto scene-switcher. Consumes the 1 Hz ingest stats feed from
 // ws-server, runs a per-user threshold/streak state machine, and drives
@@ -19,6 +20,8 @@ import { Engine } from "./engine/engine";
 //
 // Run exactly ONE replica: streaks/overrides/session selection live in
 // memory, and two engines would race conflicting scene switches.
+
+initMetrics(BUCKETS.autoSwitcher);
 
 const statusPublisher = new StatusPublisher(env.WS_SERVER_URL, env.SUPABASE_SECRET_KEY);
 const engine = new Engine(statusPublisher);
