@@ -49,7 +49,14 @@ function jobTile(title: string, icon: typeof Clock, jobs: BackupJobView[]) {
 
 const rank = (s: BackupStatus) => ({ ok: 0, unknown: 1, warning: 2, error: 3 })[s];
 
-export function BackupDashboard({ initial }: { initial: BackupFetch<BackupOverviewResponse> }) {
+export function BackupDashboard({
+  initial,
+  charts,
+}: {
+  initial: BackupFetch<BackupOverviewResponse>;
+  /** Influx charts, rendered server-side by the page below the VM table. */
+  charts?: React.ReactNode;
+}) {
   const { interval } = useRefreshInterval();
   const { data: result, mutate } = useSWR<BackupFetch<BackupOverviewResponse>>("/api/backups", fetcher, {
     fallbackData: initial,
@@ -213,6 +220,8 @@ export function BackupDashboard({ initial }: { initial: BackupFetch<BackupOvervi
           </div>
         </CardContent>
       </Card>
+
+      {charts}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>

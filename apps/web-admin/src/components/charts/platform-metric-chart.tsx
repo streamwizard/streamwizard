@@ -19,16 +19,10 @@ import {
 
 interface Props {
   title: string;
-  /** Key into the /api/metrics/supabase response. */
-  seriesKey:
-    | "cpu"
-    | "memory"
-    | "disk"
-    | "connections"
-    | "cacheHit"
-    | "meanQueryMs"
-    | "queryRate"
-    | "authApiMs";
+  /** Key into the endpoint's response. */
+  seriesKey: string;
+  /** Route that returns `{ [seriesKey]: PlatformPoint[] }`. */
+  endpoint?: string;
   initialData: PlatformPoint[];
   unit?: string;
   /** Chart color CSS var index (1-5), maps to --chart-N. */
@@ -39,13 +33,14 @@ interface Props {
 export function PlatformMetricChart({
   title,
   seriesKey,
+  endpoint = "/api/metrics/supabase",
   initialData,
   unit = "",
   color = 1,
   yMax,
 }: Props) {
   const raw = useMetricsPoll<Record<string, PlatformPoint[]>>(
-    "/api/metrics/supabase",
+    endpoint,
     { [seriesKey]: initialData },
   );
 

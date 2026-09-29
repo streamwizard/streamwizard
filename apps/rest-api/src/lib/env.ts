@@ -80,7 +80,10 @@ const schema = z.object({
   // JSON array of {name, url, tokenId, tokenSecret}, one per PVE host
   // (PVEAuditor tokens). Parsed in lib/backup-config.ts.
   PVE_HOSTS: z.string().optional(),
-  BACKUP_POLL_SECONDS: z.coerce.number().int().min(60).default(300),
+  // Backups run once a day and webhooks report each run (plus a poll a
+  // minute later), so the scheduled poll is only the safety net: every 6 h.
+  // "Poll now" on /backups forces one.
+  BACKUP_POLL_SECONDS: z.coerce.number().int().min(60).default(6 * 60 * 60),
   // Shared secret the Proxmox webhook targets send in X-Proxmox-Webhook-Token
   // (stored as a notification secret on each host). Unset = receiver off.
   BACKUP_WEBHOOK_SECRET: z.string().min(32).optional(),

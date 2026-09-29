@@ -35,3 +35,20 @@ export const BACKUP_THRESHOLDS: BackupThresholds = {
   sourceStaleMinutes: 15,
   hostQuietHours: 26,
 };
+
+/** What older poll rows (without pollSeconds) were polled at. */
+export const DEFAULT_POLL_SECONDS = 300;
+
+/**
+ * Thresholds that depend on how often we poll, stretched to the interval:
+ * with a 6 h poll a source is only "not reachable" after two missed polls
+ * (plus slack), and a snapshot only "unverified" once a poll after the
+ * verification could have seen it. At the 5-minute default nothing changes.
+ */
+export function effectiveThresholds(t: BackupThresholds, pollSeconds: number = DEFAULT_POLL_SECONDS): BackupThresholds {
+  return {
+    ...t,
+    sourceStaleMinutes: Math.max(t.sourceStaleMinutes, (2 * pollSeconds) / 60 + 10),
+    verifyPendingWarnHours: Math.max(t.verifyPendingWarnHours, (2 * pollSeconds) / 3600),
+  };
+}

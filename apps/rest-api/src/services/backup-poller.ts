@@ -1,10 +1,12 @@
 import { hostname } from "node:os";
-import type { BackupPollData, PbsData, PveHostData, SourceHealth } from "@repo/backups";
+import { computeBackupOverview, type BackupPollData, type PbsData, type PveHostData, type SourceHealth } from "@repo/backups";
+import { trackBackupPoll } from "@repo/metrics";
 import { reportError } from "@repo/sentry";
 import { supabase, type Json } from "@repo/supabase";
 import { claimBackupPoll, saveBackupPollState } from "@repo/supabase/queries/backups";
 import { backupConfig, type BackupConfig } from "../lib/backup-config";
 import { fetchPbs, fetchPve, type SourceResult } from "../lib/backup-sources";
+import { invalidateBackupCache } from "../lib/backup-cache";
 import { loadBackupPoll, reconcileUnmatchedEvents } from "../lib/backup-store";
 import { createProxmoxClient, pbsAuthorization, pveAuthorization } from "../lib/proxmox-client";
 
@@ -77,6 +79,7 @@ export function createBackupPoller(deps: BackupPollerDeps) {
       version: 1,
       datastore: deps.datastore,
       namespace: deps.namespace,
+      pollSeconds: deps.intervalSeconds,
       pbs:
         pbsResult!.status === "fulfilled"
           ? { data: pbsResult!.value.data, health: nextHealth(prev?.pbs.health, nowIso, { ok: true, warnings: pbsResult!.value.warnings }) }
@@ -175,9 +178,36 @@ function buildPoller(config: BackupConfig): BackupPoller {
     fetchPbs: (prev) => fetchPbs(pbsClient, config.datastore, config.namespace, prev),
     fetchPve: fetchPveByHost,
     afterPoll: async (data) => {
+      invalidateBackupCache();
+      recordBackupMetrics(data);
       const { matched, dropped } = await reconcileUnmatchedEvents(data);
       if (matched || dropped) console.log(`[backup-poller] webhook events: ${matched} matched, ${dropped} dropped`);
     },
+  });
+}
+
+/**
+ * Influx points for the /backups charts, only when PBS answered this round
+ * (stale numbers would draw a flat line over an outage instead of a gap).
+ * Status needs the webhook events, so it isn't written; the numbers are.
+ */
+export function recordBackupMetrics(data: BackupPollData, now = new Date()): void {
+  if (!data.pbs.data || !data.pbs.health.okAt || data.pbs.health.okAt !== data.pbs.health.attemptAt) return;
+  const overview = computeBackupOverview(data, [], now);
+  trackBackupPoll({
+    datastore: data.datastore,
+    namespace: data.namespace,
+    usage: data.pbs.data.datastore,
+    vms: overview.vms
+      .filter((vm) => vm.snapshotCount > 0)
+      .map((vm) => ({
+        vmid: vm.vmid,
+        name: vm.name,
+        ageSeconds: vm.ageSeconds,
+        snapshotCount: vm.snapshotCount,
+        lastSizeBytes: vm.lastSizeBytes,
+        verified: vm.verification === "ok",
+      })),
   });
 }
 
