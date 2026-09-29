@@ -85,7 +85,7 @@ Why Supabase, not memory: survives restarts, works with more than one replica, g
 - `dedupe_key text unique` = sha256 of `source|event_type|job_id|occurred_at|title`
 - Retention: delete after 180 days (question below).
 
-Optional later: write `pbs_*` points to Influx for size/age sparklines. Not needed for v1.
+Sizes (disk, uploaded, on disk ≈) and their Influx history: `docs/backup-sizes-plan.md`.
 
 ### Poller (`apps/rest-api/src/services/backup-poller.ts`)
 - Every `BACKUP_POLL_SECONDS` (default 300). First run 30 s after boot.
@@ -228,7 +228,9 @@ type BackupVm = {
   lastSuccessAt: string | null;
   ageSeconds: number | null;
   snapshotCount: number;
-  lastSizeBytes: number | null;  // logical size of newest snapshot, not deduplicated
+  diskBytes: number | null;          // backed-up disks, from the PVE config
+  lastUploadedBytes: number | null;  // what the newest run sent to PBS (compressed)
+  usage: GroupUsage | null;          // deduplicated sizes, see docs/backup-sizes-plan.md
   verification: "ok" | "failed" | "pending" | "none";
   lastEvent: { at: string; status: "ok" | "failed"; source: string } | null;
 };
@@ -287,6 +289,12 @@ proxmox-backup-manager acl update /datastore/nas-backups DatastoreAudit --auth-i
 proxmox-backup-manager acl update /datastore/nas-backups DatastoreAudit --auth-id 'sw-monitor@pbs!rest-api'
 ```
 - `DatastoreAudit` = `Datastore.Audit` only. It lists metadata. It **cannot** read backup contents, restore, verify, prune, delete or change anything.
+- **Added 2026-09-29 for real backup sizes** (`docs/backup-sizes-plan.md`): `DatastoreReader` on the namespace path only, so the poller can read snapshot manifests and chunk index files. Homelab stays closed.
+  ```sh
+  proxmox-backup-manager acl update /datastore/nas-backups/streamwizard DatastoreReader --auth-id sw-monitor@pbs
+  proxmox-backup-manager acl update /datastore/nas-backups/streamwizard DatastoreReader --auth-id 'sw-monitor@pbs!rest-api'
+  ```
+  `DatastoreReader` = Audit + Read + Verify (PBS has no Read-only role). A leaked token can now read and restore every streamwizard backup and start verify jobs; it still can't prune, delete or change anything. Our code only calls GET, and only `index.json.blob`, `*.fidx` and `*.didx`.
 - It is store-level because `/status` and `/gc` refuse namespace-scoped ACLs. This means the token can *see* homelab group names. Our code only ever requests `ns=streamwizard`. See question 3.
 - **No** `Sys.Audit` on `/system/tasks` — not needed in this design.
 - No password on the user, so nobody can log in to the UI with it.

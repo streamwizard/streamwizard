@@ -35,7 +35,7 @@ export function databaseRules(overrides: RuleOverrides): AlertRule[] {
         forTicks: 2,
         crit: { default: DB_ERROR_RATE_PCT, unit: "%", direction: "above" },
         async evaluate(ctx, t) {
-          const { total, errors } = await queryDbQueryErrorRate("5m", { bucket: ctx.bucket });
+          const { total, errors } = await queryDbQueryErrorRate("5m");
           if (total < DB_ERROR_MIN_QUERIES) return [];
           const rate = (errors / total) * 100;
           if (rate <= t.crit) return [];
@@ -58,15 +58,15 @@ export function databaseRules(overrides: RuleOverrides): AlertRule[] {
         title: "Metrics pipeline silent",
         forTicks: 2,
         envs: ["prod"],
-        async evaluate(ctx) {
-          const points = await queryBucketPointCount("5m", { bucket: ctx.bucket });
+        async evaluate() {
+          const points = await queryBucketPointCount("5m");
           if (points > 0) return [];
           return [
             {
               entityId: "",
               severity: "crit",
               value: 0,
-              message: `No points written to ${ctx.bucket} in 5m — the whole metrics write path is down`,
+              message: `No points written to any bucket in 5m — the whole metrics write path is down`,
             },
           ];
         },
@@ -100,8 +100,8 @@ export function databaseRules(overrides: RuleOverrides): AlertRule[] {
         unit: "%",
         fetch: async (ctx) => {
           const [series, max] = await Promise.all([
-            querySupabaseDbConnections("15m", "5m", { bucket: ctx.bucket }),
-            querySupabaseMaxConnections({ bucket: ctx.bucket }),
+            querySupabaseDbConnections("15m", "5m"),
+            querySupabaseMaxConnections(),
           ]);
           const latest = series.at(-1);
           if (latest === undefined || max === null || max === 0) return [];
@@ -132,7 +132,7 @@ export function databaseRules(overrides: RuleOverrides): AlertRule[] {
         envs: ["prod", "staging"],
         warn: { default: SUPABASE_SCRAPE_SILENT_MIN, unit: "min", direction: "above" },
         async evaluate(ctx, t) {
-          const lastScrape = await querySupabaseLastScrape({ bucket: ctx.bucket });
+          const lastScrape = await querySupabaseLastScrape();
           // Never scraped in 24h = Telegraf not set up for this env yet — a
           // provisioning gap, not an outage (same policy as the absence rules).
           if (lastScrape === null) return [];

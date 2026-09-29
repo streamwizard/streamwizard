@@ -82,7 +82,7 @@ Scene pickers populate only while the instance's OBS is running (obsws session);
 
 | Var | Required | Purpose |
 |---|---|---|
-| `INFLUXDB_URL/TOKEN/ORG/BUCKET` | yes | metrics source |
+| `INFLUXDB_URL/TOKEN/ORG` | yes | metrics source (org per env, buckets fixed in `packages/metrics/src/buckets.ts`) |
 | `SUPABASE_URL`, `SUPABASE_PUBLIC_KEY`, `SUPABASE_SECRET_KEY` | yes | auth + service-role |
 | `STREAMWIZARD_API_URL` | yes | embedded in node install commands (`/obs`, `/ingest`) |
 | `TOKEN_ENCRYPTION_KEY` | yes | encrypt/decrypt OBS WS passwords — **must be byte-identical to web-streamwizard's** |

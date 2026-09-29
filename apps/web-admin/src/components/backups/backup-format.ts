@@ -1,7 +1,25 @@
 import type { BackupStatus } from "@repo/backups";
 import type { IndicatorStatus } from "@/components/widgets/status-indicator";
 
-export { formatBytes } from "@/lib/format";
+import { formatBytes } from "@/lib/format";
+
+export { formatBytes };
+
+/** An estimate: "≈ 271 GiB". */
+export function formatApprox(bytes: number | null | undefined): string {
+  return bytes == null ? "—" : `≈ ${formatBytes(bytes)}`;
+}
+
+/** Help text for the size columns, shown on hover so "size" is never ambiguous. */
+export const SIZE_HELP = {
+  disk: "Configured size of the disks that get backed up (from the PVE config).",
+  lastUpload: "What the newest backup run sent to PBS, after compression.",
+  onDisk:
+    "Estimate of what this VM's kept backups take on PBS: data no other VM shares, counted once, times this VM's compression ratio. PBS has no exact number per VM.",
+  uploaded: "What this backup run sent to PBS, after compression.",
+  onlyHere: "Data no other kept backup uses, before compression. Roughly what pruning this snapshot would free.",
+  namespace: "Estimate for all our kept backups together (streamwizard namespace only).",
+} as const;
 
 export const STATUS_DISPLAY: Record<BackupStatus, { indicator: IndicatorStatus; label: string; tone: "positive" | "warning" | "danger" | "default" }> = {
   ok: { indicator: "ok", label: "OK", tone: "positive" },

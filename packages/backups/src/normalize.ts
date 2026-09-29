@@ -11,6 +11,8 @@ export interface RawPbsSnapshot {
   "backup-id": string;
   "backup-time": number;
   size?: number;
+  /** Archive files of the snapshot; `size` is absent for client.log.blob. */
+  files?: { filename: string; size?: number }[];
   comment?: string;
   protected?: boolean;
   verification?: { state?: string; upid?: string };
@@ -104,6 +106,8 @@ export function toPbsSnapshots(raw: RawPbsSnapshot[]): PbsSnapshot[] {
     comment: s.comment?.split("\n")[0]?.trim() || null,
     verification: s.verification?.state === "ok" ? "ok" : s.verification?.state === "failed" ? "failed" : null,
     protected: Boolean(s.protected),
+    // A finished snapshot always has its manifest; a running one doesn't yet.
+    ...(s.files && !s.files.some((f) => f.filename === "index.json.blob") ? { unfinished: true } : {}),
   }));
 }
 
