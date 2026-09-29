@@ -33,14 +33,9 @@ BUCKETS=(
   "vm-backups:400d"
 )
 
-# Doppler has one shared config per environment, so every service in it reads
-# the same INFLUXDB_TOKEN: the "apps" token writes the service buckets and
-# reads all of them. Nodes get tokens that can only write their own bucket.
-APP_WRITE_BUCKETS="rest-api ws-server bot auto-switcher supabase-platform vm-backups"
-declare -A NODE_TOKENS=(
-  ["obs-node"]="obs-nodes"       # rest-api INFLUXDB_OBS_NODE_TOKEN
-  ["ingest-node"]="ingest-nodes" # rest-api INFLUXDB_INGEST_NODE_TOKEN
-)
+# Doppler has one shared config per environment, so every service in it,
+# and every node rest-api hands it to on claim, uses the same INFLUXDB_TOKEN:
+# one token that reads and writes all of the buckets above.
 
 if ! influx org list --name "$ORG" --hide-headers >/dev/null 2>&1; then
   echo "creating org $ORG"
@@ -74,16 +69,9 @@ create_token() {
   echo "token $ORG/$description: $token"
 }
 
-# INFLUXDB_TOKEN in the environment's shared Doppler config
-app_args=()
-for bucket in $APP_WRITE_BUCKETS; do
-  app_args+=(--write-bucket "$(bucket_id "$bucket")")
-done
+token_args=()
 for entry in "${BUCKETS[@]}"; do
-  app_args+=(--read-bucket "$(bucket_id "${entry%%:*}")")
+  id="$(bucket_id "${entry%%:*}")"
+  token_args+=(--read-bucket "$id" --write-bucket "$id")
 done
-create_token "$ORG-apps" "${app_args[@]}"
-
-for description in "${!NODE_TOKENS[@]}"; do
-  create_token "$ORG-$description" --write-bucket "$(bucket_id "${NODE_TOKENS[$description]}")"
-done
+create_token "$ORG-all" "${token_args[@]}"

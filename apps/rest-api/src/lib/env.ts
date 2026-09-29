@@ -45,13 +45,13 @@ const schema = z.object({
   R2_ASSETS_BUCKET: z.string().min(1).optional(),
 
   // InfluxDB — one org per environment, buckets are fixed in @repo/metrics.
-  // INFLUXDB_TOKEN is the env's shared "apps" token (scripts/influx-setup.sh).
-  // The node tokens are write-only on the obs-nodes / ingest-nodes bucket and are
-  // relayed to nodes in the /claim response so they can report host +
-  // instance metrics without a manual .env edit per node. Optional: a claim
-  // still succeeds without these, it just omits them from the response (see
-  // ingest-nodes.ts / nodes.ts), same as install.sh already tolerates a
-  // missing tailscale_authkey.
+  // INFLUXDB_TOKEN is the env's shared token (scripts/influx-setup.sh). The
+  // optional node tokens override it with one write-only on the obs-nodes /
+  // ingest-nodes bucket. Either way the token is relayed to nodes in the
+  // /claim response so they can report host + instance metrics without a
+  // manual .env edit per node. Optional: a claim still succeeds without
+  // these, it just omits them from the response (see ingest-nodes.ts /
+  // nodes.ts), same as install.sh already tolerates a missing tailscale_authkey.
   INFLUXDB_URL: z.string().url().optional(),
   INFLUXDB_ORG: z.string().optional(),
   INFLUXDB_TOKEN: z.string().optional(),

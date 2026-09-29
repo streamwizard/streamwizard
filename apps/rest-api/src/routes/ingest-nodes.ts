@@ -121,12 +121,12 @@ ingestNodes.post("/claim", async (c) => {
     // environment — omitted (not null/empty-string) otherwise, so a node
     // claimed before Influx was wired up just runs without host metrics
     // instead of writing empty env vars into its .env.
-    // The token is write-only on the ingest-nodes bucket, never rest-api's own.
-    ...(env.INFLUXDB_URL && env.INFLUXDB_ORG && env.INFLUXDB_INGEST_NODE_TOKEN
+    // INFLUXDB_INGEST_NODE_TOKEN (write-only on ingest-nodes) when set, else the shared token.
+    ...(env.INFLUXDB_URL && env.INFLUXDB_ORG && (env.INFLUXDB_INGEST_NODE_TOKEN ?? env.INFLUXDB_TOKEN)
       ? {
           influxdb_url: env.INFLUXDB_URL,
           influxdb_org: env.INFLUXDB_ORG,
-          influxdb_token: env.INFLUXDB_INGEST_NODE_TOKEN,
+          influxdb_token: env.INFLUXDB_INGEST_NODE_TOKEN ?? env.INFLUXDB_TOKEN,
         }
       : {}),
     // Same omit-when-unset rule. ingest-control dials ws-server as a bot
