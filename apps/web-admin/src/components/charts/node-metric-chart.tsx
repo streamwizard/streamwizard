@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { formatTime, formatBandwidth, fetcher } from "@/lib/utils";
+import { formatBytes } from "@/lib/format";
 import type { BandwidthUnit } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useTimeRange } from "@/lib/time-range-context";
@@ -36,7 +37,7 @@ export interface NodeMetricPoint {
 // A function prop can't cross the server/client boundary (pages that render
 // this are Server Components), so callers pass a format name instead and the
 // actual formatter lives here, client-side.
-export type NodeMetricFormat = "percent" | "bytesPerSec" | "ms" | "number";
+export type NodeMetricFormat = "percent" | "bytesPerSec" | "ms" | "number" | "hours" | "bytes";
 
 function formatValue(
   value: number,
@@ -50,6 +51,10 @@ function formatValue(
       return formatBandwidth(value, bandwidthUnit);
     case "ms":
       return `${Math.round(value)} ms`;
+    case "hours":
+      return `${Math.round(value)} h`;
+    case "bytes":
+      return formatBytes(value);
     default:
       return String(value);
   }

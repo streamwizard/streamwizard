@@ -1,6 +1,8 @@
 import type { BackupStatus } from "@repo/backups";
 import type { IndicatorStatus } from "@/components/widgets/status-indicator";
 
+export { formatBytes } from "@/lib/format";
+
 export const STATUS_DISPLAY: Record<BackupStatus, { indicator: IndicatorStatus; label: string; tone: "positive" | "warning" | "danger" | "default" }> = {
   ok: { indicator: "ok", label: "OK", tone: "positive" },
   warning: { indicator: "warn", label: "Warning", tone: "warning" },
@@ -14,18 +16,6 @@ export const BANNER_BORDER: Record<BackupStatus, string> = {
   error: "border-l-red-500",
   unknown: "border-l-muted-foreground/40",
 };
-
-export function formatBytes(bytes: number | null | undefined): string {
-  if (bytes == null) return "—";
-  const units = ["B", "KiB", "MiB", "GiB", "TiB", "PiB"];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) {
-    value /= 1024;
-    unit++;
-  }
-  return `${value >= 100 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`;
-}
 
 /** "45 min", "9 h", "3 d" — a backup age or time since. */
 export function formatAge(seconds: number | null | undefined): string {

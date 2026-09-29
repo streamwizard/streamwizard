@@ -9,7 +9,7 @@
 //     couldn't refresh is "unknown". Worse states stay, because an age computed
 //     from old data is still a lower bound.
 
-import { BACKUP_THRESHOLDS, type BackupThresholds } from "./thresholds";
+import { BACKUP_THRESHOLDS, DEFAULT_POLL_SECONDS, effectiveThresholds, type BackupThresholds } from "./thresholds";
 import type {
   BackupCheck,
   BackupEventLite,
@@ -86,8 +86,10 @@ export function computeBackupOverview(
   poll: BackupPollData | null,
   events: BackupEventLite[],
   now: Date = new Date(),
-  t: BackupThresholds = BACKUP_THRESHOLDS,
+  thresholds: BackupThresholds = BACKUP_THRESHOLDS,
 ): BackupOverview {
+  const pollSeconds = poll?.pollSeconds ?? DEFAULT_POLL_SECONDS;
+  const t = effectiveThresholds(thresholds, pollSeconds);
   const nowSec = now.getTime() / 1000;
   const pbsHealth = poll?.pbs.health ?? EMPTY_HEALTH;
   const pbsStale = isSourceStale(pbsHealth, nowSec, t);
@@ -242,7 +244,12 @@ export function computeBackupOverview(
             ? `No successful poll since ${pbsHealth.okAt.replace("T", " ").slice(0, 16)} UTC${pbsHealth.error ? `: ${pbsHealth.error}` : ""}`
             : `Never polled successfully${pbsHealth.error ? `: ${pbsHealth.error}` : ""}`,
         }
-      : { id: "pbs-poll", label: "PBS reachable", status: "ok", hint: "Polled within the last few minutes" },
+      : {
+          id: "pbs-poll",
+          label: "PBS reachable",
+          status: "ok",
+          hint: `Last polled ${pbsHealth.okAt!.replace("T", " ").slice(0, 16)} UTC`,
+        },
   );
 
   const usage = pbs?.datastore
@@ -315,6 +322,7 @@ export function computeBackupOverview(
     namespace: poll?.namespace ?? "",
     checks,
     pbs: { health: pbsHealth, stale: pbsStale },
+    pollSeconds,
     usage,
     jobs: { gc, verify, prune },
     hosts,

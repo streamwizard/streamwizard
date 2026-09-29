@@ -5,7 +5,7 @@ import {
   getBackupPollState,
   listUnmatchedBackupEvents,
   markBackupEventsMatched,
-  type BackupEventRow,
+  type BackupEventLiteRow,
 } from "@repo/supabase/queries/backups";
 
 /** Unmatched events older than this are dropped even if discovery never ran. */
@@ -17,7 +17,7 @@ export async function loadBackupPoll(pollId: string): Promise<BackupPollData | n
   return data && data.version === 1 ? data : null;
 }
 
-export function toEventLite(row: BackupEventRow): BackupEventLite {
+export function toEventLite(row: BackupEventLiteRow): BackupEventLite {
   return {
     id: row.id,
     source: row.source,

@@ -7,7 +7,7 @@ import {
   type BackupPollData,
   type BackupVmDetailResponse,
 } from "@repo/backups";
-import type { BackupEventRow } from "@repo/supabase/queries/backups";
+import type { BackupEventLiteRow, BackupEventRow } from "@repo/supabase/queries/backups";
 import { Hono } from "hono";
 import { toEventLite } from "../lib/backup-store";
 import type { PollResult } from "../services/backup-poller";
@@ -23,7 +23,7 @@ const EVENT_WINDOW_MS = 8 * 24 * 60 * 60 * 1000;
 
 export interface BackupsInternalDeps {
   loadPoll: () => Promise<BackupPollData | null>;
-  listEventsSince: (sinceIso: string) => Promise<BackupEventRow[]>;
+  listEventsSince: (sinceIso: string) => Promise<BackupEventLiteRow[]>;
   listEvents: (opts: { before?: string; limit?: number; vmid?: number }) => Promise<BackupEventRow[]>;
   /** null when the poller isn't running in this process. */
   forcePoll: (() => Promise<PollResult>) | null;
