@@ -16,7 +16,7 @@ import {
   querySupabaseMaxConnections,
   querySupabaseLastScrape,
   type PlatformPoint,
-  type QueryOpts,
+  type Measurement,
 } from "@repo/metrics";
 import type { AlertRule, Breach, Env, EnvContext, RuleKnob, RuleOverrides, Severity } from "../types";
 
@@ -93,7 +93,7 @@ export function absenceRule(
   opts: {
     id: string;
     title: string;
-    measurement: string;
+    measurement: Measurement;
     tag: string;
     /** Registry entities expected to be writing. entityId is the stable
      * state key (node uuid); label is what humans see in alert messages. */
@@ -118,7 +118,7 @@ export function absenceRule(
       defaultEnvs,
     },
     async evaluate(ctx) {
-      const lastWrites = await queryLastWriteByTag(opts.measurement, opts.tag, "24h", { bucket: ctx.bucket });
+      const lastWrites = await queryLastWriteByTag(opts.measurement, opts.tag, "24h");
       const lastSeenByEntity = new Map(lastWrites.map((w) => [w.tagValue, new Date(w.lastSeen).getTime()]));
       const breaches: Breach[] = [];
       for (const entity of opts.expected(ctx)) {
@@ -212,10 +212,10 @@ export function customRule(
 /** Latest value of a Supabase platform series as a single "supabase" entity;
  * empty when Telegraf hasn't written the series recently. */
 export async function supabaseLatest(
-  query: (fluxRange: string, window: string, opts?: QueryOpts) => Promise<PlatformPoint[]>,
+  query: (fluxRange: string, window: string) => Promise<PlatformPoint[]>,
   ctx: EnvContext,
 ): Promise<ThresholdSample[]> {
-  const series = await query("15m", "5m", { bucket: ctx.bucket });
+  const series = await query("15m", "5m");
   const latest = series.at(-1);
   return latest === undefined ? [] : [{ entityId: "supabase", value: latest.value }];
 }
@@ -224,7 +224,7 @@ export async function obsNodeField(
   ctx: EnvContext,
   pick: (fields: Record<string, number>) => number | undefined,
 ): Promise<ThresholdSample[]> {
-  const nodes = await queryLatestObsNodeFields("10m", { bucket: ctx.bucket });
+  const nodes = await queryLatestObsNodeFields("10m");
   return nodes.flatMap((node) => {
     const value = pick(node.fields);
     return value === undefined || Number.isNaN(value) ? [] : [{ entityId: node.nodeId, value }];
@@ -235,7 +235,7 @@ export async function hostSystemField(
   ctx: EnvContext,
   pick: (fields: Record<string, number>) => number | undefined,
 ): Promise<ThresholdSample[]> {
-  const hosts = await queryLatestHostSystemFields("10m", { bucket: ctx.bucket });
+  const hosts = await queryLatestHostSystemFields("10m");
   return hosts.flatMap((host) => {
     const value = pick(host.fields);
     return value === undefined || Number.isNaN(value) ? [] : [{ entityId: host.nodeId, value }];

@@ -242,7 +242,6 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 async function enrichNodeNotifications(
   notifications: AlertNotification[],
   registry: Registry,
-  bucket: string,
 ): Promise<void> {
   const findNode = (entityId: string) => {
     const obs = registry.obsNodes.find((x) => x.id === entityId);
@@ -263,8 +262,8 @@ async function enrichNodeNotifications(
   let hostFields = new Map<string, Record<string, number>>();
   try {
     const [obs, hosts] = await Promise.all([
-      queryLatestObsNodeFields("1h", { bucket }),
-      queryLatestHostSystemFields("1h", { bucket }),
+      queryLatestObsNodeFields("1h"),
+      queryLatestHostSystemFields("1h"),
     ]);
     obsFields = new Map(obs.map((x) => [x.nodeId, x.fields]));
     hostFields = new Map(hosts.map((x) => [x.nodeId, x.fields]));
@@ -357,7 +356,6 @@ interface TickContext {
 
 async function evaluateEnv(
   alertEnv: Env,
-  bucket: string,
   registry: Registry,
   now: Date,
   overrides: RuleOverrides,
@@ -375,7 +373,7 @@ async function evaluateEnv(
   // target (see runEvaluationPass); injected here so probe rules see it
   // exactly as if runProbes had produced it. The id must stay "supabase".
   probeResults.set(tick.supabaseProbe.id, tick.supabaseProbe);
-  const ctx: EnvContext = { env: alertEnv, bucket, now, supabase: supabaseAdmin, registry, probeResults };
+  const ctx: EnvContext = { env: alertEnv, now, supabase: supabaseAdmin, registry, probeResults };
 
   // One broken query must never kill the whole tick.
   const evaluations = await Promise.allSettled(
@@ -406,7 +404,7 @@ async function evaluateEnv(
   // bounds the double-notify window of persisting after dispatch.
   updateMirror(alertEnv, upserts, now);
 
-  await enrichNodeNotifications(notifications, registry, bucket);
+  await enrichNodeNotifications(notifications, registry);
 
   const { failed } = await dispatchNotifications(notifications, notifyRoute);
 
@@ -540,7 +538,7 @@ export async function runEvaluationPass(): Promise<TickSummary> {
     ? { id: "supabase", ok: true, latencyMs: snapshotLatencyMs }
     : { id: "supabase", ok: false, error: "tick snapshot RPC failed", latencyMs: snapshotLatencyMs };
 
-  const summary = await evaluateEnv(alertEnv, alertConfig.influxdbBucket, registry, now, overrides, notifyRoute, {
+  const summary = await evaluateEnv(alertEnv, registry, now, overrides, notifyRoute, {
     prev,
     supabaseHealthy: snapshot !== null,
     supabaseProbe,

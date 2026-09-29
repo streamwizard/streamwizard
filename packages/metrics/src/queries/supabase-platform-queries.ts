@@ -1,5 +1,5 @@
 import { runFluxQuery, assertValidFluxDuration } from "../query-client";
-import { resolveBucket, type QueryOpts } from "./query-opts";
+import { fluxFrom } from "../buckets";
 
 // Supabase platform metrics, scraped from the per-project privileged
 // Prometheus endpoint by Telegraf on the monitoring host. The prometheus
@@ -22,13 +22,11 @@ const point = (row: Record<string, string | undefined>): PlatformPoint => ({
 
 /** DB host CPU usage % over time: 100 × busy / (busy + idle) from the
  * per-core mode counters. */
-export function querySupabaseDbCpuPct(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<PlatformPoint[]> {
+export function querySupabaseDbCpuPct(fluxRange = "24h", window = "5m"): Promise<PlatformPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("prometheus", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "node_cpu_seconds_total")
       |> derivative(unit: 1s, nonNegative: true)
@@ -43,13 +41,11 @@ export function querySupabaseDbCpuPct(fluxRange = "24h", window = "5m", opts?: Q
 }
 
 /** DB host memory usage % over time: 100 × (1 − MemAvailable / MemTotal). */
-export function querySupabaseDbMemoryPct(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<PlatformPoint[]> {
+export function querySupabaseDbMemoryPct(fluxRange = "24h", window = "5m"): Promise<PlatformPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("prometheus", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "node_memory_MemAvailable_bytes" or r._field == "node_memory_MemTotal_bytes")
       |> aggregateWindow(every: ${window}, fn: mean, createEmpty: false)
@@ -61,13 +57,11 @@ export function querySupabaseDbMemoryPct(fluxRange = "24h", window = "5m", opts?
 }
 
 /** Fullest filesystem usage % over time (max across mountpoints). */
-export function querySupabaseDbDiskPct(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<PlatformPoint[]> {
+export function querySupabaseDbDiskPct(fluxRange = "24h", window = "5m"): Promise<PlatformPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("prometheus", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "node_filesystem_avail_bytes" or r._field == "node_filesystem_size_bytes")
       |> keep(columns: ["_time", "_field", "_value", "mountpoint"])
@@ -81,13 +75,11 @@ export function querySupabaseDbDiskPct(fluxRange = "24h", window = "5m", opts?: 
 }
 
 /** Total backends (connections) across databases, over time. */
-export function querySupabaseDbConnections(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<PlatformPoint[]> {
+export function querySupabaseDbConnections(fluxRange = "24h", window = "5m"): Promise<PlatformPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("prometheus", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "pg_stat_database_num_backends")
       |> aggregateWindow(every: ${window}, fn: mean, createEmpty: false)
@@ -99,11 +91,9 @@ export function querySupabaseDbConnections(fluxRange = "24h", window = "5m", opt
 }
 
 /** The connection limit (max_connections), latest value. */
-export async function querySupabaseMaxConnections(opts?: QueryOpts): Promise<number | null> {
-  const bucket = resolveBucket(opts);
+export async function querySupabaseMaxConnections(): Promise<number | null> {
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -1h)
+    ${fluxFrom("prometheus", `-1h`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "max_connections_connection_count")
       |> group()
@@ -116,13 +106,11 @@ export async function querySupabaseMaxConnections(opts?: QueryOpts): Promise<num
 
 /** Buffer cache hit rate % over time: 100 × hit / (hit + read). Windows with
  * no reads at all count as 100%. */
-export function querySupabaseDbCacheHitPct(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<PlatformPoint[]> {
+export function querySupabaseDbCacheHitPct(fluxRange = "24h", window = "5m"): Promise<PlatformPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("prometheus", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "pg_stat_database_blks_hit_total" or r._field == "pg_stat_database_blks_read_total")
       |> derivative(unit: 1s, nonNegative: true)
@@ -138,13 +126,11 @@ export function querySupabaseDbCacheHitPct(fluxRange = "24h", window = "5m", opt
 
 /** Mean statement execution time in ms over time, from the DB-wide
  * pg_stat_statements counters: Δtotal_time / Δtotal_queries. */
-export function querySupabaseMeanQueryMs(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<PlatformPoint[]> {
+export function querySupabaseMeanQueryMs(fluxRange = "24h", window = "5m"): Promise<PlatformPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("prometheus", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "pg_stat_statements_total_time_seconds" or r._field == "pg_stat_statements_total_queries")
       |> derivative(unit: 1s, nonNegative: true)
@@ -157,13 +143,11 @@ export function querySupabaseMeanQueryMs(fluxRange = "24h", window = "5m", opts?
 }
 
 /** Statements executed per second, over time. */
-export function querySupabaseQueryRate(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<PlatformPoint[]> {
+export function querySupabaseQueryRate(fluxRange = "24h", window = "5m"): Promise<PlatformPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("prometheus", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "pg_stat_statements_total_queries")
       |> derivative(unit: 1s, nonNegative: true)
@@ -176,13 +160,11 @@ export function querySupabaseQueryRate(fluxRange = "24h", window = "5m", opts?: 
 /** Mean auth (GoTrue) API request latency in ms over time, summed across
  * routes: Δduration_sum / Δrequest_count. PostgREST exposes no equivalent —
  * data-path latency comes from app-side instrumentation instead. */
-export function querySupabaseAuthApiMs(fluxRange = "24h", window = "5m", opts?: QueryOpts): Promise<PlatformPoint[]> {
+export function querySupabaseAuthApiMs(fluxRange = "24h", window = "5m"): Promise<PlatformPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("prometheus", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "http_server_request_duration_seconds_sum" or r._field == "http_server_request_duration_seconds_count")
       |> derivative(unit: 1s, nonNegative: true)
@@ -206,12 +188,10 @@ export interface AuthRouteStat {
 /** Auth (GoTrue) API calls per route over the range: request count and mean
  * latency, busiest first. increase() handles counter resets; per-series
  * increases are summed across status codes before the sum/count ratio. */
-export function querySupabaseAuthRoutes(fluxRange = "24h", opts?: QueryOpts): Promise<AuthRouteStat[]> {
+export function querySupabaseAuthRoutes(fluxRange = "24h"): Promise<AuthRouteStat[]> {
   assertValidFluxDuration(fluxRange, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("prometheus", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "http_server_request_duration_seconds_sum" or r._field == "http_server_request_duration_seconds_count")
       |> map(fn: (r) => ({ r with kind: if r._field == "http_server_request_duration_seconds_sum" then "sum" else "count" }))
@@ -240,11 +220,9 @@ export interface DatabaseSize {
 }
 
 /** Latest size per database. */
-export function querySupabaseDbSizes(opts?: QueryOpts): Promise<DatabaseSize[]> {
-  const bucket = resolveBucket(opts);
+export function querySupabaseDbSizes(): Promise<DatabaseSize[]> {
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -1h)
+    ${fluxFrom("prometheus", `-1h`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "pg_database_size_bytes")
       |> group(columns: ["datname"])
@@ -268,18 +246,18 @@ export interface SupabasePlatformSnapshot {
 
 /** Latest value of each headline metric — stat cards and alert rules 25–28.
  * Nulls mean Telegraf hasn't delivered that series recently. */
-export async function querySupabasePlatformSnapshot(opts?: QueryOpts): Promise<SupabasePlatformSnapshot> {
+export async function querySupabasePlatformSnapshot(): Promise<SupabasePlatformSnapshot> {
   const last = (rows: PlatformPoint[]): number | null => {
     const r = rows.at(-1);
     return r === undefined ? null : r.value;
   };
   const [cpu, memory, disk, connections, maxConnections, scrape] = await Promise.all([
-    querySupabaseDbCpuPct("15m", "5m", opts),
-    querySupabaseDbMemoryPct("15m", "5m", opts),
-    querySupabaseDbDiskPct("15m", "5m", opts),
-    querySupabaseDbConnections("15m", "5m", opts),
-    querySupabaseMaxConnections(opts),
-    querySupabaseLastScrape(opts),
+    querySupabaseDbCpuPct("15m", "5m"),
+    querySupabaseDbMemoryPct("15m", "5m"),
+    querySupabaseDbDiskPct("15m", "5m"),
+    querySupabaseDbConnections("15m", "5m"),
+    querySupabaseMaxConnections(),
+    querySupabaseLastScrape(),
   ]);
   return {
     cpuPct: last(cpu),
@@ -292,11 +270,9 @@ export async function querySupabasePlatformSnapshot(opts?: QueryOpts): Promise<S
 }
 
 /** Timestamp of the newest platform point — absence rule 28 (scrape silent). */
-export async function querySupabaseLastScrape(opts?: QueryOpts): Promise<string | null> {
-  const bucket = resolveBucket(opts);
+export async function querySupabaseLastScrape(): Promise<string | null> {
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -24h)
+    ${fluxFrom("prometheus", `-24h`)}
       |> filter(fn: (r) => r._measurement == "prometheus")
       |> filter(fn: (r) => r._field == "pg_up")
       |> group()

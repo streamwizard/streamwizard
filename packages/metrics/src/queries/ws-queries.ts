@@ -1,5 +1,5 @@
 import { runFluxQuery, assertValidFluxDuration } from "../query-client";
-import { resolveBucket, type QueryOpts } from "./query-opts";
+import { fluxFrom } from "../buckets";
 
 export interface WsConnectionPoint {
   time: string;
@@ -46,13 +46,11 @@ export interface WsTopMessageTypePoint {
   count: number;
 }
 
-export async function queryWsConnections(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<WsConnectionPoint[]> {
+export async function queryWsConnections(fluxRange = "24h", window = "1h"): Promise<WsConnectionPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("ws_connection", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "ws_connection")
       |> filter(fn: (r) => r._field == "count")
       |> aggregateWindow(every: ${window}, fn: sum, createEmpty: false)
@@ -66,13 +64,11 @@ export async function queryWsConnections(fluxRange = "24h", window = "1h", opts?
   }));
 }
 
-export async function queryWsMessages(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<WsMessagePoint[]> {
+export async function queryWsMessages(fluxRange = "24h", window = "1h"): Promise<WsMessagePoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("ws_message", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "ws_message")
       |> filter(fn: (r) => r._field == "count")
       |> aggregateWindow(every: ${window}, fn: sum, createEmpty: false)
@@ -86,13 +82,11 @@ export async function queryWsMessages(fluxRange = "24h", window = "1h", opts?: Q
   }));
 }
 
-export async function queryWsAuthFailures(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<WsAuthFailurePoint[]> {
+export async function queryWsAuthFailures(fluxRange = "24h", window = "1h"): Promise<WsAuthFailurePoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("ws_auth_failure", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "ws_auth_failure")
       |> filter(fn: (r) => r._field == "count")
       |> aggregateWindow(every: ${window}, fn: sum, createEmpty: false)
@@ -106,13 +100,11 @@ export async function queryWsAuthFailures(fluxRange = "24h", window = "1h", opts
   }));
 }
 
-export async function queryWsDroppedMessages(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<WsMessageDropPoint[]> {
+export async function queryWsDroppedMessages(fluxRange = "24h", window = "1h"): Promise<WsMessageDropPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("ws_message_drop", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "ws_message_drop")
       |> filter(fn: (r) => r._field == "count")
       |> aggregateWindow(every: ${window}, fn: sum, createEmpty: false)
@@ -126,13 +118,11 @@ export async function queryWsDroppedMessages(fluxRange = "24h", window = "1h", o
   }));
 }
 
-export async function queryWsConnectionDuration(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<WsConnectionDurationPoint[]> {
+export async function queryWsConnectionDuration(fluxRange = "24h", window = "1h"): Promise<WsConnectionDurationPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("ws_connection", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "ws_connection")
       |> filter(fn: (r) => r._field == "duration_ms")
       |> filter(fn: (r) => r.event == "close")
@@ -146,13 +136,11 @@ export async function queryWsConnectionDuration(fluxRange = "24h", window = "1h"
   }));
 }
 
-export async function queryWsRoomEvents(fluxRange = "24h", window = "1h", opts?: QueryOpts): Promise<WsRoomEventPoint[]> {
+export async function queryWsRoomEvents(fluxRange = "24h", window = "1h"): Promise<WsRoomEventPoint[]> {
   assertValidFluxDuration(fluxRange, "range");
   assertValidFluxDuration(window, "window");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("ws_room", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "ws_room")
       |> filter(fn: (r) => r._field == "count")
       |> aggregateWindow(every: ${window}, fn: sum, createEmpty: false)
@@ -165,21 +153,18 @@ export async function queryWsRoomEvents(fluxRange = "24h", window = "1h", opts?:
   }));
 }
 
-export async function queryWsActiveConnectionsEstimate(opts?: QueryOpts): Promise<{ role: string; active: number }[]> {
-  const bucket = resolveBucket(opts);
+export async function queryWsActiveConnectionsEstimate(): Promise<{ role: string; active: number }[]> {
 
   // Compute opens and closes separately, then subtract in code — simpler than Flux join
   const opensQuery = `
-    from(bucket: "${bucket}")
-      |> range(start: 0)
+    ${fluxFrom("ws_connection", `0`)}
       |> filter(fn: (r) => r._measurement == "ws_connection" and r._field == "count" and r.event == "open")
       |> group(columns: ["role"])
       |> sum()
       |> yield(name: "opens")
   `;
   const closesQuery = `
-    from(bucket: "${bucket}")
-      |> range(start: 0)
+    ${fluxFrom("ws_connection", `0`)}
       |> filter(fn: (r) => r._measurement == "ws_connection" and r._field == "count" and r.event == "close")
       |> group(columns: ["role"])
       |> sum()
@@ -198,12 +183,10 @@ export async function queryWsActiveConnectionsEstimate(opts?: QueryOpts): Promis
   }));
 }
 
-export async function queryWsTopMessageTypes(fluxRange = "24h", limit = 15, opts?: QueryOpts): Promise<WsTopMessageTypePoint[]> {
+export async function queryWsTopMessageTypes(fluxRange = "24h", limit = 15): Promise<WsTopMessageTypePoint[]> {
   assertValidFluxDuration(fluxRange, "range");
-  const bucket = resolveBucket(opts);
   const query = `
-    from(bucket: "${bucket}")
-      |> range(start: -${fluxRange})
+    ${fluxFrom("ws_message", `-${fluxRange}`)}
       |> filter(fn: (r) => r._measurement == "ws_message")
       |> filter(fn: (r) => r._field == "count")
       |> group(columns: ["message_type"])

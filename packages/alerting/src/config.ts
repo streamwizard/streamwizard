@@ -18,9 +18,6 @@ export const alertConfig = {
   get influxdbUrl() {
     return required("INFLUXDB_URL");
   },
-  get influxdbBucket() {
-    return required("INFLUXDB_BUCKET");
-  },
   get supabaseUrl() {
     return required("SUPABASE_URL");
   },

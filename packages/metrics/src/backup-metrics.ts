@@ -1,5 +1,6 @@
 import { Point } from "@influxdata/influxdb-client";
 import { pushPoint } from "./influx-client";
+import { BUCKETS } from "./buckets";
 
 // Proxmox backup monitoring (docs/backup-monitoring-plan.md,
 // docs/backup-sizes-plan.md). rest-api's poller writes one set of points per
@@ -52,7 +53,7 @@ export function trackBackupPoll(m: BackupPollMetrics): void {
       point.intField("ns_logical_bytes", m.namespaceUsage.logicalBytes).intField("ns_unique_bytes", m.namespaceUsage.uniqueBytes);
       if (m.namespaceUsage.onDiskEstBytes !== null) point.intField("ns_ondisk_est_bytes", m.namespaceUsage.onDiskEstBytes);
     }
-    pushPoint(point);
+    pushPoint(point, BUCKETS.vmBackups);
   }
 
   for (const vm of m.vms) {
@@ -69,7 +70,7 @@ export function trackBackupPoll(m: BackupPollMetrics): void {
     if (vm.uniqueBytes !== null) point.intField("unique_bytes", vm.uniqueBytes);
     if (vm.sharedBytes !== null) point.intField("shared_bytes", vm.sharedBytes);
     if (vm.onDiskEstBytes !== null) point.intField("ondisk_est_bytes", vm.onDiskEstBytes);
-    pushPoint(point);
+    pushPoint(point, BUCKETS.vmBackups);
   }
 
   for (const snap of m.snapshots) {
@@ -81,6 +82,6 @@ export function trackBackupPoll(m: BackupPollMetrics): void {
       .intField("uploaded_bytes", snap.uploadedBytes)
       .intField("uploaded_raw_bytes", snap.uploadedRawBytes)
       .timestamp(new Date(snap.time * 1000));
-    pushPoint(point);
+    pushPoint(point, BUCKETS.vmBackups);
   }
 }
