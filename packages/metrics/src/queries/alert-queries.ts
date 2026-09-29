@@ -214,15 +214,19 @@ export function buildLastWriteByTagQuery(measurement: Measurement, tag: string, 
 
 /** Total points written to every bucket in the window across ALL measurements
  * (rule: meta.pipeline_silent — 0 means the whole write path is dead). */
+// count() can't aggregate _time, and counting _value fails once group() merges
+// float and integer fields, so every point becomes a 1 and those are summed.
 export async function queryBucketPointCount(range = "5m"): Promise<number> {
   assertValidFluxDuration(range, "range");
   const query = `
     ${fluxFromAll(`-${range}`)}
+      |> keep(columns: ["_measurement"])
+      |> map(fn: (r) => ({r with _value: 1}))
       |> group()
-      |> count(column: "_time")
+      |> sum()
       |> yield(name: "bucket_points")
   `;
-  const rows = await runFluxQuery(query, (row) => Number(row._time ?? 0));
+  const rows = await runFluxQuery(query, (row) => Number(row._value ?? 0));
   return rows[0] ?? 0;
 }
 
