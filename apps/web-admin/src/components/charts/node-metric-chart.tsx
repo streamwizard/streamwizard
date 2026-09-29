@@ -37,7 +37,9 @@ export interface NodeMetricPoint {
 // A function prop can't cross the server/client boundary (pages that render
 // this are Server Components), so callers pass a format name instead and the
 // actual formatter lives here, client-side.
-export type NodeMetricFormat = "percent" | "bytesPerSec" | "ms" | "number" | "hours" | "bytes";
+export type NodeMetricFormat = "percent" | "bytesPerSec" | "ms" | "number" | "hours" | "bytes" | "decimal" | "perSec" | "latencyMs";
+
+const trim = (value: number) => (Math.abs(value) >= 100 ? value.toFixed(0) : Math.abs(value) >= 10 ? value.toFixed(1) : value.toFixed(2));
 
 function formatValue(
   value: number,
@@ -55,6 +57,12 @@ function formatValue(
       return `${Math.round(value)} h`;
     case "bytes":
       return formatBytes(value);
+    case "decimal":
+      return trim(value);
+    case "perSec":
+      return `${trim(value)}/s`;
+    case "latencyMs":
+      return `${trim(value)} ms`;
     default:
       return String(value);
   }
@@ -73,6 +81,9 @@ interface Props {
    * node *name* after labeling — pass both name and raw id to be safe). Used
    * by the single-node detail page on top of the fleet-wide API payload. */
   filterNodeIds?: string[];
+  /** Hide series whose id matches this regex source (a string, so a Server
+   * Component can pass it). */
+  excludePattern?: string;
 }
 
 type ChartRow = { t: number; [nodeId: string]: number | undefined };
@@ -127,12 +138,13 @@ export function NodeMetricChart({
   format = "number",
   zeroLine,
   filterNodeIds,
+  excludePattern,
 }: Props) {
   const { interval } = useRefreshInterval();
   const { range } = useTimeRange();
   const { unit: bandwidthUnit } = useBandwidthUnit();
   const { data: raw } = useSWR<Record<string, NodeMetricPoint[]>>(
-    `${apiPath}?range=${range.fluxRange}&window=${range.window}`,
+    `${apiPath}${apiPath.includes("?") ? "&" : "?"}range=${range.fluxRange}&window=${range.window}`,
     fetcher,
     { fallbackData: { [dataKey]: initialData }, refreshInterval: interval },
   );
@@ -145,6 +157,10 @@ export function NodeMetricChart({
   if (filterNodeIds?.length) {
     const allowed = new Set(filterNodeIds);
     points = points.filter((p) => allowed.has(p.nodeId));
+  }
+  if (excludePattern) {
+    const exclude = new RegExp(excludePattern);
+    points = points.filter((p) => !exclude.test(p.nodeId));
   }
   const { rows, nodeIds } = transformData(
     points,
@@ -160,7 +176,7 @@ export function NodeMetricChart({
           {nodeIds.map((nodeId, i) => (
             <linearGradient
               key={nodeId}
-              id={`g-${dataKey}-${nodeId}`}
+              id={`g-${dataKey}-${i}`}
               x1="0"
               y1="0"
               x2="0"
@@ -206,7 +222,7 @@ export function NodeMetricChart({
             type="linear"
             dataKey={nodeId}
             stroke={chartColor(i)}
-            fill={`url(#g-${dataKey}-${nodeId})`}
+            fill={`url(#g-${dataKey}-${i})`}
             strokeWidth={2}
           />
         ))}

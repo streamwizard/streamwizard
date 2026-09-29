@@ -76,6 +76,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { href: "/obs", label: "OBS Nodes", icon: Cpu },
       { href: "/ingest", label: "Ingest Servers", icon: Server },
+      { href: "/vms", label: "VMs", icon: Server },
       { href: "/backups", label: "Backups", icon: DatabaseBackup },
     ],
   },
