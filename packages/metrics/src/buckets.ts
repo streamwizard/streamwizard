@@ -10,6 +10,8 @@ export const BUCKETS = {
   obsNodes: "obs-nodes",
   supabasePlatform: "supabase-platform",
   vmBackups: "vm-backups",
+  // Written by Proxmox VE itself (Datacenter → Metric Server), not by our code.
+  proxmox: "proxmox",
 } as const;
 
 export type Bucket = (typeof BUCKETS)[keyof typeof BUCKETS];
@@ -43,6 +45,15 @@ export const MEASUREMENT_BUCKETS = {
   backup_datastore: [BUCKETS.vmBackups],
   backup_vm: [BUCKETS.vmBackups],
   backup_snapshot: [BUCKETS.vmBackups],
+  // Proxmox VE's own InfluxDB plugin (docs/proxmox-monitoring-plan.md,
+  // "InfluxDB schema (verified)"). "system" holds guests, nodes and storages,
+  // told apart by the object tag (qemu|lxc|nodes|storages).
+  system: [BUCKETS.proxmox],
+  cpustat: [BUCKETS.proxmox],
+  memory: [BUCKETS.proxmox],
+  nics: [BUCKETS.proxmox],
+  blockstat: [BUCKETS.proxmox],
+  ballooninfo: [BUCKETS.proxmox],
 } as const satisfies Record<string, readonly Bucket[]>;
 
 export type Measurement = keyof typeof MEASUREMENT_BUCKETS;

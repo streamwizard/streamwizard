@@ -32,7 +32,7 @@ import {
   type SnapshotUsage,
   type UploadSizes,
 } from "@repo/backups";
-import type { ProxmoxClient } from "./proxmox-client";
+import type { ProxmoxClient } from "@repo/proxmox";
 
 /** Manifest of a snapshot; the only file fetched decoded. */
 const MANIFEST = "index.json.blob";

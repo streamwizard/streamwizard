@@ -31,6 +31,7 @@ BUCKETS=(
   "obs-nodes:30d"
   "supabase-platform:30d"
   "vm-backups:400d"
+  "proxmox:90d"
 )
 
 # Doppler has one shared config per environment, so every service in it,
@@ -75,3 +76,7 @@ for entry in "${BUCKETS[@]}"; do
   token_args+=(--read-bucket "$id" --write-bucket "$id")
 done
 create_token "$ORG-all" "${token_args[@]}"
+
+# Proxmox VE pushes its own metrics (Datacenter → Metric Server → InfluxDB).
+# This token lives in the PVE config, not Doppler, so it only writes proxmox.
+create_token "$ORG-proxmox" --write-bucket "$(bucket_id proxmox)"
