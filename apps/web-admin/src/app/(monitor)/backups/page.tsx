@@ -1,10 +1,14 @@
+import { BackupCharts } from "@/components/backups/backup-charts";
 import { BackupDashboard } from "@/components/backups/backup-dashboard";
+import { fetchBackupSeries } from "@/lib/backup-series";
 import { getBackupOverview } from "@/lib/backups";
 
 export const dynamic = "force-dynamic";
 
-// Data comes from rest-api's /internal/backups, which serves what its poller
-// stored; loading this page never reaches PBS or the PVE hosts.
+// Current state comes from rest-api's /internal/backups (what its poller
+// stored), history from Influx; loading this page never reaches PBS or the
+// PVE hosts.
 export default async function BackupsPage() {
-  return <BackupDashboard initial={await getBackupOverview()} />;
+  const [overview, series] = await Promise.all([getBackupOverview(), fetchBackupSeries()]);
+  return <BackupDashboard initial={overview} charts={<BackupCharts initial={series} />} />;
 }

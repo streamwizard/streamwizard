@@ -1,8 +1,8 @@
 import { supabase } from "@repo/supabase";
-import { insertBackupEvent, listBackupEvents, listBackupEventsSince } from "@repo/supabase/queries/backups";
+import { insertBackupEvent, listBackupEvents } from "@repo/supabase/queries/backups";
 import { Hono } from "hono";
 import { backupConfig } from "../lib/backup-config";
-import { loadBackupPoll } from "../lib/backup-store";
+import { cachedBackupEventsSince, cachedBackupPoll, invalidateBackupCache } from "../lib/backup-cache";
 import { env } from "../lib/env";
 import { internalAuth } from "../middleware/internal-auth";
 import { backupPoller } from "../services/backup-poller";
@@ -15,9 +15,12 @@ import { createProxmoxWebhookRoute } from "./proxmox-webhook";
 /** POST /webhooks/proxmox — shared-secret header auth inside the route. */
 export const proxmoxWebhook = createProxmoxWebhookRoute({
   secret: backupConfig ? env.BACKUP_WEBHOOK_SECRET : undefined,
-  loadPoll: () => loadBackupPoll(backupConfig!.pollId),
+  loadPoll: () => cachedBackupPoll(backupConfig!.pollId),
   insert: (row) => insertBackupEvent(supabase, row),
-  onStored: () => backupPoller?.pollSoon(),
+  onStored: () => {
+    invalidateBackupCache();
+    backupPoller?.pollSoon();
+  },
 });
 
 /** /internal/backups — bearer secret, called by web-admin's server only. */
@@ -26,9 +29,15 @@ internalBackups.use("*", internalAuth(backupConfig ? env.REST_API_INTERNAL_SECRE
 internalBackups.route(
   "/",
   createBackupsInternalRoute({
-    loadPoll: () => loadBackupPoll(backupConfig!.pollId),
-    listEventsSince: (since) => listBackupEventsSince(supabase, since),
+    loadPoll: () => cachedBackupPoll(backupConfig!.pollId),
+    listEventsSince: (since) => cachedBackupEventsSince(since),
     listEvents: (opts) => listBackupEvents(supabase, opts),
-    forcePoll: backupPoller ? () => backupPoller!.poll({ force: true }) : null,
+    forcePoll: backupPoller
+      ? async () => {
+          const result = await backupPoller!.poll({ force: true });
+          invalidateBackupCache();
+          return result;
+        }
+      : null,
   }),
 );

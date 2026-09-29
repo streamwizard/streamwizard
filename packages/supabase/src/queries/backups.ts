@@ -40,11 +40,18 @@ export async function saveBackupPollState(client: DBClient, id: string, data: Js
   if (error) throw new Error(`Couldn't save backup poll state: ${error.message}`);
 }
 
-/** Matched events since `sinceIso`, newest first by occurred_at. */
-export async function listBackupEventsSince(client: DBClient, sinceIso: string, limit = 500): Promise<BackupEventRow[]> {
+/** The columns status needs: no message/fields, which can be ~64 KB per
+ * event. This is what the overview and the alert rules read on every refresh. */
+export type BackupEventLiteRow = Pick<
+  BackupEventRow,
+  "id" | "source" | "event_type" | "job_id" | "severity" | "title" | "occurred_at" | "received_at" | "guests"
+>;
+
+/** Matched events since `sinceIso`, newest first by occurred_at (slim columns). */
+export async function listBackupEventsSince(client: DBClient, sinceIso: string, limit = 500): Promise<BackupEventLiteRow[]> {
   const { data, error } = await client
     .from("backup_events")
-    .select("*")
+    .select("id,source,event_type,job_id,severity,title,occurred_at,received_at,guests")
     .eq("matched", true)
     .gte("occurred_at", sinceIso)
     .order("occurred_at", { ascending: false })
