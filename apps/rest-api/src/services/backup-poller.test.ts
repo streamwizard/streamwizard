@@ -14,7 +14,7 @@ mock.module("../lib/backup-config", () => ({ backupConfig: null }));
 
 const { createBackupPoller, nextHealth } = await import("./backup-poller");
 const { downloadSnapshotFile, fetchPbs, fetchPbsUsage, fetchPve } = await import("../lib/backup-sources");
-const { createProxmoxClient, pbsAuthorization, pveAuthorization, ProxmoxApiError } = await import("../lib/proxmox-client");
+const { createProxmoxClient, pbsAuthorization, pveAuthorization, ProxmoxApiError } = await import("@repo/proxmox");
 
 const NOW = new Date("2026-09-28T12:00:00Z");
 const pbsData: PbsData = { datastore: null, snapshots: [], gc: null, verifyJobs: [], pruneJobs: [] };

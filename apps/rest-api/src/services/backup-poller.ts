@@ -8,7 +8,7 @@ import { backupConfig, type BackupConfig } from "../lib/backup-config";
 import { fetchPbs, fetchPve, type SourceResult } from "../lib/backup-sources";
 import { invalidateBackupCache } from "../lib/backup-cache";
 import { loadBackupPoll, reconcileUnmatchedEvents } from "../lib/backup-store";
-import { createProxmoxClient, pbsAuthorization, pveAuthorization } from "../lib/proxmox-client";
+import { createProxmoxClient, pbsAuthorization, pveAuthorization } from "@repo/proxmox";
 
 /**
  * Polls PBS and the PVE hosts into backup_poll_state (docs/backup-monitoring-plan.md).

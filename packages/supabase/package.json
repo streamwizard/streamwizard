@@ -238,6 +238,10 @@
     "./queries/backups": {
       "types": "./src/queries/backups.ts",
       "default": "./src/queries/backups.ts"
+    },
+    "./queries/proxmox": {
+      "types": "./src/queries/proxmox.ts",
+      "default": "./src/queries/proxmox.ts"
     }
   },
   "scripts": {

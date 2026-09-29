@@ -5,6 +5,7 @@ import { databaseRules } from "./rules/database";
 import { ingestRules } from "./rules/ingest";
 import { obsNodeRules } from "./rules/obs-nodes";
 import { probeRules } from "./rules/probes";
+import { proxmoxRules } from "./rules/proxmox";
 import { websocketRules } from "./rules/websocket";
 
 // The rule catalog (monitoring plan v2.2 §4) lives in ./rules, one module per
@@ -15,6 +16,14 @@ import { websocketRules } from "./rules/websocket";
 // database-tunable.
 
 export * from "./rules/thresholds";
+export {
+  STREAMWIZARD_VM_TAG,
+  VM_ALERT_RULES,
+  VM_ALERT_RULE_IDS,
+  isStreamwizardVm,
+  isVmAlertRuleId,
+  type VmAlertRuleId,
+} from "./rules/proxmox";
 
 export function buildRules(overrides: RuleOverrides = {}): AlertRule[] {
   return [
@@ -25,6 +34,7 @@ export function buildRules(overrides: RuleOverrides = {}): AlertRule[] {
     ...databaseRules(overrides),
     ...probeRules(overrides),
     ...backupRules(overrides),
+    ...proxmoxRules(overrides),
   ];
 }
 
@@ -42,6 +52,7 @@ const RULE_GROUPS: Record<string, string> = {
   meta: "Meta",
   probe: "Probes",
   backup: "Backups",
+  vm: "Proxmox VMs",
 };
 
 export interface RuleCatalogEntry {
