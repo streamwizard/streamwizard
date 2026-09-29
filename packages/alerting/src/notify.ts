@@ -134,7 +134,10 @@ function discordPayload(n: AlertNotification): DiscordMessagePayload {
   const monitorUrl = alertConfig.monitorBaseUrl;
 
   const fields: { name: string; value: string; inline?: boolean }[] = [];
-  if (n.node) {
+  if (n.node?.kind === "vm") {
+    fields.push({ name: "VM", value: n.node.name, inline: true });
+    if (n.node.host) fields.push({ name: "Host", value: n.node.host, inline: true });
+  } else if (n.node) {
     fields.push({ name: "Node", value: n.node.name, inline: true });
     // Code formatting so the address is tap-to-copy in Discord.
     if (n.node.address)

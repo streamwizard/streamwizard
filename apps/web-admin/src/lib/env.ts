@@ -68,6 +68,10 @@ export const env = createEnv({
     // Must match rest-api's REST_API_INTERNAL_SECRET; without it the page
     // shows a "not configured" card.
     REST_API_INTERNAL_SECRET: z.string().min(32).optional(),
+    // JSON array of Proxmox hosts, same value as rest-api's (Doppler). /vms
+    // reads guest IPs, agent state and disk use from these on demand; without
+    // it those columns show "—". Parsed by @repo/proxmox, never logged.
+    PVE_HOSTS: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_WS_SERVER_URL: z.string().min(1).optional(),
@@ -106,6 +110,7 @@ export const env = createEnv({
     WS_SERVER_URL: process.env.WS_SERVER_URL,
     CONSUMER_SECRET: process.env.CONSUMER_SECRET,
     REST_API_INTERNAL_SECRET: process.env.REST_API_INTERNAL_SECRET,
+    PVE_HOSTS: process.env.PVE_HOSTS,
     NEXT_PUBLIC_WS_SERVER_URL: process.env.NEXT_PUBLIC_WS_SERVER_URL,
     NEXT_PUBLIC_MONITOR_SECRET: process.env.NEXT_PUBLIC_MONITOR_SECRET,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

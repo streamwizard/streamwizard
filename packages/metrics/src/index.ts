@@ -10,7 +10,7 @@ export { trackAutoSwitcherEvent } from "./auto-switcher-metrics";
 export { trackBackupPoll, type BackupPollMetrics } from "./backup-metrics";
 
 // Query (read) exports — server-only, InfluxDB read path
-export { runFluxQuery } from "./query-client";
+export { runFluxQuery, assertValidFluxDuration } from "./query-client";
 export * from "./queries/ws-queries";
 export * from "./queries/http-queries";
 export * from "./queries/system-queries";
@@ -18,3 +18,4 @@ export * from "./queries/obs-queries";
 export * from "./queries/alert-queries";
 export * from "./queries/supabase-platform-queries";
 export * from "./queries/backup-queries";
+export * from "./queries/proxmox-queries";

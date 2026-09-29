@@ -58,6 +58,25 @@ export const BACKUP_STALE_CRIT_HOURS = BACKUP_THRESHOLDS.staleCritHours;
 export const BACKUP_DATASTORE_WARN_PCT = BACKUP_THRESHOLDS.datastoreWarnPct;
 export const BACKUP_DATASTORE_CRIT_PCT = BACKUP_THRESHOLDS.datastoreCritPct;
 export const BACKUP_SOURCE_STALE_MIN = BACKUP_THRESHOLDS.sourceStaleMinutes;
+// Proxmox VMs (vm.* rules). VM rules are opt-in per VM in web-admin; host rules
+// are always on.
+export const VM_CPU_WARN_PCT = 85;
+export const VM_CPU_CRIT_PCT = 95;
+export const VM_MEM_WARN_PCT = 90;
+export const VM_MEM_CRIT_PCT = 97;
+/** PSI io "some": share of time at least one task in the VM waited on IO. */
+export const VM_IO_PRESSURE_WARN_PCT = 20;
+export const VM_IO_PRESSURE_CRIT_PCT = 40;
+// PVE hosts and their storages (always on).
+export const VM_HOST_CPU_WARN_PCT = 85;
+export const VM_HOST_CPU_CRIT_PCT = 95;
+export const VM_HOST_MEM_WARN_PCT = 90;
+export const VM_HOST_MEM_CRIT_PCT = 97;
+export const VM_STORAGE_WARN_PCT = 85;
+export const VM_STORAGE_CRIT_PCT = 95;
+/** A VM (or host) that hasn't pushed to Influx for this long counts as gone.
+ * PVE pushes every ~10 s, stopped guests too, so 90 s is nine missed pushes. */
+export const VM_STALE_SECONDS = 90;
 
 // --- Rule constructors ---
 // Each takes the full overrides record and resolves its own row by opts.id:

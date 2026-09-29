@@ -37,6 +37,16 @@ export interface LiveIngestSession {
   startedAt: string;
 }
 
+/** The admin's per-VM alert opt-in (proxmox_vm_alert_settings). VM state
+ * itself comes from Influx, read by the proxmox rules. */
+export interface ProxmoxVmAlertSetting {
+  /** PVE node name, e.g. "pve1". */
+  host: string;
+  vmid: number;
+  /** vm.* rule ids switched on for this VM; empty = no alerts. */
+  rules: string[];
+}
+
 export interface Registry {
   obsNodes: RegistryNode[];
   ingestNodes: RegistryNode[];
@@ -44,6 +54,7 @@ export interface Registry {
   services: string[];
   liveIngestSessions: LiveIngestSession[];
   anyChannelLive: boolean;
+  proxmoxVmAlertSettings: ProxmoxVmAlertSetting[];
 }
 
 export interface EnvContext {
@@ -117,10 +128,12 @@ export interface NodeStats {
 }
 
 export interface NodeInfo {
-  kind: "obs" | "ingest";
+  kind: "obs" | "ingest" | "vm";
   name: string;
   /** Ingest: tailscale IP. OBS: api URL. */
   address?: string;
+  /** VM only: the PVE_HOSTS name it runs on. */
+  host?: string;
   stats?: NodeStats;
 }
 

@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import { Info, type LucideIcon } from "lucide-react";
 import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +13,8 @@ interface StatCardProps {
   tone?: StatTone;
   /** Optional leading glyph shown top-right, muted. */
   icon?: LucideIcon;
+  /** Short explanation, shown on hover next to the title. */
+  hint?: string;
   className?: string;
 }
 
@@ -23,12 +25,19 @@ const TONE_VALUE_CLASS: Record<StatTone, string> = {
   danger: "text-red-600 dark:text-red-400",
 };
 
-export function StatCard({ title, value, description, trend, tone = "default", icon: Icon, className }: StatCardProps) {
+export function StatCard({ title, value, description, trend, tone = "default", icon: Icon, hint, className }: StatCardProps) {
   return (
     <Card className={cn("transition-colors hover:border-foreground/20", className)}>
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+          <CardTitle className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+            {title}
+            {hint && (
+              <span title={hint} className="cursor-help">
+                <Info className="h-3.5 w-3.5 text-muted-foreground/60" aria-label={hint} />
+              </span>
+            )}
+          </CardTitle>
           {Icon && <Icon className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />}
         </div>
       </CardHeader>

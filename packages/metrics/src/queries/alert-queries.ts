@@ -86,6 +86,114 @@ export async function queryLatestHostSystemFields(range = "10m"): Promise<HostSy
   }));
 }
 
+/** Latest reading of every Proxmox guest (qemu VM or lxc container), one row
+ * per (PVE node, vmid). Written by PVE's own External Metric Server into the
+ * proxmox bucket, not by our code (docs/proxmox-monitoring-plan.md). */
+export interface ProxmoxGuestLatest {
+  /** PVE node name (the `nodename` tag), equal to the PVE_HOSTS name. */
+  nodename: string;
+  vmid: number;
+  /** Guest name (PVE puts it in the `host` tag). */
+  name: string;
+  type: "qemu" | "lxc";
+  /** Last push for this guest; PVE pushes every ~10 s, stopped guests too. */
+  time: string;
+  /** PVE's status string: running, stopped, paused, … ("" if not seen). */
+  status: string;
+  /** Proxmox tags, lowercased. */
+  tags: string[];
+  /** cpu is a 0-1 fraction; mem/maxmem/disk/maxdisk are bytes (mem counts
+   * guest page cache); pressureiosome is PSI percent. */
+  fields: Record<string, number>;
+}
+
+const PROXMOX_GUEST_ALERT_FIELDS = ["cpu", "mem", "maxmem", "disk", "maxdisk", "pressureiosome"] as const;
+const PROXMOX_GUEST_STRING_FIELDS = ["status", "tags"] as const;
+
+/** PVE sends tags as one string: "a;b", "a b", or blank when there are none. */
+export function parseProxmoxTags(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return [...new Set(raw.split(/[;,\s]+/).map((t) => t.trim().toLowerCase()).filter(Boolean))].sort();
+}
+
+// Only the listed fields reach last(), one table per field, so the numeric
+// and string fields never meet; rows are grouped per guest in TS instead of a
+// pivot. The range is also how long a silent guest stays listed as "gone".
+export async function queryLatestProxmoxGuests(range = "1h"): Promise<ProxmoxGuestLatest[]> {
+  assertValidFluxDuration(range, "range");
+  const query = `
+    ${fluxFrom("system", `-${range}`)}
+      |> filter(fn: (r) => r._measurement == "system")
+      |> filter(fn: (r) => r.object == "qemu" or r.object == "lxc")
+      |> filter(fn: (r) => ${[...PROXMOX_GUEST_ALERT_FIELDS, ...PROXMOX_GUEST_STRING_FIELDS].map((f) => `r._field == "${f}"`).join(" or ")})
+      |> last()
+      |> yield(name: "proxmox_guest_latest")
+  `;
+  const rows = await runFluxQuery(query, (row) => row);
+  const guests = new Map<string, ProxmoxGuestLatest>();
+  for (const row of rows) {
+    const nodename = row.nodename ?? "unknown";
+    const key = `${nodename}:${row.vmid}`;
+    let guest = guests.get(key);
+    if (!guest) {
+      guest = {
+        nodename,
+        vmid: Number(row.vmid),
+        name: row.host ?? "",
+        type: row.object === "lxc" ? "lxc" : "qemu",
+        time: "",
+        status: "",
+        tags: [],
+        fields: {},
+      };
+      guests.set(key, guest);
+    }
+    if (row._field === "status") guest.status = row._value ?? "";
+    else if (row._field === "tags") guest.tags = parseProxmoxTags(row._value);
+    else {
+      const value = Number(row._value);
+      if (row._field && Number.isFinite(value)) guest.fields[row._field] = value;
+    }
+    if ((row._time ?? "") > guest.time) guest.time = row._time ?? "";
+  }
+  return [...guests.values()];
+}
+
+/** Latest CPU and memory of every PVE node (object=nodes). */
+export interface ProxmoxNodeLatest {
+  /** Node name, equal to the PVE_HOSTS name. */
+  host: string;
+  /** Last push from this node. A node silent for minutes is down or cut off. */
+  time: string;
+  /** cpustat: cpu (0-1), cpus, avg1. memory: memtotal, memused (= total −
+   * available), memavailable, swaptotal, swapused (bytes). */
+  fields: Record<string, number>;
+}
+
+export async function queryLatestProxmoxNodes(range = "1h"): Promise<ProxmoxNodeLatest[]> {
+  assertValidFluxDuration(range, "range");
+  const query = `
+    ${fluxFrom("cpustat", `-${range}`)}
+      |> filter(fn: (r) => r.object == "nodes")
+      |> filter(fn: (r) =>
+        (r._measurement == "cpustat" and (r._field == "cpu" or r._field == "cpus" or r._field == "avg1")) or
+        (r._measurement == "memory" and (r._field == "memtotal" or r._field == "memused" or r._field == "memavailable" or r._field == "swaptotal" or r._field == "swapused")))
+      |> last()
+      |> yield(name: "proxmox_node_latest")
+  `;
+  const rows = await runFluxQuery(query, (row) => row);
+  const nodes = new Map<string, ProxmoxNodeLatest>();
+  for (const row of rows) {
+    const host = row.host ?? "unknown";
+    let node = nodes.get(host);
+    if (!node) nodes.set(host, (node = { host, time: "", fields: {} }));
+    const value = Number(row._value);
+    if (row._field && Number.isFinite(value)) node.fields[row._field] = value;
+    if ((row._time ?? "") > node.time) node.time = row._time ?? "";
+  }
+  return [...nodes.values()];
+}
+
 /** Most recent sample per ingest session in the window — stall detection
  * compares this against sessions the DB says are live. */
 export interface IngestSessionActivity {
