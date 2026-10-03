@@ -5,29 +5,12 @@ import { withMetrics } from "./with-metrics";
 /** Media-library rows: streamer-uploaded overlay assets and their storage usage. */
 
 type DBClient = SupabaseClient<Database>;
-type UserAssetInsert = Database["public"]["Tables"]["user_assets"]["Insert"];
 
 export const selectStorageUsage = withMetrics(
   "user_storage_usage",
   "select",
   async (client: DBClient, userId: string) =>
     client.from("user_storage_usage").select("used_bytes").eq("user_id", userId).maybeSingle(),
-);
-
-/**
- * Pending uploads newer than `cutoff` still reserve quota — otherwise parallel
- * uploads could each pass the quota check and collectively blow past it.
- */
-export const selectPendingAssetSizes = withMetrics(
-  "user_assets",
-  "select",
-  async (client: DBClient, userId: string, cutoff: string) =>
-    client
-      .from("user_assets")
-      .select("size_bytes")
-      .eq("user_id", userId)
-      .eq("status", "pending")
-      .gte("created_at", cutoff),
 );
 
 export const selectReadyAssets = withMetrics(
@@ -59,10 +42,39 @@ export const selectUserAsset = withMetrics(
  * (see 20261003120000_user_assets_rls_lockdown.sql). Every write is scoped by
  * user_id so the admin client can't touch another user's row by mistake.
  */
-export const insertUserAsset = withMetrics(
+export interface ReserveUserAssetInput {
+  id: string;
+  userId: string;
+  key: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  kind: string;
+  quotaBytes: number;
+  /** Pending rows created at or after this still reserve quota. */
+  reservationCutoff: string;
+}
+
+/**
+ * Checks quota and inserts the pending row atomically (per-user advisory lock
+ * in reserve_user_asset), so parallel uploads can't overshoot the quota.
+ * data is false when the upload doesn't fit.
+ */
+export const reserveUserAsset = withMetrics(
   "user_assets",
   "insert",
-  async (client: DBClient, payload: UserAssetInsert) => client.from("user_assets").insert(payload),
+  async (client: DBClient, input: ReserveUserAssetInput) =>
+    client.rpc("reserve_user_asset", {
+      p_user_id: input.userId,
+      p_id: input.id,
+      p_key: input.key,
+      p_file_name: input.fileName,
+      p_mime_type: input.mimeType,
+      p_size_bytes: input.sizeBytes,
+      p_kind: input.kind,
+      p_quota_bytes: input.quotaBytes,
+      p_reservation_cutoff: input.reservationCutoff,
+    }),
 );
 
 export const markAssetReady = withMetrics(

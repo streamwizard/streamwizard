@@ -8,16 +8,16 @@ import { revalidatePath } from "next/cache";
 
 import {
   deleteUserAsset,
-  insertUserAsset,
   markAssetReady,
+  reserveUserAsset,
   selectAllAssetKeys,
-  selectPendingAssetSizes,
   selectReadyAssets,
   selectStalePendingAssets,
   selectStorageUsage,
   selectUserAsset,
 } from "@repo/supabase/queries/assets";
 
+import { kindFromMime, type AssetKind } from "@/lib/asset-mime";
 import { tryAuthContext, type AuthContext } from "@/lib/auth";
 import { env } from "@/lib/env";
 
@@ -37,7 +37,8 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const PENDING_RESERVATION_MS = 60 * 60 * 1000;
 const PRESIGN_EXPIRY_SECONDS = 300;
 
-export type AssetKind = "image" | "audio" | "video" | "lottie";
+
+export type { AssetKind };
 
 export interface UserAsset {
   id: string;
@@ -72,30 +73,6 @@ function assetUrl(key: string): string {
   return `${env.NEXT_PUBLIC_ASSET_CDN_URL.replace(/\/$/, "")}/${key}`;
 }
 
-// Explicit allowlist — never prefix-match. image/svg+xml is deliberately
-// excluded: SVG can carry <script> and the CDN domain is same-site with the
-// dashboard, so a stored SVG would be a stored-XSS vector. presignPut signs the
-// Content-Type and Content-Length, so clients can't swap the type or grow the
-// file after this check; confirmAssetUpload re-checks both against R2.
-const MIME_TO_KIND: Record<string, AssetKind> = {
-  "image/png": "image",
-  "image/jpeg": "image",
-  "image/webp": "image",
-  "image/gif": "image",
-  "image/avif": "image",
-  "audio/mpeg": "audio",
-  "audio/wav": "audio",
-  "audio/ogg": "audio",
-  "audio/webm": "audio",
-  "video/mp4": "video",
-  "video/webm": "video",
-  "application/json": "lottie",
-};
-
-function kindFromMime(mime: string): AssetKind | null {
-  return MIME_TO_KIND[mime] ?? null;
-}
-
 function sanitizeFileName(name: string): string {
   const cleaned = name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^[-.]+|[-.]+$/g, "");
   return cleaned.slice(0, 128) || "file";
@@ -106,20 +83,9 @@ async function getQuotaBytes(supabase: AuthContext["supabase"], userId: string):
   return (planQuotaMb ?? DEFAULT_QUOTA_MB) * 1024 * 1024;
 }
 
-async function getUsedBytes(
-  supabase: AuthContext["supabase"],
-  userId: string,
-  opts: { includePending: boolean },
-): Promise<number> {
+async function getUsedBytes(supabase: AuthContext["supabase"], userId: string): Promise<number> {
   const { data: usage } = await selectStorageUsage(supabase, userId);
-  let used = usage?.used_bytes ?? 0;
-
-  if (opts.includePending) {
-    const cutoff = new Date(Date.now() - PENDING_RESERVATION_MS).toISOString();
-    const { data: pending } = await selectPendingAssetSizes(supabase, userId, cutoff);
-    used += (pending ?? []).reduce((sum, row) => sum + row.size_bytes, 0);
-  }
-  return used;
+  return usage?.used_bytes ?? 0;
 }
 
 export async function listAssets(): Promise<{ data: AssetListing | null; error: string | null }> {
@@ -135,7 +101,7 @@ export async function listAssets(): Promise<{ data: AssetListing | null; error: 
 
   try {
     const [used_bytes, quota_bytes] = await Promise.all([
-      getUsedBytes(supabase, user.id, { includePending: false }),
+      getUsedBytes(supabase, user.id),
       getQuotaBytes(supabase, user.id),
     ]);
     return {
@@ -179,31 +145,31 @@ export async function createAssetUpload(input: {
 
   try {
     const r2 = getR2();
-    const [used, quota] = await Promise.all([
-      getUsedBytes(supabase, user.id, { includePending: true }),
-      getQuotaBytes(supabase, user.id),
-    ]);
-    if (used + input.sizeBytes > quota) {
-      return { data: null, error: "Not enough storage left. Delete something or upgrade your plan." };
-    }
+    const quota = await getQuotaBytes(supabase, user.id);
 
     const fileName = sanitizeFileName(input.fileName);
     const assetId = crypto.randomUUID();
     const key = `assets/${user.id}/${assetId}/${fileName}`;
 
-    const { error: insertError } = await insertUserAsset(createAdminClient(), {
+    // Quota check + pending insert happen in one locked step in Postgres, so
+    // parallel uploads can't each pass the check and overshoot together.
+    const { data: reserved, error: reserveError } = await reserveUserAsset(createAdminClient(), {
       id: assetId,
-      user_id: user.id,
+      userId: user.id,
       key,
-      file_name: fileName,
-      mime_type: input.mimeType,
-      size_bytes: input.sizeBytes,
+      fileName,
+      mimeType: input.mimeType,
+      sizeBytes: input.sizeBytes,
       kind,
-      status: "pending",
+      quotaBytes: quota,
+      reservationCutoff: new Date(Date.now() - PENDING_RESERVATION_MS).toISOString(),
     });
-    if (insertError) {
-      reportError(insertError, "actions/assets");
+    if (reserveError) {
+      reportError(reserveError, "actions/assets");
       return { data: null, error: "Failed to start the upload." };
+    }
+    if (!reserved) {
+      return { data: null, error: "Not enough storage left. Delete something to make room." };
     }
 
     const uploadUrl = await r2.presignPut(key, input.mimeType, input.sizeBytes, PRESIGN_EXPIRY_SECONDS);
@@ -269,12 +235,16 @@ export async function deleteAsset(assetId: string): Promise<{ data: AssetListing
   }
 
   try {
-    await getR2().deleteObject(asset.key);
+    // Row first: if the R2 delete then fails, the file is just an orphan the
+    // hourly reconcile sweep removes, instead of a broken entry in the library.
     const { error: deleteError } = await deleteUserAsset(createAdminClient(), asset.id, user.id);
     if (deleteError) {
       reportError(deleteError, "actions/assets");
       return { data: null, error: "Failed to delete the file." };
     }
+    await getR2()
+      .deleteObject(asset.key)
+      .catch((err) => reportError(err, "actions/assets: delete object", { assetId: asset.id }));
     revalidatePath("/dashboard/media");
     return listAssets();
   } catch (err) {
