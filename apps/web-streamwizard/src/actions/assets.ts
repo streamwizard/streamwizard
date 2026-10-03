@@ -10,9 +10,7 @@ import {
   deleteUserAsset,
   markAssetReady,
   reserveUserAsset,
-  selectAllAssetKeys,
   selectReadyAssets,
-  selectStalePendingAssets,
   selectStorageUsage,
   selectUserAsset,
 } from "@repo/supabase/queries/assets";
@@ -28,7 +26,8 @@ import { env } from "@/lib/env";
 // records its exact size. Only confirmed ('ready') rows count toward usage;
 // pending rows younger than an hour reserve quota so parallel uploads can't
 // oversubscribe it. Users can only read user_assets; every write here uses the
-// service-role client, scoped by user_id.
+// service-role client, scoped by user_id. rest-api's asset reconciler cleans
+// up abandoned uploads and orphaned objects every hour.
 
 // Every account gets 100MB for now, paid plans included. A plan can still raise
 // it via plans.limits->storage->asset_quota_mb.
@@ -36,7 +35,6 @@ const DEFAULT_QUOTA_MB = 100;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const PENDING_RESERVATION_MS = 60 * 60 * 1000;
 const PRESIGN_EXPIRY_SECONDS = 300;
-
 
 export type { AssetKind };
 
@@ -250,48 +248,5 @@ export async function deleteAsset(assetId: string): Promise<{ data: AssetListing
   } catch (err) {
     reportError(err, "actions/assets");
     return { data: null, error: "Failed to delete the file." };
-  }
-}
-
-/**
- * Admin hygiene: drops abandoned pending rows (older than the reservation
- * window) and deletes R2 objects that no longer have a DB row. Safe to run
- * repeatedly; intended for a cron or manual admin trigger.
- */
-export async function reconcileAssets(): Promise<{
-  data: { removedPending: number; removedOrphans: number } | null;
-  error: string | null;
-}> {
-  const ctx = await tryAuthContext();
-  if (!ctx) return { data: null, error: "Unauthorized" };
-  if (ctx.user.app_metadata?.is_admin !== true) return { data: null, error: "Forbidden" };
-
-  try {
-    const admin = createAdminClient();
-    const r2 = getR2();
-    const cutoff = new Date(Date.now() - PENDING_RESERVATION_MS).toISOString();
-
-    const { data: stale } = await selectStalePendingAssets(admin, cutoff);
-    for (const row of stale ?? []) {
-      // The object may exist if the client uploaded but never confirmed.
-      await r2.deleteObject(row.key).catch(() => {});
-      await deleteUserAsset(admin, row.id, row.user_id);
-    }
-
-    const { data: allRows } = await selectAllAssetKeys(admin);
-    const known = new Set((allRows ?? []).map((row) => row.key));
-    const objects = await r2.listPrefix("assets/");
-    let removedOrphans = 0;
-    for (const obj of objects) {
-      if (!known.has(obj.key)) {
-        await r2.deleteObject(obj.key);
-        removedOrphans += 1;
-      }
-    }
-
-    return { data: { removedPending: (stale ?? []).length, removedOrphans }, error: null };
-  } catch (err) {
-    reportError(err, "actions/assets");
-    return { data: null, error: "Reconcile failed." };
   }
 }

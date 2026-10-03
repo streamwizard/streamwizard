@@ -107,6 +107,13 @@ export class R2Storage {
     } while (continuationToken);
     return objects;
   }
+
+  /** Deletes every object under a prefix. Returns how many were removed. */
+  async deletePrefix(prefix: string): Promise<number> {
+    const objects = await this.listPrefix(prefix);
+    for (const obj of objects) await this.deleteObject(obj.key);
+    return objects.length;
+  }
 }
 
 function isNotFound(err: unknown): boolean {

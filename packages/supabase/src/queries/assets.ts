@@ -103,9 +103,29 @@ export const selectStalePendingAssets = withMetrics(
     client.from("user_assets").select("id, user_id, key").eq("status", "pending").lt("created_at", cutoff),
 );
 
-/** Admin reconcile: every known object key, to spot orphans in the bucket. */
-export const selectAllAssetKeys = withMetrics(
+/**
+ * Admin reconcile: one page of known object keys, ordered by id so pages are
+ * stable. PostgREST caps a response at max_rows (1000), so callers must page:
+ * a short list would make real files look like orphans.
+ */
+export const selectAssetKeysPage = withMetrics(
   "user_assets",
   "select",
-  async (client: DBClient) => client.from("user_assets").select("key"),
+  async (client: DBClient, from: number, to: number) =>
+    client.from("user_assets").select("key").order("id").range(from, to),
 );
+
+const ASSET_KEYS_PAGE_SIZE = 1000;
+
+/** Admin reconcile: every known object key, to spot orphans in the bucket. */
+export async function selectAllAssetKeys(client: DBClient): Promise<string[]> {
+  const keys: string[] = [];
+  // Advance by what actually came back and stop on an empty page, so a
+  // project with a lower max_rows than the page size still gets every key.
+  for (;;) {
+    const { data, error } = await selectAssetKeysPage(client, keys.length, keys.length + ASSET_KEYS_PAGE_SIZE - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) return keys;
+    for (const row of data) keys.push(row.key);
+  }
+}

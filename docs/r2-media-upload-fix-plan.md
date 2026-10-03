@@ -1,6 +1,6 @@
 # R2 media upload fixes
 
-Status: **plan, 2026-10-03**. Nothing built. Covers the media library upload path (`apps/web-streamwizard/src/actions/assets.ts`, `packages/storage/src/r2.ts`, `user_assets`). OBS file storage is out of scope.
+Status: **built 2026-10-03** on `fix/r2-media-upload` (one commit per phase), PR against `staging`. Migrations written but not applied to local Supabase yet (Docker was down). Covers the media library upload path (`apps/web-streamwizard/src/actions/assets.ts`, `packages/storage/src/r2.ts`, `user_assets`). OBS file storage is out of scope.
 
 ## Findings (from the 2026-10-03 review)
 
@@ -94,6 +94,7 @@ Status: **plan, 2026-10-03**. Nothing built. Covers the media library upload pat
 ### 9. Reconcile race
 - Only delete orphans whose `lastModified` is older than the presign expiry + margin (e.g. 15 minutes). A fresh upload always has a pending row by then, or it was abandoned and the next pass gets it.
 - **Verify:** unit test: an orphan with `lastModified = now` is kept, one from an hour ago is removed.
+- **Found while building:** `selectAllAssetKeys` returned at most `max_rows` (1000) keys, so with more files real objects would look orphaned. It now pages until an empty page.
 
 ## Deploy order
 1. Phase 1 code + migration in one PR against `staging`. Deploy the migration first (staging DB workflow), then web-streamwizard. The code works under both the old and new policy because writes use the admin client.
