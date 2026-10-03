@@ -46,9 +46,19 @@ export const selectUserAsset = withMetrics(
   "user_assets",
   "select",
   async (client: DBClient, assetId: string, userId: string) =>
-    client.from("user_assets").select("id, key, status").eq("id", assetId).eq("user_id", userId).maybeSingle(),
+    client
+      .from("user_assets")
+      .select("id, key, status, size_bytes, mime_type")
+      .eq("id", assetId)
+      .eq("user_id", userId)
+      .maybeSingle(),
 );
 
+/**
+ * Writes below need the service-role client: users can only read their rows
+ * (see 20261003120000_user_assets_rls_lockdown.sql). Every write is scoped by
+ * user_id so the admin client can't touch another user's row by mistake.
+ */
 export const insertUserAsset = withMetrics(
   "user_assets",
   "insert",
@@ -58,14 +68,19 @@ export const insertUserAsset = withMetrics(
 export const markAssetReady = withMetrics(
   "user_assets",
   "update",
-  async (client: DBClient, assetId: string, sizeBytes: number) =>
-    client.from("user_assets").update({ size_bytes: sizeBytes, status: "ready" }).eq("id", assetId),
+  async (client: DBClient, assetId: string, userId: string, sizeBytes: number) =>
+    client
+      .from("user_assets")
+      .update({ size_bytes: sizeBytes, status: "ready" })
+      .eq("id", assetId)
+      .eq("user_id", userId),
 );
 
 export const deleteUserAsset = withMetrics(
   "user_assets",
   "delete",
-  async (client: DBClient, assetId: string) => client.from("user_assets").delete().eq("id", assetId),
+  async (client: DBClient, assetId: string, userId: string) =>
+    client.from("user_assets").delete().eq("id", assetId).eq("user_id", userId),
 );
 
 /** Admin reconcile: pending rows abandoned before `cutoff`. */
@@ -73,7 +88,7 @@ export const selectStalePendingAssets = withMetrics(
   "user_assets",
   "select",
   async (client: DBClient, cutoff: string) =>
-    client.from("user_assets").select("id, key").eq("status", "pending").lt("created_at", cutoff),
+    client.from("user_assets").select("id, user_id, key").eq("status", "pending").lt("created_at", cutoff),
 );
 
 /** Admin reconcile: every known object key, to spot orphans in the bucket. */

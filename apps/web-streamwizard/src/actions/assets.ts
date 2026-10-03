@@ -27,9 +27,12 @@ import { env } from "@/lib/env";
 // directly to R2, confirmAssetUpload verifies the object via HeadObject and
 // records its exact size. Only confirmed ('ready') rows count toward usage;
 // pending rows younger than an hour reserve quota so parallel uploads can't
-// oversubscribe it.
+// oversubscribe it. Users can only read user_assets; every write here uses the
+// service-role client, scoped by user_id.
 
-const FREE_QUOTA_MB = 100;
+// Every account gets 100MB for now, paid plans included. A plan can still raise
+// it via plans.limits->storage->asset_quota_mb.
+const DEFAULT_QUOTA_MB = 100;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const PENDING_RESERVATION_MS = 60 * 60 * 1000;
 const PRESIGN_EXPIRY_SECONDS = 300;
@@ -71,8 +74,9 @@ function assetUrl(key: string): string {
 
 // Explicit allowlist — never prefix-match. image/svg+xml is deliberately
 // excluded: SVG can carry <script> and the CDN domain is same-site with the
-// dashboard, so a stored SVG would be a stored-XSS vector. The Content-Type is
-// part of the presigned signature, so clients can't swap it after this check.
+// dashboard, so a stored SVG would be a stored-XSS vector. presignPut signs the
+// Content-Type and Content-Length, so clients can't swap the type or grow the
+// file after this check; confirmAssetUpload re-checks both against R2.
 const MIME_TO_KIND: Record<string, AssetKind> = {
   "image/png": "image",
   "image/jpeg": "image",
@@ -99,7 +103,7 @@ function sanitizeFileName(name: string): string {
 
 async function getQuotaBytes(supabase: AuthContext["supabase"], userId: string): Promise<number> {
   const planQuotaMb = await getUserAssetQuotaMb(supabase, userId);
-  return (planQuotaMb ?? FREE_QUOTA_MB) * 1024 * 1024;
+  return (planQuotaMb ?? DEFAULT_QUOTA_MB) * 1024 * 1024;
 }
 
 async function getUsedBytes(
@@ -187,7 +191,7 @@ export async function createAssetUpload(input: {
     const assetId = crypto.randomUUID();
     const key = `assets/${user.id}/${assetId}/${fileName}`;
 
-    const { error: insertError } = await insertUserAsset(supabase, {
+    const { error: insertError } = await insertUserAsset(createAdminClient(), {
       id: assetId,
       user_id: user.id,
       key,
@@ -202,7 +206,7 @@ export async function createAssetUpload(input: {
       return { data: null, error: "Failed to start the upload." };
     }
 
-    const uploadUrl = await r2.presignPut(key, input.mimeType, PRESIGN_EXPIRY_SECONDS);
+    const uploadUrl = await r2.presignPut(key, input.mimeType, input.sizeBytes, PRESIGN_EXPIRY_SECONDS);
     return { data: { assetId, uploadUrl, url: assetUrl(key) }, error: null };
   } catch (err) {
     reportError(err, "actions/assets");
@@ -222,13 +226,21 @@ export async function confirmAssetUpload(
 
   try {
     if (asset.status !== "ready") {
-      const head = await getR2().headObject(asset.key);
+      const admin = createAdminClient();
+      const r2 = getR2();
+      const head = await r2.headObject(asset.key);
       if (!head) {
-        await deleteUserAsset(supabase, asset.id);
+        await deleteUserAsset(admin, asset.id, user.id);
         return { data: null, error: "The upload didn't finish. Try again." };
       }
-      // HeadObject is the source of truth for size — never the client's claim.
-      const { error: updateError } = await markAssetReady(supabase, asset.id, head.size);
+      // HeadObject is the source of truth. The signed URL should already pin
+      // size and type; if R2 holds anything else, throw the upload away.
+      if (head.size > MAX_FILE_BYTES || head.size !== asset.size_bytes || head.contentType !== asset.mime_type) {
+        await r2.deleteObject(asset.key);
+        await deleteUserAsset(admin, asset.id, user.id);
+        return { data: null, error: "That upload doesn't match the file you picked. Try again." };
+      }
+      const { error: updateError } = await markAssetReady(admin, asset.id, user.id, head.size);
       if (updateError) {
         reportError(updateError, "actions/assets");
         return { data: null, error: "Failed to finish the upload." };
@@ -249,10 +261,16 @@ export async function deleteAsset(assetId: string): Promise<{ data: AssetListing
 
   const { data: asset } = await selectUserAsset(supabase, assetId, user.id);
   if (!asset) return { data: null, error: "File not found." };
+  // Rows written before the RLS lockdown could carry a rewritten key; only
+  // ever delete objects under this user's own prefix.
+  if (!asset.key.startsWith(`assets/${user.id}/${asset.id}/`)) {
+    reportError(new Error("Asset key outside the owner's prefix"), "actions/assets", { assetId: asset.id });
+    return { data: null, error: "Failed to delete the file." };
+  }
 
   try {
     await getR2().deleteObject(asset.key);
-    const { error: deleteError } = await deleteUserAsset(supabase, asset.id);
+    const { error: deleteError } = await deleteUserAsset(createAdminClient(), asset.id, user.id);
     if (deleteError) {
       reportError(deleteError, "actions/assets");
       return { data: null, error: "Failed to delete the file." };
@@ -287,7 +305,7 @@ export async function reconcileAssets(): Promise<{
     for (const row of stale ?? []) {
       // The object may exist if the client uploaded but never confirmed.
       await r2.deleteObject(row.key).catch(() => {});
-      await deleteUserAsset(admin, row.id);
+      await deleteUserAsset(admin, row.id, row.user_id);
     }
 
     const { data: allRows } = await selectAllAssetKeys(admin);
