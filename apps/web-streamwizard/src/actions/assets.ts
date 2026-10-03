@@ -8,16 +8,14 @@ import { revalidatePath } from "next/cache";
 
 import {
   deleteUserAsset,
-  insertUserAsset,
   markAssetReady,
-  selectAllAssetKeys,
-  selectPendingAssetSizes,
+  reserveUserAsset,
   selectReadyAssets,
-  selectStalePendingAssets,
   selectStorageUsage,
   selectUserAsset,
 } from "@repo/supabase/queries/assets";
 
+import { kindFromMime, type AssetKind } from "@/lib/asset-mime";
 import { tryAuthContext, type AuthContext } from "@/lib/auth";
 import { env } from "@/lib/env";
 
@@ -27,14 +25,18 @@ import { env } from "@/lib/env";
 // directly to R2, confirmAssetUpload verifies the object via HeadObject and
 // records its exact size. Only confirmed ('ready') rows count toward usage;
 // pending rows younger than an hour reserve quota so parallel uploads can't
-// oversubscribe it.
+// oversubscribe it. Users can only read user_assets; every write here uses the
+// service-role client, scoped by user_id. rest-api's asset reconciler cleans
+// up abandoned uploads and orphaned objects every hour.
 
-const FREE_QUOTA_MB = 100;
+// Every account gets 100MB for now, paid plans included. A plan can still raise
+// it via plans.limits->storage->asset_quota_mb.
+const DEFAULT_QUOTA_MB = 100;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const PENDING_RESERVATION_MS = 60 * 60 * 1000;
 const PRESIGN_EXPIRY_SECONDS = 300;
 
-export type AssetKind = "image" | "audio" | "video" | "lottie";
+export type { AssetKind };
 
 export interface UserAsset {
   id: string;
@@ -69,29 +71,6 @@ function assetUrl(key: string): string {
   return `${env.NEXT_PUBLIC_ASSET_CDN_URL.replace(/\/$/, "")}/${key}`;
 }
 
-// Explicit allowlist — never prefix-match. image/svg+xml is deliberately
-// excluded: SVG can carry <script> and the CDN domain is same-site with the
-// dashboard, so a stored SVG would be a stored-XSS vector. The Content-Type is
-// part of the presigned signature, so clients can't swap it after this check.
-const MIME_TO_KIND: Record<string, AssetKind> = {
-  "image/png": "image",
-  "image/jpeg": "image",
-  "image/webp": "image",
-  "image/gif": "image",
-  "image/avif": "image",
-  "audio/mpeg": "audio",
-  "audio/wav": "audio",
-  "audio/ogg": "audio",
-  "audio/webm": "audio",
-  "video/mp4": "video",
-  "video/webm": "video",
-  "application/json": "lottie",
-};
-
-function kindFromMime(mime: string): AssetKind | null {
-  return MIME_TO_KIND[mime] ?? null;
-}
-
 function sanitizeFileName(name: string): string {
   const cleaned = name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^[-.]+|[-.]+$/g, "");
   return cleaned.slice(0, 128) || "file";
@@ -99,23 +78,12 @@ function sanitizeFileName(name: string): string {
 
 async function getQuotaBytes(supabase: AuthContext["supabase"], userId: string): Promise<number> {
   const planQuotaMb = await getUserAssetQuotaMb(supabase, userId);
-  return (planQuotaMb ?? FREE_QUOTA_MB) * 1024 * 1024;
+  return (planQuotaMb ?? DEFAULT_QUOTA_MB) * 1024 * 1024;
 }
 
-async function getUsedBytes(
-  supabase: AuthContext["supabase"],
-  userId: string,
-  opts: { includePending: boolean },
-): Promise<number> {
+async function getUsedBytes(supabase: AuthContext["supabase"], userId: string): Promise<number> {
   const { data: usage } = await selectStorageUsage(supabase, userId);
-  let used = usage?.used_bytes ?? 0;
-
-  if (opts.includePending) {
-    const cutoff = new Date(Date.now() - PENDING_RESERVATION_MS).toISOString();
-    const { data: pending } = await selectPendingAssetSizes(supabase, userId, cutoff);
-    used += (pending ?? []).reduce((sum, row) => sum + row.size_bytes, 0);
-  }
-  return used;
+  return usage?.used_bytes ?? 0;
 }
 
 export async function listAssets(): Promise<{ data: AssetListing | null; error: string | null }> {
@@ -131,7 +99,7 @@ export async function listAssets(): Promise<{ data: AssetListing | null; error: 
 
   try {
     const [used_bytes, quota_bytes] = await Promise.all([
-      getUsedBytes(supabase, user.id, { includePending: false }),
+      getUsedBytes(supabase, user.id),
       getQuotaBytes(supabase, user.id),
     ]);
     return {
@@ -175,34 +143,34 @@ export async function createAssetUpload(input: {
 
   try {
     const r2 = getR2();
-    const [used, quota] = await Promise.all([
-      getUsedBytes(supabase, user.id, { includePending: true }),
-      getQuotaBytes(supabase, user.id),
-    ]);
-    if (used + input.sizeBytes > quota) {
-      return { data: null, error: "Not enough storage left. Delete something or upgrade your plan." };
-    }
+    const quota = await getQuotaBytes(supabase, user.id);
 
     const fileName = sanitizeFileName(input.fileName);
     const assetId = crypto.randomUUID();
     const key = `assets/${user.id}/${assetId}/${fileName}`;
 
-    const { error: insertError } = await insertUserAsset(supabase, {
+    // Quota check + pending insert happen in one locked step in Postgres, so
+    // parallel uploads can't each pass the check and overshoot together.
+    const { data: reserved, error: reserveError } = await reserveUserAsset(createAdminClient(), {
       id: assetId,
-      user_id: user.id,
+      userId: user.id,
       key,
-      file_name: fileName,
-      mime_type: input.mimeType,
-      size_bytes: input.sizeBytes,
+      fileName,
+      mimeType: input.mimeType,
+      sizeBytes: input.sizeBytes,
       kind,
-      status: "pending",
+      quotaBytes: quota,
+      reservationCutoff: new Date(Date.now() - PENDING_RESERVATION_MS).toISOString(),
     });
-    if (insertError) {
-      reportError(insertError, "actions/assets");
+    if (reserveError) {
+      reportError(reserveError, "actions/assets");
       return { data: null, error: "Failed to start the upload." };
     }
+    if (!reserved) {
+      return { data: null, error: "Not enough storage left. Delete something to make room." };
+    }
 
-    const uploadUrl = await r2.presignPut(key, input.mimeType, PRESIGN_EXPIRY_SECONDS);
+    const uploadUrl = await r2.presignPut(key, input.mimeType, input.sizeBytes, PRESIGN_EXPIRY_SECONDS);
     return { data: { assetId, uploadUrl, url: assetUrl(key) }, error: null };
   } catch (err) {
     reportError(err, "actions/assets");
@@ -222,13 +190,21 @@ export async function confirmAssetUpload(
 
   try {
     if (asset.status !== "ready") {
-      const head = await getR2().headObject(asset.key);
+      const admin = createAdminClient();
+      const r2 = getR2();
+      const head = await r2.headObject(asset.key);
       if (!head) {
-        await deleteUserAsset(supabase, asset.id);
+        await deleteUserAsset(admin, asset.id, user.id);
         return { data: null, error: "The upload didn't finish. Try again." };
       }
-      // HeadObject is the source of truth for size — never the client's claim.
-      const { error: updateError } = await markAssetReady(supabase, asset.id, head.size);
+      // HeadObject is the source of truth. The signed URL should already pin
+      // size and type; if R2 holds anything else, throw the upload away.
+      if (head.size > MAX_FILE_BYTES || head.size !== asset.size_bytes || head.contentType !== asset.mime_type) {
+        await r2.deleteObject(asset.key);
+        await deleteUserAsset(admin, asset.id, user.id);
+        return { data: null, error: "That upload doesn't match the file you picked. Try again." };
+      }
+      const { error: updateError } = await markAssetReady(admin, asset.id, user.id, head.size);
       if (updateError) {
         reportError(updateError, "actions/assets");
         return { data: null, error: "Failed to finish the upload." };
@@ -249,61 +225,28 @@ export async function deleteAsset(assetId: string): Promise<{ data: AssetListing
 
   const { data: asset } = await selectUserAsset(supabase, assetId, user.id);
   if (!asset) return { data: null, error: "File not found." };
+  // Rows written before the RLS lockdown could carry a rewritten key; only
+  // ever delete objects under this user's own prefix.
+  if (!asset.key.startsWith(`assets/${user.id}/${asset.id}/`)) {
+    reportError(new Error("Asset key outside the owner's prefix"), "actions/assets", { assetId: asset.id });
+    return { data: null, error: "Failed to delete the file." };
+  }
 
   try {
-    await getR2().deleteObject(asset.key);
-    const { error: deleteError } = await deleteUserAsset(supabase, asset.id);
+    // Row first: if the R2 delete then fails, the file is just an orphan the
+    // hourly reconcile sweep removes, instead of a broken entry in the library.
+    const { error: deleteError } = await deleteUserAsset(createAdminClient(), asset.id, user.id);
     if (deleteError) {
       reportError(deleteError, "actions/assets");
       return { data: null, error: "Failed to delete the file." };
     }
+    await getR2()
+      .deleteObject(asset.key)
+      .catch((err) => reportError(err, "actions/assets: delete object", { assetId: asset.id }));
     revalidatePath("/dashboard/media");
     return listAssets();
   } catch (err) {
     reportError(err, "actions/assets");
     return { data: null, error: "Failed to delete the file." };
-  }
-}
-
-/**
- * Admin hygiene: drops abandoned pending rows (older than the reservation
- * window) and deletes R2 objects that no longer have a DB row. Safe to run
- * repeatedly; intended for a cron or manual admin trigger.
- */
-export async function reconcileAssets(): Promise<{
-  data: { removedPending: number; removedOrphans: number } | null;
-  error: string | null;
-}> {
-  const ctx = await tryAuthContext();
-  if (!ctx) return { data: null, error: "Unauthorized" };
-  if (ctx.user.app_metadata?.is_admin !== true) return { data: null, error: "Forbidden" };
-
-  try {
-    const admin = createAdminClient();
-    const r2 = getR2();
-    const cutoff = new Date(Date.now() - PENDING_RESERVATION_MS).toISOString();
-
-    const { data: stale } = await selectStalePendingAssets(admin, cutoff);
-    for (const row of stale ?? []) {
-      // The object may exist if the client uploaded but never confirmed.
-      await r2.deleteObject(row.key).catch(() => {});
-      await deleteUserAsset(admin, row.id);
-    }
-
-    const { data: allRows } = await selectAllAssetKeys(admin);
-    const known = new Set((allRows ?? []).map((row) => row.key));
-    const objects = await r2.listPrefix("assets/");
-    let removedOrphans = 0;
-    for (const obj of objects) {
-      if (!known.has(obj.key)) {
-        await r2.deleteObject(obj.key);
-        removedOrphans += 1;
-      }
-    }
-
-    return { data: { removedPending: (stale ?? []).length, removedOrphans }, error: null };
-  } catch (err) {
-    reportError(err, "actions/assets");
-    return { data: null, error: "Reconcile failed." };
   }
 }

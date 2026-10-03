@@ -3639,6 +3639,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      reserve_user_asset: {
+        Args: {
+          p_user_id: string
+          p_id: string
+          p_key: string
+          p_file_name: string
+          p_mime_type: string
+          p_size_bytes: number
+          p_kind: string
+          p_quota_bytes: number
+          p_reservation_cutoff: string
+        }
+        Returns: boolean
+      }
       ticket_stats_summary: {
         Args: { p_guild_id: string; p_from: string; p_to: string }
         Returns: {
