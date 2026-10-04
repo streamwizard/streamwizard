@@ -3,6 +3,7 @@
 import { Circle, Radio, Users } from "lucide-react";
 import { Badge, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { StatCard } from "@/components/widgets/stat-card";
+import { StatGrid } from "@/components/widgets/stat-grid";
 import { cn } from "@/lib/utils";
 import { useMonitor } from "@/components/ws-monitor-provider";
 
@@ -26,7 +27,7 @@ export function WsRoomTable() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">WS Rooms</h1>
+        <h1 className="text-xl font-semibold">Rooms</h1>
         <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2">
           <Circle
             className={cn(
@@ -38,12 +39,12 @@ export function WsRoomTable() {
         </p>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard title="Active Rooms" value={rooms.length} />
-        <StatCard title="Total Connections" value={totalConnections} />
-        <StatCard title="Publishers Online" value={publishersOnline} />
-        <StatCard title="Total Subscribers" value={totalSubscribers} />
-      </div>
+      <StatGrid cols={4}>
+        <StatCard title="Active rooms" value={rooms.length} />
+        <StatCard title="Connections" value={totalConnections} />
+        <StatCard title="Publishers online" value={publishersOnline} />
+        <StatCard title="Total subscribers" value={totalSubscribers} />
+      </StatGrid>
 
       <Card>
         <CardHeader>

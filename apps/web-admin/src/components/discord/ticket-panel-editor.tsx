@@ -15,6 +15,7 @@ import {
   type TicketPanelLayout,
 } from "@repo/discord-message";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Input, NativeSelect, NativeSelectOption } from "@repo/ui";
+import { DesktopOnly } from "@/components/widgets/desktop-only";
 import { MessageBuilder, type BuilderTheme } from "@repo/ui/message-builder";
 import { saveTicketPanelAction } from "@/actions/discord-ticket-design";
 import { uploadBanner } from "@/lib/discord/banner-upload-client";
@@ -77,17 +78,19 @@ export function TicketPanelEditor({ initial, postedIn, themes, bot, uploadsEnabl
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <MessageBuilder
-            value={panel.message}
-            onChange={(message) => set("message", message)}
-            presets={MESSAGE_PRESETS}
-            variables={TICKET_PANEL_VARIABLES}
-            themes={themes}
-            bot={bot}
-            onReset={() => set("message", defaultTicketPanel().message)}
-            onUploadImage={uploadsEnabled ? uploadBanner : undefined}
-            disabled={saving}
-          />
+          <DesktopOnly tool="The message builder" bare>
+            <MessageBuilder
+              value={panel.message}
+              onChange={(message) => set("message", message)}
+              presets={MESSAGE_PRESETS}
+              variables={TICKET_PANEL_VARIABLES}
+              themes={themes}
+              bot={bot}
+              onReset={() => set("message", defaultTicketPanel().message)}
+              onUploadImage={uploadsEnabled ? uploadBanner : undefined}
+              disabled={saving}
+            />
+          </DesktopOnly>
         </CardContent>
       </Card>
 

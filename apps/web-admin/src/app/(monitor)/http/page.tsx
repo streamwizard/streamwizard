@@ -2,7 +2,9 @@ import { queryHttpRequests, queryHttpRouteStats } from "@repo/metrics";
 import type { HttpRequestPoint, HttpRouteStatPoint } from "@repo/metrics";
 import { HttpRequestChart } from "@/components/charts/http-request-chart";
 import { HttpRouteTable } from "@/components/charts/http-route-table";
+import { PageHeader } from "@/components/widgets/page-header";
 import { StatCard } from "@/components/widgets/stat-card";
+import { StatGrid } from "@/components/widgets/stat-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -28,16 +30,13 @@ export default async function HttpDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">HTTP / API</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Last 24 hours</p>
-      </div>
+      <PageHeader title="API" description="Requests, latency and errors for rest-api. The chart and routes follow the header range." />
 
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard title="Total Requests" value={totalRequests} description="Last 24h" />
-        <StatCard title="Avg Latency" value={`${avgLatency}ms`} description="Mean response time" />
+      <StatGrid cols={3}>
+        <StatCard title="Total requests" value={totalRequests} description="Last 24h" />
+        <StatCard title="Avg latency" value={`${avgLatency}ms`} description="Mean response time" />
         <StatCard title="Errors (4xx/5xx)" value={errorCount} description="Last 24h" />
-      </div>
+      </StatGrid>
 
       <HttpRequestChart initialData={requests} />
       <HttpRouteTable initialData={routeStats} />

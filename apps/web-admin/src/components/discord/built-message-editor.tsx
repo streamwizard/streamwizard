@@ -7,6 +7,7 @@ import { AlertTriangle, ArrowLeft, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { validateMessage, type BuiltMessage } from "@repo/discord-message";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from "@repo/ui";
+import { DesktopOnly } from "@/components/widgets/desktop-only";
 import { MessageBuilder, type BuilderTheme } from "@repo/ui/message-builder";
 import { publishBuiltMessageAction, saveBuiltMessageDraftAction } from "@/actions/discord-built-message";
 import { PageHeader } from "@/components/widgets/page-header";
@@ -199,16 +200,18 @@ export function BuiltMessageEditor({ id, initial, published, channels, themes, b
           <CardDescription>Changes save as a draft. Nothing reaches Discord until you publish.</CardDescription>
         </CardHeader>
         <CardContent>
-          <MessageBuilder
-            value={draft.message}
-            onChange={(message) => setDraft((prev) => ({ ...prev, message }))}
-            presets={MESSAGE_BUILDER_PRESETS}
-            variables={MESSAGE_VARIABLES}
-            themes={themes}
-            bot={bot}
-            onUploadImage={uploadsEnabled ? uploadBanner : undefined}
-            disabled={publishing}
-          />
+          <DesktopOnly tool="The message builder" bare>
+            <MessageBuilder
+              value={draft.message}
+              onChange={(message) => setDraft((prev) => ({ ...prev, message }))}
+              presets={MESSAGE_BUILDER_PRESETS}
+              variables={MESSAGE_VARIABLES}
+              themes={themes}
+              bot={bot}
+              onUploadImage={uploadsEnabled ? uploadBanner : undefined}
+              disabled={publishing}
+            />
+          </DesktopOnly>
         </CardContent>
       </Card>
     </div>

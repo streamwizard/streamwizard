@@ -1,4 +1,4 @@
-import { Button, Label } from "@repo/ui";
+import { Label } from "@repo/ui";
 
 /** One labelled setting: label and hint on the left, control on the right (stacks on mobile). */
 export function SettingRow({
@@ -23,27 +23,6 @@ export function SettingRow({
   );
 }
 
-/** Save bar for a settings card: shows only when there's something to save. */
-export function SaveBar({
-  dirty,
-  pending,
-  onSave,
-  onReset,
-}: {
-  dirty: boolean;
-  pending: boolean;
-  onSave: () => void;
-  onReset: () => void;
-}) {
-  if (!dirty) return null;
-  return (
-    <div className="flex items-center justify-end gap-2 border-t pt-4">
-      <Button size="sm" variant="ghost" onClick={onReset} disabled={pending}>
-        Discard
-      </Button>
-      <Button size="sm" onClick={onSave} disabled={pending}>
-        {pending ? "Saving…" : "Save changes"}
-      </Button>
-    </div>
-  );
-}
+// The save bar moved next to the other shared widgets; re-exported so the
+// settings forms keep importing both from here.
+export { SaveBar } from "@/components/widgets/save-bar";
