@@ -307,7 +307,7 @@ function ShardSheet({
   onClose: () => void;
 }) {
   const hb = shard?.heartbeat;
-  const rows = shard ? lifecycle.filter((r) => r.shardId === shard.id).slice(0, 20) : [];
+  const rows = shard ? lifecycle.filter((r) => r.shardIds.includes(shard.id)).slice(0, 20) : [];
   const chartData = series.map((p) => ({ time: formatTime(p.time), value: p.count }));
   const hasData = series.some((p) => p.count !== null);
   return (

@@ -76,8 +76,18 @@ function withActor(embed: EmbedBuilder, payload: Identity): EmbedBuilder {
 }
 
 /** Which conduit shard an EventSub row is about. */
-function shardField(payload: { shard_id?: string }): APIEmbedField[] {
+type ShardOrigin = { shard_id?: string; shard_ids?: string[] };
+
+// A row with `shard_ids` stands for several shards that hit the same thing
+// together; the bot merges those so the channel gets one row, not one each.
+function shardField(payload: ShardOrigin): APIEmbedField[] {
+  if (payload.shard_ids?.length) return field(`Shards (${payload.shard_ids.length})`, codeList(payload.shard_ids));
   return field("Shard", payload.shard_id != null ? code(payload.shard_id) : null);
+}
+
+/** " on 4 shards" for a merged row, nothing for a single shard. */
+function onShards(payload: ShardOrigin): string {
+  return payload.shard_ids?.length ? ` on ${payload.shard_ids.length} shards` : "";
 }
 
 // The subject is always identifiable: Twitch, else display name, else the
@@ -264,12 +274,12 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
   // conduit shard (absent on rows from before the bot ran shards).
   "eventsub.connected": (payload, event) =>
     describeLines(base(event, "eventsub.connected"), [
-      `${bold(payload.service, "The bot")} started and is listening for Twitch events again.`,
+      `${bold(payload.service, "The bot")} started and is listening for Twitch events again${onShards(payload)}.`,
     ]).addFields([...shardField(payload), ...field("Session", code(payload.session_id))]),
 
   "eventsub.connection_lost": (payload, event) =>
     describeLines(base(event, "eventsub.connection_lost"), [
-      `${bold(payload.service, "The bot")} lost its EventSub connection to Twitch. It reconnects on its own; a reconnected row follows once it's back.`,
+      `${bold(payload.service, "The bot")} lost its EventSub connection to Twitch${onShards(payload)}. It reconnects on its own; a reconnected row follows once it's back.`,
     ]).addFields([
       ...shardField(payload),
       ...field("Reason", plain(payload.reason)),
@@ -280,10 +290,11 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
   "eventsub.reconnected": (payload, event) => {
     const downFor = duration(msToSeconds(payload.downtime_ms));
     return describeLines(base(event, "eventsub.reconnected"), [
-      `${bold(payload.service, "The bot")} is back on EventSub${downFor ? ` after ${downFor}` : ""}. Events sent while it was down are gone; Twitch doesn't replay them.`,
+      `${bold(payload.service, "The bot")} is back on EventSub${onShards(payload)}${downFor ? ` after ${downFor}` : ""}. Events sent while it was down are gone; Twitch doesn't replay them.`,
     ]).addFields([
       ...shardField(payload),
-      ...field("Down for", downFor),
+      // On a merged row this is the shard that was down longest.
+      ...field(payload.shard_ids?.length ? "Down for (longest)" : "Down for", downFor),
       ...field("Attempts", typeof payload.attempts === "number" ? formatNumber(payload.attempts) : null),
       ...field("Session", code(payload.session_id)),
     ]);
@@ -291,7 +302,7 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
 
   "eventsub.session_migrated": (payload, event) =>
     describeLines(base(event, "eventsub.session_migrated"), [
-      `Twitch moved ${bold(payload.service, "the bot")} to a new EventSub session. Routine, not an outage; nothing was missed.`,
+      `Twitch moved ${bold(payload.service, "the bot")} to a new EventSub session${onShards(payload)}. Routine, not an outage; nothing was missed.`,
     ]).addFields([...shardField(payload), ...field("Session", code(payload.session_id))]),
 
   "eventsub.subscription_revoked": (payload, event) =>

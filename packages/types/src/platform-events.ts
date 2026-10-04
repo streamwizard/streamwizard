@@ -191,6 +191,13 @@ interface EventSubEvent {
   session_id?: string | null;
   /** Conduit shard the socket is bound to; missing on rows from before the bot ran shards */
   shard_id?: string;
+  /**
+   * Set instead of `shard_id` when one row stands for several shards that hit
+   * the same thing within seconds of each other (a deploy, a network blip).
+   * Per-shard details are merged: no `session_id`, the longest `downtime_ms`,
+   * the highest `attempts`, every distinct `reason`.
+   */
+  shard_ids?: string[];
 }
 
 /** A Discord user as seen by the bot. */
@@ -282,13 +289,13 @@ export interface PlatformEventPayloads {
   };
 
   /** First session after the bot started. */
-  "eventsub.connected": EventSubEvent & { session_id: string };
+  "eventsub.connected": EventSubEvent & { session_id: string | null };
   /** The socket died. `close_code` is Twitch's close code when there was one; `keepalive_silent_ms` when the bot gave up waiting for a keepalive. */
   "eventsub.connection_lost": EventSubEvent & { reason: string; close_code?: number | null; keepalive_silent_ms?: number | null };
   /** Back after an outage. `attempts` counts the reconnects it took. */
-  "eventsub.reconnected": EventSubEvent & { session_id: string; downtime_ms: number; attempts: number };
+  "eventsub.reconnected": EventSubEvent & { session_id: string | null; downtime_ms: number; attempts: number };
   /** Twitch asked the bot to move to a new session and it did, with no gap. */
-  "eventsub.session_migrated": EventSubEvent & { session_id: string };
+  "eventsub.session_migrated": EventSubEvent & { session_id: string | null };
   "eventsub.subscription_revoked": EventSubEvent & { subscription_type: string; status: string; reason: string };
   /** Connected, but the conduit shard could not be bound to the session after retries. Twitch may not deliver events. */
   "eventsub.conduit_update_failed": EventSubEvent & { error: string };

@@ -64,11 +64,21 @@ describe("toLifecycleRow", () => {
       created_at: "2026-09-28T12:00:00Z",
       payload: { service: "streamwizard-bot", shard_id: "3", session_id: "s1", downtime_ms: 4200, attempts: 2 },
     });
-    expect(row).toMatchObject({ id: 7, shardId: "3", sessionId: "s1", downtimeMs: 4200, service: "streamwizard-bot" });
+    expect(row).toMatchObject({ id: 7, shardIds: ["3"], sessionId: "s1", downtimeMs: 4200, service: "streamwizard-bot" });
+  });
+
+  test("a row the bot merged lists every shard it stands for", () => {
+    const row = toLifecycleRow({
+      id: 8,
+      event_type: "eventsub.reconnected",
+      created_at: "2026-09-28T12:00:00Z",
+      payload: { service: "streamwizard-bot", shard_ids: ["0", "1", "2"], session_id: null, downtime_ms: 9000, attempts: 3 },
+    });
+    expect(row).toMatchObject({ shardIds: ["0", "1", "2"], sessionId: null, downtimeMs: 9000 });
   });
 
   test("rows from before shards count as shard 0, and junk payloads don't throw", () => {
-    expect(toLifecycleRow({ id: 1, event_type: "eventsub.connection_lost", created_at: "t", payload: { reason: "x" } }).shardId).toBe("0");
+    expect(toLifecycleRow({ id: 1, event_type: "eventsub.connection_lost", created_at: "t", payload: { reason: "x" } }).shardIds).toEqual(["0"]);
     expect(toLifecycleRow({ id: 2, event_type: "eventsub.connected", created_at: "t", payload: null }).service).toBeNull();
   });
 });

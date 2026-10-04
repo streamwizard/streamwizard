@@ -5,7 +5,8 @@ import { flushSentry, reportFatal } from "@repo/sentry";
 import { handlers } from "./handlers/eventHandler";
 import { ConduitShardManager, parseShardIds, type EventSubLifecycleEvent } from "@repo/twitch-eventsub";
 import { env } from "./lib/env";
-import { createEventSubLogger } from "./lib/eventsub-log";
+import { createEventSubLogger, emitEventSubRow } from "./lib/eventsub-log";
+import { createEventSubLogGroup } from "./lib/eventsub-log-group";
 import { createEventSubTelemetry, createShardHeartbeat } from "./lib/eventsub-telemetry";
 import { overlayWsClient } from "./overlay-ws-client";
 import { isMetricsEnabled, initMetrics, BUCKETS } from "@repo/metrics";
@@ -26,12 +27,15 @@ async function main() {
     // Metrics + Sentry trail, and a platform_events row per lifecycle event
     // for the Discord log channel. Alerting is the fleet engine's job.
     const shardIds = env.EVENTSUB_SHARD_IDS ? parseShardIds(env.EVENTSUB_SHARD_IDS) : undefined;
+    // Several shards in one process hit a deploy or a network blip together;
+    // their log rows are merged so the channel gets one row, not one per shard.
+    const logGroup = (shardIds?.length ?? env.EVENTSUB_SHARD_COUNT) > 1 ? createEventSubLogGroup(emitEventSubRow) : null;
     const perShard = new Map<string, (event: EventSubLifecycleEvent) => void>();
     const onShardEvent = (shardId: string, event: EventSubLifecycleEvent) => {
       let handle = perShard.get(shardId);
       if (!handle) {
         const telemetry = createEventSubTelemetry(shardId);
-        const log = createEventSubLogger(shardId);
+        const log = createEventSubLogger(shardId, logGroup?.emit);
         handle = (e) => {
           telemetry(e);
           log(e);
@@ -53,6 +57,7 @@ async function main() {
     const shutdown = async () => {
       overlayWsClient.disconnect();
       await shards.stop();
+      await logGroup?.flush();
       await flushSentry();
       process.exit(0);
     };

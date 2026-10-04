@@ -4,6 +4,11 @@ import type { EventSubLifecycleEvent } from "@repo/twitch-eventsub";
 
 const SERVICE = "streamwizard-bot";
 
+/** Writes one row straight to `platform_events`. Never throws: logPlatformEvent swallows and reports. */
+export function emitEventSubRow(event: EmitPlatformEventInput): Promise<void> {
+  return logPlatformEvent(supabase, event, `streamwizard-bot eventsub-log: ${event.type}`);
+}
+
 function errorText(error: unknown): string {
   if (error instanceof Error) return error.message;
   return typeof error === "string" ? error : JSON.stringify(error);
@@ -12,24 +17,26 @@ function errorText(error: unknown): string {
 /**
  * Turns receiver lifecycle events into `platform_events` rows so the Discord
  * log channel shows outages, reconnects and session moves (each type has its
- * own toggle in web-admin under /discord/logs/settings). Every row lands the
- * moment it happens; there's no outage threshold here because this is the
- * trail, not the alert. Never throws: logPlatformEvent swallows and reports.
+ * own toggle in web-admin under /discord/logs/settings). There's no outage
+ * threshold here because this is the trail, not the alert.
+ *
+ * By default every row lands the moment it happens. A process that runs
+ * several shards passes the `emit` of an EventSubLogGroup instead, which
+ * merges rows from shards that hit the same thing together.
  *
  * `connected` fires for three different things, told apart with local state:
  * the first session after boot, the session after an outage (downtimeMs set),
  * and the session Twitch moved us to (no gap, after session_reconnect_requested).
  */
-export function createEventSubLogger(shardId?: string): (event: EventSubLifecycleEvent) => void {
+export function createEventSubLogger(
+  shardId?: string,
+  emit: (event: EmitPlatformEventInput) => void = (event) => void emitEventSubRow(event),
+): (event: EventSubLifecycleEvent) => void {
   let booted = false;
   // Every row names the process and, once the bot runs shards, which one.
   const origin = shardId !== undefined ? { service: SERVICE, shard_id: shardId } : { service: SERVICE };
   let migrating = false;
   let keepaliveSilentMs: number | null = null;
-
-  const emit = (event: EmitPlatformEventInput) => {
-    void logPlatformEvent(supabase, event, `streamwizard-bot eventsub-log: ${event.type}`);
-  };
 
   return (event: EventSubLifecycleEvent) => {
     switch (event.type) {

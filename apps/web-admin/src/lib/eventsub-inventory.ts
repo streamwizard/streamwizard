@@ -37,7 +37,8 @@ export interface LifecycleRow {
   type: string;
   createdAt: string;
   service: string | null;
-  shardId: string | null;
+  /** Every shard the row is about: one id, or several on a row the bot merged. */
+  shardIds: string[];
   sessionId: string | null;
   reason: string | null;
   closeCode: number | null;
@@ -86,13 +87,14 @@ export function toLifecycleRow(event: Pick<PlatformEvent, "id" | "event_type" | 
   const payload = (event.payload && typeof event.payload === "object" && !Array.isArray(event.payload)
     ? event.payload
     : {}) as Record<string, unknown>;
+  const merged = Array.isArray(payload.shard_ids) ? payload.shard_ids.filter((id): id is string => str(id) !== null) : [];
   return {
     id: event.id,
     type: event.event_type,
     createdAt: event.created_at,
     service: str(payload.service),
     // Rows from before the bot ran shards have no shard_id; shard 0 was the only one.
-    shardId: str(payload.shard_id) ?? "0",
+    shardIds: merged.length > 0 ? merged : [str(payload.shard_id) ?? "0"],
     sessionId: str(payload.session_id),
     reason: str(payload.reason) ?? str(payload.subscription_type),
     closeCode: int(payload.close_code),

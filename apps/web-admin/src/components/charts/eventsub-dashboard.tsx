@@ -295,8 +295,8 @@ const LIFECYCLE_TONE: Record<string, string> = {
 
 function LifecycleTimeline({ rows }: { rows: LifecycleRow[] }) {
   const [shard, setShard] = useState("all");
-  const shardIds = useMemo(() => [...new Set(rows.map((r) => r.shardId ?? "0"))].sort((a, b) => Number(a) - Number(b)), [rows]);
-  const visible = shard === "all" ? rows : rows.filter((r) => r.shardId === shard);
+  const shardIds = useMemo(() => [...new Set(rows.flatMap((r) => r.shardIds))].sort((a, b) => Number(a) - Number(b)), [rows]);
+  const visible = shard === "all" ? rows : rows.filter((r) => r.shardIds.includes(shard));
 
   return (
     <Card>
@@ -336,7 +336,9 @@ function LifecycleTimeline({ rows }: { rows: LifecycleRow[] }) {
                     </time>
                   </TableCell>
                   <TableCell className={cn("text-sm", LIFECYCLE_TONE[r.type])}>{r.type.replace("eventsub.", "").replace(/_/g, " ")}</TableCell>
-                  <TableCell className="font-mono text-xs">#{r.shardId}</TableCell>
+                  <TableCell className="font-mono text-xs" title={r.shardIds.length > 1 ? r.shardIds.map((id) => `#${id}`).join(", ") : undefined}>
+                    {r.shardIds.length > 1 ? `${r.shardIds.length} shards` : `#${r.shardIds[0]}`}
+                  </TableCell>
                   <TableCell className="max-w-72 truncate text-xs text-muted-foreground" title={lifecycleDetail(r)}>
                     {lifecycleDetail(r)}
                   </TableCell>
