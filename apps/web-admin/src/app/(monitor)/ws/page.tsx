@@ -36,6 +36,12 @@ function formatDuration(ms: number): string {
   return `${(ms / 60_000).toFixed(1)}m`;
 }
 
+/** Sum of the points from the last hour, as of this request. */
+function lastHourTotal(points: { time: string; count: number }[]): number {
+  const since = Date.now() - 3_600_000;
+  return points.filter((p) => new Date(p.time).getTime() > since).reduce((acc, p) => acc + p.count, 0);
+}
+
 export default async function WsDashboard() {
   let connections: WsConnectionPoint[] = [];
   let messages: WsMessagePoint[] = [];
@@ -73,13 +79,8 @@ export default async function WsDashboard() {
   // Compute stat card values
   const totalActive = activeConnections.reduce((acc, c) => acc + c.active, 0);
 
-  const authFailureCount1h = authFailures
-    .filter((f) => new Date(f.time).getTime() > Date.now() - 3_600_000)
-    .reduce((acc, f) => acc + f.count, 0);
-
-  const dropCount1h = droppedMessages
-    .filter((d) => new Date(d.time).getTime() > Date.now() - 3_600_000)
-    .reduce((acc, d) => acc + d.count, 0);
+  const authFailureCount1h = lastHourTotal(authFailures);
+  const dropCount1h = lastHourTotal(droppedMessages);
 
   const publisherDurations = connectionDuration.filter((d) => d.role === "publisher");
   const avgPublisherDurationMs =
@@ -93,7 +94,7 @@ export default async function WsDashboard() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="WebSocket" description="Connections, errors and message flow for ws-server. Charts follow the header range and refresh." />
+      <PageHeader title="WebSocket" description="Connections, errors and message flow for ws-server. The health numbers load once with the page. The charts follow the header range and refresh." />
 
       {/* Section 1: Health Summary */}
       <section className="space-y-3">
@@ -144,7 +145,7 @@ export default async function WsDashboard() {
           Errors
           {authFailureCount1h + dropCount1h > 0 && (
             <span className="ml-2 text-destructive normal-case font-normal">
-              — {authFailureCount1h + dropCount1h} in the last hour
+              {authFailureCount1h + dropCount1h} in the last hour
             </span>
           )}
         </SectionHeading>

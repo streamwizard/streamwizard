@@ -28,7 +28,7 @@ export default async function DiscordActivityPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Activity" description="What the bot counts for ranks and leaderboards." />
+      <PageHeader title="Activity tracking" description="What the bot counts for ranks and leaderboards." />
       <ActivityForm key={JSON.stringify(initial)} initial={initial} channels={toChannelOptions(channels, ["text", "voice", "category"])} />
     </div>
   );

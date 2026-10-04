@@ -35,18 +35,28 @@ interface PageTabsProps {
  */
 export function PageTabs({ tabs, label, variant = "underline", className }: PageTabsProps) {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
 
   const isActive = (tab: PageTab) =>
     tab.active ?? (tab.exact ? pathname === tab.href : pathname === tab.href || pathname.startsWith(`${tab.href}/`));
   const activeHref = tabs.find(isActive)?.href;
 
+  // Scrolls the row itself, sideways only. scrollIntoView would also move the
+  // page when the row sits below the fold.
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const nav = navRef.current;
+    const active = activeRef.current;
+    if (!nav || !active) return;
+    const left = active.offsetLeft - nav.offsetLeft;
+    const right = left + active.offsetWidth;
+    if (left < nav.scrollLeft) nav.scrollLeft = left;
+    else if (right > nav.scrollLeft + nav.clientWidth) nav.scrollLeft = right - nav.clientWidth;
   }, [activeHref]);
 
   return (
     <nav
+      ref={navRef}
       aria-label={label}
       className={cn(
         "flex max-w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",

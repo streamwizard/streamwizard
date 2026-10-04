@@ -31,7 +31,7 @@ export function TicketCategoriesManager(props: TicketCategoriesManagerProps) {
     <TicketOptionsManager
       kind="category"
       title="Categories"
-      description="What a ticket is filed under. Members pick one before they fill in the form. Drag to change the order they see."
+      description="What a ticket is filed under. Members pick one before they fill in the form, in this order."
       {...props}
       detailHref={(item) => `/discord/tickets/settings/categories/${item.id}`}
       onCreate={(draft) => createTicketCategoryAction(toInput(draft))}

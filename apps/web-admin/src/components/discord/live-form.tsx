@@ -15,9 +15,11 @@ interface LiveFormProps {
   roles: PickerOption[];
   /** Roles without "display separately": picking one of these gets a hint, since the point is the member list. */
   unhoistedRoleIds: string[];
+  /** The rest of the page (the two lists). The save bar comes after it, so it stays in view down there too. */
+  children?: React.ReactNode;
 }
 
-export function LiveForm({ initial, channels, roles, unhoistedRoleIds }: LiveFormProps) {
+export function LiveForm({ initial, channels, roles, unhoistedRoleIds, children }: LiveFormProps) {
   const router = useRouter();
   const [values, setValues] = useState(initial);
   const [saving, startSave] = useTransition();
@@ -41,7 +43,7 @@ export function LiveForm({ initial, channels, roles, unhoistedRoleIds }: LiveFor
   const roleNotHoisted = Boolean(values.liveRoleId && unhoistedRoleIds.includes(values.liveRoleId));
 
   return (
-    <>
+    <div className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Go-live posts</CardTitle>
@@ -64,7 +66,6 @@ export function LiveForm({ initial, channels, roles, unhoistedRoleIds }: LiveFor
               disabled={busy}
             />
           </SettingRow>
-          <SaveBar dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
         </CardContent>
       </Card>
 
@@ -100,15 +101,23 @@ export function LiveForm({ initial, channels, roles, unhoistedRoleIds }: LiveFor
             />
           </SettingRow>
           {!values.liveRoleId && (
-            <SettingRow label="No role yet?" hint="Makes a purple “Live” role that displays separately, and picks it.">
-              <Button size="sm" variant="outline" onClick={create} disabled={busy || dirty}>
+            // The hint says why the button is off: a tooltip is no use on a phone.
+            <SettingRow
+              label="No role yet?"
+              hint={dirty ? "Save your changes first, then create the role." : "Makes a purple “Live” role that displays separately, and picks it."}
+            >
+              <Button size="sm" variant="outline" className="h-11 md:h-8" onClick={create} disabled={busy || dirty}>
                 {creating ? "Creating…" : "Create a Live role"}
               </Button>
             </SettingRow>
           )}
-          <SaveBar dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
         </CardContent>
       </Card>
-    </>
+
+      {children}
+
+      {/* One save for both cards: they write the same settings row. */}
+      <SaveBar sticky dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
+    </div>
   );
 }

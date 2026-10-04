@@ -8,6 +8,7 @@ import { Badge, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, Brea
 import { RefreshIntervalSelector } from "@/components/refresh-interval-selector";
 import { TimeRangeSelector } from "@/components/time-range-selector";
 import { BandwidthUnitToggle } from "@/components/bandwidth-unit-toggle";
+import { CommandPalette } from "@/components/command-palette";
 import { usePageCrumbs } from "@/lib/crumbs";
 import { findNavLocation, getHeaderControls, getNavTrail, type HeaderControl } from "@/lib/nav-config";
 import { cn } from "@/lib/utils";
@@ -82,7 +83,8 @@ export function MonitorHeader({ envLabel }: { envLabel: string }) {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="ml-auto flex shrink-0 items-center gap-3">
+      <div className="ml-auto flex shrink-0 items-center gap-2 md:gap-3">
+        <CommandPalette />
         {controls.length > 0 && (
           <>
             <div className="hidden items-center gap-3 md:flex">

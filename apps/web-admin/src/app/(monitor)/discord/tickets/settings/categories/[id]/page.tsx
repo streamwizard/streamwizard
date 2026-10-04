@@ -20,6 +20,7 @@ import {
 import { Badge } from "@repo/ui";
 import { getTicketSettings } from "@repo/supabase/queries/tickets";
 import { TicketCategoryRulesForm } from "@/components/discord/ticket-category-rules-form";
+import { TicketCategorySave } from "@/components/discord/ticket-category-save";
 import { TicketFormEditor, type TicketFieldDraft } from "@/components/discord/ticket-form-editor";
 import { TicketOpeningEditor } from "@/components/discord/ticket-opening-editor";
 import { getBotProfile, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
@@ -95,39 +96,42 @@ export default async function DiscordTicketCategoryPage({ params }: { params: Pr
         {category.description && <p className="text-sm text-muted-foreground">{category.description}</p>}
       </div>
 
-      <TicketFormEditor
-        // A save hands back database ids for new questions: start the editor over from them.
-        key={JSON.stringify(drafts)}
-        categoryId={category.id}
-        initial={drafts}
-        hasProducts={products.some(isActiveProduct)}
-        limits={{
-          maxFields: TICKET_FORM_MAX_FIELDS,
-          labelMax: TICKET_FIELD_LABEL_MAX,
-          placeholderMax: TICKET_FIELD_PLACEHOLDER_MAX,
-          textMax: TICKET_FIELD_TEXT_MAX,
-          subjectMax: TICKET_SUBJECT_MAX,
-          maxOptions: TICKET_SELECT_MAX_OPTIONS,
-          optionMax: TICKET_SELECT_OPTION_MAX,
-        }}
-      />
+      {/* Three parts, three server actions, one save bar: it saves whichever of them changed. */}
+      <TicketCategorySave>
+        <TicketFormEditor
+          // A save hands back database ids for new questions: start the editor over from them.
+          key={JSON.stringify(drafts)}
+          categoryId={category.id}
+          initial={drafts}
+          hasProducts={products.some(isActiveProduct)}
+          limits={{
+            maxFields: TICKET_FORM_MAX_FIELDS,
+            labelMax: TICKET_FIELD_LABEL_MAX,
+            placeholderMax: TICKET_FIELD_PLACEHOLDER_MAX,
+            textMax: TICKET_FIELD_TEXT_MAX,
+            subjectMax: TICKET_SUBJECT_MAX,
+            maxOptions: TICKET_SELECT_MAX_OPTIONS,
+            optionMax: TICKET_SELECT_OPTION_MAX,
+          }}
+        />
 
-      <TicketCategoryRulesForm
-        key={JSON.stringify(rules)}
-        categoryId={category.id}
-        initial={rules}
-        roles={toRoleOptions(roles)}
-        staffRoleName={roles.find((role) => role.id === settings?.staff_role_id)?.name ?? null}
-        limitMax={TICKET_LIMIT_MAX}
-      />
+        <TicketCategoryRulesForm
+          key={JSON.stringify(rules)}
+          categoryId={category.id}
+          initial={rules}
+          roles={toRoleOptions(roles)}
+          staffRoleName={roles.find((role) => role.id === settings?.staff_role_id)?.name ?? null}
+          limitMax={TICKET_LIMIT_MAX}
+        />
 
-      <TicketOpeningEditor
-        key={JSON.stringify(category.opening_message ?? null)}
-        categoryId={category.id}
-        initial={parseTicketOpening(category.opening_message)}
-        themes={getBuilderThemes()}
-        bot={bot}
-      />
+        <TicketOpeningEditor
+          key={JSON.stringify(category.opening_message ?? null)}
+          categoryId={category.id}
+          initial={parseTicketOpening(category.opening_message)}
+          themes={getBuilderThemes()}
+          bot={bot}
+        />
+      </TicketCategorySave>
     </div>
   );
 }

@@ -60,8 +60,8 @@ export function AuditList({ entries, names }: { entries: DiscordSettingsAuditWit
               const keys = [...new Set([...Object.keys(before), ...Object.keys(after)])];
               return (
                 <li key={entry.id} className="space-y-1 py-2.5 first:pt-0 last:pb-0">
-                  <div className="flex flex-wrap items-baseline justify-between gap-2">
-                    <span>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                    <span className="min-w-0 break-words">
                       <span className="font-medium">{entry.changed_by_user?.name ?? "Unknown admin"}</span>
                       <span className="text-muted-foreground">
                         {" · "}
@@ -77,7 +77,8 @@ export function AuditList({ entries, names }: { entries: DiscordSettingsAuditWit
                   {keys.length > 0 && (
                     <ul className="space-y-0.5 text-xs text-muted-foreground">
                       {keys.map((key) => (
-                        <li key={key}>
+                        // Long values (ids, lists, JSON) break anywhere, so before → after wraps inside a phone card.
+                        <li key={key} className="[overflow-wrap:anywhere]">
                           <span className="font-mono">{key}</span>: {formatValue(before[key], names)} →{" "}
                           <span className="text-foreground">{formatValue(after[key], names)}</span>
                         </li>

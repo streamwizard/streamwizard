@@ -32,10 +32,10 @@ export function SaveBar({
       )}
     >
       {sticky && <p className="mr-auto text-sm text-muted-foreground">Unsaved changes</p>}
-      <Button size="sm" variant="ghost" className="h-10 md:h-8" onClick={onReset} disabled={pending}>
+      <Button size="sm" variant="ghost" className="h-11 md:h-8" onClick={onReset} disabled={pending}>
         Discard
       </Button>
-      <Button size="sm" className="h-10 md:h-8" onClick={onSave} disabled={pending}>
+      <Button size="sm" className="h-11 md:h-8" onClick={onSave} disabled={pending}>
         {pending ? "Saving…" : saveLabel}
       </Button>
     </div>

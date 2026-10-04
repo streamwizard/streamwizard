@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { getLogRouting } from "@repo/supabase/queries/platform-events";
@@ -12,7 +13,8 @@ export type DiscordSetupGaps = Set<string>;
 
 const NONE: DiscordSetupGaps = new Set();
 
-export async function getDiscordSetupGaps(): Promise<DiscordSetupGaps> {
+// cache(): the layout and the dashboard both ask within one request.
+export const getDiscordSetupGaps = cache(async (): Promise<DiscordSetupGaps> => {
   const ctx = getDiscordContext();
   if (!ctx) return NONE;
 
@@ -44,4 +46,4 @@ export async function getDiscordSetupGaps(): Promise<DiscordSetupGaps> {
     console.warn("[web-admin] Discord setup check failed:", error instanceof Error ? error.message : error);
     return NONE;
   }
-}
+});

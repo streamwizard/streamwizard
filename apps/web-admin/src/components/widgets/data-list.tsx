@@ -34,9 +34,11 @@ interface DataListProps<T> {
 }
 
 /**
- * One list, two layouts: a table from 640px up, a stack of cards below it, so
- * nothing scrolls sideways on a phone. Both are in the markup and CSS picks
- * one, which keeps this usable from server components and free of layout flash.
+ * One list, two layouts: a table when the list has room (672px), a stack of
+ * cards below that, so nothing scrolls sideways on a phone. The switch follows
+ * the list's own width, not the screen's: a tablet with the sidebar open has a
+ * narrow column too. Both layouts are in the markup and CSS picks one, which
+ * keeps this usable from server components and free of layout flash.
  * It draws no border of its own: put it in a Card (`py-0`) or a bordered box.
  */
 export function DataList<T>({ columns, rows, rowKey, rowHref, actions, actionsHeader, rowClassName, className }: DataListProps<T>) {
@@ -45,8 +47,9 @@ export function DataList<T>({ columns, rows, rowKey, rowHref, actions, actionsHe
   const fieldColumns = columns.filter((column) => column !== titleColumn && (column.mobile ?? "field") === "field");
 
   return (
-    <div className={className}>
-      <div className="hidden sm:block">
+    // isolate: the rows' z-index (links under, actions over) must not climb over the sticky app header.
+    <div className={cn("@container isolate", className)}>
+      <div className="hidden @2xl:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -82,7 +85,7 @@ export function DataList<T>({ columns, rows, rowKey, rowHref, actions, actionsHe
         </Table>
       </div>
 
-      <ul className="divide-y sm:hidden">
+      <ul className="divide-y @2xl:hidden">
         {rows.map((row) => {
           const href = rowHref?.(row);
           const title = titleColumn?.cell(row);
@@ -100,7 +103,7 @@ export function DataList<T>({ columns, rows, rowKey, rowHref, actions, actionsHe
                   )}
                 </div>
                 {badgeColumns.length > 0 && (
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 text-sm">
                     {badgeColumns.map((column) => (
                       <span key={column.key}>{column.cell(row)}</span>
                     ))}

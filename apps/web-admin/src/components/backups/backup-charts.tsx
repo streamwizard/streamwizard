@@ -1,5 +1,6 @@
 import { NodeMetricChart } from "@/components/charts/node-metric-chart";
 import { PlatformMetricChart } from "@/components/charts/platform-metric-chart";
+import { ChartGrid } from "@/components/widgets/stat-grid";
 import type { BackupSeries } from "@/lib/backup-series";
 
 const ENDPOINT = "/api/metrics/backups";
@@ -7,7 +8,7 @@ const ENDPOINT = "/api/metrics/backups";
 /** History from Influx: one point per poll (every 6 h, and a minute after each webhook), following the range selector. */
 export function BackupCharts({ initial }: { initial: BackupSeries }) {
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
+    <ChartGrid cols={3}>
       <PlatformMetricChart
         title="Datastore used %"
         endpoint={ENDPOINT}
@@ -19,6 +20,6 @@ export function BackupCharts({ initial }: { initial: BackupSeries }) {
       />
       <NodeMetricChart title="Backup age per VM" apiPath={ENDPOINT} dataKey="vmAgeHours" initialData={initial.vmAgeHours} format="hours" />
       <NodeMetricChart title="On disk per VM (estimate)" apiPath={ENDPOINT} dataKey="vmOnDiskBytes" initialData={initial.vmOnDiskBytes} format="bytes" />
-    </div>
+    </ChartGrid>
   );
 }

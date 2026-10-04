@@ -45,7 +45,7 @@ export function WsConnectionChart({ initialData }: Props) {
 
   return (
     <ChartCard
-      title="Connections by Role (opens)"
+      title="Connections by role (opens)"
       isEmpty={chartData.length === 0}
     >
       <AreaChart data={chartData}>

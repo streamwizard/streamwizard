@@ -29,28 +29,28 @@ export default async function DatabaseDashboard() {
       <section className="space-y-3">
         <SectionHeading>Clips and sync</SectionHeading>
         <StatGrid cols={3}>
-          <StatCard title="Total Clips" value={stats.clips} description="All synced clips in DB" />
-          <StatCard title="Total Sync Records" value={stats.clipSyncs} description="Users with a sync history" />
+          <StatCard title="Total clips" value={stats.clips} description="All synced clips in DB" />
+          <StatCard title="Total sync records" value={stats.clipSyncs} description="Users with a sync history" />
           <StatCard
-            title="Last Sync"
+            title="Last sync"
             value={formatDate(stats.lastClipSyncAt)}
             description="Most recent clip sync across all users"
           />
         </StatGrid>
         <StatGrid cols={3}>
           <StatCard
-            title="Active Syncs"
+            title="Active syncs"
             value={stats.activeClipSyncs}
             description="Currently syncing"
             className={stats.activeClipSyncs > 0 ? "border-yellow-500/50" : undefined}
           />
           <StatCard
-            title="Failed Syncs"
+            title="Failed syncs"
             value={stats.failedClipSyncs}
             description={stats.failedClipSyncs === 0 ? "All good" : "Users with failed sync"}
             className={stats.failedClipSyncs > 0 ? "border-destructive/50" : undefined}
           />
-          <StatCard title="Pending Clips" value={stats.pendingClips} description="Awaiting processing" />
+          <StatCard title="Pending clips" value={stats.pendingClips} description="Awaiting processing" />
         </StatGrid>
       </section>
 
@@ -58,10 +58,10 @@ export default async function DatabaseDashboard() {
       <section className="space-y-3">
         <SectionHeading>Content</SectionHeading>
         <StatGrid cols={3}>
-          <StatCard title="Clip Folders" value={stats.clipFolders} description="Folders created across all users" />
-          <StatCard title="Enabled Commands" value={stats.enabledCommands} description="Active channel commands" />
+          <StatCard title="Clip folders" value={stats.clipFolders} description="Folders created across all users" />
+          <StatCard title="Enabled commands" value={stats.enabledCommands} description="Active channel commands" />
           <StatCard
-            title="Custom Commands"
+            title="Custom commands"
             value={stats.customCommands}
             description="User-authored custom commands"
           />
@@ -72,16 +72,16 @@ export default async function DatabaseDashboard() {
       <section className="space-y-3">
         <SectionHeading>Overlays and widgets</SectionHeading>
         <StatGrid cols={5}>
-          <StatCard title="Overlay Scenes" value={stats.overlayScenes} description="Total scenes created" />
+          <StatCard title="Overlay scenes" value={stats.overlayScenes} description="Total scenes created" />
           <StatCard
-            title="Active Overlays"
+            title="Active overlays"
             value={stats.activeOverlayScenes}
             description="Currently active scenes"
           />
-          <StatCard title="Overlay Items" value={stats.overlayItems} description="Elements across all scenes" />
-          <StatCard title="Custom Widgets" value={stats.customWidgets} description="User-authored widgets" />
+          <StatCard title="Overlay items" value={stats.overlayItems} description="Elements across all scenes" />
+          <StatCard title="Custom widgets" value={stats.customWidgets} description="User-authored widgets" />
           <StatCard
-            title="Library Widgets"
+            title="Library widgets"
             value={stats.approvedLibraryWidgets}
             description="Approved in widget library"
           />
@@ -93,7 +93,7 @@ export default async function DatabaseDashboard() {
         <SectionHeading>Users</SectionHeading>
         <StatGrid cols={3}>
           <StatCard
-            title="Twitch Integrations"
+            title="Twitch integrations"
             value={stats.twitchIntegrations}
             description="Users with Twitch connected"
           />

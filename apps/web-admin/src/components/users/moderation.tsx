@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Ban, Trash2, X } from "lucide-react";
+import { X } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,13 +16,6 @@ import {
   AlertDialogTrigger,
   Button,
   Checkbox,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
   Input,
   Label,
   Textarea,
@@ -35,6 +28,24 @@ import {
   unbanUserAction,
   type ModerationResult,
 } from "@/actions/users";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/widgets/responsive-dialog";
+
+// Ban, lift ban and delete are opened from the Actions menu in the user header,
+// so they take `open` from outside and draw no trigger of their own.
+interface Controlled {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+// Primary button on top in the phone drawer, like the desktop footer puts it last.
+const FOOTER = "max-md:flex-col-reverse";
 
 /** Toasts the outcome; side-step failures show as one warning so nothing is silently skipped. */
 function report(result: ModerationResult, done: string): boolean {
@@ -61,9 +72,9 @@ function CheckRow({
   hint?: string;
 }) {
   return (
-    <div className="flex items-start gap-2.5">
+    <div className="flex items-start gap-2.5 py-1 md:py-0">
       <Checkbox id={id} checked={checked} onCheckedChange={(value) => onChange(value === true)} className="mt-0.5" />
-      <Label htmlFor={id} className="block font-normal leading-snug">
+      <Label htmlFor={id} className="block flex-1 font-normal leading-snug">
         {label}
         {hint && <span className="block text-xs text-muted-foreground">{hint}</span>}
       </Label>
@@ -76,14 +87,15 @@ export function BanUserDialog({
   name,
   hasDiscord,
   hasTwitch,
-}: {
+  open,
+  onOpenChange,
+}: Controlled & {
   userId: string;
   name: string;
   hasDiscord: boolean;
   hasTwitch: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [banDiscord, setBanDiscord] = useState(true);
   const [stopEventSub, setStopEventSub] = useState(true);
@@ -93,28 +105,22 @@ export function BanUserDialog({
     startTransition(async () => {
       const result = await banUserAction(userId, { reason, banDiscord: hasDiscord && banDiscord, stopEventSub: hasTwitch && stopEventSub });
       if (!report(result, `${name} is banned.`)) return;
-      setOpen(false);
+      onOpenChange(false);
       setReason("");
       router.refresh();
     });
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-          <Ban className="size-4" aria-hidden />
-          Ban
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[460px]">
-        <DialogHeader>
-          <DialogTitle>Ban {name}?</DialogTitle>
-          <DialogDescription>
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange}>
+      <ResponsiveDialogContent className="sm:max-w-[460px]">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Ban {name}?</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             They&apos;re signed out everywhere and can&apos;t sign in again until you lift it. Their data stays, so
             unbanning puts everything back.
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
         <div className="space-y-4 py-1">
           <div className="space-y-1.5">
             <Label htmlFor="ban-reason">Reason</Label>
@@ -146,22 +152,27 @@ export function BanUserDialog({
             />
           )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+        <ResponsiveDialogFooter className={FOOTER}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             Cancel
           </Button>
           <Button variant="destructive" onClick={submit} disabled={pending || !reason.trim()}>
             {pending ? "Banning…" : "Ban user"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 
-export function UnbanButton({ userId, name, discordBanned }: { userId: string; name: string; discordBanned: boolean }) {
+export function UnbanDialog({
+  userId,
+  name,
+  discordBanned,
+  open,
+  onOpenChange,
+}: Controlled & { userId: string; name: string; discordBanned: boolean }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
   const [unbanDiscord, setUnbanDiscord] = useState(true);
   const [pending, startTransition] = useTransition();
 
@@ -170,18 +181,13 @@ export function UnbanButton({ userId, name, discordBanned }: { userId: string; n
     startTransition(async () => {
       const result = await unbanUserAction(userId, { unbanDiscord: discordBanned && unbanDiscord });
       if (!report(result, `${name} can sign in again.`)) return;
-      setOpen(false);
+      onOpenChange(false);
       router.refresh();
     });
   };
 
   return (
-    <AlertDialog open={open} onOpenChange={setOpen}>
-      <AlertDialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Lift ban
-        </Button>
-      </AlertDialogTrigger>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Lift the ban on {name}?</AlertDialogTitle>
@@ -207,9 +213,27 @@ export function UnbanButton({ userId, name, discordBanned }: { userId: string; n
   );
 }
 
-export function DeleteUserDialog({ userId, name, hasDiscord }: { userId: string; name: string; hasDiscord: boolean }) {
-  const router = useRouter();
+/** The Lift ban button on the ban banner. The Actions menu opens the same dialog. */
+export function UnbanButton({ userId, name, discordBanned }: { userId: string; name: string; discordBanned: boolean }) {
   const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button variant="outline" size="sm" className="h-11 md:h-8" onClick={() => setOpen(true)}>
+        Lift ban
+      </Button>
+      <UnbanDialog userId={userId} name={name} discordBanned={discordBanned} open={open} onOpenChange={setOpen} />
+    </>
+  );
+}
+
+export function DeleteUserDialog({
+  userId,
+  name,
+  hasDiscord,
+  open,
+  onOpenChange,
+}: Controlled & { userId: string; name: string; hasDiscord: boolean }) {
+  const router = useRouter();
   const [confirmation, setConfirmation] = useState("");
   const [banDiscord, setBanDiscord] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -218,34 +242,28 @@ export function DeleteUserDialog({ userId, name, hasDiscord }: { userId: string;
     startTransition(async () => {
       const result = await deleteUserAction(userId, { confirmation, banDiscord: hasDiscord && banDiscord });
       if (!report(result, `${name}'s account is deleted.`)) return;
-      setOpen(false);
+      onOpenChange(false);
       router.push("/users");
     });
   };
 
   return (
-    <Dialog
+    <ResponsiveDialog
       open={open}
       onOpenChange={(value) => {
-        setOpen(value);
+        onOpenChange(value);
         if (!value) setConfirmation("");
       }}
     >
-      <DialogTrigger asChild>
-        <Button variant="destructive" size="sm">
-          <Trash2 className="size-4" aria-hidden />
-          Delete account
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[460px]">
-        <DialogHeader>
-          <DialogTitle>Delete {name}&apos;s account?</DialogTitle>
-          <DialogDescription>
+      <ResponsiveDialogContent className="sm:max-w-[460px]">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Delete {name}&apos;s account?</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             This can&apos;t be undone. Their overlays, clips, VODs, plans and settings go, their Twitch access is revoked,
             and their EventSub subscriptions are deleted. Ticket messages stay as &quot;Deleted user&quot;. Nothing stops
             them signing up again: ban instead if that matters.
-          </DialogDescription>
-        </DialogHeader>
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
         <div className="space-y-4 py-1">
           {hasDiscord && (
             <CheckRow
@@ -260,19 +278,28 @@ export function DeleteUserDialog({ userId, name, hasDiscord }: { userId: string;
             <Label htmlFor="delete-confirm">
               Type <span className="font-mono font-semibold">{name}</span> to confirm
             </Label>
-            <Input id="delete-confirm" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} autoComplete="off" />
+            <Input
+              id="delete-confirm"
+              value={confirmation}
+              onChange={(e) => setConfirmation(e.target.value)}
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              className="h-11 md:h-9"
+            />
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+        <ResponsiveDialogFooter className={FOOTER}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             Cancel
           </Button>
           <Button variant="destructive" onClick={submit} disabled={pending || confirmation.trim() !== name}>
             {pending ? "Deleting…" : "Delete account"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </ResponsiveDialogFooter>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 
@@ -307,8 +334,8 @@ export function RemoveFactorButton({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="size-7" aria-label={`Remove ${label}`}>
-          <X className="size-3.5" aria-hidden />
+        <Button variant="ghost" size="icon" className="size-11 shrink-0 md:size-7" aria-label={`Remove ${label}`}>
+          <X className="size-4 md:size-3.5" aria-hidden />
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>
@@ -321,7 +348,7 @@ export function RemoveFactorButton({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <AlertDialogAction onClick={remove} disabled={pending} className="bg-destructive text-white hover:bg-destructive/90">
+          <AlertDialogAction variant="destructive" onClick={remove} disabled={pending}>
             {pending ? "Removing…" : "Remove"}
           </AlertDialogAction>
         </AlertDialogFooter>

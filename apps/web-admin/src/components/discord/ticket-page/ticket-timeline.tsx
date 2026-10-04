@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import type { DiscordTicket, DiscordTicketEvent } from "@repo/supabase/queries/tickets";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Button } from "@repo/ui";
 import { displayName, type DiscordProfile } from "@/lib/discord/profile-names";
 import { formatDateTime, formatDateTimeShort } from "@/lib/discord/tickets";
 import { cn } from "@/lib/utils";
+import { TicketPanel } from "./ticket-panel";
 
 const EVENT_LABELS: Record<string, string> = {
   opened: "Opened",
@@ -51,10 +52,13 @@ export function TicketTimeline({
   ticket,
   events,
   profiles,
+  flat,
 }: {
   ticket: DiscordTicket;
   events: DiscordTicketEvent[];
   profiles: Record<string, DiscordProfile>;
+  /** No card around it: the phone drawer. */
+  flat?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
   const timeline: TimelineEntry[] = events.length
@@ -95,49 +99,44 @@ export function TicketTimeline({
   const shown = hidden > 0 ? [timeline[0]!, ...timeline.slice(1 + hidden)] : timeline;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Timeline</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ol className="relative space-y-3 border-l pl-4">
-          {shown.map((event, index) => {
-            const change = eventChange(event.detail);
-            return (
-              <li key={event.id} className="relative text-sm">
-                <span
-                  className={cn(
-                    "absolute top-1.5 -left-[calc(1rem+4.5px)] size-2 rounded-full bg-background",
-                    MILESTONES.has(event.type) ? "bg-foreground" : "border border-muted-foreground/60",
-                  )}
-                  aria-hidden
-                />
-                <p className="leading-snug">
-                  <span className="font-medium">{EVENT_LABELS[event.type] ?? event.type}</span>
-                  {event.target_name && <span> {event.target_name}</span>}
-                  {change && <span className="text-muted-foreground"> {change}</span>}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {event.actor_name && <>{event.actor_name} · </>}
-                  <time dateTime={event.created_at} title={formatDateTime(event.created_at)} className="tabular-nums">
-                    {formatDateTimeShort(event.created_at)}
-                  </time>
-                </p>
-                {index === 0 && hidden > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="mt-2 -ml-2 h-7 text-xs text-muted-foreground"
-                    onClick={() => setExpanded(true)}
-                  >
-                    Show {hidden} more
-                  </Button>
+    <TicketPanel title="Timeline" flat={flat}>
+      <ol className="relative space-y-3 border-l pl-4">
+        {shown.map((event, index) => {
+          const change = eventChange(event.detail);
+          return (
+            <li key={event.id} className="relative text-sm">
+              <span
+                className={cn(
+                  "absolute top-1.5 -left-[calc(1rem+4.5px)] size-2 rounded-full bg-background",
+                  MILESTONES.has(event.type) ? "bg-foreground" : "border border-muted-foreground/60",
                 )}
-              </li>
-            );
-          })}
-        </ol>
-      </CardContent>
-    </Card>
+                aria-hidden
+              />
+              <p className="leading-snug">
+                <span className="font-medium">{EVENT_LABELS[event.type] ?? event.type}</span>
+                {event.target_name && <span> {event.target_name}</span>}
+                {change && <span className="text-muted-foreground"> {change}</span>}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {event.actor_name && <>{event.actor_name} · </>}
+                <time dateTime={event.created_at} title={formatDateTime(event.created_at)} className="tabular-nums">
+                  {formatDateTimeShort(event.created_at)}
+                </time>
+              </p>
+              {index === 0 && hidden > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="mt-2 -ml-2 h-11 text-xs text-muted-foreground md:h-7"
+                  onClick={() => setExpanded(true)}
+                >
+                  Show {hidden} more
+                </Button>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+    </TicketPanel>
   );
 }

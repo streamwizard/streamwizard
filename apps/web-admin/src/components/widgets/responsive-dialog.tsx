@@ -49,7 +49,7 @@ export function ResponsiveDialogClose(props: React.ComponentProps<typeof DialogC
 export function ResponsiveDialogContent({ className, children, ...props }: React.ComponentProps<typeof DialogContent>) {
   if (useContext(DrawerMode)) {
     return (
-      <DrawerContent className="max-h-[92dvh]">
+      <DrawerContent>
         {/* The drawer scrolls inside itself, so a long form never hides its own buttons. */}
         <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">{children}</div>
       </DrawerContent>

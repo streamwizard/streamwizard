@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getNodeAction, getInstanceAction } from "@/actions/nodes";
 import { getAutoSwitcherConfigForUser } from "@/actions/auto-switcher";
-import { InstanceDetailClient } from "@/components/admin/instance-detail-client";
+import { InstanceActions, InstanceDetailClient } from "@/components/admin/instance-detail-client";
 import { InstanceSwitcherTab } from "@/components/admin/instance-switcher-tab";
 import { NodeMetricChart, type NodeMetricPoint } from "@/components/charts/node-metric-chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui";
@@ -18,6 +18,8 @@ import {
   type ObsInstanceMetricPoint,
   type IngestSignalMetricPoint,
 } from "@repo/metrics";
+import { PageHeader } from "@/components/widgets/page-header";
+import { ChartGrid } from "@/components/widgets/stat-grid";
 import { PageCrumb } from "@/lib/crumbs";
 
 export const dynamic = "force-dynamic";
@@ -65,39 +67,44 @@ export default async function InstanceDetailPage({
     <div className="space-y-6">
       <PageCrumb label={node.name} href={`/obs/${nodeId}`} />
       <PageCrumb label={instance.container_name} href={`/obs/${nodeId}/instances/${instanceId}`} />
-      <div>
-        <h1 className="text-2xl font-bold font-mono">{instance.container_name}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{instance.owner_name ?? instance.owner_email ?? instance.user_id}</p>
-      </div>
+      <PageHeader title={instance.container_name} description={instance.owner_name ?? instance.owner_email ?? instance.user_id}>
+        <InstanceActions
+          nodeId={node.id}
+          apiUrl={node.api_url}
+          instance={{ id: instance.id, container_name: instance.container_name, status: instance.status }}
+        />
+      </PageHeader>
 
       <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="metrics">Metrics history</TabsTrigger>
-          <TabsTrigger value="avsync">A/V sync</TabsTrigger>
-          <TabsTrigger value="switcher">Auto Switcher</TabsTrigger>
-        </TabsList>
+        {/* Four tabs are wider than a phone: the row scrolls sideways inside itself. */}
+        <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] md:mx-0 md:px-0 [&::-webkit-scrollbar]:hidden">
+          <TabsList className="h-11! md:h-9!">
+            <TabsTrigger value="overview" className="px-3">Overview</TabsTrigger>
+            <TabsTrigger value="metrics" className="px-3">Metrics history</TabsTrigger>
+            <TabsTrigger value="avsync" className="px-3">A/V sync</TabsTrigger>
+            <TabsTrigger value="switcher" className="px-3">Auto switcher</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="mt-4">
           <InstanceDetailClient node={node} instance={instance} />
         </TabsContent>
 
-        <TabsContent value="metrics" className="mt-4 space-y-4">
-          <p className="text-sm text-muted-foreground">Range and refresh follow the header controls.</p>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <TabsContent value="metrics" className="mt-4">
+          <ChartGrid>
             <NodeMetricChart title="CPU %" initialData={toNodePoints(cpuHist)} apiPath={apiPath} dataKey="instanceCpu" format="percent" />
-            <NodeMetricChart title="RAM Used (MB)" initialData={toNodePoints(ramHist)} apiPath={apiPath} dataKey="instanceRam" />
-            <NodeMetricChart title="VRAM Used (MB)" initialData={toNodePoints(vramHist)} apiPath={apiPath} dataKey="instanceVram" />
-            <NodeMetricChart title="Bandwidth In" initialData={toNodePoints(rxHist)} apiPath={apiPath} dataKey="instanceRx" format="bytesPerSec" />
-            <NodeMetricChart title="Bandwidth Out" initialData={toNodePoints(txHist)} apiPath={apiPath} dataKey="instanceTx" format="bytesPerSec" />
-          </div>
+            <NodeMetricChart title="RAM used (MB)" initialData={toNodePoints(ramHist)} apiPath={apiPath} dataKey="instanceRam" />
+            <NodeMetricChart title="VRAM used (MB)" initialData={toNodePoints(vramHist)} apiPath={apiPath} dataKey="instanceVram" />
+            <NodeMetricChart title="Bandwidth in" initialData={toNodePoints(rxHist)} apiPath={apiPath} dataKey="instanceRx" format="bytesPerSec" />
+            <NodeMetricChart title="Bandwidth out" initialData={toNodePoints(txHist)} apiPath={apiPath} dataKey="instanceTx" format="bytesPerSec" />
+          </ChartGrid>
         </TabsContent>
 
         <TabsContent value="avsync" className="mt-4 space-y-4">
           <div className="space-y-1 text-sm text-muted-foreground">
             <p>
-              Read off the PES timestamps of the MPEG-TS this user’s encoder sent, on the ingest relay — not from
-              OBS. Positive skew means audio is <strong>behind</strong> video. One line per stream key (“camera”).
+              Read off the PES timestamps of the MPEG-TS this user’s encoder sent, on the ingest relay, not from OBS.
+              Positive skew means audio is <strong>behind</strong> video. One line per stream key (“camera”).
             </p>
             <p>
               This is the owner’s ingest signal, so it covers whatever they were streaming in the range, whether or not
@@ -105,7 +112,7 @@ export default async function InstanceDetailPage({
               correctly but captured audio late reads zero here and still sounds out of sync.
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <ChartGrid>
             <NodeMetricChart
               title="A/V skew (audio behind video)"
               initialData={toSignalPoints(skewHist)}
@@ -135,10 +142,11 @@ export default async function InstanceDetailPage({
               apiPath={apiPath}
               dataKey="avSkewSamples"
             />
-          </div>
+          </ChartGrid>
         </TabsContent>
 
-        <TabsContent value="switcher" className="mt-4">
+        {/* min-w-0 keeps the shared switcher form inside the column on a phone. */}
+        <TabsContent value="switcher" className="mt-4 min-w-0">
           <InstanceSwitcherTab
             userId={instance.user_id}
             instanceId={instance.id}

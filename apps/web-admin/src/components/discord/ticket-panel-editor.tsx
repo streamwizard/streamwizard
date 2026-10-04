@@ -106,6 +106,7 @@ export function TicketPanelEditor({ initial, postedIn, themes, bot, uploadsEnabl
               value={panel.layout}
               onChange={(event) => set("layout", event.target.value as TicketPanelLayout)}
               disabled={saving}
+              className="h-11 text-base md:h-9 md:text-sm"
             >
               {TICKET_PANEL_LAYOUTS.map((layout) => (
                 <NativeSelectOption key={layout} value={layout}>
@@ -123,6 +124,7 @@ export function TicketPanelEditor({ initial, postedIn, themes, bot, uploadsEnabl
                   value={panel.buttonLabel}
                   onChange={(event) => set("buttonLabel", event.target.value)}
                   maxLength={TICKET_BUTTON_LABEL_MAX}
+                  className="h-11 md:h-9"
                   disabled={saving}
                 />
               </SettingRow>
@@ -136,7 +138,7 @@ export function TicketPanelEditor({ initial, postedIn, themes, bot, uploadsEnabl
                   value={panel.buttonEmoji ?? ""}
                   onChange={(event) => set("buttonEmoji", event.target.value || null)}
                   maxLength={64}
-                  className="w-40"
+                  className="h-11 w-40 md:h-9"
                   disabled={saving}
                 />
               </SettingRow>
@@ -154,6 +156,7 @@ export function TicketPanelEditor({ initial, postedIn, themes, bot, uploadsEnabl
                 value={panel.buttonStyle}
                 onChange={(event) => set("buttonStyle", event.target.value as TicketPanel["buttonStyle"])}
                 disabled={saving}
+                className="h-11 text-base md:h-9 md:text-sm"
               >
                 {BUTTON_STYLES.map((style) => (
                   <NativeSelectOption key={style} value={style}>
@@ -171,15 +174,18 @@ export function TicketPanelEditor({ initial, postedIn, themes, bot, uploadsEnabl
                 value={panel.menuPlaceholder}
                 onChange={(event) => set("menuPlaceholder", event.target.value)}
                 maxLength={TICKET_MENU_PLACEHOLDER_MAX}
+                className="h-11 md:h-9"
                 disabled={saving}
               />
             </SettingRow>
           )}
 
           {dirty && blocked && <p className="pt-3 text-sm text-destructive">{blocked}</p>}
-          <SaveBar dirty={dirty && !blocked} pending={saving} onSave={save} onReset={() => setPanel(initial)} />
         </CardContent>
       </Card>
+
+      {/* One bar for the message and the controls: they are saved together. */}
+      <SaveBar sticky dirty={dirty && !blocked} pending={saving} onSave={save} onReset={() => setPanel(initial)} />
     </div>
   );
 }

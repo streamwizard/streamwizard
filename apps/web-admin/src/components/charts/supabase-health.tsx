@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Cpu, Database, HardDrive, Lock, MemoryStick, Plug } from "lucide-react";
+import { ChevronDown, Cpu, Database, HardDrive, Lock, MemoryStick, Plug } from "lucide-react";
 import type { SupabasePlatformSnapshot } from "@repo/metrics";
 import {
   SUPABASE_DB_CONN_CRIT_PCT,
@@ -14,9 +14,12 @@ import {
   SUPABASE_DEADLOCKS_WARN,
   SUPABASE_SCRAPE_SILENT_MIN,
 } from "@repo/alerting/thresholds";
-import { Badge, Card, CardContent } from "@repo/ui";
+import { Badge, Card, CardContent, Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
 import { cn } from "@/lib/utils";
+import { SectionHeading } from "@/components/widgets/section-heading";
 import { StatCard } from "@/components/widgets/stat-card";
+import { StatGrid } from "@/components/widgets/stat-grid";
+import { useWideScreen } from "@/hooks/use-wide-screen";
 import { StatusIndicator, type IndicatorStatus } from "@/components/widgets/status-indicator";
 import { useMetricsPoll } from "./chart-kit";
 import { BANNER_BORDER, SEVERITY, TILE_TONE, band, worstStatus } from "./health-kit";
@@ -115,15 +118,20 @@ function buildChecks(s: SupabasePlatformSnapshot | null): Check[] {
   ];
 }
 
+const TICK_MS = 30_000;
+
+function subscribeToTick(onTick: () => void) {
+  const id = setInterval(onTick, TICK_MS);
+  return () => clearInterval(id);
+}
+
+/** The clock in 30 s steps: a snapshot has to stay the same between ticks. */
+const currentTick = () => Math.floor(Date.now() / TICK_MS) * TICK_MS;
+
 /** Minutes since the last scrape, ticking every 30 s. null until mounted so
  * server and client render the same markup. */
 function useScrapeAge(lastScrape: string | null | undefined): number | null {
-  const [now, setNow] = useState<number | null>(null);
-  useEffect(() => {
-    setNow(Date.now());
-    const id = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(id);
-  }, []);
+  const now = useSyncExternalStore<number | null>(subscribeToTick, currentTick, () => null);
   if (now === null || !lastScrape) return null;
   return Math.max(0, Math.floor((now - new Date(lastScrape).getTime()) / 60_000));
 }
@@ -204,7 +212,7 @@ export function SupabaseKpiTiles({ initialSnapshot }: { initialSnapshot: Supabas
   const checks = buildChecks(snapshot);
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+    <StatGrid cols={6}>
       {checks.map((c) => (
         <StatCard
           key={c.id}
@@ -215,6 +223,37 @@ export function SupabaseKpiTiles({ initialSnapshot }: { initialSnapshot: Supabas
           description={c.status === "warn" || c.status === "crit" ? `${c.hint} · breached` : c.hint}
         />
       ))}
-    </div>
+    </StatGrid>
+  );
+}
+
+/**
+ * A section of the page that folds away. Open on a wide screen, closed on a
+ * phone, where the banner and the tiles answer "is it OK?" and the charts are
+ * the follow-up. A closed section isn't mounted, so its charts don't poll.
+ */
+export function HealthSection({ icon, title, children }: { icon?: React.ReactNode; title: string; children: React.ReactNode }) {
+  const wide = useWideScreen();
+  // null until someone uses the toggle; from then on their choice wins.
+  const [chosen, setChosen] = useState<boolean | null>(null);
+  // Before the browser has answered, render open and let CSS hide it on a
+  // phone, so neither screen flashes the other one's default.
+  const undecided = chosen === null && wide === null;
+  const open = chosen ?? wide ?? true;
+
+  return (
+    <Collapsible open={open} onOpenChange={setChosen} className="space-y-3">
+      <SectionHeading>
+        <CollapsibleTrigger className="-my-2 flex min-h-11 flex-1 items-center gap-2 rounded-md text-left uppercase focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none">
+          {icon}
+          <span className="flex-1">{title}</span>
+          <ChevronDown
+            className={cn("size-4 shrink-0 transition-transform", undecided ? "max-md:-rotate-90" : !open && "-rotate-90")}
+            aria-hidden="true"
+          />
+        </CollapsibleTrigger>
+      </SectionHeading>
+      <CollapsibleContent className={cn("space-y-4", undecided && "max-md:hidden")}>{children}</CollapsibleContent>
+    </Collapsible>
   );
 }

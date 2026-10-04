@@ -3,7 +3,7 @@
 import { useId, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArchiveRestore, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArchiveRestore, FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -14,7 +14,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
   Badge,
   Button,
   Card,
@@ -22,12 +21,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   Input,
   Label,
   Switch,
@@ -37,7 +32,16 @@ import type { DiscordActionResult } from "@/lib/discord/action";
 import type { RemoveResult } from "@/actions/discord-ticket-config";
 import type { PickerOption } from "@/lib/discord/options";
 import { emojiForDisplay } from "@/lib/discord/ticket-options";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/widgets/responsive-dialog";
 import { Picker } from "./pickers";
+import { MoveMenuItems, TicketRowMenu } from "./ticket-row-menu";
 import { toastResult } from "./toast-result";
 
 /** A category or a product, flattened to what the list and the dialog need. */
@@ -91,6 +95,7 @@ export function TicketOptionsManager(props: TicketOptionsManagerProps) {
   // Local order so a drag lands at once; the server copy replaces it on refresh.
   const [order, setOrder] = useState<string[] | null>(null);
   const [editing, setEditing] = useState<TicketOption | "new" | null>(null);
+  const [removing, setRemoving] = useState<TicketOption | null>(null);
 
   const active = items.filter((item) => !item.archived);
   const archived = items.filter((item) => item.archived);
@@ -133,20 +138,22 @@ export function TicketOptionsManager(props: TicketOptionsManagerProps) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+      {/* The button drops under the title on a phone instead of squeezing it. */}
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="space-y-1.5">
           <CardTitle className="text-base">{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
+          <CardDescription>
+            {description} <span className="hidden md:inline">Drag to change the order.</span>
+            <span className="md:hidden">Change the order from a row&apos;s menu.</span>
+          </CardDescription>
         </div>
-        <Button
-          size="sm"
-          onClick={() => setEditing("new")}
-          disabled={pending || full}
-          title={full ? `Discord fits ${limit} in a menu` : undefined}
-        >
-          <Plus />
-          Add {kind}
-        </Button>
+        <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
+          <Button size="sm" className="h-11 md:h-8" onClick={() => setEditing("new")} disabled={pending || full}>
+            <Plus />
+            Add {kind}
+          </Button>
+          {full && <p className="text-xs text-muted-foreground">Discord fits {limit} in a menu.</p>}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {ordered.length === 0 ? (
@@ -162,27 +169,63 @@ export function TicketOptionsManager(props: TicketOptionsManagerProps) {
             onReorder={reorder}
             disabled={pending}
             itemLabel={(item) => item.name}
+            // No drag handle on a phone: the row's menu has Move up and Move down.
+            handleClassName="hidden md:flex"
           >
-            {(item) => (
-              <OptionRow item={item}>
-                {props.detailHref && (
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={props.detailHref(item)}>Form and message</Link>
-                  </Button>
-                )}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Edit ${item.name}`}
-                  title="Edit"
-                  disabled={pending}
-                  onClick={() => setEditing(item)}
-                >
-                  <Pencil />
-                </Button>
-                <RemoveButton item={item} kind={kind} disabled={pending} onConfirm={() => remove(item)} />
-              </OptionRow>
-            )}
+            {(item, move) => {
+              const detail = props.detailHref?.(item);
+              return (
+                <OptionRow item={item} href={detail}>
+                  <div className="hidden items-center gap-1 md:flex">
+                    {detail && (
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={detail}>Form and message</Link>
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Edit ${item.name}`}
+                      title="Edit"
+                      disabled={pending}
+                      onClick={() => setEditing(item)}
+                    >
+                      <Pencil />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Remove ${item.name}`}
+                      title="Remove"
+                      disabled={pending}
+                      onClick={() => setRemoving(item)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                  <TicketRowMenu label={item.name} disabled={pending} className="md:hidden">
+                    {detail && (
+                      <DropdownMenuItem asChild>
+                        <Link href={detail}>
+                          <FileText />
+                          Form and message
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onSelect={() => setEditing(item)}>
+                      <Pencil />
+                      Edit
+                    </DropdownMenuItem>
+                    <MoveMenuItems move={move} />
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onSelect={() => setRemoving(item)}>
+                      <Trash2 />
+                      Remove
+                    </DropdownMenuItem>
+                  </TicketRowMenu>
+                </OptionRow>
+              );
+            }}
           </SortableList>
         )}
 
@@ -191,27 +234,58 @@ export function TicketOptionsManager(props: TicketOptionsManagerProps) {
             <h3 className="text-sm font-medium">Archived</h3>
             <p className="text-xs text-muted-foreground">
               Hidden from new tickets. Still here because older tickets use them.
+              {full && ` Restoring needs room: Discord fits ${limit} in a menu.`}
             </p>
             <ul className="divide-y">
-              {archived.map((item) => (
-                <li key={item.id} className="py-3">
-                  <OptionRow item={item}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      disabled={pending || full}
-                      onClick={() => run(() => props.onRestore(item.id), `${item.name} is back.`)}
-                    >
-                      <ArchiveRestore />
-                      Restore
-                    </Button>
-                  </OptionRow>
-                </li>
-              ))}
+              {archived.map((item) => {
+                const restore = () => run(() => props.onRestore(item.id), `${item.name} is back.`);
+                return (
+                  <li key={item.id} className="py-3">
+                    <OptionRow item={item}>
+                      <Button variant="ghost" size="sm" className="hidden md:inline-flex" disabled={pending || full} onClick={restore}>
+                        <ArchiveRestore />
+                        Restore
+                      </Button>
+                      <TicketRowMenu label={item.name} disabled={pending} className="md:hidden">
+                        <DropdownMenuItem disabled={full} onSelect={restore}>
+                          <ArchiveRestore />
+                          Restore
+                        </DropdownMenuItem>
+                      </TicketRowMenu>
+                    </OptionRow>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
       </CardContent>
+
+      {removing && (
+        <AlertDialog open onOpenChange={(open) => !open && setRemoving(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove {removing.name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Members can&apos;t pick this {kind} anymore. If tickets already use it, it gets archived instead of
+                deleted, so they keep their label and you can restore it later.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="h-11 md:h-9">Keep it</AlertDialogCancel>
+              <AlertDialogAction
+                className="h-11 md:h-9"
+                onClick={() => {
+                  remove(removing);
+                  setRemoving(null);
+                }}
+              >
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       <OptionDialog
         key={editing === "new" ? "new" : (editing?.id ?? "closed")}
@@ -235,7 +309,16 @@ export function TicketOptionsManager(props: TicketOptionsManagerProps) {
   );
 }
 
-function OptionRow({ item, children }: { item: TicketOption; children: React.ReactNode }) {
+function OptionRow({
+  item,
+  href,
+  children,
+}: {
+  item: TicketOption;
+  /** The item's own page, when it has one: the name links there. */
+  href?: string;
+  children: React.ReactNode;
+}) {
   const emoji = emojiForDisplay(item.emoji);
   return (
     <div className="flex items-center gap-3">
@@ -243,8 +326,14 @@ function OptionRow({ item, children }: { item: TicketOption; children: React.Rea
         {emoji ?? "·"}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-          <span className="truncate">{item.name}</span>
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-medium">
+          {href ? (
+            <Link href={href} className="truncate underline-offset-4 hover:underline">
+              {item.name}
+            </Link>
+          ) : (
+            <span className="truncate">{item.name}</span>
+          )}
           <code className="text-xs font-normal text-muted-foreground">{item.slug}</code>
           {item.enabled === false && !item.archived && <Badge variant="outline">Off</Badge>}
         </p>
@@ -252,41 +341,6 @@ function OptionRow({ item, children }: { item: TicketOption; children: React.Rea
       </div>
       <div className="flex shrink-0 items-center gap-1">{children}</div>
     </div>
-  );
-}
-
-function RemoveButton({
-  item,
-  kind,
-  disabled,
-  onConfirm,
-}: {
-  item: TicketOption;
-  kind: "category" | "product";
-  disabled: boolean;
-  onConfirm: () => void;
-}) {
-  return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={`Remove ${item.name}`} title="Remove" disabled={disabled}>
-          <Trash2 />
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Remove {item.name}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Members can&apos;t pick this {kind} anymore. If tickets already use it, it gets archived instead of
-            deleted, so they keep their label and you can restore it later.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Keep it</AlertDialogCancel>
-          <AlertDialogAction onClick={onConfirm}>Remove</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   );
 }
 
@@ -325,8 +379,8 @@ function OptionDialog({
   const isNew = editing === "new";
 
   return (
-    <Dialog open={editing !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+    <ResponsiveDialog open={editing !== null} onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveDialogContent>
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -334,14 +388,14 @@ function OptionDialog({
             onSubmit({ ...draft, name: draft.name.trim(), description: draft.description.trim() });
           }}
         >
-          <DialogHeader>
-            <DialogTitle>{editing === "new" || !editing ? `Add a ${kind}` : `Edit ${editing.name}`}</DialogTitle>
-            <DialogDescription>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>{editing === "new" || !editing ? `Add a ${kind}` : `Edit ${editing.name}`}</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               {kind === "category"
                 ? "Members pick a category when they open a ticket."
                 : "Members say which product their ticket is about."}
-            </DialogDescription>
-          </DialogHeader>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
 
           <div className="space-y-2">
             <Label htmlFor={`${id}-name`}>Name</Label>
@@ -350,6 +404,7 @@ function OptionDialog({
               value={draft.name}
               onChange={(event) => set("name", event.target.value)}
               maxLength={nameMax}
+              className="h-11 md:h-9"
               required
               autoFocus
             />
@@ -362,6 +417,7 @@ function OptionDialog({
               value={draft.description}
               onChange={(event) => set("description", event.target.value)}
               maxLength={descriptionMax}
+              className="h-11 md:h-9"
               aria-describedby={`${id}-description-hint`}
             />
             <p id={`${id}-description-hint`} className="text-xs text-muted-foreground">
@@ -376,7 +432,7 @@ function OptionDialog({
               value={draft.emoji ?? ""}
               onChange={(event) => set("emoji", event.target.value || null)}
               maxLength={64}
-              className="w-40"
+              className="h-11 w-40 md:h-9"
               aria-describedby={`${id}-emoji-hint`}
             />
             <p id={`${id}-emoji-hint`} className="text-xs text-muted-foreground">
@@ -416,16 +472,16 @@ function OptionDialog({
             </>
           )}
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
               Cancel
             </Button>
             <Button type="submit" disabled={pending || !draft.name.trim()}>
               {isNew ? `Add ${kind}` : "Save"}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

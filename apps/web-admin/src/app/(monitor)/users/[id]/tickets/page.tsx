@@ -1,22 +1,10 @@
-import Link from "next/link";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { listUserTickets } from "@repo/supabase/queries/admin-users";
-import { formatTicketNumber } from "@repo/supabase/queries/tickets";
-import {
-  Card,
-  CardContent,
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui";
-import { PRIORITY_LABELS, formatDateTime, formatRelativeTime, priorityClass } from "@/lib/discord/tickets";
+import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui";
+import { TicketList } from "@/components/discord/ticket-list";
+import { getDiscordContext } from "@/lib/discord/api";
+import { resolveDiscordProfiles } from "@/lib/discord/users";
 import { loadAdminUser } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +12,12 @@ export const dynamic = "force-dynamic";
 export default async function UserTicketsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await loadAdminUser(id);
-  const tickets = await listUserTickets(supabaseAdmin, user.id, user.discord?.userId ?? null);
+  // Which tickets are theirs (newest 100) comes from the shared query. It reads
+  // a short column list, so the full rows the list needs for its state badges
+  // are read by id here.
+  const found = await listUserTickets(supabaseAdmin, user.id, user.discord?.userId ?? null);
 
-  if (!tickets.length) {
+  if (!found.length) {
     return (
       <Empty className="border">
         <EmptyHeader>
@@ -41,68 +32,37 @@ export default async function UserTicketsPage({ params }: { params: Promise<{ id
     );
   }
 
+  const guildId = getDiscordContext()?.guildId;
+  const [rows, categories, products] = await Promise.all([
+    supabaseAdmin
+      .from("discord_tickets")
+      .select("*")
+      .in(
+        "id",
+        found.map((ticket) => ticket.id),
+      )
+      .order("created_at", { ascending: false }),
+    // Without the Discord env there is nothing to label with; the list falls back to the slugs.
+    guildId ? listTicketCategories(supabaseAdmin, guildId) : [],
+    guildId ? listTicketProducts(supabaseAdmin, guildId) : [],
+  ]);
+  if (rows.error) throw rows.error;
+  const tickets = rows.data;
+
+  const profiles = await resolveDiscordProfiles(
+    tickets.flatMap((t) => [
+      t.claimed_by_name ? null : t.claimed_by_discord_user_id,
+      t.closed_by_name ? null : t.closed_by_discord_user_id,
+    ]),
+  );
+
   return (
-    <Card className="py-0">
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-4 text-xs text-muted-foreground">Ticket</TableHead>
-              <TableHead className="text-xs text-muted-foreground">Status</TableHead>
-              <TableHead className="text-xs text-muted-foreground">Priority</TableHead>
-              <TableHead className="text-xs text-muted-foreground">Assigned to</TableHead>
-              <TableHead className="pr-4 text-right text-xs text-muted-foreground">Opened</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tickets.map((ticket) => (
-              <TableRow key={ticket.id} className="relative has-[a:focus-visible]:bg-muted/50">
-                <TableCell className="max-w-96 py-2.5 pl-4">
-                  <div className="flex items-baseline gap-2">
-                    <Link
-                      href={`/discord/tickets/${ticket.ticket_number}`}
-                      aria-label={`${formatTicketNumber(ticket.ticket_number)} ${ticket.subject}`}
-                      className="shrink-0 font-mono text-xs text-muted-foreground after:absolute after:inset-0 focus-visible:outline-none"
-                    >
-                      {formatTicketNumber(ticket.ticket_number)}
-                    </Link>
-                    <span className="min-w-0 truncate font-medium" title={ticket.subject}>
-                      {ticket.subject}
-                    </span>
-                  </div>
-                  <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                    {[ticket.product, ticket.category].filter(Boolean).join(" · ")}
-                  </div>
-                </TableCell>
-                <TableCell className="py-2.5 text-sm">
-                  {ticket.status === "open" ? (
-                    "Open"
-                  ) : (
-                    <span className="text-muted-foreground">
-                      Closed{ticket.closed_at ? ` ${formatRelativeTime(ticket.closed_at)}` : ""}
-                    </span>
-                  )}
-                </TableCell>
-                <TableCell className="py-2.5 text-sm">
-                  {ticket.priority ? (
-                    <span className={priorityClass(ticket.priority)}>{PRIORITY_LABELS[ticket.priority] ?? ticket.priority}</span>
-                  ) : (
-                    <span className="text-muted-foreground/60">–</span>
-                  )}
-                </TableCell>
-                <TableCell className="max-w-44 truncate py-2.5 text-sm">
-                  {ticket.claimed_by_name ?? <span className="text-muted-foreground">Unclaimed</span>}
-                </TableCell>
-                <TableCell className="py-2.5 pr-4 text-right text-sm text-muted-foreground">
-                  <time dateTime={ticket.created_at} title={formatDateTime(ticket.created_at)}>
-                    {formatRelativeTime(ticket.created_at)}
-                  </time>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <TicketList
+      tickets={tickets}
+      categoryNames={new Map(categories.map((c) => [c.slug, c.name]))}
+      productLabels={new Map(products.map((p) => [p.slug, p.label]))}
+      profiles={Object.fromEntries(profiles)}
+      hideOpener
+    />
   );
 }

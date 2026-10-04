@@ -13,13 +13,13 @@ async function countFiringAlerts(): Promise<number> {
   ).length;
 }
 
-async function countTicketsAwaitingStaff(): Promise<number> {
+export async function countTicketsAwaitingStaff(): Promise<number> {
   const ctx = getDiscordContext();
   if (!ctx) return 0;
   return (await getOpenTicketCounts(supabaseAdmin, ctx.guildId)).awaitingStaff;
 }
 
-async function countPendingWidgets(): Promise<number> {
+export async function countPendingWidgets(): Promise<number> {
   const { count, error } = await supabaseAdmin
     .from("overlay_widget_library_entries")
     .select("id", { count: "exact", head: true })

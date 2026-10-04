@@ -47,7 +47,6 @@ The sidebar has five groups and 17 items (`src/lib/nav-config.ts`). Sub-pages ar
 | Home | Dashboard | `/overview` | |
 | Support | Tickets | `/discord/tickets` | Queue, Stats, Settings |
 | Support | Users | `/users` | |
-| Support | Plans | `/subscriptions` | |
 | Support | Widget review | `/widget-library` | |
 | Discord | Announcements | `/discord/announcements` | |
 | Discord | Messages | `/discord/messages` | |
@@ -58,8 +57,8 @@ The sidebar has five groups and 17 items (`src/lib/nav-config.ts`). Sub-pages ar
 | Monitoring | EventSub | `/eventsub` | |
 | Monitoring | WebSocket | `/ws` | Metrics, Live feed, Rooms, Topology |
 | Monitoring | Database | `/supabase` | Health, App data (`/database`) |
-| Infrastructure | OBS nodes | `/obs` | |
-| Infrastructure | Ingest servers | `/ingest` | |
+| Infrastructure | OBS nodes | `/obs` | Fleet, Manage (`?tab=manage`) |
+| Infrastructure | Ingest servers | `/ingest` | Fleet, Live (`?tab=live`), Manage (`?tab=manage`) |
 | Infrastructure | VMs | `/vms` | |
 | Infrastructure | Backups | `/backups` | |
 
@@ -68,17 +67,22 @@ The sidebar has five groups and 17 items (`src/lib/nav-config.ts`). Sub-pages ar
 - **Breadcrumb**: group, item and tab come from the nav config; a detail page adds its own level by rendering `<PageCrumb label href />` (`src/lib/crumbs.tsx`). On phones the header shows the last level plus a back arrow.
 - **Header controls** (range, refresh, bandwidth) only show on pages whose nav entry lists them under `controls`.
 - Route URLs are stable: other apps link in (the Discord bot posts `/discord/tickets/{number}`).
+- **Search** (the header button, or Ctrl/Cmd+K) jumps to any page or tab, a ticket by number, or a user by name, email or Twitch name (`src/components/command-palette.tsx`).
+- **Dashboard** (`/overview`): what needs attention, one status chip per subsystem (read from the alert engine's state, so it agrees with `/alerts`), live streamers and Cloud OBS load, who is live, shortcuts. Logic in `src/lib/overview.ts`, loading in `src/lib/overview-data.ts`.
+- **Desktop-only tools**: the message builder, the WebSocket live feed, the topology graphs and `/vnc` show a notice below 768px and are not mounted there (`src/components/widgets/desktop-only.tsx`).
+- **Shared page building blocks** live in `src/components/widgets/`: `PageHeader`, `StatGrid` / `ChartGrid`, `DataList` (a table that becomes cards when narrow), `FilterPanel`, `SaveBar`, `ResponsiveDialog` (a drawer on phones). New pages should start from these. The plan behind the layout is `docs/admin-redesign-plan.md`.
 
 ## Pages
 
 | Route | What it does |
 |---|---|
 | `/overview`, `/http`, `/eventsub`, `/database`, `/supabase`, `/ws/*`, `/alerts/*` | Monitoring (InfluxDB via `@repo/metrics`, alerting config) — pre-existing |
-| `/obs` | OBS fleet monitoring **+ "Manage Nodes"** (register/edit/delete GPU nodes, claim-token install command, live health) |
+| `/obs` | Two tabs in the page (`?tab=`, no extra routes). **Fleet**: stats, one node list (registry state, health probe and latest metrics merged; a node missing from one source still shows, with blanks), running instances linking to the instance page, history charts. **Manage** (`?tab=manage`): register/edit/delete GPU nodes, claim-token install command |
 | `/obs/[nodeId]` | Node detail: hardware card, live metrics stream, instance table (start/stop/remove/VNC), 24h history charts |
 | `/obs/[nodeId]/instances/[instanceId]` | Instance detail, tabbed: **Overview** (details incl. RAM limit, CPU quota, shm, config template, storage used/quota + live metrics), **Metrics history** (per-instance InfluxDB series), **Auto Switcher** (edit the owner's switcher config, hold/release scene override) |
-| `/ingest` | Ingest fleet monitoring **+ "Manage Nodes"** (SRT/SRTLA boxes, claim-token install) |
-| `/subscriptions` | Grant/revoke/edit product subscriptions per user (independent of Stripe) |
+| `/ingest` | Three tabs in the page (`?tab=`, no extra routes). **Fleet**: stats, one node list (registry state, health probe, latest host metrics), history charts. **Live** (`?tab=live`): monitor socket status, fleet bandwidth, one streams list (socket and polled metrics joined per stream; loss and retransmit turn amber at 0.5% and red at 2%), node bandwidth. **Manage** (`?tab=manage`): register/edit/delete SRT/SRTLA boxes, claim-token install command |
+| `/users`, `/users/[id]` | Everyone with an account: search, filter and sort; a row menu with **Grant access**; a user page with an **Actions** menu (grant access, ban or lift ban, make or remove admin, unlink Discord, resync EventSub, delete account) and tabs for Overview, Plans, EventSub, Tickets, Discord and Activity. Plans (product subscriptions, independent of Stripe) are granted from the row menu or the Actions menu and edited or revoked on the user's **Plans** tab |
+| `/subscriptions` | Gone as a page: redirects to `/users?filter=paying` (the "Has a plan" filter), which lists the same people the old grants screen showed with a live plan |
 | `/widget-library` | Moderation queue for community widget submissions (sandboxed iframe previews) |
 | `/discord/messages`, `/discord/messages/[id]` | Discord messages built visually (banners + embeds, themes, drag to reorder). A server has as many as it likes, each with a name and any text or announcement channel. Draft autosaves to `discord_built_messages`; **Publish** has the bot send or update the message, **Delete** has it remove the message from Discord too. The builder is `MessageBuilder` from `@repo/ui/message-builder`, the data model, limits, presets and starting templates are `@repo/discord-message` |
 | `/discord/announcements`, `/discord/announcements/[id]` | One-off announcements for the Discord: a simple form (title, text, colour, image, one link button, a ping: nobody, @everyone, @here or a role) next to a Discord-style preview. Rows live in `discord_announcements` with a status (`draft`, `scheduled`, `posting`, `posted`, `failed`). **Post now** has the bot send it, or edit the message in place (no second ping); **Post later** sets a time and the bot's scheduler (30 s tick, conditional claim) sends it; **Delete** removes it from Discord too. The shape, limits and Discord payload are `@repo/discord-message`'s `announcement` module |

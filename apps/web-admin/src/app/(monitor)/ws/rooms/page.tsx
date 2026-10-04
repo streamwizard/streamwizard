@@ -1,5 +1,6 @@
 "use client";
 
+import { PageHeader } from "@/components/widgets/page-header";
 import { WsMonitorProvider } from "@/components/ws-monitor-provider";
 import { WsRoomTable } from "@/components/ws-room-table";
 
@@ -10,7 +11,7 @@ export default function WsRoomsPage() {
   if (!wsUrl || !secret) {
     return (
       <div className="space-y-2">
-        <h1 className="text-xl font-semibold">Rooms</h1>
+        <PageHeader title="Rooms" />
         <p className="text-sm text-muted-foreground">
           Set <code className="text-xs bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_WS_SERVER_URL</code> and{" "}
           <code className="text-xs bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_MONITOR_SECRET</code> in{" "}

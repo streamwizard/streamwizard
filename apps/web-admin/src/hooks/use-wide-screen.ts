@@ -1,25 +1,29 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 // Same line as the sidebar: below it the app is in phone layout.
-const QUERY = "(min-width: 768px)";
-
-function subscribe(onChange: () => void) {
-  const mql = window.matchMedia(QUERY);
-  mql.addEventListener("change", onChange);
-  return () => mql.removeEventListener("change", onChange);
-}
+const DEFAULT_MIN_WIDTH = 768;
 
 /**
- * True from 768px up, false below, and null until the browser has answered
- * (server render and hydration). Callers that must not mount something on a
- * phone treat null as "not yet".
+ * True from `minWidth` (768px unless given) up, false below, and null until
+ * the browser has answered (server render and hydration). Callers that must
+ * not mount something on a phone treat null as "not yet".
  */
-export function useWideScreen(): boolean | null {
+export function useWideScreen(minWidth: number = DEFAULT_MIN_WIDTH): boolean | null {
+  const query = `(min-width: ${minWidth}px)`;
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const mql = window.matchMedia(query);
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    },
+    [query],
+  );
+
   return useSyncExternalStore(
     subscribe,
-    () => window.matchMedia(QUERY).matches,
+    () => window.matchMedia(query).matches,
     () => null,
   );
 }

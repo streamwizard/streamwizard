@@ -101,7 +101,7 @@ function ShardTile({ shard, series, onOpen }: { shard: ShardView; series: Events
       </div>
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
         <dt className="text-muted-foreground">Helix</dt>
-        <dd className="truncate text-right">{shard.helix ? shard.helix.status.replace(/_/g, " ") : "—"}</dd>
+        <dd className="min-w-0 text-right break-words">{shard.helix ? shard.helix.status.replace(/_/g, " ") : "—"}</dd>
         {shard.stale ? (
           <>
             <dt className="text-muted-foreground">Last heartbeat</dt>
@@ -145,11 +145,17 @@ function ShardStrip({ shards, onOpen }: { shards: ShardView[]; onOpen: (id: stri
                       onClick={() => onOpen(s.id)}
                       aria-label={`Shard ${s.id}: ${s.label}`}
                       className={cn(
-                        "flex size-5 items-center justify-center rounded-sm border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        // A tap target on a phone, a dense strip from 768px up.
+                        "flex size-11 flex-col items-center justify-center gap-0.5 rounded-sm border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:size-5",
                         STATUS_SQUARE[s.status],
+                        s.status === "muted" ? "text-muted-foreground" : "text-white",
                       )}
                     >
-                      {s.status !== "ok" && <Icon className="size-3 text-white" aria-hidden="true" />}
+                      {s.status !== "ok" && <Icon className="size-3" aria-hidden="true" />}
+                      {/* There is no hover on a phone, so the big square says which shard it is. */}
+                      <span className="font-mono text-[11px] leading-none md:hidden" aria-hidden="true">
+                        {s.id}
+                      </span>
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>
@@ -164,7 +170,7 @@ function ShardStrip({ shards, onOpen }: { shards: ShardView[]; onOpen: (id: stri
           })}
         </ul>
         <p className="mt-3 text-xs text-muted-foreground">
-          Squares with an icon need attention. Click a square for details.
+          Squares with an icon need attention. Select a square for details.
         </p>
       </div>
       <div className="min-w-0">
@@ -211,6 +217,10 @@ function ShardHeatmap({ shards, byShard, onOpen }: { shards: ShardView[]; byShar
   const max = Math.max(1, ...all.map((p) => p.count ?? 0));
   if (!all.some((p) => p.count !== null)) return <ChartEmptyState height={160} message="No shard heartbeats in the last 6 hours" />;
   const rowHeight = shards.length > 40 ? 5 : shards.length > 16 ? 8 : 14;
+  // On a phone the row is the tap target for its shard: a small fleet gets
+  // rows a finger can hit, a large one keeps the dense picture.
+  const phoneRowHeight = shards.length <= 8 ? 44 : shards.length <= 16 ? 28 : rowHeight;
+  const rowClass = "h-(--row-phone) md:h-(--row)";
   const labelEvery = Math.max(1, Math.ceil(times.length / 6));
   const outageCells = all.filter((p) => p.count === null).length;
 
@@ -220,17 +230,24 @@ function ShardHeatmap({ shards, byShard, onOpen }: { shards: ShardView[]; byShar
         role="img"
         aria-label={`Heatmap of ${shards.length} shards over the last 6 hours; ${outageCells} five-minute buckets without a heartbeat`}
         className="grid gap-px"
-        style={{ gridTemplateColumns: `3rem repeat(${times.length}, minmax(0, 1fr))` }}
+        style={
+          {
+            gridTemplateColumns: `3rem repeat(${times.length}, minmax(0, 1fr))`,
+            "--row": `${rowHeight}px`,
+            "--row-phone": `${phoneRowHeight}px`,
+          } as React.CSSProperties
+        }
       >
         {shards.map((s) => {
           const byTime = new Map((byShard.get(s.id) ?? []).map((p) => [p.time, p.count]));
+          // A tap anywhere on the row opens the shard: the per-cell title only
+          // exists on hover, and the sheet's chart carries the same numbers. Clicks
+          // on the label button bubble here too, which keeps the keyboard path.
           return (
-            <div key={s.id} className="contents">
+            <div key={s.id} className="contents" onClick={() => onOpen(s.id)}>
               <button
                 type="button"
-                onClick={() => onOpen(s.id)}
-                className="truncate pr-1 text-right font-mono text-[10px] leading-none text-muted-foreground hover:text-foreground"
-                style={{ height: rowHeight }}
+                className={cn("truncate pr-1 text-right font-mono text-[10px] leading-none text-muted-foreground hover:text-foreground", rowClass)}
                 aria-label={`Shard ${s.id} details`}
               >
                 {shards.length <= 16 || Number(s.id) % (shards.length > 40 ? 10 : 5) === 0 ? s.id : ""}
@@ -241,10 +258,11 @@ function ShardHeatmap({ shards, byShard, onOpen }: { shards: ShardView[]; byShar
                   <div
                     key={t}
                     title={hydrated ? `Shard ${s.id} · ${formatTime(t)} · ${count === null ? "no heartbeat" : `${count} events`}` : undefined}
+                    className={cn("cursor-pointer", rowClass)}
                     style={
                       count === null
-                        ? { height: rowHeight, ...GAP_STYLE }
-                        : { height: rowHeight, backgroundColor: `color-mix(in oklab, var(--chart-1) ${Math.round(15 + 85 * (count / max))}%, transparent)` }
+                        ? GAP_STYLE
+                        : { backgroundColor: `color-mix(in oklab, var(--chart-1) ${Math.round(15 + 85 * (count / max))}%, transparent)` }
                     }
                   />
                 );
@@ -256,12 +274,14 @@ function ShardHeatmap({ shards, byShard, onOpen }: { shards: ShardView[]; byShar
       <div className="mt-1 grid text-[10px] text-muted-foreground" style={{ gridTemplateColumns: `3rem repeat(${times.length}, minmax(0, 1fr))` }}>
         <span />
         {times.map((t, i) => (
-          <span key={t} className="overflow-visible whitespace-nowrap">
+          // Every other label drops out on a phone, where six of them run into each other.
+          <span key={t} className={cn("overflow-visible whitespace-nowrap", (i / labelEvery) % 2 === 1 && "max-md:invisible")}>
             {hydrated && i % labelEvery === 0 ? formatTime(t) : ""}
           </span>
         ))}
       </div>
-      <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        <span>Select a row to open that shard.</span>
         <span className="inline-flex items-center gap-1.5">
           <span className="size-3 rounded-sm border" style={GAP_STYLE} aria-hidden="true" /> no heartbeat (down or not running)
         </span>
@@ -281,7 +301,7 @@ function DetailRow({ label, children }: { label: string; children: React.ReactNo
   return (
     <div className="flex items-baseline justify-between gap-4 border-b py-1.5 text-sm last:border-0">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 truncate text-right tabular-nums">{children}</dd>
+      <dd className="min-w-0 text-right break-all tabular-nums">{children}</dd>
     </div>
   );
 }
@@ -429,13 +449,13 @@ export function EventsubShardGrid({
           </Badge>
         </CardTitle>
         <ToggleGroup type="single" variant="outline" size="sm" value={view} onValueChange={changeView} aria-label="Shard view">
-          <ToggleGroupItem value="grid" aria-label={layout === "tiles" ? "Tiles" : "Strip"}>
+          <ToggleGroupItem value="grid" className="h-11 px-3 md:h-8 md:px-2">
             <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-            <span className="ml-1 hidden sm:inline">{layout === "tiles" ? "Tiles" : "Strip"}</span>
+            {layout === "tiles" ? "Tiles" : "Strip"}
           </ToggleGroupItem>
-          <ToggleGroupItem value="heatmap" aria-label="Heatmap">
+          <ToggleGroupItem value="heatmap" className="h-11 px-3 md:h-8 md:px-2">
             <Grid3x3 className="h-4 w-4" aria-hidden="true" />
-            <span className="ml-1 hidden sm:inline">Heatmap</span>
+            Heatmap
           </ToggleGroupItem>
         </ToggleGroup>
       </CardHeader>

@@ -10,6 +10,10 @@ import {
   queryObsNodeVram,
   queryObsNodeBandwidth,
 } from "@repo/metrics";
+import { History } from "lucide-react";
+import { CollapsibleCharts } from "@/components/admin/collapsible-charts";
+import { SectionHeading } from "@/components/widgets/section-heading";
+import { ChartGrid } from "@/components/widgets/stat-grid";
 import { PageCrumb } from "@/lib/crumbs";
 
 export const dynamic = "force-dynamic";
@@ -39,26 +43,21 @@ export default async function NodeDetailPage({ params }: { params: Promise<{ nod
   return (
     <div className="space-y-6">
       <PageCrumb label={node.name} href={`/obs/${nodeId}`} />
-      <div>
-        <h1 className="text-2xl font-bold">{node.name}</h1>
-        <p className="text-sm text-muted-foreground mt-1 font-mono">
-          {node.api_url ?? "no API URL set"} · tailscale {node.tailscale_ip ?? "—"}
-        </p>
-      </div>
       <NodeDetailClient node={node} />
 
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">History</h2>
-        <p className="text-sm text-muted-foreground">Range and refresh follow the header controls.</p>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <NodeMetricChart title="CPU %" initialData={cpuHist} apiPath="/api/metrics/obs" dataKey="nodeCpu" format="percent" filterNodeIds={filterIds} />
-          <NodeMetricChart title="RAM Used (MB)" initialData={ramHist} apiPath="/api/metrics/obs" dataKey="nodeRam" filterNodeIds={filterIds} />
-          <NodeMetricChart title="GPU Utilization %" initialData={gpuHist} apiPath="/api/metrics/obs" dataKey="nodeGpu" format="percent" filterNodeIds={filterIds} />
-          <NodeMetricChart title="Encoder (NVENC) %" initialData={encoderHist} apiPath="/api/metrics/obs" dataKey="nodeEncoder" format="percent" filterNodeIds={filterIds} />
-          <NodeMetricChart title="VRAM Used (MB)" initialData={vramHist} apiPath="/api/metrics/obs" dataKey="nodeVram" filterNodeIds={filterIds} />
-          <NodeMetricChart title="Bandwidth In" initialData={rxHist} apiPath="/api/metrics/obs" dataKey="nodeRx" format="bytesPerSec" filterNodeIds={filterIds} />
-          <NodeMetricChart title="Bandwidth Out" initialData={txHist} apiPath="/api/metrics/obs" dataKey="nodeTx" format="bytesPerSec" filterNodeIds={filterIds} />
-        </div>
+        <SectionHeading icon={History}>History</SectionHeading>
+        <CollapsibleCharts>
+          <ChartGrid>
+            <NodeMetricChart title="CPU %" initialData={cpuHist} apiPath="/api/metrics/obs" dataKey="nodeCpu" format="percent" filterNodeIds={filterIds} />
+            <NodeMetricChart title="RAM used (MB)" initialData={ramHist} apiPath="/api/metrics/obs" dataKey="nodeRam" filterNodeIds={filterIds} />
+            <NodeMetricChart title="GPU utilization %" initialData={gpuHist} apiPath="/api/metrics/obs" dataKey="nodeGpu" format="percent" filterNodeIds={filterIds} />
+            <NodeMetricChart title="Encoder (NVENC) %" initialData={encoderHist} apiPath="/api/metrics/obs" dataKey="nodeEncoder" format="percent" filterNodeIds={filterIds} />
+            <NodeMetricChart title="VRAM used (MB)" initialData={vramHist} apiPath="/api/metrics/obs" dataKey="nodeVram" filterNodeIds={filterIds} />
+            <NodeMetricChart title="Bandwidth in" initialData={rxHist} apiPath="/api/metrics/obs" dataKey="nodeRx" format="bytesPerSec" filterNodeIds={filterIds} />
+            <NodeMetricChart title="Bandwidth out" initialData={txHist} apiPath="/api/metrics/obs" dataKey="nodeTx" format="bytesPerSec" filterNodeIds={filterIds} />
+          </ChartGrid>
+        </CollapsibleCharts>
       </section>
     </div>
   );

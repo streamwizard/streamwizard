@@ -79,7 +79,7 @@ export function MonitorSidebar({ userEmail, notSetUp = [] }: MonitorSidebarProps
                         asChild
                         isActive={item === activeItem}
                         tooltip={note ? `${item.label} · ${note}` : item.label}
-                        className="h-10 md:h-8"
+                        className="h-11 md:h-8"
                       >
                         <Link href={item.href}>
                           <span className="relative flex shrink-0">

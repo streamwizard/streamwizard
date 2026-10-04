@@ -48,14 +48,13 @@ export function InstanceSwitcherTab({ userId, instanceId, apiUrl, instanceRunnin
   const enabled = initialConfig?.enabled ?? false;
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Badge variant={obsConnected ? "default" : "outline"}>{obsConnected ? "OBS connected" : "OBS offline"}</Badge>
-        {!obsConnected && (
-          <span>
-            Scene pickers need the instance&apos;s OBS running — saved scene names still show below.
-          </span>
-        )}
+    // min-w-0: the form comes from the shared package and must not widen the page on a phone.
+    <div className="min-w-0 space-y-4">
+      <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+        <Badge variant={obsConnected ? "default" : "outline"} className="shrink-0">
+          {obsConnected ? "OBS connected" : "OBS offline"}
+        </Badge>
+        {!obsConnected && <span>Scene pickers need the instance&apos;s OBS running. Saved scene names still show below.</span>}
       </div>
       <AutoSwitcherOverrideControls
         scenes={obs.scenes}

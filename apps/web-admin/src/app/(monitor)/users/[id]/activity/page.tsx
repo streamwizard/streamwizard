@@ -82,17 +82,17 @@ export default async function UserActivityPage({
       )}
 
       {total > 0 && (
-        <nav className="flex items-center justify-between text-sm" aria-label="Pagination">
+        <nav className="flex flex-wrap items-center justify-between gap-2 text-sm" aria-label="Pagination">
           <span className="text-muted-foreground tabular-nums">
             {total} event{total === 1 ? "" : "s"}
             {pages > 1 && ` · page ${page} of ${pages}`}
           </span>
           {pages > 1 && (
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" asChild={page > 1} disabled={page <= 1}>
+              <Button variant="outline" size="sm" className="h-11 md:h-8" asChild={page > 1} disabled={page <= 1}>
                 {page > 1 ? <Link href={href({ page: page - 1 })}>Newer</Link> : <span>Newer</span>}
               </Button>
-              <Button variant="outline" size="sm" asChild={page < pages} disabled={page >= pages}>
+              <Button variant="outline" size="sm" className="h-11 md:h-8" asChild={page < pages} disabled={page >= pages}>
                 {page < pages ? <Link href={href({ page: page + 1 })}>Older</Link> : <span>Older</span>}
               </Button>
             </div>

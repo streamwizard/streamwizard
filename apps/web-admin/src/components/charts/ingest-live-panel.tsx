@@ -1,20 +1,25 @@
 "use client";
 
 import { ArrowDownToLine, ArrowUpFromLine, Radio, Server } from "lucide-react";
-import { Badge, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import type { ActiveIngestSignal } from "@repo/metrics";
+import { ActiveSignalsTable } from "@/components/charts/active-signals-table";
+import { DataList, type DataColumn } from "@/components/widgets/data-list";
 import { StatCard } from "@/components/widgets/stat-card";
+import { StatGrid } from "@/components/widgets/stat-grid";
 import { cn, formatBandwidth } from "@/lib/utils";
 import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
 import { useIngestLive } from "@/lib/ingest-live-context";
 import type { LiveStatus } from "@/lib/ingest-live-ws";
+import type { IngestNodeLive } from "@/lib/monitor-ws";
 
-// Realtime slice of the ingest page: fleet/per-node NIC bandwidth and
+// The Live tab of the ingest page: fleet and per-node NIC bandwidth plus
 // per-stream transport health straight off the ws-server monitor socket
-// (shared via IngestLiveProvider — see lib/ingest-live-context.tsx).
-// Deliberately network-only — cpu/ram/disk stay on the InfluxDB panels below.
+// (shared via IngestLiveProvider, see lib/ingest-live-context.tsx).
+// Deliberately network-only: cpu/ram/disk stay on the Fleet tab.
 
 const STATUS_DISPLAY: Record<LiveStatus, { dot: string; label: string }> = {
-  connected: { dot: "bg-emerald-500", label: "Live" },
+  connected: { dot: "bg-emerald-500", label: "Connected" },
   connecting: { dot: "bg-amber-500", label: "Connecting" },
   disconnected: { dot: "bg-red-500", label: "Disconnected" },
 };
@@ -29,171 +34,100 @@ function WsStatusDot({ status }: { status: LiveStatus }) {
         )}
         <span className={cn("relative inline-flex h-2 w-2 rounded-full", dot)} />
       </span>
-      <span className="font-medium text-foreground/80">{label}</span>
+      <span>Monitor socket</span>
       <span aria-hidden="true">·</span>
-      <span>websocket</span>
+      <span className="font-medium text-foreground/80">{label}</span>
     </div>
   );
 }
 
-// Mirrors the loss colouring on the signals table so "something's hot" reads
-// the same everywhere: amber past 1% loss, red past 5%.
-function lossClass(pct: number | undefined): string {
-  if (pct === undefined) return "text-muted-foreground";
-  if (pct >= 5) return "text-red-600 dark:text-red-400";
-  if (pct >= 1) return "text-amber-600 dark:text-amber-400";
-  return "";
+const NUMBER = "text-right tabular-nums";
+
+interface Props {
+  /** Latest polled signals, so the streams list has rows before the socket speaks. */
+  initialSignals: ActiveIngestSignal[];
+  /** Registry names by node id. */
+  nodeNames: Record<string, string>;
 }
 
-function num(v: number | undefined, suffix = "", digits = 0): string {
-  return v === undefined ? "—" : `${v.toFixed(digits)}${suffix}`;
-}
-
-export function IngestLivePanel() {
+export function IngestLivePanel({ initialSignals, nodeNames }: Props) {
   const { unit } = useBandwidthUnit();
   const { configured, status, nodes, fleet, streams } = useIngestLive();
 
-  if (!configured) {
-    return (
-      <Card>
-        <CardContent className="py-6 text-sm text-muted-foreground">
-          Set <code className="font-mono text-xs">NEXT_PUBLIC_WS_SERVER_URL</code> and{" "}
-          <code className="font-mono text-xs">NEXT_PUBLIC_MONITOR_SECRET</code> to enable realtime bandwidth.
-        </CardContent>
-      </Card>
-    );
-  }
+  const nodeColumns: DataColumn<IngestNodeLive>[] = [
+    {
+      key: "node",
+      header: "Node",
+      mobile: "title",
+      cell: (n) => nodeNames[n.nodeId] ?? <span className="font-mono text-xs">{n.nodeId}</span>,
+    },
+    { key: "in", header: "In", className: NUMBER, headClassName: "text-right", cell: (n) => formatBandwidth(n.rxBps, unit) },
+    { key: "out", header: "Out", className: NUMBER, headClassName: "text-right", cell: (n) => formatBandwidth(n.txBps, unit) },
+    {
+      key: "tsIn",
+      header: "Tailscale in",
+      className: cn(NUMBER, "text-muted-foreground"),
+      headClassName: "text-right",
+      cell: (n) => formatBandwidth(n.tsRxBps, unit),
+    },
+    {
+      key: "tsOut",
+      header: "Tailscale out",
+      className: cn(NUMBER, "text-muted-foreground"),
+      headClassName: "text-right",
+      cell: (n) => formatBandwidth(n.tsTxBps, unit),
+    },
+  ];
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-muted-foreground">Realtime network</h3>
-        <WsStatusDot status={status} />
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard
-          title="Fleet In"
-          value={formatBandwidth(fleet.rxBps, unit)}
-          description="Host NIC receive, all nodes"
-          icon={ArrowDownToLine}
-        />
-        <StatCard
-          title="Fleet Out"
-          value={formatBandwidth(fleet.txBps, unit)}
-          description="Host NIC transmit, all nodes"
-          icon={ArrowUpFromLine}
-        />
-        <StatCard
-          title="Nodes Reporting"
-          value={fleet.nodeCount}
-          description="Pushed bandwidth in the last 30s"
-          icon={Server}
-          tone={fleet.nodeCount === 0 ? "warning" : "positive"}
-        />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
+      {configured ? (
+        <>
+          <WsStatusDot status={status} />
+          <StatGrid cols={4}>
+            <StatCard title="Fleet in" value={formatBandwidth(fleet.rxBps, unit)} description="Host NIC receive, all nodes" icon={ArrowDownToLine} />
+            <StatCard title="Fleet out" value={formatBandwidth(fleet.txBps, unit)} description="Host NIC transmit, all nodes" icon={ArrowUpFromLine} />
+            <StatCard
+              title="Nodes reporting"
+              value={fleet.nodeCount}
+              description="Pushed bandwidth in the last 30s"
+              icon={Server}
+              tone={fleet.nodeCount === 0 ? "warning" : "positive"}
+            />
+            <StatCard title="Streams" value={streams.length} description="On the socket in the last 10s" icon={Radio} />
+          </StatGrid>
+        </>
+      ) : (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Node Bandwidth</CardTitle>
+          <CardContent className="text-sm break-words text-muted-foreground">
+            Set <code className="font-mono text-xs break-all">NEXT_PUBLIC_WS_SERVER_URL</code> and{" "}
+            <code className="font-mono text-xs break-all">NEXT_PUBLIC_MONITOR_SECRET</code>{" "}
+            to turn on the monitor socket. Until then the streams below come from polled metrics only, and node bandwidth is on the
+            Fleet tab.
+          </CardContent>
+        </Card>
+      )}
+
+      <ActiveSignalsTable initialData={initialSignals} nodeNames={nodeNames} />
+
+      {configured && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3 px-4 pb-2 sm:px-6">
+            <CardTitle className="text-base">Node bandwidth</CardTitle>
             <span className="text-xs text-muted-foreground tabular-nums">
               {nodes.length} node{nodes.length === 1 ? "" : "s"}
             </span>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Node</TableHead>
-                    <TableHead className="text-right">In</TableHead>
-                    <TableHead className="text-right">Out</TableHead>
-                    <TableHead className="text-right">Tailscale In</TableHead>
-                    <TableHead className="text-right">Tailscale Out</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {nodes.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">
-                        No nodes reporting yet.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    nodes.map((n) => (
-                      <TableRow key={n.nodeId}>
-                        <TableCell className="font-mono text-xs">{n.nodeId}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatBandwidth(n.rxBps, unit)}</TableCell>
-                        <TableCell className="text-right tabular-nums">{formatBandwidth(n.txBps, unit)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{formatBandwidth(n.tsRxBps, unit)}</TableCell>
-                        <TableCell className="text-right tabular-nums text-muted-foreground">{formatBandwidth(n.tsTxBps, unit)}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+          {/* Phone cards run edge to edge; the table keeps the card's padding. */}
+          <CardContent className="px-0 sm:px-6">
+            {nodes.length === 0 ? (
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">No nodes reporting yet.</p>
+            ) : (
+              <DataList rows={nodes} rowKey={(n) => n.nodeId} columns={nodeColumns} />
+            )}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Live Streams</CardTitle>
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground tabular-nums">
-              <Radio className="h-3.5 w-3.5" aria-hidden="true" />
-              {streams.length} active
-            </span>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Stream</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Node</TableHead>
-                    <TableHead className="text-right">Bitrate</TableHead>
-                    <TableHead className="text-right">RTT</TableHead>
-                    <TableHead className="text-right">Loss</TableHead>
-                    <TableHead className="text-right">Buffer</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {streams.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="py-6 text-center text-sm text-muted-foreground">
-                        No active streams.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    streams.map(({ stats, roomId }) => (
-                      <TableRow key={stats.session_id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-mono text-[10px] uppercase">
-                              {stats.protocol}
-                            </Badge>
-                            <span className="text-xs">{stats.label ?? stats.session_id.slice(0, 8)}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{roomId}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{stats.node_id ?? "—"}</TableCell>
-                        <TableCell className="text-right tabular-nums">{num(stats.kbps, " kbps")}</TableCell>
-                        <TableCell className="text-right tabular-nums">{num(stats.rtt_ms, " ms", 1)}</TableCell>
-                        <TableCell className={cn("text-right tabular-nums", lossClass(stats.loss_pct))}>
-                          {num(stats.loss_pct, "%", 2)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">{num(stats.ms_rcv_buf, " ms")}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      )}
     </div>
   );
 }

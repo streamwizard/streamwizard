@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Clock, MessageSquareReply, Star, Ticket, TicketCheck } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { listTicketCategories } from "@repo/supabase/queries/ticket-config";
@@ -8,12 +7,14 @@ import {
   getTicketStatsByDay,
   getTicketStatsSummary,
 } from "@repo/supabase/queries/ticket-stats";
-import { Button, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { TicketStatsChart } from "@/components/discord/ticket-stats-chart";
+import { PageTabs } from "@/components/page-tabs";
+import { DataList } from "@/components/widgets/data-list";
 import { PageHeader } from "@/components/widgets/page-header";
 import { StatCard } from "@/components/widgets/stat-card";
+import { StatGrid } from "@/components/widgets/stat-grid";
 import { requireDiscordContext } from "@/lib/discord/api";
-import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -47,18 +48,20 @@ export default async function DiscordTicketStatsPage({ searchParams }: { searchP
   return (
     <div className="space-y-6">
       <PageHeader title="Ticket stats" description={`The last ${days} days: how many tickets, how fast, and how it felt.`}>
-        <div className="flex gap-1" role="group" aria-label="Range">
-          {RANGES.map((option) => (
-            <Button key={option} size="sm" variant={option === days ? "default" : "outline"} asChild>
-              <Link href={`/discord/tickets/stats?days=${option}`} aria-current={option === days ? "page" : undefined}>
-                {option}d
-              </Link>
-            </Button>
-          ))}
-        </div>
+        {/* Taller pills on a phone: the range is the one thing to tap on this page. */}
+        <PageTabs
+          label="Range"
+          variant="pills"
+          className="[&_a]:h-10 [&_a]:px-4 md:[&_a]:h-8 md:[&_a]:px-3"
+          tabs={RANGES.map((option) => ({
+            href: `/discord/tickets/stats?days=${option}`,
+            label: `${option} days`,
+            active: option === days,
+          }))}
+        />
       </PageHeader>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <StatGrid cols={5}>
         <StatCard title="Opened" value={summary.opened} icon={Ticket} />
         <StatCard title="Closed" value={summary.closed} icon={TicketCheck} />
         <StatCard
@@ -80,44 +83,55 @@ export default async function DiscordTicketStatsPage({ searchParams }: { searchP
           icon={Star}
           tone={summary.avgRating === null ? "default" : summary.avgRating >= 4 ? "positive" : summary.avgRating >= 3 ? "warning" : "danger"}
         />
-      </div>
+      </StatGrid>
 
       <TicketStatsChart days={byDay} />
 
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 sm:px-6">
           <CardTitle className="text-base">By category</CardTitle>
         </CardHeader>
-        <CardContent className="overflow-x-auto p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Opened</TableHead>
-                <TableHead className="text-right">Closed</TableHead>
-                <TableHead className="text-right">Rating</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {byCategory.map((row) => (
-                <TableRow key={row.category}>
-                  <TableCell className="font-medium">{categoryNames.get(row.category) ?? row.category}</TableCell>
-                  <TableCell className="text-right tabular-nums">{row.opened}</TableCell>
-                  <TableCell className="text-right tabular-nums">{row.closed}</TableCell>
-                  <TableCell className={cn("text-right tabular-nums", row.avgRating === null && "text-muted-foreground")}>
-                    {rating(row.avgRating, row.ratingCount)}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {byCategory.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="p-8 text-center text-muted-foreground">
-                    No tickets in this range.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <CardContent className="px-0 sm:px-6">
+          {byCategory.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground sm:px-0">No tickets in this range.</p>
+          ) : (
+            <DataList
+              rows={byCategory}
+              rowKey={(row) => row.category}
+              columns={[
+                {
+                  key: "category",
+                  header: "Category",
+                  mobile: "title",
+                  className: "font-medium",
+                  cell: (row) => categoryNames.get(row.category) ?? row.category,
+                },
+                {
+                  key: "opened",
+                  header: "Opened",
+                  className: "text-right tabular-nums",
+                  headClassName: "text-right",
+                  cell: (row) => row.opened,
+                },
+                {
+                  key: "closed",
+                  header: "Closed",
+                  className: "text-right tabular-nums",
+                  headClassName: "text-right",
+                  cell: (row) => row.closed,
+                },
+                {
+                  key: "rating",
+                  header: "Rating",
+                  className: "text-right tabular-nums",
+                  headClassName: "text-right",
+                  cell: (row) => (
+                    <span className={row.avgRating === null ? "text-muted-foreground" : undefined}>{rating(row.avgRating, row.ratingCount)}</span>
+                  ),
+                },
+              ]}
+            />
+          )}
         </CardContent>
       </Card>
     </div>

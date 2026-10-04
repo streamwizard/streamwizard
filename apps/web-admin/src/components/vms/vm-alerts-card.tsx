@@ -58,14 +58,17 @@ export function VmAlertsCard({
         {rules.map((rule) => {
           const id = `vm-alert-${rule.id}`;
           return (
-            <div key={rule.id} className="flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0">
-              <div>
+            <div key={rule.id} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+              <div className="min-w-0">
                 <Label htmlFor={id} className="font-medium">
                   {rule.title}
                 </Label>
                 <p className="text-xs text-muted-foreground">{rule.description}</p>
               </div>
-              <Switch id={id} checked={enabled.has(rule.id)} onCheckedChange={(on) => toggle(rule.id, on)} disabled={pending} />
+              {/* The switch is 18px tall; the label around it is the 44px tap target. */}
+              <label htmlFor={id} className="-my-2 flex h-11 w-12 shrink-0 cursor-pointer items-center justify-end">
+                <Switch id={id} checked={enabled.has(rule.id)} onCheckedChange={(on) => toggle(rule.id, on)} disabled={pending} />
+              </label>
             </div>
           );
         })}
