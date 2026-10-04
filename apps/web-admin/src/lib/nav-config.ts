@@ -30,6 +30,11 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+export type HeaderControl = "range" | "refresh" | "bandwidth";
+
+const RANGE_REFRESH: HeaderControl[] = ["range", "refresh"];
+const ALL_CONTROLS: HeaderControl[] = ["bandwidth", "range", "refresh"];
+
 export interface NavItem {
   href: string;
   label: string;
@@ -37,6 +42,9 @@ export interface NavItem {
   /** Parent pages (e.g. /ws) match exactly; child pages match by prefix so
    * dynamic segments like /ws/topology/[roomId] keep their item active. */
   exact?: boolean;
+  /** Header controls this page (and its children) actually reads. Pages
+   * without any get a clean header. */
+  controls?: HeaderControl[];
 }
 
 export interface NavGroup {
@@ -52,14 +60,14 @@ export const navGroups: NavGroup[] = [
   {
     label: "Traffic",
     items: [
-      { href: "/http", label: "HTTP / API", icon: Globe },
-      { href: "/eventsub", label: "EventSub", icon: Zap },
+      { href: "/http", label: "HTTP / API", icon: Globe, controls: RANGE_REFRESH },
+      { href: "/eventsub", label: "EventSub", icon: Zap, controls: RANGE_REFRESH },
     ],
   },
   {
     label: "Realtime",
     items: [
-      { href: "/ws", label: "WS Metrics", icon: Radio, exact: true },
+      { href: "/ws", label: "WS Metrics", icon: Radio, exact: true, controls: RANGE_REFRESH },
       { href: "/ws/live", label: "WS Live", icon: MonitorDot },
       { href: "/ws/rooms", label: "Rooms", icon: LayoutList },
       { href: "/ws/topology", label: "Topology", icon: Network },
@@ -69,16 +77,16 @@ export const navGroups: NavGroup[] = [
     label: "Data",
     items: [
       { href: "/database", label: "Database", icon: Database },
-      { href: "/supabase", label: "Supabase", icon: Cloud },
+      { href: "/supabase", label: "Supabase", icon: Cloud, controls: RANGE_REFRESH },
     ],
   },
   {
     label: "Infrastructure",
     items: [
-      { href: "/obs", label: "OBS Nodes", icon: Cpu },
-      { href: "/ingest", label: "Ingest Servers", icon: Server },
-      { href: "/vms", label: "VMs", icon: Server },
-      { href: "/backups", label: "Backups", icon: DatabaseBackup },
+      { href: "/obs", label: "OBS Nodes", icon: Cpu, controls: ALL_CONTROLS },
+      { href: "/ingest", label: "Ingest Servers", icon: Server, controls: ALL_CONTROLS },
+      { href: "/vms", label: "VMs", icon: Server, controls: ALL_CONTROLS },
+      { href: "/backups", label: "Backups", icon: DatabaseBackup, controls: RANGE_REFRESH },
     ],
   },
   {

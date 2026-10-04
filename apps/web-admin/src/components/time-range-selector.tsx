@@ -16,7 +16,7 @@ export function TimeRangeSelector() {
           if (found) setRange(found);
         }}
       >
-        <SelectTrigger className="h-7 w-[88px] text-xs px-2">
+        <SelectTrigger className="h-9 w-[88px] px-2 text-xs md:h-7">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

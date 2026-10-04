@@ -22,6 +22,8 @@ export default async function MonitorLayout({ children }: { children: React.Reac
   const initialRange = cookieStore.get(DASHBOARD_COOKIE.timeRange)?.value;
   const initialInterval = cookieStore.get(DASHBOARD_COOKIE.refreshInterval)?.value;
   const initialUnit = cookieStore.get(DASHBOARD_COOKIE.bandwidthUnit)?.value;
+  // Written by the sidebar itself; collapsed stays collapsed across visits.
+  const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
   // Sidebar "Not set up" badges for Discord features missing a channel.
   const setupGaps = await getDiscordSetupGaps();
@@ -30,11 +32,14 @@ export default async function MonitorLayout({ children }: { children: React.Reac
     <TimeRangeProvider initialRange={initialRange}>
       <RefreshIntervalProvider initialInterval={initialInterval}>
         <BandwidthUnitProvider initialUnit={initialUnit}>
-          <SidebarProvider>
+          <SidebarProvider defaultOpen={sidebarOpen}>
             <MonitorSidebar userEmail={session.email} notSetUp={[...setupGaps]} />
-            <SidebarInset>
+            {/* SidebarInset is the <main>. min-w-0 keeps wide content from
+                pushing the page sideways; overflow-x-clip (not auto) so sticky
+                bars inside a page still stick to the viewport. */}
+            <SidebarInset className="min-w-0">
               <MonitorHeader envLabel={homeEnv()} />
-              <main className="flex-1 overflow-auto p-6">{children}</main>
+              <div className="min-w-0 flex-1 overflow-x-clip p-4 md:p-6">{children}</div>
             </SidebarInset>
           </SidebarProvider>
         </BandwidthUnitProvider>

@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Activity } from "lucide-react";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarRail } from "@repo/ui";
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar } from "@repo/ui";
 import { NavUser } from "@/components/nav-user";
 import { navGroups, isNavItemActive } from "@/lib/nav-config";
 
@@ -16,6 +17,13 @@ interface MonitorSidebarProps {
 export function MonitorSidebar({ userEmail, notSetUp = [] }: MonitorSidebarProps) {
   const pathname = usePathname();
   const gaps = new Set(notSetUp);
+  const { setOpenMobile } = useSidebar();
+
+  // The phone drawer covers the page, so it has to get out of the way once a
+  // link was followed.
+  useEffect(() => {
+    setOpenMobile(false);
+  }, [pathname, setOpenMobile]);
 
   return (
     <Sidebar collapsible="icon">
