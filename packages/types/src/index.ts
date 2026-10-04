@@ -5,6 +5,7 @@
  */
 
 export * from './eventsub';
+export * from './eventsub-subscriptions';
 export * from './helix';
 export * from './irl';
 export * from './overlay-ws';

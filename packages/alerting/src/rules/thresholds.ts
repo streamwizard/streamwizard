@@ -53,6 +53,14 @@ export const EVENTSUB_SILENCE_MIN = 120;
 /** How long the bot may sit in its reconnect loop before it's an incident.
  * Short blips stay silent; the Discord log channel still gets a row for each. */
 export const EVENTSUB_DISCONNECTED_MIN = 2;
+/** This many shards of one process down together fold into one alert. */
+export const EVENTSUB_DISCONNECTED_COLLAPSE_SHARDS = 3;
+/** The bot writes a heartbeat per shard every 30s; six missed ones is a dead process. */
+export const EVENTSUB_HEARTBEAT_STALE_MIN = 3;
+/** Share of a process's shards that may be down before it's degraded. */
+export const EVENTSUB_SHARDS_DEGRADED_PCT = 25;
+/** Below this many shards, eventsub.disconnected already says it all. */
+export const EVENTSUB_SHARDS_DEGRADED_MIN_SHARDS = 2;
 export const INGEST_STALL_MIN_SESSION_AGE_MS = 2 * 60 * 1000;
 // Proxmox backups: the defaults live in @repo/backups so the /backups page
 // and these rules share one source (docs/backup-monitoring-plan.md).

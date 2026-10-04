@@ -82,6 +82,34 @@ describe("log channel formatters", () => {
     expect(fieldValue(embed, "Session")).toBe("`AQoQ1`");
   });
 
+  test("eventsub rows the bot merged name every shard and say how many", () => {
+    const lost = formatPlatformEvent(
+      event("eventsub.connection_lost", {
+        service: "streamwizard-bot",
+        shard_ids: ["0", "1", "2"],
+        reason: "keepalive timeout",
+        close_code: null,
+        keepalive_silent_ms: 18_000,
+      }),
+    ).toJSON();
+    expect(lost.description).toContain("lost its EventSub connection to Twitch on 3 shards.");
+    expect(fieldValue(lost, "Shards (3)")).toBe("`0`, `1`, `2`");
+    expect(fieldValue(lost, "Shard")).toBeUndefined();
+
+    const back = formatPlatformEvent(
+      event("eventsub.reconnected", {
+        service: "streamwizard-bot",
+        shard_ids: ["0", "1", "2"],
+        session_id: null,
+        downtime_ms: 9500,
+        attempts: 3,
+      }),
+    ).toJSON();
+    expect(back.description).toContain("is back on EventSub on 3 shards after 10s");
+    expect(fieldValue(back, "Down for (longest)")).toBe("10s");
+    expect(fieldValue(back, "Session")).toBeUndefined();
+  });
+
   test("new user: avatar as author icon and thumbnail, Twitch link, Discord mention, no email", () => {
     const embed = formatPlatformEvent(event("user.created", { ...identity, email: "x@example.com" })).toJSON();
     expect(embed.title).toBe("👋 New user");

@@ -24,6 +24,14 @@ export function describeBindError(error: unknown): { status: number | null; text
     return { status, text: status !== null ? `${status} ${text}` : text };
 }
 
+/** Twitch accepted the request but refused this shard (listed in errors[] of a 202). */
+export class ShardRefusedError extends Error {
+    constructor(readonly shardId: string, readonly code: string, message: string) {
+        super(`shard ${shardId} refused: ${code ? `${code} ` : ''}${message}`);
+        this.name = 'ShardRefusedError';
+    }
+}
+
 /** 4xx means the request itself is wrong (conduit gone, bad token): retrying
  * the same call within seconds can't fix it. 408/429 are the exceptions. */
 function isPermanentBindFailure(status: number | null): boolean {
@@ -34,12 +42,14 @@ export type {
     ConnectionState,
     EventSubLifecycleEvent,
     EventSubReceiverOptions,
+    EventSubReceiverStats,
     HandlerRegistry,
 } from "./types";
 import type {
     ConnectionState,
     EventSubLifecycleEvent,
     EventSubReceiverOptions,
+    EventSubReceiverStats,
     HandlerRegistry,
 } from "./types";
 
@@ -68,6 +78,7 @@ export class TwitchEventSubReceiver {
     // Configuration
     private readonly wsUrl: string;
     private readonly conduitId: string;
+    private readonly shardId: string;
     private readonly twitchApi: TwitchApi;
     private readonly baseReconnectDelay: number;
     private readonly maxReconnectDelay: number;
@@ -87,12 +98,24 @@ export class TwitchEventSubReceiver {
     private disconnectedSince: number | null = null;
     private disposed: boolean = false;
 
+    // Exposed through getStats() for heartbeats and the admin dashboard
+    private sessionStartedAt: number | null = null;
+    private readonly counters: EventSubReceiverStats['counters'] = {
+        messages: 0,
+        notifications: 0,
+        keepalives: 0,
+        connectionsLost: 0,
+        migrations: 0,
+        revocations: 0,
+    };
+
     // Event handler
     private readonly eventHandler: HandlerRegistry;
 
     constructor(eventHandler: HandlerRegistry, options: EventSubReceiverOptions) {
         this.eventHandler = eventHandler;
         this.conduitId = options.conduitId;
+        this.shardId = options.shardId ?? '0';
         this.wsUrl = options.wsUrl ?? 'wss://eventsub.wss.twitch.tv/ws';
         this.twitchApi = options.twitchApi ?? new TwitchApi();
         this.baseReconnectDelay = options.baseReconnectDelay ?? 1000;
@@ -119,6 +142,23 @@ export class TwitchEventSubReceiver {
     }
 
     /**
+     * Snapshot of state and cumulative counters. Cheap; safe to call often.
+     */
+    getStats(): EventSubReceiverStats {
+        return {
+            shardId: this.shardId,
+            state: this.connectionState,
+            sessionId: this.connectionState === 'connected' ? this.sessionId : null,
+            sessionStartedAt: this.sessionStartedAt,
+            lastMessageAt: this.lastMessageTime,
+            keepaliveIntervalSeconds: this.keepaliveIntervalSeconds,
+            reconnectAttempts: this.reconnectAttempts,
+            conduitMissing: this.conduitMissing,
+            counters: { ...this.counters },
+        };
+    }
+
+    /**
      * Connect to the Twitch EventSub WebSocket
      */
     async connect(): Promise<void> {
@@ -141,6 +181,7 @@ export class TwitchEventSubReceiver {
         console.log('🛑 Disconnecting from Twitch EventSub...');
         this.disposed = true;
         this.connectionState = 'disconnected';
+        this.sessionStartedAt = null;
         this.clearAllTimers();
         this.abandonPendingSocket();
         this.abandonActiveSocket();
@@ -195,6 +236,7 @@ export class TwitchEventSubReceiver {
             // Any inbound frame proves the connection is alive — notifications
             // reset Twitch's keepalive cadence, not just keepalive messages.
             this.lastMessageTime = Date.now();
+            this.counters.messages++;
             this.armKeepaliveDeadline();
             try {
                 const message: WebSocketMessage = JSON.parse(event.data as string);
@@ -329,8 +371,10 @@ export class TwitchEventSubReceiver {
         }
 
         // Emit connection_lost once per outage, not once per failed retry
+        this.sessionStartedAt = null;
         if (this.disconnectedSince === null) {
             this.disconnectedSince = Date.now();
+            this.counters.connectionsLost++;
             this.emit({ type: 'connection_lost', code, reason });
         }
 
@@ -373,9 +417,11 @@ export class TwitchEventSubReceiver {
 
             case 'session_keepalive':
                 // lastMessageTime/keepalive deadline already handled in onmessage
+                this.counters.keepalives++;
                 break;
 
             case 'notification':
+                this.counters.notifications++;
                 const notificationMessage = {
                     metadata,
                     payload,
@@ -394,6 +440,7 @@ export class TwitchEventSubReceiver {
                 break;
 
             case 'revocation':
+                this.counters.revocations++;
                 const subscription = (payload as { subscription?: { status?: string; type?: string } }).subscription;
                 const revokedBecause = revocationReason(subscription?.status);
                 console.warn(`⚠️ Subscription revoked (${subscription?.type}): ${revokedBecause}`);
@@ -447,6 +494,7 @@ export class TwitchEventSubReceiver {
         }
 
         this.connectionState = 'connected';
+        this.sessionStartedAt = Date.now();
         const attempt = this.reconnectAttempts;
         const downtimeMs = this.disconnectedSince !== null ? Date.now() - this.disconnectedSince : null;
         this.reconnectAttempts = 0;
@@ -462,11 +510,15 @@ export class TwitchEventSubReceiver {
         for (let attempt = 0; ; attempt++) {
             if (gen !== this.activeGen || this.disposed) return 'stale';
             try {
-                console.log('Updating conduit shards with session ID:', sessionId);
-                await this.twitchApi.eventsub.updateShardTransport(this.conduitId, '0', {
+                console.log(`Binding conduit shard ${this.shardId} to session ${sessionId}`);
+                const { errors } = await this.twitchApi.eventsub.updateShardTransport(this.conduitId, this.shardId, {
                     method: 'websocket',
                     session_id: sessionId,
                 });
+                // Twitch answers 202 even when it refused our shard and lists
+                // the refusal in errors[], so a clean status isn't a bind.
+                const refused = errors?.find((e) => e.id === this.shardId);
+                if (refused) throw new ShardRefusedError(this.shardId, refused.code, refused.message);
                 if (this.lastBindFailureReportAt !== null || this.conduitMissing) {
                     console.log('✅ Conduit shard bound again');
                 }
@@ -581,6 +633,7 @@ export class TwitchEventSubReceiver {
         }
         this.pendingWs = null;
         this.pendingGen = -1;
+        this.counters.migrations++;
 
         // Drop the old socket silently — the new one is the live path now
         this.abandonActiveSocket();
@@ -621,6 +674,8 @@ export class TwitchEventSubReceiver {
     }
 
 }
+
+export { ConduitShardManager, parseShardIds, type ConduitShardManagerOptions } from "./shard-manager";
 
 // Re-export types from @repo/types for convenience
 export type {
