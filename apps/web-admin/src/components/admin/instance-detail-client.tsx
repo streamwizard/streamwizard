@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
 import type { ObsNode, ObsNodeInstanceDetail } from "@repo/supabase/queries/obs-nodes";
@@ -8,8 +9,11 @@ import { useNodeMetricsStream, type ConnectionStatus } from "@/hooks/use-node-me
 import { toggleInstanceAdminAction } from "@/actions/nodes";
 import { formatMb } from "@/lib/format";
 import { ContainerMetricsCharts } from "@/components/admin/metrics-charts";
+import { RemoveInstanceDialog } from "@/components/admin/remove-instance-dialog";
 
-function statusLabel(status: ConnectionStatus): { text: string; variant: "default" | "secondary" | "outline" | "destructive" } {
+type BadgeVariant = "default" | "secondary" | "outline" | "destructive";
+
+function statusLabel(status: ConnectionStatus): { text: string; variant: BadgeVariant } {
   switch (status) {
     case "live":
       return { text: "Live", variant: "default" };
@@ -22,33 +26,46 @@ function statusLabel(status: ConnectionStatus): { text: string; variant: "defaul
   }
 }
 
-function instanceStatusVariant(status: string): "default" | "secondary" | "outline" | "destructive" {
+function instanceStatusVariant(status: string): BadgeVariant {
   if (status === "running") return "default";
   if (status === "creating") return "secondary";
   if (status === "error") return "destructive";
   return "outline";
 }
 
-export function InstanceDetailClient({ node, instance }: { node: ObsNode; instance: ObsNodeInstanceDetail }) {
-  const { status, latest, buffer } = useNodeMetricsStream(node.id, node.status, node.api_url);
-  const [currentStatus, setCurrentStatus] = useState(instance.status);
-  const [isPending, setIsPending] = useState(false);
+interface InstanceActionsProps {
+  nodeId: string;
+  apiUrl: string | null;
+  instance: { id: string; container_name: string; status: string };
+}
 
-  const containerMetrics = latest?.containers[instance.id];
-  const isRunning = currentStatus === "running";
-  const canToggle = currentStatus === "running" || currentStatus === "stopped" || currentStatus === "error";
+/** The buttons in the instance page header: Start or Stop, VNC and Remove.
+ *  They sit above the tabs so they stay in reach on every one of them. */
+export function InstanceActions({ nodeId, apiUrl, instance }: InstanceActionsProps) {
+  const router = useRouter();
+  const [isPending, setIsPending] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  // What the node answered, shown until the refreshed server render catches up.
+  const [answered, setAnswered] = useState<{ from: string; to: string } | null>(null);
+  const status = answered?.from === instance.status ? answered.to : instance.status;
+
+  const isRunning = status === "running";
+  const canToggle = status === "running" || status === "stopped" || status === "error";
 
   const handleToggle = async () => {
-    if (!node.api_url) {
+    if (!apiUrl) {
       toast.error("This node has no API URL set.");
       return;
     }
     setIsPending(true);
     try {
-      const { data: updated, error } = await toggleInstanceAdminAction(node.id, instance.id, isRunning ? "stop" : "start");
+      const { data: updated, error } = await toggleInstanceAdminAction(nodeId, instance.id, isRunning ? "stop" : "start");
       if (!updated) throw new Error(error ?? "Request failed.");
-      setCurrentStatus(updated.status);
+      setAnswered({ from: instance.status, to: updated.status });
       toast.success(`Container ${isRunning ? "stopped" : "started"}.`);
+      // The status lives in the server render (details, Auto switcher tab), so re-read it.
+      router.refresh();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : `Couldn't reach "${instance.container_name}"'s node API.`);
     } finally {
@@ -57,15 +74,65 @@ export function InstanceDetailClient({ node, instance }: { node: ObsNode; instan
   };
 
   const openVnc = () => {
-    if (!node.api_url) return;
+    if (!apiUrl) return;
     const params = new URLSearchParams({
-      nodeId: node.id,
+      nodeId,
       instanceId: instance.id,
       name: instance.container_name,
     });
     window.open(`/vnc?${params.toString()}`, `vnc-${instance.id}`, "width=1280,height=800");
   };
 
+  return (
+    <>
+      <Button size="sm" variant="outline" className="h-11 min-w-20 md:h-8" disabled={!canToggle || isPending || !apiUrl} onClick={handleToggle}>
+        {isPending ? "Working…" : isRunning ? "Stop" : "Start"}
+      </Button>
+      {/* VNC needs a desktop: the button is not shown below 768px. */}
+      <Button size="sm" variant="outline" className="hidden md:inline-flex" disabled={!isRunning || !apiUrl} onClick={openVnc}>
+        VNC
+      </Button>
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-11 text-destructive hover:text-destructive md:h-8"
+        onClick={() => {
+          if (!apiUrl) {
+            toast.error("This node has no API URL set.");
+            return;
+          }
+          setRemoving(true);
+        }}
+      >
+        Remove
+      </Button>
+      <RemoveInstanceDialog
+        nodeId={nodeId}
+        instance={removing ? instance : null}
+        onClose={() => setRemoving(false)}
+        onRemoved={() => {
+          // The instance is gone, so is this page: back to its node.
+          setRemoving(false);
+          router.push(`/obs/${nodeId}`);
+        }}
+      />
+    </>
+  );
+}
+
+function Detail({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="font-medium break-words">{children}</dd>
+    </div>
+  );
+}
+
+export function InstanceDetailClient({ node, instance }: { node: ObsNode; instance: ObsNodeInstanceDetail }) {
+  const { status, latest, buffer } = useNodeMetricsStream(node.id, node.status, node.api_url);
+
+  const containerMetrics = latest?.containers[instance.id];
   const { text, variant } = statusLabel(status);
 
   return (
@@ -75,72 +142,38 @@ export function InstanceDetailClient({ node, instance }: { node: ObsNode; instan
           <CardTitle>Instance details</CardTitle>
           <CardDescription>Configuration and ownership for this container.</CardDescription>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <div>
-            <p className="text-xs text-muted-foreground">Status</p>
-            <Badge variant={instanceStatusVariant(currentStatus)}>{currentStatus}</Badge>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Resolution</p>
-            <p className="font-medium">{instance.resolution}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">VRAM allocated</p>
-            <p className="font-medium">{instance.vram_allocated_mb} MB</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Created</p>
-            <p className="font-medium">{new Date(instance.created_at).toLocaleString("en-US")}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Owner</p>
-            <p className="font-medium">{instance.owner_name ?? instance.owner_email ?? instance.user_id}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Container ID</p>
-            <p className="font-mono text-xs">{instance.container_id ?? "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">RAM limit</p>
-            <p className="font-medium">{formatMb(instance.memory_mb)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">CPU quota</p>
-            <p className="font-medium">{instance.cpu_quota}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Shared memory</p>
-            <p className="font-medium">{instance.shm_size}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Config template</p>
-            <p className="font-medium">{instance.config_template ?? "—"}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Storage</p>
-            <p className="font-medium">
+        <CardContent>
+          <dl className="grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
+            <Detail label="Status">
+              <Badge variant={instanceStatusVariant(instance.status)}>{instance.status}</Badge>
+            </Detail>
+            <Detail label="Resolution">{instance.resolution}</Detail>
+            <Detail label="VRAM allocated">{instance.vram_allocated_mb} MB</Detail>
+            <Detail label="Created">
+              {/* Formatted in the viewer's time zone, which the server render cannot know. */}
+              <span suppressHydrationWarning>{new Date(instance.created_at).toLocaleString("en-US")}</span>
+            </Detail>
+            <Detail label="Owner">{instance.owner_name ?? instance.owner_email ?? instance.user_id}</Detail>
+            <Detail label="Container ID">
+              <span className="font-mono text-xs font-normal break-all">{instance.container_id ?? "—"}</span>
+            </Detail>
+            <Detail label="RAM limit">{formatMb(instance.memory_mb)}</Detail>
+            <Detail label="CPU quota">{instance.cpu_quota}</Detail>
+            <Detail label="Shared memory">{instance.shm_size}</Detail>
+            <Detail label="Config template">{instance.config_template ?? "—"}</Detail>
+            <Detail label="Storage">
               {instance.used_storage_bytes != null ? formatMb(Math.round(instance.used_storage_bytes / (1024 * 1024))) : "—"}
               {" / "}
               {formatMb(instance.storage_quota_mb)}
-            </p>
-          </div>
+            </Detail>
+          </dl>
         </CardContent>
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CardTitle>Live metrics</CardTitle>
-            <Badge variant={variant}>{text}</Badge>
-          </div>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" disabled={!isRunning || !node.api_url} onClick={openVnc}>
-              VNC
-            </Button>
-            <Button size="sm" variant="outline" disabled={!canToggle || isPending || !node.api_url} onClick={handleToggle}>
-              {isPending ? "Working…" : isRunning ? "Stop" : "Start"}
-            </Button>
-          </div>
+        <CardHeader className="flex flex-row flex-wrap items-center gap-2">
+          <CardTitle>Live metrics</CardTitle>
+          <Badge variant={variant}>{text}</Badge>
         </CardHeader>
         <CardContent className="space-y-4">
           {node.status !== "linked" ? (
@@ -150,25 +183,25 @@ export function InstanceDetailClient({ node, instance }: { node: ObsNode; instan
               {status === "connecting"
                 ? "Connecting to the node's metrics stream…"
                 : status === "live"
-                  ? "This instance isn't reporting metrics yet — it may not be running."
+                  ? "This instance isn't reporting metrics yet. It may not be running."
                   : "Couldn't reach this node's metrics stream."}
             </p>
           ) : (
             <>
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div className="rounded-lg border p-3">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3 sm:gap-4">
+                <div className="flex items-baseline justify-between gap-3 rounded-lg border p-3 sm:block">
                   <p className="text-xs text-muted-foreground">CPU</p>
-                  <p className="font-medium">{containerMetrics.cpu_pct.toFixed(1)}%</p>
+                  <p className="font-medium tabular-nums">{containerMetrics.cpu_pct.toFixed(1)}%</p>
                 </div>
-                <div className="rounded-lg border p-3">
+                <div className="flex items-baseline justify-between gap-3 rounded-lg border p-3 sm:block">
                   <p className="text-xs text-muted-foreground">RAM</p>
-                  <p className="font-medium">
+                  <p className="font-medium tabular-nums">
                     {containerMetrics.ram_used_mb} / {containerMetrics.ram_limit_mb} MB
                   </p>
                 </div>
-                <div className="rounded-lg border p-3">
+                <div className="flex items-baseline justify-between gap-3 rounded-lg border p-3 sm:block">
                   <p className="text-xs text-muted-foreground">VRAM</p>
-                  <p className="font-medium">{containerMetrics.vram_used_mb} MB</p>
+                  <p className="font-medium tabular-nums">{containerMetrics.vram_used_mb} MB</p>
                 </div>
               </div>
               <ContainerMetricsCharts samples={buffer} instanceId={instance.id} vramMaxMb={instance.vram_allocated_mb} />

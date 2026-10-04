@@ -2,9 +2,9 @@ import Link from "next/link";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { type UserActivitySource, listUserActivity } from "@repo/supabase/queries/admin-users";
 import { Button, Card, CardContent, Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui";
+import { PageTabs } from "@/components/page-tabs";
 import { ActivityList } from "@/components/users/activity-list";
 import { loadAdminUser } from "@/lib/users";
-import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -52,21 +52,15 @@ export default async function UserActivityPage({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <nav aria-label="Activity source" className="inline-flex items-center gap-0.5 rounded-lg border p-[3px]">
-          {(Object.keys(SOURCES) as UserActivitySource[]).map((key) => (
-            <Link
-              key={key}
-              href={href({ source: key })}
-              aria-current={key === source ? "page" : undefined}
-              className={cn(
-                "inline-flex h-7 items-center rounded-md px-3 text-sm font-medium transition-colors",
-                key === source ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {SOURCES[key].label}
-            </Link>
-          ))}
-        </nav>
+        <PageTabs
+          label="Activity source"
+          variant="pills"
+          tabs={(Object.keys(SOURCES) as UserActivitySource[]).map((key) => ({
+            href: href({ source: key }),
+            label: SOURCES[key].label,
+            active: key === source,
+          }))}
+        />
         <p className="text-sm text-muted-foreground">{SOURCES[source].description}</p>
       </div>
 
@@ -88,17 +82,17 @@ export default async function UserActivityPage({
       )}
 
       {total > 0 && (
-        <nav className="flex items-center justify-between text-sm" aria-label="Pagination">
+        <nav className="flex flex-wrap items-center justify-between gap-2 text-sm" aria-label="Pagination">
           <span className="text-muted-foreground tabular-nums">
             {total} event{total === 1 ? "" : "s"}
             {pages > 1 && ` · page ${page} of ${pages}`}
           </span>
           {pages > 1 && (
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" asChild={page > 1} disabled={page <= 1}>
+              <Button variant="outline" size="sm" className="h-11 md:h-8" asChild={page > 1} disabled={page <= 1}>
                 {page > 1 ? <Link href={href({ page: page - 1 })}>Newer</Link> : <span>Newer</span>}
               </Button>
-              <Button variant="outline" size="sm" asChild={page < pages} disabled={page >= pages}>
+              <Button variant="outline" size="sm" className="h-11 md:h-8" asChild={page < pages} disabled={page >= pages}>
                 {page < pages ? <Link href={href({ page: page + 1 })}>Older</Link> : <span>Older</span>}
               </Button>
             </div>

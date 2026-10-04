@@ -1,52 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { toast } from "sonner";
-import { Copy, Pencil, Trash2 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Input,
-  Label,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui";
+import { Pencil, Trash2 } from "lucide-react";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from "@repo/ui";
 import type { ObsNode, ObsNodeCapacity } from "@repo/supabase/queries/obs-nodes";
 import type { NodeHealthStatus } from "@/lib/node-health";
 import { createNodeAction, deleteNodeAction, updateNodeAction } from "@/actions/nodes";
+import { DeleteNodeDialog, InstallCommandCard } from "@/components/admin/node-manage-kit";
+import { DataList, type DataColumn } from "@/components/widgets/data-list";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/widgets/responsive-dialog";
 import { obsNodeCapacitySchema } from "@/schemas/obs-node";
 import { formatMb } from "@/lib/format";
-import {
-  copyToClipboard,
-  nodeHealthLabel,
-  nodeHealthVariant,
-  nodeStatusVariant,
-} from "@/lib/node-ui";
+import { nodeHealthLabel, nodeHealthVariant, nodeStatusVariant } from "@/lib/node-ui";
 
 const EMPTY_FORM: ObsNodeCapacity = {
   name: "",
@@ -83,22 +57,25 @@ function NodeForm({
   const nameError = !nameResult.success && form.name.length > 0 ? nameResult.error.issues[0]?.message : null;
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="col-span-2 space-y-2">
+    <div className="grid gap-4">
+      <div className="space-y-2">
         <Label htmlFor="node-name">Name (this becomes the node&apos;s hostname)</Label>
         <Input
           id="node-name"
           placeholder="gpu-box-1"
+          autoCapitalize="none"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
         />
         {nameError && <p className="text-xs text-destructive">{nameError}</p>}
       </div>
-      <div className="col-span-2 space-y-2">
+      <div className="space-y-2">
         <Label htmlFor="node-api-url">API URL (optional)</Label>
         <Input
           id="node-api-url"
           placeholder="http://100.64.0.10:3000"
+          inputMode="url"
+          autoCapitalize="none"
           value={form.api_url ?? ""}
           onChange={(e) => setForm({ ...form, api_url: e.target.value })}
         />
@@ -107,11 +84,12 @@ function NodeForm({
           to override that, e.g. a tunnel hostname for browsers outside the tailnet.
         </p>
       </div>
-      <div className="col-span-2 space-y-2">
+      <div className="space-y-2">
         <Label htmlFor="node-max-instances">Max instances</Label>
         <Input
           id="node-max-instances"
           type="number"
+          inputMode="numeric"
           value={form.max_instances}
           onChange={(e) => setForm({ ...form, max_instances: Number(e.target.value) })}
         />
@@ -139,7 +117,6 @@ export function NodesSection({
   const [editForm, setEditForm] = useState<ObsNodeCapacity>(EMPTY_FORM);
 
   const [deletingNode, setDeletingNode] = useState<ObsNode | null>(null);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   if (error) {
     return <p className="text-destructive text-sm">{error}</p>;
@@ -190,171 +167,150 @@ export function NodesSection({
     }
     setNodes((prev) => prev.filter((n) => n.id !== id));
     setDeletingNode(null);
-    setDeleteConfirmText("");
     toast.success("Node deleted.");
   };
 
+  const columns: DataColumn<ObsNode>[] = [
+    {
+      key: "name",
+      header: "Name",
+      mobile: "title",
+      className: "max-w-64 whitespace-normal",
+      cell: (node) => (
+        <>
+          <span className="font-medium">{node.name}</span>
+          <span className="block font-mono text-xs font-normal break-all text-muted-foreground">{node.api_url ?? "no API URL"}</span>
+        </>
+      ),
+    },
+    {
+      key: "status",
+      header: "Link status",
+      mobile: "badge",
+      cell: (node) => <Badge variant={nodeStatusVariant(node.status)}>{node.status}</Badge>,
+    },
+    {
+      // Probed once when the page loaded. The Fleet tab has the refreshing view.
+      key: "health",
+      header: "Health at load",
+      cell: (node) => {
+        const health = healthByNodeId[node.id] ?? "unreachable";
+        return <Badge variant={nodeHealthVariant(health)}>{nodeHealthLabel(health)}</Badge>;
+      },
+    },
+    { key: "max", header: "Max instances", className: "tabular-nums", cell: (node) => node.max_instances },
+    {
+      key: "hardware",
+      header: "Hardware",
+      className: "hidden min-w-44 whitespace-normal @5xl:table-cell",
+      headClassName: "hidden @5xl:table-cell",
+      cell: (node) => <HardwareSummary node={node} />,
+    },
+    {
+      key: "created",
+      header: "Created",
+      mobile: "hidden",
+      className: "hidden text-muted-foreground @7xl:table-cell",
+      headClassName: "hidden @7xl:table-cell",
+      // Formatted in the viewer's time zone, which the server render cannot know.
+      cell: (node) => <span suppressHydrationWarning>{new Date(node.created_at).toLocaleDateString("en-US")}</span>,
+    },
+  ];
+
   return (
-    <>
+    <div className="space-y-4">
       {installCommand && (
-        <Card className="border-amber-500/50">
-          <CardHeader>
-            <CardTitle>Install command — copy this now</CardTitle>
-            <CardDescription>
-              This is the only time the claim token will be shown. Run this on the node to link it.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-start gap-2">
-              <pre className="flex-1 overflow-x-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap break-all">
-                {installCommand}
-              </pre>
-              <Button size="icon" variant="ghost" onClick={() => copyToClipboard(installCommand, "Install command")}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button variant="outline" className="mt-3" onClick={() => setInstallCommand(null)}>
-              I&apos;ve saved it
-            </Button>
-          </CardContent>
-        </Card>
+        <InstallCommandCard
+          command={installCommand}
+          description="This is the only time the claim token will be shown. Run this on the node to link it."
+          onDismiss={() => setInstallCommand(null)}
+        />
       )}
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 px-4 sm:px-6">
+          <div className="min-w-0">
             <CardTitle>Nodes</CardTitle>
             <CardDescription>GPU hosts running obs-instance-manager.</CardDescription>
           </div>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setCreateForm(EMPTY_FORM)}>Add node</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add node</DialogTitle>
-                <DialogDescription>
+          <ResponsiveDialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <ResponsiveDialogTrigger asChild>
+              <Button className="h-11 md:h-9" onClick={() => setCreateForm(EMPTY_FORM)}>
+                Add node
+              </Button>
+            </ResponsiveDialogTrigger>
+            <ResponsiveDialogContent>
+              <ResponsiveDialogHeader>
+                <ResponsiveDialogTitle>Add node</ResponsiveDialogTitle>
+                <ResponsiveDialogDescription>
                   Name it and cap how many instances it can run. Hardware details (GPU, VRAM, RAM,
                   CPU, storage, hostname) and the API URL are self-reported by the node when you run
                   the one-time install command you&apos;ll get after saving.
-                </DialogDescription>
-              </DialogHeader>
+                </ResponsiveDialogDescription>
+              </ResponsiveDialogHeader>
               <NodeForm form={createForm} setForm={setCreateForm} />
-              <DialogFooter>
+              <ResponsiveDialogFooter>
                 <Button
                   onClick={handleCreate}
                   disabled={isPending || !obsNodeCapacitySchema.safeParse(createForm).success}
                 >
                   {isPending ? "Creating…" : "Create node"}
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </ResponsiveDialogFooter>
+            </ResponsiveDialogContent>
+          </ResponsiveDialog>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>API URL</TableHead>
-                <TableHead>Link status</TableHead>
-                <TableHead>Health</TableHead>
-                <TableHead>Max instances</TableHead>
-                <TableHead>Hardware</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {nodes.map((node) => {
-                const health = healthByNodeId[node.id] ?? "unreachable";
-                return (
-                  <TableRow key={node.id}>
-                    <TableCell className="font-medium">
-                      <Link href={`/obs/${node.id}`} className="hover:underline">
-                        {node.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{node.api_url ?? "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant={nodeStatusVariant(node.status)}>{node.status}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={nodeHealthVariant(health)}>{nodeHealthLabel(health)}</Badge>
-                    </TableCell>
-                    <TableCell>{node.max_instances}</TableCell>
-                    <TableCell>
-                      <HardwareSummary node={node} />
-                    </TableCell>
-                    <TableCell>{new Date(node.created_at).toLocaleString("en-US")}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="icon" variant="ghost" onClick={() => openEdit(node)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <AlertDialog
-                        open={deletingNode?.id === node.id}
-                        onOpenChange={(open) => {
-                          if (!open) {
-                            setDeletingNode(null);
-                            setDeleteConfirmText("");
-                          }
-                        }}
-                      >
-                        <Button size="icon" variant="ghost" onClick={() => setDeletingNode(node)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete this node?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              &quot;{node.name}&quot; will be removed. Any instances already running on it
-                              aren&apos;t cleaned up by this action — this can&apos;t be undone. Type{" "}
-                              <span className="font-mono font-semibold">{node.name}</span> to confirm.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <Input
-                            autoFocus
-                            value={deleteConfirmText}
-                            onChange={(e) => setDeleteConfirmText(e.target.value)}
-                            placeholder={node.name}
-                          />
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Keep it</AlertDialogCancel>
-                            <AlertDialogAction
-                              disabled={deleteConfirmText !== node.name}
-                              onClick={() => handleDelete(node.id)}
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+        {/* Phone cards run edge to edge; the table keeps the card's padding. */}
+        <CardContent className="px-0 sm:px-6">
+          {nodes.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">No nodes yet. Add one to get its install command.</p>
+          ) : (
+            <DataList
+              rows={nodes}
+              rowKey={(node) => node.id}
+              rowHref={(node) => `/obs/${node.id}`}
+              columns={columns}
+              actions={(node) => (
+                <div className="flex flex-wrap items-center gap-2 @2xl:flex-nowrap @2xl:justify-end">
+                  <Button size="sm" variant="outline" className="h-11 md:h-8" onClick={() => openEdit(node)}>
+                    <Pencil aria-hidden="true" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-11 text-destructive hover:text-destructive md:h-8"
+                    onClick={() => setDeletingNode(node)}
+                  >
+                    <Trash2 aria-hidden="true" />
+                    Delete
+                  </Button>
+                </div>
+              )}
+            />
+          )}
         </CardContent>
       </Card>
 
-      <Dialog open={!!editingNode} onOpenChange={(open) => !open && setEditingNode(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit node</DialogTitle>
-            <DialogDescription>Update this node&apos;s capacity settings.</DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog open={!!editingNode} onOpenChange={(open) => !open && setEditingNode(null)}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Edit node</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>Update this node&apos;s capacity settings.</ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
           <NodeForm form={editForm} setForm={setEditForm} />
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button
               onClick={handleEdit}
               disabled={isPending || !obsNodeCapacitySchema.safeParse(editForm).success}
             >
               {isPending ? "Saving…" : "Save changes"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+
+      <DeleteNodeDialog node={deletingNode} leftRunning="instances" onClose={() => setDeletingNode(null)} onDelete={handleDelete} />
+    </div>
   );
 }

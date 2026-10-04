@@ -1,6 +1,8 @@
 "use client";
 
 import { useId, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { formatTicketNumber } from "@repo/supabase/queries/tickets";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,6 +62,7 @@ export function TicketActions({ ticketNumber, claimed, claiming, linked }: Ticke
         <Button
           size="sm"
           variant="outline"
+          className="h-11 md:h-8"
           onClick={claimed ? release : claim}
           disabled={busy || !linked}
           title={linked ? undefined : unlinkedHint}
@@ -69,7 +72,13 @@ export function TicketActions({ ticketNumber, claimed, claiming, linked }: Ticke
       )}
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button size="sm" variant="destructive" disabled={busy || !linked} title={linked ? undefined : unlinkedHint}>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-11 md:h-8"
+            disabled={busy || !linked}
+            title={linked ? undefined : unlinkedHint}
+          >
             {closing ? "Closing…" : "Close ticket"}
           </Button>
         </AlertDialogTrigger>
@@ -93,11 +102,42 @@ export function TicketActions({ ticketNumber, claimed, claiming, linked }: Ticke
             <p className="text-xs text-muted-foreground">Optional. Saved on the ticket and shown in the ticket log.</p>
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep it open</AlertDialogCancel>
-            <AlertDialogAction onClick={close}>Close ticket</AlertDialogAction>
+            <AlertDialogCancel className="h-11 md:h-9">Keep it open</AlertDialogCancel>
+            <AlertDialogAction className="h-11 md:h-9" onClick={close}>
+              Close ticket
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </>
+  );
+}
+
+/**
+ * Claim straight from the ticket list. The list is rendered on the server and
+ * follows the table over realtime; the refresh here covers a feed that is down.
+ */
+export function TicketClaimButton({ ticketNumber }: { ticketNumber: number }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+
+  const claim = () =>
+    start(async () => {
+      toastResult(await claimTicketFromDashboard(ticketNumber), "Ticket claimed. It's yours now.");
+      // Also after a refusal: "someone already claimed it" means the row on screen is out of date.
+      router.refresh();
+    });
+
+  return (
+    <Button
+      size="sm"
+      variant="outline"
+      className="h-11 md:h-8"
+      aria-label={`Claim ticket ${formatTicketNumber(ticketNumber)}`}
+      disabled={pending}
+      onClick={claim}
+    >
+      {pending ? "Claiming…" : "Claim"}
+    </Button>
   );
 }

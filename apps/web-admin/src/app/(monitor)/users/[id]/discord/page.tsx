@@ -1,29 +1,14 @@
+import { ExternalLink } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getUserDiscordState } from "@repo/supabase/queries/admin-users";
 import { Card, CardContent, CardHeader, CardTitle, Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui";
+import { Row, When } from "@/components/users/detail";
 import { UnlinkDiscordButton } from "@/components/users/user-actions";
 import { getDiscordContext } from "@/lib/discord/api";
-import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
+import { formatDateTimeShort } from "@/lib/discord/tickets";
 import { loadAdminUser, userDisplayName } from "@/lib/users";
 
 export const dynamic = "force-dynamic";
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-1.5 text-sm">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 text-right">{children}</dd>
-    </div>
-  );
-}
-
-function When({ iso }: { iso: string }) {
-  return (
-    <time dateTime={iso} title={formatDateTime(iso)}>
-      {formatRelativeTime(iso)}
-    </time>
-  );
-}
 
 export default async function UserDiscordPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -44,9 +29,9 @@ export default async function UserDiscordPage({ params }: { params: Promise<{ id
   const state = await getUserDiscordState(supabaseAdmin, user.id, user.discord.userId, guildId);
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
           <CardTitle className="text-base">Linked account</CardTitle>
           <UnlinkDiscordButton userId={user.id} name={userDisplayName(user)} />
         </CardHeader>
@@ -90,23 +75,26 @@ export default async function UserDiscordPage({ params }: { params: Promise<{ id
           {state.livePosts.length ? (
             <ul className="divide-y">
               {state.livePosts.map((post) => (
-                <li key={post.id} className="flex items-baseline justify-between gap-4 py-2 text-sm">
+                <li key={post.id} className="flex items-center justify-between gap-4 py-2 text-sm">
                   <span className="min-w-0">
                     <span className="block truncate font-medium">{post.title ?? "Untitled stream"}</span>
                     {post.game_name && <span className="block truncate text-xs text-muted-foreground">{post.game_name}</span>}
                   </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
+                  {/* The exact start time, in view: these rows are few and a hover title never shows on a phone. */}
+                  <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                     {guildId ? (
                       <a
                         href={`https://discord.com/channels/${guildId}/${post.channel_id}/${post.message_id}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="hover:underline"
+                        aria-label={`Open the post from ${formatDateTimeShort(post.started_at)} in Discord`}
+                        className="inline-flex min-h-10 items-center gap-1 underline underline-offset-4 md:min-h-0"
                       >
-                        <When iso={post.started_at} />
+                        <time dateTime={post.started_at}>{formatDateTimeShort(post.started_at)}</time>
+                        <ExternalLink className="size-3" aria-hidden />
                       </a>
                     ) : (
-                      <When iso={post.started_at} />
+                      <time dateTime={post.started_at}>{formatDateTimeShort(post.started_at)}</time>
                     )}
                   </span>
                 </li>

@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Plus, X } from "lucide-react";
+import type { TicketMessageKey } from "@repo/discord-message";
 import {
   WORKING_DAYS,
   WORKING_RANGES_PER_DAY,
@@ -60,7 +61,8 @@ function HoursSelect({
       value={value === null ? "" : String(value)}
       onChange={(event) => onChange(event.target.value === "" ? null : Number.parseInt(event.target.value, 10))}
       disabled={disabled}
-      className="w-40"
+      // scroll-mt: the Messages tab links to these by id; land with the label clear of the sticky header.
+      className="h-11 w-40 scroll-mt-40 text-base md:h-9 md:text-sm"
     >
       {off && <NativeSelectOption value="">Off</NativeSelectOption>}
       {HOUR_OPTIONS.map((option) => (
@@ -82,6 +84,11 @@ const CLOSE_MODES: { value: TicketAutomationInput["closeMode"]; label: string; h
   { value: "either", label: "Staff or the opener", hint: "The opener can close their own ticket straight away." },
 ];
 
+// On a phone the two times share the row and shrink to fit, and the clock icon goes: with it "09:00 AM" is cut
+// off, and a tap opens the picker anyway. From 640px they keep a fixed width.
+const TIME_INPUT =
+  "h-11 min-w-0 flex-1 px-2 sm:w-32 sm:flex-none sm:px-3 md:h-9 [&::-webkit-calendar-picker-indicator]:hidden sm:[&::-webkit-calendar-picker-indicator]:block";
+
 const DAY_LABELS: Record<WorkingDay, string> = {
   mon: "Monday",
   tue: "Tuesday",
@@ -91,6 +98,13 @@ const DAY_LABELS: Record<WorkingDay, string> = {
   sat: "Saturday",
   sun: "Sunday",
 };
+
+/** Each text the bot sends for these settings is edited on the Messages tab; this links to its card there. */
+const messageLink = (key: TicketMessageKey, label: string) => (
+  <Link href={`/discord/tickets/settings/messages#${key}`} className="underline">
+    {label}
+  </Link>
+);
 
 interface TicketAutomationFormProps {
   initial: TicketAutomationInput;
@@ -118,18 +132,21 @@ export function TicketAutomationForm({ initial }: TicketAutomationFormProps) {
           <CardTitle className="text-base">Quiet tickets</CardTitle>
           <CardDescription>
             First the reminder, then the close. A ticket is only ever closed after its reminder went unanswered, and any
-            reply resets both timers. The texts are under{" "}
-            <Link href="/discord/tickets/settings/messages" className="underline">
-              Messages
-            </Link>
-            .
+            reply resets both timers.
           </CardDescription>
         </CardHeader>
         <CardContent className="divide-y">
           <SettingRow
             htmlFor="stale-after"
             label="Remind after"
-            hint="How long a ticket can go without anyone writing before the opener gets a nudge in the channel."
+            hint={
+              <>
+                How long a ticket can go without anyone writing before the opener gets a nudge in the channel.{" "}
+                {values.autoCloseAfterHours === null
+                  ? messageLink("staleWarning", "Edit the reminder")
+                  : messageLink("closingSoon", "Edit the reminder")}
+              </>
+            }
           >
             <HoursSelect id="stale-after" off value={values.staleAfterHours} onChange={(v) => set("staleAfterHours", v)} disabled={saving} />
           </SettingRow>
@@ -137,9 +154,14 @@ export function TicketAutomationForm({ initial }: TicketAutomationFormProps) {
             htmlFor="auto-close-after"
             label="Close after the reminder"
             hint={
-              values.staleAfterHours === null
-                ? "Needs a reminder first: pick a time above."
-                : "How long the reminder can go unanswered before the ticket closes on its own. The opener still gets the closing DM."
+              values.staleAfterHours === null ? (
+                "Needs a reminder first: pick a time above."
+              ) : (
+                <>
+                  How long the reminder can go unanswered before the ticket closes on its own. The opener still gets the
+                  closing DM. {messageLink("autoClosed", "Edit the close reason")}
+                </>
+              )
             }
           >
             <HoursSelect
@@ -153,7 +175,7 @@ export function TicketAutomationForm({ initial }: TicketAutomationFormProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="close-mode" className="scroll-mt-20">
         <CardHeader>
           <CardTitle className="text-base">Who closes a ticket</CardTitle>
           <CardDescription>Staff can always close a ticket. This is about the person who opened it.</CardDescription>
@@ -161,7 +183,7 @@ export function TicketAutomationForm({ initial }: TicketAutomationFormProps) {
         <CardContent className="space-y-4">
           <RadioGroup value={values.closeMode} onValueChange={(v) => set("closeMode", v as TicketAutomationInput["closeMode"])} disabled={saving}>
             {CLOSE_MODES.map((mode) => (
-              <div key={mode.value} className="flex items-start gap-3">
+              <div key={mode.value} className="flex items-start gap-3 py-1">
                 <RadioGroupItem id={`close-mode-${mode.value}`} value={mode.value} className="mt-0.5" />
                 <Label htmlFor={`close-mode-${mode.value}`} className="grid gap-0.5 font-normal">
                   <span className="font-medium">{mode.label}</span>
@@ -175,7 +197,12 @@ export function TicketAutomationForm({ initial }: TicketAutomationFormProps) {
               <SettingRow
                 htmlFor="request-hours"
                 label="A request waits for"
-                hint="Unanswered after this, the request lapses and the ticket simply stays open."
+                hint={
+                  <>
+                    Unanswered after this, the request lapses and the ticket simply stays open.{" "}
+                    {messageLink("closeRequest", "Edit the request message")}
+                  </>
+                }
               >
                 <HoursSelect id="request-hours" value={values.closeRequestHours} onChange={(v) => set("closeRequestHours", v ?? 24)} disabled={saving} />
               </SettingRow>
@@ -184,12 +211,12 @@ export function TicketAutomationForm({ initial }: TicketAutomationFormProps) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="working-hours" className="scroll-mt-20">
         <CardHeader>
           <CardTitle className="text-base">Working hours</CardTitle>
           <CardDescription>
             When staff are around. A ticket opened outside these hours gets a line saying when to expect someone. Leave every day
-            empty to never send it. Up to {WORKING_RANGES_PER_DAY} ranges per day.
+            empty to never send it. Up to {WORKING_RANGES_PER_DAY} ranges per day. {messageLink("workingHoursNotice", "Edit that line")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -204,7 +231,7 @@ export function TicketAutomationForm({ initial }: TicketAutomationFormProps) {
         </CardContent>
       </Card>
 
-      <SaveBar dirty={dirty && issues.length === 0} pending={saving} onSave={save} onReset={() => setValues(initial)} />
+      <SaveBar sticky dirty={dirty && issues.length === 0} pending={saving} onSave={save} onReset={() => setValues(initial)} />
     </div>
   );
 }
@@ -235,7 +262,7 @@ function WorkingHoursEditor({
           value={value.timezone}
           onChange={(event) => onChange({ ...value, timezone: event.target.value })}
           disabled={disabled}
-          className="w-full sm:w-64"
+          className="h-11 w-full text-base sm:w-64 md:h-9 md:text-sm"
         >
           {zones.map((zone) => (
             <NativeSelectOption key={zone} value={zone}>
@@ -249,18 +276,19 @@ function WorkingHoursEditor({
           const ranges = value.days[day];
           return (
             <div key={day} className="grid gap-2 py-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start">
-              <span className="pt-1.5 text-sm font-medium">{DAY_LABELS[day]}</span>
-              <div className="space-y-2">
-                {ranges.length === 0 && <p className="pt-1.5 text-xs text-muted-foreground">Away all day</p>}
+              <span className="text-sm font-medium sm:pt-2">{DAY_LABELS[day]}</span>
+              {/* min-w-0: without it the time inputs' own width sets the column and pushes the row out of the card. */}
+              <div className="min-w-0 space-y-2">
+                {ranges.length === 0 && <p className="text-xs text-muted-foreground sm:pt-2">Away all day</p>}
                 {ranges.map((range, index) => (
-                  <div key={index} className="flex items-center gap-2">
+                  <div key={index} className="flex items-center gap-1.5 sm:gap-2">
                     <Input
                       type="time"
                       aria-label={`${DAY_LABELS[day]} range ${index + 1} start`}
                       value={range.start}
                       onChange={(event) => setDay(day, ranges.map((r, i) => (i === index ? { ...r, start: event.target.value } : r)))}
                       disabled={disabled}
-                      className="w-32"
+                      className={TIME_INPUT}
                     />
                     <span className="text-sm text-muted-foreground">to</span>
                     <Input
@@ -269,12 +297,13 @@ function WorkingHoursEditor({
                       value={range.end}
                       onChange={(event) => setDay(day, ranges.map((r, i) => (i === index ? { ...r, end: event.target.value } : r)))}
                       disabled={disabled}
-                      className="w-32"
+                      className={TIME_INPUT}
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
+                      className="size-11 md:size-9"
                       aria-label={`Remove ${DAY_LABELS[day]} range ${index + 1}`}
                       disabled={disabled}
                       onClick={() => setDay(day, ranges.filter((_, i) => i !== index))}
@@ -288,6 +317,7 @@ function WorkingHoursEditor({
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="h-11 md:h-8"
                     disabled={disabled}
                     onClick={() => setDay(day, [...ranges, ranges.length === 0 ? { start: "09:00", end: "17:00" } : { start: "13:00", end: "17:00" }])}
                   >

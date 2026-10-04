@@ -11,8 +11,8 @@ export function OtherVms({ rows, showHost = true, net }: { rows: VmTableRow[]; s
   return (
     <Card className="py-0">
       <details className="group">
-        <summary className="flex cursor-pointer list-none items-center gap-2 px-6 py-4 [&::-webkit-details-marker]:hidden">
-          <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden="true" />
+        <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-2 gap-y-0.5 px-4 py-4 sm:px-6 [&::-webkit-details-marker]:hidden">
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden="true" />
           <span className="font-medium">Other VMs</span>
           <span className="text-sm text-muted-foreground">
             {rows.length} without the {STREAMWIZARD_VM_TAG} tag · no alerts

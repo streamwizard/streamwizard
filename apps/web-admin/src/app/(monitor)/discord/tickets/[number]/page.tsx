@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getDiscordUserIdForUser, getLinkedStreamWizardAccount } from "@repo/supabase/queries/discord";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getTicketByNumber } from "@repo/supabase/queries/tickets";
+import { formatTicketNumber, getTicketByNumber } from "@repo/supabase/queries/tickets";
 import {
   isActiveCategory,
   listTicketAnswers,
@@ -13,6 +13,7 @@ import { TicketPage } from "@/components/discord/ticket-page/ticket-page";
 import { assertAdmin } from "@/lib/assert-admin";
 import { requireDiscordContext } from "@/lib/discord/api";
 import { buildTicketSnapshot } from "@/lib/discord/ticket-snapshot";
+import { PageCrumb } from "@/lib/crumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -39,22 +40,25 @@ export default async function DiscordTicketPage({ params }: { params: Promise<{ 
   ]);
 
   return (
-    <TicketPage
-      snapshot={snapshot}
-      config={{
-        guildId,
-        categories: categories.map((c) => ({
-          slug: c.slug,
-          name: c.name,
-          active: isActiveCategory(c),
-          claimingEnabled: c.claiming_enabled !== false,
-        })),
-        products: products.map((p) => ({ slug: p.slug, label: p.label })),
-        answers: answers.map((a) => ({ id: a.id, label: a.label, value: a.value })),
-        tags: tags.map((tag) => ({ name: tag.name, content: tag.content })),
-        linkedAccount,
-        linked: !!adminDiscordId,
-      }}
-    />
+    <>
+      <PageCrumb label={formatTicketNumber(ticket.ticket_number)} href={`/discord/tickets/${ticket.ticket_number}`} />
+      <TicketPage
+        snapshot={snapshot}
+        config={{
+          guildId,
+          categories: categories.map((c) => ({
+            slug: c.slug,
+            name: c.name,
+            active: isActiveCategory(c),
+            claimingEnabled: c.claiming_enabled !== false,
+          })),
+          products: products.map((p) => ({ slug: p.slug, label: p.label })),
+          answers: answers.map((a) => ({ id: a.id, label: a.label, value: a.value })),
+          tags: tags.map((tag) => ({ name: tag.name, content: tag.content })),
+          linkedAccount,
+          linked: !!adminDiscordId,
+        }}
+      />
+    </>
   );
 }

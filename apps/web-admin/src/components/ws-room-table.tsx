@@ -1,13 +1,20 @@
 "use client";
 
-import { Circle, Radio, Users } from "lucide-react";
-import { Badge, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { Radio, Users } from "lucide-react";
+import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { DataList } from "@/components/widgets/data-list";
+import { PageHeader } from "@/components/widgets/page-header";
 import { StatCard } from "@/components/widgets/stat-card";
+import { StatGrid } from "@/components/widgets/stat-grid";
+import { StatusIndicator } from "@/components/widgets/status-indicator";
+import { useWideScreen } from "@/hooks/use-wide-screen";
 import { cn } from "@/lib/utils";
 import { useMonitor } from "@/components/ws-monitor-provider";
 
 export function WsRoomTable() {
   const { snapshot, status, events } = useMonitor();
+  // The room graph is a desktop tool: rows only link to it where it can open.
+  const wide = useWideScreen();
 
   const rooms = snapshot?.rooms ?? [];
   const totalConnections = snapshot?.totalConnections ?? 0;
@@ -25,96 +32,104 @@ export function WsRoomTable() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">WS Rooms</h1>
-        <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2">
-          <Circle
-            className={cn(
-              "h-2 w-2 fill-current",
-              status === "connected" ? "text-green-500" : status === "connecting" ? "text-yellow-500" : "text-red-500"
-            )}
-          />
-          {status === "connected" ? "Live — snapshots every 5s" : status === "connecting" ? "Connecting…" : "Disconnected"}
-        </p>
-      </div>
+      <PageHeader title="Rooms" description="Every room on ws-server right now, from the monitor socket.">
+        <StatusIndicator
+          status={status === "connected" ? "ok" : status === "connecting" ? "warn" : "crit"}
+          label={status === "connected" ? "Live, snapshots every 5s" : status === "connecting" ? "Connecting…" : "Disconnected"}
+          className="text-muted-foreground"
+        />
+      </PageHeader>
 
-      <div className="grid grid-cols-4 gap-4">
-        <StatCard title="Active Rooms" value={rooms.length} />
-        <StatCard title="Total Connections" value={totalConnections} />
-        <StatCard title="Publishers Online" value={publishersOnline} />
-        <StatCard title="Total Subscribers" value={totalSubscribers} />
-      </div>
+      <StatGrid cols={4}>
+        <StatCard title="Active rooms" value={rooms.length} />
+        <StatCard title="Connections" value={totalConnections} />
+        <StatCard title="Publishers online" value={publishersOnline} />
+        <StatCard title="Total subscribers" value={totalSubscribers} />
+      </StatGrid>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">Active Rooms</CardTitle>
+        <CardHeader className="px-4 sm:px-6">
+          <CardTitle className="text-sm font-medium">Active rooms</CardTitle>
+          {rooms.length > 0 && <p className="hidden text-xs text-muted-foreground md:block">Select a room to open its graph.</p>}
         </CardHeader>
-        <CardContent>
+        {/* Phone cards run edge to edge; the table keeps the card's padding. */}
+        <CardContent className="px-0 sm:px-6">
           {rooms.length === 0 ? (
-            <div className="flex items-center justify-center h-32 text-sm text-muted-foreground">
+            <div className="flex h-32 items-center justify-center px-4 text-sm text-muted-foreground">
               {status !== "connected" ? "Waiting for connection…" : "No active rooms"}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Room ID</TableHead>
-                  <TableHead>Publisher</TableHead>
-                  <TableHead>Subscribers</TableHead>
-                  <TableHead>Stream</TableHead>
-                  <TableHead>Last Event</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rooms.map((room) => {
-                  const recent = recentByRoom.get(room.roomId);
-                  return (
-                    <TableRow key={room.roomId}>
-                      <TableCell className="font-mono text-xs">{room.roomId}</TableCell>
-                      <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px]",
-                            room.hasPublisher
-                              ? "bg-green-600/20 text-green-400 border-green-600/30"
-                              : "bg-muted text-muted-foreground"
-                          )}
-                        >
-                          <Radio className="h-3 w-3 mr-1" />
-                          {room.hasPublisher ? "Online" : "Offline"}
+            <DataList
+              rows={rooms}
+              rowKey={(room) => room.roomId}
+              rowHref={wide ? (room) => `/ws/topology/${encodeURIComponent(room.roomId)}` : undefined}
+              columns={[
+                {
+                  key: "room",
+                  header: "Room ID",
+                  mobile: "title",
+                  cell: (room) => <span className="font-mono text-xs break-all">{room.roomId}</span>,
+                },
+                {
+                  key: "publisher",
+                  header: "Publisher",
+                  mobile: "badge",
+                  cell: (room) => (
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "font-normal",
+                        room.hasPublisher ? "border-green-600/30 bg-green-600/20 text-green-700 dark:text-green-400" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      <Radio className="mr-1 h-3 w-3" aria-hidden />
+                      {room.hasPublisher ? "Online" : "Offline"}
+                    </Badge>
+                  ),
+                },
+                {
+                  key: "subscribers",
+                  header: "Subscribers",
+                  cell: (room) => (
+                    <span className="inline-flex items-center gap-1 text-sm tabular-nums">
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+                      {room.subscriberCount}
+                    </span>
+                  ),
+                },
+                {
+                  key: "stream",
+                  header: "Stream",
+                  // The whole id, wrapped: a cut-off id can't be read or copied on a phone.
+                  className: "whitespace-normal",
+                  cell: (room) =>
+                    room.streamId ? (
+                      <span className="font-mono text-xs break-all text-muted-foreground">{room.streamId}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ),
+                },
+                {
+                  key: "last-event",
+                  header: "Last event",
+                  cell: (room) => {
+                    const recent = recentByRoom.get(room.roomId);
+                    return recent ? (
+                      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <Badge variant="secondary" className="font-normal">
+                          {recent.eventType}
                         </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center gap-1 text-sm">
-                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                          {room.subscriberCount}
+                        <span className="text-xs text-muted-foreground tabular-nums">
+                          {new Date(recent.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                         </span>
-                      </TableCell>
-                      <TableCell>
-                        {room.streamId ? (
-                          <span className="font-mono text-xs text-muted-foreground">{room.streamId.slice(0, 12)}…</span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {recent ? (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-[10px]">{recent.eventType}</Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(recent.ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    );
+                  },
+                },
+              ]}
+            />
           )}
         </CardContent>
       </Card>

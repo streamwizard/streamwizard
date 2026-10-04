@@ -5,6 +5,7 @@ import { Activity, CircleDollarSign, Clock, Database, GitCompare, HeartPulse, La
 import { Badge, Card, CardContent } from "@repo/ui";
 import { cn } from "@/lib/utils";
 import { StatCard } from "@/components/widgets/stat-card";
+import { StatGrid } from "@/components/widgets/stat-grid";
 import { StatusIndicator } from "@/components/widgets/status-indicator";
 import type { EventsubCheck, EventsubCheckId, EventsubKpis } from "@/lib/eventsub-health";
 import { summarize } from "@/lib/eventsub-health";
@@ -106,10 +107,10 @@ export function EventsubKpiTiles({ kpis, checks }: { kpis: EventsubKpis; checks:
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
+    <StatGrid cols={6}>
       {tiles.map((t) => (
         <StatCard key={t.title} title={t.title} value={t.value} icon={t.icon} description={t.description} tone={t.tone} />
       ))}
-    </div>
+    </StatGrid>
   );
 }

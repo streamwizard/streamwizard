@@ -2,6 +2,9 @@ import { cookies } from "next/headers";
 import { requireAdminSession } from "@/lib/admin-session";
 import { MonitorHeader } from "@/components/monitor-header";
 import { MonitorSidebar } from "@/components/monitor-sidebar";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { NavTabs } from "@/components/page-tabs";
+import { CrumbsProvider } from "@/lib/crumbs";
 import { SidebarInset, SidebarProvider } from "@repo/ui";
 import { RefreshIntervalProvider } from "@/lib/refresh-interval-context";
 import { TimeRangeProvider } from "@/lib/time-range-context";
@@ -22,20 +25,32 @@ export default async function MonitorLayout({ children }: { children: React.Reac
   const initialRange = cookieStore.get(DASHBOARD_COOKIE.timeRange)?.value;
   const initialInterval = cookieStore.get(DASHBOARD_COOKIE.refreshInterval)?.value;
   const initialUnit = cookieStore.get(DASHBOARD_COOKIE.bandwidthUnit)?.value;
+  // Written by the sidebar itself; collapsed stays collapsed across visits.
+  const sidebarOpen = cookieStore.get("sidebar_state")?.value !== "false";
 
-  // Sidebar "Not set up" badges for Discord features missing a channel.
-  const setupGaps = await getDiscordSetupGaps();
+  // "Not set up" badges (sidebar and tab row) for Discord features missing a channel.
+  const notSetUp = [...(await getDiscordSetupGaps())];
 
   return (
     <TimeRangeProvider initialRange={initialRange}>
       <RefreshIntervalProvider initialInterval={initialInterval}>
         <BandwidthUnitProvider initialUnit={initialUnit}>
-          <SidebarProvider>
-            <MonitorSidebar userEmail={session.email} notSetUp={[...setupGaps]} />
-            <SidebarInset>
-              <MonitorHeader envLabel={homeEnv()} />
-              <main className="flex-1 overflow-auto p-6">{children}</main>
-            </SidebarInset>
+          <SidebarProvider defaultOpen={sidebarOpen}>
+            <CrumbsProvider>
+              <MonitorSidebar userEmail={session.email} notSetUp={notSetUp} />
+              {/* SidebarInset is the <main>. min-w-0 keeps wide content from
+                  pushing the page sideways; overflow-x-clip (not auto) so sticky
+                  bars inside a page still stick to the viewport. The bottom
+                  padding on phones clears the fixed bottom bar. */}
+              <SidebarInset className="min-w-0">
+                <MonitorHeader envLabel={homeEnv()} />
+                <div className="min-w-0 flex-1 overflow-x-clip p-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:p-6">
+                  <NavTabs notSetUp={notSetUp} />
+                  {children}
+                </div>
+              </SidebarInset>
+              <MobileBottomNav />
+            </CrumbsProvider>
           </SidebarProvider>
         </BandwidthUnitProvider>
       </RefreshIntervalProvider>

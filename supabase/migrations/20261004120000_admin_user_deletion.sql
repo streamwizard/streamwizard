@@ -5,7 +5,7 @@
 --
 -- A new parameter is a new signature, so the (text, text) version is dropped
 -- first rather than left as an ambiguous overload. Body otherwise unchanged
--- from 20260918130000_discord_ticket_lifecycle.sql.
+-- from 20260918180000_discord_ticket_tags_menus.sql.
 
 DROP FUNCTION IF EXISTS public.delete_user_data(text, text);
 
@@ -62,9 +62,9 @@ BEGIN
 
   -- Feedback and ticket events: the text they wrote goes too.
   UPDATE public.platform_events
-  SET payload = public.strip_platform_event_text(payload, ARRAY['description', 'subject', 'contact'])
+  SET payload = public.strip_platform_event_text(payload, ARRAY['description', 'subject', 'contact', 'comment'])
   WHERE subject_user_id = v_user_id
-    AND payload ?| ARRAY['description', 'subject', 'contact'];
+    AND payload ?| ARRAY['description', 'subject', 'contact', 'comment'];
 
   -- The integrations delete below cascades to integrations_discord; that is
   -- part of this deletion, not a separate unlink. Transaction-local.
@@ -84,7 +84,8 @@ BEGIN
 
     UPDATE public.discord_tickets
     SET opener_discord_user_id = 'deleted', opener_name = 'Deleted user',
-        subject = 'Removed', description = ''
+        subject = 'Removed', description = '', close_reason = NULL, feedback_comment = NULL,
+        references_message_url = NULL
     WHERE opener_discord_user_id = v_discord_user_id;
 
     UPDATE public.discord_tickets
@@ -92,11 +93,16 @@ BEGIN
     WHERE claimed_by_discord_user_id = v_discord_user_id;
 
     UPDATE public.discord_tickets
-    SET closed_by_discord_user_id = NULL, closed_by_name = 'Deleted user'
+    SET closed_by_discord_user_id = NULL, closed_by_name = 'Deleted user', close_reason = NULL
     WHERE closed_by_discord_user_id = v_discord_user_id;
 
-    UPDATE public.discord_tickets SET close_reason = NULL
-    WHERE opener_discord_user_id = 'deleted' AND close_reason IS NOT NULL;
+    UPDATE public.discord_tickets
+    SET close_requested_by = NULL
+    WHERE close_requested_by = v_discord_user_id;
+
+    UPDATE public.discord_tickets
+    SET created_by_discord_user_id = NULL
+    WHERE created_by_discord_user_id = v_discord_user_id;
 
     DELETE FROM public.discord_ticket_members WHERE discord_user_id = v_discord_user_id;
 

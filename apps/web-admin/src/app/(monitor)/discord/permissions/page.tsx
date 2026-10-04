@@ -2,8 +2,8 @@ import type { DiscordApplicationCommand } from "@repo/discord-api";
 import { reportError } from "@repo/sentry";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getGuildCommandPermissions } from "@repo/supabase/queries/discord";
-import { Card, CardContent, Table, TableBody, TableHead, TableHeader, TableRow } from "@repo/ui";
-import { CommandPermissionRow, type CommandView } from "@/components/discord/command-permission-row";
+import { Card, CardContent } from "@repo/ui";
+import { CommandPermissionList, type CommandView } from "@/components/discord/command-permission-row";
 import { PageHeader } from "@/components/widgets/page-header";
 import { getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toRoleOptions } from "@/lib/discord/options";
@@ -50,7 +50,7 @@ export default async function DiscordPermissionsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Command permissions"
+        title="Permissions"
         description="Limit who can run each slash command or right-click entry. Empty means everyone. The server owner can always run everything."
       />
       {deployed === null && (
@@ -60,29 +60,13 @@ export default async function DiscordPermissionsPage() {
             : "Set DISCORD_CLIENT_ID to list every command. Until then only commands with rules show up."}
         </p>
       )}
-      <Card>
-        <CardContent className="overflow-x-auto p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Command</TableHead>
-                <TableHead>Allowed roles</TableHead>
-                <TableHead className="w-32" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {commands.map((command) => (
-                <CommandPermissionRow key={`${command.name}:${command.roleIds.join(",")}`} command={command} roles={roleOptions} />
-              ))}
-              {commands.length === 0 && (
-                <TableRow>
-                  <td colSpan={3} className="p-6 text-center text-sm text-muted-foreground">
-                    No commands to show.
-                  </td>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+      <Card className="py-0 sm:py-2">
+        <CardContent className="px-0 sm:px-4">
+          {commands.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-muted-foreground">No commands to show.</p>
+          ) : (
+            <CommandPermissionList commands={commands} roles={roleOptions} />
+          )}
         </CardContent>
       </Card>
     </div>

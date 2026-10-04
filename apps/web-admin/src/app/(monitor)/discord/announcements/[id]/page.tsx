@@ -8,6 +8,7 @@ import { getBotProfile, getGuildChannels, getGuildRoles, requireDiscordContext }
 import { bannerUploadsEnabled } from "@/lib/discord/banner-storage";
 import { env } from "@/lib/env";
 import { toChannelOptions, toRoleOptions } from "@/lib/discord/options";
+import { PageCrumb } from "@/lib/crumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -27,29 +28,36 @@ export default async function DiscordAnnouncementPage({ params }: { params: Prom
   if (!row) notFound();
 
   return (
-    <AnnouncementEditor
-      // A different announcement is a different editor: no draft or autosave state carries over.
-      // The status is in the key too, so the form's baseline resets when the bot moves it along.
-      key={`${row.id}:${row.status}:${row.posted_at ?? ""}`}
-      id={row.id}
-      initial={{
-        // A stored draft from an older shape falls back to a blank one rather than a broken page.
-        announcement: parseAnnouncement(row.draft) ?? createAnnouncement(),
-        channelId: row.channel_id,
-      }}
-      state={{
-        status: row.status,
-        posted: parseAnnouncement(row.posted),
-        postedChannelId: row.message_id ? row.channel_id : null,
-        scheduledFor: row.scheduled_for,
-        postedAt: row.posted_at,
-        lastError: row.last_error,
-      }}
-      channels={toChannelOptions(channels, ANNOUNCEMENT_CHANNEL_KINDS)}
-      roles={toRoleOptions(roles)}
-      bot={bot}
-      uploadsEnabled={bannerUploadsEnabled()}
-      previewImageHosts={[env.NEXT_PUBLIC_CDN_URL, "https://cdn.discordapp.com", "https://media.discordapp.net"].filter((h): h is string => !!h)}
-    />
+    <>
+      <PageCrumb label="Announcement" href={`/discord/announcements/${row.id}`} />
+      <AnnouncementEditor
+        // A different announcement is a different editor: no draft or autosave state carries over.
+        // The status is in the key too, so the form's baseline resets when the bot moves it along.
+        key={`${row.id}:${row.status}:${row.posted_at ?? ""}`}
+        id={row.id}
+        initial={{
+          // A stored draft from an older shape falls back to a blank one rather than a broken page.
+          announcement: parseAnnouncement(row.draft) ?? createAnnouncement(),
+          channelId: row.channel_id,
+        }}
+        state={{
+          status: row.status,
+          posted: parseAnnouncement(row.posted),
+          postedChannelId: row.message_id ? row.channel_id : null,
+          scheduledFor: row.scheduled_for,
+          postedAt: row.posted_at,
+          lastError: row.last_error,
+        }}
+        channels={toChannelOptions(channels, ANNOUNCEMENT_CHANNEL_KINDS)}
+        roles={toRoleOptions(roles)}
+        bot={bot}
+        uploadsEnabled={bannerUploadsEnabled()}
+        previewImageHosts={[
+          env.NEXT_PUBLIC_CDN_URL,
+          "https://cdn.discordapp.com",
+          "https://media.discordapp.net",
+        ].filter((h): h is string => !!h)}
+      />
+    </>
   );
 }

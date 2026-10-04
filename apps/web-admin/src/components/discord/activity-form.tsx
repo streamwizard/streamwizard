@@ -48,7 +48,7 @@ export function ActivityForm({ initial, channels }: { initial: ActivitySettingsI
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Activity tracking</CardTitle>
+          <CardTitle className="text-base">What gets counted</CardTitle>
           <CardDescription>Feeds /rank, /leaderboard, /recap and /serverstats.</CardDescription>
         </CardHeader>
         <CardContent className="divide-y">
@@ -78,7 +78,7 @@ export function ActivityForm({ initial, channels }: { initial: ActivitySettingsI
           <CardTitle className="text-base">Ignored channels</CardTitle>
           <CardDescription>Nothing in these channels counts. Ignoring a category covers every channel inside it.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <MultiPicker
             id="ignored-channels"
             options={channels}
@@ -88,9 +88,10 @@ export function ActivityForm({ initial, channels }: { initial: ActivitySettingsI
             emptyText="No channels match"
             disabled={saving}
           />
-          <SaveBar dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
         </CardContent>
       </Card>
+
+      <SaveBar sticky dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
     </div>
   );
 }

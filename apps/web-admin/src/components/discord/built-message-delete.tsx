@@ -46,8 +46,16 @@ export function DeleteBuiltMessageButton({ id, name, published, disabled, onDele
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={`Delete ${name}`} title="Delete" disabled={disabled || pending}>
+        {/* A labelled, 44px button on a phone; the icon alone from 768px up. */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="max-md:h-11 max-md:w-auto max-md:px-3"
+          aria-label={`Delete ${name}`}
+          disabled={disabled || pending}
+        >
           <Trash2 />
+          <span className="md:hidden">Delete</span>
         </Button>
       </AlertDialogTrigger>
       <AlertDialogContent>

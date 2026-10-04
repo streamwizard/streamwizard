@@ -48,7 +48,7 @@ export function WsMessageDropChart({ initialData }: Props) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Dropped Messages</CardTitle>
+          <CardTitle className="text-base">Dropped messages</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center gap-3 py-8 text-green-600 dark:text-green-400">
           <CheckCircle2 className="h-5 w-5 shrink-0" />
@@ -63,8 +63,8 @@ export function WsMessageDropChart({ initialData }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          Dropped Messages
+        <CardTitle className="flex flex-wrap items-center gap-x-2 text-base">
+          Dropped messages
           <span className="text-sm font-normal text-destructive">
             ({totalDrops} total)
           </span>

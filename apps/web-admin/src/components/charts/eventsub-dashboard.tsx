@@ -11,6 +11,9 @@ import {
   CardTitle,
   NativeSelect,
   NativeSelectOption,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   Table,
   TableBody,
   TableCell,
@@ -18,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui";
+import { DataList } from "@/components/widgets/data-list";
 import { SectionHeading } from "@/components/widgets/section-heading";
 import { ChartEmptyState } from "@/components/widgets/chart-empty-state";
 import { buildEventsubChecks, buildKpis, buildShardViews, COST_WARN_PCT } from "@/lib/eventsub-health";
@@ -146,7 +150,7 @@ function SubscriptionInventoryCard({ m }: { m: EventsubMetrics }) {
   const statusEntries = Object.entries(subs.byStatus).sort((a, b) => b[1] - a[1]);
   return (
     <Card>
-      <CardHeader className="space-y-3">
+      <CardHeader className="space-y-3 px-4 sm:px-6">
         <div className="flex flex-wrap items-center gap-2">
           {statusEntries.map(([status, count]) => (
             <Badge
@@ -164,48 +168,67 @@ function SubscriptionInventoryCard({ m }: { m: EventsubMetrics }) {
         </div>
         <CostBar subs={subs} />
       </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Type</TableHead>
-              <TableHead>Transport</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="text-right">Enabled</TableHead>
-              <TableHead className="text-right">Other</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {subs.types.map((t) => {
-              const enabled = t.byStatus.enabled ?? 0;
-              const other = t.total - enabled;
-              return (
-                <TableRow key={`${t.type}|${t.transport}`}>
-                  <TableCell className="font-mono text-xs">
-                    {t.type}
-                    {!t.expected && (
-                      <Badge variant="outline" className="ml-2 font-sans font-normal">
-                        not in our lists
-                      </Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary" className="font-normal">
-                      {t.transport}
+      {/* Phone cards run edge to edge; the table keeps the card's padding. */}
+      <CardContent className="px-0 sm:px-6">
+        <DataList
+          rows={subs.types}
+          rowKey={(t) => `${t.type}|${t.transport}`}
+          columns={[
+            {
+              key: "type",
+              header: "Type",
+              mobile: "title",
+              cell: (t) => (
+                <span className="font-mono text-xs break-all">
+                  {t.type}
+                  {!t.expected && (
+                    <Badge variant="outline" className="ml-2 font-sans font-normal">
+                      not in our lists
                     </Badge>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{t.total.toLocaleString("en-US")}</TableCell>
-                  <TableCell className="text-right tabular-nums">{enabled.toLocaleString("en-US")}</TableCell>
-                  <TableCell className={cn("text-right tabular-nums", other > 0 && "font-medium text-amber-700 dark:text-amber-400")}>
-                    {other.toLocaleString("en-US")}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                  )}
+                </span>
+              ),
+            },
+            {
+              key: "transport",
+              header: "Transport",
+              mobile: "badge",
+              cell: (t) => (
+                <Badge variant="secondary" className="font-normal">
+                  {t.transport}
+                </Badge>
+              ),
+            },
+            {
+              key: "total",
+              header: "Total",
+              headClassName: "text-right",
+              className: "text-right tabular-nums",
+              cell: (t) => <span className="tabular-nums">{t.total.toLocaleString("en-US")}</span>,
+            },
+            {
+              key: "enabled",
+              header: "Enabled",
+              headClassName: "text-right",
+              className: "text-right tabular-nums",
+              cell: (t) => <span className="tabular-nums">{(t.byStatus.enabled ?? 0).toLocaleString("en-US")}</span>,
+            },
+            {
+              key: "other",
+              header: "Other",
+              headClassName: "text-right",
+              className: "text-right tabular-nums",
+              cell: (t) => {
+                const other = t.total - (t.byStatus.enabled ?? 0);
+                return (
+                  <span className={cn("tabular-nums", other > 0 && "font-medium text-amber-700 dark:text-amber-400")}>{other.toLocaleString("en-US")}</span>
+                );
+              },
+            },
+          ]}
+        />
         {missing.length > 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="mt-3 px-4 text-xs break-words text-muted-foreground sm:px-0">
             No subscriptions yet for: {missing.map((t) => <code key={t} className="mr-2 font-mono">{t}</code>)}
           </p>
         )}
@@ -260,9 +283,8 @@ function ThroughputByType({ m }: { m: EventsubMetrics }) {
               <TableBody>
                 {m.typeTotals.slice(0, 15).map((t) => (
                   <TableRow key={t.eventType}>
-                    <TableCell className="max-w-48 truncate font-mono text-xs" title={t.eventType}>
-                      {t.eventType}
-                    </TableCell>
+                    {/* Wraps instead of truncating: the full type has to be readable without a hover. */}
+                    <TableCell className="font-mono text-xs break-all whitespace-normal">{t.eventType}</TableCell>
                     <TableCell className="text-right tabular-nums">{t.handled.toLocaleString("en-US")}</TableCell>
                     <TableCell className="text-right tabular-nums text-muted-foreground">{t.unhandled.toLocaleString("en-US")}</TableCell>
                   </TableRow>
@@ -293,6 +315,19 @@ const LIFECYCLE_TONE: Record<string, string> = {
   "eventsub.reconnected": "text-emerald-600 dark:text-emerald-400",
 };
 
+/** One shard by name; several behind a tap, because a title attribute never opens on a phone. */
+function LifecycleShards({ ids }: { ids: string[] }) {
+  if (ids.length <= 1) return <span className="font-mono text-xs">#{ids[0]}</span>;
+  return (
+    <Popover>
+      <PopoverTrigger className="-my-1 rounded py-1 font-mono text-xs underline decoration-dotted underline-offset-4 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none">
+        {ids.length} shards
+      </PopoverTrigger>
+      <PopoverContent className="w-56 font-mono text-xs break-words">{ids.map((id) => `#${id}`).join(", ")}</PopoverContent>
+    </Popover>
+  );
+}
+
 function LifecycleTimeline({ rows }: { rows: LifecycleRow[] }) {
   const [shard, setShard] = useState("all");
   const shardIds = useMemo(() => [...new Set(rows.flatMap((r) => r.shardIds))].sort((a, b) => Number(a) - Number(b)), [rows]);
@@ -300,11 +335,15 @@ function LifecycleTimeline({ rows }: { rows: LifecycleRow[] }) {
 
   return (
     <Card>
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-        <CardTitle className="text-base">Last 24 hours</CardTitle>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0 px-4 sm:px-6">
+        <div>
+          <CardTitle className="text-base">Connection events</CardTitle>
+          {/* The event log is always read 24 hours back, whatever the header range says. */}
+          <p className="mt-1 text-xs text-muted-foreground">Always the last 24 hours. This list does not follow the header range.</p>
+        </div>
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           Shard
-          <NativeSelect value={shard} onChange={(e) => setShard(e.target.value)} size="sm">
+          <NativeSelect value={shard} onChange={(e) => setShard(e.target.value)} className="h-11 text-base md:h-8 md:text-sm">
             <NativeSelectOption value="all">All</NativeSelectOption>
             {shardIds.map((id) => (
               <NativeSelectOption key={id} value={id}>
@@ -314,38 +353,41 @@ function LifecycleTimeline({ rows }: { rows: LifecycleRow[] }) {
           </NativeSelect>
         </label>
       </CardHeader>
-      <CardContent>
+      {/* Phone cards run edge to edge; the table keeps the card's padding. */}
+      <CardContent className="px-0 sm:px-6">
         {visible.length === 0 ? (
           <ChartEmptyState height={120} message="No EventSub lifecycle events in the last 24 hours" />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Time</TableHead>
-                <TableHead>Event</TableHead>
-                <TableHead>Shard</TableHead>
-                <TableHead>Detail</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.slice(0, 100).map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="whitespace-nowrap text-xs tabular-nums">
-                    <time dateTime={r.createdAt} suppressHydrationWarning>
-                      {new Date(r.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                    </time>
-                  </TableCell>
-                  <TableCell className={cn("text-sm", LIFECYCLE_TONE[r.type])}>{r.type.replace("eventsub.", "").replace(/_/g, " ")}</TableCell>
-                  <TableCell className="font-mono text-xs" title={r.shardIds.length > 1 ? r.shardIds.map((id) => `#${id}`).join(", ") : undefined}>
-                    {r.shardIds.length > 1 ? `${r.shardIds.length} shards` : `#${r.shardIds[0]}`}
-                  </TableCell>
-                  <TableCell className="max-w-72 truncate text-xs text-muted-foreground" title={lifecycleDetail(r)}>
-                    {lifecycleDetail(r)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <DataList
+            rows={visible.slice(0, 100)}
+            rowKey={(r) => String(r.id)}
+            columns={[
+              {
+                key: "time",
+                header: "Time",
+                className: "whitespace-nowrap text-xs tabular-nums",
+                cell: (r) => (
+                  <time dateTime={r.createdAt} className="tabular-nums" suppressHydrationWarning>
+                    {new Date(r.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                  </time>
+                ),
+              },
+              {
+                key: "event",
+                header: "Event",
+                mobile: "title",
+                cell: (r) => <span className={cn("text-sm", LIFECYCLE_TONE[r.type])}>{r.type.replace("eventsub.", "").replace(/_/g, " ")}</span>,
+              },
+              { key: "shard", header: "Shard", cell: (r) => <LifecycleShards ids={r.shardIds} /> },
+              {
+                key: "detail",
+                header: "Detail",
+                // Wraps instead of truncating: an error has to be readable without a hover.
+                className: "max-w-72 text-xs whitespace-normal text-muted-foreground",
+                cell: (r) => lifecycleDetail(r) || "—",
+              },
+            ]}
+          />
         )}
       </CardContent>
     </Card>

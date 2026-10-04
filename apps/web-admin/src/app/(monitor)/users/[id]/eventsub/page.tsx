@@ -1,21 +1,9 @@
 import { reportError } from "@repo/sentry";
-import {
-  Badge,
-  Card,
-  CardContent,
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui";
+import { Badge, Card, CardContent, Empty, EmptyDescription, EmptyHeader, EmptyTitle, Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
+import { When } from "@/components/users/detail";
 import { ResyncEventSubButton } from "@/components/users/user-actions";
-import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
+import { DataList } from "@/components/widgets/data-list";
+import { formatRelativeTime } from "@/lib/discord/tickets";
 import type { UserSubscriptionState } from "@/lib/user-eventsub";
 import { loadUserEventSub, type UserEventSubState } from "@/lib/user-eventsub-server";
 import { loadAdminUser } from "@/lib/users";
@@ -67,51 +55,63 @@ export default async function UserEventSubPage({ params }: { params: Promise<{ i
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {(Object.keys(STATE) as UserSubscriptionState[]).map((key) => (
-            <Badge key={key} variant="outline" title={STATE[key].hint} className={cn("gap-1.5 tabular-nums", diff.counts[key] > 0 && STATE[key].className)}>
-              {STATE[key].label} {diff.counts[key]}
-            </Badge>
+            // Each count explains itself on a tap; the meaning used to sit in a hover title.
+            <Popover key={key}>
+              <PopoverTrigger
+                aria-label={`${STATE[key].label}: ${diff.counts[key]}. What this means`}
+                className="-my-2 cursor-pointer rounded-md py-2 focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:outline-none"
+              >
+                <Badge variant="outline" className={cn("gap-1.5 tabular-nums", diff.counts[key] > 0 && STATE[key].className)}>
+                  {STATE[key].label} {diff.counts[key]}
+                </Badge>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 text-sm">{STATE[key].hint}</PopoverContent>
+            </Popover>
           ))}
           <span className="text-xs text-muted-foreground">Read from Twitch {formatRelativeTime(state.fetchedAt)}</span>
         </div>
         <ResyncEventSubButton userId={user.id} disabled={needsFix === 0} />
       </div>
+      {needsFix === 0 && <p className="text-xs text-muted-foreground">Nothing is missing or failed, so there&apos;s nothing to resync.</p>}
 
       <Card className="py-0">
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
-                <TableHead className="pl-4 text-xs text-muted-foreground">Type</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Transport</TableHead>
-                <TableHead className="text-xs text-muted-foreground">State</TableHead>
-                <TableHead className="text-xs text-muted-foreground">Twitch status</TableHead>
-                <TableHead className="pr-4 text-right text-xs text-muted-foreground">Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {diff.rows.map((row, index) => (
-                <TableRow key={row.id ?? `${row.type}-${row.transport}-${index}`}>
-                  <TableCell className="py-2 pl-4 font-mono text-xs">
+        <CardContent className="px-0 sm:px-2">
+          <DataList
+            rows={diff.rows.map((row, index) => ({ ...row, key: row.id ?? `${row.type}-${row.transport}-${index}` }))}
+            rowKey={(row) => row.key}
+            columns={[
+              {
+                key: "type",
+                header: "Type",
+                mobile: "title",
+                className: "font-mono text-xs",
+                cell: (row) => (
+                  <span className="font-mono text-xs break-all">
                     {row.type} <span className="text-muted-foreground">v{row.version}</span>
-                  </TableCell>
-                  <TableCell className="py-2 text-sm">{row.transport}</TableCell>
-                  <TableCell className={cn("py-2 text-sm font-medium", STATE[row.state].className)} title={STATE[row.state].hint}>
-                    {STATE[row.state].label}
-                  </TableCell>
-                  <TableCell className="py-2 font-mono text-xs text-muted-foreground">{row.status ?? "–"}</TableCell>
-                  <TableCell className="py-2 pr-4 text-right text-sm text-muted-foreground">
-                    {row.createdAt ? (
-                      <time dateTime={row.createdAt} title={formatDateTime(row.createdAt)}>
-                        {formatRelativeTime(row.createdAt)}
-                      </time>
-                    ) : (
-                      "–"
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                  </span>
+                ),
+              },
+              { key: "transport", header: "Transport", cell: (row) => row.transport },
+              {
+                key: "state",
+                header: "State",
+                mobile: "badge",
+                cell: (row) => <span className={cn("text-sm font-medium", STATE[row.state].className)}>{STATE[row.state].label}</span>,
+              },
+              {
+                key: "status",
+                header: "Twitch status",
+                cell: (row) => <span className="font-mono text-xs break-all text-muted-foreground">{row.status ?? "–"}</span>,
+              },
+              {
+                key: "created",
+                header: "Created",
+                headClassName: "text-right",
+                className: "text-right text-muted-foreground",
+                cell: (row) => (row.createdAt ? <When iso={row.createdAt} /> : "–"),
+              },
+            ]}
+          />
         </CardContent>
       </Card>
       <p className="text-xs text-muted-foreground">

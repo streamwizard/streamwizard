@@ -1,13 +1,20 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useReducer, useRef, useTransition } from "react";
-import Link from "next/link";
-import { ArrowLeft, ExternalLink, Link2Off } from "lucide-react";
+import { ExternalLink, Link2Off, PanelRight } from "lucide-react";
 import { toast } from "sonner";
 import type { LinkedStreamWizardAccount } from "@repo/supabase/queries/discord";
 import { formatTicketNumber } from "@repo/supabase/queries/tickets";
 import { Alert, AlertDescription, AlertTitle, Button } from "@repo/ui";
 import { getTicketSnapshot, listTicketMembersForDashboard, lookupDiscordNames } from "@/actions/discord-ticket-actions";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/widgets/responsive-dialog";
 import { useTicketRealtime, type TicketRealtimeHandlers } from "@/hooks/use-ticket-realtime";
 import { displayName } from "@/lib/discord/profile-names";
 import type { TicketSnapshot } from "@/lib/discord/ticket-snapshot";
@@ -123,17 +130,53 @@ export function TicketPage({ snapshot, config }: { snapshot: TicketSnapshot; con
   const standing = ticketState(ticket);
   const opener = displayName(ticket.opener_name, ticket.opener_discord_user_id, state.profiles);
 
+  const discordLink = (className: string) => (
+    <Button size="sm" variant="outline" className={className} asChild>
+      <a href={`https://discord.com/channels/${config.guildId}/${ticket.channel_id}`} target="_blank" rel="noreferrer">
+        Open in Discord
+        <ExternalLink className="size-3.5" aria-hidden />
+      </a>
+    </Button>
+  );
+
+  const closeRequest = isOpen && ticket.close_requested_at && (
+    <TicketCloseRequest
+      ticketNumber={ticket.ticket_number}
+      requestedAt={ticket.close_requested_at}
+      expiresAt={ticket.close_request_expires_at}
+      requestedBy={displayName(null, ticket.close_requested_by, state.profiles) ?? "the opener"}
+      linked={config.linked}
+    />
+  );
+
+  // The same panels twice: cards in the desktop column, flat sections in the
+  // drawer the "Details" button opens below 1024px. CSS decides which one is
+  // reachable, so nothing jumps while the page hydrates.
+  const panels = (flat: boolean) => (
+    <>
+      <TicketDetails ticket={ticket} profiles={state.profiles} linkedAccount={config.linkedAccount} answers={config.answers} flat={flat} />
+      {/* On a small screen the close request sits above the conversation instead, where it can't be missed. */}
+      {!flat && closeRequest}
+      {isOpen && (
+        <TicketManage
+          ticketNumber={ticket.ticket_number}
+          subject={ticket.subject}
+          priority={ticket.priority}
+          category={ticket.category}
+          categories={config.categories.filter((c) => c.active || c.slug === ticket.category).map((c) => ({ slug: c.slug, name: c.name }))}
+          members={state.members}
+          linked={config.linked}
+          flat={flat}
+        />
+      )}
+      <TicketTimeline ticket={ticket} events={state.events} profiles={state.profiles} flat={flat} />
+    </>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0 space-y-1">
-          <Link
-            href="/discord/tickets"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="size-3.5" aria-hidden />
-            All tickets
-          </Link>
           <h1 className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold">
             <span className="font-mono text-base font-normal text-muted-foreground">{formatTicketNumber(ticket.ticket_number)}</span>
             <span className="min-w-0 break-words">{ticket.subject}</span>
@@ -165,19 +208,9 @@ export function TicketPage({ snapshot, config }: { snapshot: TicketSnapshot; con
             </span>
           </p>
         </div>
+        {/* Claim and Close stay one tap away on a phone; everything else is behind Details. */}
         <div className="flex flex-wrap items-center gap-2">
-          {isOpen && (
-            <Button size="sm" variant="outline" asChild>
-              <a
-                href={`https://discord.com/channels/${config.guildId}/${ticket.channel_id}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open in Discord
-                <ExternalLink className="size-3.5" aria-hidden />
-              </a>
-            </Button>
-          )}
+          {isOpen && discordLink("hidden lg:inline-flex")}
           {isOpen && (
             <TicketActions
               ticketNumber={ticket.ticket_number}
@@ -186,6 +219,26 @@ export function TicketPage({ snapshot, config }: { snapshot: TicketSnapshot; con
               linked={config.linked}
             />
           )}
+          <ResponsiveDialog>
+            <ResponsiveDialogTrigger asChild>
+              <Button size="sm" variant="outline" className="h-11 md:h-8 lg:hidden">
+                <PanelRight className="size-3.5" aria-hidden />
+                Details
+              </Button>
+            </ResponsiveDialogTrigger>
+            <ResponsiveDialogContent className="max-h-[85dvh] overflow-y-auto">
+              <ResponsiveDialogHeader>
+                <ResponsiveDialogTitle>Ticket details</ResponsiveDialogTitle>
+                <ResponsiveDialogDescription>
+                  {formatTicketNumber(ticket.ticket_number)} {ticket.subject}
+                </ResponsiveDialogDescription>
+              </ResponsiveDialogHeader>
+              <div className="space-y-6">
+                {isOpen && discordLink("h-10 w-full")}
+                {panels(true)}
+              </div>
+            </ResponsiveDialogContent>
+          </ResponsiveDialog>
         </div>
       </div>
 
@@ -199,6 +252,8 @@ export function TicketPage({ snapshot, config }: { snapshot: TicketSnapshot; con
         </Alert>
       )}
 
+      {closeRequest && <div className="lg:hidden">{closeRequest}</div>}
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <TicketConversation
           ticket={ticket}
@@ -210,40 +265,7 @@ export function TicketPage({ snapshot, config }: { snapshot: TicketSnapshot; con
           onRefresh={resync}
         />
 
-        <div className="space-y-6">
-          <TicketDetails
-            ticket={ticket}
-            profiles={state.profiles}
-            linkedAccount={config.linkedAccount}
-            answers={config.answers}
-          />
-
-          {isOpen && ticket.close_requested_at && (
-            <TicketCloseRequest
-              ticketNumber={ticket.ticket_number}
-              requestedAt={ticket.close_requested_at}
-              expiresAt={ticket.close_request_expires_at}
-              requestedBy={displayName(null, ticket.close_requested_by, state.profiles) ?? "the opener"}
-              linked={config.linked}
-            />
-          )}
-
-          {isOpen && (
-            <TicketManage
-              ticketNumber={ticket.ticket_number}
-              subject={ticket.subject}
-              priority={ticket.priority}
-              category={ticket.category}
-              categories={config.categories
-                .filter((c) => c.active || c.slug === ticket.category)
-                .map((c) => ({ slug: c.slug, name: c.name }))}
-              members={state.members}
-              linked={config.linked}
-            />
-          )}
-
-          <TicketTimeline ticket={ticket} events={state.events} profiles={state.profiles} />
-        </div>
+        <div className="hidden space-y-6 lg:block">{panels(false)}</div>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { Activity, Cpu, Gauge, KeyRound, ListOrdered, Sparkles } from "lucide-react";
+import { Activity, ChevronRight, Cpu, Gauge, KeyRound, ListOrdered, Sparkles } from "lucide-react";
 import {
   querySupabaseAuthRoutes,
   querySupabaseDbSizes,
@@ -14,10 +14,12 @@ import { getQueryStats, type QueryStat } from "@repo/supabase/queries/query-stat
 import { Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { PlatformMetricChart } from "@/components/charts/platform-metric-chart";
 import { PlatformMultiSeriesChart } from "@/components/charts/platform-multi-series-chart";
-import { SupabaseHealthBanner, SupabaseKpiTiles } from "@/components/charts/supabase-health";
+import { HealthSection, SupabaseHealthBanner, SupabaseKpiTiles } from "@/components/charts/supabase-health";
+import { DataList } from "@/components/widgets/data-list";
 import { LiveIndicator } from "@/components/widgets/live-indicator";
 import { PageHeader } from "@/components/widgets/page-header";
 import { SectionHeading } from "@/components/widgets/section-heading";
+import { ChartGrid } from "@/components/widgets/stat-grid";
 import { homeEnv } from "@/lib/home-env";
 import { EMPTY_SUPABASE_METRICS, fetchSupabaseMetrics, type SupabaseMetrics } from "@/lib/supabase-metrics";
 
@@ -27,6 +29,22 @@ function formatBytes(bytes: number): string {
   if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
   if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
   return `${Math.round(bytes / 1024)} KB`;
+}
+
+const SECTION_ICON = "h-4 w-4";
+
+/** The query on one or two lines, the whole statement behind a tap: a title attribute never opens on a phone. */
+function QueryText({ query }: { query: string }) {
+  return (
+    <details className="group min-w-0 font-normal">
+      <summary className="flex min-h-11 cursor-pointer list-none items-start gap-1.5 rounded-sm py-1 sm:min-h-0 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+        <ChevronRight className="mt-0.5 size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" aria-hidden="true" />
+        <code className="line-clamp-2 font-mono text-xs break-all whitespace-normal group-open:hidden">{query.replace(/\s+/g, " ")}</code>
+        <span className="hidden text-xs text-muted-foreground group-open:inline">Full query</span>
+      </summary>
+      <pre className="mt-1 max-h-80 overflow-y-auto rounded-md bg-muted p-3 font-mono text-xs break-words whitespace-pre-wrap">{query}</pre>
+    </details>
+  );
 }
 
 export default async function SupabasePlatformPage() {
@@ -56,7 +74,7 @@ export default async function SupabasePlatformPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Supabase platform"
+        title="Database health"
         description={`Database host metrics for ${homeEnv()} · scraped by Telegraf every minute`}
       >
         <LiveIndicator />
@@ -69,9 +87,8 @@ export default async function SupabasePlatformPage() {
         <SupabaseKpiTiles initialSnapshot={m.snapshot} />
       </section>
 
-      <section className="space-y-3">
-        <SectionHeading icon={Activity}>Load &amp; latency</SectionHeading>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <HealthSection icon={<Activity className={SECTION_ICON} aria-hidden="true" />} title="Load and latency">
+        <ChartGrid>
           <PlatformMetricChart title="Queries / sec" seriesKey="queryRate" initialData={m.queryRate} color={1} />
           <PlatformMetricChart title="Mean query time" seriesKey="meanQueryMs" initialData={m.meanQueryMs} unit="ms" color={4} />
           <PlatformMultiSeriesChart
@@ -85,12 +102,11 @@ export default async function SupabasePlatformPage() {
             ]}
           />
           <PlatformMetricChart title="Rollback share" seriesKey="rollbackPct" initialData={m.rollbackPct} unit="%" color={4} />
-        </div>
-      </section>
+        </ChartGrid>
+      </HealthSection>
 
-      <section className="space-y-3">
-        <SectionHeading icon={Cpu}>Resources</SectionHeading>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <HealthSection icon={<Cpu className={SECTION_ICON} aria-hidden="true" />} title="Resources">
+        <ChartGrid>
           <PlatformMultiSeriesChart
             title="DB CPU %"
             seriesKey="cpuBreakdown"
@@ -132,12 +148,11 @@ export default async function SupabasePlatformPage() {
               { key: "write", label: "Write", color: 2 },
             ]}
           />
-        </div>
-      </section>
+        </ChartGrid>
+      </HealthSection>
 
-      <section className="space-y-3">
-        <SectionHeading icon={Sparkles}>Efficiency</SectionHeading>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <HealthSection icon={<Sparkles className={SECTION_ICON} aria-hidden="true" />} title="Efficiency">
+        <ChartGrid cols={3}>
           <PlatformMetricChart title="Cache hit %" seriesKey="cacheHit" initialData={m.cacheHit} unit="%" color={2} yMin={95} yMax={100} />
           <PlatformMetricChart title="Temp file spill" seriesKey="tempBytes" initialData={m.tempBytes} format="bytesPerSec" color={3} />
           <PlatformMultiSeriesChart
@@ -151,57 +166,73 @@ export default async function SupabasePlatformPage() {
               { key: "deleted", label: "Deleted", color: 4 },
             ]}
           />
-        </div>
-      </section>
+        </ChartGrid>
+      </HealthSection>
 
-      <section className="space-y-3">
-        <SectionHeading icon={ListOrdered}>Top queries</SectionHeading>
+      <HealthSection icon={<ListOrdered className={SECTION_ICON} aria-hidden="true" />} title="Top queries">
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="px-4 pb-2 sm:px-6">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              By total execution time, since the last stats reset
+              By total execution time, since the last stats reset. Select a query to read all of it.
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          {/* Phone cards run edge to edge; the table keeps the card's padding. */}
+          <CardContent className="px-0 sm:px-6">
             {queryStats.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">
-                No query stats — the admin_query_stats migration isn&apos;t applied to this database yet.
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+                No query stats. The admin_query_stats migration isn&apos;t applied to this database yet.
               </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Query</TableHead>
-                    <TableHead className="text-right">Calls</TableHead>
-                    <TableHead className="text-right">Mean</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Rows</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {queryStats.map((q, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="max-w-xl">
-                        <code className="block truncate font-mono text-xs" title={q.query}>
-                          {q.query.replace(/\s+/g, " ")}
-                        </code>
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">{q.calls.toLocaleString()}</TableCell>
-                      <TableCell className="text-right tabular-nums">{q.mean_exec_ms.toFixed(2)} ms</TableCell>
-                      <TableCell className="text-right tabular-nums">{(q.total_exec_ms / 1000).toFixed(2)} s</TableCell>
-                      <TableCell className="text-right tabular-nums">{q.rows_returned.toLocaleString()}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataList
+                rows={queryStats.map((q, i) => ({ ...q, rank: i }))}
+                rowKey={(q) => String(q.rank)}
+                columns={[
+                  {
+                    key: "query",
+                    header: "Query",
+                    mobile: "title",
+                    className: "max-w-xl whitespace-normal",
+                    cell: (q) => <QueryText query={q.query} />,
+                  },
+                  {
+                    key: "calls",
+                    header: "Calls",
+                    headClassName: "text-right",
+                    className: "text-right align-top tabular-nums",
+                    cell: (q) => <span className="tabular-nums">{q.calls.toLocaleString("en-US")}</span>,
+                  },
+                  {
+                    key: "mean",
+                    header: "Mean",
+                    headClassName: "text-right",
+                    className: "text-right align-top tabular-nums",
+                    cell: (q) => <span className="tabular-nums">{q.mean_exec_ms.toFixed(2)} ms</span>,
+                  },
+                  {
+                    key: "total",
+                    header: "Total",
+                    headClassName: "text-right",
+                    className: "text-right align-top tabular-nums",
+                    cell: (q) => <span className="tabular-nums">{(q.total_exec_ms / 1000).toFixed(2)} s</span>,
+                  },
+                  {
+                    key: "rows",
+                    header: "Rows",
+                    // The phone card keeps the three timing numbers; rows returned stays on the table.
+                    mobile: "hidden",
+                    headClassName: "text-right",
+                    className: "text-right align-top tabular-nums",
+                    cell: (q) => q.rows_returned.toLocaleString("en-US"),
+                  },
+                ]}
+              />
             )}
           </CardContent>
         </Card>
-      </section>
+      </HealthSection>
 
-      <section className="space-y-3">
-        <SectionHeading icon={KeyRound}>Auth &amp; storage</SectionHeading>
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <HealthSection icon={<KeyRound className={SECTION_ICON} aria-hidden="true" />} title="Auth and storage">
+        <ChartGrid>
           <PlatformMetricChart title="Auth API latency" seriesKey="authApiMs" initialData={m.authApiMs} unit="ms" color={4} />
           <Card>
             <CardHeader>
@@ -233,41 +264,50 @@ export default async function SupabasePlatformPage() {
               )}
             </CardContent>
           </Card>
-        </div>
+        </ChartGrid>
         <Card>
-          <CardHeader className="pb-2">
+          <CardHeader className="px-4 pb-2 sm:px-6">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Auth API calls · per route, last 24h
+              Auth API calls per route, last 24 hours at page load
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          {/* Phone cards run edge to edge; the table keeps the card's padding. */}
+          <CardContent className="px-0 sm:px-6">
             {authRoutes.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-8 text-center">No auth API traffic in this range.</p>
+              <p className="px-4 py-8 text-center text-sm text-muted-foreground">No auth API traffic in the last 24 hours.</p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Route</TableHead>
-                    <TableHead>Method</TableHead>
-                    <TableHead className="text-right">Calls</TableHead>
-                    <TableHead className="text-right">Mean latency</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {authRoutes.map((r) => (
-                    <TableRow key={`${r.method} ${r.route}`}>
-                      <TableCell className="font-mono text-xs">{r.route}</TableCell>
-                      <TableCell className="text-muted-foreground">{r.method}</TableCell>
-                      <TableCell className="text-right tabular-nums">{Math.round(r.count).toLocaleString()}</TableCell>
-                      <TableCell className="text-right tabular-nums">{r.meanMs.toFixed(1)} ms</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <DataList
+                rows={authRoutes}
+                rowKey={(r) => `${r.method} ${r.route}`}
+                columns={[
+                  {
+                    key: "route",
+                    header: "Route",
+                    mobile: "title",
+                    className: "whitespace-normal",
+                    cell: (r) => <span className="font-mono text-xs font-normal break-all">{r.route}</span>,
+                  },
+                  { key: "method", header: "Method", mobile: "badge", className: "text-muted-foreground", cell: (r) => r.method },
+                  {
+                    key: "calls",
+                    header: "Calls",
+                    headClassName: "text-right",
+                    className: "text-right tabular-nums",
+                    cell: (r) => <span className="tabular-nums">{Math.round(r.count).toLocaleString("en-US")}</span>,
+                  },
+                  {
+                    key: "latency",
+                    header: "Mean latency",
+                    headClassName: "text-right",
+                    className: "text-right tabular-nums",
+                    cell: (r) => <span className="tabular-nums">{r.meanMs.toFixed(1)} ms</span>,
+                  },
+                ]}
+              />
             )}
           </CardContent>
         </Card>
-      </section>
+      </HealthSection>
     </div>
   );
 }

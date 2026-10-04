@@ -26,6 +26,14 @@ const nextConfig: NextConfig = {
     SENTRY_RELEASE: process.env.SENTRY_RELEASE ?? "",
     NEXT_PUBLIC_WS_SERVER_URL: process.env.WS_SERVER_URL ?? "",
   },
+  async redirects() {
+    return [
+      // Plans are managed from Users now: the row menu and each user's Plans
+      // tab. The old page's list of people with a plan is the "Has a plan"
+      // filter. Not permanent, so the URL stays free for a later plans page.
+      { source: "/subscriptions", destination: "/users?filter=paying", permanent: false },
+    ];
+  },
   async headers() {
     return [
       {
