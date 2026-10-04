@@ -28,6 +28,8 @@ export type Formatter<T extends PlatformEventType> = (
 export const STYLE: Record<PlatformEventType, { emoji: string; color: number }> = {
   "user.created": { emoji: "👋", color: TWITCH_PURPLE },
   "user.deleted": { emoji: "🗑️", color: DANGER_RED },
+  "user.banned": { emoji: "⛔", color: DANGER_RED },
+  "user.unbanned": { emoji: "🔓", color: TWITCH_PURPLE },
   "discord.linked": { emoji: "🔗", color: TWITCH_PURPLE },
   "discord.unlinked": { emoji: "✂️", color: DANGER_RED },
   "subscription.granted": { emoji: "🎟️", color: TWITCH_PURPLE },

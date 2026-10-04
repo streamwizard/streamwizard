@@ -18,7 +18,9 @@ import { toastResult } from "./toast-result";
 
 const HINTS: Partial<Record<PlatformEventType, string>> = {
   "user.created": "Someone signs up for StreamWizard.",
-  "user.deleted": "Someone deletes their account, or disconnects StreamWizard on Twitch.",
+  "user.deleted": "Someone deletes their account, disconnects StreamWizard on Twitch, or an admin removes them.",
+  "user.banned": "An admin bans a user from the Users page.",
+  "user.unbanned": "An admin lifts a ban.",
   "discord.linked": "A user links a Discord account.",
   "discord.unlinked": "A user unlinks their Discord account.",
   "subscription.granted": "An admin grants a plan.",

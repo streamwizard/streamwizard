@@ -25,6 +25,12 @@ const CLOUD_OBS_PRODUCT_ID = "cloud_obs";
 
 const SUBSCRIPTIONS_PATH = "/subscriptions";
 
+/** The grants screen and every /users page, which show the same plans. */
+function revalidateGrants() {
+  revalidatePath(SUBSCRIPTIONS_PATH);
+  revalidatePath("/users", "layout");
+}
+
 async function requireAdminContext() {
   const adminUserId = await assertAdmin();
   return { adminClient: createAdminClient(), adminUserId };
@@ -94,7 +100,7 @@ export async function grantSubscriptionAction(
     }
   }
 
-  revalidatePath(SUBSCRIPTIONS_PATH);
+  revalidateGrants();
   return { error: null };
 }
 
@@ -132,7 +138,7 @@ export async function revokeSubscriptionAction(subscriptionId: string) {
       "web-admin subscriptions",
     );
   }
-  revalidatePath(SUBSCRIPTIONS_PATH);
+  revalidateGrants();
   return { error: null };
 }
 
@@ -192,7 +198,7 @@ export async function updateSubscriptionAction(
       );
     }
   }
-  revalidatePath(SUBSCRIPTIONS_PATH);
+  revalidateGrants();
   return { error: null };
 }
 
