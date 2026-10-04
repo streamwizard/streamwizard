@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getLogRouting, resolveLogRoute } from "@repo/supabase/queries/platform-events";
 import { PLATFORM_EVENT_TYPES } from "@repo/types";
-import { Button } from "@repo/ui";
 import { LogSettingsForm } from "@/components/discord/log-settings-form";
 import { PageHeader } from "@/components/widgets/page-header";
 import { getGuildChannels, requireDiscordContext } from "@/lib/discord/api";
@@ -28,11 +26,7 @@ export default async function DiscordLogSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Log settings" description="Which events get posted, and to which channel.">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/discord/logs">View log</Link>
-        </Button>
-      </PageHeader>
+      <PageHeader title="Log routing" description="Which events get posted, and to which channel." />
       <LogSettingsForm
         key={JSON.stringify(routing)}
         initial={initial}

@@ -4,10 +4,10 @@ import { getLogRouting } from "@repo/supabase/queries/platform-events";
 import { getTicketSettings } from "@repo/supabase/queries/tickets";
 import { getDiscordContext } from "./api";
 
-// Server-only: feeds the sidebar "Not set up" badges. Runs on every dashboard
+// Server-only: feeds the "Not set up" badges in the sidebar and the tab rows. Runs on every dashboard
 // page, so it stays cheap: three settings rows, no Discord API calls.
 
-/** Sidebar hrefs of Discord features that can't work until a channel is picked. */
+/** Hrefs of the settings pages of Discord features that can't work until a channel is picked. */
 export type DiscordSetupGaps = Set<string>;
 
 const NONE: DiscordSetupGaps = new Set();
@@ -30,10 +30,10 @@ export async function getDiscordSetupGaps(): Promise<DiscordSetupGaps> {
     if (welcome?.welcome_enabled !== false && !welcome?.welcome_channel_id) gaps.add("/discord/welcome");
 
     // Tickets need a panel channel and a category before the panel can go up.
-    if (!tickets?.panel_channel_id || !tickets.category_id) gaps.add("/discord/tickets");
+    if (!tickets?.panel_channel_id || !tickets.category_id) gaps.add("/discord/tickets/settings");
 
     // Every log event falls back to the default channel.
-    if (!logRouting.defaultChannelId) gaps.add("/discord/logs");
+    if (!logRouting.defaultChannelId) gaps.add("/discord/logs/settings");
 
     // Go-live posts have nowhere to go without a channel. Off on purpose is fine.
     if (welcome?.live_enabled && !welcome.live_channel_id) gaps.add("/discord/live");

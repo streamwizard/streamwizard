@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { parseTicketOpening } from "@repo/discord-message";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import {
@@ -19,7 +17,7 @@ import {
   ticketSelectOptions,
   type TicketFieldKind,
 } from "@repo/supabase/queries/ticket-config";
-import { Badge, Button } from "@repo/ui";
+import { Badge } from "@repo/ui";
 import { getTicketSettings } from "@repo/supabase/queries/tickets";
 import { TicketCategoryRulesForm } from "@/components/discord/ticket-category-rules-form";
 import { TicketFormEditor, type TicketFieldDraft } from "@/components/discord/ticket-form-editor";
@@ -28,6 +26,7 @@ import { getBotProfile, getGuildRoles, requireDiscordContext } from "@/lib/disco
 import { toRoleOptions } from "@/lib/discord/options";
 import { getBuilderThemes } from "@/lib/discord/theme-assets";
 import { emojiForDisplay } from "@/lib/discord/ticket-options";
+import { PageCrumb } from "@/lib/crumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -82,12 +81,8 @@ export default async function DiscordTicketCategoryPage({ params }: { params: Pr
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Button variant="ghost" size="sm" className="-ml-2" asChild>
-          <Link href="/discord/tickets/settings/categories">
-            <ChevronLeft aria-hidden />
-            All categories
-          </Link>
-        </Button>
+        <PageCrumb label="Categories" href="/discord/tickets/settings/categories" />
+        <PageCrumb label={category.name} href={`/discord/tickets/settings/categories/${category.id}`} />
         <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold">
           {emoji && <span aria-hidden="true">{emoji}</span>}
           {category.name}

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Clock, Cpu, Gauge, HardDrive, MemoryStick, Server } from "lucide-react";
-import { Badge, Button, Card, CardContent } from "@repo/ui";
+import { Clock, Cpu, Gauge, HardDrive, MemoryStick, Server } from "lucide-react";
+import { Badge, Card, CardContent } from "@repo/ui";
 import { STREAMWIZARD_VM_TAG, VM_ALERT_RULES, isStreamwizardVm } from "@repo/alerting/rules";
 import { assertProxmoxName, queryProxmoxGuestInfo, type ProxmoxGuestInfo } from "@repo/metrics";
 import { NodeMetricChart } from "@/components/charts/node-metric-chart";
@@ -25,6 +25,7 @@ import { AutoRefresh } from "@/components/vms/auto-refresh";
 import { formatBytes } from "@/lib/format";
 import { getGuestNet, pveConfigured, type GuestRef } from "@/lib/pve";
 import { fetchGuestSeries, getVm, guestRef } from "@/lib/vms";
+import { PageCrumb } from "@/lib/crumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -135,13 +136,8 @@ export default async function VmDetailPage({ params }: { params: Promise<{ host:
   return (
     <div className="space-y-6">
       <AutoRefresh />
+      <PageCrumb label={guest.name || `VM ${guest.vmid}`} href={`/vms/${encodeURIComponent(host)}/${guest.vmid}`} />
       <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2 mb-2">
-          <Link href="/vms">
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            VMs
-          </Link>
-        </Button>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-semibold">{guest.name || `VM ${guest.vmid}`}</h1>
           <StatusIndicator status={status.indicator} label={status.label} />

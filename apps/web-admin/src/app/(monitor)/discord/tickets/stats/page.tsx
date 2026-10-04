@@ -56,9 +56,6 @@ export default async function DiscordTicketStatsPage({ searchParams }: { searchP
             </Button>
           ))}
         </div>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/discord/tickets">All tickets</Link>
-        </Button>
       </PageHeader>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

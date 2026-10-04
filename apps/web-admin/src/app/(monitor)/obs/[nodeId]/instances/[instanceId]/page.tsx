@@ -1,12 +1,10 @@
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getNodeAction, getInstanceAction } from "@/actions/nodes";
 import { getAutoSwitcherConfigForUser } from "@/actions/auto-switcher";
 import { InstanceDetailClient } from "@/components/admin/instance-detail-client";
 import { InstanceSwitcherTab } from "@/components/admin/instance-switcher-tab";
 import { NodeMetricChart, type NodeMetricPoint } from "@/components/charts/node-metric-chart";
-import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui";
 import {
   queryObsInstanceCpu,
   queryObsInstanceRam,
@@ -20,6 +18,7 @@ import {
   type ObsInstanceMetricPoint,
   type IngestSignalMetricPoint,
 } from "@repo/metrics";
+import { PageCrumb } from "@/lib/crumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -64,13 +63,9 @@ export default async function InstanceDetailPage({
 
   return (
     <div className="space-y-6">
+      <PageCrumb label={node.name} href={`/obs/${nodeId}`} />
+      <PageCrumb label={instance.container_name} href={`/obs/${nodeId}/instances/${instanceId}`} />
       <div>
-        <Button asChild variant="ghost" size="sm" className="-ml-2 mb-2">
-          <Link href={`/obs/${nodeId}`}>
-            <ArrowLeft className="mr-1 h-4 w-4" />
-            {node.name}
-          </Link>
-        </Button>
         <h1 className="text-2xl font-bold font-mono">{instance.container_name}</h1>
         <p className="text-sm text-muted-foreground mt-1">{instance.owner_name ?? instance.owner_email ?? instance.user_id}</p>
       </div>

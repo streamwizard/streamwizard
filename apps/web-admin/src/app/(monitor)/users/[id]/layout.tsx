@@ -1,11 +1,11 @@
-import Link from "next/link";
-import { ArrowLeft, Ban, ExternalLink } from "lucide-react";
+import { Ban, ExternalLink } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getTwitchUsernames } from "@repo/supabase/queries/platform-events";
 import { Alert, AlertDescription, AlertTitle, Avatar, AvatarFallback, AvatarImage, Badge, Button } from "@repo/ui";
 import { CopyValue } from "@/components/users/copy-value";
 import { UnbanButton } from "@/components/users/moderation";
-import { UserTabs } from "@/components/users/user-tabs";
+import { PageTabs } from "@/components/page-tabs";
+import { PageCrumb } from "@/lib/crumbs";
 import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
 import { loadUserAuthState } from "@/lib/user-auth";
 import { LIVE_PLAN_STATUSES, loadAdminUser, userAvatarUrl, userDisplayName } from "@/lib/users";
@@ -17,16 +17,13 @@ export default async function UserLayout({ children, params }: { children: React
   const banner = auth?.ban ? (await getTwitchUsernames(supabaseAdmin, [auth.ban.by])).get(auth.ban.by) : null;
   const name = userDisplayName(user);
   const avatar = userAvatarUrl(user);
+  const base = `/users/${user.id}`;
   const livePlans = user.subscriptions.filter((sub) => LIVE_PLAN_STATUSES.has(sub.status)).length;
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" asChild className="-ml-2 text-muted-foreground">
-        <Link href="/users">
-          <ArrowLeft className="size-4" aria-hidden />
-          Users
-        </Link>
-      </Button>
+      {/* The header breadcrumb is the way back to the list. */}
+      <PageCrumb label={name} href={base} />
 
       <header className="flex flex-wrap items-start gap-4">
         <Avatar className="size-14">
@@ -105,15 +102,15 @@ export default async function UserLayout({ children, params }: { children: React
         </Alert>
       )}
 
-      <UserTabs
-        userId={user.id}
+      <PageTabs
+        label="User sections"
         tabs={[
-          { segment: "", label: "Overview" },
-          { segment: "subscriptions", label: "Plans", count: livePlans },
-          { segment: "eventsub", label: "EventSub" },
-          { segment: "tickets", label: "Tickets" },
-          { segment: "discord", label: "Discord" },
-          { segment: "activity", label: "Activity" },
+          { href: base, label: "Overview", exact: true },
+          { href: `${base}/subscriptions`, label: "Plans", count: livePlans },
+          { href: `${base}/eventsub`, label: "EventSub" },
+          { href: `${base}/tickets`, label: "Tickets" },
+          { href: `${base}/discord`, label: "Discord" },
+          { href: `${base}/activity`, label: "Activity" },
         ]}
       />
 

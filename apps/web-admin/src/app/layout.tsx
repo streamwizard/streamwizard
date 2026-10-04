@@ -27,7 +27,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem nonce={nonce}>
           {children}
-          <Toaster position="bottom-right" theme="dark" expand visibleToasts={5} />
+          {/* mobileOffset lifts toasts above the phone bottom bar. */}
+          <Toaster position="bottom-right" theme="dark" expand visibleToasts={5} mobileOffset={{ bottom: "5rem" }} />
         </ThemeProvider>
       </body>
     </html>

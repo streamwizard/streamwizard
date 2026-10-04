@@ -3,6 +3,7 @@
 import { use } from "react";
 import { WsMonitorProvider } from "@/components/ws-monitor-provider";
 import { WsRoomTopology } from "@/components/topology/ws-room-topology";
+import { PageCrumb } from "@/lib/crumbs";
 
 export default function WsRoomTopologyPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = use(params);
@@ -24,6 +25,7 @@ export default function WsRoomTopologyPage({ params }: { params: Promise<{ roomI
 
   return (
     <WsMonitorProvider wsUrl={wsUrl} monitorSecret={secret}>
+      <PageCrumb label={decodeURIComponent(roomId)} href={`/ws/topology/${roomId}`} />
       <WsRoomTopology roomId={decodeURIComponent(roomId)} />
     </WsMonitorProvider>
   );

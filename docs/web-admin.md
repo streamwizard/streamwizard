@@ -26,7 +26,7 @@ Helpers live in `packages/supabase/src/auth/session-strength.ts`. Every Supabase
 | Weak, has a TOTP factor and/or a passkey | `/auth/verify` — enter the code, or sign in with the passkey instead |
 | Weak, has neither | `/auth/setup` — forced enrolment (at least one; both recommended) |
 
-`/security` (sidebar → Account, or the user menu) manages both methods: add/remove the authenticator, add/rename/remove passkeys. Removing the last remaining method is refused server-side (`src/actions/security.ts`). Supabase allows one verified TOTP factor per user; passkeys are one per device.
+`/security` (in the user menu at the bottom of the sidebar) manages both methods: add/remove the authenticator, add/rename/remove passkeys. Removing the last remaining method is refused server-side (`src/actions/security.ts`). Supabase allows one verified TOTP factor per user; passkeys are one per device.
 
 Passkeys are registered against a Relying Party ID that is baked into each credential, so it is scoped to the admin host and must never change afterwards:
 
@@ -37,6 +37,37 @@ Passkeys are registered against a Relying Party ID that is baked into each crede
 | prod (same) | `admin.streamwizard.org` | `https://admin.streamwizard.org` | enroll + verify on |
 
 **Locked out** (lost phone and passkey): in the Supabase dashboard, Authentication → Users → the admin → delete their TOTP factor and/or passkeys. Their next Twitch sign-in lands on `/auth/setup`. There is deliberately no in-app reset.
+
+## Navigation
+
+The sidebar has five groups and 17 items (`src/lib/nav-config.ts`). Sub-pages are tabs at the top of their page, not sidebar items; the tab row is drawn by the `(monitor)` layout from the same config, so adding a tab is one line there.
+
+| Group | Item | Route | Tabs |
+|---|---|---|---|
+| Home | Dashboard | `/overview` | |
+| Support | Tickets | `/discord/tickets` | Queue, Stats, Settings |
+| Support | Users | `/users` | |
+| Support | Plans | `/subscriptions` | |
+| Support | Widget review | `/widget-library` | |
+| Discord | Announcements | `/discord/announcements` | |
+| Discord | Messages | `/discord/messages` | |
+| Discord | Event log | `/discord/logs` | Log, Routing (`/discord/logs/settings`) |
+| Discord | Server settings | `/discord` | Overview, Welcome, Activity tracking, Go-live, Permissions |
+| Monitoring | Alerts | `/alerts` | Active, History, Rules, Notifications |
+| Monitoring | API | `/http` | |
+| Monitoring | EventSub | `/eventsub` | |
+| Monitoring | WebSocket | `/ws` | Metrics, Live feed, Rooms, Topology |
+| Monitoring | Database | `/supabase` | Health, App data (`/database`) |
+| Infrastructure | OBS nodes | `/obs` | |
+| Infrastructure | Ingest servers | `/ingest` | |
+| Infrastructure | VMs | `/vms` | |
+| Infrastructure | Backups | `/backups` | |
+
+- **Counters** next to Tickets (waiting for a reply), Alerts (firing, not silenced) and Widget review (pending) come from `GET /api/nav-counts`, polled every 45 s.
+- **Phones** (below 768px) get a bottom bar: Home, Tickets, Alerts, Users, More. "More" opens the full menu as a drawer.
+- **Breadcrumb**: group, item and tab come from the nav config; a detail page adds its own level by rendering `<PageCrumb label href />` (`src/lib/crumbs.tsx`). On phones the header shows the last level plus a back arrow.
+- **Header controls** (range, refresh, bandwidth) only show on pages whose nav entry lists them under `controls`.
+- Route URLs are stable: other apps link in (the Discord bot posts `/discord/tickets/{number}`).
 
 ## Pages
 

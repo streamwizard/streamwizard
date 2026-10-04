@@ -1,12 +1,15 @@
 "use client";
 
+import { Fragment } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SlidersHorizontal } from "lucide-react";
-import { Badge, Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, Popover, PopoverContent, PopoverTrigger, Separator, SidebarTrigger } from "@repo/ui";
+import { ChevronLeft, SlidersHorizontal } from "lucide-react";
+import { Badge, Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator, Button, Popover, PopoverContent, PopoverTrigger, Separator, SidebarTrigger } from "@repo/ui";
 import { RefreshIntervalSelector } from "@/components/refresh-interval-selector";
 import { TimeRangeSelector } from "@/components/time-range-selector";
 import { BandwidthUnitToggle } from "@/components/bandwidth-unit-toggle";
-import { findNavLocation, type HeaderControl } from "@/lib/nav-config";
+import { usePageCrumbs } from "@/lib/crumbs";
+import { findNavLocation, getHeaderControls, getNavTrail, type HeaderControl } from "@/lib/nav-config";
 import { cn } from "@/lib/utils";
 
 const ENV_BADGE_CLASSES: Record<string, string> = {
@@ -28,27 +31,57 @@ function HeaderControls({ controls }: { controls: HeaderControl[] }) {
 export function MonitorHeader({ envLabel }: { envLabel: string }) {
   const pathname = usePathname();
   const location = findNavLocation(pathname);
-  const controls = location?.item.controls ?? [];
+  const controls = getHeaderControls(location);
+  const pageCrumbs = usePageCrumbs();
+  const trail = [...getNavTrail(location), ...pageCrumbs];
+  const current = trail.at(-1);
+  // Phones show one level, so a detail page needs a way back up.
+  const parent = pageCrumbs.length > 0 ? trail.slice(0, -1).reverse().find((crumb) => crumb.href) : undefined;
 
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/75">
-      <SidebarTrigger className="-ml-1" />
-      <Separator orientation="vertical" className="mr-1 !h-4" />
-      <Breadcrumb className="min-w-0">
+      {/* The bottom bar's "More" opens the menu on phones. */}
+      <SidebarTrigger className="-ml-1 hidden md:inline-flex" />
+      <Separator orientation="vertical" className="mr-1 hidden !h-4 md:block" />
+
+      {parent?.href && (
+        <Button variant="ghost" size="icon" className="-ml-2 size-10 shrink-0 md:hidden" asChild>
+          <Link href={parent.href} aria-label={`Back to ${parent.label}`}>
+            <ChevronLeft className="size-5" aria-hidden />
+          </Link>
+        </Button>
+      )}
+      <p className="min-w-0 truncate text-sm font-medium md:hidden">{current?.label ?? "Admin"}</p>
+
+      <Breadcrumb className="hidden min-w-0 md:block">
         <BreadcrumbList className="flex-nowrap">
-          {location && location.group.label !== location.item.label && (
-            <>
-              <BreadcrumbItem className="hidden sm:block text-muted-foreground">
-                {location.group.label}
-              </BreadcrumbItem>
-              <BreadcrumbSeparator className="hidden sm:block" />
-            </>
+          {trail.length === 0 && (
+            <BreadcrumbItem>
+              <BreadcrumbPage>Admin</BreadcrumbPage>
+            </BreadcrumbItem>
           )}
-          <BreadcrumbItem className="min-w-0">
-            <BreadcrumbPage className="truncate">{location?.item.label ?? "Admin"}</BreadcrumbPage>
-          </BreadcrumbItem>
+          {trail.map((crumb, index) => {
+            const last = index === trail.length - 1;
+            return (
+              <Fragment key={`${crumb.href ?? "group"}-${crumb.label}`}>
+                <BreadcrumbItem className={cn(last ? "min-w-0" : "shrink-0")}>
+                  {last ? (
+                    <BreadcrumbPage className="truncate">{crumb.label}</BreadcrumbPage>
+                  ) : crumb.href ? (
+                    <BreadcrumbLink asChild>
+                      <Link href={crumb.href}>{crumb.label}</Link>
+                    </BreadcrumbLink>
+                  ) : (
+                    crumb.label
+                  )}
+                </BreadcrumbItem>
+                {!last && <BreadcrumbSeparator />}
+              </Fragment>
+            );
+          })}
         </BreadcrumbList>
       </Breadcrumb>
+
       <div className="ml-auto flex shrink-0 items-center gap-3">
         {controls.length > 0 && (
           <>

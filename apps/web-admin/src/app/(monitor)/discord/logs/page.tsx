@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Settings } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import {
   getTwitchUsernames,
@@ -286,14 +285,7 @@ export default async function DiscordLogPage({ searchParams }: { searchParams: P
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Log" description="Platform and Discord server events, including ones the bot skipped.">
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/discord/logs/settings">
-            <Settings className="size-4" aria-hidden />
-            Settings
-          </Link>
-        </Button>
-      </PageHeader>
+      <PageHeader title="Event log" description="Platform and Discord server events, including ones the bot skipped." />
 
       <form method="get" className="flex flex-wrap items-center gap-2 [&_[data-slot=native-select-wrapper]]:w-full sm:[&_[data-slot=native-select-wrapper]]:w-auto">
         <NativeSelect name="group" defaultValue={params.group ?? ""} aria-label="Group" className="w-full sm:w-44">

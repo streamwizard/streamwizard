@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Archive, BarChart3, CheckCheck, Inbox, MoonStar, SearchX, Settings, SlidersHorizontal, Ticket } from "lucide-react";
+import { Archive, CheckCheck, Inbox, MoonStar, SearchX, SlidersHorizontal, Ticket } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
@@ -33,6 +33,7 @@ import {
 } from "@repo/ui";
 import { TicketFiltersForm } from "@/components/discord/ticket-filters-form";
 import { TicketListLive } from "@/components/discord/ticket-list-live";
+import { PageTabs } from "@/components/page-tabs";
 import { PageHeader } from "@/components/widgets/page-header";
 import { requireDiscordContext } from "@/lib/discord/api";
 import {
@@ -277,53 +278,22 @@ export default async function DiscordTicketsPage({ searchParams }: { searchParam
       <PageHeader title="Tickets" description={VIEWS[view].description}>
         {/* New, claimed and closed tickets show up without a reload. */}
         <TicketListLive guildId={guildId} />
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/discord/tickets/stats">
-            <BarChart3 className="size-4" aria-hidden />
-            Stats
-          </Link>
-        </Button>
-        <Button variant="outline" size="sm" asChild>
-          <Link href="/discord/tickets/settings">
-            <Settings className="size-4" aria-hidden />
-            Settings
-          </Link>
-        </Button>
       </PageHeader>
 
-      <nav aria-label="Ticket views" className="inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-lg bg-muted p-[3px]">
-        {VIEW_ORDER.map((id) => {
-          const active = id === view;
+      <PageTabs
+        label="Ticket views"
+        variant="pills"
+        tabs={VIEW_ORDER.map((id) => {
           const countKey = VIEWS[id].count;
-          const count = countKey ? counts[countKey] : null;
-          return (
-            <Link
-              key={id}
-              href={viewHref(id, params)}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "inline-flex h-8 items-center gap-1.5 rounded-md border border-transparent px-3 text-sm font-medium whitespace-nowrap transition-colors",
-                "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
-                active
-                  ? "bg-background text-foreground shadow-sm dark:border-input dark:bg-input/30"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {VIEWS[id].label}
-              {count !== null && (
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 text-xs tabular-nums",
-                    count > 0 && id !== "open" ? "bg-amber-500/15 text-amber-700 dark:text-amber-400" : "bg-muted text-muted-foreground",
-                  )}
-                >
-                  {count}
-                </span>
-              )}
-            </Link>
-          );
+          return {
+            href: viewHref(id, params),
+            label: VIEWS[id].label,
+            active: id === view,
+            count: countKey ? counts[countKey] : null,
+            attention: id !== "open",
+          };
         })}
-      </nav>
+      />
 
       <TicketFiltersForm className="space-y-2 [&_[data-slot=native-select-wrapper]]:w-full sm:[&_[data-slot=native-select-wrapper]]:w-auto">
         {view !== "open" && <input type="hidden" name="status" value={view} />}
