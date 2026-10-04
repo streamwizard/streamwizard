@@ -78,6 +78,13 @@ const widgetImageHosts = [
 // play with no error a streamer would ever see.
 const mediaHosts = ["https://cdn.streamwizard.org", assetCdnUrl].filter(Boolean).join(" ");
 
+// Where Twitch's signed clip MP4s live. The clips widget plays them straight
+// from here; relaying them through this server cost a clip's worth of
+// bandwidth twice over and bought nothing, since OBS plays the CDN URL as is.
+// Wildcarded for the same reason as in web-streamwizard's csp.ts: the
+// distribution is Twitch's to change, and a pinned host would fail silently.
+const twitchClipCdn = "https://*.cloudfront.net";
+
 /** OBS-friendly fonts CSP for the overlay scene viewer (optional hardening). */
 const overlaySceneFontsCsp = [
   "default-src 'self'",
@@ -85,7 +92,7 @@ const overlaySceneFontsCsp = [
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   `img-src 'self' data: blob: ${mediaHosts} ${widgetImageHosts}`,
-  `media-src 'self' blob: data: ${mediaHosts}`,
+  `media-src 'self' blob: data: ${mediaHosts} ${twitchClipCdn}`,
   // mediaHosts is here as well as in media-src: the per-widget <meta> policy
   // allows the asset CDN in connect-src, so a widget may fetch() an upload
   // rather than only pointing a tag at it. Same srcdoc reasoning as overlayUrl.
