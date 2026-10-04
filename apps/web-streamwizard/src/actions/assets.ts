@@ -36,8 +36,6 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const PENDING_RESERVATION_MS = 60 * 60 * 1000;
 const PRESIGN_EXPIRY_SECONDS = 300;
 
-export type { AssetKind };
-
 export interface UserAsset {
   id: string;
   file_name: string;
