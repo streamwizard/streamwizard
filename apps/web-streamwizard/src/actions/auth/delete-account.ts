@@ -58,28 +58,32 @@ export async function deleteAccount() {
     captureException(revokeErr);
   }
 
-  // delete_user_data anonymises the user's Discord ticket messages but can't
-  // reach R2, so remove the ticket screenshots they posted first. Best-effort,
-  // like the steps above.
-  try {
-    const { data: integration } = await getDiscordIntegrationByUserId(supabase, user.id);
-    if (
-      integration?.discord_user_id &&
-      env.R2_ACCOUNT_ID &&
-      env.R2_ACCESS_KEY_ID &&
-      env.R2_SECRET_ACCESS_KEY &&
-      env.R2_ASSETS_BUCKET
-    ) {
-      const r2 = new R2Storage({
-        accountId: env.R2_ACCOUNT_ID,
-        accessKeyId: env.R2_ACCESS_KEY_ID,
-        secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-        bucket: env.R2_ASSETS_BUCKET,
-      });
-      await deleteTicketAttachments(supabaseAdmin, integration.discord_user_id, (key) => r2.deleteObject(key));
+  // delete_user_data can't reach R2, so the user's files go first: Discord
+  // ticket screenshots (it only anonymises the messages) and media library
+  // uploads (their rows cascade away with the account). Best-effort, like the
+  // steps above; rest-api's hourly asset reconciler removes media left behind.
+  if (env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_ASSETS_BUCKET) {
+    const r2 = new R2Storage({
+      accountId: env.R2_ACCOUNT_ID,
+      accessKeyId: env.R2_ACCESS_KEY_ID,
+      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+      bucket: env.R2_ASSETS_BUCKET,
+    });
+
+    try {
+      const { data: integration } = await getDiscordIntegrationByUserId(supabase, user.id);
+      if (integration?.discord_user_id) {
+        await deleteTicketAttachments(supabaseAdmin, integration.discord_user_id, (key) => r2.deleteObject(key));
+      }
+    } catch (ticketErr) {
+      reportError(ticketErr, "actions/delete-account: ticket attachments");
     }
-  } catch (ticketErr) {
-    reportError(ticketErr, "actions/delete-account: ticket attachments");
+
+    try {
+      await r2.deletePrefix(`assets/${user.id}/`);
+    } catch (mediaErr) {
+      reportError(mediaErr, "actions/delete-account: media");
+    }
   }
 
   const { error: rpcError } = await deleteUserData(supabase, broadcasterId);
