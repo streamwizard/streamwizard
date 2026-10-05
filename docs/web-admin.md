@@ -40,7 +40,7 @@ Passkeys are registered against a Relying Party ID that is baked into each crede
 
 ## Navigation
 
-The sidebar has five groups and 17 items (`src/lib/nav-config.ts`). Sub-pages are tabs at the top of their page, not sidebar items; the tab row is drawn by the `(monitor)` layout from the same config, so adding a tab is one line there.
+The sidebar has five groups and 18 items (`src/lib/nav-config.ts`). Sub-pages are tabs at the top of their page, not sidebar items; the tab row is drawn by the `(monitor)` layout from the same config, so adding a tab is one line there.
 
 | Group | Item | Route | Tabs |
 |---|---|---|---|
@@ -60,6 +60,7 @@ The sidebar has five groups and 17 items (`src/lib/nav-config.ts`). Sub-pages ar
 | Infrastructure | OBS nodes | `/obs` | Fleet, Manage (`?tab=manage`) |
 | Infrastructure | Ingest servers | `/ingest` | Fleet, Live (`?tab=live`), Manage (`?tab=manage`) |
 | Infrastructure | VMs | `/vms` | |
+| Infrastructure | Apps | `/apps` | |
 | Infrastructure | Backups | `/backups` | |
 
 - **Counters** next to Tickets (waiting for a reply), Alerts (firing, not silenced) and Widget review (pending) come from `GET /api/nav-counts`, polled every 45 s.
@@ -81,6 +82,7 @@ The sidebar has five groups and 17 items (`src/lib/nav-config.ts`). Sub-pages ar
 | `/obs/[nodeId]` | Node detail: hardware card, live metrics stream, instance table (start/stop/remove/VNC), 24h history charts |
 | `/obs/[nodeId]/instances/[instanceId]` | Instance detail, tabbed: **Overview** (details incl. RAM limit, CPU quota, shm, config template, storage used/quota + live metrics), **Metrics history** (per-instance InfluxDB series), **Auto Switcher** (edit the owner's switcher config, hold/release scene override) |
 | `/ingest` | Three tabs in the page (`?tab=`, no extra routes). **Fleet**: stats, one node list (registry state, health probe, latest host metrics), history charts. **Live** (`?tab=live`): monitor socket status, fleet bandwidth, one streams list (socket and polled metrics joined per stream; loss and retransmit turn amber at 0.5% and red at 2%), node bandwidth. **Manage** (`?tab=manage`): register/edit/delete SRT/SRTLA boxes, claim-token install command |
+| `/apps`, `/apps/[env]/[app]`, `/apps/server` | Every app on the Dokploy server, from the Telegraf that runs on it (bucket `webserver`). **List**: the server's load, then one row per app per environment (health, CPU, memory, network, container starts in 24 h, requests, errors, response time); other projects on the server sit folded under "Other", without status colours. An app in `EXPECTED_APPS` (`src/lib/apps-model.ts`) keeps its row when Telegraf has nothing on it. **App page**: charts plus the containers of the last 24 hours with exit codes, which is where a restart or an OOM kill shows. **Server page**: CPU, memory, swap, disk, network, OOM kills. Only the production Influx org has the bucket, so staging and local say "No server data in this environment" and query nothing. Each read fails on its own: the page names the ones that did not answer and leaves those numbers blank |
 | `/users`, `/users/[id]` | Everyone with an account: search, filter and sort; a row menu with **Grant access**; a user page with an **Actions** menu (grant access, ban or lift ban, make or remove admin, unlink Discord, resync EventSub, delete account) and tabs for Overview, Plans, EventSub, Tickets, Discord and Activity. Plans (product subscriptions, independent of Stripe) are granted from the row menu or the Actions menu and edited or revoked on the user's **Plans** tab |
 | `/subscriptions` | Gone as a page: redirects to `/users?filter=paying` (the "Has a plan" filter), which lists the same people the old grants screen showed with a live plan |
 | `/widget-library` | Moderation queue for community widget submissions (sandboxed iframe previews) |
@@ -117,7 +119,7 @@ Scene pickers populate only while the instance's OBS is running (obsws session);
 
 | Var | Required | Purpose |
 |---|---|---|
-| `INFLUXDB_URL/TOKEN/ORG` | yes | metrics source (org per env, buckets fixed in `packages/metrics/src/buckets.ts`) |
+| `INFLUXDB_URL/TOKEN/ORG` | yes | metrics source (org per env, buckets fixed in `packages/metrics/src/buckets.ts`; the `webserver` bucket behind `/apps` exists in the prod org only) |
 | `SUPABASE_URL`, `SUPABASE_PUBLIC_KEY`, `SUPABASE_SECRET_KEY` | yes | auth + service-role |
 | `STREAMWIZARD_API_URL` | yes | embedded in node install commands (`/obs`, `/ingest`) |
 | `TOKEN_ENCRYPTION_KEY` | yes | encrypt/decrypt OBS WS passwords — **must be byte-identical to web-streamwizard's** |

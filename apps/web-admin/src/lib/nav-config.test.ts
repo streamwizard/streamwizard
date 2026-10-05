@@ -47,6 +47,8 @@ describe("findNavLocation", () => {
     expect(at("/users/abc/tickets")).toEqual({ item: "Users", tab: null });
     expect(at("/obs/node-1/instances/inst-1")).toEqual({ item: "OBS nodes", tab: null });
     expect(at("/vms/hosts/pve1")).toEqual({ item: "VMs", tab: null });
+    expect(at("/apps/prod/rest-api")).toEqual({ item: "Apps", tab: null });
+    expect(at("/apps/server")).toEqual({ item: "Apps", tab: null });
     expect(at("/ws/topology/room-1")).toEqual({ item: "WebSocket", tab: "Topology" });
   });
 

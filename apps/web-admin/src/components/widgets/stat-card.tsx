@@ -6,8 +6,8 @@ type StatTone = "default" | "positive" | "warning" | "danger";
 
 interface StatCardProps {
   title: string;
-  value: string | number;
-  description?: string;
+  value: React.ReactNode;
+  description?: React.ReactNode;
   trend?: "up" | "down" | "neutral";
   /** Colors the value to signal health at a glance. */
   tone?: StatTone;
