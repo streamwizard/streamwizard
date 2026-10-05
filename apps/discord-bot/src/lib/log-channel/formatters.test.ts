@@ -537,6 +537,8 @@ describe("server log formatters", () => {
     expect(fieldValue(rated, "Comment")).toBe("> Quick and friendly");
     const bare = formatPlatformEvent(event("ticket.feedback", { ...ticket, rating: 5 })).toJSON();
     expect(fieldValue(bare, "Comment")).toBeUndefined();
+    const blank = formatPlatformEvent(event("ticket.feedback", { ...ticket, rating: 5, comment: "  " })).toJSON();
+    expect(fieldValue(blank, "Comment")).toBeUndefined();
   });
 
   test("bulk delete shows cached lines in a code block without breaking it", () => {
