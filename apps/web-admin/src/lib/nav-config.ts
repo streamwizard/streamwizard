@@ -1,4 +1,5 @@
 import {
+  AppWindow,
   Bell,
   Bot,
   Boxes,
@@ -156,6 +157,7 @@ export const navGroups: NavGroup[] = [
       { href: "/obs", label: "OBS nodes", icon: Cpu, controls: ALL_CONTROLS },
       { href: "/ingest", label: "Ingest servers", icon: Server, controls: ALL_CONTROLS },
       { href: "/vms", label: "VMs", icon: Boxes, controls: ALL_CONTROLS },
+      { href: "/apps", label: "Apps", icon: AppWindow, controls: ALL_CONTROLS },
       { href: "/backups", label: "Backups", icon: DatabaseBackup, controls: RANGE_REFRESH },
     ],
   },
