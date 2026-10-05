@@ -54,7 +54,22 @@ async function main() {
       onHeartbeat: createShardHeartbeat(),
     });
 
+    // Liveness probe (docker healthcheck). Shard state is not part of it:
+    // the shards reconnect on their own, and a Twitch outage must not make
+    // Swarm restart the bot in a loop. eventsub_shard metrics cover that.
+    const healthServer = Bun.serve({
+      port: Number(process.env.PORT ?? 8030),
+      fetch(req) {
+        const url = new URL(req.url);
+        if (url.pathname === "/health") {
+          return Response.json({ ok: true, shards: shards.getShardIds() });
+        }
+        return new Response("Not Found", { status: 404 });
+      },
+    });
+
     const shutdown = async () => {
+      healthServer.stop();
       overlayWsClient.disconnect();
       await shards.stop();
       await logGroup?.flush();

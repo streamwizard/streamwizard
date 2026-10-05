@@ -71,6 +71,13 @@ USER bun
 
 EXPOSE 3000
 
+# Liveness only: the process answers on its own port. Swarm replaces a
+# container that fails this, so it must never depend on Supabase or any other
+# service being up. start-interval makes a fresh container count as healthy
+# within seconds, so a deploy does not wait for the first 30 s check.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --start-interval=2s --retries=3 \
+  CMD curl -fsS -o /dev/null "http://127.0.0.1:${PORT:-3000}/api/health" || exit 1
+
 # DOPPLER_TOKEN must be set in Dokploy's Environment Variables section at runtime
 ENTRYPOINT ["doppler", "run", "--"]
 CMD ["bun", "apps/web-streamwizard/server.js"]

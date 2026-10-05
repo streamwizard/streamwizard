@@ -21,10 +21,18 @@ import type { AppEnv } from "./types";
 // Everything except /health sits under /internal/guilds/:guildId, behind the
 // bearer secret and the guild lookup. A new feature gets its own file in
 // routes/ and one line here.
-export function createInternalApp(client: Client, secret: string) {
+//
+// Without a secret only /health is served: the container healthcheck needs it
+// whether or not the dashboard API is configured.
+export function createInternalApp(client: Client, secret: string | undefined) {
   const app = new Hono<AppEnv>();
 
+  // Liveness: answers as long as the process runs. `ready` is the gateway
+  // state and is information only. A Discord outage must not make the
+  // healthcheck fail, or Swarm would restart the bot in a loop.
   app.get("/health", (c) => c.json({ ok: true, ready: client.isReady() }));
+
+  if (!secret) return app;
 
   const guilds = new Hono<AppEnv>();
   guilds.use("*", bearerSecret(secret));
