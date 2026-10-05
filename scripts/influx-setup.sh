@@ -32,6 +32,9 @@ BUCKETS=(
   "supabase-platform:30d"
   "vm-backups:400d"
   "proxmox:90d"
+  # Written by the Telegraf on the Dokploy server. Not in buckets.ts until the
+  # admin panel reads it: a bucket listed there must exist in every org.
+  "webserver:30d"
 )
 
 # Doppler has one shared config per environment, so every service in it,
@@ -77,6 +80,27 @@ for entry in "${BUCKETS[@]}"; do
 done
 create_token "$ORG-all" "${token_args[@]}"
 
+# A token's permissions are fixed when it is made. An all token from before a
+# bucket was added to the list cannot read or write that bucket, and a query
+# that touches it fails for the apps.
+all_permissions="$(influx auth list --org "$ORG" --json | jq -r --arg d "$ORG-all" '.[] | select(.description == $d) | .permissions[]')"
+for entry in "${BUCKETS[@]}"; do
+  name="${entry%%:*}"
+  id="$(bucket_id "$name")"
+  if ! grep -q "^read:.*buckets/$id\$" <<<"$all_permissions" || ! grep -q "^write:.*buckets/$id\$" <<<"$all_permissions"; then
+    echo "WARNING: token $ORG-all does not cover bucket $name." >&2
+    echo "  Rename it in the InfluxDB UI (for example $ORG-all-old), run this script again and put the" >&2
+    echo "  new token in Doppler. Delete the old one after every app and node uses the new token." >&2
+  fi
+done
+
 # Proxmox VE pushes its own metrics (Datacenter → Metric Server → InfluxDB).
 # This token lives in the PVE config, not Doppler, so it only writes proxmox.
 create_token "$ORG-proxmox" --write-bucket "$(bucket_id proxmox)"
+
+# The Telegraf on the Dokploy server (telegraf repo, host/) writes
+# host and container metrics and the Supabase platform scrape. It only writes
+# these two buckets. Goes in Doppler as INFLUXDB_TELEGRAF_TOKEN.
+create_token "$ORG-telegraf" \
+  --write-bucket "$(bucket_id webserver)" \
+  --write-bucket "$(bucket_id supabase-platform)"
