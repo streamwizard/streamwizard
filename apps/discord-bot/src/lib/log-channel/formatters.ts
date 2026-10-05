@@ -383,7 +383,11 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
   "ticket.feedback": (payload, event) =>
     withMember(base(event, "ticket.feedback"), payload.opener)
       .setDescription(`${discordUser(payload.opener, "The opener")} rated ${ticketLink(payload)} ${stars(payload.rating)}.`)
-      .addFields([...ticketFields(payload, event), ...field("Comment", quote(payload.comment ?? null, ""), false)]),
+      // No comment means no field. quote() would turn a missing one into "**".
+      .addFields([
+        ...ticketFields(payload, event),
+        ...field("Comment", payload.comment?.trim() ? quote(payload.comment, "") : null, false),
+      ]),
 
   "ticket.updated": (payload, event) => {
     const actor = payload.actor ? discordUser(payload.actor, "Someone") : "StreamWizard";
