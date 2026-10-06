@@ -293,7 +293,9 @@ export async function queryAppContainers(range = "24h", env?: string, app?: stri
     }
     const field = row._field ?? "";
     const seen = entry.fields.get(field);
-    if (!seen || time > seen.time) entry.fields.set(field, { time, value: row._value ?? "" });
+    // The client hands back typed values whatever Row says: oomkilled arrives
+    // as a boolean, not as "true".
+    if (!seen || time > seen.time) entry.fields.set(field, { time, value: String(row._value ?? "") });
   }
   return [...containers.entries()]
     .map(([name, c]): AppContainer => {
@@ -487,6 +489,40 @@ const SERVER_GAUGES = [
   pick("server_disk", ["total", "used", "used_percent", "inodes_used_percent"]),
   pick("docker", ["n_containers_running"]),
 ];
+/** What swarm wants and has for one service. Compose and plain containers have no row. */
+export interface AppTasks {
+  key: string;
+  app: string;
+  env: string;
+  service: string;
+  /** Replicas asked for: 0 when the service was scaled down on purpose. */
+  desired: number | null;
+  running: number | null;
+  time: string;
+}
+
+export function buildAppTasksQuery(range = "5m"): string {
+  return `
+${source(range)}
+  |> filter(fn: (r) => ${pick("docker_swarm", ["tasks_desired", "tasks_running"])})
+  |> last()
+  |> yield(name: "tasks")`;
+}
+
+/** Desired and running task counts of every swarm service, all environments. */
+export async function queryAppTasks(range = "5m"): Promise<AppTasks[]> {
+  const rows = await runFluxQuery(buildAppTasksQuery(range), (row) => row);
+  return [...byApp(rows).entries()].map(([key, a]) => ({
+    key,
+    app: a.app,
+    env: a.env,
+    service: a.service,
+    desired: a.fields.get("tasks_desired") ?? null,
+    running: a.fields.get("tasks_running") ?? null,
+    time: a.time,
+  }));
+}
+
 const SERVER_NET = `(${pick("server_net", ["bytes_recv", "bytes_sent"])} and ${PHYSICAL_NIC})`;
 const SERVER_DISK_IO = pick("server_diskio", ["read_bytes", "write_bytes"]);
 const SERVER_OOM = pick("server_vmstat", ["oom_kill"]);
