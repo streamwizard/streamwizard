@@ -9,6 +9,7 @@ import type { Widget } from "@/actions/widgets";
 import { publishWidgetToLibrary, updateWidget } from "@/actions/widgets";
 import { coerceFields } from "@/components/widgets/editor/widget-editor-fields";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
+import { safeNextPath } from "@/lib/safe-next-path";
 
 /**
  * The four editable sources. They live in refs, not state: Monaco owns the text
@@ -119,8 +120,9 @@ export function useWidgetDraft(
 
   function handleBack() {
     requestLeave(() => {
-      if (fromUrl && fromUrl.startsWith("/") && !fromUrl.startsWith("//") && !fromUrl.includes("\\")) {
-        router.push(fromUrl);
+      const backTo = safeNextPath(fromUrl);
+      if (backTo) {
+        router.push(backTo);
         return;
       }
       router.back();

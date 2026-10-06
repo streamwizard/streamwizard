@@ -11,6 +11,7 @@ import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { assignRole, DiscordMemberNotFoundError, removeRole } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 import { reportAndRedirect } from "@/lib/report-redirect";
+import { safeNextPath } from "@/lib/safe-next-path";
 
 export async function linkDiscord(next?: string) {
   const supabase = await createClient();
@@ -20,7 +21,7 @@ export async function linkDiscord(next?: string) {
   // Only relative, same-origin paths are allowed through — the callback
   // route re-validates this too, but reject early so we never embed an
   // attacker-controlled absolute/protocol-relative URL in the redirect chain.
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") && !next.includes("://") ? next : undefined;
+  const safeNext = safeNextPath(next);
   const redirectTo = `${origin}/auth/callback/discord${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`;
 
   const { error, data } = await supabase.auth.linkIdentity({

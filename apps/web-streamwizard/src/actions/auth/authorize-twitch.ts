@@ -7,6 +7,7 @@ import { createClient } from "@repo/supabase/next/server";
 import { checkProductAccess } from "@repo/supabase/queries/subscriptions";
 import { TWITCH_SCOPE_FEATURES, TWITCH_SCOPE_FEATURE_PRODUCTS, twitchScopesFor, type TwitchScopeFeature } from "@repo/schemas";
 import { reportAndRedirect } from "@/lib/report-redirect";
+import { safeNextPath } from "@/lib/safe-next-path";
 
 /**
  * Re-run the Twitch authorization so the stored token gains a feature's
@@ -23,7 +24,7 @@ export async function authorizeTwitchFeature(feature: TwitchScopeFeature | "base
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) redirect("/login");
 
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") && !next.includes("://") ? next : "/dashboard";
+  const safeNext = safeNextPath(next) ?? "/dashboard";
 
   // A feature set is only ever requested for an account that holds its
   // product, so this action cannot be used to widen consent past what the
