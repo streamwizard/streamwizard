@@ -123,6 +123,18 @@ describe("restartStats", () => {
     expect(stats).toEqual({ starts: 3, failed: 2, oomKills: 1 });
   });
 
+  test("a deploy that had to kill the old container (137) is no failure", () => {
+    const stats = restartStats(
+      [
+        container({ name: "new", startedAt: ago(600) }),
+        // Start-first: the new container was up 5 s before the old one ended.
+        stopped({ name: "old", exitCode: 137, startedAt: ago(3 * 86_400), finishedAt: ago(595) }),
+      ],
+      NOW,
+    );
+    expect(stats).toEqual({ starts: 1, failed: 0, oomKills: 0 });
+  });
+
   test("starts and stops older than 24 hours are left out", () => {
     const stats = restartStats([container(), stopped({ exitCode: 1, startedAt: ago(3 * 86_400), finishedAt: ago(2 * 86_400) })], NOW);
     expect(stats).toEqual({ starts: 0, failed: 0, oomKills: 0 });

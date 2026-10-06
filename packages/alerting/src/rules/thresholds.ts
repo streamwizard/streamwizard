@@ -88,6 +88,59 @@ export const VM_STORAGE_CRIT_PCT = 95;
 /** A VM (or host) that hasn't pushed to Influx for this long counts as gone.
  * PVE pushes every ~10 s, stopped guests too, so 90 s is nine missed pushes. */
 export const VM_STALE_SECONDS = 90;
+// Apps on the Dokploy server (app.* and server.* rules). One Telegraf on that
+// host writes container and host data to the webserver bucket, prod org only.
+/** How long a crash or an OOM kill keeps its alert open. */
+export const APP_CRASH_WINDOW_MIN = 10;
+/** Crashes in that window before app.crash fires: 1 is every crash. */
+export const APP_CRASH_COUNT = 1;
+export const APP_RESTART_LOOP_WINDOW_MIN = 15;
+/** Stops outside a deploy, clean exit codes too: an app that swarm keeps
+ * killing for a failing healthcheck exits 0 every time. */
+export const APP_RESTART_LOOP_COUNT = 3;
+export const APP_MEMORY_WARN_PCT = 80;
+export const APP_MEMORY_CRIT_PCT = 100;
+/**
+ * The apps run without a memory limit, so app.memory_high compares against a
+ * budget per app instead: well above the most each used in normal running
+ * (prod data, October 2026). An app without a budget is not watched.
+ */
+export const APP_MEMORY_BUDGET_MB: Record<string, Record<string, number>> = {
+  prod: {
+    "web-streamwizard": 1536,
+    "web-admin": 1536,
+    "web-overlay": 1536,
+    "rest-api": 1024,
+    "ws-server": 512,
+    "streamwizard-bot": 512,
+    "discord-bot": 512,
+    "obs-auto-switcher": 512,
+    "alert-worker": 512,
+  },
+  staging: {
+    "web-streamwizard": 768,
+    "web-admin": 768,
+    "web-overlay": 768,
+    "rest-api": 384,
+    "ws-server": 384,
+    "streamwizard-bot": 384,
+    "discord-bot": 384,
+    "obs-auto-switcher": 384,
+    "alert-worker": 384,
+  },
+  shared: {
+    influxdb: 3072,
+    dokploy: 2048,
+    traefik: 512,
+    "host-telegraf": 512,
+    "dokploy-postgres": 512,
+  },
+};
+export const SERVER_DISK_WARN_PCT = 80;
+export const SERVER_DISK_CRIT_PCT = 90;
+export const SERVER_OOM_WINDOW_MIN = 10;
+/** Telegraf writes every 30 s: six missed writes. */
+export const TELEGRAF_SILENT_MIN = 3;
 
 // --- Rule constructors ---
 // Each takes the full overrides record and resolves its own row by opts.id:

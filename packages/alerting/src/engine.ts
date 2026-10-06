@@ -13,6 +13,7 @@ import { alertConfig } from "./config";
 import { homeEnv } from "./home-env";
 import { queryLatestObsNodeFields, queryLatestHostSystemFields } from "@repo/metrics";
 import { buildRules } from "./rules";
+import { appEntityLabel } from "./rules/apps";
 import { proxmoxGuestName } from "./rules/proxmox";
 import { runProbes } from "./probes";
 import { computeTransitions } from "./state";
@@ -254,6 +255,8 @@ async function enrichNodeNotifications(
   // name while evaluating, so no extra lookup. Host rules key on the bare host
   // name and keep the plain Entity field.
   for (const n of notifications) {
+    // app.* rules key on "<env>:<app>".
+    if (n.ruleId.startsWith("app.")) n.entityLabel = appEntityLabel(n.entityId);
     if (!n.ruleId.startsWith("vm.")) continue;
     const vm = proxmoxGuestName(n.entityId);
     if (!vm) continue;

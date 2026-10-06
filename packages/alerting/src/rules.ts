@@ -1,5 +1,6 @@
 import type { AlertRule, Env, RuleKnob, RuleOverrides } from "./types";
 import { apiRules } from "./rules/api";
+import { appRules } from "./rules/apps";
 import { backupRules } from "./rules/backup";
 import { databaseRules } from "./rules/database";
 import { ingestRules } from "./rules/ingest";
@@ -35,6 +36,7 @@ export function buildRules(overrides: RuleOverrides = {}): AlertRule[] {
     ...probeRules(overrides),
     ...backupRules(overrides),
     ...proxmoxRules(overrides),
+    ...appRules(overrides),
   ];
 }
 
@@ -53,6 +55,8 @@ const RULE_GROUPS: Record<string, string> = {
   probe: "Probes",
   backup: "Backups",
   vm: "Proxmox VMs",
+  app: "Apps",
+  server: "Dokploy server",
 };
 
 export interface RuleCatalogEntry {

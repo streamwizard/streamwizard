@@ -7,7 +7,7 @@ import {
   type ProxmoxStorage,
 } from "@repo/metrics";
 import type { AlertRule, Breach, EnvContext, RuleOverrides } from "../types";
-import { customRule, pct, thresholdRule, type ThresholdSample } from "./builders";
+import { customRule, pct, perTick, thresholdRule, type ThresholdSample } from "./builders";
 import {
   VM_CPU_CRIT_PCT,
   VM_CPU_WARN_PCT,
@@ -75,19 +75,7 @@ const isStale = (ctx: EnvContext, iso: string) => ageMs(ctx, iso) > STALE_MS;
 /** "95 s" under two minutes, "12 min" after. */
 const silentFor = (ms: number) => (ms < 120_000 ? `${Math.round(ms / 1000)} s` : `${Math.round(ms / 60_000)} min`);
 
-// --- One Influx read per kind per tick (the engine hands all rules the same ctx) ---
-
-function perTick<T>(read: () => Promise<T>): (ctx: EnvContext) => Promise<T> {
-  const byTick = new WeakMap<EnvContext, Promise<T>>();
-  return (ctx) => {
-    let pending = byTick.get(ctx);
-    if (!pending) {
-      pending = read();
-      byTick.set(ctx, pending);
-    }
-    return pending;
-  };
-}
+// --- One Influx read per kind per tick ---
 
 // An hour back, so a guest or node that went quiet is still listed (as gone)
 // for a while instead of silently dropping out.
