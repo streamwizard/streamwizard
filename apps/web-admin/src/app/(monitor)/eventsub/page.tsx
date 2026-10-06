@@ -1,19 +1,29 @@
-import { Zap } from "lucide-react";
-import { Card, CardContent } from "@repo/ui";
+import { cookies } from "next/headers";
+import { EventsubDashboard, type ShardGridView } from "@/components/charts/eventsub-dashboard";
+import { LiveIndicator } from "@/components/widgets/live-indicator";
+import { PageHeader } from "@/components/widgets/page-header";
+import { DASHBOARD_COOKIE } from "@/lib/dashboard-prefs";
+import { fetchEventsubMetrics } from "@/lib/eventsub-metrics";
+import { homeEnv } from "@/lib/home-env";
 
-export default function EventSubDashboard() {
+export const dynamic = "force-dynamic";
+
+export default async function EventSubDashboardPage() {
+  const cookieStore = await cookies();
+  const savedView = cookieStore.get(DASHBOARD_COOKIE.eventsubShardView)?.value;
+  const initialView: ShardGridView = savedView === "heatmap" ? "heatmap" : "grid";
+  // Never throws: every source falls back to empty and flags its own error.
+  const initialData = await fetchEventsubMetrics("24h", "15m");
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">EventSub</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Twitch EventSub metrics</p>
-      </div>
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-20 gap-3 text-muted-foreground">
-          <Zap className="h-10 w-10 opacity-30" />
-          <p className="text-sm">Coming soon — EventSub metrics panel</p>
-        </CardContent>
-      </Card>
+    <div className="space-y-8">
+      <PageHeader
+        title="EventSub"
+        description={`Conduit shards, subscriptions and event flow for ${homeEnv()} · Helix cached 30 s, inventory 5 min`}
+      >
+        <LiveIndicator />
+      </PageHeader>
+      <EventsubDashboard initialData={initialData} initialView={initialView} />
     </div>
   );
 }

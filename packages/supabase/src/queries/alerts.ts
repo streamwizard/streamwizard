@@ -39,11 +39,13 @@ export async function insertAlertEvents(client: DBClient, rows: AlertEventInsert
 
 export async function listAlertEvents(
   client: DBClient,
-  opts: { env?: string; limit?: number; before?: string } = {},
+  opts: { env?: string; limit?: number; before?: string; severity?: string; ruleId?: string } = {},
 ): Promise<AlertEvent[]> {
   let query = client.from("alert_events").select("*").order("created_at", { ascending: false });
   if (opts.env) query = query.eq("env", opts.env);
   if (opts.before) query = query.lt("created_at", opts.before);
+  if (opts.severity) query = query.eq("severity", opts.severity);
+  if (opts.ruleId) query = query.eq("rule_id", opts.ruleId);
   const { data, error } = await query.limit(opts.limit ?? 100);
   if (error) throw new Error(`Couldn't list alert events: ${error.message}`);
   return data;

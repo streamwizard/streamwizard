@@ -34,7 +34,7 @@ import {
   getCachedWidget,
   primeWidgetCache,
 } from "@/components/overlays/widgets/custom/widget-cache";
-import { DemoEventPanel } from "@/components/demo/demo-event-panel";
+import { DemoDeck } from "@/components/demo/demo-deck";
 import { env } from "@/lib/env";
 import { asCustomWidgetConfig } from "@/types/overlays";
 import type {
@@ -149,6 +149,12 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         .filter((item) => item.type === "custom_widget")
         .map((item) => getCachedWidget(asCustomWidgetConfig(item.config).widget_id)?.js ?? "")
         .join("\n"),
+    [scene?.items]
+  );
+
+  /** Distinct item types on the canvas, so the demo deck offers only tests that something here can show. */
+  const canvasWidgetTypes = useMemo(
+    () => [...new Set((scene?.items ?? []).map((item) => item.type))],
     [scene?.items]
   );
 
@@ -715,32 +721,37 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         </div>
       ) : null}
 
-      {/* Kept mounted and hidden with CSS rather than unmounted: collapsing the
-          panel must not stop a running simulator, and the payload editor keeps
-          its scroll position. Live needs no socket of our own -- the server
-          action broadcasts through ws-server -- so wsConnected stays undefined. */}
-      <div className={demoOpen ? undefined : "hidden"}>
-        <DemoEventPanel
-          storageId={scene.id}
-          sourceJs={canvasWidgetJs}
-          mode={demoFireMode}
-          onModeChange={setDemoFireMode}
-          onFire={fireDemo}
-          onRunningSimulatorsChange={setRunningSimulatorIds}
-        />
-      </div>
-
       <div className="flex flex-1 overflow-hidden">
         <div className="w-56 border-r overflow-y-auto shrink-0 bg-background">
           <EditorLayers />
         </div>
 
-        {/* No scrolling here: pan and zoom own where the canvas sits. */}
-        <div ref={canvasPaneRef} className="relative flex-1 overflow-hidden bg-muted/30">
-          <EditorCanvas
-            paneRef={canvasPaneRef}
-            onAddWidget={() => setWidgetSheetOpen(true)}
-            onOpenShortcuts={() => setShortcutsOpen(true)}
+        <div className="relative flex min-w-0 flex-1">
+          {/* No scrolling here: pan and zoom own where the canvas sits. */}
+          <div ref={canvasPaneRef} className="relative flex-1 overflow-hidden bg-muted/30">
+            <EditorCanvas
+              paneRef={canvasPaneRef}
+              onAddWidget={() => setWidgetSheetOpen(true)}
+              onOpenShortcuts={() => setShortcutsOpen(true)}
+            />
+          </div>
+
+          {/* Floats over the canvas as a sibling of the pane, not inside it, so
+              clicks and wheel events on the deck never reach the pane's pan and
+              zoom handlers. Hidden rather than unmounted when closed: closing
+              must not stop a running simulator. Live needs no socket of our
+              own -- the server action broadcasts through ws-server -- so
+              wsConnected stays undefined. */}
+          <DemoDeck
+            open={demoOpen}
+            onClose={() => setDemoOpen(false)}
+            widgetTypes={canvasWidgetTypes}
+            storageId={scene.id}
+            sourceJs={canvasWidgetJs}
+            mode={demoFireMode}
+            onModeChange={setDemoFireMode}
+            onFire={fireDemo}
+            onRunningSimulatorsChange={setRunningSimulatorIds}
           />
         </div>
 

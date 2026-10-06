@@ -26,14 +26,15 @@ export function WsTopEventsTable({ initialData }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Top Event Types</CardTitle>
+        <CardTitle className="text-base">Top event types</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>#</TableHead>
-              <TableHead>Event Type</TableHead>
+              {/* The rank is the row order: it only earns a column when there is room. */}
+              <TableHead className="hidden sm:table-cell">#</TableHead>
+              <TableHead>Event type</TableHead>
               <TableHead className="text-right">Count</TableHead>
               <TableHead className="text-right">Share</TableHead>
             </TableRow>
@@ -48,8 +49,9 @@ export function WsTopEventsTable({ initialData }: Props) {
             ) : (
               rows.map((row, i) => (
                 <TableRow key={row.messageType}>
-                  <TableCell className="text-muted-foreground text-xs w-8">{i + 1}</TableCell>
-                  <TableCell className="font-mono text-xs">{row.messageType}</TableCell>
+                  <TableCell className="hidden w-8 text-xs text-muted-foreground sm:table-cell">{i + 1}</TableCell>
+                  {/* Wraps, so a long type name never pushes the counts off a phone. */}
+                  <TableCell className="font-mono text-xs break-all whitespace-normal">{row.messageType}</TableCell>
                   <TableCell className="text-right tabular-nums">{row.count.toLocaleString()}</TableCell>
                   <TableCell className="text-right tabular-nums text-muted-foreground">
                     {total > 0 ? `${((row.count / total) * 100).toFixed(1)}%` : "—"}

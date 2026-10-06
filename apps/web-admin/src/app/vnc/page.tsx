@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CloudOBSViewer } from "@repo/obs-web";
 import { getNodeApiUrlAction } from "@/actions/nodes";
+import { DesktopOnly } from "@/components/widgets/desktop-only";
 import { mintNoVncConnection } from "@repo/obs-web";
 
 // Admin's noVNC proxy lives at /admin/instances/:id/novnc on the node's API
@@ -72,8 +73,13 @@ function AdminVncView() {
 
 export default function AdminVncPage() {
   return (
-    <Suspense fallback={<div className="h-screen w-screen bg-black" />}>
-      <AdminVncView />
-    </Suspense>
+    // A desktop session scaled into a phone is unusable; say so instead.
+    <div className="min-h-screen p-4 md:p-0">
+      <DesktopOnly tool="The VNC viewer" backHref="/obs" backLabel="Back to OBS nodes">
+        <Suspense fallback={<div className="h-screen w-screen bg-black" />}>
+          <AdminVncView />
+        </Suspense>
+      </DesktopOnly>
+    </div>
   );
 }

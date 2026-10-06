@@ -64,7 +64,7 @@ export class HandlerRegistry {
     data: WebSocketNotificationMessage,
   ): Promise<void> {
     const handler = this.twitchHandlers.get(eventType);
-    trackEventSubReceived(eventType, !!handler);
+    trackEventSubReceived("streamwizard-bot", eventType, !!handler, "websocket");
 
     const broadcasterId = extractReceivingBroadcasterId(data.payload.event);
 

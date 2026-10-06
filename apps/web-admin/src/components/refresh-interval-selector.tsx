@@ -13,7 +13,7 @@ export function RefreshIntervalSelector() {
         value={String(interval)}
         onValueChange={(val) => setInterval(Number(val))}
       >
-        <SelectTrigger className="h-7 w-[64px] text-xs px-2">
+        <SelectTrigger className="h-9 w-[64px] px-2 text-xs md:h-7">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

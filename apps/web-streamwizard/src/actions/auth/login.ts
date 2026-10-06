@@ -7,6 +7,7 @@ import { headers } from "next/headers";
 import { createClient } from "@repo/supabase/next/server";
 import { twitchScopesFor } from "@repo/schemas";
 import { reportAndRedirect } from "@/lib/report-redirect";
+import { safeNextPath } from "@/lib/safe-next-path";
 
 export async function login(next?: string | null) {
   const supabase = await createClient();
@@ -14,7 +15,7 @@ export async function login(next?: string | null) {
   const headersList = await headers();
   const origin = headersList.get("origin");
 
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") && !next.includes("://") ? next : "/dashboard";
+  const safeNext = safeNextPath(next) ?? "/dashboard";
 
   // Already signed in: skip the round trip to Supabase and Twitch entirely.
   const { data: userData } = await supabase.auth.getUser();

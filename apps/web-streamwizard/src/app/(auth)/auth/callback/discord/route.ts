@@ -7,6 +7,7 @@ import { assignRole, DiscordMemberNotFoundError } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 import { reportError } from "@repo/sentry";
 import { captureServerEvent } from "@repo/posthog/server";
+import { safeNextPath } from "@/lib/safe-next-path";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -19,11 +20,7 @@ export async function GET(request: Request) {
 
   const code = searchParams.get("code");
   const oauthError = searchParams.get("error");
-  const rawNext = searchParams.get("next") ?? "/dashboard/settings/integrations";
-  const next =
-    rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes("://")
-      ? rawNext
-      : "/dashboard/settings/integrations";
+  const next = safeNextPath(searchParams.get("next")) ?? "/dashboard/settings/integrations";
 
   const errorRedirect = (reason: string) =>
     NextResponse.redirect(`${origin}/auth/auth-code-error?provider=discord&reason=${reason}`);

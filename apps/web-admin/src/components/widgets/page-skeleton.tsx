@@ -1,4 +1,7 @@
 import { Card, CardContent, CardHeader, Skeleton } from "@repo/ui";
+import { StatGrid } from "@/components/widgets/stat-grid";
+
+const clampCols = (count: number) => Math.min(6, Math.max(2, count)) as 2 | 3 | 4 | 5 | 6;
 
 /** Generic loading state: header + a row of stat cards + chart/table blocks.
  * Route-level loading.tsx files compose this with page-appropriate counts. */
@@ -10,18 +13,18 @@ export function PageSkeleton({ statCards = 4, blocks = 2 }: { statCards?: number
         <Skeleton className="h-4 w-24 mt-1" />
       </div>
       {statCards > 0 && (
-        <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${statCards}, minmax(0, 1fr))` }}>
+        <StatGrid cols={clampCols(statCards)}>
           {Array.from({ length: statCards }, (_, i) => (
             <Card key={i}>
               <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-4 w-24" />
               </CardHeader>
               <CardContent>
                 <Skeleton className="h-9 w-20" />
               </CardContent>
             </Card>
           ))}
-        </div>
+        </StatGrid>
       )}
       {Array.from({ length: blocks }, (_, i) => (
         <Card key={i}>

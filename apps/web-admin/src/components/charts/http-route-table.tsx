@@ -1,7 +1,8 @@
 "use client";
 
 import useSWR from "swr";
-import { Badge, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { DataList } from "@/components/widgets/data-list";
 import { fetcher } from "@/lib/utils";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useTimeRange } from "@/lib/time-range-context";
@@ -20,46 +21,58 @@ export function HttpRouteTable({ initialData }: Props) {
     { fallbackData: { routeStats: initialData }, refreshInterval: interval }
   );
 
-  const rows = (raw?.routeStats ?? initialData).slice(0, 20);
+  // Busiest first: the query returns the routes in no particular order.
+  const rows = [...(raw?.routeStats ?? initialData)].sort((a, b) => b.requestCount - a.requestCount).slice(0, 20);
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Top Routes</CardTitle>
+      <CardHeader className="px-4 sm:px-6">
+        <CardTitle className="text-base">Top routes</CardTitle>
       </CardHeader>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Method</TableHead>
-              <TableHead>Route</TableHead>
-              <TableHead className="text-right">Requests</TableHead>
-              <TableHead className="text-right">Avg Latency</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                  No data yet
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row, i) => (
-                <TableRow key={i}>
-                  <TableCell>
-                    <Badge variant="outline" className="font-mono text-xs">
-                      {row.method}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs truncate max-w-[240px]">{row.route}</TableCell>
-                  <TableCell className="text-right tabular-nums">{row.requestCount}</TableCell>
-                  <TableCell className="text-right tabular-nums">{Math.round(row.avgDurationMs)}ms</TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+      {/* Phone cards run edge to edge; the table keeps the card's padding. */}
+      <CardContent className="px-0 sm:px-6">
+        {rows.length === 0 ? (
+          <p className="px-4 py-8 text-center text-sm text-muted-foreground">No requests in this range.</p>
+        ) : (
+          <DataList
+            rows={rows}
+            rowKey={(row) => `${row.method} ${row.route}`}
+            columns={[
+              {
+                key: "method",
+                header: "Method",
+                mobile: "badge",
+                cell: (row) => (
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {row.method}
+                  </Badge>
+                ),
+              },
+              {
+                key: "route",
+                header: "Route",
+                mobile: "title",
+                // Wraps instead of truncating: the full path has to be readable without a hover.
+                className: "whitespace-normal",
+                cell: (row) => <span className="font-mono text-xs font-normal break-all">{row.route}</span>,
+              },
+              {
+                key: "requests",
+                header: "Requests",
+                headClassName: "text-right",
+                className: "text-right tabular-nums",
+                cell: (row) => <span className="tabular-nums">{row.requestCount.toLocaleString("en-US")}</span>,
+              },
+              {
+                key: "latency",
+                header: "Avg latency",
+                headClassName: "text-right",
+                className: "text-right tabular-nums",
+                cell: (row) => <span className="tabular-nums">{Math.round(row.avgDurationMs)}ms</span>,
+              },
+            ]}
+          />
+        )}
       </CardContent>
     </Card>
   );

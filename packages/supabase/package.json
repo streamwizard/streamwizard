@@ -107,6 +107,10 @@
       "types": "./src/queries/subscriptions.ts",
       "default": "./src/queries/subscriptions.ts"
     },
+    "./queries/admin-users": {
+      "types": "./src/queries/admin-users.ts",
+      "default": "./src/queries/admin-users.ts"
+    },
     "./queries/discord": {
       "types": "./src/queries/discord.ts",
       "default": "./src/queries/discord.ts"

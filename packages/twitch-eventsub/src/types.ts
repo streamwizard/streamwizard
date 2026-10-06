@@ -44,6 +44,8 @@ export type EventSubLifecycleEvent =
 export interface EventSubReceiverOptions {
     /** The conduit ID for this receiver - required for updating shard transport */
     conduitId: string;
+    /** The conduit shard this socket binds to (default: '0') */
+    shardId?: string;
     /** Optional custom WebSocket URL (defaults to Twitch's production URL) */
     wsUrl?: string;
     /** Optional TwitchApi instance (will create one if not provided) */
@@ -72,6 +74,33 @@ export interface EventSubReceiverOptions {
  * Connection state of the EventSub receiver
  */
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
+
+/**
+ * Point-in-time view of one receiver. Counters are cumulative since the
+ * receiver was created; consumers diff two snapshots to get rates.
+ */
+export interface EventSubReceiverStats {
+    shardId: string;
+    state: ConnectionState;
+    sessionId: string | null;
+    /** When the current session was established (ms epoch), null while down */
+    sessionStartedAt: number | null;
+    /** Last inbound frame on the active socket (ms epoch) */
+    lastMessageAt: number;
+    keepaliveIntervalSeconds: number;
+    reconnectAttempts: number;
+    /** Twitch said the conduit doesn't exist on the last bind */
+    conduitMissing: boolean;
+    counters: {
+        messages: number;
+        notifications: number;
+        keepalives: number;
+        /** Outages, not failed retries: one per connection_lost */
+        connectionsLost: number;
+        migrations: number;
+        revocations: number;
+    };
+}
 
 // ==============================================================================
 // TwitchEventSubReceiver Class

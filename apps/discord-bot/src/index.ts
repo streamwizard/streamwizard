@@ -21,7 +21,7 @@ async function main() {
   // Flush buffered activity counts and close open voice sessions before exit so
   // we don't lose in-flight data on deploys/restarts.
   const shutdown = async () => {
-    stopInternalServer?.();
+    stopInternalServer();
     await stopLogWorker();
     await stopTicketSweeper();
     await stopAnnouncementScheduler();

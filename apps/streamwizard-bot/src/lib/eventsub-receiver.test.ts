@@ -40,7 +40,16 @@ function axiosError(status: number, message: string) {
   });
 }
 
-function fakeApi(updateShardTransport: () => Promise<void>): TwitchApi {
+type ShardErrors = { id: string; message: string; code: string }[];
+type BindFn = (conduitId: string, shardId: string) => Promise<void | ShardErrors>;
+
+// Mirrors the real client: resolves { data, errors } and throws on non-2xx.
+// A bind function may return shard errors to fake a 202 that refused a shard.
+function fakeApi(bind: BindFn): TwitchApi {
+  const updateShardTransport = async (conduitId: string, shardId: string) => ({
+    data: [],
+    errors: (await bind(conduitId, shardId)) ?? [],
+  });
   return { eventsub: { updateShardTransport } } as unknown as TwitchApi;
 }
 
@@ -57,7 +66,7 @@ afterEach(async () => {
   while (cleanups.length) await cleanups.pop()!();
 });
 
-function setup(updateShardTransport: () => Promise<void>, options: { conduitMissingRetryDelay?: number } = {}) {
+function setup(bind: BindFn, options: { conduitMissingRetryDelay?: number; shardId?: string } = {}) {
   const twitch = startFakeTwitch();
   const events: EventSubLifecycleEvent[] = [];
   const receiver = new TwitchEventSubReceiver(
@@ -65,7 +74,8 @@ function setup(updateShardTransport: () => Promise<void>, options: { conduitMiss
     {
       conduitId: "conduit-1",
       wsUrl: twitch.url,
-      twitchApi: fakeApi(updateShardTransport),
+      shardId: options.shardId,
+      twitchApi: fakeApi(bind),
       baseReconnectDelay: 1,
       bindRetryDelays: [5, 5],
       conduitMissingRetryDelay: options.conduitMissingRetryDelay ?? 1,
@@ -123,6 +133,46 @@ describe("TwitchEventSubReceiver conduit binding", () => {
     expect(calls).toBe(2);
     expect(ofType("conduit_update_failed")).toHaveLength(0);
     expect(receiver.getConnectionState()).toBe("connected");
+  });
+});
+
+describe("TwitchEventSubReceiver shard id", () => {
+  it("binds the configured shard instead of shard 0", async () => {
+    const bound: string[] = [];
+    const { receiver, ofType } = setup(
+      async (_conduit, shardId) => {
+        bound.push(shardId);
+      },
+      { shardId: "7" },
+    );
+    await receiver.connect();
+    await waitFor(() => ofType("connected").length === 1);
+
+    expect(bound).toEqual(["7"]);
+  });
+
+  it("treats a 202 that lists our shard in errors[] as a failed bind", async () => {
+    const { receiver, twitch, ofType } = setup(
+      async (_conduit, shardId) => [{ id: shardId, code: "websocket_session_not_found", message: "session not found" }],
+      { shardId: "3" },
+    );
+    await receiver.connect();
+    await waitFor(() => twitch.sessions() >= 2);
+
+    expect(ofType("connected")).toHaveLength(0);
+    expect(ofType("conduit_update_failed")).toHaveLength(1);
+    expect(String(ofType("conduit_update_failed")[0]?.error)).toContain("shard 3 refused");
+  }, 15_000);
+
+  it("ignores errors[] entries for other shards", async () => {
+    const { receiver, ofType } = setup(
+      async () => [{ id: "9", code: "websocket_session_not_found", message: "not ours" }],
+      { shardId: "2" },
+    );
+    await receiver.connect();
+    await waitFor(() => ofType("connected").length === 1);
+
+    expect(ofType("conduit_update_failed")).toHaveLength(0);
   });
 });
 

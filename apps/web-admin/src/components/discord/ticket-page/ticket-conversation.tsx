@@ -8,19 +8,12 @@ import { formatDateTime } from "@/lib/discord/tickets";
 import { TicketReply, type ReplyTag } from "../ticket-reply";
 import { TicketTranscript, type TranscriptMessage } from "../ticket-transcript";
 
-const STATUS_LABEL: Record<TicketRealtimeStatus, { text: string; title: string; dot: string }> = {
-  subscribed: {
-    text: "Live",
-    title: "Updates arrive as they happen",
-    dot: "size-2 animate-pulse rounded-full bg-emerald-500",
-  },
-  connecting: { text: "Connecting", title: "Joining the live feed", dot: "size-2 rounded-full bg-amber-500" },
-  reconnecting: {
-    text: "Reconnecting",
-    title: "The live feed dropped; checking every 30 seconds meanwhile",
-    dot: "size-2 rounded-full bg-amber-500",
-  },
-  off: { text: "", title: "", dot: "" },
+// The text says what is going on by itself: a phone has no hover for a tooltip.
+const STATUS_LABEL: Record<TicketRealtimeStatus, { text: string; dot: string }> = {
+  subscribed: { text: "Live", dot: "size-2 animate-pulse rounded-full bg-emerald-500" },
+  connecting: { text: "Connecting", dot: "size-2 rounded-full bg-amber-500" },
+  reconnecting: { text: "Reconnecting, checking every 30 seconds", dot: "size-2 rounded-full bg-amber-500" },
+  off: { text: "", dot: "" },
 };
 
 export function TicketConversation({
@@ -44,20 +37,22 @@ export function TicketConversation({
   const label = STATUS_LABEL[status];
 
   return (
-    <Card>
-      <CardHeader>
+    // On a phone the card frame goes: the conversation gets the full width of
+    // the screen and scrolls with the page, never inside a box of its own.
+    <Card className="max-sm:gap-3 max-sm:rounded-none max-sm:border-0 max-sm:bg-transparent max-sm:py-0 max-sm:shadow-none">
+      <CardHeader className="max-sm:px-0">
         <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base">
           Conversation
           {isOpen && (
             <span className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1.5" title={label.title}>
+              <span className="flex items-center gap-1.5">
                 <span className={label.dot} aria-hidden />
                 {label.text}
               </span>
               <Button
                 size="icon"
                 variant="ghost"
-                className="size-7"
+                className="size-11 md:size-7"
                 aria-label="Refresh conversation"
                 disabled={refreshing}
                 onClick={onRefresh}
@@ -68,7 +63,7 @@ export function TicketConversation({
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="max-sm:px-0">
         {isOpen ? (
           <div className="space-y-4">
             {messages.length === 0 ? (

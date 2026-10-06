@@ -6,15 +6,18 @@ import useSWR from "swr";
 import { toast } from "sonner";
 import { Archive, Clock, DatabaseBackup, HardDrive, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import type { BackupJobView, BackupOverviewResponse, BackupStatus } from "@repo/backups";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { refreshBackups } from "@/actions/backups";
+import { DataList } from "@/components/widgets/data-list";
 import { PageHeader } from "@/components/widgets/page-header";
 import { StatCard } from "@/components/widgets/stat-card";
+import { ChartGrid, StatGrid } from "@/components/widgets/stat-grid";
 import { StatusIndicator } from "@/components/widgets/status-indicator";
 import type { BackupFetch } from "@/lib/backups";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { cn, fetcher } from "@/lib/utils";
-import { BANNER_BORDER, SIZE_HELP, STATUS_DISPLAY, formatAge, formatApprox, formatBytes, formatWhen, relative } from "./backup-format";
+import { BANNER_BORDER, SIZE_HELP, STATUS_DISPLAY, formatAge, formatApprox, formatBytes, relative } from "./backup-format";
+import { HelpLabel, When } from "./hint-popover";
 
 const VERIFICATION_LABEL = { ok: "Verified", failed: "Failed", pending: "Pending", none: "Not verified" } as const;
 
@@ -49,14 +52,13 @@ function jobTile(title: string, icon: typeof Clock, jobs: BackupJobView[]) {
 
 const rank = (s: BackupStatus) => ({ ok: 0, unknown: 1, warning: 2, error: 3 })[s];
 
-/** A column header whose meaning is explained on hover. */
-export function HelpHead({ help, className, children }: { help: string; className?: string; children: React.ReactNode }) {
+function Reasons({ reasons, className }: { reasons: string[]; className?: string }) {
   return (
-    <TableHead className={className}>
-      <span title={help} className="cursor-help underline decoration-dotted underline-offset-4">
-        {children}
-      </span>
-    </TableHead>
+    <ul className={cn("text-xs text-muted-foreground", className)}>
+      {reasons.map((r) => (
+        <li key={r}>{r}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -85,7 +87,7 @@ export function BackupDashboard({
   const current = result ?? initial;
   const header = (
     <PageHeader title="Backups" description={current.data ? `Proxmox backups in ${current.data.datastore} / ${current.data.namespace}` : "Proxmox backups"}>
-      <Button variant="outline" size="sm" onClick={onRefresh} disabled={refreshing || !current.data}>
+      <Button variant="outline" size="sm" className="h-11 md:h-8" onClick={onRefresh} disabled={refreshing || !current.data}>
         <RefreshCw className={cn("mr-1.5 h-4 w-4", refreshing && "animate-spin")} aria-hidden />
         Poll now
       </Button>
@@ -103,32 +105,40 @@ export function BackupDashboard({
     );
   }
 
-  const o = current.data;
+  return (
+    <div className="space-y-6">
+      {header}
+      <BackupOverviewBody overview={current.data} charts={charts} />
+    </div>
+  );
+}
+
+/** Everything under the page header: banner, tiles, VM list, charts, hosts and webhooks. No fetching of its own. */
+export function BackupOverviewBody({ overview: o, charts }: { overview: BackupOverviewResponse; charts?: React.ReactNode }) {
   const problems = o.checks.filter((c) => c.status !== "ok");
   const withBackups = o.vms.filter((v) => v.ageSeconds !== null);
   const oldest = withBackups.length ? Math.max(...withBackups.map((v) => v.ageSeconds!)) : null;
   const okCount = o.vms.filter((v) => v.status === "ok").length;
 
   return (
-    <div className="space-y-6">
-      {header}
-
+    <>
       <Card className={cn("border-l-4", BANNER_BORDER[o.status])}>
-        <CardContent className="py-4">
+        <CardContent className="px-4 py-4 sm:px-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <StatusIndicator
               status={STATUS_DISPLAY[o.status].indicator}
               label={o.status === "ok" ? "All backups healthy" : `${problems.length} ${problems.length === 1 ? "check needs" : "checks need"} attention`}
               className="text-base font-medium"
             />
-            <span className="text-xs text-muted-foreground" suppressHydrationWarning>
-              PBS polled {relative(o.pbs.health.okAt)}
+            <span className="text-xs text-muted-foreground">
+              PBS polled <When iso={o.pbs.health.okAt} />
             </span>
           </div>
           {problems.length > 0 && (
             <ul className="mt-3 space-y-1 text-sm">
               {problems.map((c) => (
-                <li key={c.id} className="flex gap-2">
+                // The hint drops under the label on a phone instead of squeezing beside it.
+                <li key={c.id} className="flex flex-col gap-x-2 sm:flex-row">
                   <StatusIndicator status={STATUS_DISPLAY[c.status].indicator} label={c.label} className="shrink-0 font-medium" />
                   <span className="text-muted-foreground">{c.hint}</span>
                 </li>
@@ -138,7 +148,7 @@ export function BackupDashboard({
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <StatGrid cols={4}>
         <StatCard
           title="VMs OK"
           value={`${okCount}/${o.vms.length}`}
@@ -166,152 +176,180 @@ export function BackupDashboard({
         {jobTile("Garbage collection", Trash2, o.jobs.gc ? [o.jobs.gc] : [])}
         {jobTile("Prune", Trash2, o.jobs.prune)}
         {jobTile("Re-verify", ShieldCheck, o.jobs.verify)}
-      </div>
+      </StatGrid>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="px-4 sm:px-6">
           <CardTitle className="text-base">Virtual machines</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Status</TableHead>
-                  <TableHead>VM</TableHead>
-                  <TableHead>Host</TableHead>
-                  <TableHead>Last backup</TableHead>
-                  <TableHead className="text-right">Snapshots</TableHead>
-                  <HelpHead help={SIZE_HELP.disk} className="text-right">
-                    Disk
-                  </HelpHead>
-                  <HelpHead help={SIZE_HELP.lastUpload} className="text-right">
-                    Last upload
-                  </HelpHead>
-                  <HelpHead help={SIZE_HELP.onDisk} className="text-right">
-                    On disk
-                  </HelpHead>
-                  <TableHead>Verification</TableHead>
-                  <TableHead>Last webhook</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {o.vms.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
-                      No VMs found yet. They appear after the first successful poll.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  o.vms.map((vm) => (
-                    <TableRow key={vm.vmid}>
-                      <TableCell className="align-top">
-                        <StatusIndicator status={STATUS_DISPLAY[vm.status].indicator} label={STATUS_DISPLAY[vm.status].label} />
-                        {vm.reasons.length > 0 && (
-                          <ul className="mt-0.5 max-w-xs text-xs text-muted-foreground">
-                            {vm.reasons.map((r) => (
-                              <li key={r}>{r}</li>
-                            ))}
-                          </ul>
-                        )}
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <Link href={`/backups/${vm.vmid}`} className="font-medium hover:underline">
-                          {vm.name ?? `VM ${vm.vmid}`}
-                        </Link>
-                        <div className="font-mono text-xs text-muted-foreground">
-                          {vm.type}/{vm.vmid}
-                        </div>
-                      </TableCell>
-                      <TableCell className="align-top">{vm.host ?? "—"}</TableCell>
-                      <TableCell className="align-top" title={formatWhen(vm.lastSuccessAt)} suppressHydrationWarning>
-                        {vm.lastSuccessAt ? relative(vm.lastSuccessAt) : "never"}
-                      </TableCell>
-                      <TableCell className="text-right align-top tabular-nums">{vm.snapshotCount}</TableCell>
-                      <TableCell className="text-right align-top tabular-nums">{formatBytes(vm.diskBytes)}</TableCell>
-                      <TableCell className="text-right align-top tabular-nums">{formatBytes(vm.lastUploadedBytes)}</TableCell>
-                      <TableCell className="text-right align-top tabular-nums">{formatApprox(vm.usage?.onDiskEstBytes)}</TableCell>
-                      <TableCell className="align-top">
-                        <VerificationBadge state={vm.verification} />
-                      </TableCell>
-                      <TableCell className="align-top text-sm" suppressHydrationWarning>
-                        {vm.lastEvent ? (
-                          <span className={cn(vm.lastEvent.status === "failed" && "text-red-600 dark:text-red-400")}>
-                            {vm.lastEvent.status === "ok" ? "OK" : "Failed"} · {relative(vm.lastEvent.at)}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="px-0 sm:px-6">
+          {o.vms.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">No VMs found yet. They appear after the first successful poll.</p>
+          ) : (
+            <DataList
+              rows={o.vms}
+              rowKey={(vm) => String(vm.vmid)}
+              columns={[
+                {
+                  key: "status",
+                  header: "Status",
+                  mobile: "badge",
+                  className: "align-top",
+                  cell: (vm) => (
+                    <>
+                      <StatusIndicator status={STATUS_DISPLAY[vm.status].indicator} label={STATUS_DISPLAY[vm.status].label} />
+                      {/* On a phone the reasons sit under the name: the badge slot has no room for them. */}
+                      {vm.reasons.length > 0 && <Reasons reasons={vm.reasons} className="mt-0.5 hidden w-max max-w-xs whitespace-normal sm:block" />}
+                    </>
+                  ),
+                },
+                {
+                  key: "vm",
+                  header: "VM",
+                  mobile: "title",
+                  className: "align-top",
+                  cell: (vm) => (
+                    <>
+                      {/* On a phone the whole card is the link. */}
+                      <Link
+                        href={`/backups/${vm.vmid}`}
+                        className="font-medium break-words after:absolute after:inset-0 hover:underline focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring/50 sm:after:hidden"
+                      >
+                        {vm.name ?? `VM ${vm.vmid}`}
+                      </Link>
+                      <div className="font-mono text-xs font-normal text-muted-foreground">
+                        {vm.type}/{vm.vmid}
+                      </div>
+                      {vm.reasons.length > 0 && <Reasons reasons={vm.reasons} className="mt-1 font-normal sm:hidden" />}
+                    </>
+                  ),
+                },
+                { key: "host", header: "Host", className: "align-top", cell: (vm) => vm.host ?? "—" },
+                {
+                  key: "last",
+                  header: "Last backup",
+                  className: "align-top",
+                  cell: (vm) => <When iso={vm.lastSuccessAt} />,
+                },
+                {
+                  key: "snapshots",
+                  header: "Snapshots",
+                  mobile: "hidden",
+                  headClassName: "text-right",
+                  className: "text-right align-top tabular-nums",
+                  cell: (vm) => vm.snapshotCount,
+                },
+                {
+                  key: "disk",
+                  header: <HelpLabel help={SIZE_HELP.disk}>Disk</HelpLabel>,
+                  mobile: "hidden",
+                  headClassName: "text-right",
+                  className: "text-right align-top tabular-nums",
+                  cell: (vm) => formatBytes(vm.diskBytes),
+                },
+                {
+                  key: "upload",
+                  header: <HelpLabel help={SIZE_HELP.lastUpload}>Last upload</HelpLabel>,
+                  mobile: "hidden",
+                  headClassName: "text-right",
+                  className: "text-right align-top tabular-nums",
+                  cell: (vm) => formatBytes(vm.lastUploadedBytes),
+                },
+                {
+                  key: "onDisk",
+                  header: <HelpLabel help={SIZE_HELP.onDisk}>On disk</HelpLabel>,
+                  headClassName: "text-right",
+                  className: "text-right align-top tabular-nums",
+                  cell: (vm) => <span className="tabular-nums">{formatApprox(vm.usage?.onDiskEstBytes)}</span>,
+                },
+                {
+                  key: "verification",
+                  header: "Verification",
+                  className: "align-top",
+                  cell: (vm) => <VerificationBadge state={vm.verification} />,
+                },
+                {
+                  key: "webhook",
+                  header: "Last webhook",
+                  mobile: "hidden",
+                  className: "align-top text-sm",
+                  cell: (vm) =>
+                    vm.lastEvent ? (
+                      <span className={cn(vm.lastEvent.status === "failed" && "text-red-600 dark:text-red-400")}>
+                        {vm.lastEvent.status === "ok" ? "OK" : "Failed"} · <When iso={vm.lastEvent.at} />
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    ),
+                },
+              ]}
+            />
+          )}
         </CardContent>
       </Card>
 
       {charts}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <ChartGrid>
         <Card>
-          <CardHeader>
+          <CardHeader className="px-4 sm:px-6">
             <CardTitle className="text-base">Proxmox hosts</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Host</TableHead>
-                  <TableHead>Backup jobs</TableHead>
-                  <TableHead>Last webhook</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {o.hosts.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="py-6 text-center text-muted-foreground">
-                      No PVE hosts configured
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  o.hosts.map((host) => (
-                    <TableRow key={host.name}>
-                      <TableCell className="align-top">
+          <CardContent className="px-0 sm:px-6">
+            {o.hosts.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-muted-foreground">No PVE hosts configured</p>
+            ) : (
+              <DataList
+                rows={o.hosts}
+                rowKey={(host) => host.name}
+                columns={[
+                  {
+                    key: "host",
+                    header: "Host",
+                    mobile: "title",
+                    className: "align-top whitespace-normal",
+                    cell: (host) => (
+                      <>
                         <StatusIndicator status={STATUS_DISPLAY[host.status].indicator} label={host.name} className="font-medium" />
-                        {host.reasons.length > 0 && <div className="mt-0.5 text-xs text-muted-foreground">{host.reasons.join("; ")}</div>}
-                      </TableCell>
-                      <TableCell className="align-top text-sm">
-                        {host.jobs.length === 0
-                          ? "—"
-                          : host.jobs.map((j) => (
-                              <div key={j.id}>
-                                <code className="font-mono text-xs">{j.id}</code>
-                                <span className="text-muted-foreground">
-                                  {" "}
-                                  · {j.schedule ?? "no schedule"} · {j.selection === "pool" ? "pool" : `${j.vmids.length} VMs`}
-                                  {!j.enabled && " · disabled"}
-                                </span>
-                              </div>
-                            ))}
-                      </TableCell>
-                      <TableCell className="align-top text-sm" title={formatWhen(host.lastEventAt)} suppressHydrationWarning>
-                        {relative(host.lastEventAt)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                        {host.reasons.length > 0 && <div className="mt-0.5 text-xs font-normal text-muted-foreground">{host.reasons.join("; ")}</div>}
+                      </>
+                    ),
+                  },
+                  {
+                    key: "jobs",
+                    header: "Backup jobs",
+                    className: "align-top text-sm whitespace-normal",
+                    cell: (host) =>
+                      host.jobs.length === 0
+                        ? "—"
+                        : host.jobs.map((j) => (
+                            <div key={j.id}>
+                              <code className="font-mono text-xs">{j.id}</code>
+                              <span className="text-muted-foreground">
+                                {" "}
+                                · {j.schedule ?? "no schedule"} · {j.selection === "pool" ? "pool" : `${j.vmids.length} VMs`}
+                                {!j.enabled && " · disabled"}
+                              </span>
+                            </div>
+                          )),
+                  },
+                  {
+                    key: "webhook",
+                    header: "Last webhook",
+                    className: "align-top text-sm",
+                    cell: (host) => <When iso={host.lastEventAt} />,
+                  },
+                ]}
+              />
+            )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="px-4 sm:px-6">
             <CardTitle className="text-base">Recent webhooks</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             {o.recentEvents.length === 0 ? (
               <p className="py-4 text-center text-sm text-muted-foreground">No webhooks received in the last 8 days</p>
             ) : (
@@ -321,17 +359,16 @@ export function BackupDashboard({
                     <StatusIndicator
                       status={e.severity === "error" ? "crit" : e.severity === "warning" ? "warn" : "ok"}
                       label={`${e.source} · ${e.eventType}${e.jobId ? ` · ${e.jobId}` : ""}`}
+                      className="min-w-0 items-start break-words [&>span]:mt-1.5"
                     />
-                    <span className="shrink-0 text-xs text-muted-foreground" title={formatWhen(e.occurredAt)} suppressHydrationWarning>
-                      {relative(e.occurredAt)}
-                    </span>
+                    <When iso={e.occurredAt} className="shrink-0 text-xs text-muted-foreground" />
                   </li>
                 ))}
               </ul>
             )}
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </ChartGrid>
+    </>
   );
 }

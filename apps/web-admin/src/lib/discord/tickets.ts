@@ -9,6 +9,15 @@ export const TICKET_CLOSE_CAUSES: Record<string, string> = {
   force: "Force closed",
 };
 
+/** How a ticket closed, as the list and its "How it closed" filter name it. */
+export const TICKET_CLOSE_CODE_LABELS = {
+  manual: "Closed by staff",
+  inactivity: "Went quiet",
+  member_left: "Opener left",
+  channel_deleted: "Channel deleted",
+  force: "Force closed",
+} as const;
+
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
 }

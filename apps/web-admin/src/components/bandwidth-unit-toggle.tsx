@@ -14,7 +14,7 @@ export function BandwidthUnitToggle() {
       <Button
         variant="outline"
         size="sm"
-        className="h-7 w-[52px] px-2 text-xs font-normal tabular-nums"
+        className="h-9 w-[52px] px-2 text-xs font-normal tabular-nums md:h-7"
         onClick={toggle}
         title={`Showing ${unit === "bits" ? "bits/s (Mbit/s)" : "bytes/s (MB/s)"} — click to switch`}
       >

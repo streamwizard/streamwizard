@@ -23,7 +23,10 @@ import { WsAuthFailureChart } from "@/components/charts/ws-auth-failure-chart";
 import { WsMessageDropChart } from "@/components/charts/ws-message-drop-chart";
 import { WsConnectionDurationChart } from "@/components/charts/ws-connection-duration-chart";
 import { WsTopEventsTable } from "@/components/charts/ws-top-events-table";
+import { PageHeader } from "@/components/widgets/page-header";
+import { SectionHeading } from "@/components/widgets/section-heading";
 import { StatCard } from "@/components/widgets/stat-card";
+import { ChartGrid, StatGrid } from "@/components/widgets/stat-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +34,12 @@ function formatDuration(ms: number): string {
   if (ms < 1000) return `${Math.round(ms)}ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
   return `${(ms / 60_000).toFixed(1)}m`;
+}
+
+/** Sum of the points from the last hour, as of this request. */
+function lastHourTotal(points: { time: string; count: number }[]): number {
+  const since = Date.now() - 3_600_000;
+  return points.filter((p) => new Date(p.time).getTime() > since).reduce((acc, p) => acc + p.count, 0);
 }
 
 export default async function WsDashboard() {
@@ -70,13 +79,8 @@ export default async function WsDashboard() {
   // Compute stat card values
   const totalActive = activeConnections.reduce((acc, c) => acc + c.active, 0);
 
-  const authFailureCount1h = authFailures
-    .filter((f) => new Date(f.time).getTime() > Date.now() - 3_600_000)
-    .reduce((acc, f) => acc + f.count, 0);
-
-  const dropCount1h = droppedMessages
-    .filter((d) => new Date(d.time).getTime() > Date.now() - 3_600_000)
-    .reduce((acc, d) => acc + d.count, 0);
+  const authFailureCount1h = lastHourTotal(authFailures);
+  const dropCount1h = lastHourTotal(droppedMessages);
 
   const publisherDurations = connectionDuration.filter((d) => d.role === "publisher");
   const avgPublisherDurationMs =
@@ -90,77 +94,74 @@ export default async function WsDashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold">WebSocket</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Last 24 hours · refreshes every 30s</p>
-      </div>
+      <PageHeader title="WebSocket" description="Connections, errors and message flow for ws-server. The health numbers load once with the page. The charts follow the header range and refresh." />
 
       {/* Section 1: Health Summary */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Health</h2>
-        <div className="grid grid-cols-5 gap-4">
+        <SectionHeading>Health</SectionHeading>
+        <StatGrid cols={5}>
           <StatCard
-            title="Active Connections"
+            title="Active connections"
             value={totalActive}
             description="Estimated (opens − closes)"
           />
           <StatCard
-            title="Auth Failures (1h)"
+            title="Auth failures (1h)"
             value={authFailureCount1h}
             description={authFailureCount1h === 0 ? "All good" : "Check Errors section"}
             className={authFailureCount1h > 0 ? "border-destructive/50" : undefined}
           />
           <StatCard
-            title="Dropped Messages (1h)"
+            title="Dropped messages (1h)"
             value={dropCount1h}
             description={dropCount1h === 0 ? "All good" : "Check Errors section"}
             className={dropCount1h > 0 ? "border-destructive/50" : undefined}
           />
           <StatCard
-            title="Publisher Duration (avg)"
+            title="Publisher duration (avg)"
             value={avgPublisherDurationMs !== null ? formatDuration(avgPublisherDurationMs) : "—"}
             description="How long publishers stay connected"
           />
           <StatCard
-            title="Active Rooms"
+            title="Active rooms"
             value={estimatedActiveRooms}
             description="Estimated (created − deleted)"
           />
-        </div>
+        </StatGrid>
       </section>
 
       {/* Section 2: Connection Flow */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Connection Flow</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <SectionHeading>Connection flow</SectionHeading>
+        <ChartGrid>
           <WsConnectionChart initialData={connections} />
           <WsConnectionDurationChart initialData={connectionDuration} />
-        </div>
+        </ChartGrid>
       </section>
 
       {/* Section 3: Errors */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+        <SectionHeading>
           Errors
           {authFailureCount1h + dropCount1h > 0 && (
             <span className="ml-2 text-destructive normal-case font-normal">
-              — {authFailureCount1h + dropCount1h} in the last hour
+              {authFailureCount1h + dropCount1h} in the last hour
             </span>
           )}
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
+        </SectionHeading>
+        <ChartGrid>
           <WsAuthFailureChart initialData={authFailures} />
           <WsMessageDropChart initialData={droppedMessages} />
-        </div>
+        </ChartGrid>
       </section>
 
       {/* Section 4: Message Flow */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Message Flow</h2>
-        <div className="grid grid-cols-2 gap-4">
+        <SectionHeading>Message flow</SectionHeading>
+        <ChartGrid>
           <WsMessageChart initialData={messages} />
           <WsTopEventsTable initialData={topMessageTypes} />
-        </div>
+        </ChartGrid>
       </section>
     </div>
   );

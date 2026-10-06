@@ -77,3 +77,6 @@ next-env.d.ts
 
 # SEO audit output (large, generated; keep local only)
 docs/seo-audits/
+
+# Local docs and plans at the repo root (new files stay local; already-tracked docs stay tracked)
+/docs/

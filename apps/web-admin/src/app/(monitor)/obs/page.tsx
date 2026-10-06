@@ -12,48 +12,68 @@ import {
   queryObsNodeSnapshot,
   queryObsInstanceSnapshot,
 } from "@repo/metrics";
-import type { ObsNodeSnapshot, ObsInstanceSnapshot } from "@repo/metrics";
+import { Cpu, MonitorPlay, Network } from "lucide-react";
 import type { NodeMetricPoint } from "@/components/charts/node-metric-chart";
 import { NodeMetricChart } from "@/components/charts/node-metric-chart";
-import { ObsNodeTable } from "@/components/charts/obs-node-table";
-import { ObsInstanceTable } from "@/components/charts/obs-instance-table";
-import { NodeFleetTable } from "@/components/charts/node-fleet-table";
-import { StatCard } from "@/components/widgets/stat-card";
+import { ObsFleetOverview, type ObsNodeFacts } from "@/components/charts/obs-node-table";
+import { CollapsibleCharts } from "@/components/admin/collapsible-charts";
+import { NodesSection } from "@/components/admin/nodes-section";
+import { PageTabs } from "@/components/page-tabs";
+import { LiveIndicator } from "@/components/widgets/live-indicator";
+import { PageHeader } from "@/components/widgets/page-header";
+import { SectionHeading } from "@/components/widgets/section-heading";
+import { ChartGrid } from "@/components/widgets/stat-grid";
 import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
 import { getFleet, type FleetNode } from "@/lib/node-fleet";
 import { settled } from "@/lib/settled";
 import { listNodesAction } from "@/actions/nodes";
 import { checkNodesHealth } from "@/lib/node-health";
-import { NodesSection } from "@/components/admin/nodes-section";
 
 export const dynamic = "force-dynamic";
 
-export default async function ObsDashboard() {
-  let nodeCpu: NodeMetricPoint[] = [];
-  let nodeRam: NodeMetricPoint[] = [];
-  let nodeGpu: NodeMetricPoint[] = [];
-  let nodeEncoder: NodeMetricPoint[] = [];
-  let nodePower: NodeMetricPoint[] = [];
-  let nodeNvencSessions: NodeMetricPoint[] = [];
-  let nodeNvencFps: NodeMetricPoint[] = [];
-  let nodeVram: NodeMetricPoint[] = [];
-  let nodeInstanceCount: NodeMetricPoint[] = [];
-  let nodeRx: NodeMetricPoint[] = [];
-  let nodeTx: NodeMetricPoint[] = [];
-  let nodeSnapshot: ObsNodeSnapshot[] = [];
-  let instanceSnapshot: ObsInstanceSnapshot[] = [];
+const API_PATH = "/api/metrics/obs";
 
-  let registeredIds: Set<string> | null = null;
+export default async function ObsDashboard({ searchParams }: { searchParams: Promise<{ tab?: string | string[] }> }) {
+  const { tab } = await searchParams;
+  const view = tab === "manage" ? "manage" : "fleet";
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="OBS nodes"
+        description={view === "manage" ? "Register, edit and delete the GPU hosts that run Cloud OBS." : "Health and load of the GPU hosts that run Cloud OBS."}
+      >
+        {/* Everything on Fleet follows the header's refresh; Manage is read once. */}
+        {view === "fleet" && <LiveIndicator />}
+      </PageHeader>
+      <PageTabs
+        label="OBS nodes sections"
+        tabs={[
+          { href: "/obs", label: "Fleet", active: view === "fleet" },
+          { href: "/obs?tab=manage", label: "Manage", active: view === "manage" },
+        ]}
+      />
+      {view === "manage" ? <ManageTab /> : <FleetTab />}
+    </div>
+  );
+}
+
+async function ManageTab() {
+  // Registry rows plus one /health probe each, both read once with the page.
+  const { data: managedNodes, error: manageError } = await listNodesAction();
+  const healthByNodeId = managedNodes ? await checkNodesHealth(managedNodes) : {};
+
+  return <NodesSection initialNodes={managedNodes ?? []} error={manageError} healthByNodeId={healthByNodeId} />;
+}
+
+async function FleetTab() {
   let fleet: FleetNode[] = [];
   try {
     fleet = await getFleet("obs");
   } catch {
-    // registry unreachable — table renders its empty state
+    // registry unreachable: the list falls back to whatever Influx reports
   }
 
-  // Management data (registry CRUD + live /health probes) alongside the metrics.
-  const { data: managedNodes, error: manageError } = await listNodesAction();
-  const healthByNodeId = managedNodes ? await checkNodesHealth(managedNodes) : {};
   const [
     cpuRes,
     ramRes,
@@ -69,6 +89,7 @@ export default async function ObsDashboard() {
     snapshotRes,
     instanceSnapshotRes,
     registeredIdsRes,
+    registryRes,
   ] = await Promise.allSettled([
     queryObsNodeCpu("24h", "1h"),
     queryObsNodeRam("24h", "1h"),
@@ -84,125 +105,78 @@ export default async function ObsDashboard() {
     queryObsNodeSnapshot(),
     queryObsInstanceSnapshot(),
     getRegisteredNodeIds("obs_nodes"),
+    listNodesAction(),
   ]);
 
-  nodeCpu = settled(cpuRes, [], "obs node cpu");
-  nodeRam = settled(ramRes, [], "obs node ram");
-  nodeGpu = settled(gpuRes, [], "obs node gpu");
-  nodeEncoder = settled(encoderRes, [], "obs node encoder");
-  nodePower = settled(powerRes, [], "obs node power");
-  nodeNvencSessions = settled(nvencSessionsRes, [], "obs node nvenc sessions");
-  nodeNvencFps = settled(nvencFpsRes, [], "obs node nvenc fps");
-  nodeVram = settled(vramRes, [], "obs node vram");
-  nodeInstanceCount = settled(instanceCountRes, [], "obs node instance count");
-  nodeRx = settled(rxRes, [], "obs node rx");
-  nodeTx = settled(txRes, [], "obs node tx");
-  nodeSnapshot = settled(snapshotRes, [], "obs node snapshot");
-  instanceSnapshot = settled(instanceSnapshotRes, [], "obs instance snapshot");
   // null (not []) keeps filterToRegistered permissive when the registry is down.
-  registeredIds = settled(registeredIdsRes, null, "obs registered ids");
+  const registeredIds = settled(registeredIdsRes, null, "obs registered ids");
 
   // Influx keeps points from deleted nodes until they age out of the range;
   // show only nodes that still exist in the registry, labeled by name.
   const nodeNames = new Map(fleet.map((n) => [n.id, n.name]));
-  nodeCpu = labelNodes(filterToRegistered(nodeCpu, registeredIds, (p) => p.nodeId), nodeNames);
-  nodeRam = labelNodes(filterToRegistered(nodeRam, registeredIds, (p) => p.nodeId), nodeNames);
-  nodeGpu = labelNodes(filterToRegistered(nodeGpu, registeredIds, (p) => p.nodeId), nodeNames);
-  nodeEncoder = labelNodes(filterToRegistered(nodeEncoder, registeredIds, (p) => p.nodeId), nodeNames);
-  nodePower = labelNodes(filterToRegistered(nodePower, registeredIds, (p) => p.nodeId), nodeNames);
-  nodeNvencSessions = labelNodes(filterToRegistered(nodeNvencSessions, registeredIds, (p) => p.nodeId), nodeNames);
-  nodeNvencFps = labelNodes(filterToRegistered(nodeNvencFps, registeredIds, (p) => p.nodeId), nodeNames);
-  nodeVram = labelNodes(filterToRegistered(nodeVram, registeredIds, (p) => p.nodeId), nodeNames);
-  nodeInstanceCount = labelNodes(filterToRegistered(nodeInstanceCount, registeredIds, (p) => p.nodeId), nodeNames);
-  nodeRx = labelNodes(filterToRegistered(nodeRx, registeredIds, (p) => p.nodeId), nodeNames);
-  nodeTx = labelNodes(filterToRegistered(nodeTx, registeredIds, (p) => p.nodeId), nodeNames);
-  nodeSnapshot = labelNodes(filterToRegistered(nodeSnapshot, registeredIds, (n) => n.nodeId), nodeNames);
-  instanceSnapshot = labelNodes(filterToRegistered(instanceSnapshot, registeredIds, (i) => i.nodeId), nodeNames);
+  const show = <T extends { nodeId: string }>(result: PromiseSettledResult<T[]>, label: string) =>
+    labelNodes(filterToRegistered(settled(result, [], label), registeredIds, (p) => p.nodeId), nodeNames);
 
-  const totalRunning = nodeSnapshot.reduce((acc, n) => acc + n.runningInstanceCount, 0);
-  const totalCapacity = nodeSnapshot.reduce((acc, n) => acc + n.maxInstances, 0);
-  const totalVramUsed = nodeSnapshot.reduce((acc, n) => acc + n.vramUsedMb, 0);
-  const totalVramCapacity = nodeSnapshot.reduce((acc, n) => acc + n.vramTotalMb, 0);
+  const nodeCpu: NodeMetricPoint[] = show(cpuRes, "obs node cpu");
+  const nodeRam: NodeMetricPoint[] = show(ramRes, "obs node ram");
+  const nodeGpu: NodeMetricPoint[] = show(gpuRes, "obs node gpu");
+  const nodeEncoder: NodeMetricPoint[] = show(encoderRes, "obs node encoder");
+  const nodePower: NodeMetricPoint[] = show(powerRes, "obs node power");
+  const nodeNvencSessions: NodeMetricPoint[] = show(nvencSessionsRes, "obs node nvenc sessions");
+  const nodeNvencFps: NodeMetricPoint[] = show(nvencFpsRes, "obs node nvenc fps");
+  const nodeVram: NodeMetricPoint[] = show(vramRes, "obs node vram");
+  const nodeInstanceCount: NodeMetricPoint[] = show(instanceCountRes, "obs node instance count");
+  const nodeRx: NodeMetricPoint[] = show(rxRes, "obs node rx");
+  const nodeTx: NodeMetricPoint[] = show(txRes, "obs node tx");
+  const nodeSnapshot = show(snapshotRes, "obs node snapshot");
+  const instanceSnapshot = show(instanceSnapshotRes, "obs instance snapshot");
+
+  // Only the registry columns the list shows cross to the browser.
+  const registry = registryRes.status === "fulfilled" ? (registryRes.value.data ?? []) : [];
+  const facts: ObsNodeFacts[] = registry.map((n) => ({
+    id: n.id,
+    name: n.name,
+    status: n.status,
+    maintenance: n.maintenance,
+    api_url: n.api_url,
+    gpu_model: n.gpu_model,
+    max_instances: n.max_instances,
+  }));
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold">OBS Nodes</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Range and refresh follow the header controls</p>
-      </div>
+    <>
+      <ObsFleetOverview initial={{ fleet, nodeSnapshot, instanceSnapshot }} facts={facts} />
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Fleet</h2>
-        <div className="grid grid-cols-4 gap-4">
-          <StatCard
-            title="Nodes"
-            value={registeredIds === null ? nodeSnapshot.length : `${nodeSnapshot.length} / ${registeredIds.size}`}
-            description={registeredIds === null ? "Reporting host metrics" : "Reporting / registered"}
-          />
-          <StatCard
-            title="Running Instances"
-            value={`${totalRunning} / ${totalCapacity}`}
-            description="Across all nodes"
-          />
-          <StatCard
-            title="VRAM"
-            value={`${totalVramUsed.toFixed(0)} / ${totalVramCapacity.toFixed(0)} MB`}
-            description="Used vs total across nodes"
-          />
-          <StatCard
-            title="Utilization"
-            value={totalCapacity > 0 ? `${((totalRunning / totalCapacity) * 100).toFixed(0)}%` : "—"}
-            description="Instance capacity used"
-          />
-        </div>
-        <NodeFleetTable initialData={fleet} apiPath="/api/metrics/obs" title="Registered Nodes" />
-      </section>
+      <CollapsibleCharts>
+        <section className="space-y-3">
+          <SectionHeading icon={Cpu}>Host resources</SectionHeading>
+          <ChartGrid>
+            <NodeMetricChart title="CPU %" initialData={nodeCpu} apiPath={API_PATH} dataKey="nodeCpu" format="percent" />
+            <NodeMetricChart title="RAM used (MB)" initialData={nodeRam} apiPath={API_PATH} dataKey="nodeRam" />
+          </ChartGrid>
+        </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Manage Nodes</h2>
-        <NodesSection initialNodes={managedNodes ?? []} error={manageError} healthByNodeId={healthByNodeId} />
-      </section>
+        <section className="space-y-3">
+          <SectionHeading icon={MonitorPlay}>GPU</SectionHeading>
+          <ChartGrid>
+            <NodeMetricChart title="Encoder (NVENC) utilization %" initialData={nodeEncoder} apiPath={API_PATH} dataKey="nodeEncoder" format="percent" />
+            <NodeMetricChart title="Power draw (W)" initialData={nodePower} apiPath={API_PATH} dataKey="nodePower" />
+            <NodeMetricChart title="GPU utilization % (time occupancy)" initialData={nodeGpu} apiPath={API_PATH} dataKey="nodeGpu" format="percent" />
+            <NodeMetricChart title="VRAM used (MB)" initialData={nodeVram} apiPath={API_PATH} dataKey="nodeVram" />
+            <NodeMetricChart title="NVENC sessions" initialData={nodeNvencSessions} apiPath={API_PATH} dataKey="nodeNvencSessions" />
+            <NodeMetricChart title="NVENC encode FPS" initialData={nodeNvencFps} apiPath={API_PATH} dataKey="nodeNvencFps" />
+          </ChartGrid>
+        </section>
 
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Host Resources</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <NodeMetricChart title="CPU %" initialData={nodeCpu} apiPath="/api/metrics/obs" dataKey="nodeCpu" format="percent" />
-          <NodeMetricChart title="RAM Used (MB)" initialData={nodeRam} apiPath="/api/metrics/obs" dataKey="nodeRam" />
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">GPU</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <NodeMetricChart title="Encoder (NVENC) Utilization %" initialData={nodeEncoder} apiPath="/api/metrics/obs" dataKey="nodeEncoder" format="percent" />
-          <NodeMetricChart title="Power Draw (W)" initialData={nodePower} apiPath="/api/metrics/obs" dataKey="nodePower" />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <NodeMetricChart title="GPU Utilization % (time occupancy)" initialData={nodeGpu} apiPath="/api/metrics/obs" dataKey="nodeGpu" format="percent" />
-          <NodeMetricChart title="VRAM Used (MB)" initialData={nodeVram} apiPath="/api/metrics/obs" dataKey="nodeVram" />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <NodeMetricChart title="NVENC Sessions" initialData={nodeNvencSessions} apiPath="/api/metrics/obs" dataKey="nodeNvencSessions" />
-          <NodeMetricChart title="NVENC Encode FPS" initialData={nodeNvencFps} apiPath="/api/metrics/obs" dataKey="nodeNvencFps" />
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Instances & Bandwidth</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <NodeMetricChart title="Running Instances" initialData={nodeInstanceCount} apiPath="/api/metrics/obs" dataKey="nodeInstanceCount" />
-          <NodeMetricChart title="Bandwidth In" initialData={nodeRx} apiPath="/api/metrics/obs" dataKey="nodeRx" format="bytesPerSec" />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <NodeMetricChart title="Bandwidth Out" initialData={nodeTx} apiPath="/api/metrics/obs" dataKey="nodeTx" format="bytesPerSec" />
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Fleet Detail</h2>
-        <ObsNodeTable initialData={nodeSnapshot} />
-        <ObsInstanceTable initialData={instanceSnapshot} />
-      </section>
-    </div>
+        <section className="space-y-3">
+          <SectionHeading icon={Network}>Instances and bandwidth</SectionHeading>
+          <ChartGrid>
+            <NodeMetricChart title="Running instances" initialData={nodeInstanceCount} apiPath={API_PATH} dataKey="nodeInstanceCount" />
+            <NodeMetricChart title="Bandwidth in" initialData={nodeRx} apiPath={API_PATH} dataKey="nodeRx" format="bytesPerSec" />
+            <NodeMetricChart title="Bandwidth out" initialData={nodeTx} apiPath={API_PATH} dataKey="nodeTx" format="bytesPerSec" />
+          </ChartGrid>
+        </section>
+      </CollapsibleCharts>
+    </>
   );
 }

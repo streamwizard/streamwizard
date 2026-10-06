@@ -37,7 +37,7 @@ export function WsMessageChart({ initialData }: Props) {
   const seriesKeys = [...new Set(points.map(seriesKeyOf))];
 
   return (
-    <ChartCard title="Messages by Role & Type" isEmpty={chartData.length === 0}>
+    <ChartCard title="Messages by role and type" isEmpty={chartData.length === 0}>
       <BarChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
         <XAxis

@@ -1,6 +1,9 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getPlatformStats } from "@repo/supabase/queries/platform-stats";
+import { PageHeader } from "@/components/widgets/page-header";
+import { SectionHeading } from "@/components/widgets/section-heading";
 import { StatCard } from "@/components/widgets/stat-card";
+import { StatGrid } from "@/components/widgets/stat-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -20,84 +23,81 @@ export default async function DatabaseDashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-xl font-semibold">Database</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Platform-wide stats · refreshes on load</p>
-      </div>
+      <PageHeader title="App data" description="Row counts across the platform. Read when the page loads." />
 
       {/* Section 1: Clips & Sync */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Clips & Sync</h2>
-        <div className="grid grid-cols-3 gap-4">
-          <StatCard title="Total Clips" value={stats.clips} description="All synced clips in DB" />
-          <StatCard title="Total Sync Records" value={stats.clipSyncs} description="Users with a sync history" />
+        <SectionHeading>Clips and sync</SectionHeading>
+        <StatGrid cols={3}>
+          <StatCard title="Total clips" value={stats.clips} description="All synced clips in DB" />
+          <StatCard title="Total sync records" value={stats.clipSyncs} description="Users with a sync history" />
           <StatCard
-            title="Last Sync"
+            title="Last sync"
             value={formatDate(stats.lastClipSyncAt)}
             description="Most recent clip sync across all users"
           />
-        </div>
-        <div className="grid grid-cols-3 gap-4">
+        </StatGrid>
+        <StatGrid cols={3}>
           <StatCard
-            title="Active Syncs"
+            title="Active syncs"
             value={stats.activeClipSyncs}
             description="Currently syncing"
             className={stats.activeClipSyncs > 0 ? "border-yellow-500/50" : undefined}
           />
           <StatCard
-            title="Failed Syncs"
+            title="Failed syncs"
             value={stats.failedClipSyncs}
             description={stats.failedClipSyncs === 0 ? "All good" : "Users with failed sync"}
             className={stats.failedClipSyncs > 0 ? "border-destructive/50" : undefined}
           />
-          <StatCard title="Pending Clips" value={stats.pendingClips} description="Awaiting processing" />
-        </div>
+          <StatCard title="Pending clips" value={stats.pendingClips} description="Awaiting processing" />
+        </StatGrid>
       </section>
 
       {/* Section 2: Content */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Content</h2>
-        <div className="grid grid-cols-3 gap-4">
-          <StatCard title="Clip Folders" value={stats.clipFolders} description="Folders created across all users" />
-          <StatCard title="Enabled Commands" value={stats.enabledCommands} description="Active channel commands" />
+        <SectionHeading>Content</SectionHeading>
+        <StatGrid cols={3}>
+          <StatCard title="Clip folders" value={stats.clipFolders} description="Folders created across all users" />
+          <StatCard title="Enabled commands" value={stats.enabledCommands} description="Active channel commands" />
           <StatCard
-            title="Custom Commands"
+            title="Custom commands"
             value={stats.customCommands}
             description="User-authored custom commands"
           />
-        </div>
+        </StatGrid>
       </section>
 
       {/* Section 3: Overlays & Widgets */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Overlays & Widgets</h2>
-        <div className="grid grid-cols-5 gap-4">
-          <StatCard title="Overlay Scenes" value={stats.overlayScenes} description="Total scenes created" />
+        <SectionHeading>Overlays and widgets</SectionHeading>
+        <StatGrid cols={5}>
+          <StatCard title="Overlay scenes" value={stats.overlayScenes} description="Total scenes created" />
           <StatCard
-            title="Active Overlays"
+            title="Active overlays"
             value={stats.activeOverlayScenes}
             description="Currently active scenes"
           />
-          <StatCard title="Overlay Items" value={stats.overlayItems} description="Elements across all scenes" />
-          <StatCard title="Custom Widgets" value={stats.customWidgets} description="User-authored widgets" />
+          <StatCard title="Overlay items" value={stats.overlayItems} description="Elements across all scenes" />
+          <StatCard title="Custom widgets" value={stats.customWidgets} description="User-authored widgets" />
           <StatCard
-            title="Library Widgets"
+            title="Library widgets"
             value={stats.approvedLibraryWidgets}
             description="Approved in widget library"
           />
-        </div>
+        </StatGrid>
       </section>
 
       {/* Section 4: Users */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Users</h2>
-        <div className="grid grid-cols-3 gap-4">
+        <SectionHeading>Users</SectionHeading>
+        <StatGrid cols={3}>
           <StatCard
-            title="Twitch Integrations"
+            title="Twitch integrations"
             value={stats.twitchIntegrations}
             description="Users with Twitch connected"
           />
-        </div>
+        </StatGrid>
       </section>
     </div>
   );

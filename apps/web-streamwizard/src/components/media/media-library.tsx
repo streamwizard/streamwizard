@@ -9,10 +9,10 @@ import {
   confirmAssetUpload,
   createAssetUpload,
   deleteAsset,
-  type AssetKind,
   type AssetListing,
   type UserAsset,
 } from "@/actions/assets";
+import type { AssetKind } from "@/lib/asset-mime";
 import { formatBytes } from "@/lib/format";
 
 interface Uploading {

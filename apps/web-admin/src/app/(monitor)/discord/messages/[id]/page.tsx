@@ -8,6 +8,7 @@ import { bannerUploadsEnabled } from "@/lib/discord/banner-storage";
 import { MESSAGE_CHANNEL_KINDS } from "@/lib/discord/built-messages";
 import { toChannelOptions } from "@/lib/discord/options";
 import { getBuilderThemes } from "@/lib/discord/theme-assets";
+import { PageCrumb } from "@/lib/crumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -18,26 +19,33 @@ export default async function DiscordMessagePage({ params }: { params: Promise<{
   if (!UUID.test(id)) notFound();
 
   const { guildId } = requireDiscordContext();
-  const [row, channels, bot] = await Promise.all([getBuiltMessage(supabaseAdmin, guildId, id), getGuildChannels(), getBotProfile()]);
+  const [row, channels, bot] = await Promise.all([
+    getBuiltMessage(supabaseAdmin, guildId, id),
+    getGuildChannels(),
+    getBotProfile(),
+  ]);
   if (!row) notFound();
 
   return (
-    <BuiltMessageEditor
-      // A different message is a different editor: no draft or autosave state carries over.
-      key={row.id}
-      id={row.id}
-      initial={{
-        name: row.name,
-        // A stored draft from an older shape falls back to a blank message rather than a broken page.
-        message: parseBuiltMessage(row.draft) ?? MESSAGE_TEMPLATES[0]!.create(),
-        channelId: row.draft_channel_id,
-        createChannel: row.draft_create_channel,
-      }}
-      published={{ message: parseBuiltMessage(row.published), channelId: row.channel_id }}
-      channels={toChannelOptions(channels, MESSAGE_CHANNEL_KINDS)}
-      themes={getBuilderThemes()}
-      bot={bot}
-      uploadsEnabled={bannerUploadsEnabled()}
-    />
+    <>
+      <PageCrumb label={row.name?.trim() || "Message"} href={`/discord/messages/${row.id}`} />
+      <BuiltMessageEditor
+        // A different message is a different editor: no draft or autosave state carries over.
+        key={row.id}
+        id={row.id}
+        initial={{
+          name: row.name,
+          // A stored draft from an older shape falls back to a blank message rather than a broken page.
+          message: parseBuiltMessage(row.draft) ?? MESSAGE_TEMPLATES[0]!.create(),
+          channelId: row.draft_channel_id,
+          createChannel: row.draft_create_channel,
+        }}
+        published={{ message: parseBuiltMessage(row.published), channelId: row.channel_id }}
+        channels={toChannelOptions(channels, MESSAGE_CHANNEL_KINDS)}
+        themes={getBuilderThemes()}
+        bot={bot}
+        uploadsEnabled={bannerUploadsEnabled()}
+      />
+    </>
   );
 }

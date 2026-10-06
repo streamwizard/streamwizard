@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { WidgetFieldDef, WidgetFieldSchema } from "@repo/ui/overlay";
 import { isAssetFieldType, isGroupFieldDef } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
-import type { AssetKind } from "@/actions/assets";
+import type { AssetKind } from "@/lib/asset-mime";
 import { GoogleFontSelect } from "@/components/overlays/inspector-fields";
 import {
   Accordion,

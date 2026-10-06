@@ -7,6 +7,16 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { cn } from "../lib/utils";
 
+/**
+ * Moves one row a step without dragging, for a "Move up" / "Move down" button
+ * or menu item in the row. Undefined where the row can't go: the first row has
+ * no `up`, the last no `down`, a disabled list neither.
+ */
+export interface SortableMove {
+  up?: () => void;
+  down?: () => void;
+}
+
 interface SortableListProps<T extends { id: string }> {
   /**
    * A fixed id for the drag context. dnd-kit otherwise numbers its contexts,
@@ -19,8 +29,11 @@ interface SortableListProps<T extends { id: string }> {
   disabled?: boolean;
   /** "Bug", "Cloud OBS": names the row for screen readers on its drag handle. */
   itemLabel: (item: T) => string;
-  children: (item: T) => React.ReactNode;
+  /** `move` is opt-in: a row that ignores it is drag-only, as before. */
+  children: (item: T, move: SortableMove) => React.ReactNode;
   className?: string;
+  /** Extra classes for the drag handle, e.g. to hide it on a phone where the row offers `move` instead. */
+  handleClassName?: string;
 }
 
 /** A vertical list whose rows can be dragged (or moved with the keyboard) into a new order. */
@@ -32,6 +45,7 @@ export function SortableList<T extends { id: string }>({
   itemLabel,
   children,
   className,
+  handleClassName,
 }: SortableListProps<T>) {
   const sensors = useSensors(
     // A few pixels of travel before a drag starts, so a click on the handle isn't one.
@@ -57,9 +71,18 @@ export function SortableList<T extends { id: string }>({
     >
       <SortableContext items={items.map((item) => item.id)} strategy={verticalListSortingStrategy}>
         <ul className={cn("divide-y", className)}>
-          {items.map((item) => (
-            <SortableRow key={item.id} id={item.id} label={itemLabel(item)} disabled={disabled || items.length < 2}>
-              {children(item)}
+          {items.map((item, index) => (
+            <SortableRow
+              key={item.id}
+              id={item.id}
+              label={itemLabel(item)}
+              disabled={disabled || items.length < 2}
+              handleClassName={handleClassName}
+            >
+              {children(item, {
+                up: disabled || index === 0 ? undefined : () => onReorder(arrayMove(items, index, index - 1)),
+                down: disabled || index === items.length - 1 ? undefined : () => onReorder(arrayMove(items, index, index + 1)),
+              })}
             </SortableRow>
           ))}
         </ul>
@@ -72,11 +95,13 @@ function SortableRow({
   id,
   label,
   disabled,
+  handleClassName,
   children,
 }: {
   id: string;
   label: string;
   disabled?: boolean;
+  handleClassName?: string;
   children: React.ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
@@ -95,7 +120,10 @@ function SortableRow({
         type="button"
         aria-label={`Reorder ${label}`}
         disabled={disabled}
-        className="flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:cursor-grabbing disabled:cursor-default disabled:opacity-40"
+        className={cn(
+          "flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring active:cursor-grabbing disabled:cursor-default disabled:opacity-40",
+          handleClassName,
+        )}
         {...attributes}
         {...listeners}
       >

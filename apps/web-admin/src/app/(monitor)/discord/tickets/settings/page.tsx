@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets";
 import { TicketsForm } from "@/components/discord/tickets-form";
 import { StatCard } from "@/components/widgets/stat-card";
+import { StatGrid } from "@/components/widgets/stat-grid";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toChannelOptions, toRoleOptions } from "@/lib/discord/options";
 
@@ -32,10 +33,10 @@ export default async function DiscordTicketSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
+      <StatGrid cols={2}>
         <StatCard title="Open tickets" value={openTickets} icon={Ticket} />
         <StatCard title="Tickets opened all time" value={settings?.ticket_counter ?? 0} icon={TicketCheck} />
-      </div>
+      </StatGrid>
       <TicketsForm
         key={JSON.stringify(settings)}
         initial={initial}

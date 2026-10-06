@@ -1,9 +1,11 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getAlertStates } from "@repo/supabase/queries/alerts";
-import { Badge, Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { SilenceMenu } from "@/components/alerts/silence-menu";
+import { DataList } from "@/components/widgets/data-list";
 import { PageHeader } from "@/components/widgets/page-header";
 import { StatCard } from "@/components/widgets/stat-card";
+import { StatGrid } from "@/components/widgets/stat-grid";
 import { StatusIndicator, type IndicatorStatus } from "@/components/widgets/status-indicator";
 import { homeEnv } from "@/lib/home-env";
 
@@ -39,7 +41,7 @@ export default async function AlertsPage() {
     <div className="space-y-6">
       <PageHeader title="Active alerts" description={`Alert state for ${env} · evaluated every minute`} />
 
-      <div className="grid grid-cols-3 gap-4">
+      <StatGrid cols={3}>
         <StatCard
           title="Firing"
           value={firing.length}
@@ -48,61 +50,67 @@ export default async function AlertsPage() {
         />
         <StatCard title="Critical" value={critCount} description="Firing at crit severity" />
         <StatCard title="Silenced" value={silencedCount} description="Firing but muted" />
-      </div>
+      </StatGrid>
 
       <Card>
-        <CardHeader className="pb-2">
+        <CardHeader className="px-4 pb-2 sm:px-6">
           <CardTitle className="text-sm font-medium text-muted-foreground">Firing now</CardTitle>
         </CardHeader>
-        <CardContent>
+        {/* Phone cards run edge to edge; the table keeps the card's padding. */}
+        <CardContent className="px-0 sm:px-6">
           {firing.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
               Nothing is firing. Rule states appear here the moment a breach passes its debounce.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Severity</TableHead>
-                  <TableHead>Rule</TableHead>
-                  <TableHead>Entity</TableHead>
-                  <TableHead>Message</TableHead>
-                  <TableHead>Since</TableHead>
-                  <TableHead>Last notified</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {firing.map((s) => {
-                  const silenced = !!s.silenced_until && new Date(s.silenced_until).getTime() > now;
-                  return (
-                    <TableRow key={s.id}>
-                      <TableCell>
-                        <StatusIndicator status={severityStatus(s.severity)} label={s.severity ?? "—"} />
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">{s.rule_id}</TableCell>
-                      <TableCell className="font-mono text-xs">{s.entity_id || "—"}</TableCell>
-                      <TableCell className="max-w-sm truncate text-muted-foreground" title={s.message ?? undefined}>
-                        {s.message ?? "—"}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap">{formatSince(s.first_fired_at)}</TableCell>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {s.notify_failed ? (
-                          <Badge variant="outline" className="border-red-500/40 text-red-600 dark:text-red-400">
-                            notify failed
-                          </Badge>
-                        ) : (
-                          formatSince(s.last_notified_at)
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <SilenceMenu stateId={s.id} silenced={silenced} />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <DataList
+              rows={firing}
+              rowKey={(s) => s.id}
+              columns={[
+                {
+                  key: "rule",
+                  header: "Rule",
+                  mobile: "title",
+                  className: "font-mono text-xs",
+                  cell: (s) => <span className="font-mono text-xs break-all">{s.rule_id}</span>,
+                },
+                {
+                  key: "severity",
+                  header: "Severity",
+                  mobile: "badge",
+                  cell: (s) => <StatusIndicator status={severityStatus(s.severity)} label={s.severity ?? "—"} />,
+                },
+                {
+                  key: "entity",
+                  header: "Entity",
+                  cell: (s) => <span className="font-mono text-xs break-all">{s.entity_id || "—"}</span>,
+                },
+                {
+                  key: "message",
+                  header: "Message",
+                  // Wraps instead of truncating: the full text has to be readable without a hover.
+                  className: "max-w-sm whitespace-normal text-muted-foreground",
+                  cell: (s) => s.message ?? "—",
+                },
+                { key: "since", header: "Since", className: "whitespace-nowrap", cell: (s) => formatSince(s.first_fired_at) },
+                {
+                  key: "notified",
+                  header: "Last notified",
+                  className: "whitespace-nowrap text-muted-foreground",
+                  cell: (s) =>
+                    s.notify_failed ? (
+                      <Badge variant="outline" className="border-red-500/40 text-red-600 dark:text-red-400">
+                        notify failed
+                      </Badge>
+                    ) : (
+                      formatSince(s.last_notified_at)
+                    ),
+                },
+              ]}
+              actions={(s) => (
+                <SilenceMenu stateId={s.id} silenced={!!s.silenced_until && new Date(s.silenced_until).getTime() > now} />
+              )}
+            />
           )}
         </CardContent>
       </Card>

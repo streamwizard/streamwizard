@@ -62,6 +62,8 @@ interface EventMeta {
 export const PLATFORM_EVENTS = {
   "user.created": { label: "New user", group: "platform", defaultEnabled: true },
   "user.deleted": { label: "Account deleted", group: "platform", defaultEnabled: true },
+  "user.banned": { label: "User banned", group: "platform", defaultEnabled: true },
+  "user.unbanned": { label: "User unbanned", group: "platform", defaultEnabled: true },
   "discord.linked": { label: "Discord linked", group: "platform", defaultEnabled: true },
   "discord.unlinked": { label: "Discord unlinked", group: "platform", defaultEnabled: true },
   "subscription.granted": { label: "Plan granted", group: "platform", defaultEnabled: true },
@@ -145,7 +147,8 @@ export function platformEventTypesInGroup(group: PlatformEventGroup): PlatformEv
   return PLATFORM_EVENT_TYPES.filter((type) => PLATFORM_EVENTS[type].group === group);
 }
 
-export type UserDeletedReason = "requested" | "twitch_revoked";
+/** `admin`: removed from web-admin's /users page. */
+export type UserDeletedReason = "requested" | "twitch_revoked" | "admin";
 /**
  * `stream_not_found`: Twitch never listed the stream, even after retrying.
  * `ended_before_tracked`: stream.offline arrived while we were still waiting.
@@ -189,6 +192,15 @@ interface SubscriptionFields {
 interface EventSubEvent {
   service: string;
   session_id?: string | null;
+  /** Conduit shard the socket is bound to; missing on rows from before the bot ran shards */
+  shard_id?: string;
+  /**
+   * Set instead of `shard_id` when one row stands for several shards that hit
+   * the same thing within seconds of each other (a deploy, a network blip).
+   * Per-shard details are merged: no `session_id`, the longest `downtime_ms`,
+   * the highest `attempts`, every distinct `reason`.
+   */
+  shard_ids?: string[];
 }
 
 /** A Discord user as seen by the bot. */
@@ -254,7 +266,15 @@ interface TicketEvent extends ServerEvent {
 
 export interface PlatformEventPayloads {
   "user.created": SubjectIdentity;
-  "user.deleted": SubjectIdentity & { reason?: UserDeletedReason | null };
+  "user.deleted": SubjectIdentity & ActorIdentity & { reason?: UserDeletedReason | null };
+  "user.banned": SubjectIdentity &
+    ActorIdentity & {
+      /** Internal note from the admin. Shown in the log channel, never to the user. */
+      reason?: string | null;
+      /** Whether the linked Discord account was banned from the server too. */
+      discord_banned?: boolean | null;
+    };
+  "user.unbanned": SubjectIdentity & ActorIdentity & { discord_unbanned?: boolean | null };
   "admin.role_granted": SubjectIdentity & { role: string };
   "admin.role_revoked": SubjectIdentity & { role: string };
   "feedback.submitted": SubjectIdentity & {
@@ -280,13 +300,13 @@ export interface PlatformEventPayloads {
   };
 
   /** First session after the bot started. */
-  "eventsub.connected": EventSubEvent & { session_id: string };
+  "eventsub.connected": EventSubEvent & { session_id: string | null };
   /** The socket died. `close_code` is Twitch's close code when there was one; `keepalive_silent_ms` when the bot gave up waiting for a keepalive. */
   "eventsub.connection_lost": EventSubEvent & { reason: string; close_code?: number | null; keepalive_silent_ms?: number | null };
   /** Back after an outage. `attempts` counts the reconnects it took. */
-  "eventsub.reconnected": EventSubEvent & { session_id: string; downtime_ms: number; attempts: number };
+  "eventsub.reconnected": EventSubEvent & { session_id: string | null; downtime_ms: number; attempts: number };
   /** Twitch asked the bot to move to a new session and it did, with no gap. */
-  "eventsub.session_migrated": EventSubEvent & { session_id: string };
+  "eventsub.session_migrated": EventSubEvent & { session_id: string | null };
   "eventsub.subscription_revoked": EventSubEvent & { subscription_type: string; status: string; reason: string };
   /** Connected, but the conduit shard could not be bound to the session after retries. Twitch may not deliver events. */
   "eventsub.conduit_update_failed": EventSubEvent & { error: string };

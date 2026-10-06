@@ -4,20 +4,17 @@ import { useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { MESSAGE_TEMPLATES } from "@repo/discord-message";
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Input,
-  Label,
-  cn,
-} from "@repo/ui";
+import { Button, Input, Label, cn } from "@repo/ui";
 import { createBuiltMessageAction } from "@/actions/discord-built-message";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/widgets/responsive-dialog";
 import { MESSAGE_NAME_MAX } from "@/lib/discord/built-messages";
 
 /** "New message": a name and a starting point, then straight into the editor. */
@@ -40,7 +37,7 @@ export function NewBuiltMessageButton() {
     });
 
   return (
-    <Dialog
+    <ResponsiveDialog
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
@@ -51,13 +48,13 @@ export function NewBuiltMessageButton() {
         }
       }}
     >
-      <DialogTrigger asChild>
-        <Button>
+      <ResponsiveDialogTrigger asChild>
+        <Button className="h-11 md:h-9">
           <Plus />
           New message
         </Button>
-      </DialogTrigger>
-      <DialogContent>
+      </ResponsiveDialogTrigger>
+      <ResponsiveDialogContent>
         <form
           className="space-y-4"
           onSubmit={(e) => {
@@ -65,10 +62,10 @@ export function NewBuiltMessageButton() {
             create();
           }}
         >
-          <DialogHeader>
-            <DialogTitle>New message</DialogTitle>
-            <DialogDescription>Pick a starting point. You choose the channel next, and nothing is sent until you publish.</DialogDescription>
-          </DialogHeader>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>New message</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>Pick a starting point. You choose the channel next, and nothing is sent until you publish.</ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
 
           <div role="radiogroup" aria-label="Start from" className="grid gap-2 sm:grid-cols-2">
             {MESSAGE_TEMPLATES.map((option) => (
@@ -107,13 +104,13 @@ export function NewBuiltMessageButton() {
             </p>
           </div>
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button type="submit" disabled={pending}>
               {pending ? "Creating…" : "Create message"}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

@@ -3,6 +3,7 @@ import { flushSentry, reportFatal } from "@repo/sentry";
 import { env } from "./lib/env";
 import { runEvaluationPass } from "@repo/alerting/engine";
 import { homeEnv } from "@repo/alerting/home-env";
+import { isLoopAlive } from "./lib/liveness";
 
 // The alert engine's ticker: run an evaluation pass, report the outcome to
 // healthchecks.io, sleep, repeat. Replaces the old curl sidecar + web-admin
@@ -125,10 +126,28 @@ if (once) {
   process.exit(ok ? 0 : 1);
 }
 
+// Liveness probe (docker healthcheck). A failed pass still counts: that is a
+// bug or an outage, and a restart would not help. Only a loop that stopped
+// finishing passes answers 503, so Swarm replaces the container.
+let lastPassAt = Date.now();
+const healthServer = Bun.serve({
+  port: Number(process.env.PORT ?? 8020),
+  fetch(req) {
+    const url = new URL(req.url);
+    if (url.pathname === "/health") {
+      const ok = isLoopAlive(lastPassAt, Date.now(), env.TICK_SECONDS);
+      return Response.json({ ok, lastPassAt: new Date(lastPassAt).toISOString() }, { status: ok ? 200 : 503 });
+    }
+    return new Response("Not Found", { status: 404 });
+  },
+});
+
 while (!stopped) {
   await tick();
+  lastPassAt = Date.now();
   if (!stopped) await sleep(env.TICK_SECONDS * 1000);
 }
+healthServer.stop(true);
 console.log("[alert-worker] stopped");
 // The --once path above already flushes; this is the SIGTERM exit, where a
 // failed final pass would otherwise never reach Sentry.

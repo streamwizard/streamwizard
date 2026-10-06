@@ -58,7 +58,7 @@ export function WsAuthFailureChart({ initialData }: Props) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Auth Failures</CardTitle>
+          <CardTitle className="text-base">Auth failures</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center gap-3 py-8 text-green-600 dark:text-green-400">
           <CheckCircle2 className="h-5 w-5 shrink-0" />
@@ -73,8 +73,8 @@ export function WsAuthFailureChart({ initialData }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          Auth Failures
+        <CardTitle className="flex flex-wrap items-center gap-x-2 text-base">
+          Auth failures
           <span className="text-sm font-normal text-destructive">
             ({totalFailures} total)
           </span>
