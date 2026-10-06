@@ -20,7 +20,7 @@ export function NewAnnouncementButton() {
     });
 
   return (
-    <Button onClick={create} disabled={pending}>
+    <Button className="h-11 md:h-9" onClick={create} disabled={pending}>
       <Plus />
       {pending ? "One moment…" : "New announcement"}
     </Button>

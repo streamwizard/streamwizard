@@ -2,8 +2,9 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord-live";
 import { listLiveRoleGrants } from "@repo/supabase/queries/discord-live-role";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
 import { LiveForm } from "@/components/discord/live-form";
+import { DataList } from "@/components/widgets/data-list";
 import { PageHeader } from "@/components/widgets/page-header";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toChannelOptions, toRoleOptions } from "@/lib/discord/options";
@@ -19,6 +20,29 @@ function Avatar({ url }: { url: string | null }) {
 
 function OnOff({ on }: { on: boolean }) {
   return <span className={on ? undefined : "text-muted-foreground"}>{on ? "On" : "Off"}</span>;
+}
+
+function User({ name, avatarUrl }: { name: string | null; avatarUrl: string | null }) {
+  return (
+    <span className="flex items-center gap-2">
+      <Avatar url={avatarUrl} />
+      <span className="min-w-0 break-words">{name ?? "Unnamed"}</span>
+    </span>
+  );
+}
+
+function TwitchLink({ username }: { username: string }) {
+  return (
+    <a
+      href={`https://twitch.tv/${encodeURIComponent(username)}`}
+      target="_blank"
+      rel="noreferrer"
+      // Above the row's own link, so this one still opens Twitch.
+      className="relative z-10 font-medium underline-offset-4 hover:underline"
+    >
+      {username}
+    </a>
+  );
 }
 
 export default async function DiscordLivePage() {
@@ -48,131 +72,101 @@ export default async function DiscordLivePage() {
         channels={toChannelOptions(channels, ["text", "announcement"])}
         roles={toRoleOptions(roles)}
         unhoistedRoleIds={roles.filter((role) => !role.hoist).map((role) => role.id)}
-      />
+      >
+        {/* The lists are the form's children so its save bar, which comes last, stays in view while they scroll. */}
+        <Card>
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="text-base">Live right now</CardTitle>
+            <CardDescription>
+              Who holds the live role at the moment. rest-api checks this against Twitch every ten minutes, so a missed offline fixes itself.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-0 sm:px-6">
+            {liveNow.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-muted-foreground">
+                {settings?.live_role_id ? "Nobody is live right now." : "Pick a live role above and this fills in as people go live."}
+              </p>
+            ) : (
+              <DataList
+                rows={liveNow}
+                rowKey={(row) => row.discord_user_id}
+                rowHref={(row) => (row.user ? `/users/${row.user.userId}` : undefined)}
+                columns={[
+                  {
+                    key: "user",
+                    header: "User",
+                    mobile: "title",
+                    cell: (row) => <User name={row.user?.name ?? null} avatarUrl={row.user?.avatarUrl ?? null} />,
+                  },
+                  {
+                    key: "twitch",
+                    header: "Twitch",
+                    cell: (row) =>
+                      row.user?.twitchUsername ? (
+                        <TwitchLink username={row.user.twitchUsername} />
+                      ) : (
+                        <span className="text-muted-foreground">{row.broadcaster_id}</span>
+                      ),
+                  },
+                  {
+                    key: "discord",
+                    header: "Discord",
+                    cell: (row) => (row.user?.discordUsername ? `@${row.user.discordUsername}` : row.discord_user_id),
+                  },
+                  {
+                    key: "since",
+                    header: "Since",
+                    className: "whitespace-nowrap text-muted-foreground tabular-nums",
+                    cell: (row) => formatDateTime(row.granted_at),
+                  },
+                ]}
+              />
+            )}
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Live right now</CardTitle>
-          <CardDescription>
-            Who holds the live role at the moment. rest-api checks this against Twitch every ten minutes, so a missed offline fixes itself.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Twitch</TableHead>
-                <TableHead>Discord</TableHead>
-                <TableHead>Since</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {liveNow.map((row) => (
-                <TableRow key={row.discord_user_id}>
-                  <TableCell>
-                    <span className="flex items-center gap-2">
-                      <Avatar url={row.user?.avatarUrl ?? null} />
-                      <span className="truncate">{row.user?.name ?? "Unnamed"}</span>
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {row.user?.twitchUsername ? (
-                      <a
-                        href={`https://twitch.tv/${encodeURIComponent(row.user.twitchUsername)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-medium underline-offset-4 hover:underline"
-                      >
-                        {row.user.twitchUsername}
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground">{row.broadcaster_id}</span>
-                    )}
-                  </TableCell>
-                  <TableCell title={row.discord_user_id}>
-                    {row.user?.discordUsername ? `@${row.user.discordUsername}` : row.discord_user_id}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground tabular-nums">{formatDateTime(row.granted_at)}</TableCell>
-                </TableRow>
-              ))}
-              {liveNow.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="p-8 text-center text-muted-foreground">
-                    {settings?.live_role_id ? "Nobody is live right now." : "Pick a live role above and this fills in as people go live."}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Linked users</CardTitle>
-          <CardDescription>
-            Everyone with Discord linked, and what they&apos;ve switched on in the main app. Both are on by default. {optIns.length} right now.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Twitch</TableHead>
-                <TableHead>Discord</TableHead>
-                <TableHead>Posts</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Last post</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {optIns.map((row) => (
-                <TableRow key={row.userId}>
-                  <TableCell>
-                    <span className="flex items-center gap-2">
-                      <Avatar url={row.avatarUrl} />
-                      <span className="truncate">{row.name ?? "Unnamed"}</span>
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    {row.twitchUsername ? (
-                      <a
-                        href={`https://twitch.tv/${encodeURIComponent(row.twitchUsername)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="font-medium underline-offset-4 hover:underline"
-                      >
-                        {row.twitchUsername}
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground">Not linked</span>
-                    )}
-                  </TableCell>
-                  <TableCell title={row.discordUserId}>{row.discordUsername ? `@${row.discordUsername}` : row.discordUserId}</TableCell>
-                  <TableCell>
-                    <OnOff on={row.livePosts} />
-                  </TableCell>
-                  <TableCell>
-                    <OnOff on={row.liveRole} />
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-muted-foreground tabular-nums">
-                    {row.lastPostedAt ? formatDateTime(row.lastPostedAt) : "Never"}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {optIns.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="p-8 text-center text-muted-foreground">
-                    Nobody yet. Anyone who links Discord in the main app shows up here.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+        <Card>
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="text-base">Linked users</CardTitle>
+            <CardDescription>
+              Everyone with Discord linked, and what they&apos;ve switched on in the main app. Both are on by default. {optIns.length} right now.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-0 sm:px-6">
+            {optIns.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-muted-foreground">Nobody yet. Anyone who links Discord in the main app shows up here.</p>
+            ) : (
+              <DataList
+                rows={optIns}
+                rowKey={(row) => row.userId}
+                rowHref={(row) => `/users/${row.userId}`}
+                columns={[
+                  { key: "user", header: "User", mobile: "title", cell: (row) => <User name={row.name} avatarUrl={row.avatarUrl} /> },
+                  {
+                    key: "twitch",
+                    header: "Twitch",
+                    cell: (row) =>
+                      row.twitchUsername ? <TwitchLink username={row.twitchUsername} /> : <span className="text-muted-foreground">Not linked</span>,
+                  },
+                  {
+                    key: "discord",
+                    header: "Discord",
+                    cell: (row) => (row.discordUsername ? `@${row.discordUsername}` : row.discordUserId),
+                  },
+                  { key: "posts", header: "Posts", cell: (row) => <OnOff on={row.livePosts} /> },
+                  { key: "role", header: "Role", cell: (row) => <OnOff on={row.liveRole} /> },
+                  {
+                    key: "last",
+                    header: "Last post",
+                    className: "whitespace-nowrap text-muted-foreground tabular-nums",
+                    cell: (row) => (row.lastPostedAt ? formatDateTime(row.lastPostedAt) : "Never"),
+                  },
+                ]}
+              />
+            )}
+          </CardContent>
+        </Card>
+      </LiveForm>
     </div>
   );
 }

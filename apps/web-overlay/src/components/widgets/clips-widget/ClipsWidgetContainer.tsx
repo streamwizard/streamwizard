@@ -62,7 +62,7 @@ export function ClipsWidgetContainer({ scene, item }: OverlayWidgetProps) {
             viewCount: next.clip.view_count,
             durationSec: next.clip.duration,
           },
-          videoUrl: next.proxyUrl,
+          videoUrl: next.videoUrl,
           cursor: next.cursor,
         };
       } catch (err) {

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import {
   PLATFORM_EVENT_GROUPS,
   PLATFORM_EVENTS,
@@ -9,7 +10,20 @@ import {
   type PlatformEventGroup,
   type PlatformEventType,
 } from "@repo/types";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Label, Switch } from "@repo/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+  Label,
+  Switch,
+} from "@repo/ui";
 import { saveLogSettings, sendTestLogEvent, type LogSettingsInput } from "@/actions/discord-logs";
 import type { PickerOption } from "@/lib/discord/options";
 import { MultiPicker, Picker } from "./pickers";
@@ -18,7 +32,9 @@ import { toastResult } from "./toast-result";
 
 const HINTS: Partial<Record<PlatformEventType, string>> = {
   "user.created": "Someone signs up for StreamWizard.",
-  "user.deleted": "Someone deletes their account, or disconnects StreamWizard on Twitch.",
+  "user.deleted": "Someone deletes their account, disconnects StreamWizard on Twitch, or an admin removes them.",
+  "user.banned": "An admin bans a user from the Users page.",
+  "user.unbanned": "An admin lifts a ban.",
   "discord.linked": "A user links a Discord account.",
   "discord.unlinked": "A user unlinks their Discord account.",
   "subscription.granted": "An admin grants a plan.",
@@ -81,24 +97,24 @@ export function LogSettingsForm({
     });
 
   const defaultLabel = textChannels.find((c) => c.value === values.defaultChannelId)?.label;
+  const testBlocked = dirty ? "Save your changes first." : !initial.defaultChannelId ? "Pick a default channel and save it first." : null;
 
   return (
-    <div className="space-y-4">
+    // A container, so the group headers lay out by the room they have: the open sidebar takes 256px of the viewport.
+    <div className="@container space-y-4">
       <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+        {/* The button drops under the title on a phone instead of squeezing it. */}
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-base">Channels</CardTitle>
+            <CardTitle className="text-base">Default channel</CardTitle>
             <CardDescription>Keep log channels staff-only: they show names, Discord ids and message text.</CardDescription>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={test}
-            disabled={testing || dirty || !initial.defaultChannelId}
-            title={dirty ? "Save first" : !initial.defaultChannelId ? "Pick a default channel first" : undefined}
-          >
-            {testing ? "Sending…" : "Send test event"}
-          </Button>
+          <div className="shrink-0 space-y-1 sm:text-right">
+            <Button size="sm" variant="outline" className="h-11 md:h-8" onClick={test} disabled={testing || testBlocked !== null}>
+              {testing ? "Sending…" : "Send test event"}
+            </Button>
+            {testBlocked && <p className="text-xs text-muted-foreground">{testBlocked}</p>}
+          </div>
         </CardHeader>
         <CardContent className="divide-y">
           <SettingRow
@@ -134,68 +150,79 @@ export function LogSettingsForm({
         </CardContent>
       </Card>
 
+      {/* One section per group, closed until asked for: about 120 controls in one scroll was the problem. */}
       {PLATFORM_EVENT_GROUPS.map((group) => {
         const types = platformEventTypesInGroup(group.id);
         const channels = new Set(types.map((type) => values.events[type]?.channelId ?? null));
         const shared = channels.size === 1 ? [...channels][0]! : null;
+        const enabled = types.filter((type) => values.events[type]?.enabled).length;
         return (
-          <Card key={group.id}>
-            <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-4 space-y-0">
-              <div className="space-y-1">
-                <CardTitle className="text-base">{group.label}</CardTitle>
-                <CardDescription>{group.hint}</CardDescription>
+          <Collapsible key={group.id} asChild>
+            <Card className="gap-0 py-0">
+              {/* The picker sits next to the trigger, not inside it: a control can't live in a button. */}
+              <div className="flex flex-col gap-3 p-4 sm:px-6 @2xl:flex-row @2xl:items-center @2xl:justify-between @2xl:gap-6">
+                <CollapsibleTrigger className="group flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" aria-hidden />
+                  <span className="min-w-0 flex-1 space-y-1">
+                    <span className="block leading-none font-semibold">{group.label}</span>
+                    <span className="block text-sm text-muted-foreground">{group.hint}</span>
+                  </span>
+                  <Badge variant={enabled > 0 ? "secondary" : "outline"} className="shrink-0 tabular-nums">
+                    {enabled} of {types.length} on
+                  </Badge>
+                </CollapsibleTrigger>
+                <div className="w-full space-y-1 @2xl:w-64 @2xl:shrink-0">
+                  <Label htmlFor={`group-${group.id}`} className="text-xs text-muted-foreground">
+                    Channel for all {group.label.toLowerCase()} events
+                  </Label>
+                  <Picker
+                    id={`group-${group.id}`}
+                    options={textChannels}
+                    value={shared}
+                    onChange={(v) => setGroupChannel(group.id, v)}
+                    placeholder={channels.size > 1 ? "Mixed" : defaultLabel ? `Default (${defaultLabel})` : "Default channel"}
+                    emptyText="No channels match"
+                    disabled={saving}
+                  />
+                </div>
               </div>
-              <div className="w-full space-y-1 sm:w-64">
-                <Label htmlFor={`group-${group.id}`} className="text-xs text-muted-foreground">
-                  Channel for all {group.label.toLowerCase()} events
-                </Label>
-                <Picker
-                  id={`group-${group.id}`}
-                  options={textChannels}
-                  value={shared}
-                  onChange={(v) => setGroupChannel(group.id, v)}
-                  placeholder={channels.size > 1 ? "Mixed" : defaultLabel ? `Default (${defaultLabel})` : "Default channel"}
-                  emptyText="No channels match"
-                  disabled={saving}
-                />
-              </div>
-            </CardHeader>
-            <CardContent className="divide-y">
-              {types.map((type) => {
-                const meta = PLATFORM_EVENTS[type];
-                const route = values.events[type]!;
-                return (
-                  <SettingRow key={type} htmlFor={`event-${type}`} label={meta.label} hint={HINTS[type]}>
-                    <div className="flex w-full items-center gap-3">
-                      <Switch
-                        id={`event-${type}`}
-                        checked={route.enabled}
-                        onCheckedChange={(v) => setEvent(type, { enabled: v })}
-                        disabled={saving || ("alwaysOn" in meta && meta.alwaysOn)}
-                        aria-label={`Post ${meta.label.toLowerCase()} events`}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <Picker
-                          options={textChannels}
-                          value={route.channelId}
-                          onChange={(v) => setEvent(type, { channelId: v })}
-                          placeholder={defaultLabel ? `Default (${defaultLabel})` : "Default channel"}
-                          emptyText="No channels match"
-                          disabled={saving || !route.enabled}
-                        />
-                      </div>
-                    </div>
-                  </SettingRow>
-                );
-              })}
-            </CardContent>
-          </Card>
+              <CollapsibleContent>
+                <div className="divide-y border-t px-4 py-4 sm:px-6">
+                  {types.map((type) => {
+                    const meta = PLATFORM_EVENTS[type];
+                    const route = values.events[type]!;
+                    return (
+                      <SettingRow key={type} htmlFor={`event-${type}`} label={meta.label} hint={HINTS[type]}>
+                        <div className="flex w-full items-center gap-3">
+                          <Switch
+                            id={`event-${type}`}
+                            checked={route.enabled}
+                            onCheckedChange={(v) => setEvent(type, { enabled: v })}
+                            disabled={saving || ("alwaysOn" in meta && meta.alwaysOn)}
+                            aria-label={`Post ${meta.label.toLowerCase()} events`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <Picker
+                              options={textChannels}
+                              value={route.channelId}
+                              onChange={(v) => setEvent(type, { channelId: v })}
+                              placeholder={defaultLabel ? `Default (${defaultLabel})` : "Default channel"}
+                              emptyText="No channels match"
+                              disabled={saving || !route.enabled}
+                            />
+                          </div>
+                        </div>
+                      </SettingRow>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         );
       })}
 
-      <div className="sticky bottom-4 z-10 rounded-lg border bg-background/95 px-4 pb-4 shadow-sm backdrop-blur empty:hidden">
-        <SaveBar dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
-      </div>
+      <SaveBar sticky dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
     </div>
   );
 }

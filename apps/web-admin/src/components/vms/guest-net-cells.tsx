@@ -13,11 +13,8 @@ import { AGENT_LABEL, pctOf } from "./vm-format";
 export type GuestNetPromise = Promise<Record<string, GuestNet>>;
 
 const Loading = () => <span className="text-muted-foreground">…</span>;
-const None = ({ title }: { title?: string }) => (
-  <span className="text-muted-foreground" title={title}>
-    —
-  </span>
-);
+// `why` is written out instead of hiding in a tooltip: a phone has no hover.
+const None = ({ why }: { why?: string }) => <span className={why ? "text-xs text-muted-foreground" : "text-muted-foreground"}>{why ?? "—"}</span>;
 
 function Ips({ net, guestKey }: { net: GuestNetPromise; guestKey: string }) {
   const ips = use(net)[guestKey]?.ips ?? [];
@@ -32,7 +29,7 @@ function Agent({ net, guestKey }: { net: GuestNetPromise; guestKey: string }) {
 
 function Disk({ net, guestKey, name }: { net: GuestNetPromise; guestKey: string; name: string }) {
   const disk = use(net)[guestKey]?.disk;
-  if (!disk) return <None title="Needs the guest agent" />;
+  if (!disk) return <None why="Needs the guest agent" />;
   return <DiskUse used={disk.usedBytes} total={disk.totalBytes} name={name} />;
 }
 
@@ -64,7 +61,7 @@ export function GuestAgent({ net, guestKey }: { net?: GuestNetPromise; guestKey:
 }
 
 export function GuestDisk({ net, guestKey, name }: { net?: GuestNetPromise; guestKey: string; name: string }) {
-  if (!net) return <None title="Needs the guest agent" />;
+  if (!net) return <None why="Needs the guest agent" />;
   return (
     <Suspense fallback={<Loading />}>
       <Disk net={net} guestKey={guestKey} name={name} />

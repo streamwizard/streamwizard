@@ -15,7 +15,7 @@ import {
 } from "@/lib/overlay-clip-query-builder";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
-import { getSignedClipProxyUrl } from "@/actions/twitch";
+import { getClipDownloadUrl } from "@/actions/twitch";
 
 /** Minimal clip identity for Twitch Helix downloads (broadcaster id from clips row). */
 export type PlaylistClip = {
@@ -45,8 +45,11 @@ export type ClipCursor = {
 
 export type NextOverlayClip = {
   clip: OverlayClipForDisplay;
-  /** Signed `/api/video` path, already minted — saves the caller a round trip. */
-  proxyUrl: string;
+  /**
+   * Twitch's signed MP4 URL, already minted — saves the caller a round trip.
+   * The player loads it straight from Twitch's CDN.
+   */
+  videoUrl: string;
   cursor: ClipCursor;
 };
 
@@ -307,11 +310,11 @@ export async function getNextOverlayClip(
     }
 
     try {
-      const proxyUrl = await getSignedClipProxyUrl(
+      const videoUrl = await getClipDownloadUrl(
         row.twitch_clip_id,
         row.broadcaster_id
       );
-      return { clip: toDisplayClip(row), proxyUrl, cursor: nextCursor };
+      return { clip: toDisplayClip(row), videoUrl, cursor: nextCursor };
     } catch (err) {
       reportError(err, "clips.getNextOverlayClip.downloadUrl", { twitch_clip_id: row.twitch_clip_id });
       deadClips.set(row.twitch_clip_id, Date.now() + DEAD_CLIP_TTL_MS);

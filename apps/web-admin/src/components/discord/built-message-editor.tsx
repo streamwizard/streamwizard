@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Check, Loader2 } from "lucide-react";
+import { AlertTriangle, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { validateMessage, type BuiltMessage } from "@repo/discord-message";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from "@repo/ui";
+import { DesktopOnly } from "@/components/widgets/desktop-only";
 import { MessageBuilder, type BuilderTheme } from "@repo/ui/message-builder";
 import { publishBuiltMessageAction, saveBuiltMessageDraftAction } from "@/actions/discord-built-message";
 import { PageHeader } from "@/components/widgets/page-header";
@@ -79,11 +79,11 @@ export function BuiltMessageEditor({ id, initial, published, channels, themes, b
   const issues = useMemo(() => validateMessage(draft.message, MESSAGE_VALIDATE_OPTIONS), [draft.message]);
   const hasChannel = draft.createChannel ? !nameTaken : Boolean(draft.channelId);
   const blocked = !name
-    ? "Give the message a name first"
+    ? "Give the message a name first."
     : issues.length > 0
-      ? "Fix the marked problems first"
+      ? "Fix the marked problems in the builder first."
       : !hasChannel
-        ? "Pick a channel first"
+        ? "Pick a channel first."
         : null;
 
   const live =
@@ -109,23 +109,11 @@ export function BuiltMessageEditor({ id, initial, published, channels, themes, b
 
   return (
     <div className="space-y-6">
-      <Link
-        href="/discord/messages"
-        // Save first, so the list shows the name that was just typed.
-        onClick={(e) => {
-          if (status !== "saving" || e.metaKey || e.ctrlKey || e.shiftKey) return;
-          e.preventDefault();
-          void flush().then(() => router.push("/discord/messages"));
-        }}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="size-4" />
-        All messages
-      </Link>
+      {/* No back link: the header's breadcrumb and back arrow do that, and autosave flushes when the page is left. */}
       <PageHeader title={name || "Untitled message"} description="Build it here, publish it when it looks right.">
         <SaveStatus status={status} />
         {published.message && <Badge variant={live ? "secondary" : "outline"}>{live ? "Live" : "Unpublished changes"}</Badge>}
-        <Button onClick={publish} disabled={publishing || blocked !== null} title={blocked ?? undefined}>
+        <Button className="h-11 md:h-9" onClick={publish} disabled={publishing || blocked !== null}>
           {publishing ? "Publishing…" : "Publish"}
         </Button>
         <DeleteBuiltMessageButton
@@ -139,6 +127,12 @@ export function BuiltMessageEditor({ id, initial, published, channels, themes, b
           onDeleted={() => router.push("/discord/messages")}
         />
       </PageHeader>
+      {/* Why Publish is off, as text: a tooltip is no use on a phone. */}
+      {blocked && (
+        <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
+          Can&apos;t publish yet. {blocked}
+        </p>
+      )}
 
       <Card>
         <CardHeader>
@@ -146,10 +140,11 @@ export function BuiltMessageEditor({ id, initial, published, channels, themes, b
           <CardDescription>The name is only for this dashboard. The channel is where the message goes.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="max-w-sm space-y-1.5">
+          <div className="space-y-1.5 sm:max-w-sm">
             <Label htmlFor="built-message-name">Name</Label>
             <Input
               id="built-message-name"
+              className="h-11 md:h-9"
               value={draft.name}
               maxLength={MESSAGE_NAME_MAX}
               onChange={(e) => setDraft((prev) => ({ ...prev, name: e.target.value }))}
@@ -163,7 +158,7 @@ export function BuiltMessageEditor({ id, initial, published, channels, themes, b
               </p>
             )}
           </div>
-          <div className="max-w-sm space-y-1.5">
+          <div className="space-y-1.5 sm:max-w-sm">
             <Label htmlFor="built-message-channel">Channel</Label>
             <Picker
               id="built-message-channel"
@@ -199,16 +194,18 @@ export function BuiltMessageEditor({ id, initial, published, channels, themes, b
           <CardDescription>Changes save as a draft. Nothing reaches Discord until you publish.</CardDescription>
         </CardHeader>
         <CardContent>
-          <MessageBuilder
-            value={draft.message}
-            onChange={(message) => setDraft((prev) => ({ ...prev, message }))}
-            presets={MESSAGE_BUILDER_PRESETS}
-            variables={MESSAGE_VARIABLES}
-            themes={themes}
-            bot={bot}
-            onUploadImage={uploadsEnabled ? uploadBanner : undefined}
-            disabled={publishing}
-          />
+          <DesktopOnly tool="The message builder" bare>
+            <MessageBuilder
+              value={draft.message}
+              onChange={(message) => setDraft((prev) => ({ ...prev, message }))}
+              presets={MESSAGE_BUILDER_PRESETS}
+              variables={MESSAGE_VARIABLES}
+              themes={themes}
+              bot={bot}
+              onUploadImage={uploadsEnabled ? uploadBanner : undefined}
+              disabled={publishing}
+            />
+          </DesktopOnly>
         </CardContent>
       </Card>
     </div>

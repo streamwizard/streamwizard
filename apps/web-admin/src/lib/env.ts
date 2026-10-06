@@ -72,6 +72,16 @@ export const env = createEnv({
     // reads guest IPs, agent state and disk use from these on demand; without
     // it those columns show "—". Parsed by @repo/proxmox, never logged.
     PVE_HOSTS: z.string().min(1).optional(),
+    // /eventsub reads the conduit, its shards and the subscription inventory
+    // from Helix with the app token (@repo/twitch-api reads these straight
+    // from process.env). Without all three the Helix panels show as not configured.
+    TWITCH_CLIENT_ID: z.string().min(1).optional(),
+    TWITCH_CLIENT_SECRET: z.string().min(1).optional(),
+    TWITCH_CONDUIT_ID: z.string().min(1).optional(),
+    // /users/[id]/eventsub resync creates the channel's webhook subscriptions
+    // (stream.online/offline, channel.update) with it. Without it the resync
+    // still creates conduit subscriptions and reports the webhook ones.
+    TWITCH_WEBHOOK_SECRET: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_WS_SERVER_URL: z.string().min(1).optional(),
@@ -111,6 +121,10 @@ export const env = createEnv({
     CONSUMER_SECRET: process.env.CONSUMER_SECRET,
     REST_API_INTERNAL_SECRET: process.env.REST_API_INTERNAL_SECRET,
     PVE_HOSTS: process.env.PVE_HOSTS,
+    TWITCH_CLIENT_ID: process.env.TWITCH_CLIENT_ID,
+    TWITCH_CLIENT_SECRET: process.env.TWITCH_CLIENT_SECRET,
+    TWITCH_CONDUIT_ID: process.env.TWITCH_CONDUIT_ID,
+    TWITCH_WEBHOOK_SECRET: process.env.TWITCH_WEBHOOK_SECRET,
     NEXT_PUBLIC_WS_SERVER_URL: process.env.NEXT_PUBLIC_WS_SERVER_URL,
     NEXT_PUBLIC_MONITOR_SECRET: process.env.NEXT_PUBLIC_MONITOR_SECRET,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

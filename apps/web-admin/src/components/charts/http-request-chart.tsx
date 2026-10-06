@@ -36,7 +36,7 @@ export function HttpRequestChart({ initialData }: Props) {
   });
 
   return (
-    <ChartCard title="Avg Response Time (ms)" isEmpty={chartData.length === 0}>
+    <ChartCard title="Avg response time (ms)" isEmpty={chartData.length === 0}>
       <AreaChart data={chartData}>
         <defs>
           <linearGradient id="gAvgMs" x1="0" y1="0" x2="0" y2="1">
@@ -56,7 +56,7 @@ export function HttpRequestChart({ initialData }: Props) {
         <Area
           type="monotone"
           dataKey="avg_ms"
-          name="Avg Latency"
+          name="Avg latency"
           stroke="var(--chart-2)"
           fill="url(#gAvgMs)"
           strokeWidth={2}

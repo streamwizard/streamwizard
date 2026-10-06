@@ -44,7 +44,7 @@ export default async function AlertRulesPage() {
     <div className="space-y-6">
       <PageHeader
         title="Alert rules"
-        description="Overrides of the code defaults — empty fields fall back to the default shown. The engine applies changes on its next tick (≤60s)."
+        description="Overrides of the code defaults. Empty fields fall back to the default shown. The engine applies changes on its next tick, within 60 seconds."
       />
       <RulesEditor rules={rules} />
     </div>

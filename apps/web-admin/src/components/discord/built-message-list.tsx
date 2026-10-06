@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge, Card, CardContent, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { Badge, Card, CardContent } from "@repo/ui";
+import { DataList, type DataColumn } from "@/components/widgets/data-list";
 import type { BuiltMessageStatus } from "@/lib/discord/built-messages";
 import { DeleteBuiltMessageButton } from "./built-message-delete";
 
@@ -22,49 +22,43 @@ const STATUS: Record<BuiltMessageStatus, { label: string; variant: "secondary" |
   changed: { label: "Unpublished changes", variant: "outline" },
 };
 
+const COLUMNS: DataColumn<BuiltMessageListItem>[] = [
+  { key: "name", header: "Message", mobile: "title", className: "max-w-md min-w-40 whitespace-normal", cell: (message) => message.name },
+  { key: "channel", header: "Channel", className: "text-muted-foreground", cell: (message) => message.channel },
+  {
+    key: "status",
+    header: "Status",
+    mobile: "badge",
+    cell: (message) => <Badge variant={STATUS[message.status].variant}>{STATUS[message.status].label}</Badge>,
+  },
+  {
+    key: "published",
+    header: "Last published",
+    className: "text-muted-foreground tabular-nums",
+    cell: (message) => message.publishedAt ?? "Never",
+  },
+];
+
 export function BuiltMessageList({ messages }: { messages: BuiltMessageListItem[] }) {
   const router = useRouter();
 
   return (
-    <Card>
-      <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Message</TableHead>
-              <TableHead>Channel</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Last published</TableHead>
-              <TableHead className="w-12">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {messages.map((message) => (
-              <TableRow key={message.id}>
-                <TableCell>
-                  <Link href={`/discord/messages/${message.id}`} className="font-medium hover:underline">
-                    {message.name}
-                  </Link>
-                </TableCell>
-                <TableCell className="text-muted-foreground">{message.channel}</TableCell>
-                <TableCell>
-                  <Badge variant={STATUS[message.status].variant}>{STATUS[message.status].label}</Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground tabular-nums">{message.publishedAt ?? "Never"}</TableCell>
-                <TableCell>
-                  <DeleteBuiltMessageButton
-                    id={message.id}
-                    name={message.name}
-                    published={message.status !== "draft"}
-                    onDeleted={() => router.refresh()}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+    <Card className="py-0 sm:py-2">
+      <CardContent className="px-0 sm:px-4">
+        <DataList
+          rows={messages}
+          rowKey={(message) => message.id}
+          rowHref={(message) => `/discord/messages/${message.id}`}
+          columns={COLUMNS}
+          actions={(message) => (
+            <DeleteBuiltMessageButton
+              id={message.id}
+              name={message.name}
+              published={message.status !== "draft"}
+              onDeleted={() => router.refresh()}
+            />
+          )}
+        />
       </CardContent>
     </Card>
   );

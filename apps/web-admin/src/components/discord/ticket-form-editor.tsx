@@ -1,9 +1,16 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useId, useState } from "react";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Badge,
   Button,
   Card,
@@ -11,15 +18,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   Input,
   Label,
@@ -29,8 +31,16 @@ import {
 } from "@repo/ui";
 import { SortableList } from "@repo/ui/components/sortable-list";
 import { saveTicketCategoryFormAction } from "@/actions/discord-ticket-design";
-import { SaveBar } from "./setting-row";
-import { toastResult } from "./toast-result";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/widgets/responsive-dialog";
+import { useCategorySavePart } from "./ticket-category-save";
+import { MoveMenuItems, TicketRowMenu } from "./ticket-row-menu";
 
 type FieldKind = "subject" | "description" | "product" | "text" | "select";
 
@@ -109,12 +119,11 @@ const optionValue = (label: string, taken: string[]): string => {
   return value;
 };
 
-/** The questions a category's ticket form asks, in order. Saved as a whole. */
+/** The questions a category's ticket form asks, in order. Saved as a whole, by the category page's save bar. */
 export function TicketFormEditor({ categoryId, initial, hasProducts, limits }: TicketFormEditorProps) {
-  const router = useRouter();
   const [fields, setFields] = useState(initial);
   const [editing, setEditing] = useState<TicketFieldDraft | null>(null);
-  const [saving, startSave] = useTransition();
+  const [removing, setRemoving] = useState<TicketFieldDraft | null>(null);
 
   const dirty = JSON.stringify(fields) !== JSON.stringify(initial);
   const full = fields.length >= limits.maxFields;
@@ -122,9 +131,13 @@ export function TicketFormEditor({ categoryId, initial, hasProducts, limits }: T
     (kind) => !KINDS[kind].once || !fields.some((field) => field.kind === kind),
   );
 
-  const save = () =>
-    startSave(async () => {
-      const result = await saveTicketCategoryFormAction(
+  const saving = useCategorySavePart({
+    label: "Form",
+    saved: "Form saved.",
+    dirty,
+    reset: () => setFields(initial),
+    save: () =>
+      saveTicketCategoryFormAction(
         categoryId,
         fields.map((field) => ({
           ...(isNew(field.id) ? {} : { id: field.id }),
@@ -142,9 +155,8 @@ export function TicketFormEditor({ categoryId, initial, hasProducts, limits }: T
             emoji: o.emoji || null,
           })),
         })),
-      );
-      if (toastResult(result, "Form saved.")) router.refresh();
-    });
+      ),
+  });
 
   const upsert = (next: TicketFieldDraft) => {
     setFields((current) =>
@@ -157,30 +169,38 @@ export function TicketFormEditor({ categoryId, initial, hasProducts, limits }: T
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+      {/* The button drops under the title on a phone instead of squeezing it. */}
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="space-y-1.5">
-          <CardTitle className="text-base">Form</CardTitle>
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+            Form
+            {dirty && <Badge variant="outline">Not saved</Badge>}
+          </CardTitle>
           <CardDescription>
             What members fill in to open a ticket here. Discord fits {limits.maxFields} questions in a form. With none,
-            the ticket opens straight away.
+            the ticket opens straight away. <span className="hidden md:inline">Drag to change the order.</span>
+            <span className="md:hidden">Change the order from a row&apos;s menu.</span>
           </CardDescription>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" disabled={saving || full} title={full ? `Discord fits ${limits.maxFields} questions` : undefined}>
-              <Plus />
-              Add question
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-72">
-            {addable.map((kind) => (
-              <DropdownMenuItem key={kind} onSelect={() => setEditing(blank(kind))} className="flex-col items-start gap-0.5">
-                <span className="font-medium">{KINDS[kind].name}</span>
-                <span className="text-xs text-muted-foreground">{KINDS[kind].hint}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-11 md:h-8" disabled={saving || full}>
+                <Plus />
+                Add question
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              {addable.map((kind) => (
+                <DropdownMenuItem key={kind} onSelect={() => setEditing(blank(kind))} className="flex-col items-start gap-0.5">
+                  <span className="font-medium">{KINDS[kind].name}</span>
+                  <span className="text-xs text-muted-foreground">{KINDS[kind].hint}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {full && <p className="text-xs text-muted-foreground">Discord fits {limits.maxFields} questions.</p>}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {fields.length === 0 ? (
@@ -194,11 +214,13 @@ export function TicketFormEditor({ categoryId, initial, hasProducts, limits }: T
             onReorder={setFields}
             disabled={saving}
             itemLabel={(field) => field.label || KINDS[field.kind].name}
+            // No drag handle on a phone: the row's menu has Move up and Move down.
+            handleClassName="hidden md:flex"
           >
-            {(field) => (
+            {(field, move) => (
               <div className="flex items-center gap-3">
                 <div className="min-w-0 flex-1">
-                  <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-medium">
                     <span className="truncate">{field.label || "Untitled question"}</span>
                     {/* "Subject · Subject" says nothing; the badge earns its place once the label differs. */}
                     {field.label !== KINDS[field.kind].name && <Badge variant="outline">{KINDS[field.kind].name}</Badge>}
@@ -212,35 +234,73 @@ export function TicketFormEditor({ categoryId, initial, hasProducts, limits }: T
                         : field.placeholder || KINDS[field.kind].hint}
                   </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Edit ${field.label || "question"}`}
-                  title="Edit"
-                  disabled={saving}
-                  onClick={() => setEditing(field)}
-                >
-                  <Pencil />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Remove ${field.label || "question"}`}
-                  title="Remove"
-                  disabled={saving}
-                  onClick={() => setFields((current) => current.filter((f) => f.id !== field.id))}
-                >
-                  <Trash2 />
-                </Button>
+                <div className="hidden shrink-0 items-center gap-1 md:flex">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Edit ${field.label || "question"}`}
+                    title="Edit"
+                    disabled={saving}
+                    onClick={() => setEditing(field)}
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove ${field.label || "question"}`}
+                    title="Remove"
+                    disabled={saving}
+                    onClick={() => setRemoving(field)}
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
+                <TicketRowMenu label={field.label || "question"} disabled={saving} className="md:hidden">
+                  <DropdownMenuItem onSelect={() => setEditing(field)}>
+                    <Pencil />
+                    Edit
+                  </DropdownMenuItem>
+                  <MoveMenuItems move={move} />
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={() => setRemoving(field)}>
+                    <Trash2 />
+                    Remove
+                  </DropdownMenuItem>
+                </TicketRowMenu>
               </div>
             )}
           </SortableList>
         )}
-        <SaveBar dirty={dirty} pending={saving} onSave={save} onReset={() => setFields(initial)} />
       </CardContent>
 
       {editing && (
         <FieldDialog key={editing.id} field={editing} limits={limits} onClose={() => setEditing(null)} onDone={upsert} />
+      )}
+
+      {removing && (
+        <AlertDialog open onOpenChange={(open) => !open && setRemoving(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove {removing.label || "this question"}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Members aren&apos;t asked it anymore once you save. Answers on older tickets stay.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="h-11 md:h-9">Keep it</AlertDialogCancel>
+              <AlertDialogAction
+                className="h-11 md:h-9"
+                onClick={() => {
+                  setFields((current) => current.filter((f) => f.id !== removing.id));
+                  setRemoving(null);
+                }}
+              >
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
     </Card>
   );
@@ -295,8 +355,8 @@ function FieldDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
+    <ResponsiveDialog open onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveDialogContent className="max-h-[90vh] overflow-y-auto">
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -304,10 +364,10 @@ function FieldDialog({
             if (ready) submit();
           }}
         >
-          <DialogHeader>
-            <DialogTitle>{KINDS[draft.kind].name}</DialogTitle>
-            <DialogDescription>{KINDS[draft.kind].hint}</DialogDescription>
-          </DialogHeader>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>{KINDS[draft.kind].name}</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>{KINDS[draft.kind].hint}</ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
 
           <div className="space-y-2">
             <Label htmlFor={`${id}-label`}>Question</Label>
@@ -316,6 +376,7 @@ function FieldDialog({
               value={draft.label}
               onChange={(event) => set("label", event.target.value)}
               maxLength={limits.labelMax}
+              className="h-11 md:h-9"
               required
               autoFocus
             />
@@ -328,6 +389,7 @@ function FieldDialog({
               value={draft.placeholder}
               onChange={(event) => set("placeholder", event.target.value)}
               maxLength={limits.placeholderMax}
+              className="h-11 md:h-9"
             />
             <p className="text-xs text-muted-foreground">Grey hint text inside the empty field. Optional.</p>
           </div>
@@ -339,6 +401,7 @@ function FieldDialog({
                 id={`${id}-style`}
                 value={draft.style}
                 onChange={(event) => set("style", event.target.value === "paragraph" ? "paragraph" : "short")}
+                className="h-11 text-base md:h-9 md:text-sm"
               >
                 <NativeSelectOption value="short">One line</NativeSelectOption>
                 <NativeSelectOption value="paragraph">Paragraph</NativeSelectOption>
@@ -347,7 +410,7 @@ function FieldDialog({
           )}
 
           {isText && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor={`${id}-min`}>Shortest answer</Label>
                 <Input
@@ -358,6 +421,7 @@ function FieldDialog({
                   value={draft.minLength ?? ""}
                   onChange={(event) => set("minLength", number(event.target.value, ceiling))}
                   placeholder="No minimum"
+                  className="h-11 md:h-9"
                 />
               </div>
               <div className="space-y-2">
@@ -370,9 +434,10 @@ function FieldDialog({
                   value={draft.maxLength ?? ""}
                   onChange={(event) => set("maxLength", number(event.target.value, ceiling) || null)}
                   placeholder={String(ceiling)}
+                  className="h-11 md:h-9"
                 />
               </div>
-              <p className="col-span-2 text-xs text-muted-foreground">In characters. Discord allows {ceiling} here.</p>
+              <p className="text-xs text-muted-foreground sm:col-span-2">In characters. Discord allows {ceiling} here.</p>
             </div>
           )}
 
@@ -387,7 +452,7 @@ function FieldDialog({
                     onChange={(event) => setOption(index, { emoji: event.target.value })}
                     maxLength={64}
                     placeholder="🙂"
-                    className="w-16 shrink-0 text-center"
+                    className="h-11 w-14 shrink-0 px-1 text-center md:h-9 md:w-16"
                   />
                   <div className="min-w-0 flex-1 space-y-1">
                     <Input
@@ -396,6 +461,7 @@ function FieldDialog({
                       onChange={(event) => setOption(index, { label: event.target.value })}
                       maxLength={limits.optionMax}
                       placeholder="Label"
+                      className="h-11 md:h-9"
                       required
                     />
                     <Input
@@ -404,12 +470,14 @@ function FieldDialog({
                       onChange={(event) => setOption(index, { description: event.target.value })}
                       maxLength={limits.optionMax}
                       placeholder="Description (optional)"
+                      className="h-11 md:h-9"
                     />
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
+                    className="size-11 md:size-9"
                     aria-label={`Remove option ${index + 1}`}
                     onClick={() =>
                       set(
@@ -426,6 +494,7 @@ function FieldDialog({
                 type="button"
                 variant="outline"
                 size="sm"
+                className="h-11 md:h-8"
                 disabled={draft.options.length >= limits.maxOptions}
                 onClick={() => set("options", [...draft.options, { label: "", value: "", description: "", emoji: "" }])}
               >
@@ -443,16 +512,16 @@ function FieldDialog({
             <Switch id={`${id}-required`} checked={draft.required} onCheckedChange={(value) => set("required", value)} />
           </div>
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={!ready}>
               Done
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

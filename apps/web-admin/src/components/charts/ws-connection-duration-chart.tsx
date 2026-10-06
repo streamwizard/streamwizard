@@ -46,7 +46,7 @@ export function WsConnectionDurationChart({ initialData }: Props) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Connection Duration</CardTitle>
+          <CardTitle className="text-base">Connection duration</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-8 text-muted-foreground text-sm">
           No closed connections in this time range
@@ -59,7 +59,7 @@ export function WsConnectionDurationChart({ initialData }: Props) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base">
-          Avg Connection Duration (seconds)
+          Avg connection duration (seconds)
         </CardTitle>
       </CardHeader>
       <CardContent>

@@ -77,7 +77,7 @@ export function WsLiveFeed() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold">WS Live</h1>
+          <h1 className="text-xl font-semibold">Live feed</h1>
           <p className="text-sm text-muted-foreground mt-0.5 flex items-center gap-2">
             <Circle
               className={cn(

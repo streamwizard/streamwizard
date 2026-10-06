@@ -27,7 +27,7 @@ export function TicketProductsManager(props: TicketProductsManagerProps) {
     <TicketOptionsManager
       kind="product"
       title="Products"
-      description="What a ticket is about. Asked in the ticket form, and a filter on the ticket list. Drag to change the order."
+      description="What a ticket is about. Asked in the ticket form, and a filter on the ticket list."
       {...props}
       onCreate={(draft) => createTicketProductAction(toInput(draft))}
       onUpdate={(id, draft) => updateTicketProductAction(id, toInput(draft))}

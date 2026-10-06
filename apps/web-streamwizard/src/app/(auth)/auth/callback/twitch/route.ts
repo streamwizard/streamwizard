@@ -8,6 +8,7 @@ import { setTwitchScopesByUserId } from "@repo/supabase/queries/twitch-scopes";
 import { validateTwitchToken } from "@repo/twitch-api";
 import { captureServerEvent } from "@repo/posthog/server";
 import { reportError } from "@repo/sentry";
+import { safeNextPath } from "@/lib/safe-next-path";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -21,11 +22,7 @@ export async function GET(request: Request) {
 
   const code = searchParams.get("code");
   // Sanitize next to a relative path only to prevent open redirect
-  const rawNext = searchParams.get("next") ?? "/dashboard";
-  const next =
-    rawNext.startsWith("/") && !rawNext.startsWith("//") && !rawNext.includes("://")
-      ? rawNext
-      : "/dashboard";
+  const next = safeNextPath(searchParams.get("next")) ?? "/dashboard";
 
   const oauthError = searchParams.get("error");
   const oauthErrorCode = searchParams.get("error_code");

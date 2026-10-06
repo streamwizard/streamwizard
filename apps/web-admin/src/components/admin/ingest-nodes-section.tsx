@@ -2,44 +2,24 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { Copy, Pencil, Trash2 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  Input,
-  Label,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@repo/ui";
+import { Pencil, Trash2 } from "lucide-react";
+import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from "@repo/ui";
 import type { IngestNode, IngestNodeCapacity } from "@repo/supabase/queries/ingest-nodes";
 import { createIngestNodeAction, deleteIngestNodeAction, updateIngestNodeAction } from "@/actions/ingest-nodes";
+import { DeleteNodeDialog, InstallCommandCard } from "@/components/admin/node-manage-kit";
+import { DataList, type DataColumn } from "@/components/widgets/data-list";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/widgets/responsive-dialog";
 import { ingestNodeCapacitySchema } from "@/schemas/ingest-node";
 import { formatMb } from "@/lib/format";
-import { copyToClipboard, nodeStatusVariant } from "@/lib/node-ui";
+import { nodeStatusVariant } from "@/lib/node-ui";
 
 const EMPTY_FORM: IngestNodeCapacity = {
   name: "",
@@ -77,39 +57,43 @@ function IngestNodeForm({
   const nameError = !nameResult.success && form.name.length > 0 ? nameResult.error.issues[0]?.message : null;
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="col-span-2 space-y-2">
+    <div className="grid gap-4">
+      <div className="space-y-2">
         <Label htmlFor="ingest-node-name">Name (this becomes the node&apos;s hostname)</Label>
         <Input
           id="ingest-node-name"
           placeholder="ingest-box-1"
+          autoCapitalize="none"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
         />
         {nameError && <p className="text-xs text-destructive">{nameError}</p>}
       </div>
-      <div className="col-span-2 space-y-2">
+      <div className="space-y-2">
         <Label htmlFor="ingest-node-max-sessions">Max concurrent sessions (optional)</Label>
         <Input
           id="ingest-node-max-sessions"
           type="number"
+          inputMode="numeric"
           value={form.max_concurrent_sessions ?? ""}
           onChange={(e) =>
             setForm({ ...form, max_concurrent_sessions: e.target.value === "" ? null : Number(e.target.value) })
           }
         />
       </div>
-      <div className="col-span-2 space-y-2">
+      <div className="space-y-2">
         <Label htmlFor="ingest-node-public-hostname">Public domain (optional)</Label>
         <Input
           id="ingest-node-public-hostname"
           placeholder="ingest-01.streamwizard.org"
+          inputMode="url"
+          autoCapitalize="none"
           value={form.public_hostname ?? ""}
           onChange={(e) => setForm({ ...form, public_hostname: e.target.value === "" ? null : e.target.value })}
         />
         <p className="text-xs text-muted-foreground">
           Point a DNS record at this box, then set it here. Encoders connect to this domain
-          instead of the raw IP — leave blank to use the public IP.
+          instead of the raw IP. Leave blank to use the public IP.
         </p>
       </div>
     </div>
@@ -133,7 +117,6 @@ export function IngestNodesSection({
   const [editForm, setEditForm] = useState<IngestNodeCapacity>(EMPTY_FORM);
 
   const [deletingNode, setDeletingNode] = useState<IngestNode | null>(null);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   if (error) {
     return <p className="text-destructive text-sm">{error}</p>;
@@ -184,166 +167,146 @@ export function IngestNodesSection({
     }
     setNodes((prev) => prev.filter((n) => n.id !== id));
     setDeletingNode(null);
-    setDeleteConfirmText("");
     toast.success("Node deleted.");
   };
 
+  const columns: DataColumn<IngestNode>[] = [
+    {
+      key: "name",
+      header: "Name",
+      mobile: "title",
+      className: "max-w-64 whitespace-normal",
+      cell: (node) => (
+        <>
+          <span className="font-medium">{node.name}</span>
+          {node.public_hostname && <span className="block text-xs font-normal break-all text-muted-foreground">{node.public_hostname}</span>}
+        </>
+      ),
+    },
+    {
+      key: "status",
+      header: "Link status",
+      mobile: "badge",
+      cell: (node) => <Badge variant={nodeStatusVariant(node.status)}>{node.status}</Badge>,
+    },
+    {
+      key: "max",
+      header: "Max sessions",
+      className: "tabular-nums",
+      cell: (node) => node.max_concurrent_sessions ?? "Unlimited",
+    },
+    {
+      key: "hardware",
+      header: "Hardware",
+      className: "hidden min-w-44 whitespace-normal @4xl:table-cell",
+      headClassName: "hidden @4xl:table-cell",
+      cell: (node) => <HardwareSummary node={node} />,
+    },
+    {
+      key: "created",
+      header: "Created",
+      mobile: "hidden",
+      className: "hidden text-muted-foreground @6xl:table-cell",
+      headClassName: "hidden @6xl:table-cell",
+      // Formatted in the viewer's time zone, which the server render cannot know.
+      cell: (node) => <span suppressHydrationWarning>{new Date(node.created_at).toLocaleDateString("en-US")}</span>,
+    },
+  ];
+
   return (
-    <>
+    <div className="space-y-4">
       {installCommand && (
-        <Card className="border-amber-500/50">
-          <CardHeader>
-            <CardTitle>Install command — copy this now</CardTitle>
-            <CardDescription>
-              This is the only time the claim token will be shown. The node joins Tailscale
-              automatically during install — no auth key needs to be pasted in.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-start gap-2">
-              <pre className="flex-1 overflow-x-auto rounded-md bg-muted p-3 text-xs whitespace-pre-wrap break-all">
-                {installCommand}
-              </pre>
-              <Button size="icon" variant="ghost" onClick={() => copyToClipboard(installCommand, "Install command")}>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button variant="outline" className="mt-3" onClick={() => setInstallCommand(null)}>
-              I&apos;ve saved it
-            </Button>
-          </CardContent>
-        </Card>
+        <InstallCommandCard
+          command={installCommand}
+          description="This is the only time the claim token will be shown. The node joins Tailscale automatically during install, so no auth key needs to be pasted in."
+          onDismiss={() => setInstallCommand(null)}
+        />
       )}
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Ingest Nodes</CardTitle>
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 px-4 sm:px-6">
+          <div className="min-w-0">
+            <CardTitle>Ingest nodes</CardTitle>
             <CardDescription>SRT/SRTLA boxes running ingest-server.</CardDescription>
           </div>
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => setCreateForm(EMPTY_FORM)}>Add node</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add ingest node</DialogTitle>
-                <DialogDescription>
+          <ResponsiveDialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <ResponsiveDialogTrigger asChild>
+              <Button className="h-11 md:h-9" onClick={() => setCreateForm(EMPTY_FORM)}>
+                Add node
+              </Button>
+            </ResponsiveDialogTrigger>
+            <ResponsiveDialogContent>
+              <ResponsiveDialogHeader>
+                <ResponsiveDialogTitle>Add ingest node</ResponsiveDialogTitle>
+                <ResponsiveDialogDescription>
                   Name it and optionally cap how many concurrent sessions it should handle.
                   Hardware details (RAM, CPU, storage, public IP, Tailscale IP, hostname) are
                   self-reported by the node when you run the one-time install command you&apos;ll
                   get after saving.
-                </DialogDescription>
-              </DialogHeader>
+                </ResponsiveDialogDescription>
+              </ResponsiveDialogHeader>
               <IngestNodeForm form={createForm} setForm={setCreateForm} />
-              <DialogFooter>
+              <ResponsiveDialogFooter>
                 <Button
                   onClick={handleCreate}
                   disabled={isPending || !ingestNodeCapacitySchema.safeParse(createForm).success}
                 >
                   {isPending ? "Creating…" : "Create node"}
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              </ResponsiveDialogFooter>
+            </ResponsiveDialogContent>
+          </ResponsiveDialog>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Link status</TableHead>
-                <TableHead>Max concurrent sessions</TableHead>
-                <TableHead>Hardware</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {nodes.map((node) => (
-                <TableRow key={node.id}>
-                  <TableCell className="font-medium">
-                    {node.name}
-                    {node.public_hostname && (
-                      <p className="text-xs font-normal text-muted-foreground">{node.public_hostname}</p>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={nodeStatusVariant(node.status)}>{node.status}</Badge>
-                  </TableCell>
-                  <TableCell>{node.max_concurrent_sessions ?? "Unlimited"}</TableCell>
-                  <TableCell>
-                    <HardwareSummary node={node} />
-                  </TableCell>
-                  <TableCell>{new Date(node.created_at).toLocaleString("en-US")}</TableCell>
-                  <TableCell className="text-right">
-                    <Button size="icon" variant="ghost" onClick={() => openEdit(node)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <AlertDialog
-                      open={deletingNode?.id === node.id}
-                      onOpenChange={(open) => {
-                        if (!open) {
-                          setDeletingNode(null);
-                          setDeleteConfirmText("");
-                        }
-                      }}
-                    >
-                      <Button size="icon" variant="ghost" onClick={() => setDeletingNode(node)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Delete this node?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            &quot;{node.name}&quot; will be removed. Any sessions already running on
-                            it aren&apos;t cleaned up by this action — this can&apos;t be undone.
-                            Type <span className="font-mono font-semibold">{node.name}</span> to
-                            confirm.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <Input
-                          autoFocus
-                          value={deleteConfirmText}
-                          onChange={(e) => setDeleteConfirmText(e.target.value)}
-                          placeholder={node.name}
-                        />
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Keep it</AlertDialogCancel>
-                          <AlertDialogAction
-                            disabled={deleteConfirmText !== node.name}
-                            onClick={() => handleDelete(node.id)}
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        {/* Phone cards run edge to edge; the table keeps the card's padding. */}
+        <CardContent className="px-0 sm:px-6">
+          {nodes.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">No nodes yet. Add one to get its install command.</p>
+          ) : (
+            <DataList
+              rows={nodes}
+              rowKey={(node) => node.id}
+              columns={columns}
+              actions={(node) => (
+                <div className="flex flex-wrap items-center gap-2 @2xl:flex-nowrap @2xl:justify-end">
+                  <Button size="sm" variant="outline" className="h-11 md:h-8" onClick={() => openEdit(node)}>
+                    <Pencil aria-hidden="true" />
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-11 text-destructive hover:text-destructive md:h-8"
+                    onClick={() => setDeletingNode(node)}
+                  >
+                    <Trash2 aria-hidden="true" />
+                    Delete
+                  </Button>
+                </div>
+              )}
+            />
+          )}
         </CardContent>
       </Card>
 
-      <Dialog open={!!editingNode} onOpenChange={(open) => !open && setEditingNode(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit ingest node</DialogTitle>
-            <DialogDescription>Update this node&apos;s capacity settings.</DialogDescription>
-          </DialogHeader>
+      <ResponsiveDialog open={!!editingNode} onOpenChange={(open) => !open && setEditingNode(null)}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Edit ingest node</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>Update this node&apos;s capacity settings.</ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
           <IngestNodeForm form={editForm} setForm={setEditForm} />
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button
               onClick={handleEdit}
               disabled={isPending || !ingestNodeCapacitySchema.safeParse(editForm).success}
             >
               {isPending ? "Saving…" : "Save changes"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+
+      <DeleteNodeDialog node={deletingNode} leftRunning="sessions" onClose={() => setDeletingNode(null)} onDelete={handleDelete} />
+    </div>
   );
 }

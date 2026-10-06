@@ -34,10 +34,10 @@ export function TicketCloseRequest({ ticketNumber, requestedAt, expiresAt, reque
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
-        <Button size="sm" disabled={pending || !linked} onClick={() => answer("close-accept", "Ticket closed. Conversation saved.")}>
+        <Button size="sm" className="h-11 md:h-8" disabled={pending || !linked} onClick={() => answer("close-accept", "Ticket closed. Conversation saved.")}>
           {pending ? "Working…" : "Accept and close"}
         </Button>
-        <Button size="sm" variant="outline" disabled={pending || !linked} onClick={() => answer("close-reject", "Kept open.")}>
+        <Button size="sm" variant="outline" className="h-11 md:h-8" disabled={pending || !linked} onClick={() => answer("close-reject", "Kept open.")}>
           Keep it open
         </Button>
       </CardContent>

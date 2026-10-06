@@ -82,6 +82,34 @@ describe("log channel formatters", () => {
     expect(fieldValue(embed, "Session")).toBe("`AQoQ1`");
   });
 
+  test("eventsub rows the bot merged name every shard and say how many", () => {
+    const lost = formatPlatformEvent(
+      event("eventsub.connection_lost", {
+        service: "streamwizard-bot",
+        shard_ids: ["0", "1", "2"],
+        reason: "keepalive timeout",
+        close_code: null,
+        keepalive_silent_ms: 18_000,
+      }),
+    ).toJSON();
+    expect(lost.description).toContain("lost its EventSub connection to Twitch on 3 shards.");
+    expect(fieldValue(lost, "Shards (3)")).toBe("`0`, `1`, `2`");
+    expect(fieldValue(lost, "Shard")).toBeUndefined();
+
+    const back = formatPlatformEvent(
+      event("eventsub.reconnected", {
+        service: "streamwizard-bot",
+        shard_ids: ["0", "1", "2"],
+        session_id: null,
+        downtime_ms: 9500,
+        attempts: 3,
+      }),
+    ).toJSON();
+    expect(back.description).toContain("is back on EventSub on 3 shards after 10s");
+    expect(fieldValue(back, "Down for (longest)")).toBe("10s");
+    expect(fieldValue(back, "Session")).toBeUndefined();
+  });
+
   test("new user: avatar as author icon and thumbnail, Twitch link, Discord mention, no email", () => {
     const embed = formatPlatformEvent(event("user.created", { ...identity, email: "x@example.com" })).toJSON();
     expect(embed.title).toBe("👋 New user");
@@ -189,6 +217,24 @@ describe("log channel formatters", () => {
     const revoked = formatPlatformEvent(event("user.deleted", { ...identity, reason: "twitch_revoked" })).toJSON();
     expect(revoked.description).toContain("They disconnected StreamWizard on Twitch.");
     expect(fieldValue(revoked, "Reason")).toBe("Twitch revoked");
+  });
+
+  test("admin deletion and bans name the admin", () => {
+    const admin = { actor_twitch_username: "jochem" };
+    const deleted = formatPlatformEvent(event("user.deleted", { ...identity, ...admin, reason: "admin" })).toJSON();
+    expect(deleted.description).toBe("An admin removed **logtester**'s account and data.");
+    expect(fieldValue(deleted, "Deleted by")).toContain("jochem");
+
+    const banned = formatPlatformEvent(
+      event("user.banned", { ...identity, ...admin, reason: "spam bot", discord_banned: true }),
+    ).toJSON();
+    expect(banned.title).toBe("⛔ User banned");
+    expect(banned.description).toBe("**logtester** is banned from StreamWizard and the Discord server.");
+    expect(fieldValue(banned, "Reason")).toBe("spam bot");
+    expect(fieldValue(banned, "Banned by")).toContain("jochem");
+
+    const unbanned = formatPlatformEvent(event("user.unbanned", { ...identity, ...admin, discord_unbanned: false })).toJSON();
+    expect(unbanned.description).toBe("**logtester** can sign in again.");
   });
 
   test("admin roles: granted purple, revoked red, by the database", () => {
@@ -491,6 +537,8 @@ describe("server log formatters", () => {
     expect(fieldValue(rated, "Comment")).toBe("> Quick and friendly");
     const bare = formatPlatformEvent(event("ticket.feedback", { ...ticket, rating: 5 })).toJSON();
     expect(fieldValue(bare, "Comment")).toBeUndefined();
+    const blank = formatPlatformEvent(event("ticket.feedback", { ...ticket, rating: 5, comment: "  " })).toJSON();
+    expect(fieldValue(blank, "Comment")).toBeUndefined();
   });
 
   test("bulk delete shows cached lines in a code block without breaking it", () => {

@@ -15,7 +15,7 @@ The app uses Next.js App Router with two main route groups:
 - `app/[overlayId]/page.tsx` — Server-rendered canvas for OBS (browser source). `overlayId` is either an **active** overlay **slug** or a scene **UUID** (UUID skips `is_active`, for embed tooling).
 - **Environment** — `import { env } from "@repo/env/next"` (same schema as **`packages/env/src/next.ts`** as the dashboard). **`next.config.js`** reads **`.env.local`** then **`.env`** from the monorepo root into **`process.env`** using the same parsing rules as **`packages/env`**, so setups where **`@next/env` cannot be resolved** (e.g. some Bun workspaces) still work. In production, inject the same variables on the host.
 - `app/actions/*.ts` (Server Actions `"use server"`) — Trusted server reads via **`supabaseAdmin` from `@repo/supabase/next/admin`** and **`@repo/supabase/queries/*`**: load scene + merged clip widgets, Twitch clip playlists, signed download URLs.
-- **`app/api/video/route.ts`** — Same-origin proxy for clip video URLs used by widgets.
+- **Clip video** — Played straight from Twitch's CDN. The server only mints the signed MP4 URL (`actions/twitch.ts`); no video passes through this app.
 
 Overlay data access follows the shared rule below: mutations are not surfaced here; all Supabase `.from()` usage goes through `@repo/supabase/queries/*`.
 

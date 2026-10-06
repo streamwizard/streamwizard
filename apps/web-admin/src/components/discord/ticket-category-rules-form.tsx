@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, Input, NativeSelect, NativeSelectOption, Switch } from "@repo/ui";
+import { useState } from "react";
+import Link from "next/link";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, NativeSelect, NativeSelectOption, Switch } from "@repo/ui";
 import { saveTicketCategoryRulesAction, type TicketCategoryRulesInput } from "@/actions/discord-ticket-config";
 import type { PickerOption } from "@/lib/discord/options";
 import { MultiPicker } from "./pickers";
-import { SaveBar, SettingRow } from "./setting-row";
-import { toastResult } from "./toast-result";
+import { SettingRow } from "./setting-row";
+import { useCategorySavePart } from "./ticket-category-save";
 
 interface TicketCategoryRulesFormProps {
   categoryId: string;
@@ -33,21 +33,22 @@ const duration = (seconds: number): string => {
 /** A stored value that isn't one of the steps (set some other way) still has to show up as selected. */
 const withCurrent = (steps: number[], current: number) => (steps.includes(current) ? steps : [...steps, current].sort((a, b) => a - b));
 
-/** Who works this category's tickets, who may open them, and how many. */
+/** Who works this category's tickets, who may open them, and how many. Saved by the category page's save bar. */
 export function TicketCategoryRulesForm({ categoryId, initial, roles, staffRoleName, limitMax }: TicketCategoryRulesFormProps) {
-  const router = useRouter();
   const [values, setValues] = useState(initial);
-  const [saving, startSave] = useTransition();
   const set = <K extends keyof TicketCategoryRulesInput>(key: K, value: TicketCategoryRulesInput[K]) =>
     setValues((prev) => ({ ...prev, [key]: value }));
 
   const dirty = JSON.stringify(values) !== JSON.stringify(initial);
   const staff = staffRoleName ? `the ${staffRoleName} role` : "the staff role";
 
-  const save = () =>
-    startSave(async () => {
-      if (toastResult(await saveTicketCategoryRulesAction(categoryId, values), "Category saved.")) router.refresh();
-    });
+  const saving = useCategorySavePart({
+    label: "Staff and limits",
+    saved: "Staff and limits saved.",
+    dirty,
+    reset: () => setValues(initial),
+    save: () => saveTicketCategoryRulesAction(categoryId, values),
+  });
 
   const numberRow = (key: "memberLimit" | "totalLimit", id: string) => (
     <Input
@@ -55,7 +56,7 @@ export function TicketCategoryRulesForm({ categoryId, initial, roles, staffRoleN
       type="number"
       min={1}
       max={limitMax}
-      className="w-28"
+      className="h-11 w-28 md:h-9"
       value={values[key] ?? ""}
       onChange={(event) => {
         const parsed = Number.parseInt(event.target.value, 10);
@@ -69,7 +70,10 @@ export function TicketCategoryRulesForm({ categoryId, initial, roles, staffRoleN
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Staff and limits</CardTitle>
+        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+          Staff and limits
+          {dirty && <Badge variant="outline">Not saved</Badge>}
+        </CardTitle>
         <CardDescription>Applies to new tickets. Open ones keep the permissions they have until they are moved or claimed.</CardDescription>
       </CardHeader>
       <CardContent className="divide-y">
@@ -129,7 +133,18 @@ export function TicketCategoryRulesForm({ categoryId, initial, roles, staffRoleN
         <SettingRow
           htmlFor="category-feedback"
           label="Ask for a rating"
-          hint="The closing DM gets five rating buttons and an optional comment. Needs the closing DM to be on."
+          hint={
+            <>
+              The closing DM gets five rating buttons and an optional comment. Needs{" "}
+              <Link href="/discord/tickets/settings#dm-on-close" className="underline">
+                the closing DM
+              </Link>{" "}
+              to be on.{" "}
+              <Link href="/discord/tickets/settings/messages#feedbackPrompt" className="underline">
+                Edit the rating prompt
+              </Link>
+            </>
+          }
         >
           <Switch
             id="category-feedback"
@@ -154,6 +169,7 @@ export function TicketCategoryRulesForm({ categoryId, initial, roles, staffRoleN
             value={values.cooldownSeconds}
             onChange={(event) => set("cooldownSeconds", Number(event.target.value))}
             disabled={saving}
+            className="h-11 text-base md:h-9 md:text-sm"
           >
             {withCurrent(COOLDOWN, values.cooldownSeconds).map((seconds) => (
               <NativeSelectOption key={seconds} value={seconds}>
@@ -168,6 +184,7 @@ export function TicketCategoryRulesForm({ categoryId, initial, roles, staffRoleN
             value={values.slowmodeSeconds}
             onChange={(event) => set("slowmodeSeconds", Number(event.target.value))}
             disabled={saving}
+            className="h-11 text-base md:h-9 md:text-sm"
           >
             {withCurrent(SLOWMODE, values.slowmodeSeconds).map((seconds) => (
               <NativeSelectOption key={seconds} value={seconds}>
@@ -186,11 +203,10 @@ export function TicketCategoryRulesForm({ categoryId, initial, roles, staffRoleN
             value={values.channelNameTemplate}
             onChange={(event) => set("channelNameTemplate", event.target.value.toLowerCase())}
             maxLength={100}
-            className="font-mono text-sm"
+            className="h-11 font-mono md:h-9"
             disabled={saving}
           />
         </SettingRow>
-        <SaveBar dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
       </CardContent>
     </Card>
   );

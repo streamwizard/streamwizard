@@ -322,15 +322,19 @@ export function buildLastWriteByTagQuery(measurement: Measurement, tag: string, 
 
 /** Total points written to every bucket in the window across ALL measurements
  * (rule: meta.pipeline_silent — 0 means the whole write path is dead). */
+// count() can't aggregate _time, and counting _value fails once group() merges
+// float and integer fields, so every point becomes a 1 and those are summed.
 export async function queryBucketPointCount(range = "5m"): Promise<number> {
   assertValidFluxDuration(range, "range");
   const query = `
     ${fluxFromAll(`-${range}`)}
+      |> keep(columns: ["_measurement"])
+      |> map(fn: (r) => ({r with _value: 1}))
       |> group()
-      |> count(column: "_time")
+      |> sum()
       |> yield(name: "bucket_points")
   `;
-  const rows = await runFluxQuery(query, (row) => Number(row._time ?? 0));
+  const rows = await runFluxQuery(query, (row) => Number(row._value ?? 0));
   return rows[0] ?? 0;
 }
 
@@ -410,11 +414,13 @@ export async function queryEventsubLastEvent(range = "30m"): Promise<string | nu
   return rows[0] || null;
 }
 
-/** Latest `eventsub_connection` point per service and event tag (rule:
+/** Latest `eventsub_connection` point per service, shard and event tag (rule:
  * eventsub.disconnected). Written by the EventSub receiver's telemetry on
- * connect, loss and every reconnect attempt. */
+ * connect, loss and every reconnect attempt. Points from before shards had a
+ * tag count as shard "0", which is the only shard the bot ran back then. */
 export interface EventsubConnectionLatest {
   service: string;
+  shardId: string;
   event: "connected" | "lost" | "reconnect_attempt" | string;
   time: string;
 }
@@ -425,13 +431,44 @@ export async function queryEventsubConnectionLatest(range = "24h"): Promise<Even
     ${fluxFrom("eventsub_connection", `-${range}`)}
       |> filter(fn: (r) => r._measurement == "eventsub_connection")
       |> filter(fn: (r) => r._field == "count")
-      |> group(columns: ["service", "event"])
+      |> map(fn: (r) => ({ r with shard_id: if exists r.shard_id then r.shard_id else "0" }))
+      |> group(columns: ["service", "shard_id", "event"])
       |> last(column: "_time")
       |> yield(name: "eventsub_connection_latest")
   `;
   return runFluxQuery(query, (row) => ({
     service: String(row.service ?? ""),
+    shardId: String(row.shard_id ?? "0"),
     event: String(row.event ?? ""),
+    time: row._time ?? "",
+  }));
+}
+
+/** Latest `eventsub_shard` heartbeat per service and shard (rules:
+ * eventsub.heartbeat_stale, eventsub.shards_degraded). The bot writes one
+ * point per shard every 30s whatever the connection state, so a gap means
+ * the process is gone, not the socket. */
+export interface EventsubShardLatest {
+  service: string;
+  shardId: string;
+  connected: boolean;
+  time: string;
+}
+
+export async function queryEventsubShardLatest(range = "24h"): Promise<EventsubShardLatest[]> {
+  assertValidFluxDuration(range, "range");
+  const query = `
+    ${fluxFrom("eventsub_shard", `-${range}`)}
+      |> filter(fn: (r) => r._measurement == "eventsub_shard")
+      |> filter(fn: (r) => r._field == "connected")
+      |> group(columns: ["service", "shard_id"])
+      |> last(column: "_time")
+      |> yield(name: "eventsub_shard_latest")
+  `;
+  return runFluxQuery(query, (row) => ({
+    service: String(row.service ?? ""),
+    shardId: String(row.shard_id ?? ""),
+    connected: Number(row._value) === 1,
     time: row._time ?? "",
   }));
 }

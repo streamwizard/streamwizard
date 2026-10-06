@@ -2,10 +2,10 @@
 
 import { TwitchApi } from "@repo/twitch-api";
 import axios, { type AxiosError } from "axios";
-import { signVideoProxyUrl } from "@/lib/video-proxy-signature";
 
 /**
- * Signed landscape MP4 URL for OBS playback. Mirrors dashboard
+ * Twitch's signed landscape MP4 URL. OBS plays it straight from Twitch's CDN;
+ * no clip bytes pass through this server. Mirrors dashboard
  * `GetClipDownloadURL` in `apps/web-streamwizard/src/actions/twitch/clips.ts`:
  * `new TwitchApi(broadcasterId)` then `api.clips.getClipDownloadUrl(...)`.
  */
@@ -37,15 +37,4 @@ export async function getClipDownloadUrl(
       `Twitch API error ${axiosErr.response?.status ?? "unknown"}: ${body}`
     );
   }
-}
-
-/**
- * Same clip URL, wrapped in a signed `/api/video` path. The proxy only
- * fetches upstreams carrying this signature, so minting must stay server-side.
- */
-export async function getSignedClipProxyUrl(
-  clipId: string,
-  broadcasterId: string
-): Promise<string> {
-  return signVideoProxyUrl(await getClipDownloadUrl(clipId, broadcasterId));
 }

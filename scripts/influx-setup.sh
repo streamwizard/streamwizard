@@ -34,6 +34,12 @@ BUCKETS=(
   "proxmox:90d"
 )
 
+# Buckets only the prod org has (PROD_ONLY_BUCKETS in buckets.ts). The Telegraf
+# on the Dokploy server writes prod and staging containers into the prod org.
+if [[ "$ENV" == "prod" ]]; then
+  BUCKETS+=("webserver:30d")
+fi
+
 # Doppler has one shared config per environment, so every service in it,
 # and every node rest-api hands it to on claim, uses the same INFLUXDB_TOKEN:
 # one token that reads and writes all of the buckets above.
@@ -56,7 +62,8 @@ for entry in "${BUCKETS[@]}"; do
   fi
 done
 
-existing_descriptions="$(influx auth list --org "$ORG" --json | jq -r '.[].description')"
+auths="$(influx auth list --org "$ORG" --json)"
+existing_descriptions="$(jq -r '.[].description' <<<"$auths")"
 
 create_token() {
   local description="$1"
@@ -71,12 +78,61 @@ create_token() {
 }
 
 token_args=()
+bucket_ids=()
 for entry in "${BUCKETS[@]}"; do
   id="$(bucket_id "${entry%%:*}")"
+  bucket_ids+=("$id")
   token_args+=(--read-bucket "$id" --write-bucket "$id")
 done
-create_token "$ORG-all" "${token_args[@]}"
+
+# Does the token with this description read and write every bucket above?
+covers_all() {
+  local permissions id
+  permissions="$(jq -r --arg d "$1" '.[] | select(.description == $d) | .permissions[]' <<<"$auths")"
+  for id in "${bucket_ids[@]}"; do
+    grep -q "^read:.*buckets/$id\$" <<<"$permissions" && grep -q "^write:.*buckets/$id\$" <<<"$permissions" || return 1
+  done
+}
+
+# A token's permissions are fixed when it is made, so an all token from before
+# a bucket was added cannot read or write that bucket. The all tokens are
+# therefore numbered: <org>-all, <org>-all-2, <org>-all-3, ... When none of
+# them covers every bucket, the next one is made. Older ones keep working for
+# the apps and nodes that still hold them.
+all_tokens="$(grep -E "^$ORG-all(-[0-9]+)?\$" <<<"$existing_descriptions" || true)"
+covering=""
+highest=0
+while IFS= read -r description; do
+  [[ -z "$description" ]] && continue
+  number="${description#"$ORG-all"}"
+  number="${number#-}"
+  number="${number:-1}"
+  ((number > highest)) && highest="$number"
+  if covers_all "$description"; then
+    covering="$description"
+  fi
+done <<<"$all_tokens"
+
+if [[ -n "$covering" ]]; then
+  echo "token $ORG/$covering covers every bucket, skipped"
+elif ((highest == 0)); then
+  create_token "$ORG-all" "${token_args[@]}"
+else
+  create_token "$ORG-all-$((highest + 1))" "${token_args[@]}"
+  echo "No older all token covers every bucket. Put the new one in Doppler as INFLUXDB_TOKEN." >&2
+  echo "  Delete the older ones only after every app and node uses the new token." >&2
+fi
 
 # Proxmox VE pushes its own metrics (Datacenter → Metric Server → InfluxDB).
 # This token lives in the PVE config, not Doppler, so it only writes proxmox.
 create_token "$ORG-proxmox" --write-bucket "$(bucket_id proxmox)"
+
+# The Telegraf on the Dokploy server (telegraf repo, host/) writes
+# host and container metrics and the Supabase platform scrape. It only writes
+# these two buckets. Goes in Doppler as INFLUXDB_TELEGRAF_TOKEN. Prod only:
+# that is the one org it writes to.
+if [[ "$ENV" == "prod" ]]; then
+  create_token "$ORG-telegraf" \
+    --write-bucket "$(bucket_id webserver)" \
+    --write-bucket "$(bucket_id supabase-platform)"
+fi

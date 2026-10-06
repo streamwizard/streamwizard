@@ -17,7 +17,7 @@ export function SilenceMenu({ stateId, silenced }: { stateId: string; silenced: 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" disabled={pending} className="h-7 gap-1 text-xs">
+        <Button variant="outline" size="sm" disabled={pending} className="h-9 gap-1 text-xs md:h-7">
           <BellOff className="size-3.5" />
           {silenced ? "Silenced" : "Silence"}
           <ChevronDown className="size-3" />

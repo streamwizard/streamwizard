@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button, Label } from "@repo/ui";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
-import type { AssetKind } from "@/actions/assets";
+import type { AssetKind } from "@/lib/asset-mime";
 
 /** Media-library picker button showing the chosen file, with clear action. */
 export function MediaField({

@@ -10,7 +10,7 @@ export function formatApprox(bytes: number | null | undefined): string {
   return bytes == null ? "—" : `≈ ${formatBytes(bytes)}`;
 }
 
-/** Help text for the size columns, shown on hover so "size" is never ambiguous. */
+/** Help text for the size columns, behind a tap on the column label, so "size" is never ambiguous. */
 export const SIZE_HELP = {
   disk: "Configured size of the disks that get backed up (from the PVE config).",
   lastUpload: "What the newest backup run sent to PBS, after compression.",

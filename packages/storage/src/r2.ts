@@ -44,14 +44,28 @@ export class R2Storage {
     });
   }
 
-  /** Presigned PUT URL the browser uploads directly to. */
-  async presignPut(key: string, contentType: string, expiresInSeconds = 300): Promise<string> {
+  /**
+   * Presigned PUT URL the browser uploads directly to. Content-Type and
+   * Content-Length are both signed, so the client must send exactly the type
+   * and byte count the server approved. The presigner leaves content-type out
+   * of the signature by default, hence the explicit signableHeaders.
+   */
+  async presignPut(
+    key: string,
+    contentType: string,
+    contentLength: number,
+    expiresInSeconds = 300,
+  ): Promise<string> {
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,
       ContentType: contentType,
+      ContentLength: contentLength,
     });
-    return getSignedUrl(this.client, command, { expiresIn: expiresInSeconds });
+    return getSignedUrl(this.client, command, {
+      expiresIn: expiresInSeconds,
+      signableHeaders: new Set(["content-type", "content-length"]),
+    });
   }
 
   /** Server-side upload of a small object. */
@@ -92,6 +106,13 @@ export class R2Storage {
       continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
     } while (continuationToken);
     return objects;
+  }
+
+  /** Deletes every object under a prefix. Returns how many were removed. */
+  async deletePrefix(prefix: string): Promise<number> {
+    const objects = await this.listPrefix(prefix);
+    for (const obj of objects) await this.deleteObject(obj.key);
+    return objects.length;
   }
 }
 

@@ -16,6 +16,7 @@ import { viewerCountPoller } from "./services/viewer-count-poller";
 import { twitchTokenValidator } from "./services/twitch-token-validator";
 import { liveRoleSweeper } from "./services/discord-live-role-sweeper";
 import { backupPoller } from "./services/backup-poller";
+import { assetReconciler } from "./services/asset-reconciler";
 import { internalBackups, proxmoxWebhook } from "./routes/backups";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
 import nodes from "./routes/nodes";
@@ -166,5 +167,11 @@ liveRoleSweeper.start();
 if (backupPoller) {
   backupPoller.start();
   console.log("[backup-poller] active");
+}
+// Media library hygiene: abandoned uploads and R2 objects with no row. Null
+// (off) unless the R2 env vars are set.
+if (assetReconciler) {
+  assetReconciler.start();
+  console.log("[asset-reconciler] active");
 }
 console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

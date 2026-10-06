@@ -86,4 +86,12 @@ describe("eventsub log", () => {
     });
     expect(emitted[1]?.payload).toEqual({ service: "streamwizard-bot", error: "429 Too Many Requests" });
   });
+
+  test("a shard's logger tags every row with its shard id", () => {
+    const log = createEventSubLogger("7");
+    log({ type: "connected", sessionId: "s1", attempt: 0, downtimeMs: null });
+    log({ type: "connection_lost", code: 4007, reason: "Invalid reconnect" });
+    expect(emitted[0]?.payload).toEqual({ service: "streamwizard-bot", shard_id: "7", session_id: "s1" });
+    expect(emitted[1]?.payload).toMatchObject({ service: "streamwizard-bot", shard_id: "7", reason: "Invalid reconnect" });
+  });
 });

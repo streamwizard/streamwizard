@@ -15,8 +15,9 @@ const schema = z.object({
   DISCORD_GUILD_ID: z.string().min(1).optional(),
 
   // Internal HTTP server for web-admin (cache refresh, panel re-post, test
-  // welcome). The server only starts when the secret is set; never expose the
-  // port publicly — web-admin reaches it over the internal network.
+  // welcome). Without the secret the server only answers /health, for the
+  // container healthcheck; never expose the port publicly — web-admin reaches
+  // it over the internal network.
   DISCORD_BOT_INTERNAL_SECRET: z.string().min(16).optional(),
   DISCORD_BOT_INTERNAL_PORT: z.coerce.number().int().positive().default(3010),
 

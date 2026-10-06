@@ -4,7 +4,7 @@ import { Fragment, type ReactNode } from "react";
 import type { Json } from "@repo/supabase";
 import type { DiscordTicketMessage } from "@repo/supabase/queries/tickets";
 import { Badge } from "@repo/ui";
-import { formatBytes, formatDateTime, formatDay, formatTimeOfDay } from "@/lib/discord/tickets";
+import { formatBytes, formatDateTime, formatDateTimeShort, formatDay, formatTimeOfDay } from "@/lib/discord/tickets";
 import { cn } from "@/lib/utils";
 
 /** An archived message. Deleted ones are kept and shown as such, so staff can still read what a ticket was about. */
@@ -96,14 +96,14 @@ function MediaEmbed({ embed }: { embed: StoredEmbed }) {
         loop
         muted
         playsInline
-        className="mt-1.5 max-h-64 max-w-xs rounded-md"
+        className="mt-1.5 max-h-64 max-w-[min(20rem,100%)] rounded-md"
       />
     );
   }
   const src = embed.image?.url ?? embed.thumbnail?.url;
   if (!src) return null;
   // eslint-disable-next-line @next/next/no-img-element -- embedded image link
-  return <img src={src} alt="" className="mt-1.5 max-h-64 max-w-xs rounded-md" loading="lazy" />;
+  return <img src={src} alt="" className="mt-1.5 max-h-64 max-w-[min(20rem,100%)] rounded-md" loading="lazy" />;
 }
 
 const isMediaEmbed = (embed: StoredEmbed) => embed.type === "gifv" || embed.type === "image";
@@ -155,14 +155,14 @@ function Embed({ embed, names }: { embed: StoredEmbed; names: Record<string, str
 function Attachment({ attachment }: { attachment: StoredAttachment }) {
   if (attachment.url) {
     return (
-      <a href={attachment.url} target="_blank" rel="noreferrer" className="mt-1.5 block w-fit">
+      <a href={attachment.url} target="_blank" rel="noreferrer" className="mt-1.5 block w-fit max-w-full">
         {/* eslint-disable-next-line @next/next/no-img-element -- CDN copy of a small ticket screenshot */}
-        <img src={attachment.url} alt={attachment.name} className="max-h-72 max-w-sm rounded-md border" loading="lazy" />
+        <img src={attachment.url} alt={attachment.name} className="max-h-72 max-w-[min(24rem,100%)] rounded-md border" loading="lazy" />
       </a>
     );
   }
   return (
-    <div className="mt-1.5 w-fit rounded-md border px-2.5 py-1.5 text-xs text-muted-foreground">
+    <div className="mt-1.5 w-fit max-w-full rounded-md border px-2.5 py-1.5 text-xs break-words text-muted-foreground">
       {attachment.name} · {formatBytes(attachment.size)} · not saved
     </div>
   );
@@ -289,19 +289,23 @@ export function TicketTranscript({ messages, names }: { messages: TranscriptMess
           </Badge>
         )}
         {message.deleted_at && (
-          <Badge variant="destructive" className="px-1 py-0 text-[10px]" title={`Deleted ${formatDateTime(message.deleted_at)}`}>
-            Deleted
+          <Badge variant="destructive" className="px-1 py-0 text-[10px]">
+            Deleted {formatDateTimeShort(message.deleted_at)}
           </Badge>
         )}
       </span>
     );
 
     rows.push(
-      <li key={message.id} className={cn("group flex gap-3", grouped ? "-mt-3" : "mt-1", message.deleted_at && "opacity-60")}>
+      <li key={message.id} className={cn("flex gap-3", grouped ? "-mt-3" : "mt-1", message.deleted_at && "opacity-60")}>
         {grouped ? (
-          <span className="w-9 shrink-0 pt-0.5 text-right text-[10px] leading-5 text-muted-foreground tabular-nums opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100">
+          // Always shown: a phone has no hover to reveal it with.
+          <time
+            dateTime={message.created_at}
+            className="w-9 shrink-0 pt-0.5 text-right text-[10px] leading-5 text-muted-foreground tabular-nums"
+          >
             {formatTimeOfDay(message.created_at)}
-          </span>
+          </time>
         ) : (
           <Avatar url={shape.avatarUrl} name={shape.name} />
         )}
@@ -327,8 +331,8 @@ export function TicketTranscript({ messages, names }: { messages: TranscriptMess
             <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
               <Inline text={shape.body} names={allNames} />
               {message.edited_at && (
-                <span className="ml-1 text-[10px] text-muted-foreground" title={`Edited ${formatDateTime(message.edited_at)}`}>
-                  (edited)
+                <span className="ml-1 text-[10px] whitespace-nowrap text-muted-foreground">
+                  (edited {formatDateTimeShort(message.edited_at)})
                 </span>
               )}
             </p>

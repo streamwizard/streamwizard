@@ -14,7 +14,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
   Badge,
   Button,
   Card,
@@ -22,12 +21,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
   Input,
   Label,
   Switch,
@@ -41,6 +36,15 @@ import {
   updateTicketTagAction,
   type TicketTagFormInput,
 } from "@/actions/discord-ticket-tags";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/widgets/responsive-dialog";
+import { MoveMenuItems, TicketRowMenu } from "./ticket-row-menu";
 import { toastResult } from "./toast-result";
 
 export interface TicketTagView {
@@ -67,6 +71,7 @@ export function TicketTagsManager({ items, nameMax, contentMax, keywordsMax }: T
   const [pending, start] = useTransition();
   const [order, setOrder] = useState<string[] | null>(null);
   const [editing, setEditing] = useState<TicketTagView | "new" | null>(null);
+  const [removing, setRemoving] = useState<TicketTagView | null>(null);
   const ordered = order ? [...items].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id)) : items;
 
   const reorder = (next: TicketTagView[]) => {
@@ -92,16 +97,18 @@ export function TicketTagsManager({ items, nameMax, contentMax, keywordsMax }: T
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+      {/* The button drops under the title on a phone instead of squeezing it. */}
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="space-y-1.5">
           <CardTitle className="text-base">Tags</CardTitle>
           <CardDescription>
             Canned answers. Staff post one with <code>/tag name</code> or from the reply box on a ticket page. A tag with
-            auto-reply on posts itself once per ticket when a member&apos;s message contains one of its keywords. Drag to
-            change the order.
+            auto-reply on posts itself once per ticket when a member&apos;s message contains one of its keywords.{" "}
+            <span className="hidden md:inline">Drag to change the order.</span>
+            <span className="md:hidden">Change the order from a row&apos;s menu.</span>
           </CardDescription>
         </div>
-        <Button size="sm" onClick={() => setEditing("new")} disabled={pending}>
+        <Button size="sm" className="h-11 shrink-0 self-start md:h-8" onClick={() => setEditing("new")} disabled={pending}>
           <Plus />
           Add tag
         </Button>
@@ -110,54 +117,83 @@ export function TicketTagsManager({ items, nameMax, contentMax, keywordsMax }: T
         {ordered.length === 0 ? (
           <p className="text-sm text-muted-foreground">No tags yet. Add the answers you keep typing.</p>
         ) : (
-          <SortableList id="ticket-tag-order" items={ordered} onReorder={reorder} disabled={pending} itemLabel={(item) => item.name}>
-            {(item) => (
+          <SortableList
+            id="ticket-tag-order"
+            items={ordered}
+            onReorder={reorder}
+            disabled={pending}
+            itemLabel={(item) => item.name}
+            // No drag handle on a phone: the row's menu has Move up and Move down.
+            handleClassName="hidden md:flex"
+          >
+            {(item, move) => (
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
-                    <code>/tag {item.name}</code>
+                    <code className="break-all">/tag {item.name}</code>
                     {item.autoReply && <Badge variant="secondary">Auto-reply</Badge>}
                   </p>
-                  <p className="line-clamp-2 whitespace-pre-wrap text-xs text-muted-foreground">{item.content}</p>
+                  <p className="line-clamp-2 whitespace-pre-wrap break-words text-xs text-muted-foreground">{item.content}</p>
                   {item.triggerKeywords.length > 0 && (
                     <p className="flex flex-wrap gap-1">
                       {item.triggerKeywords.map((keyword) => (
-                        <Badge key={keyword} variant="outline" className="font-normal">
-                          {keyword}
+                        <Badge key={keyword} variant="outline" className="max-w-full font-normal">
+                          <span className="truncate">{keyword}</span>
                         </Badge>
                       ))}
                     </p>
                   )}
                 </div>
-                <div className="flex shrink-0 items-center gap-1">
+                <div className="hidden shrink-0 items-center gap-1 md:flex">
                   <Button variant="ghost" size="icon" aria-label={`Edit ${item.name}`} title="Edit" disabled={pending} onClick={() => setEditing(item)}>
                     <Pencil />
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" aria-label={`Remove ${item.name}`} title="Remove" disabled={pending}>
-                        <Trash2 />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Remove {item.name}?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          <code>/tag {item.name}</code> stops working and it won&apos;t auto-reply anymore. Answers it already posted stay.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Keep it</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => remove(item)}>Remove</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button variant="ghost" size="icon" aria-label={`Remove ${item.name}`} title="Remove" disabled={pending} onClick={() => setRemoving(item)}>
+                    <Trash2 />
+                  </Button>
                 </div>
+                <TicketRowMenu label={item.name} disabled={pending} className="md:hidden">
+                  <DropdownMenuItem onSelect={() => setEditing(item)}>
+                    <Pencil />
+                    Edit
+                  </DropdownMenuItem>
+                  <MoveMenuItems move={move} />
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={() => setRemoving(item)}>
+                    <Trash2 />
+                    Remove
+                  </DropdownMenuItem>
+                </TicketRowMenu>
               </div>
             )}
           </SortableList>
         )}
       </CardContent>
+
+      {removing && (
+        <AlertDialog open onOpenChange={(open) => !open && setRemoving(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove {removing.name}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                <code>/tag {removing.name}</code> stops working and it won&apos;t auto-reply anymore. Answers it already posted stay.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="h-11 md:h-9">Keep it</AlertDialogCancel>
+              <AlertDialogAction
+                className="h-11 md:h-9"
+                onClick={() => {
+                  remove(removing);
+                  setRemoving(null);
+                }}
+              >
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
       <TagDialog
         key={editing === "new" ? "new" : (editing?.id ?? "closed")}
@@ -218,8 +254,8 @@ function TagDialog({
   const valid = draft.name.trim() && draft.content.trim() && unknown.length === 0 && (!draft.autoReply || draft.triggerKeywords.length > 0);
 
   return (
-    <Dialog open={editing !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+    <ResponsiveDialog open={editing !== null} onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveDialogContent>
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -227,10 +263,10 @@ function TagDialog({
             onSubmit({ ...draft, name: draft.name.trim().toLowerCase(), content: draft.content.trim() });
           }}
         >
-          <DialogHeader>
-            <DialogTitle>{editing === "new" || !editing ? "Add a tag" : `Edit ${editing.name}`}</DialogTitle>
-            <DialogDescription>Staff type /tag and the name. Keep it short.</DialogDescription>
-          </DialogHeader>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>{editing === "new" || !editing ? "Add a tag" : `Edit ${editing.name}`}</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>Staff type /tag and the name. Keep it short.</ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
 
           <div className="space-y-2">
             <Label htmlFor={`${id}-name`}>Name</Label>
@@ -242,7 +278,7 @@ function TagDialog({
               placeholder="obs-connect"
               required
               autoFocus
-              className="font-mono"
+              className="h-11 font-mono md:h-9"
             />
           </div>
 
@@ -259,10 +295,11 @@ function TagDialog({
             />
             <p id={`${id}-content-hint`} className="text-xs text-muted-foreground">
               Discord formatting works. Placeholders:{" "}
+              {/* The meaning sits next to each one: a hover title says nothing on a phone. */}
               {CORE_VARIABLES.map((variable, index) => (
                 <span key={variable.key}>
                   {index > 0 && ", "}
-                  <code title={variable.label}>[{variable.key}]</code>
+                  <code>[{variable.key}]</code> ({variable.label.toLowerCase()})
                 </span>
               ))}
               . The member is whoever the tag is for.
@@ -286,25 +323,32 @@ function TagDialog({
                 maxLength={50}
                 placeholder="won't connect"
                 disabled={draft.triggerKeywords.length >= keywordsMax}
+                className="h-11 md:h-9"
               />
-              <Button type="button" variant="outline" onClick={addKeyword} disabled={!keyword.trim() || draft.triggerKeywords.length >= keywordsMax}>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 md:h-9"
+                onClick={addKeyword}
+                disabled={!keyword.trim() || draft.triggerKeywords.length >= keywordsMax}
+              >
                 Add
               </Button>
             </div>
             {draft.triggerKeywords.length > 0 && (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap gap-1.5">
+                {/* The whole chip removes the keyword: a 12px cross is no target for a thumb. */}
                 {draft.triggerKeywords.map((item) => (
-                  <Badge key={item} variant="outline" className="gap-1 font-normal">
-                    {item}
-                    <button
-                      type="button"
-                      aria-label={`Remove keyword ${item}`}
-                      className="rounded-full hover:text-foreground"
-                      onClick={() => set("triggerKeywords", draft.triggerKeywords.filter((k) => k !== item))}
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </Badge>
+                  <button
+                    key={item}
+                    type="button"
+                    aria-label={`Remove keyword ${item}`}
+                    className="inline-flex h-10 max-w-full items-center gap-1 rounded-full border px-3 text-xs hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring md:h-6 md:px-2"
+                    onClick={() => set("triggerKeywords", draft.triggerKeywords.filter((k) => k !== item))}
+                  >
+                    <span className="truncate">{item}</span>
+                    <X className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                  </button>
                 ))}
               </div>
             )}
@@ -321,16 +365,16 @@ function TagDialog({
             <Switch id={`${id}-auto`} checked={draft.autoReply} onCheckedChange={(value) => set("autoReply", value)} disabled={pending} />
           </div>
 
-          <DialogFooter>
+          <ResponsiveDialogFooter>
             <Button type="button" variant="outline" onClick={onClose} disabled={pending}>
               Cancel
             </Button>
             <Button type="submit" disabled={pending || !valid}>
               {editing === "new" ? "Add tag" : "Save"}
             </Button>
-          </DialogFooter>
+          </ResponsiveDialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
