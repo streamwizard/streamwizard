@@ -20,17 +20,20 @@ import {
   Flame,
   TrainFront,
   Gauge,
-  Goal,
-  MapPin,
+  Gem,
   Megaphone,
   MessagesSquare,
   Mountain,
+  MoveHorizontal,
+  MoveVertical,
   Radio,
   ScrollText,
   Sparkles,
+  Star,
   Tag,
   Timer,
   Type,
+  UserPlus,
   Vote,
 } from "lucide-react";
 import type { ChildOverlayItemType, OverlayItemType, RootOverlayItemType } from "@/types/overlays";
@@ -316,7 +319,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   follower_goal_widget: {
     type: "follower_goal_widget",
     layerScope: "root",
-    icon: Goal,
+    icon: UserPlus,
     showInLibrary: true,
     category: "goals",
     library: {
@@ -332,7 +335,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   sub_goal_widget: {
     type: "sub_goal_widget",
     layerScope: "root",
-    icon: Goal,
+    icon: Star,
     showInLibrary: true,
     category: "goals",
     library: {
@@ -348,7 +351,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   bits_goal_widget: {
     type: "bits_goal_widget",
     layerScope: "root",
-    icon: Goal,
+    icon: Gem,
     showInLibrary: true,
     category: "goals",
     library: {
@@ -526,7 +529,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   irl_latitude_widget: {
     type: "irl_latitude_widget",
     layerScope: "root",
-    icon: MapPin,
+    icon: MoveVertical,
     showInLibrary: true,
     category: "other",
     library: { title: "IRL · Latitude", description: "Live GPS latitude from an IRL stream." },
@@ -538,7 +541,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   irl_longitude_widget: {
     type: "irl_longitude_widget",
     layerScope: "root",
-    icon: MapPin,
+    icon: MoveHorizontal,
     showInLibrary: true,
     category: "other",
     library: { title: "IRL · Longitude", description: "Live GPS longitude from an IRL stream." },
