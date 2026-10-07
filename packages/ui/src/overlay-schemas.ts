@@ -10,8 +10,20 @@ import {
 } from "./components/overlay/types";
 import {
   ALERT_EVENT_TYPES,
+  ALERT_ANIMATION_MAX_SECONDS,
+  ALERT_ANIMATIONS_IN,
+  ALERT_ANIMATIONS_OUT,
+  ALERT_MAX_QUEUE_LIMIT,
+  ALERT_SUB_TIERS,
+  ALERT_VARIATION_LIMITS,
+  ALERT_VARIATION_OPERATORS,
+  migrateAlertAnimationIn,
+  migrateAlertAnimationOut,
+  type AlertAnimationIn,
+  type AlertAnimationOut,
   type AlertEventType,
 } from "./components/overlay/widgets/alert/alert-widget-config";
+import { ALERT_HIGHLIGHT_ANIMATIONS } from "./components/overlay/widgets/alert/alert-animations";
 import {
   CHAT_WIDGET_ANIMATIONS_IN,
   CHAT_WIDGET_ANIMATIONS_OUT,
@@ -267,8 +279,16 @@ export const customWidgetItemConfigSchema = z.object({
 
 const alertMediaKindSchema = z.enum(["", "image", "video"]).default("");
 
-const alertVariantConfigSchema = z.object({
-  enabled: z.boolean().default(true),
+const alertAnimationSecondsSchema = z.number().min(0).max(ALERT_ANIMATION_MAX_SECONDS);
+
+const alertEnterSchema = (fallback: AlertAnimationIn) =>
+  z.preprocess((value) => migrateAlertAnimationIn(value, fallback), z.enum(ALERT_ANIMATIONS_IN));
+
+const alertExitSchema = (fallback: AlertAnimationOut) =>
+  z.preprocess((value) => migrateAlertAnimationOut(value, fallback), z.enum(ALERT_ANIMATIONS_OUT));
+
+/** How an alert looks, sounds and moves; shared by an alert and its variations. */
+const alertPresentationSchema = z.object({
   mediaUrl: z.string().max(2000).default(""),
   mediaKind: alertMediaKindSchema,
   soundUrl: z.string().max(2000).default(""),
@@ -277,12 +297,20 @@ const alertVariantConfigSchema = z.object({
   messageTemplate: z.string().max(200).default(""),
   durationSeconds: z.number().min(0).max(60).default(6),
   durationMode: z.enum(["fixed", "media"]).default("fixed"),
-  minAmount: z.number().int().min(0).max(1_000_000).default(0),
   layout: z.enum(["stacked", "row", "overlay"]).default("stacked"),
-  animationIn: z
-    .enum(["fade", "slide_up", "slide_down", "zoom", "bounce"])
-    .default("zoom"),
-  animationOut: z.enum(["fade", "slide_down", "zoom"]).default("fade"),
+  // Preprocessed, not a bare enum: a box saved before the full effect list
+  // still holds one of the old five names, and must keep saving.
+  animationIn: alertEnterSchema("zoom_in"),
+  animationInSeconds: alertAnimationSecondsSchema.default(0.5),
+  animationOut: alertExitSchema("fade_out"),
+  animationOutSeconds: alertAnimationSecondsSchema.default(0.35),
+  textAnimationIn: alertEnterSchema("none"),
+  textAnimationInSeconds: alertAnimationSecondsSchema.default(1),
+  textAnimationOut: alertExitSchema("none"),
+  textAnimationOutSeconds: alertAnimationSecondsSchema.default(1),
+  textDelaySeconds: alertAnimationSecondsSchema.default(0),
+  textEarlyExitSeconds: alertAnimationSecondsSchema.default(0),
+  highlightAnimation: z.enum(ALERT_HIGHLIGHT_ANIMATIONS).default("none"),
   fontFamily: z.preprocess(
     (val) =>
       typeof val === "string" && isValidGoogleFontFamilyName(val)
@@ -301,6 +329,41 @@ const alertVariantConfigSchema = z.object({
   textShadow: z.boolean().default(true),
 });
 
+const alertVariationConditionSchema = z.discriminatedUnion("parameter", [
+  z.object({ parameter: z.literal("none") }),
+  z.object({
+    parameter: z.literal("amount"),
+    operator: z.enum(ALERT_VARIATION_OPERATORS),
+    value: z.number().min(0).max(1_000_000_000),
+  }),
+  z.object({ parameter: z.literal("tier"), tier: z.enum(ALERT_SUB_TIERS) }),
+  z.object({
+    parameter: z.literal("name"),
+    names: z.array(z.string().max(64)).max(ALERT_VARIATION_LIMITS.names),
+  }),
+]);
+
+/**
+ * One conditional alternative to an alert. `settings` is declared in full for
+ * the usual reason: a z.object strips what it does not know, so a key missing
+ * here would vanish from every variation on save.
+ */
+const alertVariationSchema = z.object({
+  id: z.string().min(1).max(64),
+  name: z.string().max(ALERT_VARIATION_LIMITS.nameLength),
+  enabled: z.boolean().default(true),
+  chance: z.number().min(0).max(100).default(100),
+  condition: alertVariationConditionSchema,
+  settings: alertPresentationSchema,
+});
+
+const alertVariantConfigSchema = alertPresentationSchema.extend({
+  enabled: z.boolean().default(true),
+  minAmount: z.number().int().min(0).max(1_000_000).default(0),
+  variations: z.array(alertVariationSchema).max(ALERT_VARIATION_LIMITS.perAlert).default([]),
+  randomPick: z.boolean().default(false),
+});
+
 /**
  * Persisted JSON on `alert_widget` rows.
  *
@@ -313,6 +376,8 @@ const alertVariantConfigSchema = z.object({
 export const alertWidgetItemConfigSchema = z.object({
   gapSeconds: z.number().min(0).max(30).default(1),
   masterVolume: z.number().min(0).max(1).default(0.8),
+  waitForSound: z.boolean().default(false),
+  maxQueue: z.number().int().min(1).max(ALERT_MAX_QUEUE_LIMIT).default(50),
   variants: z.object(
     Object.fromEntries(
       ALERT_EVENT_TYPES.map((event) => [event, alertVariantConfigSchema.optional()])

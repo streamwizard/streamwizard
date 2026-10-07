@@ -1,72 +1,97 @@
 "use client";
 
 import { useState } from "react";
+import { motion, useReducedMotion } from "motion/react";
+import { toast } from "sonner";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-  Button,
-  ColorPicker,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Separator,
-  Slider,
-  Switch,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@repo/ui";
-import {
-  ALERT_AMOUNT_LABELS,
-  ALERT_DETAIL_TOKENS,
-  ALERT_EVENT_CATEGORIES,
   ALERT_EVENT_LABELS,
-  ALERT_GIFTER_EVENTS,
-  ALERT_MESSAGE_EVENTS,
-  ALERT_NAME_LABELS,
   ALERT_EVENT_SUBSCRIPTION_TYPES,
+  ALERT_VARIATION_LIMITS,
+  alertVariationParameters,
+  applyAlertLookToAll,
+  createAlertVariation,
   normalizeAlertWidgetConfig,
-  type AlertAnimationIn,
-  type AlertAnimationOut,
   type AlertEventCategoryId,
   type AlertEventType,
-  type AlertLayout,
+  type AlertPresentation,
   type AlertVariantConfig,
+  type AlertVariation,
   type AlertWidgetItemConfig,
 } from "@repo/ui/overlay";
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  TextAlignSelect,
-  GroupLabel,
-  MediaField,
-  SectionTitle,
-} from "@/components/overlays/inspector-fields";
-import {
-  ANIMATION_IN_LABELS,
-  ANIMATION_OUT_LABELS,
-  LAYOUT_LABELS,
-} from "./alert-widget-labels";
+import { useModKeyLabel } from "@/components/overlays/editor/use-mod-key";
+import { AlertCopySourceDialog } from "./alert-copy-source-dialog";
+import { AlertDetail } from "./alert-detail";
+import { AlertList } from "./alert-list";
+import { AlertVariationEditor, type AlertVariationGroup } from "./alert-variation-editor";
+import { AlertVariationList } from "./alert-variation-list";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
 
-export function AlertWidgetSettings({ item, updateItem }: OverlayInspectorAppendProps) {
+export function AlertWidgetSettings(props: OverlayInspectorAppendProps) {
+  // Keyed on the widget: picking another alert box starts on its list, not on
+  // whichever alert the last one had open.
+  return <AlertSettingsPanel key={props.item.id} {...props} />;
+}
+
+/** Which of the panel's screens is showing. */
+type View =
+  | { screen: "list" }
+  | { screen: "alert"; event: AlertEventType }
+  | {
+      screen: "variation";
+      event: AlertEventType;
+      id: string;
+      /** The alert's variations as they were when this opened: what Cancel puts back. */
+      snapshot: AlertVariation[];
+    };
+
+type PanelGroup = AlertVariationGroup | "variations";
+
+function newVariationId(): string {
+  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `v-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * The alert box's panel is up to three screens deep: the list of every alert,
+ * one alert on its own, and one of that alert's variations. Twenty-three
+ * alerts with twenty-odd settings each do not fit one column, so each screen
+ * answers one question and the fields only show once their owner is picked.
+ */
+function AlertSettingsPanel({ item, updateItem }: OverlayInspectorAppendProps) {
   const cfg = normalizeAlertWidgetConfig(item.config);
   const [category, setCategory] = useState<AlertEventCategoryId>("community");
-  // Which event is expanded, per tab -- switching tabs and coming back should
-  // land where you left off rather than collapsing everything.
-  const [openByCategory, setOpenByCategory] = useState<Record<string, string>>({
-    community: "follow",
+  const [view, setView] = useState<View>({ screen: "list" });
+  // Which way the last move went, for the slide. Null until there has been
+  // one, which keeps the panel's first appearance still.
+  const [direction, setDirection] = useState<"in" | "out" | null>(null);
+  // The rows to hand focus back to on the way out of a screen.
+  const [returnEvent, setReturnEvent] = useState<AlertEventType | null>(null);
+  const [returnVariation, setReturnVariation] = useState<string | null>(null);
+  const [openGroups, setOpenGroups] = useState<Record<PanelGroup, boolean>>({
+    text: true,
+    typography: false,
+    media: true,
+    timing: false,
+    animation: false,
+    textAnimation: false,
+    variations: true,
+    condition: true,
   });
-  const [testBusy, setTestBusy] = useState<AlertEventType | null>(null);
+  const [copyFor, setCopyFor] = useState<AlertEventType | null>(null);
+  const [testBusy, setTestBusy] = useState(false);
   const { mode, fire } = useDemoFire();
+  const reduceMotion = useReducedMotion();
+  const mod = useModKeyLabel();
+
+  const setGroup = (group: PanelGroup, open: boolean) =>
+    setOpenGroups((prev) => ({ ...prev, [group]: open }));
+
+  function go(next: View, way: "in" | "out") {
+    setDirection(way);
+    setView(next);
+  }
 
   function patchConfig(updates: Partial<AlertWidgetItemConfig>) {
     updateItem(item.id, { config: { ...cfg, ...updates } });
@@ -81,437 +106,215 @@ export function AlertWidgetSettings({ item, updateItem }: OverlayInspectorAppend
     });
   }
 
-  async function fireTest(event: AlertEventType) {
+  function patchVariation(event: AlertEventType, id: string, updates: Partial<AlertVariation>) {
+    patchVariant(event, {
+      variations: cfg.variants[event].variations.map((v) =>
+        v.id === id ? { ...v, ...updates } : v
+      ),
+    });
+  }
+
+  async function fireTest(event: AlertEventType, variationId?: string) {
     // Same path the demo bar's buttons take, so Local/Live means the same thing
     // in both places and this panel needs no live switch of its own.
     // It warns on its own when nothing on the scene would play the alert, so a
     // switched-off one never reads as a broken button.
-    setTestBusy(event);
-    await fire(ALERT_EVENT_SUBSCRIPTION_TYPES[event]);
-    setTestBusy(null);
+    setTestBusy(true);
+    await fire({
+      ...ALERT_EVENT_SUBSCRIPTION_TYPES[event],
+      // A variation is tested as itself, whatever its condition says.
+      forceVariation: variationId ? { itemId: item.id, variationId } : undefined,
+    });
+    setTestBusy(false);
   }
 
+  function copyLookToAll(event: AlertEventType) {
+    // One write, so one undo step puts every alert back.
+    updateItem(item.id, { config: applyAlertLookToAll(cfg, event) });
+    toast(`Every alert now looks like ${ALERT_EVENT_LABELS[event]}.`, {
+      id: "alert-look-copied",
+      description: `${mod}+Z puts it back.`,
+    });
+  }
+
+  /** Adds a variation looking like `settings` and opens it. Cancel there removes it again. */
+  function addVariation(event: AlertEventType, settings: AlertPresentation) {
+    const existing = cfg.variants[event].variations;
+    if (existing.length >= ALERT_VARIATION_LIMITS.perAlert) return;
+    const added = createAlertVariation(
+      event,
+      settings,
+      newVariationId(),
+      `Variation ${existing.length + 1}`
+    );
+    patchVariant(event, { variations: [...existing, added] });
+    setGroup("condition", true);
+    go({ screen: "variation", event, id: added.id, snapshot: existing }, "in");
+  }
+
+  function duplicateVariation(event: AlertEventType, id: string) {
+    const existing = cfg.variants[event].variations;
+    const index = existing.findIndex((v) => v.id === id);
+    if (index < 0 || existing.length >= ALERT_VARIATION_LIMITS.perAlert) return;
+    const source = existing[index]!;
+    const copy: AlertVariation = {
+      ...source,
+      id: newVariationId(),
+      name: `${source.name} copy`.slice(0, ALERT_VARIATION_LIMITS.nameLength),
+      settings: { ...source.settings },
+    };
+    patchVariant(event, {
+      variations: [...existing.slice(0, index + 1), copy, ...existing.slice(index + 1)],
+    });
+  }
+
+  function deleteVariation(event: AlertEventType, id: string) {
+    const existing = cfg.variants[event].variations;
+    const gone = existing.find((v) => v.id === id);
+    if (!gone) return;
+    patchVariant(event, { variations: existing.filter((v) => v.id !== id) });
+    toast(`${gone.name} deleted.`, {
+      id: "alert-variation-deleted",
+      description: `${mod}+Z brings it back.`,
+    });
+  }
+
+  function renderAlert(event: AlertEventType) {
+    const variant = cfg.variants[event];
+    return (
+      <AlertDetail
+        event={event}
+        variant={variant}
+        masterVolume={cfg.masterVolume}
+        openGroups={openGroups}
+        onOpenGroupChange={setGroup}
+        testBusy={testBusy}
+        variations={
+          alertVariationParameters(event).length ? (
+            <AlertVariationList
+              itemId={item.id}
+              event={event}
+              variations={variant.variations}
+              randomPick={variant.randomPick}
+              open={openGroups.variations}
+              onOpenChange={(open) => setGroup("variations", open)}
+              returnTo={returnVariation}
+              testBusy={testBusy}
+              onEdit={(id) =>
+                go({ screen: "variation", event, id, snapshot: variant.variations }, "in")
+              }
+              onToggle={(id, enabled) => patchVariation(event, id, { enabled })}
+              onTest={(id) => void fireTest(event, id)}
+              onDuplicate={(id) => duplicateVariation(event, id)}
+              onDelete={(id) => deleteVariation(event, id)}
+              onAddFromAlert={() => addVariation(event, variant)}
+              onAddFromCopy={() => setCopyFor(event)}
+              onRandomPickChange={(randomPick) => patchVariant(event, { randomPick })}
+            />
+          ) : undefined
+        }
+        onBack={() => {
+          setReturnEvent(event);
+          setReturnVariation(null);
+          go({ screen: "list" }, "out");
+        }}
+        onPatch={(updates) => patchVariant(event, updates)}
+        onTest={() => void fireTest(event)}
+        onCopyLookToAll={() => copyLookToAll(event)}
+      />
+    );
+  }
+
+  function renderScreen() {
+    if (view.screen === "list") {
+      return (
+        <AlertList
+          itemId={item.id}
+          cfg={cfg}
+          category={category}
+          onCategoryChange={setCategory}
+          returnTo={returnEvent}
+          testBusy={testBusy}
+          fireMode={mode}
+          onOpen={(event) => go({ screen: "alert", event }, "in")}
+          onToggle={(event, enabled) => patchVariant(event, { enabled })}
+          onTest={(event) => void fireTest(event)}
+          onPatchConfig={patchConfig}
+        />
+      );
+    }
+    if (view.screen === "alert") return renderAlert(view.event);
+
+    const { event, id, snapshot } = view;
+    const variation = cfg.variants[event].variations.find((v) => v.id === id);
+    // Gone from under the editor (an undo past its creation, say): its alert
+    // is the nearest thing still there.
+    if (!variation) return renderAlert(event);
+
+    const before = snapshot.find((v) => v.id === id);
+    return (
+      <AlertVariationEditor
+        event={event}
+        variation={variation}
+        isNew={!before}
+        canCancel={!before || JSON.stringify(before) !== JSON.stringify(variation)}
+        masterVolume={cfg.masterVolume}
+        openGroups={openGroups}
+        onOpenGroupChange={setGroup}
+        testBusy={testBusy}
+        onDone={() => {
+          setReturnVariation(id);
+          go({ screen: "alert", event }, "out");
+        }}
+        onCancel={() => {
+          // The whole list goes back, so a new variation is gone and an edited
+          // one is exactly what it was.
+          patchVariant(event, { variations: snapshot });
+          setReturnVariation(before ? id : null);
+          go({ screen: "alert", event }, "out");
+        }}
+        onPatch={(updates) => patchVariation(event, id, updates)}
+        onTest={() => void fireTest(event, id)}
+      />
+    );
+  }
+
+  const screenKey =
+    view.screen === "list"
+      ? "list"
+      : view.screen === "alert"
+        ? `alert-${view.event}`
+        : `variation-${view.event}-${view.id}`;
+
   return (
-    <div className="space-y-5">
-      {/* ── Per-event config ─────────────────────────────────── */}
-      <div>
-        <SectionTitle>Alert types</SectionTitle>
-        <Tabs value={category} onValueChange={(v) => setCategory(v as AlertEventCategoryId)}>
-          {/* Same grouping the public /overlays catalog uses, so the page a
-              streamer read and the panel they configure line up. */}
-          <TabsList className="w-full">
-            {ALERT_EVENT_CATEGORIES.map((c) => (
-              <TabsTrigger key={c.id} value={c.id} className="flex-1 text-xs">
-                {c.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-          {ALERT_EVENT_CATEGORIES.map((c) => (
-            <TabsContent key={c.id} value={c.id} className="mt-2">
-              <Accordion
-                type="single"
-                collapsible
-                value={openByCategory[c.id] ?? ""}
-                onValueChange={(v) =>
-                  setOpenByCategory((prev) => ({ ...prev, [c.id]: v }))
-                }
-                className="-mx-1"
-              >
-                {c.events.map((event) => {
-                  const variant = cfg.variants[event];
-                  const amountLabel = ALERT_AMOUNT_LABELS[event];
-                  const detailToken = ALERT_DETAIL_TOKENS[event];
-                  // A leftover "media" mode on an image or an empty slot has no
-                  // video to match, so it reads (and behaves) as the fixed one.
-                  const matchesVideo =
-                    variant.mediaKind === "video" && variant.durationMode === "media";
+    // The slide starts 16px to the side. Clipped here, at the panel's own edge
+    // (the wrapper takes back the inspector's padding), or that offset becomes
+    // sideways overflow and the panel flashes a scrollbar for the length of the
+    // move. Clip, not hidden: hidden would make this the alert header's scroll
+    // box and it would stop sticking to the panel.
+    <div className="-mx-4 overflow-x-clip px-4">
+      {/* Keyed, not wrapped in AnimatePresence: the screen leaving is dropped at
+          once and only the one arriving moves, so two columns of fields never
+          share the panel. */}
+      <motion.div
+        key={screenKey}
+        initial={
+          direction
+            ? { opacity: 0, x: reduceMotion ? 0 : direction === "in" ? 16 : -16 }
+            : false
+        }
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+      >
+        {renderScreen()}
+      </motion.div>
 
-                  return (
-                    <AccordionItem key={event} value={event} className="border-b">
-                      {/* Trigger spans the row so the chevron sits far right; the
-                          test button (left) and toggle (right) float over it. */}
-                      <div className="relative">
-                        <AccordionTrigger className="w-full items-center gap-0 py-2 pl-16 pr-1 hover:no-underline">
-                          <span className="flex flex-1 items-center gap-2 min-w-0 pr-16">
-                            <span
-                              className={
-                                variant.enabled ? "truncate" : "truncate text-muted-foreground"
-                              }
-                            >
-                              {ALERT_EVENT_LABELS[event]}
-                            </span>
-                            {!variant.enabled && (
-                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground shrink-0">
-                                Off
-                              </span>
-                            )}
-                          </span>
-                        </AccordionTrigger>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="absolute left-0 top-1/2 -translate-y-1/2 h-7 w-14 px-0 text-xs"
-                          disabled={testBusy !== null}
-                          onClick={() => void fireTest(event)}
-                        >
-                          {testBusy === event ? "…" : "Test"}
-                        </Button>
-                        <Switch
-                          aria-label={`Enable ${ALERT_EVENT_LABELS[event]} alerts`}
-                          className="absolute right-6 top-1/2 -translate-y-1/2"
-                          checked={variant.enabled}
-                          onCheckedChange={(v) => patchVariant(event, { enabled: v })}
-                        />
-                      </div>
-
-                      <AccordionContent className="space-y-4 px-1 pb-5">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Title</Label>
-                          <Input
-                            value={variant.titleTemplate}
-                            onChange={(e) =>
-                              patchVariant(event, { titleTemplate: e.target.value })
-                            }
-                            className="h-9 text-sm"
-                            maxLength={200}
-                          />
-                          <p className="text-[11px] text-muted-foreground leading-snug">
-                            {"{name}"} is {ALERT_NAME_LABELS[event]}
-                            {amountLabel ? `, {amount} is ${amountLabel}` : ""}
-                            {ALERT_GIFTER_EVENTS.includes(event)
-                              ? ", {gifter} is who gave the original sub"
-                              : ""}
-                            {detailToken === "reward" ? ", {reward} is the reward" : ""}
-                            {detailToken === "charity" ? ", {charity} is the charity" : ""}.
-                          </p>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Second line (optional)</Label>
-                          <Input
-                            value={variant.messageTemplate}
-                            onChange={(e) =>
-                              patchVariant(event, { messageTemplate: e.target.value })
-                            }
-                            className="h-9 text-sm"
-                            maxLength={200}
-                            placeholder="Leave empty to hide"
-                          />
-                          {ALERT_MESSAGE_EVENTS.includes(event) && (
-                            <p className="text-[11px] text-muted-foreground leading-snug">
-                              {"{message}"} shows what the viewer wrote.
-                            </p>
-                          )}
-                        </div>
-
-                        <MediaField
-                          label="Image or video"
-                          kinds={["image", "video"]}
-                          value={variant.mediaUrl}
-                          helper="Transparent WebM and GIFs work great."
-                          onChange={(url, kind) =>
-                            patchVariant(event, {
-                              mediaUrl: url,
-                              mediaKind:
-                                kind === "video" ? "video" : kind === "image" ? "image" : "",
-                            })
-                          }
-                        />
-
-                        <MediaField
-                          label="Sound"
-                          kinds={["audio"]}
-                          value={variant.soundUrl}
-                          onChange={(url) => patchVariant(event, { soundUrl: url })}
-                        />
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">
-                              Volume ({Math.round(variant.volume * 100)}%)
-                            </Label>
-                            <Slider
-                              value={[variant.volume]}
-                              onValueChange={([v]) => patchVariant(event, { volume: v })}
-                              min={0}
-                              max={1}
-                              step={0.05}
-                              className="py-1"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">
-                              On screen{" "}
-                              {matchesVideo
-                                ? "(video length)"
-                                : `(${variant.durationSeconds}s)`}
-                            </Label>
-                            <Slider
-                              value={[variant.durationSeconds]}
-                              onValueChange={([v]) =>
-                                patchVariant(event, { durationSeconds: Math.round(v) })
-                              }
-                              min={1}
-                              max={30}
-                              step={1}
-                              disabled={matchesVideo}
-                              className="py-1"
-                            />
-                          </div>
-                        </div>
-
-                        {variant.mediaKind === "video" && (
-                          <div className="space-y-1.5">
-                            <div className="flex items-center justify-between gap-2">
-                              <Label
-                                htmlFor={`alert-duration-mode-${event}`}
-                                className="text-xs cursor-pointer"
-                              >
-                                Match the video length
-                              </Label>
-                              <Switch
-                                id={`alert-duration-mode-${event}`}
-                                checked={matchesVideo}
-                                onCheckedChange={(v) =>
-                                  patchVariant(event, {
-                                    durationMode: v ? "media" : "fixed",
-                                  })
-                                }
-                              />
-                            </div>
-                            <p className="text-[11px] text-muted-foreground leading-snug">
-                              Plays the video once and leaves when it ends, instead of
-                              looping for a set time. Long videos get cut at 60s.
-                            </p>
-                          </div>
-                        )}
-
-                        {amountLabel && (
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Minimum {amountLabel}</Label>
-                            <Input
-                              type="number"
-                              min={0}
-                              value={variant.minAmount}
-                              onChange={(e) => {
-                                const n = Number(e.target.value);
-                                if (!Number.isFinite(n)) return;
-                                patchVariant(event, { minAmount: Math.max(0, Math.round(n)) });
-                              }}
-                              className="h-9 text-sm"
-                            />
-                            <p className="text-[11px] text-muted-foreground leading-snug">
-                              Alerts below this are skipped. 0 shows everything.
-                            </p>
-                          </div>
-                        )}
-
-                        <GroupLabel>Look &amp; feel</GroupLabel>
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Layout</Label>
-                          <Select
-                            value={variant.layout}
-                            onValueChange={(v) =>
-                              patchVariant(event, { layout: v as AlertLayout })
-                            }
-                          >
-                            <SelectTrigger className="h-9 text-sm w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {(Object.keys(LAYOUT_LABELS) as AlertLayout[]).map((l) => (
-                                <SelectItem key={l} value={l} className="text-sm">
-                                  {LAYOUT_LABELS[l]}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Entrance</Label>
-                            <Select
-                              value={variant.animationIn}
-                              onValueChange={(v) =>
-                                patchVariant(event, { animationIn: v as AlertAnimationIn })
-                              }
-                            >
-                              <SelectTrigger className="h-9 text-sm w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(Object.keys(ANIMATION_IN_LABELS) as AlertAnimationIn[]).map(
-                                  (a) => (
-                                    <SelectItem key={a} value={a} className="text-sm">
-                                      {ANIMATION_IN_LABELS[a]}
-                                    </SelectItem>
-                                  )
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Exit</Label>
-                            <Select
-                              value={variant.animationOut}
-                              onValueChange={(v) =>
-                                patchVariant(event, { animationOut: v as AlertAnimationOut })
-                              }
-                            >
-                              <SelectTrigger className="h-9 text-sm w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(Object.keys(ANIMATION_OUT_LABELS) as AlertAnimationOut[]).map(
-                                  (a) => (
-                                    <SelectItem key={a} value={a} className="text-sm">
-                                      {ANIMATION_OUT_LABELS[a]}
-                                    </SelectItem>
-                                  )
-                                )}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        <GoogleFontSelect
-                          id={`alert-font-family-${event}`}
-                          value={variant.fontFamily}
-                          onValueChange={(v) => patchVariant(event, { fontFamily: v })}
-                        />
-
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Font size ({variant.fontSize}px)</Label>
-                          <Slider
-                            value={[variant.fontSize]}
-                            onValueChange={([v]) =>
-                              patchVariant(event, { fontSize: Math.round(v) })
-                            }
-                            min={12}
-                            max={96}
-                            step={1}
-                            className="py-1"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <FontWeightSelect
-                            id={`alert-font-weight-${event}`}
-                            className="min-w-0"
-                            triggerClassName="w-full"
-                            value={variant.fontWeight}
-                            onValueChange={(v) => patchVariant(event, { fontWeight: v })}
-                          />
-                          <TextAlignSelect
-                            id={`alert-align-${event}`}
-                            className="min-w-0"
-                            triggerClassName="w-full"
-                            value={variant.align}
-                            onValueChange={(v) => patchVariant(event, { align: v })}
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Title</Label>
-                            <ColorPicker
-                              value={variant.titleColor}
-                              onChange={(titleColor) => patchVariant(event, { titleColor })}
-                              aria-label="Title color"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Accent</Label>
-                            <ColorPicker
-                              value={variant.accentColor}
-                              fallback="#9e7aff"
-                              onChange={(accentColor) => patchVariant(event, { accentColor })}
-                              aria-label="Accent color"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-xs">Message</Label>
-                            <ColorPicker
-                              value={variant.messageColor}
-                              fallback="#d4d4d8"
-                              onChange={(messageColor) => patchVariant(event, { messageColor })}
-                              aria-label="Message color"
-                            />
-                          </div>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground leading-snug">
-                          Accent highlights {"{name}"} and {"{amount}"} in the title.
-                        </p>
-
-                        <div className="flex items-center justify-between gap-2">
-                          <Label
-                            htmlFor={`alert-text-shadow-${event}`}
-                            className="text-xs cursor-pointer"
-                          >
-                            Text shadow for readability
-                          </Label>
-                          <Switch
-                            id={`alert-text-shadow-${event}`}
-                            checked={variant.textShadow}
-                            onCheckedChange={(v) => patchVariant(event, { textShadow: v })}
-                          />
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                })}
-              </Accordion>
-            </TabsContent>
-          ))}
-        </Tabs>
-      </div>
-
-      <Separator />
-
-      {/* ── Everything-alerts settings ───────────────────────── */}
-      <div>
-        <SectionTitle>All alerts</SectionTitle>
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label className="text-xs">
-              Master volume ({Math.round(cfg.masterVolume * 100)}%)
-            </Label>
-            <Slider
-              value={[cfg.masterVolume]}
-              onValueChange={([v]) => patchConfig({ masterVolume: v })}
-              min={0}
-              max={1}
-              step={0.05}
-              className="py-1"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">Gap between alerts ({cfg.gapSeconds}s)</Label>
-            <Slider
-              value={[cfg.gapSeconds]}
-              onValueChange={([v]) => patchConfig({ gapSeconds: Math.round(v) })}
-              min={0}
-              max={10}
-              step={1}
-              className="py-1"
-            />
-          </div>
-
-          {/* No live switch here: the demo bar owns it for the whole editor, so
-              there is one answer to "where do my tests go" instead of two. */}
-          <div className="min-w-0">
-            <Label className="text-xs">Where tests go</Label>
-            <p className="text-[11px] text-muted-foreground leading-snug">
-              {mode === "live"
-                ? "Live. Tests play on this canvas and in OBS, exactly like the real thing."
-                : "This canvas only. Switch the demo bar to Live to fire them in OBS too."}
-            </p>
-          </div>
-        </div>
-      </div>
+      <AlertCopySourceDialog
+        open={copyFor !== null}
+        onOpenChange={(open) => !open && setCopyFor(null)}
+        cfg={cfg}
+        onPick={(settings) => copyFor && addVariation(copyFor, settings)}
+      />
     </div>
   );
 }

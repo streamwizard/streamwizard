@@ -9,16 +9,28 @@ import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
 import type { OverlayItem, OverlayScene } from "../../types";
 import {
-  ALERT_EVENT_TYPES,
+  alertEffectKeyframes,
+  alertEffectStyle,
+  type AlertHighlightAnimation,
+} from "./alert-animations";
+import {
   ALERT_TEST_BROWSER_EVENT,
   alertAmountText,
+  alertFontFamilies,
+  alertForcedVariationId,
   alertInstanceFromSocketMessage,
+  alertMediaOutAtMs,
+  alertTimeline,
+  ALERT_MAX_HOLD_MS,
   alertSkipReason,
+  clampAlertOutAtMs,
   normalizeAlertWidgetConfig,
+  pickAlertVariation,
   renderAlertTemplate,
+  type AlertEventType,
   type AlertInstance,
+  type AlertPresentation,
   type AlertTestBrowserEventDetail,
-  type AlertVariantConfig,
 } from "./alert-widget-config";
 
 export interface AlertWidgetRendererProps {
@@ -34,51 +46,39 @@ export interface AlertWidgetRendererProps {
 }
 
 type Phase = "in" | "hold" | "out";
+/**
+ * The text keeps its own time inside the alert's: it can arrive late and leave
+ * early. `waiting` and `gone` hold its place without showing it, so the media
+ * does not shift when it appears.
+ */
+type TextPhase = "waiting" | "in" | "out" | "gone";
 
-interface ActiveAlert {
+interface QueuedAlert {
   alert: AlertInstance;
-  variant: AlertVariantConfig;
+  /** The alert's own look, or that of the variation picked for this event. */
+  variant: AlertPresentation;
 }
 
-const IN_MS = 500;
-const OUT_MS = 350;
-/** Floor for a media-matched hold, so a half-second video does not just blink. */
-const MIN_HOLD_MS = 1000;
-/** Ceiling for a media-matched hold — an hour-long file must not park the overlay. */
-const MAX_HOLD_MS = 60_000;
-
-const KEYFRAMES = `
-@keyframes sw-alert-fade-in { from { opacity: 0 } to { opacity: 1 } }
-@keyframes sw-alert-slide-up-in { from { opacity: 0; transform: translateY(32px) } to { opacity: 1; transform: translateY(0) } }
-@keyframes sw-alert-slide-down-in { from { opacity: 0; transform: translateY(-32px) } to { opacity: 1; transform: translateY(0) } }
-@keyframes sw-alert-zoom-in { from { opacity: 0; transform: scale(0.8) } to { opacity: 1; transform: scale(1) } }
-@keyframes sw-alert-bounce-in {
-  0% { opacity: 0; transform: scale(0.6) }
-  60% { opacity: 1; transform: scale(1.08) }
-  80% { transform: scale(0.97) }
-  100% { opacity: 1; transform: scale(1) }
+interface ActiveAlert extends QueuedAlert {
+  /**
+   * Counts up per alert played. The media is keyed on it: two alerts sharing a
+   * file would otherwise reuse the element, and a video that already ran to
+   * its end just sits on its last frame.
+   */
+  seq: number;
 }
-@keyframes sw-alert-fade-out { from { opacity: 1 } to { opacity: 0 } }
-@keyframes sw-alert-slide-down-out { from { opacity: 1; transform: translateY(0) } to { opacity: 0; transform: translateY(24px) } }
-@keyframes sw-alert-zoom-out { from { opacity: 1; transform: scale(1) } to { opacity: 0; transform: scale(0.85) } }
+
+/** How long one loop of a highlight effect takes: the pace animate.css draws them at. */
+const HIGHLIGHT_LOOP_MS = 1000;
+/** How far apart the letters of a wave start, so it travels along the word. */
+const WAVE_STAGGER_MS = 70;
+
+const REDUCED_MOTION_CSS = `
 @media (prefers-reduced-motion: reduce) {
   .sw-alert-anim { animation-duration: 1ms !important; }
+  .sw-alert-loop { animation: none !important; }
 }
 `;
-
-const IN_ANIMATION: Record<AlertVariantConfig["animationIn"], string> = {
-  fade: "sw-alert-fade-in",
-  slide_up: "sw-alert-slide-up-in",
-  slide_down: "sw-alert-slide-down-in",
-  zoom: "sw-alert-zoom-in",
-  bounce: "sw-alert-bounce-in",
-};
-
-const OUT_ANIMATION: Record<AlertVariantConfig["animationOut"], string> = {
-  fade: "sw-alert-fade-out",
-  slide_down: "sw-alert-slide-down-out",
-  zoom: "sw-alert-zoom-out",
-};
 
 /**
  * Renders a title template as React nodes with `{name}` / `{amount}`
@@ -87,14 +87,46 @@ const OUT_ANIMATION: Record<AlertVariantConfig["animationOut"], string> = {
 function renderAccentedTemplate(
   template: string,
   alert: AlertInstance,
-  accentColor: string
+  accentColor: string,
+  highlight: AlertHighlightAnimation
 ): ReactNode[] {
+  const loop = alertEffectStyle(highlight, HIGHLIGHT_LOOP_MS, true);
   const parts = template.split(/(\{name\}|\{amount\})/g);
   return parts.map((part, i) => {
     if (part === "{name}" || part === "{amount}") {
+      const text = part === "{name}" ? alert.name : alertAmountText(alert);
+      if (!loop) {
+        return (
+          <span key={i} style={{ color: accentColor }}>
+            {text}
+          </span>
+        );
+      }
+      // A wave is each letter rising in turn; every other effect moves the
+      // word as one. Either way it has to be a box: inline text ignores
+      // transforms.
+      if (highlight === "wave") {
+        return (
+          <span key={i} style={{ color: accentColor, whiteSpace: "pre" }}>
+            {[...text].map((letter, n) => (
+              <span
+                key={n}
+                className="sw-alert-loop"
+                style={{ display: "inline-block", ...loop, animationDelay: `${n * WAVE_STAGGER_MS}ms` }}
+              >
+                {letter}
+              </span>
+            ))}
+          </span>
+        );
+      }
       return (
-        <span key={i} style={{ color: accentColor }}>
-          {part === "{name}" ? alert.name : alertAmountText(alert)}
+        <span
+          key={i}
+          className="sw-alert-loop"
+          style={{ display: "inline-block", color: accentColor, ...loop }}
+        >
+          {text}
         </span>
       );
     }
@@ -104,28 +136,40 @@ function renderAccentedTemplate(
 
 export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidgetRendererProps) {
   const cfg = useMemo(() => normalizeAlertWidgetConfig(item.config), [item.config]);
-  const fontFamilies = useMemo(
-    () => [...new Set(ALERT_EVENT_TYPES.map((e) => cfg.variants[e].fontFamily))],
-    [cfg]
-  );
+  const fontFamilies = useMemo(() => alertFontFamilies(cfg), [cfg]);
   useGoogleFonts(fontFamilies);
 
 
   const [active, setActive] = useState<ActiveAlert | null>(null);
   const [phase, setPhase] = useState<Phase>("in");
+  const [textPhase, setTextPhase] = useState<TextPhase>("in");
 
-  const queueRef = useRef<ActiveAlert[]>([]);
+  const queueRef = useRef<QueuedAlert[]>([]);
+  const seqRef = useRef(0);
+  // The biggest amount each event type has had since this overlay loaded: what
+  // "biggest of the stream" variations measure against. It lives with the page,
+  // so reloading the browser source starts the count again.
+  const sessionTopRef = useRef<Partial<Record<AlertEventType, number>>>({});
   const busyRef = useRef(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const cfgRef = useRef(cfg);
   cfgRef.current = cfg;
 
-  // The out/next pair is rescheduled once a media-matched video reports its
-  // real length, so both live in refs instead of the fire-and-forget list.
+  // Everything from the exit on is rescheduled once a media-matched video
+  // reports its real length, so each timer lives in a ref instead of a
+  // fire-and-forget list.
   const startedAtRef = useRef(0);
-  const inTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const outTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const doneTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The alert on screen, for the timers: they outlive the render that set them.
+  const currentRef = useRef<QueuedAlert | null>(null);
+  type Timer = ReturnType<typeof setTimeout> | null;
+  const inTimerRef = useRef<Timer>(null);
+  const textInTimerRef = useRef<Timer>(null);
+  const outTimerRef = useRef<Timer>(null);
+  const textOutTimerRef = useRef<Timer>(null);
+  const textGoneTimerRef = useRef<Timer>(null);
+  const hideTimerRef = useRef<Timer>(null);
+  const nextTimerRef = useRef<Timer>(null);
+  const soundCapTimerRef = useRef<Timer>(null);
   const playNextRef = useRef<() => void>(() => {});
 
   const stopAudio = () => {
@@ -134,26 +178,65 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
   };
 
   /**
-   * Schedules the exit (and the alert after it), `outAtMs` after this alert
-   * started. Safe to call again mid-alert: the pending pair is replaced.
+   * Schedules everything from the exit on, for an alert held `holdMs` before it
+   * leaves. Safe to call again mid-alert: the pending set is replaced.
    */
-  const scheduleOut = useCallback((outAtMs: number) => {
+  const scheduleOut = useCallback((holdMs: number) => {
     const c = cfgRef.current;
-    if (outTimerRef.current) clearTimeout(outTimerRef.current);
-    if (doneTimerRef.current) clearTimeout(doneTimerRef.current);
+    const current = currentRef.current;
+    if (!current) return;
+    for (const t of [
+      outTimerRef,
+      textOutTimerRef,
+      textGoneTimerRef,
+      hideTimerRef,
+      nextTimerRef,
+      soundCapTimerRef,
+    ]) {
+      if (t.current) clearTimeout(t.current);
+    }
 
-    const floor = IN_MS + MIN_HOLD_MS;
-    const target = Math.min(IN_MS + MAX_HOLD_MS, Math.max(floor, outAtMs));
-    const outIn = Math.max(0, target - (Date.now() - startedAtRef.current));
+    const timeline = alertTimeline(current.variant, clampAlertOutAtMs(holdMs, 0));
+    const elapsed = Date.now() - startedAtRef.current;
+    const from = (atMs: number) => Math.max(0, atMs - elapsed);
 
-    outTimerRef.current = setTimeout(() => setPhase("out"), outIn);
-    doneTimerRef.current = setTimeout(
+    outTimerRef.current = setTimeout(() => setPhase("out"), from(timeline.outAtMs));
+    textOutTimerRef.current = setTimeout(() => setTextPhase("out"), from(timeline.textOutAtMs));
+    textGoneTimerRef.current = setTimeout(
+      () => setTextPhase("gone"),
+      from(timeline.textOutAtMs + timeline.textExitMs)
+    );
+    // Unmount as soon as the exit has played, not after the gap: a video with
+    // sound would otherwise keep looping, unseen, until the next alert.
+    hideTimerRef.current = setTimeout(() => setActive(null), from(timeline.endAtMs));
+
+    // The sound file is left to ring out through the gap. Past it the next
+    // alert cuts it off, unless the box is set to let sounds finish.
+    nextTimerRef.current = setTimeout(
       () => {
-        stopAudio();
-        setActive(null);
-        playNextRef.current();
+        let moved = false;
+        const audio = audioRef.current;
+        const moveOn = () => {
+          if (moved) return;
+          moved = true;
+          if (soundCapTimerRef.current) clearTimeout(soundCapTimerRef.current);
+          audio?.removeEventListener("ended", moveOn);
+          stopAudio();
+          playNextRef.current();
+        };
+        if (c.waitForSound && audio && !audio.paused && !audio.ended) {
+          audio.addEventListener("ended", moveOn);
+          // A sound that never ends, or never reports that it did, must not
+          // hold the queue for good.
+          soundCapTimerRef.current = setTimeout(
+            moveOn,
+            Math.max(0, ALERT_MAX_HOLD_MS - (Date.now() - startedAtRef.current))
+          );
+        } else {
+          moveOn();
+        }
       },
-      outIn + OUT_MS + c.gapSeconds * 1000
+      from(timeline.endAtMs) + c.gapSeconds * 1000
     );
   }, []);
 
@@ -168,8 +251,11 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     const c = cfgRef.current;
 
     startedAtRef.current = Date.now();
-    setActive(next);
-    setPhase("in");
+    currentRef.current = next;
+    const timeline = alertTimeline(next.variant, next.variant.durationSeconds * 1000);
+    setActive({ ...next, seq: ++seqRef.current });
+    setPhase(timeline.enterMs > 0 ? "in" : "hold");
+    setTextPhase(timeline.textInAtMs > 0 ? "waiting" : "in");
 
     const soundUrl = next.variant.soundUrl;
     if (soundUrl) {
@@ -180,19 +266,45 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     }
 
     if (inTimerRef.current) clearTimeout(inTimerRef.current);
-    inTimerRef.current = setTimeout(() => setPhase("hold"), IN_MS);
+    if (textInTimerRef.current) clearTimeout(textInTimerRef.current);
+    if (timeline.enterMs > 0) {
+      inTimerRef.current = setTimeout(() => setPhase("hold"), timeline.enterMs);
+    }
+    if (timeline.textInAtMs > 0) {
+      textInTimerRef.current = setTimeout(() => setTextPhase("in"), timeline.textInAtMs);
+    }
     // Media-matched alerts start on this too: it is the fallback if the video's
     // length never resolves, and the cap if playback stalls forever.
-    scheduleOut(IN_MS + next.variant.durationSeconds * 1000);
+    scheduleOut(timeline.outAtMs);
   }, [scheduleOut]);
   playNextRef.current = playNext;
 
   const enqueue = useCallback(
-    (alert: AlertInstance) => {
+    (alert: AlertInstance, forcedVariationId: string | null = null) => {
       const c = cfgRef.current;
       const variant = c.variants[alert.event];
-      if (alertSkipReason(alert, variant)) return;
-      queueRef.current.push({ alert, variant });
+
+      // A test of one variation plays it outright: no gate, no condition, no
+      // chance roll, and no entry in the stream's records.
+      const forced = forcedVariationId
+        ? variant.variations.find((v) => v.id === forcedVariationId)
+        : undefined;
+
+      let look: AlertPresentation = variant;
+      if (forced) {
+        look = forced.settings;
+      } else {
+        const sessionTop = sessionTopRef.current[alert.event] ?? 0;
+        if (alert.amount > sessionTop) sessionTopRef.current[alert.event] = alert.amount;
+        if (alertSkipReason(alert, variant)) return;
+        look =
+          pickAlertVariation(alert, variant, { random: Math.random, sessionTop })?.settings ??
+          variant;
+      }
+
+      // Full line: drop it. A follow-bot wave must not book the box for hours.
+      if (queueRef.current.length >= c.maxQueue) return;
+      queueRef.current.push({ alert, variant: look });
       if (!busyRef.current) playNext();
     },
     [playNext]
@@ -208,12 +320,11 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
     return subscribeToWsRoom(token, wsUrl, (raw) => {
-      const alert = alertInstanceFromSocketMessage(
-        raw as { type?: string; payload?: unknown }
-      );
-      if (alert) enqueue(alert);
+      const message = raw as { type?: string; payload?: unknown };
+      const alert = alertInstanceFromSocketMessage(message);
+      if (alert) enqueue(alert, alertForcedVariationId(message.payload, item.id));
     });
-  }, [scene?.subscriber_token, enqueue]);
+  }, [scene?.subscriber_token, enqueue, item.id]);
 
   // Editor: local test fires from the inspector and the demo bar (no server
   // round-trip). Anything that isn't an alert maps to null and is ignored.
@@ -223,15 +334,24 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
       const detail = (e as CustomEvent<AlertTestBrowserEventDetail>).detail;
       if (!detail || (scene && detail.sceneId !== scene.id)) return;
       const alert = alertInstanceFromSocketMessage(detail.message);
-      if (alert) enqueue(alert);
+      if (alert) enqueue(alert, alertForcedVariationId(detail.message.payload, item.id));
     };
     window.addEventListener(ALERT_TEST_BROWSER_EVENT, onTest);
     return () => window.removeEventListener(ALERT_TEST_BROWSER_EVENT, onTest);
-  }, [scene, enqueue]);
+  }, [scene, enqueue, item.id]);
 
   // Cleanup timers/audio on unmount.
   useEffect(() => {
-    const timers = [inTimerRef, outTimerRef, doneTimerRef];
+    const timers = [
+      inTimerRef,
+      textInTimerRef,
+      outTimerRef,
+      textOutTimerRef,
+      textGoneTimerRef,
+      hideTimerRef,
+      nextTimerRef,
+      soundCapTimerRef,
+    ];
     return () => {
       for (const t of timers) if (t.current) clearTimeout(t.current);
       stopAudio();
@@ -264,7 +384,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     );
   }
 
-  const { alert, variant } = active;
+  const { alert, variant, seq } = active;
   const fontFamily = `"${variant.fontFamily}", sans-serif`;
   const textShadow = variant.textShadow ? "0 2px 8px rgba(0,0,0,0.6)" : "none";
   const alignItems =
@@ -286,7 +406,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
   const media =
     mediaUrl && mediaKind === "video" ? (
       <video
-        key={mediaUrl}
+        key={seq}
         src={mediaUrl}
         autoPlay
         loop={!matchVideo}
@@ -297,11 +417,15 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
         }}
         onLoadedMetadata={(e) => {
           if (!matchVideo) return;
-          // Streamed WebM often reports Infinity until it is seeked; leave the
-          // fixed duration in place and let onEnded close the alert instead.
-          const d = e.currentTarget.duration;
-          if (!Number.isFinite(d) || d <= 0) return;
-          scheduleOut(d * 1000);
+          const el = e.currentTarget;
+          // Null when the length is unknown: leave the fixed duration in place
+          // and let onEnded close the alert instead.
+          const outAt = alertMediaOutAtMs(
+            Date.now() - startedAtRef.current,
+            el.duration,
+            el.currentTime
+          );
+          if (outAt !== null) scheduleOut(outAt);
         }}
         onEnded={() => {
           if (!matchVideo) return;
@@ -318,6 +442,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
       />
     ) : mediaUrl && mediaKind === "image" ? (
       <img
+        key={seq}
         src={mediaUrl}
         alt=""
         style={{
@@ -344,7 +469,12 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
         wordBreak: "break-word",
       }}
     >
-      {renderAccentedTemplate(variant.titleTemplate, alert, variant.accentColor)}
+      {renderAccentedTemplate(
+        variant.titleTemplate,
+        alert,
+        variant.accentColor,
+        variant.highlightAnimation
+      )}
     </div>
   );
 
@@ -368,16 +498,38 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     </div>
   ) : null;
 
-  const animation =
+  // Only the lengths are read here, and those do not depend on the hold.
+  const timeline = alertTimeline(variant, 0);
+  const alertMotion =
     phase === "in"
-      ? `${IN_ANIMATION[variant.animationIn]} ${IN_MS}ms cubic-bezier(0.22, 1, 0.36, 1) both`
+      ? alertEffectStyle(variant.animationIn, timeline.enterMs)
       : phase === "out"
-        ? `${OUT_ANIMATION[variant.animationOut]} ${OUT_MS}ms ease-in both`
-        : "none";
+        ? alertEffectStyle(variant.animationOut, timeline.exitMs)
+        : null;
+  const textMotion =
+    textPhase === "in"
+      ? alertEffectStyle(variant.textAnimationIn, timeline.textEnterMs)
+      : textPhase === "out"
+        ? alertEffectStyle(variant.textAnimationOut, timeline.textExitMs)
+        : null;
+  // Out of sight but still taking its room, so the media stays where it is
+  // while the text is yet to arrive or already gone. An exit with no effect is
+  // gone the moment it starts.
+  const textHidden =
+    textPhase === "waiting" || textPhase === "gone" || (textPhase === "out" && !textMotion);
 
   return (
     <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative" }}>
-      <style>{KEYFRAMES}</style>
+      <style>
+        {REDUCED_MOTION_CSS +
+          alertEffectKeyframes([
+            variant.animationIn,
+            variant.animationOut,
+            variant.textAnimationIn,
+            variant.textAnimationOut,
+            variant.highlightAnimation,
+          ])}
+      </style>
       <div
         className="sw-alert-anim"
         style={{
@@ -391,11 +543,13 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
           justifyContent: "center",
           gap: 12,
           padding: 8,
-          animation,
+          ...(alertMotion ?? { animation: "none" }),
         }}
       >
         {media}
         <div
+          className="sw-alert-anim"
+          data-alert-text=""
           style={{
             position: variant.layout === "overlay" ? "relative" : "static",
             zIndex: 1,
@@ -404,6 +558,8 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
             alignItems,
             gap: 4,
             minWidth: 0,
+            visibility: textHidden ? "hidden" : "visible",
+            ...(textMotion ?? { animation: "none" }),
           }}
         >
           {title}
