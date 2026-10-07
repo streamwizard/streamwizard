@@ -12,7 +12,7 @@ If you discover a security vulnerability in StreamWizard, please report it respo
 
 ### How to Report
 
-Please report it privately by opening a ticket in our Discord server: https://discord.gg/29Eq659egv
+Please report it privately by opening a ticket in our Discord server: https://discord.streamwizard.org
 
 Include the following:
 
