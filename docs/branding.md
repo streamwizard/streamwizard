@@ -376,7 +376,7 @@ Tailwind v4's preflight sets buttons to `cursor: default`. globals.css restores 
 
 | Channel | URL |
 |---|---|
-| Discord | https://discord.gg/29Eq659egv |
+| Discord | https://discord.streamwizard.org |
 | GitHub | https://github.com/streamwizard/streamwizard |
 | Twitch | https://twitch.tv/jochemwhite |
 | X | https://x.com/streamwizard |
