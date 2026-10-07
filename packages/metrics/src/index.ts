@@ -29,4 +29,6 @@ export * from "./queries/supabase-platform-queries";
 export * from "./queries/backup-queries";
 export * from "./queries/proxmox-queries";
 export * from "./queries/webserver-queries";
+export * from "./queries/traefik-queries";
 export * from "./apps-model";
+export * from "./traefik-model";
