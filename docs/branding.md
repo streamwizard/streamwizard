@@ -201,6 +201,8 @@ Dark is the default and gets designed first. If a screen only works in light, it
 
 More than five series means the chart needs rethinking, not a sixth color.
 
+Ordered steps of one thing (speed bands, size classes) are not five series: they share one hue. Use `--chart-ramp-1` through `--chart-ramp-5`, which are `--chart-1` in five lightness steps, defined per theme in web-admin's `globals.css`. The heavier step means more: darker on a light surface, lighter on a dark one. The steps pass the ordinal palette check (one hue, even lightness steps, the faintest step still 2:1 against the card). Legend text next to a ramp stays in the text color, because the faintest step is too light to read as text.
+
 ### Social card colors
 
 Fixed, in `apps/web-streamwizard/src/lib/og-image.tsx`:

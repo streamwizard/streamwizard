@@ -91,6 +91,12 @@
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
+  /* Ordered steps of one series (speed bands): one hue, more is darker. */
+  --chart-ramp-1: color-mix(in oklab, var(--chart-1) 66%, var(--card));
+  --chart-ramp-2: var(--chart-1);
+  --chart-ramp-3: color-mix(in oklab, var(--foreground) 20%, var(--chart-1));
+  --chart-ramp-4: color-mix(in oklab, var(--foreground) 40%, var(--chart-1));
+  --chart-ramp-5: color-mix(in oklab, var(--foreground) 60%, var(--chart-1));
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --sidebar: hsl(0 0% 98%);
@@ -127,6 +133,12 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
+  /* On a dark surface more is lighter. */
+  --chart-ramp-1: var(--chart-1);
+  --chart-ramp-2: color-mix(in oklab, var(--foreground) 18%, var(--chart-1));
+  --chart-ramp-3: color-mix(in oklab, var(--foreground) 36%, var(--chart-1));
+  --chart-ramp-4: color-mix(in oklab, var(--foreground) 54%, var(--chart-1));
+  --chart-ramp-5: color-mix(in oklab, var(--foreground) 72%, var(--chart-1));
   --sidebar: hsl(240 5.9% 10%);
   --sidebar-foreground: hsl(240 4.8% 95.9%);
   --sidebar-primary: hsl(224.3 76.3% 48%);
