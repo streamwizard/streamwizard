@@ -37,7 +37,7 @@ export interface NodeMetricPoint {
 // A function prop can't cross the server/client boundary (pages that render
 // this are Server Components), so callers pass a format name instead and the
 // actual formatter lives here, client-side.
-export type NodeMetricFormat = "percent" | "bytesPerSec" | "ms" | "number" | "hours" | "bytes" | "decimal" | "perSec" | "latencyMs";
+export type NodeMetricFormat = "percent" | "share" | "bytesPerSec" | "ms" | "number" | "hours" | "bytes" | "decimal" | "perSec" | "latencyMs";
 
 const trim = (value: number) => (Math.abs(value) >= 100 ? value.toFixed(0) : Math.abs(value) >= 10 ? value.toFixed(1) : value.toFixed(2));
 
@@ -49,6 +49,9 @@ function formatValue(
   switch (format) {
     case "percent":
       return `${value.toFixed(0)}%`;
+    // A share that matters below 1%: an error rate, where 0.4% is not 0%.
+    case "share":
+      return `${value > 0 && value < 10 ? value.toFixed(1) : value.toFixed(0)}%`;
     case "bytesPerSec":
       return formatBandwidth(value, bandwidthUnit);
     case "ms":
@@ -84,7 +87,14 @@ interface Props {
   /** Hide series whose id matches this regex source (a string, so a Server
    * Component can pass it). */
   excludePattern?: string;
+  /** Pins these series to the first colours, in this order, so a series keeps
+   * its colour while another one has no data. Without it colour follows the
+   * order the series show up in. */
+  seriesOrder?: string[];
 }
+
+/** Rates and small shares live below 1: whole-number ticks would flatten them. */
+const DECIMAL_AXIS: ReadonlySet<NodeMetricFormat> = new Set(["share", "perSec"]);
 
 type ChartRow = { t: number; [nodeId: string]: number | undefined };
 
@@ -139,6 +149,7 @@ export function NodeMetricChart({
   zeroLine,
   filterNodeIds,
   excludePattern,
+  seriesOrder,
 }: Props) {
   const { interval } = useRefreshInterval();
   const { range } = useTimeRange();
@@ -162,28 +173,34 @@ export function NodeMetricChart({
     const exclude = new RegExp(excludePattern);
     points = points.filter((p) => !exclude.test(p.nodeId));
   }
-  const { rows, nodeIds } = transformData(
+  const { rows, nodeIds: seen } = transformData(
     points,
     fluxRangeToMs(range.window),
     domainStart,
     now,
   );
+  // Pinned series first, each on its own colour slot whether it has data or not.
+  const pinned = seriesOrder ?? [];
+  const series = [
+    ...pinned.flatMap((nodeId, slot) => (seen.includes(nodeId) ? [{ nodeId, slot }] : [])),
+    ...seen.filter((nodeId) => !pinned.includes(nodeId)).map((nodeId, i) => ({ nodeId, slot: pinned.length + i })),
+  ];
 
   return (
     <ChartCard title={title} isEmpty={rows.length === 0}>
       <AreaChart data={rows}>
         <defs>
-          {nodeIds.map((nodeId, i) => (
+          {series.map(({ nodeId, slot }) => (
             <linearGradient
               key={nodeId}
-              id={`g-${dataKey}-${i}`}
+              id={`g-${dataKey}-${slot}`}
               x1="0"
               y1="0"
               x2="0"
               y2="1"
             >
-              <stop offset="5%" stopColor={chartColor(i)} stopOpacity={0.3} />
-              <stop offset="95%" stopColor={chartColor(i)} stopOpacity={0} />
+              <stop offset="5%" stopColor={chartColor(slot)} stopOpacity={0.3} />
+              <stop offset="95%" stopColor={chartColor(slot)} stopOpacity={0} />
             </linearGradient>
           ))}
         </defs>
@@ -203,7 +220,7 @@ export function NodeMetricChart({
           tickFormatter={(value: number) =>
             formatValue(value, format, bandwidthUnit)
           }
-          allowDecimals={false}
+          allowDecimals={DECIMAL_AXIS.has(format)}
         />
         <Tooltip
           contentStyle={CHART_TOOLTIP_STYLE}
@@ -216,13 +233,13 @@ export function NodeMetricChart({
         />
         <Legend wrapperStyle={LEGEND_WRAPPER_STYLE} />
         {zeroLine ? <ReferenceLine y={0} strokeDasharray="4 4" className="stroke-muted-foreground" /> : null}
-        {nodeIds.map((nodeId, i) => (
+        {series.map(({ nodeId, slot }) => (
           <Area
             key={nodeId}
             type="linear"
             dataKey={nodeId}
-            stroke={chartColor(i)}
-            fill={`url(#g-${dataKey}-${i})`}
+            stroke={chartColor(slot)}
+            fill={`url(#g-${dataKey}-${slot})`}
             strokeWidth={2}
           />
         ))}

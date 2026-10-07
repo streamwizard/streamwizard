@@ -187,6 +187,8 @@ export function customRule(
     envs?: Env[];
     warn?: RuleKnob;
     crit?: RuleKnob;
+    /** Code default for enabled; an alert_rule_config row still wins. */
+    enabled?: boolean;
     evaluate: (ctx: EnvContext, t: { warn: number; crit: number }) => Promise<Breach[]>;
   },
   overrides: RuleOverrides,
@@ -201,13 +203,27 @@ export function customRule(
     title: opts.title,
     envs: o.envs ?? opts.envs,
     forTicks: o.forTicks ?? opts.forTicks,
-    enabled: o.enabled ?? true,
-    meta: { warn: opts.warn, crit: opts.crit, defaultForTicks: opts.forTicks, defaultEnvs: opts.envs },
+    enabled: o.enabled ?? opts.enabled ?? true,
+    meta: { warn: opts.warn, crit: opts.crit, defaultForTicks: opts.forTicks, defaultEnvs: opts.envs, defaultEnabled: opts.enabled ?? true },
     evaluate: (ctx) => opts.evaluate(ctx, t),
   };
 }
 
 // --- Fetch helpers shared by threshold rules ---
+
+/** One read per tick, however many rules ask: the engine hands every rule of
+ * a tick the same ctx. */
+export function perTick<T>(read: () => Promise<T>): (ctx: EnvContext) => Promise<T> {
+  const byTick = new WeakMap<EnvContext, Promise<T>>();
+  return (ctx) => {
+    let pending = byTick.get(ctx);
+    if (!pending) {
+      pending = read();
+      byTick.set(ctx, pending);
+    }
+    return pending;
+  };
+}
 
 /** Latest value of a Supabase platform series as a single "supabase" entity;
  * empty when Telegraf hasn't written the series recently. */

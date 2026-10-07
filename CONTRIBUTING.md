@@ -2,7 +2,7 @@
 
 Never opened a PR before? Never forked a repo? That's fine — this guide covers everything from zero. Read it top to bottom once, then use it as a reference.
 
-Got stuck? [Join the Discord](https://discord.gg/29Eq659egv) and ask. No question is too basic.
+Got stuck? [Join the Discord](https://discord.streamwizard.org) and ask. No question is too basic.
 
 ---
 
@@ -127,7 +127,7 @@ The project uses [Doppler](https://www.doppler.com/) for secrets in production. 
 cp .env.example .env
 ```
 
-You don't need every variable — only the ones relevant to what you're working on. Not sure which ones? Ask in [Discord](https://discord.gg/29Eq659egv).
+You don't need every variable — only the ones relevant to what you're working on. Not sure which ones? Ask in [Discord](https://discord.streamwizard.org).
 
 ---
 
@@ -320,7 +320,7 @@ PRs with failing checks won't be merged.
 
 ## 12. Get help
 
-- **Stuck on setup or have a question?** [Join the Discord](https://discord.gg/29Eq659egv) — fastest way to get help
-- **General discussion or ideas?** [Discord](https://discord.gg/29Eq659egv)
+- **Stuck on setup or have a question?** [Join the Discord](https://discord.streamwizard.org) — fastest way to get help
+- **General discussion or ideas?** [Discord](https://discord.streamwizard.org)
 - **Not sure what to work on?** Ask in Discord or look for issues tagged `good first issue`
 - **Found a bug or have a feature request?** Open an issue on [GitHub](https://github.com/streamwizard/streamwizard/issues) — or use the StreamWizard Discord bot directly. `/bug`, `/feature`, `/docs`, and `/perf` all create a GitHub issue without leaving Discord.

@@ -8,7 +8,7 @@ body:
       value: |
         Before you type — [search existing issues](https://github.com/streamwizard/streamwizard/issues) first. Someone may have already reported it.
 
-        You can also report bugs directly from Discord using the StreamWizard bot — `/bug` in the [StreamWizard Discord](https://discord.gg/29Eq659egv). It creates the same GitHub issue, no browser required.
+        You can also report bugs directly from Discord using the StreamWizard bot — `/bug` in the [StreamWizard Discord](https://discord.streamwizard.org). It creates the same GitHub issue, no browser required.
         For general help or questions, Discord is faster than a GitHub issue.
 
   - type: dropdown

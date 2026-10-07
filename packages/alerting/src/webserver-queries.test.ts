@@ -7,6 +7,7 @@ import {
   buildAppContainersQuery,
   buildAppHistoryQuery,
   buildAppSnapshotQuery,
+  buildAppTasksQuery,
   buildAppTrafficQuery,
   buildServerHistoryQuery,
   buildServerOomKillsQuery,
@@ -53,7 +54,13 @@ describe("webserver queries", () => {
   };
 
   it("read the webserver bucket, bounded", () => {
-    for (const query of [buildAppSnapshotQuery("5m"), buildAppTrafficQuery("5m"), buildAppContainersQuery("24h"), buildServerOomKillsQuery("24h")]) {
+    for (const query of [
+      buildAppSnapshotQuery("5m"),
+      buildAppTrafficQuery("5m"),
+      buildAppContainersQuery("24h"),
+      buildAppTasksQuery("5m"),
+      buildServerOomKillsQuery("24h"),
+    ]) {
       expect(query).toContain('from(bucket: "webserver") |> range(start: -');
     }
   });
@@ -77,6 +84,12 @@ describe("webserver queries", () => {
     expect(query).toContain("last()");
     expect(query).not.toContain("group(");
     expect(query).not.toContain("pivot(");
+  });
+
+  it("reads what swarm wants and has per service, newest value only", () => {
+    const query = buildAppTasksQuery("5m");
+    before(query, 'r._measurement == "docker_swarm" and (r._field == "tasks_desired" or r._field == "tasks_running")', "last()");
+    expect(() => buildAppTasksQuery("5m |> yield()")).toThrow();
   });
 
   it("scope one app by env and app, since the app tag repeats across environments", () => {

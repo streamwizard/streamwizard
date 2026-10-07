@@ -8,7 +8,7 @@
 
 -- ── Default Chat Commands ─────────────────────────────────────
 INSERT INTO public.default_chat_commands (command, message, action) VALUES
-  ('!discord',   'Join our Discord: https://discord.gg/29Eq659egv', 'none'),
+  ('!discord',   'Join our Discord: https://discord.streamwizard.org', 'none'),
   ('!commands',  'Check out all available commands at streamwizard.org/commands', 'none'),
   ('!clip',      'Clip created! Check the clips section on your dashboard.', 'none'),
   ('!uptime',    'The stream has been live for {uptime}.', 'none'),

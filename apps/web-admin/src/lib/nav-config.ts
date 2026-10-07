@@ -16,6 +16,7 @@ import {
   Server,
   Ticket,
   Users,
+  Waypoints,
   Zap,
   type LucideIcon,
 } from "lucide-react";
@@ -158,6 +159,7 @@ export const navGroups: NavGroup[] = [
       { href: "/ingest", label: "Ingest servers", icon: Server, controls: ALL_CONTROLS },
       { href: "/vms", label: "VMs", icon: Boxes, controls: ALL_CONTROLS },
       { href: "/apps", label: "Apps", icon: AppWindow, controls: ALL_CONTROLS },
+      { href: "/traefik", label: "Traefik", icon: Waypoints, controls: ALL_CONTROLS },
       { href: "/backups", label: "Backups", icon: DatabaseBackup, controls: RANGE_REFRESH },
     ],
   },

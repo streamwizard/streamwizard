@@ -19,6 +19,7 @@ export const SUBSYSTEMS: Subsystem[] = [
   { key: "obs", label: "OBS nodes", href: "/obs", prefixes: ["gpu", "obs"] },
   { key: "ingest", label: "Ingest", href: "/ingest", prefixes: ["ingest"] },
   { key: "vms", label: "VMs", href: "/vms", prefixes: ["vm"] },
+  { key: "apps", label: "Apps", href: "/apps", prefixes: ["app", "server"] },
   { key: "backups", label: "Backups", href: "/backups", prefixes: ["backup"] },
 ];
 

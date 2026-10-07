@@ -8,7 +8,7 @@ body:
       value: |
         Fast tools feel invisible. If StreamWizard is making itself known in the wrong way — use this.
 
-        You can also report performance issues from Discord using the StreamWizard bot — `/perf` in the [StreamWizard Discord](https://discord.gg/29Eq659egv).
+        You can also report performance issues from Discord using the StreamWizard bot — `/perf` in the [StreamWizard Discord](https://discord.streamwizard.org).
 
   - type: dropdown
     id: area

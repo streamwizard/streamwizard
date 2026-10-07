@@ -1,8 +1,12 @@
 import type { AppContainer, AppSnapshot, AppSparkline, AppTraffic } from "@repo/metrics";
+import { EXPECTED_APPS, STALE_AFTER_MS, isDeployStop, isFailedExit, liveContainers } from "@repo/metrics/apps-model";
 
 // The /apps page's logic, kept free of server imports so it can be unit-tested:
-// which apps to expect, and how container, health and request data become one
-// row per app per environment.
+// how container, health and request data become one row per app per
+// environment. Which apps to expect and how a container's state reads is
+// shared with the app.* alert rules: @repo/metrics/apps-model.
+
+export { EXPECTED_APPS, STALE_AFTER_MS, isFailedExit, liveContainers };
 
 export type AppEnv = "prod" | "staging" | "shared" | "other";
 
@@ -16,44 +20,10 @@ export const ENV_LABEL: Record<AppEnv, string> = {
 /** The environments that are ours, in page order. "other" is the rest of the server. */
 export const OUR_ENVS = ["prod", "staging", "shared"] as const satisfies readonly AppEnv[];
 
-const MONOREPO_APPS = [
-  "rest-api",
-  "ws-server",
-  "web-streamwizard",
-  "web-overlay",
-  "web-admin",
-  "streamwizard-bot",
-  "discord-bot",
-  "obs-auto-switcher",
-  "alert-worker",
-];
-
-// One instance of these serves both environments.
-const SHARED_APPS = ["traefik", "influxdb", "dokploy", "dokploy-postgres", "dokploy-redis", "host-telegraf"];
-
-/**
- * Apps that should be on the server. Each gets a row even when Telegraf has
- * nothing on it, so a missing app reads as "No data" instead of not being
- * there. The names are the app tags Telegraf writes (telegraf repo,
- * host/apps.star): add an app there and here.
- */
-export const EXPECTED_APPS: readonly { env: AppEnv; app: string }[] = [
-  ...MONOREPO_APPS.map((app) => ({ env: "prod" as const, app })),
-  ...MONOREPO_APPS.map((app) => ({ env: "staging" as const, app })),
-  ...SHARED_APPS.map((app) => ({ env: "shared" as const, app })),
-];
-
 export const appRowKey = (env: string, app: string) => `${env}:${app}`;
-
-/** Telegraf writes every 30 s. After this long without a reading the numbers
- * are old, and a container that was running counts as gone. */
-export const STALE_AFTER_MS = 120_000;
 
 /** Restarts are counted over this window. */
 export const RESTART_WINDOW_MS = 24 * 3_600_000;
-
-// 0 is a clean stop, 143 is SIGTERM: what Docker sends the old container on a deploy.
-const NORMAL_EXIT_CODES = new Set([0, 143]);
 
 /**
  * - healthy / unhealthy / starting: what the container's healthcheck says
@@ -82,7 +52,7 @@ export interface AppRow {
   netTxBps: number | null;
   /** Containers started in the last 24 h. A deploy counts as one. */
   starts: number;
-  /** Of those that stopped in the last 24 h: exit code other than 0 or 143, or OOM-killed. */
+  /** Of those that stopped in the last 24 h, deploys aside: exit code other than 0 or 143, or OOM-killed. */
   failed: number;
   oomKills: number;
   /** Null when Traefik has no route to this app. */
@@ -94,17 +64,6 @@ export interface AppRow {
 }
 
 const isRecent = (iso: string | null | undefined, now: number, withinMs: number) => !!iso && now - Date.parse(iso) <= withinMs;
-
-/** A stop that is not a deploy or a clean exit. */
-export function isFailedExit(c: Pick<AppContainer, "state" | "exitCode" | "oomKilled">): boolean {
-  if (c.state === "running") return false;
-  return c.oomKilled || (c.exitCode !== null && !NORMAL_EXIT_CODES.has(c.exitCode));
-}
-
-/** Containers that are running and still being reported. */
-export function liveContainers(containers: AppContainer[], now: number): AppContainer[] {
-  return containers.filter((c) => c.state === "running" && isRecent(c.lastSeen, now, STALE_AFTER_MS));
-}
 
 const HEALTH_RANK: Record<string, number> = { unhealthy: 3, starting: 2, healthy: 1 };
 
@@ -131,7 +90,8 @@ export function restartStats(containers: AppContainer[], now: number): { starts:
   const stopped = containers.filter((c) => c.state !== "running" && isRecent(c.finishedAt ?? c.lastSeen, now, RESTART_WINDOW_MS));
   return {
     starts: containers.filter((c) => isRecent(c.startedAt, now, RESTART_WINDOW_MS)).length,
-    failed: stopped.filter(isFailedExit).length,
+    // A container that is slow to stop leaves 137 on a normal deploy.
+    failed: stopped.filter((c) => isFailedExit(c) && (c.oomKilled || !isDeployStop(c, containers))).length,
     oomKills: stopped.filter((c) => c.oomKilled).length,
   };
 }

@@ -35,7 +35,7 @@ Maintainers have the right and responsibility to remove, edit, or reject comment
 
 ## Reporting Issues
 
-If you experience or witness unacceptable behavior, please report it by joining our Discord server: https://discord.gg/29Eq659egv
+If you experience or witness unacceptable behavior, please report it by joining our Discord server: https://discord.streamwizard.org
 
 Reports will be reviewed promptly and handled with discretion. Every effort will be made to protect the privacy and safety of those involved.
 
