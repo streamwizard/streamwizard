@@ -19,6 +19,7 @@ import {
   type ServerHistory,
   type ServerSnapshot,
 } from "@repo/metrics";
+import { softReader } from "@/lib/soft-reader";
 import { EXPECTED_APPS, STALE_AFTER_MS, appRowKey, buildAppRows, hasNoAppData, liveContainers, type AppEnv, type AppRow } from "@/lib/apps-model";
 
 /**
@@ -53,22 +54,7 @@ export type AppsOverview =
   | { state: "empty" }
   | { state: "ok"; server: ServerView | null; rows: AppRow[]; failed: string[] };
 
-/** Runs reads side by side and remembers which ones failed. */
-function reader() {
-  const failed: string[] = [];
-  let total = 0;
-  const soft = async <T>(label: string, run: () => Promise<T>, fallback: T): Promise<T> => {
-    total++;
-    try {
-      return await run();
-    } catch (error) {
-      console.error(`[apps ${label}]`, error);
-      failed.push(label);
-      return fallback;
-    }
-  };
-  return { soft, failed, allFailed: () => total > 0 && failed.length === total };
-}
+const reader = () => softReader("apps");
 
 function toServerView(snapshot: ServerSnapshot | null, oomKills24h: number | null, now: number): ServerView | null {
   return snapshot && { snapshot, stale: now - Date.parse(snapshot.time) > STALE_AFTER_MS, oomKills24h };

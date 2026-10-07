@@ -1,5 +1,19 @@
-import { runFluxQuery, assertValidFluxDuration } from "../query-client";
-import { fluxFrom } from "../buckets";
+import { runFluxQuery } from "../query-client";
+import {
+  TRAEFIK_DURATION_COUNT,
+  TRAEFIK_DURATION_SUM,
+  TRAEFIK_REQUESTS,
+  any,
+  latestQuery,
+  num,
+  pick,
+  ratioPoints,
+  seriesQuery,
+  source,
+  sumPoints,
+  type Row,
+  type WebserverMetricPoint,
+} from "./webserver-flux";
 
 // Dokploy server metrics for web-admin's /apps pages. One Telegraf on the host
 // (telegraf repo, host/) writes them into the webserver bucket every 30 s.
@@ -50,101 +64,12 @@ export function appKey(env: string, app: string): string {
   return `${env}:${app}`;
 }
 
-/** One chart point. `nodeId` is the series label so NodeMetricChart takes it as is. */
-export interface WebserverMetricPoint {
-  time: string;
-  nodeId: string;
-  value: number;
-}
-
-// --- Flux building blocks ---
-
-const fieldIn = (fields: readonly string[]) => `(${fields.map((f) => `r._field == "${f}"`).join(" or ")})`;
-
-/** `(r._measurement == m and (r._field == …))`, for picking fields per measurement. */
-const pick = (measurement: string, fields: readonly string[]) => `(r._measurement == "${measurement}" and ${fieldIn(fields)})`;
-
-const any = (predicates: string[]) => predicates.join(" or ");
-
-// Every measurement above lives in the one webserver bucket.
-const source = (range: string) => fluxFrom("server_cpu", `-${assertValidFluxDuration(range, "range")}`);
-
-const num = (v: string | undefined): number | null => {
-  if (v === undefined || v === null || v === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
-
-type Row = Record<string, string>;
-
-const TRAEFIK_REQUESTS = "traefik_service_requests_total";
-const TRAEFIK_DURATION_SUM = "traefik_service_request_duration_seconds_sum";
-const TRAEFIK_DURATION_COUNT = "traefik_service_request_duration_seconds_count";
+export type { WebserverMetricPoint } from "./webserver-flux";
 
 const CONTAINER_GAUGES = [pick("docker_container_cpu", ["usage_percent"]), pick("docker_container_mem", ["usage", "inactive_file"])];
 const CONTAINER_NET = pick("docker_container_net", ["rx_bytes", "tx_bytes"]);
 const CONTAINER_DISK = pick("docker_container_blkio", ["io_service_bytes_recursive_read", "io_service_bytes_recursive_write"]);
 const TRAEFIK_COUNTERS = pick("traefik", [TRAEFIK_REQUESTS, TRAEFIK_DURATION_SUM, TRAEFIK_DURATION_COUNT]);
-
-/**
- * Latest value per series: last() for gauges, the mean rate over the range
- * for counters. No pivot: rows come back per field and are grouped in TS.
- */
-function latestQuery(opts: { range: string; base?: string; gauges?: string[]; rates?: string[] }): string {
-  const branches: string[] = [];
-  if (opts.gauges?.length) {
-    branches.push(`gauges = data
-  |> filter(fn: (r) => ${any(opts.gauges)})
-  |> last()`);
-  }
-  if (opts.rates?.length) {
-    // mean() drops _time; keep the window's stop as a stand-in.
-    branches.push(`rates = data
-  |> filter(fn: (r) => ${any(opts.rates)})
-  |> derivative(unit: 1s, nonNegative: true)
-  |> mean()
-  |> duplicate(column: "_stop", as: "_time")`);
-  }
-  const names = branches.map((b) => b.slice(0, b.indexOf(" ")));
-  return `
-data = ${source(opts.range)}${opts.base ? `\n  |> filter(fn: (r) => ${opts.base})` : ""}
-${branches.join("\n")}
-${names.length === 1 ? names[0] : `union(tables: [${names.join(", ")}])`}
-  |> yield(name: "latest")`;
-}
-
-/**
- * A page's worth of series in one round trip: gauges averaged per window,
- * counters turned into a per-second rate first, deltas into the increase
- * per window.
- */
-function seriesQuery(opts: { range: string; window: string; base?: string; gauges?: string[]; rates?: string[]; deltas?: string[] }): string {
-  const window = assertValidFluxDuration(opts.window, "window");
-  const branches: string[] = [];
-  if (opts.gauges?.length) {
-    branches.push(`gauges = data
-  |> filter(fn: (r) => ${any(opts.gauges)})
-  |> aggregateWindow(every: ${window}, fn: mean, createEmpty: false)`);
-  }
-  if (opts.rates?.length) {
-    branches.push(`rates = data
-  |> filter(fn: (r) => ${any(opts.rates)})
-  |> derivative(unit: 1s, nonNegative: true)
-  |> aggregateWindow(every: ${window}, fn: mean, createEmpty: false)`);
-  }
-  if (opts.deltas?.length) {
-    branches.push(`deltas = data
-  |> filter(fn: (r) => ${any(opts.deltas)})
-  |> difference(nonNegative: true)
-  |> aggregateWindow(every: ${window}, fn: sum, createEmpty: false)`);
-  }
-  const names = branches.map((b) => b.slice(0, b.indexOf(" ")));
-  return `
-data = ${source(opts.range)}${opts.base ? `\n  |> filter(fn: (r) => ${opts.base})` : ""}
-${branches.join("\n")}
-${names.length === 1 ? names[0] : `union(tables: [${names.join(", ")}])`}
-  |> yield(name: "series")`;
-}
 
 const appBase = (env: string, app: string) => `r.env == "${assertAppEnv(env)}" and r.app == "${assertAppName(app)}"`;
 
@@ -293,7 +218,9 @@ export async function queryAppContainers(range = "24h", env?: string, app?: stri
     }
     const field = row._field ?? "";
     const seen = entry.fields.get(field);
-    if (!seen || time > seen.time) entry.fields.set(field, { time, value: row._value ?? "" });
+    // The client hands back typed values whatever Row says: oomkilled arrives
+    // as a boolean, not as "true".
+    if (!seen || time > seen.time) entry.fields.set(field, { time, value: String(row._value ?? "") });
   }
   return [...containers.entries()]
     .map(([name, c]): AppContainer => {
@@ -422,33 +349,8 @@ export function buildAppHistoryQuery(env: string, app: string, range = "24h", wi
   return seriesQuery({ range, window, base: appBase(env, app), gauges: CONTAINER_GAUGES, rates: [CONTAINER_NET, CONTAINER_DISK, TRAEFIK_COUNTERS] });
 }
 
-/** Sums rows that share a time and label into one chart point each. */
-function sumPoints(rows: Row[], label: (row: Row) => string | null): WebserverMetricPoint[] {
-  const totals = new Map<string, WebserverMetricPoint>();
-  for (const row of rows) {
-    const nodeId = label(row);
-    const value = num(row._value);
-    if (nodeId === null || value === null || !row._time) continue;
-    const id = `${row._time}|${nodeId}`;
-    const point = totals.get(id);
-    if (point) point.value += value;
-    else totals.set(id, { time: row._time, nodeId, value });
-  }
-  return [...totals.values()].sort((a, b) => a.time.localeCompare(b.time));
-}
-
 const fieldLabels = (measurement: string, labels: Record<string, string>) => (row: Row) =>
   row._measurement === measurement ? (labels[row._field ?? ""] ?? null) : null;
-
-/** Per time: the sum of the `isA` rows divided by the sum of the `isB` rows. */
-function ratioPoints(rows: Row[], nodeId: string, isA: (row: Row) => boolean, isB: (row: Row) => boolean, scale = 1): WebserverMetricPoint[] {
-  const a = sumPoints(rows, (row) => (isA(row) ? nodeId : null));
-  const b = new Map(sumPoints(rows, (row) => (isB(row) ? nodeId : null)).map((p) => [p.time, p.value]));
-  return a.flatMap((p) => {
-    const divisor = b.get(p.time);
-    return divisor ? [{ time: p.time, nodeId, value: (p.value / divisor) * scale }] : [];
-  });
-}
 
 /** Every chart on one app's page. */
 export async function queryAppHistory(env: string, app: string, range = "24h", window = "1h"): Promise<AppHistory> {
@@ -487,6 +389,40 @@ const SERVER_GAUGES = [
   pick("server_disk", ["total", "used", "used_percent", "inodes_used_percent"]),
   pick("docker", ["n_containers_running"]),
 ];
+/** What swarm wants and has for one service. Compose and plain containers have no row. */
+export interface AppTasks {
+  key: string;
+  app: string;
+  env: string;
+  service: string;
+  /** Replicas asked for: 0 when the service was scaled down on purpose. */
+  desired: number | null;
+  running: number | null;
+  time: string;
+}
+
+export function buildAppTasksQuery(range = "5m"): string {
+  return `
+${source(range)}
+  |> filter(fn: (r) => ${pick("docker_swarm", ["tasks_desired", "tasks_running"])})
+  |> last()
+  |> yield(name: "tasks")`;
+}
+
+/** Desired and running task counts of every swarm service, all environments. */
+export async function queryAppTasks(range = "5m"): Promise<AppTasks[]> {
+  const rows = await runFluxQuery(buildAppTasksQuery(range), (row) => row);
+  return [...byApp(rows).entries()].map(([key, a]) => ({
+    key,
+    app: a.app,
+    env: a.env,
+    service: a.service,
+    desired: a.fields.get("tasks_desired") ?? null,
+    running: a.fields.get("tasks_running") ?? null,
+    time: a.time,
+  }));
+}
+
 const SERVER_NET = `(${pick("server_net", ["bytes_recv", "bytes_sent"])} and ${PHYSICAL_NIC})`;
 const SERVER_DISK_IO = pick("server_diskio", ["read_bytes", "write_bytes"]);
 const SERVER_OOM = pick("server_vmstat", ["oom_kill"]);

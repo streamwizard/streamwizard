@@ -16,7 +16,7 @@ test("every link resolves to a host StreamWizard controls", () => {
     new URL(siteUrl()).host,
     "docs.streamwizard.org",
     "github.com",
-    "discord.gg",
+    "discord.streamwizard.org",
     "twitch.tv",
   ]);
   const body = renderLlmsTxt();

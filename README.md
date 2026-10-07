@@ -1,6 +1,6 @@
 # StreamWizard
 
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/29Eq659egv)
+[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.streamwizard.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
 Cloud OBS for IRL, overlays, clips, VOD clipping and analytics. One Twitch login and one dashboard, instead of seven browser tabs and a Notion doc you stopped updating in March.
@@ -23,7 +23,7 @@ This repo is the whole thing, open source under the MIT license: the dashboard s
 
 - **Open the app**: [streamwizard.org](https://streamwizard.org)
 - **Docs**: [docs.streamwizard.org](https://docs.streamwizard.org)
-- **Discord**: [join the community](https://discord.gg/29Eq659egv)
+- **Discord**: [join the community](https://discord.streamwizard.org)
 - **Report a bug**: [open an issue](https://github.com/streamwizard/streamwizard/issues)
 - **Contributing**: [CONTRIBUTING.md](./CONTRIBUTING.md)
 - **Architecture**: [ARCHITECTURE.md](./ARCHITECTURE.md)
@@ -36,7 +36,7 @@ This repo is the whole thing, open source under the MIT license: the dashboard s
 
 Want to fix a bug, add a feature, or just poke around the code? Everything you need is in [CONTRIBUTING.md](./CONTRIBUTING.md): how the monorepo is laid out, how to run it locally, and how to open a PR. Never opened a PR before? That guide starts from zero.
 
-Not a coder but found something broken? [Open an issue](https://github.com/streamwizard/streamwizard/issues), or use the StreamWizard bot in [Discord](https://discord.gg/29Eq659egv). `/bug`, `/feature`, `/docs` and `/perf` file it for you without leaving chat.
+Not a coder but found something broken? [Open an issue](https://github.com/streamwizard/streamwizard/issues), or use the StreamWizard bot in [Discord](https://discord.streamwizard.org). `/bug`, `/feature`, `/docs` and `/perf` file it for you without leaving chat.
 
 ## License
 

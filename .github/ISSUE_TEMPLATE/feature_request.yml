@@ -8,7 +8,7 @@ body:
       value: |
         The best features come from people who actually use the thing. So — what's missing?
 
-        You can also submit feature requests from Discord using the StreamWizard bot — `/feature` in the [StreamWizard Discord](https://discord.gg/29Eq659egv). Same result, fewer tabs.
+        You can also submit feature requests from Discord using the StreamWizard bot — `/feature` in the [StreamWizard Discord](https://discord.streamwizard.org). Same result, fewer tabs.
         Want to talk it through before filing? Discord is faster.
 
   - type: dropdown

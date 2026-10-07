@@ -10,6 +10,14 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./apps-model": {
+      "types": "./src/apps-model.ts",
+      "default": "./src/apps-model.ts"
+    },
+    "./traefik-model": {
+      "types": "./src/traefik-model.ts",
+      "default": "./src/traefik-model.ts"
     }
   },
   "scripts": {

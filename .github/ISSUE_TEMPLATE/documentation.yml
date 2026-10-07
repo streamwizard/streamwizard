@@ -8,7 +8,7 @@ body:
       value: |
         Bad docs waste more time than bad code. If something's wrong, missing, or just confusing — tell us.
 
-        You can also file docs issues from Discord using the StreamWizard bot — `/docs` in the [StreamWizard Discord](https://discord.gg/29Eq659egv).
+        You can also file docs issues from Discord using the StreamWizard bot — `/docs` in the [StreamWizard Discord](https://discord.streamwizard.org).
 
   - type: input
     id: location

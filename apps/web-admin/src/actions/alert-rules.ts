@@ -35,8 +35,9 @@ export async function saveRuleConfig(input: RuleConfigInput): Promise<void> {
     throw new Error("Envs must be a non-empty subset of prod/staging/dev");
 
   // An all-default override is the same as no override — keep the table clean.
+  // A rule that is off in code needs its row to stay on.
   const isAllDefault =
-    input.enabled && input.warn === null && input.crit === null && input.forTicks === null && input.envs === null;
+    input.enabled === entry.defaultEnabled && input.warn === null && input.crit === null && input.forTicks === null && input.envs === null;
 
   if (isAllDefault) {
     await deleteAlertRuleConfig(supabaseAdmin, input.ruleId);
