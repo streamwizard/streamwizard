@@ -18,12 +18,32 @@ interface AssetPickerDialogProps {
 // Media-library picker: browse (or upload) an asset and hand its CDN URL back.
 // Used by the widget editor and overlay inspector for image/audio/video fields.
 export function AssetPickerDialog({ open, onOpenChange, onSelect, kindFilter, title }: AssetPickerDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{title ?? "Pick a file"}</DialogTitle>
+        </DialogHeader>
+        <AssetPickerBody
+          kindFilter={kindFilter}
+          onSelect={(asset) => {
+            onSelect(asset);
+            onOpenChange(false);
+          }}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Mounts with the dialog content, so the listing is loaded again on every
+// open. A copy kept across opens goes stale: it misses files uploaded during
+// an earlier open, in another picker, or on the Media page.
+function AssetPickerBody({ onSelect, kindFilter }: Pick<AssetPickerDialogProps, "onSelect" | "kindFilter">) {
   const [listing, setListing] = useState<AssetListing | null>(null);
   const [loaded, setLoaded] = useState(false);
 
-  // Lazy-load the listing the first time the dialog opens.
   useEffect(() => {
-    if (!open || loaded) return;
     let cancelled = false;
     void listAssets().then(({ data, error }) => {
       if (cancelled) return;
@@ -34,27 +54,8 @@ export function AssetPickerDialog({ open, onOpenChange, onSelect, kindFilter, ti
     return () => {
       cancelled = true;
     };
-  }, [open, loaded]);
+  }, []);
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{title ?? "Pick a file"}</DialogTitle>
-        </DialogHeader>
-        {loaded ? (
-          <MediaLibrary
-            initialListing={listing}
-            kindFilter={kindFilter}
-            onSelect={(asset) => {
-              onSelect(asset);
-              onOpenChange(false);
-            }}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground py-6 text-center">Loading your files…</p>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
+  if (!loaded) return <p className="text-sm text-muted-foreground py-6 text-center">Loading your files…</p>;
+  return <MediaLibrary initialListing={listing} kindFilter={kindFilter} onSelect={onSelect} />;
 }
