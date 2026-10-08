@@ -178,23 +178,29 @@ function WidgetButton({
   onAddWidget: (type: RootOverlayItemType) => void;
 }) {
   const title = def.library?.title ?? def.type;
+  const Icon = def.icon;
 
   return (
     <Button
       variant="outline"
-      className="w-full h-auto justify-start gap-2 py-3 flex-col items-stretch text-left whitespace-normal"
+      className="group h-auto w-full items-center justify-start gap-3 whitespace-normal px-3 py-2.5 text-left"
       type="button"
       onClick={() => onAddWidget(def.type as RootOverlayItemType)}
     >
-      <span className="flex items-center w-full min-w-0">
-        <Plus className="h-4 w-4 mr-2 shrink-0" />
-        <span className="font-medium text-left min-w-0 wrap-break-word">{title}</span>
+      {/* The widget's own icon, the same one its row in the layer list gets,
+          so a widget is recognised here before its name is read. */}
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+        <Icon className="size-4" />
       </span>
-      {def.library?.description ? (
-        <span className="block w-full min-w-0 pl-6 text-xs font-normal text-muted-foreground text-left wrap-break-word leading-snug">
-          {def.library.description}
-        </span>
-      ) : null}
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium wrap-break-word">{title}</span>
+        {def.library?.description ? (
+          <span className="block text-xs font-normal leading-snug text-muted-foreground wrap-break-word">
+            {def.library.description}
+          </span>
+        ) : null}
+      </span>
+      <Plus className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
     </Button>
   );
 }

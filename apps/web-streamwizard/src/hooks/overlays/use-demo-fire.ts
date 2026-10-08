@@ -39,7 +39,9 @@ export function useDemoFire(): UseDemoFire {
     async (request: DemoFireRequest) => {
       if (!sceneId) return false;
       const delivered = await fireDemoEvent(request, { mode, sceneId, emitLocal });
-      if (delivered) warnIfNoAlertBoxWillPlay(request, items ?? []);
+      // A forced variation skips the alert's own switch and minimum, so there
+      // is nothing it could be swallowed by.
+      if (delivered && !request.forceVariation) warnIfNoAlertBoxWillPlay(request, items ?? []);
       return delivered;
     },
     [mode, sceneId, items, emitLocal]

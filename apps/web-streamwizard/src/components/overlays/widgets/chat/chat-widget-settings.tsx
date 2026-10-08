@@ -410,7 +410,7 @@ export function ChatWidgetSettings({ item, updateItem }: OverlayInspectorAppendP
             options={LAYOUT_OPTIONS}
             hint={
               horizontal
-                ? "One line per message, side by side. The box shrinks to one row; set Frame width under Scale & crop to make the strip longer."
+                ? "One line per message, side by side. The box shrinks to one row; set Frame width under Advanced, Scale & crop to make the strip longer."
                 : "A normal chat column. Horizontal puts messages side by side for a ticker along the top or bottom."
             }
             onChange={(layout) => patchConfig({ layout })}

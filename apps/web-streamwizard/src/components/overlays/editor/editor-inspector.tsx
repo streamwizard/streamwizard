@@ -63,6 +63,9 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
   const selectedItem = scene?.items.find((i) => i.id === selectedItemId);
 
   const labelInputRef = useRef<HTMLInputElement>(null);
+  // Held here, above the per-item panel: someone placing widgets by number
+  // opens Advanced once, not again for every widget they click.
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   // Canvas context-menu "Rename" focuses the Label input.
   useEffect(() => {
@@ -270,6 +273,8 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
         item={selectedItem}
         clipFolders={clipFolders}
         labelInputRef={labelInputRef}
+        advancedOpen={advancedOpen}
+        onAdvancedOpenChange={setAdvancedOpen}
       />
     </TooltipProvider>
   );
@@ -279,10 +284,14 @@ function SelectedItemInspector({
   item,
   clipFolders,
   labelInputRef,
+  advancedOpen,
+  onAdvancedOpenChange,
 }: {
   item: OverlayItem;
   clipFolders: EditorInspectorProps["clipFolders"];
   labelInputRef: React.RefObject<HTMLInputElement | null>;
+  advancedOpen: boolean;
+  onAdvancedOpenChange: (open: boolean) => void;
 }) {
   const { scene, updateItem, pushHistory, flipSelected } = useOverlayStore();
   const def = getOverlayWidgetDefinition(item.type);
@@ -333,349 +342,157 @@ function SelectedItemInspector({
             />
           </div>
 
-          {/* X and Y are distances from the pinned edge, so the labels say
-              which one whenever it is not the usual top-left. */}
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">
-                X
-                {anchor.x !== "left" && (
-                  <span className="font-normal text-muted-foreground">
-                    {" "}
-                    from {anchor.x}
-                  </span>
-                )}
-              </Label>
-              <NumberField
-                value={Math.round(item.x)}
-                onFocus={() => pushHistory()}
-                onCommit={(x) => handleUpdate({ x })}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">
-                Y
-                {anchor.y !== "top" && (
-                  <span className="font-normal text-muted-foreground">
-                    {" "}
-                    from {anchor.y === "center" ? "middle" : anchor.y}
-                  </span>
-                )}
-              </Label>
-              <NumberField
-                value={Math.round(item.y)}
-                onFocus={() => pushHistory()}
-                onCommit={(y) => handleUpdate({ y })}
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <Label className="text-xs">Pinned to</Label>
-              <InspectorHint label="About pinning">
-                The edge X and Y are measured from. Pin a widget bottom-right
-                and it stays in that corner when you change the scene&apos;s
-                resolution or view it in portrait. Picking a pin doesn&apos;t
-                move the widget.
-              </InspectorHint>
-            </div>
-            <AnchorPicker
-              value={anchor}
-              disabled={layoutLocked}
-              onChange={(next) => {
-                pushHistory();
-                setAnchor({ anchor_x: next.x, anchor_y: next.y });
-              }}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Width</Label>
-              <NumberField
-                value={Math.round(item.w)}
-                min={1}
-                onFocus={() => pushHistory()}
-                onCommit={setRenderedWidth}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Height</Label>
-              <NumberField
-                value={Math.round(item.h)}
-                min={1}
-                onFocus={() => pushHistory()}
-                onCommit={setRenderedHeight}
-              />
-            </div>
-          </div>
-
-          {/* Flip goes through the store's selection action, which is what
-              makes it one undo step and skips a locked item. A clip display
-              field mirrors with its parent, so it gets no buttons of its own. */}
-          {isRootLayerType(item.type) && (
-            <div className="space-y-1.5">
-              <Label className="text-xs">Flip</Label>
-              <div className="grid grid-cols-2 gap-1.5">
-                <Button
-                  type="button"
-                  variant={item.flip_h ? "secondary" : "outline"}
-                  size="sm"
-                  className="h-8"
-                  aria-pressed={item.flip_h}
-                  disabled={item.is_locked}
-                  title="Mirror left to right"
-                  onClick={() => flipSelected("horizontal")}
-                >
-                  <FlipHorizontal2 className="mr-2 h-4 w-4" />
-                  Horizontal
-                </Button>
-                <Button
-                  type="button"
-                  variant={item.flip_v ? "secondary" : "outline"}
-                  size="sm"
-                  className="h-8"
-                  aria-pressed={item.flip_v}
-                  disabled={item.is_locked}
-                  title="Mirror top to bottom"
-                  onClick={() => flipSelected("vertical")}
-                >
-                  <FlipVertical2 className="mr-2 h-4 w-4" />
-                  Vertical
-                </Button>
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Rotation</Label>
-              <NumberField
-                value={item.rotation}
-                min={-360}
-                max={360}
-                onFocus={() => pushHistory()}
-                onCommit={(rotation) => handleUpdate({ rotation })}
-                className="pr-6"
-                adornment={
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    °
-                  </span>
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Opacity</Label>
-              <NumberField
-                value={Math.round(item.opacity * 100)}
-                min={0}
-                max={100}
-                onFocus={() => pushHistory()}
-                onCommit={(percent) => handleUpdate({ opacity: percent / 100 })}
-                className="pr-6"
-                adornment={
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
-                    %
-                  </span>
-                }
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2 pt-0.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5">
-                <Label className="text-xs">Scene layout</Label>
-                <InspectorHint label="About scene layout">
-                  Pin the widget to a scene edge or the center, or fit the full
-                  width or height. A pinned widget stays on that edge when the
-                  scene&apos;s resolution changes.
-                </InspectorHint>
-              </div>
-              <Popover open={sceneLayoutOpen} onOpenChange={setSceneLayoutOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 shrink-0"
-                    disabled={layoutLocked}
-                    aria-label="Open scene layout tools"
-                  >
-                    <LayoutTemplate className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-auto p-3">
-                  <p className="text-xs font-medium text-foreground mb-2">
-                    Snap to scene ({sceneW}×{sceneH})
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-9 w-full"
-                      disabled={layoutLocked}
-                      aria-label="Fit to screen"
-                      onClick={() => {
-                        fit("scene");
-                        setSceneLayoutOpen(false);
-                      }}
-                    >
-                      <Maximize2 className="h-4 w-4" />
-                    </Button>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-full"
-                        disabled={layoutLocked}
-                        aria-label="Full width"
-                        onClick={() => {
-                          fit("width");
-                          setSceneLayoutOpen(false);
-                        }}
-                      >
-                        <StretchHorizontal className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9 w-full"
-                        disabled={layoutLocked}
-                        aria-label="Full height"
-                        onClick={() => {
-                          fit("height");
-                          setSceneLayoutOpen(false);
-                        }}
-                      >
-                        <StretchVertical className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9"
-                        disabled={layoutLocked}
-                        aria-label="Align left"
-                        onClick={() => {
-                          align("left");
-                          setSceneLayoutOpen(false);
-                        }}
-                      >
-                        <AlignHorizontalJustifyStart className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9"
-                        disabled={layoutLocked}
-                        aria-label="Align horizontal center"
-                        onClick={() => {
-                          align("hcenter");
-                          setSceneLayoutOpen(false);
-                        }}
-                      >
-                        <AlignHorizontalJustifyCenter className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9"
-                        disabled={layoutLocked}
-                        aria-label="Align right"
-                        onClick={() => {
-                          align("right");
-                          setSceneLayoutOpen(false);
-                        }}
-                      >
-                        <AlignHorizontalJustifyEnd className="h-4 w-4" />
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9"
-                        disabled={layoutLocked}
-                        aria-label="Align top"
-                        onClick={() => {
-                          align("top");
-                          setSceneLayoutOpen(false);
-                        }}
-                      >
-                        <AlignVerticalJustifyStart className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9"
-                        disabled={layoutLocked}
-                        aria-label="Align vertical center"
-                        onClick={() => {
-                          align("vcenter");
-                          setSceneLayoutOpen(false);
-                        }}
-                      >
-                        <AlignVerticalJustifyCenter className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="h-9"
-                        disabled={layoutLocked}
-                        aria-label="Align bottom"
-                        onClick={() => {
-                          align("bottom");
-                          setSceneLayoutOpen(false);
-                        }}
-                      >
-                        <AlignVerticalJustifyEnd className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-muted-foreground mt-3 leading-snug max-w-56">
-                    Unlock the layer to use these tools.
-                    {layoutTarget.id !== item.id ? (
-                      <>
-                        {" "}
-                        Affects the{" "}
-                        <span className="font-medium text-foreground">
-                          clips widget
-                        </span>{" "}
-                        frame.
-                      </>
-                    ) : null}
-                  </p>
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
           {/*
-            Scale, frame and crop all reshape the box that Width and Height
-            already describe, so they wait behind a section until wanted.
+            Position, size and the rest of the geometry are set by dragging on
+            the canvas far more often than by number, so they wait behind
+            Advanced and the widget's own settings sit right under its name.
           */}
-          <InspectorSection title="Scale & crop">
+          <InspectorSection
+            title="Advanced"
+            open={advancedOpen}
+            onOpenChange={onAdvancedOpenChange}
+          >
             <div className="space-y-3">
+              {/* X and Y are distances from the pinned edge, so the labels say
+                  which one whenever it is not the usual top-left. */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Size</Label>
+                  <Label className="text-xs">
+                    X
+                    {anchor.x !== "left" && (
+                      <span className="font-normal text-muted-foreground">
+                        {" "}
+                        from {anchor.x}
+                      </span>
+                    )}
+                  </Label>
                   <NumberField
-                    value={Math.round(itemScale * 100)}
+                    value={Math.round(item.x)}
+                    onFocus={() => pushHistory()}
+                    onCommit={(x) => handleUpdate({ x })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">
+                    Y
+                    {anchor.y !== "top" && (
+                      <span className="font-normal text-muted-foreground">
+                        {" "}
+                        from {anchor.y === "center" ? "middle" : anchor.y}
+                      </span>
+                    )}
+                  </Label>
+                  <NumberField
+                    value={Math.round(item.y)}
+                    onFocus={() => pushHistory()}
+                    onCommit={(y) => handleUpdate({ y })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-xs">Pinned to</Label>
+                  <InspectorHint label="About pinning">
+                    The edge X and Y are measured from. Pin a widget bottom-right
+                    and it stays in that corner when you change the scene&apos;s
+                    resolution or view it in portrait. Picking a pin doesn&apos;t
+                    move the widget.
+                  </InspectorHint>
+                </div>
+                <AnchorPicker
+                  value={anchor}
+                  disabled={layoutLocked}
+                  onChange={(next) => {
+                    pushHistory();
+                    setAnchor({ anchor_x: next.x, anchor_y: next.y });
+                  }}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Width</Label>
+                  <NumberField
+                    value={Math.round(item.w)}
                     min={1}
                     onFocus={() => pushHistory()}
-                    onCommit={setScalePercent}
+                    onCommit={setRenderedWidth}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Height</Label>
+                  <NumberField
+                    value={Math.round(item.h)}
+                    min={1}
+                    onFocus={() => pushHistory()}
+                    onCommit={setRenderedHeight}
+                  />
+                </div>
+              </div>
+
+              {/* Flip goes through the store's selection action, which is what
+                  makes it one undo step and skips a locked item. A clip display
+                  field mirrors with its parent, so it gets no buttons of its own. */}
+              {isRootLayerType(item.type) && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Flip</Label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button
+                      type="button"
+                      variant={item.flip_h ? "secondary" : "outline"}
+                      size="sm"
+                      className="h-8"
+                      aria-pressed={item.flip_h}
+                      disabled={item.is_locked}
+                      title="Mirror left to right"
+                      onClick={() => flipSelected("horizontal")}
+                    >
+                      <FlipHorizontal2 className="mr-2 h-4 w-4" />
+                      Horizontal
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={item.flip_v ? "secondary" : "outline"}
+                      size="sm"
+                      className="h-8"
+                      aria-pressed={item.flip_v}
+                      disabled={item.is_locked}
+                      title="Mirror top to bottom"
+                      onClick={() => flipSelected("vertical")}
+                    >
+                      <FlipVertical2 className="mr-2 h-4 w-4" />
+                      Vertical
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Rotation</Label>
+                  <NumberField
+                    value={item.rotation}
+                    min={-360}
+                    max={360}
+                    onFocus={() => pushHistory()}
+                    onCommit={(rotation) => handleUpdate({ rotation })}
+                    className="pr-6"
+                    adornment={
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                        °
+                      </span>
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Opacity</Label>
+                  <NumberField
+                    value={Math.round(item.opacity * 100)}
+                    min={0}
+                    max={100}
+                    onFocus={() => pushHistory()}
+                    onCommit={(percent) => handleUpdate({ opacity: percent / 100 })}
                     className="pr-6"
                     adornment={
                       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
@@ -684,109 +501,312 @@ function SelectedItemInspector({
                     }
                   />
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">&nbsp;</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-8 w-full text-xs"
-                    disabled={item.is_locked || itemScale === 1}
-                    onClick={() => {
-                      pushHistory();
-                      setScalePercent(100);
-                    }}
-                  >
-                    Reset to 100%
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1.5">
-                    <Label className="text-xs">Frame width</Label>
-                    <InspectorHint label="About the frame">
-                      The box the widget lays itself out in. Widen it to give text
-                      more room to wrap. The text itself stays the same size.
-                    </InspectorHint>
-                  </div>
-                  <NumberField
-                    value={Math.round(designSize.w)}
-                    min={1}
-                    onFocus={() => pushHistory()}
-                    onCommit={setDesignWidth}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Frame height</Label>
-                  <NumberField
-                    value={Math.round(designSize.h)}
-                    min={1}
-                    onFocus={() => pushHistory()}
-                    onCommit={setDesignHeight}
-                  />
-                </div>
               </div>
 
               <div className="space-y-2 pt-0.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
-                    <Label className="text-xs">Crop</Label>
-                    <InspectorHint label="About crop">
-                      Trim what you don&apos;t need, then drag a corner to stretch
-                      the rest back out. That zooms in without leaving the canvas.
-                      Hold Alt and drag a handle to crop on the canvas.
+                    <Label className="text-xs">Scene layout</Label>
+                    <InspectorHint label="About scene layout">
+                      Pin the widget to a scene edge or the center, or fit the full
+                      width or height. A pinned widget stays on that edge when the
+                      scene&apos;s resolution changes.
                     </InspectorHint>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    disabled={item.is_locked || !isCropped}
-                    onClick={() => {
-                      pushHistory();
-                      applyCrop(NO_CROP);
-                    }}
-                  >
-                    Reset
-                  </Button>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  {(
-                    [
-                      ["top", "Top"],
-                      ["right", "Right"],
-                      ["bottom", "Bottom"],
-                      ["left", "Left"],
-                    ] as const
-                  ).map(([edge, label]) => (
-                    <div key={edge} className="space-y-1.5">
-                      <Label className="text-[10px] text-muted-foreground">
-                        {label}
-                      </Label>
-                      <NumberField
-                        min={0}
-                        value={Math.round(cropInsets[edge])}
-                        onFocus={() => pushHistory()}
-                        onCommit={(inset) => setCropInset(edge, inset)}
-                        className="px-2"
-                      />
-                    </div>
-                  ))}
+                  <Popover open={sceneLayoutOpen} onOpenChange={setSceneLayoutOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8 shrink-0"
+                        disabled={layoutLocked}
+                        aria-label="Open scene layout tools"
+                      >
+                        <LayoutTemplate className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-auto p-3">
+                      <p className="text-xs font-medium text-foreground mb-2">
+                        Snap to scene ({sceneW}×{sceneH})
+                      </p>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="h-9 w-full"
+                          disabled={layoutLocked}
+                          aria-label="Fit to screen"
+                          onClick={() => {
+                            fit("scene");
+                            setSceneLayoutOpen(false);
+                          }}
+                        >
+                          <Maximize2 className="h-4 w-4" />
+                        </Button>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-full"
+                            disabled={layoutLocked}
+                            aria-label="Full width"
+                            onClick={() => {
+                              fit("width");
+                              setSceneLayoutOpen(false);
+                            }}
+                          >
+                            <StretchHorizontal className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-full"
+                            disabled={layoutLocked}
+                            aria-label="Full height"
+                            onClick={() => {
+                              fit("height");
+                              setSceneLayoutOpen(false);
+                            }}
+                          >
+                            <StretchVertical className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-9"
+                            disabled={layoutLocked}
+                            aria-label="Align left"
+                            onClick={() => {
+                              align("left");
+                              setSceneLayoutOpen(false);
+                            }}
+                          >
+                            <AlignHorizontalJustifyStart className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-9"
+                            disabled={layoutLocked}
+                            aria-label="Align horizontal center"
+                            onClick={() => {
+                              align("hcenter");
+                              setSceneLayoutOpen(false);
+                            }}
+                          >
+                            <AlignHorizontalJustifyCenter className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-9"
+                            disabled={layoutLocked}
+                            aria-label="Align right"
+                            onClick={() => {
+                              align("right");
+                              setSceneLayoutOpen(false);
+                            }}
+                          >
+                            <AlignHorizontalJustifyEnd className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-9"
+                            disabled={layoutLocked}
+                            aria-label="Align top"
+                            onClick={() => {
+                              align("top");
+                              setSceneLayoutOpen(false);
+                            }}
+                          >
+                            <AlignVerticalJustifyStart className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-9"
+                            disabled={layoutLocked}
+                            aria-label="Align vertical center"
+                            onClick={() => {
+                              align("vcenter");
+                              setSceneLayoutOpen(false);
+                            }}
+                          >
+                            <AlignVerticalJustifyCenter className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="h-9"
+                            disabled={layoutLocked}
+                            aria-label="Align bottom"
+                            onClick={() => {
+                              align("bottom");
+                              setSceneLayoutOpen(false);
+                            }}
+                          >
+                            <AlignVerticalJustifyEnd className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-3 leading-snug max-w-56">
+                        Unlock the layer to use these tools.
+                        {layoutTarget.id !== item.id ? (
+                          <>
+                            {" "}
+                            Affects the{" "}
+                            <span className="font-medium text-foreground">
+                              clips widget
+                            </span>{" "}
+                            frame.
+                          </>
+                        ) : null}
+                      </p>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
-            </div>
-          </InspectorSection>
 
-          <InspectorSection title="Advanced">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Z-Index</Label>
-              <NumberField
-                value={item.z_index}
-                onFocus={() => pushHistory()}
-                onCommit={(z_index) => handleUpdate({ z_index })}
-              />
+              {/*
+                Scale, frame and crop all reshape the box that Width and Height
+                already describe, so they wait behind a section until wanted.
+              */}
+              <InspectorSection title="Scale & crop">
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Size</Label>
+                      <NumberField
+                        value={Math.round(itemScale * 100)}
+                        min={1}
+                        onFocus={() => pushHistory()}
+                        onCommit={setScalePercent}
+                        className="pr-6"
+                        adornment={
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                            %
+                          </span>
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">&nbsp;</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="h-8 w-full text-xs"
+                        disabled={item.is_locked || itemScale === 1}
+                        onClick={() => {
+                          pushHistory();
+                          setScalePercent(100);
+                        }}
+                      >
+                        Reset to 100%
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <Label className="text-xs">Frame width</Label>
+                        <InspectorHint label="About the frame">
+                          The box the widget lays itself out in. Widen it to give text
+                          more room to wrap. The text itself stays the same size.
+                        </InspectorHint>
+                      </div>
+                      <NumberField
+                        value={Math.round(designSize.w)}
+                        min={1}
+                        onFocus={() => pushHistory()}
+                        onCommit={setDesignWidth}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Frame height</Label>
+                      <NumberField
+                        value={Math.round(designSize.h)}
+                        min={1}
+                        onFocus={() => pushHistory()}
+                        onCommit={setDesignHeight}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-0.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Label className="text-xs">Crop</Label>
+                        <InspectorHint label="About crop">
+                          Trim what you don&apos;t need, then drag a corner to stretch
+                          the rest back out. That zooms in without leaving the canvas.
+                          Hold Alt and drag a handle to crop on the canvas.
+                        </InspectorHint>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        disabled={item.is_locked || !isCropped}
+                        onClick={() => {
+                          pushHistory();
+                          applyCrop(NO_CROP);
+                        }}
+                      >
+                        Reset
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                      {(
+                        [
+                          ["top", "Top"],
+                          ["right", "Right"],
+                          ["bottom", "Bottom"],
+                          ["left", "Left"],
+                        ] as const
+                      ).map(([edge, label]) => (
+                        <div key={edge} className="space-y-1.5">
+                          <Label className="text-[10px] text-muted-foreground">
+                            {label}
+                          </Label>
+                          <NumberField
+                            min={0}
+                            value={Math.round(cropInsets[edge])}
+                            onFocus={() => pushHistory()}
+                            onCommit={(inset) => setCropInset(edge, inset)}
+                            className="px-2"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </InspectorSection>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs">Z-Index</Label>
+                <NumberField
+                  value={item.z_index}
+                  onFocus={() => pushHistory()}
+                  onCommit={(z_index) => handleUpdate({ z_index })}
+                />
+              </div>
             </div>
           </InspectorSection>
         </div>

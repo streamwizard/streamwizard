@@ -9,6 +9,7 @@ import {
   isDemoEventType,
 } from "@repo/schemas";
 import { broadcastToUser } from "@repo/ws-client";
+import { ALERT_TEST_PAYLOAD_KEY, type AlertForcedVariation } from "@repo/ui/overlay";
 import { env } from "@/lib/env";
 
 /**
@@ -34,6 +35,19 @@ function withinRateLimit(userId: string, now: number): boolean {
   return true;
 }
 
+const TEST_ID = /^[\w-]{1,64}$/;
+
+function isForcedVariation(value: unknown): value is AlertForcedVariation {
+  if (!value || typeof value !== "object") return false;
+  const { itemId, variationId } = value as Record<string, unknown>;
+  return (
+    typeof itemId === "string" &&
+    TEST_ID.test(itemId) &&
+    typeof variationId === "string" &&
+    TEST_ID.test(variationId)
+  );
+}
+
 /**
  * Fires a synthetic event at the signed-in user's overlay WS room via ws-server
  * `/internal/broadcast`. The message uses the real listener string, so the
@@ -57,7 +71,13 @@ export async function sendTestEventToOverlay(
    * send, for instance. Checked against the event's own variant table for the
    * same reason `event` is checked against the catalogue.
    */
-  variant?: string
+  variant?: string,
+  /**
+   * Asks one alert box to play one of its variations outright. Only ever two
+   * ids, checked for shape here: the overlay looks them up in its own config,
+   * so a made-up pair simply matches nothing.
+   */
+  forceVariation?: AlertForcedVariation
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isDemoEventType(event)) {
     return { ok: false, error: "Unknown event type" };
@@ -67,6 +87,10 @@ export async function sendTestEventToOverlay(
   // so only some of its members declare `variants` at all.
   if (variant !== undefined && !DEMO_EVENT_DEFS[event].variants?.[variant]) {
     return { ok: false, error: "Unknown event variant" };
+  }
+
+  if (forceVariation !== undefined && !isForcedVariation(forceVariation)) {
+    return { ok: false, error: "Unknown alert variation" };
   }
 
   if (customPayload !== undefined) {
@@ -95,7 +119,10 @@ export async function sendTestEventToOverlay(
     customPayload === undefined
       ? buildDemoEvent(event, undefined, variant)
       : { type: event, payload: customPayload };
-  const result = await broadcastToUser(user.id, msg.type, msg.payload, {
+  const payload = forceVariation
+    ? { ...(msg.payload as Record<string, unknown>), [ALERT_TEST_PAYLOAD_KEY]: forceVariation }
+    : msg.payload;
+  const result = await broadcastToUser(user.id, msg.type, payload, {
     wsServerUrl: env.WS_SERVER_URL,
     consumerSecret: env.CONSUMER_SECRET,
   });
