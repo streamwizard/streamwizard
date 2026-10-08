@@ -19,6 +19,7 @@ import {
   alertFontFamilies,
   alertForcedVariationId,
   alertInstanceFromSocketMessage,
+  alertLiveLook,
   alertMediaOutAtMs,
   alertTimeline,
   ALERT_MAX_HOLD_MS,
@@ -57,6 +58,8 @@ interface QueuedAlert {
   alert: AlertInstance;
   /** The alert's own look, or that of the variation picked for this event. */
   variant: AlertPresentation;
+  /** The variation picked, or null for the alert itself: where `variant` came from. */
+  variationId: string | null;
 }
 
 interface ActiveAlert extends QueuedAlert {
@@ -290,21 +293,18 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
         ? variant.variations.find((v) => v.id === forcedVariationId)
         : undefined;
 
-      let look: AlertPresentation = variant;
-      if (forced) {
-        look = forced.settings;
-      } else {
+      let picked = forced ?? null;
+      if (!forced) {
         const sessionTop = sessionTopRef.current[alert.event] ?? 0;
         if (alert.amount > sessionTop) sessionTopRef.current[alert.event] = alert.amount;
         if (alertSkipReason(alert, variant)) return;
-        look =
-          pickAlertVariation(alert, variant, { random: Math.random, sessionTop })?.settings ??
-          variant;
+        picked = pickAlertVariation(alert, variant, { random: Math.random, sessionTop });
       }
+      const look: AlertPresentation = picked?.settings ?? variant;
 
       // Full line: drop it. A follow-bot wave must not book the box for hours.
       if (queueRef.current.length >= c.maxQueue) return;
-      queueRef.current.push({ alert, variant: look });
+      queueRef.current.push({ alert, variant: look, variationId: picked?.id ?? null });
       if (!busyRef.current) playNext();
     },
     [playNext]
@@ -384,7 +384,10 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     );
   }
 
-  const { alert, variant, seq } = active;
+  const { alert, seq } = active;
+  // Text and typography follow the settings while the alert plays, so an edit
+  // shows on the alert being tested. Its timing and media stay as started.
+  const variant = alertLiveLook(cfg, alert.event, active.variationId, active.variant);
   const fontFamily = `"${variant.fontFamily}", sans-serif`;
   const textShadow = variant.textShadow ? "0 2px 8px rgba(0,0,0,0.6)" : "none";
   const alignItems =

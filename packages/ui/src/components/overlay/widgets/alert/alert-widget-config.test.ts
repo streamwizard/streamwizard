@@ -13,6 +13,7 @@ import {
   ALERT_MIN_HOLD_MS,
   DEFAULT_ALERT_VARIANT_TITLES,
   alertInstanceFromSocketMessage,
+  alertLiveLook,
   alertMediaOutAtMs,
   alertSkipReason,
   alertTimeline,
@@ -1028,6 +1029,62 @@ describe("a variation's settings", () => {
     });
     expect(changed.variants.cheer.fontSize).toBe(80);
     expect(changed.variants.cheer.variations[0]!.settings.fontSize).toBe(32);
+  });
+});
+
+describe("settings changed while an alert plays", () => {
+  it("shows a new text style on the alert already on screen", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    const started = alertPresentationOf(cfg.variants.follow);
+    cfg.variants.follow = {
+      ...cfg.variants.follow,
+      fontSize: 72,
+      fontWeight: 400,
+      titleColor: "#ff0000",
+      titleTemplate: "Welcome {name}",
+    };
+    const look = alertLiveLook(cfg, "follow", null, started);
+    expect(look.fontSize).toBe(72);
+    expect(look.fontWeight).toBe(400);
+    expect(look.titleColor).toBe("#ff0000");
+    expect(look.titleTemplate).toBe("Welcome {name}");
+  });
+
+  it("keeps the timing, media and sound it started with", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    const started = alertPresentationOf(cfg.variants.follow);
+    cfg.variants.follow = {
+      ...cfg.variants.follow,
+      durationSeconds: started.durationSeconds + 5,
+      animationInSeconds: started.animationInSeconds + 1,
+      textDelaySeconds: started.textDelaySeconds + 1,
+      mediaUrl: "https://cdn.example/new.webm",
+      mediaKind: "video",
+      soundUrl: "https://cdn.example/new.mp3",
+      volume: 0.1,
+    };
+    const look = alertLiveLook(cfg, "follow", null, started);
+    expect(look).toEqual(started);
+    expect(alertTimeline(look, 3000)).toEqual(alertTimeline(started, 3000));
+  });
+
+  it("reads a variation's own settings, not its alert's", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    const made = createAlertVariation("cheer", cfg.variants.cheer, "v1", "Big");
+    const started = made.settings;
+    cfg.variants.cheer = {
+      ...cfg.variants.cheer,
+      fontSize: 80,
+      variations: [{ ...made, settings: { ...made.settings, fontSize: 48 } }],
+    };
+    expect(alertLiveLook(cfg, "cheer", "v1", started).fontSize).toBe(48);
+    expect(alertLiveLook(cfg, "cheer", null, started).fontSize).toBe(80);
+  });
+
+  it("leaves an alert as it started when its variation is deleted", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    const started = { ...alertPresentationOf(cfg.variants.cheer), fontSize: 48 };
+    expect(alertLiveLook(cfg, "cheer", "gone", started)).toEqual(started);
   });
 });
 

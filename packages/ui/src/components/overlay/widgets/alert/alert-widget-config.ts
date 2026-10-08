@@ -647,6 +647,48 @@ export function applyAlertLookToAll(
   };
 }
 
+/**
+ * What an alert already on screen takes from the settings as they change: how
+ * its text reads and looks. Media, sound and every length stay as they were
+ * when it started, since its timers and its video are already running on them.
+ */
+export const ALERT_LIVE_KEYS = [
+  "titleTemplate",
+  "messageTemplate",
+  "layout",
+  "highlightAnimation",
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "align",
+  "titleColor",
+  "messageColor",
+  "accentColor",
+  "textShadow",
+] as const satisfies readonly (keyof AlertPresentation)[];
+
+/**
+ * The look of an alert that is playing, with the live keys read from the
+ * settings as they are now. `variationId` is the variation it started as, or
+ * null for the alert itself; one deleted since keeps the look it started with.
+ */
+export function alertLiveLook(
+  cfg: AlertWidgetItemConfig,
+  event: AlertEventType,
+  variationId: string | null,
+  started: AlertPresentation
+): AlertPresentation {
+  const variant = cfg.variants[event];
+  const source: AlertPresentation | undefined = variationId
+    ? variant.variations.find((v) => v.id === variationId)?.settings
+    : variant;
+  if (!source) return started;
+  return {
+    ...started,
+    ...Object.fromEntries(ALERT_LIVE_KEYS.map((key) => [key, source[key]])),
+  };
+}
+
 /** What `gift_sub` defaulted to while it also covered gift bombs. */
 const LEGACY_GIFT_BOMB_TITLE = "{name} gifted {amount} subs!";
 
