@@ -5,6 +5,7 @@ import {
   liveFollowerTotal,
   liveGoals,
   livePoll,
+  livePrediction,
   liveAdSchedule,
   liveCredits,
   liveLabels,
@@ -38,7 +39,7 @@ import {
  *   Assets (badges, cheermotes, users, game, emotes) — Supabase-cached, and
  *   safe to let the browser hold briefly. A stale badge is an old picture.
  *
- *   Live counters (followers, subscribers, stream, goals, poll, ads, labels) — `no-store`, never cached
+ *   Live counters (followers, subscribers, stream, goals, poll, prediction, ads, labels) — `no-store`, never cached
  *   anywhere. A goal widget refreshing mid-stream must come back with the true
  *   number, not the one that was true when some cache filled.
  *
@@ -53,7 +54,7 @@ const LIVE_CACHE_CONTROL = "no-store";
 /** Credits for a finished stream: the roll-up can't change any more. */
 const ENDED_CREDITS_CACHE_CONTROL = "private, max-age=300";
 
-const LIVE_RESOURCES = new Set(["followers", "subscribers", "stream", "goals", "poll", "ads", "labels"]);
+const LIVE_RESOURCES = new Set(["followers", "subscribers", "stream", "goals", "poll", "prediction", "ads", "labels"]);
 
 type Resource =
   | "badges"
@@ -66,6 +67,7 @@ type Resource =
   | "stream"
   | "goals"
   | "poll"
+  | "prediction"
   | "ads"
   | "credits"
   | "labels";
@@ -81,6 +83,7 @@ const RESOURCES = new Set<Resource>([
   "stream",
   "goals",
   "poll",
+  "prediction",
   "ads",
   "credits",
   "labels",
@@ -200,6 +203,9 @@ async function handle(
 
     case "poll":
       return { data: await livePoll(broadcasterId) };
+
+    case "prediction":
+      return { data: await livePrediction(broadcasterId) };
 
     case "ads":
       return { data: await liveAdSchedule(broadcasterId) };

@@ -2,6 +2,7 @@ import type { AlertWidgetItemConfig } from "../widgets/alert/alert-widget-config
 import type { ChatWidgetItemConfig } from "../widgets/chat/chat-widget-config";
 import type { GoalWidgetItemConfig } from "../widgets/goal/goal-widget-config";
 import type { PollWidgetItemConfig } from "../widgets/poll/poll-widget-config";
+import type { PredictionWidgetItemConfig } from "../widgets/prediction/prediction-widget-config";
 import type { AdWidgetItemConfig } from "../widgets/ads/ad-widget-config";
 import type { UptimeWidgetItemConfig } from "../widgets/uptime/uptime-widget-config";
 import type { CreditsWidgetItemConfig } from "../widgets/credits/credits-widget-config";
@@ -9,6 +10,9 @@ import type { LabelWidgetItemConfig } from "../widgets/label/label-widget-config
 import type { EmoteWidgetItemConfig } from "../widgets/emote/emote-widget-config";
 import type { ComboWidgetItemConfig } from "../widgets/combo/combo-widget-config";
 import type { HypeTrainWidgetItemConfig } from "../widgets/hype-train/hype-train-widget-config";
+import type { ImageWidgetItemConfig, VideoWidgetItemConfig } from "../widgets/media/media-widget-config";
+import type { ShapeWidgetItemConfig } from "../widgets/shape/shape-widget-config";
+import type { SlideshowWidgetItemConfig } from "../widgets/slideshow/slideshow-widget-config";
 import type { OverlayItemType } from "./base";
 import {
   buildCompositeClipsConfig,
@@ -44,13 +48,18 @@ export type OverlayItemConfig =
   | ChatWidgetItemConfig
   | GoalWidgetItemConfig
   | PollWidgetItemConfig
+  | PredictionWidgetItemConfig
   | AdWidgetItemConfig
   | UptimeWidgetItemConfig
   | CreditsWidgetItemConfig
   | LabelWidgetItemConfig
   | EmoteWidgetItemConfig
   | ComboWidgetItemConfig
-  | HypeTrainWidgetItemConfig;
+  | HypeTrainWidgetItemConfig
+  | ImageWidgetItemConfig
+  | VideoWidgetItemConfig
+  | ShapeWidgetItemConfig
+  | SlideshowWidgetItemConfig;
 
 export interface OverlayItem {
   id: string;

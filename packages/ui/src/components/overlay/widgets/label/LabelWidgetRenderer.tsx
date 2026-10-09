@@ -13,6 +13,7 @@ import {
 import { useGoogleFont } from "../../hooks/use-google-font";
 import type { OverlayItem, OverlayScene } from "../../types";
 import {
+  applyLabelEventKinds,
   LABEL_ANIMATE_PREVIEW_EVENT,
   effectiveLabelTemplate,
   normalizeLabelWidgetConfig,
@@ -106,13 +107,13 @@ export function LabelWidgetRenderer({ item, scene, isEditor = false }: LabelWidg
   const { status, snapshot } = useStreamLabels({ isEditor, token: scene?.subscriber_token, sceneId: scene?.id });
   const def = getLabelDefinition(cfg.labelId);
 
-  let lines = linesFor(resolveLabel(snapshot, def, cfg.period), cfg);
+  let lines = linesFor(applyLabelEventKinds(resolveLabel(snapshot, def, cfg.period), def, cfg), cfg);
   // The editor fills an empty label with sample data, dimmed, so the layout
   // can be judged before the channel has a single follower.
   let preview = false;
   if (lines.length === 0 && isEditor) {
     demoSnapshot ??= buildDemoLabelSnapshot();
-    lines = linesFor(resolveLabel(demoSnapshot, def, cfg.period), cfg);
+    lines = linesFor(applyLabelEventKinds(resolveLabel(demoSnapshot, def, cfg.period), def, cfg), cfg);
     preview = lines.length > 0;
   }
 

@@ -2,7 +2,8 @@ import { TwitchApi } from "@repo/twitch-api";
 import { singleFlight } from "./cache";
 import { toPublicAdSchedule } from "./ads";
 import { toPublicPoll } from "./polls";
-import type { LiveAdSchedule, LiveGoals, LivePoll, PublicGoal, PublicStream } from "./types";
+import { toPublicPrediction } from "./predictions";
+import type { LiveAdSchedule, LiveGoals, LivePoll, LivePrediction, PublicGoal, PublicStream } from "./types";
 
 /**
  * Class B: live counters.
@@ -112,6 +113,23 @@ export async function livePoll(broadcasterId: string): Promise<LivePoll> {
       return { missing_scope: false, poll: toPublicPoll(poll) };
     } catch (error) {
       if (isMissingScope(error)) return { missing_scope: true, poll: null };
+      throw error;
+    }
+  });
+}
+
+/**
+ * The channel's open or locked prediction, or the one that just ended (see
+ * `toPublicPrediction`). Missing channel:read:predictions comes back as
+ * `missing_scope`, like polls.
+ */
+export async function livePrediction(broadcasterId: string): Promise<LivePrediction> {
+  return singleFlight(`live:prediction:${broadcasterId}`, async () => {
+    try {
+      const prediction = await new TwitchApi(broadcasterId).predictions.getLatestPrediction();
+      return { missing_scope: false, prediction: toPublicPrediction(prediction) };
+    } catch (error) {
+      if (isMissingScope(error)) return { missing_scope: true, prediction: null };
       throw error;
     }
   });
