@@ -6,7 +6,7 @@ import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { assignRole, DiscordMemberNotFoundError } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 import { reportError } from "@repo/sentry";
-import { captureServerEvent } from "@repo/posthog/server";
+import { track } from "@/lib/track";
 import { safeNextPath } from "@/lib/safe-next-path";
 
 export async function GET(request: Request) {
@@ -89,19 +89,14 @@ export async function GET(request: Request) {
     }
   }
 
-  try {
-    captureServerEvent(
-      data.session.user.id,
-      "discord_linked",
-      {
-        role_status: roleStatus,
-        source: next.includes("onboarding") ? "onboarding" : "settings",
-      },
-      request,
-    );
-  } catch (phErr) {
-    reportError(phErr, "auth/callback/discord: posthog capture failed");
-  }
+  await track(
+    "discord_linked",
+    {
+      role_status: roleStatus,
+      source: next.includes("onboarding") ? "onboarding" : "settings",
+    },
+    data.session.user,
+  );
 
   const redirectUrl = new URL(`${origin}${next}`);
   if (roleStatus === "pending_membership" || roleStatus === "failed") {

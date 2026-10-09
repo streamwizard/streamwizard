@@ -134,6 +134,41 @@ export interface LivePoll {
   missing_scope: boolean;
 }
 
+export type PublicPredictionStatus = "active" | "locked" | "resolved" | "canceled";
+
+export interface PublicPredictionOutcome {
+  id: string;
+  title: string;
+  color: "blue" | "pink";
+  /** How many viewers picked this outcome. */
+  users: number;
+  channel_points: number;
+}
+
+/** A prediction in the same shape as the channel.prediction.* events, running or just ended. */
+export interface PublicPrediction {
+  id: string;
+  title: string;
+  outcomes: PublicPredictionOutcome[];
+  status: PublicPredictionStatus;
+  started_at: string;
+  /** When an open prediction stops taking points. */
+  locks_at: string;
+  /** Null while viewers can still predict. */
+  locked_at: string | null;
+  /** Null until it is resolved or canceled. */
+  ended_at: string | null;
+  /** The outcome the streamer picked; null until resolved, and on a cancel. */
+  winning_outcome_id: string | null;
+}
+
+export interface LivePrediction {
+  /** The open or locked prediction, or one that ended in the last minute; otherwise null. */
+  prediction: PublicPrediction | null;
+  /** The stored token lacks channel:read:predictions; the user has to reconnect. */
+  missing_scope: boolean;
+}
+
 /** The channel's ad schedule, with Twitch's mixed formats settled. */
 export interface PublicAdSchedule {
   /** ISO time of the next scheduled ad; null when none is scheduled or the channel is offline. */

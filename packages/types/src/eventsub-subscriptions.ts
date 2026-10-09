@@ -129,6 +129,30 @@ export const CONDUIT_SUBSCRIPTIONS: readonly EventSubSubscriptionConfig[] = [
     requiredScope: "channel:read:polls",
   },
   {
+    type: "channel.prediction.begin",
+    version: "1",
+    condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:predictions",
+  },
+  {
+    type: "channel.prediction.progress",
+    version: "1",
+    condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:predictions",
+  },
+  {
+    type: "channel.prediction.lock",
+    version: "1",
+    condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:predictions",
+  },
+  {
+    type: "channel.prediction.end",
+    version: "1",
+    condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:predictions",
+  },
+  {
     type: "channel.hype_train.begin",
     version: "2",
     condition: (userId) => ({ broadcaster_user_id: userId }),

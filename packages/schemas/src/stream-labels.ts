@@ -17,16 +17,19 @@
 
 // ─── Shapes ─────────────────────────────────────────────────────────────────
 
-export type LabelEntryKind =
-  | "follow"
-  | "sub"
-  | "resub"
-  | "gift"
-  | "cheer"
-  | "raid"
-  | "redemption"
-  | "shoutout"
-  | "hype_train";
+export const LABEL_ENTRY_KINDS = [
+  "follow",
+  "sub",
+  "resub",
+  "gift",
+  "cheer",
+  "raid",
+  "redemption",
+  "shoutout",
+  "hype_train",
+] as const;
+
+export type LabelEntryKind = (typeof LABEL_ENTRY_KINDS)[number];
 
 /** One person or event, as every latest/recent/top label stores it. */
 export interface LabelEntry {

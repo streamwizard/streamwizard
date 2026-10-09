@@ -7,6 +7,7 @@ export type { TwitchCheermote, TwitchCheermoteTier } from "./bits";
 export type { CreatorGoal, CreatorGoalType } from "./goals";
 export type { AdSchedule } from "./ads";
 export type { HelixPoll, HelixPollChoice, HelixPollStatus } from "./polls";
+export type { HelixPrediction, HelixPredictionOutcome, HelixPredictionStatus } from "./predictions";
 export type {
   Conduit,
   ConduitShard,
@@ -36,6 +37,7 @@ import { TwitchChannelsClient } from "./channels";
 import { TwitchAuthClient } from "./auth";
 import { TwitchGoalsClient } from "./goals";
 import { TwitchPollsClient } from "./polls";
+import { TwitchPredictionsClient } from "./predictions";
 
 export class TwitchApi {
   public chat: TwitchChatClient;
@@ -53,6 +55,7 @@ export class TwitchApi {
   public auth: TwitchAuthClient;
   public goals: TwitchGoalsClient;
   public polls: TwitchPollsClient;
+  public predictions: TwitchPredictionsClient;
 
   constructor(broadcaster_id: string | null = null) {
     this.chat = new TwitchChatClient(broadcaster_id);
@@ -70,5 +73,6 @@ export class TwitchApi {
     this.auth = new TwitchAuthClient(broadcaster_id);
     this.goals = new TwitchGoalsClient(broadcaster_id);
     this.polls = new TwitchPollsClient(broadcaster_id);
+    this.predictions = new TwitchPredictionsClient(broadcaster_id);
   }
 }

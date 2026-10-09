@@ -50,7 +50,7 @@ export function MediaField({
         )}
       </div>
       {helper && (
-        <p className="text-[11px] text-muted-foreground leading-snug">{helper}</p>
+        <p className="text-xs text-muted-foreground leading-snug">{helper}</p>
       )}
       <AssetPickerDialog
         open={pickerOpen}

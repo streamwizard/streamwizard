@@ -1,6 +1,6 @@
 "use client";
 
-import { captureEvent } from "@repo/posthog";
+import { trackAction } from "@/lib/track-action";
 import { Button, Separator, SidebarTrigger, useSidebar } from "@repo/ui";
 import { Database } from "@repo/supabase";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
@@ -603,6 +603,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
             onClick={() => {
               const url = `${env.NEXT_PUBLIC_OVERLAY_URL}/${scene.slug}`;
               navigator.clipboard.writeText(url);
+              trackAction("overlay_url_copied", { overlay_id: scene.id, location: "editor" });
               toast.success("Overlay URL copied");
             }}
             title="Copy OBS browser source URL"
@@ -763,20 +764,14 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       <OverlayWidgetSheet
         open={widgetSheetOpen}
         onOpenChange={setWidgetSheetOpen}
-        onAddWidget={(type) => {
-          captureEvent("widget_added", { widget: type, custom: false });
-          addItem(type);
-        }}
+        onAddWidget={(type, presetId) => addItem(type, presetId)}
         onOpenLibrary={() => setWidgetLibraryOpen(true)}
       />
 
       <WidgetLibraryModal
         open={widgetLibraryOpen}
         onOpenChange={setWidgetLibraryOpen}
-        onAddToCanvas={(widgetId) => {
-          captureEvent("widget_added", { custom: true });
-          addCustomWidget(widgetId);
-        }}
+        onAddToCanvas={(widgetId) => addCustomWidget(widgetId)}
       />
 
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />

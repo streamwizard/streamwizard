@@ -125,7 +125,7 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-w-0">
       {listing && (
         <div className="space-y-1">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -176,7 +176,7 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
           <Loader2 className="h-5 w-5 text-muted-foreground shrink-0 animate-spin" />
           <div className="flex-1 min-w-0 space-y-1">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm font-medium truncate">{u.name}</p>
+              <p className="text-sm font-medium truncate" title={u.name}>{u.name}</p>
               <span className="text-xs text-muted-foreground tabular-nums">{u.progress}%</span>
             </div>
             <Progress value={u.progress} className="h-1" />
@@ -205,7 +205,7 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
             >
               <KindIcon asset={asset} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{asset.file_name}</p>
+                <p className="text-sm font-medium truncate" title={asset.file_name}>{asset.file_name}</p>
                 <p className="text-xs text-muted-foreground">
                   {formatBytes(asset.size_bytes)} · {asset.kind}
                 </p>

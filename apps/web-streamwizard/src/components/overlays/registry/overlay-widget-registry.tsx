@@ -18,19 +18,28 @@ import {
   Compass,
   Crosshair,
   Flame,
+  Scale,
   TrainFront,
   Gauge,
-  Goal,
-  MapPin,
+  Gem,
+  Image as ImageIcon,
+  Images,
+  ListOrdered,
   Megaphone,
   MessagesSquare,
   Mountain,
+  MoveHorizontal,
+  MoveVertical,
   Radio,
   ScrollText,
+  Shapes,
   Sparkles,
+  Star,
   Tag,
   Timer,
   Type,
+  UserPlus,
+  Video,
   Vote,
 } from "lucide-react";
 import type { ChildOverlayItemType, OverlayItemType, RootOverlayItemType } from "@/types/overlays";
@@ -50,6 +59,22 @@ import {
   TEXT_WIDGET_DEFAULT_SIZE,
 } from "../widgets/text/text-widget-definition";
 import { TextWidgetSettings } from "../widgets/text/text-widget-settings";
+import {
+  IMAGE_WIDGET_DEFAULT_SIZE,
+  VIDEO_WIDGET_DEFAULT_SIZE,
+  createMediaWidgetRootItems,
+} from "../widgets/media/media-widget-definition";
+import { MediaWidgetSettings } from "../widgets/media/media-widget-settings";
+import {
+  SHAPE_WIDGET_DEFAULT_SIZE,
+  createShapeWidgetRootItems,
+} from "../widgets/shape/shape-widget-definition";
+import { ShapeWidgetSettings } from "../widgets/shape/shape-widget-settings";
+import {
+  SLIDESHOW_WIDGET_DEFAULT_SIZE,
+  createSlideshowWidgetRootItems,
+} from "../widgets/slideshow/slideshow-widget-definition";
+import { SlideshowWidgetSettings } from "../widgets/slideshow/slideshow-widget-settings";
 import {
   createTimerWidgetRootItems,
   TIMER_WIDGET_DEFAULT_SIZE,
@@ -97,6 +122,11 @@ import {
 } from "../widgets/poll/poll-widget-definition";
 import { PollWidgetSettings } from "../widgets/poll/poll-widget-settings";
 import {
+  PREDICTION_WIDGET_DEFAULT_SIZE,
+  createPredictionWidgetRootItems,
+} from "../widgets/prediction/prediction-widget-definition";
+import { PredictionWidgetSettings } from "../widgets/prediction/prediction-widget-settings";
+import {
   AD_WIDGET_DEFAULT_SIZE,
   createAdWidgetRootItems,
 } from "../widgets/ads/ad-widget-definition";
@@ -111,7 +141,11 @@ import {
   createCreditsWidgetRootItems,
 } from "../widgets/credits/credits-widget-definition";
 import { CreditsWidgetSettings } from "../widgets/credits/credits-widget-settings";
-import { LABEL_WIDGET_DEFAULT_SIZE, createLabelWidgetRootItems } from "../widgets/label/label-widget-definition";
+import {
+  LABEL_WIDGET_DEFAULT_SIZE,
+  createEventListRootItems,
+  createLabelWidgetRootItems,
+} from "../widgets/label/label-widget-definition";
 import { LabelWidgetSettings } from "../widgets/label/label-widget-settings";
 import { EMOTE_WIDGET_DEFAULT_SIZE, createEmoteWidgetRootItems } from "../widgets/emote/emote-widget-definition";
 import { EmoteWidgetSettings } from "../widgets/emote/emote-widget-settings";
@@ -127,6 +161,7 @@ import {
   ChatWidgetRenderer,
   GoalWidgetRenderer,
   PollWidgetRenderer,
+  PredictionWidgetRenderer,
   AdWidgetRenderer,
   UptimeWidgetRenderer,
   CreditsWidgetRenderer,
@@ -134,6 +169,10 @@ import {
   EmoteWidgetRenderer,
   ComboWidgetRenderer,
   HypeTrainWidgetRenderer,
+  ImageWidgetRenderer,
+  VideoWidgetRenderer,
+  ShapeWidgetRenderer,
+  SlideshowWidgetRenderer,
   TextWidgetRenderer,
   TimerWidgetRenderer,
   ClockWidgetRenderer,
@@ -142,6 +181,7 @@ import {
 import type {
   OverlayCanvasProps,
   OverlayChildResolvedDefinition,
+  OverlayLibraryEntry,
   OverlayRootWidgetDefinition,
   ResolvedOverlayWidgetDefinition,
   WidgetCategory,
@@ -168,6 +208,11 @@ function GoalWidgetCanvas({ item, scene }: OverlayCanvasProps) {
 /** The poll widget reads the channel's poll through the dashboard session on the canvas. */
 function PollWidgetCanvas({ item, scene }: OverlayCanvasProps) {
   return <PollWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** The prediction widget reads the channel's prediction through the dashboard session on the canvas. */
+function PredictionWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <PredictionWidgetRenderer item={item} scene={scene} isEditor />;
 }
 
 /** The ad widget reads the channel's ad schedule through the dashboard session on the canvas. */
@@ -198,6 +243,21 @@ function HypeTrainWidgetCanvas({ item, scene }: OverlayCanvasProps) {
 /** The uptime widget reads the stream through the dashboard session and previews a time while offline. */
 function UptimeWidgetCanvas({ item, scene }: OverlayCanvasProps) {
   return <UptimeWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
+/** An empty image slot shows a placeholder on the canvas, so there is something to select. */
+function ImageWidgetCanvas({ item }: OverlayCanvasProps) {
+  return <ImageWidgetRenderer item={item} isEditor />;
+}
+
+/** Videos play muted on the canvas; an empty slot shows a placeholder. */
+function VideoWidgetCanvas({ item }: OverlayCanvasProps) {
+  return <VideoWidgetRenderer item={item} isEditor />;
+}
+
+/** The slideshow plays on the canvas too; an empty one shows a placeholder. */
+function SlideshowWidgetCanvas({ item }: OverlayCanvasProps) {
+  return <SlideshowWidgetRenderer item={item} isEditor />;
 }
 
 /** The credits widget reads the last stream through the dashboard session and rolls only when the settings say so. */
@@ -316,7 +376,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   follower_goal_widget: {
     type: "follower_goal_widget",
     layerScope: "root",
-    icon: Goal,
+    icon: UserPlus,
     showInLibrary: true,
     category: "goals",
     library: {
@@ -332,7 +392,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   sub_goal_widget: {
     type: "sub_goal_widget",
     layerScope: "root",
-    icon: Goal,
+    icon: Star,
     showInLibrary: true,
     category: "goals",
     library: {
@@ -348,7 +408,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   bits_goal_widget: {
     type: "bits_goal_widget",
     layerScope: "root",
-    icon: Goal,
+    icon: Gem,
     showInLibrary: true,
     category: "goals",
     library: {
@@ -376,6 +436,22 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     createRootItems: createPollWidgetRootItems,
     CanvasContent: PollWidgetCanvas,
     SettingsPanel: PollWidgetSettings,
+  },
+  prediction_widget: {
+    type: "prediction_widget",
+    layerScope: "root",
+    icon: Scale,
+    showInLibrary: true,
+    category: "polls",
+    library: {
+      title: "Prediction",
+      description:
+        "Your Twitch prediction with live channel points, a countdown until it locks and the winner when you call it. Start the prediction on Twitch.",
+    },
+    defaultSize: { ...PREDICTION_WIDGET_DEFAULT_SIZE },
+    createRootItems: createPredictionWidgetRootItems,
+    CanvasContent: PredictionWidgetCanvas,
+    SettingsPanel: PredictionWidgetSettings,
   },
   ad_widget: {
     type: "ad_widget",
@@ -437,6 +513,16 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     },
     defaultSize: { ...LABEL_WIDGET_DEFAULT_SIZE },
     createRootItems: createLabelWidgetRootItems,
+    libraryPresets: [
+      {
+        id: "label_widget:event_list",
+        icon: ListOrdered,
+        title: "Event list",
+        description:
+          "A running feed of your latest follows, subs, cheers, raids and rewards. Pick which ones show.",
+        createRootItems: createEventListRootItems,
+      },
+    ],
     CanvasContent: LabelWidgetCanvas,
     SettingsPanel: LabelWidgetSettings,
   },
@@ -454,6 +540,67 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     createRootItems: createTextWidgetRootItems,
     CanvasContent: TextWidgetRenderer,
     SettingsPanel: TextWidgetSettings,
+  },
+  image_widget: {
+    type: "image_widget",
+    layerScope: "root",
+    icon: ImageIcon,
+    showInLibrary: true,
+    category: "media",
+    library: {
+      title: "Image",
+      description: "A picture from your media library: logo, webcam frame, sponsor, anything. GIFs move.",
+    },
+    defaultSize: { ...IMAGE_WIDGET_DEFAULT_SIZE },
+    createRootItems: createMediaWidgetRootItems("image_widget"),
+    CanvasContent: ImageWidgetCanvas,
+    SettingsPanel: MediaWidgetSettings,
+  },
+  video_widget: {
+    type: "video_widget",
+    layerScope: "root",
+    icon: Video,
+    showInLibrary: true,
+    category: "media",
+    library: {
+      title: "Video",
+      description: "A video from your media library, looping or played once. Animated backgrounds, stingers, transparent WebM.",
+    },
+    defaultSize: { ...VIDEO_WIDGET_DEFAULT_SIZE },
+    createRootItems: createMediaWidgetRootItems("video_widget"),
+    CanvasContent: VideoWidgetCanvas,
+    SettingsPanel: MediaWidgetSettings,
+  },
+  slideshow_widget: {
+    type: "slideshow_widget",
+    layerScope: "root",
+    icon: Images,
+    showInLibrary: true,
+    category: "media",
+    library: {
+      title: "Slideshow",
+      description: "Several pictures taking turns in one spot. Sponsors, socials, your schedule, fan art.",
+    },
+    defaultSize: { ...SLIDESHOW_WIDGET_DEFAULT_SIZE },
+    createRootItems: createSlideshowWidgetRootItems,
+    CanvasContent: SlideshowWidgetCanvas,
+    SettingsPanel: SlideshowWidgetSettings,
+  },
+  shape_widget: {
+    type: "shape_widget",
+    layerScope: "root",
+    icon: Shapes,
+    showInLibrary: true,
+    category: "layout",
+    library: {
+      title: "Shape",
+      description:
+        "Rectangle, circle, triangle, diamond, star or line. Pick a color and an outline to build frames, backdrops and dividers.",
+    },
+    defaultSize: { ...SHAPE_WIDGET_DEFAULT_SIZE },
+    createRootItems: createShapeWidgetRootItems,
+    CanvasContent: ShapeWidgetRenderer,
+    SettingsPanel: ShapeWidgetSettings,
   },
   timer_widget: {
     type: "timer_widget",
@@ -526,7 +673,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   irl_latitude_widget: {
     type: "irl_latitude_widget",
     layerScope: "root",
-    icon: MapPin,
+    icon: MoveVertical,
     showInLibrary: true,
     category: "other",
     library: { title: "IRL · Latitude", description: "Live GPS latitude from an IRL stream." },
@@ -538,7 +685,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
   irl_longitude_widget: {
     type: "irl_longitude_widget",
     layerScope: "root",
-    icon: MapPin,
+    icon: MoveHorizontal,
     showInLibrary: true,
     category: "other",
     library: { title: "IRL · Longitude", description: "Live GPS longitude from an IRL stream." },
@@ -625,11 +772,54 @@ export function getLibraryWidgetDefinitions(): OverlayRootWidgetDefinition[] {
   return Object.values(OVERLAY_WIDGET_REGISTRY).filter((d) => d.showInLibrary);
 }
 
-export function groupLibraryWidgetsByCategory(): Record<
-  WidgetCategory,
-  OverlayRootWidgetDefinition[]
-> {
-  const grouped: Record<WidgetCategory, OverlayRootWidgetDefinition[]> = {
+/**
+ * Every card the widget library shows: each widget, followed by its presets.
+ * Pure, so the list can be checked without a registry full of components.
+ */
+export function buildLibraryEntries(
+  definitions: readonly Pick<
+    OverlayRootWidgetDefinition,
+    "type" | "icon" | "category" | "library" | "libraryPresets"
+  >[]
+): OverlayLibraryEntry[] {
+  return definitions.flatMap((def): OverlayLibraryEntry[] => {
+    const type = def.type as RootOverlayItemType;
+    const category: WidgetCategory = def.category ?? "other";
+    return [
+      {
+        key: type,
+        type,
+        icon: def.icon,
+        category,
+        library: { title: def.library?.title ?? type, description: def.library?.description },
+      },
+      ...(def.libraryPresets ?? []).map(
+        (preset): OverlayLibraryEntry => ({
+          key: preset.id,
+          type,
+          presetId: preset.id,
+          icon: preset.icon,
+          category: preset.category ?? category,
+          library: { title: preset.title, description: preset.description },
+        })
+      ),
+    ];
+  });
+}
+
+export function getLibraryEntries(): OverlayLibraryEntry[] {
+  return buildLibraryEntries(getLibraryWidgetDefinitions());
+}
+
+/** The `createRootItems` behind a library card: the preset's, or the widget's own. */
+export function getLibraryRootItemFactory(type: RootOverlayItemType, presetId?: string) {
+  const def = OVERLAY_WIDGET_REGISTRY[type];
+  if (!presetId) return def?.createRootItems;
+  return def?.libraryPresets?.find((preset) => preset.id === presetId)?.createRootItems;
+}
+
+export function groupLibraryEntriesByCategory(): Record<WidgetCategory, OverlayLibraryEntry[]> {
+  const grouped: Record<WidgetCategory, OverlayLibraryEntry[]> = {
     media: [],
     alerts: [],
     goals: [],
@@ -640,10 +830,7 @@ export function groupLibraryWidgetsByCategory(): Record<
     layout: [],
     other: [],
   };
-  for (const def of getLibraryWidgetDefinitions()) {
-    const cat: WidgetCategory = def.category ?? "other";
-    grouped[cat].push(def);
-  }
+  for (const entry of getLibraryEntries()) grouped[entry.category].push(entry);
   return grouped;
 }
 
@@ -652,6 +839,8 @@ export type {
   OverlayChildFieldDeclaration,
   OverlayChildResolvedDefinition,
   OverlayInspectorAppendProps,
+  OverlayLibraryEntry,
+  OverlayLibraryPreset,
   OverlayRootWidgetDefinition,
   ResolvedOverlayWidgetDefinition,
 } from "./overlay-widget-registry.types";

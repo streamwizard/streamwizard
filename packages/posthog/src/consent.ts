@@ -1,4 +1,6 @@
 import posthog from "posthog-js";
+import { captureEvent } from "./events";
+import { startReplay } from "./init";
 
 // Fired on `window` when the visitor accepts analytics. The SDK drops every
 // capture — `$identify` included — while consent is pending (nothing is
@@ -20,6 +22,7 @@ export function hasGrantedConsent(): boolean {
 
 export function grantConsent(): void {
   posthog.opt_in_capturing();
+  startReplay();
   // capture_pageview is off and the pre-consent pageview was dropped, so the
   // page the visitor accepted on has to be counted by hand.
   posthog.capture("$pageview", { $current_url: window.location.href });
@@ -29,8 +32,13 @@ export function grantConsent(): void {
 // With cookieless_mode "on_reject" the SDK handles the rest itself: it
 // registers the cookieless distinct id, disables persistence, and fires one
 // anonymous $pageview for the current page.
-export function denyConsent(): void {
+//
+// `via` is how the "no" arrived. It goes out as one anonymous, cookieless
+// event, so the share of visitors who accept can be worked out at all:
+// accepts were counted ($opt_in), declines were not.
+export function denyConsent(via: "button" | "gpc"): void {
   posthog.opt_out_capturing();
+  captureEvent("consent_declined", { via });
 }
 
 // Global Privacy Control (navigator.globalPrivacyControl) is the browser

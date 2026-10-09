@@ -3,12 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, MotionConfig, motion, useInView } from "motion/react";
 import { cn } from "@repo/ui";
-import {
-  ALERT_ANIMATIONS_IN,
-  ALERT_LAYOUTS,
-  type AlertAnimationIn,
-  type AlertLayout,
-} from "@repo/ui/overlay";
+import { ALERT_LAYOUTS, type AlertLayout } from "@repo/ui/overlay";
 import {
   BadgeCheck,
   ChartColumn,
@@ -107,7 +102,15 @@ const LAYOUT_LABELS: Record<AlertLayout, string> = {
   overlay: "Text on media",
 };
 
-const ANIMATION_LABELS: Record<AlertAnimationIn, string> = {
+/**
+ * The entrances this demo shows off. The real alert box offers the full effect
+ * list; five is what fits a row of buttons, and each is drawn here with motion
+ * of the demo's own.
+ */
+const DEMO_ENTRANCES = ["fade", "slide_up", "slide_down", "zoom", "bounce"] as const;
+type DemoEntrance = (typeof DEMO_ENTRANCES)[number];
+
+const ANIMATION_LABELS: Record<DemoEntrance, string> = {
   fade: "Fade",
   slide_up: "Slide up",
   slide_down: "Slide down",
@@ -115,7 +118,7 @@ const ANIMATION_LABELS: Record<AlertAnimationIn, string> = {
   bounce: "Bounce",
 };
 
-const ANIM_IN: Record<AlertAnimationIn, { opacity: number; scale?: number; y?: number }> = {
+const ANIM_IN: Record<DemoEntrance, { opacity: number; scale?: number; y?: number }> = {
   fade: { opacity: 0 },
   zoom: { opacity: 0, scale: 0.6 },
   bounce: { opacity: 0, scale: 0.4 },
@@ -123,7 +126,7 @@ const ANIM_IN: Record<AlertAnimationIn, { opacity: number; scale?: number; y?: n
   slide_down: { opacity: 0, y: -28 },
 };
 
-const ANIM_TRANSITION: Record<AlertAnimationIn, object> = {
+const ANIM_TRANSITION: Record<DemoEntrance, object> = {
   fade: { duration: 0.45, ease: "easeOut" },
   zoom: { duration: 0.35, ease: "easeOut" },
   bounce: { type: "spring", stiffness: 420, damping: 14 },
@@ -269,7 +272,7 @@ export function AlertBoxPlayground() {
 
   // Product defaults: a fresh alert widget ships stacked with a zoom entrance.
   const [layout, setLayout] = useState<AlertLayout>("stacked");
-  const [anim, setAnim] = useState<AlertAnimationIn>("zoom");
+  const [anim, setAnim] = useState<DemoEntrance>("zoom");
   const [play, setPlay] = useState<Play>({ idx: null, last: 0, n: 0 });
   const [tabOverride, setTabOverride] = useState<AlertCategoryId | null>(null);
   /** Picked milestone per event kind; unset = the tier matching the shared wording. */
@@ -535,7 +538,7 @@ export function AlertBoxPlayground() {
             />
             <ControlGroup
               label="Entrance"
-              options={ALERT_ANIMATIONS_IN}
+              options={DEMO_ENTRANCES}
               labels={ANIMATION_LABELS}
               value={anim}
               onChange={(next) => {

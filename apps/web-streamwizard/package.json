@@ -52,6 +52,7 @@
     "@repo/posthog": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",
+    "@repo/ttl-cache": "workspace:*",
     "@repo/storage": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/twitch-api": "workspace:*",

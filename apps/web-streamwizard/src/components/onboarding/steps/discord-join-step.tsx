@@ -2,12 +2,21 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CheckCircle2, PartyPopper } from "lucide-react";
+import { Check, PartyPopper } from "lucide-react";
 import { FaDiscord } from "react-icons/fa";
-import { Button } from "@repo/ui";
 import { discordInviteLink } from "@/lib/constant";
 
-export function DiscordJoinStep({ status }: { status: "verified" | "not_member" }) {
+// Shows what joining is for. The button that opens the invite ("Join the
+// server") is in the wizard's footer, next to Back and Skip. `inviteOpened`
+// is true once it was clicked: the footer button has become "Take me to my
+// clips" by then, so the invite gets a small link of its own here.
+export function DiscordJoinStep({
+  status,
+  inviteOpened,
+}: {
+  status: "verified" | "not_member";
+  inviteOpened: boolean;
+}) {
   const router = useRouter();
   const [checking, setChecking] = useState(false);
 
@@ -44,38 +53,31 @@ export function DiscordJoinStep({ status }: { status: "verified" | "not_member" 
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold">Now join the server.</h2>
         <p className="text-sm text-muted-foreground">
-          Account&apos;s linked. Hop into the Discord and your Verified Member role shows up on its own.
+          Go live and we post your stream in the server. Plus quick help and streamers to collab with.
         </p>
       </div>
 
       <div className="relative rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
         <div className="absolute inset-x-0 top-0 h-px rounded-t-xl bg-gradient-to-r from-transparent via-[#5865F2]/40 to-transparent" />
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#5865F2]/10 border border-[#5865F2]/20">
-              <FaDiscord className="h-4 w-4 text-[#5865F2]" />
-            </span>
-            <div>
-              <p className="text-sm font-medium">StreamWizard Discord</p>
-              <p className="text-xs text-muted-foreground">The official server.</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#5865F2]/10 border border-[#5865F2]/20">
+            <FaDiscord className="h-4 w-4 text-[#5865F2]" />
+          </span>
+          <div>
+            <p className="text-sm font-medium">StreamWizard Discord</p>
+            <p className="text-xs text-muted-foreground">Your Verified Member role is waiting inside.</p>
           </div>
-          <Button
-            asChild
-            size="sm"
-            className="shrink-0 ml-3 bg-[#5865F2] text-white transition-transform hover:bg-[#4752C4] active:scale-95"
-          >
-            <a href={discordInviteLink} target="_blank" rel="noopener noreferrer">
-              Join
-            </a>
-          </Button>
         </div>
       </div>
 
       <ul className="flex flex-col gap-1.5 text-sm text-muted-foreground">
         <li className="flex items-start gap-2">
           <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5865F2]" />
-          Your linked account only unlocks the role once you&apos;re actually in the server
+          Your title, game and a link land in the server the moment you go live
+        </li>
+        <li className="flex items-start gap-2">
+          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5865F2]" />
+          You get the Live role while you stream, so you sit at the top of the member list
         </li>
         <li className="flex items-start gap-2">
           <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5865F2]" />
@@ -87,14 +89,26 @@ export function DiscordJoinStep({ status }: { status: "verified" | "not_member" 
         </li>
       </ul>
 
-      <button
-        type="button"
-        onClick={handleCheckAgain}
-        disabled={checking}
-        className="text-xs text-muted-foreground underline underline-offset-4 disabled:opacity-50 self-start"
-      >
-        {checking ? "Checking…" : "Already joined? Check again"}
-      </button>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <button
+          type="button"
+          onClick={handleCheckAgain}
+          disabled={checking}
+          className="text-xs text-muted-foreground underline underline-offset-4 disabled:opacity-50"
+        >
+          {checking ? "Checking…" : "Already joined? Check again"}
+        </button>
+        {inviteOpened && (
+          <a
+            href={discordInviteLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-muted-foreground underline underline-offset-4"
+          >
+            Open the invite again
+          </a>
+        )}
+      </div>
     </div>
   );
 }

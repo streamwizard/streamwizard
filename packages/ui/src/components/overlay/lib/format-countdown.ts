@@ -1,8 +1,4 @@
-/**
- * Formats remaining milliseconds as a countdown string (day prefix when needed).
- */
-export function formatCountdownMs(ms: number): string {
-  if (ms <= 0) return "";
+function formatClock(ms: number): string {
   const sec = Math.floor(ms / 1000);
   const days = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
@@ -13,4 +9,17 @@ export function formatCountdownMs(ms: number): string {
     return `${days}d ${pad2(h)}:${pad2(m)}:${pad2(s)}`;
   }
   return `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
+}
+
+/**
+ * Formats remaining milliseconds as a countdown string (day prefix when needed).
+ */
+export function formatCountdownMs(ms: number): string {
+  if (ms <= 0) return "";
+  return formatClock(ms);
+}
+
+/** Formats elapsed milliseconds for a stopwatch. Unlike a countdown, zero is a time: 00:00:00. */
+export function formatElapsedMs(ms: number): string {
+  return formatClock(Math.max(0, ms));
 }

@@ -12,6 +12,7 @@ import { TwitchApi } from "@repo/twitch-api";
 import { redirect } from "next/navigation";
 import { removeRole } from "@/server/discord/roles";
 import { env } from "@/lib/env";
+import { track } from "@/lib/track";
 
 export async function deleteAccount() {
   const ctx = await tryAuthContext();
@@ -100,8 +101,15 @@ export async function deleteAccount() {
     return { success: false, error: authError.message };
   }
 
-  // PostHog is left alone on purpose: the policy allows analytics linked to
-  // the account for 12 months after last activity, and the scheduled
-  // retention purge removes the person once that window passes.
+  // PostHog's existing data is left alone on purpose: the policy allows
+  // analytics linked to the account for 12 months after last activity, and
+  // the scheduled retention purge removes the person once that window passes.
+  // The deletion itself is recorded: it is the clearest "I'm leaving" there is.
+  const createdAt = Date.parse(user.created_at);
+  await track(
+    "account_deleted",
+    { account_age_days: Number.isFinite(createdAt) ? Math.floor((Date.now() - createdAt) / 86_400_000) : null },
+    user,
+  );
   redirect("/goodbye");
 }

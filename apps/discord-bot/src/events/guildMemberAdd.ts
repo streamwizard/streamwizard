@@ -10,7 +10,7 @@ import {
 } from "../lib/welcome";
 import type { BotEvent } from "../types/discord";
 import { reportError } from "@repo/sentry";
-import { captureServerEvent } from "@repo/posthog/server";
+import { trackServer } from "@repo/posthog/server";
 
 export default {
   name: Events.GuildMemberAdd,
@@ -20,13 +20,9 @@ export default {
     // Connection info is fetched before the welcome-settings early returns so
     // every join gets counted, welcome message or not.
     const connection = await getConnectionInfo(member);
-    try {
-      captureServerEvent(connection.userId ?? `discord:${member.id}`, "discord_guild_joined", {
-        linked: connection.isConnected,
-      });
-    } catch (error) {
-      reportError(error, "discord-bot member add: posthog", { memberId: member.id });
-    }
+    trackServer(connection.userId ?? `discord:${member.id}`, "discord_guild_joined", {
+      linked: connection.isConnected,
+    });
 
     const settings = await getGuildWelcomeSettings(member.guild);
     // The join role doesn't depend on welcome messages being on.

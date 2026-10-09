@@ -6,6 +6,7 @@ import {
   isThirdPartyProvider,
   liveGoals,
   livePoll,
+  livePrediction,
   liveAdSchedule,
   liveCredits,
   liveLabels,
@@ -22,8 +23,8 @@ import {
 
 /**
  * Twitch chat assets for signed-in app surfaces (the deck's chat tab, the
- * overlay editor's widgets), plus the live goals, poll and ad schedule
- * the goal, poll and ad widgets start from.
+ * overlay editor's widgets), plus the live goals, poll, prediction and ad
+ * schedule the goal, poll, prediction and ad widgets start from.
  *
  * The overlay has an equivalent route, but it authorises with a scene's
  * subscriber token — a credential the deck neither has nor should mint. Same
@@ -50,15 +51,16 @@ type Resource =
   | "emote_search"
   | "goals"
   | "poll"
+  | "prediction"
   | "ads"
   | "stream"
   | "credits"
   | "labels"
   | "users";
 
-type LiveResource = "goals" | "poll" | "ads";
+type LiveResource = "goals" | "poll" | "prediction" | "ads";
 
-const LIVE_RESOURCES = new Set<Resource>(["goals", "poll", "ads", "stream", "credits", "labels"]);
+const LIVE_RESOURCES = new Set<Resource>(["goals", "poll", "prediction", "ads", "stream", "credits", "labels"]);
 
 const RESOURCES = new Set<Resource>([
   "badges",
@@ -68,6 +70,7 @@ const RESOURCES = new Set<Resource>([
   "emote_search",
   "goals",
   "poll",
+  "prediction",
   "ads",
   "stream",
   "credits",
@@ -106,7 +109,7 @@ export async function GET(
 
   try {
     const body =
-      resource === "goals" || resource === "poll" || resource === "ads"
+      resource === "goals" || resource === "poll" || resource === "prediction" || resource === "ads"
         ? await handleLive(resource, supabase, broadcasterId)
         : await handle(resource, broadcasterId, req.nextUrl.searchParams);
     if ("error" in body) {
@@ -162,6 +165,7 @@ async function handle(
 
     case "goals":
     case "poll":
+    case "prediction":
     case "ads":
       return handleLive(resource, null, broadcasterId);
 
@@ -196,7 +200,7 @@ async function handle(
 }
 
 /**
- * Goals, the poll or the ad schedule, plus the streamer's login, so the widget settings can
+ * Goals, the poll, the prediction or the ad schedule, plus the streamer's login, so the widget settings can
  * link into their own Creator Dashboard.
  */
 async function handleLive(
@@ -209,7 +213,9 @@ async function handleLive(
       ? liveGoals(broadcasterId)
       : resource === "poll"
         ? livePoll(broadcasterId)
-        : liveAdSchedule(broadcasterId),
+        : resource === "prediction"
+          ? livePrediction(broadcasterId)
+          : liveAdSchedule(broadcasterId),
     supabase
       ? supabase
           .from("integrations_twitch")

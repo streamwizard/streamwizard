@@ -3,6 +3,7 @@
 import { randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
+import { track } from "@/lib/track";
 import type { Json } from "@repo/supabase";
 import {
   createOverlayScene as createSceneRow,
@@ -80,6 +81,11 @@ export async function createOverlayScene(formData: {
     return { data: null, error: error.message };
   }
 
+  await track(
+    "overlay_created",
+    { overlay_id: data.id, template: "blank", render_mode: formData.render_mode ?? "obs" },
+    ctx.user,
+  );
   revalidatePath("/dashboard/overlays");
   return { data, error: null };
 }
@@ -106,6 +112,15 @@ export async function updateOverlayScene(formData: {
     return { data: null, error: error.message };
   }
 
+  // The same action saves the canvas size from the editor; only the two list
+  // toggles are events.
+  if (updates.is_favourite !== undefined) {
+    await track("overlay_favourite_toggled", { overlay_id: id, favourite: updates.is_favourite }, ctx.user);
+  }
+  if (updates.is_active !== undefined) {
+    await track("overlay_active_toggled", { overlay_id: id, active: updates.is_active }, ctx.user);
+  }
+
   revalidatePath("/dashboard/overlays");
   return { data, error: null };
 }
@@ -119,6 +134,8 @@ export async function deleteOverlayScene(id: string) {
     reportError(error, OVERLAYS_ERROR_SCOPE);
     return { success: false, error: error.message };
   }
+
+  await track("overlay_deleted", { overlay_id: id }, ctx.user);
 
   revalidatePath("/dashboard/overlays");
   return { success: true, error: null };
@@ -196,6 +213,15 @@ export async function duplicateOverlayScene(id: string) {
     }
   }
 
+  await track(
+    "overlay_duplicated",
+    {
+      overlay_id: newScene.id,
+      source_overlay_id: id,
+      item_count: originalItems?.filter((row) => row.type !== "clip_display_field").length ?? 0,
+    },
+    user,
+  );
   revalidatePath("/dashboard/overlays");
   return { data: newScene, error: null };
 }
@@ -209,5 +235,6 @@ export async function resetSceneSubscriberToken(sceneId: string): Promise<{ erro
 
   revalidatePath("/dashboard/overlays");
   if (error) reportError(error, OVERLAYS_ERROR_SCOPE);
+  else await track("overlay_key_reset", { overlay_id: sceneId }, ctx.user);
   return { error: error?.message ?? null };
 }

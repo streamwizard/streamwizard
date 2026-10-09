@@ -1,5 +1,7 @@
 "use server";
 import { TwitchApi } from "@repo/twitch-api";
+import { track } from "@/lib/track";
+import { clipSyncErrorMessage } from "@/lib/clip-sync-error";
 import { createClient } from "@repo/supabase/next/server";
 import { getClipBroadcasterId } from "@repo/supabase/queries/clips";
 import { getBroadcasterId } from "@repo/supabase/queries/user";
@@ -38,6 +40,7 @@ export async function SyncBroadcasterClips(): Promise<{ message: string; success
       },
     });
 
+    await track("clips_synced", { trigger: "manual", skipped: false });
     revalidatePath("/dashboard/clips", "page");
     return {
       message: "Clips synced successfully",
@@ -47,6 +50,8 @@ export async function SyncBroadcasterClips(): Promise<{ message: string; success
     if (axios.isAxiosError<{ skipped: boolean; message: string; success: boolean; lastSync?: string }>(error)) {
       const data = error.response?.data;
       if (data?.skipped) {
+        // Throttled: they asked, we said "not yet". Still a sync attempt.
+        await track("clips_synced", { trigger: "manual", skipped: true });
         return {
           message: data.message || "Already synced recently",
           success: false,
@@ -54,14 +59,17 @@ export async function SyncBroadcasterClips(): Promise<{ message: string; success
           lastSync: data.lastSync,
         };
       }
-      console.error("[SyncBroadcasterClips] API error:", error.response?.status, JSON.stringify(error.response?.data ?? {}));
-    } else {
-      console.error("[SyncBroadcasterClips] Unexpected error:", error instanceof Error ? error.message : error);
+      // No response means the request never got an answer (API down, wrong
+      // URL); `code` is then the only thing that says why, e.g. ECONNREFUSED.
+      console.error(
+        "[SyncBroadcasterClips] API error:",
+        error.response?.status ?? error.code ?? "no response",
+        JSON.stringify(error.response?.data ?? {}),
+      );
+      return { message: clipSyncErrorMessage(error.response?.status), success: false };
     }
-    return {
-      message: "Error syncing clips",
-      success: false,
-    };
+    console.error("[SyncBroadcasterClips] Unexpected error:", error instanceof Error ? error.message : error);
+    return { message: clipSyncErrorMessage(500), success: false };
   }
 }
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { TwitchApi, type ChannelInformation } from "@repo/twitch-api";
+import { track } from "@/lib/track";
 import { createClient } from "@repo/supabase/next/server";
 import { getTwitchUserId } from "@repo/supabase/queries/user";
 import { reportError } from "@repo/sentry";
@@ -97,6 +98,7 @@ export async function updateChannelInfo(params: {
       title,
       game_id: params.gameId,
     });
+    await track("stream_info_updated", {}, user);
     return { ok: true };
   } catch (error) {
     reportError(error, "updateChannelInfo");

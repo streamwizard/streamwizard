@@ -61,7 +61,7 @@ export async function deleteOverlayScene(client: DBClient, id: string, userId: s
 }
 
 export async function getOverlayItems(client: DBClient, sceneId: string) {
-  return client.from("overlay_items").select("id").eq("scene_id", sceneId);
+  return client.from("overlay_items").select("*").eq("scene_id", sceneId);
 }
 
 export async function getActiveOverlaySceneBySlug(client: DBClient, slug: string) {

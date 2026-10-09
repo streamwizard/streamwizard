@@ -5,6 +5,7 @@ import {
   isRootLayerType,
   isRootOverlayDefinition,
   OVERLAY_WIDGET_REGISTRY,
+  getLibraryRootItemFactory,
 } from "@/components/overlays/registry/overlay-widget-registry";
 import { clampZoom } from "@/components/overlays/editor/canvas-zoom";
 import {
@@ -144,7 +145,8 @@ interface OverlayEditorState {
   undo: () => void;
   redo: () => void;
 
-  addItem: (type: RootOverlayItemType) => void;
+  /** `presetId` adds one of the widget's library presets instead of its plain default. */
+  addItem: (type: RootOverlayItemType, presetId?: string) => void;
   addCustomWidget: (widgetId: string) => void;
   updateItem: (
     id: string,
@@ -558,15 +560,15 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     });
   },
 
-  addItem: (type) => {
+  addItem: (type, presetId) => {
     const { scene, pushHistory } = get();
     if (!scene) return;
 
-    const def = OVERLAY_WIDGET_REGISTRY[type];
-    if (!def?.createRootItems) return;
+    const createRootItems = getLibraryRootItemFactory(type, presetId);
+    if (!createRootItems) return;
 
     const maxZ = scene.items.reduce((max, item) => Math.max(max, item.z_index), 0);
-    const newItems = def.createRootItems({ scene, nextId: nextTempId, maxZ });
+    const newItems = createRootItems({ scene, nextId: nextTempId, maxZ });
     if (newItems.length === 0) return;
 
     pushHistory();

@@ -75,14 +75,14 @@ const COLOR_MODE_OPTIONS: readonly SegmentedOption<PollWidgetColorMode>[] = [
   { value: "leader", label: "Leader only" },
 ];
 
-const CELEBRATION_LABELS: Record<PollWidgetCelebration, string> = {
+export const CELEBRATION_LABELS: Record<PollWidgetCelebration, string> = {
   none: "None",
   glow: "Glow",
   confetti: "Confetti",
 };
 
 /** A tiny drawing of each design, so the grid reads before the labels do. */
-function PresetSketch({ preset }: { preset: PollWidgetPreset }) {
+export function PresetSketch({ preset }: { preset: PollWidgetPreset }) {
   const fills = ["bg-primary/80", "bg-primary/55", "bg-primary/35"];
   const track = "bg-muted-foreground/25";
   switch (preset) {
@@ -143,7 +143,7 @@ function PresetSketch({ preset }: { preset: PollWidgetPreset }) {
   }
 }
 
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+export function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="min-w-0 space-y-1.5">
       <Label className="text-xs">{label}</Label>
@@ -152,7 +152,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
-function OptionSelect<T extends string>({
+export function OptionSelect<T extends string>({
   id,
   label,
   value,

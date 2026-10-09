@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { Button } from "@repo/ui";
+import { ResetAnalyticsIdentity } from "@/components/public/analytics/reset-analytics-identity";
 import { TrackedLink } from "@/components/public/analytics/tracked-link";
 import type { Metadata } from "next";
 
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
 export default function GoodbyePage() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-16">
+      <ResetAnalyticsIdentity />
       <div className="w-full max-w-lg space-y-8 text-center">
         <div className="space-y-3">
           <h1 className="text-3xl font-bold tracking-tight">

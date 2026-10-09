@@ -14,6 +14,7 @@ export {
 } from "./text-align-select";
 export { GroupLabel, SectionTitle } from "./panel-labels";
 export { MediaField } from "./media-field";
+export { MediaCardField, type MediaCardFieldProps } from "./media-card-field";
 export { SliderField, type SliderFieldProps } from "./slider-field";
 export { SwitchField, type SwitchFieldProps } from "./switch-field";
 export {
