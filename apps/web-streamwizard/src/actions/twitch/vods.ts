@@ -8,6 +8,7 @@ import type { TwitchVideo, GetVideosResponse } from "@/types/twitch";
 import type { GetVideosResult, DeleteVideosResult, CreateClipResult, TwitchStreamMarkersResponse, GetStreamMarkersResult, CreateStreamMarkerResponse } from "@/types/twitch-video";
 import type { GetStreamDataResult, StreamEvent, Clip } from "@/types/stream-events";
 import { ActionResponse } from "@/types/actions";
+import { track } from "@/lib/track";
 
 async function getBroadcasterId(): Promise<string> {
   const supabase = await createClient();
@@ -121,6 +122,8 @@ export async function createClipFromVOD({ vodId, vod_offset, duration, title }: 
       return { success: false, error: "Clip created but not added to pending clips table" };
     }
 
+    await track("vod_clip_created", { duration_s: duration });
+
     return {
       success: true,
       data: {
@@ -233,6 +236,7 @@ export async function createStreamMarker(description?: string): Promise<ActionRe
     const broadcasterId = await getBroadcasterId();
     const api = new TwitchApi(broadcasterId);
     const marker = await api.markers.createMarker(description);
+    await track("stream_marker_created", {});
 
     return {
       success: true,

@@ -1,12 +1,10 @@
 "use client";
 
 import { User } from "@supabase/supabase-js";
-import { hasGrantedConsent, identifyUser, onConsentGranted } from "@repo/posthog";
+import { hasGrantedConsent, identifyUser, isInternalEmail, onConsentGranted } from "@repo/posthog";
 import React, { createContext, useContext, useEffect } from "react";
 
 export const SessionContext = createContext<User | null>(null);
-
-const INTERNAL_EMAIL_DOMAINS = ["amrio.nl"];
 
 interface Props {
   children: React.ReactNode;
@@ -21,9 +19,9 @@ export const SessionProvider = ({ children, session }: Props) => {
     // and display name make a person readable in the PostHog UI; email and
     // avatar were sent before but nothing read them, and PostHog is a US
     // processor, so they stay out. The "Internal / Test users" cohort used to
-    // match on the email domain; it also matches this flag, so the domain
-    // check moves here and the address itself never leaves the browser.
-    const isInternal = INTERNAL_EMAIL_DOMAINS.some((d) => session.email?.toLowerCase().endsWith(`@${d}`));
+    // match on the email domain; it also matches this flag, so only the flag
+    // is sent and the address itself never leaves the browser.
+    const isInternal = isInternalEmail(session.email);
     const identify = () =>
       identifyUser(session.id, {
         name: session.user_metadata.full_name,

@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { denyConsent, getConsentStatus, grantConsent, hasGlobalPrivacyControl } from "@repo/posthog";
-import { useEffect, useState } from "react";
+import {
+  denyConsent,
+  getConsentStatus,
+  grantConsent,
+  hasGlobalPrivacyControl,
+  markConsentResolved,
+} from "@repo/posthog";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { enableSentryReplay } from "@/lib/sentry-replay";
 
@@ -10,20 +16,20 @@ const content = {
   normal: {
     title: "🍪 We use cookies",
     sub: "Unlike your Twitch chat, we ask before we watch.",
-    body: "We use PostHog to track page views and clicks. No ads, no selling your data, just us figuring out why nobody clicks that button.\n\nDecline and you still count as a +1 in the page stats. No cookies, no profile, nothing tied to you.",
+    body: "We use PostHog to track page views and clicks. No ads, no selling your data, just us figuring out why nobody clicks that button.\n\nDecline and you still count as a +1 in the page stats. No cookies, no profile.\n\nSigned in? We still log what your account does, like making an overlay. No IP, and not for sale either.",
     accept: "PogChamp, let's go ✅",
     decline: "Nah, I'm lurking",
     acceptToast: { title: "PogChamp! 🎉", description: "You're now being watched. Just kidding. Kind of." },
-    declineToast: { title: "👀 Lurk mode activated", description: "No cookies, no profile. Just an anonymous +1 in the page stats. True lurker." },
+    declineToast: { title: "👀 Lurk mode activated", description: "No cookies, no profile. Page stats stay anonymous. True lurker." },
   },
   genz: {
     title: "🍪 this website got cookies fr",
     sub: "powered by posthog bc we need to know when the ui is fighting for its life ☕️",
-    body: "we track clicks + navigation + anonymous usage stuff so we can keep improving things instead of shipping pure chaos 💀\n\ndecline = no cookies, no profile. u still count as an anonymous +1 in the page stats tho, like a lurker in the view count.\n\nalso we do NOT sell ur data. that's loser behavior ngl.",
+    body: "we track clicks + navigation + anonymous usage stuff so we can keep improving things instead of shipping pure chaos 💀\n\ndecline = no cookies, no profile. u still count as an anonymous +1 in the page stats tho, like a lurker in the view count.\n\nlogged in? we still note what ur account does (making an overlay etc). no IP tho.\n\nalso we do NOT sell ur data. that's loser behavior ngl.",
     accept: "it's giving consent ✅ slayyyyyyyyy",
     decline: "nah fam i'm ghosting 👻",
     acceptToast: { title: "slay! you're based 🔥", description: "tracking activated. we see u. in a chill way tho." },
-    declineToast: { title: "ghost mode on fr 👻", description: "no cookies. no profile. ur just an anonymous +1 in the stats. certified lurker behavior." },
+    declineToast: { title: "ghost mode on fr 👻", description: "no cookies. no profile. page stats stay anonymous. certified lurker behavior." },
   },
 } as const;
 
@@ -41,11 +47,26 @@ export function CookieBanner() {
     // recorded so we don't ask again; Cookie settings in the footer still
     // lets them change it.
     if (hasGlobalPrivacyControl()) {
-      denyConsent();
+      denyConsent("gpc");
       return;
     }
     setVisible(true);
   }, []);
+
+  // Cookie-banner blockers hide this with a cosmetic filter. Onboarding waits
+  // for the banner to be answered, so a banner nobody can see must not hold
+  // it up: settle the question, without recording a choice either way.
+  const bannerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!visible) return;
+    const frame = requestAnimationFrame(() => {
+      const banner = bannerRef.current;
+      const hidden =
+        !banner || banner.getClientRects().length === 0 || getComputedStyle(banner).visibility === "hidden";
+      if (hidden) markConsentResolved();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [visible]);
 
   function accept() {
     grantConsent();
@@ -55,7 +76,7 @@ export function CookieBanner() {
   }
 
   function decline() {
-    denyConsent();
+    denyConsent("button");
     setVisible(false);
     toast(content[tab].declineToast.title, { description: content[tab].declineToast.description });
   }
@@ -65,7 +86,10 @@ export function CookieBanner() {
   const c = content[tab];
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm w-full animate-in slide-in-from-bottom-4 duration-300">
+    <div
+      ref={bannerRef}
+      className="fixed bottom-4 right-4 z-50 max-w-sm w-full animate-in slide-in-from-bottom-4 duration-300"
+    >
       <div className="rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
         {/* Tabs */}
         <div className="flex border-b border-border">

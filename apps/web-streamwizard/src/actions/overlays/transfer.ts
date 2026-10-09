@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
+import { track } from "@/lib/track";
 import {
   createOverlayScene as createSceneRow,
   deleteOverlayScene as deleteSceneRow,
@@ -120,6 +121,12 @@ export async function exportOverlayScene(sceneId: string): Promise<{
       label: item.label,
       config,
     };
+  });
+
+  await track("overlay_exported", {
+    overlay_id: sceneId,
+    item_count: scene.items.filter((item) => item.type !== "clip_display_field").length,
+    custom_widget_count: widgets.length,
   });
 
   return {
@@ -365,6 +372,11 @@ export async function importOverlayScene(rawJson: string): Promise<{
     notes.push("Clip filters were cleared. Pick your own folders in the editor.");
   }
 
+  await track(
+    "overlay_imported",
+    { overlay_id: newScene.id, item_count: roots.length, custom_widget_count: widgets.length },
+    user,
+  );
   revalidatePath("/dashboard/overlays");
   return { data: { id: newScene.id, name: newScene.name }, error: null, notes };
 }

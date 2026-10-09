@@ -4,6 +4,7 @@ import { reportError } from "@repo/sentry";
 import { getEnabledCommandsByChannel } from "@repo/supabase/queries/commands";
 import type { ChannelChatMessageEvent } from "@repo/schemas";
 import { resolveVariables } from "../../functions/resolveVariables";
+import { recordChatCommand } from "../../functions/trackChatCommand";
 
 export async function handleChatMessage(message: ChannelChatMessageEvent, twitchApi: TwitchApi) {
   // split the message into parts
@@ -53,6 +54,12 @@ export async function handleChatMessage(message: ChannelChatMessageEvent, twitch
     if (!commandData) {
       return;
     }
+
+    recordChatCommand(
+      message.broadcaster_user_id,
+      commandData === matchingCommand.custom_commands ? "custom" : "default",
+      command,
+    );
 
     returnMessage = commandData.message || "";
     action = commandData.action || "";

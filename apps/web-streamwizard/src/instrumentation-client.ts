@@ -26,7 +26,10 @@ if (process.env.NODE_ENV !== "development") {
         createSupabaseIntegration(Sentry),
         createConsoleLogsIntegration(),
       ],
-      replaysSessionSampleRate: 0.1,
+      // Only sessions that hit an error. PostHog records the ordinary ones now
+      // (see packages/posthog/src/init.ts), and two recorders on one page is
+      // twice the work for the visitor's browser.
+      replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 1.0,
     });
   });

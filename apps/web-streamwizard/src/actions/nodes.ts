@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "crypto";
+import { track } from "@/lib/track";
 import { tryAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getTwitchScopes } from "@repo/supabase/queries/twitch-scopes";
@@ -94,12 +95,19 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
     getTwitchScopes(supabase),
   ]);
 
-  if (!node?.api_url) return { data: null, error: "No Cloud OBS capacity is available right now. Please try again later." };
-  if (!subscriptionId) return { data: null, error: "No active Cloud OBS subscription found." };
+  if (!node?.api_url) {
+    await track("cloud_obs_launch_failed", { reason: "no_capacity" }, ctx.user);
+    return { data: null, error: "No Cloud OBS capacity is available right now. Please try again later." };
+  }
+  if (!subscriptionId) {
+    await track("cloud_obs_launch_failed", { reason: "no_subscription" }, ctx.user);
+    return { data: null, error: "No active Cloud OBS subscription found." };
+  }
   // The instance goes live with the user's Twitch stream key, which the node
   // fetches through rest-api. Without the scope that fetch returns nothing and
   // OBS boots keyless, so refuse here and let the page send them to Twitch.
   if (missingTwitchScopes(twitchScopes, "cloud_obs").length > 0) {
+    await track("cloud_obs_launch_failed", { reason: "missing_twitch_scope" }, ctx.user);
     return { data: null, error: "Connect Twitch first so your cloud OBS can stream with your key." };
   }
 
@@ -129,9 +137,11 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as { error?: string };
+    await track("cloud_obs_launch_failed", { reason: "node_refused", status: res.status }, ctx.user);
     return { data: null, error: body.error ?? `Failed to launch instance (${res.status})` };
   }
 
   const instance = (await res.json()) as ObsInstance;
+  await track("cloud_obs_launched", {}, ctx.user);
   return { data: { instance, apiUrl: node.api_url, password: obsWsPassword }, error: null };
 }

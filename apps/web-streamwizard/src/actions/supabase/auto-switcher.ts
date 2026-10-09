@@ -9,6 +9,7 @@ import {
 } from "@repo/supabase/queries/auto-switcher";
 import { autoSwitcherFormSchema, type AutoSwitcherFormValues } from "@repo/schemas";
 import { reportError } from "@repo/sentry";
+import { track } from "@/lib/track";
 import { broadcastToUser } from "@repo/ws-client";
 import { env } from "@/lib/env";
 
@@ -54,6 +55,7 @@ export async function upsertAutoSwitcherConfig(
   }
 
   await pushConfigToEngine(data);
+  await track("auto_switcher_config_saved", {}, user);
   // The saved row goes back to the caller so client state (the deck's switcher
   // tab) can refresh without a page load.
   return { ok: true, data };
@@ -90,6 +92,7 @@ export async function setSceneOverride(
   }
 
   await pushConfigToEngine(data);
+  await track("scene_override_set", { timed: durationMinutes !== null }, user);
   return { ok: true };
 }
 
@@ -112,5 +115,6 @@ export async function clearSceneOverride(): Promise<{ ok: boolean; error?: strin
   }
 
   await pushConfigToEngine(data);
+  await track("scene_override_cleared", {}, user);
   return { ok: true };
 }

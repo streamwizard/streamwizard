@@ -9,6 +9,7 @@ import {
   deleteClipFolder as _deleteClipFolder,
 } from "@repo/supabase/queries/clips";
 import { revalidatePath } from "next/cache";
+import { track } from "@/lib/track";
 
 interface ClipFolder {
   clipId: string;
@@ -21,6 +22,9 @@ export async function addClipToFolder({ clipId, userId, folderId, folderName }: 
   const supabase = await createClient();
   try {
     const result = await _addClipToFolder(supabase, { clipId, userId, folderId, folderName });
+    // No user passed on purpose: `userId` came from the browser, and the
+    // event must be filed under whoever the session says is signed in.
+    if (result.success) await track("clip_added_to_folder", {});
     revalidatePath("/dashboard", "layout");
     return result;
   } catch (error) {
@@ -33,6 +37,7 @@ export async function removeClipFromFolder(clipId: string, folderId: string, use
   const supabase = await createClient();
   try {
     const result = await _removeClipFromFolder(supabase, clipId, folderId, userId);
+    if (result.success) await track("clip_removed_from_folder", {});
     revalidatePath("/dashboard", "layout");
     return result;
   } catch (error) {
@@ -45,6 +50,7 @@ export async function createClipFolder(folderName: string, user_id: string, pare
   const supabase = await createClient();
   try {
     const data = await _createClipFolder(supabase, folderName, user_id, parentFolderId);
+    await track("clip_folder_created", { is_subfolder: !!parentFolderId });
     revalidatePath("/dashboard/clips", "layout");
     return { success: true, message: "Folder created successfully", data };
   } catch (error) {
@@ -69,6 +75,7 @@ export async function deleteClipFolder(folderId: string) {
   const supabase = await createClient();
   try {
     await _deleteClipFolder(supabase, folderId);
+    await track("clip_folder_deleted", {});
     revalidatePath("/dashboard/clips", "layout");
     return { success: true, message: "Folder deleted successfully" };
   } catch (error) {

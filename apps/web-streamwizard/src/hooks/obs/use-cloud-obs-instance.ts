@@ -1,8 +1,8 @@
 "use client";
 
+import { trackAction } from "@/lib/track-action";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { captureEvent } from "@repo/posthog";
 import { launchMyInstanceAction } from "@/actions/nodes";
 import { toggleInstance } from "@/lib/instance-actions";
 import { useObsInstanceSession } from "@/hooks/obs/use-obs-instance-session";
@@ -51,7 +51,6 @@ export function useCloudObsInstance() {
       setApiUrl(data.apiUrl);
       setObsWsPassword(data.password);
       setContainerStatus("running");
-      captureEvent("cloud_obs_launched");
       toast.success("Cloud OBS launched", {
         description: "Your container is booting. Give it a few seconds.",
       });
@@ -75,6 +74,7 @@ export function useCloudObsInstance() {
     try {
       await toggleInstance(apiUrl, instanceId, action);
       setContainerStatus(action === "start" ? "running" : "stopped");
+      trackAction(action === "start" ? "cloud_obs_started" : "cloud_obs_stopped", { location: "dashboard" });
       if (action === "start") {
         awaitingConnectRef.current = true;
         // reconnect (not connect) resets the retry budget, so a restart after a
