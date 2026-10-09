@@ -83,6 +83,13 @@ describe("trackServer", () => {
     expect(captured[0]?.properties.internal_user).toBe(true);
   });
 
+  it("marks an event the browser reported", () => {
+    trackServer("user-1", "discord_guild_joined", { linked: true }, { relayed: true });
+    trackServer("user-1", "discord_guild_joined", { linked: true });
+    expect(captured[0]?.properties.relayed).toBe(true);
+    expect(captured[1]?.properties).not.toHaveProperty("relayed");
+  });
+
   it("sends nothing for an account that objected", () => {
     process.env.POSTHOG_OPT_OUT_USER_IDS = "user-1";
     trackServer("user-1", "discord_guild_joined", { linked: true });

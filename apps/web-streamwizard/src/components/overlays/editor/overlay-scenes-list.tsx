@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAction } from "@/lib/track-action";
 import { Button } from "@repo/ui";
 import {
   Card,
@@ -396,6 +397,7 @@ export function OverlayScenesList({
                       title="Copy URL"
                       onClick={() => {
                         navigator.clipboard.writeText(getOverlayUrl(createdScene));
+                        trackAction("overlay_url_copied", { overlay_id: createdScene.id, location: "create_dialog" });
                         toast.success("Overlay URL copied");
                       }}
                     >
@@ -658,6 +660,7 @@ export function OverlayScenesList({
                       size="sm"
                       onClick={() => {
                         navigator.clipboard.writeText(getOverlayUrl(scene));
+                        trackAction("overlay_url_copied", { overlay_id: scene.id, location: "card" });
                         toast.success("URL copied");
                       }}
                     >

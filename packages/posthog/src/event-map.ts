@@ -75,6 +75,22 @@ export interface EventMap {
   scene_override_set: { timed: boolean };
   scene_override_cleared: NoProps;
 
+  // Dashboard actions no server action sees. The browser reports them through
+  // POST /api/activity and they arrive with `relayed: true`.
+  overlay_url_copied: { overlay_id: string; location: "create_dialog" | "card" | "editor" };
+  cloud_obs_started: { location: "dashboard" | "deck" };
+  cloud_obs_stopped: { location: "dashboard" | "deck" };
+  clip_played: NoProps;
+  clip_link_copied: NoProps;
+  onboarding_step_completed: { step_id: string; step_index: number; total_steps: number };
+  // Once per event type per editor visit, not per click: the simulators loop.
+  test_alert_fired: { event_type: string; mode: "local" | "live" };
+  // `held`: the auto switcher is on, so the scene was pinned as well.
+  deck_scene_switched: { held: boolean };
+  clips_filtered: { filters: string[] };
+  deck_chat_sent: NoProps;
+  stream_info_updated: NoProps;
+
   // Account.
   preferences_saved: Preferences;
   data_export_requested: NoProps;

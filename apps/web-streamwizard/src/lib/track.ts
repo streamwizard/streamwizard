@@ -27,13 +27,19 @@ async function currentUser(): Promise<TrackedUser | null> {
 // Records an account action from a server action or route handler. Pass `user`
 // when the caller already has it; otherwise it is read from the session.
 // Never throws: tracking must not fail the action it describes.
-export async function track<E extends AppEvent>(event: E, properties: EventMap[E], user?: TrackedUser): Promise<void> {
+export async function track<E extends AppEvent>(
+  event: E,
+  properties: EventMap[E],
+  user?: TrackedUser,
+  options?: { relayed?: boolean },
+): Promise<void> {
   try {
     const account = user ?? (await currentUser());
     if (!account) return;
     trackServer(account.id, event, properties, {
       request: { headers: await headers() },
       internal: isInternalEmail(account.email),
+      relayed: options?.relayed,
     });
   } catch (error) {
     reportError(error, "posthog: track");

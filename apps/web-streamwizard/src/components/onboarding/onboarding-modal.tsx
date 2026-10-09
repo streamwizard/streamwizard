@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAction } from "@/lib/track-action";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -14,7 +15,6 @@ import { DiscordLinkStep } from "./steps/discord-link-step";
 import { DiscordJoinStep } from "./steps/discord-join-step";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui";
 import { Button } from "@repo/ui";
-import { captureEvent } from "@repo/posthog";
 
 interface OnboardingValues {
   memes_enabled: boolean;
@@ -37,7 +37,7 @@ const DISCORD_JOIN_STEP_INDEX = STEP_IDS.indexOf("discord-join");
 // Rendered only while the modal is actually shown, so mounting IS the event.
 function OnboardingStartedTracker() {
   useEffect(() => {
-    captureEvent("onboarding_started");
+    trackAction("onboarding_started", {});
   }, []);
   return null;
 }
@@ -90,8 +90,13 @@ export function OnboardingModal({
   }, []);
 
   const handleNext = useCallback(() => {
+    trackAction("onboarding_step_completed", {
+      step_id: STEP_IDS[step]!,
+      step_index: step,
+      total_steps: STEP_IDS.length,
+    });
     setStep((s) => s + 1);
-  }, []);
+  }, [step]);
 
   const isLast = step === STEP_IDS.length - 1;
 

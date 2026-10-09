@@ -24,6 +24,9 @@ export interface TrackOptions {
   // For callers that know the account is one of ours by something other than
   // its id (the web app checks the email domain).
   internal?: boolean;
+  // The browser reported this one (through an authenticated route) rather
+  // than the server seeing it happen. Lands on the event as `relayed: true`.
+  relayed?: boolean;
 }
 
 let config: TrackingConfig | undefined;
@@ -134,6 +137,7 @@ export function trackServer<E extends AppEvent>(
         ...(userAgent ? { $raw_user_agent: userAgent } : {}),
         ...(config?.app ? { app: config.app } : {}),
         ...(options?.internal || isInternalUserId(userId) ? { internal_user: true } : {}),
+        ...(options?.relayed ? { relayed: true } : {}),
         environment: env,
         $process_person_profile: false,
       },

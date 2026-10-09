@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAction } from "@/lib/track-action";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { launchMyInstanceAction } from "@/actions/nodes";
@@ -73,6 +74,7 @@ export function useCloudObsInstance() {
     try {
       await toggleInstance(apiUrl, instanceId, action);
       setContainerStatus(action === "start" ? "running" : "stopped");
+      trackAction(action === "start" ? "cloud_obs_started" : "cloud_obs_stopped", { location: "dashboard" });
       if (action === "start") {
         awaitingConnectRef.current = true;
         // reconnect (not connect) resets the retry budget, so a restart after a

@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAction } from "@/lib/track-action";
 import { captureEvent } from "@repo/posthog";
 import { Button, Separator, SidebarTrigger, useSidebar } from "@repo/ui";
 import { Database } from "@repo/supabase";
@@ -603,6 +604,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
             onClick={() => {
               const url = `${env.NEXT_PUBLIC_OVERLAY_URL}/${scene.slug}`;
               navigator.clipboard.writeText(url);
+              trackAction("overlay_url_copied", { overlay_id: scene.id, location: "editor" });
               toast.success("Overlay URL copied");
             }}
             title="Copy OBS browser source URL"

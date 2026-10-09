@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAction } from "@/lib/track-action";
 import { useCallback } from "react";
 import { toast } from "sonner";
 import {
@@ -28,6 +29,17 @@ export interface UseDemoFire {
  * the alert box's Test buttons both call this, so one Local/Live switch governs
  * both and neither can deliver somewhere the other doesn't.
  */
+// Whether someone tried their alerts at all is the question; the simulators
+// fire on a loop, so every type is reported once per page load and no more.
+const reportedTestAlerts = new Set<string>();
+
+function reportTestAlert(eventType: string, mode: "local" | "live") {
+  const key = `${mode}:${eventType}`;
+  if (reportedTestAlerts.has(key)) return;
+  reportedTestAlerts.add(key);
+  trackAction("test_alert_fired", { event_type: eventType, mode });
+}
+
 export function useDemoFire(): UseDemoFire {
   const sceneId = useOverlayStore((s) => s.scene?.id);
   const items = useOverlayStore((s) => s.scene?.items);
@@ -39,6 +51,7 @@ export function useDemoFire(): UseDemoFire {
     async (request: DemoFireRequest) => {
       if (!sceneId) return false;
       const delivered = await fireDemoEvent(request, { mode, sceneId, emitLocal });
+      if (delivered) reportTestAlert(request.type, mode);
       // A forced variation skips the alert's own switch and minimum, so there
       // is nothing it could be swallowed by.
       if (delivered && !request.forceVariation) warnIfNoAlertBoxWillPlay(request, items ?? []);
