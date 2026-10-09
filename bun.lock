@@ -90,6 +90,7 @@
         "@repo/discord-api": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/metrics": "workspace:*",
+        "@repo/posthog": "workspace:*",
         "@repo/proxmox": "workspace:*",
         "@repo/schemas": "workspace:*",
         "@repo/sentry": "workspace:*",

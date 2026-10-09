@@ -17,6 +17,7 @@ import {
 
 import { kindFromMime, type AssetKind } from "@/lib/asset-mime";
 import { tryAuthContext, type AuthContext } from "@/lib/auth";
+import { track } from "@/lib/track";
 import { env } from "@/lib/env";
 
 // Media library: streamer-uploaded overlay assets (alert images/sounds/videos)
@@ -207,6 +208,7 @@ export async function confirmAssetUpload(
         reportError(updateError, "actions/assets");
         return { data: null, error: "Failed to finish the upload." };
       }
+      await track("media_uploaded", { mime_type: asset.mime_type, size_kb: Math.round(head.size / 1024) }, user);
     }
     revalidatePath("/dashboard/media");
     return listAssets();
@@ -241,6 +243,7 @@ export async function deleteAsset(assetId: string): Promise<{ data: AssetListing
     await getR2()
       .deleteObject(asset.key)
       .catch((err) => reportError(err, "actions/assets: delete object", { assetId: asset.id }));
+    await track("media_deleted", { mime_type: asset.mime_type, size_kb: Math.round(asset.size_bytes / 1024) }, user);
     revalidatePath("/dashboard/media");
     return listAssets();
   } catch (err) {

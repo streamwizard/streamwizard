@@ -11,6 +11,7 @@ import {
   selectOutputKeys,
 } from "@repo/supabase/queries/ingest";
 import { tryAuthContext } from "@/lib/auth";
+import { track } from "@/lib/track";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
 import type { Database } from "@repo/supabase";
@@ -61,6 +62,7 @@ export async function createOutputKey(
   }
 
   revalidatePath(INGEST_SETTINGS_PATH);
+  await track("ingest_key_created", { kind: "output" }, user);
   return { data, error: null };
 }
 
@@ -93,6 +95,7 @@ export async function rotateOutputKey(
   }
 
   revalidatePath(INGEST_SETTINGS_PATH);
+  await track("ingest_key_rotated", { kind: "output" }, user);
   return { data, error: null };
 }
 
@@ -106,5 +109,6 @@ export async function deleteOutputKey(id: string): Promise<{ error: string | nul
 
   revalidatePath(INGEST_SETTINGS_PATH);
   if (error) reportError(error, "actions/ingest-output-keys");
+  if (!error) await track("ingest_key_deleted", { kind: "output" }, user);
   return { error: error?.message ?? null };
 }

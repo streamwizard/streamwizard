@@ -36,6 +36,13 @@ const schema = z.object({
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_RELEASE: z.string().optional(),
 
+  // PostHog (server-side capture; analytics silently off when unset)
+  POSTHOG_KEY: z.string().min(1).optional(),
+  POSTHOG_HOST: z.string().url().optional(),
+  // Comma-separated account ids: flagged as internal / never sent at all.
+  POSTHOG_INTERNAL_USER_IDS: z.string().optional(),
+  POSTHOG_OPT_OUT_USER_IDS: z.string().optional(),
+
   // Shared CDN bucket, for removing a user's ticket attachments when Twitch
   // revokes StreamWizard (user.authorization.revoke). Optional: without all
   // four the account is still deleted and the skipped purge is reported.

@@ -134,7 +134,6 @@ export function OnboardingModal({
     const ok = await completeOnboarding(values);
     setSaving(false);
     if (!ok) return;
-    captureEvent("onboarding_completed");
     setPreferences({ ...preferences, ...values, onboarding_completed: true });
     router.push("/dashboard/clips");
   }, [values, preferences, setPreferences, router]);

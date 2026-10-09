@@ -1,4 +1,3 @@
-import "server-only";
 import { headers } from "next/headers";
 import { configureTracking, isInternalEmail, trackServer, type AppEvent, type EventMap } from "@repo/posthog/server";
 import { reportError } from "@repo/sentry";

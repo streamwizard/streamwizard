@@ -4,7 +4,8 @@ process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); 
 import "./lib/env";
 import { Hono } from "hono";
 import { sentry } from "@sentry/hono/bun";
-import { getSentryOptions, createSupabaseIntegration, createConsoleLogsIntegration, flushSentry, reportFatal } from "@repo/sentry";
+import { configureTracking, flushTracking } from "@repo/posthog/server";
+import { getSentryOptions, createSupabaseIntegration, createConsoleLogsIntegration, flushSentry, reportError, reportFatal } from "@repo/sentry";
 import { metricsMiddleware, isMetricsEnabled, initMetrics, BUCKETS } from "@repo/metrics";
 import { cors } from "hono/cors";
 import { securityMiddleware } from "./middleware/security";
@@ -144,9 +145,12 @@ const server = Bun.serve({
 
 // Without a signal handler the container is killed outright on deploy and any
 // queued Sentry event dies with it.
+configureTracking({ app: "rest-api", onError: (error) => reportError(error, "rest-api: posthog") });
+
 const shutdown = async () => {
   console.log("[rest-api] shutting down");
   server.stop();
+  await flushTracking();
   await flushSentry();
   process.exit(0);
 };

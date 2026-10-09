@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { track } from "@/lib/track";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
@@ -125,6 +126,7 @@ export async function unlinkDiscord() {
   }
 
   await deleteDiscordIntegration(supabase, userData.user.id);
+  await track("discord_unlinked", {}, userData.user);
 
   revalidatePath("/dashboard/settings/integrations");
 }
