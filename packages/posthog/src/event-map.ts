@@ -39,7 +39,22 @@ export interface EventMap {
   overlay_key_reset: { overlay_id: string };
   overlay_favourite_toggled: { overlay_id: string; favourite: boolean };
   overlay_active_toggled: { overlay_id: string; active: boolean };
-  widget_added: { custom: boolean; widget?: string; preset?: string };
+  // What one Save in the editor changed. The type lists hold each type once;
+  // the counts say how many widgets.
+  overlay_saved: {
+    overlay_id: string;
+    item_count: number;
+    added_types: string[];
+    added_count: number;
+    removed_types: string[];
+    removed_count: number;
+    reconfigured_types: string[];
+    reconfigured_count: number;
+  };
+  // Sent at save time, one per widget: a widget that was saved onto an
+  // overlay, or saved off it. Not a widget dropped on the canvas and undone.
+  widget_added: { overlay_id: string; widget: string; custom: boolean; custom_widget_id?: string };
+  widget_removed: { overlay_id: string; widget: string; custom: boolean; custom_widget_id?: string };
 
   // Custom widgets. "starter" is one of our templates, "library" another
   // streamer's published widget.

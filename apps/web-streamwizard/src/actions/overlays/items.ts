@@ -10,8 +10,10 @@ import {
   updateOverlayItemData,
 } from "@repo/supabase/queries/overlays";
 import { overlayItemSchema } from "@/schemas/overlay";
-import type { OverlayItem, OverlayItemConfig, OverlaySceneWithItems } from "@/types/overlays";
+import { overlayItemFromDbRow, type OverlayItem, type OverlayItemConfig, type OverlaySceneWithItems } from "@/types/overlays";
 import { tryAuthContext } from "@/lib/auth";
+import { track } from "@/lib/track";
+import { diffOverlaySave, type StoredOverlayItem, type WidgetRef } from "./save-diff";
 import { getOverlayScene } from "./scenes";
 import {
   OVERLAYS_ERROR_SCOPE,
@@ -19,6 +21,9 @@ import {
   overlayItemColumns,
   resolveClipFieldParentRefs,
 } from "./shared";
+
+// A save that swaps out a whole overlay is still one save, not 200 events.
+const MAX_WIDGET_EVENTS_PER_SAVE = 40;
 
 interface OverlayItemInput {
   id?: string;
@@ -65,6 +70,8 @@ export async function saveAllOverlayItems(
   const { supabase } = ctx;
 
   const idMap = new Map<string, string>();
+  // Existing rows as this save wrote them, for the "what changed" event.
+  const written: StoredOverlayItem[] = [];
 
   const { data: dbItems } = await getOverlayItems(supabase, sceneId);
   const liveIds = new Set((dbItems ?? []).map((row) => row.id));
@@ -98,11 +105,13 @@ export async function saveAllOverlayItems(
     if (!parsed.success) {
       return { success: false, error: parsed.error.message, data: null, idMap: {} };
     }
-    const { error } = await updateOverlayItemData(supabase, item.id!, overlayItemColumns(parsed.data));
+    const columns = overlayItemColumns(parsed.data);
+    const { error } = await updateOverlayItemData(supabase, item.id!, columns);
     if (error) {
       reportError(error, OVERLAYS_ERROR_SCOPE);
       return { success: false, error: error.message, data: null, idMap: {} };
     }
+    written.push({ id: item.id!, type: item.type, config: columns.config });
   }
 
   type ItemInsert = Database["public"]["Tables"]["overlay_items"]["Insert"];
@@ -166,6 +175,56 @@ export async function saveAllOverlayItems(
   }
 
   revalidatePath("/dashboard/overlays");
+
+  // Everything is saved at this point. Whatever goes wrong while describing
+  // the save must not turn it into a failed one.
+  try {
+    // A stored config predates whatever defaults the schema has gained since
+    // it was written. Compared as stored, every widget of a type would count
+    // as changed the first time it is saved after such a release, so the old
+    // side goes through the same schema as the new one first.
+    const stored = (dbItems ?? []).map((row): StoredOverlayItem => {
+      const parsed = overlayItemSchema.safeParse(overlayItemFromDbRow(row));
+      return { id: row.id, type: row.type, config: parsed.success ? overlayItemColumns(parsed.data).config : row.config };
+    });
+    const diff = diffOverlaySave({
+      stored,
+      deletedIds: idsToDelete,
+      updated: written,
+      inserted: newItems,
+    });
+    const types = (refs: WidgetRef[]) => [...new Set(refs.map((ref) => ref.type))].sort();
+    await track(
+      "overlay_saved",
+      {
+        overlay_id: sceneId,
+        item_count: diff.itemCount,
+        added_types: types(diff.added),
+        added_count: diff.added.length,
+        removed_types: types(diff.removed),
+        removed_count: diff.removed.length,
+        reconfigured_types: diff.reconfiguredTypes,
+        reconfigured_count: diff.reconfiguredCount,
+      },
+      ctx.user,
+    );
+    // One event per widget as well: PostHog cannot break a chart down by the
+    // entries of a list, and "which widgets get added" is the chart.
+    const widgetEvent = (ref: WidgetRef) => ({
+      overlay_id: sceneId,
+      widget: ref.type,
+      custom: ref.type === "custom_widget",
+      ...(ref.customWidgetId ? { custom_widget_id: ref.customWidgetId } : {}),
+    });
+    for (const ref of diff.added.slice(0, MAX_WIDGET_EVENTS_PER_SAVE)) {
+      await track("widget_added", widgetEvent(ref), ctx.user);
+    }
+    for (const ref of diff.removed.slice(0, MAX_WIDGET_EVENTS_PER_SAVE)) {
+      await track("widget_removed", widgetEvent(ref), ctx.user);
+    }
+  } catch (error) {
+    reportError(error, "overlays: save diff");
+  }
 
   const reloaded = await getOverlayScene(sceneId);
   // getOverlayScene already reports its own DB errors; this reload is

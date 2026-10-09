@@ -1,7 +1,6 @@
 "use client";
 
 import { trackAction } from "@/lib/track-action";
-import { captureEvent } from "@repo/posthog";
 import { Button, Separator, SidebarTrigger, useSidebar } from "@repo/ui";
 import { Database } from "@repo/supabase";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
@@ -765,20 +764,14 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       <OverlayWidgetSheet
         open={widgetSheetOpen}
         onOpenChange={setWidgetSheetOpen}
-        onAddWidget={(type, presetId) => {
-          captureEvent("widget_added", { widget: type, custom: false, ...(presetId ? { preset: presetId } : {}) });
-          addItem(type, presetId);
-        }}
+        onAddWidget={(type, presetId) => addItem(type, presetId)}
         onOpenLibrary={() => setWidgetLibraryOpen(true)}
       />
 
       <WidgetLibraryModal
         open={widgetLibraryOpen}
         onOpenChange={setWidgetLibraryOpen}
-        onAddToCanvas={(widgetId) => {
-          captureEvent("widget_added", { custom: true });
-          addCustomWidget(widgetId);
-        }}
+        onAddToCanvas={(widgetId) => addCustomWidget(widgetId)}
       />
 
       <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
