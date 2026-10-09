@@ -10,9 +10,9 @@ mock.module("posthog-js", () => ({
     opt_in_capturing: () => {
       status = "granted";
     },
-    // Left "pending" on purpose: this is the browser that blocks storage, so
-    // the stored status never changes however the visitor answers.
-    opt_out_capturing: () => {},
+    opt_out_capturing: () => {
+      status = "denied";
+    },
     capture: (event: string, properties: unknown) => captures.push({ event, properties }),
     startSessionRecording: () => {
       recordingStarts++;
@@ -27,54 +27,33 @@ Object.assign(globalThis, { window: browser, navigator: {} });
 
 const consent = await import("./consent");
 
-describe("consent resolution", () => {
+describe("consent", () => {
   beforeEach(() => {
+    status = "pending";
     captures.length = 0;
-    Object.assign(globalThis, { navigator: {} });
-  });
-
-  // Order matters in this file: "resolved this page load" is module state and
-  // only ever goes one way, as it does in a browser.
-  it("is unresolved while the banner is still unanswered", () => {
-    status = "pending";
-    expect(consent.isConsentResolved()).toBe(false);
-  });
-
-  it("counts Global Privacy Control as an answer", () => {
-    Object.assign(globalThis, { navigator: { globalPrivacyControl: true } });
-    expect(consent.isConsentResolved()).toBe(true);
-  });
-
-  it("counts an answer from an earlier visit", () => {
-    status = "denied";
-    expect(consent.isConsentResolved()).toBe(true);
-    status = "granted";
-    expect(consent.isConsentResolved()).toBe(true);
-  });
-
-  it("starts no recording on a decline", () => {
     recordingStarts = 0;
-    status = "pending";
-    consent.denyConsent("gpc");
-    expect(recordingStarts).toBe(0);
   });
 
-  it("starts recording on an accept", () => {
-    recordingStarts = 0;
-    consent.grantConsent();
-    expect(recordingStarts).toBe(1);
-  });
-
-  it("resolves on decline even when storage never records it, and says how it was declined", () => {
-    status = "pending";
-    let notified = 0;
-    const stop = consent.onConsentResolved(() => notified++);
+  it("a decline starts no recording and is counted once, with how it arrived", () => {
     consent.denyConsent("button");
+    expect(recordingStarts).toBe(0);
+    expect(captures).toEqual([{ event: "consent_declined", properties: { via: "button" } }]);
+  });
+
+  it("tells a banner decline apart from the browser answering for them", () => {
+    consent.denyConsent("gpc");
+    expect(captures[0]?.properties).toEqual({ via: "gpc" });
+  });
+
+  it("an accept starts recording, counts the page it happened on and tells listeners", () => {
+    let granted = 0;
+    const stop = consent.onConsentGranted(() => granted++);
+    consent.grantConsent();
     stop();
 
-    expect(notified).toBe(1);
-    expect(consent.getConsentStatus()).toBe("pending");
-    expect(consent.isConsentResolved()).toBe(true);
-    expect(captures).toEqual([{ event: "consent_declined", properties: { via: "button" } }]);
+    expect(recordingStarts).toBe(1);
+    expect(captures).toEqual([{ event: "$pageview", properties: { $current_url: "https://example.test/dashboard" } }]);
+    expect(granted).toBe(1);
+    expect(consent.hasGrantedConsent()).toBe(true);
   });
 });
