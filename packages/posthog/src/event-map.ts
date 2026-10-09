@@ -116,6 +116,18 @@ export interface EventMap {
   account_deleted: { account_age_days: number | null };
   discord_linked: { role_status: string; source: "onboarding" | "settings" };
   discord_guild_joined: { linked: boolean };
+  // A slash command or right-click entry in our Discord server. People who
+  // have not linked a StreamWizard account all share one id.
+  discord_command_used: {
+    command: string;
+    subcommand?: string;
+    kind: "slash" | "context_menu";
+    linked: boolean;
+    ok: boolean;
+  };
+  // Chat commands the Twitch bot answered in a channel, added up per five
+  // minutes: `count` uses in one event. `command` only for our own defaults.
+  chat_command_used: { command_type: "custom" | "default"; command?: string; count: number };
   // Public marketing pages. `$pathname` is on every event, so none of these
   // carry the page; `section` / `cta` say where on the page.
   cta_clicked: { cta: string; section: string; href: string; external: boolean };

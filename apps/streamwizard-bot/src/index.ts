@@ -1,7 +1,9 @@
 import { Sentry } from "./sentry";
 process.on("uncaughtException", (err) => { reportFatal(err, "streamwizard-bot"); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
-import { flushSentry, reportFatal } from "@repo/sentry";
+import { configureTracking, flushTracking } from "@repo/posthog/server";
+import { flushSentry, reportError, reportFatal } from "@repo/sentry";
+import { flushChatCommands } from "./functions/trackChatCommand";
 import { handlers } from "./handlers/eventHandler";
 import { ConduitShardManager, parseShardIds, type EventSubLifecycleEvent } from "@repo/twitch-eventsub";
 import { env } from "./lib/env";
@@ -68,11 +70,15 @@ async function main() {
       },
     });
 
+    configureTracking({ app: "streamwizard-bot", onError: (error) => reportError(error, "streamwizard-bot: posthog") });
+
     const shutdown = async () => {
       healthServer.stop();
       overlayWsClient.disconnect();
       await shards.stop();
       await logGroup?.flush();
+      await flushChatCommands();
+      await flushTracking();
       await flushSentry();
       process.exit(0);
     };

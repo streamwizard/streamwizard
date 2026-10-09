@@ -5,6 +5,7 @@ import { canRunCommand } from "../lib/permissions";
 import { handleTicketInteraction } from "../lib/tickets";
 import { handleSetupInteraction } from "../lib/setup-wizard";
 import { handleBuiltButton, isBuiltButton } from "../lib/built-buttons";
+import { trackCommand } from "../lib/command-tracking";
 
 export default {
   name: Events.InteractionCreate,
@@ -57,7 +58,9 @@ export default {
       }
       try {
         await command.execute(interaction);
+        void trackCommand(interaction, true);
       } catch (error) {
+        void trackCommand(interaction, false);
         reportError(error, "discord-bot commands: execute", { command: interaction.commandName });
         const payload = { content: "Something went wrong with that.", flags: MessageFlags.Ephemeral } as const;
         if (interaction.replied || interaction.deferred) await interaction.followUp(payload).catch(() => {});
@@ -95,7 +98,9 @@ export default {
 
     try {
       await command.execute(interaction);
+      void trackCommand(interaction, true);
     } catch (error) {
+      void trackCommand(interaction, false);
       reportError(error, "discord-bot commands: execute", { command: interaction.commandName });
 
       const payload = { content: "Something went wrong running that command.", flags: MessageFlags.Ephemeral } as const;

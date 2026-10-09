@@ -119,6 +119,7 @@
       "dependencies": {
         "@repo/logger": "workspace:*",
         "@repo/metrics": "workspace:*",
+        "@repo/posthog": "workspace:*",
         "@repo/schemas": "workspace:*",
         "@repo/sentry": "workspace:*",
         "@repo/supabase": "workspace:*",
