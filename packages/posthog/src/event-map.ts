@@ -9,6 +9,10 @@
 
 type NoProps = Record<string, never>;
 
+// Where an overlay page is open: an OBS browser source, a plain browser tab,
+// or framed inside another page.
+export type OverlayClient = "obs" | "browser" | "embed";
+
 interface Preferences {
   memes_enabled?: boolean;
   sync_clips_on_end?: boolean;
@@ -116,6 +120,28 @@ export interface EventMap {
   account_deleted: { account_age_days: number | null };
   discord_linked: { role_status: string; source: "onboarding" | "settings" };
   discord_guild_joined: { linked: boolean };
+  // Sent by the rendered overlay itself, so they describe real use on stream
+  // rather than what someone configured. Keyed on the overlay's owner.
+  overlay_loaded: {
+    overlay_id: string;
+    render_mode: string;
+    widget_types: string[];
+    widget_count: number;
+    has_custom_widget: boolean;
+    client: OverlayClient;
+    obs_version?: string;
+  };
+  overlay_heartbeat: {
+    overlay_id: string;
+    uptime_s: number;
+    client: OverlayClient;
+    // "unknown" until OBS says either way: it reports changes, not the state
+    // a source loaded in.
+    on_program: boolean | "unknown";
+    streaming: boolean | "unknown";
+    clips_played: number;
+    alerts_shown: number;
+  };
   // A slash command or right-click entry in our Discord server. People who
   // have not linked a StreamWizard account all share one id.
   discord_command_used: {
