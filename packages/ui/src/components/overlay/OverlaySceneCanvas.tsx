@@ -26,6 +26,8 @@ import { GoalWidgetRenderer } from "./widgets/goal/GoalWidgetRenderer";
 import { GOAL_WIDGET_TYPES } from "./widgets/goal/goal-widget-config";
 import { pollWidgetBaseDefinition } from "./widgets/poll/poll-widget-definition";
 import { PollWidgetRenderer } from "./widgets/poll/PollWidgetRenderer";
+import { predictionWidgetBaseDefinition } from "./widgets/prediction/prediction-widget-definition";
+import { PredictionWidgetRenderer } from "./widgets/prediction/PredictionWidgetRenderer";
 import { adWidgetBaseDefinition } from "./widgets/ads/ad-widget-definition";
 import { AdWidgetRenderer } from "./widgets/ads/AdWidgetRenderer";
 import { uptimeWidgetBaseDefinition } from "./widgets/uptime/uptime-widget-definition";
@@ -40,6 +42,9 @@ import { hypeTrainWidgetBaseDefinition } from "./widgets/hype-train/hype-train-w
 import { HypeTrainWidgetRenderer } from "./widgets/hype-train/HypeTrainWidgetRenderer";
 import { creditsWidgetBaseDefinition } from "./widgets/credits/credits-widget-definition";
 import { CreditsWidgetRenderer } from "./widgets/credits/CreditsWidgetRenderer";
+import { ImageWidgetRenderer, VideoWidgetRenderer } from "./widgets/media/MediaWidgetRenderer";
+import { ShapeWidgetRenderer } from "./widgets/shape/ShapeWidgetRenderer";
+import { SlideshowWidgetRenderer } from "./widgets/slideshow/SlideshowWidgetRenderer";
 import { IRL_FIELD_WIDGET_TYPES } from "./types";
 
 export type OverlayWidgetProps = {
@@ -61,6 +66,10 @@ const CORE_WIDGETS: OverlayWidgetRegistration[] = [
     Component: TextWidgetRenderer as W,
     collectFontFamilies: textWidgetBaseDefinition.collectFontFamilies,
   },
+  { id: "image_widget", Component: ImageWidgetRenderer as W },
+  { id: "video_widget", Component: VideoWidgetRenderer as W },
+  { id: "slideshow_widget", Component: SlideshowWidgetRenderer as W },
+  { id: "shape_widget", Component: ShapeWidgetRenderer as W },
   {
     id: "timer_widget",
     Component: TimerWidgetRenderer as W,
@@ -90,6 +99,11 @@ const CORE_WIDGETS: OverlayWidgetRegistration[] = [
     id: "poll_widget",
     Component: PollWidgetRenderer as W,
     collectFontFamilies: pollWidgetBaseDefinition.collectFontFamilies,
+  },
+  {
+    id: "prediction_widget",
+    Component: PredictionWidgetRenderer as W,
+    collectFontFamilies: predictionWidgetBaseDefinition.collectFontFamilies,
   },
   {
     id: "ad_widget",

@@ -30,15 +30,19 @@ import {
 } from "@/components/overlays/inspector-fields";
 import {
   LABEL_CATALOG,
+  LABEL_ENTRY_KINDS,
   LABEL_GROUP_TITLES,
   LABEL_PERIODS,
   LABEL_PERIOD_LABELS,
   getLabelDefinition,
   type LabelDefinition,
+  type LabelEntryKind,
   type LabelGroup,
   type LabelPeriod,
 } from "@repo/schemas";
 import {
+  EVENT_LIST_LABEL_ID,
+  LABEL_ENTRY_KIND_LABELS,
   LABELS_RESET_BROWSER_EVENT,
   LABEL_ANIMATE_PREVIEW_EVENT,
   LABEL_WIDGET_ANIMATIONS,
@@ -54,6 +58,7 @@ import {
 } from "@repo/ui/overlay";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
+import { LABEL_WIDGET_SIZES as SIZES } from "./label-widget-definition";
 
 const LAYOUT_OPTIONS: readonly SegmentedOption<LabelWidgetLayout>[] = [
   { value: "inline", label: "One line" },
@@ -68,12 +73,6 @@ const DIRECTION_OPTIONS: readonly SegmentedOption<LabelWidgetDirection>[] = [
 /** Only groups the catalog uses, in catalog order. */
 const GROUPS = [...new Set(LABEL_CATALOG.map((d) => d.group))] as LabelGroup[];
 
-/** Canvas size per kind of label, applied when switching between kinds. */
-const SIZES = {
-  single: { w: 480, h: 64 },
-  stacked: { w: 360, h: 260 },
-  row: { w: 960, h: 64 },
-} as const;
 
 function isList(def: LabelDefinition): boolean {
   return def.shape === "list" || (def.shape === "leaders" && !def.single);
@@ -112,6 +111,11 @@ export function LabelWidgetSettings({ item, updateItem }: OverlayInspectorAppend
     const to = sizeFor(nextDef, next.direction);
     const geometry = from === to ? null : presetGeometry(item, to);
     updateItem(item.id, { config: next, ...geometry });
+  }
+
+  function toggleEventKind(kind: LabelEntryKind, on: boolean) {
+    // Rebuilt from the catalog, so the stored list keeps one order whatever was clicked first.
+    patchConfig({ eventKinds: LABEL_ENTRY_KINDS.filter((k) => (k === kind ? on : cfg.eventKinds.includes(k))) });
   }
 
   function pickLabel(labelId: string) {
@@ -331,6 +335,27 @@ export function LabelWidgetSettings({ item, updateItem }: OverlayInspectorAppend
                 </InspectorReveal>
               </div>
             </InspectorReveal>
+          </div>
+        </InspectorSection>
+      )}
+
+      {def.id === EVENT_LIST_LABEL_ID && (
+        <InspectorSection title="Events" defaultOpen>
+          <div className="space-y-1">
+            {LABEL_ENTRY_KINDS.map((kind) => (
+              <SwitchField
+                key={kind}
+                id={`label-widget-kind-${kind}`}
+                label={LABEL_ENTRY_KIND_LABELS[kind]}
+                checked={cfg.eventKinds.includes(kind)}
+                onCheckedChange={(on) => toggleEventKind(kind, on)}
+              />
+            ))}
+            <p className="pt-2 text-xs leading-snug text-muted-foreground">
+              {cfg.eventKinds.length === 0
+                ? "Everything is off, so the list stays empty. Turn on at least one."
+                : "The list picks from your 50 newest events. On a busy stream, a rare kind can show fewer rows than you asked for."}
+            </p>
           </div>
         </InspectorSection>
       )}

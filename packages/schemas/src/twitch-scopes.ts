@@ -29,7 +29,8 @@ export const TWITCH_SCOPE_SETS = {
     "user:bot",
     "channel:bot",
     // Overlay events: channel.follow, .cheer, .subscribe and .subscription.*,
-    // .hype_train.*, .ad_break.begin, .channel_points_*, .poll.*, .shoutout.*
+    // .hype_train.*, .ad_break.begin, .channel_points_*, .poll.*, .prediction.*,
+    // .shoutout.*
     // (manage also covers the bot's Send Shoutout action).
     "moderator:read:followers",
     "bits:read",
@@ -38,6 +39,7 @@ export const TWITCH_SCOPE_SETS = {
     "channel:read:ads",
     "channel:read:redemptions",
     "channel:read:polls",
+    "channel:read:predictions",
     "moderator:manage:shoutouts",
     // Goal widgets: Get Creator Goals and channel.goal.*.
     "channel:read:goals",

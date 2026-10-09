@@ -763,9 +763,9 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       <OverlayWidgetSheet
         open={widgetSheetOpen}
         onOpenChange={setWidgetSheetOpen}
-        onAddWidget={(type) => {
-          captureEvent("widget_added", { widget: type, custom: false });
-          addItem(type);
+        onAddWidget={(type, presetId) => {
+          captureEvent("widget_added", { widget: type, custom: false, ...(presetId ? { preset: presetId } : {}) });
+          addItem(type, presetId);
         }}
         onOpenLibrary={() => setWidgetLibraryOpen(true)}
       />

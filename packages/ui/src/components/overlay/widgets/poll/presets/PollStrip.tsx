@@ -26,7 +26,7 @@ export function PollStrip({ view, cfg }: PollPresetProps) {
     ? view.resultText
     : lead
       ? [lead.title, leadValue].filter(Boolean).join(" ")
-      : "No votes yet";
+      : (view.emptyText ?? "No votes yet");
   const right = !view.ended && cfg.showTimer ? view.timerText : "";
   const dotColor = lead && view.resultText !== "Tie" ? lead.color : null;
   const dot = Math.round(cfg.fontSize * 0.55);

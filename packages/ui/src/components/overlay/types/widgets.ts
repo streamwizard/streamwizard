@@ -11,9 +11,33 @@ import type { OverlayItemConfig } from "./item";
 /** Persisted on `overlay_items` rows with `type === "text_widget"`. */
 export interface TextWidgetItemConfig extends OverlayTextStyle {
   text: string;
+  /** A soft dark shadow, so light text stays readable over a bright game. */
+  textShadow: boolean;
+  /** Outline thickness in px. Zero = no outline. */
+  outlineWidth: number;
+  outlineColor: string;
+  backgroundColor: string;
+  /** 0–1. Zero = no background box. */
+  backgroundOpacity: number;
+  /** Corner rounding of the background in percent. 100 is a pill. */
+  backgroundRounding: number;
+  /** Runs the text across the box on one line, like a news ticker. */
+  scroll: boolean;
+  /** Ticker speed in px per second. */
+  scrollSpeed: number;
 }
 
-export const TIMER_COUNTDOWN_MODES = ["duration", "absolute"] as const;
+export const TEXT_WIDGET_LIMITS = {
+  outlineWidth: { min: 0, max: 20 },
+  backgroundRounding: { min: 0, max: 100 },
+  scrollSpeed: { min: 10, max: 400 },
+} as const;
+
+/**
+ * `stopwatch` counts up from zero; the other two count down. The name predates
+ * the stopwatch, and stored rows carry it.
+ */
+export const TIMER_COUNTDOWN_MODES = ["duration", "absolute", "stopwatch"] as const;
 
 export type TimerCountdownMode = (typeof TIMER_COUNTDOWN_MODES)[number];
 
@@ -29,7 +53,7 @@ export const CLOCK_LAYOUT_MODES = ["inline", "stacked"] as const;
 
 export type ClockLayoutMode = (typeof CLOCK_LAYOUT_MODES)[number];
 
-/** Countdown: either a fixed length from first paint / load, or a wall-clock target. */
+/** Countdown to a fixed length or a wall-clock target, or a stopwatch counting up from load. */
 export interface TimerWidgetItemConfig extends OverlayTextStyle {
   countdownMode: TimerCountdownMode;
   /**
@@ -105,7 +129,61 @@ export const DEFAULT_TEXT_WIDGET_ITEM_CONFIG: TextWidgetItemConfig = {
   align: "left",
   fontWeight: 400,
   fontFamily: DEFAULT_GOOGLE_FONT_FAMILY,
+  textShadow: false,
+  outlineWidth: 0,
+  outlineColor: "#000000",
+  backgroundColor: "#000000",
+  backgroundOpacity: 0,
+  backgroundRounding: 0,
+  scroll: false,
+  scrollSpeed: 80,
 };
+
+const HEX_COLOR = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+function hexColor(value: unknown, fallback: string): string {
+  return typeof value === "string" && HEX_COLOR.test(value) ? value : fallback;
+}
+
+function clampedNumber(value: unknown, range: { min: number; max: number }, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.min(range.max, Math.max(range.min, value))
+    : fallback;
+}
+
+/**
+ * Fills gaps and clamps a stored text config. Rows from before outline,
+ * background and ticker existed carry none of them, and read as "off".
+ */
+export function normalizeTextWidgetConfig(
+  config: OverlayItemConfig | Record<string, unknown>
+): TextWidgetItemConfig {
+  const r = config as Partial<TextWidgetItemConfig> & Record<string, unknown>;
+  const base = DEFAULT_TEXT_WIDGET_ITEM_CONFIG;
+  return {
+    text: typeof r.text === "string" ? r.text : base.text,
+    fontFamily: resolvedTextWidgetFontFamily(r),
+    fontSize: typeof r.fontSize === "number" && r.fontSize >= 8 ? r.fontSize : base.fontSize,
+    color: typeof r.color === "string" ? r.color : base.color,
+    align: r.align === "left" || r.align === "center" || r.align === "right" ? r.align : base.align,
+    fontWeight:
+      r.fontWeight === 400 || r.fontWeight === 500 || r.fontWeight === 600 || r.fontWeight === 700
+        ? r.fontWeight
+        : base.fontWeight,
+    textShadow: typeof r.textShadow === "boolean" ? r.textShadow : base.textShadow,
+    outlineWidth: clampedNumber(r.outlineWidth, TEXT_WIDGET_LIMITS.outlineWidth, base.outlineWidth),
+    outlineColor: hexColor(r.outlineColor, base.outlineColor),
+    backgroundColor: hexColor(r.backgroundColor, base.backgroundColor),
+    backgroundOpacity: clampedNumber(r.backgroundOpacity, { min: 0, max: 1 }, base.backgroundOpacity),
+    backgroundRounding: clampedNumber(
+      r.backgroundRounding,
+      TEXT_WIDGET_LIMITS.backgroundRounding,
+      base.backgroundRounding
+    ),
+    scroll: typeof r.scroll === "boolean" ? r.scroll : base.scroll,
+    scrollSpeed: clampedNumber(r.scrollSpeed, TEXT_WIDGET_LIMITS.scrollSpeed, base.scrollSpeed),
+  };
+}
 
 /** Defaults for new timer rows (absolute target is a sensible placeholder if you switch mode). */
 export const TIMER_WIDGET_CONFIG_DEFAULTS: TimerWidgetItemConfig = {
@@ -158,10 +236,7 @@ export function normalizeTimerWidgetConfig(
         : base.fontWeight,
   };
 
-  if (
-    merged.countdownMode !== "duration" &&
-    merged.countdownMode !== "absolute"
-  ) {
+  if (!(TIMER_COUNTDOWN_MODES as readonly unknown[]).includes(merged.countdownMode)) {
     merged.countdownMode =
       typeof r.targetAtIso === "string" &&
       r.targetAtIso.length > 0 &&

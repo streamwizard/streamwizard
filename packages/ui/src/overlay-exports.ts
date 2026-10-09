@@ -40,7 +40,7 @@ export {
 } from "./components/overlay/lib/item-anchor";
 export { itemFlipTransform, itemTransform } from "./components/overlay/lib/item-flip";
 export { WidgetScaleFrame } from "./components/overlay/WidgetScaleFrame";
-export { formatCountdownMs } from "./components/overlay/lib/format-countdown";
+export { formatCountdownMs, formatElapsedMs } from "./components/overlay/lib/format-countdown";
 export { formatClockWidgetDisplay } from "./components/overlay/lib/format-clock-widget";
 export {
   formatClipDuration,
@@ -320,6 +320,41 @@ export { PollWidgetRenderer } from "./components/overlay/widgets/poll/PollWidget
 export type { PollWidgetRendererProps } from "./components/overlay/widgets/poll/PollWidgetRenderer";
 export { pollWidgetBaseDefinition, POLL_WIDGET_DEFAULT_SIZE } from "./components/overlay/widgets/poll/poll-widget-definition";
 export {
+  PREDICTION_WIDGET_TYPE,
+  PREDICTION_MAX_OUTCOMES,
+  PREDICTION_DEFAULT_OUTCOME_COLORS,
+  createDefaultPredictionWidgetConfig,
+  normalizePredictionWidgetConfig,
+  type PredictionWidgetType,
+  type PredictionWidgetItemConfig,
+} from "./components/overlay/widgets/prediction/prediction-widget-config";
+export {
+  DEMO_PREDICTION_ID,
+  PREDICTION_RESET_BROWSER_EVENT,
+  PREDICTION_WIDGET_FRAME_TYPES,
+  applyPredictionFrame,
+  isDemoPredictionFrame,
+  seedPrediction,
+  type FetchedPrediction,
+  type PredictionOutcomeSnapshot,
+  type PredictionResetBrowserEventDetail,
+  type PredictionSnapshot,
+  type PredictionStatus,
+  type PredictionWidgetFrame,
+  type PredictionWidgetState,
+} from "./components/overlay/widgets/prediction/prediction-widget-state";
+export {
+  buildPredictionView,
+  PREDICTION_CANCELED_TEXT,
+  PREDICTION_LOCKED_TEXT,
+} from "./components/overlay/widgets/prediction/prediction-view";
+export { PredictionWidgetRenderer } from "./components/overlay/widgets/prediction/PredictionWidgetRenderer";
+export type { PredictionWidgetRendererProps } from "./components/overlay/widgets/prediction/PredictionWidgetRenderer";
+export {
+  predictionWidgetBaseDefinition,
+  PREDICTION_WIDGET_DEFAULT_SIZE,
+} from "./components/overlay/widgets/prediction/prediction-widget-definition";
+export {
   AD_WIDGET_TYPE,
   AD_WIDGET_PRESETS,
   AD_WIDGET_PRESET_LABELS,
@@ -373,6 +408,69 @@ export { UptimeWidgetRenderer } from "./components/overlay/widgets/uptime/Uptime
 export type { UptimeWidgetRendererProps } from "./components/overlay/widgets/uptime/UptimeWidgetRenderer";
 export { uptimeWidgetBaseDefinition, UPTIME_WIDGET_DEFAULT_SIZE } from "./components/overlay/widgets/uptime/uptime-widget-definition";
 export {
+  IMAGE_WIDGET_TYPE,
+  VIDEO_WIDGET_TYPE,
+  MEDIA_WIDGET_FITS,
+  MEDIA_WIDGET_LIMITS,
+  createDefaultImageWidgetConfig,
+  createDefaultVideoWidgetConfig,
+  normalizeImageWidgetConfig,
+  normalizeVideoWidgetConfig,
+  roundingRadiusPx,
+  type ImageWidgetType,
+  type VideoWidgetType,
+  type MediaWidgetType,
+  type MediaWidgetFit,
+  type ImageWidgetItemConfig,
+  type VideoWidgetItemConfig,
+} from "./components/overlay/widgets/media/media-widget-config";
+export { ImageWidgetRenderer, VideoWidgetRenderer } from "./components/overlay/widgets/media/MediaWidgetRenderer";
+export type { MediaWidgetRendererProps } from "./components/overlay/widgets/media/MediaWidgetRenderer";
+export {
+  imageWidgetBaseDefinition,
+  videoWidgetBaseDefinition,
+  IMAGE_WIDGET_DEFAULT_SIZE,
+  VIDEO_WIDGET_DEFAULT_SIZE,
+} from "./components/overlay/widgets/media/media-widget-definition";
+export {
+  SHAPE_WIDGET_TYPE,
+  SHAPE_WIDGET_SHAPES,
+  SHAPE_WIDGET_FILL_TYPES,
+  SHAPE_WIDGET_STROKE_TYPES,
+  SHAPE_WIDGET_FRAME_STROKE_WIDTH,
+  SHAPE_WIDGET_LIMITS,
+  createDefaultShapeWidgetConfig,
+  normalizeShapeWidgetConfig,
+  shapeGradientLine,
+  shapePolygonPoints,
+  type ShapeWidgetType,
+  type ShapeWidgetShape,
+  type ShapeWidgetFillType,
+  type ShapeWidgetStrokeType,
+  type ShapeWidgetItemConfig,
+} from "./components/overlay/widgets/shape/shape-widget-config";
+export { ShapeWidgetRenderer } from "./components/overlay/widgets/shape/ShapeWidgetRenderer";
+export type { ShapeWidgetRendererProps } from "./components/overlay/widgets/shape/ShapeWidgetRenderer";
+export { shapeWidgetBaseDefinition, SHAPE_WIDGET_DEFAULT_SIZE } from "./components/overlay/widgets/shape/shape-widget-definition";
+export {
+  SLIDESHOW_WIDGET_TYPE,
+  SLIDESHOW_WIDGET_TRANSITIONS,
+  SLIDESHOW_WIDGET_LIMITS,
+  SLIDESHOW_TRANSITION_MS,
+  createDefaultSlideshowWidgetConfig,
+  normalizeSlideshowWidgetConfig,
+  nextSlideIndex,
+  type SlideshowWidgetType,
+  type SlideshowWidgetTransition,
+  type SlideshowWidgetItemConfig,
+} from "./components/overlay/widgets/slideshow/slideshow-widget-config";
+export { SlideshowWidgetRenderer } from "./components/overlay/widgets/slideshow/SlideshowWidgetRenderer";
+export type { SlideshowWidgetRendererProps } from "./components/overlay/widgets/slideshow/SlideshowWidgetRenderer";
+export {
+  slideshowWidgetBaseDefinition,
+  SLIDESHOW_WIDGET_DEFAULT_SIZE,
+} from "./components/overlay/widgets/slideshow/slideshow-widget-definition";
+export {
   LABEL_WIDGET_TYPE,
   LABEL_WIDGET_LAYOUTS,
   LABEL_WIDGET_DIRECTIONS,
@@ -385,6 +483,9 @@ export {
   createDefaultLabelWidgetConfig,
   normalizeLabelWidgetConfig,
   effectiveLabelTemplate,
+  applyLabelEventKinds,
+  EVENT_LIST_LABEL_ID,
+  LABEL_ENTRY_KIND_LABELS,
   type LabelWidgetType,
   type LabelWidgetItemConfig,
   type LabelWidgetLayout,

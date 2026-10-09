@@ -39,7 +39,7 @@ export function PollDonut({ view, cfg, pulses }: PollPresetProps) {
   // Middle of the ring: the leader's share and name; at the end, the winner,
   // or just "Tie".
   const centreBig = tie ? "Tie" : lead ? lead.percentText : "0%";
-  const centreSmall = tie ? "" : lead ? lead.title : view.ended ? "No votes" : "No votes yet";
+  const centreSmall = tie ? "" : lead ? lead.title : (view.emptyText ?? (view.ended ? "No votes" : "No votes yet"));
   const family = `"${cfg.fontFamily}", sans-serif`;
   const dot = Math.round(cfg.fontSize * 0.62);
 

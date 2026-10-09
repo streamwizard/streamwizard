@@ -5,7 +5,9 @@ import {
   CLIP_SORT_OPTIONS,
   CLIP_SOURCE_MODES,
   DISPLAY_FIELD_KEYS,
+  TEXT_WIDGET_LIMITS,
   TIME_WINDOW_PRESETS,
+  TIMER_COUNTDOWN_MODES,
   type DisplayFieldKey,
 } from "./components/overlay/types";
 import {
@@ -58,8 +60,20 @@ import {
   AD_WIDGET_LIMITS,
   AD_WIDGET_PRESETS,
 } from "./components/overlay/widgets/ads/ad-widget-config";
+import { PREDICTION_DEFAULT_OUTCOME_COLORS } from "./components/overlay/widgets/prediction/prediction-widget-config";
 import { UPTIME_WIDGET_LAYOUTS, UPTIME_WIDGET_LIMITS } from "./components/overlay/widgets/uptime/uptime-widget-config";
-import { LABEL_PERIODS } from "@repo/schemas";
+import { MEDIA_WIDGET_FITS, MEDIA_WIDGET_LIMITS } from "./components/overlay/widgets/media/media-widget-config";
+import {
+  SHAPE_WIDGET_FILL_TYPES,
+  SHAPE_WIDGET_LIMITS,
+  SHAPE_WIDGET_SHAPES,
+  SHAPE_WIDGET_STROKE_TYPES,
+} from "./components/overlay/widgets/shape/shape-widget-config";
+import {
+  SLIDESHOW_WIDGET_LIMITS,
+  SLIDESHOW_WIDGET_TRANSITIONS,
+} from "./components/overlay/widgets/slideshow/slideshow-widget-config";
+import { LABEL_ENTRY_KINDS, LABEL_PERIODS } from "@repo/schemas";
 import {
   LABEL_WIDGET_ANIMATIONS,
   LABEL_WIDGET_DIRECTIONS,
@@ -207,11 +221,32 @@ const overlayTextStyleSchema = z.object({
 /** Persisted JSON on `text_widget` rows. */
 export const textWidgetItemConfigSchema = overlayTextStyleSchema.extend({
   text: z.string().min(0).max(5000),
+  // Rows from before these existed carry none of them; the defaults are "off".
+  textShadow: z.boolean().default(false),
+  outlineWidth: z
+    .number()
+    .min(TEXT_WIDGET_LIMITS.outlineWidth.min)
+    .max(TEXT_WIDGET_LIMITS.outlineWidth.max)
+    .default(0),
+  outlineColor: hexColorSchema.default("#000000"),
+  backgroundColor: hexColorSchema.default("#000000"),
+  backgroundOpacity: z.number().min(0).max(1).default(0),
+  backgroundRounding: z
+    .number()
+    .min(TEXT_WIDGET_LIMITS.backgroundRounding.min)
+    .max(TEXT_WIDGET_LIMITS.backgroundRounding.max)
+    .default(0),
+  scroll: z.boolean().default(false),
+  scrollSpeed: z
+    .number()
+    .min(TEXT_WIDGET_LIMITS.scrollSpeed.min)
+    .max(TEXT_WIDGET_LIMITS.scrollSpeed.max)
+    .default(80),
 });
 
 const timerWidgetItemConfigSchemaInner = overlayTextStyleSchema.extend({
   finishedText: z.string().min(0).max(200),
-  countdownMode: z.enum(["duration", "absolute"]),
+  countdownMode: z.enum(TIMER_COUNTDOWN_MODES),
   durationSeconds: z.number().int().min(10).max(604800),
   targetAtIso: z.string().min(1),
 }).superRefine((data, ctx) => {
@@ -228,7 +263,7 @@ const timerWidgetItemConfigSchemaInner = overlayTextStyleSchema.extend({
 export const timerWidgetItemConfigSchema = z.preprocess((raw) => {
   if (!raw || typeof raw !== "object") return raw;
   const o = { ...(raw as Record<string, unknown>) };
-  if (o.countdownMode !== "duration" && o.countdownMode !== "absolute") {
+  if (!(TIMER_COUNTDOWN_MODES as readonly unknown[]).includes(o.countdownMode)) {
     if (
       typeof o.targetAtIso === "string" &&
       o.targetAtIso.length > 0 &&
@@ -581,6 +616,19 @@ export const pollWidgetItemConfigSchema = z.object({
 });
 
 /**
+ * Persisted JSON on prediction widget rows: the poll's config (it is drawn by
+ * the poll designs) with room for ten outcome colors. Defaults mirror
+ * createDefaultPredictionWidgetConfig.
+ */
+export const predictionWidgetItemConfigSchema = pollWidgetItemConfigSchema.extend({
+  choiceColors: z
+    .array(hexColorSchema)
+    .length(PREDICTION_DEFAULT_OUTCOME_COLORS.length)
+    .default([...PREDICTION_DEFAULT_OUTCOME_COLORS]),
+  showWhileLocked: z.boolean().default(true),
+});
+
+/**
  * Persisted JSON on ad widget rows. Every key has a default matching
  * createDefaultAdWidgetConfig, for the same reason as the chat schema above.
  */
@@ -641,6 +689,67 @@ export const uptimeWidgetItemConfigSchema = z.object({
   textShadow: z.boolean().default(true),
 });
 
+/** Persisted JSON on `image_widget` rows. Defaults mirror createDefaultImageWidgetConfig. */
+export const imageWidgetItemConfigSchema = z.object({
+  url: z.string().max(MEDIA_WIDGET_LIMITS.url).default(""),
+  fit: z.enum(MEDIA_WIDGET_FITS).default("contain"),
+  rounding: z.number().min(MEDIA_WIDGET_LIMITS.rounding.min).max(MEDIA_WIDGET_LIMITS.rounding.max).default(0),
+});
+
+/** Persisted JSON on `video_widget` rows. Defaults mirror createDefaultVideoWidgetConfig. */
+export const videoWidgetItemConfigSchema = imageWidgetItemConfigSchema.extend({
+  loop: z.boolean().default(true),
+  volume: z.number().min(0).max(1).default(0),
+});
+
+/** Persisted JSON on `slideshow_widget` rows. Defaults mirror createDefaultSlideshowWidgetConfig. */
+export const slideshowWidgetItemConfigSchema = z.object({
+  images: z.array(z.string().min(1).max(SLIDESHOW_WIDGET_LIMITS.url)).max(SLIDESHOW_WIDGET_LIMITS.images).default([]),
+  intervalSeconds: z
+    .number()
+    .min(SLIDESHOW_WIDGET_LIMITS.intervalSeconds.min)
+    .max(SLIDESHOW_WIDGET_LIMITS.intervalSeconds.max)
+    .default(5),
+  transition: z.enum(SLIDESHOW_WIDGET_TRANSITIONS).default("fade"),
+  shuffle: z.boolean().default(false),
+  fit: z.enum(MEDIA_WIDGET_FITS).default("contain"),
+  rounding: z
+    .number()
+    .min(SLIDESHOW_WIDGET_LIMITS.rounding.min)
+    .max(SLIDESHOW_WIDGET_LIMITS.rounding.max)
+    .default(0),
+});
+
+/** Persisted JSON on `shape_widget` rows. Defaults mirror createDefaultShapeWidgetConfig. */
+export const shapeWidgetItemConfigSchema = z.object({
+  shape: z.enum(SHAPE_WIDGET_SHAPES).default("rectangle"),
+  fillColor: hexColorSchema.default("#9e7aff"),
+  fillOpacity: z.number().min(0).max(1).default(1),
+  strokeColor: hexColorSchema.default("#ffffff"),
+  strokeWidth: z
+    .number()
+    .min(SHAPE_WIDGET_LIMITS.strokeWidth.min)
+    .max(SHAPE_WIDGET_LIMITS.strokeWidth.max)
+    .default(0),
+  rounding: z.number().min(SHAPE_WIDGET_LIMITS.rounding.min).max(SHAPE_WIDGET_LIMITS.rounding.max).default(0),
+  lineWidth: z.number().min(SHAPE_WIDGET_LIMITS.lineWidth.min).max(SHAPE_WIDGET_LIMITS.lineWidth.max).default(8),
+  fillType: z.enum(SHAPE_WIDGET_FILL_TYPES).default("solid"),
+  gradientColor: hexColorSchema.default("#00d4ff"),
+  gradientAngle: z
+    .number()
+    .min(SHAPE_WIDGET_LIMITS.gradientAngle.min)
+    .max(SHAPE_WIDGET_LIMITS.gradientAngle.max)
+    .default(90),
+  strokeType: z.enum(SHAPE_WIDGET_STROKE_TYPES).default("solid"),
+  strokeGradientColor: hexColorSchema.default("#00d4ff"),
+  strokeGradientAngle: z
+    .number()
+    .min(SHAPE_WIDGET_LIMITS.gradientAngle.min)
+    .max(SHAPE_WIDGET_LIMITS.gradientAngle.max)
+    .default(90),
+  roundedEnds: z.boolean().default(false),
+});
+
 /** Persisted JSON on `label_widget` rows. Defaults mirror createDefaultLabelWidgetConfig. */
 export const labelWidgetItemConfigSchema = z.object({
   labelId: z.enum(LABEL_WIDGET_IDS as [string, ...string[]]).default("latest_follower"),
@@ -651,6 +760,7 @@ export const labelWidgetItemConfigSchema = z.object({
   layout: z.enum(LABEL_WIDGET_LAYOUTS).default("inline"),
   emptyText: z.string().max(LABEL_WIDGET_LIMITS.emptyText).default(""),
   count: z.number().int().min(LABEL_WIDGET_LIMITS.count.min).max(LABEL_WIDGET_LIMITS.count.max).default(5),
+  eventKinds: z.array(z.enum(LABEL_ENTRY_KINDS)).max(LABEL_ENTRY_KINDS.length).default([...LABEL_ENTRY_KINDS]),
   direction: z.enum(LABEL_WIDGET_DIRECTIONS).default("vertical"),
   separator: z.string().max(LABEL_WIDGET_LIMITS.separator).default("•"),
   marquee: z.boolean().default(false),
@@ -1003,6 +1113,7 @@ export const overlayItemConfigSchema = z.union([
   chatWidgetItemConfigSchema,
   goalWidgetItemConfigSchema,
   pollWidgetItemConfigSchema,
+  predictionWidgetItemConfigSchema,
   adWidgetItemConfigSchema,
   uptimeWidgetItemConfigSchema,
   creditsWidgetItemConfigSchema,
@@ -1010,6 +1121,10 @@ export const overlayItemConfigSchema = z.union([
   emoteWidgetItemConfigSchema,
   comboWidgetItemConfigSchema,
   hypeTrainWidgetItemConfigSchema,
+  imageWidgetItemConfigSchema,
+  videoWidgetItemConfigSchema,
+  shapeWidgetItemConfigSchema,
+  slideshowWidgetItemConfigSchema,
 ]);
 
 /**
@@ -1114,6 +1229,7 @@ export const overlayItemSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("sub_goal_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: goalWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("bits_goal_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: goalWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("poll_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: pollWidgetItemConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("prediction_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: predictionWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("ad_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: adWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("uptime_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: uptimeWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("label_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: labelWidgetItemConfigSchema }),
@@ -1121,6 +1237,10 @@ export const overlayItemSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("combo_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: comboWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("hype_train_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: hypeTrainWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("credits_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: creditsWidgetItemConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("image_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: imageWidgetItemConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("video_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: videoWidgetItemConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("shape_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: shapeWidgetItemConfigSchema }),
+  z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("slideshow_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: slideshowWidgetItemConfigSchema }),
 ]);
 
 export const createSceneSchema = z.object({
