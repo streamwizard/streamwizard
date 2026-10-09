@@ -201,8 +201,10 @@
       "name": "@repo/web-overlay",
       "version": "0.1.0",
       "dependencies": {
+        "@repo/posthog": "workspace:*",
         "@repo/sentry": "workspace:*",
         "@repo/supabase": "workspace:*",
+        "@repo/ttl-cache": "workspace:*",
         "@repo/twitch-api": "workspace:*",
         "@repo/twitch-assets": "workspace:*",
         "@repo/types": "workspace:*",
@@ -220,6 +222,7 @@
       },
       "devDependencies": {
         "@tailwindcss/postcss": "^4",
+        "@types/bun": "^1.3.6",
         "@types/node": "^20",
         "@types/react": "^19",
         "@types/react-dom": "^19",

@@ -44,6 +44,13 @@ export const env = createEnv({
     STREAMWIZARD_API_URL: z.string().url(),
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_RELEASE: z.string().optional(),
+    // Usage telemetry (overlay loaded / heartbeat). Silently off when unset.
+    POSTHOG_KEY: z.string().min(1).optional(),
+    POSTHOG_HOST: z.string().url().optional(),
+    // Comma-separated account ids whose events get `internal_user: true`.
+    POSTHOG_INTERNAL_USER_IDS: z.string().optional(),
+    // Comma-separated account ids that objected; nothing is sent for them.
+    POSTHOG_OPT_OUT_USER_IDS: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -67,6 +74,10 @@ export const env = createEnv({
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
     SENTRY_DSN: process.env.SENTRY_DSN,
     SENTRY_RELEASE: process.env.SENTRY_RELEASE,
+    POSTHOG_KEY: process.env.POSTHOG_KEY,
+    POSTHOG_HOST: process.env.POSTHOG_HOST,
+    POSTHOG_INTERNAL_USER_IDS: process.env.POSTHOG_INTERNAL_USER_IDS,
+    POSTHOG_OPT_OUT_USER_IDS: process.env.POSTHOG_OPT_OUT_USER_IDS,
     // Derived in next.config.ts env: block from their non-prefixed Doppler counterparts
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

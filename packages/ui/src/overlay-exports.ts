@@ -38,6 +38,11 @@ export {
   type AnchorX,
   type AnchorY,
 } from "./components/overlay/lib/item-anchor";
+export {
+  OVERLAY_ACTIVITY_EVENT,
+  reportOverlayActivity,
+  type OverlayActivityKind,
+} from "./components/overlay/lib/overlay-activity";
 export { itemFlipTransform, itemTransform } from "./components/overlay/lib/item-flip";
 export { WidgetScaleFrame } from "./components/overlay/WidgetScaleFrame";
 export { formatCountdownMs, formatElapsedMs } from "./components/overlay/lib/format-countdown";

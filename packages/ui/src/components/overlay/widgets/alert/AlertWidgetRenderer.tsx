@@ -13,6 +13,7 @@ import {
   alertEffectStyle,
   type AlertHighlightAnimation,
 } from "./alert-animations";
+import { reportOverlayActivity } from "../../lib/overlay-activity";
 import {
   ALERT_TEST_BROWSER_EVENT,
   alertAmountText,
@@ -251,6 +252,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
       return;
     }
     busyRef.current = true;
+    reportOverlayActivity("alert_shown");
     const c = cfgRef.current;
 
     startedAtRef.current = Date.now();

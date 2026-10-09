@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ClipsWidgetConfig, DisplayFieldKey, ClipDataRow } from "../../types";
 import { formatClipField } from "../../lib/format-clip-fields";
+import { reportOverlayActivity } from "../../lib/overlay-activity";
 import { describeMediaError } from "./media-error";
 
 /** Opaque to the renderer — handed back to `fetchNextClip` to continue the rotation. */
@@ -244,6 +245,7 @@ export function ClipsWidgetRenderer({
       videoRefs.current[0]
         ?.play()
         .catch((err) => console.warn("[clips] slot 0 autoplay rejected", err));
+      reportOverlayActivity("clip_played");
       await fillSlot(1);
     })();
 
@@ -294,6 +296,7 @@ export function ClipsWidgetRenderer({
       }
 
       setActiveSlot(nextSlot);
+      reportOverlayActivity("clip_played");
 
       // Let the crossfade finish before stopping the clip that just left.
       const outgoingEl = videoRefs.current[current];
