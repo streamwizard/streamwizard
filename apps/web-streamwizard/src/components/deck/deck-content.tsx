@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAction } from "@/lib/track-action";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -120,6 +121,7 @@ export function DeckContent({
     try {
       await toggleInstance(apiUrl, instanceId, "start");
       setContainerStatus("running");
+      trackAction("cloud_obs_started", { location: "deck" });
       setStartRequested(true);
       awaitingConnectRef.current = true;
       // reconnect (not connect) resets the retry budget, so a restart after a
@@ -141,6 +143,7 @@ export function DeckContent({
       toast.error("Couldn't switch the scene", { description: err instanceof Error ? err.message : "Try again?" });
     });
 
+    trackAction("deck_scene_switched", { held: switcherEnabled });
     if (!switcherEnabled) return;
     // Hold the scene so the auto switcher doesn't take it back (or force the
     // connection-lost scene when the feed drops). If the engine flips the

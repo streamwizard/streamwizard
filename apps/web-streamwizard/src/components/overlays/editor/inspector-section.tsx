@@ -11,7 +11,9 @@ const REVEAL_TRANSITION = { duration: 0.22, ease: "easeOut" } as const;
 // Collapsible inspector section: the editor shows the essentials expanded and
 // tucks everything else behind these, so new users aren't hit with every
 // option at once. State is per-mount on purpose - reselecting an item resets
-// to the calm default.
+// to the calm default. A panel that swaps what sits under the same headings
+// (the alert box, one alert at a time) can own the state instead through
+// `open` / `onOpenChange`, so a section someone opened stays open.
 //
 // The body grows and shrinks rather than appearing at full height: the panel
 // is a column of these, so a snap moves everything under it by the height of
@@ -19,19 +21,30 @@ const REVEAL_TRANSITION = { duration: 0.22, ease: "easeOut" } as const;
 export function InspectorSection({
   title,
   defaultOpen = false,
+  open: controlledOpen,
+  onOpenChange,
   children,
 }: {
   title: string;
   defaultOpen?: boolean;
+  /** Set to drive the section from outside; leave out for per-mount state. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [ownOpen, setOwnOpen] = useState(defaultOpen);
+  const open = controlledOpen ?? ownOpen;
+
+  const toggle = () => {
+    if (controlledOpen === undefined) setOwnOpen(!open);
+    onOpenChange?.(!open);
+  };
 
   return (
     <div>
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         aria-expanded={open}
         className="flex w-full items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3 hover:text-foreground transition-colors"
       >

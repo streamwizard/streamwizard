@@ -44,7 +44,7 @@ export function TimerWidgetSettings({
     <div className="space-y-5">
       <div>
         <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-          Countdown
+          Timer
         </h3>
         <div className="space-y-4">
           <RadioGroup
@@ -77,9 +77,21 @@ export function TimerWidgetSettings({
                 </p>
               </div>
             </div>
+            <div className="flex items-start gap-2.5">
+              <RadioGroupItem value="stopwatch" id="timer-mode-stopwatch" className="mt-0.5" />
+              <div className="grid gap-1.5 leading-none">
+                <Label htmlFor="timer-mode-stopwatch" className="text-xs font-normal cursor-pointer">
+                  Stopwatch
+                </Label>
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  Count up from zero each time the page opens (speedruns,
+                  challenges, how long you have been stuck on this boss).
+                </p>
+              </div>
+            </div>
           </RadioGroup>
 
-          {cfg.countdownMode === "duration" ? (
+          {cfg.countdownMode === "stopwatch" ? null : cfg.countdownMode === "duration" ? (
             <div className="space-y-1.5 pl-1">
               <Label className="text-xs">Minutes</Label>
               <Input
@@ -124,16 +136,18 @@ export function TimerWidgetSettings({
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">When time is up</Label>
-            <Input
-              value={cfg.finishedText}
-              onChange={(e) => patchConfig({ finishedText: e.target.value })}
-              className="h-9 text-sm"
-              maxLength={200}
-              placeholder="We're live!"
-            />
-          </div>
+          {cfg.countdownMode === "stopwatch" ? null : (
+            <div className="space-y-1.5">
+              <Label className="text-xs">When time is up</Label>
+              <Input
+                value={cfg.finishedText}
+                onChange={(e) => patchConfig({ finishedText: e.target.value })}
+                className="h-9 text-sm"
+                maxLength={200}
+                placeholder="We're live!"
+              />
+            </div>
+          )}
         </div>
       </div>
 

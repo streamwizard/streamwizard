@@ -222,3 +222,31 @@ test("flipping only locked items writes nothing, not even an undo step", () => {
   expect(useOverlayStore.getState().scene!.items[0]!.flip_v).toBe(false);
   expect(useOverlayStore.getState().history.past).toHaveLength(0);
 });
+
+test("a library preset adds its parent widget already set up, and undo takes it away", () => {
+  const before = useOverlayStore.getState().scene!.items.length;
+  useOverlayStore.getState().addItem("label_widget", "label_widget:event_list");
+
+  const { scene, selectedItemIds } = useOverlayStore.getState();
+  const added = scene!.items.at(-1)!;
+  expect(scene!.items).toHaveLength(before + 1);
+  expect(added.type).toBe("label_widget");
+  expect((added.config as { labelId?: string }).labelId).toBe("event_list");
+  expect(added.label).toBe("Event list 1");
+  expect(selectedItemIds).toEqual([added.id]);
+
+  useOverlayStore.getState().undo();
+  expect(useOverlayStore.getState().scene!.items).toHaveLength(before);
+});
+
+test("the same widget without a preset is its plain default", () => {
+  useOverlayStore.getState().addItem("label_widget");
+  const added = useOverlayStore.getState().scene!.items.at(-1)!;
+  expect((added.config as { labelId?: string }).labelId).toBe("latest_follower");
+});
+
+test("a preset id the widget does not have adds nothing", () => {
+  const before = useOverlayStore.getState().scene!.items.length;
+  useOverlayStore.getState().addItem("label_widget", "label_widget:nope");
+  expect(useOverlayStore.getState().scene!.items).toHaveLength(before);
+});

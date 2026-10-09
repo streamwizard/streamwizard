@@ -114,10 +114,10 @@ export const ALERTS: DemoAlert[] = [
   {
     kind: "Resub",
     name: "sandwichlord",
-    rest: " subscribed for 6 months in a row!",
+    rest: " subscribed for 6 months!",
     message: "six months, still here",
     anim: "zoom",
-    template: "{name} subscribed for {amount} months in a row!",
+    template: "{name} subscribed for {amount} months!",
     messageTemplate: "{message}",
     media: "resub.webm",
   },

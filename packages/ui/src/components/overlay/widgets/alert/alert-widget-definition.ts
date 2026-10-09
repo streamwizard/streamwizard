@@ -1,6 +1,6 @@
 import type { WidgetBaseDefinition } from "../../widget-definition";
 import {
-  ALERT_EVENT_TYPES,
+  alertFontFamilies,
   createDefaultAlertWidgetConfig,
   normalizeAlertWidgetConfig,
 } from "./alert-widget-config";
@@ -14,12 +14,7 @@ export const alertWidgetBaseDefinition: WidgetBaseDefinition<"alert_widget"> = {
   createDefaultConfig: createDefaultAlertWidgetConfig,
   Renderer: AlertWidgetRenderer,
   collectFontFamilies: (item) => {
-    const cfg = normalizeAlertWidgetConfig(item.config);
-    // Each alert type carries its own font.
-    return [
-      ...new Set(
-        ALERT_EVENT_TYPES.map((e) => cfg.variants[e].fontFamily).filter(Boolean)
-      ),
-    ];
+    // Each alert type carries its own font, and so does each variation.
+    return alertFontFamilies(normalizeAlertWidgetConfig(item.config));
   },
 };

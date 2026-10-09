@@ -6,7 +6,7 @@ import { encryptToken } from "@repo/supabase/crypto";
 import { updateTwitchTokens } from "@repo/supabase/queries/user";
 import { setTwitchScopesByUserId } from "@repo/supabase/queries/twitch-scopes";
 import { validateTwitchToken } from "@repo/twitch-api";
-import { captureServerEvent } from "@repo/posthog/server";
+import { track } from "@/lib/track";
 import { reportError } from "@repo/sentry";
 import { safeNextPath } from "@/lib/safe-next-path";
 
@@ -111,19 +111,23 @@ export async function GET(request: Request) {
       // every login, and the client-side onboarding events only exist for
       // visitors who accepted analytics. Supabase creates the auth user during
       // this same exchange, so a minute-old account is a first login.
-      try {
+      //
+      // A signed-in user granting extra Twitch rights (authorizeTwitchFeature)
+      // comes back through this same callback. That is not a login, and
+      // counting it as one inflated the number.
+      const scopeUpgrade = searchParams.get("scope_upgrade");
+      if (scopeUpgrade && /^[a-z_]{1,32}$/.test(scopeUpgrade)) {
+        await track("twitch_scope_granted", { feature: scopeUpgrade }, data.session.user);
+      } else {
         const createdAt = Date.parse(data.session.user.created_at);
-        captureServerEvent(
-          data.session.user.id,
+        await track(
           "login_completed",
           {
             destination: next.includes("onboarding") ? "onboarding" : "dashboard",
             is_new_user: Number.isFinite(createdAt) && Date.now() - createdAt < 60_000,
           },
-          request,
+          data.session.user,
         );
-      } catch (phErr) {
-        reportError(phErr, "auth/callback/twitch: posthog capture failed");
       }
       return NextResponse.redirect(`${origin}${next}`);
     }

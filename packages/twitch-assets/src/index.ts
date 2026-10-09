@@ -26,11 +26,20 @@ export {
   resolveGame,
 } from "./assets";
 
-export { liveFollowerTotal, liveSubscriberTotal, liveStream, liveGoals, livePoll, liveAdSchedule } from "./live";
+export {
+  liveFollowerTotal,
+  liveSubscriberTotal,
+  liveStream,
+  liveGoals,
+  livePoll,
+  livePrediction,
+  liveAdSchedule,
+} from "./live";
 export { toPublicAdSchedule, adTime } from "./ads";
 export { liveCredits, type CreditsOptions } from "./credits";
 export { liveLabels } from "./labels";
 export { toPublicPoll, RECENT_POLL_MS } from "./polls";
+export { toPublicPrediction, RECENT_PREDICTION_MS } from "./predictions";
 
 export {
   resolveThirdPartyEmotes,
@@ -65,6 +74,10 @@ export type {
   PublicPoll,
   PublicPollChoice,
   PublicPollStatus,
+  LivePrediction,
+  PublicPrediction,
+  PublicPredictionOutcome,
+  PublicPredictionStatus,
   PublicGoal,
   PublicGoalType,
   PublicGame,

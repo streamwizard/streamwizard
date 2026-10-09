@@ -8,15 +8,86 @@ description: "Follow, sub, cheer, and raid alerts with your own image and sound.
 **New Overlay → Alert box**. That's it. The overlay comes with an alert
 widget already placed, listening for follows, subs, cheers, and raids.
 
-Click the widget to customize it in the right panel:
+Click the widget and the right panel lists every alert. Switch on the ones you
+want, and see at a glance which have an image or a sound. Only want follows and
+raids? Switch the rest off.
 
-- **Alert image**: pick from your [media library](/overlays/media-library).
-- **Alert sound**: same, with a volume slider.
-- **Accent color** and **seconds on screen**.
-- **Per-event toggles**: only want follows and raids? Switch the rest off.
+Click an alert to set it up:
+
+- **Text**: the title and an optional second line. Click a chip like `{name}` to drop it in. Font, size, and colors sit under **Typography**.
+- **Media and sound**: pick from your [media library](/overlays/media-library), choose where the image or video sits, and set the volume.
+- **Timing**: seconds on screen, and a minimum (bits, viewers) before it fires.
+- **Animation**: how the alert comes in and leaves, and what its text does in between. See [Animation](#animation).
+
+Happy with one alert? **Use this look for all alerts** copies its typography, animation, and media position to the rest.
 
 Alerts queue. If three people follow at once, you get three alerts back to
-back, not one mangled one.
+back, not one mangled one. The line holds 50 by default and skips anything past
+that, so a follow-bot wave can't book your alerts for an hour. Change it with
+**Most alerts waiting**.
+
+## Animation
+
+Three things can move, each on its own:
+
+- **The alert**: image or video and text together. Pick an **Enter** and an **Exit** effect and how many seconds each takes.
+- **The text**: its own enter and exit, under **Text animation**. **Show text after** holds it back for up to 10 seconds, and **Hide text early** takes it off before the alert leaves.
+- **The highlight**: `{name}` and `{amount}` in the title can keep moving while the text shows. Pulse, Tada, Wave, and eight more, under **Typography**.
+
+There are 32 enter effects and a matching exit for each, grouped as Bounce,
+Fade, Flip, Light speed, Rotate, Roll, Zoom, and Slide. The small tile next to
+the picker plays the effect, so you do not need to fire a test for every one.
+
+How the time adds up, for an alert set to 10 seconds on screen:
+
+1. It appears at 0 and plays its enter effect. The enter time is part of the 10 seconds.
+2. The text shows after its delay.
+3. The text leaves at 10 seconds minus **Hide text early**.
+4. At 10 seconds the alert plays its exit. The exit time comes on top, so a 1 second exit means 11 seconds in all.
+
+An effect set to **None** takes no time: the alert is just there, or just gone.
+
+A sound still playing is cut when the next alert starts. Want it to finish?
+Switch on **Let sounds finish** under **All alerts**. The next alert then waits
+for the sound, up to a minute.
+
+Every variation has its own animation settings, so a big cheer can roll in
+while a small one fades.
+
+## Variations
+
+A variation is another version of an alert that plays instead of it when a
+condition is met. A louder cheer alert from 1000 bits up. A different video for
+a 12 month resub. One alert just for your mods.
+
+Open an alert, go to **Variations**, and hit **Add variation**. Start from the
+alert itself or copy any other alert or variation. Each one has its own text,
+media, sound, and style. It is a separate copy: changing the alert later does
+not change its variations.
+
+A variation can look at one thing:
+
+- **A number**: bits, months, viewers, gifts. Exactly, at least, or the biggest of the stream.
+- **Sub tier**: Prime, Tier 1, Tier 2, or Tier 3.
+- **Viewer name**: one or more usernames, commas between them.
+- **Nothing**: chance only.
+
+**Chance** sets how often it plays when it matches. 25 is about one in four.
+
+When several match, the most specific one plays: a viewer by name, then the
+biggest of the stream, then an exact number or tier, then "at least". Between
+two "at least" variations the higher number wins, so 1000 bits plays your 1000
+variation, not your 100 one. Still tied? The first in the list plays, or switch
+on **Pick at random when several match** to rotate them.
+
+The play button on a variation tests that exact one, whatever its condition.
+
+A few things to know:
+
+- Follow, gift upgrade, Prime upgrade, pay it forward, announcement, and poll start have no variations. There is nothing in those events to tell one from the next.
+- Modiversary can only match on the mod's name. Twitch does not send the number of years.
+- "Biggest of the stream" counts from when the overlay loaded. Refresh the browser source in OBS and the count starts again.
+- The alert's own minimum still applies. An event under it plays nothing, variations included.
 
 ## Adding alerts to an existing overlay
 

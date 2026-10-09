@@ -14,6 +14,7 @@ import {
   selectIngestKeys,
 } from "@repo/supabase/queries/ingest";
 import { tryAuthContext } from "@/lib/auth";
+import { track } from "@/lib/track";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest-nodes";
@@ -157,6 +158,7 @@ export async function createIngestKey(label: string): Promise<{ data: IngestStre
   await notifyDiscord(user.id, data.label, data.stream_key);
 
   revalidatePath(INGEST_SETTINGS_PATH);
+  await track("ingest_key_created", { kind: "ingest" }, user);
   return { data, error: null };
 }
 
@@ -186,6 +188,7 @@ export async function rotateIngestKey(id: string): Promise<{ data: IngestStreamK
   }
 
   revalidatePath(INGEST_SETTINGS_PATH);
+  await track("ingest_key_rotated", { kind: "ingest" }, user);
   return { data, error: null };
 }
 
@@ -199,5 +202,6 @@ export async function deleteIngestKey(id: string): Promise<{ error: string | nul
 
   revalidatePath(INGEST_SETTINGS_PATH);
   if (error) reportError(error, "actions/ingest-keys");
+  else await track("ingest_key_deleted", { kind: "ingest" }, user);
   return { error: error?.message ?? null };
 }

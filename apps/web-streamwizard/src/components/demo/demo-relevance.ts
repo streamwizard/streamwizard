@@ -20,6 +20,12 @@ const NATIVE_WIDGET_LISTENERS: Record<string, readonly string[]> = {
   combo_widget: ["channel.chat.message"],
   emote_widget: ["channel.chat.message"],
   poll_widget: ["channel.poll.begin", "channel.poll.progress", "channel.poll.end"],
+  prediction_widget: [
+    "channel.prediction.begin",
+    "channel.prediction.progress",
+    "channel.prediction.lock",
+    "channel.prediction.end",
+  ],
   irl_accuracy_widget: ["streamwizard.geo"],
   irl_altitude_widget: ["streamwizard.geo"],
   irl_heading_widget: ["streamwizard.geo"],

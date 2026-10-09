@@ -50,6 +50,9 @@ export const env = createEnv({
     STREAMWIZARD_API_URL: z.string().url(),
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_RELEASE: z.string().optional(),
+    // Comma-separated account ids that objected to server-side analytics.
+    // Nothing is sent to PostHog for them.
+    POSTHOG_OPT_OUT_USER_IDS: z.string().optional(),
     // Cloudflare R2 for user-uploaded overlay assets (media library). Optional
     // so environments without the feature configured still boot; the asset
     // actions throw a clear error when missing.
@@ -93,6 +96,7 @@ export const env = createEnv({
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
     SENTRY_DSN: process.env.SENTRY_DSN,
     SENTRY_RELEASE: process.env.SENTRY_RELEASE,
+    POSTHOG_OPT_OUT_USER_IDS: process.env.POSTHOG_OPT_OUT_USER_IDS,
     R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
     R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,

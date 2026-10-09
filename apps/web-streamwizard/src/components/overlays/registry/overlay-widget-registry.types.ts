@@ -84,6 +84,36 @@ export interface OverlayChildFieldDeclaration {
 }
 
 /**
+ * An extra card in the widget library that adds its parent widget already set
+ * up for one job. The Label widget's "Event list" is one: nobody looking for
+ * an event list thinks to open Label first. What lands on the scene is an
+ * ordinary item of the parent's type.
+ */
+export interface OverlayLibraryPreset {
+  /** Unique across the whole library; also what analytics records. */
+  id: string;
+  icon: LucideIcon;
+  /** Defaults to the parent widget's category. */
+  category?: WidgetCategory;
+  title: string;
+  description?: string;
+  createRootItems: (ctx: CreateRootItemContext) => OverlayItem[];
+}
+
+/** One card in the widget library: a widget, or one of its presets. */
+export interface OverlayLibraryEntry {
+  /** Unique: the widget type, or the preset's id. */
+  key: string;
+  type: RootOverlayItemType;
+  /** Set when the card is a preset of `type`. */
+  presetId?: string;
+  icon: LucideIcon;
+  category: WidgetCategory;
+  /** The same shape the registry uses, so the library search reads both alike. */
+  library: { title: string; description?: string };
+}
+
+/**
  * Root entry in `OVERLAY_WIDGET_REGISTRY` only.
  * Extends the shared `WidgetBaseDefinition` with editor-specific capabilities.
  */
@@ -99,6 +129,9 @@ export interface OverlayRootWidgetDefinition extends WidgetBaseDefinition {
   };
 
   createRootItems?: (ctx: CreateRootItemContext) => OverlayItem[];
+
+  /** More library cards for this widget, each adding it preconfigured. */
+  libraryPresets?: OverlayLibraryPreset[];
 
   newLabel?: (scene: OverlaySceneWithItems) => string;
 

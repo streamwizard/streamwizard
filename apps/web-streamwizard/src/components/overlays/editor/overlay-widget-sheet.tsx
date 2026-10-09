@@ -12,11 +12,11 @@ import {
 import type { RootOverlayItemType } from "@/types/overlays";
 import { BookOpen, LayoutGrid, Plus, Search } from "lucide-react";
 import {
-  getLibraryWidgetDefinitions,
-  groupLibraryWidgetsByCategory,
+  getLibraryEntries,
+  groupLibraryEntriesByCategory,
 } from "../registry/overlay-widget-registry";
 import type {
-  OverlayRootWidgetDefinition,
+  OverlayLibraryEntry,
   WidgetCategory,
 } from "../registry/overlay-widget-registry.types";
 import { filterLibraryWidgets } from "./widget-search";
@@ -25,7 +25,7 @@ const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   media: "Media",
   alerts: "Alerts & chat",
   goals: "Goals",
-  polls: "Polls",
+  polls: "Polls & predictions",
   ads: "Ads",
   credits: "Credits",
   labels: "Labels",
@@ -36,7 +36,7 @@ const CATEGORY_LABELS: Record<WidgetCategory, string> = {
 interface OverlayWidgetSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddWidget: (type: RootOverlayItemType) => void;
+  onAddWidget: (type: RootOverlayItemType, presetId?: string) => void;
   onOpenLibrary: () => void;
 }
 
@@ -98,14 +98,14 @@ function WidgetPicker({
   onAddWidget,
 }: {
   searchRef: React.RefObject<HTMLInputElement | null>;
-  onAddWidget: (type: RootOverlayItemType) => void;
+  onAddWidget: (type: RootOverlayItemType, presetId?: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const searching = query.trim() !== "";
 
-  const byCategory = useMemo(() => groupLibraryWidgetsByCategory(), []);
+  const byCategory = useMemo(() => groupLibraryEntriesByCategory(), []);
   const matches = useMemo(
-    () => (searching ? filterLibraryWidgets(getLibraryWidgetDefinitions(), query) : []),
+    () => (searching ? filterLibraryWidgets(getLibraryEntries(), query) : []),
     [searching, query]
   );
 
@@ -131,24 +131,24 @@ function WidgetPicker({
           // Categories are noise once a query narrows things down; one ranked
           // list is easier to scan than four headed ones.
           <div className="space-y-2">
-            {matches.map((def) => (
-              <WidgetButton key={def.type} def={def} onAddWidget={onAddWidget} />
+            {matches.map((entry) => (
+              <WidgetButton key={entry.key} entry={entry} onAddWidget={onAddWidget} />
             ))}
           </div>
         )
       ) : (
         <>
           {(Object.keys(CATEGORY_LABELS) as WidgetCategory[]).map((category) => {
-            const defs = byCategory[category];
-            if (defs.length === 0) return null;
+            const entries = byCategory[category];
+            if (entries.length === 0) return null;
             return (
               <section key={category}>
                 <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
                   {CATEGORY_LABELS[category]}
                 </h4>
                 <div className="space-y-2">
-                  {defs.map((def) => (
-                    <WidgetButton key={def.type} def={def} onAddWidget={onAddWidget} />
+                  {entries.map((entry) => (
+                    <WidgetButton key={entry.key} entry={entry} onAddWidget={onAddWidget} />
                   ))}
                 </div>
               </section>
@@ -171,30 +171,36 @@ function WidgetPicker({
 }
 
 function WidgetButton({
-  def,
+  entry,
   onAddWidget,
 }: {
-  def: OverlayRootWidgetDefinition;
-  onAddWidget: (type: RootOverlayItemType) => void;
+  entry: OverlayLibraryEntry;
+  onAddWidget: (type: RootOverlayItemType, presetId?: string) => void;
 }) {
-  const title = def.library?.title ?? def.type;
+  const { title, description } = entry.library;
+  const Icon = entry.icon;
 
   return (
     <Button
       variant="outline"
-      className="w-full h-auto justify-start gap-2 py-3 flex-col items-stretch text-left whitespace-normal"
+      className="group h-auto w-full items-center justify-start gap-3 whitespace-normal px-3 py-2.5 text-left"
       type="button"
-      onClick={() => onAddWidget(def.type as RootOverlayItemType)}
+      onClick={() => onAddWidget(entry.type, entry.presetId)}
     >
-      <span className="flex items-center w-full min-w-0">
-        <Plus className="h-4 w-4 mr-2 shrink-0" />
-        <span className="font-medium text-left min-w-0 wrap-break-word">{title}</span>
+      {/* The widget's own icon, the same one its row in the layer list gets,
+          so a widget is recognised here before its name is read. */}
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted text-foreground">
+        <Icon className="size-4" />
       </span>
-      {def.library?.description ? (
-        <span className="block w-full min-w-0 pl-6 text-xs font-normal text-muted-foreground text-left wrap-break-word leading-snug">
-          {def.library.description}
-        </span>
-      ) : null}
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium wrap-break-word">{title}</span>
+        {description ? (
+          <span className="block text-xs font-normal leading-snug text-muted-foreground wrap-break-word">
+            {description}
+          </span>
+        ) : null}
+      </span>
+      <Plus className="size-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
     </Button>
   );
 }

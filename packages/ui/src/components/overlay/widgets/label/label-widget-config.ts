@@ -1,4 +1,14 @@
-import { LABEL_CATALOG, LABEL_PERIODS, DEFAULT_LABEL_ID, getLabelDefinition, type LabelPeriod } from "@repo/schemas";
+import {
+  LABEL_CATALOG,
+  LABEL_ENTRY_KINDS,
+  LABEL_PERIODS,
+  DEFAULT_LABEL_ID,
+  getLabelDefinition,
+  type LabelDefinition,
+  type LabelEntryKind,
+  type LabelPeriod,
+  type ResolvedLabel,
+} from "@repo/schemas";
 import {
   DEFAULT_GOOGLE_FONT_FAMILY,
   isValidGoogleFontFamilyName,
@@ -63,6 +73,22 @@ export const LABEL_WIDGET_LIMITS = {
 
 export const LABEL_WIDGET_IDS = LABEL_CATALOG.map((d) => d.id);
 
+/** The label that lists every kind of event, and so the one `eventKinds` filters. */
+export const EVENT_LIST_LABEL_ID = "event_list";
+
+/** What the event list's filter calls each kind of event. */
+export const LABEL_ENTRY_KIND_LABELS: Record<LabelEntryKind, string> = {
+  follow: "Follows",
+  sub: "New subs",
+  resub: "Resubs",
+  gift: "Gift subs",
+  cheer: "Cheers",
+  raid: "Raids",
+  redemption: "Channel point rewards",
+  shoutout: "Shoutouts",
+  hype_train: "Hype trains",
+};
+
 export interface LabelWidgetItemConfig {
   /** A LABEL_CATALOG id. */
   labelId: string;
@@ -78,6 +104,8 @@ export interface LabelWidgetItemConfig {
   emptyText: string;
   /** List and leaderboard labels. */
   count: number;
+  /** Event list only: the kinds of event it shows. Every kind by default. */
+  eventKinds: LabelEntryKind[];
   direction: LabelWidgetDirection;
   /** Between entries in a horizontal list. */
   separator: string;
@@ -107,6 +135,7 @@ export function createDefaultLabelWidgetConfig(): LabelWidgetItemConfig {
     layout: "inline",
     emptyText: "",
     count: 5,
+    eventKinds: [...LABEL_ENTRY_KINDS],
     direction: "vertical",
     separator: "•",
     marquee: false,
@@ -160,6 +189,11 @@ export function normalizeLabelWidgetConfig(raw: unknown): LabelWidgetItemConfig 
     layout: oneOf(c.layout, LABEL_WIDGET_LAYOUTS, d.layout),
     emptyText: text(c.emptyText, L.emptyText, d.emptyText),
     count: clamp(c.count, L.count, d.count),
+    // Rows from before the filter have no list and show everything. A stored
+    // list is kept as is, in catalog order, so an empty one shows nothing.
+    eventKinds: Array.isArray(c.eventKinds)
+      ? LABEL_ENTRY_KINDS.filter((kind) => (c.eventKinds as unknown[]).includes(kind))
+      : d.eventKinds,
     direction: oneOf(c.direction, LABEL_WIDGET_DIRECTIONS, d.direction),
     separator: text(c.separator, L.separator, d.separator),
     marquee: bool(c.marquee, d.marquee),
@@ -184,6 +218,23 @@ export function normalizeLabelWidgetConfig(raw: unknown): LabelWidgetItemConfig 
     align: oneOf(c.align, ["left", "center", "right"] as const, d.align),
     textShadow: bool(c.textShadow, d.textShadow),
   };
+}
+
+/**
+ * A resolved label with the event list's filter applied. Every other label is
+ * returned as is: "Latest follower" has nothing to filter.
+ *
+ * The filter runs on the events the snapshot holds (the newest 50 or so), so
+ * a rare kind can show fewer rows than `count` on a busy stream.
+ */
+export function applyLabelEventKinds(
+  resolved: ResolvedLabel,
+  def: LabelDefinition,
+  cfg: Pick<LabelWidgetItemConfig, "eventKinds">,
+): ResolvedLabel {
+  if (def.id !== EVENT_LIST_LABEL_ID || resolved.shape !== "list") return resolved;
+  if (cfg.eventKinds.length === LABEL_ENTRY_KINDS.length) return resolved;
+  return { shape: "list", items: resolved.items.filter((entry) => cfg.eventKinds.includes(entry.kind)) };
 }
 
 /** The template in use: the author's, or the label's own default. */

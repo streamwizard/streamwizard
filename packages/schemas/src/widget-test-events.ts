@@ -33,6 +33,10 @@ import {
   ChannelPollBeginEventSchema,
   ChannelPollEndEventSchema,
   ChannelPollProgressEventSchema,
+  ChannelPredictionBeginEventSchema,
+  ChannelPredictionEndEventSchema,
+  ChannelPredictionLockEventSchema,
+  ChannelPredictionProgressEventSchema,
 } from "./polls-predictions";
 import { StreamOfflineEventSchema, StreamOnlineEventSchema } from "./stream";
 
@@ -344,6 +348,61 @@ function demoHypeTrain(opts: WidgetTestEventOptions | undefined, level: number) 
     is_shared_train: false,
     type: "regular",
   };
+}
+
+/** The id every demo prediction fire uses; widgets use it to tell test predictions from real ones. */
+export const DEMO_PREDICTION_ID = "demo-prediction";
+
+const DEMO_PREDICTION_TITLE = "Do I beat this boss first try?";
+const DEMO_PREDICTION_OUTCOMES = ["Easy clap", "Not a chance"] as const;
+const DEMO_PREDICTION_SECONDS = 60;
+
+/**
+ * When the demo prediction started. A begin sets it; the later stages reuse
+ * it, so the countdown keeps running across fires instead of restarting.
+ */
+let demoPredictionStartedAt = 0;
+
+type DemoPredictionStage = "begin" | "progress" | "lock" | "resolved" | "canceled";
+type DemoPredictionPoints = "random" | "close" | "final";
+
+/**
+ * One `channel.prediction.*` payload. The id is fixed so begin, progress,
+ * lock and end all land on the same prediction. "close" puts the two outcomes
+ * a few points apart. A resolved one goes to the first outcome.
+ */
+function demoPrediction(stage: DemoPredictionStage, points: DemoPredictionPoints = "random"): Record<string, unknown> {
+  const t = Date.now();
+  if (stage === "begin" || t - demoPredictionStartedAt > DEMO_PREDICTION_SECONDS * 1000) demoPredictionStartedAt = t;
+  const counts =
+    points === "close"
+      ? [41_000, 40_500]
+      : points === "final"
+        ? [152_000, 98_000]
+        : DEMO_PREDICTION_OUTCOMES.map(() => Math.round(2_000 + Math.random() * 60_000));
+  const outcomes = DEMO_PREDICTION_OUTCOMES.map((title, i) => {
+    const base = { id: String(i + 1), title, color: i === 0 ? "blue" : "pink" };
+    if (stage === "begin") return base;
+    return { ...base, users: Math.max(1, Math.round(counts[i]! / 900)), channel_points: counts[i]!, top_predictors: [] };
+  });
+  const payload: Record<string, unknown> = {
+    id: DEMO_PREDICTION_ID,
+    ...BROADCASTER,
+    title: DEMO_PREDICTION_TITLE,
+    outcomes,
+    started_at: new Date(demoPredictionStartedAt).toISOString(),
+  };
+  if (stage === "begin" || stage === "progress") {
+    payload.locks_at = new Date(demoPredictionStartedAt + DEMO_PREDICTION_SECONDS * 1000).toISOString();
+  } else if (stage === "lock") {
+    payload.locked_at = now();
+  } else {
+    payload.status = stage;
+    // Twitch sends an empty string here on a cancel: nobody won.
+    payload.winning_outcome_id = stage === "resolved" ? "1" : "";
+    payload.ended_at = now();
+  }
+  return payload;
 }
 
 export const WIDGET_TEST_EVENTS = {
@@ -929,6 +988,36 @@ export const WIDGET_TEST_EVENTS = {
     group: "Channel",
     schema: ChannelPollEndEventSchema,
     build: () => demoPoll("end", "final"),
+  },
+  "channel.prediction.begin": {
+    label: "Prediction started",
+    group: "Channel",
+    schema: ChannelPredictionBeginEventSchema,
+    build: () => demoPrediction("begin"),
+  },
+  "channel.prediction.progress": {
+    label: "Prediction points",
+    group: "Channel",
+    schema: ChannelPredictionProgressEventSchema,
+    build: () => demoPrediction("progress"),
+    variants: {
+      close: { label: "Close call", build: () => demoPrediction("progress", "close") },
+    },
+  },
+  "channel.prediction.lock": {
+    label: "Prediction locked",
+    group: "Channel",
+    schema: ChannelPredictionLockEventSchema,
+    build: () => demoPrediction("lock", "final"),
+  },
+  "channel.prediction.end": {
+    label: "Prediction ended",
+    group: "Channel",
+    schema: ChannelPredictionEndEventSchema,
+    build: () => demoPrediction("resolved", "final"),
+    variants: {
+      canceled: { label: "Canceled", build: () => demoPrediction("canceled", "final") },
+    },
   },
   "channel.chat.clear": {
     label: "Chat cleared",

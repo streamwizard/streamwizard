@@ -2,6 +2,8 @@ import { toast } from "sonner";
 import { buildDemoEvent, type DemoEventType } from "@repo/schemas";
 import {
   ALERT_TEST_BROWSER_EVENT,
+  ALERT_TEST_PAYLOAD_KEY,
+  type AlertForcedVariation,
   type AlertTestBrowserEventDetail,
 } from "@repo/ui/overlay";
 import { sendTestEventToOverlay } from "@/actions/overlay-test-alert";
@@ -23,6 +25,12 @@ export interface DemoFireRequest {
    * lets the server build it, so ids and timestamps stay fresh per fire.
    */
   custom?: Record<string, unknown>;
+  /**
+   * Plays one variation of one alert box outright, whatever its condition. The
+   * event still goes out as a normal one, so everything else on the scene
+   * reacts to it as usual.
+   */
+  forceVariation?: AlertForcedVariation;
 }
 
 export interface DemoFireContext {
@@ -42,11 +50,12 @@ export interface DemoFireContext {
  * rejected too, and it should stop rather than toast once a second.
  */
 export async function fireDemoEvent(
-  { type, variant, custom }: DemoFireRequest,
+  request: DemoFireRequest,
   { mode, sceneId, emitLocal }: DemoFireContext
 ): Promise<boolean> {
+  const { type } = request;
   if (mode === "local") {
-    const payload = custom ?? buildDemoEvent(type, undefined, variant).payload;
+    const payload = demoFirePayload(request);
     emitLocal(type, payload);
     // Native widgets aren't iframes and have no store to read, so the alert box
     // takes its Local copy off a browser event. Anything that isn't an alert
@@ -59,7 +68,7 @@ export async function fireDemoEvent(
     return true;
   }
 
-  return sendDemoEventLive({ type, variant, custom });
+  return sendDemoEventLive(request);
 }
 
 /**
@@ -70,8 +79,9 @@ export async function sendDemoEventLive({
   type,
   variant,
   custom,
+  forceVariation,
 }: DemoFireRequest): Promise<boolean> {
-  const { ok, error } = await sendTestEventToOverlay(type, custom, variant);
+  const { ok, error } = await sendTestEventToOverlay(type, custom, variant, forceVariation);
   if (!ok) toast.error(error ?? "Could not send the demo event");
   return ok;
 }
@@ -81,6 +91,8 @@ export function demoFirePayload({
   type,
   variant,
   custom,
+  forceVariation,
 }: DemoFireRequest): Record<string, unknown> {
-  return custom ?? buildDemoEvent(type, undefined, variant).payload;
+  const payload = custom ?? buildDemoEvent(type, undefined, variant).payload;
+  return forceVariation ? { ...payload, [ALERT_TEST_PAYLOAD_KEY]: forceVariation } : payload;
 }

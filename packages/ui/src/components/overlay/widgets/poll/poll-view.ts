@@ -38,6 +38,11 @@ export interface PollView {
   resultText: string;
   /** Screen-reader summary. */
   label: string;
+  /**
+   * What designs say while nothing has come in yet. Left out by polls, which
+   * get "No votes yet" / "No votes"; predictions count points, not votes.
+   */
+  emptyText?: string;
 }
 
 function plural(n: number, one: string, many: string): string {

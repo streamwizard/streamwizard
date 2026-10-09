@@ -237,7 +237,7 @@ export const ALERT_TIERS: Record<string, AlertTier[]> = {
     { label: "1 month", rest: " subscribed for 1 month!", message: "month one", media: "resub.webm" },
     {
       label: "6 months",
-      rest: " subscribed for 6 months in a row!",
+      rest: " subscribed for 6 months!",
       message: "six months, still here",
       media: "resub-6.webm",
       base: true,
