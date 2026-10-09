@@ -1,4 +1,5 @@
 "use client";
+import { trackAction } from "@/lib/track-action";
 import { Badge } from "@repo/ui";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@repo/ui";
 import {
@@ -59,6 +60,7 @@ export function useClipCardActions(clip: clipsWithFolders) {
 
   const OpenClip = () => {
     openClip(clip);
+    trackAction("clip_played", {});
   };
 
   return { OpenClip };
@@ -69,6 +71,7 @@ export function ClipCardActions({ clip }: { clip: clipsWithFolders }) {
 
   const copyClipUrl = () => {
     navigator.clipboard.writeText(clip.url!);
+    trackAction("clip_link_copied", {});
     toast.success("Copied to clipboard");
   };
 

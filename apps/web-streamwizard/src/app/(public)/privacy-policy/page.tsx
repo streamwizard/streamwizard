@@ -114,7 +114,15 @@ function NormalContent() {
           accepted analytics. You can object to them at any time (see Your
           Rights below). If your browser sends the Global Privacy Control signal,
           we treat that as declining analytics and do not show the cookie
-          banner. PostHog stores data on EU infrastructure.
+          banner. If you accept analytics, PostHog also records session
+          replays: how the page looked and where you clicked, so we can see
+          where people get stuck. Every piece of text and everything you type
+          is masked in your browser before anything is sent, and images and
+          video are left out. If you decline, or have not answered yet,
+          nothing is recorded. When an automated crawler (a search engine or an AI
+          assistant) reads one of our public pages, we record which page and
+          the crawler&apos;s user-agent string, never an IP address. PostHog
+          stores data on EU infrastructure.
         </p>
 
         <h3 className="text-lg font-medium mb-2">
@@ -125,9 +133,9 @@ function NormalContent() {
           your account ID, browser type, operating system, and the URL where the
           error occurred. No passwords or payment data are included in error
           reports. If you accept analytics, Sentry may also record a session
-          replay for a small sample of visits, and for visits where an error
-          occurs, so we can see what led up to a bug. Replays mask all text and
-          block images and video. If you decline, no replay is recorded.
+          replay of a visit where an error occurs, so we can see what led up
+          to a bug. Replays mask all text and block images and video. If you
+          decline, no replay is recorded.
         </p>
 
         <h3 className="text-lg font-medium mb-2">Server Logs</h3>
@@ -291,6 +299,7 @@ function NormalContent() {
             months after your last activity. Anonymous, aggregated statistics
             that cannot be tied to you may be kept for up to 7 years.
           </li>
+          <li>Session replays (PostHog): deleted after 30 days.</li>
           <li>
             Discord support tickets: conversations, images and your feedback
             comment are deleted 12 months after the ticket closes; the rating
@@ -591,7 +600,12 @@ function GenZContent() {
           said yes to cookies or not. it&apos;s tied to ur account ID, never ur IP
           or location, and it doesn&apos;t build a profile on its own. no yes to
           cookies = no profile, period. don&apos;t want it? u can object, see ur
-          rights below.
+          rights below. said yes to cookies? PostHog also records session
+          replays: what the page looked like + where u clicked, so we can see
+          where people get stuck. all text and everything u type is masked
+          before it leaves ur browser, images + video left out. said no (or
+          didn&apos;t answer yet)? nothing gets recorded. bots too: when a crawler (Google, ChatGPT and friends)
+          reads a public page we note which page + which bot. no IP.
         </p>
 
         <h3 className="text-lg font-medium mb-2">when things go wrong 💀</h3>
@@ -599,9 +613,9 @@ function GenZContent() {
           Sentry catches app errors. it might grab ur account ID, browser type,
           OS, and the URL that caused the chaos. no passwords, no payment info.
           just vibes and stack traces. said yes to cookies? Sentry might also
-          record a replay of a small slice of visits (and any visit where
-          something breaks) so we can see how the bug happened. all text is
-          masked, images + video blocked. said no? zero replays.
+          record a replay of a visit where something breaks so we can see how
+          the bug happened. all text is masked, images + video blocked. said
+          no? zero replays.
         </p>
 
         <h3 className="text-lg font-medium mb-2">server logs</h3>
@@ -759,6 +773,7 @@ function GenZContent() {
             months after u last showed up. anonymous aggregate stats that
             can&apos;t trace back to u can stick around up to 7 years.
           </li>
+          <li>session replays (PostHog): gone after 30 days.</li>
           <li>
             support tickets: chats, images + ur feedback comment get deleted 12
             months after the ticket closes (the star rating stays, as a

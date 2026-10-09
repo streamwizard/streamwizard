@@ -69,14 +69,50 @@ export function initPostHog({ key, host = "https://eu.i.posthog.com" }: PostHogC
     // is Twitch names, clip titles and chat. The public pages lose nothing —
     // their CTAs are named by the cta_clicked / section_viewed events.
     mask_all_text: true,
+    // Session replay, for visitors who accepted analytics and nobody else.
+    // It stays off here and is switched on by startReplay(), which only runs
+    // on a "yes". The SDK has its own check too (it never records while
+    // consent is pending or declined); this is the one that does not depend
+    // on how a future SDK version reads consent.
     disable_session_recording: true,
+    session_recording: {
+      // Recordings show where someone clicked and how the page looked, never
+      // what it said: every piece of text and every input is masked in the
+      // browser before anything is sent, and images and video are left out.
+      maskAllInputs: true,
+      maskTextSelector: "*",
+      blockSelector: "img, video",
+      recordHeaders: false,
+      recordBody: false,
+      recordCrossOriginIframes: false,
+    },
+    enable_recording_console_log: false,
     disable_surveys: true,
     disable_web_experiments: true,
     disable_conversations: true,
-    capture_performance: { web_vitals: true },
+    disable_product_tours: true,
+    // Replay cannot start without the project's remote config (whether
+    // recording is on, which recorder to load), so that request is allowed
+    // again; `advanced_disable_flags` used to block it. Remote config can also
+    // switch other products on from the PostHog settings page, and nobody
+    // reading this file would know. Each of them is pinned off here, so what
+    // this site collects is decided in this file and nowhere else.
+    enable_heatmaps: false,
+    capture_dead_clicks: false,
+    capture_exceptions: false,
+    logs: { captureConsoleLogs: false },
+    capture_performance: { web_vitals: true, network_timing: false },
+    // Still no feature flag requests: nothing here uses flags.
     advanced_disable_feature_flags: true,
-    advanced_disable_flags: true,
     request_batching: false,
     before_send: scrubEvent,
   });
+  // A returning visitor who said yes on an earlier visit.
+  if (posthog.get_explicit_consent_status() === "granted") startReplay();
+}
+
+// Only ever called after an explicit "yes". Nothing is recorded unless
+// "Record user sessions" is also on in the PostHog project settings.
+export function startReplay(): void {
+  posthog.startSessionRecording();
 }

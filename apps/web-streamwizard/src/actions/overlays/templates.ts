@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { track } from "@/lib/track";
 import { reportError } from "@repo/sentry";
 import type { Database, Json } from "@repo/supabase";
 import {
@@ -227,6 +228,11 @@ export async function createOverlayFromTemplate(formData: {
     }
   }
 
+  await track(
+    "overlay_created",
+    { overlay_id: scene.id, template: formData.templateId, render_mode: formData.render_mode ?? "obs" },
+    user,
+  );
   revalidatePath("/dashboard/overlays");
   return { data: scene, error: null };
 }

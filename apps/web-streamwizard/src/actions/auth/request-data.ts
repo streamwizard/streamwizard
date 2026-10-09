@@ -4,6 +4,7 @@ import { reportError } from "@repo/sentry";
 import { exportUserData } from "@repo/supabase/queries/data-export";
 
 import { tryAuthContext } from "@/lib/auth";
+import { track } from "@/lib/track";
 
 export async function requestUserData() {
   const ctx = await tryAuthContext();
@@ -14,6 +15,7 @@ export async function requestUserData() {
       userId: ctx.user.id,
       broadcasterId: ctx.broadcasterId,
     });
+    await track("data_export_requested", {}, ctx.user);
     return { data, error: null };
   } catch (err) {
     // Fail the whole export rather than hand back a partial file that looks

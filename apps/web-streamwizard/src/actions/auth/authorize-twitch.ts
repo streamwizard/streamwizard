@@ -43,7 +43,9 @@ export async function authorizeTwitchFeature(feature: TwitchScopeFeature | "base
   const { error, data } = await supabase.auth.signInWithOAuth({
     provider: "twitch",
     options: {
-      redirectTo: `${origin}/auth/callback/twitch?next=${encodeURIComponent(safeNext)}`,
+      // `scope_upgrade` tells the callback this is a signed-in user granting
+      // more rights, so it does not count the round trip as a login.
+      redirectTo: `${origin}/auth/callback/twitch?next=${encodeURIComponent(safeNext)}&scope_upgrade=${feature}`,
       scopes: twitchScopesFor(entitled).join(" "),
     },
   });

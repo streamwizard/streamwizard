@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { GetClipDownloadURL } from "@/actions/twitch/clips";
 import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";
+import { track } from "@/lib/track";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,6 +53,11 @@ export async function POST(request: NextRequest) {
     const range = request.headers.get("range");
     if (range) {
       forwardHeaders["Range"] = range;
+    }
+    // A ranged request is a player seeking through the same file, not
+    // another download.
+    if (!range) {
+      await track("clip_downloaded", { orientation: layout === "landscape" ? "landscape" : "portrait" }, user);
     }
 
     const videoResponse = await fetch(downloadUrl, {

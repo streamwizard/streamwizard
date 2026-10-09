@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAction } from "@/lib/track-action";
 import { AddToFolderItems } from "@/components/clips/add-to-folder-menu";
 import { formatClipDuration, formatDate } from "@/lib/format";
 import { buildClipFolderTree, type ClipFolderNode } from "@/lib/utils/clip-folders";
@@ -85,6 +86,7 @@ function ClipDialogBody({ clip }: { clip: clipsWithFolders }) {
   const copyUrl = () => {
     if (!clip.url) return;
     navigator.clipboard.writeText(clip.url);
+    trackAction("clip_link_copied", {});
     toast.success("Copied to clipboard");
   };
 

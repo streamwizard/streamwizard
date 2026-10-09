@@ -1,5 +1,6 @@
 "use client";
 
+import { trackAction } from "@/lib/track-action";
 import {
   Badge,
   Button,
@@ -65,7 +66,11 @@ export default function TwitchClipSearchForm() {
         else params.set(key, val);
       }
       const next = params.toString();
-      if (next !== searchParams.toString()) router.push(`?${next}`);
+      if (next !== searchParams.toString()) {
+        // Which controls, never what was typed or picked.
+        trackAction("clips_filtered", { filters: Object.keys(updates) });
+        router.push(`?${next}`);
+      }
     },
     [router, searchParams]
   );

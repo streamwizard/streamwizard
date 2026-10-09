@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
+import { track } from "@/lib/track";
 import {
   getWidgetTemplates as getWidgetTemplateRows,
   getWidgetTemplateById,
@@ -126,6 +127,7 @@ export async function createWidget(input: {
   );
   revalidatePath("/dashboard/widget-library");
   if (error) reportError(error, ERROR_SCOPE);
+  else if (data) await track("custom_widget_created", { widget_id: data.id }, ctx.user);
   return { data: data as unknown as Widget | null, error: error?.message ?? null };
 }
 
@@ -208,6 +210,7 @@ export async function publishWidgetToLibrary(
     tags: input.tags,
   });
   if (error) reportError(error, ERROR_SCOPE);
+  else await track("custom_widget_published", { widget_id: widgetId }, ctx.user);
   return { error: error?.message ?? null };
 }
 
@@ -267,6 +270,9 @@ export async function installWidgetTemplate(templateId: string) {
     return { data: null, error: installError.message };
   }
 
+  if (installed) {
+    await track("custom_widget_installed", { widget_id: installed.id, install_source: "starter" }, ctx.user);
+  }
   return { data: installed as unknown as Widget, error: null };
 }
 
@@ -293,6 +299,9 @@ export async function installWidgetFromLibrary(entryId: string) {
   }
 
   await incrementWidgetInstalls(ctx.supabase, entryId);
+  if (forked) {
+    await track("custom_widget_installed", { widget_id: forked.id, install_source: "library" }, ctx.user);
+  }
 
   revalidatePath("/dashboard/widget-library");
   return { data: forked as unknown as Widget, error: null };

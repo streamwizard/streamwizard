@@ -1,6 +1,7 @@
 "use server";
 
 import { TwitchApi } from "@repo/twitch-api";
+import { track } from "@/lib/track";
 import { createClient } from "@repo/supabase/next/server";
 import { getTwitchUserId } from "@repo/supabase/queries/user";
 import { reportError } from "@repo/sentry";
@@ -59,6 +60,7 @@ export async function sendDeckChatMessage(
       };
     }
 
+    await track("deck_chat_sent", {}, user);
     return { ok: true, messageId: sent?.message_id };
   } catch (error) {
     reportError(error, "sendDeckChatMessage");

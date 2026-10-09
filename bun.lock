@@ -90,6 +90,7 @@
         "@repo/discord-api": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/metrics": "workspace:*",
+        "@repo/posthog": "workspace:*",
         "@repo/proxmox": "workspace:*",
         "@repo/schemas": "workspace:*",
         "@repo/sentry": "workspace:*",
@@ -118,6 +119,7 @@
       "dependencies": {
         "@repo/logger": "workspace:*",
         "@repo/metrics": "workspace:*",
+        "@repo/posthog": "workspace:*",
         "@repo/schemas": "workspace:*",
         "@repo/sentry": "workspace:*",
         "@repo/supabase": "workspace:*",
@@ -281,6 +283,7 @@
         "@repo/sentry": "workspace:*",
         "@repo/storage": "workspace:*",
         "@repo/supabase": "workspace:*",
+        "@repo/ttl-cache": "workspace:*",
         "@repo/twitch-api": "workspace:*",
         "@repo/twitch-assets": "workspace:*",
         "@repo/types": "workspace:*",

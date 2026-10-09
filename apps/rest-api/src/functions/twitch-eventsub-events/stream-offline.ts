@@ -1,3 +1,4 @@
+import { trackServer } from "@repo/posthog/server";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
@@ -90,5 +91,12 @@ export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: 
   if (!preferences.sync_clips_on_end) return;
 
   // Use the reusable syncTwitch function
-  await syncTwitch(event.broadcaster_user_id, TwitchAPI);
+  const synced = await syncTwitch(event.broadcaster_user_id, TwitchAPI);
+  // No browser is behind this one, so PostHog files it under "Automation";
+  // charts on it must not use the bot filter.
+  trackServer(user.user_id, "clips_synced", {
+    trigger: "stream_end",
+    skipped: !synced || "skipped" in synced,
+    ...(synced && "clipsCount" in synced ? { new_clip_count: synced.clipsCount } : {}),
+  });
 };

@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { denyConsent, getConsentStatus, grantConsent, hasGlobalPrivacyControl } from "@repo/posthog";
-import { useEffect, useState } from "react";
+import {
+  denyConsent,
+  getConsentStatus,
+  grantConsent,
+  hasGlobalPrivacyControl,
+  markConsentResolved,
+} from "@repo/posthog";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { enableSentryReplay } from "@/lib/sentry-replay";
 
@@ -41,11 +47,26 @@ export function CookieBanner() {
     // recorded so we don't ask again; Cookie settings in the footer still
     // lets them change it.
     if (hasGlobalPrivacyControl()) {
-      denyConsent();
+      denyConsent("gpc");
       return;
     }
     setVisible(true);
   }, []);
+
+  // Cookie-banner blockers hide this with a cosmetic filter. Onboarding waits
+  // for the banner to be answered, so a banner nobody can see must not hold
+  // it up: settle the question, without recording a choice either way.
+  const bannerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!visible) return;
+    const frame = requestAnimationFrame(() => {
+      const banner = bannerRef.current;
+      const hidden =
+        !banner || banner.getClientRects().length === 0 || getComputedStyle(banner).visibility === "hidden";
+      if (hidden) markConsentResolved();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [visible]);
 
   function accept() {
     grantConsent();
@@ -55,7 +76,7 @@ export function CookieBanner() {
   }
 
   function decline() {
-    denyConsent();
+    denyConsent("button");
     setVisible(false);
     toast(content[tab].declineToast.title, { description: content[tab].declineToast.description });
   }
@@ -65,7 +86,10 @@ export function CookieBanner() {
   const c = content[tab];
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 max-w-sm w-full animate-in slide-in-from-bottom-4 duration-300">
+    <div
+      ref={bannerRef}
+      className="fixed bottom-4 right-4 z-50 max-w-sm w-full animate-in slide-in-from-bottom-4 duration-300"
+    >
       <div className="rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
         {/* Tabs */}
         <div className="flex border-b border-border">

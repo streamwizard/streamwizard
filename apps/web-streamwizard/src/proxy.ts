@@ -1,8 +1,18 @@
 import { updateSession } from "@repo/supabase/next/proxy";
-import { type NextRequest } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
+import { logCrawlerVisit } from "@/lib/crawler-log";
 import { buildCsp } from "@/lib/csp";
 
-export async function proxy(request: NextRequest) {
+// Crawler-facing files with no session to refresh and no page to protect.
+// They reach the proxy only so a crawler fetching them can be recorded.
+const CRAWLER_FILES = new Set(["/robots.txt", "/sitemap.xml", "/llms.txt"]);
+
+export async function proxy(request: NextRequest, event: NextFetchEvent) {
+  // Handed to waitUntil, so the response does not wait for PostHog.
+  const crawlerLog = logCrawlerVisit(request);
+  if (crawlerLog) event.waitUntil(crawlerLog);
+  if (CRAWLER_FILES.has(request.nextUrl.pathname)) return NextResponse.next();
+
   // Per-request nonce'd CSP. The header must be on the *request* before
   // updateSession builds its pass-through response (Next reads the nonce from
   // the forwarded request header to tag its inline scripts) and on the
@@ -38,13 +48,17 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
-// txt/xml are listed so /robots.txt and /sitemap.xml skip updateSession: they are
-// crawler-facing and have no session to refresh. /ingest is the PostHog reverse
+// txt/xml are listed so static files skip updateSession: they have no session
+// to refresh. The three crawler-facing ones are matched again by name below,
+// and leave through the early return above. /ingest is the PostHog reverse
 // proxy (see next.config.ts rewrites): pure pass-through traffic with nothing to
 // refresh either, and it fires on every page.
 export const config = {
   matcher: [
     "/((?!_next|ingest/|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest|txt|xml)).*)",
     "/(api|trpc)(.*)",
+    "/robots.txt",
+    "/sitemap.xml",
+    "/llms.txt",
   ],
 };
