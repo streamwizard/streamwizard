@@ -114,7 +114,10 @@ function NormalContent() {
           accepted analytics. You can object to them at any time (see Your
           Rights below). If your browser sends the Global Privacy Control signal,
           we treat that as declining analytics and do not show the cookie
-          banner. PostHog stores data on EU infrastructure.
+          banner. When an automated crawler (a search engine or an AI
+          assistant) reads one of our public pages, we record which page and
+          the crawler&apos;s user-agent string, never an IP address. PostHog
+          stores data on EU infrastructure.
         </p>
 
         <h3 className="text-lg font-medium mb-2">
@@ -591,7 +594,8 @@ function GenZContent() {
           said yes to cookies or not. it&apos;s tied to ur account ID, never ur IP
           or location, and it doesn&apos;t build a profile on its own. no yes to
           cookies = no profile, period. don&apos;t want it? u can object, see ur
-          rights below.
+          rights below. bots too: when a crawler (Google, ChatGPT and friends)
+          reads a public page we note which page + which bot. no IP.
         </p>
 
         <h3 className="text-lg font-medium mb-2">when things go wrong 💀</h3>
