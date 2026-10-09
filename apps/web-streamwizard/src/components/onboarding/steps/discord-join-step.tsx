@@ -44,7 +44,7 @@ export function DiscordJoinStep({ status }: { status: "verified" | "not_member" 
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold">Now join the server.</h2>
         <p className="text-sm text-muted-foreground">
-          Account&apos;s linked. Hop into the Discord and your Verified Member role shows up on its own.
+          Go live and we post your stream in the server. Plus quick help and streamers to collab with.
         </p>
       </div>
 
@@ -57,7 +57,7 @@ export function DiscordJoinStep({ status }: { status: "verified" | "not_member" 
             </span>
             <div>
               <p className="text-sm font-medium">StreamWizard Discord</p>
-              <p className="text-xs text-muted-foreground">The official server.</p>
+              <p className="text-xs text-muted-foreground">Your Verified Member role is waiting inside.</p>
             </div>
           </div>
           <Button
@@ -75,7 +75,11 @@ export function DiscordJoinStep({ status }: { status: "verified" | "not_member" 
       <ul className="flex flex-col gap-1.5 text-sm text-muted-foreground">
         <li className="flex items-start gap-2">
           <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5865F2]" />
-          Your linked account only unlocks the role once you&apos;re actually in the server
+          Your title, game and a link land in the server the moment you go live
+        </li>
+        <li className="flex items-start gap-2">
+          <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5865F2]" />
+          You get the Live role while you stream, so you sit at the top of the member list
         </li>
         <li className="flex items-start gap-2">
           <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5865F2]" />

@@ -1,14 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import {
-  denyConsent,
-  getConsentStatus,
-  grantConsent,
-  hasGlobalPrivacyControl,
-  markConsentResolved,
-} from "@repo/posthog";
-import { useEffect, useRef, useState } from "react";
+import { denyConsent, getConsentStatus, grantConsent, hasGlobalPrivacyControl } from "@repo/posthog";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { enableSentryReplay } from "@/lib/sentry-replay";
 
@@ -53,21 +47,6 @@ export function CookieBanner() {
     setVisible(true);
   }, []);
 
-  // Cookie-banner blockers hide this with a cosmetic filter. Onboarding waits
-  // for the banner to be answered, so a banner nobody can see must not hold
-  // it up: settle the question, without recording a choice either way.
-  const bannerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!visible) return;
-    const frame = requestAnimationFrame(() => {
-      const banner = bannerRef.current;
-      const hidden =
-        !banner || banner.getClientRects().length === 0 || getComputedStyle(banner).visibility === "hidden";
-      if (hidden) markConsentResolved();
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [visible]);
-
   function accept() {
     grantConsent();
     void enableSentryReplay();
@@ -86,10 +65,13 @@ export function CookieBanner() {
   const c = content[tab];
 
   return (
-    <div
-      ref={bannerRef}
-      className="fixed bottom-4 right-4 z-50 max-w-sm w-full animate-in slide-in-from-bottom-4 duration-300"
-    >
+    // Above every dialog, and clickable while one is open. A new user gets the
+    // onboarding wizard on their first page, and it is a modal: it sat on top
+    // of this banner (same z-index, later in the DOM) and switched off pointer
+    // events for everything outside itself, so the question could not be
+    // answered until onboarding was done. z-[60] puts the banner over the
+    // dialog and its backdrop; pointer-events-auto opts it back in.
+    <div className="pointer-events-auto fixed bottom-4 right-4 z-[60] max-w-sm w-full animate-in slide-in-from-bottom-4 duration-300">
       <div className="rounded-xl border border-border bg-card shadow-2xl overflow-hidden">
         {/* Tabs */}
         <div className="flex border-b border-border">

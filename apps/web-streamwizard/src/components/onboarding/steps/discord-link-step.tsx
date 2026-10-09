@@ -57,7 +57,9 @@ export function DiscordLinkStep({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-semibold">Link your Discord.</h2>
-        <p className="text-sm text-muted-foreground">Connect your account and we&apos;ll hand you the Verified Member role.</p>
+        <p className="text-sm text-muted-foreground">
+          Takes ten seconds. It&apos;s how we know it&apos;s you when you ask for help.
+        </p>
       </div>
 
       <div className="relative rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
@@ -86,7 +88,7 @@ export function DiscordLinkStep({
       <ul className="flex flex-col gap-1.5 text-sm text-muted-foreground">
         <li className="flex items-start gap-2">
           <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5865F2]" />
-          We match your Discord ID, so the role lands without a mod lifting a finger
+          Go live and we post your stream in our Discord and give you the Live role. Switch it off in Settings any time
         </li>
         <li className="flex items-start gap-2">
           <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#5865F2]" />
