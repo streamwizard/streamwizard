@@ -1,5 +1,6 @@
 "use client";
 
+import { useConsentResolved } from "@repo/posthog";
 import { trackAction } from "@/lib/track-action";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -42,18 +43,34 @@ function OnboardingStartedTracker() {
   return null;
 }
 
-export function OnboardingModal({
-  clipCount,
-  discordStatus,
-  initialOnboardingCompleted,
-}: {
+interface OnboardingProps {
   clipCount: number;
   discordStatus: "verified" | "not_member" | "not_linked";
   // Server-fetched truth. The client store's onboarding_completed defaults to
-  // false and only hydrates in a later effect, so it can't gate analytics —
-  // a mount effect would false-fire for every user already past onboarding.
+  // false and only hydrates in a later effect, so on its own it would mount
+  // the wizard, for a moment, for every user already past onboarding.
   initialOnboardingCompleted: boolean;
-}) {
+}
+
+// Decides whether the wizard exists at all. Everything the wizard does —
+// including its window-wide Enter key listener — lives in OnboardingWizard, so
+// it only runs while the wizard is on screen. It used to be one component
+// with the listener above the early return, and Enter kept driving a hidden
+// wizard for people who had finished it long ago.
+export function OnboardingModal(props: OnboardingProps) {
+  const { preferences } = useSessionStore();
+  const consentResolved = useConsentResolved();
+
+  if (props.initialOnboardingCompleted || preferences.onboarding_completed) return null;
+  // Cookie banner first. The wizard is a modal: it would cover the banner and
+  // block clicks on it, and whatever a new user did before answering would be
+  // lost to analytics along with the answer.
+  if (!consentResolved) return null;
+
+  return <OnboardingWizard clipCount={props.clipCount} discordStatus={props.discordStatus} />;
+}
+
+function OnboardingWizard({ clipCount, discordStatus }: Omit<OnboardingProps, "initialOnboardingCompleted">) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { preferences, setPreferences } = useSessionStore();
@@ -156,11 +173,9 @@ export function OnboardingModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [isLast, saving, handleFinish, handleNext]);
 
-  if (preferences.onboarding_completed) return null;
-
   return (
     <Dialog open>
-      {!initialOnboardingCompleted && !resumedMidFlow && <OnboardingStartedTracker />}
+      {!resumedMidFlow && <OnboardingStartedTracker />}
       <DialogContent className="sm:max-w-lg" showCloseButton={false}>
         <DialogHeader>
           <DialogTitle className="sr-only">Get set up</DialogTitle>

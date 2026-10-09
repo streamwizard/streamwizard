@@ -19,6 +19,9 @@ interface Preferences {
 }
 
 export interface EventMap {
+  // Anonymous and cookieless. `gpc`: the browser's Global Privacy Control
+  // answered before the banner could ask.
+  consent_declined: { via: "button" | "gpc" };
   login_clicked: { source?: string };
   login_completed: { destination: "onboarding" | "dashboard"; is_new_user: boolean };
   // Not a login: a signed-in user granting extra Twitch rights for a feature.
