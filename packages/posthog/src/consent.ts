@@ -1,5 +1,6 @@
 import posthog from "posthog-js";
 import { captureEvent } from "./events";
+import { startReplay } from "./init";
 
 // Fired on `window` when the visitor accepts analytics. The SDK drops every
 // capture — `$identify` included — while consent is pending (nothing is
@@ -49,6 +50,7 @@ export function hasGrantedConsent(): boolean {
 
 export function grantConsent(): void {
   posthog.opt_in_capturing();
+  startReplay();
   // capture_pageview is off and the pre-consent pageview was dropped, so the
   // page the visitor accepted on has to be counted by hand.
   posthog.capture("$pageview", { $current_url: window.location.href });

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, mock } from "bun:test";
 
 let status: "granted" | "denied" | "pending" = "pending";
 const captures: { event: string; properties: unknown }[] = [];
+let recordingStarts = 0;
 
 mock.module("posthog-js", () => ({
   default: {
@@ -13,6 +14,10 @@ mock.module("posthog-js", () => ({
     // the stored status never changes however the visitor answers.
     opt_out_capturing: () => {},
     capture: (event: string, properties: unknown) => captures.push({ event, properties }),
+    startSessionRecording: () => {
+      recordingStarts++;
+    },
+    init: () => {},
   },
 }));
 
@@ -45,6 +50,19 @@ describe("consent resolution", () => {
     expect(consent.isConsentResolved()).toBe(true);
     status = "granted";
     expect(consent.isConsentResolved()).toBe(true);
+  });
+
+  it("starts no recording on a decline", () => {
+    recordingStarts = 0;
+    status = "pending";
+    consent.denyConsent("gpc");
+    expect(recordingStarts).toBe(0);
+  });
+
+  it("starts recording on an accept", () => {
+    recordingStarts = 0;
+    consent.grantConsent();
+    expect(recordingStarts).toBe(1);
   });
 
   it("resolves on decline even when storage never records it, and says how it was declined", () => {
