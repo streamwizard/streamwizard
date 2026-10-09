@@ -1,11 +1,13 @@
 "use client";
 
 import { trackAction } from "@/lib/track-action";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { useSessionStore } from "@/stores/session-store";
-import { completeOnboarding } from "@/actions/supabase/user/settings";
+import { linkDiscord } from "@/actions/auth/link-discord";
+import { completeOnboarding, saveOnboardingProgress } from "@/actions/supabase/user/settings";
+import { discordInviteLink } from "@/lib/constant";
 import { SyncBroadcasterClips } from "@/actions/twitch/clips";
 import { SyncNowStep, type SyncState } from "./steps/sync-now-step";
 import { DiscordLinkStep } from "./steps/discord-link-step";
@@ -13,6 +15,7 @@ import { DiscordJoinStep } from "./steps/discord-join-step";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@repo/ui";
 import { Button, LoadingSpinner } from "@repo/ui";
 import { RefreshCcw } from "lucide-react";
+import { FaDiscord } from "react-icons/fa";
 
 interface OnboardingValues {
   memes_enabled: boolean;
@@ -25,6 +28,9 @@ interface OnboardingValues {
 // first are gone: the toggles keep their defaults and live in Settings for
 // whoever wants them changed.
 const STEP_IDS = ["sync-now", "discord-link", "discord-join"] as const;
+// Discord's own blurple, as on the buttons these replace inside the steps.
+const DISCORD_BUTTON = "bg-[#5865F2] text-white hover:bg-[#4752C4]";
+
 const DISCORD_LINK_STEP_INDEX = STEP_IDS.indexOf("discord-link");
 const DISCORD_JOIN_STEP_INDEX = STEP_IDS.indexOf("discord-join");
 
@@ -130,6 +136,25 @@ function OnboardingWizard({ clipCount, discordStatus }: Omit<OnboardingProps, "i
     setSyncState("error");
   }, [handleNext]);
 
+  // Discord: linking leaves for Discord's consent screen and comes back on the
+  // join step; joining opens the invite in a new tab. Both buttons live in the
+  // footer, so every step reads the same way: Back, Skip, and the thing to do.
+  const linked = discordStatus !== "not_linked";
+  const joined = discordStatus === "verified";
+  const [linking, startLinking] = useTransition();
+  const [inviteOpened, setInviteOpened] = useState(false);
+
+  const handleLink = () => {
+    startLinking(async () => {
+      // The round trip to Discord reloads the page; what the wizard knows
+      // lives in client state and would be gone.
+      await saveOnboardingProgress(values);
+      await linkDiscord("/dashboard/clips?onboarding=discord-join-step");
+    });
+  };
+
+  const busy = isSyncing || linking || saving;
+
   // Render the current step by referencing the imported components directly so
   // their identity stays stable across re-renders. Building these inline inside
   // an array (and rendering via a dynamic `CurrentStep` variable) gives each
@@ -140,9 +165,9 @@ function OnboardingWizard({ clipCount, discordStatus }: Omit<OnboardingProps, "i
       case "sync-now":
         return <SyncNowStep clipCount={clipCount} state={syncState} errorMessage={syncError} />;
       case "discord-link":
-        return <DiscordLinkStep linked={discordStatus !== "not_linked"} values={values} />;
+        return <DiscordLinkStep linked={linked} />;
       case "discord-join":
-        return <DiscordJoinStep status={discordStatus === "not_linked" ? "not_member" : discordStatus} />;
+        return <DiscordJoinStep status={joined ? "verified" : "not_member"} inviteOpened={inviteOpened} />;
       default:
         return null;
     }
@@ -160,18 +185,22 @@ function OnboardingWizard({ clipCount, discordStatus }: Omit<OnboardingProps, "i
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Enter") return;
-      // Enter is the step's main button, whatever that is.
-      if (isLast) {
+      // Enter is the step's main button, except where that button leaves the
+      // page (Discord's consent screen, the server invite): a stray Enter
+      // should never send someone to another site.
+      const stepId = STEP_IDS[step];
+      if (stepId === "sync-now") {
+        if (hasSynced) handleNext();
+        else if (!isSyncing) void handleSync();
+      } else if (stepId === "discord-link") {
+        if (linked) handleNext();
+      } else if (joined || inviteOpened) {
         if (!saving) handleFinish();
-      } else if (isSyncStep && !hasSynced) {
-        if (!isSyncing) void handleSync();
-      } else {
-        handleNext();
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [isLast, saving, handleFinish, handleNext, isSyncStep, hasSynced, isSyncing, handleSync]);
+  }, [step, saving, handleFinish, handleNext, hasSynced, isSyncing, handleSync, linked, joined, inviteOpened]);
 
   return (
     <Dialog open>
@@ -217,42 +246,83 @@ function OnboardingWizard({ clipCount, discordStatus }: Omit<OnboardingProps, "i
           </p>
         </div>
 
+        {/* Same shape on every step: Back on the left, then Skip and the one
+            thing this step is for. Skip is only there while that thing is
+            still undone; once it is done the button reads Next (or, on the
+            last step, takes them to their clips). */}
         <DialogFooter className="flex justify-between sm:justify-between">
-          {isSyncStep && !hasSynced ? (
-            <>
-              <Button variant="ghost" onClick={handleNext} disabled={isSyncing}>
-                Skip
-              </Button>
-              <Button onClick={handleSync} disabled={isSyncing}>
-                {isSyncing ? (
-                  <>
-                    <span className="mr-2 h-4 w-4 shrink-0">
-                      <LoadingSpinner />
-                    </span>
-                    Pulling in your clips...
-                  </>
-                ) : (
-                  <>
-                    <RefreshCcw className="mr-2 h-4 w-4" />
-                    {syncState === "error" ? "Try again" : clipCount > 0 ? "Sync latest clips" : "Grab my clips"}
-                  </>
-                )}
-              </Button>
-            </>
+          {step > 0 ? (
+            <Button variant="ghost" onClick={() => setStep((s) => s - 1)} disabled={busy}>
+              Back
+            </Button>
           ) : (
-            <>
-              <Button variant="ghost" onClick={() => setStep((s) => s - 1)} disabled={step === 0}>
-                Back
-              </Button>
-              {isLast ? (
-                <Button onClick={handleFinish} disabled={saving}>
-                  {saving ? "Saving..." : "Take me to my clips"}
-                </Button>
-              ) : (
-                <Button onClick={handleNext}>Next</Button>
-              )}
-            </>
+            <span />
           )}
+          <div className="flex flex-col-reverse gap-2 sm:flex-row">
+            {isSyncStep && !hasSynced && (
+              <>
+                <Button variant="ghost" onClick={handleNext} disabled={busy}>
+                  Skip
+                </Button>
+                <Button onClick={handleSync} disabled={busy}>
+                  {isSyncing ? (
+                    <>
+                      <span className="mr-2 h-4 w-4 shrink-0">
+                        <LoadingSpinner />
+                      </span>
+                      Pulling in your clips...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCcw className="mr-2 h-4 w-4" />
+                      {syncState === "error" ? "Try again" : clipCount > 0 ? "Sync latest clips" : "Grab my clips"}
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+
+            {STEP_IDS[step] === "discord-link" && !linked && (
+              <>
+                <Button variant="ghost" onClick={handleNext} disabled={busy}>
+                  Skip
+                </Button>
+                <Button onClick={handleLink} disabled={busy} className={DISCORD_BUTTON}>
+                  <FaDiscord className="mr-2 h-4 w-4" />
+                  {linking ? "Connecting…" : "Link Discord"}
+                </Button>
+              </>
+            )}
+
+            {isLast && !joined && !inviteOpened && (
+              <>
+                <Button variant="ghost" onClick={handleFinish} disabled={busy}>
+                  {saving ? "Saving..." : "Skip"}
+                </Button>
+                <Button asChild className={DISCORD_BUTTON}>
+                  <a
+                    href={discordInviteLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setInviteOpened(true)}
+                  >
+                    <FaDiscord className="mr-2 h-4 w-4" />
+                    Join the server
+                  </a>
+                </Button>
+              </>
+            )}
+
+            {isLast && (joined || inviteOpened) && (
+              <Button onClick={handleFinish} disabled={busy}>
+                {saving ? "Saving..." : "Take me to my clips"}
+              </Button>
+            )}
+
+            {!isLast && ((isSyncStep && hasSynced) || (STEP_IDS[step] === "discord-link" && linked)) && (
+              <Button onClick={handleNext}>Next</Button>
+            )}
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
