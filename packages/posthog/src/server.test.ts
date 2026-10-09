@@ -24,14 +24,13 @@ mock.module("posthog-node", () => ({
 process.env.POSTHOG_KEY = "phc_test";
 const { configureTracking, trackServer } = await import("./server");
 
-const ENV_KEYS = ["APP_ENV", "NODE_ENV", "POSTHOG_INTERNAL_USER_IDS", "POSTHOG_OPT_OUT_USER_IDS"] as const;
+const ENV_KEYS = ["APP_ENV", "NODE_ENV", "POSTHOG_OPT_OUT_USER_IDS"] as const;
 const saved = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]));
 
 beforeEach(() => {
   captured.length = 0;
   failCapture = false;
   delete process.env.APP_ENV;
-  delete process.env.POSTHOG_INTERNAL_USER_IDS;
   delete process.env.POSTHOG_OPT_OUT_USER_IDS;
   process.env.NODE_ENV = "staging";
   configureTracking({ app: "test-app" });
@@ -70,16 +69,10 @@ describe("trackServer", () => {
     expect(captured[0]?.properties.environment).toBe("staging");
   });
 
-  it("flags accounts on the internal id list", () => {
-    process.env.POSTHOG_INTERNAL_USER_IDS = "user-9, user-1";
-    trackServer("user-1", "discord_guild_joined", { linked: true });
-    trackServer("user-2", "discord_guild_joined", { linked: true });
-    expect(captured[0]?.properties.internal_user).toBe(true);
-    expect(captured[1]?.properties).not.toHaveProperty("internal_user");
-  });
-
-  it("flags an account the caller marks as internal", () => {
+  it("flags an account the caller marks as internal, and no other", () => {
     trackServer("user-2", "discord_guild_joined", { linked: true }, { internal: true });
+    trackServer("user-3", "discord_guild_joined", { linked: true });
+    expect(captured[1]?.properties).not.toHaveProperty("internal_user");
     expect(captured[0]?.properties.internal_user).toBe(true);
   });
 

@@ -39,8 +39,7 @@ const schema = z.object({
   // PostHog (server-side capture; analytics silently off when unset)
   POSTHOG_KEY: z.string().min(1).optional(),
   POSTHOG_HOST: z.string().url().optional(),
-  // Comma-separated account ids: flagged as internal / never sent at all.
-  POSTHOG_INTERNAL_USER_IDS: z.string().optional(),
+  // Comma-separated account ids that objected; nothing is sent for them.
   POSTHOG_OPT_OUT_USER_IDS: z.string().optional(),
 
   // Shared CDN bucket, for removing a user's ticket attachments when Twitch

@@ -21,8 +21,10 @@ export interface TrackOptions {
   // hides. Nothing else from the request — no IP, no geo — because these
   // events don't wait for consent.
   request?: Pick<Request, "headers">;
-  // For callers that know the account is one of ours by something other than
-  // its id (the web app checks the email domain).
+  // For callers that can tell the account is one of ours (the web app checks
+  // the email domain). Lands on the event as `internal_user: true`. Apps that
+  // only see an account id cannot tell; their events are filtered inside
+  // PostHog, on the account id.
   internal?: boolean;
   // The browser reported this one (through an authenticated route) rather
   // than the server seeing it happen. Lands on the event as `relayed: true`.
@@ -72,13 +74,6 @@ function getClient(): PostHog | null {
   client.on("error", report);
   return client;
 }
-
-// These events have no person profile, so the "Internal / Test users" cohort
-// (a person property) can't exclude them. An event property can: the project's
-// test-account filter also drops `internal_user = true`. The id list is the one
-// check that works everywhere, including apps that only ever see an account id
-// (the overlay, the bots).
-const isInternalUserId = idList("POSTHOG_INTERNAL_USER_IDS");
 
 // The privacy policy lets anyone object to these events (they rest on
 // legitimate interest, so GDPR Art. 21 applies). An account on this list is
@@ -136,7 +131,7 @@ export function trackServer<E extends AppEvent>(
         ...properties,
         ...(userAgent ? { $raw_user_agent: userAgent } : {}),
         ...(config?.app ? { app: config.app } : {}),
-        ...(options?.internal || isInternalUserId(userId) ? { internal_user: true } : {}),
+        ...(options?.internal ? { internal_user: true } : {}),
         ...(options?.relayed ? { relayed: true } : {}),
         environment: env,
         $process_person_profile: false,
