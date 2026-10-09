@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/privacy-policy") },
 };
 
-const LAST_UPDATED = "19 September 2026";
+const LAST_UPDATED = "9 October 2026";
 const CONTACT_EMAIL = LEGAL_CONTACT_EMAIL;
 
 function NormalContent() {
@@ -102,14 +102,17 @@ function NormalContent() {
           account ID so we can understand how the product is used. If you
           decline, we count page views in cookieless mode instead: no cookies,
           no identifiers, no profile. Only anonymous, aggregated statistics
-          that cannot be tied to you. We also record a few account-level
-          product events on our servers (for example signing in, linking your
-          Discord account or joining our Discord server), tied to your account
-          ID under legitimate interest. Those server-side events carry your
+          that cannot be tied to you. Separately, our servers record what you
+          do with your account (for example signing in, finishing onboarding,
+          creating or saving an overlay, uploading a file, syncing clips,
+          starting Cloud OBS, or one of your overlays loading in OBS), tied to
+          your account ID under legitimate interest, whether or not you
+          accepted analytics. Those server-side events carry your
           browser&apos;s user-agent string (so PostHog can tell them apart from
-          automated traffic) but never your IP address, and never create an
-          analytics profile on their own; one only exists if you accepted
-          analytics. If your browser sends the Global Privacy Control signal,
+          automated traffic) but never your IP address or location, and never
+          create an analytics profile on their own; one only exists if you
+          accepted analytics. You can object to them at any time (see Your
+          Rights below). If your browser sends the Global Privacy Control signal,
           we treat that as declining analytics and do not show the cookie
           banner. PostHog stores data on EU infrastructure.
         </p>
@@ -573,20 +576,22 @@ function GenZContent() {
           our own logs. nobody else sees it.
         </p>
 
-        <h3 className="text-lg font-medium mb-2">
-          analytics (if u said yes to cookies)
-        </h3>
+        <h3 className="text-lg font-medium mb-2">analytics</h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
           we use PostHog to see what pages people visit + where they click. ur
           IP gets dropped at the door, never stored with analytics. once ur
           logged in we link ur PostHog profile to ur account ID so we can
           understand what&apos;s cooked vs what slaps. EU region only. said no to
           cookies? then it&apos;s cookieless mode: no cookies, no profile, ur just
-          an anonymous +1 in the page stats. nothing traces back to u. our
-          servers also log a few account moments (like logging in, linking
-          Discord or joining our Discord server) so we know the community is
-          growing. those don&apos;t build a profile on their own. no yes to
-          cookies = no profile, period.
+          an anonymous +1 in the page stats. nothing traces back to u.
+          separate thing: our servers log what u do with ur account (logging
+          in, finishing onboarding, making or saving an overlay, uploading
+          stuff, syncing clips, starting Cloud OBS, an overlay of urs loading
+          in OBS) so we know what actually gets used. that happens whether u
+          said yes to cookies or not. it&apos;s tied to ur account ID, never ur IP
+          or location, and it doesn&apos;t build a profile on its own. no yes to
+          cookies = no profile, period. don&apos;t want it? u can object, see ur
+          rights below.
         </p>
 
         <h3 className="text-lg font-medium mb-2">when things go wrong 💀</h3>

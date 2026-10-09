@@ -1,26 +1,12 @@
 import posthog from "posthog-js";
+import type { AppEvent, EventProps } from "./event-map";
 
-// One place for every custom event name. Add here first, then capture.
-export type AppEvent =
-  | "login_clicked"
-  | "login_completed"
-  | "onboarding_started"
-  | "onboarding_completed"
-  | "clips_synced"
-  | "clip_folder_created"
-  | "overlay_created"
-  | "overlay_favourite_toggled"
-  | "widget_added"
-  | "cloud_obs_launched"
-  | "discord_linked"
-  | "discord_guild_joined"
-  // Public marketing pages. `$pathname` is on every event, so none of these
-  // carry the page; `section` / `cta` say where on the page.
-  | "cta_clicked"
-  | "section_viewed"
-  | "demo_interacted"
-  | "faq_opened";
+export type { AppEvent, EventMap } from "./event-map";
 
-export function captureEvent(event: AppEvent, properties?: Record<string, unknown>) {
+// Browser capture, so it follows the visitor's cookie choice. That makes it
+// right for the public pages and wrong for anything a signed-in user does:
+// most of them decline, their id then changes daily, and the event can't be
+// tied to the account. Those go through `trackServer` instead.
+export function captureEvent<E extends AppEvent>(event: E, ...[properties]: EventProps<E>) {
   posthog.capture(event, properties);
 }

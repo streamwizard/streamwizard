@@ -18,7 +18,7 @@ const PRINCIPLES = [
   {
     icon: ShieldCheck,
     title: "Your data is not the product.",
-    body: "Analytics are cookieless by default. The banner asks before anything else gets switched on.",
+    body: "No analytics cookies until you say yes. Signed in, we log what your account does, without your IP, and none of it gets sold.",
   },
   {
     icon: Wrench,

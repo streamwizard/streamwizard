@@ -2,7 +2,8 @@ import { Sentry } from "./sentry";
 process.on("uncaughtException", (err) => { reportFatal(err, "discord-bot"); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 
-import { flushSentry, reportFatal } from "@repo/sentry";
+import { configureTracking, flushTracking } from "@repo/posthog/server";
+import { flushSentry, reportError, reportFatal } from "@repo/sentry";
 import { client } from "./lib/discord-client";
 import { env } from "./lib/env";
 import { loadCommands } from "./handlers/commandHandler";
@@ -14,6 +15,7 @@ import { stopTicketSweeper } from "./lib/tickets/sweeper";
 import { startInternalServer } from "./http/server";
 
 async function main() {
+  configureTracking({ app: "discord-bot", onError: (error) => reportError(error, "discord-bot: posthog") });
   await loadCommands(client);
   await loadEvents(client);
   const stopInternalServer = startInternalServer(client);
@@ -27,6 +29,7 @@ async function main() {
     await stopAnnouncementScheduler();
     await shutdownTracker();
     await client.destroy();
+    await flushTracking();
     await flushSentry();
     process.exit(0);
   };
