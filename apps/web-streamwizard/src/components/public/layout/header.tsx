@@ -215,7 +215,7 @@ export default function Header({ isAuthenticated = false }: { isAuthenticated?: 
               {socialLinks.map((social) => {
                 const Icon = socialIcons[social.name];
                 return (
-                  <Button key={social.href} asChild variant="ghost" size="icon-sm">
+                  <Button key={social.href} asChild variant="ghost" size="icon-lg">
                     <TrackedLink
                       href={social.href}
                       cta={social.cta}
@@ -356,7 +356,7 @@ export default function Header({ isAuthenticated = false }: { isAuthenticated?: 
                     {socialLinks.map((social) => {
                       const Icon = socialIcons[social.name];
                       return (
-                        <Button key={social.href} asChild variant="ghost" size="icon">
+                        <Button key={social.href} asChild variant="ghost" size="icon-lg">
                           <TrackedLink
                             href={social.href}
                             cta={social.cta}
