@@ -67,7 +67,7 @@ import { formatDate } from "@/lib/format";
 import { CLIP_SORT_DEFAULT_ASC, type ClipSortKey } from "@/lib/utils/clip-sort";
 import { ClipShowcaseDialog } from "./clips-marquee";
 import { useDemoTracking } from "../analytics/use-demo-tracking";
-import type { RealClipCard } from "./demo-data";
+import { clipAlt, type RealClipCard } from "./demo-data";
 
 /*
  * /dashboard/clips, rebuilt on the landing page with real clips in it: the view
@@ -1218,7 +1218,7 @@ export function ClipFoldersMock({ clips }: { clips: RealClipCard[] }) {
                         )}
                       >
                         <div className="relative h-9 w-14 shrink-0 overflow-hidden rounded border border-border bg-muted">
-                          <Image src={clip.thumbnailUrl} alt="" fill sizes="56px" className="object-cover" />
+                          <Image src={clip.thumbnailUrl} alt={clipAlt(clip)} fill sizes="56px" className="object-cover" />
                           {featuredIds.has(clip.id) ? (
                             <Star
                               className="absolute right-0.5 top-0.5 size-3 fill-yellow-500 text-yellow-500"
@@ -1279,7 +1279,7 @@ export function ClipFoldersMock({ clips }: { clips: RealClipCard[] }) {
                           <div className="relative aspect-video overflow-hidden rounded-md border border-border bg-black">
                             <Image
                               src={clip.thumbnailUrl}
-                              alt=""
+                              alt={clipAlt(clip)}
                               fill
                               sizes="(max-width: 640px) 100vw, 200px"
                               className="object-cover"

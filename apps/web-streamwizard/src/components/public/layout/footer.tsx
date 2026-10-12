@@ -47,7 +47,7 @@ export function Footer() {
             <div className="flex items-center">
               <Image
                 src="/logo.png"
-                alt="StreamWizard Logo"
+                alt="StreamWizard"
                 width={40}
                 height={40}
                 className="rounded-xl"

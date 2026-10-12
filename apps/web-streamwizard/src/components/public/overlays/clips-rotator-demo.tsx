@@ -33,7 +33,7 @@ import {
 import { InspectorReveal, InspectorSection } from "@/components/overlays/editor/inspector-section";
 import { createPlaybackOrder, seededRng } from "@/lib/clip-playback-order";
 import { formatDate } from "@/lib/format";
-import type { RealClipCard } from "../home/demo-data";
+import { clipAlt, type RealClipCard } from "../home/demo-data";
 import { useDemoTracking } from "../analytics/use-demo-tracking";
 
 /*
@@ -787,7 +787,7 @@ export function ClipsRotatorDemo({ clips, videos }: { clips: RealClipCard[]; vid
                  has decoded. */
               <Image
                 src={clip.thumbnailUrl}
-                alt=""
+                alt={clipAlt(clip)}
                 fill
                 sizes="(min-width: 1024px) 60vw, 100vw"
                 className="object-cover"
