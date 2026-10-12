@@ -378,6 +378,11 @@ export interface RealClipCard {
   category?: string | null;
 }
 
+/* Alt text for a clip thumbnail, in the shape /about already uses. */
+export function clipAlt(clip: Pick<RealClipCard, "title" | "broadcaster">): string {
+  return `${clip.title}, clipped from ${clip.broadcaster}`;
+}
+
 export const fallbackClipCards: RealClipCard[] = [
   {
     id: "TalentedCogentSlothKappaWealth-OqcQ7nwuwl3hGU2K",

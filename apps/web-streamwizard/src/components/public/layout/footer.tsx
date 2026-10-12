@@ -47,7 +47,7 @@ export function Footer() {
             <div className="flex items-center">
               <Image
                 src="/logo.png"
-                alt="StreamWizard Logo"
+                alt="StreamWizard"
                 width={40}
                 height={40}
                 className="rounded-xl"
@@ -158,16 +158,17 @@ export function Footer() {
 
         {/* Footer Bottom */}
         <div className="flex text-center flex-row justify-between items-center gap-4">
-          <div className="flex items-center gap-4">
+          {/* size-10 is the tap area; -ml-2 keeps the first icon on the column edge. */}
+          <div className="-ml-2 flex items-center">
             <TrackedLink
               href={discordInviteLink}
               cta="discord"
               section="footer"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-white transition-colors"
+              className="inline-flex size-10 items-center justify-center text-muted-foreground hover:text-white transition-colors"
             >
-              <FaDiscord className="h-6 w-6" />
+              <FaDiscord className="h-6 w-6" aria-hidden="true" />
               <span className="sr-only">Discord</span>
             </TrackedLink>
             <TrackedLink
@@ -176,9 +177,9 @@ export function Footer() {
               section="footer"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-white transition-colors"
+              className="inline-flex size-10 items-center justify-center text-muted-foreground hover:text-white transition-colors"
             >
-              <FaGithub className="h-6 w-6" />
+              <FaGithub className="h-6 w-6" aria-hidden="true" />
               <span className="sr-only">GitHub</span>
             </TrackedLink>
           </div>
