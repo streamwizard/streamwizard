@@ -34,11 +34,15 @@ describe("createFlagReader", () => {
   });
 
   it("treats true and any variant as on, everything else as off", async () => {
-    const { source } = countingSource({ "cms-admin": true, "cms-public": "test", "cms-comments": false });
-    const isEnabled = createFlagReader({ source });
-    expect(await isEnabled("cms-admin")).toBe(true);
-    expect(await isEnabled("cms-public")).toBe(true);
-    expect(await isEnabled("cms-comments")).toBe(false);
+    expect(await createFlagReader({ source: countingSource({ "cms-public": true }).source })("cms-public")).toBe(true);
+    expect(await createFlagReader({ source: countingSource({ "cms-public": "test" }).source })("cms-public")).toBe(
+      true,
+    );
+    expect(await createFlagReader({ source: countingSource({ "cms-public": false }).source })("cms-public")).toBe(
+      false,
+    );
+    expect(await createFlagReader({ source: countingSource({ "cms-public": "" }).source })("cms-public")).toBe(false);
+    expect(await createFlagReader({ source: countingSource({}).source })("cms-public")).toBe(false);
   });
 
   it("lets an override win without asking PostHog", async () => {
@@ -50,21 +54,21 @@ describe("createFlagReader", () => {
 
   it("asks once per distinct id until the snapshot expires", async () => {
     let time = 0;
-    const { source, calls } = countingSource({ "cms-admin": true });
+    const { source, calls } = countingSource({ "cms-public": true });
     const isEnabled = createFlagReader({ source, ttlMs: 1000, now: () => time });
-    await isEnabled("cms-admin", "user-1");
     await isEnabled("cms-public", "user-1");
-    await isEnabled("cms-admin", "user-2");
+    await isEnabled("cms-comments", "user-1");
+    await isEnabled("cms-public", "user-2");
     expect(calls).toEqual(["user-1", "user-2"]);
     time = 1001;
-    await isEnabled("cms-admin", "user-1");
+    await isEnabled("cms-public", "user-1");
     expect(calls).toEqual(["user-1", "user-2", "user-1"]);
   });
 
   it("shares one request between concurrent checks", async () => {
-    const { source, calls } = countingSource({ "cms-admin": true });
+    const { source, calls } = countingSource({ "cms-public": true });
     const isEnabled = createFlagReader({ source });
-    await Promise.all([isEnabled("cms-admin"), isEnabled("cms-public"), isEnabled("cms-comments")]);
+    await Promise.all([isEnabled("cms-public"), isEnabled("cms-comments"), isEnabled("cms-public")]);
     expect(calls).toHaveLength(1);
   });
 

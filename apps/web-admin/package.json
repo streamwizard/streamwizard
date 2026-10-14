@@ -21,7 +21,6 @@
     "@repo/discord-message": "workspace:*",
     "@repo/metrics": "workspace:*",
     "@repo/obs-web": "workspace:*",
-    "@repo/posthog": "workspace:*",
     "@repo/proxmox": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",

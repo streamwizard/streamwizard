@@ -2,7 +2,7 @@ import { PostHog } from "posthog-node";
 
 // Every flag the server checks. A typo in a flag key would silently read as
 // "off", so the keys are typed here the same way events are in event-map.ts.
-export const FEATURE_FLAGS = ["cms-admin", "cms-public", "cms-comments"] as const;
+export const FEATURE_FLAGS = ["cms-public", "cms-comments"] as const;
 export type FeatureFlag = (typeof FEATURE_FLAGS)[number];
 
 // What a flag check asks PostHog: the values of `keys` for one distinct id.
@@ -37,7 +37,7 @@ const DEFAULT_TIMEOUT_MS = 1_500;
 // global (on or off for everyone), so the id only has to be stable.
 export const ANONYMOUS_FLAG_ID = "anonymous";
 
-// FEATURE_FLAG_OVERRIDES="cms-admin,cms-public=false" for local dev and tests.
+// FEATURE_FLAG_OVERRIDES="cms-public,cms-comments=false" for local dev and tests.
 // A bare key means on. Unknown keys are kept so a new flag works before it is
 // added to FEATURE_FLAGS.
 export function parseFlagOverrides(raw: string | undefined): Map<string, boolean> {
