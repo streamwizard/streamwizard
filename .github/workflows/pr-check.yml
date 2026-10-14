@@ -31,3 +31,8 @@ jobs:
 
       - name: Type-check & build (affected only)
         run: SKIP_ENV_VALIDATION=true bun x turbo run check-types build --filter=...[origin/${{ github.base_ref }}]
+
+      # bun test in every affected package. The suites are pure logic (no
+      # database, no network), so they run without secrets.
+      - name: Test (affected only)
+        run: SKIP_ENV_VALIDATION=true bun x turbo run test --filter=...[origin/${{ github.base_ref }}]
