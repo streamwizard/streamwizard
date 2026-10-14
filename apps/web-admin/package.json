@@ -17,6 +17,7 @@
     "@novnc/novnc": "^1.7.0",
     "@repo/alerting": "workspace:*",
     "@repo/backups": "workspace:*",
+    "@repo/cms": "workspace:*",
     "@repo/discord-api": "workspace:*",
     "@repo/discord-message": "workspace:*",
     "@repo/metrics": "workspace:*",
