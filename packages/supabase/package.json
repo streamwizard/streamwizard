@@ -231,6 +231,10 @@
       "types": "./src/queries/cms/preview.ts",
       "default": "./src/queries/cms/preview.ts"
     },
+    "./queries/cms/published": {
+      "types": "./src/queries/cms/published.ts",
+      "default": "./src/queries/cms/published.ts"
+    },
     "./queries/cms/taxonomy": {
       "types": "./src/queries/cms/taxonomy.ts",
       "default": "./src/queries/cms/taxonomy.ts"

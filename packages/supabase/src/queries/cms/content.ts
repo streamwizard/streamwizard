@@ -106,6 +106,15 @@ export const getCmsContentForEditor = withMetrics("cms_content", "select", async
     .maybeSingle(),
 );
 
+/** Just enough to name a post in a log line or a toast. */
+export const getCmsContentSummary = withMetrics("cms_content", "select", async (client: DBClient, id: string) =>
+  client
+    .from("cms_content")
+    .select("id, type, status, title, slug, lock_version, deleted_at")
+    .eq("id", id)
+    .maybeSingle(),
+);
+
 export interface SaveCmsDraftInput {
   contentId: string;
   actorId: string;
@@ -145,6 +154,61 @@ export const restoreCmsRevision = withMetrics(
       p_expected_lock_version: expectedLockVersion,
       p_revision_id: revisionId,
     }),
+);
+
+/**
+ * Puts the working copy on the site, or pushes a live post's changes ("Update").
+ * Returns { before, after, lock_version, first_publish }; before/after are the
+ * public footprints for tagsForChange.
+ */
+export const publishCmsContent = withMetrics(
+  "cms_content",
+  "update",
+  async (client: DBClient, contentId: string, actorId: string, expectedLockVersion: number, minorEdit: boolean) =>
+    client.rpc("cms_publish", {
+      p_content_id: contentId,
+      p_actor: actorId,
+      p_expected_lock_version: expectedLockVersion,
+      p_minor_edit: minorEdit,
+    }),
+);
+
+/** Takes a live post off the site, back to draft or into the archive. Returns { before, lock_version }. */
+export const unpublishCmsContent = withMetrics(
+  "cms_content",
+  "update",
+  async (
+    client: DBClient,
+    contentId: string,
+    actorId: string,
+    expectedLockVersion: number,
+    toStatus: "draft" | "archived",
+  ) =>
+    client.rpc("cms_unpublish", {
+      p_content_id: contentId,
+      p_actor: actorId,
+      p_expected_lock_version: expectedLockVersion,
+      p_to_status: toStatus,
+    }),
+);
+
+/**
+ * Archived back to draft. Archived posts aren't on the site, so this is a
+ * plain status change behind the lock check. No row back: it moved meanwhile.
+ */
+export const unarchiveCmsContent = withMetrics(
+  "cms_content",
+  "update",
+  async (client: DBClient, contentId: string, actorId: string, expectedLockVersion: number) =>
+    client
+      .from("cms_content")
+      .update({ status: "draft", lock_version: expectedLockVersion + 1, updated_by: actorId })
+      .eq("id", contentId)
+      .eq("status", "archived")
+      .eq("lock_version", expectedLockVersion)
+      .is("deleted_at", null)
+      .select("lock_version")
+      .maybeSingle(),
 );
 
 /** Takes it off the site (if it was on) and into the trash. Returns { before }. */
