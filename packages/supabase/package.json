@@ -215,6 +215,18 @@
       "types": "./src/queries/assets.ts",
       "default": "./src/queries/assets.ts"
     },
+    "./queries/cms/assets": {
+      "types": "./src/queries/cms/assets.ts",
+      "default": "./src/queries/cms/assets.ts"
+    },
+    "./queries/cms/authors": {
+      "types": "./src/queries/cms/authors.ts",
+      "default": "./src/queries/cms/authors.ts"
+    },
+    "./queries/cms/taxonomy": {
+      "types": "./src/queries/cms/taxonomy.ts",
+      "default": "./src/queries/cms/taxonomy.ts"
+    },
     "./queries/data-export": {
       "types": "./src/queries/data-export.ts",
       "default": "./src/queries/data-export.ts"
