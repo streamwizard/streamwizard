@@ -110,3 +110,8 @@ export const selectUnreferencedCmsAssets = withMetrics(
   async (client: DBClient, olderThan: string = "0 seconds") =>
     client.rpc("cms_unreferenced_assets", { p_older_than: olderThan }),
 );
+
+/** Ready images by id, for resolving the images a draft points at. */
+export const selectCmsAssetsByIds = withMetrics("cms_assets", "select", async (client: DBClient, ids: string[]) =>
+  client.from("cms_assets").select("id, key, width, height").in("id", ids).eq("status", "ready"),
+);

@@ -227,6 +227,10 @@
       "types": "./src/queries/cms/authors.ts",
       "default": "./src/queries/cms/authors.ts"
     },
+    "./queries/cms/preview": {
+      "types": "./src/queries/cms/preview.ts",
+      "default": "./src/queries/cms/preview.ts"
+    },
     "./queries/cms/taxonomy": {
       "types": "./src/queries/cms/taxonomy.ts",
       "default": "./src/queries/cms/taxonomy.ts"
