@@ -4397,6 +4397,30 @@ export type Database = {
         }
         Returns: Json
       }
+      cms_restore_revision: {
+        Args: {
+          p_actor: string
+          p_content_id: string
+          p_expected_lock_version: number
+          p_revision_id: string
+        }
+        Returns: Json
+      }
+      cms_save_draft: {
+        Args: {
+          p_actor: string
+          p_author_ids?: string[]
+          p_category_ids?: string[]
+          p_content_id: string
+          p_expected_lock_version: number
+          p_fields: Json
+          p_related_ids?: string[]
+          p_revision?: string
+          p_sections?: Json
+          p_tag_ids?: string[]
+        }
+        Returns: Json
+      }
       cms_trash: {
         Args: {
           p_actor: string
