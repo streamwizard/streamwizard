@@ -25,6 +25,12 @@ const nextConfig = {
     root: path.resolve(__dirname, "../.."),
   },
   output: "standalone",
+  // Post and guide share cards render on request (lib/cms/og.tsx), not at
+  // build like the other OG images, so the server needs the font files.
+  outputFileTracingIncludes: {
+    "/blog/**": ["./src/app/fonts/Geist-*.ttf"],
+    "/guides/**": ["./src/app/fonts/Geist-*.ttf"],
+  },
   skipTrailingSlashRedirect: true,
   async headers() {
     return [

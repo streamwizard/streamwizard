@@ -2,8 +2,8 @@ import Image from "next/image";
 import { pageOutline, type Doc } from "@repo/cms";
 import { CMS_PROSE, CmsDocument, type ResolvedImage } from "./cms-document";
 
-// One blog post or guide, laid out for reading. Used by the draft preview
-// now and by the published pages later, so both look the same.
+// One blog post or guide, laid out for reading. The draft preview and the
+// published pages both use it, so a preview looks like the real thing.
 
 export interface ArticleAuthor {
   name: string;
@@ -163,7 +163,7 @@ export function CmsArticle({ data, resolveImage, parentHost }: CmsArticleProps) 
         </nav>
       )}
 
-      <div className={`mt-10 ${CMS_PROSE}`}>
+      <div data-cms-body className={`mt-10 ${CMS_PROSE}`}>
         <CmsDocument
           doc={data.body}
           anchors={outline.bodyAnchors}

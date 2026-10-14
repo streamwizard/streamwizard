@@ -13,5 +13,6 @@ export {
   resetCookieConsent,
   type ConsentStatus,
 } from "./consent";
-export { captureEvent, type AppEvent, type EventMap } from "./events";
+export { captureEvent, captureEventOnLeave, type AppEvent, type EventMap } from "./events";
+export type { ContentProps } from "./event-map";
 export { isInternalEmail } from "./internal";
