@@ -219,6 +219,10 @@
       "types": "./src/queries/cms/assets.ts",
       "default": "./src/queries/cms/assets.ts"
     },
+    "./queries/cms/content": {
+      "types": "./src/queries/cms/content.ts",
+      "default": "./src/queries/cms/content.ts"
+    },
     "./queries/cms/authors": {
       "types": "./src/queries/cms/authors.ts",
       "default": "./src/queries/cms/authors.ts"
