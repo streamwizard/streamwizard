@@ -20,6 +20,7 @@ export type PlatformEventGroup =
   | "twitch"
   | "eventsub"
   | "tickets"
+  | "content"
   | "members"
   | "messages"
   | "roles"
@@ -41,6 +42,7 @@ export const PLATFORM_EVENT_GROUPS: { id: PlatformEventGroup; label: string; hin
     hint: "The bot's Twitch EventSub connection: outages, reconnects, session moves and revoked subscriptions.",
   },
   { id: "tickets", label: "Tickets", hint: "Tickets opened, claimed, closed, rated and replied to from the dashboard." },
+  { id: "content", label: "Blog and guides", hint: "Posts and guides published, updated, taken down or moved to the trash." },
   { id: "members", label: "Members", hint: "Joins, leaves, kicks, bans, timeouts, nicknames and roles." },
   { id: "messages", label: "Messages", hint: "Edited and deleted messages, including their text." },
   { id: "roles", label: "Roles", hint: "Roles created, changed or deleted." },
@@ -94,6 +96,12 @@ export const PLATFORM_EVENTS = {
   "ticket.replied": { label: "Ticket reply from dashboard", group: "tickets", defaultEnabled: true },
   "ticket.updated": { label: "Ticket changed by staff", group: "tickets", defaultEnabled: false },
   "ticket.feedback": { label: "Ticket rated by the opener", group: "tickets", defaultEnabled: true },
+
+  "content.published": { label: "Post published", group: "content", defaultEnabled: true },
+  "content.updated": { label: "Live post updated", group: "content", defaultEnabled: true },
+  "content.unpublished": { label: "Post unpublished", group: "content", defaultEnabled: true },
+  "content.archived": { label: "Post archived", group: "content", defaultEnabled: true },
+  "content.trashed": { label: "Post moved to the trash", group: "content", defaultEnabled: true },
 
   "member.joined": { label: "Member joined", group: "members", defaultEnabled: true },
   "member.left": { label: "Member left", group: "members", defaultEnabled: true },
@@ -174,6 +182,16 @@ interface SubjectIdentity {
 interface ActorIdentity {
   actor_twitch_username?: string | null;
   actor_avatar_url?: string | null;
+}
+
+/** A blog post or guide, as the CMS admin actions report it. */
+interface ContentEvent extends ActorIdentity {
+  content_id: string;
+  content_type: "blog" | "guide";
+  title: string;
+  slug: string;
+  /** The public page, when the post is (still) on the site. */
+  url?: string | null;
 }
 
 interface SubscriptionFields {
@@ -356,6 +374,12 @@ export interface PlatformEventPayloads {
     changes: Record<string, { from: unknown; to: unknown }>;
   };
   "log.test": ActorIdentity;
+
+  "content.published": ContentEvent & { first_publish: boolean };
+  "content.updated": ContentEvent & { minor_edit: boolean };
+  "content.unpublished": ContentEvent;
+  "content.archived": ContentEvent;
+  "content.trashed": ContentEvent & { was_public: boolean };
 
   "member.joined": MemberEvent & { account_created_at?: string | null; member_count?: number | null };
   "member.left": MemberEvent & { joined_at?: string | null; roles?: DiscordRoleRef[]; member_count?: number | null };

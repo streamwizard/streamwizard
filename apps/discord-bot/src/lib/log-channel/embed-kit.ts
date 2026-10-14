@@ -54,6 +54,12 @@ export const STYLE: Record<PlatformEventType, { emoji: string; color: number }> 
   "eventsub.subscription_revoked": { emoji: "🚫", color: DANGER_RED },
   "eventsub.conduit_update_failed": { emoji: "⚠️", color: DANGER_RED },
 
+  "content.published": { emoji: "📰", color: TWITCH_PURPLE },
+  "content.updated": { emoji: "✏️", color: TWITCH_PURPLE },
+  "content.unpublished": { emoji: "📤", color: DANGER_RED },
+  "content.archived": { emoji: "🗄️", color: DANGER_RED },
+  "content.trashed": { emoji: "🗑️", color: DANGER_RED },
+
   "ticket.opened": { emoji: "🎫", color: TWITCH_PURPLE },
   "ticket.claimed": { emoji: "🙋", color: TWITCH_PURPLE },
   "ticket.closed": { emoji: "✅", color: TWITCH_PURPLE },

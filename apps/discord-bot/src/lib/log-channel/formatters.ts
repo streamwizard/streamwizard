@@ -175,6 +175,27 @@ function ticketFields(payload: TicketPayload, event: PlatformEvent): APIEmbedFie
   ];
 }
 
+// ── Blog and guides ─────────────────────────────────────────────────────────
+
+type ContentPayload = Partial<PlatformEventPayloads["content.unpublished"]>;
+
+const CONTENT_KIND = { blog: "blog post", guide: "guide" } as const;
+
+const contentKind = (payload: ContentPayload) =>
+  payload.content_type ? CONTENT_KIND[payload.content_type] : "post";
+
+// The title, linked to the live page when there is one. Brackets would end
+// the markdown link early, so they're dropped from a linked title.
+function contentTitle(payload: ContentPayload): string {
+  const title = payload.title?.trim() || "Untitled";
+  const url = httpsUrl(payload.url);
+  return url ? `[${escapeMarkdown(title).replace(/[[\]]/g, "")}](${url})` : bold(title, "Untitled");
+}
+
+function contentFields(payload: ContentPayload): APIEmbedField[] {
+  return [...field("Slug", code(payload.slug)), ...byField("By", payload)];
+}
+
 type PlatformOnly = Exclude<PlatformEventType, keyof typeof SERVER_FORMATTERS>;
 
 const msToSeconds = (ms?: number | null): number | null =>
@@ -469,6 +490,43 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
       : `${who} ran \`${payload.action}\` in **${section}**.`;
     return describeLines(withActor(base(event, "discord_settings.changed"), payload), [summary, ...changes]);
   },
+
+  "content.published": (payload, event) =>
+    withActor(base(event, "content.published"), payload)
+      .setDescription(
+        payload.first_publish === false
+          ? `The ${contentKind(payload)} ${contentTitle(payload)} is back on the site.`
+          : `New ${contentKind(payload)} on the site: ${contentTitle(payload)}.`,
+      )
+      .addFields(contentFields(payload)),
+
+  "content.updated": (payload, event) =>
+    withActor(base(event, "content.updated"), payload)
+      .setDescription(
+        payload.minor_edit
+          ? `Small fix to the ${contentKind(payload)} ${contentTitle(payload)}. The "Updated" date stays the same.`
+          : `The ${contentKind(payload)} ${contentTitle(payload)} was updated on the site.`,
+      )
+      .addFields(contentFields(payload)),
+
+  "content.unpublished": (payload, event) =>
+    withActor(base(event, "content.unpublished"), payload)
+      .setDescription(`The ${contentKind(payload)} ${contentTitle(payload)} is off the site and back to a draft.`)
+      .addFields(contentFields(payload)),
+
+  "content.archived": (payload, event) =>
+    withActor(base(event, "content.archived"), payload)
+      .setDescription(`The ${contentKind(payload)} ${contentTitle(payload)} is archived and off the site.`)
+      .addFields(contentFields(payload)),
+
+  "content.trashed": (payload, event) =>
+    withActor(base(event, "content.trashed"), payload)
+      .setDescription(
+        payload.was_public
+          ? `The ${contentKind(payload)} ${contentTitle(payload)} was taken off the site and moved to the trash.`
+          : `The draft ${contentKind(payload)} ${contentTitle(payload)} was moved to the trash.`,
+      )
+      .addFields(contentFields(payload)),
 
   "log.test": (payload, event) =>
     withActor(base(event, "log.test"), payload).setDescription(

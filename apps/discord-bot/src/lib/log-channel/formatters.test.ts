@@ -52,6 +52,38 @@ describe("log channel formatters", () => {
     }
   });
 
+  test("content published: linked title, slug and the admin", () => {
+    const embed = formatPlatformEvent(
+      event("content.published", {
+        content_id: "6a0b2c1d-0000-4000-8000-000000000001",
+        content_type: "guide",
+        title: "Set up [alerts] in OBS",
+        slug: "set-up-alerts",
+        url: "https://streamwizard.org/guides/set-up-alerts",
+        first_publish: true,
+        actor_twitch_username: "logtester",
+        actor_avatar_url: AVATAR,
+      }),
+    ).toJSON();
+    expect(embed.description).toBe(
+      "New guide on the site: [Set up alerts in OBS](https://streamwizard.org/guides/set-up-alerts).",
+    );
+    expect(fieldValue(embed, "Slug")).toBe("`set-up-alerts`");
+    expect(fieldValue(embed, "By")).toBe("[logtester](https://twitch.tv/logtester)");
+    expect(embed.author?.name).toBe("logtester");
+    expect(embed.color).toBe(TWITCH_PURPLE);
+  });
+
+  test("content trashed: unlinked title and red", () => {
+    const embed = formatPlatformEvent(
+      event("content.trashed", { content_type: "blog", title: "Old news", slug: "old-news", was_public: true }),
+    ).toJSON();
+    expect(embed.description).toBe(
+      "The blog post **Old news** was taken off the site and moved to the trash.",
+    );
+    expect(embed.color).toBe(DANGER_RED);
+  });
+
   test("eventsub connection lost: reason, close code and keepalive silence, no author", () => {
     const embed = formatPlatformEvent(
       event("eventsub.connection_lost", {
