@@ -1,6 +1,7 @@
 export * from "./a11y";
 export * from "./doc";
 export * from "./embed";
+export * from "./preview";
 export * from "./slug";
 export * from "./status";
 export * from "./tags";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { Doc } from "./doc";
-import { AnchorRegistry, extractToc } from "./toc";
+import { AnchorRegistry, extractToc, pageOutline } from "./toc";
 
 function heading(level: number, text: string) {
   return { type: "heading", attrs: { level }, content: [{ type: "text", text }] };
@@ -29,5 +29,23 @@ describe("extractToc", () => {
     const anchors = new AnchorRegistry();
     anchors.claim("Setup");
     expect(extractToc({ type: "doc", content: [heading(3, "Setup")] }, anchors)[0]?.anchor).toBe("setup-2");
+  });
+});
+
+describe("pageOutline", () => {
+  it("numbers anchors across body and sections the same way every time", () => {
+    const body: Doc = { type: "doc", content: [heading(2, "Setup")] };
+    const sections = [
+      { title: "Setup", body: { type: "doc", content: [heading(3, "Windows")] } as Doc },
+      { title: "", body: { type: "doc", content: [] } as Doc },
+    ];
+    const outline = pageOutline(body, sections);
+    expect(outline.bodyAnchors).toEqual(["setup"]);
+    expect(outline.sections).toEqual([
+      { anchor: "setup-2", headingAnchors: ["windows"] },
+      { anchor: "section-2", headingAnchors: [] },
+    ]);
+    expect(outline.toc.map((entry) => entry.anchor)).toEqual(["setup", "setup-2", "windows", "section-2"]);
+    expect(pageOutline(body, sections)).toEqual(outline);
   });
 });

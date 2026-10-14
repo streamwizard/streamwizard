@@ -55,3 +55,17 @@ export function parseEmbedUrl(raw: string): Embed | null {
   }
   return null;
 }
+
+// The iframe URL for an embed. Twitch refuses to play inside a page unless
+// the page's hostname is passed as `parent`.
+export function embedSrc(embed: Embed, parentHost: string): string {
+  const parent = encodeURIComponent(parentHost);
+  switch (embed.provider) {
+    case "youtube":
+      return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(embed.id)}`;
+    case "twitch_clip":
+      return `https://clips.twitch.tv/embed?clip=${encodeURIComponent(embed.id)}&parent=${parent}&autoplay=false`;
+    case "twitch_video":
+      return `https://player.twitch.tv/?video=${encodeURIComponent(embed.id)}&parent=${parent}&autoplay=false`;
+  }
+}

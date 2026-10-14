@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { parseEmbedUrl } from "./embed";
+import { embedSrc, parseEmbedUrl } from "./embed";
 
 describe("parseEmbedUrl", () => {
   it.each([
@@ -24,5 +24,19 @@ describe("parseEmbedUrl", () => {
     "not a url",
   ])("ignores %s", (url) => {
     expect(parseEmbedUrl(url)).toBeNull();
+  });
+});
+
+describe("embedSrc", () => {
+  it("builds privacy-friendly YouTube and parent-scoped Twitch URLs", () => {
+    expect(embedSrc({ provider: "youtube", id: "dQw4w9WgXcQ" }, "streamwizard.org")).toBe(
+      "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+    );
+    expect(embedSrc({ provider: "twitch_clip", id: "Clip-1" }, "streamwizard.org")).toBe(
+      "https://clips.twitch.tv/embed?clip=Clip-1&parent=streamwizard.org&autoplay=false",
+    );
+    expect(embedSrc({ provider: "twitch_video", id: "123" }, "localhost")).toBe(
+      "https://player.twitch.tv/?video=123&parent=localhost&autoplay=false",
+    );
   });
 });

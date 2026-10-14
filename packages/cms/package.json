@@ -10,6 +10,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./preview-token": {
+      "types": "./src/preview-token.ts",
+      "default": "./src/preview-token.ts"
     }
   },
   "scripts": {
