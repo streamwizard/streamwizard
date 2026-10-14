@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from "bun:test";
+import { afterAll, beforeEach, expect, test } from "bun:test";
 import {
   DEFAULT_CANVAS_PREFERENCES,
   clampGridSize,
@@ -33,6 +33,12 @@ function installLocalStorage() {
 
 beforeEach(() => {
   installLocalStorage();
+});
+
+// bun runs every test file in one process: a window left behind makes later
+// files think they're in a browser (next/image then reads `document`).
+afterAll(() => {
+  delete (globalThis as { window?: unknown }).window;
 });
 
 test("preferences default to a checkerboard with the grid hidden", () => {
