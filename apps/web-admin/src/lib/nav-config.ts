@@ -6,7 +6,9 @@ import {
   Cpu,
   Database,
   DatabaseBackup,
+  FolderTree,
   Globe,
+  Images,
   LayoutDashboard,
   Megaphone,
   Package,
@@ -15,6 +17,7 @@ import {
   ScrollText,
   Server,
   Ticket,
+  UserPen,
   Users,
   Waypoints,
   Zap,
@@ -80,6 +83,25 @@ export const navGroups: NavGroup[] = [
       },
       { href: "/users", label: "Users", icon: Users },
       { href: "/widget-library", label: "Widget review", icon: Package, badge: "widgets" },
+    ],
+  },
+  {
+    // Blog posts and guides for streamwizard.org: who wrote them, what they're
+    // about, the images they use.
+    label: "Content",
+    items: [
+      { href: "/content/media", label: "Media", icon: Images },
+      { href: "/content/authors", label: "Authors", icon: UserPen },
+      {
+        href: "/content/categories",
+        label: "Topics",
+        icon: FolderTree,
+        match: ["/content/tags"],
+        tabs: [
+          { href: "/content/categories", label: "Categories" },
+          { href: "/content/tags", label: "Tags" },
+        ],
+      },
     ],
   },
   {

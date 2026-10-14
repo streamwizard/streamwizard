@@ -48,6 +48,9 @@ The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages ar
 | Support | Tickets | `/discord/tickets` | Queue, Stats, Settings |
 | Support | Users | `/users` | |
 | Support | Widget review | `/widget-library` | |
+| Content | Media | `/content/media` | |
+| Content | Authors | `/content/authors` | |
+| Content | Topics | `/content/categories` | Categories, Tags (`/content/tags`) |
 | Discord | Announcements | `/discord/announcements` | |
 | Discord | Messages | `/discord/messages` | |
 | Discord | Event log | `/discord/logs` | Log, Routing (`/discord/logs/settings`) |
@@ -90,6 +93,9 @@ The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages ar
 | `/widget-library` | Moderation queue for community widget submissions (sandboxed iframe previews) |
 | `/discord/messages`, `/discord/messages/[id]` | Discord messages built visually (banners + embeds, themes, drag to reorder). A server has as many as it likes, each with a name and any text or announcement channel. Draft autosaves to `discord_built_messages`; **Publish** has the bot send or update the message, **Delete** has it remove the message from Discord too. The builder is `MessageBuilder` from `@repo/ui/message-builder`, the data model, limits, presets and starting templates are `@repo/discord-message` |
 | `/discord/announcements`, `/discord/announcements/[id]` | One-off announcements for the Discord: a simple form (title, text, colour, image, one link button, a ping: nobody, @everyone, @here or a role) next to a Discord-style preview. Rows live in `discord_announcements` with a status (`draft`, `scheduled`, `posting`, `posted`, `failed`). **Post now** has the bot send it, or edit the message in place (no second ping); **Post later** sets a time and the bot's scheduler (30 s tick, conditional claim) sends it; **Delete** removes it from Discord too. The shape, limits and Discord payload are `@repo/discord-message`'s `announcement` module |
+| `/content/media` | Images for blog posts, guides and author avatars (`cms_assets`, R2 prefix `cms/`). Upload asks for alt text (or **Decorative**) first; the browser PUTs straight to a presigned R2 URL and the server confirms with a HEAD. Search, edit alt text, copy URL; **Delete** only shows on images nothing uses (same check as `cms_unreferenced_assets`). Alt edits reach live posts on their next Update |
+| `/content/authors`, `/content/authors/[id]` | Public author profiles: name, slug, role, bio, avatar (from Media), social links (https, checked per platform), optional private link to a StreamWizard account. Soft delete (posts keep the credit) and restore |
+| `/content/categories`, `/content/tags` | Topics shared by blog posts and guides. Categories have a description and an order; tags can be merged into another tag. Deleting either takes it off its posts, not the posts away |
 | `/vnc?nodeId&instanceId&name` | noVNC popup onto an instance's OBS desktop (opened from node/instance pages) |
 
 ## How it talks to obs-instance-manager
@@ -126,7 +132,8 @@ Scene pickers populate only while the instance's OBS is running (obsws session);
 | `STREAMWIZARD_API_URL` | yes | embedded in node install commands (`/obs`, `/ingest`) |
 | `TOKEN_ENCRYPTION_KEY` | yes | encrypt/decrypt OBS WS passwords — **must be byte-identical to web-streamwizard's** |
 | `WS_SERVER_URL`, `CONSUMER_SECRET` | no | ~1s auto-switcher config pushes (fallback: 60s reconcile) |
-| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ASSETS_BUCKET`, `NEXT_PUBLIC_CDN_URL` | no | banner image uploads in the Discord message builder (`discord-banners/` prefix). Without them banners use theme images only. The bot needs the same `NEXT_PUBLIC_CDN_URL`: it only attaches uploads that start with it |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ASSETS_BUCKET`, `NEXT_PUBLIC_CDN_URL` | no | banner image uploads in the Discord message builder (`discord-banners/` prefix) and Content section images (`cms/` prefix, presigned PUT from the browser: the bucket's CORS must allow this app's origin). Without them banners use theme images only and Media can't upload. The bot needs the same `NEXT_PUBLIC_CDN_URL`: it only attaches uploads that start with it |
+| `CMS_REVALIDATE_URL`, `CMS_REVALIDATE_SECRET` | no | Content section changes refresh web-streamwizard's cached pages (`POST {url}/api/revalidate`, secret shared with web-streamwizard). Without them saves still land; the site catches up within the hour |
 | `SENTRY_DSN`, `ALERT_*`, `DISCORD_BOT_TOKEN`, `TELEGRAM_*`, `MONITOR_SECRET` | no | observability + alert routing |
 
 ## Known gaps / roadmap
