@@ -117,6 +117,28 @@ export async function saveTagAction(id: string | null, input: TagInput): Promise
   }
 }
 
+export interface CreateTagResult extends CmsActionResult {
+  tag: { id: string; name: string } | null;
+}
+
+/** From the post editor's tag picker: a new tag by name, slug made from it. */
+export async function createTagAction(name: string): Promise<CreateTagResult> {
+  try {
+    await requireCmsAdmin();
+    const parsed = tagSchema.safeParse({ name, slug: "" });
+    if (!parsed.success) throw new CmsError(parsed.error.issues[0]?.message ?? "Check the name.");
+    const row = { name: parsed.data.name, slug: resolveSlug("", parsed.data.name) };
+    const { data, error } = await insertCmsTag(supabaseAdmin, row);
+    if (isUniqueViolation(error))
+      throw new CmsError(`A tag with the slug "${row.slug}" already exists. Pick it from the list.`);
+    if (error) throw error;
+    revalidatePath(TAGS_PATH);
+    return { error: null, tag: { id: data.id, name: row.name } };
+  } catch (error) {
+    return { ...toCmsActionError(error, "create tag", "Couldn't add the tag. Try again?"), tag: null };
+  }
+}
+
 export async function deleteTagAction(id: string): Promise<CmsActionResult> {
   try {
     await requireCmsAdmin();
