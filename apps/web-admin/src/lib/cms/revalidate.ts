@@ -12,9 +12,9 @@ export type RevalidateMode = "stale" | "immediate";
 /** True when the site confirmed the refresh, or when there is no site to tell (local dev). */
 export async function revalidateCms(tags: string[], mode: RevalidateMode = "stale"): Promise<boolean> {
   if (tags.length === 0) return true;
-  if (!env.CMS_REVALIDATE_URL || !env.CMS_REVALIDATE_SECRET) return true;
+  if (!env.CMS_SITE_URL || !env.CMS_REVALIDATE_SECRET) return true;
   try {
-    const response = await fetch(new URL("/api/revalidate", env.CMS_REVALIDATE_URL), {
+    const response = await fetch(new URL("/api/revalidate", env.CMS_SITE_URL), {
       method: "POST",
       headers: { authorization: `Bearer ${env.CMS_REVALIDATE_SECRET}`, "content-type": "application/json" },
       body: JSON.stringify({ tags, mode }),

@@ -1,9 +1,8 @@
 import { z } from "zod";
 import {
-  AnchorRegistry,
   EMPTY_DOC,
   extractText,
-  extractToc,
+  pageOutline,
   readingStats,
   sanitizeDoc,
   slugify,
@@ -133,22 +132,25 @@ export function deriveDraft(type: ContentType, draft: ContentDraft): DerivedDraf
   const body = sanitizeDoc(draft.body);
   if (body.issues.length) removed.push({ where: "body", issues: body.issues });
 
-  const anchors = new AnchorRegistry();
-  const toc = extractToc(body.doc, anchors);
   const docs: Doc[] = [body.doc];
-
   let sections: DerivedDraft["sections"] = null;
+  let cleanSections: { id: string; title: string; body: Doc }[] = [];
   if (type === "guide") {
-    sections = draft.sections.map((section, index) => {
+    cleanSections = draft.sections.map((section, index) => {
       const clean = sanitizeDoc(section.body);
       if (clean.issues.length) removed.push({ where: index, issues: clean.issues });
-      const title = section.title.trim();
-      const anchor = anchors.claim(title || `section ${index + 1}`);
-      toc.push({ level: 2, text: title, anchor });
-      toc.push(...extractToc(clean.doc, anchors));
       docs.push(clean.doc);
-      return { id: section.id, title, anchor, body: clean.doc, body_text: extractText(clean.doc) };
+      return { id: section.id, title: section.title.trim(), body: clean.doc };
     });
+  }
+  const outline = pageOutline(body.doc, cleanSections);
+  const toc = outline.toc;
+  if (type === "guide") {
+    sections = cleanSections.map((section, index) => ({
+      ...section,
+      anchor: outline.sections[index]!.anchor,
+      body_text: extractText(section.body),
+    }));
   }
 
   const stats = readingStats(docs);

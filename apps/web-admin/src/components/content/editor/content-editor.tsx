@@ -42,6 +42,7 @@ import { ConfirmButton } from "../confirm-button";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
 import { ChipPicker, type PickerOption } from "./chip-picker";
+import { PreviewMenu } from "./preview-menu";
 import { RichTextEditor } from "./rich-text-editor";
 import { SectionList } from "./section-list";
 
@@ -246,6 +247,7 @@ export function ContentEditor(props: ContentEditorProps) {
         <Badge variant={status === "published" ? "default" : "outline"}>{STATUS_LABELS[status]}</Badge>
         {publishedSlug && unpublishedChanges && <Badge variant="secondary">Unpublished changes</Badge>}
         <SaveStatus status={saveStatus} conflict={conflict} />
+        <PreviewMenu contentId={id} flush={flush} />
         <Button variant="ghost" className="h-11 md:h-9" asChild>
           <Link href={`/content/${id}/revisions`}>
             <History aria-hidden />
