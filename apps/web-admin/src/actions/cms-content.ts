@@ -6,7 +6,9 @@ import { z } from "zod";
 import { tagsForChange } from "@repo/cms";
 import type { Json } from "@repo/supabase/types/supabase";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
+import { logPlatformEvent } from "@repo/supabase/queries/platform-events";
 import {
+  getCmsContentSummary,
   insertCmsContent,
   restoreCmsRevision,
   saveCmsDraft,
@@ -18,6 +20,7 @@ import { CmsError, requireCmsAdmin, toCmsActionError, type CmsActionResult } fro
 import { classifyContentError, toFootprint } from "@/lib/cms/content-errors";
 import { canonicalProblem, deriveDraft, draftSchema, type ContentDraft, type ContentType } from "@/lib/cms/draft";
 import { revalidateCms } from "@/lib/cms/revalidate";
+import { actorIdentity } from "@/lib/platform-events";
 
 // Content section: blog posts and guides, the working copy. Nothing here
 // changes the live site except the trash (it takes a live post down).
@@ -168,7 +171,8 @@ export async function restoreRevisionAction(
 export async function trashContentAction(id: string, lockVersion: number | null): Promise<CmsActionResult> {
   try {
     const actor = await requireCmsAdmin();
-    const { data, error } = await trashCmsContent(supabaseAdmin, requireId(id), actor, lockVersion);
+    const { data: summary } = await getCmsContentSummary(supabaseAdmin, requireId(id));
+    const { data, error } = await trashCmsContent(supabaseAdmin, id, actor, lockVersion);
     if (error) {
       const failure = classifyContentError(error);
       if (failure.kind === "conflict")
@@ -178,6 +182,24 @@ export async function trashContentAction(id: string, lockVersion: number | null)
     }
     const before = toFootprint((data as { before?: unknown } | null)?.before);
     await revalidateCms(tagsForChange(before, null), "immediate");
+    if (summary) {
+      await logPlatformEvent(
+        supabaseAdmin,
+        {
+          type: "content.trashed",
+          actorUserId: actor,
+          payload: {
+            content_id: id,
+            content_type: summary.type === "guide" ? "guide" : "blog",
+            title: summary.title,
+            slug: summary.slug,
+            was_public: before !== null,
+            ...(await actorIdentity(actor)),
+          },
+        },
+        "web-admin cms: trash",
+      );
+    }
     revalidatePath(CONTENT_PATH, "layout");
     return { error: null };
   } catch (error) {

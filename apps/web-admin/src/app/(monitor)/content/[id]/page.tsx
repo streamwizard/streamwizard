@@ -6,7 +6,9 @@ import { getCmsContentForEditor, listCmsContentOptions } from "@repo/supabase/qu
 import { listCmsCategories, listCmsTags } from "@repo/supabase/queries/cms/taxonomy";
 import { ContentEditor, type ContentStatus, type EditorImage } from "@/components/content/editor/content-editor";
 import { contentType, draftFromRow } from "@/lib/cms/draft-row";
+import { publicContentUrl } from "@/lib/cms/publish";
 import { cmsAssetUrl } from "@/lib/cms/storage";
+import { env } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,7 @@ export default async function ContentEditorPage({ params }: { params: Promise<{ 
       lockVersion={row.lock_version}
       initial={draftFromRow(row)}
       publishedSlug={row.published?.slug ?? null}
+      liveUrl={row.published ? publicContentUrl(env.CMS_SITE_URL, contentType(row), row.published.slug) : null}
       unpublishedChanges={!!row.published && row.updated_at > row.published.snapshot_at}
       scheduleError={row.schedule_error}
       images={images}

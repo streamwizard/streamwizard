@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, CircleAlert, History, ImagePlus, Loader2, Plus, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { contentPath } from "@repo/cms";
 import {
   Badge,
   Button,
@@ -43,6 +44,7 @@ import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
 import { ChipPicker, type PickerOption } from "./chip-picker";
 import { PreviewMenu } from "./preview-menu";
+import { PublishControls } from "./publish-controls";
 import { RichTextEditor } from "./rich-text-editor";
 import { SectionList } from "./section-list";
 
@@ -62,6 +64,8 @@ export interface ContentEditorProps {
   initial: ContentDraft;
   /** The live copy's slug, when the post is on the site. */
   publishedSlug: string | null;
+  /** The live page on the site, when published and the site URL is known. */
+  liveUrl: string | null;
   /** The working copy changed after the live copy was made. */
   unpublishedChanges: boolean;
   scheduleError: string | null;
@@ -258,6 +262,16 @@ export function ContentEditor(props: ContentEditorProps) {
           <Save aria-hidden />
           Save version
         </Button>
+        <PublishControls
+          contentId={id}
+          status={status}
+          path={contentPath(type, draft.slug)}
+          liveUrl={props.liveUrl}
+          readiness={readiness}
+          flush={flush}
+          lockVersion={() => lock.current}
+          disabled={pending || conflict}
+        />
         <ConfirmButton
           title="Move to the trash?"
           description={
