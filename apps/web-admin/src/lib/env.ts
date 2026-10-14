@@ -27,6 +27,15 @@ export const env = createEnv({
     SUPABASE_SECRET_KEY: z.string().min(1),
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_RELEASE: z.string().optional(),
+    // Server-side PostHog (lib/track.ts) and feature flags (isFlagEnabled from
+    // @repo/posthog/server). Read straight from process.env by the package;
+    // listed here so a typo shows up at boot. Without POSTHOG_KEY nothing is
+    // tracked and every flag reads as off. FEATURE_FLAG_OVERRIDES
+    // ("cms-admin,cms-public=false") pins flags locally.
+    POSTHOG_KEY: z.string().min(1).optional(),
+    POSTHOG_HOST: z.string().url().optional(),
+    POSTHOG_FLAGS_SECRET_KEY: z.string().min(1).optional(),
+    FEATURE_FLAG_OVERRIDES: z.string().optional(),
     // Alert routing/display — the engine itself runs in apps/alert-worker; the
     // /alerts UI still reads these for notification defaults and test sends.
     // Next standalone overwrites NODE_ENV=production at startup, so non-prod
@@ -102,6 +111,10 @@ export const env = createEnv({
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
     SENTRY_DSN: process.env.SENTRY_DSN,
     SENTRY_RELEASE: process.env.SENTRY_RELEASE,
+    POSTHOG_KEY: process.env.POSTHOG_KEY,
+    POSTHOG_HOST: process.env.POSTHOG_HOST,
+    POSTHOG_FLAGS_SECRET_KEY: process.env.POSTHOG_FLAGS_SECRET_KEY,
+    FEATURE_FLAG_OVERRIDES: process.env.FEATURE_FLAG_OVERRIDES,
     ALERT_ENV: process.env.ALERT_ENV,
     ALERT_DISCORD_CHANNEL_ID: process.env.ALERT_DISCORD_CHANNEL_ID,
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
