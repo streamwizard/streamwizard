@@ -16,7 +16,8 @@ and web-streamwizard (rendering). No I/O: everything here is pure and tested.
   ids always match.
 - `checkAccessibility`: alt text, heading outline, link text, table headers.
   Errors block publishing, warnings only show in the editor.
-- `slugify`, `isValidSlug`.
+- `slugify`, `isValidSlug`; `contentPath`, `contentIndexPath` for public URLs
+  (`/blog/…`, `/guides/…`).
 - `transition`, `allowedActions`: the publishing state machine.
 - `cmsTags`, `isCmsTag`, `tagsForChange`: cache tags for the public site and
   which ones a change refreshes.
