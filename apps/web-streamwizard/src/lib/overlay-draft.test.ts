@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from "bun:test";
+import { afterAll, beforeEach, expect, test } from "bun:test";
 import {
   clearOverlayDraft,
   isDraftNewerThan,
@@ -54,6 +54,12 @@ function makeItem(label: string): OverlayItem {
 let rows: Map<string, string>;
 beforeEach(() => {
   rows = installLocalStorage();
+});
+
+// bun runs every test file in one process: a window left behind makes later
+// files think they're in a browser (next/image then reads `document`).
+afterAll(() => {
+  delete (globalThis as { window?: unknown }).window;
 });
 
 test("a written draft reads back with its items", () => {
