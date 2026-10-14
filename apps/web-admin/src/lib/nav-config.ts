@@ -6,6 +6,7 @@ import {
   Cpu,
   Database,
   DatabaseBackup,
+  FileText,
   FolderTree,
   Globe,
   Images,
@@ -90,6 +91,7 @@ export const navGroups: NavGroup[] = [
     // about, the images they use.
     label: "Content",
     items: [
+      { href: "/content", label: "Posts", icon: FileText },
       { href: "/content/media", label: "Media", icon: Images },
       { href: "/content/authors", label: "Authors", icon: UserPen },
       {

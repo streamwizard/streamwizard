@@ -46,6 +46,8 @@ describe("findNavLocation", () => {
   });
 
   test("Content pages keep their item, author pages included", () => {
+    expect(at("/content")).toEqual({ item: "Posts", tab: null });
+    expect(at("/content/abc/revisions")).toEqual({ item: "Posts", tab: null });
     expect(at("/content/media")).toEqual({ item: "Media", tab: null });
     expect(at("/content/authors/abc")).toEqual({ item: "Authors", tab: null });
     expect(at("/content/categories")).toEqual({ item: "Topics", tab: "Categories" });

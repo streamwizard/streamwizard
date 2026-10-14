@@ -48,7 +48,9 @@ The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages ar
 | Support | Tickets | `/discord/tickets` | Queue, Stats, Settings |
 | Support | Users | `/users` | |
 | Support | Widget review | `/widget-library` | |
-| Content | Media | `/content/media` | |
+| Content | Posts | `/content` | |
+| Content | Media | `/content`, `/content/[id]`, `/content/[id]/revisions` | Blog posts and guides. **List**: search, filter (type, status, author, category), sort, trash with restore; *New blog post* / *New guide* create a draft credited to the admin's own author profile when there is one. **Editor**: Tiptap body (headings H2–H4, lists, quotes, callouts, code blocks, tables, links, images from Media with inline alt text, YouTube/Twitch embeds), guide sections, and a sidebar for details, SEO, guide fields and **Checks** (what blocks publishing, accessibility, the table of contents). Everything autosaves into the working copy through `cms_save_draft` (one transaction, `lock_version` check: a second tab's save pauses autosave and asks for a reload). The live site doesn't change here. **Revisions**: autosaves at most one per 10 minutes, *Save version* always, restore puts a revision back into the draft and keeps the replaced state |
+| `/content/media` | |
 | Content | Authors | `/content/authors` | |
 | Content | Topics | `/content/categories` | Categories, Tags (`/content/tags`) |
 | Discord | Announcements | `/discord/announcements` | |
