@@ -113,7 +113,8 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       .filter(Boolean)
       .join(" "),
     // Twitch embedded player and clips use iframes served from these origins
-    "frame-src https://player.twitch.tv https://clips.twitch.tv",
+    // Twitch players, plus YouTube (privacy-enhanced domain) for embeds in blog posts and guides.
+    "frame-src https://player.twitch.tv https://clips.twitch.tv https://www.youtube-nocookie.com",
     // Explicit manifest-src (rather than relying on the default-src fallback)
     // so we can carve out the Cloudflare Access reauth redirect on staging
     // without loosening default-src for everything else.

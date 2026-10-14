@@ -52,6 +52,17 @@ const nextConfig = {
           },
         ],
       },
+      // CMS draft previews: the token in the path is the secret, so it must
+      // never travel in a Referer, and no crawler should keep it. No
+      // Cache-Control here: Next overrides it on pages, and the page is
+      // dynamic, so it already goes out as private, no-store.
+      {
+        source: "/preview/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
     ];
   },
   async rewrites() {

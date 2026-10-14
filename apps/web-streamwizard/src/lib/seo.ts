@@ -50,7 +50,7 @@ export const PUBLIC_ROUTES: PublicRoute[] = [
  * because it is too thin to rank (SW-308), and a crawler still has to be able
  * to read that tag.
  */
-export const DISALLOWED_PATHS = ["/api/", "/auth/", "/dashboard", "/deck", "/obs-viewer"];
+export const DISALLOWED_PATHS = ["/api/", "/auth/", "/dashboard", "/deck", "/obs-viewer", "/preview/"];
 
 /** The one host whose content is the real, indexable site. */
 const CANONICAL_HOST = "streamwizard.org";
