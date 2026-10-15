@@ -25,6 +25,12 @@ const nextConfig = {
     root: path.resolve(__dirname, "../.."),
   },
   output: "standalone",
+  // Post and guide share cards render on request (lib/cms/og.tsx), not at
+  // build like the other OG images, so the server needs the font files.
+  outputFileTracingIncludes: {
+    "/blog/**": ["./src/app/fonts/Geist-*.ttf"],
+    "/guides/**": ["./src/app/fonts/Geist-*.ttf"],
+  },
   skipTrailingSlashRedirect: true,
   async headers() {
     return [
@@ -50,6 +56,17 @@ const nextConfig = {
             key: "Referrer-Policy",
             value: process.env.NODE_ENV === "development" ? "no-referrer" : "strict-origin-when-cross-origin",
           },
+        ],
+      },
+      // CMS draft previews: the token in the path is the secret, so it must
+      // never travel in a Referer, and no crawler should keep it. No
+      // Cache-Control here: Next overrides it on pages, and the page is
+      // dynamic, so it already goes out as private, no-store.
+      {
+        source: "/preview/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
         ],
       },
     ];

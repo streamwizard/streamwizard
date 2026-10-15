@@ -468,6 +468,718 @@ export type Database = {
           },
         ]
       }
+      cms_assets: {
+        Row: {
+          alt: string
+          created_at: string
+          created_by: string | null
+          height: number | null
+          id: string
+          is_decorative: boolean
+          key: string
+          mime_type: string
+          size_bytes: number
+          status: string
+          updated_at: string
+          width: number | null
+        }
+        Insert: {
+          alt?: string
+          created_at?: string
+          created_by?: string | null
+          height?: number | null
+          id?: string
+          is_decorative?: boolean
+          key: string
+          mime_type: string
+          size_bytes: number
+          status?: string
+          updated_at?: string
+          width?: number | null
+        }
+        Update: {
+          alt?: string
+          created_at?: string
+          created_by?: string | null
+          height?: number | null
+          id?: string
+          is_decorative?: boolean
+          key?: string
+          mime_type?: string
+          size_bytes?: number
+          status?: string
+          updated_at?: string
+          width?: number | null
+        }
+        Relationships: []
+      }
+      cms_authors: {
+        Row: {
+          avatar_asset_id: string | null
+          bio: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          name: string
+          role_title: string | null
+          slug: string
+          social_links: Json
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          avatar_asset_id?: string | null
+          bio?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name: string
+          role_title?: string | null
+          slug: string
+          social_links?: Json
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          avatar_asset_id?: string | null
+          bio?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          name?: string
+          role_title?: string | null
+          slug?: string
+          social_links?: Json
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_authors_avatar_asset_id_fkey"
+            columns: ["avatar_asset_id"]
+            isOneToOne: false
+            referencedRelation: "cms_assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          position: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          position?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          position?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      cms_content: {
+        Row: {
+          body: Json
+          body_text: string
+          canonical_url: string | null
+          comments_enabled: boolean
+          content_updated_at: string | null
+          cover_asset_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          difficulty: string | null
+          estimated_minutes: number | null
+          excerpt: string | null
+          first_published_at: string | null
+          id: string
+          is_featured: boolean
+          lock_version: number
+          noindex: boolean
+          og_asset_id: string | null
+          pinned_rank: number | null
+          prerequisites: Json
+          primary_category_id: string | null
+          publish_at: string | null
+          reading_time_minutes: number
+          schedule_error: string | null
+          scheduled_by: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          status: string
+          summary: string | null
+          title: string
+          toc: Json
+          type: string
+          updated_at: string
+          updated_by: string | null
+          word_count: number
+        }
+        Insert: {
+          body?: Json
+          body_text?: string
+          canonical_url?: string | null
+          comments_enabled?: boolean
+          content_updated_at?: string | null
+          cover_asset_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          difficulty?: string | null
+          estimated_minutes?: number | null
+          excerpt?: string | null
+          first_published_at?: string | null
+          id?: string
+          is_featured?: boolean
+          lock_version?: number
+          noindex?: boolean
+          og_asset_id?: string | null
+          pinned_rank?: number | null
+          prerequisites?: Json
+          primary_category_id?: string | null
+          publish_at?: string | null
+          reading_time_minutes?: number
+          schedule_error?: string | null
+          scheduled_by?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          status?: string
+          summary?: string | null
+          title?: string
+          toc?: Json
+          type: string
+          updated_at?: string
+          updated_by?: string | null
+          word_count?: number
+        }
+        Update: {
+          body?: Json
+          body_text?: string
+          canonical_url?: string | null
+          comments_enabled?: boolean
+          content_updated_at?: string | null
+          cover_asset_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          difficulty?: string | null
+          estimated_minutes?: number | null
+          excerpt?: string | null
+          first_published_at?: string | null
+          id?: string
+          is_featured?: boolean
+          lock_version?: number
+          noindex?: boolean
+          og_asset_id?: string | null
+          pinned_rank?: number | null
+          prerequisites?: Json
+          primary_category_id?: string | null
+          publish_at?: string | null
+          reading_time_minutes?: number
+          schedule_error?: string | null
+          scheduled_by?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          status?: string
+          summary?: string | null
+          title?: string
+          toc?: Json
+          type?: string
+          updated_at?: string
+          updated_by?: string | null
+          word_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_content_cover_asset_id_fkey"
+            columns: ["cover_asset_id"]
+            isOneToOne: false
+            referencedRelation: "cms_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cms_content_og_asset_id_fkey"
+            columns: ["og_asset_id"]
+            isOneToOne: false
+            referencedRelation: "cms_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cms_content_primary_category_id_fkey"
+            columns: ["primary_category_id"]
+            isOneToOne: false
+            referencedRelation: "cms_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_content_authors: {
+        Row: {
+          author_id: string
+          content_id: string
+          position: number
+        }
+        Insert: {
+          author_id: string
+          content_id: string
+          position?: number
+        }
+        Update: {
+          author_id?: string
+          content_id?: string
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_content_authors_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "cms_authors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cms_content_authors_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_content_categories: {
+        Row: {
+          category_id: string
+          content_id: string
+        }
+        Insert: {
+          category_id: string
+          content_id: string
+        }
+        Update: {
+          category_id?: string
+          content_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_content_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "cms_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cms_content_categories_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_content_published: {
+        Row: {
+          assets: Json
+          author_ids: string[]
+          body: Json
+          body_text: string
+          canonical_url: string | null
+          category_ids: string[]
+          comments_enabled: boolean
+          content_id: string
+          content_updated_at: string
+          cover: Json | null
+          difficulty: string | null
+          estimated_minutes: number | null
+          excerpt: string | null
+          first_published_at: string
+          is_featured: boolean
+          noindex: boolean
+          og_image: Json | null
+          pinned_rank: number | null
+          prerequisites: Json
+          primary_category_id: string | null
+          reading_time_minutes: number
+          related_ids: string[]
+          search: unknown
+          sections: Json
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          snapshot_at: string
+          summary: string | null
+          tag_ids: string[]
+          title: string
+          toc: Json
+          type: string
+          word_count: number
+        }
+        Insert: {
+          assets?: Json
+          author_ids?: string[]
+          body: Json
+          body_text?: string
+          canonical_url?: string | null
+          category_ids?: string[]
+          comments_enabled: boolean
+          content_id: string
+          content_updated_at: string
+          cover?: Json | null
+          difficulty?: string | null
+          estimated_minutes?: number | null
+          excerpt?: string | null
+          first_published_at: string
+          is_featured: boolean
+          noindex: boolean
+          og_image?: Json | null
+          pinned_rank?: number | null
+          prerequisites?: Json
+          primary_category_id?: string | null
+          reading_time_minutes: number
+          related_ids?: string[]
+          search?: unknown
+          sections?: Json
+          seo_description?: string | null
+          seo_title?: string | null
+          slug: string
+          snapshot_at?: string
+          summary?: string | null
+          tag_ids?: string[]
+          title: string
+          toc?: Json
+          type: string
+          word_count: number
+        }
+        Update: {
+          assets?: Json
+          author_ids?: string[]
+          body?: Json
+          body_text?: string
+          canonical_url?: string | null
+          category_ids?: string[]
+          comments_enabled?: boolean
+          content_id?: string
+          content_updated_at?: string
+          cover?: Json | null
+          difficulty?: string | null
+          estimated_minutes?: number | null
+          excerpt?: string | null
+          first_published_at?: string
+          is_featured?: boolean
+          noindex?: boolean
+          og_image?: Json | null
+          pinned_rank?: number | null
+          prerequisites?: Json
+          primary_category_id?: string | null
+          reading_time_minutes?: number
+          related_ids?: string[]
+          search?: unknown
+          sections?: Json
+          seo_description?: string | null
+          seo_title?: string | null
+          slug?: string
+          snapshot_at?: string
+          summary?: string | null
+          tag_ids?: string[]
+          title?: string
+          toc?: Json
+          type?: string
+          word_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_content_published_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: true
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_content_tags: {
+        Row: {
+          content_id: string
+          tag_id: string
+        }
+        Insert: {
+          content_id: string
+          tag_id: string
+        }
+        Update: {
+          content_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_content_tags_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cms_content_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "cms_tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_guide_sections: {
+        Row: {
+          anchor: string
+          body: Json
+          body_text: string
+          content_id: string
+          created_at: string
+          id: string
+          position: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          anchor: string
+          body?: Json
+          body_text?: string
+          content_id: string
+          created_at?: string
+          id?: string
+          position: number
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          anchor?: string
+          body?: Json
+          body_text?: string
+          content_id?: string
+          created_at?: string
+          id?: string
+          position?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_guide_sections_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_preview_tokens: {
+        Row: {
+          content_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          content_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          content_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_preview_tokens_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_related_content: {
+        Row: {
+          content_id: string
+          position: number
+          related_id: string
+        }
+        Insert: {
+          content_id: string
+          position?: number
+          related_id: string
+        }
+        Update: {
+          content_id?: string
+          position?: number
+          related_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_related_content_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cms_related_content_related_id_fkey"
+            columns: ["related_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_revalidate_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: number
+          index_now_paths: string[]
+          last_error: string | null
+          mode: string
+          next_attempt_at: string
+          tags: string[]
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          index_now_paths?: string[]
+          last_error?: string | null
+          mode?: string
+          next_attempt_at?: string
+          tags: string[]
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          index_now_paths?: string[]
+          last_error?: string | null
+          mode?: string
+          next_attempt_at?: string
+          tags?: string[]
+        }
+        Relationships: []
+      }
+      cms_revisions: {
+        Row: {
+          content_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          snapshot: Json
+        }
+        Insert: {
+          content_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          snapshot: Json
+        }
+        Update: {
+          content_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_revisions_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_slug_redirects: {
+        Row: {
+          content_id: string
+          created_at: string
+          old_slug: string
+          type: string
+        }
+        Insert: {
+          content_id: string
+          created_at?: string
+          old_slug: string
+          type: string
+        }
+        Update: {
+          content_id?: string
+          created_at?: string
+          old_slug?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_slug_redirects_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cms_tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       commands: {
         Row: {
           channel_id: string
@@ -3639,6 +4351,165 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cms_claim_due_scheduled: {
+        Args: { p_limit?: number }
+        Returns: {
+          content_id: string
+          error: string
+          ok: boolean
+          result: Json
+          scheduled_by: string
+        }[]
+      }
+      cms_content_snapshot: { Args: { p_content_id: string }; Returns: Json }
+      cms_is_valid_slug: { Args: { p_slug: string }; Returns: boolean }
+      cms_jsonb_asset_ids: { Args: { p_value: Json }; Returns: string[] }
+      cms_claim_revalidations: {
+        Args: { p_lease_seconds: number; p_limit: number }
+        Returns: {
+          attempts: number
+          created_at: string
+          id: number
+          index_now_paths: string[]
+          last_error: string | null
+          mode: string
+          next_attempt_at: string
+          tags: string[]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "cms_revalidate_queue"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      cms_lock_content: {
+        Args: { p_content_id: string; p_expected_lock_version: number }
+        Returns: {
+          body: Json
+          body_text: string
+          canonical_url: string | null
+          comments_enabled: boolean
+          content_updated_at: string | null
+          cover_asset_id: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          difficulty: string | null
+          estimated_minutes: number | null
+          excerpt: string | null
+          first_published_at: string | null
+          id: string
+          is_featured: boolean
+          lock_version: number
+          noindex: boolean
+          og_asset_id: string | null
+          pinned_rank: number | null
+          prerequisites: Json
+          primary_category_id: string | null
+          publish_at: string | null
+          reading_time_minutes: number
+          schedule_error: string | null
+          scheduled_by: string | null
+          seo_description: string | null
+          seo_title: string | null
+          slug: string
+          status: string
+          summary: string | null
+          title: string
+          toc: Json
+          type: string
+          updated_at: string
+          updated_by: string | null
+          word_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cms_content"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      cms_publish: {
+        Args: {
+          p_actor: string
+          p_content_id: string
+          p_expected_lock_version: number
+          p_minor_edit?: boolean
+        }
+        Returns: Json
+      }
+      cms_published_footprint: {
+        Args: {
+          p: Database["public"]["Tables"]["cms_content_published"]["Row"]
+        }
+        Returns: Json
+      }
+      cms_restore_revision: {
+        Args: {
+          p_actor: string
+          p_content_id: string
+          p_expected_lock_version: number
+          p_revision_id: string
+        }
+        Returns: Json
+      }
+      cms_save_draft: {
+        Args: {
+          p_actor: string
+          p_author_ids?: string[]
+          p_category_ids?: string[]
+          p_content_id: string
+          p_expected_lock_version: number
+          p_fields: Json
+          p_related_ids?: string[]
+          p_revision?: string
+          p_sections?: Json
+          p_tag_ids?: string[]
+        }
+        Returns: Json
+      }
+      cms_schedule: {
+        Args: {
+          p_actor: string
+          p_content_id: string
+          p_expected_lock_version: number
+          p_publish_at: string
+        }
+        Returns: Json
+      }
+      cms_trash: {
+        Args: {
+          p_actor: string
+          p_content_id: string
+          p_expected_lock_version: number
+        }
+        Returns: Json
+      }
+      cms_unpublish: {
+        Args: {
+          p_actor: string
+          p_content_id: string
+          p_expected_lock_version: number
+          p_to_status: string
+        }
+        Returns: Json
+      }
+      cms_unreferenced_assets: {
+        Args: { p_older_than: string }
+        Returns: {
+          id: string
+          key: string
+        }[]
+      }
+      cms_unschedule: {
+        Args: {
+          p_actor: string
+          p_content_id: string
+          p_expected_lock_version: number
+        }
+        Returns: Json
+      }
       reserve_user_asset: {
         Args: {
           p_user_id: string

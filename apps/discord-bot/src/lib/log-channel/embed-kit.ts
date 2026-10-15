@@ -54,6 +54,15 @@ export const STYLE: Record<PlatformEventType, { emoji: string; color: number }> 
   "eventsub.subscription_revoked": { emoji: "🚫", color: DANGER_RED },
   "eventsub.conduit_update_failed": { emoji: "⚠️", color: DANGER_RED },
 
+  "content.published": { emoji: "📰", color: TWITCH_PURPLE },
+  "content.updated": { emoji: "✏️", color: TWITCH_PURPLE },
+  "content.unpublished": { emoji: "📤", color: DANGER_RED },
+  "content.archived": { emoji: "🗄️", color: DANGER_RED },
+  "content.trashed": { emoji: "🗑️", color: DANGER_RED },
+  "content.scheduled": { emoji: "⏰", color: TWITCH_PURPLE },
+  "content.unscheduled": { emoji: "⏹️", color: TWITCH_PURPLE },
+  "content.schedule_failed": { emoji: "⚠️", color: DANGER_RED },
+
   "ticket.opened": { emoji: "🎫", color: TWITCH_PURPLE },
   "ticket.claimed": { emoji: "🙋", color: TWITCH_PURPLE },
   "ticket.closed": { emoji: "✅", color: TWITCH_PURPLE },
@@ -163,6 +172,15 @@ export function discordDate(iso: string | null | undefined, fallback = "Never"):
   if (Number.isNaN(ms)) return iso;
   const unix = Math.floor(ms / 1000);
   return `<t:${unix}:D> (<t:${unix}:R>)`;
+}
+
+/** Date and time in the reader's timezone, plus how far off it is. */
+export function discordDateTime(iso: string | null | undefined, fallback: string): string {
+  if (!iso) return fallback;
+  const ms = new Date(iso).getTime();
+  if (Number.isNaN(ms)) return fallback;
+  const unix = Math.floor(ms / 1000);
+  return `<t:${unix}:f> (<t:${unix}:R>)`;
 }
 
 /** "1h 4m", "2m 13s", "45s" (activity-format's rule). Null for missing or negative values. */

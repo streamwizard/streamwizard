@@ -50,6 +50,13 @@ export const env = createEnv({
     R2_ACCESS_KEY_ID: z.string().min(1).optional(),
     R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
     R2_ASSETS_BUCKET: z.string().min(1).optional(),
+    // web-streamwizard's origin (https://streamwizard.org). The Content
+    // section builds preview links on it and tells it which cached pages
+    // changed: POST {CMS_SITE_URL}/api/revalidate with the shared secret.
+    // Without the pair, saves still land and the site catches up within the
+    // hour; without the URL, preview links can't be made.
+    CMS_SITE_URL: z.string().url().optional(),
+    CMS_REVALIDATE_SECRET: z.string().min(32).optional(),
     TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
     TELEGRAM_CHAT_ID: z.string().min(1).optional(),
     // Same var the rest of the stack uses for the rest-api base URL; the
@@ -113,6 +120,8 @@ export const env = createEnv({
     R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
     R2_ASSETS_BUCKET: process.env.R2_ASSETS_BUCKET,
+    CMS_SITE_URL: process.env.CMS_SITE_URL,
+    CMS_REVALIDATE_SECRET: process.env.CMS_REVALIDATE_SECRET,
     TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
     TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,

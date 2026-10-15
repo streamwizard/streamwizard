@@ -13,6 +13,7 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "bun x turbo run check-types",
+    "test:db": "supabase test db --local",
     "gen-types": "supabase gen types typescript --project-id jgxdrljoqployiyjedst --schema public > packages/supabase/src/types/supabase.ts"
   },
   "devDependencies": {

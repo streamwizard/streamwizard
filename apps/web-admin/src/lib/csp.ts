@@ -53,6 +53,11 @@ export function buildCsp(nonce: string): string {
       "https://api.open-meteo.com",
       "https://nominatim.openstreetmap.org",
       process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+      // Content section image uploads PUT straight to presigned R2 URLs. The
+      // AWS SDK signs them virtual-hosted-style, so the host carries the bucket.
+      process.env.R2_ACCOUNT_ID && process.env.R2_ASSETS_BUCKET
+        ? `https://${process.env.R2_ASSETS_BUCKET}.${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+        : "",
     ]
       .filter(Boolean)
       .join(" "),

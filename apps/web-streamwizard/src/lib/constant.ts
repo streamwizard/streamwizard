@@ -46,6 +46,15 @@ export const productLinks = {
 export const pricingLink = "/pricing";
 
 /**
+ * The guides and blog indexes. The header and footer show them only while the
+ * cms-public flag is on, so they never point at a 404.
+ */
+export const contentLinks = {
+  guides: "/guides",
+  blog: "/blog",
+} as const;
+
+/**
  * Deep links for the cross-page doors. A band that names one section on another
  * page ("see the clips rotator") should land on that section, not on the top of
  * the page and a second scroll.

@@ -215,6 +215,34 @@
       "types": "./src/queries/assets.ts",
       "default": "./src/queries/assets.ts"
     },
+    "./queries/cms/assets": {
+      "types": "./src/queries/cms/assets.ts",
+      "default": "./src/queries/cms/assets.ts"
+    },
+    "./queries/cms/content": {
+      "types": "./src/queries/cms/content.ts",
+      "default": "./src/queries/cms/content.ts"
+    },
+    "./queries/cms/authors": {
+      "types": "./src/queries/cms/authors.ts",
+      "default": "./src/queries/cms/authors.ts"
+    },
+    "./queries/cms/preview": {
+      "types": "./src/queries/cms/preview.ts",
+      "default": "./src/queries/cms/preview.ts"
+    },
+    "./queries/cms/published": {
+      "types": "./src/queries/cms/published.ts",
+      "default": "./src/queries/cms/published.ts"
+    },
+    "./queries/cms/schedule": {
+      "types": "./src/queries/cms/schedule.ts",
+      "default": "./src/queries/cms/schedule.ts"
+    },
+    "./queries/cms/taxonomy": {
+      "types": "./src/queries/cms/taxonomy.ts",
+      "default": "./src/queries/cms/taxonomy.ts"
+    },
     "./queries/data-export": {
       "types": "./src/queries/data-export.ts",
       "default": "./src/queries/data-export.ts"

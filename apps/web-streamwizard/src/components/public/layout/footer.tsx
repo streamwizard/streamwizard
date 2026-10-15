@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { discordInviteLink, docsLink, githubLink, pricingLink, productLinks } from "@/lib/constant";
+import { contentLinks, discordInviteLink, docsLink, githubLink, pricingLink, productLinks } from "@/lib/constant";
 import { resetCookieConsent } from "@repo/posthog";
 import { TrackedLink } from "../analytics/tracked-link";
 import { Separator } from "@repo/ui";
@@ -19,9 +19,11 @@ const navigation = {
     { name: "Analytics", href: productLinks.analytics, cta: "analytics" },
     { name: "Pricing", href: pricingLink, cta: "pricing" },
     { name: "Docs", href: docsLink, cta: "docs" },
+    { name: "Guides", href: contentLinks.guides, cta: "guides", content: true },
   ],
   company: [
     { name: "About", href: "/about", cta: "about" },
+    { name: "Blog", href: contentLinks.blog, cta: "blog", content: true },
     { name: "Contact", href: "/contact", cta: "contact" },
     { name: "Roadmap", href: "/roadmap", cta: "roadmap" },
   ],
@@ -35,7 +37,11 @@ const navigation = {
   ],
 };
 
-export function Footer() {
+/** `content` links need the cms-public flag: without it /guides and /blog are a 404. */
+const visible = <T extends { content?: boolean }>(items: T[], showContent: boolean) =>
+  items.filter((item) => showContent || !item.content);
+
+export function Footer({ showContent = false }: { showContent?: boolean }) {
   const currentYear = new Date().getFullYear();
 
   return (
@@ -68,7 +74,7 @@ export function Footer() {
             <div className="space-y-4">
               <h3 className="font-medium text-sm tracking-wider">PRODUCT</h3>
               <ul className="space-y-3">
-                {navigation.product.map((item) => (
+                {visible(navigation.product, showContent).map((item) => (
                   <li key={item.name}>
                     <TrackedLink
                       href={item.href}
@@ -88,7 +94,7 @@ export function Footer() {
             <div className="space-y-4">
               <h3 className="font-medium text-sm tracking-wider">COMPANY</h3>
               <ul className="space-y-3">
-                {navigation.company.map((item) => (
+                {visible(navigation.company, showContent).map((item) => (
                   <li key={item.name}>
                     <TrackedLink
                       href={item.href}

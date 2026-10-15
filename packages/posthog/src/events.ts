@@ -10,3 +10,9 @@ export type { AppEvent, EventMap } from "./event-map";
 export function captureEvent<E extends AppEvent>(event: E, ...[properties]: EventProps<E>) {
   posthog.capture(event, properties);
 }
+
+// For the moment a visitor leaves (pagehide, a hidden tab): sent with
+// sendBeacon so the browser still delivers it once the page is gone.
+export function captureEventOnLeave<E extends AppEvent>(event: E, ...[properties]: EventProps<E>) {
+  posthog.capture(event, properties, { transport: "sendBeacon" });
+}
