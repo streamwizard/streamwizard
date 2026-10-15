@@ -87,6 +87,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@repo/backups": "workspace:*",
+        "@repo/cms": "workspace:*",
         "@repo/discord-api": "workspace:*",
         "@repo/logger": "workspace:*",
         "@repo/metrics": "workspace:*",
