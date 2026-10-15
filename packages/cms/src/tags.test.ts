@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { cmsTags, isCmsTag, tagsForChange, type PublicFootprint } from "./tags";
+import { cmsTags, isCmsTag, parseFootprint, tagsForChange, type PublicFootprint } from "./tags";
 
 const POST = "11111111-1111-4111-8111-111111111111";
 const CAT_A = "22222222-2222-4222-8222-222222222222";
@@ -81,5 +81,22 @@ describe("tagsForChange", () => {
     const tags = tagsForChange(published, published);
     expect(new Set(tags).size).toBe(tags.length);
     expect(tags.every(isCmsTag)).toBe(true);
+  });
+});
+
+describe("parseFootprint", () => {
+  it("maps the snake_case shape", () => {
+    expect(parseFootprint({ id: "a", type: "guide", category_ids: ["c"], tag_ids: null, author_ids: ["x"] })).toEqual({
+      id: "a",
+      type: "guide",
+      categoryIds: ["c"],
+      tagIds: [],
+      authorIds: ["x"],
+    });
+  });
+
+  it("is null for nothing or junk", () => {
+    expect(parseFootprint(null)).toBeNull();
+    expect(parseFootprint({ id: "a", type: "news" })).toBeNull();
   });
 });

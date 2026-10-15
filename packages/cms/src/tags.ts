@@ -58,3 +58,25 @@ export function tagsForChange(before: PublicFootprint | null, after: PublicFootp
   }
   return [...tags];
 }
+
+interface DbFootprint {
+  id: string;
+  type: ContentType;
+  category_ids: string[] | null;
+  tag_ids: string[] | null;
+  author_ids: string[] | null;
+}
+
+/** A footprint as the database functions return it ({ id, type, category_ids, … }), or null. */
+export function parseFootprint(value: unknown): PublicFootprint | null {
+  if (!value || typeof value !== "object") return null;
+  const raw = value as DbFootprint;
+  if (typeof raw.id !== "string" || (raw.type !== "blog" && raw.type !== "guide")) return null;
+  return {
+    id: raw.id,
+    type: raw.type,
+    categoryIds: raw.category_ids ?? [],
+    tagIds: raw.tag_ids ?? [],
+    authorIds: raw.author_ids ?? [],
+  };
+}
