@@ -38,11 +38,16 @@ async function loadPost(type: ContentType, slug: string): Promise<PublishedRow> 
   notFound();
 }
 
+// What the head says when there's no live post here. A not-found.tsx below
+// the root can't set metadata, so the page does it. `robots: null` for the
+// same reason as in app/not-found.tsx: Next adds its own noindex on a 404.
+const NOT_FOUND_METADATA: Metadata = { title: "Page not found", robots: null };
+
 export async function contentMetadata(type: ContentType, params: Params): Promise<Metadata> {
   const { slug } = await params;
-  if (!isValidSlug(slug)) return {};
+  if (!isValidSlug(slug)) return NOT_FOUND_METADATA;
   const row = await getPublishedPost(type, slug);
-  if (!row) return {};
+  if (!row) return NOT_FOUND_METADATA;
   const meta = articleMeta(row, absoluteUrl);
   return {
     title: meta.title,
