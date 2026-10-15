@@ -1,25 +1,22 @@
 import type { MetadataRoute } from "next";
 import { contentIndexPath, contentPath } from "@repo/cms";
 import { reportError } from "@repo/sentry";
-import { cmsPublicEnabled, listSitemapEntries } from "@/lib/cms/public";
+import { listSitemapEntries } from "@/lib/cms/public";
 import { PUBLIC_ROUTES, absoluteUrl } from "@/lib/seo";
 
-// Rendered per request: the flag and the posts must not be frozen at build
-// time. The post list itself is cached (lib/cms/public.ts), so this is cheap.
+// Rendered per request: the posts must not be frozen at build time. The post list itself is cached (lib/cms/public.ts), so this is cheap.
 export const dynamic = "force-dynamic";
 
 /**
  * The hand-listed public routes, plus the blog, the guides and every
- * published post once the cms-public flag is on. A database hiccup drops the
- * posts for this request rather than the whole sitemap.
+ * published post. A database hiccup drops the posts for this request rather
+ * than the whole sitemap.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const routes: MetadataRoute.Sitemap = PUBLIC_ROUTES.map((route) => ({
     url: absoluteUrl(route.path),
     lastModified: new Date(route.lastModified),
   }));
-  if (!(await cmsPublicEnabled())) return routes;
-
   try {
     const entries = await listSitemapEntries();
     // ISO timestamps sort as strings.

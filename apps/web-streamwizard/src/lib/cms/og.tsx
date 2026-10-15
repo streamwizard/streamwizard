@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import type { ContentType } from "@repo/cms";
 import { OG_SIZE, renderOgImage } from "@/lib/og-image";
 import { cmsImageUrl } from "./images";
-import { cmsPublicEnabled, getPublishedPost } from "./public";
+import { getPublishedPost } from "./public";
 import { shareImage, splitTitle } from "./published";
 
 // The share card of one post or guide: the OG image uploaded for it, or else
@@ -13,7 +13,7 @@ const DRAWABLE = new Set(["image/png", "image/jpeg"]);
 const LEVELS = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" } as Record<string, string>;
 
 export async function renderContentOgImage(type: ContentType, slug: string) {
-  const row = (await cmsPublicEnabled()) ? await getPublishedPost(type, slug) : null;
+  const row = await getPublishedPost(type, slug);
   if (!row) {
     return renderOgImage({ eyebrow: "StreamWizard", title: ["Nothing here.", "Try the blog or guides."], subline: "" });
   }

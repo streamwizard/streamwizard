@@ -24,12 +24,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { BsTwitch } from "react-icons/bs";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import type { IconType } from "react-icons";
 import TwitchLogin from "@/components/buttons/twitch-login";
-import { docsLink, socialLinks } from "@/lib/constant";
+import { socialLinks } from "@/lib/constant";
 import { TrackedLink } from "../analytics/tracked-link";
 import {
   companyNavItems,
@@ -151,14 +151,7 @@ function NavDropdown({
   );
 }
 
-export default function Header({
-  isAuthenticated = false,
-  showContent = false,
-}: {
-  isAuthenticated?: boolean;
-  /** The cms-public flag: guides and blog links only while it's on. */
-  showContent?: boolean;
-}) {
+export default function Header({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
@@ -178,7 +171,7 @@ export default function Header({
 
   const isCurrent = (href: string) => pathname === href;
   const isWithin = (href: string) => isCurrent(href) || pathname.startsWith(`${href}/`);
-  const navSections = showContent ? [productSection, learnSection, companySection] : [productSection, companySection];
+  const navSections = [productSection, learnSection, companySection];
 
   return (
     <header
@@ -207,16 +200,14 @@ export default function Header({
                   isCurrent={isCurrent}
                   isWithin={isWithin}
                 />
-                {showContent && (
-                  <NavDropdown
-                    label="Learn"
-                    items={learnItems}
-                    columns={1}
-                    section="header_learn_menu"
-                    isCurrent={isCurrent}
-                    isWithin={isWithin}
-                  />
-                )}
+                <NavDropdown
+                  label="Learn"
+                  items={learnItems}
+                  columns={1}
+                  section="header_learn_menu"
+                  isCurrent={isCurrent}
+                  isWithin={isWithin}
+                />
               </NavigationMenuList>
             </NavigationMenu>
 
@@ -235,20 +226,6 @@ export default function Header({
                 {item.name}
               </TrackedLink>
             ))}
-
-            {!showContent && (
-              <TrackedLink
-                href={docsLink}
-                cta="docs"
-                section="header"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <BookOpen className="h-4 w-4" aria-hidden="true" />
-                Docs
-              </TrackedLink>
-            )}
 
             {/* Plain rule: Separator's data-[orientation=vertical]:h-full outranks any
                 height set here, so it would stretch to the full 4rem row. */}
@@ -359,25 +336,6 @@ export default function Header({
                       </AccordionItem>
                     ))}
                   </Accordion>
-
-                  {!showContent && (
-                    <>
-                      <Separator className="my-3" />
-
-                      <TrackedLink
-                        href={docsLink}
-                        cta="docs"
-                        section="header_menu"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={closeMenu}
-                        className="flex items-center gap-3 rounded-md p-2 text-sm text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
-                      >
-                        <BookOpen className="h-4 w-4" aria-hidden="true" />
-                        Docs
-                      </TrackedLink>
-                    </>
-                  )}
 
                   <Separator className="my-3" />
 

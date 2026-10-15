@@ -45,10 +45,7 @@ export const productLinks = {
  */
 export const pricingLink = "/pricing";
 
-/**
- * The guides and blog indexes. The header and footer show them only while the
- * cms-public flag is on, so they never point at a 404.
- */
+/** The guides and blog indexes. */
 export const contentLinks = {
   guides: "/guides",
   blog: "/blog",

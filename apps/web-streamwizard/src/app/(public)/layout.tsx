@@ -4,7 +4,6 @@ import { ScrollToTop } from "@/components/buttons/scroll-to-top";
 import { JsonLd } from "@/components/seo/json-ld";
 import { organizationSchema } from "@/lib/seo";
 import { hasSessionCookie } from "@/lib/auth";
-import { cmsPublicEnabled } from "@/lib/cms/public";
 
 // No metadata export here on purpose. This layout used to duplicate the root's
 // title/description with different wording, so the two disagreed about what the
@@ -17,14 +16,14 @@ export default async function RootLayout({
 }>) {
   // Cookie presence only, never a Supabase call: this decides a button label,
   // not access. See hasSessionCookie in src/lib/auth.ts.
-  const [isAuthenticated, showContent] = await Promise.all([hasSessionCookie(), cmsPublicEnabled()]);
+  const isAuthenticated = await hasSessionCookie();
 
   return (
     <>
       <JsonLd schema={organizationSchema()} />
-      <Header isAuthenticated={isAuthenticated} showContent={showContent} />
+      <Header isAuthenticated={isAuthenticated} />
       <main>{children}</main>
-      <Footer showContent={showContent} />
+      <Footer />
       <ScrollToTop />
     </>
   );

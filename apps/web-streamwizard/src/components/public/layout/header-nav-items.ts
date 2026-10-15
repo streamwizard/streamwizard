@@ -68,10 +68,7 @@ export const productNavItems: NavItem[] = [
   },
 ];
 
-/**
- * Guides and the blog. Shown only while the cms-public flag is on: the layout
- * checks it and tells the header and footer.
- */
+/** Guides and the blog, in the Learn menu. */
 export const contentNavItems: NavItem[] = [
   {
     name: "Guides",
@@ -90,8 +87,8 @@ export const contentNavItems: NavItem[] = [
 ];
 
 /**
- * Docs, as the Learn menu's last entry. With guides and blog in the bar there
- * is no room for a separate Docs link at 1024px, and the docs belong with them.
+ * Docs, as the Learn menu's last entry. With a separate Docs link the bar
+ * doesn't fit at 1024px, and the docs belong with the guides anyway.
  */
 export const docsNavItem: NavItem = {
   name: "Docs",
