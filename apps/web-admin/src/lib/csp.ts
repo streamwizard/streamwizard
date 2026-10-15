@@ -23,6 +23,9 @@ export function buildCsp(nonce: string): string {
       // Discord guild icons, avatars and attachments on /discord, plus Klipy,
       // the GIF provider behind Discord's GIF picker.
       "https://cdn.discordapp.com https://klipy.com https://*.klipy.com",
+      // Content section uploads: the file the admin picked, as a local blob:
+      // URL, for the preview and for reading its width and height.
+      "blob:",
       process.env.NEXT_PUBLIC_CDN_URL,
       process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
