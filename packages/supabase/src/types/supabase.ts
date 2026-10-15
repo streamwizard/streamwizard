@@ -618,7 +618,6 @@ export type Database = {
           primary_category_id: string | null
           publish_at: string | null
           reading_time_minutes: number
-          revalidate_tags: string[]
           schedule_error: string | null
           scheduled_by: string | null
           seo_description: string | null
@@ -657,7 +656,6 @@ export type Database = {
           primary_category_id?: string | null
           publish_at?: string | null
           reading_time_minutes?: number
-          revalidate_tags?: string[]
           schedule_error?: string | null
           scheduled_by?: string | null
           seo_description?: string | null
@@ -696,7 +694,6 @@ export type Database = {
           primary_category_id?: string | null
           publish_at?: string | null
           reading_time_minutes?: number
-          revalidate_tags?: string[]
           schedule_error?: string | null
           scheduled_by?: string | null
           seo_description?: string | null
@@ -1061,6 +1058,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      cms_revalidate_queue: {
+        Row: {
+          attempts: number
+          created_at: string
+          id: number
+          index_now_paths: string[]
+          last_error: string | null
+          mode: string
+          next_attempt_at: string
+          tags: string[]
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          index_now_paths?: string[]
+          last_error?: string | null
+          mode?: string
+          next_attempt_at?: string
+          tags: string[]
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          id?: never
+          index_now_paths?: string[]
+          last_error?: string | null
+          mode?: string
+          next_attempt_at?: string
+          tags?: string[]
+        }
+        Relationships: []
       }
       cms_revisions: {
         Row: {
@@ -4334,6 +4364,25 @@ export type Database = {
       cms_content_snapshot: { Args: { p_content_id: string }; Returns: Json }
       cms_is_valid_slug: { Args: { p_slug: string }; Returns: boolean }
       cms_jsonb_asset_ids: { Args: { p_value: Json }; Returns: string[] }
+      cms_claim_revalidations: {
+        Args: { p_lease_seconds: number; p_limit: number }
+        Returns: {
+          attempts: number
+          created_at: string
+          id: number
+          index_now_paths: string[]
+          last_error: string | null
+          mode: string
+          next_attempt_at: string
+          tags: string[]
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "cms_revalidate_queue"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       cms_lock_content: {
         Args: { p_content_id: string; p_expected_lock_version: number }
         Returns: {
@@ -4360,7 +4409,6 @@ export type Database = {
           primary_category_id: string | null
           publish_at: string | null
           reading_time_minutes: number
-          revalidate_tags: string[]
           schedule_error: string | null
           scheduled_by: string | null
           seo_description: string | null
@@ -4421,6 +4469,15 @@ export type Database = {
         }
         Returns: Json
       }
+      cms_schedule: {
+        Args: {
+          p_actor: string
+          p_content_id: string
+          p_expected_lock_version: number
+          p_publish_at: string
+        }
+        Returns: Json
+      }
       cms_trash: {
         Args: {
           p_actor: string
@@ -4444,6 +4501,14 @@ export type Database = {
           id: string
           key: string
         }[]
+      }
+      cms_unschedule: {
+        Args: {
+          p_actor: string
+          p_content_id: string
+          p_expected_lock_version: number
+        }
+        Returns: Json
       }
       reserve_user_asset: {
         Args: {

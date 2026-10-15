@@ -235,6 +235,10 @@
       "types": "./src/queries/cms/published.ts",
       "default": "./src/queries/cms/published.ts"
     },
+    "./queries/cms/schedule": {
+      "types": "./src/queries/cms/schedule.ts",
+      "default": "./src/queries/cms/schedule.ts"
+    },
     "./queries/cms/taxonomy": {
       "types": "./src/queries/cms/taxonomy.ts",
       "default": "./src/queries/cms/taxonomy.ts"
