@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual } from "node:crypto";
-import { isCmsTag } from "@repo/cms";
+import { isCmsTag, isContentPath } from "@repo/cms";
 import { z } from "zod";
 
 // The logic behind POST /api/revalidate, without Next in the way so it can be
@@ -15,15 +15,21 @@ const MAX_TAGS = 200;
 // (unpublish, archive, delete), so removed content can't linger.
 export type RevalidateMode = "stale" | "immediate";
 
+const MAX_INDEX_NOW_PATHS = 20;
+
 const bodySchema = z.object({
   tags: z.array(z.string()).min(1).max(MAX_TAGS),
   mode: z.enum(["stale", "immediate"]).default("stale"),
+  // Public pages that changed, for IndexNow: /blog, /guides or a post under them.
+  indexNow: z.array(z.string()).max(MAX_INDEX_NOW_PATHS).default([]),
 });
 
 export interface RevalidateDeps {
   // CMS_REVALIDATE_SECRET. Unset means the endpoint doesn't exist.
   secret: string | undefined;
   revalidate: (tag: string, mode: RevalidateMode) => void;
+  // Runs after the response; the production host only (lib/indexnow.ts).
+  pingIndexNow?: (paths: string[]) => void;
 }
 
 export interface RevalidateResult {
@@ -57,7 +63,10 @@ export async function handleRevalidate(request: Request, deps: RevalidateDeps): 
   }
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success)
-    return { status: 400, body: { error: "Expected { tags: string[], mode?: 'stale' | 'immediate' }" } };
+    return {
+      status: 400,
+      body: { error: "Expected { tags: string[], mode?: 'stale' | 'immediate', indexNow?: string[] }" },
+    };
 
   // All or nothing: one bad tag means a caller bug, and a half-applied
   // refresh is harder to reason about than a refused one.
@@ -65,7 +74,13 @@ export async function handleRevalidate(request: Request, deps: RevalidateDeps): 
   if (unknown.length > 0)
     return { status: 400, body: { error: `Not a CMS cache tag: ${unknown.slice(0, 3).join(", ")}` } };
 
+  const badPaths = parsed.data.indexNow.filter((path) => !isContentPath(path));
+  if (badPaths.length > 0)
+    return { status: 400, body: { error: `Not a blog or guide path: ${badPaths.slice(0, 3).join(", ")}` } };
+
   const tags = [...new Set(parsed.data.tags)];
   for (const tag of tags) deps.revalidate(tag, parsed.data.mode);
+  const paths = [...new Set(parsed.data.indexNow)];
+  if (paths.length > 0) deps.pingIndexNow?.(paths);
   return { status: 200, body: { revalidated: tags.length } };
 }

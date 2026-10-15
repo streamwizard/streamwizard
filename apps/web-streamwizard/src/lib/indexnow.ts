@@ -10,22 +10,24 @@ export const INDEXNOW_KEY = "07ab6f0bae864d5455522be38d967138";
 const INDEXNOW_ENDPOINT = "https://api.indexnow.org/indexnow";
 
 /**
- * Tell Bing, Yandex and friends the public pages may have changed. Called once
- * per server boot from instrumentation.ts, which is the moment a new build
- * actually starts serving. Only the production host pings: staging and local
- * fail `isIndexableEnvironment()` and return before any request.
+ * Tell Bing, Yandex and friends public pages may have changed. With no paths:
+ * every route in PUBLIC_ROUTES, once per server boot from instrumentation.ts
+ * (the moment a new build starts serving). With paths: the blog and guide
+ * pages a CMS change touched (POST /api/revalidate). Only the production host
+ * pings: staging and local fail `isIndexableEnvironment()` and return before
+ * any request.
  *
  * Never throws. A failed ping costs nothing but a log line; the crawlers
  * still find the sitemap on their own schedule.
  */
-export async function pingIndexNow(): Promise<void> {
+export async function pingIndexNow(paths: string[] = PUBLIC_ROUTES.map((route) => route.path)): Promise<void> {
   if (!isIndexableEnvironment()) return;
 
   const body = {
     host: new URL(absoluteUrl("/")).hostname,
     key: INDEXNOW_KEY,
     keyLocation: absoluteUrl(`/${INDEXNOW_KEY}.txt`),
-    urlList: PUBLIC_ROUTES.map((route) => absoluteUrl(route.path)),
+    urlList: paths.map((path) => absoluteUrl(path)),
   };
 
   try {

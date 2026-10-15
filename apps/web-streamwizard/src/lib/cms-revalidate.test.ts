@@ -73,6 +73,27 @@ describe("handleRevalidate", () => {
     },
   );
 
+  it("hands valid content paths to IndexNow, once each", async () => {
+    const { revalidate } = recorder();
+    const pinged: string[][] = [];
+    const result = await handleRevalidate(
+      request({ tags: [cmsTags.list("guide")], indexNow: ["/guides/set-up-alerts", "/guides", "/guides"] }),
+      { secret: SECRET, revalidate, pingIndexNow: (paths) => pinged.push(paths) },
+    );
+    expect(result.status).toBe(200);
+    expect(pinged).toEqual([["/guides/set-up-alerts", "/guides"]]);
+  });
+
+  it("refuses IndexNow paths outside the blog and guides", async () => {
+    const { calls, revalidate } = recorder();
+    const result = await handleRevalidate(request({ tags: [cmsTags.sitemap], indexNow: ["/pricing"] }), {
+      secret: SECRET,
+      revalidate,
+    });
+    expect(result.status).toBe(400);
+    expect(calls).toEqual([]);
+  });
+
   it("refuses oversized bodies", async () => {
     const { revalidate } = recorder();
     const result = await handleRevalidate(request({ tags: [cmsTags.sitemap], pad: "x".repeat(20_000) }), {
