@@ -5,7 +5,7 @@ import { contentPath, isValidSlug, type ContentType } from "@repo/cms";
 import type { ContentProps } from "@repo/posthog";
 import { JsonLd } from "@/components/seo/json-ld";
 import { cmsImageUrl, imageResolver } from "@/lib/cms/images";
-import { cmsPublicEnabled, getCurrentSlug, getPublicTaxonomy, getPublishedPost, listPostsById } from "@/lib/cms/public";
+import { getCurrentSlug, getPublicTaxonomy, getPublishedPost, listPostsById } from "@/lib/cms/public";
 import {
   articleBreadcrumbSchema,
   articleMeta,
@@ -30,7 +30,7 @@ type Params = Promise<{ slug: string }>;
 
 /** The live post at this URL, a redirect to its new one, or a 404. */
 async function loadPost(type: ContentType, slug: string): Promise<PublishedRow> {
-  if (!(await cmsPublicEnabled()) || !isValidSlug(slug)) notFound();
+  if (!isValidSlug(slug)) notFound();
   const row = await getPublishedPost(type, slug);
   if (row) return row;
   const current = await getCurrentSlug(type, slug);
@@ -40,7 +40,7 @@ async function loadPost(type: ContentType, slug: string): Promise<PublishedRow> 
 
 export async function contentMetadata(type: ContentType, params: Params): Promise<Metadata> {
   const { slug } = await params;
-  if (!(await cmsPublicEnabled()) || !isValidSlug(slug)) return {};
+  if (!isValidSlug(slug)) return {};
   const row = await getPublishedPost(type, slug);
   if (!row) return {};
   const meta = articleMeta(row, absoluteUrl);

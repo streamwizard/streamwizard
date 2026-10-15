@@ -1,9 +1,7 @@
 import { PostHog } from "posthog-node";
 import type { AppEvent, EventMap } from "./event-map";
-import { configureFlags, shutdownFlags } from "./flags";
 
 export { isInternalEmail } from "./internal";
-export { ANONYMOUS_FLAG_ID, FEATURE_FLAGS, isFlagEnabled, type FeatureFlag } from "./flags";
 export type { AppEvent, EventMap } from "./event-map";
 
 interface TrackingConfig {
@@ -37,10 +35,8 @@ let config: TrackingConfig | undefined;
 let client: PostHog | null | undefined;
 
 // Call once per app, before the first event.
-// Also where flag-check failures are reported.
 export function configureTracking(next: TrackingConfig): void {
   config = next;
-  configureFlags({ onError: next.onError });
 }
 
 function report(error: unknown): void {
@@ -154,5 +150,4 @@ export async function flushTracking(): Promise<void> {
   } catch (error) {
     report(error);
   }
-  await shutdownFlags();
 }

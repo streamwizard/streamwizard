@@ -1,6 +1,5 @@
 import { unstable_cache } from "next/cache";
 import { cmsTags, type ContentType } from "@repo/cms";
-import { isFlagEnabled } from "@repo/posthog/server";
 import { createAnonClient } from "@repo/supabase/anon";
 import {
   getCmsSlugRedirect,
@@ -27,11 +26,6 @@ import { authorSameAs, type PublicTaxonomy, type PublishedCardRow, type Publishe
 
 const HOUR = 3600;
 const INDEX_LIMIT = 60;
-
-/** The cms-public flag. Checked outside the cache, so flipping it needs no revalidate. */
-export function cmsPublicEnabled(): Promise<boolean> {
-  return isFlagEnabled("cms-public");
-}
 
 export const getPublishedPost = (type: ContentType, slug: string) =>
   unstable_cache(

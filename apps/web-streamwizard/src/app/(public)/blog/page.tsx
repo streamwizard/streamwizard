@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { ContentIndex, INDEX_COPY } from "@/components/public/cms/content-index";
-import { cmsPublicEnabled } from "@/lib/cms/public";
 import { absoluteUrl } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -10,7 +8,6 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/blog") },
 };
 
-export default async function BlogPage() {
-  if (!(await cmsPublicEnabled())) notFound();
+export default function BlogPage() {
   return <ContentIndex type="blog" />;
 }
