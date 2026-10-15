@@ -2,7 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Archive, ChevronDown, CircleAlert, ExternalLink, FileText, Rocket, Undo2 } from "lucide-react";
+import {
+  Archive,
+  CalendarClock,
+  CalendarX,
+  ChevronDown,
+  CircleAlert,
+  ExternalLink,
+  FileText,
+  Rocket,
+  Undo2,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   Button,
@@ -11,9 +21,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  Input,
   Label,
 } from "@repo/ui";
-import { publishContentAction, unarchiveContentAction, unpublishContentAction } from "@/actions/cms-publish";
+import {
+  publishContentAction,
+  scheduleContentAction,
+  unarchiveContentAction,
+  unpublishContentAction,
+  unscheduleContentAction,
+} from "@/actions/cms-publish";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -23,7 +40,17 @@ import {
   ResponsiveDialogTitle,
 } from "@/components/widgets/responsive-dialog";
 import type { ReadinessItem } from "@/lib/cms/readiness";
+import { defaultScheduleTime, fromLocalInputValue, toLocalInputValue } from "@/lib/cms/schedule-time";
 import type { ContentStatus } from "./content-editor";
+
+const SCHEDULE_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const TIME_ZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 interface PublishControlsProps {
   contentId: string;
@@ -33,6 +60,8 @@ interface PublishControlsProps {
   /** The live page, when the post is on the site and the site URL is known. */
   liveUrl: string | null;
   readiness: ReadinessItem[];
+  /** When a scheduled post goes live. */
+  publishAt: string | null;
   /** Saves pending edits first. Resolves to false when that failed. */
   flush: () => Promise<boolean>;
   /** The lock version after the last save. */
@@ -40,26 +69,71 @@ interface PublishControlsProps {
   disabled: boolean;
 }
 
+function BlockingList({ errors }: { errors: ReadinessItem[] }) {
+  return (
+    <ul className="space-y-1.5 text-sm">
+      {errors.map((item, index) => (
+        <li key={index} className="flex gap-2">
+          <CircleAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+          <span>
+            {item.section !== undefined && <span className="text-muted-foreground">Section {item.section + 1}: </span>}
+            {item.message}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /**
- * Publish, Update, Unpublish, Archive. Publishing always saves first and
- * then puts the saved draft live, so what the admin sees is what goes out.
+ * Publish, Schedule, Update, Unpublish, Archive. Publishing always saves first
+ * and then puts the saved draft live, so what the admin sees is what goes out.
+ * A scheduled post goes live with whatever is saved at its time.
  */
 export function PublishControls(props: PublishControlsProps) {
-  const { contentId, status, path, liveUrl, readiness, flush, lockVersion, disabled } = props;
+  const { contentId, status, path, liveUrl, readiness, publishAt, flush, lockVersion, disabled } = props;
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [minorEdit, setMinorEdit] = useState(false);
   const [takeDown, setTakeDown] = useState<"draft" | "archived" | null>(null);
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [when, setWhen] = useState("");
   const [pending, start] = useTransition();
   const live = status === "published";
   const errors = readiness.filter((item) => item.severity === "error");
   const warnings = readiness.filter((item) => item.severity === "warning");
 
+  const scheduled = status === "scheduled";
+
   const done = (message: string) => {
     toast.success(message);
     setOpen(false);
+    setScheduleOpen(false);
     router.refresh();
   };
+
+  const openSchedule = () => {
+    setWhen(toLocalInputValue(publishAt ? new Date(publishAt) : defaultScheduleTime(new Date())));
+    setScheduleOpen(true);
+  };
+
+  const schedule = () =>
+    start(async () => {
+      const moment = fromLocalInputValue(when);
+      if (!moment) return void toast.error("Pick a date and time.");
+      if (!(await flush())) return void toast.error("Couldn't save your last changes, so nothing was scheduled.");
+      const result = await scheduleContentAction(contentId, lockVersion(), moment.toISOString());
+      if (result.error) return void toast.error(result.error);
+      done(`Scheduled for ${SCHEDULE_FORMAT.format(moment)}.`);
+    });
+
+  const unschedule = () =>
+    start(async () => {
+      if (!(await flush())) return void toast.error("Couldn't save your last changes. Try again?");
+      const result = await unscheduleContentAction(contentId, lockVersion());
+      if (result.error) return void toast.error(result.error);
+      done("Schedule cancelled. It's a draft again.");
+    });
 
   const publish = () =>
     start(async () => {
@@ -100,46 +174,59 @@ export function PublishControls(props: PublishControlsProps) {
       )}
 
       <div className="flex">
-        <Button
-          className={live || status === "archived" ? "h-11 rounded-r-none md:h-9" : "h-11 md:h-9"}
-          onClick={() => setOpen(true)}
-          disabled={busy}
-        >
+        <Button className="h-11 rounded-r-none md:h-9" onClick={() => setOpen(true)} disabled={busy}>
           <Rocket aria-hidden />
-          {live ? "Update" : status === "archived" ? "Publish again" : "Publish"}
+          {live ? "Update" : status === "archived" ? "Publish again" : scheduled ? "Publish now" : "Publish"}
         </Button>
-        {(live || status === "archived") && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                className="h-11 rounded-l-none border-l border-primary-foreground/20 px-2 md:h-9"
-                disabled={busy}
-                aria-label="More publishing options"
-              >
-                <ChevronDown />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {live ? (
-                <>
-                  <DropdownMenuItem onSelect={() => setTakeDown("draft")}>
-                    <FileText aria-hidden />
-                    Unpublish (back to draft)
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setTakeDown("archived")}>
-                    <Archive aria-hidden />
-                    Archive
-                  </DropdownMenuItem>
-                </>
-              ) : (
-                <DropdownMenuItem onSelect={unarchive}>
-                  <Undo2 aria-hidden />
-                  Back to drafts
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              className="h-11 rounded-l-none border-l border-primary-foreground/20 px-2 md:h-9"
+              disabled={busy}
+              aria-label="More publishing options"
+            >
+              <ChevronDown />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {status === "draft" && (
+              <DropdownMenuItem onSelect={openSchedule}>
+                <CalendarClock aria-hidden />
+                Schedule…
+              </DropdownMenuItem>
+            )}
+            {scheduled && (
+              <>
+                <DropdownMenuItem onSelect={openSchedule}>
+                  <CalendarClock aria-hidden />
+                  Change the time…
                 </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+                <DropdownMenuItem onSelect={unschedule}>
+                  <CalendarX aria-hidden />
+                  Cancel the schedule
+                </DropdownMenuItem>
+              </>
+            )}
+            {live && (
+              <>
+                <DropdownMenuItem onSelect={() => setTakeDown("draft")}>
+                  <FileText aria-hidden />
+                  Unpublish (back to draft)
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setTakeDown("archived")}>
+                  <Archive aria-hidden />
+                  Archive
+                </DropdownMenuItem>
+              </>
+            )}
+            {status === "archived" && (
+              <DropdownMenuItem onSelect={unarchive}>
+                <Undo2 aria-hidden />
+                Back to drafts
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <ResponsiveDialog open={open} onOpenChange={setOpen}>
@@ -153,24 +240,14 @@ export function PublishControls(props: PublishControlsProps) {
                 ? "Fix these first. They're also on the Checks tab."
                 : live
                   ? `The saved draft replaces what's on ${path} now.`
-                  : `It goes live at ${path} right away.`}
+                  : scheduled
+                    ? `It goes live at ${path} right away instead of at its scheduled time.`
+                    : `It goes live at ${path} right away.`}
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
 
           {errors.length > 0 ? (
-            <ul className="space-y-1.5 text-sm">
-              {errors.map((item, index) => (
-                <li key={index} className="flex gap-2">
-                  <CircleAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-                  <span>
-                    {item.section !== undefined && (
-                      <span className="text-muted-foreground">Section {item.section + 1}: </span>
-                    )}
-                    {item.message}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <BlockingList errors={errors} />
           ) : (
             <div className="space-y-4 text-sm">
               {warnings.length > 0 && (
@@ -205,6 +282,45 @@ export function PublishControls(props: PublishControlsProps) {
             {errors.length === 0 && (
               <Button onClick={publish} disabled={pending}>
                 {live ? "Update" : "Publish"}
+              </Button>
+            )}
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
+
+      <ResponsiveDialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>{errors.length > 0 ? "Not ready yet" : "Schedule it"}</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              {errors.length > 0
+                ? "Fix these first. A post has to pass the checks to be scheduled."
+                : `It goes live at ${path} at this time, with whatever is saved by then.`}
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+          {errors.length > 0 ? (
+            <BlockingList errors={errors} />
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor={`${contentId}-publish-at`}>Goes live</Label>
+              <Input
+                id={`${contentId}-publish-at`}
+                type="datetime-local"
+                value={when}
+                min={toLocalInputValue(new Date())}
+                onChange={(event) => setWhen(event.target.value)}
+                className="h-11 md:h-9"
+              />
+              <p className="text-xs text-muted-foreground">Your time ({TIME_ZONE}).</p>
+            </div>
+          )}
+          <ResponsiveDialogFooter>
+            <Button variant="ghost" onClick={() => setScheduleOpen(false)}>
+              {errors.length > 0 ? "Close" : "Cancel"}
+            </Button>
+            {errors.length === 0 && (
+              <Button onClick={schedule} disabled={pending || !when}>
+                Schedule
               </Button>
             )}
           </ResponsiveDialogFooter>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { classifyContentError, toFootprint } from "./content-errors";
+import { classifyContentError, describeScheduleError } from "./content-errors";
 
 describe("classifyContentError", () => {
   it("reads the database functions' prefixes", () => {
@@ -37,19 +37,9 @@ describe("classifyContentError", () => {
   });
 });
 
-describe("toFootprint", () => {
-  it("maps the snake_case shape", () => {
-    expect(toFootprint({ id: "a", type: "guide", category_ids: ["c"], tag_ids: null, author_ids: ["x"] })).toEqual({
-      id: "a",
-      type: "guide",
-      categoryIds: ["c"],
-      tagIds: [],
-      authorIds: ["x"],
-    });
-  });
-
-  it("is null for nothing or junk", () => {
-    expect(toFootprint(null)).toBeNull();
-    expect(toFootprint({ id: "a", type: "news" })).toBeNull();
+describe("describeScheduleError", () => {
+  it("turns the stored database reason into the editor's wording", () => {
+    expect(describeScheduleError("cms_invalid: at least one author is required")).toBe("Add at least one author.");
+    expect(describeScheduleError("something unexpected")).toBe("something unexpected");
   });
 });

@@ -66,6 +66,8 @@ export interface ContentEditorProps {
   publishedSlug: string | null;
   /** The live page on the site, when published and the site URL is known. */
   liveUrl: string | null;
+  /** When a scheduled post goes live. */
+  publishAt: string | null;
   /** The working copy changed after the live copy was made. */
   unpublishedChanges: boolean;
   scheduleError: string | null;
@@ -147,6 +149,14 @@ function ImageField({
  * site only changes when it is published. A save that finds someone else's
  * newer version stops autosaving and asks for a reload instead of overwriting.
  */
+const SCHEDULED_AT = new Intl.DateTimeFormat("en-GB", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
 export function ContentEditor(props: ContentEditorProps) {
   const { id, type, status, publishedSlug, unpublishedChanges, scheduleError, options } = props;
   const uid = useId();
@@ -249,6 +259,14 @@ export function ContentEditor(props: ContentEditorProps) {
         description={`${guide ? "Guide" : "Blog post"} · ${derived.words} words · ${derived.minutes} min read`}
       >
         <Badge variant={status === "published" ? "default" : "outline"}>{STATUS_LABELS[status]}</Badge>
+        {status === "scheduled" && props.publishAt && (
+          <span className="text-xs text-muted-foreground">
+            Goes live {/* The server renders in its own timezone; the browser corrects it to the admin's. */}
+            <time dateTime={props.publishAt} suppressHydrationWarning>
+              {SCHEDULED_AT.format(new Date(props.publishAt))}
+            </time>
+          </span>
+        )}
         {publishedSlug && unpublishedChanges && <Badge variant="secondary">Unpublished changes</Badge>}
         <SaveStatus status={saveStatus} conflict={conflict} />
         <PreviewMenu contentId={id} flush={flush} />
@@ -268,6 +286,7 @@ export function ContentEditor(props: ContentEditorProps) {
           path={contentPath(type, draft.slug)}
           liveUrl={props.liveUrl}
           readiness={readiness}
+          publishAt={props.publishAt}
           flush={flush}
           lockVersion={() => lock.current}
           disabled={pending || conflict}
@@ -310,7 +329,7 @@ export function ContentEditor(props: ContentEditorProps) {
       )}
       {scheduleError && (
         <div role="alert" className="rounded-lg border border-amber-500/50 bg-amber-500/5 p-3 text-sm">
-          The scheduled publish didn&apos;t go through, so this is a draft again: {scheduleError}
+          The scheduled publish didn&apos;t go through, so this is a draft again. {scheduleError}
         </div>
       )}
 

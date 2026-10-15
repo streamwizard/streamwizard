@@ -2,7 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { tagsForChange, transition, type ContentStatus } from "@repo/cms";
+import {
+  contentIndexPath,
+  contentPath,
+  parseFootprint,
+  tagsForChange,
+  transition,
+  type ContentStatus,
+  type ContentType,
+} from "@repo/cms";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { selectCmsAsset } from "@repo/supabase/queries/cms/assets";
 import {
@@ -11,9 +19,10 @@ import {
   unarchiveCmsContent,
   unpublishCmsContent,
 } from "@repo/supabase/queries/cms/content";
+import { scheduleCmsContent, unscheduleCmsContent } from "@repo/supabase/queries/cms/schedule";
 import { logPlatformEvent } from "@repo/supabase/queries/platform-events";
 import { CmsError, requireCmsAdmin, toCmsActionError, type CmsActionResult } from "@/lib/cms/action";
-import { classifyContentError, toFootprint } from "@/lib/cms/content-errors";
+import { classifyContentError } from "@/lib/cms/content-errors";
 import { contentType, draftFromRow } from "@/lib/cms/draft-row";
 import { blockingMessage, publicContentUrl } from "@/lib/cms/publish";
 import { publishReadiness } from "@/lib/cms/readiness";
@@ -56,6 +65,29 @@ function throwDbError(error: unknown): never {
   throw error;
 }
 
+type EditorRow = Awaited<ReturnType<typeof loadForMove>>;
+
+/** The editor's publish checks, again on the server: an old tab or a crafted request can't skip them. */
+async function assertPublishable(row: EditorRow): Promise<void> {
+  const cover = row.cover_asset_id ? (await selectCmsAsset(supabaseAdmin, row.cover_asset_id)).data : null;
+  const blocked = blockingMessage(
+    publishReadiness(contentType(row), draftFromRow(row), {
+      coverAlt: row.cover_asset_id
+        ? cover
+          ? { alt: cover.alt ?? "", decorative: cover.is_decorative }
+          : null
+        : undefined,
+    }),
+  );
+  if (blocked) throw new CmsError(blocked);
+}
+
+/** The pages to tell IndexNow about: the post, its old URL after a slug change, and its index. */
+function indexNowPaths(type: ContentType, slugs: (string | null | undefined)[]): string[] {
+  const paths = slugs.flatMap((slug) => (slug ? [contentPath(type, slug)] : []));
+  return [...new Set([...paths, contentIndexPath(type)])];
+}
+
 function refreshAdmin(id: string) {
   revalidatePath(CONTENT_PATH);
   revalidatePath(`${CONTENT_PATH}/${id}`, "layout");
@@ -75,17 +107,7 @@ export async function publishContentAction(id: string, lockVersion: number, mino
     const move = transition(status, update ? "update" : "publish", { now: new Date() });
     if (!move.ok) throw new CmsError(move.error);
 
-    const cover = row.cover_asset_id ? (await selectCmsAsset(supabaseAdmin, row.cover_asset_id)).data : null;
-    const blocked = blockingMessage(
-      publishReadiness(type, draftFromRow(row), {
-        coverAlt: row.cover_asset_id
-          ? cover
-            ? { alt: cover.alt ?? "", decorative: cover.is_decorative }
-            : null
-          : undefined,
-      }),
-    );
-    if (blocked) throw new CmsError(blocked);
+    await assertPublishable(row);
 
     const { data, error } = await publishCmsContent(supabaseAdmin, id, actor, lockVersion, update && minorEdit);
     if (error) throwDbError(error);
@@ -93,7 +115,9 @@ export async function publishContentAction(id: string, lockVersion: number, mino
 
     // Immediate, not stale-while-revalidate: the next visit is usually the
     // admin's own "View on site", and it has to show what they just pushed.
-    await revalidateCms(tagsForChange(toFootprint(result.before), toFootprint(result.after)), "immediate");
+    await revalidateCms(tagsForChange(parseFootprint(result.before), parseFootprint(result.after)), "immediate", {
+      indexNow: indexNowPaths(type, [row.slug, row.published?.slug]),
+    });
     const url = publicContentUrl(env.CMS_SITE_URL, type, row.slug);
     const base = {
       content_id: id,
@@ -138,8 +162,10 @@ export async function unpublishContentAction(
     if (error) throwDbError(error);
     const result = data as { before?: unknown; lock_version: number };
 
-    await revalidateCms(tagsForChange(toFootprint(result.before), null), "immediate");
     const type = contentType(row);
+    await revalidateCms(tagsForChange(parseFootprint(result.before), null), "immediate", {
+      indexNow: indexNowPaths(type, [row.published?.slug ?? row.slug]),
+    });
     await logPlatformEvent(
       supabaseAdmin,
       {
@@ -182,6 +208,99 @@ export async function unarchiveContentAction(id: string, lockVersion: number): P
   } catch (error) {
     return {
       ...toCmsActionError(error, "unarchive content", "Couldn't move it back to drafts. Try again?"),
+      lockVersion: null,
+      url: null,
+    };
+  }
+}
+
+export interface ScheduleResult extends PublishResult {
+  publishAt: string | null;
+}
+
+/**
+ * Schedule a draft, or move a scheduled post to a new time. The publish
+ * checks run now as well, so a post that can't go live isn't scheduled; the
+ * rest-api scheduler publishes it at `publishAt` on this admin's behalf.
+ */
+export async function scheduleContentAction(
+  id: string,
+  lockVersion: number,
+  publishAt: string,
+): Promise<ScheduleResult> {
+  try {
+    const actor = await requireCmsAdmin();
+    const row = await loadForMove(id, lockVersion);
+    const when = new Date(publishAt);
+    const move = transition(row.status as ContentStatus, "schedule", { now: new Date(), publishAt: when });
+    if (!move.ok) throw new CmsError(move.error);
+    await assertPublishable(row);
+
+    const { data, error } = await scheduleCmsContent(supabaseAdmin, id, actor, lockVersion, when.toISOString());
+    if (error) throwDbError(error);
+    const result = data as { lock_version: number; publish_at: string };
+
+    const type = contentType(row);
+    await logPlatformEvent(
+      supabaseAdmin,
+      {
+        type: "content.scheduled",
+        actorUserId: actor,
+        payload: {
+          content_id: id,
+          content_type: type,
+          title: row.title,
+          slug: row.slug,
+          publish_at: result.publish_at,
+          ...(await actorIdentity(actor)),
+        },
+      },
+      "web-admin cms: schedule",
+    );
+    refreshAdmin(id);
+    return { error: null, lockVersion: result.lock_version, url: null, publishAt: result.publish_at };
+  } catch (error) {
+    return {
+      ...toCmsActionError(error, "schedule content", "Couldn't schedule it. Try again?"),
+      lockVersion: null,
+      url: null,
+      publishAt: null,
+    };
+  }
+}
+
+/** Drop the schedule: back to a draft. */
+export async function unscheduleContentAction(id: string, lockVersion: number): Promise<PublishResult> {
+  try {
+    const actor = await requireCmsAdmin();
+    const row = await loadForMove(id, lockVersion);
+    const move = transition(row.status as ContentStatus, "unschedule", { now: new Date() });
+    if (!move.ok) throw new CmsError(move.error);
+
+    const { data, error } = await unscheduleCmsContent(supabaseAdmin, id, actor, lockVersion);
+    if (error) throwDbError(error);
+    const result = data as { lock_version: number };
+
+    await logPlatformEvent(
+      supabaseAdmin,
+      {
+        type: "content.unscheduled",
+        actorUserId: actor,
+        payload: {
+          content_id: id,
+          content_type: contentType(row),
+          title: row.title,
+          slug: row.slug,
+          ...(await actorIdentity(actor)),
+        },
+      },
+      "web-admin cms: unschedule",
+    );
+    refreshAdmin(id);
+    return { error: null, lockVersion: result.lock_version, url: null };
+  } catch (error) {
+    return {
+      ...toCmsActionError(error, "unschedule content", "Couldn't cancel the schedule. Try again?"),
       lockVersion: null,
       url: null,
     };

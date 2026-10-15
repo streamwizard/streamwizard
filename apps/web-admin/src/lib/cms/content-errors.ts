@@ -1,7 +1,5 @@
-import type { PublicFootprint } from "@repo/cms";
-
 // Turns what the CMS database functions raise into something an admin can
-// act on, and their footprints into @repo/cms's shape. Pure.
+// act on. Pure.
 
 export type ContentFailure =
   | { kind: "conflict" }
@@ -20,6 +18,7 @@ const INVALID_MESSAGES: [RegExp, string][] = [
   [/^a title is required/, "Give it a title first."],
   [/^only guides have sections/, "Only guides have sections."],
   [/belongs to another post/, "A section got mixed up with another post. Reload the page."],
+  [/^the publish time has to be in the future/, "Pick a time in the future."],
 ];
 
 export function classifyContentError(error: unknown): ContentFailure {
@@ -44,24 +43,10 @@ export function classifyContentError(error: unknown): ContentFailure {
   return { kind: "unknown" };
 }
 
-interface DbFootprint {
-  id: string;
-  type: "blog" | "guide";
-  category_ids: string[] | null;
-  tag_ids: string[] | null;
-  author_ids: string[] | null;
-}
-
-/** A footprint as the database functions return it, or null. */
-export function toFootprint(value: unknown): PublicFootprint | null {
-  if (!value || typeof value !== "object") return null;
-  const raw = value as DbFootprint;
-  if (typeof raw.id !== "string" || (raw.type !== "blog" && raw.type !== "guide")) return null;
-  return {
-    id: raw.id,
-    type: raw.type,
-    categoryIds: raw.category_ids ?? [],
-    tagIds: raw.tag_ids ?? [],
-    authorIds: raw.author_ids ?? [],
-  };
+/** schedule_error as the scheduler stored it (a raw database message), for the editor's banner. */
+export function describeScheduleError(raw: string): string {
+  const failure = classifyContentError({ message: raw });
+  if (failure.kind === "message") return failure.message;
+  if (failure.kind === "conflict") return "Someone was saving it at that moment. Schedule it again.";
+  return raw;
 }

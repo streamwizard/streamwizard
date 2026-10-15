@@ -3,7 +3,7 @@
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { tagsForChange } from "@repo/cms";
+import { parseFootprint, tagsForChange } from "@repo/cms";
 import type { Json } from "@repo/supabase/types/supabase";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { logPlatformEvent } from "@repo/supabase/queries/platform-events";
@@ -17,7 +17,7 @@ import {
   untrashCmsContent,
 } from "@repo/supabase/queries/cms/content";
 import { CmsError, requireCmsAdmin, toCmsActionError, type CmsActionResult } from "@/lib/cms/action";
-import { classifyContentError, toFootprint } from "@/lib/cms/content-errors";
+import { classifyContentError } from "@/lib/cms/content-errors";
 import { canonicalProblem, deriveDraft, draftSchema, type ContentDraft, type ContentType } from "@/lib/cms/draft";
 import { revalidateCms } from "@/lib/cms/revalidate";
 import { actorIdentity } from "@/lib/platform-events";
@@ -180,7 +180,7 @@ export async function trashContentAction(id: string, lockVersion: number | null)
       if (failure.kind === "not_found") return { error: null };
       throw error;
     }
-    const before = toFootprint((data as { before?: unknown } | null)?.before);
+    const before = parseFootprint((data as { before?: unknown } | null)?.before);
     await revalidateCms(tagsForChange(before, null), "immediate");
     if (summary) {
       await logPlatformEvent(

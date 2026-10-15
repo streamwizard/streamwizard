@@ -8,6 +8,7 @@ import {
 } from "@repo/supabase/queries/cms/content";
 import { listCmsCategories } from "@repo/supabase/queries/cms/taxonomy";
 import { ContentListView, type ContentListFilters } from "@/components/content/content-list-view";
+import { describeScheduleError } from "@/lib/cms/content-errors";
 
 export const dynamic = "force-dynamic";
 
@@ -68,7 +69,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
         slug: row.slug,
         updatedAt: row.updated_at,
         publishAt: row.publish_at,
-        scheduleError: row.schedule_error,
+        scheduleError: row.schedule_error ? describeScheduleError(row.schedule_error) : null,
         unpublishedChanges: !!row.published && row.updated_at > row.published.snapshot_at,
         authors: [...row.credits]
           .sort((a, b) => a.position - b.position)

@@ -179,6 +179,11 @@ export function ContentListView({
           <Badge variant={row.status === "published" ? "default" : "secondary"} className="text-xs">
             {STATUS_LABELS[row.status]}
           </Badge>
+          {row.status === "scheduled" && row.publishAt && (
+            <time dateTime={row.publishAt} className="text-xs text-muted-foreground">
+              {formatDateTime(row.publishAt)}
+            </time>
+          )}
           {row.unpublishedChanges && (
             <Badge variant="outline" className="text-xs">
               Unpublished changes
