@@ -74,6 +74,33 @@ describe("log channel formatters", () => {
     expect(embed.color).toBe(TWITCH_PURPLE);
   });
 
+  test("content scheduled: names the time in Discord's own format", () => {
+    const embed = formatPlatformEvent(
+      event("content.scheduled", {
+        content_type: "blog",
+        title: "Launch week",
+        slug: "launch-week",
+        publish_at: "2026-10-20T09:00:00.000Z",
+      }),
+    ).toJSON();
+    expect(embed.description).toBe(
+      "The blog post **Launch week** goes live <t:1792486800:f> (<t:1792486800:R>).",
+    );
+  });
+
+  test("content schedule failed: the reason, red", () => {
+    const embed = formatPlatformEvent(
+      event("content.schedule_failed", {
+        content_type: "guide",
+        title: "Alerts",
+        slug: "alerts",
+        error: "cms_invalid: at least one author is required",
+      }),
+    ).toJSON();
+    expect(fieldValue(embed, "Why")).toBe("cms\\_invalid: at least one author is required");
+    expect(embed.color).toBe(DANGER_RED);
+  });
+
   test("content trashed: unlinked title and red", () => {
     const embed = formatPlatformEvent(
       event("content.trashed", { content_type: "blog", title: "Old news", slug: "old-news", was_public: true }),

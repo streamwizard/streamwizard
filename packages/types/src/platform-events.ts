@@ -42,7 +42,7 @@ export const PLATFORM_EVENT_GROUPS: { id: PlatformEventGroup; label: string; hin
     hint: "The bot's Twitch EventSub connection: outages, reconnects, session moves and revoked subscriptions.",
   },
   { id: "tickets", label: "Tickets", hint: "Tickets opened, claimed, closed, rated and replied to from the dashboard." },
-  { id: "content", label: "Blog and guides", hint: "Posts and guides published, updated, taken down or moved to the trash." },
+  { id: "content", label: "Blog and guides", hint: "Posts and guides published, scheduled, updated, taken down or moved to the trash." },
   { id: "members", label: "Members", hint: "Joins, leaves, kicks, bans, timeouts, nicknames and roles." },
   { id: "messages", label: "Messages", hint: "Edited and deleted messages, including their text." },
   { id: "roles", label: "Roles", hint: "Roles created, changed or deleted." },
@@ -102,6 +102,9 @@ export const PLATFORM_EVENTS = {
   "content.unpublished": { label: "Post unpublished", group: "content", defaultEnabled: true },
   "content.archived": { label: "Post archived", group: "content", defaultEnabled: true },
   "content.trashed": { label: "Post moved to the trash", group: "content", defaultEnabled: true },
+  "content.scheduled": { label: "Post scheduled", group: "content", defaultEnabled: true },
+  "content.unscheduled": { label: "Schedule cancelled", group: "content", defaultEnabled: true },
+  "content.schedule_failed": { label: "Scheduled publish failed", group: "content", defaultEnabled: true },
 
   "member.joined": { label: "Member joined", group: "members", defaultEnabled: true },
   "member.left": { label: "Member left", group: "members", defaultEnabled: true },
@@ -375,11 +378,16 @@ export interface PlatformEventPayloads {
   };
   "log.test": ActorIdentity;
 
-  "content.published": ContentEvent & { first_publish: boolean };
+  /** `scheduled`: the rest-api scheduler published it at its time, for the admin who scheduled it. */
+  "content.published": ContentEvent & { first_publish: boolean; scheduled?: boolean };
   "content.updated": ContentEvent & { minor_edit: boolean };
   "content.unpublished": ContentEvent;
   "content.archived": ContentEvent;
   "content.trashed": ContentEvent & { was_public: boolean };
+  "content.scheduled": ContentEvent & { publish_at: string };
+  "content.unscheduled": ContentEvent;
+  /** The post went back to a draft; `error` says why (as the database raised it). */
+  "content.schedule_failed": ContentEvent & { publish_at?: string | null; error: string };
 
   "member.joined": MemberEvent & { account_created_at?: string | null; member_count?: number | null };
   "member.left": MemberEvent & { joined_at?: string | null; roles?: DiscordRoleRef[]; member_count?: number | null };

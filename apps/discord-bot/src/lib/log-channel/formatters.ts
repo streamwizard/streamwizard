@@ -12,6 +12,7 @@ import {
   codeList,
   describeLines,
   discordDate,
+  discordDateTime,
   discordMention,
   discordUser,
   duration,
@@ -498,7 +499,10 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
           ? `The ${contentKind(payload)} ${contentTitle(payload)} is back on the site.`
           : `New ${contentKind(payload)} on the site: ${contentTitle(payload)}.`,
       )
-      .addFields(contentFields(payload)),
+      .addFields([
+        ...contentFields(payload),
+        ...field("How", payload.scheduled ? "Scheduled" : null),
+      ]),
 
   "content.updated": (payload, event) =>
     withActor(base(event, "content.updated"), payload)
@@ -527,6 +531,25 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
           : `The draft ${contentKind(payload)} ${contentTitle(payload)} was moved to the trash.`,
       )
       .addFields(contentFields(payload)),
+
+  "content.scheduled": (payload, event) =>
+    withActor(base(event, "content.scheduled"), payload)
+      .setDescription(
+        `The ${contentKind(payload)} ${contentTitle(payload)} goes live ${discordDateTime(payload.publish_at, "later")}.`,
+      )
+      .addFields(contentFields(payload)),
+
+  "content.unscheduled": (payload, event) =>
+    withActor(base(event, "content.unscheduled"), payload)
+      .setDescription(`The ${contentKind(payload)} ${contentTitle(payload)} is no longer scheduled. It's a draft again.`)
+      .addFields(contentFields(payload)),
+
+  "content.schedule_failed": (payload, event) =>
+    withActor(base(event, "content.schedule_failed"), payload)
+      .setDescription(
+        `The ${contentKind(payload)} ${contentTitle(payload)} didn't go live at its time. It's a draft again.`,
+      )
+      .addFields([...field("Why", plain(payload.error), false), ...contentFields(payload)]),
 
   "log.test": (payload, event) =>
     withActor(base(event, "log.test"), payload).setDescription(
