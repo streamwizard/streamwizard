@@ -1,3 +1,4 @@
+import { AddClipsHelpDialog } from "@/components/clips/add-clips-help-dialog";
 import { ClipsDisplay } from "@/components/clips/clips-display";
 import { ClipsPaginationBar } from "@/components/nav/clips-pagination-bar";
 import { Button } from "@repo/ui";
@@ -105,7 +106,7 @@ export default async function Page({ params, searchParams }: PageProps) {
         <div className="mt-32 flex flex-col items-center justify-center space-y-4 p-6 text-center">
           <FolderX className="h-16 w-16 text-muted-foreground " />
           <p className="text-muted-foreground">This folder is empty</p>
-          <Button variant="outline">How do I add clips to a folder?</Button>
+          <AddClipsHelpDialog />
         </div>
       )}
     </>
