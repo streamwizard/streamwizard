@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
-import { ContentIndex, INDEX_COPY } from "@/components/public/cms/content-index";
-import { absoluteUrl } from "@/lib/seo";
+import { ContentIndex, contentIndexMetadata } from "@/components/public/cms/content-index";
+import type { RawSearchParams } from "@/lib/cms/filters";
 
-export const metadata: Metadata = {
-  title: "Blog",
-  description: INDEX_COPY.blog.description,
-  alternates: { canonical: absoluteUrl("/blog") },
-};
+interface Props {
+  searchParams: Promise<RawSearchParams>;
+}
 
-export default function BlogPage() {
-  return <ContentIndex type="blog" />;
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  return contentIndexMetadata("blog", await searchParams);
+}
+
+export default async function BlogPage({ searchParams }: Props) {
+  return <ContentIndex type="blog" searchParams={await searchParams} />;
 }

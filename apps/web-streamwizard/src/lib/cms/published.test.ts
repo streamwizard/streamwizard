@@ -77,6 +77,8 @@ function row(overrides: Partial<PublishedRow> = {}): PublishedRow {
     tag_ids: [TAG],
     related_ids: [],
     primary_category_id: CATEGORY,
+    is_featured: false,
+    pinned_rank: null,
     first_published_at: "2026-10-01T10:00:00.000Z",
     content_updated_at: "2026-10-05T10:00:00.000Z",
     ...overrides,
@@ -120,7 +122,10 @@ describe("toCard", () => {
   it("links to the post and names its primary category", () => {
     const card = toCard(row(), taxonomy, imageUrl);
     expect(card.path).toBe("/guides/set-up-alerts");
-    expect(card.category).toBe("Overlays");
+    expect(card.category).toEqual({ slug: "overlays", name: "Overlays" });
+    expect(card.categories.map((term) => term.slug)).toEqual(["overlays", "obs"]);
+    expect(card.tags).toEqual([{ slug: "alerts", name: "Alerts" }]);
+    expect(card.prerequisiteCount).toBe(1);
     expect(card.authors).toEqual(["Jochem"]);
   });
 });

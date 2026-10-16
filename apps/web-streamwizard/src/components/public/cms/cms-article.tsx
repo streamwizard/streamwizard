@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { pageOutline, type Doc } from "@repo/cms";
+import { DIFFICULTY_LABELS, LONG_DATE } from "@/lib/cms/published";
 import { CMS_PROSE, CmsDocument, type ResolvedImage } from "./cms-document";
 
 // One blog post or guide, laid out for reading. The draft preview and the
@@ -29,12 +30,8 @@ export interface ArticleData {
   sections: { title: string; body: Doc }[];
 }
 
-const DIFFICULTY_LABELS = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" } as const;
-
-const DATE = new Intl.DateTimeFormat("en", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
-
 function formatDate(iso: string): string {
-  return DATE.format(new Date(iso));
+  return LONG_DATE.format(new Date(iso));
 }
 
 interface CmsArticleProps {
