@@ -43,6 +43,8 @@ import { activeTextStyle, TEXT_STYLES, textStyleLabel, type TextStyle, type Text
 import { cn } from "@/lib/utils";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
+import { BlockHandle } from "./block-handle";
+import { BlockInserter } from "./block-inserter";
 import { CODE_LANGUAGES, cmsExtensions } from "./extensions";
 
 // Prose styles for the editing surface. The public site has its own; these
@@ -394,6 +396,8 @@ export function RichTextEditor({ initial, onChange, placeholder, label, classNam
           onEmbed={() => setDialog("embed")}
         />
       )}
+      {editor && <BlockInserter editor={editor} onDialog={setDialog} />}
+      {editor && <BlockHandle editor={editor} />}
       <EditorContent editor={editor} />
 
       {editor && dialog === "link" && <LinkDialog editor={editor} onClose={() => setDialog(null)} />}

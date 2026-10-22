@@ -37,6 +37,7 @@
     "@t3-oss/env-nextjs": "^0.13.11",
     "@tanstack/react-virtual": "^3.13.25",
     "@tiptap/core": "^3.32.0",
+    "@tiptap/extension-drag-handle-react": "3.32.0",
     "@tiptap/extension-table": "^3.32.0",
     "@tiptap/extensions": "^3.32.0",
     "@tiptap/pm": "^3.32.0",

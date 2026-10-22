@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { Button, Input } from "@repo/ui";
+import { SortableList, type SortableMove } from "@repo/ui/components/sortable-list";
 import { emptyDoc, LIMITS, type DraftSection } from "@/lib/cms/draft";
 import { ConfirmButton } from "../confirm-button";
 import { RichTextEditor } from "./rich-text-editor";
@@ -15,21 +16,20 @@ interface SectionListProps {
 function SectionCard({
   section,
   index,
-  count,
+  move,
   onChange,
-  onMove,
   onRemove,
 }: {
   section: DraftSection;
   index: number;
-  count: number;
+  /** Drag does the same thing; these keep it reachable from the keyboard. */
+  move: SortableMove;
   onChange: (section: DraftSection) => void;
-  onMove: (to: number) => void;
   onRemove: () => void;
 }) {
   const uid = useId();
   return (
-    <li className="space-y-3 rounded-lg border p-4">
+    <div className="space-y-3 rounded-lg border p-4">
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-muted-foreground tabular-nums">{index + 1}.</span>
         <Input
@@ -46,8 +46,8 @@ function SectionCard({
           variant="ghost"
           size="icon"
           className="size-11 md:size-8"
-          disabled={index === 0}
-          onClick={() => onMove(index - 1)}
+          disabled={!move.up}
+          onClick={move.up}
           aria-label={`Move section ${index + 1} up`}
         >
           <ArrowUp />
@@ -57,8 +57,8 @@ function SectionCard({
           variant="ghost"
           size="icon"
           className="size-11 md:size-8"
-          disabled={index === count - 1}
-          onClick={() => onMove(index + 1)}
+          disabled={!move.down}
+          onClick={move.down}
           aria-label={`Move section ${index + 1} down`}
         >
           <ArrowDown />
@@ -86,7 +86,7 @@ function SectionCard({
         placeholder="Write this step. Use H3 for sub-steps."
         label={`Section ${index + 1} text`}
       />
-    </li>
+    </div>
   );
 }
 
@@ -94,29 +94,27 @@ function SectionCard({
 export function SectionList({ sections, onChange }: SectionListProps) {
   const update = (index: number, section: DraftSection) =>
     onChange(sections.map((current, i) => (i === index ? section : current)));
-  const move = (from: number, to: number) => {
-    const next = [...sections];
-    const [moved] = next.splice(from, 1);
-    if (moved) next.splice(to, 0, moved);
-    onChange(next);
-  };
 
   return (
     <div className="space-y-3">
-      <ol className="space-y-4">
-        {sections.map((section, index) => (
+      <SortableList
+        id="guide-sections"
+        items={sections}
+        onReorder={onChange}
+        itemLabel={(section) => section.title.trim() || "this section"}
+        className="space-y-4 divide-y-0"
+        handleClassName="self-start"
+      >
+        {(section, move) => (
           <SectionCard
-            // Ids are made in the browser for new sections, so keys stay stable across saves.
-            key={section.id}
             section={section}
-            index={index}
-            count={sections.length}
-            onChange={(next) => update(index, next)}
-            onMove={(to) => move(index, to)}
-            onRemove={() => onChange(sections.filter((_, i) => i !== index))}
+            index={sections.findIndex((current) => current.id === section.id)}
+            move={move}
+            onChange={(next) => update(sections.indexOf(section), next)}
+            onRemove={() => onChange(sections.filter((current) => current.id !== section.id))}
           />
-        ))}
-      </ol>
+        )}
+      </SortableList>
       <Button
         type="button"
         variant="outline"
