@@ -18,6 +18,8 @@ export type CmsContentSort = "updated" | "published" | "title";
 export interface CmsContentListFilters {
   type?: CmsContentType;
   status?: CmsContentStatus;
+  /** Where the draft stands with the other admins: 'requested', 'changes', 'approved'. */
+  reviewState?: string;
   authorId?: string;
   categoryId?: string;
   search?: string;
@@ -31,6 +33,7 @@ export interface CmsContentListRow {
   id: string;
   type: string;
   status: string;
+  review_state: string;
   title: string;
   slug: string;
   updated_at: string;
@@ -43,7 +46,7 @@ export interface CmsContentListRow {
 }
 
 const LIST_COLUMNS =
-  "id, type, status, title, slug, updated_at, publish_at, first_published_at, deleted_at, schedule_error, published:cms_content_published(snapshot_at), credits:cms_content_authors(position, author:cms_authors(id, name))";
+  "id, type, status, review_state, title, slug, updated_at, publish_at, first_published_at, deleted_at, schedule_error, published:cms_content_published(snapshot_at), credits:cms_content_authors(position, author:cms_authors(id, name))";
 
 export const listCmsContent = withMetrics(
   "cms_content",
@@ -62,6 +65,7 @@ export const listCmsContent = withMetrics(
     query = filters.trash ? query.not("deleted_at", "is", null) : query.is("deleted_at", null);
     if (filters.type) query = query.eq("type", filters.type);
     if (filters.status) query = query.eq("status", filters.status);
+    if (filters.reviewState) query = query.eq("review_state", filters.reviewState);
     if (filters.authorId) query = query.eq("author_filter.author_id", filters.authorId);
     if (filters.categoryId) query = query.eq("category_filter.category_id", filters.categoryId);
     const search = filters.search?.replace(/[%_,()]/g, " ").trim();

@@ -27,6 +27,7 @@ import { FilterPanel } from "@/components/widgets/filter-panel";
 import { PageHeader } from "@/components/widgets/page-header";
 import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
 import type { ContentType } from "@/lib/cms/draft";
+import { REVIEW_BADGE, REVIEW_FILTER_STATES, REVIEW_LABELS, type ReviewState } from "@/lib/cms/review";
 import { templatesFor } from "@/lib/cms/templates";
 import {
   ResponsiveDialog,
@@ -79,6 +80,8 @@ export interface ContentListFilters {
   search?: string;
   type?: "blog" | "guide";
   status?: "draft" | "scheduled" | "published" | "archived";
+  /** Only the states worth filtering by: every post that isn't in review is 'none'. */
+  reviewState?: Exclude<ReviewState, "none">;
   authorId?: string;
   categoryId?: string;
   sort: "updated" | "published" | "title";
@@ -89,6 +92,7 @@ export interface ContentRow {
   id: string;
   type: ContentType;
   status: "draft" | "scheduled" | "published" | "archived";
+  reviewState: ReviewState;
   title: string;
   slug: string;
   updatedAt: string;
@@ -160,7 +164,8 @@ export function ContentListView({
   const [templateFor, setTemplateFor] = useState<ContentType | null>(null);
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const activeFilters =
-    [filters.type, filters.status, filters.authorId, filters.categoryId].filter(Boolean).length +
+    [filters.type, filters.status, filters.reviewState, filters.authorId, filters.categoryId].filter(Boolean)
+      .length +
     (filters.sort !== "updated" ? 1 : 0);
   const filtered = !!(filters.search || activeFilters);
 
@@ -170,6 +175,7 @@ export function ContentListView({
       q: filters.search,
       type: filters.type,
       status: filters.status,
+      review: filters.reviewState,
       author: filters.authorId,
       category: filters.categoryId,
       sort: filters.sort !== "updated" ? filters.sort : undefined,
@@ -232,6 +238,11 @@ export function ContentListView({
             <time dateTime={row.publishAt} className="text-xs text-muted-foreground">
               {formatDateTime(row.publishAt)}
             </time>
+          )}
+          {row.reviewState !== "none" && (
+            <Badge variant={REVIEW_BADGE[row.reviewState]} className="text-xs">
+              {REVIEW_LABELS[row.reviewState]}
+            </Badge>
           )}
           {row.unpublishedChanges && (
             <Badge variant="outline" className="text-xs">
@@ -342,6 +353,19 @@ export function ContentListView({
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <NativeSelectOption key={value} value={value}>
                 {label}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <NativeSelect
+            name="review"
+            defaultValue={filters.reviewState ?? ""}
+            aria-label="Review"
+            className={`${SELECT} w-full sm:w-44`}
+          >
+            <NativeSelectOption value="">Any review state</NativeSelectOption>
+            {REVIEW_FILTER_STATES.map((state) => (
+              <NativeSelectOption key={state} value={state}>
+                {REVIEW_LABELS[state]}
               </NativeSelectOption>
             ))}
           </NativeSelect>

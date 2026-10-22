@@ -20,6 +20,12 @@ export const REVIEW_BADGE: Record<ReviewState, "outline" | "secondary" | "defaul
   approved: "default",
 };
 
+/** Worth filtering the content list by; "none" is every post nobody has asked about. */
+export const REVIEW_FILTER_STATES = REVIEW_STATES.filter((state) => state !== "none") as Exclude<
+  ReviewState,
+  "none"
+>[];
+
 export function asReviewState(value: string | null | undefined): ReviewState {
   return REVIEW_STATES.includes(value as ReviewState) ? (value as ReviewState) : "none";
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { REVIEW_STATES, asReviewState, countComments, nextReviewStates } from "./review";
+import { REVIEW_FILTER_STATES, REVIEW_STATES, asReviewState, countComments, nextReviewStates } from "./review";
 
 describe("asReviewState", () => {
   it("takes the states the column allows", () => {
@@ -38,5 +38,11 @@ describe("countComments", () => {
 
   it("counts nothing when there is nothing", () => {
     expect(countComments([])).toEqual({ open: 0, resolved: 0 });
+  });
+});
+
+describe("REVIEW_FILTER_STATES", () => {
+  it("leaves out the state most posts are in", () => {
+    expect(REVIEW_FILTER_STATES).toEqual(["requested", "changes", "approved"]);
   });
 });
