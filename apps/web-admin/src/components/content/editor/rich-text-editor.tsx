@@ -6,6 +6,7 @@ import {
   Bold,
   ChevronDown,
   Code,
+  FileUp,
   Film,
   ImagePlus,
   Italic,
@@ -45,6 +46,7 @@ import { cn } from "@/lib/utils";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
 import { BlockHandle } from "./block-handle";
+import { ImportDocxDialog } from "./import-docx-dialog";
 import { BlockInserter, insertBlock } from "./block-inserter";
 import { CODE_LANGUAGES, cmsExtensions } from "./extensions";
 import { SlashMenu, SlashMenuList, type SlashMenuState } from "./slash-menu";
@@ -215,11 +217,13 @@ function Toolbar({
   onImage,
   onLink,
   onEmbed,
+  onImport,
 }: {
   editor: Editor;
   onImage: () => void;
   onLink: () => void;
   onEmbed: () => void;
+  onImport: () => void;
 }) {
   const state = useEditorState({
     editor,
@@ -332,6 +336,7 @@ function Toolbar({
         }
       />
       <ToolButton label="Divider" icon={Minus} onClick={() => chain().setHorizontalRule().run()} />
+      <ToolButton label="Import a Word file" icon={FileUp} onClick={onImport} />
       <span className="ml-auto" />
       <ToolButton label="Undo" icon={Undo} disabled={!state.canUndo} onClick={() => chain().undo().run()} />
       <ToolButton label="Redo" icon={Redo} disabled={!state.canRedo} onClick={() => chain().redo().run()} />
@@ -366,7 +371,7 @@ function reportPaste(report: PasteReport, onAddImages: () => void) {
 }
 
 export function RichTextEditor({ initial, onChange, placeholder, label, className }: RichTextEditorProps) {
-  const [dialog, setDialog] = useState<"image" | "link" | "embed" | null>(null);
+  const [dialog, setDialog] = useState<"image" | "link" | "embed" | "docx" | null>(null);
   const [slash, setSlash] = useState<SlashMenuState | null>(null);
   // Every callback here is a stable setState, so the extensions can be built
   // once: useEditor takes them at mount and never looks again.
@@ -404,6 +409,7 @@ export function RichTextEditor({ initial, onChange, placeholder, label, classNam
           onImage={() => setDialog("image")}
           onLink={() => setDialog("link")}
           onEmbed={() => setDialog("embed")}
+          onImport={() => setDialog("docx")}
         />
       )}
       {editor && <BlockInserter editor={editor} onDialog={setDialog} />}
@@ -421,6 +427,7 @@ export function RichTextEditor({ initial, onChange, placeholder, label, classNam
 
       {editor && dialog === "link" && <LinkDialog editor={editor} onClose={() => setDialog(null)} />}
       {editor && dialog === "embed" && <EmbedDialog editor={editor} onClose={() => setDialog(null)} />}
+      {editor && dialog === "docx" && <ImportDocxDialog editor={editor} onClose={() => setDialog(null)} />}
       <ImagePickerDialog
         open={dialog === "image"}
         onOpenChange={(open) => !open && setDialog(null)}
