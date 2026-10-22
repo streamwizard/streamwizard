@@ -43,6 +43,7 @@
     "@tiptap/pm": "^3.32.0",
     "@tiptap/react": "^3.32.0",
     "@tiptap/starter-kit": "^3.32.0",
+    "@tiptap/suggestion": "3.32.0",
     "@types/d3-hierarchy": "^3.1.7",
     "@xyflow/react": "^12.10.2",
     "class-variance-authority": "^0.7.1",

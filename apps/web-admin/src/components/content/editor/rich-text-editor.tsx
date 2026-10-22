@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import {
   Bold,
@@ -39,13 +39,15 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/widgets/responsive-dialog";
+import type { BlockId } from "@/lib/cms/blocks";
 import { activeTextStyle, TEXT_STYLES, textStyleLabel, type TextStyle, type TextStyleId } from "@/lib/cms/text-styles";
 import { cn } from "@/lib/utils";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
 import { BlockHandle } from "./block-handle";
-import { BlockInserter } from "./block-inserter";
+import { BlockInserter, insertBlock } from "./block-inserter";
 import { CODE_LANGUAGES, cmsExtensions } from "./extensions";
+import { SlashMenu, SlashMenuList, type SlashMenuState } from "./slash-menu";
 
 // Prose styles for the editing surface. The public site has its own; these
 // only need to make the structure (headings, lists, quotes) obvious.
@@ -365,8 +367,16 @@ function reportPaste(report: PasteReport, onAddImages: () => void) {
 
 export function RichTextEditor({ initial, onChange, placeholder, label, className }: RichTextEditorProps) {
   const [dialog, setDialog] = useState<"image" | "link" | "embed" | null>(null);
+  const [slash, setSlash] = useState<SlashMenuState | null>(null);
+  // Every callback here is a stable setState, so the extensions can be built
+  // once: useEditor takes them at mount and never looks again.
+  const pickBlock = useCallback((instance: Editor, id: BlockId) => insertBlock(instance, id, setDialog), []);
+  const extensions = useMemo(
+    () => [...cmsExtensions(placeholder), SlashMenu.configure({ onChange: setSlash, onPick: pickBlock })],
+    [placeholder, pickBlock],
+  );
   const editor = useEditor({
-    extensions: cmsExtensions(placeholder),
+    extensions,
     content: initial,
     immediatelyRender: false,
     editorProps: {
@@ -397,6 +407,15 @@ export function RichTextEditor({ initial, onChange, placeholder, label, classNam
         />
       )}
       {editor && <BlockInserter editor={editor} onDialog={setDialog} />}
+      {editor && slash && (
+        <SlashMenuList
+          state={slash}
+          onPick={(item) => {
+            setSlash(null);
+            insertBlock(editor, item.id, setDialog);
+          }}
+        />
+      )}
       {editor && <BlockHandle editor={editor} />}
       <EditorContent editor={editor} />
 
