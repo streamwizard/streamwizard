@@ -3,6 +3,7 @@
 // sanitizeDoc, which keeps only the nodes, marks and attributes the public
 // renderer knows how to draw, so the renderer can trust what it reads.
 
+import { stampDoc } from "./doc-version";
 import { isEmbedProvider, isValidEmbedId } from "./embed";
 
 export interface DocMark {
@@ -20,6 +21,8 @@ export interface DocNode {
 
 export interface Doc {
   type: "doc";
+  /** Only ever `{ v }`, the stored format version. See doc-version.ts. */
+  attrs?: Record<string, unknown>;
   content: DocNode[];
 }
 
@@ -293,11 +296,14 @@ export function sanitizeDoc(input: unknown): SanitizeResult {
   const state: WalkState = { issues: [], nodes: 0 };
   if (!isRecord(input) || input.type !== "doc") {
     return {
-      doc: { ...EMPTY_DOC, content: [] },
+      doc: stampDoc({ ...EMPTY_DOC, content: [] }),
       issues: [{ code: "invalid_doc", path: "", detail: "Not a document." }],
     };
   }
-  return { doc: { type: "doc", content: sanitizeChildren(input.content, ROOT, "", 1, state) }, issues: state.issues };
+  return {
+    doc: stampDoc({ type: "doc", content: sanitizeChildren(input.content, ROOT, "", 1, state) }),
+    issues: state.issues,
+  };
 }
 
 // Depth-first walk in document order. Used by every extractor below, so they

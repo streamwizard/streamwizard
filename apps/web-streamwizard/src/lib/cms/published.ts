@@ -1,4 +1,4 @@
-import { contentIndexPath, contentPath, type ContentType, type Doc } from "@repo/cms";
+import { contentIndexPath, contentPath, migrateDoc, type ContentType, type Doc } from "@repo/cms";
 import type { ArticleData } from "@/components/public/cms/cms-article";
 import type { AssetRecord } from "./images";
 
@@ -102,8 +102,7 @@ export function asContentType(value: string): ContentType {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const asDoc = (value: unknown): Doc =>
-  isRecord(value) && value.type === "doc" ? (value as unknown as Doc) : { type: "doc", content: [] };
+const asDoc = (value: unknown): Doc => migrateDoc(value).doc;
 
 const asDifficulty = (value: string | null): ArticleData["difficulty"] =>
   value && DIFFICULTIES.has(value) ? (value as ArticleData["difficulty"]) : null;

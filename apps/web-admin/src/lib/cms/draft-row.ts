@@ -1,4 +1,4 @@
-import type { Doc } from "@repo/cms";
+import { migrateDoc, type Doc } from "@repo/cms";
 import type { getCmsContentForEditor } from "@repo/supabase/queries/cms/content";
 import type { ContentDraft, ContentType, Difficulty } from "./draft";
 
@@ -6,8 +6,15 @@ import type { ContentDraft, ContentType, Difficulty } from "./draft";
 
 export type EditorRow = NonNullable<Awaited<ReturnType<typeof getCmsContentForEditor>>["data"]>;
 
-const asDoc = (value: unknown): Doc =>
-  value && typeof value === "object" && (value as Doc).type === "doc" ? (value as Doc) : { type: "doc", content: [] };
+const asDoc = (value: unknown): Doc => migrateDoc(value).doc;
+
+/**
+ * A body written by a newer deploy than this one. The editor would save it
+ * back at this deploy's version and quietly drop whatever it couldn't read.
+ */
+export function rowHasFutureBody(row: EditorRow): boolean {
+  return migrateDoc(row.body).future || row.sections.some((section) => migrateDoc(section.body).future);
+}
 
 export function draftFromRow(row: EditorRow): ContentDraft {
   const prerequisites = Array.isArray(row.prerequisites) ? row.prerequisites : [];
