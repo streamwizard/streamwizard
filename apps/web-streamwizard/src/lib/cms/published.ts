@@ -184,7 +184,13 @@ export function toArticle(row: PublishedRow, taxonomy: PublicTaxonomy, imageUrl:
     body: asDoc(row.body),
     sections: sections.flatMap((section) =>
       isRecord(section)
-        ? [{ title: typeof section.title === "string" ? section.title : "", body: asDoc(section.body) }]
+        ? [
+            {
+              title: typeof section.title === "string" ? section.title : "",
+              anchor: typeof section.anchor === "string" ? section.anchor : null,
+              body: asDoc(section.body),
+            },
+          ]
         : [],
     ),
   };

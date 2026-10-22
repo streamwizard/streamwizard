@@ -122,7 +122,7 @@ export function SectionList({ sections, onChange }: SectionListProps) {
         variant="outline"
         className="h-11 md:h-9"
         disabled={sections.length >= LIMITS.sections}
-        onClick={() => onChange([...sections, { id: crypto.randomUUID(), title: "", body: emptyDoc() }])}
+        onClick={() => onChange([...sections, { id: crypto.randomUUID(), title: "", anchor: null, body: emptyDoc() }])}
       >
         <Plus aria-hidden />
         Add section

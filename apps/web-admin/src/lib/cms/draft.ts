@@ -28,6 +28,8 @@ export interface DraftSection {
   /** Made in the browser for a new section, so it stays the same across saves. */
   id: string;
   title: string;
+  /** The anchor it already has on the page. Kept so renaming the section doesn't move its link. */
+  anchor: string | null;
   body: Doc;
 }
 
@@ -93,7 +95,7 @@ export const draftSchema = z.object({
   estimatedMinutes: z.number().int().min(1).max(10_000).nullable(),
   prerequisites: z.array(text(LIMITS.prerequisite)).max(LIMITS.prerequisites),
   sections: z
-    .array(z.object({ id: uuid, title: text(LIMITS.sectionTitle), body: z.unknown() }))
+    .array(z.object({ id: uuid, title: text(LIMITS.sectionTitle), anchor: z.string().max(80).nullable(), body: z.unknown() }))
     .max(LIMITS.sections, `A guide can have up to ${LIMITS.sections} sections.`),
   authorIds: z.array(uuid).max(10),
   categoryIds: z.array(uuid).max(10),
@@ -134,13 +136,13 @@ export function deriveDraft(type: ContentType, draft: ContentDraft): DerivedDraf
 
   const docs: Doc[] = [body.doc];
   let sections: DerivedDraft["sections"] = null;
-  let cleanSections: { id: string; title: string; body: Doc }[] = [];
+  let cleanSections: { id: string; title: string; anchor: string | null; body: Doc }[] = [];
   if (type === "guide") {
     cleanSections = draft.sections.map((section, index) => {
       const clean = sanitizeDoc(section.body);
       if (clean.issues.length) removed.push({ where: index, issues: clean.issues });
       docs.push(clean.doc);
-      return { id: section.id, title: section.title.trim(), body: clean.doc };
+      return { id: section.id, title: section.title.trim(), anchor: section.anchor, body: clean.doc };
     });
   }
   const outline = pageOutline(body.doc, cleanSections);
@@ -148,6 +150,7 @@ export function deriveDraft(type: ContentType, draft: ContentDraft): DerivedDraf
   if (type === "guide") {
     sections = cleanSections.map((section, index) => ({
       ...section,
+      // Its own anchor when it had one, otherwise the one pageOutline just handed out.
       anchor: outline.sections[index]!.anchor,
       body_text: extractText(section.body),
     }));

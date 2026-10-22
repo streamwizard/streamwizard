@@ -29,7 +29,7 @@ export async function loadPreview(token: string): Promise<PreviewResult> {
   const sections = guide
     ? [...content.sections]
         .sort((a, b) => a.position - b.position)
-        .map((section) => ({ title: section.title, body: asDoc(section.body) }))
+        .map((section) => ({ title: section.title, anchor: section.anchor, body: asDoc(section.body) }))
     : [];
   const body = asDoc(content.body);
 

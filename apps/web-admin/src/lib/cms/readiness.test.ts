@@ -24,7 +24,7 @@ function ready(overrides: Partial<ContentDraft> = {}): ContentDraft {
     difficulty: "beginner",
     estimatedMinutes: 15,
     prerequisites: [],
-    sections: [{ id: ID, title: "Install", body: emptyDoc() }],
+    sections: [{ id: ID, title: "Install", anchor: null, body: emptyDoc() }],
     authorIds: [ID],
     categoryIds: [ID],
     tagIds: [],
@@ -69,7 +69,7 @@ describe("publishReadiness", () => {
   });
 
   it("names untitled guide sections", () => {
-    const items = publishReadiness("guide", ready({ sections: [{ id: ID, title: "", body: emptyDoc() }] }));
+    const items = publishReadiness("guide", ready({ sections: [{ id: ID, title: "", anchor: null, body: emptyDoc() }] }));
     expect(items).toContainEqual({ severity: "error", message: "Section 1 needs a title.", section: 0 });
   });
 

@@ -41,7 +41,7 @@ export function draftFromRow(row: EditorRow): ContentDraft {
     ),
     sections: [...row.sections]
       .sort((a, b) => a.position - b.position)
-      .map((section) => ({ id: section.id, title: section.title, body: asDoc(section.body) })),
+      .map((section) => ({ id: section.id, title: section.title, anchor: section.anchor, body: asDoc(section.body) })),
     authorIds: [...row.credits].sort((a, b) => a.position - b.position).map((credit) => credit.author_id),
     categoryIds: row.categories.map((category) => category.category_id),
     tagIds: row.tags.map((tag) => tag.tag_id),

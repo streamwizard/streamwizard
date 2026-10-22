@@ -5,6 +5,7 @@
 
 import { stampDoc } from "./doc-version";
 import { isEmbedProvider, isValidEmbedId } from "./embed";
+import { isValidSlug } from "./slug";
 
 export interface DocMark {
   type: string;
@@ -98,7 +99,15 @@ const NODE_SPECS: Record<string, NodeSpec> = {
     children: "inline",
     attrs: (attrs) => {
       const level = typeof attrs.level === "number" ? Math.round(attrs.level) : MIN_HEADING_LEVEL;
-      return { level: Math.min(MAX_HEADING_LEVEL, Math.max(MIN_HEADING_LEVEL, level)) };
+      // The anchor the heading was given when it was written. It outlives
+      // rewording, which is the point: #how-to-start keeps working after the
+      // heading becomes "Getting started". Absent on older content, which
+      // falls back to a slug of the text.
+      const anchor = typeof attrs.anchor === "string" && isValidSlug(attrs.anchor) ? attrs.anchor : null;
+      const clamped = Math.min(MAX_HEADING_LEVEL, Math.max(MIN_HEADING_LEVEL, level));
+      // Left out rather than stored as null, so a heading written before
+      // anchors existed keeps the shape it had.
+      return anchor ? { level: clamped, anchor } : { level: clamped };
     },
   },
   bulletList: { category: "block", children: "listItem" },

@@ -10,6 +10,7 @@ import { Film, Info, Lightbulb, TriangleAlert, X } from "lucide-react";
 import { CALLOUT_VARIANTS, MAX_HEADING_LEVEL, MIN_HEADING_LEVEL, sanitizeHref, type CalloutVariant } from "@repo/cms";
 import { Checkbox, Input, Label } from "@repo/ui";
 import { cn } from "@/lib/utils";
+import { HeadingAnchor } from "./heading-anchor";
 
 // The editor's schema. It mirrors @repo/cms sanitizeDoc's allowlist: nothing
 // the public renderer can't draw can be typed or pasted in. Pasted <img> tags
@@ -256,6 +257,7 @@ export function cmsExtensions(placeholder: string) {
     TableKit.configure({ table: { resizable: false } }),
     Placeholder.configure({ placeholder }),
     CharacterCount,
+    HeadingAnchor,
     CmsImage,
     Callout,
     Embed,
