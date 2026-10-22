@@ -107,6 +107,35 @@ export function emptyDoc(): Doc {
   return { ...EMPTY_DOC, content: [] };
 }
 
+/** A draft with nothing in it: what a brand new post starts from. */
+export function emptyDraft(): ContentDraft {
+  return {
+    title: "",
+    slug: "",
+    excerpt: "",
+    summary: "",
+    coverAssetId: null,
+    body: emptyDoc(),
+    seoTitle: "",
+    seoDescription: "",
+    ogAssetId: null,
+    canonicalUrl: "",
+    noindex: false,
+    primaryCategoryId: null,
+    isFeatured: false,
+    pinnedRank: null,
+    commentsEnabled: true,
+    difficulty: null,
+    estimatedMinutes: null,
+    prerequisites: [],
+    sections: [],
+    authorIds: [],
+    categoryIds: [],
+    tagIds: [],
+    relatedIds: [],
+  };
+}
+
 export interface DerivedDraft {
   /** cms_content columns for cms_save_draft's p_fields. */
   fields: Record<string, unknown>;

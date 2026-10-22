@@ -4,11 +4,9 @@ import { useId, useState } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import {
   Bold,
+  ChevronDown,
   Code,
   Film,
-  Heading2,
-  Heading3,
-  Heading4,
   ImagePlus,
   Italic,
   Link as LinkIcon,
@@ -25,7 +23,14 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cleanPastedHtml, parseEmbedUrl, sanitizeHref, type Doc, type PasteReport } from "@repo/cms";
-import { Button, Input } from "@repo/ui";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  Input,
+} from "@repo/ui";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -34,6 +39,7 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/widgets/responsive-dialog";
+import { activeTextStyle, TEXT_STYLES, textStyleLabel, type TextStyle, type TextStyleId } from "@/lib/cms/text-styles";
 import { cn } from "@/lib/utils";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
@@ -174,6 +180,32 @@ function EmbedDialog({ editor, onClose }: { editor: Editor; onClose: () => void 
   );
 }
 
+/** The one control a writer looks for first, in words rather than H2/H3. */
+function TextStyleMenu({ active, onPick }: { active: TextStyleId; onPick: (style: TextStyle) => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="ghost" className="h-9 justify-between gap-1 px-2 text-sm md:h-8 md:w-40">
+          <span className="truncate">{textStyleLabel(active)}</span>
+          <ChevronDown className="size-4 shrink-0 opacity-60" aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        {TEXT_STYLES.map((style) => (
+          <DropdownMenuCheckboxItem
+            key={style.id}
+            checked={style.id === active}
+            onSelect={() => onPick(style)}
+            className={style.id === "h2" ? "text-base font-semibold" : style.id === "h3" ? "font-semibold" : undefined}
+          >
+            {style.label}
+          </DropdownMenuCheckboxItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function Toolbar({
   editor,
   onImage,
@@ -216,23 +248,11 @@ function Toolbar({
       aria-label="Formatting"
       className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 border-b bg-background/95 p-1 backdrop-blur"
     >
-      <ToolButton
-        label="Heading 2"
-        icon={Heading2}
-        active={state.h2}
-        onClick={() => chain().toggleHeading({ level: 2 }).run()}
-      />
-      <ToolButton
-        label="Heading 3"
-        icon={Heading3}
-        active={state.h3}
-        onClick={() => chain().toggleHeading({ level: 3 }).run()}
-      />
-      <ToolButton
-        label="Heading 4"
-        icon={Heading4}
-        active={state.h4}
-        onClick={() => chain().toggleHeading({ level: 4 }).run()}
+      <TextStyleMenu
+        active={activeTextStyle(state)}
+        onPick={(style) =>
+          style.level === null ? chain().setParagraph().run() : chain().setHeading({ level: style.level }).run()
+        }
       />
       <span className="mx-1 h-5 w-px bg-border" aria-hidden />
       <ToolButton label="Bold" icon={Bold} active={state.bold} onClick={() => chain().toggleBold().run()} />
