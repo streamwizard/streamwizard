@@ -8,6 +8,7 @@ import { ContentEditor, type ContentStatus, type EditorImage } from "@/component
 import { describeScheduleError } from "@/lib/cms/content-errors";
 import { contentType, draftFromRow, rowHasFutureBody } from "@/lib/cms/draft-row";
 import { publicContentUrl } from "@/lib/cms/publish";
+import { asReviewState } from "@/lib/cms/review";
 import { cmsAssetUrl } from "@/lib/cms/storage";
 import { env } from "@/lib/env";
 
@@ -58,6 +59,7 @@ export default async function ContentEditorPage({ params }: { params: Promise<{ 
       scheduleError={row.schedule_error ? describeScheduleError(row.schedule_error) : null}
       futureBody={rowHasFutureBody(row)}
       updatedAt={row.updated_at}
+      reviewState={asReviewState(row.review_state)}
       images={images}
       options={{
         authors: (authors.data ?? [])

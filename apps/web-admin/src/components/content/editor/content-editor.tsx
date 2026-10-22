@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Check, CircleAlert, History, ImagePlus, Loader2, Plus, Save, Trash2, X } from "lucide-react";
+import { AlertTriangle, Check, CircleAlert, History, ImagePlus, Loader2, MessageSquare, Plus, Save, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { contentPath } from "@repo/cms";
 import {
@@ -12,6 +12,10 @@ import {
   Card,
   CardContent,
   Checkbox,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Input,
   Label,
   NativeSelect,
@@ -23,6 +27,7 @@ import {
   TabsTrigger,
   Textarea,
 } from "@repo/ui";
+import { setContentReviewStateAction } from "@/actions/cms-comments";
 import { saveContentDraftAction, trashContentAction } from "@/actions/cms-content";
 import { createTagAction } from "@/actions/cms-taxonomy";
 import { PageHeader } from "@/components/widgets/page-header";
@@ -40,11 +45,13 @@ import {
 import type { CmsMediaItem } from "@/lib/cms/media-items";
 import { clearLocalDraft, writeLocalDraft } from "@/lib/cms/local-draft";
 import { publishReadiness } from "@/lib/cms/readiness";
+import { REVIEW_BADGE, REVIEW_LABELS, nextReviewStates, type ReviewState } from "@/lib/cms/review";
 import { PageCrumb } from "@/lib/crumbs";
 import { ConfirmButton } from "../confirm-button";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
 import { ChipPicker, type PickerOption } from "./chip-picker";
+import { CommentsSheet } from "./comments-sheet";
 import { PreviewMenu } from "./preview-menu";
 import { PublishControls } from "./publish-controls";
 import { RestoreDraftDialog } from "./restore-draft-dialog";
@@ -78,6 +85,8 @@ export interface ContentEditorProps {
   futureBody: boolean;
   /** When the working copy was last saved on the server, to judge a local copy against. */
   updatedAt: string;
+  /** Where this draft stands with the other admins. Advisory: it never blocks publishing. */
+  reviewState: ReviewState;
   options: { authors: PickerOption[]; categories: PickerOption[]; tags: PickerOption[]; related: PickerOption[] };
   /** Cover and OG images the draft already points at. */
   images: Record<string, EditorImage>;
@@ -178,6 +187,9 @@ export function ContentEditor(props: ContentEditorProps) {
   // Bumped by a restore: the editors own their content after mount, so the
   // only way to put different text in them is to mount them again.
   const [restoreKey, setRestoreKey] = useState(0);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [openComments, setOpenComments] = useState<number | null>(null);
+  const [review, setReview] = useState<ReviewState>(props.reviewState);
   const [mounted, setMounted] = useState<ContentDraft>(props.initial);
   const lock = useRef(props.lockVersion);
   const latest = useRef(props.initial);
@@ -299,6 +311,13 @@ export function ContentEditor(props: ContentEditorProps) {
   return (
     <div className="flex flex-col gap-6">
       <RestoreDraftDialog {...recovery} />
+      <CommentsSheet
+        contentId={id}
+        open={commentsOpen}
+        onOpenChange={setCommentsOpen}
+        headings={derived.toc.map((entry) => ({ anchor: entry.anchor, text: entry.text || "Untitled heading" }))}
+        onCountChange={setOpenComments}
+      />
       <PageCrumb label={draft.title.trim() || "Untitled"} href={`/content/${id}`} />
       <PageHeader
         title={draft.title.trim() || (guide ? "Untitled guide" : "Untitled post")}
@@ -315,6 +334,38 @@ export function ContentEditor(props: ContentEditorProps) {
         )}
         {publishedSlug && unpublishedChanges && <Badge variant="secondary">Unpublished changes</Badge>}
         <SaveStatus status={saveStatus} conflict={conflict} />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="h-11 md:h-9">
+              <Badge variant={REVIEW_BADGE[review]}>{REVIEW_LABELS[review]}</Badge>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {nextReviewStates(review).map((state) => (
+              <DropdownMenuItem
+                key={state}
+                onSelect={() =>
+                  start(async () => {
+                    const previous = review;
+                    setReview(state);
+                    const result = await setContentReviewStateAction(id, state);
+                    if (result.error) {
+                      setReview(previous);
+                      toast.error(result.error);
+                    }
+                  })
+                }
+              >
+                {REVIEW_LABELS[state]}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button variant="ghost" className="h-11 md:h-9" onClick={() => setCommentsOpen(true)}>
+          <MessageSquare aria-hidden />
+          Comments
+          {openComments !== null && openComments > 0 && <Badge variant="secondary">{openComments}</Badge>}
+        </Button>
         <PreviewMenu contentId={id} flush={flush} />
         <Button variant="ghost" className="h-11 md:h-9" asChild>
           <Link href={`/content/${id}/revisions`}>

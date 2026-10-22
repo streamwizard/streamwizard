@@ -219,6 +219,10 @@
       "types": "./src/queries/cms/assets.ts",
       "default": "./src/queries/cms/assets.ts"
     },
+    "./queries/cms/comments": {
+      "types": "./src/queries/cms/comments.ts",
+      "default": "./src/queries/cms/comments.ts"
+    },
     "./queries/cms/content": {
       "types": "./src/queries/cms/content.ts",
       "default": "./src/queries/cms/content.ts"
