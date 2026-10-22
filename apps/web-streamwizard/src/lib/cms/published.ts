@@ -259,6 +259,35 @@ export function inOrder<T extends { id: string }>(ids: string[], items: T[]): T[
   return ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
 }
 
+type TopicFields = Pick<PublishedCardRow, "content_id" | "type" | "primary_category_id" | "category_ids" | "tag_ids" | "first_published_at">;
+
+/**
+ * Posts and guides that share a topic with `row`, best match first: the same
+ * primary category counts most, then each shared tag, then each shared
+ * category. Nothing in common means not related. Ties go to the same type,
+ * then the newest.
+ */
+export function relatedByTopic<T extends TopicFields>(row: TopicFields, candidates: T[], skip: string[] = []): T[] {
+  const skipped = new Set([row.content_id, ...skip]);
+  const tags = new Set(row.tag_ids ?? []);
+  const categories = new Set(row.category_ids ?? []);
+  const scored = candidates.flatMap((candidate) => {
+    if (skipped.has(candidate.content_id)) return [];
+    let score = 0;
+    if (row.primary_category_id && candidate.primary_category_id === row.primary_category_id) score += 3;
+    for (const id of candidate.tag_ids ?? []) if (tags.has(id)) score += 2;
+    for (const id of candidate.category_ids ?? []) if (categories.has(id)) score += 1;
+    return score > 0 ? [{ candidate, score, sameType: candidate.type === row.type }] : [];
+  });
+  scored.sort(
+    (a, b) =>
+      b.score - a.score ||
+      Number(b.sameType) - Number(a.sameType) ||
+      (b.candidate.first_published_at ?? "").localeCompare(a.candidate.first_published_at ?? ""),
+  );
+  return scored.map((entry) => entry.candidate);
+}
+
 /** Title, description and canonical for generateMetadata. */
 export function articleMeta(row: PublishedRow, absoluteUrl: (path: string) => string) {
   const path = contentPath(asContentType(row.type), row.slug);

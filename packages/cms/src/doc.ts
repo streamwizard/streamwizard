@@ -50,6 +50,12 @@ export interface SanitizeResult {
 // The editor allows H2 to H4. The page title is the only H1.
 export const MIN_HEADING_LEVEL = 2;
 export const MAX_HEADING_LEVEL = 4;
+/** An image's display width, as a percentage of the text column. Absent: full width. */
+export const MIN_IMAGE_SIZE = 25;
+export const MAX_IMAGE_SIZE = 100;
+/** Where a narrower image sits in the text column. Absent: centred. */
+export const IMAGE_ALIGNS = ["left", "right"] as const;
+export type ImageAlign = (typeof IMAGE_ALIGNS)[number];
 
 export const CALLOUT_VARIANTS = ["info", "tip", "warning"] as const;
 export type CalloutVariant = (typeof CALLOUT_VARIANTS)[number];
@@ -134,6 +140,11 @@ const NODE_SPECS: Record<string, NodeSpec> = {
         cleaned.width = width;
         cleaned.height = height;
       }
+      // Full width is the default, so it isn't stored.
+      const size = intInRange(attrs.size, MIN_IMAGE_SIZE, MAX_IMAGE_SIZE - 1);
+      if (size) cleaned.size = size;
+      // Centred is the default, so it isn't stored.
+      if ((IMAGE_ALIGNS as readonly unknown[]).includes(attrs.align)) cleaned.align = attrs.align;
       return cleaned;
     },
   },

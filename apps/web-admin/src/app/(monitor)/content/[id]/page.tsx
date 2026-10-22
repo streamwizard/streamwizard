@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { contentPath } from "@repo/cms";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { selectCmsAsset } from "@repo/supabase/queries/cms/assets";
 import { listCmsAuthors } from "@repo/supabase/queries/cms/authors";
@@ -44,8 +45,11 @@ export default async function ContentEditorPage({ params }: { params: Promise<{ 
 
   return (
     <ContentEditor
-      // A restore or someone else's save means a fresh start, not a merge.
-      key={row.lock_version}
+      // No key on lock_version: every autosave bumps it, and a server action
+      // that revalidates (an image upload, a new tag) re-renders this page,
+      // which would remount the editor mid-edit and lose what it was doing.
+      // A restore opens the editor fresh from the revisions page, and someone
+      // else's save is caught by the conflict check, which reloads.
       id={row.id}
       type={contentType(row)}
       status={row.status as ContentStatus}
@@ -69,6 +73,14 @@ export default async function ContentEditorPage({ params }: { params: Promise<{ 
           hint: option.status === "published" ? (option.type === "guide" ? "guide" : "blog") : option.status,
         })),
       }}
+      linkablePosts={(related.data ?? [])
+        .filter((option) => option.id !== row.id && option.title.trim())
+        .map((option) => ({
+          title: option.title.trim(),
+          path: contentPath(option.type === "guide" ? "guide" : "blog", option.slug),
+          type: option.type === "guide" ? "guide" : "blog",
+          live: option.status === "published",
+        }))}
     />
   );
 }

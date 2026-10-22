@@ -13,6 +13,10 @@ export type CspOptions = {
   // never gets the chance to reauth. Production has no Access in front of it,
   // so this is staging-only. See src/proxy.ts.
   cloudflareAccess?: boolean;
+  // CMS draft previews (/preview/[token]) are shown next to the editor in the
+  // admin app. The admin's origin goes here for those routes only; every other
+  // page keeps frame-ancestors 'none'. See src/proxy.ts.
+  frameAncestor?: string | null;
 };
 
 /** Production R2 CDN. The landing page demo clips are served from here only. */
@@ -26,7 +30,7 @@ const TWITCH_CLIP_CDN = "https://*.cloudfront.net";
 // and stamps it on its inline (hydration/RSC) scripts, which is what lets us
 // drop 'unsafe-inline' from script-src.
 export function buildCsp(nonce: string, options: CspOptions = {}): string {
-  const { monaco = false, cloudflareAccess = false } = options;
+  const { monaco = false, cloudflareAccess = false, frameAncestor = null } = options;
   const supabaseUrl = process.env.SUPABASE_URL ?? "";
   // Supabase realtime uses WebSocket — derive wss:// from the https:// URL
   const supabaseWs = supabaseUrl.replace(/^https:\/\//, "wss://");
@@ -37,12 +41,9 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     // Inline scripts must carry the per-request nonce. player.twitch.tv is
     // needed for the Twitch embedded player script. Monaco's 'unsafe-eval' is
     // added only on the editor route (see monaco option).
-    [
-      "script-src 'self'",
-      `'nonce-${nonce}'`,
-      "https://player.twitch.tv",
-      ...(monaco ? ["'unsafe-eval'"] : []),
-    ].join(" "),
+    ["script-src 'self'", `'nonce-${nonce}'`, "https://player.twitch.tv", ...(monaco ? ["'unsafe-eval'"] : [])].join(
+      " ",
+    ),
     // Next.js inlines critical styles; Google Fonts load external stylesheets.
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     // Google Fonts actual font files
@@ -118,16 +119,13 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     // Explicit manifest-src (rather than relying on the default-src fallback)
     // so we can carve out the Cloudflare Access reauth redirect on staging
     // without loosening default-src for everything else.
-    [
-      "manifest-src 'self'",
-      ...(cloudflareAccess ? ["https://streamwizard.cloudflareaccess.com"] : []),
-    ].join(" "),
+    ["manifest-src 'self'", ...(cloudflareAccess ? ["https://streamwizard.cloudflareaccess.com"] : [])].join(" "),
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     // Modern replacement for the X-Frame-Options: DENY set in next.config.ts;
     // both are kept so older browsers stay covered.
-    "frame-ancestors 'none'",
+    `frame-ancestors ${frameAncestor ?? "'none'"}`,
   ];
 
   // Workers, on every route rather than just the editor: Sentry's replay

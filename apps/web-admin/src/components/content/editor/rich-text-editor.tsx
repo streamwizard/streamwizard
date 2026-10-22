@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
+import { BubbleMenu } from "@tiptap/react/menus";
 import {
   Bold,
   Code,
@@ -18,6 +19,7 @@ import {
   Minus,
   Quote,
   Redo,
+  Search,
   SquareCode,
   Strikethrough,
   Table as TableIcon,
@@ -35,17 +37,21 @@ import {
   ResponsiveDialogTitle,
 } from "@/components/widgets/responsive-dialog";
 import { cn } from "@/lib/utils";
+import type { CmsMediaItem } from "@/lib/cms/media-items";
+import { CMS_IMAGE_TYPES } from "@/lib/cms/media";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
+import { ImageUploadDialog } from "../image-upload-dialog";
+import { useEditorWorkspace, type EditorDialog, type LinkTarget } from "./editor-workspace";
 import { CODE_LANGUAGES, cmsExtensions } from "./extensions";
 
 // Prose styles for the editing surface. The public site has its own; these
 // only need to make the structure (headings, lists, quotes) obvious.
 const SURFACE =
   "min-h-64 px-4 py-3 text-sm leading-7 focus:outline-none " +
-  "[&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-5 [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:mt-4 [&_h4]:font-semibold " +
+  "[&_:is(h2,h3,h4)]:scroll-mt-32 [&_h2]:mt-6 [&_h2]:text-xl [&_h2]:font-semibold [&_h3]:mt-5 [&_h3]:text-lg [&_h3]:font-semibold [&_h4]:mt-4 [&_h4]:font-semibold " +
   "[&_p]:my-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-6 " +
-  "[&_blockquote]:my-3 [&_blockquote]:border-l-4 [&_blockquote]:pl-4 [&_blockquote]:text-muted-foreground " +
+  "[&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:pl-4 [&_blockquote]:text-muted-foreground " +
   "[&_a]:text-primary [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 " +
   "[&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3 [&_pre_code]:bg-transparent [&_pre_code]:p-0 " +
   "[&_hr]:my-6 [&_table]:my-3 [&_table]:w-full [&_table]:border-collapse [&_td]:border [&_td]:p-2 [&_th]:border [&_th]:bg-muted [&_th]:p-2 [&_th]:text-left " +
@@ -83,28 +89,45 @@ function ToolButton({
   );
 }
 
-function LinkDialog({ editor, onClose }: { editor: Editor; onClose: () => void }) {
+// Typed text that already looks like an address, rather than words to search for.
+const LOOKS_LIKE_URL = /^(#|\/|[a-z][a-z0-9+.-]*:)|\.[a-z]{2,}(\/|$)/i;
+const MAX_MATCHES = 6;
+
+function LinkDialog({ editor, targets, onClose }: { editor: Editor; targets: LinkTarget[]; onClose: () => void }) {
   const uid = useId();
   const current = editor.getAttributes("link").href as string | undefined;
   const [href, setHref] = useState(current ?? "");
+  const query = href.trim();
+  const searching = query !== "" && !LOOKS_LIKE_URL.test(query);
+  const matches = useMemo(() => {
+    if (!searching) return [];
+    const words = query.toLowerCase().split(/\s+/);
+    return targets
+      .filter((target) => words.every((word) => target.label.toLowerCase().includes(word)))
+      .slice(0, MAX_MATCHES);
+  }, [searching, query, targets]);
 
-  const apply = () => {
-    if (!href.trim()) {
+  const setLink = (value: string) => {
+    if (!value) {
       editor.chain().focus().extendMarkRange("link").unsetLink().run();
       return onClose();
     }
-    const clean = sanitizeHref(href.trim().match(/^[a-z]+:|^\/|^#/i) ? href.trim() : `https://${href.trim()}`);
+    const clean = sanitizeHref(value.match(/^[a-z]+:|^\/|^#/i) ? value : `https://${value}`);
     if (!clean) return void toast.error("Use a full https:// link, a site link like /pricing, or #section.");
     editor.chain().focus().extendMarkRange("link").setLink({ href: clean }).run();
     onClose();
   };
+  // Words that match a page link to it; anything else is taken as typed.
+  const apply = () => setLink(searching && matches[0] ? matches[0].href : query);
 
   return (
     <ResponsiveDialog open onOpenChange={(open) => !open && onClose()}>
       <ResponsiveDialogContent className="sm:max-w-md">
         <ResponsiveDialogHeader>
           <ResponsiveDialogTitle>{current ? "Edit link" : "Add link"}</ResponsiveDialogTitle>
-          <ResponsiveDialogDescription>Leave it empty to remove the link.</ResponsiveDialogDescription>
+          <ResponsiveDialogDescription>
+            Search your posts and guides, or paste a link. Leave it empty to remove the link.
+          </ResponsiveDialogDescription>
         </ResponsiveDialogHeader>
         <form
           onSubmit={(event) => {
@@ -112,10 +135,42 @@ function LinkDialog({ editor, onClose }: { editor: Editor; onClose: () => void }
             apply();
           }}
         >
-          <FormField label="URL" htmlFor={`${uid}-href`} hint="https://…, /guides/obs-setup or #a-heading">
-            <Input id={`${uid}-href`} value={href} autoFocus onChange={(event) => setHref(event.target.value)} />
+          <FormField label="Link to" htmlFor={`${uid}-href`} hint="A title, https://…, /pricing or #a-heading">
+            <Input
+              id={`${uid}-href`}
+              value={href}
+              autoFocus
+              autoComplete="off"
+              role="combobox"
+              aria-expanded={matches.length > 0}
+              aria-controls={`${uid}-matches`}
+              onChange={(event) => setHref(event.target.value)}
+            />
           </FormField>
         </form>
+        {searching && (
+          <ul id={`${uid}-matches`} role="listbox" aria-label="Matching pages" className="-mx-1 space-y-0.5">
+            {matches.length === 0 ? (
+              <li className="px-2 py-1.5 text-sm text-muted-foreground">Nothing matches. Paste a full link instead.</li>
+            ) : (
+              matches.map((target, index) => (
+                <li key={target.href} role="option" aria-selected={index === 0}>
+                  <button
+                    type="button"
+                    onClick={() => setLink(target.href)}
+                    className={cn(
+                      "flex w-full items-baseline justify-between gap-3 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
+                      index === 0 && "bg-muted/60",
+                    )}
+                  >
+                    <span className="min-w-0 truncate">{target.label}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">{target.hint}</span>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        )}
         <ResponsiveDialogFooter>
           <Button variant="ghost" onClick={onClose}>
             Cancel
@@ -179,11 +234,15 @@ function Toolbar({
   onImage,
   onLink,
   onEmbed,
+  onFind,
+  className,
 }: {
   editor: Editor;
   onImage: () => void;
   onLink: () => void;
   onEmbed: () => void;
+  onFind?: () => void;
+  className?: string;
 }) {
   const state = useEditorState({
     editor,
@@ -214,7 +273,10 @@ function Toolbar({
     <div
       role="toolbar"
       aria-label="Formatting"
-      className="sticky top-0 z-10 flex flex-wrap items-center gap-0.5 border-b bg-background/95 p-1 backdrop-blur"
+      className={cn(
+        "sticky top-14 z-[5] flex flex-wrap items-center gap-0.5 rounded-t-lg border-b bg-background/95 p-1 backdrop-blur",
+        className,
+      )}
     >
       <ToolButton
         label="Heading 2"
@@ -309,9 +371,98 @@ function Toolbar({
       />
       <ToolButton label="Divider" icon={Minus} onClick={() => chain().setHorizontalRule().run()} />
       <span className="ml-auto" />
+      {onFind && <ToolButton label="Find and replace (Ctrl H)" icon={Search} onClick={onFind} />}
       <ToolButton label="Undo" icon={Undo} disabled={!state.canUndo} onClick={() => chain().undo().run()} />
       <ToolButton label="Redo" icon={Redo} disabled={!state.canRedo} onClick={() => chain().redo().run()} />
     </div>
+  );
+}
+
+/** The node the picker and an upload insert: one image, with the asset's own alt text. */
+function imageNode(asset: CmsMediaItem) {
+  return {
+    type: "image",
+    attrs: {
+      assetId: asset.id,
+      alt: asset.decorative ? "" : asset.alt,
+      decorative: asset.decorative,
+      src: asset.url,
+      width: asset.width,
+      height: asset.height,
+    },
+  };
+}
+
+/** Image files in a paste or a drop, in the formats the media library takes. */
+function imageFiles(data: DataTransfer | null): File[] {
+  return [...(data?.files ?? [])].filter((file) => file.type in CMS_IMAGE_TYPES);
+}
+
+/** Bold, italic and link right at the selection, so formatting doesn't mean a trip to the toolbar. */
+function SelectionMenu({ editor, onLink }: { editor: Editor; onLink: () => void }) {
+  const state = useEditorState({
+    editor,
+    selector: ({ editor: e }) => ({
+      bold: e.isActive("bold"),
+      italic: e.isActive("italic"),
+      link: e.isActive("link"),
+      h2: e.isActive("heading", { level: 2 }),
+      h3: e.isActive("heading", { level: 3 }),
+    }),
+  });
+  const chain = () => editor.chain().focus();
+  return (
+    <BubbleMenu
+      editor={editor}
+      shouldShow={({ editor: e, view, from, to }) =>
+        // Hidden once focus leaves the editor (a dialog opened, the writer clicked away).
+        view.hasFocus() && from !== to && !e.isActive("image") && !e.isActive("embed") && !e.isActive("codeBlock")
+      }
+    >
+      <div
+        role="toolbar"
+        aria-label="Format selection"
+        className="flex gap-0.5 rounded-lg border bg-popover p-1 shadow-md"
+      >
+        <ToolButton label="Bold" icon={Bold} active={state.bold} onClick={() => chain().toggleBold().run()} />
+        <ToolButton label="Italic" icon={Italic} active={state.italic} onClick={() => chain().toggleItalic().run()} />
+        <ToolButton label="Link" icon={LinkIcon} active={state.link} onClick={onLink} />
+        <span className="mx-0.5 my-1.5 w-px bg-border" aria-hidden />
+        <ToolButton
+          label="Heading 2"
+          icon={Heading2}
+          active={state.h2}
+          onClick={() => chain().toggleHeading({ level: 2 }).run()}
+        />
+        <ToolButton
+          label="Heading 3"
+          icon={Heading3}
+          active={state.h3}
+          onClick={() => chain().toggleHeading({ level: 3 }).run()}
+        />
+      </div>
+    </BubbleMenu>
+  );
+}
+
+/**
+ * The one toolbar of a workspace, sticky above the writing column. It works
+ * on whichever editor was focused last.
+ */
+export function WorkspaceToolbar({ onFind }: { onFind: () => void }) {
+  const workspace = useEditorWorkspace();
+  const active = workspace?.active;
+  if (!active) return <div className="h-11 rounded-lg border" aria-hidden />;
+  return (
+    <Toolbar
+      key={active.id}
+      editor={active.editor}
+      onImage={() => active.open("image")}
+      onLink={() => active.open("link")}
+      onEmbed={() => active.open("embed")}
+      onFind={onFind}
+      className="rounded-lg border shadow-xs"
+    />
   );
 }
 
@@ -325,18 +476,66 @@ interface RichTextEditorProps {
 }
 
 export function RichTextEditor({ initial, onChange, placeholder, label, className }: RichTextEditorProps) {
-  const [dialog, setDialog] = useState<"image" | "link" | "embed" | null>(null);
+  const id = useId();
+  const workspace = useEditorWorkspace();
+  const register = workspace?.register;
+  const focusWorkspace = workspace?.focus;
+  const [dialog, setDialog] = useState<EditorDialog | null>(null);
+  // An image pasted or dropped in: it needs alt text before it can upload.
+  const [incoming, setIncoming] = useState<{ file: File; pos: number } | null>(null);
+  const editorRef = useRef<Editor | null>(null);
+
+  const receive = (files: File[], pos: number) => {
+    if (files.length === 0) return false;
+    if (files.length > 1) toast.message("One image at a time: the first one is ready to upload.");
+    setIncoming({ file: files[0]!, pos });
+    return true;
+  };
+
   const editor = useEditor({
     extensions: cmsExtensions(placeholder),
     content: initial,
     immediatelyRender: false,
-    editorProps: { attributes: { class: SURFACE, "aria-label": label } },
-    onUpdate: ({ editor: e }) => onChange(e.getJSON() as Doc),
+    editorProps: {
+      attributes: { class: SURFACE, "aria-label": label },
+      handlePaste: (view, event) => receive(imageFiles(event.clipboardData), view.state.selection.from),
+      handleDrop: (view, event, _slice, moved) => {
+        if (moved) return false;
+        const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
+        return receive(imageFiles(event.dataTransfer), at?.pos ?? view.state.selection.from);
+      },
+    },
+    // A plain copy: ProseMirror keeps node attributes (image ids, heading
+    // levels, callout variants, link targets) in null-prototype objects, which
+    // React can't send to a server action. They'd arrive as "$T" placeholders
+    // and the save would drop or reset every one of them.
+    onUpdate: ({ editor: e }) => onChange(structuredClone(e.getJSON()) as Doc),
   });
+
+  useEffect(() => {
+    editorRef.current = editor;
+    if (!editor || !register || !focusWorkspace) return;
+    const unregister = register({ id, label, editor, open: setDialog });
+    const onFocus = () => focusWorkspace(id);
+    editor.on("focus", onFocus);
+    return () => {
+      editor.off("focus", onFocus);
+      unregister();
+    };
+  }, [editor, register, focusWorkspace, id, label]);
+
+  const insertImage = (asset: CmsMediaItem, pos?: number) => {
+    const chain = editorRef.current?.chain().focus();
+    if (!chain) return;
+    if (pos === undefined) return void chain.insertContent(imageNode(asset)).run();
+    // Text may have moved while the alt text was written: stay inside the document.
+    const size = editorRef.current!.state.doc.content.size;
+    chain.insertContentAt(Math.min(pos, size), imageNode(asset)).run();
+  };
 
   return (
     <div className={cn("rounded-lg border bg-background", className)}>
-      {editor && (
+      {editor && !workspace && (
         <Toolbar
           editor={editor}
           onImage={() => setDialog("image")}
@@ -344,31 +543,26 @@ export function RichTextEditor({ initial, onChange, placeholder, label, classNam
           onEmbed={() => setDialog("embed")}
         />
       )}
+      {/* Gone while one of this editor's dialogs is open, so it can't float over it. */}
+      {editor && !dialog && !incoming && <SelectionMenu editor={editor} onLink={() => setDialog("link")} />}
       <EditorContent editor={editor} />
 
-      {editor && dialog === "link" && <LinkDialog editor={editor} onClose={() => setDialog(null)} />}
+      {editor && dialog === "link" && (
+        <LinkDialog editor={editor} targets={workspace?.linkTargets ?? []} onClose={() => setDialog(null)} />
+      )}
       {editor && dialog === "embed" && <EmbedDialog editor={editor} onClose={() => setDialog(null)} />}
       <ImagePickerDialog
         open={dialog === "image"}
         onOpenChange={(open) => !open && setDialog(null)}
         purpose="content"
-        onPick={(asset) =>
-          editor
-            ?.chain()
-            .focus()
-            .insertContent({
-              type: "image",
-              attrs: {
-                assetId: asset.id,
-                alt: asset.decorative ? "" : asset.alt,
-                decorative: asset.decorative,
-                src: asset.url,
-                width: asset.width,
-                height: asset.height,
-              },
-            })
-            .run()
-        }
+        onPick={(asset) => insertImage(asset)}
+      />
+      <ImageUploadDialog
+        open={incoming !== null}
+        initialFile={incoming?.file}
+        onOpenChange={(open) => !open && setIncoming(null)}
+        purpose="content"
+        onUploaded={(asset) => incoming && insertImage(asset, incoming.pos)}
       />
     </div>
   );

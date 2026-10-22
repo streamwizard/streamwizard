@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { CmsArticle } from "@/components/public/cms/cms-article";
+import { PreviewScrollKeeper } from "@/components/public/cms/preview-scroll-keeper";
 import { imageResolver } from "@/lib/cms/images";
 import { loadPreview } from "@/lib/cms/preview";
 
@@ -42,6 +43,7 @@ export default async function PreviewPage({ params }: { params: Promise<{ token:
         Draft preview. This isn&apos;t published, and only people with this link can see it.
       </div>
       <CmsArticle data={preview.article} resolveImage={imageResolver(preview.assets)} parentHost={host} />
+      <PreviewScrollKeeper token={token} />
     </>
   );
 }

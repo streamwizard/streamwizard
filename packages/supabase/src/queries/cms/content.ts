@@ -245,11 +245,24 @@ export const listCmsRevisions = withMetrics("cms_revisions", "select", async (cl
     .limit(100),
 );
 
+/** One revision with its full snapshot, for comparing with the draft. */
+export const getCmsRevision = withMetrics(
+  "cms_revisions",
+  "select",
+  async (client: DBClient, contentId: string, revisionId: string) =>
+    client
+      .from("cms_revisions")
+      .select("id, kind, created_at, snapshot")
+      .eq("content_id", contentId)
+      .eq("id", revisionId)
+      .maybeSingle(),
+);
+
 /** Posts and guides to pick as related posts. */
 export const listCmsContentOptions = withMetrics("cms_content", "select", async (client: DBClient) =>
   client
     .from("cms_content")
-    .select("id, type, title, status")
+    .select("id, type, title, slug, status")
     .is("deleted_at", null)
     .order("updated_at", { ascending: false })
     .limit(300),

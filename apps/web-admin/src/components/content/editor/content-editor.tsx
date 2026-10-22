@@ -1,17 +1,47 @@
 "use client";
 
-import { useId, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useEffectEvent, useId, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Check, CircleAlert, History, ImagePlus, Loader2, Plus, Save, Trash2, X } from "lucide-react";
-import { toast } from "sonner";
-import { contentPath } from "@repo/cms";
 import {
+  AlertTriangle,
+  Check,
+  ChevronRight,
+  CircleAlert,
+  History,
+  ImagePlus,
+  ListCollapse,
+  Loader2,
+  MoreHorizontal,
+  PanelRight,
+  Plus,
+  Save,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import { contentPath, countWords } from "@repo/cms";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Badge,
   Button,
   Card,
   CardContent,
   Checkbox,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
   Input,
   Label,
   NativeSelect,
@@ -25,7 +55,6 @@ import {
 } from "@repo/ui";
 import { saveContentDraftAction, trashContentAction } from "@/actions/cms-content";
 import { createTagAction } from "@/actions/cms-taxonomy";
-import { PageHeader } from "@/components/widgets/page-header";
 import { useAutosave, type AutosaveStatus } from "@/hooks/use-autosave";
 import {
   DIFFICULTIES,
@@ -39,13 +68,18 @@ import {
 import type { CmsMediaItem } from "@/lib/cms/media-items";
 import { publishReadiness } from "@/lib/cms/readiness";
 import { PageCrumb } from "@/lib/crumbs";
-import { ConfirmButton } from "../confirm-button";
+import { cn } from "@/lib/utils";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
 import { ChipPicker, type PickerOption } from "./chip-picker";
+import { EditorOutline } from "./editor-outline";
+import { EditorWorkspace, type LinkTarget } from "./editor-workspace";
+import { FindReplaceDialog } from "./find-replace-dialog";
 import { PreviewMenu } from "./preview-menu";
+import { PreviewPane } from "./preview-pane";
 import { PublishControls } from "./publish-controls";
-import { RichTextEditor } from "./rich-text-editor";
+import { RichTextEditor, WorkspaceToolbar } from "./rich-text-editor";
+import { SearchPreview } from "./search-preview";
 import { SectionList } from "./section-list";
 
 export type ContentStatus = "draft" | "scheduled" | "published" | "archived";
@@ -74,6 +108,8 @@ export interface ContentEditorProps {
   options: { authors: PickerOption[]; categories: PickerOption[]; tags: PickerOption[]; related: PickerOption[] };
   /** Cover and OG images the draft already points at. */
   images: Record<string, EditorImage>;
+  /** Other posts and guides, for the link search. */
+  linkablePosts: { title: string; path: string; type: ContentType; live: boolean }[];
 }
 
 const STATUS_LABELS: Record<ContentStatus, string> = {
@@ -167,7 +203,15 @@ export function ContentEditor(props: ContentEditorProps) {
   const [picker, setPicker] = useState<"cover" | "og" | null>(null);
   const [tagOptions, setTagOptions] = useState(options.tags);
   const [pending, start] = useTransition();
+  const [trashOpen, setTrashOpen] = useState(false);
+  const [findOpen, setFindOpen] = useState(false);
+  const [folded, setFolded] = useState<string[]>([]);
+  // The side-by-side preview, on wide screens. `saves` ticks after every save so it reloads.
+  const [beside, setBeside] = useState(false);
+  const [saves, setSaves] = useState(0);
   const lock = useRef(props.lockVersion);
+  const writing = useRef<HTMLDivElement>(null);
+  const summaryField = useRef<HTMLTextAreaElement>(null);
   const guide = type === "guide";
 
   const set = <K extends keyof ContentDraft>(key: K, value: ContentDraft[K]) =>
@@ -185,6 +229,7 @@ export function ContentEditor(props: ContentEditorProps) {
       return false;
     }
     lock.current = result.lockVersion;
+    setSaves((count) => count + 1);
     if (result.removed > 0) toast.warning("Some pasted content isn't supported here and was left out when saving.");
     return true;
   };
@@ -201,6 +246,22 @@ export function ContentEditor(props: ContentEditorProps) {
   );
   const errors = readiness.filter((item) => item.severity === "error");
   const warnings = readiness.filter((item) => item.severity === "warning");
+  const linkTargets = useMemo<LinkTarget[]>(
+    () => [
+      ...derived.toc
+        .filter((entry) => entry.text)
+        .map((entry) => ({ label: entry.text, href: `#${entry.anchor}`, hint: "On this page" })),
+      ...props.linkablePosts.map((post) => ({
+        label: post.title,
+        href: post.path,
+        hint: `${post.type === "guide" ? "Guide" : "Blog post"}${post.live ? "" : " · not live"}`,
+      })),
+    ],
+    [derived.toc, props.linkablePosts],
+  );
+
+  // A post with some structure opens on its outline; a fresh one on its details.
+  const [tab, setTab] = useState(() => (derived.toc.length > 1 ? "outline" : "details"));
 
   const setTitle = (title: string) =>
     setDraft((current) => {
@@ -219,6 +280,25 @@ export function ContentEditor(props: ContentEditorProps) {
       if (!(await flush())) return;
       if (await save(draft, "manual")) toast.success("Version saved. Find it under Revisions.");
     });
+
+  // Ctrl/Cmd+S saves a version instead of opening the browser's save dialog.
+  // Ctrl/Cmd+H opens find and replace, like in most editors.
+  const onShortcut = useEffectEvent((event: KeyboardEvent) => {
+    if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
+    const key = event.key.toLowerCase();
+    if (key === "s") {
+      event.preventDefault();
+      saveVersion();
+    } else if (key === "h") {
+      event.preventDefault();
+      setFindOpen(true);
+    }
+  });
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => onShortcut(event);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const trash = () =>
     start(async () => {
@@ -251,538 +331,671 @@ export function ContentEditor(props: ContentEditorProps) {
 
   const categoryOptions = options.categories.filter((option) => draft.categoryIds.includes(option.id));
 
+  const plainFields = [
+    { label: "Title", value: draft.title },
+    { label: "Summary", value: draft.summary },
+    { label: "Excerpt", value: draft.excerpt },
+    { label: "SEO title", value: draft.seoTitle },
+    { label: "Meta description", value: draft.seoDescription },
+    ...(guide
+      ? [
+          ...draft.sections.map((section, index) => ({ label: `Section ${index + 1} title`, value: section.title })),
+          ...draft.prerequisites.map((item, index) => ({ label: `Prerequisite ${index + 1}`, value: item })),
+        ]
+      : []),
+  ];
+  const replaceInFields = (replace: (text: string) => string) =>
+    setDraft((current) => ({
+      ...current,
+      title: replace(current.title),
+      summary: replace(current.summary),
+      excerpt: replace(current.excerpt),
+      seoTitle: replace(current.seoTitle),
+      seoDescription: replace(current.seoDescription),
+      sections: current.sections.map((section) => ({ ...section, title: replace(section.title) })),
+      prerequisites: current.prerequisites.map(replace),
+    }));
+
   return (
-    <div className="flex flex-col gap-6">
-      <PageCrumb label={draft.title.trim() || "Untitled"} href={`/content/${id}`} />
-      <PageHeader
-        title={draft.title.trim() || (guide ? "Untitled guide" : "Untitled post")}
-        description={`${guide ? "Guide" : "Blog post"} · ${derived.words} words · ${derived.minutes} min read`}
-      >
-        <Badge variant={status === "published" ? "default" : "outline"}>{STATUS_LABELS[status]}</Badge>
-        {status === "scheduled" && props.publishAt && (
-          <span className="text-xs text-muted-foreground">
-            Goes live {/* The server renders in its own timezone; the browser corrects it to the admin's. */}
-            <time dateTime={props.publishAt} suppressHydrationWarning>
-              {SCHEDULED_AT.format(new Date(props.publishAt))}
-            </time>
-          </span>
-        )}
-        {publishedSlug && unpublishedChanges && <Badge variant="secondary">Unpublished changes</Badge>}
-        <SaveStatus status={saveStatus} conflict={conflict} />
-        <PreviewMenu contentId={id} flush={flush} />
-        <Button variant="ghost" className="h-11 md:h-9" asChild>
-          <Link href={`/content/${id}/revisions`}>
-            <History aria-hidden />
-            Revisions
-          </Link>
-        </Button>
-        <Button variant="outline" className="h-11 md:h-9" onClick={saveVersion} disabled={pending || conflict}>
-          <Save aria-hidden />
-          Save version
-        </Button>
-        <PublishControls
-          contentId={id}
-          status={status}
-          path={contentPath(type, draft.slug)}
-          liveUrl={props.liveUrl}
-          readiness={readiness}
-          publishAt={props.publishAt}
-          flush={flush}
-          lockVersion={() => lock.current}
-          disabled={pending || conflict}
-        />
-        <ConfirmButton
-          title="Move to the trash?"
-          description={
-            publishedSlug
-              ? "It comes off the site right away. You can restore it from the trash."
-              : "You can restore it from the trash."
-          }
-          confirmLabel="Move to trash"
-          onConfirm={trash}
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-11 md:size-9"
-            disabled={pending}
-            aria-label="Move to the trash"
-          >
-            <Trash2 />
-          </Button>
-        </ConfirmButton>
-      </PageHeader>
-
-      {conflict && (
-        <div
-          role="alert"
-          className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm"
-        >
-          <CircleAlert className="size-4 text-destructive" aria-hidden />
-          <span className="flex-1">
-            Someone else saved this post in another tab or session. Autosave is paused so nothing gets overwritten.
-          </span>
-          <Button size="sm" className="h-11 md:h-8" onClick={() => window.location.reload()}>
-            Reload their version
-          </Button>
-        </div>
-      )}
-      {scheduleError && (
-        <div role="alert" className="rounded-lg border border-amber-500/50 bg-amber-500/5 p-3 text-sm">
-          The scheduled publish didn&apos;t go through, so this is a draft again. {scheduleError}
-        </div>
-      )}
-
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="min-w-0 space-y-4">
-          <Input
-            value={draft.title}
-            maxLength={LIMITS.title}
-            onChange={(event) => setTitle(event.target.value)}
-            placeholder={guide ? "How to …" : "Title"}
-            aria-label="Title"
-            className="h-12 text-xl font-semibold md:text-2xl"
-          />
-          <FormField
-            label="Summary"
-            htmlFor={`${uid}-summary`}
-            hint={
-              <>
-                The short, direct answer at the top of the page. AI assistants and search snippets quote it.{" "}
-                <Counter value={draft.summary} max={LIMITS.summary} />
-              </>
-            }
-          >
-            <Textarea
-              id={`${uid}-summary`}
-              value={draft.summary}
-              maxLength={LIMITS.summary}
-              rows={2}
-              onChange={(event) => set("summary", event.target.value)}
-            />
-          </FormField>
-
-          <div className="space-y-1.5">
-            <Label>{guide ? "Intro" : "Body"}</Label>
-            <RichTextEditor
-              initial={props.initial.body}
-              onChange={(body) => set("body", body)}
-              placeholder={guide ? "What will the reader have built by the end?" : "Start writing…"}
-              label={guide ? "Intro" : "Body"}
-            />
+    <EditorWorkspace linkTargets={linkTargets}>
+      <div className="flex flex-col gap-6">
+        <PageCrumb label={draft.title.trim() || "Untitled"} href={`/content/${id}`} />
+        <h1 className="sr-only">{draft.title.trim() || (guide ? "Untitled guide" : "Untitled post")}</h1>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-muted-foreground">
+            <Badge variant={status === "published" ? "default" : "outline"}>{STATUS_LABELS[status]}</Badge>
+            {status === "scheduled" && props.publishAt && (
+              <span className="text-xs">
+                Goes live {/* The server renders in its own timezone; the browser corrects it to the admin's. */}
+                <time dateTime={props.publishAt} suppressHydrationWarning>
+                  {SCHEDULED_AT.format(new Date(props.publishAt))}
+                </time>
+              </span>
+            )}
+            {publishedSlug && unpublishedChanges && <Badge variant="secondary">Unpublished changes</Badge>}
+            <span className="tabular-nums">
+              {guide ? "Guide" : "Blog post"} · {derived.words} words · {derived.minutes} min read
+            </span>
+            <SaveStatus status={saveStatus} conflict={conflict} />
           </div>
-
-          {guide && (
-            <div className="space-y-2">
-              <h2 className="text-base font-semibold">Sections</h2>
-              <SectionList sections={draft.sections} onChange={(sections) => set("sections", sections)} />
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <PreviewMenu contentId={id} flush={flush} />
+            <Button
+              variant={beside ? "secondary" : "ghost"}
+              size="icon"
+              className="hidden xl:inline-flex"
+              aria-pressed={beside}
+              aria-label="Preview next to the editor"
+              title="Preview next to the editor"
+              onClick={() => setBeside((open) => !open)}
+            >
+              <PanelRight />
+            </Button>
+            <PublishControls
+              contentId={id}
+              status={status}
+              path={contentPath(type, draft.slug)}
+              liveUrl={props.liveUrl}
+              readiness={readiness}
+              publishAt={props.publishAt}
+              flush={flush}
+              lockVersion={() => lock.current}
+              disabled={pending || conflict}
+            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-11 md:size-9" aria-label="More actions">
+                  <MoreHorizontal />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onSelect={saveVersion} disabled={pending || conflict}>
+                  <Save aria-hidden />
+                  Save version
+                  <DropdownMenuShortcut>Ctrl S</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setFindOpen(true)}>
+                  <Search aria-hidden />
+                  Find and replace
+                  <DropdownMenuShortcut>Ctrl H</DropdownMenuShortcut>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href={`/content/${id}/revisions`}>
+                    <History aria-hidden />
+                    Revisions
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onSelect={() => setTrashOpen(true)} disabled={pending}>
+                  <Trash2 aria-hidden />
+                  Move to trash
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <AlertDialog open={trashOpen} onOpenChange={setTrashOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Move to the trash?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {publishedSlug
+                      ? "It comes off the site right away. You can restore it from the trash."
+                      : "You can restore it from the trash."}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep it</AlertDialogCancel>
+                  <AlertDialogAction onClick={trash}>Move to trash</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </div>
 
-        <aside className="min-w-0">
-          <Tabs defaultValue="details">
-            <TabsList className="w-full">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="seo">SEO</TabsTrigger>
-              {guide && <TabsTrigger value="guide">Guide</TabsTrigger>}
-              <TabsTrigger value="checks">
-                Checks
-                {errors.length > 0 && (
-                  <Badge variant="destructive" className="ml-1 px-1.5 text-[10px] tabular-nums">
-                    {errors.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
+        {conflict && (
+          <div
+            role="alert"
+            className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm"
+          >
+            <CircleAlert className="size-4 text-destructive" aria-hidden />
+            <span className="flex-1">
+              Someone else saved this post in another tab or session. Autosave is paused so nothing gets overwritten.
+            </span>
+            <Button size="sm" className="h-11 md:h-8" onClick={() => window.location.reload()}>
+              Reload their version
+            </Button>
+          </div>
+        )}
+        {scheduleError && (
+          <div role="alert" className="rounded-lg border border-amber-500/50 bg-amber-500/5 p-3 text-sm">
+            The scheduled publish didn&apos;t go through, so this is a draft again. {scheduleError}
+          </div>
+        )}
 
-            <TabsContent value="details">
-              <Card>
-                <CardContent className="space-y-5">
-                  <FormField
-                    label="Slug"
-                    htmlFor={`${uid}-slug`}
-                    hint={`streamwizard.org/${guide ? "guides" : "blog"}/${draft.slug || "…"}${publishedSlug && publishedSlug !== draft.slug ? ". The old URL will redirect." : ""}`}
-                  >
-                    <Input
-                      id={`${uid}-slug`}
-                      value={draft.slug}
-                      maxLength={80}
-                      onChange={(event) => set("slug", event.target.value)}
-                    />
-                  </FormField>
-                  <FormField
-                    label="Excerpt"
-                    htmlFor={`${uid}-excerpt`}
-                    hint={
-                      <>
-                        One or two sentences for cards and link previews.{" "}
-                        <Counter value={draft.excerpt} max={LIMITS.excerpt} />
-                      </>
-                    }
-                  >
-                    <Textarea
-                      id={`${uid}-excerpt`}
-                      value={draft.excerpt}
-                      maxLength={LIMITS.excerpt}
-                      rows={3}
-                      onChange={(event) => set("excerpt", event.target.value)}
-                    />
-                  </FormField>
-                  <ImageField
-                    label="Cover image"
-                    hint="Shown on cards and at the top of the page. 1600 × 900 works well."
-                    image={cover}
-                    onPick={() => setPicker("cover")}
-                    onClear={() => set("coverAssetId", null)}
-                  />
-                  <div className="space-y-1.5">
-                    <Label>Authors</Label>
-                    <ChipPicker
-                      label="Authors"
-                      options={options.authors}
-                      value={draft.authorIds}
-                      onChange={(ids) => set("authorIds", ids)}
-                      max={10}
-                    />
-                    <p className="text-xs text-muted-foreground">The first one is the byline.</p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Categories</Label>
-                    <ChipPicker
-                      label="Categories"
-                      options={options.categories}
-                      value={draft.categoryIds}
-                      onChange={(ids) => set("categoryIds", ids)}
-                      max={10}
-                    />
-                  </div>
-                  {categoryOptions.length > 1 && (
-                    <FormField
-                      label="Primary category"
-                      htmlFor={`${uid}-primary`}
-                      hint="Used in the breadcrumb and for related posts."
-                    >
-                      <NativeSelect
-                        id={`${uid}-primary`}
-                        value={draft.primaryCategoryId ?? ""}
-                        onChange={(event) => set("primaryCategoryId", event.target.value || null)}
-                        className="w-full"
-                      >
-                        <NativeSelectOption value="">First one</NativeSelectOption>
-                        {categoryOptions.map((option) => (
-                          <NativeSelectOption key={option.id} value={option.id}>
-                            {option.label}
-                          </NativeSelectOption>
-                        ))}
-                      </NativeSelect>
-                    </FormField>
-                  )}
-                  <div className="space-y-1.5">
-                    <Label>Tags</Label>
-                    <ChipPicker
-                      label="Tags"
-                      options={tagOptions}
-                      value={draft.tagIds}
-                      onChange={(ids) => set("tagIds", ids)}
-                      max={30}
-                      onCreate={createTag}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label>Related posts</Label>
-                    <ChipPicker
-                      label="Related"
-                      options={options.related.filter((option) => option.id !== id)}
-                      value={draft.relatedIds}
-                      onChange={(ids) => set("relatedIds", ids)}
-                      max={10}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Shown first under the post; the rest come from the same category and tags.
-                    </p>
-                  </div>
-                  <div className="space-y-3 border-t pt-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor={`${uid}-featured`}>Featured</Label>
-                      <Switch
-                        id={`${uid}-featured`}
-                        checked={draft.isFeatured}
-                        onCheckedChange={(checked) => set("isFeatured", checked)}
-                      />
-                    </div>
-                    <FormField
-                      label="Pin position"
-                      htmlFor={`${uid}-pin`}
-                      hint="Empty: not pinned. 1 shows first on the index page."
-                    >
-                      <Input
-                        id={`${uid}-pin`}
-                        type="number"
-                        min={1}
-                        max={999}
-                        value={draft.pinnedRank ?? ""}
-                        className="w-28"
-                        onChange={(event) =>
-                          set(
-                            "pinnedRank",
-                            event.target.value ? Math.max(1, Number.parseInt(event.target.value, 10) || 1) : null,
-                          )
-                        }
-                      />
-                    </FormField>
-                    <div className="flex items-center justify-between gap-3">
-                      <Label htmlFor={`${uid}-comments`}>Comments</Label>
-                      <Switch
-                        id={`${uid}-comments`}
-                        checked={draft.commentsEnabled}
-                        onCheckedChange={(checked) => set("commentsEnabled", checked)}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+        <div
+          className={cn(
+            "grid gap-6",
+            beside ? "xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" : "xl:grid-cols-[minmax(0,1fr)_22rem]",
+          )}
+        >
+          <div ref={writing} className="min-w-0 space-y-6">
+            <Textarea
+              value={draft.title}
+              maxLength={LIMITS.title}
+              rows={1}
+              // A title is one line on the site: Enter moves on to the summary.
+              onChange={(event) => setTitle(event.target.value.replace(/\s*\n\s*/g, " "))}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  summaryField.current?.focus();
+                }
+              }}
+              placeholder={guide ? "How to …" : "Title"}
+              aria-label="Title"
+              className="min-h-0 resize-none rounded-none border-0 border-b border-transparent bg-transparent px-0 py-1 text-2xl leading-tight font-semibold tracking-tight shadow-none focus-visible:border-ring focus-visible:ring-0 md:text-3xl dark:bg-transparent"
+            />
+            <FormField
+              label="Summary"
+              htmlFor={`${uid}-summary`}
+              hint={
+                <>
+                  The short, direct answer at the top of the page. AI assistants and search snippets quote it.{" "}
+                  <Counter value={draft.summary} max={LIMITS.summary} />
+                </>
+              }
+            >
+              <Textarea
+                ref={summaryField}
+                id={`${uid}-summary`}
+                value={draft.summary}
+                maxLength={LIMITS.summary}
+                rows={2}
+                onChange={(event) => set("summary", event.target.value)}
+              />
+            </FormField>
 
-            <TabsContent value="seo">
-              <Card>
-                <CardContent className="space-y-5">
-                  <FormField
-                    label="SEO title"
-                    htmlFor={`${uid}-seo-title`}
-                    hint={
-                      <>
-                        Empty: the title is used. Around 60 characters shows in full.{" "}
-                        <Counter value={draft.seoTitle} max={LIMITS.seoTitle} />
-                      </>
-                    }
-                  >
-                    <Input
-                      id={`${uid}-seo-title`}
-                      value={draft.seoTitle}
-                      maxLength={LIMITS.seoTitle}
-                      placeholder={draft.title}
-                      onChange={(event) => set("seoTitle", event.target.value)}
-                    />
-                  </FormField>
-                  <FormField
-                    label="Meta description"
-                    htmlFor={`${uid}-seo-description`}
-                    hint={
-                      <>
-                        Empty: the excerpt is used. Around 155 characters shows in full.{" "}
-                        <Counter value={draft.seoDescription} max={LIMITS.seoDescription} />
-                      </>
-                    }
-                  >
-                    <Textarea
-                      id={`${uid}-seo-description`}
-                      value={draft.seoDescription}
-                      maxLength={LIMITS.seoDescription}
-                      rows={3}
-                      placeholder={draft.excerpt}
-                      onChange={(event) => set("seoDescription", event.target.value)}
-                    />
-                  </FormField>
-                  <ImageField
-                    label="Social image"
-                    hint="Empty: one is generated from the title. 1200 × 630."
-                    image={og}
-                    onPick={() => setPicker("og")}
-                    onClear={() => set("ogAssetId", null)}
-                  />
-                  <FormField
-                    label="Canonical URL"
-                    htmlFor={`${uid}-canonical`}
-                    hint="Only when this post first appeared somewhere else. Empty: this page."
-                  >
-                    <Input
-                      id={`${uid}-canonical`}
-                      type="url"
-                      value={draft.canonicalUrl}
-                      placeholder="https://"
-                      onChange={(event) => set("canonicalUrl", event.target.value)}
-                    />
-                  </FormField>
-                  <div className="flex items-start gap-2">
-                    <Checkbox
-                      id={`${uid}-noindex`}
-                      checked={draft.noindex}
-                      onCheckedChange={(checked) => set("noindex", checked === true)}
-                    />
-                    <div className="grid gap-0.5">
-                      <Label htmlFor={`${uid}-noindex`}>Hide from search engines</Label>
-                      <p className="text-xs text-muted-foreground">
-                        The page stays reachable by link but asks not to be indexed.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
+            <WorkspaceToolbar onFind={() => setFindOpen(true)} />
+
+            <div className="space-y-1.5">
+              <Label>{guide ? "Intro" : "Body"}</Label>
+              <RichTextEditor
+                initial={props.initial.body}
+                onChange={(body) => set("body", body)}
+                placeholder={guide ? "What will the reader have built by the end?" : "Start writing…"}
+                label={guide ? "Intro" : "Body"}
+              />
+            </div>
 
             {guide && (
-              <TabsContent value="guide">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-base font-semibold">Sections</h2>
+                  {draft.sections.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-11 md:h-8"
+                      onClick={() => setFolded(folded.length > 0 ? [] : draft.sections.map((section) => section.id))}
+                    >
+                      <ListCollapse aria-hidden />
+                      {folded.length > 0 ? "Unfold all" : "Fold all"}
+                    </Button>
+                  )}
+                </div>
+                <SectionList
+                  sections={draft.sections}
+                  onChange={(update) => setDraft((current) => ({ ...current, sections: update(current.sections) }))}
+                  words={(derived.sections ?? []).map((section) => countWords(section.body_text))}
+                  folded={folded}
+                  onFold={setFolded}
+                />
+              </div>
+            )}
+          </div>
+
+          {beside && (
+            <aside className="hidden min-w-0 xl:sticky xl:top-[4.5rem] xl:block xl:h-[calc(100dvh-5.5rem)] xl:self-start xl:pb-4">
+              <PreviewPane contentId={id} flush={flush} reloadKey={saves} onClose={() => setBeside(false)} />
+            </aside>
+          )}
+          <aside
+            className={cn(
+              "min-w-0 space-y-3 xl:sticky xl:top-[4.5rem] xl:max-h-[calc(100dvh-5.5rem)] xl:self-start xl:overflow-y-auto xl:overscroll-contain xl:pb-4",
+              beside && "xl:hidden",
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => setTab("checks")}
+              className="flex w-full items-center gap-2 rounded-lg border px-3 py-2.5 text-left text-sm transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              {errors.length > 0 ? (
+                <CircleAlert className="size-4 shrink-0 text-destructive" aria-hidden />
+              ) : (
+                <Check className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden />
+              )}
+              <span className="flex-1">
+                {errors.length > 0
+                  ? `${errors.length} ${errors.length === 1 ? "thing" : "things"} to fix before it can go live`
+                  : "Ready to publish"}
+                {warnings.length > 0 && (
+                  <span className="text-muted-foreground"> · {warnings.length} worth a look</span>
+                )}
+              </span>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            </button>
+            <Tabs value={tab} onValueChange={setTab}>
+              <TabsList className="w-full">
+                <TabsTrigger value="outline">Outline</TabsTrigger>
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="seo">SEO</TabsTrigger>
+                {guide && <TabsTrigger value="guide">Guide</TabsTrigger>}
+                <TabsTrigger value="checks">
+                  Checks
+                  {errors.length > 0 && (
+                    <Badge variant="destructive" className="ml-1 px-1.5 text-[10px] tabular-nums">
+                      {errors.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="outline">
+                <Card>
+                  <CardContent>
+                    <EditorOutline
+                      entries={derived.toc}
+                      root={writing}
+                      onUnfold={(sectionId) => setFolded((current) => current.filter((id) => id !== sectionId))}
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="details">
                 <Card>
                   <CardContent className="space-y-5">
-                    <FormField label="Difficulty" htmlFor={`${uid}-difficulty`}>
-                      <NativeSelect
-                        id={`${uid}-difficulty`}
-                        value={draft.difficulty ?? ""}
-                        onChange={(event) => set("difficulty", (event.target.value || null) as Difficulty | null)}
-                        className="w-full"
-                      >
-                        <NativeSelectOption value="">Not set</NativeSelectOption>
-                        {Object.entries(DIFFICULTIES).map(([value, label]) => (
-                          <NativeSelectOption key={value} value={value}>
-                            {label}
-                          </NativeSelectOption>
-                        ))}
-                      </NativeSelect>
-                    </FormField>
                     <FormField
-                      label="Time to complete (minutes)"
-                      htmlFor={`${uid}-minutes`}
-                      hint={`Reading alone takes about ${derived.minutes} min.`}
+                      label="Slug"
+                      htmlFor={`${uid}-slug`}
+                      hint={`streamwizard.org/${guide ? "guides" : "blog"}/${draft.slug || "…"}${publishedSlug && publishedSlug !== draft.slug ? ". The old URL will redirect." : ""}`}
                     >
                       <Input
-                        id={`${uid}-minutes`}
-                        type="number"
-                        min={1}
-                        value={draft.estimatedMinutes ?? ""}
-                        className="w-28"
-                        onChange={(event) =>
-                          set(
-                            "estimatedMinutes",
-                            event.target.value ? Math.max(1, Number.parseInt(event.target.value, 10) || 1) : null,
-                          )
-                        }
+                        id={`${uid}-slug`}
+                        value={draft.slug}
+                        maxLength={80}
+                        onChange={(event) => set("slug", event.target.value)}
                       />
                     </FormField>
-                    <div className="space-y-2">
-                      <Label>Before you start</Label>
-                      <ul className="space-y-2">
-                        {draft.prerequisites.map((item, index) => (
-                          <li key={index} className="flex gap-2">
-                            <Input
-                              value={item}
-                              maxLength={LIMITS.prerequisite}
-                              aria-label={`Prerequisite ${index + 1}`}
-                              onChange={(event) =>
-                                set(
-                                  "prerequisites",
-                                  draft.prerequisites.map((p, i) => (i === index ? event.target.value : p)),
-                                )
-                              }
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="size-11 shrink-0 md:size-9"
-                              aria-label={`Remove prerequisite ${index + 1}`}
-                              onClick={() =>
-                                set(
-                                  "prerequisites",
-                                  draft.prerequisites.filter((_, i) => i !== index),
-                                )
-                              }
-                            >
-                              <X />
-                            </Button>
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-11 md:h-8"
-                        disabled={draft.prerequisites.length >= LIMITS.prerequisites}
-                        onClick={() => set("prerequisites", [...draft.prerequisites, ""])}
+                    <FormField
+                      label="Excerpt"
+                      htmlFor={`${uid}-excerpt`}
+                      hint={
+                        <>
+                          One or two sentences for cards and link previews.{" "}
+                          <Counter value={draft.excerpt} max={LIMITS.excerpt} />
+                        </>
+                      }
+                    >
+                      <Textarea
+                        id={`${uid}-excerpt`}
+                        value={draft.excerpt}
+                        maxLength={LIMITS.excerpt}
+                        rows={3}
+                        onChange={(event) => set("excerpt", event.target.value)}
+                      />
+                    </FormField>
+                    <ImageField
+                      label="Cover image"
+                      hint="Shown on cards and at the top of the page. 1600 × 900 works well."
+                      image={cover}
+                      onPick={() => setPicker("cover")}
+                      onClear={() => set("coverAssetId", null)}
+                    />
+                    <div className="space-y-1.5">
+                      <Label>Authors</Label>
+                      <ChipPicker
+                        label="Authors"
+                        options={options.authors}
+                        value={draft.authorIds}
+                        onChange={(ids) => set("authorIds", ids)}
+                        max={10}
+                      />
+                      <p className="text-xs text-muted-foreground">The first one is the byline.</p>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Categories</Label>
+                      <ChipPicker
+                        label="Categories"
+                        options={options.categories}
+                        value={draft.categoryIds}
+                        onChange={(ids) => set("categoryIds", ids)}
+                        max={10}
+                      />
+                    </div>
+                    {categoryOptions.length > 1 && (
+                      <FormField
+                        label="Primary category"
+                        htmlFor={`${uid}-primary`}
+                        hint="Used in the breadcrumb and for related posts."
                       >
-                        <Plus aria-hidden />
-                        Add prerequisite
-                      </Button>
+                        <NativeSelect
+                          id={`${uid}-primary`}
+                          value={draft.primaryCategoryId ?? ""}
+                          onChange={(event) => set("primaryCategoryId", event.target.value || null)}
+                          className="w-full"
+                        >
+                          <NativeSelectOption value="">First one</NativeSelectOption>
+                          {categoryOptions.map((option) => (
+                            <NativeSelectOption key={option.id} value={option.id}>
+                              {option.label}
+                            </NativeSelectOption>
+                          ))}
+                        </NativeSelect>
+                      </FormField>
+                    )}
+                    <div className="space-y-1.5">
+                      <Label>Tags</Label>
+                      <ChipPicker
+                        label="Tags"
+                        options={tagOptions}
+                        value={draft.tagIds}
+                        onChange={(ids) => set("tagIds", ids)}
+                        max={30}
+                        onCreate={createTag}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Related posts</Label>
+                      <ChipPicker
+                        label="Related"
+                        options={options.related.filter((option) => option.id !== id)}
+                        value={draft.relatedIds}
+                        onChange={(ids) => set("relatedIds", ids)}
+                        max={10}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Shown first under the post; the rest come from the same category and tags.
+                      </p>
+                    </div>
+                    <div className="space-y-3 border-t pt-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <Label htmlFor={`${uid}-featured`}>Featured</Label>
+                        <Switch
+                          id={`${uid}-featured`}
+                          checked={draft.isFeatured}
+                          onCheckedChange={(checked) => set("isFeatured", checked)}
+                        />
+                      </div>
+                      <FormField
+                        label="Pin position"
+                        htmlFor={`${uid}-pin`}
+                        hint="Empty: not pinned. 1 shows first on the index page."
+                      >
+                        <Input
+                          id={`${uid}-pin`}
+                          type="number"
+                          min={1}
+                          max={999}
+                          value={draft.pinnedRank ?? ""}
+                          className="w-28"
+                          onChange={(event) =>
+                            set(
+                              "pinnedRank",
+                              event.target.value ? Math.max(1, Number.parseInt(event.target.value, 10) || 1) : null,
+                            )
+                          }
+                        />
+                      </FormField>
+                      <div className="flex items-center justify-between gap-3">
+                        <Label htmlFor={`${uid}-comments`}>Comments</Label>
+                        <Switch
+                          id={`${uid}-comments`}
+                          checked={draft.commentsEnabled}
+                          onCheckedChange={(checked) => set("commentsEnabled", checked)}
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
-            )}
 
-            <TabsContent value="checks">
-              <Card>
-                <CardContent className="space-y-4 text-sm">
-                  {readiness.length === 0 ? (
-                    <p className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                      <Check className="size-4" aria-hidden />
-                      Ready to publish.
-                    </p>
-                  ) : (
-                    <>
-                      {errors.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="font-medium">Before it can go live</p>
-                          <ul className="space-y-1.5">
-                            {errors.map((item, index) => (
-                              <li key={index} className="flex gap-2">
-                                <CircleAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
-                                <span>
-                                  {item.section !== undefined && (
-                                    <span className="text-muted-foreground">Section {item.section + 1}: </span>
-                                  )}
-                                  {item.message}
-                                </span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {warnings.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="font-medium">Worth a look</p>
-                          <ul className="space-y-1.5">
-                            {warnings.map((item, index) => (
-                              <li key={index} className="flex gap-2 text-muted-foreground">
-                                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden />
-                                {item.message}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  {derived.toc.length > 0 && (
-                    <div className="space-y-2 border-t pt-4">
-                      <p className="font-medium">Table of contents</p>
-                      <ol className="space-y-1 text-muted-foreground">
-                        {derived.toc.map((entry) => (
-                          <li
-                            key={entry.anchor}
-                            style={{ paddingLeft: `${(entry.level - 2) * 0.75}rem` }}
-                            className="truncate"
-                          >
-                            {entry.text || <em>Untitled</em>}
-                          </li>
-                        ))}
-                      </ol>
+              <TabsContent value="seo">
+                <Card>
+                  <CardContent className="space-y-5">
+                    <SearchPreview
+                      title={draft.seoTitle.trim() || draft.title.trim()}
+                      description={draft.seoDescription.trim() || draft.excerpt.trim() || draft.summary.trim()}
+                      path={contentPath(type, draft.slug)}
+                    />
+                    <FormField
+                      label="SEO title"
+                      htmlFor={`${uid}-seo-title`}
+                      hint={
+                        <>
+                          Empty: the title is used. Around 60 characters shows in full.{" "}
+                          <Counter value={draft.seoTitle} max={LIMITS.seoTitle} />
+                        </>
+                      }
+                    >
+                      <Input
+                        id={`${uid}-seo-title`}
+                        value={draft.seoTitle}
+                        maxLength={LIMITS.seoTitle}
+                        placeholder={draft.title}
+                        onChange={(event) => set("seoTitle", event.target.value)}
+                      />
+                    </FormField>
+                    <FormField
+                      label="Meta description"
+                      htmlFor={`${uid}-seo-description`}
+                      hint={
+                        <>
+                          Empty: the excerpt is used. Around 155 characters shows in full.{" "}
+                          <Counter value={draft.seoDescription} max={LIMITS.seoDescription} />
+                        </>
+                      }
+                    >
+                      <Textarea
+                        id={`${uid}-seo-description`}
+                        value={draft.seoDescription}
+                        maxLength={LIMITS.seoDescription}
+                        rows={3}
+                        placeholder={draft.excerpt}
+                        onChange={(event) => set("seoDescription", event.target.value)}
+                      />
+                    </FormField>
+                    <ImageField
+                      label="Social image"
+                      hint="Empty: one is generated from the title. 1200 × 630."
+                      image={og}
+                      onPick={() => setPicker("og")}
+                      onClear={() => set("ogAssetId", null)}
+                    />
+                    <FormField
+                      label="Canonical URL"
+                      htmlFor={`${uid}-canonical`}
+                      hint="Only when this post first appeared somewhere else. Empty: this page."
+                    >
+                      <Input
+                        id={`${uid}-canonical`}
+                        type="url"
+                        value={draft.canonicalUrl}
+                        placeholder="https://"
+                        onChange={(event) => set("canonicalUrl", event.target.value)}
+                      />
+                    </FormField>
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        id={`${uid}-noindex`}
+                        checked={draft.noindex}
+                        onCheckedChange={(checked) => set("noindex", checked === true)}
+                      />
+                      <div className="grid gap-0.5">
+                        <Label htmlFor={`${uid}-noindex`}>Hide from search engines</Label>
+                        <p className="text-xs text-muted-foreground">
+                          The page stays reachable by link but asks not to be indexed.
+                        </p>
+                      </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </aside>
-      </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-      <ImagePickerDialog
-        open={picker !== null}
-        onOpenChange={(open) => !open && setPicker(null)}
-        purpose="content"
-        defaultAlt={draft.title}
-        onPick={pickImage}
-      />
-    </div>
+              {guide && (
+                <TabsContent value="guide">
+                  <Card>
+                    <CardContent className="space-y-5">
+                      <FormField label="Difficulty" htmlFor={`${uid}-difficulty`}>
+                        <NativeSelect
+                          id={`${uid}-difficulty`}
+                          value={draft.difficulty ?? ""}
+                          onChange={(event) => set("difficulty", (event.target.value || null) as Difficulty | null)}
+                          className="w-full"
+                        >
+                          <NativeSelectOption value="">Not set</NativeSelectOption>
+                          {Object.entries(DIFFICULTIES).map(([value, label]) => (
+                            <NativeSelectOption key={value} value={value}>
+                              {label}
+                            </NativeSelectOption>
+                          ))}
+                        </NativeSelect>
+                      </FormField>
+                      <FormField
+                        label="Time to complete (minutes)"
+                        htmlFor={`${uid}-minutes`}
+                        hint={`Reading alone takes about ${derived.minutes} min.`}
+                      >
+                        <Input
+                          id={`${uid}-minutes`}
+                          type="number"
+                          min={1}
+                          value={draft.estimatedMinutes ?? ""}
+                          className="w-28"
+                          onChange={(event) =>
+                            set(
+                              "estimatedMinutes",
+                              event.target.value ? Math.max(1, Number.parseInt(event.target.value, 10) || 1) : null,
+                            )
+                          }
+                        />
+                      </FormField>
+                      <div className="space-y-2">
+                        <Label>Before you start</Label>
+                        <ul className="space-y-2">
+                          {draft.prerequisites.map((item, index) => (
+                            <li key={index} className="flex gap-2">
+                              <Input
+                                value={item}
+                                maxLength={LIMITS.prerequisite}
+                                aria-label={`Prerequisite ${index + 1}`}
+                                onChange={(event) =>
+                                  set(
+                                    "prerequisites",
+                                    draft.prerequisites.map((p, i) => (i === index ? event.target.value : p)),
+                                  )
+                                }
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-11 shrink-0 md:size-9"
+                                aria-label={`Remove prerequisite ${index + 1}`}
+                                onClick={() =>
+                                  set(
+                                    "prerequisites",
+                                    draft.prerequisites.filter((_, i) => i !== index),
+                                  )
+                                }
+                              >
+                                <X />
+                              </Button>
+                            </li>
+                          ))}
+                        </ul>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-11 md:h-8"
+                          disabled={draft.prerequisites.length >= LIMITS.prerequisites}
+                          onClick={() => set("prerequisites", [...draft.prerequisites, ""])}
+                        >
+                          <Plus aria-hidden />
+                          Add prerequisite
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              )}
+
+              <TabsContent value="checks">
+                <Card>
+                  <CardContent className="space-y-4 text-sm">
+                    {readiness.length === 0 ? (
+                      <p className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                        <Check className="size-4" aria-hidden />
+                        Ready to publish.
+                      </p>
+                    ) : (
+                      <>
+                        {errors.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="font-medium">Before it can go live</p>
+                            <ul className="space-y-1.5">
+                              {errors.map((item, index) => (
+                                <li key={index} className="flex gap-2">
+                                  <CircleAlert className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+                                  <span>
+                                    {item.section !== undefined && (
+                                      <span className="text-muted-foreground">Section {item.section + 1}: </span>
+                                    )}
+                                    {item.message}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {warnings.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="font-medium">Worth a look</p>
+                            <ul className="space-y-1.5">
+                              {warnings.map((item, index) => (
+                                <li key={index} className="flex gap-2 text-muted-foreground">
+                                  <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden />
+                                  {item.message}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </aside>
+        </div>
+
+        <ImagePickerDialog
+          open={picker !== null}
+          onOpenChange={(open) => !open && setPicker(null)}
+          purpose="content"
+          defaultAlt={draft.title}
+          onPick={pickImage}
+        />
+        <FindReplaceDialog
+          open={findOpen}
+          onOpenChange={setFindOpen}
+          fields={plainFields}
+          onReplaceFields={replaceInFields}
+        />
+      </div>
+    </EditorWorkspace>
   );
 }

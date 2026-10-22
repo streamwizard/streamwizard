@@ -5,16 +5,24 @@ import { contentPath, isValidSlug, type ContentType } from "@repo/cms";
 import type { ContentProps } from "@repo/posthog";
 import { JsonLd } from "@/components/seo/json-ld";
 import { cmsImageUrl, imageResolver } from "@/lib/cms/images";
-import { getCurrentSlug, getPublicTaxonomy, getPublishedPost, listPostsById } from "@/lib/cms/public";
+import {
+  getCurrentSlug,
+  getPublicTaxonomy,
+  getPublishedPost,
+  listPostsById,
+  listPublishedPosts,
+} from "@/lib/cms/public";
 import {
   articleBreadcrumbSchema,
   articleMeta,
   articleSchema,
   inOrder,
   publishedAssets,
+  relatedByTopic,
   toArticle,
   toCard,
   type PublicTaxonomy,
+  type PublishedCardRow,
   type PublishedRow,
 } from "@/lib/cms/published";
 import { absoluteUrl } from "@/lib/seo";
@@ -27,6 +35,8 @@ import { ContentTracker } from "./content-tracker";
 // 404, archived posts included.
 
 type Params = Promise<{ slug: string }>;
+
+const RELATED_COUNT = 3;
 
 /** The live post at this URL, a redirect to its new one, or a 404. */
 async function loadPost(type: ContentType, slug: string): Promise<PublishedRow> {
@@ -78,11 +88,20 @@ function trackingProps(row: PublishedRow, taxonomy: PublicTaxonomy): ContentProp
 export async function ContentDetail({ type, params }: { type: ContentType; params: Params }) {
   const { slug } = await params;
   const row = await loadPost(type, slug);
-  const [taxonomy, relatedRows] = await Promise.all([getPublicTaxonomy(), listPostsById(row.related_ids)]);
-  const related = inOrder(
-    row.related_ids,
-    relatedRows.map((card) => toCard(card, taxonomy, cmsImageUrl)),
-  ).slice(0, 3);
+  const [taxonomy, relatedRows, blogs, guides] = await Promise.all([
+    getPublicTaxonomy(),
+    listPostsById(row.related_ids),
+    listPublishedPosts("blog"),
+    listPublishedPosts("guide"),
+  ]);
+  // Hand-picked related posts first, then the closest topic matches to fill.
+  const card = (published: PublishedCardRow) => toCard(published, taxonomy, cmsImageUrl);
+  const related = [
+    ...inOrder(row.related_ids, relatedRows.map(card)),
+    ...relatedByTopic(row, [...blogs, ...guides], row.related_ids)
+      .slice(0, RELATED_COUNT)
+      .map(card),
+  ].slice(0, RELATED_COUNT);
   const host = ((await headers()).get("host") ?? "streamwizard.org").replace(/:\d+$/, "");
 
   return (
@@ -93,16 +112,17 @@ export async function ContentDetail({ type, params }: { type: ContentType; param
         data={toArticle(row, taxonomy, cmsImageUrl)}
         resolveImage={imageResolver(publishedAssets(row.assets))}
         parentHost={host}
+        related={related.map((item) => ({ title: item.title, path: item.path, type: item.type }))}
       />
       {related.length > 0 && (
-        <section aria-labelledby="related-heading" className="mx-auto max-w-3xl px-4 pb-20 sm:px-6">
-          <h2 id="related-heading" className="text-xl font-semibold tracking-tight">
+        <section aria-labelledby="related-heading" className="mx-auto max-w-6xl px-4 pb-24 sm:px-6">
+          <h2 id="related-heading" className="border-t border-border pt-12 text-2xl font-semibold tracking-tight">
             Read next
           </h2>
-          <ul className="mt-6 grid gap-6 sm:grid-cols-2">
-            {related.map((card) => (
-              <li key={card.id} className="flex">
-                <ContentCard card={card} headingLevel={3} />
+          <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((item) => (
+              <li key={item.id} className="flex">
+                <ContentCard card={item} headingLevel={3} />
               </li>
             ))}
           </ul>
