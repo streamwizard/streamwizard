@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, CircleAlert, History, ImagePlus, Loader2, Plus, Save, Trash2, X } from "lucide-react";
@@ -27,6 +27,7 @@ import { saveContentDraftAction, trashContentAction } from "@/actions/cms-conten
 import { createTagAction } from "@/actions/cms-taxonomy";
 import { PageHeader } from "@/components/widgets/page-header";
 import { useAutosave, type AutosaveStatus } from "@/hooks/use-autosave";
+import { forgetOpeningDraft, useContentDraftRecovery } from "@/hooks/use-content-draft-recovery";
 import {
   DIFFICULTIES,
   LIMITS,
@@ -37,6 +38,7 @@ import {
   type Difficulty,
 } from "@/lib/cms/draft";
 import type { CmsMediaItem } from "@/lib/cms/media-items";
+import { clearLocalDraft, writeLocalDraft } from "@/lib/cms/local-draft";
 import { publishReadiness } from "@/lib/cms/readiness";
 import { PageCrumb } from "@/lib/crumbs";
 import { ConfirmButton } from "../confirm-button";
@@ -45,6 +47,7 @@ import { ImagePickerDialog } from "../image-picker-dialog";
 import { ChipPicker, type PickerOption } from "./chip-picker";
 import { PreviewMenu } from "./preview-menu";
 import { PublishControls } from "./publish-controls";
+import { RestoreDraftDialog } from "./restore-draft-dialog";
 import { RichTextEditor } from "./rich-text-editor";
 import { SectionList } from "./section-list";
 
@@ -71,6 +74,10 @@ export interface ContentEditorProps {
   /** The working copy changed after the live copy was made. */
   unpublishedChanges: boolean;
   scheduleError: string | null;
+  /** The stored body was written by a newer deploy than this one. */
+  futureBody: boolean;
+  /** When the working copy was last saved on the server, to judge a local copy against. */
+  updatedAt: string;
   options: { authors: PickerOption[]; categories: PickerOption[]; tags: PickerOption[]; related: PickerOption[] };
   /** Cover and OG images the draft already points at. */
   images: Record<string, EditorImage>;
@@ -86,12 +93,13 @@ const STATUS_LABELS: Record<ContentStatus, string> = {
 function SaveStatus({ status, conflict }: { status: AutosaveStatus; conflict: boolean }) {
   if (conflict) return null;
   if (status === "idle") return null;
+  // A failed save isn't a lost one: the text is in this browser until it lands.
   return (
     <span className="flex items-center gap-1.5 text-xs text-muted-foreground" role="status" aria-live="polite">
       {status === "saving" && <Loader2 className="size-3.5 animate-spin" aria-hidden />}
       {status === "saved" && <Check className="size-3.5" aria-hidden />}
       {status === "error" && <AlertTriangle className="size-3.5 text-destructive" aria-hidden />}
-      {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : "Couldn't save"}
+      {status === "saving" ? "Saving…" : status === "saved" ? "Saved" : "Couldn't save · kept on this device"}
     </span>
   );
 }
@@ -158,7 +166,7 @@ const SCHEDULED_AT = new Intl.DateTimeFormat("en-GB", {
 });
 
 export function ContentEditor(props: ContentEditorProps) {
-  const { id, type, status, publishedSlug, unpublishedChanges, scheduleError, options } = props;
+  const { id, type, status, publishedSlug, unpublishedChanges, scheduleError, futureBody, options } = props;
   const uid = useId();
   const router = useRouter();
   const [draft, setDraft] = useState<ContentDraft>(props.initial);
@@ -167,14 +175,25 @@ export function ContentEditor(props: ContentEditorProps) {
   const [picker, setPicker] = useState<"cover" | "og" | null>(null);
   const [tagOptions, setTagOptions] = useState(options.tags);
   const [pending, start] = useTransition();
+  // Bumped by a restore: the editors own their content after mount, so the
+  // only way to put different text in them is to mount them again.
+  const [restoreKey, setRestoreKey] = useState(0);
+  const [mounted, setMounted] = useState<ContentDraft>(props.initial);
   const lock = useRef(props.lockVersion);
+  const latest = useRef(props.initial);
   const guide = type === "guide";
+
+  useEffect(() => {
+    latest.current = draft;
+  });
 
   const set = <K extends keyof ContentDraft>(key: K, value: ContentDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
   const save = async (value: ContentDraft, kind: "autosave" | "manual" = "autosave"): Promise<boolean> => {
     if (conflict) return false;
+    // Parked here first: if the request never lands, the text survives the tab.
+    writeLocalDraft(id, value, lock.current);
     const result = await saveContentDraftAction(id, type, lock.current, value, kind);
     if (result.conflict) {
       setConflict(true);
@@ -185,11 +204,37 @@ export function ContentEditor(props: ContentEditorProps) {
       return false;
     }
     lock.current = result.lockVersion;
+    clearLocalDraft(id);
+    forgetOpeningDraft(id);
     if (result.removed > 0) toast.warning("Some pasted content isn't supported here and was left out when saving.");
     return true;
   };
 
   const { status: saveStatus, flush } = useAutosave(draft, (value) => save(value));
+
+  // A tab closed inside the debounce, or while a save is failing, still leaves
+  // the text in this browser. pagehide fires where beforeunload doesn't (iOS,
+  // bfcache), and localStorage is synchronous, so it always completes.
+  useEffect(() => {
+    const park = () => writeLocalDraft(id, latest.current, lock.current);
+    window.addEventListener("pagehide", park);
+    return () => window.removeEventListener("pagehide", park);
+  }, [id]);
+
+  // Back online: send what's waiting instead of sitting on "Couldn't save"
+  // until the next keystroke.
+  useEffect(() => {
+    const retry = () => void flush();
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+  }, [flush]);
+
+  const restoreLocal = useCallback((recovered: ContentDraft) => {
+    setDraft(recovered);
+    setMounted(recovered);
+    setRestoreKey((key) => key + 1);
+  }, []);
+  const recovery = useContentDraftRecovery(id, props.updatedAt, restoreLocal);
 
   const derived = useMemo(() => deriveDraft(type, draft), [type, draft]);
   const cover = draft.coverAssetId ? (images[draft.coverAssetId] ?? null) : null;
@@ -253,6 +298,7 @@ export function ContentEditor(props: ContentEditorProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      <RestoreDraftDialog {...recovery} />
       <PageCrumb label={draft.title.trim() || "Untitled"} href={`/content/${id}`} />
       <PageHeader
         title={draft.title.trim() || (guide ? "Untitled guide" : "Untitled post")}
@@ -333,6 +379,13 @@ export function ContentEditor(props: ContentEditorProps) {
         </div>
       )}
 
+      {futureBody && (
+        <div role="alert" className="rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm">
+          This post was last edited on a newer version of the admin. Saving it here could drop parts of it. Reload once
+          this deploy has caught up.
+        </div>
+      )}
+
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="min-w-0 space-y-4">
           <Input
@@ -365,7 +418,8 @@ export function ContentEditor(props: ContentEditorProps) {
           <div className="space-y-1.5">
             <Label>{guide ? "Intro" : "Body"}</Label>
             <RichTextEditor
-              initial={props.initial.body}
+              key={restoreKey}
+              initial={mounted.body}
               onChange={(body) => set("body", body)}
               placeholder={guide ? "What will the reader have built by the end?" : "Start writing…"}
               label={guide ? "Intro" : "Body"}
@@ -375,7 +429,11 @@ export function ContentEditor(props: ContentEditorProps) {
           {guide && (
             <div className="space-y-2">
               <h2 className="text-base font-semibold">Sections</h2>
-              <SectionList sections={draft.sections} onChange={(sections) => set("sections", sections)} />
+              <SectionList
+                key={restoreKey}
+                sections={draft.sections}
+                onChange={(sections) => set("sections", sections)}
+              />
             </div>
           )}
         </div>
