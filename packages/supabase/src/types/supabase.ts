@@ -618,6 +618,7 @@ export type Database = {
           primary_category_id: string | null
           publish_at: string | null
           reading_time_minutes: number
+          review_state: string
           schedule_error: string | null
           scheduled_by: string | null
           seo_description: string | null
@@ -656,6 +657,7 @@ export type Database = {
           primary_category_id?: string | null
           publish_at?: string | null
           reading_time_minutes?: number
+          review_state?: string
           schedule_error?: string | null
           scheduled_by?: string | null
           seo_description?: string | null
@@ -694,6 +696,7 @@ export type Database = {
           primary_category_id?: string | null
           publish_at?: string | null
           reading_time_minutes?: number
+          review_state?: string
           schedule_error?: string | null
           scheduled_by?: string | null
           seo_description?: string | null
@@ -1091,6 +1094,67 @@ export type Database = {
           tags?: string[]
         }
         Relationships: []
+      }
+      cms_comments: {
+        Row: {
+          anchor: string | null
+          body: string
+          content_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          parent_id: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          section_id: string | null
+        }
+        Insert: {
+          anchor?: string | null
+          body: string
+          content_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          parent_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          section_id?: string | null
+        }
+        Update: {
+          anchor?: string | null
+          body?: string
+          content_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          parent_id?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          section_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cms_comments_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "cms_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cms_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "cms_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cms_comments_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "cms_guide_sections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cms_revisions: {
         Row: {
@@ -4409,6 +4473,7 @@ export type Database = {
           primary_category_id: string | null
           publish_at: string | null
           reading_time_minutes: number
+          review_state: string
           schedule_error: string | null
           scheduled_by: string | null
           seo_description: string | null

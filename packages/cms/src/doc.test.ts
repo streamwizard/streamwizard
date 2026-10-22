@@ -42,12 +42,13 @@ describe("sanitizeDoc", () => {
     );
     const { doc: out, issues } = sanitizeDoc(input);
     expect(issues).toEqual([]);
-    expect(out).toEqual(input as never);
+    // Saved documents carry the format version; the content is untouched.
+    expect(out.content).toEqual(input.content as never);
   });
 
   it("rejects anything that isn't a document", () => {
     expect(sanitizeDoc(null).issues[0]?.code).toBe("invalid_doc");
-    expect(sanitizeDoc({ type: "paragraph" }).doc).toEqual({ type: "doc", content: [] });
+    expect(sanitizeDoc({ type: "paragraph" }).doc.content).toEqual([]);
   });
 
   it("drops unknown nodes and marks, and reports them", () => {

@@ -49,3 +49,35 @@ describe("pageOutline", () => {
     expect(pageOutline(body, sections)).toEqual(outline);
   });
 });
+
+describe("stored anchors", () => {
+  const heading = (text: string, anchor?: string) => ({
+    type: "heading",
+    attrs: anchor ? { level: 2, anchor } : { level: 2 },
+    content: [{ type: "text", text }],
+  });
+  const body = (...content: Doc["content"]): Doc => ({ type: "doc", content });
+
+  it("keeps a heading's own anchor when it is reworded", () => {
+    const outline = pageOutline(body(heading("Getting started", "set-up-obs")));
+    expect(outline.toc[0]?.anchor).toBe("set-up-obs");
+  });
+
+  it("falls back to the words when there is no stored anchor", () => {
+    expect(pageOutline(body(heading("Set up OBS"))).toc[0]?.anchor).toBe("set-up-obs");
+  });
+
+  it("ignores an anchor that isn't a usable slug", () => {
+    expect(pageOutline(body(heading("Set up OBS", "Not A Slug"))).toc[0]?.anchor).toBe("set-up-obs");
+  });
+
+  it("gives the second claim on one anchor a number", () => {
+    const outline = pageOutline(body(heading("First", "shared"), heading("Second", "shared")));
+    expect(outline.toc.map((entry) => entry.anchor)).toEqual(["shared", "second"]);
+  });
+
+  it("keeps a guide section's anchor when its title changes", () => {
+    const outline = pageOutline(body(), [{ title: "Renamed", body: body(), anchor: "install-obs" }]);
+    expect(outline.sections[0]?.anchor).toBe("install-obs");
+  });
+});

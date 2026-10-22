@@ -54,7 +54,7 @@ describe("deriveDraft", () => {
   it("drops guide fields from blog posts", () => {
     const { fields, sections } = deriveDraft(
       "blog",
-      draft({ sections: [{ id: CATEGORY, title: "x", body: emptyDoc() }] }),
+      draft({ sections: [{ id: CATEGORY, title: "x", anchor: null, body: emptyDoc() }] }),
     );
     expect(fields).toMatchObject({ difficulty: null, estimated_minutes: null, prerequisites: [] });
     expect(sections).toBeNull();
@@ -74,8 +74,8 @@ describe("deriveDraft", () => {
       draft({
         body: doc(heading(2, "Setup")),
         sections: [
-          { id: CATEGORY, title: "Setup", body: doc(heading(3, "Windows")) },
-          { id: "22222222-2222-4222-8222-222222222222", title: "", body: doc(paragraph("words here")) },
+          { id: CATEGORY, title: "Setup", anchor: null, body: doc(heading(3, "Windows")) },
+          { id: "22222222-2222-4222-8222-222222222222", title: "", anchor: null, body: doc(paragraph("words here")) },
         ],
       }),
     );
@@ -94,7 +94,7 @@ describe("deriveDraft", () => {
     const words = Array.from({ length: 450 }, () => "word").join(" ");
     const derived = deriveDraft(
       "guide",
-      draft({ sections: [{ id: CATEGORY, title: "A", body: doc(paragraph(words)) }] }),
+      draft({ sections: [{ id: CATEGORY, title: "A", anchor: null, body: doc(paragraph(words)) }] }),
     );
     expect(derived.words).toBe(450);
     expect(derived.fields).toMatchObject({ word_count: 450, reading_time_minutes: 2 });

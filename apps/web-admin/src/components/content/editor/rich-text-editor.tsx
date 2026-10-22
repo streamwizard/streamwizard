@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import {
   Bold,
+  ChevronDown,
   Code,
+  FileUp,
   Film,
   Heading2,
   Heading3,
-  Heading4,
   ImagePlus,
   Italic,
   Link as LinkIcon,
@@ -26,8 +27,15 @@ import {
   Undo,
 } from "lucide-react";
 import { toast } from "sonner";
-import { parseEmbedUrl, sanitizeHref, type Doc } from "@repo/cms";
-import { Button, Input } from "@repo/ui";
+import { cleanPastedHtml, parseEmbedUrl, sanitizeHref, type Doc, type PasteReport } from "@repo/cms";
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  Input,
+} from "@repo/ui";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -36,14 +44,20 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/widgets/responsive-dialog";
+import type { BlockId } from "@/lib/cms/blocks";
+import { activeTextStyle, TEXT_STYLES, textStyleLabel, type TextStyle, type TextStyleId } from "@/lib/cms/text-styles";
 import { cn } from "@/lib/utils";
 import type { CmsMediaItem } from "@/lib/cms/media-items";
 import { CMS_IMAGE_TYPES } from "@/lib/cms/media";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
 import { ImageUploadDialog } from "../image-upload-dialog";
+import { BlockHandle } from "./block-handle";
+import { BlockInserter, insertBlock } from "./block-inserter";
 import { useEditorWorkspace, type EditorDialog, type LinkTarget } from "./editor-workspace";
+import { ImportDocxDialog } from "./import-docx-dialog";
 import { CODE_LANGUAGES, cmsExtensions } from "./extensions";
+import { SlashMenu, SlashMenuList, type SlashMenuState } from "./slash-menu";
 
 // Prose styles for the editing surface. The public site has its own; these
 // only need to make the structure (headings, lists, quotes) obvious.
@@ -229,11 +243,38 @@ function EmbedDialog({ editor, onClose }: { editor: Editor; onClose: () => void 
   );
 }
 
+/** The one control a writer looks for first, in words rather than H2/H3. */
+function TextStyleMenu({ active, onPick }: { active: TextStyleId; onPick: (style: TextStyle) => void }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button type="button" variant="ghost" className="h-9 justify-between gap-1 px-2 text-sm md:h-8 md:w-40">
+          <span className="truncate">{textStyleLabel(active)}</span>
+          <ChevronDown className="size-4 shrink-0 opacity-60" aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">
+        {TEXT_STYLES.map((style) => (
+          <DropdownMenuCheckboxItem
+            key={style.id}
+            checked={style.id === active}
+            onSelect={() => onPick(style)}
+            className={style.id === "h2" ? "text-base font-semibold" : style.id === "h3" ? "font-semibold" : undefined}
+          >
+            {style.label}
+          </DropdownMenuCheckboxItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function Toolbar({
   editor,
   onImage,
   onLink,
   onEmbed,
+  onImport,
   onFind,
   className,
 }: {
@@ -241,6 +282,7 @@ function Toolbar({
   onImage: () => void;
   onLink: () => void;
   onEmbed: () => void;
+  onImport: () => void;
   onFind?: () => void;
   className?: string;
 }) {
@@ -278,23 +320,11 @@ function Toolbar({
         className,
       )}
     >
-      <ToolButton
-        label="Heading 2"
-        icon={Heading2}
-        active={state.h2}
-        onClick={() => chain().toggleHeading({ level: 2 }).run()}
-      />
-      <ToolButton
-        label="Heading 3"
-        icon={Heading3}
-        active={state.h3}
-        onClick={() => chain().toggleHeading({ level: 3 }).run()}
-      />
-      <ToolButton
-        label="Heading 4"
-        icon={Heading4}
-        active={state.h4}
-        onClick={() => chain().toggleHeading({ level: 4 }).run()}
+      <TextStyleMenu
+        active={activeTextStyle(state)}
+        onPick={(style) =>
+          style.level === null ? chain().setParagraph().run() : chain().setHeading({ level: style.level }).run()
+        }
       />
       <span className="mx-1 h-5 w-px bg-border" aria-hidden />
       <ToolButton label="Bold" icon={Bold} active={state.bold} onClick={() => chain().toggleBold().run()} />
@@ -370,6 +400,7 @@ function Toolbar({
         }
       />
       <ToolButton label="Divider" icon={Minus} onClick={() => chain().setHorizontalRule().run()} />
+      <ToolButton label="Import a Word file" icon={FileUp} onClick={onImport} />
       <span className="ml-auto" />
       {onFind && <ToolButton label="Find and replace (Ctrl H)" icon={Search} onClick={onFind} />}
       <ToolButton label="Undo" icon={Undo} disabled={!state.canUndo} onClick={() => chain().undo().run()} />
@@ -460,6 +491,7 @@ export function WorkspaceToolbar({ onFind }: { onFind: () => void }) {
       onImage={() => active.open("image")}
       onLink={() => active.open("link")}
       onEmbed={() => active.open("embed")}
+      onImport={() => active.open("docx")}
       onFind={onFind}
       className="rounded-lg border shadow-xs"
     />
@@ -475,12 +507,30 @@ interface RichTextEditorProps {
   className?: string;
 }
 
+/** What the writer is told about a paste that didn't arrive whole. */
+function reportPaste(report: PasteReport, onAddImages: () => void) {
+  if (report.images.length > 0) {
+    const count = report.images.length;
+    toast.warning(
+      count === 1
+        ? "One image didn't come along: images live in the media library."
+        : `${count} images didn't come along: images live in the media library.`,
+      { action: { label: "Add images", onClick: onAddImages } },
+    );
+  }
+  if (report.headingsRemapped > 0) {
+    const where = report.source === "google-docs" ? "Google Docs" : report.source === "word" ? "Word" : "the page";
+    toast.message(`Pasted from ${where}. Headings were matched to this page's levels.`);
+  }
+}
+
 export function RichTextEditor({ initial, onChange, placeholder, label, className }: RichTextEditorProps) {
   const id = useId();
   const workspace = useEditorWorkspace();
   const register = workspace?.register;
   const focusWorkspace = workspace?.focus;
   const [dialog, setDialog] = useState<EditorDialog | null>(null);
+  const [slash, setSlash] = useState<SlashMenuState | null>(null);
   // An image pasted or dropped in: it needs alt text before it can upload.
   const [incoming, setIncoming] = useState<{ file: File; pos: number } | null>(null);
   const editorRef = useRef<Editor | null>(null);
@@ -492,8 +542,15 @@ export function RichTextEditor({ initial, onChange, placeholder, label, classNam
     return true;
   };
 
+  // Every callback here is a stable setState, so the extensions can be built
+  // once: useEditor takes them at mount and never looks again.
+  const pickBlock = useCallback((instance: Editor, id: BlockId) => insertBlock(instance, id, setDialog), []);
+  const extensions = useMemo(
+    () => [...cmsExtensions(placeholder), SlashMenu.configure({ onChange: setSlash, onPick: pickBlock })],
+    [placeholder, pickBlock],
+  );
   const editor = useEditor({
-    extensions: cmsExtensions(placeholder),
+    extensions,
     content: initial,
     immediatelyRender: false,
     editorProps: {
@@ -503,6 +560,17 @@ export function RichTextEditor({ initial, onChange, placeholder, label, classNam
         if (moved) return false;
         const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
         return receive(imageFiles(event.dataTransfer), at?.pos ?? view.state.selection.from);
+      },
+      // Google Docs' and Word's own markup, tidied before ProseMirror parses
+      // it: what the schema drops afterwards can no longer be explained to
+      // the writer, and pasted images are only visible here.
+      transformPastedHTML: (html) => {
+        const { html: clean, report } = cleanPastedHtml(html);
+        // This runs inside ProseMirror's dispatch; toasts are React state.
+        if (report.images.length > 0 || report.headingsRemapped > 0) {
+          queueMicrotask(() => reportPaste(report, () => setDialog("image")));
+        }
+        return clean;
       },
     },
     // A plain copy: ProseMirror keeps node attributes (image ids, heading
@@ -541,16 +609,29 @@ export function RichTextEditor({ initial, onChange, placeholder, label, classNam
           onImage={() => setDialog("image")}
           onLink={() => setDialog("link")}
           onEmbed={() => setDialog("embed")}
+          onImport={() => setDialog("docx")}
         />
       )}
       {/* Gone while one of this editor's dialogs is open, so it can't float over it. */}
       {editor && !dialog && !incoming && <SelectionMenu editor={editor} onLink={() => setDialog("link")} />}
+      {editor && !dialog && !incoming && <BlockInserter editor={editor} onDialog={setDialog} />}
+      {editor && slash && (
+        <SlashMenuList
+          state={slash}
+          onPick={(item) => {
+            setSlash(null);
+            insertBlock(editor, item.id, setDialog);
+          }}
+        />
+      )}
+      {editor && <BlockHandle editor={editor} />}
       <EditorContent editor={editor} />
 
       {editor && dialog === "link" && (
         <LinkDialog editor={editor} targets={workspace?.linkTargets ?? []} onClose={() => setDialog(null)} />
       )}
       {editor && dialog === "embed" && <EmbedDialog editor={editor} onClose={() => setDialog(null)} />}
+      {editor && dialog === "docx" && <ImportDocxDialog editor={editor} onClose={() => setDialog(null)} />}
       <ImagePickerDialog
         open={dialog === "image"}
         onOpenChange={(open) => !open && setDialog(null)}

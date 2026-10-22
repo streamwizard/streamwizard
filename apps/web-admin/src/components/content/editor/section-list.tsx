@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { ArrowDown, ArrowUp, ChevronDown, Plus, Trash2 } from "lucide-react";
 import { Button, Input } from "@repo/ui";
+import { SortableList, type SortableMove } from "@repo/ui/components/sortable-list";
 import { cn } from "@/lib/utils";
 import { emptyDoc, LIMITS, type DraftSection } from "@/lib/cms/draft";
 import { ConfirmButton } from "../confirm-button";
@@ -25,27 +26,26 @@ interface SectionListProps {
 function SectionCard({
   section,
   index,
-  count,
   words,
   folded,
+  move,
   onFold,
   onChange,
-  onMove,
   onRemove,
 }: {
   section: DraftSection;
   index: number;
-  count: number;
   words: number;
   folded: boolean;
+  /** Drag does the same thing; these keep it reachable from the keyboard. */
+  move: SortableMove;
   onFold: () => void;
   onChange: (section: DraftSection) => void;
-  onMove: (to: number) => void;
   onRemove: () => void;
 }) {
   const uid = useId();
   return (
-    <li className="space-y-3 border-t pt-6" data-section-id={section.id} data-folded={folded || undefined}>
+    <div className="space-y-3 pt-3" data-section-id={section.id} data-folded={folded || undefined}>
       <div className="flex items-center gap-2">
         <Button
           type="button"
@@ -78,8 +78,8 @@ function SectionCard({
           variant="ghost"
           size="icon"
           className="size-11 md:size-8"
-          disabled={index === 0}
-          onClick={() => onMove(index - 1)}
+          disabled={!move.up}
+          onClick={move.up}
           aria-label={`Move section ${index + 1} up`}
         >
           <ArrowUp />
@@ -89,8 +89,8 @@ function SectionCard({
           variant="ghost"
           size="icon"
           className="size-11 md:size-8"
-          disabled={index === count - 1}
-          onClick={() => onMove(index + 1)}
+          disabled={!move.down}
+          onClick={move.down}
           aria-label={`Move section ${index + 1} down`}
         >
           <ArrowDown />
@@ -121,7 +121,7 @@ function SectionCard({
           label={`Section ${index + 1} text`}
         />
       </div>
-    </li>
+    </div>
   );
 }
 
@@ -129,42 +129,43 @@ function SectionCard({
 export function SectionList({ sections, onChange, words, folded, onFold }: SectionListProps) {
   const update = (section: DraftSection) =>
     onChange((current) => current.map((other) => (other.id === section.id ? section : other)));
-  const move = (from: number, to: number) =>
-    onChange((current) => {
-      const next = [...current];
-      const [moved] = next.splice(from, 1);
-      if (moved) next.splice(to, 0, moved);
-      return next;
-    });
 
   return (
     <div className="space-y-3">
-      <ol className="space-y-8">
-        {sections.map((section, index) => (
-          <SectionCard
-            // Ids are made in the browser for new sections, so keys stay stable across saves.
-            key={section.id}
-            section={section}
-            index={index}
-            count={sections.length}
-            words={words[index] ?? 0}
-            folded={folded.includes(section.id)}
-            onFold={() =>
-              onFold(folded.includes(section.id) ? folded.filter((id) => id !== section.id) : [...folded, section.id])
-            }
-            onChange={update}
-            onMove={(to) => move(index, to)}
-            onRemove={() => onChange((current) => current.filter((other) => other.id !== section.id))}
-          />
-        ))}
-      </ol>
+      {/* Drag to reorder, or the arrows on each section: the same move either way. */}
+      <SortableList
+        id="guide-sections"
+        items={sections}
+        onReorder={(next) => onChange(() => next)}
+        itemLabel={(section) => section.title.trim() || "this section"}
+        className="space-y-5"
+        handleClassName="self-start"
+      >
+        {(section, move) => {
+          const index = sections.findIndex((other) => other.id === section.id);
+          return (
+            <SectionCard
+              section={section}
+              index={index}
+              words={words[index] ?? 0}
+              folded={folded.includes(section.id)}
+              move={move}
+              onFold={() =>
+                onFold(folded.includes(section.id) ? folded.filter((id) => id !== section.id) : [...folded, section.id])
+              }
+              onChange={update}
+              onRemove={() => onChange((current) => current.filter((other) => other.id !== section.id))}
+            />
+          );
+        }}
+      </SortableList>
       <Button
         type="button"
         variant="outline"
         className="h-11 md:h-9"
         disabled={sections.length >= LIMITS.sections}
         onClick={() => {
-          const added = { id: crypto.randomUUID(), title: "", body: emptyDoc() };
+          const added = { id: crypto.randomUUID(), title: "", anchor: null, body: emptyDoc() };
           onChange((current) => [...current, added]);
         }}
       >

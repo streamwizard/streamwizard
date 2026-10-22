@@ -36,7 +36,8 @@ export interface ArticleData {
   estimatedMinutes: number | null;
   prerequisites: string[];
   body: Doc;
-  sections: { title: string; body: Doc }[];
+  /** `anchor` is the one the section was published with; absent on content written before anchors. */
+  sections: { title: string; body: Doc; anchor?: string | null }[];
 }
 
 function formatDate(iso: string): string {

@@ -19,6 +19,7 @@ import {
 } from "@repo/cms";
 import { Button, Checkbox, Label, Popover, PopoverContent, PopoverTrigger, Textarea } from "@repo/ui";
 import { cn } from "@/lib/utils";
+import { HeadingAnchor } from "./heading-anchor";
 
 // The editor's schema. It mirrors @repo/cms sanitizeDoc's allowlist: nothing
 // the public renderer can't draw can be typed or pasted in. Pasted <img> tags
@@ -463,6 +464,7 @@ export function cmsExtensions(placeholder: string) {
     TableKit.configure({ table: { resizable: false } }),
     Placeholder.configure({ placeholder }),
     CharacterCount,
+    HeadingAnchor,
     CmsImage,
     Callout,
     Embed,

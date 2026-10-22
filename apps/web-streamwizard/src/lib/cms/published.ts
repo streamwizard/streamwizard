@@ -1,4 +1,4 @@
-import { contentIndexPath, contentPath, type ContentType, type Doc } from "@repo/cms";
+import { contentIndexPath, contentPath, migrateDoc, type ContentType, type Doc } from "@repo/cms";
 import type { ArticleData } from "@/components/public/cms/cms-article";
 import type { AssetRecord } from "./images";
 
@@ -133,8 +133,7 @@ export function asContentType(value: string): ContentType {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const asDoc = (value: unknown): Doc =>
-  isRecord(value) && value.type === "doc" ? (value as unknown as Doc) : { type: "doc", content: [] };
+const asDoc = (value: unknown): Doc => migrateDoc(value).doc;
 
 const asDifficulty = (value: string | null): ArticleData["difficulty"] =>
   value && DIFFICULTIES.has(value) ? (value as ArticleData["difficulty"]) : null;
@@ -222,7 +221,13 @@ export function toArticle(row: PublishedRow, taxonomy: PublicTaxonomy, imageUrl:
     body: asDoc(row.body),
     sections: sections.flatMap((section) =>
       isRecord(section)
-        ? [{ title: typeof section.title === "string" ? section.title : "", body: asDoc(section.body) }]
+        ? [
+            {
+              title: typeof section.title === "string" ? section.title : "",
+              anchor: typeof section.anchor === "string" ? section.anchor : null,
+              body: asDoc(section.body),
+            },
+          ]
         : [],
     ),
   };

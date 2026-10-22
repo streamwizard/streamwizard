@@ -7,8 +7,9 @@ import { getCmsContentForEditor, listCmsContentOptions } from "@repo/supabase/qu
 import { listCmsCategories, listCmsTags } from "@repo/supabase/queries/cms/taxonomy";
 import { ContentEditor, type ContentStatus, type EditorImage } from "@/components/content/editor/content-editor";
 import { describeScheduleError } from "@/lib/cms/content-errors";
-import { contentType, draftFromRow } from "@/lib/cms/draft-row";
+import { contentType, draftFromRow, rowHasFutureBody } from "@/lib/cms/draft-row";
 import { publicContentUrl } from "@/lib/cms/publish";
+import { asReviewState } from "@/lib/cms/review";
 import { cmsAssetUrl } from "@/lib/cms/storage";
 import { env } from "@/lib/env";
 
@@ -60,6 +61,9 @@ export default async function ContentEditorPage({ params }: { params: Promise<{ 
       liveUrl={row.published ? publicContentUrl(env.CMS_SITE_URL, contentType(row), row.published.slug) : null}
       unpublishedChanges={!!row.published && row.updated_at > row.published.snapshot_at}
       scheduleError={row.schedule_error ? describeScheduleError(row.schedule_error) : null}
+      futureBody={rowHasFutureBody(row)}
+      updatedAt={row.updated_at}
+      reviewState={asReviewState(row.review_state)}
       images={images}
       options={{
         authors: (authors.data ?? [])

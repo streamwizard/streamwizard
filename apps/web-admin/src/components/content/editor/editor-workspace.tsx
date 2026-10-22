@@ -8,7 +8,7 @@ import type { Editor } from "@tiptap/react";
 // editors (find and replace works across them), and the places a link can
 // point to. Outside a workspace a RichTextEditor brings its own toolbar.
 
-export type EditorDialog = "image" | "link" | "embed";
+export type EditorDialog = "image" | "link" | "embed" | "docx";
 
 export interface EditorHandle {
   id: string;
