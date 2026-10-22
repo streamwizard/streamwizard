@@ -24,7 +24,7 @@ import {
   Undo,
 } from "lucide-react";
 import { toast } from "sonner";
-import { parseEmbedUrl, sanitizeHref, type Doc } from "@repo/cms";
+import { cleanPastedHtml, parseEmbedUrl, sanitizeHref, type Doc, type PasteReport } from "@repo/cms";
 import { Button, Input } from "@repo/ui";
 import {
   ResponsiveDialog,
@@ -324,13 +324,43 @@ interface RichTextEditorProps {
   className?: string;
 }
 
+/** What the writer is told about a paste that didn't arrive whole. */
+function reportPaste(report: PasteReport, onAddImages: () => void) {
+  if (report.images.length > 0) {
+    const count = report.images.length;
+    toast.warning(
+      count === 1
+        ? "One image didn't come along: images live in the media library."
+        : `${count} images didn't come along: images live in the media library.`,
+      { action: { label: "Add images", onClick: onAddImages } },
+    );
+  }
+  if (report.headingsRemapped > 0) {
+    const where = report.source === "google-docs" ? "Google Docs" : report.source === "word" ? "Word" : "the page";
+    toast.message(`Pasted from ${where}. Headings were matched to this page's levels.`);
+  }
+}
+
 export function RichTextEditor({ initial, onChange, placeholder, label, className }: RichTextEditorProps) {
   const [dialog, setDialog] = useState<"image" | "link" | "embed" | null>(null);
   const editor = useEditor({
     extensions: cmsExtensions(placeholder),
     content: initial,
     immediatelyRender: false,
-    editorProps: { attributes: { class: SURFACE, "aria-label": label } },
+    editorProps: {
+      attributes: { class: SURFACE, "aria-label": label },
+      // Google Docs' and Word's own markup, tidied before ProseMirror parses
+      // it: what the schema drops afterwards can no longer be explained to
+      // the writer, and pasted images are only visible here.
+      transformPastedHTML: (html) => {
+        const { html: clean, report } = cleanPastedHtml(html);
+        // This runs inside ProseMirror's dispatch; toasts are React state.
+        if (report.images.length > 0 || report.headingsRemapped > 0) {
+          queueMicrotask(() => reportPaste(report, () => setDialog("image")));
+        }
+        return clean;
+      },
+    },
     onUpdate: ({ editor: e }) => onChange(e.getJSON() as Doc),
   });
 

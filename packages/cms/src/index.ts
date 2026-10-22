@@ -2,6 +2,7 @@ export * from "./a11y";
 export * from "./doc";
 export * from "./doc-version";
 export * from "./embed";
+export * from "./paste-html";
 export * from "./paths";
 export * from "./preview";
 export * from "./slug";
