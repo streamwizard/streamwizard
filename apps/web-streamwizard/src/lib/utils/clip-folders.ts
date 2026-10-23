@@ -35,6 +35,64 @@ export function buildClipFolderTree(folders: ClipFolderRow[]): ClipFolderNode[] 
   return roots;
 }
 
+export type FolderClipCount = {
+  /** Clips filed in this exact folder. */
+  direct: number;
+  /** Clips in this folder plus everything in its subfolders. */
+  total: number;
+};
+
+/**
+ * Roll up per-folder clip counts over the tree, keyed by folder id.
+ *
+ * Caveat: `total` sums the direct counts of a folder and its descendants, so a
+ * clip filed in BOTH a folder and one of its subfolders is counted twice. The
+ * number reads high, never low, and leaf folders are always exact. Making it
+ * exact needs a recursive count(distinct clip_id) in SQL, which is only worth
+ * the migration once a folder page actually lists its subfolders' clips.
+ */
+export function rollupFolderClipCounts(
+  nodes: ClipFolderNode[],
+  directCounts: Record<string, number>
+): Record<string, FolderClipCount> {
+  const counts: Record<string, FolderClipCount> = {};
+
+  const walk = (node: ClipFolderNode): number => {
+    const direct = directCounts[node.id] ?? 0;
+    const total = direct + node.children.reduce((sum, child) => sum + walk(child), 0);
+    counts[node.id] = { direct, total };
+    return total;
+  };
+
+  nodes.forEach(walk);
+  return counts;
+}
+
+/** Depth-first flattening of the folder tree, keeping each folder's nesting depth. */
+export function flattenClipFolderTree(
+  nodes: ClipFolderNode[],
+  depth = 0
+): { folder: ClipFolderNode; depth: number }[] {
+  return nodes.flatMap((folder) => [
+    { folder, depth },
+    ...flattenClipFolderTree(folder.children, depth + 1),
+  ]);
+}
+
+/** One wording for clip counts, so the sidebar and the overview page never drift apart. */
+export function formatFolderClipCount(count: FolderClipCount): { label: string; aria: string } {
+  const { direct, total } = count;
+  const clips = (value: number) => `${value} ${value === 1 ? "clip" : "clips"}`;
+
+  if (total === 0) return { label: "Empty", aria: "No clips" };
+  if (total === direct) return { label: clips(direct), aria: clips(direct) };
+
+  return {
+    label: `${clips(direct)} \u00b7 ${total} total`,
+    aria: `${clips(direct)}, ${total} including subfolders`,
+  };
+}
+
 export function getFolderUrl(href: string): string {
   return `/dashboard/clips/${folderHrefToUrlPath(href)}`;
 }
