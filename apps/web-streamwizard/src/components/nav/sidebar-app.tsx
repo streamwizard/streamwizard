@@ -11,7 +11,6 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@repo/ui";
 import { discordInviteLink } from "@/lib/constant";
 import { Database } from "@repo/supabase";
@@ -25,6 +24,7 @@ import { Separator } from "@repo/ui";
 import { DashboardUserNav } from "./dashboard-user-nav";
 import SidebarClips from "./sidebar-clips";
 import SidebarCommands from "./sidebar-commands";
+import { useCloseMobileSidebar } from "./use-close-mobile-sidebar";
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   user: User;
@@ -40,10 +40,7 @@ export function AppSidebar({
   hasCloudObsAccess = false,
   ...props
 }: AppSidebarProps) {
-  const { setOpenMobile, isMobile } = useSidebar();
-  const closeMobile = () => {
-    if (isMobile) setOpenMobile(false);
-  };
+  const closeMobile = useCloseMobileSidebar();
   const pathname = usePathname();
 
   return (
@@ -90,8 +87,8 @@ export function AppSidebar({
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarClips clipFolders={folders} clipCounts={folderClipCounts} />
             </SidebarMenu>
-            <SidebarClips clipFolders={folders} clipCounts={folderClipCounts} />
           </SidebarGroupContent>
         </SidebarGroup>
         {hasCloudObsAccess && (
