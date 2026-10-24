@@ -46,6 +46,11 @@ export interface Shot {
   route: string;
   app?: App;
   auth?: AuthRole;
+  /**
+   * "onboarding" starts the run with the wizard unfinished, which is a
+   * different state from every other authenticated shot.
+   */
+  seed?: "default" | "onboarding";
 
   viewport: { width: number; height: number; dsf?: number };
   theme?: Theme;

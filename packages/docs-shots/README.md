@@ -33,7 +33,28 @@ bun src/cli.ts                          # everything, dry run
 bun src/cli.ts --only 'overlays/*'      # one area
 bun src/cli.ts --only overlays/clock-widget --write   # promote into apps/docs/images
 bun src/cli.ts --check                  # non-zero exit if anything drifted
+bun src/cli.ts --keep-seed              # leave the seeded rows for poking at
+bun src/cli.ts --teardown               # remove seeded rows, capture nothing
 ```
+
+## Seeded data
+
+Any shot with `auth: "smoke-user"` runs against rows this harness inserts and
+then deletes again: a fake channel, a dozen clips, three folders, a stream with
+a viewer curve. Fixtures live in `src/fixtures/`, and nothing in a published
+screenshot is a real person, a real clip or a real stream.
+
+Teardown runs at the end of every run, and again at the *start*, so a run that
+died halfway does not block the next one on a unique constraint.
+
+Capture the onboarding shots on their own:
+
+```bash
+bun src/cli.ts --only 'onboarding/*' --write
+```
+
+They need the wizard unfinished, which is a different starting state, and the
+wizard covers every other page while it is open.
 
 A dry run writes to `.out/` and reports what changed. Only `--write` touches
 `apps/docs/images/`. Diffs land in `.out/_diff/`.
@@ -57,6 +78,15 @@ The `id` doubles as the output path under `apps/docs/images/`.
   `setTimeout` and `MessageChannel`, which React's scheduler needs to hydrate.
 - **Scripts go in through `addInitScript`, never `addScriptTag`.** The app's CSP
   has no `unsafe-inline`, so an injected `<script>` element is blocked.
+- **The dashboard reads the broadcaster id from `user_metadata.sub`**, not from
+  `integrations_twitch`. A password smoke account has never been through Twitch
+  OAuth, so nothing fills that in and every page shows its empty state until the
+  seed sets it.
+- **Twitch image URLs are intercepted** and answered with a generated
+  rectangle. The fixture clips do not exist, so real requests would 404 and the
+  clips page would read as broken rather than as populated.
+- **Next's dev-tools badge is hidden** in CSS. It floats over the bottom-left of
+  every page, which in this app is the sidebar footer.
 - **The leak scanner fails a shot** that shows an email, a JWT, a Supabase key,
   a stream key, an ingest key, an overlay id or the real account name. Fix the
   fixture or add a redaction; do not disable it.

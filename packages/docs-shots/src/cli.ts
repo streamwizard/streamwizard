@@ -2,6 +2,8 @@ import { mkdirSync, writeFileSync, copyFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { launch, newContext } from "./browser";
 import { signInCookie, localSupabase } from "./auth";
+import { seedShotData, type SeedHandle } from "./seed";
+import { stubRemoteImages } from "./stub-images";
 import { capture, goto, settle } from "./capture";
 import { applyRedactions, assertNoLeaks } from "./redact";
 import { assertNotBlank, optimize } from "./optimize";
@@ -22,22 +24,41 @@ interface Args {
   write: boolean;
   check: boolean;
   headed: boolean;
+  /** Leave the seeded rows in place, for poking at a page by hand. */
+  keepSeed: boolean;
+  /** Remove the seeded rows and capture nothing. */
+  teardown: boolean;
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { write: false, check: false, headed: false };
+  const args: Args = {
+    write: false,
+    check: false,
+    headed: false,
+    keepSeed: false,
+    teardown: false,
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--only") args.only = argv[++i];
     else if (arg === "--write") args.write = true;
     else if (arg === "--check") args.check = true;
     else if (arg === "--headed") args.headed = true;
+    else if (arg === "--keep-seed") args.keepSeed = true;
+    else if (arg === "--teardown") args.teardown = true;
   }
   return args;
 }
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+
+  if (args.teardown) {
+    await (await seedShotData()).teardown();
+    console.log("Seeded rows removed.");
+    return;
+  }
+
   const selected = SHOTS.filter((s) => matchesFilter(s.id, args.only));
 
   if (selected.length === 0) {
@@ -48,6 +69,13 @@ async function main() {
   // Only pay for a Supabase round trip when a shot actually needs a session.
   const needsAuth = selected.some((s) => s.auth && s.auth !== "none");
   const cookie = needsAuth ? await signInCookie(localSupabase()) : undefined;
+
+  // Seeded rows exist only for the length of the run. The onboarding shots
+  // need the wizard unfinished, which is a different starting state, so they
+  // are seeded separately rather than fighting over one preference.
+  const needsOnboarding = selected.some((s) => s.seed === "onboarding");
+  let seed: SeedHandle | undefined;
+  if (needsAuth) seed = await seedShotData({ onboarding: needsOnboarding });
 
   const browser = await launch();
   const results: Array<{
@@ -61,6 +89,7 @@ async function main() {
     const context = await newContext(browser, shot, cookie);
     const page = await context.newPage();
     try {
+      await stubRemoteImages(page);
       // Freeze Date before anything renders, so a clock or an uptime reads the
       // same value on every run. setFixedTime rather than install: install also
       // stubs setTimeout and MessageChannel, which React's scheduler needs to
@@ -108,6 +137,7 @@ async function main() {
   }
 
   await browser.close();
+  if (seed && !args.keepSeed) await seed.teardown();
   report(results, args);
 }
 

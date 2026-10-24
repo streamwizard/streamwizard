@@ -99,4 +99,7 @@ export const FREEZE_STYLES = `
     caret-color: transparent !important;
   }
   ::-webkit-scrollbar { display: none !important; }
+  /* Next's dev-tools badge floats over the bottom-left of every page in dev,
+     which in this app lands squarely on the sidebar footer. */
+  nextjs-portal, [data-nextjs-toast], #__next-build-watcher { display: none !important; }
 `;
