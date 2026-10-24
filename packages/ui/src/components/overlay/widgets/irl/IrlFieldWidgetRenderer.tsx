@@ -9,6 +9,7 @@ import { useIrlGeoContext } from "../../hooks/use-irl-geo-context";
 export interface IrlFieldWidgetRendererProps {
   item: OverlayItem;
   scene?: OverlayScene;
+  isEditor?: boolean;
 }
 
 type IrlFieldKey = "speed" | "heading" | "altitude" | "latitude" | "longitude" | "accuracy";
@@ -73,12 +74,16 @@ function formatValue(
   }
 }
 
-export function IrlFieldWidgetRenderer({ item, scene }: IrlFieldWidgetRendererProps) {
+export function IrlFieldWidgetRenderer({ item, scene, isEditor }: IrlFieldWidgetRendererProps) {
   const cfg = resolveConfig(item.config);
   const subscriberToken = scene?.subscriber_token ?? "";
   const field = FIELD_FROM_TYPE[item.type as IrlFieldWidgetType] ?? "speed";
   const contextGeo = useIrlGeoContext();
-  const { geo: wsGeo, status: wsStatus } = useIrlGeoData(subscriberToken, cfg.mockData);
+  // Mock is a layout aid for the editor, never something a viewer should see.
+  // Honouring it on stream would put "MOCK·" on the broadcast and, worse, hide
+  // the OFFLINE state that tells the streamer their phone stopped publishing.
+  const mock = cfg.mockData && isEditor === true;
+  const { geo: wsGeo, status: wsStatus } = useIrlGeoData(subscriberToken, mock);
 
   // Phone mode: context geo overrides WebSocket geo
   const geo = contextGeo !== undefined ? contextGeo : wsGeo;
@@ -105,7 +110,7 @@ export function IrlFieldWidgetRenderer({ item, scene }: IrlFieldWidgetRendererPr
     textAlign,
   };
 
-  if (!cfg.mockData && status === "offline") {
+  if (!mock && status === "offline") {
     return (
       <div style={{ ...containerStyle, opacity: 0.5, fontSize: fontSize * 0.6 }}>
         OFFLINE
@@ -133,7 +138,7 @@ export function IrlFieldWidgetRenderer({ item, scene }: IrlFieldWidgetRendererPr
 
   return (
     <div style={containerStyle}>
-      {cfg.mockData && (
+      {mock && (
         <span style={{ fontSize: fontSize * 0.5, opacity: 0.4, marginRight: "4px" }}>
           MOCK·
         </span>
