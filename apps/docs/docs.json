@@ -84,6 +84,14 @@
             ]
           },
           {
+            "group": "VODs",
+            "pages": [
+              "vods/overview",
+              "vods/clip-from-vod",
+              "vods/timeline"
+            ]
+          },
+          {
             "group": "IRL streaming",
             "pages": [
               "irl/overview",
