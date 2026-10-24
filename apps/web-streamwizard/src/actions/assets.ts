@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import {
   deleteUserAsset,
   markAssetReady,
+  renameUserAsset,
   reserveUserAsset,
   selectReadyAssets,
   selectStorageUsage,
@@ -36,6 +37,8 @@ const DEFAULT_QUOTA_MB = 100;
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const PENDING_RESERVATION_MS = 60 * 60 * 1000;
 const PRESIGN_EXPIRY_SECONDS = 300;
+const DOWNLOAD_EXPIRY_SECONDS = 60;
+const MAX_DISPLAY_NAME_LENGTH = 128;
 
 export interface UserAsset {
   id: string;
@@ -73,6 +76,10 @@ function assetUrl(key: string): string {
 function sanitizeFileName(name: string): string {
   const cleaned = name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^[-.]+|[-.]+$/g, "");
   return cleaned.slice(0, 128) || "file";
+}
+
+function cleanDisplayName(name: string): string {
+  return name.replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, MAX_DISPLAY_NAME_LENGTH);
 }
 
 async function getQuotaBytes(supabase: AuthContext["supabase"], userId: string): Promise<number> {
@@ -215,6 +222,76 @@ export async function confirmAssetUpload(
   } catch (err) {
     reportError(err, "actions/assets");
     return { data: null, error: "Failed to finish the upload." };
+  }
+}
+
+/**
+ * Renames what the library shows, not where the file lives. The key and the
+ * public CDN URL are untouched, so every overlay already pointing at this file
+ * keeps working; the download action hands the browser the new name instead.
+ */
+export async function renameAsset(
+  assetId: string,
+  fileName: string,
+): Promise<{ data: UserAsset | null; error: string | null }> {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { supabase, user } = ctx;
+
+  const cleaned = cleanDisplayName(fileName);
+  if (!cleaned) return { data: null, error: "Give the file a name." };
+
+  const { data: asset } = await selectUserAsset(supabase, assetId, user.id);
+  if (!asset) return { data: null, error: "File not found." };
+
+  try {
+    const { error: renameError } = await renameUserAsset(createAdminClient(), asset.id, user.id, cleaned);
+    if (renameError) {
+      reportError(renameError, "actions/assets");
+      return { data: null, error: "Failed to rename the file." };
+    }
+    revalidatePath("/dashboard/media");
+    return {
+      data: {
+        id: asset.id,
+        file_name: cleaned,
+        mime_type: asset.mime_type,
+        size_bytes: asset.size_bytes,
+        kind: asset.kind as AssetKind,
+        url: assetUrl(asset.key),
+        created_at: asset.created_at,
+      },
+      error: null,
+    };
+  } catch (err) {
+    reportError(err, "actions/assets");
+    return { data: null, error: "Failed to rename the file." };
+  }
+}
+
+/**
+ * Short-lived signed GET so the browser saves the file instead of opening it.
+ * The CDN is a different origin, where the <a download> attribute is ignored.
+ */
+export async function getAssetDownloadUrl(
+  assetId: string,
+): Promise<{ data: { url: string } | null; error: string | null }> {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { supabase, user } = ctx;
+
+  const { data: asset } = await selectUserAsset(supabase, assetId, user.id);
+  if (!asset) return { data: null, error: "File not found." };
+
+  try {
+    const url = await getR2().presignGet(asset.key, {
+      expiresInSeconds: DOWNLOAD_EXPIRY_SECONDS,
+      downloadFileName: asset.file_name,
+    });
+    return { data: { url }, error: null };
+  } catch (err) {
+    reportError(err, "actions/assets");
+    return { data: null, error: "Failed to start the download." };
   }
 }
 

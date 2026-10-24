@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -66,6 +67,28 @@ export class R2Storage {
       expiresIn: expiresInSeconds,
       signableHeaders: new Set(["content-type", "content-length"]),
     });
+  }
+
+  /**
+   * Presigned GET URL for a one-off download. The asset CDN is a different
+   * origin, so a plain <a download> is ignored by the browser; a signed GET
+   * with Content-Disposition makes it save instead of navigate. Passing
+   * downloadFileName also lets a renamed asset download under its new name,
+   * since the name baked into the object key never changes.
+   */
+  async presignGet(
+    key: string,
+    options: { expiresInSeconds?: number; downloadFileName?: string } = {},
+  ): Promise<string> {
+    // Quotes and control characters would break the header; the name is only a
+    // suggestion to the browser, so stripping them is enough.
+    const fileName = options.downloadFileName?.replace(/["\\\r\n]+/g, "").trim();
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+      ...(fileName ? { ResponseContentDisposition: `attachment; filename="${fileName}"` } : {}),
+    });
+    return getSignedUrl(this.client, command, { expiresIn: options.expiresInSeconds ?? 300 });
   }
 
   /** Server-side upload of a small object. */

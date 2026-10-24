@@ -1,8 +1,19 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Upload, Music, Video, FileJson, Trash2, Loader2, Copy, ImageIcon } from "lucide-react";
-import { Button, Progress } from "@repo/ui";
+import { Upload, Music, Video, FileJson, Trash2, Loader2, Copy, Eye, ImageIcon } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Button,
+  Progress,
+} from "@repo/ui";
 import { cn } from "@repo/ui";
 import { toast } from "sonner";
 import {
@@ -14,6 +25,7 @@ import {
 } from "@/actions/assets";
 import type { AssetKind } from "@/lib/asset-mime";
 import { formatBytes } from "@/lib/format";
+import { MediaPreviewDialog } from "./media-preview-dialog";
 
 interface Uploading {
   id: string;
@@ -67,6 +79,8 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
   const [listing, setListing] = useState<AssetListing | null>(initialListing);
   const [uploads, setUploads] = useState<Uploading[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [preview, setPreview] = useState<UserAsset | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<UserAsset | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const upload = useCallback(async (incoming: File[]) => {
@@ -98,14 +112,21 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
   }, []);
 
   const onDelete = useCallback(async (asset: UserAsset) => {
-    if (!window.confirm(`Delete ${asset.file_name}? Overlays using it will lose it.`)) return;
     const { data, error } = await deleteAsset(asset.id);
     if (error) {
       toast.error(error);
       return;
     }
     if (data) setListing(data);
+    setPendingDelete(null);
     toast.success("File deleted");
+  }, []);
+
+  const onRenamed = useCallback((renamed: UserAsset) => {
+    setListing((prev) =>
+      prev ? { ...prev, files: prev.files.map((f) => (f.id === renamed.id ? renamed : f)) } : prev,
+    );
+    setPreview((prev) => (prev && prev.id === renamed.id ? renamed : prev));
   }, []);
 
   const onCopyUrl = useCallback(async (asset: UserAsset) => {
@@ -197,10 +218,12 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
           {visibleFiles.map((asset) => (
             <div
               key={asset.id}
-              onClick={onSelect ? () => onSelect(asset) : undefined}
+              // In select mode the row still selects, so the eye button is the
+              // only way into the preview there.
+              onClick={onSelect ? () => onSelect(asset) : () => setPreview(asset)}
               className={cn(
                 "rounded-lg border bg-card p-3 flex items-center gap-3",
-                onSelect && "cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors",
+                "cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors",
               )}
             >
               <KindIcon asset={asset} />
@@ -210,20 +233,90 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
                   {formatBytes(asset.size_bytes)} · {asset.kind}
                 </p>
               </div>
-              {!onSelect && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Copy URL" onClick={() => onCopyUrl(asset)}>
-                    <Copy className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7" title="Delete" onClick={() => onDelete(asset)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center gap-1 shrink-0">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-7 w-7"
+                  title="Open preview"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreview(asset);
+                  }}
+                >
+                  <Eye className="h-3.5 w-3.5" />
+                </Button>
+                {!onSelect && (
+                  <>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      title="Copy URL"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void onCopyUrl(asset);
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7"
+                      title="Delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPendingDelete(asset);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>
       )}
+
+      <MediaPreviewDialog
+        asset={preview}
+        files={visibleFiles}
+        nested={!!onSelect}
+        onClose={() => setPreview(null)}
+        onNavigate={setPreview}
+        onRenamed={onRenamed}
+        onDeleted={(updated, next) => {
+          if (updated) setListing(updated);
+          setPreview(next);
+        }}
+        onSelect={
+          onSelect
+            ? (asset) => {
+                setPreview(null);
+                onSelect(asset);
+              }
+            : undefined
+        }
+      />
+
+      <AlertDialog open={!!pendingDelete} onOpenChange={(open) => !open && setPendingDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {pendingDelete?.file_name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Any overlay using this file loses it. This can&apos;t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep it</AlertDialogCancel>
+            <AlertDialogAction onClick={() => pendingDelete && void onDelete(pendingDelete)}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

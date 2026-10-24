@@ -31,7 +31,7 @@ export const selectUserAsset = withMetrics(
   async (client: DBClient, assetId: string, userId: string) =>
     client
       .from("user_assets")
-      .select("id, key, status, size_bytes, mime_type")
+      .select("id, key, status, size_bytes, mime_type, file_name, kind, created_at")
       .eq("id", assetId)
       .eq("user_id", userId)
       .maybeSingle(),
@@ -84,6 +84,22 @@ export const markAssetReady = withMetrics(
     client
       .from("user_assets")
       .update({ size_bytes: sizeBytes, status: "ready" })
+      .eq("id", assetId)
+      .eq("user_id", userId),
+);
+
+/**
+ * Display name only. The object key (and so the public URL) keeps the name it
+ * was uploaded under, because R2 has no copy or move and overlay configs store
+ * the URL as a plain string.
+ */
+export const renameUserAsset = withMetrics(
+  "user_assets",
+  "update",
+  async (client: DBClient, assetId: string, userId: string, fileName: string) =>
+    client
+      .from("user_assets")
+      .update({ file_name: fileName })
       .eq("id", assetId)
       .eq("user_id", userId),
 );
