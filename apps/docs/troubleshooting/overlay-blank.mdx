@@ -1,0 +1,68 @@
+---
+title: "Overlay is blank or black in OBS"
+description: "The browser source is there but nothing shows. Work through these in order."
+---
+
+import AddOverlayToObs from '/snippets/add-overlay-to-obs.mdx';
+
+Nine times out of ten this is the overlay being switched off, or OBS holding an
+old copy of the page.
+
+## Check the overlay is on
+
+Overlays render only while they're active. Open **Overlays** in the dashboard
+and check the switch on the overlay's card is on.
+
+This is the most common cause by a long way, because a new overlay doesn't turn
+itself on when you paste the URL into OBS.
+
+## Refresh the browser source
+
+OBS caches the page. Layout changes you make in the editor need a refresh
+before OBS sees them, though live events like alerts and follows don't.
+
+Right-click the browser source, select **Properties**, then
+**Refresh cache of current page**.
+
+## Check the URL is complete
+
+Overlay URLs are long and easy to truncate when copying by hand. Copy it again
+with **Copy URL** on the overlay card rather than retyping it, and paste it
+into **URL** with nothing before or after.
+
+## Check the size matches
+
+The browser source's **Width** and **Height** must match the overlay's own
+size, 1920 × 1080 unless you changed it. If they don't match, the page renders
+at the wrong scale and your widgets can sit entirely outside the visible area.
+
+Don't fix a size mismatch by stretching the source with the transform handles.
+Set the numbers in the source properties instead.
+
+## Check the widget isn't empty on purpose
+
+Several widgets deliberately render nothing rather than show a placeholder on
+stream:
+
+- **Goals**, **Polls** and **Predictions** show nothing when there's no active
+  one on Twitch.
+- **Uptime** shows nothing while you're offline, unless you turn
+  **Hide when offline** off.
+- **Image**, **Video** and **Slideshow** show nothing until you pick a file.
+- **Stream labels** show nothing until the first follow, cheer or raid lands,
+  unless you set **When there's nothing yet**.
+
+The editor shows a placeholder or sample data for all of these so you can place
+them. An empty overlay in OBS with a full-looking editor is usually this.
+
+## Start again from a known-good source
+
+If none of the above helps, delete the browser source and add it fresh:
+
+<AddOverlayToObs />
+
+## Still nothing
+
+Ask in the **#help** channel on our [Discord](https://discord.streamwizard.org),
+or [open a ticket](/troubleshooting/contact-support). Tell us which of the
+above you've tried.

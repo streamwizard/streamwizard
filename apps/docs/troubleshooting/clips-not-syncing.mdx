@@ -1,0 +1,55 @@
+---
+title: "Clips aren't syncing"
+description: "New clips missing from your library, or the Sync button refusing to run."
+---
+
+## You can sync again at…
+
+Syncing is limited to once an hour. Select **Sync** inside that hour and you
+get a message telling you the time you can sync again.
+
+This isn't a punishment, it's Twitch's rate limits. Pulling a whole clip
+library is a lot of requests, and the cap keeps StreamWizard inside what Twitch
+allows for everyone.
+
+If you're waiting on one specific clip, it's usually faster to wait for the
+hour than to keep trying.
+
+## New clips aren't appearing on their own
+
+StreamWizard syncs for you while you're live: every five minutes, and once
+more when the stream ends. That's the preference in **Settings → Preferences**
+reading **Sync Twitch clips automatically**, and it's on by default.
+
+With it off, your library only updates when you select **Sync** yourself.
+
+Note that automatic syncing only runs **while you're live**. Clips someone
+makes from your VOD hours after the stream are picked up by your next manual
+sync or your next stream, not within five minutes.
+
+## A clip from just now is missing
+
+Twitch takes a little while to make a new clip available through its API, so a
+clip made seconds ago can be missing from a sync that ran immediately after.
+It arrives on the next sync.
+
+## Clips are there but a folder looks empty
+
+Folders are something you fill yourself. Syncing adds clips to your library,
+not to any folder.
+
+Open a clip and use **Add to folder**, or see
+[organize clips into folders](/clips/folders). An empty folder shows a help
+panel explaining this.
+
+## Nothing syncs at all
+
+Check **Settings → Integrations** shows Twitch as connected. If it offers
+**Connect Twitch** or **Reconnect**, your token has gone stale: see
+[Connect Twitch keeps appearing](/troubleshooting/connect-twitch).
+
+## Still stuck
+
+Ask in the **#help** channel on our [Discord](https://discord.streamwizard.org),
+or [open a ticket](/troubleshooting/contact-support). Tell us roughly when the
+clip was made and whether it shows on your Twitch clips page.

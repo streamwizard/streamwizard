@@ -1,0 +1,64 @@
+---
+title: "A widget shows nothing on stream"
+description: "Goals, polls and predictions render nothing when there is nothing to show. That is usually correct."
+---
+
+Several widgets draw nothing rather than show a placeholder to your viewers.
+It looks broken and usually isn't.
+
+## Widgets that hide themselves
+
+| Widget | Shows nothing when |
+|---|---|
+| **Goals** | No goal of that kind is running on Twitch. |
+| **Polls** | No poll is running. |
+| **Predictions** | No prediction is running, or it's locked and **Stay up while locked** is off. |
+| **Uptime** | You're offline and **Hide when offline** is on. |
+| **Stream labels** | Nothing has happened yet and **When there's nothing yet** is empty. |
+| **Image**, **Video**, **Slideshow** | No file is picked. |
+| **Emote combo** | No combo is running. |
+| **Hype train** | No hype train is running. |
+
+The editor shows a placeholder, a dashed hint box or sample data for all of
+these so you can place and size them. That difference is deliberate: your
+viewers should never see a layout aid.
+
+## Goals, polls and predictions come from Twitch
+
+You start all three on Twitch, not in StreamWizard. Twitch doesn't let other
+apps create them.
+
+Open your Creator Dashboard and start one. The widget picks it up on its own
+within a few seconds. The settings panel for each of these widgets tells you
+what Twitch is currently reporting, which is the quickest way to tell whether
+the problem is the widget or the absence of a goal.
+
+<Note>
+Twitch runs one goal per kind at a time, so a follower goal, a sub goal and a
+Bits goal can all be on screen together. It will not run two sub goals.
+</Note>
+
+## It worked, then the result disappeared
+
+Predictions and polls hide themselves a set time after they resolve, which is
+**Show the result for** in the settings.
+
+There's a second limit you can't change: Twitch only reports a finished
+prediction for 60 seconds after it ends. Reload the overlay later than that and
+there's nothing left for the widget to show, however high you set
+**Show the result for**.
+
+## It says Connect Twitch
+
+See [Connect Twitch keeps appearing](/troubleshooting/connect-twitch).
+
+## The widget is there but empty in the editor too
+
+That points at the widget's own settings rather than at Twitch. Check the
+widget's page in [the widget catalogue](/overlays/overview) for what it needs:
+most commonly a file that hasn't been picked, or every event toggled off.
+
+## Still stuck
+
+Ask in the **#help** channel on our [Discord](https://discord.streamwizard.org),
+or [open a ticket](/troubleshooting/contact-support).
