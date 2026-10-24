@@ -25,6 +25,25 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
 }
 
 /**
+ * Twitch's video player. It loads player.twitch.tv in an iframe, which needs
+ * network and a VOD that has not expired, and reports its own errors over the
+ * top of the page. A screenshot of it would rot the day Twitch deletes the
+ * recording, so it is replaced with a flat panel.
+ */
+export async function stubTwitchPlayer(page: Page): Promise<void> {
+  await page.route(/player\.twitch\.tv|embed\/v1\.js/, async (route) => {
+    const isScript = route.request().url().endsWith(".js");
+    await route.fulfill({
+      status: 200,
+      contentType: isScript ? "application/javascript" : "text/html",
+      body: isScript
+        ? "window.Twitch = { Player: function () { this.addEventListener = function () {}; } };"
+        : "<!doctype html><html><body style=\"margin:0;background:#0b0b12\"></body></html>",
+    });
+  });
+}
+
+/**
  * Serve a flat, dark, slightly-coloured rectangle in place of every Twitch
  * image. It reads as a thumbnail at a glance without pretending to be footage
  * StreamWizard does not have the rights to publish.

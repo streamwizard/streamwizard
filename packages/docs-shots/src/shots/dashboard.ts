@@ -1,4 +1,5 @@
 import { defineShots, type Settle, type Shot } from "../manifest";
+import { SHOT_SCENE_ID } from "../seed";
 
 /**
  * The dashboard pages all share the same chrome, and that chrome is part of
@@ -83,6 +84,55 @@ export const dashboardShots: Shot[] = defineShots([
     route: "/dashboard/overlays",
     auth: "smoke-user",
     viewport: { width: 1500, height: 950, dsf: 1 },
+    theme: "dark",
+    settle: SIDEBAR_READY,
+    settleAfter: [{ kind: "wait", ms: 1_500 }],
+    redact: HIDE_ACCOUNT_EMAIL,
+    crop: { kind: "viewport" },
+  },
+  {
+    id: "overlays/overlay-editor",
+    description: "The overlay editor: canvas, layers panel and the inspector.",
+    route: `/dashboard/overlays/${SHOT_SCENE_ID}/edit`,
+    auth: "smoke-user",
+    viewport: { width: 1600, height: 950, dsf: 1 },
+    theme: "dark",
+    settle: [
+      { kind: "fonts" },
+      // The editor collapses the app sidebar on mount, so wait for its own
+      // chrome rather than the dashboard's.
+      { kind: "selector", selector: "[data-shot-stage], main" },
+      { kind: "networkIdle" },
+    ],
+    settleAfter: [{ kind: "wait", ms: 2_500 }],
+    crop: { kind: "viewport" },
+  },
+  {
+    id: "overlays/widget-library",
+    description: "The widget library sheet, listing everything you can add to an overlay.",
+    route: `/dashboard/overlays/${SHOT_SCENE_ID}/edit`,
+    auth: "smoke-user",
+    viewport: { width: 1600, height: 950, dsf: 1 },
+    theme: "dark",
+    settle: [
+      { kind: "fonts" },
+      { kind: "selector", selector: "main" },
+      { kind: "networkIdle" },
+    ],
+    actions: [
+      async (page) => {
+        await page.getByRole("button", { name: "Widgets" }).first().click();
+      },
+    ],
+    settleAfter: [{ kind: "wait", ms: 1_500 }],
+    crop: { kind: "viewport" },
+  },
+  {
+    id: "overlays/media-library",
+    description: "The media library, where alert images and sounds live.",
+    route: "/dashboard/media",
+    auth: "smoke-user",
+    viewport: { width: 1400, height: 880, dsf: 1 },
     theme: "dark",
     settle: SIDEBAR_READY,
     settleAfter: [{ kind: "wait", ms: 1_500 }],

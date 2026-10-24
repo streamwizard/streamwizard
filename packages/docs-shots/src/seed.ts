@@ -14,6 +14,9 @@ export const SMOKE_USER_ID =
 
 const STREAM_ID = `${PREFIX}-57ea-4000-8000-000000000001`;
 
+/** Matches SHOT_VOD in the VOD harness route, so the timeline finds its events. */
+const SHOT_VIDEO_ID = "2451234571";
+
 function shotId(kind: number, n: number): string {
   return `${PREFIX}-${kind.toString(16).padStart(4, "0")}-4000-8000-${n
     .toString(16)
@@ -105,6 +108,158 @@ function viewerRows() {
   });
 }
 
+/**
+ * A believable spread of events across the stream, so the VOD timeline has
+ * markers and the dashboard's activity feed has rows.
+ */
+function eventRows() {
+  const spec: Array<[string, number, Record<string, unknown>]> = [
+    ["channel.follow", 420, { user_name: VIEWERS[0] }],
+    ["channel.cheer", 1_860, { user_name: VIEWERS[2], bits: 500 }],
+    ["channel.subscribe", 3_120, { user_name: VIEWERS[1], tier: "1000" }],
+    ["channel.follow", 4_500, { user_name: VIEWERS[3] }],
+    ["channel.raid", 6_240, { from_broadcaster_user_name: VIEWERS[4], viewers: 62 }],
+    ["channel.subscription.message", 7_980, { user_name: VIEWERS[5], tier: "1000", months: 7 }],
+    ["channel.follow", 9_300, { user_name: VIEWERS[6] }],
+    ["channel.cheer", 10_920, { user_name: VIEWERS[7], bits: 1_200 }],
+    ["channel.subscription.gift", 12_600, { user_name: VIEWERS[8], total: 5, tier: "1000" }],
+    ["channel.follow", 14_040, { user_name: VIEWERS[9] }],
+  ];
+  return spec.map(([event_type, offset_seconds, event_data], i) => ({
+    id: shotId(8, i),
+    stream_id: STREAM_ID,
+    broadcaster_id: BROADCASTER.id,
+    event_type,
+    offset_seconds,
+    event_data,
+    provider: "twitch",
+    status: "received",
+  }));
+}
+
+/** The overlay the editor screenshots open, and the list screenshot shows. */
+export const SHOT_SCENE_ID = `${PREFIX}-0009-4000-8000-000000000001`;
+
+function sceneRow(userId: string) {
+  return {
+    id: SHOT_SCENE_ID,
+    user_id: userId,
+    name: "Starting soon",
+    slug: "shot-starting-soon",
+    // Short and obviously a placeholder: a realistic token is a secret, and
+    // the leak scanner fails any shot that shows something token-shaped.
+    subscriber_token: "shot-room",
+    width: 1920,
+    height: 1080,
+    is_active: true,
+    is_favourite: false,
+    render_mode: "obs",
+  };
+}
+
+/** A layout with enough on it that the layers panel is worth photographing. */
+function sceneItemRows() {
+  const base = {
+    scene_id: SHOT_SCENE_ID,
+    anchor_x: "left",
+    anchor_y: "top",
+    crop_top: 0,
+    crop_right: 0,
+    crop_bottom: 0,
+    crop_left: 0,
+    rotation: 0,
+    flip_h: false,
+    flip_v: false,
+    opacity: 1,
+    is_visible: true,
+    is_locked: false,
+  };
+  return [
+    {
+      ...base,
+      id: shotId(10, 1),
+      type: "text_widget",
+      label: "Title",
+      x: 160,
+      y: 300,
+      w: 1120,
+      h: 180,
+      design_w: 1120,
+      design_h: 180,
+      z_index: 3,
+      config: {
+        text: "starting soon",
+        fontSize: 96,
+        color: "#ffffff",
+        align: "left",
+        fontWeight: 700,
+        fontFamily: "Inter",
+        textShadow: true,
+        outlineWidth: 2,
+        outlineColor: "#000000",
+        backgroundColor: "#000000",
+        backgroundOpacity: 0,
+        backgroundRounding: 0,
+        scroll: false,
+        scrollSpeed: 80,
+      },
+    },
+    {
+      ...base,
+      id: shotId(10, 2),
+      type: "timer_widget",
+      label: "Countdown",
+      x: 160,
+      y: 520,
+      w: 520,
+      h: 140,
+      design_w: 520,
+      design_h: 140,
+      z_index: 2,
+      config: {
+        mode: "duration",
+        durationSeconds: 600,
+        finishedText: "We're live!",
+        fontSize: 72,
+        color: "#9e7aff",
+        align: "left",
+        fontWeight: 600,
+        fontFamily: "Inter",
+      },
+    },
+    {
+      ...base,
+      id: shotId(10, 3),
+      type: "shape_widget",
+      label: "Backdrop",
+      x: 120,
+      y: 240,
+      w: 1240,
+      h: 520,
+      design_w: 1240,
+      design_h: 520,
+      z_index: 1,
+      is_locked: true,
+      config: {
+        shape: "rectangle",
+        fillColor: "#140f24",
+        fillOpacity: 0.85,
+        strokeColor: "#9e7aff",
+        strokeWidth: 2,
+        rounding: 6,
+        lineWidth: 8,
+        fillType: "solid",
+        gradientColor: "#00d4ff",
+        gradientAngle: 90,
+        strokeType: "solid",
+        strokeGradientColor: "#00d4ff",
+        strokeGradientAngle: 90,
+        roundedEnds: false,
+      },
+    },
+  ];
+}
+
 export interface SeedHandle {
   teardown: () => Promise<void>;
 }
@@ -160,6 +315,9 @@ export async function seedShotData(opts: { onboarding?: boolean } = {}): Promise
     "resolution=merge-duplicates",
   );
 
+  const scene = sceneRow(userId);
+  const sceneItems = sceneItemRows();
+  const events = eventRows();
   const clips = clipRows(userId);
   const folders = folderRows(userId);
   const viewers = viewerRows();
@@ -182,6 +340,9 @@ export async function seedShotData(opts: { onboarding?: boolean } = {}): Promise
     await byIds("clips", clips.map((c) => c.id));
     // Subfolders reference their parent, so delete the deepest first.
     await byIds("clip_folders", [...folders].reverse().map((f) => f.id));
+    await byIds("overlay_items", sceneItems.map((i) => i.id));
+    await byIds("overlay_scenes", [SHOT_SCENE_ID]);
+    await byIds("stream_events", events.map((e) => e.id));
     await byIds("stream_viewer_counts", viewers.map((v) => v.id));
     await byIds("vods", [shotId(7, 1)]);
     await byIds("broadcaster_live_status", [liveStatusId]);
@@ -218,17 +379,21 @@ export async function seedShotData(opts: { onboarding?: boolean } = {}): Promise
     "resolution=merge-duplicates",
   );
 
-  // Viewer samples hang off a vods row keyed by stream_id. video_id stays
-  // null, which is the real shape for a stream Twitch kept no VOD for.
+  // Viewer samples hang off a vods row keyed by stream_id, and the VOD page
+  // looks its events up through the same row by video_id.
   await rest(supabase, "POST", "vods", [
     {
       id: shotId(7, 1),
       broadcaster_id: BROADCASTER.id,
       stream_id: STREAM_ID,
-      video_id: null,
+      video_id: SHOT_VIDEO_ID,
       started_at: STREAM_START.toISOString(),
     },
   ]);
+
+  await rest(supabase, "POST", "overlay_scenes", [scene]);
+  await rest(supabase, "POST", "overlay_items", sceneItems);
+  await rest(supabase, "POST", "stream_events", events);
 
   await rest(supabase, "POST", "clips", clips);
   await rest(supabase, "POST", "clip_folders", folders);

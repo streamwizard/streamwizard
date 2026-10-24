@@ -3,7 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { launch, newContext } from "./browser";
 import { signInCookie, localSupabase } from "./auth";
 import { seedShotData, type SeedHandle } from "./seed";
-import { stubRemoteImages } from "./stub-images";
+import { stubRemoteImages, stubTwitchPlayer } from "./stub-images";
 import { capture, goto, settle } from "./capture";
 import { applyRedactions, assertNoLeaks } from "./redact";
 import { assertNotBlank, optimize } from "./optimize";
@@ -90,6 +90,7 @@ async function main() {
     const page = await context.newPage();
     try {
       await stubRemoteImages(page);
+      await stubTwitchPlayer(page);
       // Freeze Date before anything renders, so a clock or an uptime reads the
       // same value on every run. setFixedTime rather than install: install also
       // stubs setTimeout and MessageChannel, which React's scheduler needs to
