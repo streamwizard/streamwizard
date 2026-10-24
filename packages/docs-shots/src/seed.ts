@@ -260,6 +260,48 @@ function sceneItemRows() {
   ];
 }
 
+/** The custom widget the code-editor screenshot opens. */
+export const SHOT_WIDGET_ID = `${PREFIX}-0011-4000-8000-000000000001`;
+
+function widgetRow(userId: string) {
+  return {
+    id: SHOT_WIDGET_ID,
+    user_id: userId,
+    name: "Follower counter",
+    description: "A counter that ticks up on every follow.",
+    tags: ["followers", "counter"],
+    html: '<div class="count"><span id="n">0</span> followers</div>',
+    extra_css: ".count { font: 700 48px Inter, sans-serif; color: #fff; }",
+    // The real widget API: addEventListener('onWidgetLoad' | 'onEventReceived')
+    // and StreamWizard.state.get()/.set({...}). Checked against
+    // apps/docs/widgets/api/globals.mdx, because this code is published in a
+    // screenshot and someone will copy it.
+    js: [
+      "// Runs once when the overlay loads.",
+      "addEventListener('onWidgetLoad', async () => {",
+      "  const saved = await StreamWizard.state.get().catch(() => null);",
+      "  render(saved?.count ?? 0);",
+      "});",
+      "",
+      "// Every follow bumps the number, then saves it for next time.",
+      "addEventListener('onEventReceived', async (e) => {",
+      "  const { listener } = e.detail;",
+      "  if (listener !== 'channel.follow') return;",
+      "",
+      "  const saved = await StreamWizard.state.get().catch(() => null);",
+      "  const count = (saved?.count ?? 0) + 1;",
+      "  await StreamWizard.state.set({ count });",
+      "  render(count);",
+      "});",
+      "",
+      "function render(value) {",
+      "  document.getElementById('n').textContent = value;",
+      "}",
+    ].join("\\n"),
+    fields: [],
+  };
+}
+
 export interface SeedHandle {
   teardown: () => Promise<void>;
 }
@@ -315,6 +357,7 @@ export async function seedShotData(opts: { onboarding?: boolean } = {}): Promise
     "resolution=merge-duplicates",
   );
 
+  const widget = widgetRow(userId);
   const scene = sceneRow(userId);
   const sceneItems = sceneItemRows();
   const events = eventRows();
@@ -341,6 +384,7 @@ export async function seedShotData(opts: { onboarding?: boolean } = {}): Promise
     // Subfolders reference their parent, so delete the deepest first.
     await byIds("clip_folders", [...folders].reverse().map((f) => f.id));
     await byIds("overlay_items", sceneItems.map((i) => i.id));
+    await byIds("overlay_widgets", [SHOT_WIDGET_ID]);
     await byIds("overlay_scenes", [SHOT_SCENE_ID]);
     await byIds("stream_events", events.map((e) => e.id));
     await byIds("stream_viewer_counts", viewers.map((v) => v.id));
@@ -391,6 +435,7 @@ export async function seedShotData(opts: { onboarding?: boolean } = {}): Promise
     },
   ]);
 
+  await rest(supabase, "POST", "overlay_widgets", [widget]);
   await rest(supabase, "POST", "overlay_scenes", [scene]);
   await rest(supabase, "POST", "overlay_items", sceneItems);
   await rest(supabase, "POST", "stream_events", events);

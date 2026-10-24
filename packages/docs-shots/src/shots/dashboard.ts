@@ -1,5 +1,5 @@
 import { defineShots, type Settle, type Shot } from "../manifest";
-import { SHOT_SCENE_ID } from "../seed";
+import { SHOT_SCENE_ID, SHOT_WIDGET_ID } from "../seed";
 
 /**
  * The dashboard pages all share the same chrome, and that chrome is part of
@@ -138,6 +138,67 @@ export const dashboardShots: Shot[] = defineShots([
     settleAfter: [{ kind: "wait", ms: 1_500 }],
     redact: HIDE_ACCOUNT_EMAIL,
     crop: { kind: "viewport" },
+  },
+  {
+    id: "widgets/widget-editor",
+    description: "The custom widget editor: HTML, CSS and JavaScript with a live preview.",
+    route: `/dashboard/widgets/${SHOT_WIDGET_ID}`,
+    auth: "smoke-user",
+    viewport: { width: 1600, height: 950, dsf: 1 },
+    theme: "dark",
+    settle: [
+      { kind: "fonts" },
+      { kind: "selector", selector: "main" },
+      { kind: "networkIdle" },
+    ],
+    settleAfter: [{ kind: "wait", ms: 2_500 }],
+    redact: HIDE_ACCOUNT_EMAIL,
+    crop: { kind: "viewport" },
+  },
+  {
+    id: "account/your-data",
+    description: "The account page: export your data, or delete the account.",
+    route: "/dashboard/settings/account",
+    auth: "smoke-user",
+    viewport: { width: 1400, height: 880, dsf: 1 },
+    theme: "dark",
+    settle: SIDEBAR_READY,
+    settleAfter: [{ kind: "wait", ms: 1_200 }],
+    redact: HIDE_ACCOUNT_EMAIL,
+    crop: { kind: "viewport" },
+  },
+  {
+    id: "clips/sync-button",
+    description: "The filter bar above your clips, with search, category and Sync.",
+    route: "/dashboard/clips",
+    auth: "smoke-user",
+    viewport: { width: 1500, height: 900, dsf: 2 },
+    theme: "dark",
+    settle: SIDEBAR_READY,
+    settleAfter: [{ kind: "wait", ms: 1_500 }],
+    // Just the bar: the clips page itself is on the clips overview page.
+    crop: { kind: "rect", x: 260, y: 70, width: 1240, height: 190 },
+  },
+  {
+    id: "clips/clip-dialog",
+    description: "A clip open, with Add to folder, Download and Copy URL.",
+    route: "/dashboard/clips",
+    auth: "smoke-user",
+    viewport: { width: 1500, height: 950, dsf: 1 },
+    theme: "dark",
+    settle: SIDEBAR_READY,
+    actions: [
+      async (page) => {
+        await page.waitForTimeout(1_500);
+        await page.getByText("never doing that again").first().click();
+      },
+    ],
+    settleAfter: [
+      { kind: "selector", selector: "[role='dialog']" },
+      { kind: "wait", ms: 1_500 },
+    ],
+    redact: HIDE_ACCOUNT_EMAIL,
+    crop: { kind: "element", selector: "[role='dialog']", padding: 16 },
   },
   {
     id: "onboarding/wizard",

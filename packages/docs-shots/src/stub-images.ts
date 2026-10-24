@@ -8,6 +8,13 @@ import type { Page } from "playwright";
  */
 const REMOTE_IMAGES = /static-cdn\.jtvnw\.net|clips-media-assets|ttvnw\.net/;
 
+/**
+ * Emotes and badges are the exception: they are small, public, and they ARE
+ * the thing the emote wall and chat box pages are showing. A stubbed rectangle
+ * in place of an emote reads as a broken image rather than as a feature.
+ */
+const REAL_IMAGES = /\/emoticons\/|\/badges\/|7tv\.app|betterttv|frankerfacez/;
+
 /** Deterministic colour per URL, so a thumbnail never changes between runs. */
 function hueFor(url: string): number {
   let h = 0;
@@ -25,13 +32,14 @@ function hslToRgb(h: number, s: number, l: number): [number, number, number] {
 }
 
 /**
- * Twitch's video player. It loads player.twitch.tv in an iframe, which needs
- * network and a VOD that has not expired, and reports its own errors over the
- * top of the page. A screenshot of it would rot the day Twitch deletes the
- * recording, so it is replaced with a flat panel.
+ * Twitch's video and clip players. Both load an iframe that needs network and
+ * a recording that still exists; the fixture clips and VODs do not, so they
+ * render "This clip is no longer available" across the shot. Replaced with a
+ * flat panel, which also stops the screenshot rotting when Twitch deletes a
+ * real recording.
  */
 export async function stubTwitchPlayer(page: Page): Promise<void> {
-  await page.route(/player\.twitch\.tv|embed\/v1\.js/, async (route) => {
+  await page.route(/player\.twitch\.tv|clips\.twitch\.tv|embed\/v1\.js/, async (route) => {
     const isScript = route.request().url().endsWith(".js");
     await route.fulfill({
       status: 200,
@@ -50,6 +58,7 @@ export async function stubTwitchPlayer(page: Page): Promise<void> {
  */
 export async function stubRemoteImages(page: Page): Promise<void> {
   await page.route(REMOTE_IMAGES, async (route) => {
+    if (REAL_IMAGES.test(route.request().url())) return route.continue();
     const hue = hueFor(route.request().url());
     const [r, g, b] = hslToRgb(hue, 0.3, 0.22);
     const png = await sharp({

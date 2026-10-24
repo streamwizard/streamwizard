@@ -16,6 +16,15 @@ function fire(type: string, opts: { variant?: string; nth?: number } = {}) {
   };
 }
 
+/** End credits roll on their own browser event, not on an EventSub payload. */
+function rollCredits() {
+  return async (page: import("playwright").Page) => {
+    await page.evaluate(() => {
+      (window as unknown as { __shots?: { rollCredits: () => void } }).__shots?.rollCredits();
+    });
+  };
+}
+
 /** Push a frame down the faked overlay socket, for widgets with no event path. */
 function emit(frame: { type: string; payload: unknown }) {
   return async (page: Page) => {
@@ -165,6 +174,50 @@ export const overlayWidgetShots: Shot[] = defineShots([
     viewport: { width: 760, height: 200 },
     actions: [fire("channel.follow")],
     waitMs: 1_500,
+  }),
+
+  widgetShot({
+    id: "overlays/credits-widget",
+    description: "End credits rolling the names from a stream.",
+    type: "credits_widget",
+    box: { w: 700, h: 760 },
+    viewport: { width: 900, height: 900 },
+    actions: [rollCredits()],
+    // Long enough for the roll to move past its "Thanks for watching" card and
+    // onto the names, which is the part worth photographing. A roll is a
+    // scrolling animation, so this is one frame of a moving thing.
+    waitMs: 9_000,
+    unstable: true,
+  }),
+  widgetShot({
+    id: "overlays/emote-wall-widget",
+    description: "The emote wall mid-burst after a cheer.",
+    type: "emote_widget",
+    box: { w: 1100, h: 560 },
+    viewport: { width: 1280, height: 720 },
+    actions: [
+      fire("channel.chat.message", { variant: "emotes", nth: 0 }),
+      fire("channel.cheer", { nth: 2 }),
+    ],
+    // Emotes are in flight the whole time, so no two frames match.
+    waitMs: 1_800,
+    unstable: true,
+  }),
+  widgetShot({
+    id: "overlays/emote-combo-widget",
+    description: "The emote combo counter partway through a run.",
+    type: "combo_widget",
+    box: { w: 560, h: 220 },
+    viewport: { width: 760, height: 420 },
+    actions: [
+      fire("channel.chat.message", { variant: "emotes", nth: 0 }),
+      fire("channel.chat.message", { variant: "emotes", nth: 1 }),
+      fire("channel.chat.message", { variant: "emotes", nth: 2 }),
+      fire("channel.chat.message", { variant: "emotes", nth: 3 }),
+      fire("channel.chat.message", { variant: "emotes", nth: 4 }),
+    ],
+    waitMs: 1_500,
+    unstable: true,
   }),
 
   // Driven over the faked overlay socket: the IRL widgets have no browser

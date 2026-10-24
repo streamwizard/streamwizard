@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { buildDemoEvent, type DemoEventType } from "@repo/schemas";
-import { ALERT_TEST_BROWSER_EVENT } from "@repo/ui/overlay";
+import { buildDemoCreditsData, buildDemoEvent, type DemoEventType } from "@repo/schemas";
+import { ALERT_TEST_BROWSER_EVENT, CREDITS_ROLL_BROWSER_EVENT } from "@repo/ui/overlay";
 
 /**
  * One fake viewer roster for every screenshot, so no real person's name ever
@@ -18,6 +18,8 @@ declare global {
         type: DemoEventType,
         opts?: { variant?: string; userName?: string; nth?: number },
       ) => void;
+      /** End credits roll on their own event, not on an EventSub payload. */
+      rollCredits: () => void;
     };
   }
 }
@@ -36,6 +38,13 @@ export function ShotBridge({ sceneId }: { sceneId: string }) {
         const message = buildDemoEvent(type, { userName }, opts?.variant);
         window.dispatchEvent(
           new CustomEvent(ALERT_TEST_BROWSER_EVENT, { detail: { sceneId, message } }),
+        );
+      },
+      rollCredits() {
+        window.dispatchEvent(
+          new CustomEvent(CREDITS_ROLL_BROWSER_EVENT, {
+            detail: { sceneId, data: buildDemoCreditsData(Date.now()) },
+          }),
         );
       },
     };
