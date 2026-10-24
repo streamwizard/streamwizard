@@ -1,32 +1,85 @@
 ---
-title: "OBS setup"
-description: "Browser source settings that work, and fixes for when they don't."
+title: "Add an overlay to OBS"
+description: "The browser source settings that work, and the two OBS options that cause most overlay problems."
 ---
+
+import AddOverlayToObs from '/snippets/add-overlay-to-obs.mdx';
+import OverlayUrlWarning from '/snippets/overlay-url-warning.mdx';
+
+An overlay is a web page, so OBS shows it with a **Browser** source. Set it up
+once per overlay and leave it alone.
+
+## Before you start
+
+- You have an overlay. [Make one first](/overlays/quickstart) if you don't.
+
+<OverlayUrlWarning />
+
+## Add it
+
+<AddOverlayToObs />
 
 ## The settings that matter
 
-Add a **Browser** source in OBS and set:
+| Setting | Use |
+|---|---|
+| **URL** | Your overlay URL, copied from the dashboard. |
+| **Width** and **Height** | Your overlay's size, 1920 × 1080 unless you changed it. |
+| **Custom frame rate** | Leave it off unless you know you need it. |
 
-- **URL**: your overlay URL (Copy URL in the editor or on the overlay card).
-- **Width / Height**: match your overlay size. Default is 1920 × 1080.
-- **Custom frame rate**: leave off unless you know you need it.
+Match the width and height to the overlay rather than resizing the source on
+the canvas. Stretching it with the transform handles makes everything soft and
+puts your widgets somewhere other than where you placed them.
 
-Leave "Shutdown source when not visible" off for alert overlays. If OBS
-shuts the page down, alerts that fire while the scene is hidden are gone.
+## The two options that cause most problems
 
-## Sound from overlays
+### Shutdown source when not visible
 
-OBS plays browser source audio through **Control audio via OBS** (right-click
-the source → Properties). Turn it on if your alert sounds are silent, and
-check the source's volume in the audio mixer.
+**Leave this off** for any overlay with alerts on it.
 
-## Common fixes
+With it on, OBS closes the page whenever the scene isn't showing. An alert that
+fires while you're on another scene arrives at a page that isn't running, and
+it's gone. It isn't queued for when you switch back.
 
-- **Overlay is blank**: is it switched on? Overlays render only while active.
-- **Old version showing**: right-click the browser source → **Refresh**.
-  Layout changes need a refresh; live events don't.
-- **Clips won't autoplay with sound**: browsers block autoplay audio.
-  In the clips widget settings, keep **Muted** on, or use Control audio via
-  OBS which is exempt from autoplay rules.
-- **Wrong size / cut off**: browser source width and height must match the
-  overlay's size exactly. Don't stretch it with the transform handles.
+### Control audio via OBS
+
+**Turn this on** if your overlay makes any sound.
+
+OBS doesn't route browser source audio to your stream by default, so alert
+sounds and clip audio are silent until you do. It also puts the source in your
+audio mixer, where you can set its level like anything else.
+
+It has a second benefit: audio routed through OBS isn't subject to the
+browser's autoplay rules, which is what otherwise stops clips playing with
+sound.
+
+## After you change an overlay
+
+Changes to a widget's text, position or colours need a refresh before OBS sees
+them. Right-click the source, select **Properties**, then
+**Refresh cache of current page**.
+
+Live events don't need this. A follow alert fires on a page that's been open
+for six hours.
+
+## If it doesn't work
+
+<CardGroup cols={2}>
+  <Card title="Overlay is blank or black" href="/troubleshooting/overlay-blank">
+    Usually the overlay being switched off, or a stale cache.
+  </Card>
+  <Card title="Alerts aren't playing" href="/troubleshooting/alerts-not-playing">
+    Including alerts that fire silently.
+  </Card>
+</CardGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Your first overlay" href="/overlays/quickstart">
+    From template to live in about five minutes.
+  </Card>
+  <Card title="Overlay widgets" href="/overlays/overview">
+    Everything you can put on one.
+  </Card>
+</CardGroup>

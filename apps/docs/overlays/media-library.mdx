@@ -20,13 +20,15 @@ Up to 10MB per file. SVG is not supported.
 
 ## Storage limits
 
-The bar at the top shows what you're using. Every account gets 100MB.
-Deleting a file frees its space right away.
+The bar at the top shows what you're using. Every account gets 100MB, and some
+paid plans get more. Deleting a file frees its space right away.
 
 ## Using your files
 
-- **In widget settings**: image and sound fields show a **Choose** button that
-  opens your library.
+- **In widget settings**: an empty image or sound field shows **Add an image**
+  or **Add a video**, which opens your library. A filled one offers
+  **Replace** and **Remove**. The picker only lists files of the kind that
+  field takes, so a sound never shows up in an image slot.
 - **In widget code**: the **Insert asset** button in the widget editor drops
   the file's URL at your cursor.
 - **Anywhere else**: every file has a **Copy URL** button. The URL is public,
@@ -36,3 +38,15 @@ Deleting a file frees its space right away.
 Deleting a file breaks any overlay still pointing at it. Swap it out in the
 widget settings first.
 </Warning>
+
+## Why SVG isn't allowed
+
+An SVG is code as much as it is a picture, and it can carry scripts. Allowing
+them would mean anything in your library could run code on your overlay.
+Export a PNG or WebP instead.
+
+## What happens if you delete your account
+
+Your uploads go with it. Deleting your StreamWizard account removes every file
+in your media library, and that can't be undone. If you want to keep anything,
+use **Copy URL** and download it first.
