@@ -1,0 +1,88 @@
+---
+title: "Sync your clips from Twitch"
+description: "How your clip library fills up, what the once-an-hour limit is for, and when syncing happens on its own."
+---
+
+StreamWizard keeps its own copy of your clip list so it can search, filter and
+organise them. Syncing is how that list gets filled.
+
+## It mostly happens on its own
+
+While you're live, StreamWizard pulls new clips **every five minutes**, and
+once more when the stream ends. That's the preference in
+**Settings → Preferences** reading **Sync Twitch clips automatically**, and
+it's on unless you turned it off.
+
+So for clips made during your stream, you rarely need to do anything.
+
+<Note>
+Automatic syncing only runs **while you're live**. A clip someone cuts from
+your VOD the next afternoon isn't picked up five minutes later. It arrives on
+your next stream, or when you sync by hand.
+</Note>
+
+## Syncing by hand
+
+Select **Sync** in the filter bar above your clips. It reads your whole clip
+history from Twitch, so it also refreshes view counts and titles on clips you
+already had.
+
+## Once an hour
+
+A manual sync is limited to once an hour. Inside that hour you get:
+
+> Sync skipped. Last sync was less than an hour ago. You can sync again at 14:30.
+
+This is Twitch's rate limits rather than ours. A full history pull is a lot of
+requests, and the limit keeps StreamWizard inside what Twitch allows across
+everyone using it.
+
+<Warning>
+The limit also applies to the sync at the end of your stream. If you hit
+**Sync** by hand in the last hour of a stream, the end-of-stream sync is
+skipped, silently. That sync is the one that catches up on anything the
+five-minute pulls missed, so it's worth leaving it alone while you're live.
+</Warning>
+
+The five-minute pulls while you're live are not affected by the limit, and
+don't consume it.
+
+## What syncing does and doesn't do
+
+| Syncing does | Syncing doesn't |
+|---|---|
+| Add clips that are new to StreamWizard | Put anything into a folder |
+| Update view counts, titles and featured status | Download anything |
+| Link clips to the VOD they came from, when that VOD is known | Create clips |
+
+Folders are something you fill yourself. See
+[organize clips into folders](/clips/folders).
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="Couldn't load your clips. Check your Twitch connection.">
+    Open **Settings → Integrations** and check Twitch is connected. If your
+    account is older than the clip features, see
+    [Connect Twitch keeps appearing](/troubleshooting/connect-twitch).
+  </Accordion>
+  <Accordion title="Your session ran out">
+    Reload the page and try again.
+  </Accordion>
+  <Accordion title="A clip from a minute ago is missing">
+    Twitch takes a little while to make a new clip available to other apps, so
+    a sync run seconds after the clip was made can miss it. The next one gets
+    it.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Find clips with filters" href="/clips/filtering">
+    Search, narrow and share a view.
+  </Card>
+  <Card title="Download a clip" href="/clips/downloading">
+    Get the MP4 out.
+  </Card>
+</CardGroup>

@@ -1,0 +1,56 @@
+---
+title: "Twitch and Discord connections"
+description: "What is connected to your account, and how to fix a Discord role that did not arrive."
+---
+
+import ReconnectTwitch from '/snippets/reconnect-twitch.mdx';
+
+**Settings → Integrations** shows what StreamWizard is plugged into.
+
+## Twitch
+
+Your Twitch account is how you sign in, so it can't be disconnected from here.
+There'd be no account left to come back to.
+
+The page shows which Twitch account you're signed in as, and nothing else.
+
+### When a widget asks you to connect Twitch again
+
+<ReconnectTwitch />
+
+See [Connect Twitch keeps appearing](/troubleshooting/connect-twitch) for the
+full explanation.
+
+## Discord
+
+Linking is optional and gets you the go-live post, the Live role, and support
+tickets that already know which account is yours. See [Discord](/discord) for
+the whole picture.
+
+**Connect Discord** links it. StreamWizard asks Discord for your account
+identity and nothing else.
+
+Once linked you get **Disconnect**, and a **Re-verify** link for when your role
+hasn't turned up.
+
+### When the role doesn't arrive
+
+| What you see | What it means |
+|---|---|
+| **Hold up, you're not in the server** | Your account is linked, but roles can't be given to someone who isn't a member. Join the server and it appears on its own. |
+| **Your role tripped on the way over** | Linking worked, the role grant didn't. Select **Re-verify**. |
+| **Discord's the only way in right now** | Unlinking would lock you out, so it's blocked. Add another sign-in method first. |
+
+**Re-verify** doesn't send you back to Discord. It just asks the bot to try the
+role again.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Discord" href="/discord">
+    What linking gets you, in full.
+  </Card>
+  <Card title="Preferences" href="/account/preferences">
+    Switch the go-live post and Live role on or off.
+  </Card>
+</CardGroup>

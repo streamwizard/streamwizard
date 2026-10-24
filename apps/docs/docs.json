@@ -30,8 +30,11 @@
             "pages": [
               "overlays/overview",
               "overlays/quickstart",
+              "overlays/editor",
               "overlays/obs-setup",
-              "overlays/media-library"
+              "overlays/widget-library",
+              "overlays/media-library",
+              "overlays/import-export"
             ]
           },
           {
@@ -79,8 +82,10 @@
             "group": "Clips",
             "pages": [
               "clips/overview",
+              "clips/syncing",
               "clips/filtering",
-              "clips/folders"
+              "clips/folders",
+              "clips/downloading"
             ]
           },
           {
@@ -96,6 +101,7 @@
             "pages": [
               "irl/overview",
               "irl/cloud-obs",
+              "irl/ingest-keys",
               "irl/irl-pro",
               "irl/auto-switcher",
               "irl/switcher-monitor",
@@ -106,7 +112,10 @@
           {
             "group": "Account",
             "pages": [
-              "settings",
+              "account/overview",
+              "account/your-data",
+              "account/preferences",
+              "account/integrations",
               "discord"
             ]
           },
@@ -249,5 +258,11 @@
         ]
       }
     ]
-  }
+  },
+  "redirects": [
+    {
+      "source": "/settings",
+      "destination": "/account/overview"
+    }
+  ]
 }
