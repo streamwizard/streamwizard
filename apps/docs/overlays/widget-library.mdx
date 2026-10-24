@@ -1,0 +1,89 @@
+---
+title: "The widget library"
+description: "Ready-made starters, your own custom widgets, and widgets other streamers have published."
+---
+
+Most of what you need is already a built-in widget. The library is for the rest:
+ready-made starters you can edit, widgets you've written, and widgets other
+people have published.
+
+Open it with **Widgets** in the editor toolbar, then **Open Library**.
+
+<Frame caption="The widget library, with every widget and what it does.">
+  <img src="/images/overlays/widget-library.png" alt="The widget library sheet listing widgets grouped by Media and Alerts and chat, each with a description." />
+</Frame>
+
+## Three tabs
+
+| Tab | What's in it |
+|---|---|
+| **My Widgets** | Custom widgets you've made or installed. |
+| **Starters** | Ready-made widgets to use as-is or take apart. |
+| **Public Library** | Widgets other streamers have published, once approved. |
+
+## Starters
+
+Each starter has **Add to canvas**, which places it and copies it to your
+widgets, and **Save only**, which copies it without placing it.
+
+Either way you get your own copy. Editing it doesn't affect anyone else, and
+the original stays as it was.
+
+## Your own widgets
+
+**New Widget** makes an empty one and opens the code editor. Each card has
+**Add to canvas** to place it, and a pencil to open its code.
+
+Writing widgets is its own subject: see
+[custom widgets](/widgets/overview) for the API, fields and testing.
+
+## The public library
+
+Search by name, description or tag. Each card previews the widget live, and
+shows how many people have installed it.
+
+**Install** copies it into **My Widgets**. It doesn't place it on the canvas,
+so add it from there when you're ready.
+
+Your copy is yours. The author updating theirs later doesn't change yours.
+
+## Publishing your own
+
+Publishing happens in the widget code editor rather than here. Open the widget,
+select **Publish to Library**, and give it a title, a description and some
+tags.
+
+It's reviewed before it appears, so it won't show up immediately.
+
+<Note>
+Publishing shares your widget's code. Don't publish a widget with an API key,
+a webhook URL or anything else personal written into it.
+</Note>
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="No approved widgets in the library yet">
+    Nothing has been approved for the public library so far. Starters are the
+    place to look instead.
+  </Accordion>
+  <Accordion title="I installed something and can't find it">
+    Installing from the public library copies the widget to **My Widgets**
+    without placing it. It'll be at the top of that tab.
+  </Accordion>
+  <Accordion title="I edited a starter and it changed everywhere">
+    It shouldn't. Each install is a private copy. If a change really did follow
+    across overlays, you're probably looking at the same copy placed twice.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Build your own widget" href="/widgets/quickstart">
+    HTML, CSS and JavaScript in the editor.
+  </Card>
+  <Card title="Using the overlay editor" href="/overlays/editor">
+    Place and arrange what you installed.
+  </Card>
+</CardGroup>

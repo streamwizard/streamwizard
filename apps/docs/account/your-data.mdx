@@ -1,0 +1,80 @@
+---
+title: "Download or delete your data"
+description: "Export everything StreamWizard holds about you, or close your account for good."
+---
+
+Both of these live on **Settings → Account**.
+
+<Frame caption="The account page: download your data, or delete the account.">
+  <img src="/images/account/your-data.png" alt="The account settings page with Download my data and Delete account sections." />
+</Frame>
+
+## Download your data
+
+Select **Download my data** and confirm. You get a JSON file,
+`streamwizard-data-2026-10-24.json`, straight to your device. There's no email
+and no waiting.
+
+It contains everything StreamWizard holds about you:
+
+- Your profile and preferences
+- Your Twitch connection details, without any tokens
+- Your overlays, widgets and library entries
+- Your clips, clip folders and sync history
+- Your commands
+- Your VODs, stream events and viewer counts
+- Your IRL GPS tracks
+- Any feedback or testimonials you left
+
+It's your full history rather than a recent window.
+
+<Note>
+The export is all or nothing. If one part fails, you get an error rather than a
+file that quietly left something out.
+</Note>
+
+## Delete your account
+
+<Warning>
+There is no undo, no grace period and no recovery. Download your data first if
+you want to keep any of it.
+</Warning>
+
+Select **Delete my account** and confirm. One click, no typed confirmation.
+
+What happens:
+
+1. StreamWizard's access to your Twitch account is revoked, and the event
+   subscriptions behind your alerts are removed.
+2. Your uploaded media is deleted.
+3. Your account data is deleted: clips, folders, overlays, widgets, commands,
+   VODs, stream history, viewer counts, GPS tracks, preferences and your
+   Twitch connection.
+4. You're signed out and sent to a goodbye page.
+
+### What this doesn't do
+
+**It doesn't remove StreamWizard from your Twitch authorized apps.** The access
+is revoked, but the entry stays in your Twitch settings until you remove it.
+Go to **Twitch Settings → Connections** afterwards if you want it gone.
+
+**It doesn't remove you from the Discord server.** Your Verified Member role is
+taken off, but you stay in the server unless you leave.
+
+**Discord ticket history is anonymised rather than deleted.** Support
+conversations stay so the team keeps the thread, but your name is replaced and
+the contents are cleared.
+
+**Encrypted backups keep a copy for up to three months**, then roll off on
+their own schedule. That's how backups work, not a hold on your data.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Preferences" href="/account/preferences">
+    Change what StreamWizard does rather than leaving.
+  </Card>
+  <Card title="Contact support" href="/troubleshooting/contact-support">
+    If something is wrong, we would rather fix it.
+  </Card>
+</CardGroup>
