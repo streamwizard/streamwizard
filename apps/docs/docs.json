@@ -19,7 +19,11 @@
         "groups": [
           {
             "group": "Get started",
-            "pages": ["index", "onboarding", "dashboard"]
+            "pages": [
+              "index",
+              "onboarding",
+              "dashboard"
+            ]
           },
           {
             "group": "Overlays",
@@ -73,7 +77,19 @@
           },
           {
             "group": "Clips",
-            "pages": ["clips/overview", "clips/filtering", "clips/folders"]
+            "pages": [
+              "clips/overview",
+              "clips/filtering",
+              "clips/folders"
+            ]
+          },
+          {
+            "group": "VODs",
+            "pages": [
+              "vods/overview",
+              "vods/clip-from-vod",
+              "vods/timeline"
+            ]
           },
           {
             "group": "IRL streaming",
@@ -89,7 +105,21 @@
           },
           {
             "group": "Account",
-            "pages": ["settings", "discord"]
+            "pages": [
+              "settings",
+              "discord"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/overlay-blank",
+              "troubleshooting/alerts-not-playing",
+              "troubleshooting/widget-shows-nothing",
+              "troubleshooting/connect-twitch",
+              "troubleshooting/clips-not-syncing",
+              "troubleshooting/contact-support"
+            ]
           }
         ]
       },
@@ -109,11 +139,17 @@
           },
           {
             "group": "API reference",
-            "pages": ["widgets/api/globals", "widgets/api/events"]
+            "pages": [
+              "widgets/api/globals",
+              "widgets/api/events"
+            ]
           },
           {
             "group": "Recipes",
-            "pages": ["widgets/recipes/alert-box", "widgets/recipes/counter"]
+            "pages": [
+              "widgets/recipes/alert-box",
+              "widgets/recipes/counter"
+            ]
           }
         ]
       },
@@ -122,7 +158,9 @@
         "groups": [
           {
             "group": "For developers",
-            "pages": ["contributing/first-contribution"]
+            "pages": [
+              "contributing/first-contribution"
+            ]
           }
         ]
       }
@@ -150,28 +188,64 @@
       {
         "header": "Product",
         "items": [
-          { "label": "Clips", "href": "https://streamwizard.org/clips" },
-          { "label": "VODs", "href": "https://streamwizard.org/vods" },
-          { "label": "Overlays", "href": "https://streamwizard.org/overlays" },
-          { "label": "Cloud OBS", "href": "https://streamwizard.org/cloud-obs" },
-          { "label": "Pricing", "href": "https://streamwizard.org/pricing" }
+          {
+            "label": "Clips",
+            "href": "https://streamwizard.org/clips"
+          },
+          {
+            "label": "VODs",
+            "href": "https://streamwizard.org/vods"
+          },
+          {
+            "label": "Overlays",
+            "href": "https://streamwizard.org/overlays"
+          },
+          {
+            "label": "Cloud OBS",
+            "href": "https://streamwizard.org/cloud-obs"
+          },
+          {
+            "label": "Pricing",
+            "href": "https://streamwizard.org/pricing"
+          }
         ]
       },
       {
         "header": "Learn",
         "items": [
-          { "label": "Guides", "href": "https://streamwizard.org/guides" },
-          { "label": "Blog", "href": "https://streamwizard.org/blog" },
-          { "label": "Roadmap", "href": "https://streamwizard.org/roadmap" }
+          {
+            "label": "Guides",
+            "href": "https://streamwizard.org/guides"
+          },
+          {
+            "label": "Blog",
+            "href": "https://streamwizard.org/blog"
+          },
+          {
+            "label": "Roadmap",
+            "href": "https://streamwizard.org/roadmap"
+          }
         ]
       },
       {
         "header": "Company",
         "items": [
-          { "label": "About", "href": "https://streamwizard.org/about" },
-          { "label": "Contact", "href": "https://streamwizard.org/contact" },
-          { "label": "Privacy", "href": "https://streamwizard.org/privacy-policy" },
-          { "label": "Terms", "href": "https://streamwizard.org/terms-of-service" }
+          {
+            "label": "About",
+            "href": "https://streamwizard.org/about"
+          },
+          {
+            "label": "Contact",
+            "href": "https://streamwizard.org/contact"
+          },
+          {
+            "label": "Privacy",
+            "href": "https://streamwizard.org/privacy-policy"
+          },
+          {
+            "label": "Terms",
+            "href": "https://streamwizard.org/terms-of-service"
+          }
         ]
       }
     ]

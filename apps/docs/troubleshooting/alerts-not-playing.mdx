@@ -1,0 +1,68 @@
+---
+title: "Alerts aren't playing, or have no sound"
+description: "Alerts that never fire, fire silently, or vanish when you switch scenes."
+---
+
+import TestEvents from '/snippets/widget-test-events.mdx';
+
+## First, prove the widget works
+
+<TestEvents />
+
+Fire a test alert in **Local** mode. If the alert plays in the editor, the
+widget is fine and the problem is between StreamWizard and OBS. If it doesn't
+play in the editor either, the problem is in the widget's settings.
+
+## The alert never fires
+
+**Is the alert switched on?** The alert box lists every alert with its own
+toggle. The template switches on follows, subs, cheers and raids and leaves the
+other 19 off.
+
+**Is there a minimum set?** Under **Timing**, an alert can require a minimum
+before it fires, like a number of bits or raid viewers. A cheer below your
+minimum is ignored on purpose.
+
+**Is a variation stealing it?** A variation plays instead of the base alert
+when its condition matches. If a variation is misconfigured, it can swallow
+alerts you expected to see. Open the alert, check **Variations**, and use the
+play button on each one to test it directly.
+
+**Is the overlay switched on?** See [overlay is blank](/troubleshooting/overlay-blank).
+
+## The alert fires but there's no sound
+
+OBS doesn't route browser source audio to your stream by default.
+
+Right-click the browser source, select **Properties**, and turn on
+**Control audio via OBS**. The source then appears in your audio mixer, where
+you can check it isn't muted and the volume is up.
+
+Also check the alert's own volume under **Media and sound**, and that the sound
+file is still in your [media library](/overlays/media-library).
+
+<Note>
+**Control audio via OBS** is also the fix for clips that won't autoplay with
+sound, because audio routed through OBS isn't subject to the browser's autoplay
+rules.
+</Note>
+
+## Alerts vanish when I switch scenes
+
+Turn off **Shutdown source when not visible** in the browser source properties.
+
+With it on, OBS closes the page whenever the scene isn't showing. Alerts that
+fire while the scene is hidden arrive at a page that isn't running, and they're
+gone. They're not queued for when you come back.
+
+## Several alerts fired at once and I only saw some
+
+Alerts queue rather than overlap, so three follows at once play one after
+another. The queue holds 50 by default and drops anything past that, so a
+follow-bot wave can't book your alert box for an hour. **Most alerts waiting**
+changes the limit.
+
+## Still stuck
+
+Ask in the **#help** channel on our [Discord](https://discord.streamwizard.org),
+or [open a ticket](/troubleshooting/contact-support).
