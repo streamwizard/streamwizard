@@ -3,7 +3,9 @@
 // sanitizeDoc, which keeps only the nodes, marks and attributes the public
 // renderer knows how to draw, so the renderer can trust what it reads.
 
+import { stampDoc } from "./doc-version";
 import { isEmbedProvider, isValidEmbedId } from "./embed";
+import { isValidSlug } from "./slug";
 
 export interface DocMark {
   type: string;
@@ -20,6 +22,8 @@ export interface DocNode {
 
 export interface Doc {
   type: "doc";
+  /** Only ever `{ v }`, the stored format version. See doc-version.ts. */
+  attrs?: Record<string, unknown>;
   content: DocNode[];
 }
 
@@ -50,6 +54,12 @@ export interface SanitizeResult {
 // The editor allows H2 to H4. The page title is the only H1.
 export const MIN_HEADING_LEVEL = 2;
 export const MAX_HEADING_LEVEL = 4;
+/** An image's display width, as a percentage of the text column. Absent: full width. */
+export const MIN_IMAGE_SIZE = 25;
+export const MAX_IMAGE_SIZE = 100;
+/** Where a narrower image sits in the text column. Absent: centred. */
+export const IMAGE_ALIGNS = ["left", "right"] as const;
+export type ImageAlign = (typeof IMAGE_ALIGNS)[number];
 
 export const CALLOUT_VARIANTS = ["info", "tip", "warning"] as const;
 export type CalloutVariant = (typeof CALLOUT_VARIANTS)[number];
@@ -95,7 +105,15 @@ const NODE_SPECS: Record<string, NodeSpec> = {
     children: "inline",
     attrs: (attrs) => {
       const level = typeof attrs.level === "number" ? Math.round(attrs.level) : MIN_HEADING_LEVEL;
-      return { level: Math.min(MAX_HEADING_LEVEL, Math.max(MIN_HEADING_LEVEL, level)) };
+      // The anchor the heading was given when it was written. It outlives
+      // rewording, which is the point: #how-to-start keeps working after the
+      // heading becomes "Getting started". Absent on older content, which
+      // falls back to a slug of the text.
+      const anchor = typeof attrs.anchor === "string" && isValidSlug(attrs.anchor) ? attrs.anchor : null;
+      const clamped = Math.min(MAX_HEADING_LEVEL, Math.max(MIN_HEADING_LEVEL, level));
+      // Left out rather than stored as null, so a heading written before
+      // anchors existed keeps the shape it had.
+      return anchor ? { level: clamped, anchor } : { level: clamped };
     },
   },
   bulletList: { category: "block", children: "listItem" },
@@ -134,6 +152,11 @@ const NODE_SPECS: Record<string, NodeSpec> = {
         cleaned.width = width;
         cleaned.height = height;
       }
+      // Full width is the default, so it isn't stored.
+      const size = intInRange(attrs.size, MIN_IMAGE_SIZE, MAX_IMAGE_SIZE - 1);
+      if (size) cleaned.size = size;
+      // Centred is the default, so it isn't stored.
+      if ((IMAGE_ALIGNS as readonly unknown[]).includes(attrs.align)) cleaned.align = attrs.align;
       return cleaned;
     },
   },
@@ -293,11 +316,14 @@ export function sanitizeDoc(input: unknown): SanitizeResult {
   const state: WalkState = { issues: [], nodes: 0 };
   if (!isRecord(input) || input.type !== "doc") {
     return {
-      doc: { ...EMPTY_DOC, content: [] },
+      doc: stampDoc({ ...EMPTY_DOC, content: [] }),
       issues: [{ code: "invalid_doc", path: "", detail: "Not a document." }],
     };
   }
-  return { doc: { type: "doc", content: sanitizeChildren(input.content, ROOT, "", 1, state) }, issues: state.issues };
+  return {
+    doc: stampDoc({ type: "doc", content: sanitizeChildren(input.content, ROOT, "", 1, state) }),
+    issues: state.issues,
+  };
 }
 
 // Depth-first walk in document order. Used by every extractor below, so they

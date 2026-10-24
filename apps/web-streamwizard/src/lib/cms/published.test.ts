@@ -5,6 +5,7 @@ import {
   articleSchema,
   authorSameAs,
   inOrder,
+  relatedByTopic,
   splitTitle,
   toArticle,
   toCard,
@@ -77,6 +78,8 @@ function row(overrides: Partial<PublishedRow> = {}): PublishedRow {
     tag_ids: [TAG],
     related_ids: [],
     primary_category_id: CATEGORY,
+    is_featured: false,
+    pinned_rank: null,
     first_published_at: "2026-10-01T10:00:00.000Z",
     content_updated_at: "2026-10-05T10:00:00.000Z",
     ...overrides,
@@ -120,7 +123,10 @@ describe("toCard", () => {
   it("links to the post and names its primary category", () => {
     const card = toCard(row(), taxonomy, imageUrl);
     expect(card.path).toBe("/guides/set-up-alerts");
-    expect(card.category).toBe("Overlays");
+    expect(card.category).toEqual({ slug: "overlays", name: "Overlays" });
+    expect(card.categories.map((term) => term.slug)).toEqual(["overlays", "obs"]);
+    expect(card.tags).toEqual([{ slug: "alerts", name: "Alerts" }]);
+    expect(card.prerequisiteCount).toBe(1);
     expect(card.authors).toEqual(["Jochem"]);
   });
 });
@@ -128,6 +134,48 @@ describe("toCard", () => {
 describe("inOrder", () => {
   it("keeps the hand-picked order and skips posts that aren't live", () => {
     expect(inOrder(["b", "x", "a"], [{ id: "a" }, { id: "b" }]).map((item) => item.id)).toEqual(["b", "a"]);
+  });
+});
+
+describe("relatedByTopic", () => {
+  const post = (
+    id: string,
+    fields: { type?: string; primary?: string | null; categories?: string[]; tags?: string[]; at?: string } = {},
+  ) => ({
+    content_id: id,
+    type: fields.type ?? "guide",
+    primary_category_id: fields.primary ?? null,
+    category_ids: fields.categories ?? [],
+    tag_ids: fields.tags ?? [],
+    first_published_at: fields.at ?? "2026-10-01T00:00:00Z",
+  });
+  const self = post("self", { primary: CATEGORY, categories: [CATEGORY], tags: [TAG] });
+
+  it("ranks the same primary category over a shared tag, and drops posts with nothing in common", () => {
+    const ranked = relatedByTopic(self, [
+      post("tag-only", { tags: [TAG] }),
+      post("unrelated", { primary: OTHER_CATEGORY, categories: [OTHER_CATEGORY] }),
+      post("same-category", { primary: CATEGORY, categories: [CATEGORY] }),
+    ]);
+    expect(ranked.map((row) => row.content_id)).toEqual(["same-category", "tag-only"]);
+  });
+
+  it("skips the post itself and the hand-picked ones", () => {
+    const ranked = relatedByTopic(
+      self,
+      [self, post("picked", { tags: [TAG] }), post("other", { tags: [TAG] })],
+      ["picked"],
+    );
+    expect(ranked.map((row) => row.content_id)).toEqual(["other"]);
+  });
+
+  it("breaks ties by type, then by the newest", () => {
+    const ranked = relatedByTopic(self, [
+      post("blog", { type: "blog", tags: [TAG], at: "2026-10-20T00:00:00Z" }),
+      post("old-guide", { tags: [TAG], at: "2026-09-01T00:00:00Z" }),
+      post("new-guide", { tags: [TAG], at: "2026-10-10T00:00:00Z" }),
+    ]);
+    expect(ranked.map((row) => row.content_id)).toEqual(["new-guide", "old-guide", "blog"]);
   });
 });
 

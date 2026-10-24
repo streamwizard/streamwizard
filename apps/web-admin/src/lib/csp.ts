@@ -2,6 +2,15 @@
 // Next.js reads the nonce from the request's Content-Security-Policy header
 // and stamps it on its inline (hydration/RSC) scripts, which is what lets us
 // drop 'unsafe-inline' from script-src.
+/** The public site's origin (CMS_SITE_URL), or null when unset or invalid. */
+function siteOrigin(): string | null {
+  try {
+    return process.env.CMS_SITE_URL ? new URL(process.env.CMS_SITE_URL).origin : null;
+  } catch {
+    return null;
+  }
+}
+
 export function buildCsp(nonce: string): string {
   const supabaseUrl = process.env.SUPABASE_URL ?? "";
   // Supabase realtime uses WebSocket — derive wss:// from the https:// URL
@@ -32,7 +41,11 @@ export function buildCsp(nonce: string): string {
       .filter(Boolean)
       .join(" "),
     // Klipy: Discord GIFs in ticket conversations play as looping mp4s.
-    ["media-src 'self' https://klipy.com https://*.klipy.com", process.env.NEXT_PUBLIC_CDN_URL, process.env.NEXT_PUBLIC_ASSET_CDN_URL]
+    [
+      "media-src 'self' https://klipy.com https://*.klipy.com",
+      process.env.NEXT_PUBLIC_CDN_URL,
+      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+    ]
       .filter(Boolean)
       .join(" "),
     // Sentry is tunneled through /monitoring so 'self' covers it; the ws
@@ -69,6 +82,8 @@ export function buildCsp(nonce: string): string {
     // blocks it. blob: only permits workers from blobs the page itself made,
     // and the script inside one still has to come from 'self'.
     "worker-src 'self' blob:",
+    // The editor's side-by-side preview frames the draft on the public site.
+    ...(siteOrigin() ? [`frame-src 'self' ${siteOrigin()}`] : []),
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

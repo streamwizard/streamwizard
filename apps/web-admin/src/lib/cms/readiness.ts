@@ -1,5 +1,6 @@
-import { checkAccessibility, isValidSlug, type Doc } from "@repo/cms";
+import { checkAccessibility, extractText, isValidSlug, type Doc } from "@repo/cms";
 import { canonicalProblem, type ContentDraft, type ContentType } from "./draft";
+import { toneFindings } from "./tone";
 
 // What stands between a draft and the Publish button. Errors block
 // publishing; warnings are worth fixing but don't. Pure: the editor shows the
@@ -57,6 +58,17 @@ export function publishReadiness(
   for (const issue of checkAccessibility(draft.body, bodies)) {
     items.push({ severity: issue.severity, message: issue.message, section: issue.section ?? undefined });
   }
+
+  const texts = [
+    draft.title,
+    draft.summary,
+    draft.excerpt,
+    draft.seoTitle,
+    draft.seoDescription,
+    extractText(draft.body),
+    ...(type === "guide" ? draft.sections.flatMap((section) => [section.title, extractText(section.body)]) : []),
+  ];
+  for (const finding of toneFindings(texts)) warning(finding.message);
   return items;
 }
 

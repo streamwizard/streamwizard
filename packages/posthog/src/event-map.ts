@@ -186,6 +186,15 @@ export interface EventMap {
   content_read_time: ContentProps & { active_seconds: number };
   // A link inside the article. `target`: the path for our own pages, the host for others.
   content_link_clicked: ContentProps & { link_type: "internal" | "external"; target: string };
+  // The /blog or /guides index after a search or filter change. Never the
+  // query itself, only its length; `filters` names the active controls.
+  content_searched: { content_type: "blog" | "guide"; query_length: number; result_count: number };
+  content_filtered: {
+    content_type: "blog" | "guide";
+    filters: ("category" | "tag" | "level")[];
+    tag_count: number;
+    result_count: number;
+  };
 }
 
 export type AppEvent = keyof EventMap;

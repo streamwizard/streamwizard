@@ -1,4 +1,4 @@
-import { contentIndexPath, contentPath, type ContentType, type Doc } from "@repo/cms";
+import { contentIndexPath, contentPath, migrateDoc, type ContentType, type Doc } from "@repo/cms";
 import type { ArticleData } from "@/components/public/cms/cms-article";
 import type { AssetRecord } from "./images";
 
@@ -39,6 +39,8 @@ export interface PublishedRow {
   tag_ids: string[];
   related_ids: string[];
   primary_category_id: string | null;
+  is_featured: boolean;
+  pinned_rank: number | null;
   first_published_at: string;
   content_updated_at: string;
 }
@@ -55,8 +57,14 @@ export type PublishedCardRow = Pick<
   | "assets"
   | "reading_time_minutes"
   | "difficulty"
+  | "estimated_minutes"
+  | "prerequisites"
   | "author_ids"
+  | "category_ids"
+  | "tag_ids"
   | "primary_category_id"
+  | "is_featured"
+  | "pinned_rank"
   | "first_published_at"
   | "content_updated_at"
 >;
@@ -77,6 +85,12 @@ export interface PublicTaxonomy {
   tags: Record<string, { slug: string; name: string }>;
 }
 
+/** A category or tag as the index filters and the cards use it. */
+export interface Term {
+  slug: string;
+  name: string;
+}
+
 export interface ContentCard {
   id: string;
   type: ContentType;
@@ -84,16 +98,33 @@ export interface ContentCard {
   title: string;
   excerpt: string | null;
   cover: { src: string; width: number | null; height: number | null; alt: string } | null;
-  category: string | null;
+  /** The primary category. */
+  category: Term | null;
+  /** Every category, primary first. */
+  categories: Term[];
+  tags: Term[];
   authors: string[];
   readingMinutes: number;
   difficulty: ArticleData["difficulty"];
+  /** Guides only. */
+  estimatedMinutes: number | null;
+  /** Guides only. */
+  prerequisiteCount: number;
+  featured: boolean;
+  pinnedRank: number | null;
   publishedAt: string;
 }
 
+export const DIFFICULTY_LABELS = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" } as const;
+export type Difficulty = keyof typeof DIFFICULTY_LABELS;
+
+/** "12 Oct 2026" on cards, "12 October 2026" on the article. UTC so server and client agree. */
+export const SHORT_DATE = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+export const LONG_DATE = new Intl.DateTimeFormat("en", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
 type ImageUrl = (key: string) => string;
 
-const DIFFICULTIES = new Set(["beginner", "intermediate", "advanced"]);
+const DIFFICULTIES = new Set(Object.keys(DIFFICULTY_LABELS));
 
 export function asContentType(value: string): ContentType {
   return value === "guide" ? "guide" : "blog";
@@ -102,8 +133,7 @@ export function asContentType(value: string): ContentType {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const asDoc = (value: unknown): Doc =>
-  isRecord(value) && value.type === "doc" ? (value as unknown as Doc) : { type: "doc", content: [] };
+const asDoc = (value: unknown): Doc => migrateDoc(value).doc;
 
 const asDifficulty = (value: string | null): ArticleData["difficulty"] =>
   value && DIFFICULTIES.has(value) ? (value as ArticleData["difficulty"]) : null;
@@ -143,12 +173,18 @@ function coverImage(row: Pick<PublishedRow, "cover" | "assets" | "title">, image
   };
 }
 
-/** Category names with the primary one first. */
-function categoryNames(row: Pick<PublishedRow, "category_ids" | "primary_category_id">, taxonomy: PublicTaxonomy) {
+/** Categories with the primary one first. */
+function categoryTerms(row: Pick<PublishedRow, "category_ids" | "primary_category_id">, taxonomy: PublicTaxonomy): Term[] {
+  // `?? []`: a list cached before the card read these columns doesn't have them.
+  const all = row.category_ids ?? [];
   const ids = row.primary_category_id
-    ? [row.primary_category_id, ...row.category_ids.filter((id) => id !== row.primary_category_id)]
-    : row.category_ids;
-  return ids.flatMap((id) => (taxonomy.categories[id] ? [taxonomy.categories[id].name] : []));
+    ? [row.primary_category_id, ...all.filter((id) => id !== row.primary_category_id)]
+    : all;
+  return ids.flatMap((id) => (taxonomy.categories[id] ? [taxonomy.categories[id]] : []));
+}
+
+function categoryNames(row: Pick<PublishedRow, "category_ids" | "primary_category_id">, taxonomy: PublicTaxonomy) {
+  return categoryTerms(row, taxonomy).map((term) => term.name);
 }
 
 export function toArticle(row: PublishedRow, taxonomy: PublicTaxonomy, imageUrl: ImageUrl): ArticleData {
@@ -185,7 +221,13 @@ export function toArticle(row: PublishedRow, taxonomy: PublicTaxonomy, imageUrl:
     body: asDoc(row.body),
     sections: sections.flatMap((section) =>
       isRecord(section)
-        ? [{ title: typeof section.title === "string" ? section.title : "", body: asDoc(section.body) }]
+        ? [
+            {
+              title: typeof section.title === "string" ? section.title : "",
+              anchor: typeof section.anchor === "string" ? section.anchor : null,
+              body: asDoc(section.body),
+            },
+          ]
         : [],
     ),
   };
@@ -193,6 +235,8 @@ export function toArticle(row: PublishedRow, taxonomy: PublicTaxonomy, imageUrl:
 
 export function toCard(row: PublishedCardRow, taxonomy: PublicTaxonomy, imageUrl: ImageUrl): ContentCard {
   const type = asContentType(row.type);
+  const guide = type === "guide";
+  const categories = categoryTerms(row, taxonomy);
   return {
     id: row.content_id,
     type,
@@ -200,10 +244,16 @@ export function toCard(row: PublishedCardRow, taxonomy: PublicTaxonomy, imageUrl
     title: row.title,
     excerpt: row.excerpt,
     cover: coverImage(row, imageUrl),
-    category: row.primary_category_id ? (taxonomy.categories[row.primary_category_id]?.name ?? null) : null,
+    category: row.primary_category_id ? (taxonomy.categories[row.primary_category_id] ?? null) : null,
+    categories,
+    tags: (row.tag_ids ?? []).flatMap((id) => (taxonomy.tags[id] ? [taxonomy.tags[id]] : [])),
     authors: row.author_ids.flatMap((id) => (taxonomy.authors[id] ? [taxonomy.authors[id].name] : [])),
     readingMinutes: row.reading_time_minutes,
-    difficulty: type === "guide" ? asDifficulty(row.difficulty) : null,
+    difficulty: guide ? asDifficulty(row.difficulty) : null,
+    estimatedMinutes: guide ? (row.estimated_minutes ?? null) : null,
+    prerequisiteCount: guide && Array.isArray(row.prerequisites) ? row.prerequisites.length : 0,
+    featured: row.is_featured === true,
+    pinnedRank: row.pinned_rank ?? null,
     publishedAt: row.first_published_at,
   };
 }
@@ -212,6 +262,35 @@ export function toCard(row: PublishedCardRow, taxonomy: PublicTaxonomy, imageUrl
 export function inOrder<T extends { id: string }>(ids: string[], items: T[]): T[] {
   const byId = new Map(items.map((item) => [item.id, item]));
   return ids.flatMap((id) => (byId.has(id) ? [byId.get(id)!] : []));
+}
+
+type TopicFields = Pick<PublishedCardRow, "content_id" | "type" | "primary_category_id" | "category_ids" | "tag_ids" | "first_published_at">;
+
+/**
+ * Posts and guides that share a topic with `row`, best match first: the same
+ * primary category counts most, then each shared tag, then each shared
+ * category. Nothing in common means not related. Ties go to the same type,
+ * then the newest.
+ */
+export function relatedByTopic<T extends TopicFields>(row: TopicFields, candidates: T[], skip: string[] = []): T[] {
+  const skipped = new Set([row.content_id, ...skip]);
+  const tags = new Set(row.tag_ids ?? []);
+  const categories = new Set(row.category_ids ?? []);
+  const scored = candidates.flatMap((candidate) => {
+    if (skipped.has(candidate.content_id)) return [];
+    let score = 0;
+    if (row.primary_category_id && candidate.primary_category_id === row.primary_category_id) score += 3;
+    for (const id of candidate.tag_ids ?? []) if (tags.has(id)) score += 2;
+    for (const id of candidate.category_ids ?? []) if (categories.has(id)) score += 1;
+    return score > 0 ? [{ candidate, score, sameType: candidate.type === row.type }] : [];
+  });
+  scored.sort(
+    (a, b) =>
+      b.score - a.score ||
+      Number(b.sameType) - Number(a.sameType) ||
+      (b.candidate.first_published_at ?? "").localeCompare(a.candidate.first_published_at ?? ""),
+  );
+  return scored.map((entry) => entry.candidate);
 }
 
 /** Title, description and canonical for generateMetadata. */

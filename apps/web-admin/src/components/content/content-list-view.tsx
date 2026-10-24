@@ -27,12 +27,61 @@ import { FilterPanel } from "@/components/widgets/filter-panel";
 import { PageHeader } from "@/components/widgets/page-header";
 import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
 import type { ContentType } from "@/lib/cms/draft";
+import { REVIEW_BADGE, REVIEW_FILTER_STATES, REVIEW_LABELS, type ReviewState } from "@/lib/cms/review";
+import { templatesFor } from "@/lib/cms/templates";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/widgets/responsive-dialog";
 import type { PickerOption } from "./editor/chip-picker";
+
+/** What a new post starts from. Blank is a template like any other. */
+function TemplatePicker({
+  type,
+  onClose,
+  onPick,
+}: {
+  type: ContentType | null;
+  onClose: () => void;
+  onPick: (templateId: string) => void;
+}) {
+  return (
+    <ResponsiveDialog open={type !== null} onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveDialogContent className="sm:max-w-lg">
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>{type === "guide" ? "New guide" : "New blog post"}</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
+            Start from a shape, or from nothing. Everything in a template can be changed or deleted.
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ul className="space-y-2">
+          {(type ? templatesFor(type) : []).map((template) => (
+            <li key={template.id}>
+              <button
+                type="button"
+                onClick={() => onPick(template.id)}
+                className="w-full rounded-lg border p-3 text-left hover:bg-muted"
+              >
+                <span className="block text-sm font-medium">{template.name}</span>
+                <span className="block text-sm text-muted-foreground">{template.description}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
+  );
+}
 
 export interface ContentListFilters {
   search?: string;
   type?: "blog" | "guide";
   status?: "draft" | "scheduled" | "published" | "archived";
+  /** Only the states worth filtering by: every post that isn't in review is 'none'. */
+  reviewState?: Exclude<ReviewState, "none">;
   authorId?: string;
   categoryId?: string;
   sort: "updated" | "published" | "title";
@@ -43,6 +92,7 @@ export interface ContentRow {
   id: string;
   type: ContentType;
   status: "draft" | "scheduled" | "published" | "archived";
+  reviewState: ReviewState;
   title: string;
   slug: string;
   updatedAt: string;
@@ -110,9 +160,12 @@ export function ContentListView({
 }) {
   const router = useRouter();
   const [creating, setCreating] = useState<ContentType | null>(null);
+  /** Which kind of post the template picker is open for. */
+  const [templateFor, setTemplateFor] = useState<ContentType | null>(null);
   const pages = Math.max(1, Math.ceil(total / pageSize));
   const activeFilters =
-    [filters.type, filters.status, filters.authorId, filters.categoryId].filter(Boolean).length +
+    [filters.type, filters.status, filters.reviewState, filters.authorId, filters.categoryId].filter(Boolean)
+      .length +
     (filters.sort !== "updated" ? 1 : 0);
   const filtered = !!(filters.search || activeFilters);
 
@@ -122,6 +175,7 @@ export function ContentListView({
       q: filters.search,
       type: filters.type,
       status: filters.status,
+      review: filters.reviewState,
       author: filters.authorId,
       category: filters.categoryId,
       sort: filters.sort !== "updated" ? filters.sort : undefined,
@@ -133,9 +187,10 @@ export function ContentListView({
     return search ? `/content?${search}` : "/content";
   };
 
-  const create = async (type: ContentType) => {
+  const create = async (type: ContentType, templateId?: string) => {
     setCreating(type);
-    const result = await createContentAction(type);
+    setTemplateFor(null);
+    const result = await createContentAction(type, templateId);
     if (result.error || !result.id) {
       setCreating(null);
       return void toast.error(result.error ?? "Couldn't create the draft.");
@@ -183,6 +238,11 @@ export function ContentListView({
             <time dateTime={row.publishAt} className="text-xs text-muted-foreground">
               {formatDateTime(row.publishAt)}
             </time>
+          )}
+          {row.reviewState !== "none" && (
+            <Badge variant={REVIEW_BADGE[row.reviewState]} className="text-xs">
+              {REVIEW_LABELS[row.reviewState]}
+            </Badge>
           )}
           {row.unpublishedChanges && (
             <Badge variant="outline" className="text-xs">
@@ -237,18 +297,24 @@ export function ContentListView({
               variant="outline"
               className="h-11 md:h-9"
               disabled={creating !== null}
-              onClick={() => create("guide")}
+              onClick={() => setTemplateFor("guide")}
             >
               <BookOpen aria-hidden />
               {creating === "guide" ? "Creating…" : "New guide"}
             </Button>
-            <Button className="h-11 md:h-9" disabled={creating !== null} onClick={() => create("blog")}>
+            <Button className="h-11 md:h-9" disabled={creating !== null} onClick={() => setTemplateFor("blog")}>
               <Newspaper aria-hidden />
               {creating === "blog" ? "Creating…" : "New blog post"}
             </Button>
           </>
         )}
       </PageHeader>
+
+      <TemplatePicker
+        type={templateFor}
+        onClose={() => setTemplateFor(null)}
+        onPick={(templateId) => templateFor && void create(templateFor, templateId)}
+      />
 
       <TicketFiltersForm
         action="/content"
@@ -287,6 +353,19 @@ export function ContentListView({
             {Object.entries(STATUS_LABELS).map(([value, label]) => (
               <NativeSelectOption key={value} value={value}>
                 {label}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <NativeSelect
+            name="review"
+            defaultValue={filters.reviewState ?? ""}
+            aria-label="Review"
+            className={`${SELECT} w-full sm:w-44`}
+          >
+            <NativeSelectOption value="">Any review state</NativeSelectOption>
+            {REVIEW_FILTER_STATES.map((state) => (
+              <NativeSelectOption key={state} value={state}>
+                {REVIEW_LABELS[state]}
               </NativeSelectOption>
             ))}
           </NativeSelect>

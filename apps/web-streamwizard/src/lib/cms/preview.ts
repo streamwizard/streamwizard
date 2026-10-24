@@ -1,5 +1,5 @@
 import { hashPreviewToken, isPreviewToken, previewState, toPgBytea, type PreviewState } from "@repo/cms/preview-token";
-import type { Doc } from "@repo/cms";
+import { migrateDoc, type Doc } from "@repo/cms";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { selectCmsAssetsByIds } from "@repo/supabase/queries/cms/assets";
 import { getCmsPreviewByHash } from "@repo/supabase/queries/cms/preview";
@@ -14,8 +14,7 @@ export type PreviewResult =
   | { state: Exclude<PreviewState, "active"> }
   | { state: "active"; article: ArticleData; assets: Map<string, AssetRecord> };
 
-const asDoc = (value: unknown): Doc =>
-  value && typeof value === "object" && (value as Doc).type === "doc" ? (value as Doc) : { type: "doc", content: [] };
+const asDoc = (value: unknown): Doc => migrateDoc(value).doc;
 
 export async function loadPreview(token: string): Promise<PreviewResult> {
   if (!isPreviewToken(token)) return { state: "missing" };
@@ -30,7 +29,7 @@ export async function loadPreview(token: string): Promise<PreviewResult> {
   const sections = guide
     ? [...content.sections]
         .sort((a, b) => a.position - b.position)
-        .map((section) => ({ title: section.title, body: asDoc(section.body) }))
+        .map((section) => ({ title: section.title, anchor: section.anchor, body: asDoc(section.body) }))
     : [];
   const body = asDoc(content.body);
 

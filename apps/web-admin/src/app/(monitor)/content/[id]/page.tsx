@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { contentPath } from "@repo/cms";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { selectCmsAsset } from "@repo/supabase/queries/cms/assets";
 import { listCmsAuthors } from "@repo/supabase/queries/cms/authors";
@@ -6,8 +7,9 @@ import { getCmsContentForEditor, listCmsContentOptions } from "@repo/supabase/qu
 import { listCmsCategories, listCmsTags } from "@repo/supabase/queries/cms/taxonomy";
 import { ContentEditor, type ContentStatus, type EditorImage } from "@/components/content/editor/content-editor";
 import { describeScheduleError } from "@/lib/cms/content-errors";
-import { contentType, draftFromRow } from "@/lib/cms/draft-row";
+import { contentType, draftFromRow, rowHasFutureBody } from "@/lib/cms/draft-row";
 import { publicContentUrl } from "@/lib/cms/publish";
+import { asReviewState } from "@/lib/cms/review";
 import { cmsAssetUrl } from "@/lib/cms/storage";
 import { env } from "@/lib/env";
 
@@ -44,8 +46,11 @@ export default async function ContentEditorPage({ params }: { params: Promise<{ 
 
   return (
     <ContentEditor
-      // A restore or someone else's save means a fresh start, not a merge.
-      key={row.lock_version}
+      // No key on lock_version: every autosave bumps it, and a server action
+      // that revalidates (an image upload, a new tag) re-renders this page,
+      // which would remount the editor mid-edit and lose what it was doing.
+      // A restore opens the editor fresh from the revisions page, and someone
+      // else's save is caught by the conflict check, which reloads.
       id={row.id}
       type={contentType(row)}
       status={row.status as ContentStatus}
@@ -56,6 +61,9 @@ export default async function ContentEditorPage({ params }: { params: Promise<{ 
       liveUrl={row.published ? publicContentUrl(env.CMS_SITE_URL, contentType(row), row.published.slug) : null}
       unpublishedChanges={!!row.published && row.updated_at > row.published.snapshot_at}
       scheduleError={row.schedule_error ? describeScheduleError(row.schedule_error) : null}
+      futureBody={rowHasFutureBody(row)}
+      updatedAt={row.updated_at}
+      reviewState={asReviewState(row.review_state)}
       images={images}
       options={{
         authors: (authors.data ?? [])
@@ -69,6 +77,14 @@ export default async function ContentEditorPage({ params }: { params: Promise<{ 
           hint: option.status === "published" ? (option.type === "guide" ? "guide" : "blog") : option.status,
         })),
       }}
+      linkablePosts={(related.data ?? [])
+        .filter((option) => option.id !== row.id && option.title.trim())
+        .map((option) => ({
+          title: option.title.trim(),
+          path: contentPath(option.type === "guide" ? "guide" : "blog", option.slug),
+          type: option.type === "guide" ? "guide" : "blog",
+          live: option.status === "published",
+        }))}
     />
   );
 }

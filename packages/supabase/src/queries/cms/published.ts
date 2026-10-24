@@ -16,9 +16,9 @@ export type CmsPublishedType = "blog" | "guide";
 const DETAIL_COLUMNS =
   "content_id, type, slug, title, excerpt, summary, cover, og_image, body, sections, toc, assets, word_count, reading_time_minutes, seo_title, seo_description, canonical_url, noindex, difficulty, estimated_minutes, prerequisites, author_ids, category_ids, tag_ids, related_ids, primary_category_id, is_featured, pinned_rank, comments_enabled, first_published_at, content_updated_at";
 
-/** Enough for a card: no body. `assets` carries the cover's key and size. */
+/** Enough for a card and the index filters: no body. `assets` carries the cover's key and size. */
 const CARD_COLUMNS =
-  "content_id, type, slug, title, excerpt, cover, assets, reading_time_minutes, difficulty, author_ids, primary_category_id, is_featured, pinned_rank, first_published_at, content_updated_at";
+  "content_id, type, slug, title, excerpt, cover, assets, reading_time_minutes, difficulty, estimated_minutes, prerequisites, author_ids, category_ids, tag_ids, primary_category_id, is_featured, pinned_rank, first_published_at, content_updated_at";
 
 export const getPublishedCmsContent = withMetrics(
   "cms_content_published",

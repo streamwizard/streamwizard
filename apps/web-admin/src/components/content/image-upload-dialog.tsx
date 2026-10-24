@@ -25,6 +25,8 @@ interface ImageUploadDialogProps {
   purpose: CmsUploadPurpose;
   /** Prefills the alt text (an avatar's is usually the author's name). */
   defaultAlt?: string;
+  /** A file that's already chosen (pasted or dropped into the editor): only the alt text is left to write. */
+  initialFile?: File;
   onUploaded: (asset: CmsMediaItem) => void;
 }
 
@@ -34,20 +36,30 @@ export function ImageUploadDialog(props: ImageUploadDialogProps) {
   return props.open ? <UploadForm {...props} /> : null;
 }
 
-function UploadForm({ onOpenChange, purpose, defaultAlt = "", onUploaded }: ImageUploadDialogProps) {
+function UploadForm({ onOpenChange, purpose, defaultAlt = "", initialFile, onUploaded }: ImageUploadDialogProps) {
   const uid = useId();
-  const [file, setFile] = useState<File | null>(null);
+  const [file, setFile] = useState<File | null>(initialFile ?? null);
   const [preview, setPreview] = useState<string | null>(null);
   const [alt, setAlt] = useState(defaultAlt);
   const [decorative, setDecorative] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
 
-  // Frees the last preview's blob when the dialog closes.
-  useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview]);
+  // A data URL rather than a blob URL: nothing to revoke, so a pasted file's
+  // preview survives the dialog mounting twice (React dev mode does that).
+  useEffect(() => {
+    if (!file) return;
+    let current = true;
+    const reader = new FileReader();
+    reader.onload = () => current && setPreview(String(reader.result));
+    reader.readAsDataURL(file);
+    return () => {
+      current = false;
+    };
+  }, [file]);
 
   const choose = (next: File | null) => {
     setFile(next);
-    setPreview(next ? URL.createObjectURL(next) : null);
+    if (!next) setPreview(null);
   };
 
   const uploading = progress !== null;
@@ -76,7 +88,15 @@ function UploadForm({ onOpenChange, purpose, defaultAlt = "", onUploaded }: Imag
         </ResponsiveDialogHeader>
 
         <div className="space-y-4">
-          <FormField label="File" htmlFor={`${uid}-file`}>
+          <FormField
+            label="File"
+            htmlFor={`${uid}-file`}
+            hint={
+              initialFile && file === initialFile
+                ? `Pasted: ${initialFile.name}. Pick another file to swap it.`
+                : undefined
+            }
+          >
             <Input
               id={`${uid}-file`}
               type="file"
@@ -102,6 +122,7 @@ function UploadForm({ onOpenChange, purpose, defaultAlt = "", onUploaded }: Imag
           >
             <Textarea
               id={`${uid}-alt`}
+              autoFocus={initialFile !== undefined}
               value={decorative ? "" : alt}
               maxLength={MAX_ALT_LENGTH}
               disabled={decorative || uploading}

@@ -166,15 +166,24 @@ function renderNode(node: DocNode, ctx: Context, key: string): ReactNode {
       if (!image) return null;
       const alt = attrs.decorative === true ? "" : typeof attrs.alt === "string" ? attrs.alt : "";
       const caption = typeof attrs.caption === "string" && attrs.caption ? attrs.caption : null;
+      // Display width as a share of the text column; absent means full width.
+      const size = typeof attrs.size === "number" && attrs.size > 0 && attrs.size < 100 ? attrs.size : 100;
+      // A narrower image sits left, right or (default) centred in the column.
+      const align =
+        attrs.align === "left"
+          ? "mr-auto text-left"
+          : attrs.align === "right"
+            ? "ml-auto text-right"
+            : "mx-auto text-center";
       return (
-        <figure key={key} className="my-8">
+        <figure key={key} className={`my-8 ${align}`} style={size < 100 ? { width: `${size}%` } : undefined}>
           {image.width && image.height ? (
             <Image
               src={image.src}
               alt={alt}
               width={image.width}
               height={image.height}
-              sizes="(min-width: 768px) 720px, 100vw"
+              sizes={`(min-width: 768px) ${Math.round((720 * size) / 100)}px, ${size}vw`}
               className="h-auto w-full rounded-xl border border-white/[0.08]"
             />
           ) : (
@@ -186,7 +195,7 @@ function renderNode(node: DocNode, ctx: Context, key: string): ReactNode {
               className="h-auto w-full rounded-xl border border-white/[0.08]"
             />
           )}
-          {caption && <figcaption className="mt-2 text-center text-sm text-muted-foreground">{caption}</figcaption>}
+          {caption && <figcaption className="mt-2 text-sm text-muted-foreground">{caption}</figcaption>}
         </figure>
       );
     }

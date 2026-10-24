@@ -3,14 +3,13 @@ import type { ContentType } from "@repo/cms";
 import { OG_SIZE, renderOgImage } from "@/lib/og-image";
 import { cmsImageUrl } from "./images";
 import { getPublishedPost } from "./public";
-import { shareImage, splitTitle } from "./published";
+import { DIFFICULTY_LABELS, shareImage, splitTitle } from "./published";
 
 // The share card of one post or guide: the OG image uploaded for it, or else
 // the site's card with the post's title. Satori can't draw WebP or GIF, so
 // only a PNG or JPEG upload is used as is.
 
 const DRAWABLE = new Set(["image/png", "image/jpeg"]);
-const LEVELS = { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced" } as Record<string, string>;
 
 export async function renderContentOgImage(type: ContentType, slug: string) {
   const row = await getPublishedPost(type, slug);
@@ -34,7 +33,10 @@ export async function renderContentOgImage(type: ContentType, slug: string) {
   }
 
   const guide = type === "guide";
-  const level = guide && row.difficulty ? LEVELS[row.difficulty] : null;
+  const level =
+    guide && row.difficulty && row.difficulty in DIFFICULTY_LABELS
+      ? DIFFICULTY_LABELS[row.difficulty as keyof typeof DIFFICULTY_LABELS]
+      : null;
   return renderOgImage({
     eyebrow: guide ? "Guide" : "Blog",
     title: splitTitle(row.title),

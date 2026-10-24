@@ -1,8 +1,9 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { History, RotateCcw } from "lucide-react";
+import { GitCompare, History, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import {
   Badge,
@@ -18,26 +19,20 @@ import {
 import { restoreRevisionAction } from "@/actions/cms-content";
 import { DataList, type DataColumn } from "@/components/widgets/data-list";
 import { PageHeader } from "@/components/widgets/page-header";
+import { REVISION_KIND_LABELS, type RevisionKind } from "@/lib/cms/revision-kinds";
 import { PageCrumb } from "@/lib/crumbs";
 import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
 import { ConfirmButton } from "./confirm-button";
 
 export interface RevisionRow {
   id: string;
-  kind: "autosave" | "manual" | "publish" | "restore";
+  kind: RevisionKind;
   createdAt: string;
   title: string;
   words: number;
 }
 
-const KIND_LABELS: Record<RevisionRow["kind"], string> = {
-  autosave: "Autosave",
-  manual: "Saved version",
-  publish: "Published",
-  restore: "Before a restore",
-};
-
-function RestoreButton({
+export function RestoreButton({
   contentId,
   lockVersion,
   revision,
@@ -100,7 +95,7 @@ export function RevisionList({
       mobile: "badge",
       cell: (revision) => (
         <Badge variant={revision.kind === "publish" ? "default" : "outline"} className="text-xs">
-          {KIND_LABELS[revision.kind]}
+          {REVISION_KIND_LABELS[revision.kind]}
         </Badge>
       ),
     },
@@ -144,7 +139,15 @@ export function RevisionList({
               rowKey={(revision) => revision.id}
               columns={columns}
               actions={(revision) => (
-                <RestoreButton contentId={contentId} lockVersion={lockVersion} revision={revision} />
+                <>
+                  <Button variant="ghost" size="sm" className="h-11 md:h-8" asChild>
+                    <Link href={`/content/${contentId}/revisions/${revision.id}`}>
+                      <GitCompare aria-hidden />
+                      Compare
+                    </Link>
+                  </Button>
+                  <RestoreButton contentId={contentId} lockVersion={lockVersion} revision={revision} />
+                </>
               )}
             />
           </CardContent>

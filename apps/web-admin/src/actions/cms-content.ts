@@ -18,7 +18,15 @@ import {
 } from "@repo/supabase/queries/cms/content";
 import { CmsError, requireCmsAdmin, toCmsActionError, type CmsActionResult } from "@/lib/cms/action";
 import { classifyContentError } from "@/lib/cms/content-errors";
-import { canonicalProblem, deriveDraft, draftSchema, type ContentDraft, type ContentType } from "@/lib/cms/draft";
+import {
+  canonicalProblem,
+  deriveDraft,
+  draftSchema,
+  emptyDraft,
+  type ContentDraft,
+  type ContentType,
+} from "@/lib/cms/draft";
+import { findTemplate } from "@/lib/cms/templates";
 import { revalidateCms } from "@/lib/cms/revalidate";
 import { actorIdentity } from "@/lib/platform-events";
 
@@ -40,8 +48,11 @@ export interface CreateContentResult extends CmsActionResult {
   id: string | null;
 }
 
-/** A fresh draft. The admin's own author profile is credited when they have one. */
-export async function createContentAction(type: ContentType): Promise<CreateContentResult> {
+/**
+ * A fresh draft, optionally from a template. The admin's own author profile
+ * is credited when they have one.
+ */
+export async function createContentAction(type: ContentType, templateId?: string): Promise<CreateContentResult> {
   try {
     const actor = await requireCmsAdmin();
     if (type !== "blog" && type !== "guide") throw new CmsError("Pick blog post or guide.");
@@ -51,14 +62,32 @@ export async function createContentAction(type: ContentType): Promise<CreateCont
     if (error) throw error;
 
     const { data: author } = await selectCmsAuthorForUser(supabaseAdmin, actor);
-    if (author) {
+    const template = findTemplate(type, templateId);
+    if (author || template) {
+      // Through deriveDraft like any other save, so a template's content is
+      // cleaned, counted and anchored the same way typed content is.
+      const content = template?.build();
+      const derived = content
+        ? deriveDraft(type, {
+            ...emptyDraft(),
+            summary: content.summary,
+            body: content.body,
+            prerequisites: content.prerequisites,
+            sections: content.sections.map((section) => ({
+              id: randomUUID(),
+              title: section.title,
+              anchor: null,
+              body: section.body,
+            })),
+          })
+        : null;
       await saveCmsDraft(supabaseAdmin, {
         contentId: data.id,
         actorId: actor,
         expectedLockVersion: 0,
-        fields: {},
-        sections: null,
-        authorIds: [author.id],
+        fields: derived ? (derived.fields as Record<string, Json>) : {},
+        sections: derived && type === "guide" ? (derived.sections as unknown as Json) : null,
+        authorIds: author ? [author.id] : null,
         categoryIds: null,
         tagIds: null,
         relatedIds: null,

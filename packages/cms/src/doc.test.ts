@@ -42,12 +42,13 @@ describe("sanitizeDoc", () => {
     );
     const { doc: out, issues } = sanitizeDoc(input);
     expect(issues).toEqual([]);
-    expect(out).toEqual(input as never);
+    // Saved documents carry the format version; the content is untouched.
+    expect(out.content).toEqual(input.content as never);
   });
 
   it("rejects anything that isn't a document", () => {
     expect(sanitizeDoc(null).issues[0]?.code).toBe("invalid_doc");
-    expect(sanitizeDoc({ type: "paragraph" }).doc).toEqual({ type: "doc", content: [] });
+    expect(sanitizeDoc({ type: "paragraph" }).doc.content).toEqual([]);
   });
 
   it("drops unknown nodes and marks, and reports them", () => {
@@ -136,6 +137,26 @@ describe("sanitizeDoc", () => {
       },
     ]);
     expect(issues[0]?.code).toBe("invalid_node");
+  });
+
+  it("keeps an image's display size only inside the allowed range, and not at full width", () => {
+    const sized = (size: unknown) =>
+      sanitizeDoc(doc({ type: "image", attrs: { assetId: ASSET, alt: "a", size } })).doc.content[0]?.attrs?.size;
+    expect(sized(60)).toBe(60);
+    expect(sized(25)).toBe(25);
+    expect(sized(100)).toBeUndefined();
+    expect(sized(10)).toBeUndefined();
+    expect(sized(60.5)).toBeUndefined();
+    expect(sized("60")).toBeUndefined();
+  });
+
+  it("keeps left and right alignment, and stores nothing for centred", () => {
+    const aligned = (align: unknown) =>
+      sanitizeDoc(doc({ type: "image", attrs: { assetId: ASSET, alt: "a", align } })).doc.content[0]?.attrs?.align;
+    expect(aligned("left")).toBe("left");
+    expect(aligned("right")).toBe("right");
+    expect(aligned("center")).toBeUndefined();
+    expect(aligned("float")).toBeUndefined();
   });
 
   it("keeps valid embeds as provider + id only", () => {

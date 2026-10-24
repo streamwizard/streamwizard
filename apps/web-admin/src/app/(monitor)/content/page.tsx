@@ -9,6 +9,7 @@ import {
 import { listCmsCategories } from "@repo/supabase/queries/cms/taxonomy";
 import { ContentListView, type ContentListFilters } from "@/components/content/content-list-view";
 import { describeScheduleError } from "@/lib/cms/content-errors";
+import { asReviewState, type ReviewState } from "@/lib/cms/review";
 
 export const dynamic = "force-dynamic";
 
@@ -16,12 +17,14 @@ const PAGE_SIZE = 25;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TYPES = ["blog", "guide"] as const;
 const STATUSES = ["draft", "scheduled", "published", "archived"] as const;
+const REVIEW_FILTERS = ["requested", "changes", "approved"] as const;
 const SORTS = ["updated", "published", "title"] as const;
 
 type Params = {
   q?: string;
   type?: string;
   status?: string;
+  review?: string;
   author?: string;
   category?: string;
   sort?: string;
@@ -40,6 +43,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
     search: params.q?.trim() || undefined,
     type: pick<CmsContentType>(params.type, TYPES),
     status: pick<CmsContentStatus>(params.status, STATUSES),
+    reviewState: pick<Exclude<ReviewState, "none">>(params.review, REVIEW_FILTERS),
     authorId: params.author && UUID.test(params.author) ? params.author : undefined,
     categoryId: params.category && UUID.test(params.category) ? params.category : undefined,
     sort: pick<CmsContentSort>(params.sort, SORTS) ?? "updated",
@@ -65,6 +69,7 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
         id: row.id,
         type: row.type === "guide" ? "guide" : "blog",
         status: row.status as CmsContentStatus,
+        reviewState: asReviewState(row.review_state),
         title: row.title,
         slug: row.slug,
         updatedAt: row.updated_at,

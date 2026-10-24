@@ -1,5 +1,5 @@
 import { inlineText, walk, type Doc } from "./doc";
-import { slugify } from "./slug";
+import { isValidSlug, slugify } from "./slug";
 
 export interface TocEntry {
   level: number;
@@ -13,7 +13,16 @@ export interface TocEntry {
 export class AnchorRegistry {
   private readonly taken = new Set<string>();
 
-  claim(text: string): string {
+  /**
+   * `preferred` is the anchor the heading already carries. It wins when it is
+   * a usable slug and nothing else on the page took it, so rewording a
+   * heading doesn't move it.
+   */
+  claim(text: string, preferred?: string | null): string {
+    if (preferred && isValidSlug(preferred) && !this.taken.has(preferred)) {
+      this.taken.add(preferred);
+      return preferred;
+    }
     const base = slugify(text, 60) || "section";
     let anchor = base;
     for (let n = 2; this.taken.has(anchor); n++) anchor = `${base}-${n}`;
@@ -31,7 +40,8 @@ export function extractToc(doc: Doc, anchors: AnchorRegistry = new AnchorRegistr
     if (node.type !== "heading") return;
     const text = inlineText(node).trim();
     const level = typeof node.attrs?.level === "number" ? node.attrs.level : 2;
-    entries.push({ level, text, anchor: anchors.claim(text) });
+    const preferred = typeof node.attrs?.anchor === "string" ? node.attrs.anchor : null;
+    entries.push({ level, text, anchor: anchors.claim(text, preferred) });
   });
   return entries;
 }
@@ -50,13 +60,16 @@ export interface PageOutline {
  * what this returns, and the renderer calls it again on the same content, so
  * heading ids and table-of-contents links always agree.
  */
-export function pageOutline(body: Doc, sections: readonly { title: string; body: Doc }[] = []): PageOutline {
+export function pageOutline(
+  body: Doc,
+  sections: readonly { title: string; body: Doc; anchor?: string | null }[] = [],
+): PageOutline {
   const anchors = new AnchorRegistry();
   const bodyToc = extractToc(body, anchors);
   const toc = [...bodyToc];
   const outline = sections.map((section, index) => {
     const title = section.title.trim();
-    const anchor = anchors.claim(title || `section ${index + 1}`);
+    const anchor = anchors.claim(title || `section ${index + 1}`, section.anchor ?? null);
     const headings = extractToc(section.body, anchors);
     toc.push({ level: 2, text: title, anchor }, ...headings);
     return { anchor, headingAnchors: headings.map((entry) => entry.anchor) };
