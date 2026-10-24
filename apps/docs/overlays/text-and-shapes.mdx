@@ -1,0 +1,113 @@
+---
+title: "Text and shapes"
+description: "Static text, tickers, and the rectangles, circles and lines you build frames and backdrops from."
+---
+
+Two widgets that don't read anything from Twitch. **Text** puts words on
+screen, **Shape** draws the boxes, frames and dividers you arrange everything
+else inside. Both live under **Widgets → Layout**.
+
+## Text
+
+<Steps>
+  <Step title="Add the widget">
+    Open **Widgets → Layout** and pick **Text**.
+  </Step>
+  <Step title="Write it">
+    **Content** takes multiple lines. The box doesn't grow to fit, so drag an
+    edge if your text is clipped.
+  </Step>
+  <Step title="Make it readable over gameplay">
+    Turn **Outline** up a little under **Outline and shadow**. A one or two
+    pixel outline keeps text legible over anything.
+  </Step>
+</Steps>
+
+**Text** settings
+
+| Group | Setting | Default |
+|---|---|---|
+| Text | **Font size** | 24 px (8 to 200) |
+| Text | **Alignment** | Left |
+| Outline and shadow | **Outline** | 0 px (0 to 20) |
+| Outline and shadow | **Text shadow** | Off |
+| Background | **Opacity** | 0% |
+| Background | **Rounded corners** | 0% |
+| Ticker | **Scroll the text** | Off |
+| Ticker | **Speed** | 80 px/s (10 to 400) |
+
+The background fills the whole widget rectangle, not just the words, so give
+the box some room if you turn it on.
+
+### Tickers
+
+**Scroll the text** runs the text across the box on one line, over and over.
+Good for socials, sponsors and rules.
+
+<Note>
+Scrolling collapses your line breaks into spaces and hides **Alignment**, since
+neither means anything on a line that's always moving. It also respects
+**reduced motion**: a viewer who's turned that on in their own system settings
+sees the text sitting still.
+</Note>
+
+## Shape
+
+Six shapes: **Rectangle**, **Circle**, **Triangle**, **Diamond**, **Star** and
+**Line**.
+
+**Fill** is **None**, **Color** or **Gradient**. A gradient takes a **From**
+and **To** colour and a **Direction** in degrees, where 90° runs left to right
+and 180° top to bottom.
+
+**Outline** has its own thickness, colour and gradient, and is hidden for a
+**Line**, which is already just a stroke.
+
+### Building a frame
+
+Set **Fill** to **None** and give the shape an outline. You get a frame with
+nothing in the middle, which is how you put a border around a webcam or box off
+a widget. StreamWizard sets the outline to 8 px for you when you pick **None**
+with no outline set, so the shape doesn't vanish on you.
+
+### Lines
+
+A **Line** is always horizontal. Rotate the item to get a vertical or diagonal
+one. **Thickness** sets how heavy it is and **Rounded ends** softens the caps.
+
+<Warning>
+Switching shape resets every look setting back to defaults: colours, outline,
+rounding, the lot. Only size, position and rotation survive. Pick your shape
+before you spend time on the colours.
+</Warning>
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="My text is cut off">
+    The box clips rather than grows. Make it bigger, or turn the font size down.
+  </Accordion>
+  <Accordion title="Rounded corners aren't there">
+    Only **Rectangle** has corners to round. The other shapes don't show the
+    control.
+  </Accordion>
+  <Accordion title="My circle looks like an oval">
+    The shape stretches to fill the box. Make the box square, or hold the
+    aspect ratio while you resize.
+  </Accordion>
+  <Accordion title="The shape is smaller than its box">
+    The outline is drawn centred on the edge, so half of it sits inside. A thick
+    outline visibly shrinks the shape to keep it all in the box.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Images and video" href="/overlays/images-and-video">
+    Your own art instead of drawn shapes.
+  </Card>
+  <Card title="Clocks and countdowns" href="/overlays/time-widgets">
+    Finish off a starting soon screen.
+  </Card>
+</CardGroup>

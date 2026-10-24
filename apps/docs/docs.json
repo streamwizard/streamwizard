@@ -37,12 +37,42 @@
           {
             "group": "Overlay widgets",
             "pages": [
-              "overlays/alerts",
-              "overlays/chat",
-              "overlays/goals",
-              "overlays/polls",
-              "overlays/ads",
-              "overlays/credits"
+              {
+                "group": "Chat and alerts",
+                "pages": [
+                  "overlays/alerts",
+                  "overlays/chat",
+                  "overlays/emote-wall",
+                  "overlays/emote-combo",
+                  "overlays/hype-train"
+                ]
+              },
+              {
+                "group": "Goals, polls and ads",
+                "pages": [
+                  "overlays/goals",
+                  "overlays/polls",
+                  "overlays/predictions",
+                  "overlays/ads"
+                ]
+              },
+              {
+                "group": "On-screen info",
+                "pages": [
+                  "overlays/stream-labels",
+                  "overlays/time-widgets",
+                  "overlays/credits"
+                ]
+              },
+              {
+                "group": "Pictures, text and shapes",
+                "pages": [
+                  "overlays/clips-widget",
+                  "overlays/images-and-video",
+                  "overlays/text-and-shapes",
+                  "overlays/irl-widgets"
+                ]
+              }
             ]
           },
           {

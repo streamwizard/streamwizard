@@ -1,0 +1,121 @@
+---
+title: "Clocks, countdowns and uptime"
+description: "Three small widgets: the time, a countdown to something, and how long you have been live."
+---
+
+Three widgets that all show a number that keeps moving. **Time** is the clock,
+**Countdown** counts to or from a moment you pick, and **Uptime** shows how
+long you've been live straight from Twitch.
+
+All three live under **Widgets → Layout**, and all three share the same
+**Text style** settings: font, size, colour, weight and alignment.
+
+## Uptime
+
+Shows how long you've been live. It reads your stream from Twitch, so it starts
+and stops on its own.
+
+| Setting | Default | Notes |
+|---|---|---|
+| **Label** | `Live for` | The words in front. Empty shows the time alone. |
+| **Layout** | One line | Or **Label above**. Hidden when there's no label. |
+| **Seconds** | On | |
+| **Live dot** | On | A pulsing dot, like a live badge. |
+| **Dot color** | Red | Only when **Live dot** is on. |
+| **Hide when offline** | On | |
+| **Offline text** | `Offline` | Only when **Hide when offline** is off. |
+
+<Warning>
+**Offline text** does nothing while **Hide when offline** is on, and
+**Hide when offline** is on by default. If you type an offline message and
+never see it, that's why. Turn the toggle off.
+</Warning>
+
+Hours keep counting past 24, so a subathon reads `30:00:00` rather than
+rolling over.
+
+In the editor, an offline widget shows a dimmed fake uptime of `2:14:09` so you
+can place it. That's a preview, not your real uptime.
+
+<Note>
+Turning **Seconds** off also slows the redraw to once every ten seconds, so the
+minute can lag by up to ten seconds. That's deliberate: a clock without seconds
+doesn't need to redraw every frame.
+</Note>
+
+## Countdown
+
+Counts down to a moment, or up from zero. **Timer** has three modes:
+
+| Mode | What it does |
+|---|---|
+| **After overlay loads** | Counts down a fixed number of minutes every time the page opens. Good for starting soon. |
+| **Until date and time** | Counts to one absolute moment. Every viewer sees the same number. |
+| **Stopwatch** | Counts up from zero each time the page opens. |
+
+**Minutes** takes anything from 1 minute to 7 days. **When time is up** is the
+text shown at zero, `We're live!` by default, and is ignored in **Stopwatch**
+mode.
+
+<Warning>
+In **After overlay loads** and **Stopwatch**, the clock is anchored to when the
+page loaded. Refreshing the OBS browser source starts the number again. If you
+need a break timer that survives a refresh, use **Until date and time**.
+</Warning>
+
+## Time
+
+A clock. Shows the date, the time, or both.
+
+| Setting | Default | Notes |
+|---|---|---|
+| **Time zone** | Empty | An IANA name like `Europe/Amsterdam`. |
+| **Show date** / **Show time** | Both on | |
+| **12-hour clock** | Off | |
+| **Show seconds** | On | |
+| **Date style** / **Time style** | Medium / Short | **Short**, **Medium** or **Long**. |
+| **Layout** | One line | Or **Date above time**, when both are shown. |
+
+<Warning>
+Leave **Time zone** empty and every viewer sees **their own** local time, not
+yours. For a stream schedule that's usually wrong. Put your zone in, like
+`Europe/Amsterdam`.
+</Warning>
+
+A time zone you've typed wrong doesn't show an error. It quietly falls back to
+the viewer's local time, which looks exactly like leaving it empty.
+
+**Time style** is ignored while **Show seconds** is on, because seconds force a
+medium-length pattern.
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="The uptime widget shows nothing">
+    That's what **Hide when offline** does when you're not live. It fills in on
+    its own once Twitch reports the stream as online.
+  </Accordion>
+  <Accordion title="My countdown restarted">
+    See the countdown warning above. Two of the three modes anchor to page load
+    by design.
+  </Accordion>
+  <Accordion title="The clock shows the wrong time">
+    Set **Time zone** explicitly. Empty means the viewer's clock, and a typo
+    falls back to the same thing.
+  </Accordion>
+  <Accordion title="The widget is blank for a second when the overlay loads">
+    The clock and countdown deliberately draw nothing until the browser has
+    formatted the first value. It fills in immediately after.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Text and shapes" href="/overlays/text-and-shapes">
+    Build the rest of the starting soon screen.
+  </Card>
+  <Card title="Stream labels" href="/overlays/stream-labels">
+    Live channel numbers next to the clock.
+  </Card>
+</CardGroup>
