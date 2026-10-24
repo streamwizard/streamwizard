@@ -50,9 +50,16 @@ export interface Shot {
   viewport: { width: number; height: number; dsf?: number };
   theme?: Theme;
 
+  /**
+   * Waited for BEFORE actions run. Actions that call into page scripts need
+   * [data-shot-ready] here, or they fire into a page that has not hydrated and
+   * do nothing at all.
+   */
+  settle?: Settle[];
   /** Typed, so a renamed selector fails to compile rather than at 2am. */
   actions?: Array<(page: Page) => Promise<void>>;
-  settle?: Settle[];
+  /** Waited for AFTER actions, to let what they triggered settle. */
+  settleAfter?: Settle[];
   redact?: Redaction[];
   crop: Crop;
 

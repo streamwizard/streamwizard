@@ -33,15 +33,24 @@ export default function WidgetShotPage({
     return <div style={{ color: "#fff", padding: 24 }}>Unknown widget type: {type}</div>;
   }
 
-  const size = def.defaultSize;
+  // ?w and ?h override the widget's default box. Needed for the widgets that
+  // default to the whole 1920x1080 scene, like the hype train and the emote
+  // wall: shooting those at their default size buries the widget in a field
+  // of empty backdrop.
+  const size = {
+    w: Number(query.w) || def.defaultSize.w,
+    h: Number(query.h) || def.defaultSize.h,
+  };
   const scene = shotScene({ id: `shot-${widgetType}`, width: size.w, height: size.h });
 
   let next = 0;
   const items = def
     .createRootItems({ scene, nextId: () => `shot-item-${next++}`, maxZ: 0 })
-    // The widget is the whole picture here, so park it at the origin whatever
+    // The widget is the whole picture here, so fill the stage with it whatever
     // the factory chose for a real canvas.
-    .map((item) => (item.z_index === 1 ? { ...item, x: 0, y: 0 } : item));
+    .map((item) =>
+      item.z_index === 1 ? { ...item, x: 0, y: 0, w: size.w, h: size.h } : item,
+    );
 
   // ?preset=bar selects one of a widget family's designs. The config shapes are
   // per-widget unions, so this merge is asserted rather than inferred.
@@ -61,8 +70,12 @@ export default function WidgetShotPage({
     <div
       data-shot-stage
       style={{
-        width: size.w,
-        height: size.h,
+        // Padding so type that overflows its box is not sliced off at the
+        // frame edge, which is what a tight stage does to the goal widget.
+        padding: 24,
+        width: size.w + 48,
+        height: size.h + 48,
+        boxSizing: "border-box",
         // Widgets render transparent by design. A transparent PNG looks broken
         // in one of Mintlify's two themes, so give every shot a backdrop.
         background: "#0b0b12",

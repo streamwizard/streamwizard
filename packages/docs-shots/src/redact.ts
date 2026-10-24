@@ -33,8 +33,11 @@ const LEAK_PATTERNS: ReadonlyArray<readonly [string, RegExp]> = [
   ["a Twitch stream key", /\blive_\d{6,}_[A-Za-z0-9]{20,}/],
   ["an SRT stream id", /streamid=[^\s&"']{16,}/],
   ["an ingest key", /\b[0-9a-f]{64}\b/],
-  // An overlay URL is the key to that overlay's live data: branding doc §8.
-  ["an overlay id", /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/],
+  // An overlay URL is the key to that overlay's live data (branding doc §8),
+  // as is the token an overlay page reads its own room with. A bare UUID is
+  // NOT a useful signal: Twitch badge CDN ids are UUIDs, and so are React keys.
+  ["an overlay or room token", /\b(?:subscriber_)?token=[A-Za-z0-9._-]{16,}/],
+  ["an overlay URL", /https?:\/\/[^\s"']*overlay[^\s"']*\/[0-9a-f-]{20,}/],
   ["the real account name", /\bjochemwhite\b/i],
 ];
 

@@ -2,7 +2,7 @@ import { chromium, type Browser, type BrowserContext } from "playwright";
 import { existsSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { DECLINE_COOKIES, FAKE_WEBSOCKET, pinTheme } from "./prepare";
+import { DECLINE_COOKIES, FAKE_WEBSOCKET, SEEDED_RANDOM, pinTheme } from "./prepare";
 import type { Shot } from "./manifest";
 
 /**
@@ -56,7 +56,9 @@ export async function newContext(
     timezoneId: "Europe/Amsterdam",
   });
 
-  await context.addInitScript(`${pinTheme(theme)}\n${DECLINE_COOKIES}\n${FAKE_WEBSOCKET}`);
+  await context.addInitScript(
+    `${pinTheme(theme)}\n${DECLINE_COOKIES}\n${SEEDED_RANDOM}\n${FAKE_WEBSOCKET}`,
+  );
 
   if (cookieHeader) {
     await context.addCookies(parseCookieHeader(cookieHeader, "localhost"));

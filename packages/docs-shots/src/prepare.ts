@@ -64,6 +64,24 @@ export const DECLINE_COOKIES = `
 Object.defineProperty(Navigator.prototype, "globalPrivacyControl", { get: () => true });
 `;
 
+/**
+ * A seeded Math.random, installed before any app code runs.
+ *
+ * The demo event builders randomise their payloads, so a goal read 293/1,000
+ * on one run and 787/1,000 on the next. That is a permanent diff on every
+ * event-driven shot, which would make the drift report worthless. Same seed,
+ * same numbers, every run.
+ */
+export const SEEDED_RANDOM = `
+(() => {
+  let s = 0x2f6e2b1;
+  Math.random = () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+})();
+`;
+
 export function pinTheme(theme: "dark" | "light"): string {
   return `try { window.localStorage.setItem("theme", ${JSON.stringify(theme)}); } catch {}`;
 }
