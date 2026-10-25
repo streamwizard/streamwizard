@@ -14,6 +14,7 @@ import {
 } from "@/actions/assets";
 import type { AssetKind } from "@/lib/asset-mime";
 import { formatBytes } from "@/lib/format";
+import { MediaPreviewDialog } from "./media-preview-dialog";
 
 interface Uploading {
   id: string;
@@ -55,6 +56,20 @@ function KindIcon({ asset }: { asset: UserAsset }) {
   );
 }
 
+function AssetSummary({ asset }: { asset: UserAsset }) {
+  return (
+    <>
+      <KindIcon asset={asset} />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate" title={asset.file_name}>{asset.file_name}</p>
+        <p className="text-xs text-muted-foreground">
+          {formatBytes(asset.size_bytes)} · {asset.kind}
+        </p>
+      </div>
+    </>
+  );
+}
+
 interface MediaLibraryProps {
   initialListing: AssetListing | null;
   // Select mode (asset pickers): clicking a file calls onSelect instead of
@@ -67,6 +82,7 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
   const [listing, setListing] = useState<AssetListing | null>(initialListing);
   const [uploads, setUploads] = useState<Uploading[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [preview, setPreview] = useState<UserAsset | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const upload = useCallback(async (incoming: File[]) => {
@@ -203,13 +219,18 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
                 onSelect && "cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors",
               )}
             >
-              <KindIcon asset={asset} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" title={asset.file_name}>{asset.file_name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatBytes(asset.size_bytes)} · {asset.kind}
-                </p>
-              </div>
+              {onSelect ? (
+                <AssetSummary asset={asset} />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setPreview(asset)}
+                  title="Preview"
+                  className="flex flex-1 min-w-0 items-center gap-3 rounded-md text-left hover:opacity-80 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <AssetSummary asset={asset} />
+                </button>
+              )}
               {!onSelect && (
                 <div className="flex items-center gap-1 shrink-0">
                   <Button size="icon" variant="ghost" className="h-7 w-7" title="Copy URL" onClick={() => onCopyUrl(asset)}>
@@ -224,6 +245,8 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
           ))}
         </div>
       )}
+
+      <MediaPreviewDialog asset={preview} onOpenChange={(open) => !open && setPreview(null)} onCopyUrl={onCopyUrl} />
     </div>
   );
 }
