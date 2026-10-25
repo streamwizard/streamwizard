@@ -400,7 +400,7 @@ export type Database = {
           title: string
           twitch_clip_id: string
           url: string
-          user_id: string
+          user_id: string | null
           video_id: string | null
           view_count: number | null
           vod_offset: number | null
@@ -423,7 +423,7 @@ export type Database = {
           title: string
           twitch_clip_id: string
           url: string
-          user_id: string
+          user_id?: string | null
           video_id?: string | null
           view_count?: number | null
           vod_offset?: number | null
@@ -446,7 +446,7 @@ export type Database = {
           title?: string
           twitch_clip_id?: string
           url?: string
-          user_id?: string
+          user_id?: string | null
           video_id?: string | null
           view_count?: number | null
           vod_offset?: number | null
