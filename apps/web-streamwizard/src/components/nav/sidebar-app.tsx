@@ -12,10 +12,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@repo/ui";
-import { discordInviteLink } from "@/lib/constant";
+import { discordInviteLink, docsLink } from "@/lib/constant";
 import { Database } from "@repo/supabase";
 import { User } from "@supabase/supabase-js";
-import { BarChart2, Cloud,FileVideoCamera, FolderOpen, Layers, Radio } from "lucide-react";
+import { BarChart2, BookOpen, Cloud, FileVideoCamera, FolderOpen, Layers, Radio } from "lucide-react";
 import { StreamWizardLogo } from "@/components/brand/streamwizard-logo";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -47,12 +47,14 @@ export function AppSidebar({
     <Sidebar className="h-full" {...props}>
       <SidebarHeader>
         <div className="flex flex-row items-center gap-2 px-4 mt-4 justify-center">
-          <StreamWizardLogo
-            width={160}
-            height={160}
-            style={{ width: 160, height: 160 }}
-            priority
-          />
+          <Link href="/" aria-label="StreamWizard home" className="rounded-md">
+            <StreamWizardLogo
+              width={160}
+              height={160}
+              style={{ width: 160, height: 160 }}
+              priority
+            />
+          </Link>
         </div>
         <span className="my-4">
           <Separator />
@@ -168,6 +170,21 @@ export function AppSidebar({
                     <FaDiscord className="h-4 w-4 text-[#002bff]" />
                   </div>
                   <p className="text-sm font-medium leading-none">Discord Community</p>
+                </div>
+              </Link>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <Link
+                href={docsLink}
+                target="_blank"
+                rel="noreferrer"
+                className="items flex h-8 w-full select-none items-center justify-between rounded-md pl-3 pr-3 text-sm text-sidebar-foreground/80 transition hover:cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              >
+                <div className="flex flex-row items-center gap-2">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full ">
+                    <BookOpen className="h-4 w-4" />
+                  </div>
+                  <p className="text-sm font-medium leading-none">Docs</p>
                 </div>
               </Link>
             </SidebarMenuItem>

@@ -274,7 +274,7 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
         </Popover>
         <div className="ml-auto flex items-center gap-2">
           <a
-            href={`${env.NEXT_PUBLIC_DOCS_URL ?? "https://docs.streamwizard.org"}/overlays/widgets`}
+            href={`${env.NEXT_PUBLIC_DOCS_URL ?? "https://docs.streamwizard.org"}/widgets/overview`}
             target="_blank"
             rel="noreferrer"
             className="text-xs px-2.5 py-1 rounded-md border border-border hover:bg-accent transition-colors text-muted-foreground"
