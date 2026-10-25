@@ -1,0 +1,58 @@
+---
+title: "Connect Twitch keeps appearing"
+description: "A widget says StreamWizard needs permission, even though your Twitch account is already connected."
+---
+
+import ReconnectTwitch from '/snippets/reconnect-twitch.mdx';
+
+<ReconnectTwitch />
+
+## Why it happens
+
+Your Twitch token carries exactly the permissions you agreed to when you signed
+in, and nothing else. Twitch doesn't add to an old token when StreamWizard
+starts needing something new.
+
+So when a widget ships that reads something StreamWizard never asked for
+before, every account older than that widget has a token without it. Signing in
+again swaps your token for one with the current set, and fixes every widget at
+once rather than one at a time.
+
+New accounts never see this, because they agreed to the current set on day one.
+
+## Fix it
+
+<Steps>
+  <Step title="Use the button if it is there">
+    **Connect Twitch** in the widget's settings takes you to Twitch and back.
+  </Step>
+  <Step title="Otherwise sign out and in again">
+    Signing in again does exactly the same thing. You don't have to wait for
+    the button to appear.
+  </Step>
+  <Step title="Check the widget">
+    The widget loads as soon as you're back. No need to refresh the browser
+    source in OBS, though it does no harm.
+  </Step>
+</Steps>
+
+## The button hasn't appeared yet
+
+StreamWizard checks your permissions on a schedule rather than on every page
+load, so there's a window where a widget can't load and hasn't yet worked out
+why. Signing in again always works, with or without the button.
+
+## Cloud OBS asks separately
+
+Cloud OBS needs permission to read your stream key, and that one is asked for
+on its own rather than at sign-in. It's only requested from accounts that have
+cloud OBS, so the Twitch consent screen never lists a permission StreamWizard
+wouldn't use for you.
+
+If you've just got cloud OBS access, expect to approve that once. Until you do,
+starting a cloud OBS stream stays disabled.
+
+## Still stuck
+
+Ask in the **#help** channel on our [Discord](https://discord.streamwizard.org),
+or [open a ticket](/troubleshooting/contact-support).
