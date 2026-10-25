@@ -150,9 +150,19 @@ export function databaseRules(overrides: RuleOverrides): AlertRule[] {
         warn: { default: SUPABASE_SCRAPE_SILENT_MIN, unit: "min", direction: "above" },
         async evaluate(ctx, t) {
           const lastScrape = await querySupabaseLastScrape();
-          // Never scraped in 24h = Telegraf not set up for this env yet — a
-          // provisioning gap, not an outage (same policy as the absence rules).
-          if (lastScrape === null) return [];
+          // No pg_up point in the whole 24h window is the loudest case, not a
+          // quiet one: it's how the Telegraf removal went unnoticed. Query
+          // errors throw, so null here really means nothing was written.
+          if (lastScrape === null) {
+            return [
+              {
+                entityId: "supabase",
+                severity: "warn",
+                value: 24 * 3600,
+                message: `No Supabase platform metrics in the last 24h. Telegraf isn't scraping this env, so DB rules are blind`,
+              },
+            ];
+          }
           const silentForMs = ctx.now.getTime() - new Date(lastScrape).getTime();
           if (silentForMs < t.warn * 60_000) return [];
           return [
