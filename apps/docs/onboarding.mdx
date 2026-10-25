@@ -1,92 +1,69 @@
 ---
 title: "Onboarding"
-description: "Connect Twitch, set three preferences, pull in your clips. About two minutes."
+description: "Connect Twitch, pull in your clips, join the Discord. About two minutes."
 ---
 
-The first time you sign in, StreamWizard runs you through a short setup. Six
-steps, no essay to read, and you land on your clips at the end. Here's what each
-step actually does.
+Signing in for the first time gets you a short setup window. Three things to
+do, none of them permanent, all of them changeable later in
+[Settings](/account/overview).
 
 ## Connect your Twitch account
 
-Head to [streamwizard.org](https://streamwizard.org) and hit **Login with Twitch**.
-You authorize StreamWizard from the Twitch login screen. We ask for the
-permissions we need to read your clips and run your chat, nothing more. You're
-back in a few seconds.
+Go to [streamwizard.org](https://streamwizard.org) and select
+**Login with Twitch**. You approve StreamWizard from Twitch's own screen. We
+ask for the permissions needed to read your clips and run your chat, and
+nothing else. You're back in a few seconds.
 
-<Frame caption="Connect your Twitch account to get started.">
-  <img src="/images/onboarding/connect-twitch.png" alt="Connect Twitch screen" style={{ maxWidth: "360px" }} />
+That's the first of the four steps done before you've seen the dashboard.
+
+## The setup window
+
+<Frame caption="The setup window after signing in, on the clips step.">
+  <img src="/images/onboarding/wizard.png" alt="The StreamWizard onboarding window welcoming a streamer by name, offering to sync their Twitch clips." />
 </Frame>
 
-## The setup steps
-
-After you sign in for the first time, a setup window opens. You can't dismiss it
-by clicking away. Work through it with **Next** (or just press **Enter**), and
-**Back** if you want to change something. The progress bar at the bottom tracks
-where you are. Every toggle here also lives in **Settings**, so nothing you pick
-is permanent.
-
-<Frame caption="The setup window walks you through six quick steps.">
-  <img src="/images/onboarding/setup-modal.png" alt="Onboarding setup window" style={{ maxWidth: "500px" }} />
-</Frame>
+It opens over your dashboard and can't be dismissed by clicking away. The bar
+along the bottom tracks where you are: **Twitch connected. 1 of 4 done.**
 
 <Steps>
-  <Step title="Welcome">
-    A quick hello by name and the three things StreamWizard sets out to fix:
-    your clips finally organized, clips synced while you stream, and actually
-    finding the moment you're looking for. Nothing to configure, just hit
-    **Next**.
-  </Step>
-  <Step title="Auto-sync clips">
-    A single toggle: **Auto-sync clips**. Leave it on and StreamWizard checks
-    Twitch every five minutes while you're live, pulls in new clips, then does
-    one last pass when you go offline. No manual sync, no forgetting. Turn it
-    off if you'd rather pull clips in yourself.
-  </Step>
-  <Step title="Memes">
-    A toggle for whether StreamWizard sprinkles memes through the UI. They're
-    stupid, they're great, and you can turn them off if you're using the app at
-    work. Cosmetic only. It changes nothing about how clips or syncing work.
-  </Step>
-  <Step title="Show stream stats">
-    Controls what your dashboard leads with. On, you get viewer stats: peak and
-    average viewers and a minute-by-minute chart. Off, the dashboard shows your
-    last stream's clips instead, so peak-viewer numbers can't mess with your
-    head mid-grind. Change it any time in Settings.
-  </Step>
   <Step title="Pull in your clips">
-    This is where StreamWizard actually grabs your Twitch clips. What you see
-    depends on your account:
+    StreamWizard can already see your Twitch clips. Select **Sync latest clips**
+    to pull them in now, or **Skip** and let them arrive on their own.
 
-    - **No clips yet:** hit **Grab my clips** to import them now, or skip it. If
-      you left auto-sync on, they come in on their own during your next stream.
-    - **We already have some:** hit **Sync latest clips** to pull in anything
-      new since last time.
-    - **Already up to date:** nothing new to fetch, and we tell you so.
-
-    Big channels take a minute to import, so go grab coffee. This step is
-    optional; you can always sync later from the clips page.
-
-    <Frame caption="Pull your Twitch clips in during setup, or skip and sync later.">
-      <img src="/images/onboarding/sync-clips.png" alt="Sync clips step" style={{ maxWidth: "500px" }} />
-    </Frame>
+    Nothing is lost by skipping. StreamWizard syncs automatically while you
+    stream, every five minutes and once more at the end, so your library fills
+    up during your next broadcast either way. A big channel takes a minute to
+    import, so skipping is often the faster route.
   </Step>
-  <Step title="You're all set">
-    Clips sorted, sync configured. The last step is an invite to the
-    [StreamWizard Discord](https://discord.streamwizard.org): bug reports,
-    feature requests, and streamers complaining about chat. Hit **Take me to my
-    clips** to finish; your preferences save and you land on your clips. 📁
+  <Step title="Join the Discord">
+    Support runs through [Discord](/discord), so this step hands you the invite.
+    Once you're in, select **Already joined? Check again** and it picks you up.
+  </Step>
+  <Step title="Link your Discord account">
+    Linking connects your Discord to your StreamWizard account, which gets you
+    the go-live post, the Live role while you stream, and tickets that already
+    know which account is yours.
+
+    Optional, like the rest. Everything in StreamWizard works without it.
   </Step>
 </Steps>
 
+Finish with **Take me to my clips** and you land on your clips page.
+
 ## Changed your mind later?
 
-Every preference from setup (auto-sync, memes, stream stats) lives in
-[Settings](/settings). Flip any of them whenever you want. To pull in clips again, use the
-sync button on the [clips page](/clips/overview).
+Nothing in setup is a one-time decision:
+
+- Clip syncing, stream stats and the Discord switches live in
+  [preferences](/account/preferences).
+- Linking or unlinking Discord lives in
+  [integrations](/account/integrations).
+- To pull clips in again, use **Sync** on the [clips page](/clips/syncing).
 
 ## Stuck?
 
-Something not loading? Check your Twitch connection in **Settings** first. It
-fixes most issues. Still broken? Reach out on
-[Discord](https://discord.streamwizard.org).
+Check your Twitch connection in **Settings → Integrations** first, since that
+fixes most of it. If a widget later asks you to connect Twitch again, see
+[Connect Twitch keeps appearing](/troubleshooting/connect-twitch).
+
+Still broken? Ask on [Discord](https://discord.streamwizard.org).

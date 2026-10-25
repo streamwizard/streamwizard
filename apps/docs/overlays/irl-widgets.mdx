@@ -14,6 +14,10 @@ If you want the whole bar laid out for you rather than six separate numbers,
 use the [walking stats](/irl/walking-stats) template instead. These widgets are
 for building your own.
 
+<Frame caption="The IRL speed widget reading a live GPS fix.">
+  <img src="/images/overlays/irl-speed-widget.png" alt="A small readout on stream showing 40.3 km/h." />
+</Frame>
+
 ## How the GPS gets to the widget
 
 This is the part worth understanding before you place anything, because there
@@ -75,13 +79,14 @@ widget. Altitude and accuracy are always in metres.
 **Mock data** at the top of the settings fills the widget with a sample fix so
 you can lay things out at your desk without a phone running.
 
-<Warning>
-**Turn it off before you go live.** Mock data is saved with the widget, not just
-used in the editor, and a mocked widget prints `MOCK·` in front of the value on
-stream for everyone to see. It also hides the **OFFLINE** state, so a mocked
-widget never tells you the phone has dropped out. Check every IRL widget before
-a stream.
-</Warning>
+It only applies in the editor. On stream the widget ignores it and shows your
+real GPS, or an honest **OFFLINE** if the phone isn't publishing, so a widget
+left on mock can't put made-up numbers in front of your viewers.
+
+<Note>
+Mock values carry a small `MOCK·` label in the editor, so you can tell at a
+glance that what you're looking at isn't a real fix.
+</Note>
 
 ## What the widget shows when there's no fix
 
@@ -122,9 +127,10 @@ There's no outline, shadow, background or label option, so pair them with
     second device, the first one holds the connection for 15 seconds before the
     new one can take over. Close the one you aren't using.
   </Accordion>
-  <Accordion title="MOCK· is on my stream">
-    Turn **Mock data** off in that widget's settings and save. Check the others
-    while you're there.
+  <Accordion title="The editor shows numbers but my stream doesn't">
+    Check whether **Mock data** is on. Mock values only ever appear in the
+    editor, so a widget that looks fine there can still be waiting for a real
+    fix from your phone on stream.
   </Accordion>
   <Accordion title="My font didn't apply">
     The font loads reliably on the live overlay. In the editor it may only
