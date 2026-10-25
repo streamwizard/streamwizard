@@ -245,6 +245,11 @@ function UptimeWidgetCanvas({ item, scene }: OverlayCanvasProps) {
   return <UptimeWidgetRenderer item={item} scene={scene} isEditor />;
 }
 
+/** Mock GPS values are a layout aid, so they only ever resolve on the canvas. */
+function IrlFieldWidgetCanvas({ item, scene }: OverlayCanvasProps) {
+  return <IrlFieldWidgetRenderer item={item} scene={scene} isEditor />;
+}
+
 /** An empty image slot shows a placeholder on the canvas, so there is something to select. */
 function ImageWidgetCanvas({ item }: OverlayCanvasProps) {
   return <ImageWidgetRenderer item={item} isEditor />;
@@ -643,7 +648,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     library: { title: "IRL · Speed", description: "Live GPS speed from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlSpeedWidgetRootItems,
-    CanvasContent: IrlFieldWidgetRenderer,
+    CanvasContent: IrlFieldWidgetCanvas,
     SettingsPanel: IrlFieldWidgetSettings,
   },
   irl_heading_widget: {
@@ -655,7 +660,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     library: { title: "IRL · Heading", description: "Live GPS heading direction from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlHeadingWidgetRootItems,
-    CanvasContent: IrlFieldWidgetRenderer,
+    CanvasContent: IrlFieldWidgetCanvas,
     SettingsPanel: IrlFieldWidgetSettings,
   },
   irl_altitude_widget: {
@@ -667,7 +672,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     library: { title: "IRL · Altitude", description: "Live GPS altitude from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlAltitudeWidgetRootItems,
-    CanvasContent: IrlFieldWidgetRenderer,
+    CanvasContent: IrlFieldWidgetCanvas,
     SettingsPanel: IrlFieldWidgetSettings,
   },
   irl_latitude_widget: {
@@ -679,7 +684,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     library: { title: "IRL · Latitude", description: "Live GPS latitude from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlLatitudeWidgetRootItems,
-    CanvasContent: IrlFieldWidgetRenderer,
+    CanvasContent: IrlFieldWidgetCanvas,
     SettingsPanel: IrlFieldWidgetSettings,
   },
   irl_longitude_widget: {
@@ -691,7 +696,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     library: { title: "IRL · Longitude", description: "Live GPS longitude from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlLongitudeWidgetRootItems,
-    CanvasContent: IrlFieldWidgetRenderer,
+    CanvasContent: IrlFieldWidgetCanvas,
     SettingsPanel: IrlFieldWidgetSettings,
   },
   irl_accuracy_widget: {
@@ -703,7 +708,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     library: { title: "IRL · Accuracy", description: "Live GPS accuracy from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlAccuracyWidgetRootItems,
-    CanvasContent: IrlFieldWidgetRenderer,
+    CanvasContent: IrlFieldWidgetCanvas,
     SettingsPanel: IrlFieldWidgetSettings,
   },
   custom_widget: {
