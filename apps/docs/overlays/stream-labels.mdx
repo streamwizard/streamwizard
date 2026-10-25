@@ -1,0 +1,144 @@
+---
+title: "Stream labels"
+description: "Latest follower, top cheerer, sub count, recent raids and more, updating the second they happen."
+---
+
+import TestEvents from '/snippets/widget-test-events.mdx';
+
+A label is one line of live information about your channel: your newest
+follower, your follower count, your top cheerer this stream. There's also an
+**Event list**, which is a running feed of everything happening at once.
+
+## Before you start
+
+- You have an overlay. [Make one first](/overlays/quickstart) if you don't.
+
+## Add a label
+
+<Steps>
+  <Step title="Add the widget">
+    In the overlay editor, open **Widgets → Labels**. **Label** gives you a
+    single line, **Event list** gives you the feed.
+  </Step>
+  <Step title="Pick what it shows">
+    **Show** under **Content** has nine options, grouped by what they're about.
+  </Step>
+  <Step title="Write the line">
+    **Prefix** is the words in front, like `Latest follower`. **Text** is the
+    value itself, and takes tokens in braces. Leave **Text** empty for the
+    sensible default.
+  </Step>
+</Steps>
+
+## What a label can show
+
+| Group | Label | Shows |
+|---|---|---|
+| Followers | **Latest follower** | The most recent person to follow. |
+| Followers | **Follower count** | How many followers you have. |
+| Subscribers | **Latest subscriber** | The most recent sub. |
+| Subscribers | **Latest gift** | Who gifted, and how many. |
+| Subscribers | **Subscriber count** | How many subs you have. |
+| Bits | **Latest cheer** | Who cheered, and how much. |
+| Bits | **Top cheerer** | The biggest cheer in the time range. |
+| Raids | **Latest raid** | Who raided, and with how many. |
+| Channel | **Event list** | A feed of everything below. |
+
+**Text** fills in whatever you put in braces: `{name}`, `{amount}`, and
+depending on the label `{tier}`, `{months}`, `{message}`, `{reward}` or
+`{event}`. So `{name} - {amount}` prints `MoonPie - 500`. The token buttons
+under the field insert them for you.
+
+## Time ranges
+
+**Time range** limits a label to what happened recently: **This stream**,
+**Today**, **This week**, **This month**, **This year** or **All time**. Days,
+weeks and months follow UTC and weeks start on Monday. **All time** goes back
+to when StreamWizard started tracking your channel.
+
+Counts don't have a time range, so **Follower count** and **Subscriber count**
+don't offer one.
+
+<Note>
+The range applies to the "latest" labels too. **Latest follower** set to
+**This week** goes blank every Monday until somebody follows.
+</Note>
+
+## The event list
+
+Pick **Event list** and you get two more groups of settings.
+
+**List** sets **Entries** (up to 25), whether it's **Stacked** or **In a row**,
+and for a row, a **Separator** and an optional **Scroll like a ticker** with a
+**Speed**.
+
+**Events** turns the nine kinds on and off: **Follows**, **New subs**,
+**Resubs**, **Gift subs**, **Cheers**, **Raids**,
+**Channel point rewards**, **Shoutouts** and **Hype trains**. All are on to
+start with. Turn them all off and the list stays empty.
+
+<Tip>
+The list is filtered out of your 50 newest events. On a busy stream a rare kind
+can show fewer rows than you asked for, because it filtered 25 rows' worth of
+follows and found only two raids in the last fifty things that happened.
+</Tip>
+
+## Settings
+
+**Text style** has the usual **Font (Google Fonts)**, **Font size**, **Color**,
+**Weight**, **Alignment** and **Text shadow**, plus **Prefix color** so the
+label and its value can differ.
+
+**Animation** plays when a value changes. **New value comes in with** is
+**None**, **Pop**, **Fade in**, **Slide up**, **Slide in from the side**,
+**Drop and bounce**, **Typewriter** or **Glow**, with a **Length** in
+milliseconds and a **Preview** button.
+
+The animation doesn't replay when the overlay reloads, only when something
+actually changes.
+
+## See it before you go live
+
+<TestEvents />
+
+Test events land in the label without being saved. **Clear test events** under
+**Testing** puts it back.
+
+In the editor an empty label shows sample data at low opacity so you can place
+and size it. On stream it shows **When there's nothing yet** if you set it, and
+otherwise nothing at all.
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="My custom text disappeared when I changed the label">
+    Switching **Show** resets **Text** to empty, because a template written for
+    a cheer rarely makes sense for a raid. The prefix is kept if you wrote it
+    yourself.
+  </Accordion>
+  <Accordion title="Layout does nothing">
+    **One line** and **Prefix above** only matter when there's a prefix to put
+    somewhere. With **Prefix** empty the control is hidden.
+  </Accordion>
+  <Accordion title="The ticker never animates new entries">
+    A scrolling row is already moving, so the entry animation is skipped. Turn
+    **Scroll like a ticker** off if you want new entries to land with an
+    animation.
+  </Accordion>
+  <Accordion title="My follower count is behind">
+    Counts refresh every five minutes. Twitch sends no event when someone
+    unfollows or a sub lapses, so that refresh is the only way the number comes
+    back down.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Goals" href="/overlays/goals">
+    Turn a count into a progress bar.
+  </Card>
+  <Card title="End credits" href="/overlays/credits">
+    Roll the whole stream's names at the end.
+  </Card>
+</CardGroup>

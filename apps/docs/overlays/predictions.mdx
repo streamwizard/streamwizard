@@ -1,0 +1,129 @@
+---
+title: "Predictions"
+description: "Your Twitch prediction on stream with live channel points, a countdown until it locks, and the winner when you call it."
+---
+
+import ReconnectTwitch from '/snippets/reconnect-twitch.mdx';
+import TestEvents from '/snippets/widget-test-events.mdx';
+
+The prediction widget shows the prediction you're running on Twitch: the
+outcomes, how channel points are stacking up, a countdown until betting closes,
+and the winner once you pick one.
+
+## Before you start
+
+- You have an overlay. [Make one first](/overlays/quickstart) if you don't.
+- You start predictions on Twitch, not in StreamWizard. Twitch doesn't let
+  other apps create them.
+
+## Add the prediction widget
+
+<Steps>
+  <Step title="Add the widget">
+    In the overlay editor, open **Widgets → Polls & predictions** and pick
+    **Prediction**.
+  </Step>
+  <Step title="Check what the panel says">
+    The top of the settings tells you what Twitch is reporting right now,
+    whether that's a prediction in progress or **No prediction running**.
+  </Step>
+  <Step title="Start one to try it">
+    Select **Start a prediction on Twitch** to jump to your Stream Manager, or
+    use the **Test** buttons to fake one without touching your channel.
+  </Step>
+</Steps>
+
+## Designs
+
+**Design** has five, shared with the [poll widget](/overlays/polls). Picking one
+resizes the widget to suit it.
+
+| Design | What it looks like |
+|---|---|
+| **Bars** | Horizontal bars that fill up. The all-rounder. |
+| **Columns** | Vertical bars side by side. |
+| **Donut** | A ring split by share. |
+| **Strip** | One thin line. Good along the top of a screen. |
+| **Race** | Outcomes running at each other. |
+
+## What happens as the prediction plays out
+
+A prediction has more stages than a poll, and the widget follows all of them:
+
+1. **Open.** Viewers spend points. The countdown shows how long is left.
+2. **Locked.** Betting has closed and you haven't called it yet. The countdown
+   spot reads `Locked`.
+3. **Resolved.** You picked the winner. The winning outcome celebrates and the
+   result stays up for **Show the result for** seconds, then the widget hides.
+
+**Stay up while locked** controls the middle stage and is on by default.
+
+<Warning>
+Turn **Stay up while locked** off and the widget vanishes for the whole locked
+stretch. If you lock a prediction and then play a twenty-minute match before
+calling it, your viewers see nothing for twenty minutes. Leave it on unless you
+have a reason.
+</Warning>
+
+A refund never celebrates, whatever **When you pick the winner** is set to.
+
+## Settings
+
+**Prediction**
+
+| Setting | Default | Notes |
+|---|---|---|
+| **Title** | Empty | Uses the question from Twitch when empty. |
+| **Stay up while locked** | On | See the warning above. |
+| **Show the result for** | 10 s | 3 to 60. |
+
+**Show** toggles **Title**, **Percentage**, **Channel points** and
+**Countdown**. Channel points is the one that's off by default.
+
+**Colors** has **Each outcome**, giving all ten outcome slots their own colour,
+or **Leader only**, which highlights whichever outcome is winning and greys the
+rest. Twitch allows up to ten outcomes, though most predictions use two.
+
+**Motion** covers **Flash on points**, which blinks an outcome each time
+viewers back it, and **When you pick the winner**, which is **None**, **Glow**
+or **Confetti**.
+
+## See it before you go live
+
+<TestEvents />
+
+The **Test** row walks the whole lifecycle: **Start**, **Points**,
+**Close call**, **Lock**, **Pick winner** and **Refund**. Select
+**Back to your Twitch prediction** when you're done to drop back to real data.
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="The widget shows nothing on stream">
+    That's deliberate when there's no prediction running. In the editor you get
+    a dashed box telling you why instead, so you can still place it.
+  </Accordion>
+  <Accordion title="StreamWizard needs permission to read your predictions">
+    <ReconnectTwitch />
+  </Accordion>
+  <Accordion title="The result was gone when I reloaded the overlay">
+    Twitch only reports a finished prediction for 60 seconds after it ends.
+    Reload later than that and there's nothing left to show, even with
+    **Show the result for** turned up.
+  </Accordion>
+  <Accordion title="Corner radius does nothing">
+    **Donut** and **Race** don't have corners to round, so the control is hidden
+    for those two. A value you set on another design is kept and ignored.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Polls" href="/overlays/polls">
+    The same five designs, for Twitch polls.
+  </Card>
+  <Card title="Goals" href="/overlays/goals">
+    Follower, sub and Bits goals as progress bars.
+  </Card>
+</CardGroup>

@@ -1,0 +1,135 @@
+---
+title: "Hype train"
+description: "A train rides across your stream with a wagon for everyone who cheered, subbed or gifted."
+---
+
+import TestEvents from '/snippets/widget-test-events.mdx';
+
+When Twitch starts a hype train, a train rolls onto your stream and keeps
+riding until the train ends. Everyone who cheered, subbed or gifted subs gets
+their own wagon with their name and picture on it. The biggest supporters ride
+up front.
+
+## Before you start
+
+- You have an overlay. [Make one first](/overlays/quickstart) if you don't.
+- Hype trains come from Twitch. You don't start one, your chat does.
+
+## Add the hype train
+
+<Steps>
+  <Step title="Add the widget">
+    In the overlay editor, open **Widgets → Alerts & chat** and pick
+    **Hype train**. It's added at the full size of your overlay, because a
+    bouncing train needs room to roam.
+  </Step>
+  <Step title="Watch a test run">
+    Select **Start a test train**. A fourteen-second train rides through with
+    riders arriving as it goes. **Riders**, **Level up** and **End** let you
+    push it along by hand once it's running.
+  </Step>
+  <Step title="Pick how it moves">
+    **Movement** under **Ride** is either **Bounce around**, which sends the
+    train ricocheting around the box, or **Straight across**, which runs it
+    along the bottom edge.
+  </Step>
+</Steps>
+
+## Who gets a wagon
+
+Everyone who cheers, subs or gifts subs during the train, plus anyone who
+chipped in during the five minutes that got the train started. Riders are
+ordered by what they gave, and the order re-sorts live, so a wagon hops over
+the others when someone overtakes.
+
+Gifted subs credit the gifter, not the recipients. Anonymous contributions are
+merged into one rider called `Anonymous`.
+
+**Wagons** caps how many ride individually, at 20 by default. Everyone past
+that shares one last wagon showing how many more there are.
+
+## Designs
+
+**Train** under **Look** has three:
+
+| Train | What it looks like |
+|---|---|
+| **Steam** | A classic locomotive with a smoking chimney. |
+| **Neon** | A sleek glowing bullet train. |
+| **Toy** | A chunky wooden toy train in bright colours. |
+
+<Note>
+Twitch sometimes runs a Golden Kappa train. Those ride in gold whatever colours
+you pick here.
+</Note>
+
+## Settings
+
+**Ride**
+
+| Setting | Default | Range |
+|---|---|---|
+| **Speed** | 420 px/s | 100 to 1500 |
+| **Faster every level** | 15% | 0 to 50 |
+| **Wagons** | 20 | 1 to 50 |
+| **New riders arrive** | Drop in | None, Fade, Pop, Chase, Drop in |
+
+**Faster every level** is measured against the starting speed rather than
+compounding, so at 15% a level 5 train rides 60% faster than it started, not
+75%. However fast the maths gets, the train tops out at 3000 px/s.
+
+**Look**
+
+| Setting | Default |
+|---|---|
+| **Train size** | 150 px |
+| **Profile pictures** | On |
+| **Bits and subs** | On |
+| **Level on the engine** | On |
+| **Train** / **Trim** / **Text** colours | Purple, amber, white |
+
+## See it before you go live
+
+<TestEvents />
+
+**Preview** plays a scripted train with made-up riders, which is the quickest
+way to judge a colour change.
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="The train is smaller than I set">
+    **Train size** is capped by the height of the widget box. A 400 px train in
+    a 200 px tall box draws at 200 px. Make the box taller.
+  </Accordion>
+  <Accordion title="Straight across runs along the bottom of my screen">
+    It rides along the bottom edge of the **widget**, and the widget defaults to
+    your whole overlay. Resize or move the box to put the track where you want
+    it.
+  </Accordion>
+  <Accordion title="Direction does nothing">
+    **Direction** only applies to **Straight across**. In **Bounce around** the
+    train picks its own way about, so the control is hidden.
+  </Accordion>
+  <Accordion title="A rider has no picture">
+    Profile pictures are fetched from Twitch per rider. Test riders and
+    anonymous contributors have no account to fetch, so they fall back to the
+    first letter of the name.
+  </Accordion>
+  <Accordion title="A rider shows no amount">
+    **Bits and subs** can only show what Twitch reported. A contribution Twitch
+    only counted as an "other" total has nothing to print, so that wagon shows
+    the name alone.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Alerts" href="/overlays/alerts">
+    Alert on the individual subs and cheers too.
+  </Card>
+  <Card title="Emote wall" href="/overlays/emote-wall">
+    Set off a burst of emotes while the train rides.
+  </Card>
+</CardGroup>

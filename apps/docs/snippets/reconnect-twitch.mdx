@@ -1,0 +1,12 @@
+StreamWizard asks Twitch for a set of permissions when you sign in. That set
+grows when new widgets need new data. If your account is older than a widget,
+your Twitch token predates the permission it needs, and the widget can't load.
+
+You'll see a **Connect Twitch** button in the widget's settings when this
+happens. One trip to Twitch and back fixes it for every widget at once.
+
+<Note>
+StreamWizard checks your permissions on a schedule rather than on every page
+load, so the button can take a little while to appear after a new widget ships.
+Signing in again always works, whether or not the button is showing.
+</Note>
