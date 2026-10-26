@@ -136,6 +136,12 @@ export const APP_MEMORY_BUDGET_MB: Record<string, Record<string, number>> = {
     "dokploy-postgres": 512,
   },
 };
+/** Dokploy builds images on this server too, so short CPU spikes are normal:
+ *  warn only, and only once it has held for several ticks (see server.cpu_high). */
+export const SERVER_CPU_WARN_PCT = 90;
+export const SERVER_MEM_WARN_PCT = 90;
+/** Past this the kernel starts killing containers; server.oom_kill follows. */
+export const SERVER_MEM_CRIT_PCT = 95;
 export const SERVER_DISK_WARN_PCT = 80;
 export const SERVER_DISK_CRIT_PCT = 90;
 export const SERVER_OOM_WINDOW_MIN = 10;
