@@ -3283,6 +3283,45 @@ export type Database = {
         }
         Relationships: []
       }
+      overlay_item_groups: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          parent_group_id: string | null
+          scene_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          label?: string
+          parent_group_id?: string | null
+          scene_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          parent_group_id?: string | null
+          scene_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "overlay_item_groups_parent_group_id_scene_id_fkey"
+            columns: ["parent_group_id", "scene_id"]
+            isOneToOne: false
+            referencedRelation: "overlay_item_groups"
+            referencedColumns: ["id", "scene_id"]
+          },
+          {
+            foreignKeyName: "overlay_item_groups_scene_id_fkey"
+            columns: ["scene_id"]
+            isOneToOne: false
+            referencedRelation: "overlay_scenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       overlay_items: {
         Row: {
           anchor_x: string
@@ -3297,6 +3336,7 @@ export type Database = {
           design_w: number
           flip_h: boolean
           flip_v: boolean
+          group_id: string | null
           h: number
           id: string
           is_locked: boolean
@@ -3325,6 +3365,7 @@ export type Database = {
           design_w?: number
           flip_h?: boolean
           flip_v?: boolean
+          group_id?: string | null
           h?: number
           id?: string
           is_locked?: boolean
@@ -3353,6 +3394,7 @@ export type Database = {
           design_w?: number
           flip_h?: boolean
           flip_v?: boolean
+          group_id?: string | null
           h?: number
           id?: string
           is_locked?: boolean
@@ -3369,6 +3411,13 @@ export type Database = {
           z_index?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "overlay_items_group_id_fkey"
+            columns: ["group_id", "scene_id"]
+            isOneToOne: false
+            referencedRelation: "overlay_item_groups"
+            referencedColumns: ["id", "scene_id"]
+          },
           {
             foreignKeyName: "overlay_items_scene_id_fkey"
             columns: ["scene_id"]

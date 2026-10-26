@@ -105,6 +105,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
     clearSelection,
     removeSelectedItems,
     duplicateSelectedItems,
+    groupSelected,
+    ungroupSelected,
     nudgeSelected,
     editorClipPreviewPaused,
     setEditorClipPreviewPaused,
@@ -202,10 +204,13 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
       crop_left: item.crop_left,
       z_index: item.z_index,
       rotation: item.rotation,
+      flip_h: item.flip_h,
+      flip_v: item.flip_v,
       opacity: item.opacity,
       is_visible: item.is_visible,
       is_locked: item.is_locked,
       label: item.label,
+      group_id: item.group_id ?? null,
       config: item.config as OverlayItemConfig,
     }));
 
@@ -229,7 +234,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
       persistedSizeRef.current = { width: scene.width, height: scene.height };
     }
 
-    const { success, error, data, idMap } = await saveAllOverlayItems(scene.id, items);
+    const { success, error, data, idMap } = await saveAllOverlayItems(scene.id, items, scene.groups ?? []);
 
     if (success) {
       toast.success("Overlay saved");
@@ -413,6 +418,14 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
         duplicateSelectedItems();
         return;
       }
+      // Ctrl+G is the browser's find-next; in the editor it groups, as in
+      // every design tool. Shift+G alone (no Ctrl) is still the grid toggle.
+      if (mod && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        if (e.shiftKey) ungroupSelected();
+        else groupSelected();
+        return;
+      }
       if (e.key === "Escape") {
         // Radix overlays handle their own Escape and preventDefault it.
         if (!e.defaultPrevented) clearSelection();
@@ -453,6 +466,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
     clearSelection,
     removeSelectedItems,
     duplicateSelectedItems,
+    groupSelected,
+    ungroupSelected,
     nudgeSelected,
   ]);
 

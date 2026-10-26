@@ -1,6 +1,6 @@
 "use server";
 
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
 import { track } from "@/lib/track";
@@ -9,6 +9,8 @@ import {
   createOverlayScene as createSceneRow,
   deleteOverlayScene as deleteSceneRow,
   getAllOverlayItemsByScene,
+  getOverlayItemGroups,
+  insertOverlayItemGroups,
   getOverlayScene as getSceneWithItems,
   getOverlaySceneRow,
   getOverlayScenes as getSceneRows,
@@ -21,6 +23,7 @@ import { createSceneSchema, updateSceneSchema } from "@/schemas/overlay";
 import type { ClipDisplayFieldItemConfig } from "@/types/overlays";
 import { overlayItemFromDbRow } from "@/types/overlays";
 import { tryAuthContext } from "@/lib/auth";
+import { sanitizeGroups } from "@/components/overlays/editor/item-groups";
 import { OVERLAYS_ERROR_SCOPE, generateSlug } from "./shared";
 
 export async function getOverlayScenes() {
@@ -39,7 +42,7 @@ export async function getOverlayScene(id: string) {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
 
-  const { scene, items, error } = await getSceneWithItems(ctx.supabase, id, ctx.user.id);
+  const { scene, items, groups, error } = await getSceneWithItems(ctx.supabase, id, ctx.user.id);
   if (error) {
     reportError(error, OVERLAYS_ERROR_SCOPE);
     return { data: null, error: error.message };
@@ -49,6 +52,12 @@ export async function getOverlayScene(id: string) {
     data: {
       ...scene,
       items: (items ?? []).map((item) => overlayItemFromDbRow(item)),
+      groups: (groups ?? []).map(({ id, scene_id, parent_group_id, label }) => ({
+        id,
+        scene_id,
+        parent_group_id,
+        label,
+      })),
     },
     error: null,
   };
@@ -167,6 +176,33 @@ export async function duplicateOverlayScene(id: string) {
   // the user has no way to tell this apart from a scene that had no items.
   if (itemsFetchErr) reportError(itemsFetchErr, OVERLAYS_ERROR_SCOPE);
 
+  // Groups first: the copied items point at them. Fresh ids, same tree, and
+  // sanitizeGroups hands them back parents first so each parent row exists.
+  const { data: originalGroups, error: groupsFetchErr } = await getOverlayItemGroups(supabase, id);
+  if (groupsFetchErr) reportError(groupsFetchErr, OVERLAYS_ERROR_SCOPE);
+  const { groups: groupsToCopy } = sanitizeGroups(
+    (originalItems ?? []).map((row) => overlayItemFromDbRow(row)),
+    originalGroups ?? [],
+  );
+  const groupIdMap = new Map(groupsToCopy.map((g) => [g.id, randomUUID()]));
+  if (groupsToCopy.length > 0) {
+    const { error: groupErr } = await insertOverlayItemGroups(
+      supabase,
+      groupsToCopy.map((g) => ({
+        id: groupIdMap.get(g.id)!,
+        scene_id: newScene.id,
+        parent_group_id: g.parent_group_id ? (groupIdMap.get(g.parent_group_id) ?? null) : null,
+        label: g.label,
+      })),
+    );
+    if (groupErr) {
+      reportError(groupErr, OVERLAYS_ERROR_SCOPE);
+      return { data: null, error: groupErr.message };
+    }
+  }
+  const copyGroupId = (groupId: string | null) =>
+    groupId ? (groupIdMap.get(groupId) ?? null) : null;
+
   if (originalItems?.length) {
     const roots = originalItems.filter((row) => row.type !== "clip_display_field");
     const children = originalItems.filter((row) => row.type === "clip_display_field");
@@ -174,9 +210,10 @@ export async function duplicateOverlayScene(id: string) {
 
     const { data: insertedRoots, error: rootErr } = await insertOverlayItemsReturningIds(
       supabase,
-      roots.map(({ id: _i, created_at: _c, updated_at: _u, scene_id: _s, ...rest }) => ({
+      roots.map(({ id: _i, created_at: _c, updated_at: _u, scene_id: _s, group_id, ...rest }) => ({
         ...rest,
         scene_id: newScene.id,
+        group_id: copyGroupId(group_id),
       })),
     );
 
@@ -191,7 +228,7 @@ export async function duplicateOverlayScene(id: string) {
 
     if (children.length > 0) {
       const childRows = children
-        .map(({ id: _i, created_at: _c, updated_at: _u, scene_id: _s, config, ...rest }) => {
+        .map(({ id: _i, created_at: _c, updated_at: _u, scene_id: _s, group_id: _g, config, ...rest }) => {
           const cfg = config as unknown as ClipDisplayFieldItemConfig;
           const newParentId = oldIdToNew.get(cfg.parentClipItemId);
           if (!newParentId) return null;

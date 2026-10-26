@@ -104,3 +104,27 @@ test("an absurd item count is refused", () => {
   };
   expect(overlayExportDocumentSchema.safeParse(many).success).toBe(false);
 });
+
+test("a file from before groups existed has no groups and ungrouped items", () => {
+  const parsed = overlayExportDocumentSchema.parse(doc);
+  expect(parsed.groups).toEqual([]);
+  expect(parsed.items[0]!.group_ref).toBeNull();
+});
+
+test("groups travel by ref, nested through parent_ref", () => {
+  const parsed = overlayExportDocumentSchema.parse({
+    ...doc,
+    groups: [
+      { ref: "group-0", parent_ref: null, label: "Header" },
+      { ref: "group-1", parent_ref: "group-0", label: "Logo" },
+    ],
+    items: [{ ...doc.items[0], group_ref: "group-1" }],
+  });
+  expect(parsed.groups[1]).toEqual({ ref: "group-1", parent_ref: "group-0", label: "Logo" });
+  expect(parsed.items[0]!.group_ref).toBe("group-1");
+});
+
+test("a group with a blank name is rejected", () => {
+  const broken = { ...doc, groups: [{ ref: "group-0", parent_ref: null, label: "   " }] };
+  expect(overlayExportDocumentSchema.safeParse(broken).success).toBe(false);
+});

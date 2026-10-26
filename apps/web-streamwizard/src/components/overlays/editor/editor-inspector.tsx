@@ -24,13 +24,15 @@ import {
   Copy,
   FlipHorizontal2,
   FlipVertical2,
+  Group,
   LayoutTemplate,
   Maximize2,
   StretchHorizontal,
   StretchVertical,
   Trash2,
+  Ungroup,
 } from "lucide-react";
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem, OverlayItemGroup } from "@/types/overlays";
 import { NO_CROP, getAnchor, type CropInsets } from "@repo/ui/overlay";
 import { getOverlayWidgetDefinition, isRootLayerType } from "../registry/overlay-widget-registry";
 import { AnchorPicker } from "./anchor-picker";
@@ -38,6 +40,7 @@ import { InspectorHint } from "./inspector-hint";
 import { InspectorSection } from "./inspector-section";
 import { NumberField } from "./number-field";
 import { MIN_DISTRIBUTE_ITEMS } from "./selection-layout";
+import { selectedGroupId } from "./item-groups";
 import { selectPrimarySelectedId, useOverlayStore } from "@/stores/overlay-editor-store";
 import { useInspectorCommands } from "@/hooks/overlays/use-inspector-commands";
 
@@ -57,6 +60,8 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
     distributeSelected,
     matchSizeSelected,
     flipSelected,
+    groupSelected,
+    ungroupSelected,
   } = useOverlayStore();
 
   const selectedItemId = selectPrimarySelectedId({ selectedItemIds });
@@ -78,15 +83,45 @@ export function EditorInspector({ clipFolders }: EditorInspectorProps) {
 
   if (selectedItemIds.length > 1) {
     const canDistribute = selectedItemIds.length >= MIN_DISTRIBUTE_ITEMS;
+    const groupId = scene
+      ? selectedGroupId(selectedItemIds, scene.items, scene.groups ?? [])
+      : null;
+    const group = groupId ? scene?.groups?.find((g) => g.id === groupId) : undefined;
 
     return (
       <div className="p-4 space-y-4">
         <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          Selection
+          {group ? "Group" : "Selection"}
         </h3>
+        {group ? (
+          // Keyed on the label too, so a rename from the layers panel or undo
+          // resets the draft.
+          <GroupNameField key={`${group.id}:${group.label}`} group={group} />
+        ) : null}
         <p className="text-sm text-foreground">
-          {selectedItemIds.length} items selected
+          {selectedItemIds.length} items {group ? "in this group" : "selected"}
         </p>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full h-9"
+          title={group ? "Ctrl+Shift+G" : "Ctrl+G"}
+          onClick={() => (group ? ungroupSelected() : groupSelected())}
+        >
+          {group ? (
+            <>
+              <Ungroup className="mr-2 h-4 w-4" />
+              Ungroup
+            </>
+          ) : (
+            <>
+              <Group className="mr-2 h-4 w-4" />
+              Group these
+            </>
+          )}
+        </Button>
 
         <div className="space-y-2">
           <Label className="text-xs">Align to each other</Label>
@@ -822,6 +857,56 @@ function SelectedItemInspector({
           />
         </>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The selected group's name. Commits on Enter or blur, like the layers row,
+ * and takes focus when the canvas menu's Rename asks for it.
+ */
+function GroupNameField({ group }: { group: OverlayItemGroup }) {
+  const { renameGroup, renameRequestId, setRenameRequestId } = useOverlayStore();
+  const [draft, setDraft] = useState(group.label);
+  const inputRef = useRef<HTMLInputElement>(null);
+  // Escape blurs too; this keeps that blur from saving the abandoned text.
+  const cancelledRef = useRef(false);
+
+  useEffect(() => {
+    if (renameRequestId === group.id) {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+      setRenameRequestId(null);
+    }
+  }, [renameRequestId, group.id, setRenameRequestId]);
+
+  const commit = () => {
+    if (!cancelledRef.current && draft.trim()) renameGroup(group.id, draft);
+    else setDraft(group.label);
+    cancelledRef.current = false;
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor="group-name" className="text-xs">
+        Name
+      </Label>
+      <Input
+        id="group-name"
+        ref={inputRef}
+        value={draft}
+        maxLength={100}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") {
+            cancelledRef.current = true;
+            e.currentTarget.blur();
+          }
+        }}
+        className="h-8"
+      />
     </div>
   );
 }

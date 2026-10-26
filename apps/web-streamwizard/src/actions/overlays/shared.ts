@@ -72,6 +72,8 @@ export function overlayItemColumns(parsed: ParsedOverlayItem) {
     is_visible: parsed.is_visible,
     is_locked: parsed.is_locked,
     label: parsed.label,
+    // Clip fields follow their clips widget; they are never grouped themselves.
+    group_id: parsed.type === "clip_display_field" ? null : parsed.group_id,
     config: parsed.config as unknown as Json,
   };
 }
