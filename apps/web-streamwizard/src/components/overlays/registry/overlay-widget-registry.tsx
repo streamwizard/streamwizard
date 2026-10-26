@@ -182,6 +182,7 @@ import type {
   OverlayCanvasProps,
   OverlayChildResolvedDefinition,
   OverlayLibraryEntry,
+  OverlayRenderMode,
   OverlayRootWidgetDefinition,
   ResolvedOverlayWidgetDefinition,
   WidgetCategory,
@@ -644,7 +645,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     layerScope: "root",
     icon: Gauge,
     showInLibrary: true,
-    category: "other",
+    category: "irl",
     library: { title: "IRL · Speed", description: "Live GPS speed from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlSpeedWidgetRootItems,
@@ -656,7 +657,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     layerScope: "root",
     icon: Compass,
     showInLibrary: true,
-    category: "other",
+    category: "irl",
     library: { title: "IRL · Heading", description: "Live GPS heading direction from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlHeadingWidgetRootItems,
@@ -668,7 +669,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     layerScope: "root",
     icon: Mountain,
     showInLibrary: true,
-    category: "other",
+    category: "irl",
     library: { title: "IRL · Altitude", description: "Live GPS altitude from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlAltitudeWidgetRootItems,
@@ -680,7 +681,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     layerScope: "root",
     icon: MoveVertical,
     showInLibrary: true,
-    category: "other",
+    category: "irl",
     library: { title: "IRL · Latitude", description: "Live GPS latitude from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlLatitudeWidgetRootItems,
@@ -692,7 +693,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     layerScope: "root",
     icon: MoveHorizontal,
     showInLibrary: true,
-    category: "other",
+    category: "irl",
     library: { title: "IRL · Longitude", description: "Live GPS longitude from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlLongitudeWidgetRootItems,
@@ -704,7 +705,7 @@ export const OVERLAY_WIDGET_REGISTRY: Record<
     layerScope: "root",
     icon: Crosshair,
     showInLibrary: true,
-    category: "other",
+    category: "irl",
     library: { title: "IRL · Accuracy", description: "Live GPS accuracy from an IRL stream." },
     defaultSize: { ...IRL_FIELD_WIDGET_DEFAULT_SIZE },
     createRootItems: createIrlAccuracyWidgetRootItems,
@@ -812,8 +813,20 @@ export function buildLibraryEntries(
   });
 }
 
-export function getLibraryEntries(): OverlayLibraryEntry[] {
-  return buildLibraryEntries(getLibraryWidgetDefinitions());
+/**
+ * The cards an overlay of this type offers. The IRL widgets read the phone's
+ * GPS, which only a GPS overlay publishes, so they are listed there and
+ * nowhere else. Ones already placed on an OBS overlay keep working.
+ */
+export function entriesForRenderMode(
+  entries: OverlayLibraryEntry[],
+  renderMode: OverlayRenderMode
+): OverlayLibraryEntry[] {
+  return renderMode === "gps" ? entries : entries.filter((entry) => entry.category !== "irl");
+}
+
+export function getLibraryEntries(renderMode: OverlayRenderMode): OverlayLibraryEntry[] {
+  return entriesForRenderMode(buildLibraryEntries(getLibraryWidgetDefinitions()), renderMode);
 }
 
 /** The `createRootItems` behind a library card: the preset's, or the widget's own. */
@@ -823,7 +836,9 @@ export function getLibraryRootItemFactory(type: RootOverlayItemType, presetId?: 
   return def?.libraryPresets?.find((preset) => preset.id === presetId)?.createRootItems;
 }
 
-export function groupLibraryEntriesByCategory(): Record<WidgetCategory, OverlayLibraryEntry[]> {
+export function groupLibraryEntriesByCategory(
+  renderMode: OverlayRenderMode
+): Record<WidgetCategory, OverlayLibraryEntry[]> {
   const grouped: Record<WidgetCategory, OverlayLibraryEntry[]> = {
     media: [],
     alerts: [],
@@ -833,9 +848,10 @@ export function groupLibraryEntriesByCategory(): Record<WidgetCategory, OverlayL
     credits: [],
     labels: [],
     layout: [],
+    irl: [],
     other: [],
   };
-  for (const entry of getLibraryEntries()) grouped[entry.category].push(entry);
+  for (const entry of getLibraryEntries(renderMode)) grouped[entry.category].push(entry);
   return grouped;
 }
 
@@ -846,6 +862,7 @@ export type {
   OverlayInspectorAppendProps,
   OverlayLibraryEntry,
   OverlayLibraryPreset,
+  OverlayRenderMode,
   OverlayRootWidgetDefinition,
   ResolvedOverlayWidgetDefinition,
 } from "./overlay-widget-registry.types";

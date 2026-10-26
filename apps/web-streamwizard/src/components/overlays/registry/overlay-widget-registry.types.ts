@@ -12,7 +12,10 @@ import type {
 } from "@/types/overlays";
 import type { WidgetBaseDefinition } from "@repo/ui/overlay";
 
-export type WidgetCategory = "media" | "alerts" | "goals" | "polls" | "ads" | "credits" | "labels" | "layout" | "other";
+export type WidgetCategory = "media" | "alerts" | "goals" | "polls" | "ads" | "credits" | "labels" | "layout" | "irl" | "other";
+
+/** An overlay's type: "obs" renders in a browser source, "gps" on the phone. */
+export type OverlayRenderMode = "obs" | "gps";
 
 export type LayerScope = "root" | "child";
 

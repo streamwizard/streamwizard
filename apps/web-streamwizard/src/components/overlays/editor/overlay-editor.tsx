@@ -44,6 +44,7 @@ import type {
 import { EditorCanvas } from "./editor-canvas";
 import { EditorLayers } from "./editor-layers";
 import { EditorInspector } from "./editor-inspector";
+import type { OverlayRenderMode } from "../registry/overlay-widget-registry.types";
 import { OverlayWidgetSheet } from "./overlay-widget-sheet";
 import { WidgetLibraryModal } from "./widget-library-modal";
 import { ShortcutsDialog } from "./shortcuts-dialog";
@@ -61,6 +62,8 @@ interface OverlayEditorProps {
   clipFolders: Database["public"]["Tables"]["clip_folders"]["Row"][];
   /** Widget rows for the scene's custom widgets, fetched with the page. */
   initialWidgets: Widget[];
+  /** The overlay's type, which decides what the widget list offers. */
+  renderMode: OverlayRenderMode;
 }
 
 /**
@@ -71,7 +74,7 @@ interface OverlayEditorProps {
 const OVERLAY_SURFACE_SELECTOR =
   '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]';
 
-export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: OverlayEditorProps) {
+export function OverlayEditor({ initialScene, clipFolders, initialWidgets, renderMode }: OverlayEditorProps) {
   // Before first render, so the canvas never has to fetch what the page already
   // loaded.
   useState(() => primeWidgetCache(initialWidgets));
@@ -766,6 +769,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         onOpenChange={setWidgetSheetOpen}
         onAddWidget={(type, presetId) => addItem(type, presetId)}
         onOpenLibrary={() => setWidgetLibraryOpen(true)}
+        renderMode={renderMode}
       />
 
       <WidgetLibraryModal

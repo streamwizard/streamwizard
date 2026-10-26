@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Upload, Music, Video, FileJson, Trash2, Loader2, Copy, ImageIcon } from "lucide-react";
+import { Upload, Music, Video, FileJson, Trash2, Loader2, Copy, ImageIcon, FolderUp } from "lucide-react";
 import { Button, Progress } from "@repo/ui";
 import { cn } from "@repo/ui";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
 } from "@/actions/assets";
 import type { AssetKind } from "@/lib/asset-mime";
 import { formatBytes } from "@/lib/format";
+import { filesFromDrop, partitionUploadable } from "@/lib/media-upload";
 import { MediaPreviewDialog } from "./media-preview-dialog";
 
 interface Uploading {
@@ -84,8 +85,17 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
   const [dragging, setDragging] = useState(false);
   const [preview, setPreview] = useState<UserAsset | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
 
-  const upload = useCallback(async (incoming: File[]) => {
+  const upload = useCallback(async (picked: File[]) => {
+    const { uploadable: incoming, skipped } = partitionUploadable(picked);
+    if (skipped.length > 0) {
+      const n = skipped.length;
+      toast.info(`Skipped ${n} ${n === 1 ? "file" : "files"} that ${n === 1 ? "isn't" : "aren't"} an image, sound, video or Lottie JSON.`);
+    }
+    // One file gets its own toast; a batch gets one at the end, not one per file.
+    const single = incoming.length === 1;
+    let uploaded = 0;
     for (const file of incoming) {
       const id = crypto.randomUUID();
       setUploads((prev) => [...prev, { id, name: file.name, progress: 0 }]);
@@ -104,13 +114,15 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
         const confirmed = await confirmAssetUpload(data.assetId);
         if (confirmed.error || !confirmed.data) throw new Error(confirmed.error ?? "Failed to finish the upload.");
         setListing(confirmed.data);
-        toast.success(`Uploaded ${file.name}`);
+        uploaded++;
+        if (single) toast.success(`Uploaded ${file.name}`);
       } catch (err) {
         toast.error(`${file.name}: ${(err as Error).message}`);
       } finally {
         setUploads((prev) => prev.filter((u) => u.id !== id));
       }
     }
+    if (!single && uploaded > 0) toast.success(`Uploaded ${uploaded} ${uploaded === 1 ? "file" : "files"}`);
   }, []);
 
   const onDelete = useCallback(async (asset: UserAsset) => {
@@ -137,7 +149,10 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
   const onDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
-    if (e.dataTransfer.files.length > 0) void upload(Array.from(e.dataTransfer.files));
+    // Folders in the drop are walked; this has to start inside the handler.
+    void filesFromDrop(e.dataTransfer).then((files) => {
+      if (files.length > 0) void upload(files);
+    });
   };
 
   return (
@@ -169,17 +184,45 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
       >
         <Upload className={cn("h-8 w-8 transition-colors", dragging ? "text-primary" : "text-muted-foreground")} />
         <div className="text-center">
-          <p className="text-sm font-medium">Drop files here or click to browse</p>
+          <p className="text-sm font-medium">Drop files or a folder here, or click to browse</p>
           <p className="text-xs text-muted-foreground mt-1">
             Images, sounds, and videos for your overlays. Up to 10MB per file.
           </p>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            folderInputRef.current?.click();
+          }}
+        >
+          <FolderUp className="mr-2 h-4 w-4" />
+          Upload a folder
+        </Button>
         <input
           ref={inputRef}
           type="file"
           multiple
           accept="image/*,audio/*,video/*,.json"
           className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.length) void upload(Array.from(e.target.files));
+            e.target.value = "";
+          }}
+        />
+        <input
+          // webkitdirectory isn't in React's input types; every current
+          // browser supports it, so set it on the element directly.
+          ref={(el) => {
+            folderInputRef.current = el;
+            el?.setAttribute("webkitdirectory", "");
+          }}
+          type="file"
+          multiple
+          className="hidden"
+          onClick={(e) => e.stopPropagation()}
           onChange={(e) => {
             if (e.target.files?.length) void upload(Array.from(e.target.files));
             e.target.value = "";
