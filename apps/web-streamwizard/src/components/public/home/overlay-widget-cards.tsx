@@ -193,8 +193,8 @@ export function OverlayWidgetCards() {
 
       <Card
         icon={Timer}
-        title="Countdowns, goals, and the subathon clock"
-        body="Count down a break or to a set date and time, on a clock in your time zone. Follower and sub goals that fill while you stream. A subathon timer that gains time on every sub, cheer, and gift."
+        title="Countdowns, goals, and your own subathon clock"
+        body="Count down a break or to a set date and time, on a clock in your time zone. Follower, sub, and Bits goals that fill while you stream. Want a subathon timer? Build it as a custom widget: every sub, cheer, and gift arrives as an event, ready to add time."
         className="lg:col-span-2"
       >
         <div className="space-y-2">
