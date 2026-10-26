@@ -1,4 +1,6 @@
+import { docsLink } from "@/lib/constant";
 import { SectionView } from "../analytics/section-view";
+import { TrackedLink } from "../analytics/tracked-link";
 import { CheckItem } from "../layout/check-item";
 import { Reveal } from "../home/reveal";
 import { AlertBoxPlayground } from "./alert-box-playground";
@@ -8,7 +10,7 @@ import { AlertBoxPlayground } from "./alert-box-playground";
  * events and the layout, entrance and milestone settings, the list below
  * carries the depth a demo cannot: thresholds, queueing, the gift sub rule,
  * testing. The media block closes it out: every alert is somebody's file, so
- * the formats get named. No docs link yet; SW-199 publishes the media docs.
+ * the formats get named, with a door to the media library docs for the rest.
  */
 
 const MEDIA_GROUPS: { label: string; items: string[]; note: string }[] = [
@@ -114,6 +116,20 @@ export function AlertBoxSection() {
                 </div>
               ))}
             </div>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              Not sure which format?{" "}
+              <TrackedLink
+                href={`${docsLink}/overlays/media-library`}
+                cta="read_media_docs"
+                section="alert_box"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-300 transition-colors hover:text-purple-200"
+              >
+                Read the media library docs
+              </TrackedLink>
+              .
+            </p>
           </div>
         </Reveal>
       </SectionView>

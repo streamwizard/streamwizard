@@ -7,7 +7,8 @@ description: "Everything injected into your widget's sandbox: globals, lifecycle
 
 | Global | What it is |
 |--------|-----------|
-| `fieldData` | Values of your [fields](/widgets/fields), defaults merged with the streamer's overrides. |
+| `fieldData` | Values of your [fields](/widgets/fields), defaults merged with the streamer's overrides. Ready on your script's first line and replaced before each `onFieldsUpdate`, so it is always the latest. |
+| `StreamWizard.fieldData` | The same values as `fieldData`. Handy if you declared a `fieldData` of your own. |
 | `StreamWizard.state` | `get()` / `set()` persistence for this one placed widget, see [state](/widgets/state). |
 | `StreamWizard.userState` | `get(key)` / `getAll()` / `set(key, value)` / `increment(key, amount?)` / `delete(key)` / `subscribe(key, cb)` / `onChange(cb)` channel-wide state, also written by the server, pushed live to open overlays. See [state](/widgets/state). |
 | `StreamWizard.session` | `{ subscriberToken, overlayItemId }` once the widget runs on an overlay; `null` in the editor preview. |
@@ -16,9 +17,13 @@ description: "Everything injected into your widget's sandbox: globals, lifecycle
 | `gsap` | GSAP 3.12 animation library. |
 | `TextPlugin` | GSAP text animation; call `gsap.registerPlugin(TextPlugin)` first. |
 
+`onWidgetLoad` and `onFieldsUpdate` also hand you the values as
+`e.detail.fieldData`. Read `fieldData` again after an update rather than
+keeping an old copy: the global is replaced, not edited in place.
+
 ## Lifecycle events
 
-All three arrive as DOM `CustomEvent`s on `window`.
+All four arrive as DOM `CustomEvent`s on `window`.
 
 ### `onWidgetLoad`
 
@@ -44,6 +49,19 @@ addEventListener('onEventReceived', (e) => {
   if (listener === 'channel.cheer') {
     console.log(`${event.user_name} cheered ${event.bits} bits`);
   }
+});
+```
+
+### `onFieldsUpdate`
+
+Fires when the streamer changes one of your [fields](/widgets/fields) while the
+widget is running. Handle it to update in place; if you don't, the editor
+reloads the widget to show the change, restarting your script.
+
+```js
+addEventListener('onFieldsUpdate', (e) => {
+  const { fieldData } = e.detail;
+  document.getElementById('title').style.color = fieldData.accentColor;
 });
 ```
 
