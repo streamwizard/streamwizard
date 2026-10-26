@@ -52,9 +52,10 @@ export async function handleInternalBroadcast(req: Request): Promise<Response> {
 
 // Server-to-server stream_id push from the rest-api EventSub handlers.
 // A room resolves stream_id once, at publisher upgrade — so a GPS overlay
-// opened before the stream goes live would log its whole walk with
-// stream_id=null. stream.online/offline pushes here so a long-lived room
-// picks up the id (or drops it) without the phone reconnecting.
+// opened before the stream goes live would never log its walk, since geo is
+// only stored while stream_id is set (SW-76). stream.online/offline pushes
+// here so a long-lived room picks up the id (or drops it, which stops the
+// logging) without the phone reconnecting.
 export async function handleInternalStreamStatus(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
