@@ -22,6 +22,40 @@ Drag files onto the page or click to browse. Supported:
 
 Up to 10MB per file. SVG is not supported.
 
+## Which format to use
+
+Every format above uploads, but some do the job in a fraction of the space.
+Smaller files load faster on your overlay and leave more of your storage free.
+
+| For | Use | Why |
+|---|---|---|
+| Alert animations, stingers, anything that moves | **WebM** | Keeps the transparent background, so only your animation shows on stream. Small files too. |
+| Video with a solid background | **MP4** or **WebM** | Both play fine. MP4 has no transparency, so whatever is behind your animation in the file shows on stream as well. |
+| Logos, frames, anything with see-through parts | **PNG** or **WebP** | Both keep transparency and sharp edges. WebP is usually smaller. |
+| Photos and screenshots | **WebP** or **AVIF** | AVIF is the smallest for photos. JPEG works too, without transparency. |
+| Sounds | **MP3** or **OGG** | WAV works, but a 10MB WAV only holds about a minute of audio. |
+
+### Swap GIFs for WebM
+
+A GIF works everywhere, but it's stuck at 256 colours and the files are big.
+The same clip as a WebM is usually a small fraction of the size and looks
+better. If your alert is a GIF, convert it to WebM before you upload it. Most
+video converters and many online GIF tools export WebM.
+
+### Keep sounds at the same loudness
+
+The alert box has a **Volume** slider on every alert and a **Master volume**
+for the whole box. They're there for fine tuning. If one sound file is much
+louder than the rest, fix the file and save yourself chasing it with sliders.
+Keep alert sounds short, a few seconds at most, so they don't talk over you.
+
+### Lottie animations
+
+A Lottie file is a vector animation saved as JSON, often a few kilobytes where a
+video would be a few megabytes. The built-in widgets take images and video, not
+Lottie, so a Lottie file is for [custom widgets](/widgets/overview): use
+**Insert asset** in the widget editor to get its URL into your code.
+
 ## Storage limits
 
 The bar at the top shows what you're using. Every account gets 100MB, and some
