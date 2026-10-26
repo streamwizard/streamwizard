@@ -1,0 +1,197 @@
+---
+title: "Build a widget with an AI assistant"
+description: "Copy one block into ChatGPT, Claude or any other assistant so it writes widgets that actually run in StreamWizard."
+---
+
+AI assistants are good at widget code, but they don't know how StreamWizard
+widgets work. Out of the box they'll write a full web page, load scripts from
+other sites and guess at event names, and none of that runs here. The block
+below fixes that: paste it in first and the assistant knows the four tabs, the
+events, the settings fields and the sandbox rules.
+
+## Before you start
+
+- You can open the widget editor. See the [quickstart](/widgets/quickstart).
+- You have an AI assistant open in another tab.
+
+## Use it
+
+<Steps>
+  <Step title="Copy the block">
+    Use the copy button on the block below.
+  </Step>
+  <Step title="Paste it into your assistant">
+    Start a new chat and paste it as your first message, or into the
+    assistant's custom instructions if you build widgets often.
+  </Step>
+  <Step title="Describe your widget">
+    Say what it should show and when. "A sub goal bar that fills on every sub
+    and gift, with the goal as a setting" is plenty.
+  </Step>
+  <Step title="Paste the answer into the tabs">
+    The assistant answers with four parts. Each one goes into the tab of the
+    same name: **HTML**, **JS**, **Fields** and **Extra CSS**.
+  </Step>
+  <Step title="Test it">
+    Fire events from the demo bar above the preview. See
+    [testing](/widgets/testing).
+  </Step>
+</Steps>
+
+## The block
+
+````markdown streamwizard-widget-api.md
+# StreamWizard custom widget API
+
+You are helping me write a custom widget for StreamWizard, a Twitch overlay
+tool. The widget runs on my stream as part of an OBS browser source. Follow
+these rules exactly. Don't invent APIs that aren't listed here.
+
+## Answer format
+
+Give me four parts, each in its own code block, labelled:
+
+1. **HTML**: markup only. No `<html>`, `<head>`, `<body>` or `<script>` tags.
+2. **JS**: plain browser JavaScript. No `import`, no modules, no `<script>` tags.
+   It runs after the HTML, so the elements already exist.
+3. **Fields**: a JSON object describing the widget's settings (see Fields).
+   Use `{}` if there are none.
+4. **Extra CSS**: only what Tailwind classes can't do. May be empty.
+
+## The sandbox
+
+- The widget runs in a sandboxed iframe (`allow-scripts` only) with a
+  transparent background, drawn on top of the stream. Don't set a page
+  background unless I ask for one.
+- Tailwind CSS is loaded: use utility classes in the HTML.
+- GSAP 3.12.5 is loaded as the global `gsap`, and `TextPlugin` too
+  (call `gsap.registerPlugin(TextPlugin)` before using it).
+- Nothing else loads. Script tags from other sites are blocked.
+- `fetch()` only reaches the StreamWizard state API, the streamer's media
+  library files, `https://api.open-meteo.com` and
+  `https://nominatim.openstreetmap.org`. Everything else is blocked.
+
+## Lifecycle events
+
+All arrive as `CustomEvent`s on `window`.
+
+```js
+addEventListener('onWidgetLoad', (e) => {
+  // Fires once. e.detail = { fieldData, channel: { user_id }, session }
+  // channel.user_id is the broadcaster's Twitch user ID.
+  const settings = e.detail.fieldData;
+});
+
+addEventListener('onEventReceived', (e) => {
+  // Every live event. e.detail = { listener, event }
+  const { listener, event } = e.detail;
+  if (listener === 'channel.cheer') {
+    console.log(`${event.user_name} cheered ${event.bits} bits`);
+  }
+});
+
+addEventListener('onFieldsUpdate', (e) => {
+  // The streamer changed a setting while the widget runs.
+  // e.detail = { fieldData }. Re-apply settings here instead of
+  // reloading, or the editor restarts the widget to show the change.
+});
+```
+
+The latest settings are also on `StreamWizard.fieldData`. There is no bare
+global called `fieldData`: read it from the event or from `StreamWizard`.
+
+## Fields
+
+Fields are the widget's settings panel, so the streamer can change things
+without touching code. The schema is a JSON object keyed by field name:
+
+```json
+{
+  "accentColor": { "type": "colorpicker", "label": "Accent color", "value": "#9e7aff" },
+  "goal":        { "type": "number", "label": "Goal", "value": 50 },
+  "duration":    { "type": "slider", "label": "Seconds on screen", "value": 5, "min": 2, "max": 15, "step": 1 },
+  "position":    { "type": "dropdown", "label": "Position", "value": "left",
+                   "options": [{ "value": "left", "label": "Left" }, { "value": "right", "label": "Right" }] },
+  "alertSound":  { "type": "audio", "label": "Alert sound", "value": "" }
+}
+```
+
+Types: `text`, `number`, `checkbox`, `colorpicker`, `slider` (with `min`,
+`max`, `step`), `dropdown` (with `options`), `googleFont`, `image`, `audio`,
+`video` (the last three open the streamer's media library and give a file
+URL), `hidden`, and `group` (a collapsible section with its own `fields`).
+
+Read values as `{{key}}` in the HTML and Extra CSS, and as `fieldData.key` in
+JS. Keys stay flat even inside a group: `fieldData.followText`, never
+`fieldData.follow.followText`. So every key must be unique.
+
+## Saving data between streams
+
+Variables are lost whenever the overlay reloads.
+
+- `StreamWizard.state` belongs to this one placed widget:
+  `await StreamWizard.state.get()` returns the saved object or `null`,
+  `await StreamWizard.state.set(obj)` replaces it.
+- `StreamWizard.userState` is shared across the whole channel, one key at a
+  time: `get(key)`, `getAll()`, `set(key, value)`, `increment(key, amount?)`,
+  `delete(key)`, `subscribe(key, cb)` and `onChange(cb)` (the last two return
+  an unsubscribe function).
+  - Keys: 1 to 64 characters of `a-z`, `0-9` and `_`. Values: any JSON up to
+    8KB. 200 keys per channel.
+  - Always use `increment` for counters, never `get` then `set`. It adds on
+    the server, so two overlays can't overwrite each other.
+  - Read-only keys written by StreamWizard: `sys.stream_id` (`null` when
+    offline), `sys.stream_started_at`, `sys.is_live`.
+- Both throw in the editor preview, which isn't attached to an overlay. Wrap
+  calls in `try/catch` or add `.catch()`.
+
+## The events you'll use most
+
+`listener` name, then the payload fields that matter. Names and amounts can be
+`null` for anonymous gifts and cheers.
+
+| Listener | Payload |
+|---|---|
+| `channel.follow` | `user_name`, `user_login`, `followed_at`, `user_profile_image_url?` |
+| `channel.subscribe` | `user_name`, `tier` (`"1000"`, `"2000"`, `"3000"`), `is_gift` |
+| `channel.subscription.message` (resub) | `user_name`, `tier`, `message.text`, `cumulative_months`, `streak_months` |
+| `channel.subscription.gift` | `user_name`, `total`, `tier`, `is_anonymous` |
+| `channel.cheer` | `user_name`, `bits`, `message`, `is_anonymous` |
+| `channel.raid` | `from_broadcaster_user_name`, `viewers` |
+| `channel.chat.message` | `chatter_user_name`, `message.text`, `message.fragments` |
+| `channel.channel_points_custom_reward_redemption.add` | `user_name`, `user_input`, `reward.title`, `reward.cost` |
+| `stream.online` / `stream.offline` | The stream started or ended. |
+| `streamwizard.geo` | `{ status: "connected", payload: { latitude, longitude, altitude, speed, heading, accuracy, timestamp } }` or `{ status: "offline" }`. Speed is in metres per second. |
+| `streamwizard.user_state` | `{ key, value, updatedAt }` whenever channel state changes. |
+
+A gift bomb sends one `channel.subscription.gift` and also one
+`channel.subscribe` with `is_gift: true` for every recipient. If you handle
+gifts, skip subscribes where `is_gift` is true or you'll count them twice.
+
+Polls, predictions, hype trains, ad breaks, shoutouts and every other Twitch
+EventSub event arrive the same way, relayed as-is. The full list with exact
+payloads: https://docs.streamwizard.org/widgets/api/events
+````
+
+## Good to know
+
+- **Check what comes back.** The assistant can still get things wrong. If the
+  widget shows nothing, open the console under the preview: errors from your
+  code show up there.
+- **Give it the event page for unusual events.** The block lists the common
+  events. For anything else, paste the matching section of the
+  [event reference](/widgets/api/events) into the chat.
+- **Don't paste secrets.** Keep API keys and webhook URLs out of your widget
+  and out of the chat, especially if you plan to
+  [publish it](/widgets/publishing).
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Event reference" href="/widgets/api/events">
+    Every event with its exact payload.
+  </Card>
+  <Card title="Testing your widget" href="/widgets/testing">
+    Fire fake events at it before anyone is watching.
+  </Card>
+</CardGroup>

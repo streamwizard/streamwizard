@@ -144,7 +144,8 @@
               "widgets/fields",
               "widgets/state",
               "widgets/testing",
-              "widgets/publishing"
+              "widgets/publishing",
+              "widgets/ai-assistant"
             ]
           },
           {
