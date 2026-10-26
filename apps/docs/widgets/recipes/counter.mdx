@@ -44,7 +44,7 @@ window.addEventListener('onWidgetLoad', async function () {
 
 window.addEventListener('onEventReceived', function (e) {
   if (e.detail.listener !== 'channel.channel_points_custom_reward_redemption.add') return;
-  if (e.detail.event.reward.title !== fieldData.rewardTitle) return;
+  if (e.detail.event.reward.title !== StreamWizard.fieldData.rewardTitle) return;
 
   count++;
   render();

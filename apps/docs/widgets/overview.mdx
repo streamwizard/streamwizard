@@ -22,7 +22,8 @@ Your widget's iframe ships with:
 
 - **Tailwind CSS**: every utility class, no setup.
 - **GSAP 3.12 + TextPlugin**: animation that doesn't fight you.
-- **`fieldData`**: the values of your configurable fields.
+- **`StreamWizard.fieldData`**: the values of your configurable fields, also
+  handed to you in `onWidgetLoad`.
 - **`StreamWizard.state`**: persistence between streams ([state docs](/widgets/state)).
 - **Transparent background**: your widget composites over the stream.
 
@@ -39,11 +40,12 @@ No npm imports, no external scripts. The sandbox is `allow-scripts` only.
 
 ## The event model
 
-Three events reach your widget:
+Four events reach your widget:
 
 - `onWidgetLoad`: fires once, carries `fieldData` and session info.
 - `onEventReceived`: every live event. `detail.listener` is the event name,
   `detail.event` the payload. Full list: [event reference](/widgets/api/events).
+- `onFieldsUpdate`: the streamer changed a setting while the widget runs.
 - `onSessionUpdate`: reserved, currently unused.
 
 The editor autocompletes all of it. Type `e.detail.` and read the menu.
