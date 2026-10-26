@@ -25,21 +25,40 @@ function wsServerHealthUrl(): string | undefined {
   return `${base}/health`;
 }
 
-function publicTargets(alertEnv: Env): ProbeTarget[] {
-  const wsHealth = wsServerHealthUrl();
+const stripSlash = (url: string) => url.replace(/\/$/, "");
+
+/** A target only when its URL is configured. */
+const optionalTarget = (id: string, url: string | undefined): ProbeTarget[] => (url ? [{ id, url }] : []);
+
+/** Every HTTP probe target for one env, before the registry's fleet nodes.
+ * The web apps are probed on their /api/health routes, which answer without
+ * a session, rather than on a rendered page. */
+export function publicTargets(alertEnv: Env): ProbeTarget[] {
+  const overlay = alertConfig.overlayUrl;
   const serviceTargets: ProbeTarget[] = [
-    ...(alertConfig.streamwizardApiUrl ? [{ id: "rest-api", url: `${alertConfig.streamwizardApiUrl.replace(/\/$/, "")}/health` }] : []),
-    ...(wsHealth ? [{ id: "ws-server", url: wsHealth }] : []),
+    ...optionalTarget("rest-api", alertConfig.streamwizardApiUrl && `${stripSlash(alertConfig.streamwizardApiUrl)}/health`),
+    ...optionalTarget("ws-server", wsServerHealthUrl()),
+    // The bots answer on their own /health; probe.fail covers them like any
+    // other target.
+    ...optionalTarget("discord-bot", alertConfig.discordBotHealthUrl),
+    ...optionalTarget("obs-auto-switcher", alertConfig.obsAutoSwitcherHealthUrl),
+    ...optionalTarget("streamwizard-bot", alertConfig.streamwizardBotHealthUrl),
   ];
   switch (alertEnv) {
     case "prod":
       return [
-        { id: "site", url: "https://streamwizard.org" },
+        { id: "site", url: "https://streamwizard.org/api/health" },
         { id: "overlay", url: "https://overlay.streamwizard.org/api/health" },
+        { id: "web-admin", url: "https://admin.streamwizard.org/api/health" },
         ...serviceTargets,
       ];
     case "staging":
-      return [{ id: "site", url: "https://staging.streamwizard.org" }, ...serviceTargets];
+      return [
+        { id: "site", url: "https://staging.streamwizard.org/api/health" },
+        ...optionalTarget("overlay", overlay && `${stripSlash(overlay)}/api/health`),
+        { id: "web-admin", url: "https://admin-staging.streamwizard.org/api/health" },
+        ...serviceTargets,
+      ];
     case "dev":
       return serviceTargets;
   }

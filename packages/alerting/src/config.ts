@@ -29,6 +29,23 @@ export const alertConfig = {
   get streamwizardApiUrl() {
     return optional("STREAMWIZARD_API_URL");
   },
+  /** Base URL of this env's overlay app. Prod's is fixed in probes.ts; staging
+   * has no fixed host, so its overlay is only probed when this is set. The
+   * NEXT_PUBLIC_ fallback matches what the web apps already read. */
+  get overlayUrl() {
+    return optional("OVERLAY_URL") ?? optional("NEXT_PUBLIC_OVERLAY_URL");
+  },
+  /** Full /health URLs of the bots, reached over the internal network or the
+   * tailnet. Each one is probed only when set. */
+  get discordBotHealthUrl() {
+    return optional("DISCORD_BOT_HEALTH_URL");
+  },
+  get obsAutoSwitcherHealthUrl() {
+    return optional("OBS_AUTO_SWITCHER_HEALTH_URL");
+  },
+  get streamwizardBotHealthUrl() {
+    return optional("STREAMWIZARD_BOT_HEALTH_URL");
+  },
   get alertDiscordChannelId() {
     return optional("ALERT_DISCORD_CHANNEL_ID");
   },

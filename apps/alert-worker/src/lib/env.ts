@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** An optional URL where "" means unset, as @repo/alerting's config reads it. */
+const optionalUrl = () => z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional());
+
 const schema = z.object({
   NODE_ENV: z
     .enum(["development", "staging", "production"])
@@ -29,6 +32,14 @@ const schema = z.object({
   // (derived from the websocket URL).
   STREAMWIZARD_API_URL: z.string().url().optional(),
   WS_SERVER_URL: z.string().min(1).optional(),
+  // Staging's overlay has no fixed host, so it is probed only when this is set
+  // (prod's overlay URL is fixed in @repo/alerting).
+  OVERLAY_URL: optionalUrl(),
+  // Full /health URLs of the bots over the internal network or tailnet; each
+  // is probed only when set.
+  DISCORD_BOT_HEALTH_URL: optionalUrl(),
+  OBS_AUTO_SWITCHER_HEALTH_URL: optionalUrl(),
+  STREAMWIZARD_BOT_HEALTH_URL: optionalUrl(),
 
   // Dashboard URL for the "Open dashboard" button on Discord alerts.
   MONITOR_BASE_URL: z.string().url().optional(),
