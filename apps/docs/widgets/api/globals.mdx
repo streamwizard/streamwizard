@@ -7,7 +7,8 @@ description: "Everything injected into your widget's sandbox: globals, lifecycle
 
 | Global | What it is |
 |--------|-----------|
-| `StreamWizard.fieldData` | Values of your [fields](/widgets/fields), defaults merged with the streamer's overrides. Filled in when `onWidgetLoad` fires and replaced before each `onFieldsUpdate`, so it is always the latest. |
+| `fieldData` | Values of your [fields](/widgets/fields), defaults merged with the streamer's overrides. Ready on your script's first line and replaced before each `onFieldsUpdate`, so it is always the latest. |
+| `StreamWizard.fieldData` | The same values as `fieldData`. Handy if you declared a `fieldData` of your own. |
 | `StreamWizard.state` | `get()` / `set()` persistence for this one placed widget, see [state](/widgets/state). |
 | `StreamWizard.userState` | `get(key)` / `getAll()` / `set(key, value)` / `increment(key, amount?)` / `delete(key)` / `subscribe(key, cb)` / `onChange(cb)` channel-wide state, also written by the server, pushed live to open overlays. See [state](/widgets/state). |
 | `StreamWizard.session` | `{ subscriberToken, overlayItemId }` once the widget runs on an overlay; `null` in the editor preview. |
@@ -16,10 +17,9 @@ description: "Everything injected into your widget's sandbox: globals, lifecycle
 | `gsap` | GSAP 3.12 animation library. |
 | `TextPlugin` | GSAP text animation; call `gsap.registerPlugin(TextPlugin)` first. |
 
-There is no bare `fieldData` global. Read field values from `e.detail.fieldData`
-in `onWidgetLoad` and `onFieldsUpdate`, or from `StreamWizard.fieldData`. Your
-script's top level runs before the values arrive, so read them inside a
-handler, not on the first line of your script.
+`onWidgetLoad` and `onFieldsUpdate` also hand you the values as
+`e.detail.fieldData`. Read `fieldData` again after an update rather than
+keeping an old copy: the global is replaced, not edited in place.
 
 ## Lifecycle events
 

@@ -370,10 +370,12 @@ type EventReceivedDetail =
   | { listener: "user.update";                                                   event: UserUpdateEvent }
   | { listener: "user.whisper.message";                                          event: UserWhisperMessageEvent };`.trim();
 
-// No bare fieldData global exists in the sandbox (buildWidgetSrcdoc in
-// @repo/ui): values come on the events below or on StreamWizard.fieldData,
-// which is declared with the rest of StreamWizard in widget-editor-lib-declarations.ts.
+// buildWidgetSrcdoc in @repo/ui sets the fieldData global before the author's
+// JS runs and replaces it on onWidgetLoad and onFieldsUpdate. It is the same
+// object as StreamWizard.fieldData (widget-editor-lib-declarations.ts).
 const globalDeclarations = `
+declare var fieldData: Record<string, any>;
+
 interface WidgetLoadDetail {
   fieldData: Record<string, any>;
   channel: { user_id: string };

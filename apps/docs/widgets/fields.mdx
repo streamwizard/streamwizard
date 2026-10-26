@@ -8,8 +8,9 @@ Fields are your widget's settings panel. You declare them as JSON in the
 overlay. Values reach your code two ways:
 
 - **In HTML and Extra CSS**: `{{fieldName}}` is replaced with the value.
-- **In JS**: `e.detail.fieldData` in `onWidgetLoad` and `onFieldsUpdate`, or
-  `StreamWizard.fieldData` anywhere after load, e.g. `fieldData.accentColor`.
+- **In JS**: the global `fieldData` object, e.g. `fieldData.accentColor`. It's
+  ready on your first line and kept up to date. `onWidgetLoad` and
+  `onFieldsUpdate` also pass it as `e.detail.fieldData`.
 
 <Frame caption="Fields you add appear beside the preview.">
   <img src="/images/widgets/widget-editor.png" alt="The widget editor's Fields panel, empty until you add a field." />
@@ -89,7 +90,7 @@ Groups can hold groups, up to five levels deep.
 
 ```js
 addEventListener('onWidgetLoad', (e) => {
-  const fieldData = e.detail.fieldData; // also on StreamWizard.fieldData
+  const fieldData = e.detail.fieldData; // same as the global
   document.getElementById('title').style.color = fieldData.accentColor;
 
   if (fieldData.alertSound) {

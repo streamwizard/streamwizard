@@ -248,7 +248,7 @@ interface StreamWizardGlobal {
   userStateUrl: string | null;
   /** Set from onWidgetLoad; null until then or in the editor preview. */
   session: StreamWizardSession | null;
-  /** Latest field values: set from onWidgetLoad, replaced before each onFieldsUpdate. Empty until onWidgetLoad. */
+  /** Latest field values, the same object as the fieldData global. Replaced on onWidgetLoad and before each onFieldsUpdate. */
   fieldData: Record<string, any>;
   /** This widget instance's own private state. */
   state: StreamWizardStateApi;

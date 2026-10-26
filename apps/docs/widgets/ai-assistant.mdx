@@ -97,8 +97,10 @@ addEventListener('onFieldsUpdate', (e) => {
 });
 ```
 
-The latest settings are also on `StreamWizard.fieldData`. There is no bare
-global called `fieldData`: read it from the event or from `StreamWizard`.
+`fieldData` is also a global holding the current settings. It's ready on the
+first line of the JS and replaced (not edited) whenever a setting changes, so
+read `fieldData.key` when you need it instead of copying values out once.
+`StreamWizard.fieldData` holds the same object.
 
 ## Fields
 
