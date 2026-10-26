@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { Tag, ListOrdered, Type } from "lucide-react";
-import { buildLibraryEntries } from "./overlay-widget-registry";
+import { buildLibraryEntries, entriesForRenderMode, getLibraryEntries, groupLibraryEntriesByCategory } from "./overlay-widget-registry";
 import { filterLibraryWidgets } from "../editor/widget-search";
 
 const definitions = [
@@ -44,4 +44,23 @@ test("a plain widget card carries no preset", () => {
 test("searching the library finds the preset by its own name", () => {
   const found = filterLibraryWidgets(buildLibraryEntries(definitions), "event list");
   expect(found.map((e) => e.key)).toEqual(["label_widget:event_list"]);
+});
+
+test("IRL widgets are offered on GPS overlays only, under their own category", () => {
+  const irl = (entries: { category: string }[]) => entries.filter((e) => e.category === "irl").length;
+  expect(irl(getLibraryEntries("gps"))).toBe(6);
+  expect(irl(getLibraryEntries("obs"))).toBe(0);
+  expect(groupLibraryEntriesByCategory("gps").irl.map((e) => e.key)).toContain("irl_speed_widget");
+  expect(groupLibraryEntriesByCategory("obs").irl).toEqual([]);
+  // Nothing else is touched: an OBS overlay offers everything but the IRL six.
+  expect(getLibraryEntries("obs").length).toBe(getLibraryEntries("gps").length - 6);
+});
+
+test("entriesForRenderMode only drops the irl category", () => {
+  const entries = buildLibraryEntries([
+    ...definitions,
+    { type: "irl_speed_widget" as const, icon: Type, category: "irl" as const, library: { title: "IRL · Speed" } },
+  ]);
+  expect(entriesForRenderMode(entries, "obs").map((e) => e.key)).toEqual(["text_widget", "label_widget", "label_widget:event_list"]);
+  expect(entriesForRenderMode(entries, "gps")).toEqual(entries);
 });

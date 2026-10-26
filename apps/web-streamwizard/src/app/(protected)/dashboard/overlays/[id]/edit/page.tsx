@@ -40,6 +40,7 @@ export default async function OverlayEditorPage({ params }: Props) {
       initialScene={scene}
       clipFolders={folders ?? []}
       initialWidgets={widgets ?? []}
+      renderMode={scene.render_mode === "gps" ? "gps" : "obs"}
     />
   );
 }

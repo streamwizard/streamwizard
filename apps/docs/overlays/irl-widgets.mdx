@@ -7,8 +7,8 @@ import OverlayUrlWarning from '/snippets/overlay-url-warning.mdx';
 
 Six small widgets, one number each: **Speed**, **Heading**, **Altitude**,
 **Latitude**, **Longitude** and **Accuracy**. They read your phone's GPS while
-you're out walking. They're under **Widgets → Other**, named `IRL · Speed` and
-so on.
+you're out walking. They're under **Widgets → IRL**, named `IRL · Speed` and
+so on, and only show up when you're editing a GPS overlay.
 
 If you want the whole bar laid out for you rather than six separate numbers,
 use the [walking stats](/irl/walking-stats) template instead. These widgets are
@@ -27,8 +27,10 @@ are two scenes involved.
    type. A **GPS** overlay is the one that reads the phone's location, and it
    only does that while its URL is open in a browser on the phone, normally as
    a web overlay inside IRL Pro.
-2. **Your widgets, wherever you want them.** The phone publishes each fix, and
-   widgets subscribe to it.
+2. **Your widgets, on that GPS overlay.** The phone publishes each fix, and
+   the widgets subscribe to it. The widget list only offers the IRL widgets
+   on a GPS overlay. One already placed on an OBS overlay keeps working, as
+   long as the GPS overlay is open on your phone.
 
 So the phone has to be holding that page open. Close it, lose signal, or deny
 the location permission, and the widgets have nothing to show.
@@ -45,7 +47,7 @@ physically are.
     In **Overlays**, create a new overlay and set its type to **GPS**.
   </Step>
   <Step title="Add the widgets you want">
-    Open **Widgets → Other** and add **IRL · Speed**, **IRL · Heading** or
+    Open **Widgets → IRL** and add **IRL · Speed**, **IRL · Heading** or
     whichever you need. Each is 200 × 50 to start with.
   </Step>
   <Step title="Open it on your phone">
