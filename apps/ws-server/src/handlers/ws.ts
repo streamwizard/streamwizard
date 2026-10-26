@@ -203,7 +203,12 @@ export const websocketHandlers = {
       const sinceInsert = Date.now() - (room.lastGeoInsertAt ?? 0);
       const shouldLog = moving ? sinceInsert >= 900 : sinceInsert >= 10_000;
 
-      if (session_id && shouldLog) {
+      // Only store a location while the streamer is live (SW-76). The overlay
+      // still gets every fix above so it can be set up before going live, but
+      // where someone walks off stream is theirs, not ours to keep. stream_id
+      // is set at publisher upgrade and kept current by the stream.online and
+      // stream.offline pushes (/internal/stream-status), so null means offline.
+      if (session_id && room.stream_id && shouldLog) {
         room.lastGeoInsertAt = Date.now();
         insertIrlGeoTrack(supabase, {
           user_id: userId,
