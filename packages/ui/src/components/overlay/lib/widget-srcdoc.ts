@@ -1,4 +1,4 @@
-import { resolveWidgetTemplate, type WidgetFieldSchema } from "./widget-fields";
+import { mergeFieldValues, resolveWidgetTemplate, type WidgetFieldSchema } from "./widget-fields";
 
 /**
  * Builds the sandboxed `srcdoc` a custom widget runs inside: the resolved
@@ -12,6 +12,18 @@ import { resolveWidgetTemplate, type WidgetFieldSchema } from "./widget-fields";
 // content attribute is hidden from the DOM, but the IDL property on any of
 // Next's own nonce'd scripts still exposes it. Under the overlay app's
 // 'unsafe-inline' policy the attribute is inert, so stamping is always safe.
+/**
+ * JSON that is safe inside an inline <script>: field values are free text, so
+ * a "</script>" or "<!--" in one must not end the tag, and U+2028/U+2029 are
+ * line terminators to older JS parsers.
+ */
+function inlineScriptJson(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+}
+
 function documentNonce(): string {
   if (typeof document === "undefined") return "";
   return document.querySelector<HTMLScriptElement>("script[nonce]")?.nonce ?? "";
@@ -42,6 +54,9 @@ export function buildWidgetSrcdoc(
     ? JSON.stringify(`${overlayOrigin}/api/widgets/user-state`)
     : "null";
   const twitchUrl = overlayOrigin ? JSON.stringify(`${overlayOrigin}/api/twitch`) : "null";
+  // Known at build time, so the widget can read its settings on its first
+  // line instead of only after onWidgetLoad arrives.
+  const initialFieldData = inlineScriptJson(mergeFieldValues(fields, fieldValues));
   const nonce = documentNonce();
   const connectSrc = [
     overlayOrigin,
@@ -120,8 +135,8 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
       stateUrl: ${stateUrl},
       userStateUrl: ${userStateUrl},
       session: null,
-      /** Latest field values. Replaced before each 'onFieldsUpdate'. */
-      fieldData: {},
+      /** Latest field values. Replaced on 'onWidgetLoad' and before each 'onFieldsUpdate'. */
+      fieldData: ${initialFieldData},
       // Typed wrapper around the raw state API; see the editor's autocomplete
       // (StreamWizardStateApi). Throws outside a placed overlay widget, where
       // there is no session to authenticate with.
@@ -374,10 +389,15 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
         }
       }
     };
+    // The bare 'fieldData' global the docs and starters have always used. A
+    // property, not a declaration: widget JS shares this script, so a 'var',
+    // 'let' or 'const' here would make an author's own top-level
+    // 'const fieldData' a SyntaxError. Kept in step with StreamWizard.fieldData.
+    window.fieldData = window.StreamWizard.fieldData;
     window.addEventListener('message', function(e) {
       if (e.data.type === 'onWidgetLoad') {
         if (e.data.payload && e.data.payload.session) window.StreamWizard.session = e.data.payload.session;
-        if (e.data.payload && e.data.payload.fieldData) window.StreamWizard.fieldData = e.data.payload.fieldData;
+        if (e.data.payload && e.data.payload.fieldData) window.StreamWizard.fieldData = window.fieldData = e.data.payload.fieldData;
         window.dispatchEvent(new CustomEvent('onWidgetLoad', { detail: e.data.payload }));
       }
       // A setting changed while the document stayed loaded. Widgets that act on
@@ -385,7 +405,7 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
       // one did, so it can fall back to a reload for widgets that read
       // fieldData once at load.
       if (e.data.type === 'swFieldData') {
-        window.StreamWizard.fieldData = e.data.fieldData || {};
+        window.StreamWizard.fieldData = window.fieldData = e.data.fieldData || {};
         window.dispatchEvent(new CustomEvent('onFieldsUpdate', { detail: { fieldData: window.StreamWizard.fieldData } }));
         try {
           parent.postMessage({ type: 'swFieldDataApplied', handled: swHandlesFieldUpdates }, '*');
