@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/privacy-policy") },
 };
 
-const LAST_UPDATED = "9 October 2026";
+const LAST_UPDATED = "26 October 2026";
 const CONTACT_EMAIL = LEGAL_CONTACT_EMAIL;
 
 function NormalContent() {
@@ -60,6 +60,50 @@ function NormalContent() {
         <p className="text-muted-foreground leading-relaxed mb-4">
           We store the content you create inside StreamWizard: clip folders,
           overlay configurations, widget settings, and related metadata.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">IRL GPS Location</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          If you open a GPS overlay on your phone and allow location access,
+          your phone&apos;s browser sends its position to our servers:
+          latitude, longitude, altitude, speed, heading, GPS accuracy and the
+          time of each reading. Nothing is read unless a GPS overlay is open
+          and you have allowed it. We pass each reading straight on to your own
+          overlays so the IRL widgets can show it. We only store readings while
+          you are live on Twitch: each one is saved with your account ID and
+          the stream it belongs to, up to about one per second while you move
+          and one every 10 seconds while you stand still. Readings from before
+          you go live or after your stream ends reach your overlays but are
+          never saved. We use the stored track to fix and improve the GPS
+          widgets, such as the distance counter. Your stored readings are
+          included when you download your data.
+        </p>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          The Walking stats overlay template can show your town and the
+          weather. To do that, the browser running your overlay sends your
+          coordinates (rounded to a few metres) directly to{" "}
+          <Link
+            href="https://osmfoundation.org/wiki/Privacy_Policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            OpenStreetMap Nominatim ↗
+          </Link>{" "}
+          for the place name and to{" "}
+          <Link
+            href="https://open-meteo.com/en/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            Open-Meteo ↗
+          </Link>{" "}
+          for the weather. These are independent services, not our
+          processors: they also see that browser&apos;s IP address, and their
+          own privacy policies apply. Turn off the location or weather field in
+          the widget&apos;s settings and those requests stop. Custom widgets
+          you add to an overlay can make the same requests.
         </p>
 
         <h3 className="text-lg font-medium mb-2">Discord Support Tickets</h3>
@@ -170,6 +214,21 @@ function NormalContent() {
                 <td className="py-2">
                   Performance of a contract (Art. 6(1)(b))
                 </td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Showing your live GPS position on your overlays
+                </td>
+                <td className="py-2">
+                  Performance of a contract (Art. 6(1)(b))
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Storing your GPS track while you are live, to fix and improve
+                  the GPS widgets
+                </td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
               </tr>
               <tr>
                 <td className="py-2 pr-4">
@@ -300,6 +359,10 @@ function NormalContent() {
             that cannot be tied to you may be kept for up to 7 years.
           </li>
           <li>Session replays (PostHog): deleted after 30 days.</li>
+          <li>
+            IRL GPS readings: deleted 30 days after they are saved, or right
+            away if you delete your account.
+          </li>
           <li>
             Discord support tickets: conversations, images and your feedback
             comment are deleted 12 months after the ticket closes; the rating
@@ -560,6 +623,46 @@ function GenZContent() {
           hold it for you.
         </p>
 
+        <h3 className="text-lg font-medium mb-2">ur GPS (IRL) 📍</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          open a GPS overlay on ur phone and allow location, and ur phone
+          sends us where it is: latitude, longitude, altitude, speed, heading,
+          GPS accuracy and the time. no GPS overlay open or no permission =
+          nothing. we pass it straight to ur own overlays so the IRL widgets
+          work. we only save it while ur live on Twitch, tagged with ur
+          account ID and that stream, about once a second while u move and
+          once every 10 seconds while u stand still. before u go live or after
+          u end the stream? ur overlays still get it, we save nothing. we use
+          the saved track to fix and improve the GPS widgets (like the distance
+          counter). it&apos;s in ur data download too.
+        </p>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          the Walking stats template can show ur town and the weather. for
+          that, the browser running ur overlay sends ur coordinates (rounded
+          to a few metres) straight to{" "}
+          <Link
+            href="https://osmfoundation.org/wiki/Privacy_Policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            OpenStreetMap Nominatim ↗
+          </Link>{" "}
+          (place name) and{" "}
+          <Link
+            href="https://open-meteo.com/en/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            Open-Meteo ↗
+          </Link>{" "}
+          (weather). they&apos;re their own thing, not us: they see that
+          browser&apos;s IP too, and their privacy policies apply. turn off
+          the location or weather field in the widget settings and those
+          requests stop. custom widgets u add can do the same.
+        </p>
+
         <h3 className="text-lg font-medium mb-2">support tickets 🎫</h3>
         <p className="text-muted-foreground leading-relaxed mb-4">
           opened a ticket in our Discord? we save the chat as it happens: the
@@ -648,6 +751,18 @@ function GenZContent() {
                   running the actual service (auth, features)
                 </td>
                 <td className="py-2">contract performance (Art. 6(1)(b))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  showing ur live GPS on ur overlays
+                </td>
+                <td className="py-2">contract performance (Art. 6(1)(b))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  saving ur GPS track while live, to fix the GPS widgets
+                </td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
               </tr>
               <tr>
                 <td className="py-2 pr-4">
@@ -774,6 +889,10 @@ function GenZContent() {
             can&apos;t trace back to u can stick around up to 7 years.
           </li>
           <li>session replays (PostHog): gone after 30 days.</li>
+          <li>
+            GPS readings: gone 30 days after we save them, or straight away if
+            u delete ur account.
+          </li>
           <li>
             support tickets: chats, images + ur feedback comment get deleted 12
             months after the ticket closes (the star rating stays, as a
