@@ -1,0 +1,170 @@
+---
+title: "Add widgets to your overlay"
+description: "What a widget is, how to add one, where its settings live, and every built-in widget in one list."
+---
+
+A widget is one thing on your overlay: an alert box, your chat, a follower goal,
+a clock, a logo. You add widgets in the overlay editor, drag them where you want
+them, and each one has its own settings. One overlay can hold as many as you
+like.
+
+## Before you start
+
+- You have an overlay. If not, [create one](/overlays/quickstart).
+- You're on a desktop. The editor needs a bigger screen than a phone.
+
+## Add a widget
+
+<Steps>
+  <Step title="Open the overlay in the editor">
+    In **Overlays**, select **Edit** on the overlay you want to change.
+  </Step>
+  <Step title="Open the widget list">
+    Select **Widgets** in the editor toolbar. The **Widget library** panel opens
+    with the search box ready, so you can type "goal" or "chat" straight away.
+  </Step>
+  <Step title="Pick a widget">
+    Select it. It lands on the canvas and shows up in the layers panel on the
+    left.
+  </Step>
+  <Step title="Place it">
+    Drag it where you want it and drag a corner to resize. The
+    [editor page](/overlays/editor) has the shortcuts.
+  </Step>
+  <Step title="Set it up">
+    With the widget selected, its settings appear in the panel on the right,
+    under **Properties**. That's where you pick a design, colours, sounds, and
+    whatever else that widget does.
+  </Step>
+  <Step title="Save">
+    Press **Ctrl+S** or select **Save**. Nothing saves on its own.
+  </Step>
+</Steps>
+
+<Tip>
+Most widgets only show something when an event happens. To see one working
+without waiting for a real follower, fire a test event: select **Demo** in the
+toolbar, pick an event and select **Fire**.
+</Tip>
+
+## Every built-in widget
+
+The list in the editor groups widgets the same way as below. Each name links to
+its own page with the settings and how to set it up.
+
+### Alerts & chat
+
+| Widget | What it does |
+|---|---|
+| [Alert box](/overlays/alerts) | Follows, subs, cheers, raids, watch streaks, gift bombs and more, each with your own image, video and sound. |
+| [Chat box](/overlays/chat) | Your Twitch chat on stream, with badges and 7TV, BTTV and FFZ emotes. Deleted messages disappear. |
+| [Emote wall](/overlays/emote-wall) | Chat emotes fly across your stream, and follows, subs, cheers and raids set off a big burst. |
+| [Emote combo](/overlays/emote-combo) | When chat spams the same emote, a counter shows it and punches up with every hit. |
+| [Hype train](/overlays/hype-train) | During a hype train, a train bounces around your stream with a wagon for everyone who cheered, subbed or gifted. |
+
+### Goals
+
+| Widget | What it does |
+|---|---|
+| [Follower goal](/overlays/goals) | Your Twitch follower goal as a live progress bar. Make the goal on Twitch, watch it fill here. |
+| [Sub goal](/overlays/goals) | Your Twitch sub goal, whichever kind you run: total or new, subs or sub points. |
+| [Bits goal](/overlays/goals) | Your Twitch Bits goal, counting Bits or cheerers. |
+
+### Polls & predictions
+
+| Widget | What it does |
+|---|---|
+| [Poll](/overlays/polls) | Your Twitch poll with live votes, a countdown and the winner. Start the poll on Twitch. |
+| [Prediction](/overlays/predictions) | Your Twitch prediction with live channel points, a countdown and the winner. Start it on Twitch. |
+
+### Ads
+
+| Widget | What it does |
+|---|---|
+| [Ads](/overlays/ads) | A heads-up before your ad break and a countdown while it runs, so viewers know when you're back. |
+
+### Credits
+
+| Widget | What it does |
+|---|---|
+| [End credits](/overlays/credits) | Rolls the names from your stream when your ending scene comes up: followers, subs, gifts, Bits, raids and more. |
+
+### Labels
+
+| Widget | What it does |
+|---|---|
+| [Label](/overlays/stream-labels) | One live value: latest follower, top cheerer, sub count, recent raids and more. |
+| [Event list](/overlays/stream-labels) | A running feed of your latest follows, subs, cheers, raids and rewards. You pick which ones show. |
+
+### Media
+
+| Widget | What it does |
+|---|---|
+| [Clips](/overlays/clips-widget) | Your Twitch clips on rotation, with fields like title, creator and game around them. |
+| [Image](/overlays/images-and-video) | A picture from your media library: logo, webcam frame, sponsor. GIFs move. |
+| [Video](/overlays/images-and-video) | A video from your media library, looping or played once. |
+| [Slideshow](/overlays/images-and-video) | Several pictures taking turns in one spot. |
+
+### Layout
+
+| Widget | What it does |
+|---|---|
+| [Text](/overlays/text-and-shapes) | Text you type, with your own font size, colour and alignment. |
+| [Shape](/overlays/text-and-shapes) | Rectangle, circle, triangle, diamond, star or line, for frames, backdrops and dividers. |
+| [Countdown](/overlays/time-widgets) | Counts down to a date and time: starting soon, a break, anything you schedule. |
+| [Time](/overlays/time-widgets) | The date and time, in your time zone or a fixed one. |
+| [Uptime](/overlays/time-widgets) | How long you've been live. Hides itself when you're offline. |
+
+### Other: IRL
+
+| Widget | What it does |
+|---|---|
+| [IRL · Speed](/overlays/irl-widgets) | How fast you're moving, from your phone's GPS. |
+| [IRL · Heading](/overlays/irl-widgets) | Which way you're facing. |
+| [IRL · Altitude](/overlays/irl-widgets) | How high up you are. |
+| [IRL · Latitude](/overlays/irl-widgets) | Your latitude. |
+| [IRL · Longitude](/overlays/irl-widgets) | Your longitude. |
+| [IRL · Accuracy](/overlays/irl-widgets) | How sure the GPS is about your position. |
+
+The IRL widgets need a GPS overlay open on your phone while you stream. The
+[IRL widgets page](/overlays/irl-widgets) explains how the two fit together.
+
+## Not finding what you need
+
+Select **Open Library** at the top of the widget list. That's where ready-made
+starters, widgets other streamers have published, and the ones you build
+yourself live. See [the widget library](/overlays/widget-library).
+
+If none of those fit, you can [build your own](/widgets/overview) with HTML, CSS
+and JavaScript.
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="I added a widget and the canvas looks empty">
+    Most widgets wait for an event before they show anything. An alert box with
+    no alert, a poll with no poll running, or an uptime widget while you're
+    offline all look empty. Fire a test from **Demo** in the toolbar, or select
+    the widget in the layers panel to see its outline.
+  </Accordion>
+  <Accordion title="It works in the editor but not on stream">
+    Check you saved, and that the overlay's switch is on in **Overlays**. Then
+    see [overlay is blank in OBS](/troubleshooting/overlay-blank).
+  </Accordion>
+  <Accordion title="My IRL widgets show nothing">
+    They need the GPS overlay open on your phone with location allowed. Close
+    that page or lose signal and they have nothing to show. See
+    [IRL widgets](/overlays/irl-widgets).
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Using the overlay editor" href="/overlays/editor">
+    Arrange, align and lock what you've added.
+  </Card>
+  <Card title="Set up alerts" href="/overlays/alerts">
+    The widget most streamers add first.
+  </Card>
+</CardGroup>
