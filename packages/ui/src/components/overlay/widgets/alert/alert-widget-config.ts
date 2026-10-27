@@ -601,6 +601,11 @@ export interface AlertWidgetItemConfig {
    * dropped. Without a ceiling a follow-bot wave parks the box for hours.
    */
   maxQueue: number;
+  /**
+   * Longest viewer name shown in full; longer ones end in "…". 0 = no limit.
+   * Twitch names run to 25 characters, which is the most this goes up to.
+   */
+  maxNameLength: number;
 
   variants: Record<AlertEventType, AlertVariantConfig>;
 }
@@ -721,6 +726,7 @@ export function createDefaultAlertWidgetConfig(): AlertWidgetItemConfig {
     masterVolume: 0.8,
     waitForSound: false,
     maxQueue: 50,
+    maxNameLength: 0,
     variants: Object.fromEntries(
       ALERT_EVENT_TYPES.map((e) => [e, createDefaultAlertVariantConfig(e)])
     ) as Record<AlertEventType, AlertVariantConfig>,
@@ -822,6 +828,19 @@ const LEGACY_RESUB_TITLE = "{name} subscribed for {amount} months in a row!";
 
 /** Hard ceiling on `maxQueue`, shared with the persisted schema. */
 export const ALERT_MAX_QUEUE_LIMIT = 200;
+
+/** Twitch's own limit on a name, so the most `maxNameLength` is worth setting. */
+export const ALERT_MAX_NAME_LENGTH = 25;
+
+/**
+ * `name` cut to `max` characters with an ellipsis. Counts code points, so an
+ * emoji or a CJK character is never split in half. 0 leaves it whole.
+ */
+export function truncateAlertName(name: string, max: number): string {
+  if (max <= 0) return name;
+  const chars = Array.from(name);
+  return chars.length > max ? `${chars.slice(0, max).join("")}…` : name;
+}
 
 const clamp01 = (n: unknown, fallback: number) =>
   typeof n === "number" && Number.isFinite(n)
@@ -1129,6 +1148,10 @@ export function normalizeAlertWidgetConfig(
       typeof r.maxQueue === "number" && Number.isFinite(r.maxQueue)
         ? Math.min(ALERT_MAX_QUEUE_LIMIT, Math.max(1, Math.round(r.maxQueue)))
         : base.maxQueue,
+    maxNameLength:
+      typeof r.maxNameLength === "number" && Number.isFinite(r.maxNameLength)
+        ? Math.min(ALERT_MAX_NAME_LENGTH, Math.max(0, Math.round(r.maxNameLength)))
+        : base.maxNameLength,
     variants: Object.fromEntries(
       ALERT_EVENT_TYPES.map((e) => [
         e,

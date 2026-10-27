@@ -15,6 +15,7 @@ import {
 import {
   ALERT_EVENT_CATEGORIES,
   ALERT_EVENT_LABELS,
+  ALERT_MAX_NAME_LENGTH,
   type AlertEventCategoryId,
   type AlertEventType,
   type AlertVariantConfig,
@@ -250,6 +251,15 @@ export function AlertList({
             step={5}
             hint="Once this many are lined up, new ones are skipped. Keeps a follow-bot wave from booking your alerts for the next hour."
             onChange={(v) => onPatchConfig({ maxQueue: Math.round(v) })}
+          />
+          <SliderField
+            id={`alert-max-name-${itemId}`}
+            label="Longest name"
+            value={cfg.maxNameLength}
+            min={0}
+            max={ALERT_MAX_NAME_LENGTH}
+            hint="Longer names are cut short and end in …, so a 25-letter name can't push your layout around. At 0 every name shows in full."
+            onChange={(v) => onPatchConfig({ maxNameLength: Math.round(v) })}
           />
 
           <SwitchField

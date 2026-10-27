@@ -29,6 +29,7 @@ import {
   normalizeAlertWidgetConfig,
   pickAlertVariation,
   renderAlertTemplate,
+  truncateAlertName,
   type AlertEventType,
   type AlertInstance,
   type AlertPresentation,
@@ -390,6 +391,11 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
   // Text and typography follow the settings while the alert plays, so an edit
   // shows on the alert being tested. Its timing and media stay as started.
   const variant = alertLiveLook(cfg, alert.event, active.variationId, active.variant);
+  // What the viewer sees. Variations matched on the full name when it started.
+  const shown =
+    cfg.maxNameLength > 0
+      ? { ...alert, name: truncateAlertName(alert.name, cfg.maxNameLength) }
+      : alert;
   const fontFamily = `"${variant.fontFamily}", sans-serif`;
   const textShadow = variant.textShadow ? "0 2px 8px rgba(0,0,0,0.6)" : "none";
   const alignItems =
@@ -473,7 +479,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     >
       {renderAccentedTemplate(
         variant.titleTemplate,
-        alert,
+        shown,
         variant.accentColor,
         variant.highlightAnimation
       )}
@@ -481,7 +487,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
   );
 
   const messageText = variant.messageTemplate
-    ? renderAlertTemplate(variant.messageTemplate, alert).trim()
+    ? renderAlertTemplate(variant.messageTemplate, shown).trim()
     : "";
   const message = messageText ? (
     <div

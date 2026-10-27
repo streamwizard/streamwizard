@@ -39,6 +39,7 @@ import {
   createDefaultAlertWidgetConfig,
   normalizeAlertWidgetConfig,
   renderAlertTemplate,
+  truncateAlertName,
   type AlertEventType,
 } from "./alert-widget-config";
 import { buildWidgetTestEvent } from "@repo/schemas";
@@ -742,6 +743,44 @@ describe("video sound", () => {
     cfg.variants.follow.videoVolume = 0.3;
     const saved = alertWidgetItemConfigSchema.parse(cfg);
     expect(normalizeAlertWidgetConfig(saved).variants.follow.videoVolume).toBe(0.3);
+  });
+});
+
+describe("long names", () => {
+  it("cuts a name past the limit and ends it in an ellipsis", () => {
+    const name = "abcdefghijklmnopqrstuvwxy"; // 25, Twitch's most
+    expect(truncateAlertName(name, 12)).toBe("abcdefghijkl…");
+    expect(truncateAlertName("short", 12)).toBe("short");
+    expect(truncateAlertName("exactlytwelv", 12)).toBe("exactlytwelv");
+  });
+
+  it("leaves every name whole at 0", () => {
+    expect(truncateAlertName("abcdefghijklmnopqrstuvwxy", 0)).toBe("abcdefghijklmnopqrstuvwxy");
+  });
+
+  it("never splits an emoji or a CJK character", () => {
+    expect(truncateAlertName("🎉🎉🎉🎉", 2)).toBe("🎉🎉…");
+    expect(truncateAlertName("配信者の名前", 3)).toBe("配信者…");
+  });
+
+  it("has no limit on a new box or one saved before the setting", () => {
+    expect(createDefaultAlertWidgetConfig().maxNameLength).toBe(0);
+    expect(normalizeAlertWidgetConfig({ gapSeconds: 2, variants: {} }).maxNameLength).toBe(0);
+  });
+
+  it("keeps a saved limit inside Twitch's 25", () => {
+    expect(normalizeAlertWidgetConfig({ maxNameLength: 12 }).maxNameLength).toBe(12);
+    expect(normalizeAlertWidgetConfig({ maxNameLength: 99 }).maxNameLength).toBe(25);
+    expect(normalizeAlertWidgetConfig({ maxNameLength: -3 }).maxNameLength).toBe(0);
+    expect(normalizeAlertWidgetConfig({ maxNameLength: "x" }).maxNameLength).toBe(0);
+  });
+
+  it("is not stripped by the save schema", () => {
+    const saved = alertWidgetItemConfigSchema.parse({
+      ...createDefaultAlertWidgetConfig(),
+      maxNameLength: 12,
+    });
+    expect(saved.maxNameLength).toBe(12);
   });
 });
 

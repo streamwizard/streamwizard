@@ -15,6 +15,7 @@ import {
   ALERT_ANIMATION_MAX_SECONDS,
   ALERT_ANIMATIONS_IN,
   ALERT_ANIMATIONS_OUT,
+  ALERT_MAX_NAME_LENGTH,
   ALERT_MAX_QUEUE_LIMIT,
   ALERT_SUB_TIERS,
   ALERT_VARIATION_LIMITS,
@@ -433,6 +434,7 @@ export const alertWidgetItemConfigSchema = z.object({
   masterVolume: z.number().min(0).max(1).default(0.8),
   waitForSound: z.boolean().default(false),
   maxQueue: z.number().int().min(1).max(ALERT_MAX_QUEUE_LIMIT).default(50),
+  maxNameLength: z.number().int().min(0).max(ALERT_MAX_NAME_LENGTH).default(0),
   variants: z.object(
     Object.fromEntries(
       ALERT_EVENT_TYPES.map((event) => [event, alertVariantConfigSchema.optional()])
