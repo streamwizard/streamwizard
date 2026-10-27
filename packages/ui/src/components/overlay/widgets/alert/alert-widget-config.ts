@@ -451,9 +451,8 @@ export type AlertVariationOperator = (typeof ALERT_VARIATION_OPERATORS)[number];
 export const ALERT_SUB_TIERS = ["prime", "1000", "2000", "3000"] as const;
 export type AlertSubTier = (typeof ALERT_SUB_TIERS)[number];
 
-/** What a variation looks at to decide whether it plays. One thing, never a mix. */
+/** One thing a variation looks at to decide whether it plays. */
 export type AlertVariationCondition =
-  | { parameter: "none" }
   | {
       parameter: "amount";
       operator: AlertVariationOperator;
@@ -467,6 +466,10 @@ export type AlertVariationCondition =
   | { parameter: "anonymous"; value: boolean };
 
 export type AlertVariationParameter = AlertVariationCondition["parameter"];
+
+/** all: every condition has to hold · any: one is enough. */
+export const ALERT_VARIATION_MATCH_MODES = ["all", "any"] as const;
+export type AlertVariationMatch = (typeof ALERT_VARIATION_MATCH_MODES)[number];
 
 /**
  * An alternative version of an alert that plays instead of it when its
@@ -485,7 +488,13 @@ export interface AlertVariation {
   enabled: boolean;
   /** 0–100, decimals allowed. How often a matching event actually plays it. */
   chance: number;
-  condition: AlertVariationCondition;
+  /** Whether every condition has to hold, or one is enough. */
+  match: AlertVariationMatch;
+  /**
+   * What it looks at. Empty means it matches every event of its alert, so only
+   * its chance and the other variations decide whether it plays.
+   */
+  conditions: AlertVariationCondition[];
   settings: AlertPresentation;
 }
 
@@ -494,6 +503,8 @@ export const ALERT_VARIATION_LIMITS = {
   nameLength: 60,
   /** Usernames in one name condition. */
   names: 50,
+  /** Conditions on one variation. */
+  conditions: 5,
 } as const;
 
 /** Everything about one alert type: its presentation, its gate, its variations. */
@@ -890,12 +901,15 @@ function normalizeAlertVariant(
   };
 }
 
-function normalizeAlertCondition(raw: unknown, event: AlertEventType): AlertVariationCondition {
-  const none: AlertVariationCondition = { parameter: "none" };
-  if (!raw || typeof raw !== "object") return none;
+/** A saved condition made safe, or null when this alert cannot have it. */
+function normalizeAlertCondition(
+  raw: unknown,
+  event: AlertEventType
+): AlertVariationCondition | null {
+  if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   const allowed = alertVariationParameters(event);
-  if (!allowed.includes(r.parameter as AlertVariationParameter)) return none;
+  if (!allowed.includes(r.parameter as AlertVariationParameter)) return null;
 
   switch (r.parameter) {
     case "amount": {
@@ -927,8 +941,24 @@ function normalizeAlertCondition(raw: unknown, event: AlertEventType): AlertVari
     case "anonymous":
       return { parameter: r.parameter, value: r.value !== false };
     default:
-      return none;
+      return null;
   }
+}
+
+/**
+ * A variation's conditions, from either shape it has been saved in. Before
+ * SW-251 a variation held one `condition`, with `{ parameter: "none" }` for
+ * none; that reads as a list of one, or an empty list.
+ */
+function normalizeAlertConditions(
+  v: Record<string, unknown>,
+  event: AlertEventType
+): AlertVariationCondition[] {
+  const raw = Array.isArray(v.conditions) ? v.conditions : v.condition ? [v.condition] : [];
+  return raw
+    .map((c) => normalizeAlertCondition(c, event))
+    .filter((c): c is AlertVariationCondition => c !== null)
+    .slice(0, ALERT_VARIATION_LIMITS.conditions);
 }
 
 function normalizeAlertVariations(raw: unknown, event: AlertEventType): AlertVariation[] {
@@ -954,7 +984,8 @@ function normalizeAlertVariations(raw: unknown, event: AlertEventType): AlertVar
           typeof v.chance === "number" && Number.isFinite(v.chance)
             ? Math.min(100, Math.max(0, v.chance))
             : 100,
-        condition: normalizeAlertCondition(v.condition, event),
+        match: v.match === "any" ? "any" : "all",
+        conditions: normalizeAlertConditions(v, event),
         // The same coercion an alert gets, then only the part a variation has.
         settings: alertPresentationOf(normalizeAlertVariant(v.settings, event)),
       };
@@ -1418,7 +1449,7 @@ export function renderAlertTemplate(
 /** What a variation on this event may look at. Empty = the event takes none. */
 export function alertVariationParameters(event: AlertEventType): readonly AlertVariationParameter[] {
   if (!ALERT_VARIATION_EVENTS.includes(event)) return [];
-  const out: AlertVariationParameter[] = ["none"];
+  const out: AlertVariationParameter[] = [];
   if (ALERT_AMOUNT_LABELS[event]) out.push("amount");
   if (ALERT_TIER_EVENTS.includes(event)) out.push("tier");
   if (!ALERT_NAMELESS_EVENTS.includes(event)) out.push("name");
@@ -1455,8 +1486,6 @@ export function alertConditionMatches(
   sessionTop: number
 ): boolean {
   switch (condition.parameter) {
-    case "none":
-      return true;
     case "amount":
       if (condition.operator === "exact") return alert.amount === condition.value;
       if (condition.operator === "at_least") return alert.amount >= condition.value;
@@ -1496,9 +1525,61 @@ function conditionRank(condition: AlertVariationCondition): number {
     case "gifted":
     case "anonymous":
       return 2;
-    case "none":
-      return 0;
   }
+}
+
+/** How high an amount condition sets the bar. A ceiling counts down: the tighter one is higher. */
+function conditionRequirement(condition: AlertVariationCondition): number | null {
+  if (condition.parameter !== "amount") return null;
+  return condition.operator === "at_most" ? -condition.value : condition.value;
+}
+
+/**
+ * Whether a variation's conditions hold for an alert: all of them, or any one,
+ * as it is set. No conditions always holds.
+ */
+export function alertVariationMatches(
+  alert: AlertInstance,
+  variation: Pick<AlertVariation, "match" | "conditions">,
+  sessionTop: number
+): boolean {
+  const { match, conditions } = variation;
+  if (conditions.length === 0) return true;
+  const holds = (c: AlertVariationCondition) => alertConditionMatches(alert, c, sessionTop);
+  return match === "any" ? conditions.some(holds) : conditions.every(holds);
+}
+
+/**
+ * How specific a variation is, as [rank, depth, requirement] -- compared in
+ * that order, higher first.
+ *
+ * rank: "all" is as specific as its most specific condition, since every one
+ * has to hold; "any" only as specific as its least, since that one alone can
+ * let it through. No conditions is 0.
+ * depth: under "all", each extra condition narrows it, so more wins a tie.
+ * requirement: the highest bar set by an amount condition ("any": the lowest).
+ */
+function variationSpecificity(v: AlertVariation): [number, number, number] {
+  if (v.conditions.length === 0) return [0, 0, 0];
+  const all = v.match === "all";
+  const pick = (values: number[]) => (all ? Math.max(...values) : Math.min(...values));
+  const requirements = v.conditions
+    .map(conditionRequirement)
+    .filter((r): r is number => r !== null);
+  return [
+    pick(v.conditions.map(conditionRank)),
+    all ? v.conditions.length : 1,
+    requirements.length ? pick(requirements) : 0,
+  ];
+}
+
+function compareSpecificity(a: AlertVariation, b: AlertVariation): number {
+  const sa = variationSpecificity(a);
+  const sb = variationSpecificity(b);
+  for (let i = 0; i < sa.length; i++) {
+    if (sa[i] !== sb[i]) return sa[i]! - sb[i]!;
+  }
+  return 0;
 }
 
 export interface AlertVariationContext {
@@ -1511,11 +1592,13 @@ export interface AlertVariationContext {
 /**
  * The variation that plays for an alert, or null for the alert itself.
  *
- * Off variations and ones that miss their condition or their chance roll are
- * out. Of the rest the most specific kind of condition wins, then the highest
- * requirement -- a 1000-bit cheer plays "at least 1000", not "at least 100".
- * Still tied, the first in the list plays, or a random one when the alert is
- * set to pick at random (how several alerts rotate on one condition).
+ * Off variations and ones that miss their conditions or their chance roll are
+ * out. Of the rest the most specific wins (see `variationSpecificity`): the
+ * most specific kind of condition, then the most conditions that all have to
+ * hold, then the highest requirement -- a 1000-bit cheer plays "at least 1000",
+ * not "at least 100". Still tied, the first in the list plays, or a random one
+ * when the alert is set to pick at random (how several alerts rotate on one
+ * condition).
  */
 export function pickAlertVariation(
   alert: AlertInstance,
@@ -1525,28 +1608,13 @@ export function pickAlertVariation(
   const matching = variant.variations.filter(
     (v) =>
       v.enabled &&
-      alertConditionMatches(alert, v.condition, sessionTop) &&
+      alertVariationMatches(alert, v, sessionTop) &&
       random() * 100 < v.chance
   );
   if (matching.length === 0) return null;
 
-  // The higher floor wins; between two ceilings the lower one is the tighter fit.
-  const requirement = (v: AlertVariation) =>
-    v.condition.parameter !== "amount"
-      ? 0
-      : v.condition.operator === "at_most"
-        ? -v.condition.value
-        : v.condition.value;
-  const best = matching.reduce((a, b) => {
-    const byRank = conditionRank(b.condition) - conditionRank(a.condition);
-    if (byRank !== 0) return byRank > 0 ? b : a;
-    return requirement(b) > requirement(a) ? b : a;
-  });
-  const tied = matching.filter(
-    (v) =>
-      conditionRank(v.condition) === conditionRank(best.condition) &&
-      requirement(v) === requirement(best)
-  );
+  const best = matching.reduce((a, b) => (compareSpecificity(b, a) > 0 ? b : a));
+  const tied = matching.filter((v) => compareSpecificity(v, best) === 0);
   if (tied.length === 1 || !variant.randomPick) return tied[0]!;
   return tied[Math.min(tied.length - 1, Math.floor(random() * tied.length))]!;
 }
@@ -1556,48 +1624,64 @@ export function pickAlertVariation(
  * "Bits: at least 1000", "Viewer: toastcrumb, ninetoad · 25% of the time".
  */
 export function alertVariationSummary(event: AlertEventType, variation: AlertVariation): string {
-  const { condition, chance } = variation;
+  const { conditions, match, chance } = variation;
+  const often = chance >= 100 ? "" : `${Number(chance.toFixed(2))}% of the time`;
+  if (conditions.length === 0) return often || "Every time";
+
+  const when = conditions
+    .map((condition) => alertConditionSummary(event, condition))
+    .join(match === "any" ? " or " : " and ");
+  return often ? `${when} · ${often}` : when;
+}
+
+/** One condition in plain words: "Bits: at least 1000", "Sub tier: Tier 3". */
+export function alertConditionSummary(
+  event: AlertEventType,
+  condition: AlertVariationCondition
+): string {
   const unit = ALERT_AMOUNT_LABELS[event] ?? "amount";
   const label = unit.charAt(0).toUpperCase() + unit.slice(1);
-  const often = chance >= 100 ? "" : `${Number(chance.toFixed(2))}% of the time`;
 
-  let when: string;
   switch (condition.parameter) {
-    case "none":
-      return often || "Every time";
     case "amount":
-      when =
-        condition.operator === "exact"
-          ? `${label}: exactly ${condition.value}`
-          : condition.operator === "at_least"
-            ? `${label}: at least ${condition.value}`
-            : condition.operator === "at_most"
-              ? `${label}: at most ${condition.value}`
-              : condition.operator === "between"
-                ? `${label}: ${condition.value} to ${condition.max ?? condition.value}`
-                : condition.value > 0
-              ? `${label}: biggest of the stream, at least ${condition.value}`
-              : `${label}: biggest of the stream`;
-      break;
+      if (condition.operator === "exact") return `${label}: exactly ${condition.value}`;
+      if (condition.operator === "at_least") return `${label}: at least ${condition.value}`;
+      if (condition.operator === "at_most") return `${label}: at most ${condition.value}`;
+      if (condition.operator === "between") {
+        return `${label}: ${condition.value} to ${condition.max ?? condition.value}`;
+      }
+      return condition.value > 0
+        ? `${label}: biggest of the stream, at least ${condition.value}`
+        : `${label}: biggest of the stream`;
     case "tier":
-      when = `Sub tier: ${alertTierLabel(condition.tier)}`;
-      break;
+      return `Sub tier: ${alertTierLabel(condition.tier)}`;
     case "name": {
       const shown = condition.names.slice(0, 3).join(", ");
       const more = condition.names.length - 3;
-      when = condition.names.length === 0
+      return condition.names.length === 0
         ? "Viewer: nobody yet"
         : `Viewer: ${shown}${more > 0 ? ` and ${more} more` : ""}`;
-      break;
     }
     case "gifted":
-      when = condition.value ? "Gifted sub" : "Not gifted";
-      break;
+      return condition.value ? "Gifted sub" : "Not gifted";
     case "anonymous":
-      when = condition.value ? "Anonymous" : "Not anonymous";
-      break;
+      return condition.value ? "Anonymous" : "Not anonymous";
   }
-  return often ? `${when} · ${often}` : when;
+}
+
+/** A fresh condition on `parameter`, as the editor adds one. */
+export function createAlertCondition(parameter: AlertVariationParameter): AlertVariationCondition {
+  switch (parameter) {
+    case "amount":
+      return { parameter, operator: "at_least", value: 1 };
+    case "tier":
+      return { parameter, tier: "1000" };
+    case "name":
+      return { parameter, names: [] };
+    case "gifted":
+    case "anonymous":
+      return { parameter, value: true };
+  }
 }
 
 /**
@@ -1612,19 +1696,14 @@ export function createAlertVariation(
   name: string
 ): AlertVariation {
   const parameters = alertVariationParameters(event);
-  const condition: AlertVariationCondition = parameters.includes("amount")
-    ? { parameter: "amount", operator: "at_least", value: 1 }
-    : parameters.includes("tier")
-      ? { parameter: "tier", tier: "1000" }
-      : parameters.includes("name")
-        ? { parameter: "name", names: [] }
-        : { parameter: "none" };
+  const first = (["amount", "tier", "name"] as const).find((p) => parameters.includes(p));
   return {
     id,
     name: name.slice(0, ALERT_VARIATION_LIMITS.nameLength),
     enabled: true,
     chance: 100,
-    condition,
+    match: "all",
+    conditions: first ? [createAlertCondition(first)] : [],
     settings: alertPresentationOf(settings),
   };
 }

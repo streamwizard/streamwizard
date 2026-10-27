@@ -81,8 +81,6 @@ export function alertAmountTitle(event: AlertEventType): string {
 /** What a variation can look at, as the choice reads in the editor. */
 export function alertParameterLabel(event: AlertEventType, parameter: AlertVariationParameter): string {
   switch (parameter) {
-    case "none":
-      return "Nothing, chance only";
     case "amount":
       return alertAmountTitle(event);
     case "tier":

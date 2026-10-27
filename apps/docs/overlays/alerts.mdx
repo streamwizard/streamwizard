@@ -84,8 +84,8 @@ while a small one fades.
 
 ## Variations
 
-A variation is another version of an alert that plays instead of it when a
-condition is met. A louder cheer alert from 1000 bits up. A different video for
+A variation is another version of an alert that plays instead of it when its
+conditions are met. A louder cheer alert from 1000 bits up. A different video for
 a 12 month resub. One alert just for your mods.
 
 Open an alert, go to **Variations**, and hit **Add variation**. Start from the
@@ -93,22 +93,30 @@ alert itself or copy any other alert or variation. Each one has its own text,
 media, sound, and style. It is a separate copy: changing the alert later does
 not change its variations.
 
-A variation can look at one thing:
+A variation checks one or more conditions:
 
-- **A number**: bits, months, viewers, gifts. Exactly, at least, or the biggest of the stream.
+- **A number**: bits, months, viewers, gifts. Exactly, at least, at most, between two numbers (both included), or the biggest of the stream.
 - **Sub tier**: Prime, Tier 1, Tier 2, or Tier 3.
 - **Viewer name**: one or more usernames, commas between them.
-- **Nothing**: chance only.
+- **Gifted sub**: on subs and resubs, a gifted sub or one the viewer paid for.
+- **Anonymous**: on cheers, gift subs, and gift bombs, sent anonymously or not.
+
+Add up to five. With two or more, pick **All of them** (a Tier 3 sub that is
+also 6 months or more) or **Any of them** (either one is enough). No conditions
+means it plays every time.
 
 **Chance** sets how often it plays when it matches. 25 is about one in four.
 
 When several match, the most specific one plays: a viewer by name, then the
-biggest of the stream, then an exact number or tier, then "at least". Between
-two "at least" variations the higher number wins, so 1000 bits plays your 1000
-variation, not your 100 one. Still tied? The first in the list plays, or switch
-on **Pick at random when several match** to rotate them.
+biggest of the stream, then an exact number, a range, a tier, gifted, or
+anonymous, then "at least" and "at most". A variation where all of several
+conditions have to hold beats one with fewer of the same kind. One set to
+"Any of them" counts only as its loosest condition. Between two "at least"
+variations the higher number wins, so 1000 bits plays your 1000 variation, not
+your 100 one. Still tied? The first in the list plays, or switch on **Pick at
+random when several match** to rotate them.
 
-The play button on a variation tests that exact one, whatever its condition.
+The play button on a variation tests that exact one, whatever its conditions.
 
 A few things to know:
 

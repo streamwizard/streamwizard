@@ -18,6 +18,7 @@ import {
   ALERT_MAX_QUEUE_LIMIT,
   ALERT_SUB_TIERS,
   ALERT_VARIATION_LIMITS,
+  ALERT_VARIATION_MATCH_MODES,
   ALERT_VARIATION_OPERATORS,
   migrateAlertAnimationIn,
   migrateAlertAnimationOut,
@@ -365,7 +366,6 @@ const alertPresentationSchema = z.object({
 });
 
 const alertVariationConditionSchema = z.discriminatedUnion("parameter", [
-  z.object({ parameter: z.literal("none") }),
   z.object({
     parameter: z.literal("amount"),
     operator: z.enum(ALERT_VARIATION_OPERATORS),
@@ -386,14 +386,28 @@ const alertVariationConditionSchema = z.discriminatedUnion("parameter", [
  * the usual reason: a z.object strips what it does not know, so a key missing
  * here would vanish from every variation on save.
  */
-const alertVariationSchema = z.object({
-  id: z.string().min(1).max(64),
-  name: z.string().max(ALERT_VARIATION_LIMITS.nameLength),
-  enabled: z.boolean().default(true),
-  chance: z.number().min(0).max(100).default(100),
-  condition: alertVariationConditionSchema,
-  settings: alertPresentationSchema,
-});
+const alertVariationSchema = z.preprocess(
+  (raw) => {
+    // Before SW-251 a variation held one `condition`, `{ parameter: "none" }`
+    // for none. An old save or export would otherwise lose it here.
+    if (!raw || typeof raw !== "object" || "conditions" in raw || !("condition" in raw)) return raw;
+    const { condition, ...rest } = raw as Record<string, unknown>;
+    const none = (condition as { parameter?: unknown } | null)?.parameter === "none";
+    return { ...rest, conditions: condition && !none ? [condition] : [] };
+  },
+  z.object({
+    id: z.string().min(1).max(64),
+    name: z.string().max(ALERT_VARIATION_LIMITS.nameLength),
+    enabled: z.boolean().default(true),
+    chance: z.number().min(0).max(100).default(100),
+    match: z.enum(ALERT_VARIATION_MATCH_MODES).default("all"),
+    conditions: z
+      .array(alertVariationConditionSchema)
+      .max(ALERT_VARIATION_LIMITS.conditions)
+      .default([]),
+    settings: alertPresentationSchema,
+  })
+);
 
 const alertVariantConfigSchema = alertPresentationSchema.extend({
   enabled: z.boolean().default(true),

@@ -1,43 +1,20 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { ArrowLeft } from "lucide-react";
-import {
-  Button,
-  Input,
-  Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Switch,
-} from "@repo/ui";
+import { Button, Label, Switch } from "@repo/ui";
 import {
   ALERT_EVENT_LABELS,
-  ALERT_SUB_TIERS,
   ALERT_VARIATION_LIMITS,
-  alertTierLabel,
-  alertVariationOperators,
-  alertVariationParameters,
   alertVariationSummary,
-  normalizeAlertName,
   type AlertEventType,
   type AlertPresentation,
-  type AlertSubTier,
   type AlertVariation,
-  type AlertVariationCondition,
-  type AlertVariationOperator,
-  type AlertVariationParameter,
 } from "@repo/ui/overlay";
-import {
-  InspectorHint,
-  InspectorSection,
-  NumberField,
-  SliderField,
-} from "@/components/overlays/inspector-fields";
+import { InspectorSection, SliderField } from "@/components/overlays/inspector-fields";
+import { DraftInput } from "./alert-draft-input";
 import { AlertPresentationFields, type AlertFieldGroup } from "./alert-presentation-fields";
-import { alertAmountTitle, alertParameterLabel, OPERATOR_LABELS } from "./alert-widget-labels";
+import { AlertVariationConditions } from "./alert-variation-conditions";
 
 export type AlertVariationGroup = AlertFieldGroup | "condition";
 
@@ -56,59 +33,6 @@ export interface AlertVariationEditorProps {
   onCancel: () => void;
   onPatch: (updates: Partial<AlertVariation>) => void;
   onTest: () => void;
-}
-
-/** The condition a variation gets when its parameter is switched to `parameter`. */
-function defaultCondition(parameter: AlertVariationParameter): AlertVariationCondition {
-  switch (parameter) {
-    case "amount":
-      return { parameter, operator: "at_least", value: 1 };
-    case "tier":
-      return { parameter, tier: "1000" };
-    case "name":
-      return { parameter, names: [] };
-    case "gifted":
-    case "anonymous":
-      return { parameter, value: true };
-    case "none":
-      return { parameter };
-  }
-}
-
-/**
- * A text field that keeps what is being typed to itself. The stored value is
- * cleaned on every read (an empty name gets a default, usernames lose their
- * spaces and capitals), and a field bound straight to it would rewrite the
- * text under the cursor. It shows the stored value again once focus leaves.
- */
-function DraftInput({
-  id,
-  stored,
-  maxLength,
-  placeholder,
-  onChange,
-}: {
-  id: string;
-  stored: string;
-  maxLength?: number;
-  placeholder?: string;
-  onChange: (text: string) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-  return (
-    <Input
-      id={id}
-      value={draft ?? stored}
-      maxLength={maxLength}
-      placeholder={placeholder}
-      className="h-9 text-sm"
-      onChange={(e) => {
-        setDraft(e.target.value);
-        onChange(e.target.value);
-      }}
-      onBlur={() => setDraft(null)}
-    />
-  );
 }
 
 /**
@@ -133,9 +57,6 @@ export function AlertVariationEditor({
 }: AlertVariationEditorProps) {
   const backRef = useRef<HTMLButtonElement>(null);
   const alertLabel = ALERT_EVENT_LABELS[event];
-  const parameters = alertVariationParameters(event);
-  const { condition } = variation;
-  const amountTitle = alertAmountTitle(event);
 
   useLayoutEffect(() => {
     backRef.current?.focus({ preventScroll: true });
@@ -181,7 +102,7 @@ export function AlertVariationEditor({
             className="shrink-0"
             disabled={testBusy}
             aria-label={`Test the ${variation.name} variation`}
-            title="Plays this variation, whatever its condition"
+            title="Plays this variation, whatever its conditions"
             onClick={onTest}
           >
             Test
@@ -212,203 +133,13 @@ export function AlertVariationEditor({
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label id={`alert-variation-parameter-${variation.id}`} className="text-xs">
-                Looks at
-              </Label>
-              <Select
-                value={condition.parameter}
-                onValueChange={(v) =>
-                  onPatch({ condition: defaultCondition(v as AlertVariationParameter) })
-                }
-              >
-                <SelectTrigger
-                  aria-labelledby={`alert-variation-parameter-${variation.id}`}
-                  className="h-9 w-full text-sm"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {parameters.map((parameter) => (
-                    <SelectItem key={parameter} value={parameter} className="text-sm">
-                      {alertParameterLabel(event, parameter)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {condition.parameter === "amount" ? (
-              <div className="grid grid-cols-[1fr_6rem] gap-2">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-1">
-                    <Label id={`alert-variation-operator-${variation.id}`} className="text-xs">
-                      Plays when it is
-                    </Label>
-                    {condition.operator === "session_top" ? (
-                      <InspectorHint label="About the biggest of the stream">
-                        The biggest since the overlay loaded. Reloading the browser source in OBS
-                        starts the count again. The number beside it is a floor: 0 means any new
-                        record counts.
-                      </InspectorHint>
-                    ) : null}
-                  </div>
-                  <Select
-                    value={condition.operator}
-                    onValueChange={(v) => {
-                      const operator = v as AlertVariationOperator;
-                      const { value } = condition;
-                      onPatch({
-                        condition:
-                          operator === "between"
-                            ? { parameter: "amount", operator, value, max: Math.max(value, condition.max ?? 0) }
-                            : { parameter: "amount", operator, value },
-                      });
-                    }}
-                  >
-                    <SelectTrigger
-                      aria-labelledby={`alert-variation-operator-${variation.id}`}
-                      className="h-9 w-full text-sm"
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {alertVariationOperators(event).map((operator) => (
-                        <SelectItem key={operator} value={operator} className="text-sm">
-                          {OPERATOR_LABELS[operator]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="truncate text-xs">
-                    {condition.operator === "session_top"
-                      ? "At least"
-                      : condition.operator === "between"
-                        ? "From"
-                        : amountTitle}
-                  </Label>
-                  <NumberField
-                    value={condition.value}
-                    min={0}
-                    aria-label={
-                      condition.operator === "between"
-                        ? `${amountTitle} from`
-                        : `${OPERATOR_LABELS[condition.operator]} ${amountTitle.toLowerCase()}`
-                    }
-                    className="h-9 text-sm tabular-nums"
-                    onCommit={(value) =>
-                      onPatch({
-                        condition:
-                          condition.operator === "between"
-                            ? { ...condition, value, max: Math.max(value, condition.max ?? value) }
-                            : { ...condition, value },
-                      })
-                    }
-                  />
-                </div>
-                {condition.operator === "between" ? (
-                  <div className="col-start-2 space-y-1.5">
-                    <Label className="truncate text-xs">To</Label>
-                    <NumberField
-                      value={condition.max ?? condition.value}
-                      min={0}
-                      aria-label={`${amountTitle} to`}
-                      className="h-9 text-sm tabular-nums"
-                      onCommit={(max) =>
-                        onPatch({
-                          condition: {
-                            ...condition,
-                            value: Math.min(condition.value, max),
-                            max: Math.max(condition.value, max),
-                          },
-                        })
-                      }
-                    />
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-
-            {condition.parameter === "tier" ? (
-              <div className="space-y-1.5">
-                <Label id={`alert-variation-tier-${variation.id}`} className="text-xs">
-                  Tier
-                </Label>
-                <Select
-                  value={condition.tier}
-                  onValueChange={(v) =>
-                    onPatch({ condition: { parameter: "tier", tier: v as AlertSubTier } })
-                  }
-                >
-                  <SelectTrigger
-                    aria-labelledby={`alert-variation-tier-${variation.id}`}
-                    className="h-9 w-full text-sm"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ALERT_SUB_TIERS.map((tier) => (
-                      <SelectItem key={tier} value={tier} className="text-sm">
-                        {alertTierLabel(tier)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-
-            {condition.parameter === "name" ? (
-              <div className="space-y-1.5">
-                <Label htmlFor={`alert-variation-names-${variation.id}`} className="text-xs">
-                  Viewers
-                </Label>
-                <DraftInput
-                  id={`alert-variation-names-${variation.id}`}
-                  stored={condition.names.join(", ")}
-                  placeholder="toastcrumb, ninetoad"
-                  onChange={(text) =>
-                    onPatch({
-                      condition: {
-                        parameter: "name",
-                        names: [...new Set(text.split(",").map(normalizeAlertName).filter(Boolean))],
-                      },
-                    })
-                  }
-                />
-                <p className="text-xs leading-snug text-muted-foreground">
-                  Twitch usernames with commas between them. Capitals do not matter.
-                </p>
-              </div>
-            ) : null}
-
-            {condition.parameter === "gifted" || condition.parameter === "anonymous" ? (
-              <div className="space-y-1.5">
-                <Label id={`alert-variation-flag-${variation.id}`} className="text-xs">
-                  {condition.parameter === "gifted" ? "Plays for" : "Plays when the viewer is"}
-                </Label>
-                <Select
-                  value={condition.value ? "yes" : "no"}
-                  onValueChange={(v) => onPatch({ condition: { ...condition, value: v === "yes" } })}
-                >
-                  <SelectTrigger
-                    aria-labelledby={`alert-variation-flag-${variation.id}`}
-                    className="h-9 w-full text-sm"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="yes" className="text-sm">
-                      {condition.parameter === "gifted" ? "Gifted subs" : "Anonymous"}
-                    </SelectItem>
-                    <SelectItem value="no" className="text-sm">
-                      {condition.parameter === "gifted" ? "Subs they paid for" : "Not anonymous"}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
+            <AlertVariationConditions
+              event={event}
+              idPrefix={`alert-variation-${variation.id}`}
+              match={variation.match}
+              conditions={variation.conditions}
+              onChange={onPatch}
+            />
 
             <SliderField
               id={`alert-variation-chance-${variation.id}`}
@@ -417,7 +148,7 @@ export function AlertVariationEditor({
               value={variation.chance}
               min={0}
               max={100}
-              hint="How often it plays when its condition is met. 25 is about one in four; the rest of the time the next best match plays."
+              hint="How often it plays when its conditions are met. 25 is about one in four; the rest of the time the next best match plays."
               onChange={(chance) => onPatch({ chance })}
             />
 

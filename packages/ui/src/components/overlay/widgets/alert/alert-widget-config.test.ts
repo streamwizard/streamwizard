@@ -795,12 +795,12 @@ function cheer(bits: number, name = "toastcrumb"): AlertInstance {
 
 function variation(
   id: string,
-  condition: AlertVariationCondition,
+  condition: AlertVariationCondition | null,
   extra: Partial<AlertVariation> = {}
 ): AlertVariation {
   return {
     ...createAlertVariation("cheer", createDefaultAlertVariantConfig("cheer"), id, id),
-    condition,
+    conditions: condition ? [condition] : [],
     ...extra,
   };
 }
@@ -850,15 +850,15 @@ describe("which alerts take variations", () => {
   });
 
   it("offers each alert only what its events carry", () => {
-    expect(alertVariationParameters("cheer")).toEqual(["none", "amount", "name", "anonymous"]);
-    expect(alertVariationParameters("sub")).toEqual(["none", "tier", "name", "gifted"]);
-    expect(alertVariationParameters("resub")).toEqual(["none", "amount", "tier", "name", "gifted"]);
-    expect(alertVariationParameters("gift_sub")).toEqual(["none", "amount", "tier", "name", "anonymous"]);
+    expect(alertVariationParameters("cheer")).toEqual(["amount", "name", "anonymous"]);
+    expect(alertVariationParameters("sub")).toEqual(["tier", "name", "gifted"]);
+    expect(alertVariationParameters("resub")).toEqual(["amount", "tier", "name", "gifted"]);
+    expect(alertVariationParameters("gift_sub")).toEqual(["amount", "tier", "name", "anonymous"]);
     // No year in the payload: a modiversary can only be told apart by who it is.
-    expect(alertVariationParameters("modiversary")).toEqual(["none", "name"]);
+    expect(alertVariationParameters("modiversary")).toEqual(["name"]);
     // Nobody to name on an ad break or a poll.
-    expect(alertVariationParameters("ad_break")).toEqual(["none", "amount"]);
-    expect(alertVariationParameters("poll_winner")).toEqual(["none", "amount"]);
+    expect(alertVariationParameters("ad_break")).toEqual(["amount"]);
+    expect(alertVariationParameters("poll_winner")).toEqual(["amount"]);
   });
 
   it("keeps the biggest-of-the-stream condition to the events people celebrate it on", () => {
@@ -931,7 +931,7 @@ describe("which variation plays", () => {
       variation("exact", { parameter: "amount", operator: "exact", value: 100 }),
       variation("top", { parameter: "amount", operator: "session_top", value: 0 }),
       variation("named", { parameter: "name", names: ["toastcrumb"] }),
-      variation("any", { parameter: "none" }),
+      variation("any", null),
     ];
     const pick = (ids: string[], bits: number) =>
       pickAlertVariation(cheer(bits), cheerAlert(list.filter((v) => ids.includes(v.id))), always)?.id;
@@ -1070,6 +1070,72 @@ describe("which variation plays", () => {
   });
 });
 
+describe("several conditions on one variation", () => {
+  const resub = (months: number, tier: string) =>
+    alertInstanceFromSocketMessage(
+      notice("resub", { resub: { cumulative_months: months, sub_plan: tier } })
+    )!;
+  const tier3 = { parameter: "tier", tier: "3000" } as const;
+  const sixMonths = { parameter: "amount", operator: "at_least", value: 6 } as const;
+  const resubAlert = (variations: AlertVariation[]) => ({
+    ...createDefaultAlertVariantConfig("resub"),
+    variations,
+  });
+  const both = (match: "all" | "any") =>
+    resubAlert([variation("loyal", null, { match, conditions: [tier3, sixMonths] })]);
+
+  it("plays on all only when every condition holds", () => {
+    expect(pickAlertVariation(resub(6, "3000"), both("all"), always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(12, "3000"), both("all"), always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(5, "3000"), both("all"), always)).toBeNull();
+    expect(pickAlertVariation(resub(6, "1000"), both("all"), always)).toBeNull();
+    expect(pickAlertVariation(resub(1, "1000"), both("all"), always)).toBeNull();
+  });
+
+  it("plays on any when one condition holds", () => {
+    expect(pickAlertVariation(resub(6, "3000"), both("any"), always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(5, "3000"), both("any"), always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(6, "1000"), both("any"), always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(1, "1000"), both("any"), always)).toBeNull();
+  });
+
+  it("plays every time with no conditions, whatever all or any says", () => {
+    for (const match of ["all", "any"] as const) {
+      const empty = resubAlert([variation("every", null, { match })]);
+      expect(pickAlertVariation(resub(1, "1000"), empty, always)?.id).toBe("every");
+    }
+  });
+
+  it("makes a range out of two amounts that both have to hold", () => {
+    const range = cheerAlert([
+      variation("mid", null, {
+        conditions: [atLeast(100), { parameter: "amount", operator: "at_most", value: 999 }],
+      }),
+    ]);
+    expect(pickAlertVariation(cheer(100), range, always)?.id).toBe("mid");
+    expect(pickAlertVariation(cheer(999), range, always)?.id).toBe("mid");
+    expect(pickAlertVariation(cheer(1000), range, always)).toBeNull();
+  });
+
+  it("lets more conditions that all hold beat fewer of the same kind", () => {
+    const list = resubAlert([
+      variation("tier", tier3),
+      variation("loyal", null, { conditions: [tier3, sixMonths] }),
+    ]);
+    expect(pickAlertVariation(resub(12, "3000"), list, always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(1, "3000"), list, always)?.id).toBe("tier");
+  });
+
+  it("ranks any by its loosest condition, so it does not beat a single tighter one", () => {
+    const list = resubAlert([
+      variation("either", null, { match: "any", conditions: [tier3, sixMonths] }),
+      variation("tier", tier3),
+    ]);
+    // Both match a Tier 3 at 12 months; "either" could have got in on months alone.
+    expect(pickAlertVariation(resub(12, "3000"), list, always)?.id).toBe("tier");
+  });
+});
+
 describe("a variation's settings", () => {
   it("starts as a full copy of what it was made from", () => {
     const base = { ...createDefaultAlertVariantConfig("cheer"), fontSize: 64, mediaUrl: "https://cdn.example/a.webm", mediaKind: "video" as const };
@@ -1084,10 +1150,10 @@ describe("a variation's settings", () => {
 
   it("starts on the condition its event is most likely wanted for", () => {
     const from = (event: AlertEventType) =>
-      createAlertVariation(event, createDefaultAlertVariantConfig(event), "v", "v").condition;
-    expect(from("cheer")).toEqual({ parameter: "amount", operator: "at_least", value: 1 });
-    expect(from("sub")).toEqual({ parameter: "tier", tier: "1000" });
-    expect(from("modiversary")).toEqual({ parameter: "name", names: [] });
+      createAlertVariation(event, createDefaultAlertVariantConfig(event), "v", "v").conditions;
+    expect(from("cheer")).toEqual([{ parameter: "amount", operator: "at_least", value: 1 }]);
+    expect(from("sub")).toEqual([{ parameter: "tier", tier: "1000" }]);
+    expect(from("modiversary")).toEqual([{ parameter: "name", names: [] }]);
   });
 
   it("stays put when the alert it came from changes", () => {
@@ -1171,13 +1237,13 @@ describe("saved variations", () => {
     const cfg = createDefaultAlertWidgetConfig();
     cfg.variants.cheer.randomPick = true;
     cfg.variants.cheer.variations = [
-      { ...createAlertVariation("cheer", cfg.variants.cheer, "v1", "Big cheer"), chance: 12.5, condition: atLeast(1000) },
-      { ...createAlertVariation("cheer", cfg.variants.cheer, "v2", "Regulars"), condition: { parameter: "name", names: ["toastcrumb"] } },
-      { ...createAlertVariation("cheer", cfg.variants.cheer, "v3", "Mid"), condition: { parameter: "amount", operator: "between", value: 100, max: 999 } },
+      { ...createAlertVariation("cheer", cfg.variants.cheer, "v1", "Big cheer"), chance: 12.5, conditions: [atLeast(1000)] },
+      { ...createAlertVariation("cheer", cfg.variants.cheer, "v2", "Regulars"), conditions: [{ parameter: "name", names: ["toastcrumb"] }] },
+      { ...createAlertVariation("cheer", cfg.variants.cheer, "v3", "Mid"), conditions: [{ parameter: "amount", operator: "between", value: 100, max: 999 }] },
     ];
     cfg.variants.sub.variations = [
-      { ...createAlertVariation("sub", cfg.variants.sub, "v1", "Tier 3"), condition: { parameter: "tier", tier: "3000" } },
-      { ...createAlertVariation("sub", cfg.variants.sub, "v2", "Gifted"), condition: { parameter: "gifted", value: true } },
+      { ...createAlertVariation("sub", cfg.variants.sub, "v1", "Tier 3"), conditions: [{ parameter: "tier", tier: "3000" }] },
+      { ...createAlertVariation("sub", cfg.variants.sub, "v2", "Gifted"), conditions: [{ parameter: "gifted", value: true }] },
     ];
     const normalized = normalizeAlertWidgetConfig(cfg);
     expect(normalized).toEqual(cfg);
@@ -1200,19 +1266,19 @@ describe("saved variations", () => {
     const cond = (event: AlertEventType, condition: unknown) =>
       normalizeAlertWidgetConfig({
         ...cfg,
-        variants: { ...cfg.variants, [event]: { ...cfg.variants[event], variations: [{ ...raw, condition }] } },
-      }).variants[event].variations[0]!.condition;
+        variants: { ...cfg.variants, [event]: { ...cfg.variants[event], variations: [{ ...raw, conditions: [condition] }] } },
+      }).variants[event].variations[0]!.conditions[0] ?? null;
 
     // A tier on a cheer, a record on a watch streak, junk.
-    expect(cond("cheer", { parameter: "tier", tier: "3000" })).toEqual({ parameter: "none" });
+    expect(cond("cheer", { parameter: "tier", tier: "3000" })).toBeNull();
     expect(cond("watch_streak", { parameter: "amount", operator: "session_top", value: 5 })).toEqual({
       parameter: "amount",
       operator: "at_least",
       value: 5,
     });
-    expect(cond("cheer", "nonsense")).toEqual({ parameter: "none" });
+    expect(cond("cheer", "nonsense")).toBeNull();
     // Gifted is a sub thing; a cheer has nothing to say about it.
-    expect(cond("cheer", { parameter: "gifted", value: true })).toEqual({ parameter: "none" });
+    expect(cond("cheer", { parameter: "gifted", value: true })).toBeNull();
     expect(cond("cheer", { parameter: "anonymous", value: false })).toEqual({ parameter: "anonymous", value: false });
     expect(cond("cheer", { parameter: "amount", operator: "at_least", value: -5 })).toEqual(atLeast(0));
     // A range saved the wrong way round, one with no top, and a top on a non-range.
@@ -1235,6 +1301,49 @@ describe("saved variations", () => {
     });
   });
 
+  it("reads a variation saved with one condition as a list of one", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    const { conditions: _, ...old } = createAlertVariation("cheer", cfg.variants.cheer, "v1", "Old");
+    const read = (condition: unknown) =>
+      normalizeAlertWidgetConfig({
+        ...cfg,
+        variants: { ...cfg.variants, cheer: { ...cfg.variants.cheer, variations: [{ ...old, condition }] } },
+      }).variants.cheer.variations[0]!;
+
+    expect(read(atLeast(1000))).toMatchObject({ match: "all", conditions: [atLeast(1000)] });
+    expect(read({ parameter: "none" }).conditions).toEqual([]);
+
+    // Through the save schema too, which would otherwise drop the key it does not know.
+    const parsed = alertWidgetItemConfigSchema.parse({
+      ...cfg,
+      variants: { ...cfg.variants, cheer: { ...cfg.variants.cheer, variations: [{ ...old, condition: atLeast(1000) }] } },
+    });
+    expect(normalizeAlertWidgetConfig(parsed).variants.cheer.variations[0]!.conditions).toEqual([atLeast(1000)]);
+    const parsedNone = alertWidgetItemConfigSchema.parse({
+      ...cfg,
+      variants: { ...cfg.variants, cheer: { ...cfg.variants.cheer, variations: [{ ...old, condition: { parameter: "none" } }] } },
+    });
+    expect(normalizeAlertWidgetConfig(parsedNone).variants.cheer.variations[0]!.conditions).toEqual([]);
+  });
+
+  it("keeps all or any, and no more than five conditions", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    const raw = createAlertVariation("cheer", cfg.variants.cheer, "v1", "x");
+    const read = (extra: Record<string, unknown>) =>
+      normalizeAlertWidgetConfig({
+        ...cfg,
+        variants: { ...cfg.variants, cheer: { ...cfg.variants.cheer, variations: [{ ...raw, ...extra }] } },
+      }).variants.cheer.variations[0]!;
+
+    expect(read({ match: "any" }).match).toBe("any");
+    expect(read({ match: "most" }).match).toBe("all");
+    expect(read({ conditions: Array.from({ length: 8 }, (_, i) => atLeast(i)) }).conditions).toHaveLength(5);
+    // One bad row goes; the rest stay.
+    expect(read({ conditions: [atLeast(1), { parameter: "tier", tier: "3000" }, "junk"] }).conditions).toEqual([
+      atLeast(1),
+    ]);
+  });
+
   it("cleans usernames and holds the limits", () => {
     const cfg = createDefaultAlertWidgetConfig();
     const raw = createAlertVariation("cheer", cfg.variants.cheer, "v1", "x");
@@ -1245,7 +1354,7 @@ describe("saved variations", () => {
         cheer: {
           ...cfg.variants.cheer,
           variations: [
-            { ...raw, name: "n".repeat(200), chance: 250, condition: { parameter: "name", names: [" @ToastCrumb ", "toastcrumb", "", 7, "NineToad"] } },
+            { ...raw, name: "n".repeat(200), chance: 250, conditions: [{ parameter: "name", names: [" @ToastCrumb ", "toastcrumb", "", 7, "NineToad"] }] },
             ...Array.from({ length: 30 }, (_, i) => ({ ...raw, id: `extra-${i}` })),
           ],
         },
@@ -1255,7 +1364,7 @@ describe("saved variations", () => {
     expect(out).toHaveLength(20);
     expect(out[0]!.name).toHaveLength(60);
     expect(out[0]!.chance).toBe(100);
-    expect(out[0]!.condition).toEqual({ parameter: "name", names: ["toastcrumb", "ninetoad"] });
+    expect(out[0]!.conditions).toEqual([{ parameter: "name", names: ["toastcrumb", "ninetoad"] }]);
   });
 
   it("gives variations that lost or share an id one of their own, the same on every read", () => {
@@ -1272,10 +1381,10 @@ describe("saved variations", () => {
 });
 
 describe("a variation's condition in plain words", () => {
-  const say = (event: AlertEventType, condition: AlertVariationCondition, chance = 100) =>
+  const say = (event: AlertEventType, condition: AlertVariationCondition | null, chance = 100) =>
     alertVariationSummary(event, {
       ...createAlertVariation(event, createDefaultAlertVariantConfig(event), "v", "v"),
-      condition,
+      conditions: condition ? [condition] : [],
       chance,
     });
 
@@ -1305,11 +1414,26 @@ describe("a variation's condition in plain words", () => {
     expect(say("cheer", { parameter: "anonymous", value: false })).toBe("Not anonymous");
   });
 
+  it("joins several conditions with and, or or", () => {
+    const loyal = (match: "all" | "any") =>
+      alertVariationSummary("resub", {
+        ...createAlertVariation("resub", createDefaultAlertVariantConfig("resub"), "v", "v"),
+        match,
+        conditions: [
+          { parameter: "tier", tier: "3000" },
+          { parameter: "amount", operator: "at_least", value: 6 },
+        ],
+        chance: 25,
+      });
+    expect(loyal("all")).toBe("Sub tier: Tier 3 and Months: at least 6 · 25% of the time");
+    expect(loyal("any")).toBe("Sub tier: Tier 3 or Months: at least 6 · 25% of the time");
+  });
+
   it("adds how often, when it is not every time", () => {
     expect(say("cheer", atLeast(100), 25)).toBe("Bits: at least 100 · 25% of the time");
     expect(say("cheer", atLeast(100), 12.5)).toBe("Bits: at least 100 · 12.5% of the time");
-    expect(say("cheer", { parameter: "none" })).toBe("Every time");
-    expect(say("cheer", { parameter: "none" }, 10)).toBe("10% of the time");
+    expect(say("cheer", null)).toBe("Every time");
+    expect(say("cheer", null, 10)).toBe("10% of the time");
   });
 });
 
