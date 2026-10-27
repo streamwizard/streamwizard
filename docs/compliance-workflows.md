@@ -146,7 +146,7 @@ Twitch ID may appear in breadcrumbs; search `twitch_user_id` if needed.
 
 ## 6. Twitch token security (reference)
 
-- OAuth scopes: `packages/schemas/src/twitch-scopes.ts` (`TWITCH_SCOPE_SETS`). Sign-in asks for `base` only; a feature set (today: `cloud_obs` → `channel:read:stream_key`) is requested from the page that needs it via `actions/auth/authorize-twitch.ts`, and only when the account holds that product.
+- OAuth scopes: `packages/schemas/src/twitch-scopes.ts` (`TWITCH_SCOPE_SETS`). Sign-in asks for `base` only; a feature set is requested from the page that needs it via `actions/auth/authorize-twitch.ts`. Product sets (`cloud_obs` → `channel:read:stream_key`) are only requested when the account holds that product. Free sets (`alert_bans` → `channel:moderate`, `alert_vips` → `channel:read:vips`, `alert_mods` → `moderation:read`) are only requested when the streamer turns that alert on. Every authorization keeps the sets the token already carries, and a plain sign-in that dropped some goes round once more (silently) to keep them.
 - Granted scopes are stored in `integrations_twitch.twitch_scopes`, written from `/oauth2/validate` on sign-in, from the refresh response, and by the hourly validation sweep in rest-api (`services/twitch-token-validator.ts`), which also satisfies Twitch's hourly token-validation requirement.
 - Tokens encrypted at rest with **AES-256-GCM** before storage in `integrations_twitch` (`packages/supabase/src/crypto.ts`, callback `auth/callback/twitch/route.ts`).
 - Requires `TOKEN_ENCRYPTION_KEY` (64-char hex) in deployment secrets.

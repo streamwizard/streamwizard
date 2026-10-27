@@ -4,11 +4,13 @@ import { createClient } from "@repo/supabase/next/server";
 import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
 import { encryptToken } from "@repo/supabase/crypto";
 import { updateTwitchTokens } from "@repo/supabase/queries/user";
-import { setTwitchScopesByUserId } from "@repo/supabase/queries/twitch-scopes";
+import { getTwitchScopes, setTwitchScopesByUserId } from "@repo/supabase/queries/twitch-scopes";
+import { lostTwitchFeatures } from "@repo/schemas";
 import { validateTwitchToken } from "@repo/twitch-api";
 import { track } from "@/lib/track";
 import { reportError } from "@repo/sentry";
 import { safeNextPath } from "@/lib/safe-next-path";
+import { twitchAuthorizationUrl } from "@/lib/twitch-authorize";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -23,6 +25,11 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   // Sanitize next to a relative path only to prevent open redirect
   const next = safeNextPath(searchParams.get("next")) ?? "/dashboard";
+
+  // Set when a signed-in user is granting more rights (authorizeTwitchFeature),
+  // or when this callback sent them round again to keep what they had.
+  const scopeUpgradeParam = searchParams.get("scope_upgrade");
+  const scopeUpgrade = scopeUpgradeParam && /^[a-z_]{1,32}$/.test(scopeUpgradeParam) ? scopeUpgradeParam : null;
 
   const oauthError = searchParams.get("error");
   const oauthErrorCode = searchParams.get("error_code");
@@ -64,6 +71,10 @@ export async function GET(request: Request) {
       return errorRedirect("missing_tokens");
     }
 
+    // The token this one replaces, read before it is overwritten: a plain
+    // sign-in asks for base only, and anything it dropped is put back below.
+    const scopesBefore = scopeUpgrade ? null : await getTwitchScopes(supabase);
+
     // Encrypt tokens before storing
     const encryptedAccessToken = encryptToken(data.session.provider_token);
     const encryptedRefreshToken = encryptToken(
@@ -103,6 +114,29 @@ export async function GET(request: Request) {
       reportError(scopeErr, "auth/callback/twitch: scope sync failed");
     }
 
+    /*
+     * A plain sign-in asks for base only, and Twitch replaces the token with
+     * exactly that, which would quietly take back a granted stream key or
+     * alert permission. Go round once more for them: Twitch approves scopes
+     * the user granted before without a consent screen. `scope_upgrade` on
+     * the way back stops this from looping.
+     */
+    if (!scopeUpgrade && grantedScopes && lostTwitchFeatures(scopesBefore, grantedScopes).length > 0) {
+      try {
+        const url = await twitchAuthorizationUrl(supabase, {
+          requested: "base",
+          next,
+          origin,
+          granted: scopesBefore,
+          reason: "restore",
+        });
+        if (url) return NextResponse.redirect(url);
+      } catch (restoreErr) {
+        // Not fatal: the user is signed in, the feature asks again when used.
+        reportError(restoreErr, "auth/callback/twitch: restoring scopes failed");
+      }
+    }
+
     await checkEventSubscriptions(data.session.user.user_metadata.sub, grantedScopes);
     if (!error) {
       // The other side of `login_clicked`: without this the OAuth funnel has a
@@ -115,8 +149,9 @@ export async function GET(request: Request) {
       // A signed-in user granting extra Twitch rights (authorizeTwitchFeature)
       // comes back through this same callback. That is not a login, and
       // counting it as one inflated the number.
-      const scopeUpgrade = searchParams.get("scope_upgrade");
-      if (scopeUpgrade && /^[a-z_]{1,32}$/.test(scopeUpgrade)) {
+      // "restore" is the second leg of a sign-in that kept earlier grants
+      // (above), so it counts as the login, once.
+      if (scopeUpgrade && scopeUpgrade !== "restore") {
         await track("twitch_scope_granted", { feature: scopeUpgrade }, data.session.user);
       } else {
         const createdAt = Date.parse(data.session.user.created_at);
@@ -131,6 +166,14 @@ export async function GET(request: Request) {
       }
       return NextResponse.redirect(`${origin}${next}`);
     }
+  }
+
+  // Saying no to more rights is not a failed sign-in: the user is still signed
+  // in with the token they had, so send them back to where they asked.
+  if (oauthError === "access_denied" && scopeUpgrade) {
+    const back = new URL(next, origin);
+    back.searchParams.set("twitch_scope", "declined");
+    return NextResponse.redirect(back.toString());
   }
 
   if (oauthError) {

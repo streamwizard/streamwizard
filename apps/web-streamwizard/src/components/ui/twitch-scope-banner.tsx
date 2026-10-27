@@ -11,6 +11,18 @@ const COPY: Record<TwitchScopeFeature, { title: string; body: string }> = {
     title: "Cloud OBS needs your stream key",
     body: "Your cloud OBS goes live on your channel with your own Twitch stream key. Twitch only hands it over with your say-so, so this is a one-time Twitch round trip. Until then the instance starts without a key.",
   },
+  alert_bans: {
+    title: "Ban and timeout alerts need one more Twitch permission",
+    body: "Twitch only tells StreamWizard about bans and timeouts with your say-so. Its screen calls this \"moderate\", but StreamWizard only reads who was banned or timed out. It never bans anyone.",
+  },
+  alert_vips: {
+    title: "The new VIP alert needs one more Twitch permission",
+    body: "Twitch only tells StreamWizard who your VIPs are with your say-so. It is read only: StreamWizard never adds or removes a VIP.",
+  },
+  alert_mods: {
+    title: "The new mod alert needs one more Twitch permission",
+    body: "Twitch only tells StreamWizard who your mods are with your say-so. It is read only: StreamWizard never adds or removes a mod.",
+  },
 };
 
 /**
