@@ -1,12 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
+import type { TwitchScopeFeature } from "@repo/schemas";
+import { getTwitchFeatureGrants } from "@/actions/auth/twitch-grants";
 import {
   ALERT_EVENT_LABELS,
   ALERT_EVENT_SUBSCRIPTION_TYPES,
+  ALERT_EVENT_TWITCH_FEATURES,
   ALERT_VARIATION_LIMITS,
   alertVariationParameters,
   applyAlertLookToAll,
@@ -23,6 +26,7 @@ import { useModKeyLabel } from "@/components/overlays/editor/use-mod-key";
 import { AlertCopySourceDialog } from "./alert-copy-source-dialog";
 import { AlertDetail } from "./alert-detail";
 import { AlertList } from "./alert-list";
+import { AlertPermissionDialog } from "./alert-permission-dialog";
 import { AlertVariationEditor, type AlertVariationGroup } from "./alert-variation-editor";
 import { AlertVariationList } from "./alert-variation-list";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
@@ -81,6 +85,40 @@ function AlertSettingsPanel({ item, updateItem }: OverlayInspectorAppendProps) {
   });
   const [copyFor, setCopyFor] = useState<AlertEventType | null>(null);
   const [testBusy, setTestBusy] = useState(false);
+  // Which Twitch permissions the token holds, for the alerts behind one. Null
+  // while loading: those alerts then ask first, which is the safe side.
+  const [grants, setGrants] = useState<readonly TwitchScopeFeature[] | null>(null);
+  const [permissionFor, setPermissionFor] = useState<{
+    event: AlertEventType;
+    feature: TwitchScopeFeature;
+  } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getTwitchFeatureGrants()
+      .then((granted) => !cancelled && setGrants(granted))
+      .catch(() => !cancelled && setGrants([]));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Back from Twitch after saying no (the OAuth callback adds this). Said
+    // once, then dropped from the address so a reload does not say it again.
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("twitch_scope") !== "declined") return;
+    toast("No permission, no problem. That alert stays off until you allow it.");
+    url.searchParams.delete("twitch_scope");
+    window.history.replaceState(window.history.state, "", url);
+  }, []);
+
+  /** The Twitch permission an alert is missing, or null when it can fire. */
+  function missingFeature(event: AlertEventType): TwitchScopeFeature | null {
+    const feature = ALERT_EVENT_TWITCH_FEATURES[event];
+    if (!feature) return null;
+    return grants?.includes(feature) ? null : feature;
+  }
   const { mode, fire } = useDemoFire();
   const reduceMotion = useReducedMotion();
   const mod = useModKeyLabel();
@@ -104,6 +142,20 @@ function AlertSettingsPanel({ item, updateItem }: OverlayInspectorAppendProps) {
         [event]: { ...cfg.variants[event], ...updates },
       },
     });
+  }
+
+  /**
+   * Turning on an alert whose events need a Twitch permission the token lacks
+   * explains that first instead: on without the permission, it would sit there
+   * never firing. Turning off, and everything else, goes straight through.
+   */
+  function patchAlert(event: AlertEventType, updates: Partial<AlertVariantConfig>) {
+    const feature = updates.enabled === true ? missingFeature(event) : null;
+    if (!feature) return patchVariant(event, updates);
+    const rest = { ...updates };
+    delete rest.enabled;
+    if (Object.keys(rest).length) patchVariant(event, rest);
+    setPermissionFor({ event, feature });
   }
 
   function patchVariation(event: AlertEventType, id: string, updates: Partial<AlertVariation>) {
@@ -218,7 +270,7 @@ function AlertSettingsPanel({ item, updateItem }: OverlayInspectorAppendProps) {
           setReturnVariation(null);
           go({ screen: "list" }, "out");
         }}
-        onPatch={(updates) => patchVariant(event, updates)}
+        onPatch={(updates) => patchAlert(event, updates)}
         onTest={() => void fireTest(event)}
         onCopyLookToAll={() => copyLookToAll(event)}
       />
@@ -237,9 +289,10 @@ function AlertSettingsPanel({ item, updateItem }: OverlayInspectorAppendProps) {
           testBusy={testBusy}
           fireMode={mode}
           onOpen={(event) => go({ screen: "alert", event }, "in")}
-          onToggle={(event, enabled) => patchVariant(event, { enabled })}
+          onToggle={(event, enabled) => patchAlert(event, { enabled })}
           onTest={(event) => void fireTest(event)}
           onPatchConfig={patchConfig}
+          needsPermission={(event) => missingFeature(event) !== null && grants !== null}
         />
       );
     }
@@ -314,6 +367,10 @@ function AlertSettingsPanel({ item, updateItem }: OverlayInspectorAppendProps) {
         onOpenChange={(open) => !open && setCopyFor(null)}
         cfg={cfg}
         onPick={(settings) => copyFor && addVariation(copyFor, settings)}
+      />
+      <AlertPermissionDialog
+        request={permissionFor}
+        onOpenChange={(open) => !open && setPermissionFor(null)}
       />
     </div>
   );

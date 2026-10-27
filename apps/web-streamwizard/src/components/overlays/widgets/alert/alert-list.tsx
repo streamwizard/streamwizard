@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { ChevronRight, Film, ImageIcon, Volume2 } from "lucide-react";
+import { ChevronRight, Film, ImageIcon, KeyRound, Volume2 } from "lucide-react";
 import {
   Button,
   cn,
@@ -42,6 +42,8 @@ export interface AlertListProps {
   onToggle: (event: AlertEventType, enabled: boolean) => void;
   onTest: (event: AlertEventType) => void;
   onPatchConfig: (updates: Partial<AlertWidgetItemConfig>) => void;
+  /** True for an alert whose events need a Twitch permission not granted yet. */
+  needsPermission: (event: AlertEventType) => boolean;
 }
 
 const rowId = (itemId: string, event: AlertEventType) => `alert-row-${itemId}-${event}`;
@@ -69,6 +71,7 @@ export function AlertList({
   onToggle,
   onTest,
   onPatchConfig,
+  needsPermission,
 }: AlertListProps) {
   useEffect(() => {
     // No scroll with it: the list comes back exactly where it was left.
@@ -83,15 +86,17 @@ export function AlertList({
         <SectionTitle>Alerts</SectionTitle>
         <Tabs value={category} onValueChange={(v) => onCategoryChange(v as AlertEventCategoryId)}>
           {/* Same grouping the public /overlays catalog uses, so the page a
-              streamer read and the panel they configure line up. */}
-          <TabsList className="w-full">
+              streamer read and the panel they configure line up. Two rows of
+              two: four tabs with their counts do not fit the inspector's
+              width in one. */}
+          <TabsList className="grid w-full grid-cols-2 gap-1 group-data-[orientation=horizontal]/tabs:h-auto">
             {ALERT_EVENT_CATEGORIES.map((c) => {
               const on = c.events.filter((e) => cfg.variants[e].enabled).length;
               return (
                 <TabsTrigger
                   key={c.id}
                   value={c.id}
-                  className="flex-1 gap-1 px-1.5 text-xs"
+                  className="h-7 gap-1 px-1.5 text-xs"
                   aria-label={`${c.label}, ${on} of ${c.events.length} on`}
                 >
                   {c.label}
@@ -109,6 +114,7 @@ export function AlertList({
                   const variant = cfg.variants[event];
                   const label = ALERT_EVENT_LABELS[event];
                   const MediaIcon = variant.mediaKind === "video" ? Film : ImageIcon;
+                  const locked = needsPermission(event);
                   return (
                     <li
                       key={event}
@@ -143,6 +149,17 @@ export function AlertList({
                         >
                           {label}
                         </span>
+                        {locked ? (
+                          // Just the key: the row is too narrow for words beside
+                          // the name, and the switch explains when pressed.
+                          <span
+                            title="Needs one more Twitch permission. Turn it on to see why."
+                            className="flex shrink-0 items-center text-muted-foreground"
+                          >
+                            <KeyRound aria-hidden className="size-3.5" />
+                            <span className="sr-only">Needs permission.</span>
+                          </span>
+                        ) : null}
                         {variant.variations.length ? (
                           <span
                             aria-hidden

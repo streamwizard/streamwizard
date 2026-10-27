@@ -6,7 +6,8 @@ import { Alert, AlertDescription, AlertTitle, Button } from "@repo/ui";
 import { authorizeTwitchFeature } from "@/actions/auth/authorize-twitch";
 import type { TwitchScopeFeature } from "@repo/schemas";
 
-const COPY: Record<TwitchScopeFeature, { title: string; body: string }> = {
+/** What each feature set is for, in the words the banner and the alert box use. */
+export const TWITCH_SCOPE_COPY: Record<TwitchScopeFeature, { title: string; body: string }> = {
   cloud_obs: {
     title: "Cloud OBS needs your stream key",
     body: "Your cloud OBS goes live on your channel with your own Twitch stream key. Twitch only hands it over with your say-so, so this is a one-time Twitch round trip. Until then the instance starts without a key.",
@@ -36,10 +37,12 @@ export function TwitchConnectButton({
   disabled,
   size = "sm",
   className,
+  label = "Connect Twitch",
 }: {
   feature: TwitchScopeFeature | "base";
   next: string;
   disabled?: boolean;
+  label?: string;
   size?: "sm" | "default";
   className?: string;
 }) {
@@ -52,7 +55,7 @@ export function TwitchConnectButton({
       onClick={() => startTransition(() => authorizeTwitchFeature(feature, next))}
     >
       <KeyRound className="h-3.5 w-3.5 mr-1.5" />
-      {pending ? "Heading to Twitch…" : "Connect Twitch"}
+      {pending ? "Heading to Twitch…" : label}
     </Button>
   );
 }
@@ -61,7 +64,7 @@ export function TwitchConnectButton({
  * Shown when a feature's Twitch scopes are missing from the stored token.
  */
 export function TwitchScopeBanner({ feature, next }: { feature: TwitchScopeFeature; next: string }) {
-  const { title, body } = COPY[feature];
+  const { title, body } = TWITCH_SCOPE_COPY[feature];
 
   return (
     <Alert>

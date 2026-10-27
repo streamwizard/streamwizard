@@ -32,27 +32,49 @@ that, so a follow-bot wave can't book your alerts for an hour. Change it with
 
 ## What you can alert on
 
-There are 23 alerts, in three groups. The template switches on the usual four,
+There are 30 alerts, in four groups. The template switches on the usual four,
 and the rest are waiting in the panel.
 
-| Community | Money | Channel |
-|---|---|---|
-| Follow | Sub | Raid |
-| Reward redeemed | Resub | Shoutout received |
-| Watch streak | Gift sub | Shoutout sent |
-| Modiversary | Gift bomb | Announcement |
-| | Gift upgrade | Ad break |
-| | Prime upgrade | Poll start |
-| | Pay it forward | Poll winner |
-| | Cheer | |
-| | Bits badge | |
-| | Charity donation | |
-| | Hype train start | |
-| | Hype train end | |
+| Community | Money | Channel | Mod |
+|---|---|---|---|
+| Follow | Sub | Raid | Ban |
+| Reward redeemed | Resub | Shoutout received | Timeout |
+| Watch streak | Gift sub | Shoutout sent | VIP added |
+| Modiversary | Gift bomb | Announcement | Mod added |
+| | Gift upgrade | Ad break | |
+| | Prime upgrade | Poll start | |
+| | Pay it forward | Poll winner | |
+| | Cheer | Prediction start | |
+| | Bits badge | Prediction result | |
+| | Charity donation | Goal achieved | |
+| | Hype train start | | |
+| | Hype train end | | |
 
 **Reward redeemed** is the one people miss. It fires on channel point
 redemptions, so any reward you've set up on Twitch can have its own alert with
 its own sound.
+
+### Mod alerts ask Twitch first
+
+Ban, Timeout, VIP added, and Mod added need one more Twitch permission each.
+StreamWizard doesn't ask for them when you sign in, only when you turn one of
+these alerts on. You'll see why, then Twitch's own screen, then you're back in
+the editor. Turn the alert on again and it's live. Save your overlay before you
+go: the trip to Twitch leaves the editor.
+
+Twitch calls the ban permission "moderate". StreamWizard only reads who was
+banned or timed out, and by whom. It never bans anyone. VIP and mod are read
+only too.
+
+Say no on Twitch's screen and nothing breaks: the alert stays off, and you can
+try again whenever you like.
+
+A few things to know:
+
+- A timeout is its own alert, so a busy mod team doesn't flood your stream. `{amount}` is how long it lasts, in seconds.
+- `{message}` on a ban or timeout is the reason the mod typed, and `{moderator}` is who did it. Neither is in the default text.
+- Prediction result names the winning outcome, with its channel points in `{amount}`. A canceled prediction plays nothing.
+- Goal achieved only plays when the goal was hit, not when it ran out.
 
 ## Animation
 
