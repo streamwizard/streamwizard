@@ -674,3 +674,11 @@ export {
   EditorAudioProvider,
   useEditorAudioMuted,
 } from "./components/overlay/hooks/use-editor-audio";
+export {
+  EditorPreviewValuesProvider,
+  useEditorPreviewValues,
+  type EditorPreviewValues,
+  type EditorLabelValue,
+  type EditorGoalValue,
+} from "./components/overlay/hooks/use-editor-preview-values";
+export { editableLabelParts } from "./components/overlay/widgets/label/label-editor-values";

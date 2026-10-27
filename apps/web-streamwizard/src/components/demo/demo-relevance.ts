@@ -75,7 +75,11 @@ export function demoRelevance(
   if (types.has("ad_widget") || listensTo("channel.ad_break.")) sections.push("ads");
   if (types.has("credits_widget")) sections.push("credits");
   if (simulatorIds.length > 0) sections.push("simulate");
-  if (usesState) sections.push("state");
+  // Custom widgets that save data, and the built-ins that take typed values.
+  const takesValues = ["label_widget", "follower_goal_widget", "sub_goal_widget", "bits_goal_widget"].some((t) =>
+    types.has(t)
+  );
+  if (usesState || takesValues) sections.push("state");
   const nothingToTest = sections.length === 0;
   sections.push("custom");
 

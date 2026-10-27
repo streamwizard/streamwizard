@@ -2,12 +2,22 @@
 
 import { useState } from "react";
 import { RotateCcw, Undo2, X } from "lucide-react";
-import { Button, Input, Textarea } from "@repo/ui";
+import { Button, Input, Switch, Textarea } from "@repo/ui";
+import { LABEL_CATALOG } from "@repo/schemas";
+import {
+  GOAL_WIDGET_LABELS,
+  GOAL_WIDGET_TYPES,
+  editableLabelParts,
+  type EditorGoalValue,
+  type EditorLabelValue,
+} from "@repo/ui/overlay";
 import { SectionNote } from "./demo-sections";
 import {
+  EMPTY_EDITOR_STATE,
   USER_STATE_KEY_PATTERN,
   isEditorStateEmpty,
   useEditorStateData,
+  type EditorStateData,
 } from "./editor-state-data";
 
 const quick = "h-7 px-2.5 text-xs";
@@ -116,21 +126,169 @@ function WidgetStateBox({
   );
 }
 
-/**
- * What custom widgets have saved while you test. In the editor they read the
- * real StreamWizard.state and userState, but their writes stop here, so a
- * test counter never touches the one on stream. Values typed here win over
- * the real ones until "Use real values again".
- */
-export function SavedDataSection({
-  storageId,
+/** A number input that commits on blur. Empty means "use the real number". */
+function NumberField({
+  value,
+  onCommit,
+  ...props
+}: Omit<React.ComponentProps<typeof Input>, "value" | "onChange"> & {
+  value: number | undefined;
+  onCommit: (value: number | undefined) => void;
+}) {
+  return (
+    <CommitInput
+      {...props}
+      inputMode="decimal"
+      value={value === undefined ? "" : String(value)}
+      onCommit={(text) => {
+        const n = Number(text.trim());
+        onCommit(text.trim() === "" || !Number.isFinite(n) ? undefined : n);
+      }}
+    />
+  );
+}
+
+function ClearButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <Button
+      size="icon-sm"
+      variant="ghost"
+      className="size-7 shrink-0"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={`Use the real value for ${label}`}
+      title="Use the real value"
+    >
+      <X className="size-3.5" />
+    </Button>
+  );
+}
+
+function GroupTitle({ children, hint }: { children: React.ReactNode; hint?: string }) {
+  return (
+    <p className="text-[11px] font-medium">
+      {children} {hint && <span className="font-mono font-normal text-muted-foreground">{hint}</span>}
+    </p>
+  );
+}
+
+/** Built-in widgets: stream labels and goals, shown on the editor canvas only. */
+function NativeValueFields({
+  data,
+  update,
+  labelIds,
+  goalTypes,
+}: {
+  data: EditorStateData;
+  update: (fn: (d: EditorStateData) => EditorStateData) => void;
+  labelIds: string[];
+  goalTypes: string[];
+}) {
+  const labels = LABEL_CATALOG.flatMap((def) => {
+    const parts = editableLabelParts(def);
+    return parts && labelIds.includes(def.id) ? [{ def, parts }] : [];
+  });
+  const goals = GOAL_WIDGET_TYPES.filter((type) => goalTypes.includes(type));
+
+  function setLabel(id: string, patch: EditorLabelValue) {
+    update((d) => {
+      const next = { ...d.labels[id], ...patch };
+      const labels = { ...d.labels };
+      if (next.name === undefined && next.amount === undefined) delete labels[id];
+      else labels[id] = next;
+      return { ...d, labels };
+    });
+  }
+
+  function setGoal(type: string, patch: EditorGoalValue) {
+    update((d) => {
+      const next = { ...d.goals[type], ...patch };
+      const goals = { ...d.goals };
+      if (next.current === undefined && next.target === undefined) delete goals[type];
+      else goals[type] = next;
+      return { ...d, goals };
+    });
+  }
+
+  return (
+    <>
+      {labels.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <GroupTitle>Stream labels</GroupTitle>
+          {labels.map(({ def, parts }) => {
+            const value = data.labels[def.id];
+            return (
+              <div key={def.id} className="flex items-center gap-1.5">
+                <span className="w-36 shrink-0 truncate text-[11px]">{def.title}</span>
+                {parts.name && (
+                  <CommitInput
+                    value={value?.name ?? ""}
+                    onCommit={(text) => setLabel(def.id, { name: text.trim() === "" ? undefined : text })}
+                    placeholder="Real name"
+                    aria-label={`${def.title}: name`}
+                    className="h-7 flex-1 text-[11px]"
+                  />
+                )}
+                {parts.amount && (
+                  <NumberField
+                    value={value?.amount}
+                    onCommit={(amount) => setLabel(def.id, { amount })}
+                    placeholder={parts.name ? "Amount" : "Real number"}
+                    aria-label={`${def.title}: amount`}
+                    className={parts.name ? "h-7 w-24 shrink-0 text-[11px]" : "h-7 flex-1 text-[11px]"}
+                  />
+                )}
+                <ClearButton label={def.title} disabled={!value} onClick={() => setLabel(def.id, { name: undefined, amount: undefined })} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {goals.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <GroupTitle>Goals</GroupTitle>
+          {goals.map((type) => {
+            const value = data.goals[type];
+            const title = GOAL_WIDGET_LABELS[type].title;
+            return (
+              <div key={type} className="flex items-center gap-1.5">
+                <span className="w-36 shrink-0 truncate text-[11px]">{title}</span>
+                <NumberField
+                  value={value?.current}
+                  onCommit={(current) => setGoal(type, { current })}
+                  placeholder="Real now"
+                  aria-label={`${title}: current`}
+                  className="h-7 flex-1 text-[11px]"
+                />
+                <span className="text-[11px] text-muted-foreground">of</span>
+                <NumberField
+                  value={value?.target}
+                  onCommit={(target) => setGoal(type, { target })}
+                  placeholder="Real target"
+                  aria-label={`${title}: target`}
+                  className="h-7 flex-1 text-[11px]"
+                />
+                <ClearButton label={title} disabled={!value} onClick={() => setGoal(type, { current: undefined, target: undefined })} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Custom widgets: StreamWizard.userState and each widget's own StreamWizard.state. */
+function CustomStateFields({
+  data,
+  update,
   widgets,
 }: {
-  storageId: string;
-  /** The custom widgets that can hold their own state, by item id. */
+  data: EditorStateData;
+  update: (fn: (d: EditorStateData) => EditorStateData) => void;
   widgets: { id: string; label: string }[];
 }) {
-  const [data, update] = useEditorStateData(storageId);
   const [newKey, setNewKey] = useState("");
   const [newValue, setNewValue] = useState("");
   const keyError =
@@ -160,16 +318,9 @@ export function SavedDataSection({
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <SectionNote>
-        Widgets read your real saved values here. Anything they save while you test stays in the editor, so your
-        real counters don&apos;t move.
-      </SectionNote>
-
+    <>
       <div className="flex flex-col gap-1.5">
-        <p className="text-[11px] font-medium">
-          Channel values <span className="font-mono font-normal text-muted-foreground">StreamWizard.userState</span>
-        </p>
+        <GroupTitle hint="StreamWizard.userState">Channel values</GroupTitle>
         {entries.length === 0 && (
           <SectionNote>Nothing changed yet. The widgets see your real values.</SectionNote>
         )}
@@ -244,6 +395,55 @@ export function SavedDataSection({
           }
         />
       ))}
+    </>
+  );
+}
+
+/**
+ * Values to preview with, editor only. Custom widgets read the real
+ * StreamWizard.state and userState, but their writes stop here, so a test
+ * counter never touches the one on stream. Stream labels and goals take typed
+ * values on top of the real ones. Everything here wins over the real values
+ * until "Use real values again", and OBS never sees any of it.
+ */
+export function SavedDataSection({
+  storageId,
+  widgets,
+  customState = true,
+  native,
+}: {
+  storageId: string;
+  /** The custom widgets that can hold their own state, by item id. */
+  widgets: { id: string; label: string }[];
+  /** Show the custom widget fields: a widget here uses StreamWizard.state or userState. */
+  customState?: boolean;
+  /** The overlay editor's built-in widgets: label ids and goal widget types on the canvas. */
+  native?: { labelIds: string[]; goalTypes: string[] };
+}) {
+  const [data, update] = useEditorStateData(storageId);
+  const [showAll, setShowAll] = useState(false);
+  const labelIds = showAll ? LABEL_CATALOG.map((d) => d.id) : (native?.labelIds ?? []);
+  const goalTypes = showAll ? [...GOAL_WIDGET_TYPES] : (native?.goalTypes ?? []);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <SectionNote>
+        {native
+          ? "Try values on the canvas without waiting for them on stream. Only this editor sees them, never OBS."
+          : "Widgets read your real saved values here. Anything they save while you test stays in the editor, so your real counters don't move."}
+      </SectionNote>
+
+      {native && (
+        <>
+          <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
+            <Switch checked={showAll} onCheckedChange={setShowAll} className="scale-75" />
+            Show every label and goal, not just the ones on this canvas
+          </label>
+          <NativeValueFields data={data} update={update} labelIds={labelIds} goalTypes={goalTypes} />
+        </>
+      )}
+
+      {customState && <CustomStateFields data={data} update={update} widgets={widgets} />}
 
       <div>
         <Button
@@ -251,7 +451,7 @@ export function SavedDataSection({
           variant="ghost"
           className={quick}
           disabled={isEditorStateEmpty(data)}
-          onClick={() => update(() => ({ userState: {}, widgetState: {} }))}
+          onClick={() => update(() => EMPTY_EDITOR_STATE)}
         >
           <RotateCcw className="size-3" aria-hidden />
           Use real values again
