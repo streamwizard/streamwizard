@@ -14,8 +14,11 @@ import { env } from "@/lib/env";
 import { coerceFields } from "@/components/widgets/editor/widget-editor-fields";
 import { parseFieldsJson, type WidgetSources } from "@/hooks/widgets/use-widget-draft";
 
-/** Console/error mirroring is editor-only — overlays don't need the traffic. */
-const SRCDOC_OPTS = { forwardLogs: true } as const;
+/**
+ * Console/error mirroring is editor-only — overlays don't need the traffic.
+ * `editor` turns on the preview-only runtime hooks (mute, editor state).
+ */
+const SRCDOC_OPTS = { forwardLogs: true, editor: true } as const;
 
 export type EditorTab = "html" | "js" | "fields" | "css";
 

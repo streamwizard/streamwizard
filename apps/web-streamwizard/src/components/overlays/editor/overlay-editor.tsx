@@ -2,6 +2,7 @@
 
 import { trackAction } from "@/lib/track-action";
 import { Button, Separator, SidebarTrigger, useSidebar } from "@repo/ui";
+import { EditorAudioProvider } from "@repo/ui/overlay";
 import { Database } from "@repo/supabase";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
@@ -110,8 +111,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
     nudgeSelected,
     editorClipPreviewPaused,
     setEditorClipPreviewPaused,
-    editorClipPreviewForceMute,
-    setEditorClipPreviewForceMute,
+    editorAudioMuted,
+    setEditorAudioMuted,
     editorClipPreviewAutoplayBlocked,
     attemptEditorClipPreviewUnblock,
     runningSimulatorIds,
@@ -561,16 +562,16 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={() =>
-                setEditorClipPreviewForceMute(!editorClipPreviewForceMute)
-              }
+              onClick={() => setEditorAudioMuted(!editorAudioMuted)}
+              aria-pressed={editorAudioMuted}
+              aria-label={editorAudioMuted ? "Turn editor sound back on" : "Mute editor sound"}
               title={
-                editorClipPreviewForceMute
-                  ? "Unmute clip preview (editor only; still respects saved clip mute in widget settings)"
-                  : "Mute clip preview in the editor"
+                editorAudioMuted
+                  ? "Editor sound is off. Click to turn it back on. Your overlay in OBS still plays sound."
+                  : "Mute alerts, clips and custom widgets in this editor. Your overlay in OBS still plays sound."
               }
             >
-              {editorClipPreviewForceMute ? (
+              {editorAudioMuted ? (
                 <VolumeX className="h-3 w-3" />
               ) : (
                 <Volume2 className="h-3 w-3" />
@@ -748,11 +749,14 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
         <div className="relative flex min-w-0 flex-1">
           {/* No scrolling here: pan and zoom own where the canvas sits. */}
           <div ref={canvasPaneRef} className="relative flex-1 overflow-hidden bg-muted/30">
-            <EditorCanvas
-              paneRef={canvasPaneRef}
-              onAddWidget={() => setWidgetSheetOpen(true)}
-              onOpenShortcuts={() => setShortcutsOpen(true)}
-            />
+            {/* Only the editor mounts this, so the mute can never reach OBS. */}
+            <EditorAudioProvider muted={editorAudioMuted}>
+              <EditorCanvas
+                paneRef={canvasPaneRef}
+                onAddWidget={() => setWidgetSheetOpen(true)}
+                onOpenShortcuts={() => setShortcutsOpen(true)}
+              />
+            </EditorAudioProvider>
           </div>
 
           {/* Floats over the canvas as a sibling of the pane, not inside it, so

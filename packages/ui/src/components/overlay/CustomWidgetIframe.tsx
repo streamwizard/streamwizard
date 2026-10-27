@@ -6,6 +6,7 @@ declare const process: { env: Record<string, string | undefined> };
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { subscribeToWsRoomWith, wsStatusFromMessage, type WsRoomOptions, type WsRoomStatus } from "./lib/ws-store";
 import { useIrlGeoContext } from "./hooks/use-irl-geo-context";
+import { useEditorAudioMuted } from "./hooks/use-editor-audio";
 
 export interface CustomWidgetIframeHandle {
   postMessage: (msg: unknown) => void;
@@ -65,6 +66,11 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
     onWsStatusRef.current = onWsStatus;
     const onLogRef = useRef(onLog);
     onLogRef.current = onLog;
+    // Only acted on by a document built with `editor: true`; anywhere else
+    // nobody listens for it, and a live overlay always reads false anyway.
+    const editorMuted = useEditorAudioMuted();
+    const editorMutedRef = useRef(editorMuted);
+    editorMutedRef.current = editorMuted;
 
     useImperativeHandle(ref, () => ({
       postMessage: (msg) => iframeRef.current?.contentWindow?.postMessage(msg, "*"),
@@ -104,6 +110,9 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
           },
           "*"
         );
+        if (editorMutedRef.current) {
+          iframeRef.current?.contentWindow?.postMessage({ type: "swSetMuted", muted: true }, "*");
+        }
       };
 
       // Attach listener before setting srcdoc so the load event is never missed.
@@ -123,6 +132,11 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
       if (!loadedRef.current) return;
       iframeRef.current?.contentWindow?.postMessage({ type: "swFieldData", fieldData }, "*");
     }, [fieldData]);
+
+    useEffect(() => {
+      if (!loadedRef.current) return;
+      iframeRef.current?.contentWindow?.postMessage({ type: "swSetMuted", muted: editorMuted }, "*");
+    }, [editorMuted]);
 
     useEffect(() => {
       function handle(e: MessageEvent) {

@@ -106,3 +106,64 @@ describe("buildWidgetSrcdoc fieldData", () => {
     expect(global.g).toBe("</script><b>hi </b>");
   });
 });
+
+describe("buildWidgetSrcdoc editor mute", () => {
+  class FakeMedia {
+    muted = false;
+    ended = false;
+    play() {
+      return Promise.resolve();
+    }
+  }
+
+  /** Runs just the editor's mute script against fake media elements. */
+  function bootMute(domMedia: FakeMedia[]) {
+    const srcdoc = buildWidgetSrcdoc("<div></div>", "", "", FIELDS, {}, undefined, undefined, { editor: true });
+    const script = [...srcdoc.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)]
+      .map((m) => m[1] ?? "")
+      .find((s) => s.includes("swSetMuted"));
+    if (!script) throw new Error("mute script not found in srcdoc");
+
+    const messageListeners: Listener[] = [];
+    const context = vm.createContext({
+      HTMLMediaElement: FakeMedia,
+      document: {
+        addEventListener() {},
+        querySelectorAll: () => domMedia,
+      },
+      addEventListener(type: string, cb: Listener) {
+        if (type === "message") messageListeners.push(cb);
+      },
+    });
+    context.window = context;
+    vm.runInContext(script, context);
+    return (muted: boolean) => {
+      for (const cb of messageListeners) cb({ type: "message", data: { type: "swSetMuted", muted } });
+    };
+  }
+
+  test("is only installed in editor documents", () => {
+    expect(buildWidgetSrcdoc("<div></div>", "", "", FIELDS, {})).not.toContain("swSetMuted");
+  });
+
+  test("mutes played sounds and page media, and only unmutes what it muted", () => {
+    const inPage = new FakeMedia();
+    const authorMuted = new FakeMedia();
+    authorMuted.muted = true;
+    const setMuted = bootMute([inPage, authorMuted]);
+
+    const sound = new FakeMedia();
+    sound.play();
+    setMuted(true);
+    expect([sound.muted, inPage.muted, authorMuted.muted]).toEqual([true, true, true]);
+
+    // A sound started while muted starts silent.
+    const later = new FakeMedia();
+    later.play();
+    expect(later.muted).toBe(true);
+
+    setMuted(false);
+    expect([sound.muted, inPage.muted, later.muted]).toEqual([false, false, false]);
+    expect(authorMuted.muted).toBe(true);
+  });
+});

@@ -6,6 +6,7 @@ declare const process: { env: Record<string, string | undefined> };
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
+import { useEditorAudioMuted } from "../../hooks/use-editor-audio";
 import { subscribeToWsRoom } from "../../lib/ws-store";
 import type { OverlayItem, OverlayScene } from "../../types";
 import {
@@ -142,6 +143,11 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
   const cfg = useMemo(() => normalizeAlertWidgetConfig(item.config), [item.config]);
   const fontFamilies = useMemo(() => alertFontFamilies(cfg), [cfg]);
   useGoogleFonts(fontFamilies);
+  // The editor's mute. Muted rather than skipped, so "wait for the sound"
+  // still waits exactly as long as it will on stream.
+  const editorMuted = useEditorAudioMuted();
+  const editorMutedRef = useRef(editorMuted);
+  editorMutedRef.current = editorMuted;
 
 
   const [active, setActive] = useState<ActiveAlert | null>(null);
@@ -266,6 +272,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     if (soundUrl) {
       const audio = new Audio(soundUrl);
       audio.volume = Math.min(1, Math.max(0, next.variant.volume * c.masterVolume));
+      audio.muted = editorMutedRef.current;
       audioRef.current = audio;
       audio.play().catch(() => {});
     }
@@ -342,6 +349,11 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     return () => window.removeEventListener(ALERT_TEST_BROWSER_EVENT, onTest);
   }, [scene, enqueue, item.id]);
 
+  // Flipping the mute mid-alert reaches the sound that is already playing.
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.muted = editorMuted;
+  }, [editorMuted]);
+
   // Cleanup timers/audio on unmount.
   useEffect(() => {
     const timers = [
@@ -416,9 +428,12 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
         autoPlay
         loop={!matchVideo}
         playsInline
-        muted={videoVolume === 0}
+        muted={editorMuted || videoVolume === 0}
         ref={(el) => {
-          if (el) el.volume = videoVolume;
+          if (!el) return;
+          el.volume = videoVolume;
+          // React only applies `muted` on mount; keep a mid-alert toggle in step.
+          el.muted = editorMuted || videoVolume === 0;
         }}
         onLoadedMetadata={(e) => {
           if (!matchVideo) return;

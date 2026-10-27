@@ -95,7 +95,8 @@ function CustomWidgetCanvasInner({ item, scene }: OverlayCanvasProps) {
           source.fields,
           values,
           env.NEXT_PUBLIC_OVERLAY_URL,
-          env.NEXT_PUBLIC_ASSET_CDN_URL
+          env.NEXT_PUBLIC_ASSET_CDN_URL,
+          { editor: true }
         )
       );
     }

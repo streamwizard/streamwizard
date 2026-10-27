@@ -668,3 +668,7 @@ export {
   type CustomWidgetIframeProps,
   type WidgetLogEntry,
 } from "./components/overlay/CustomWidgetIframe";
+export {
+  EditorAudioProvider,
+  useEditorAudioMuted,
+} from "./components/overlay/hooks/use-editor-audio";

@@ -46,6 +46,11 @@ export function buildWidgetSrcdoc(
      * on every log for nobody's benefit.
      */
     forwardLogs?: boolean;
+    /**
+     * The document runs in a dashboard preview rather than on a live overlay.
+     * Installs the editor-only hooks: the editor's mute (`swSetMuted`).
+     */
+    editor?: boolean;
   }
 ): string {
   const { resolvedHtml, resolvedCss } = resolveWidgetTemplate(html, extraCss, fields, fieldValues);
@@ -96,13 +101,52 @@ export function buildWidgetSrcdoc(
   <\/script>
 `
     : "";
+  // The editor's mute button. Best effort: it reaches every <audio>/<video>
+  // and every Audio() the widget plays, which is how widgets play sound, but
+  // not Web Audio. Only elements this muted are unmuted again, so a widget's
+  // own muted video stays muted. Installed first so it sees early play() calls.
+  const editorMute = opts?.editor
+    ? `  <script nonce="${nonce}">
+    (function () {
+      var muted = false;
+      var seen = [];
+      function hush(el) {
+        if (muted && !el.muted) { el.muted = true; el.__swEditorMuted = true; }
+      }
+      function track(el) {
+        seen = seen.filter(function (s) { return !s.ended; });
+        if (seen.indexOf(el) === -1) seen.push(el);
+        hush(el);
+      }
+      var play = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () {
+        track(this);
+        return play.apply(this, arguments);
+      };
+      // autoplay never calls play(); its 'play' event doesn't bubble, so capture it.
+      document.addEventListener('play', function (e) {
+        if (e.target instanceof HTMLMediaElement) track(e.target);
+      }, true);
+      window.addEventListener('message', function (e) {
+        if (!e.data || e.data.type !== 'swSetMuted') return;
+        muted = e.data.muted === true;
+        var els = seen.concat(Array.prototype.slice.call(document.querySelectorAll('audio,video')));
+        els.forEach(function (el) {
+          if (muted) hush(el);
+          else if (el.__swEditorMuted) { el.muted = false; delete el.__swEditorMuted; }
+        });
+      });
+    })();
+  <\/script>
+`
+    : "";
 
   return `<!DOCTYPE html>
 <html style="background:transparent!important;background-color:transparent!important;color-scheme:normal">
 <head>
   <meta name="color-scheme" content="normal">
   <meta http-equiv="Content-Security-Policy" content="connect-src ${connectSrc}">
-${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/script>
+${logForwarder}${editorMute}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/script>
   <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>
   <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"><\/script>
   <script nonce="${nonce}">

@@ -17,6 +17,7 @@ import {
   saveRulerCursor,
   saveSnapToItems,
   saveRulersVisible,
+  saveEditorAudioMuted,
   type CanvasBackground,
   type GridSettings,
   type SnapAxes,
@@ -246,11 +247,16 @@ interface OverlayEditorState {
   toggleGroupVisibility: (groupId: string) => void;
   toggleGroupLock: (groupId: string) => void;
 
-  /** Editor-only: optional clip preview controls (pause / force-mute / autoplay), not persisted. */
+  /**
+   * Editor-only sound switch: alerts, clip previews and custom widgets on the
+   * canvas. Kept across sessions; the live overlay never reads it.
+   */
+  editorAudioMuted: boolean;
+  setEditorAudioMuted: (muted: boolean) => void;
+
+  /** Editor-only: optional clip preview controls (pause / autoplay), not persisted. */
   editorClipPreviewPaused: boolean;
   setEditorClipPreviewPaused: (paused: boolean) => void;
-  editorClipPreviewForceMute: boolean;
-  setEditorClipPreviewForceMute: (forceMute: boolean) => void;
   editorClipPreviewAutoplayBlocked: boolean;
   setEditorClipPreviewAutoplayBlocked: (blocked: boolean) => void;
   editorClipPreviewResumeTick: number;
@@ -493,6 +499,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       grid: prefs.grid,
       rulersVisible: prefs.rulers,
       rulerCursorVisible: prefs.rulerCursor,
+      editorAudioMuted: prefs.audioMuted,
     };
   })(),
 
@@ -1224,9 +1231,10 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       ...(!paused ? { editorClipPreviewAutoplayBlocked: false } : {}),
     }),
 
-  editorClipPreviewForceMute: false,
-  setEditorClipPreviewForceMute: (forceMute) =>
-    set({ editorClipPreviewForceMute: forceMute }),
+  setEditorAudioMuted: (muted) => {
+    saveEditorAudioMuted(muted);
+    set({ editorAudioMuted: muted });
+  },
 
   editorClipPreviewAutoplayBlocked: false,
   setEditorClipPreviewAutoplayBlocked: (blocked) =>
