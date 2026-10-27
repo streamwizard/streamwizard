@@ -52,10 +52,26 @@ once a background is where you want it, so you stop dragging it by accident.
 
 Double-click a name to rename it.
 
-<Note>
-There's no grouping. Widgets are arranged individually, and the only nesting is
-the clips widget's own caption fields, which are fixed to it.
-</Note>
+### Groups
+
+A logo, its label and the panel behind them belong together. Select them and
+press **Ctrl+G** so they stay together. Right-click → **Group selection** and
+**Group these** in the inspector do the same.
+
+- Select any part of a group on the canvas and you get the whole group. Drag,
+  duplicate or delete it as one thing, and one **Ctrl+Z** undoes it.
+- **Double-click** to get inside a group and pick one item. Each double-click
+  goes one level deeper, because groups can sit inside other groups.
+- In the layers panel a group is one row you can collapse. Its eye and lock
+  apply to everything inside. Selecting an item's row picks just that item.
+- Rename a group by double-clicking its row, or in the inspector while it's
+  selected. New groups start as **Group 1**, **Group 2** and so on.
+- **Ctrl+Shift+G** ungroups one level. Nothing moves.
+- Right-click an item for **Move to group** or **Remove from group**.
+
+Locked items stay where they are when you move their group. The clips widget's
+caption fields are part of the clips widget, not a group, so they always follow
+it.
 
 ## The canvas view
 

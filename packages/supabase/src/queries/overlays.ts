@@ -17,7 +17,7 @@ export async function getOverlayScene(client: DBClient, id: string, userId: stri
     .eq("user_id", userId)
     .single();
 
-  if (sceneError) return { scene: null, items: null, error: sceneError };
+  if (sceneError) return { scene: null, items: null, groups: null, error: sceneError };
 
   const { data: items, error: itemsError } = await client
     .from("overlay_items")
@@ -25,8 +25,15 @@ export async function getOverlayScene(client: DBClient, id: string, userId: stri
     .eq("scene_id", id)
     .order("z_index", { ascending: true });
 
-  if (itemsError) return { scene: null, items: null, error: itemsError };
-  return { scene, items: items ?? [], error: null };
+  if (itemsError) return { scene: null, items: null, groups: null, error: itemsError };
+
+  const { data: groups, error: groupsError } = await client
+    .from("overlay_item_groups")
+    .select("*")
+    .eq("scene_id", id);
+
+  if (groupsError) return { scene: null, items: null, groups: null, error: groupsError };
+  return { scene, items: items ?? [], groups: groups ?? [], error: null };
 }
 
 export async function getOverlaySceneBySlug(client: DBClient, slug: string) {
@@ -149,6 +156,26 @@ export async function insertOverlayItems(
   items: Database["public"]["Tables"]["overlay_items"]["Insert"][]
 ) {
   return client.from("overlay_items").insert(items);
+}
+
+type OverlayItemGroupInsert = Database["public"]["Tables"]["overlay_item_groups"]["Insert"];
+
+/** The editor's user groups for a scene. The live overlay never reads these. */
+export async function getOverlayItemGroups(client: DBClient, sceneId: string) {
+  return client.from("overlay_item_groups").select("*").eq("scene_id", sceneId);
+}
+
+/** Groups carry editor-made ids, so a save writes new and changed ones in one upsert. */
+export async function upsertOverlayItemGroups(client: DBClient, groups: OverlayItemGroupInsert[]) {
+  return client.from("overlay_item_groups").upsert(groups, { onConflict: "id" });
+}
+
+export async function insertOverlayItemGroups(client: DBClient, groups: OverlayItemGroupInsert[]) {
+  return client.from("overlay_item_groups").insert(groups);
+}
+
+export async function deleteOverlayItemGroupsByIds(client: DBClient, sceneId: string, ids: string[]) {
+  return client.from("overlay_item_groups").delete().eq("scene_id", sceneId).in("id", ids);
 }
 
 export async function getOverlaySceneBySubscriberToken(client: DBClient, token: string) {

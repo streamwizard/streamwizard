@@ -1,15 +1,18 @@
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem, OverlayItemGroup } from "@/types/overlays";
 
 /**
  * Unsaved editor state, parked in localStorage so a crash or an accidental
  * reload doesn't take the work with it.
  *
- * Items only. Widget source is fetched fresh and would blow the quota for
- * nothing, and everything else about the scene comes back from the server.
+ * Items and groups only. Widget source is fetched fresh and would blow the
+ * quota for nothing, and everything else about the scene comes back from the
+ * server.
  */
 export interface OverlayDraft {
   sceneId: string;
   items: OverlayItem[];
+  /** Absent on drafts written before groups existed. */
+  groups?: OverlayItemGroup[];
   savedAt: string;
 }
 
@@ -56,12 +59,17 @@ export function readOverlayDraft(sceneId: string): OverlayDraft | null {
   return parseOverlayDraft(readOverlayDraftRaw(sceneId), sceneId);
 }
 
-export function writeOverlayDraft(sceneId: string, items: OverlayItem[]) {
+export function writeOverlayDraft(
+  sceneId: string,
+  items: OverlayItem[],
+  groups: OverlayItemGroup[] = []
+) {
   if (typeof window === "undefined") return;
 
   const payload = JSON.stringify({
     sceneId,
     items,
+    groups,
     savedAt: new Date().toISOString(),
   } satisfies OverlayDraft);
 

@@ -69,6 +69,14 @@ test("a written draft reads back with its items", () => {
   expect(draft?.items[0]?.label).toBe("Hello");
 });
 
+test("a draft keeps the groups", () => {
+  const group = { id: "g-1", scene_id: "scene-1", parent_group_id: null, label: "Header" };
+  writeOverlayDraft("scene-1", [{ ...makeItem("Hello"), group_id: "g-1" }], [group]);
+  const draft = readOverlayDraft("scene-1");
+  expect(draft?.groups).toEqual([group]);
+  expect(draft?.items[0]?.group_id).toBe("g-1");
+});
+
 test("clearing removes the draft", () => {
   writeOverlayDraft("scene-1", [makeItem("Hello")]);
   clearOverlayDraft("scene-1");

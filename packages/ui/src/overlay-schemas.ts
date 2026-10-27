@@ -1148,6 +1148,8 @@ const overlayItemBoxFields = {
   // Payloads from before flipping existed carry neither; unflipped is what they meant.
   flip_h: z.boolean().default(false),
   flip_v: z.boolean().default(false),
+  // The item's innermost user group. Payloads from before groups carry none.
+  group_id: z.string().uuid().nullable().default(null),
 };
 
 export const overlayItemSchema = z.discriminatedUnion("type", [
@@ -1242,6 +1244,14 @@ export const overlayItemSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("shape_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: shapeWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("slideshow_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: slideshowWidgetItemConfigSchema }),
 ]);
+
+/** A user group in the editor's layers tree; see `OverlayItemGroup`. */
+export const overlayItemGroupSchema = z.object({
+  id: z.string().uuid(),
+  scene_id: z.string().uuid(),
+  parent_group_id: z.string().uuid().nullable(),
+  label: z.string().trim().min(1).max(100),
+});
 
 export const createSceneSchema = z.object({
   name: z.string().min(1).max(100),

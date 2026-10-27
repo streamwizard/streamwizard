@@ -23,6 +23,7 @@ export const OVERLAY_EXPORT_SCHEMA_VERSION = 1;
 /** Guards against a hand-made file asking the importer to build something huge. */
 const MAX_EXPORTED_ITEMS = 500;
 const MAX_EXPORTED_WIDGETS = 50;
+const MAX_EXPORTED_GROUPS = 500;
 const MAX_WIDGET_SOURCE_CHARS = 500_000;
 
 /**
@@ -70,6 +71,15 @@ export const exportedItemSchema = z.object({
   is_locked: z.boolean(),
   label: z.string(),
   config: z.record(z.string(), z.unknown()),
+  // The `ref` of the item's innermost group. Files from before groups carry none.
+  group_ref: z.string().min(1).max(100).nullable().default(null),
+});
+
+/** A user group from the layers panel; nests through `parent_ref`. */
+export const exportedGroupSchema = z.object({
+  ref: z.string().min(1).max(100),
+  parent_ref: z.string().min(1).max(100).nullable().default(null),
+  label: z.string().trim().min(1).max(100),
 });
 
 export const overlayExportDocumentSchema = z.object({
@@ -84,8 +94,10 @@ export const overlayExportDocumentSchema = z.object({
   }),
   items: z.array(exportedItemSchema).max(MAX_EXPORTED_ITEMS),
   widgets: z.array(exportedWidgetSchema).max(MAX_EXPORTED_WIDGETS).default([]),
+  groups: z.array(exportedGroupSchema).max(MAX_EXPORTED_GROUPS).default([]),
 });
 
 export type OverlayExportDocument = z.infer<typeof overlayExportDocumentSchema>;
 export type ExportedOverlayItem = z.infer<typeof exportedItemSchema>;
 export type ExportedWidget = z.infer<typeof exportedWidgetSchema>;
+export type ExportedGroup = z.infer<typeof exportedGroupSchema>;

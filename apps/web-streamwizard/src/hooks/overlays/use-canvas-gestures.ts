@@ -26,6 +26,7 @@ import {
 import { snapToGrid } from "@/components/overlays/editor/canvas-preferences";
 import { fromAbsoluteGeometry } from "@/components/overlays/editor/overlay-item-helpers";
 import { extendsSelection } from "@/components/overlays/editor/selection-modifiers";
+import { expandToOutermostGroups } from "@/components/overlays/editor/item-groups";
 
 /** Screen-px snap radius; converted to scene px by dividing by zoom. */
 const SNAP_THRESHOLD_PX = 8;
@@ -69,8 +70,7 @@ export function useCanvasGestures() {
   const zoom = useOverlayStore((s) => s.zoom);
   const grid = useOverlayStore((s) => s.grid);
   const snapToItems = useOverlayStore((s) => s.snapToItems);
-  const selectItem = useOverlayStore((s) => s.selectItem);
-  const toggleSelectItem = useOverlayStore((s) => s.toggleSelectItem);
+  const selectFromCanvas = useOverlayStore((s) => s.selectFromCanvas);
   const setSelectedItems = useOverlayStore((s) => s.setSelectedItems);
   const clearSelection = useOverlayStore((s) => s.clearSelection);
   const updateItem = useOverlayStore((s) => s.updateItem);
@@ -126,22 +126,20 @@ export function useCanvasGestures() {
       if (!item) return;
 
       if (extendsSelection(e) && mode === "move" && isRootLayerType(item.type)) {
-        toggleSelectItem(itemId);
+        selectFromCanvas(itemId, "toggle");
         return;
       }
+
+      // Grabbing something outside the selection selects what a click means
+      // there -- the item's whole group, if it has one -- and drags that.
+      const inSelection = selectedItemIds.includes(itemId);
+      const selection = inSelection ? selectedItemIds : selectFromCanvas(itemId, "click");
 
       // Locked items are selectable but never draggable.
-      if (item.is_locked) {
-        if (!selectedItemIds.includes(itemId)) selectItem(itemId);
-        return;
-      }
+      if (item.is_locked) return;
 
-      const inSelection = selectedItemIds.includes(itemId);
-      if (!inSelection) selectItem(itemId);
-
-      // Group move when grabbing a member of a multi-selection; resize is always single-item.
-      const groupIds =
-        mode === "move" && inSelection && selectedItemIds.length > 1 ? selectedItemIds : [itemId];
+      // Moving drags the whole selection; resize is always single-item.
+      const groupIds = mode === "move" && selection.length > 1 ? selection : [itemId];
       const items: DragItemStart[] = groupIds
         .map((id) => scene.items.find((i) => i.id === id))
         .filter(
@@ -176,7 +174,7 @@ export function useCanvasGestures() {
         handle,
       });
     },
-    [scene, selectedItemIds, selectItem, toggleSelectItem],
+    [scene, selectedItemIds, selectFromCanvas],
   );
 
   const handleBackgroundMouseDown = useCallback(
@@ -360,8 +358,10 @@ export function useCanvasGestures() {
           .map((i) => withAbsolutePosition(i, scene))
           .filter((i) => i.x < x2 && i.x + i.w > x1 && i.y < y2 && i.y + i.h > y1)
           .map((i) => i.id);
+        // Catching any part of a group catches the whole group.
+        const caught = expandToOutermostGroups(hit, scene.items, scene.groups ?? []);
         setSelectedItems(
-          marquee.additive ? Array.from(new Set([...selectedItemIds, ...hit])) : hit,
+          marquee.additive ? Array.from(new Set([...selectedItemIds, ...caught])) : caught,
         );
       } else if (!marquee.additive) {
         clearSelection();
@@ -374,8 +374,9 @@ export function useCanvasGestures() {
       if (movedRef.current && gestureSnapshotRef.current) {
         pushHistory(gestureSnapshotRef.current); // one undo entry per drag/resize gesture
       } else if (!movedRef.current && selectedItemIds.length > 1) {
-        // Plain click (no drag) on a multi-selected item collapses to that item.
-        selectItem(dragState.grabbedId);
+        // Plain click (no drag) on a multi-selected item collapses to what a
+        // click there means: that item, or its group when it has one.
+        selectFromCanvas(dragState.grabbedId, "click");
       }
       gestureSnapshotRef.current = null;
       movedRef.current = false;
@@ -390,7 +391,7 @@ export function useCanvasGestures() {
     scene,
     selectedItemIds,
     setSelectedItems,
-    selectItem,
+    selectFromCanvas,
     clearSelection,
     pushHistory,
   ]);
