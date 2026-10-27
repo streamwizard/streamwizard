@@ -1,4 +1,8 @@
-import { buildWidgetTestEvent, type WidgetTestEventType } from "@repo/schemas";
+import {
+  buildWidgetTestEvent,
+  type TwitchScopeFeature,
+  type WidgetTestEventType,
+} from "@repo/schemas";
 import {
   ALERT_ENTER_ANIMATIONS,
   ALERT_EXIT_ANIMATIONS,
@@ -21,10 +25,9 @@ import {
  * the way the public /overlays catalog groups them so the marketing page and
  * the settings panel read as the same product.
  *
- * Six more events from that catalog are missing on purpose -- ban, VIP added,
- * mod added, both predictions and goal achieved each need an OAuth scope
- * StreamWizard does not request yet, so shipping them means re-consent for
- * every existing user. They are tracked separately.
+ * The Mod alerts need one more Twitch permission each, asked for only when
+ * the streamer turns one on (see `ALERT_EVENT_TWITCH_FEATURES`), so an
+ * existing account never sees a consent screen for alerts it does not use.
  */
 export const ALERT_EVENT_CATEGORIES = [
   {
@@ -62,7 +65,15 @@ export const ALERT_EVENT_CATEGORIES = [
       "ad_break",
       "poll_start",
       "poll_winner",
+      "prediction_start",
+      "prediction_result",
+      "goal_achieved",
     ],
+  },
+  {
+    id: "moderation",
+    label: "Mod",
+    events: ["ban", "timeout", "vip_added", "mod_added"],
   },
 ] as const;
 
@@ -98,6 +109,13 @@ export const ALERT_EVENT_LABELS: Record<AlertEventType, string> = {
   ad_break: "Ad break",
   poll_start: "Poll start",
   poll_winner: "Poll winner",
+  prediction_start: "Prediction start",
+  prediction_result: "Prediction result",
+  goal_achieved: "Goal achieved",
+  ban: "Ban",
+  timeout: "Timeout",
+  vip_added: "VIP added",
+  mod_added: "Mod added",
 };
 
 /**
@@ -130,6 +148,13 @@ export const ALERT_AMOUNT_LABELS: Record<AlertEventType, string | null> = {
   ad_break: "seconds",
   poll_start: null,
   poll_winner: "votes",
+  prediction_start: null,
+  prediction_result: "points",
+  goal_achieved: "target",
+  ban: null,
+  timeout: "seconds",
+  vip_added: null,
+  mod_added: null,
 };
 
 /**
@@ -161,6 +186,13 @@ export const ALERT_NAME_LABELS: Record<AlertEventType, string> = {
   ad_break: "your channel",
   poll_start: "the poll question",
   poll_winner: "the winning choice",
+  prediction_start: "the prediction question",
+  prediction_result: "the winning outcome",
+  goal_achieved: "the goal",
+  ban: "who was banned",
+  timeout: "who was timed out",
+  vip_added: "the new VIP",
+  mod_added: "the new mod",
 };
 
 /**
@@ -190,6 +222,10 @@ export const ALERT_MESSAGE_EVENTS: readonly AlertEventType[] = [
   "announcement",
   "charity_donation",
   "redemption",
+  // The ban reason. Not in the default text: it is the mod's note, and a
+  // streamer should choose to put it on screen.
+  "ban",
+  "timeout",
 ];
 
 /**
@@ -207,11 +243,25 @@ export const ALERT_GIFTER_EVENTS: readonly AlertEventType[] = [
  * on a charity alert would read like a bug.
  */
 export const ALERT_DETAIL_TOKENS: Partial<
-  Record<AlertEventType, "reward" | "charity" | "recipient">
+  Record<AlertEventType, "reward" | "charity" | "recipient" | "moderator">
 > = {
   redemption: "reward",
   charity_donation: "charity",
   gift_sub: "recipient",
+  ban: "moderator",
+  timeout: "moderator",
+};
+
+/**
+ * The alerts behind a Twitch permission StreamWizard does not ask for at
+ * sign-in. Their events only arrive once the streamer grants it, so the
+ * editor asks for it when one of them is turned on.
+ */
+export const ALERT_EVENT_TWITCH_FEATURES: Partial<Record<AlertEventType, TwitchScopeFeature>> = {
+  ban: "alert_bans",
+  timeout: "alert_bans",
+  vip_added: "alert_vips",
+  mod_added: "alert_mods",
 };
 
 /** Events whose payload names a sub plan: what a tier condition reads. */
@@ -273,10 +323,20 @@ export const ALERT_VARIATION_EVENTS: readonly AlertEventType[] = [
   "shoutout_sent",
   "ad_break",
   "poll_winner",
+  "prediction_result",
+  "goal_achieved",
+  "timeout",
 ];
 
 /** Events whose `{name}` is not a person, so there is no username to match. */
-const ALERT_NAMELESS_EVENTS: readonly AlertEventType[] = ["ad_break", "poll_start", "poll_winner"];
+const ALERT_NAMELESS_EVENTS: readonly AlertEventType[] = [
+  "ad_break",
+  "poll_start",
+  "poll_winner",
+  "prediction_start",
+  "prediction_result",
+  "goal_achieved",
+];
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -565,6 +625,13 @@ export const DEFAULT_ALERT_VARIANT_TITLES: Record<AlertEventType, string> = {
   ad_break: "Ads for {amount} seconds. Stretch.",
   poll_start: "New poll: {name}",
   poll_winner: "{name} won the poll with {amount} votes!",
+  prediction_start: "New prediction: {name}",
+  prediction_result: "{name} wins the prediction!",
+  goal_achieved: "Goal hit: {name}!",
+  ban: "{name} met the banhammer.",
+  timeout: "{name} is in timeout for {amount} seconds.",
+  vip_added: "{name} is a VIP now!",
+  mod_added: "{name} has the sword now.",
 };
 
 const DEFAULT_ALERT_VARIANT_MESSAGES: Record<AlertEventType, string> = {
@@ -591,6 +658,13 @@ const DEFAULT_ALERT_VARIANT_MESSAGES: Record<AlertEventType, string> = {
   ad_break: "",
   poll_start: "",
   poll_winner: "",
+  prediction_start: "",
+  prediction_result: "",
+  goal_achieved: "",
+  ban: "",
+  timeout: "",
+  vip_added: "",
+  mod_added: "",
 };
 
 export function createDefaultAlertVariantConfig(
@@ -1084,6 +1158,30 @@ export interface AlertInstance {
   detail: string;
 }
 
+/**
+ * What a goal is called when the streamer left its description empty. Twitch
+ * says "follow" on these events and "follower" elsewhere; both read the same.
+ */
+function goalLabel(type: string): string {
+  switch (type) {
+    case "follow":
+    case "follower":
+      return "Follower goal";
+    case "subscription":
+    case "subscription_count":
+      return "Sub goal";
+    case "new_subscription":
+    case "new_subscription_count":
+      return "New sub goal";
+    case "new_bit":
+      return "Bits goal";
+    case "new_cheerer":
+      return "Cheerers goal";
+    default:
+      return "Goal";
+  }
+}
+
 /** An anonymous gifter has no name in the payload; the alert still needs one. */
 const ANONYMOUS_GIFTER = "an anonymous gifter";
 
@@ -1362,6 +1460,54 @@ export function alertInstanceFromSocketMessage(msg: {
     case "channel.poll.begin":
       return baseInstance("poll_start", str(p.title));
 
+    case "channel.prediction.begin":
+      return baseInstance("prediction_start", str(p.title));
+
+    case "channel.prediction.end": {
+      // A canceled prediction has no winner, and handing everyone their
+      // points back is nothing to celebrate.
+      if (p.status !== "resolved") return null;
+      const outcomes = Array.isArray(p.outcomes) ? (p.outcomes as Record<string, unknown>[]) : [];
+      const winner = outcomes.find((o) => str(o.id) === str(p.winning_outcome_id));
+      if (!winner) return null;
+      return {
+        ...baseInstance("prediction_result", str(winner.title)),
+        amount: num(winner.channel_points),
+      };
+    }
+
+    case "channel.goal.end":
+      // A goal that ran out without being reached ends too; only a hit is an alert.
+      if (p.is_achieved !== true) return null;
+      return {
+        ...baseInstance("goal_achieved", str(p.description) || goalLabel(str(p.type))),
+        amount: num(p.target_amount),
+      };
+
+    case "channel.ban": {
+      // Twitch sends a timeout as a ban that is not permanent, with its end.
+      if (p.is_permanent === true) {
+        return {
+          ...baseInstance("ban", str(p.user_name), str(p.user_login)),
+          message: str(p.reason),
+          detail: str(p.moderator_user_name),
+        };
+      }
+      const seconds = (Date.parse(str(p.ends_at)) - Date.parse(str(p.banned_at))) / 1000;
+      return {
+        ...baseInstance("timeout", str(p.user_name), str(p.user_login)),
+        amount: Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0,
+        message: str(p.reason),
+        detail: str(p.moderator_user_name),
+      };
+    }
+
+    case "channel.vip.add":
+      return baseInstance("vip_added", str(p.user_name), str(p.user_login));
+
+    case "channel.moderator.add":
+      return baseInstance("mod_added", str(p.user_name), str(p.user_login));
+
     case "channel.poll.end": {
       // An archived or terminated poll has no winner worth announcing.
       if (p.status !== "completed") return null;
@@ -1398,6 +1544,7 @@ export const ALERT_TEMPLATE_TOKENS = [
   "reward",
   "charity",
   "recipient",
+  "moderator",
 ] as const;
 export type AlertTemplateToken = (typeof ALERT_TEMPLATE_TOKENS)[number];
 
@@ -1438,7 +1585,7 @@ export function renderAlertTemplate(
       case "gifter":
         return alert.gifter;
       default:
-        // reward / charity / recipient all read the one `detail` field.
+        // reward / charity / recipient / moderator all read the one `detail` field.
         return alert.detail;
     }
   });
@@ -1838,6 +1985,13 @@ export const ALERT_EVENT_SUBSCRIPTION_TYPES: Record<
   ad_break: { type: "channel.ad_break.begin" },
   poll_start: { type: "channel.poll.begin" },
   poll_winner: { type: "channel.poll.end" },
+  prediction_start: { type: "channel.prediction.begin" },
+  prediction_result: { type: "channel.prediction.end" },
+  goal_achieved: { type: "channel.goal.end" },
+  ban: { type: "channel.ban" },
+  timeout: { type: "channel.ban", variant: "timeout" },
+  vip_added: { type: "channel.vip.add" },
+  mod_added: { type: "channel.moderator.add" },
 };
 
 /**

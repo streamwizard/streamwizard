@@ -6,6 +6,7 @@ import {
   ALERT_EVENT_LABELS,
   ALERT_EVENT_SUBSCRIPTION_TYPES,
   ALERT_EVENT_TYPES,
+  ALERT_EVENT_TWITCH_FEATURES,
   ALERT_LOOK_KEYS,
   ALERT_NAME_LABELS,
   ALERT_MAX_HOLD_MS,
@@ -341,6 +342,88 @@ describe("notice payloads", () => {
   });
 });
 
+describe("alerts behind an extra Twitch permission", () => {
+  const ban = (extra: Record<string, unknown>) =>
+    alertInstanceFromSocketMessage({
+      type: "channel.ban",
+      payload: {
+        user_name: "TrollBot", user_login: "trollbot", moderator_user_name: "ninetoad",
+        reason: "spam", banned_at: "2026-10-27T12:00:00Z", ...extra,
+      },
+    });
+
+  it("tells a ban from a timeout, and times the timeout", () => {
+    const banned = ban({ is_permanent: true, ends_at: null });
+    expect(banned?.event).toBe("ban");
+    expect(banned?.name).toBe("TrollBot");
+    expect(banned?.message).toBe("spam");
+    expect(renderAlertTemplate("{name} by {moderator}", banned!)).toBe("TrollBot by ninetoad");
+
+    const timedOut = ban({ is_permanent: false, ends_at: "2026-10-27T12:10:00Z" });
+    expect(timedOut?.event).toBe("timeout");
+    expect(timedOut?.amount).toBe(600);
+    // A timeout without a readable end still fires, just without a length.
+    expect(ban({ is_permanent: false, ends_at: null })?.amount).toBe(0);
+  });
+
+  it("names the new VIP and the new mod", () => {
+    const vip = alertInstanceFromSocketMessage({ type: "channel.vip.add", payload: { user_name: "Toast", user_login: "toast" } });
+    expect(vip).toMatchObject({ event: "vip_added", name: "Toast", login: "toast" });
+    const mod = alertInstanceFromSocketMessage({ type: "channel.moderator.add", payload: { user_name: "Nine", user_login: "nine" } });
+    expect(mod).toMatchObject({ event: "mod_added", name: "Nine", login: "nine" });
+  });
+
+  it("only these ask for a permission, and none of them start on", () => {
+    expect(ALERT_EVENT_TWITCH_FEATURES).toEqual({
+      ban: "alert_bans",
+      timeout: "alert_bans",
+      vip_added: "alert_vips",
+      mod_added: "alert_mods",
+    });
+    for (const event of ["ban", "timeout", "vip_added", "mod_added", "prediction_start", "prediction_result", "goal_achieved"] as const) {
+      expect(ALERT_DEFAULT_ON_EVENTS).not.toContain(event);
+    }
+  });
+});
+
+describe("prediction and goal alerts", () => {
+  it("opens a prediction on its question", () => {
+    const alert = alertInstanceFromSocketMessage({ type: "channel.prediction.begin", payload: { title: "Clutch or throw?" } });
+    expect(alert).toMatchObject({ event: "prediction_start", name: "Clutch or throw?" });
+  });
+
+  it("names the winning outcome and its points, and skips a canceled prediction", () => {
+    const outcomes = [
+      { id: "1", title: "Clutch", channel_points: 15000 },
+      { id: "2", title: "Throw", channel_points: 9000 },
+    ];
+    const won = alertInstanceFromSocketMessage({
+      type: "channel.prediction.end",
+      payload: { status: "resolved", winning_outcome_id: "2", outcomes },
+    });
+    expect(won).toMatchObject({ event: "prediction_result", name: "Throw", amount: 9000 });
+    expect(
+      alertInstanceFromSocketMessage({ type: "channel.prediction.end", payload: { status: "canceled", winning_outcome_id: "", outcomes } })
+    ).toBeNull();
+  });
+
+  it("fires on a goal that was hit, not one that ran out", () => {
+    const hit = alertInstanceFromSocketMessage({
+      type: "channel.goal.end",
+      payload: { type: "subscription_count", description: "Road to 250", target_amount: 250, is_achieved: true },
+    });
+    expect(hit).toMatchObject({ event: "goal_achieved", name: "Road to 250", amount: 250 });
+    const unnamed = alertInstanceFromSocketMessage({
+      type: "channel.goal.end",
+      payload: { type: "follower", description: "", target_amount: 100, is_achieved: true },
+    });
+    expect(unnamed?.name).toBe("Follower goal");
+    expect(
+      alertInstanceFromSocketMessage({ type: "channel.goal.end", payload: { type: "follow", target_amount: 100, is_achieved: false } })
+    ).toBeNull();
+  });
+});
+
 describe("dedicated subscriptions the alert box still owns", () => {
   it("reads a redemption's reward and cost", () => {
     const alert = alertInstanceFromSocketMessage({
@@ -578,10 +661,10 @@ describe("config migration", () => {
 });
 
 describe("alert type coverage", () => {
-  it("configures 23 alerts", () => {
-    // 29 in the public catalog minus the six that need an OAuth scope
-    // StreamWizard does not request yet (ban, VIP, mod, 2x prediction, goal).
-    expect(ALERT_EVENT_TYPES.length).toBe(23);
+  it("configures 30 alerts", () => {
+    // The 29 in the public catalog, plus timeout, which the catalog folds
+    // into its ban demo.
+    expect(ALERT_EVENT_TYPES.length).toBe(30);
   });
 
   it("still ships the six the widget started with", () => {
@@ -819,10 +902,13 @@ const atLeast = (value: number): AlertVariationCondition => ({
 });
 
 describe("which alerts take variations", () => {
-  it("is the seventeen that have something to match on", () => {
+  it("is the twenty that have something to match on", () => {
     expect([...ALERT_VARIATION_EVENTS].sort() as string[]).toEqual(
       [
         "ad_break",
+        "goal_achieved",
+        "prediction_result",
+        "timeout",
         "bits_badge",
         "charity_donation",
         "cheer",

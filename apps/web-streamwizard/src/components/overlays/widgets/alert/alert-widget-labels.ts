@@ -25,7 +25,9 @@ export function alertTokenMeaning(event: AlertEventType, token: AlertTemplateTok
     case "amount":
       return `{amount} is ${ALERT_AMOUNT_LABELS[event] ?? "the number"}.`;
     case "message":
-      return "{message} is what the viewer wrote.";
+      return event === "ban" || event === "timeout"
+        ? "{message} is the reason the mod gave."
+        : "{message} is what the viewer wrote.";
     case "gifter":
       return "{gifter} is who gave the original sub.";
     case "reward":
@@ -34,6 +36,8 @@ export function alertTokenMeaning(event: AlertEventType, token: AlertTemplateTok
       return "{charity} is the charity.";
     case "recipient":
       return "{recipient} is who got the sub.";
+    case "moderator":
+      return "{moderator} is the mod who did it.";
   }
 }
 
