@@ -376,6 +376,8 @@ const alertVariationConditionSchema = z.discriminatedUnion("parameter", [
     parameter: z.literal("name"),
     names: z.array(z.string().max(64)).max(ALERT_VARIATION_LIMITS.names),
   }),
+  z.object({ parameter: z.literal("gifted"), value: z.boolean() }),
+  z.object({ parameter: z.literal("anonymous"), value: z.boolean() }),
 ]);
 
 /**

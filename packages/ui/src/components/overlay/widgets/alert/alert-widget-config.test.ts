@@ -850,9 +850,10 @@ describe("which alerts take variations", () => {
   });
 
   it("offers each alert only what its events carry", () => {
-    expect(alertVariationParameters("cheer")).toEqual(["none", "amount", "name"]);
-    expect(alertVariationParameters("sub")).toEqual(["none", "tier", "name"]);
-    expect(alertVariationParameters("resub")).toEqual(["none", "amount", "tier", "name"]);
+    expect(alertVariationParameters("cheer")).toEqual(["none", "amount", "name", "anonymous"]);
+    expect(alertVariationParameters("sub")).toEqual(["none", "tier", "name", "gifted"]);
+    expect(alertVariationParameters("resub")).toEqual(["none", "amount", "tier", "name", "gifted"]);
+    expect(alertVariationParameters("gift_sub")).toEqual(["none", "amount", "tier", "name", "anonymous"]);
     // No year in the payload: a modiversary can only be told apart by who it is.
     expect(alertVariationParameters("modiversary")).toEqual(["none", "name"]);
     // Nobody to name on an ad break or a poll.
@@ -959,6 +960,46 @@ describe("which variation plays", () => {
     expect(pickAlertVariation(sub({ sub_plan: "3000" }), tiered, always)?.id).toBe("t3");
     expect(pickAlertVariation(sub({ sub_tier: "1000", is_prime: true }), tiered, always)?.id).toBe("prime");
     expect(pickAlertVariation(sub({ sub_tier: "1000", is_prime: false }), tiered, always)).toBeNull();
+  });
+
+  it("tells a gifted sub from one the viewer paid for", () => {
+    const sub = (block: Record<string, unknown>) =>
+      alertInstanceFromSocketMessage(notice("sub", { sub: block }))!;
+    const resub = (block: Record<string, unknown>) =>
+      alertInstanceFromSocketMessage(notice("resub", { resub: { cumulative_months: 3, ...block } }))!;
+    const gifted = (event: "sub" | "resub") => ({
+      ...createDefaultAlertVariantConfig(event),
+      variations: [variation("gift", { parameter: "gifted", value: true })],
+    });
+    const paid = { ...gifted("sub"), variations: [variation("paid", { parameter: "gifted", value: false })] };
+
+    expect(pickAlertVariation(sub({ sub_plan: "1000", is_gift: true }), gifted("sub"), always)?.id).toBe("gift");
+    expect(pickAlertVariation(sub({ sub_plan: "1000", is_gift: false }), gifted("sub"), always)).toBeNull();
+    expect(pickAlertVariation(sub({ sub_plan: "1000", is_gift: false }), paid, always)?.id).toBe("paid");
+    expect(pickAlertVariation(resub({ is_gift: true }), gifted("resub"), always)?.id).toBe("gift");
+    // A payload that does not say counts as paid for.
+    expect(pickAlertVariation(sub({ sub_plan: "1000" }), paid, always)?.id).toBe("paid");
+  });
+
+  it("tells an anonymous cheer or gift from a named one", () => {
+    const anon = (event: AlertEventType) => ({
+      ...createDefaultAlertVariantConfig(event),
+      variations: [variation("anon", { parameter: "anonymous", value: true })],
+    });
+    const anonCheer = alertInstanceFromSocketMessage({
+      type: "channel.cheer",
+      payload: { is_anonymous: true, user_name: null, bits: 100, message: "" },
+    })!;
+    expect(anonCheer.anonymous).toBe(true);
+    expect(pickAlertVariation(anonCheer, anon("cheer"), always)?.id).toBe("anon");
+    expect(pickAlertVariation(cheer(100), anon("cheer"), always)).toBeNull();
+
+    const gift = (anonymous: boolean) =>
+      alertInstanceFromSocketMessage(
+        notice("community_sub_gift", { community_sub_gift: { total: 5 } }, { chatter_is_anonymous: anonymous })
+      )!;
+    expect(pickAlertVariation(gift(true), anon("community_gift"), always)?.id).toBe("anon");
+    expect(pickAlertVariation(gift(false), anon("community_gift"), always)).toBeNull();
   });
 
   it("ignores a variation that is switched off", () => {
@@ -1106,6 +1147,7 @@ describe("saved variations", () => {
     ];
     cfg.variants.sub.variations = [
       { ...createAlertVariation("sub", cfg.variants.sub, "v1", "Tier 3"), condition: { parameter: "tier", tier: "3000" } },
+      { ...createAlertVariation("sub", cfg.variants.sub, "v2", "Gifted"), condition: { parameter: "gifted", value: true } },
     ];
     const normalized = normalizeAlertWidgetConfig(cfg);
     expect(normalized).toEqual(cfg);
@@ -1139,6 +1181,9 @@ describe("saved variations", () => {
       value: 5,
     });
     expect(cond("cheer", "nonsense")).toEqual({ parameter: "none" });
+    // Gifted is a sub thing; a cheer has nothing to say about it.
+    expect(cond("cheer", { parameter: "gifted", value: true })).toEqual({ parameter: "none" });
+    expect(cond("cheer", { parameter: "anonymous", value: false })).toEqual({ parameter: "anonymous", value: false });
     expect(cond("cheer", { parameter: "amount", operator: "at_least", value: -5 })).toEqual(atLeast(0));
   });
 
@@ -1201,6 +1246,13 @@ describe("a variation's condition in plain words", () => {
     expect(say("cheer", { parameter: "name", names: ["toastcrumb", "ninetoad"] })).toBe("Viewer: toastcrumb, ninetoad");
     expect(say("cheer", { parameter: "name", names: ["a", "b", "c", "d", "e"] })).toBe("Viewer: a, b, c and 2 more");
     expect(say("cheer", { parameter: "name", names: [] })).toBe("Viewer: nobody yet");
+  });
+
+  it("says whether it is a gift, and whether it is anonymous", () => {
+    expect(say("sub", { parameter: "gifted", value: true })).toBe("Gifted sub");
+    expect(say("resub", { parameter: "gifted", value: false })).toBe("Not gifted");
+    expect(say("cheer", { parameter: "anonymous", value: true })).toBe("Anonymous");
+    expect(say("cheer", { parameter: "anonymous", value: false })).toBe("Not anonymous");
   });
 
   it("adds how often, when it is not every time", () => {

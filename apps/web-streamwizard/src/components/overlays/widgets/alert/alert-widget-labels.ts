@@ -89,6 +89,10 @@ export function alertParameterLabel(event: AlertEventType, parameter: AlertVaria
       return "Sub tier";
     case "name":
       return "Viewer name";
+    case "gifted":
+      return "Gifted sub";
+    case "anonymous":
+      return "Anonymous";
   }
 }
 

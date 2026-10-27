@@ -223,6 +223,20 @@ export const ALERT_TIER_EVENTS: readonly AlertEventType[] = [
 ];
 
 /**
+ * Events whose payload says whether the sub was a gift: what a gifted
+ * condition reads. A gifted sub reaches its recipient's alert this way; the
+ * gifter's own alert is the gift sub one.
+ */
+export const ALERT_GIFTED_EVENTS: readonly AlertEventType[] = ["sub", "resub"];
+
+/** Events a viewer can send without their name on it: what an anonymous condition reads. */
+export const ALERT_ANONYMOUS_EVENTS: readonly AlertEventType[] = [
+  "cheer",
+  "gift_sub",
+  "community_gift",
+];
+
+/**
  * Events where "the biggest one this stream" is a thing people celebrate. A
  * record watch streak or ad break is not, so those keep to exact / at least.
  */
@@ -435,7 +449,9 @@ export type AlertVariationCondition =
   | { parameter: "none" }
   | { parameter: "amount"; operator: AlertVariationOperator; value: number }
   | { parameter: "tier"; tier: AlertSubTier }
-  | { parameter: "name"; names: string[] };
+  | { parameter: "name"; names: string[] }
+  | { parameter: "gifted"; value: boolean }
+  | { parameter: "anonymous"; value: boolean };
 
 export type AlertVariationParameter = AlertVariationCondition["parameter"];
 
@@ -892,6 +908,9 @@ function normalizeAlertCondition(raw: unknown, event: AlertEventType): AlertVari
         : [];
       return { parameter: "name", names };
     }
+    case "gifted":
+    case "anonymous":
+      return { parameter: r.parameter, value: r.value !== false };
     default:
       return none;
   }
@@ -996,6 +1015,10 @@ export interface AlertInstance {
   login: string;
   /** The sub plan on a sub event; empty on everything else. */
   tier: AlertSubTier | "";
+  /** The sub was a gift. False wherever the payload does not say. */
+  gifted: boolean;
+  /** The viewer sent it without their name. False wherever the payload does not say. */
+  anonymous: boolean;
   /** bits / viewers / gifts / months / …; 0 when the event has no amount. */
   amount: number;
   /**
@@ -1024,6 +1047,8 @@ function baseInstance(event: AlertEventType, name: string, login = ""): AlertIns
     name,
     login,
     tier: "",
+    gifted: false,
+    anonymous: false,
     amount: 0,
     amountText: "",
     message: "",
@@ -1099,13 +1124,20 @@ function alertInstanceFromChatNotice(p: Record<string, unknown>): AlertInstance 
   const block = (key: string) => (p[key] ?? null) as Record<string, unknown> | null;
 
   switch (noticeType) {
-    case "sub":
-      return { ...baseInstance("sub", chatter, login), tier: subTier(block("sub")) };
+    case "sub": {
+      const sub = block("sub");
+      return {
+        ...baseInstance("sub", chatter, login),
+        tier: subTier(sub),
+        gifted: sub?.is_gift === true,
+      };
+    }
     case "resub": {
       const resub = block("resub");
       return {
         ...baseInstance("resub", chatter, login),
         tier: subTier(resub),
+        gifted: resub?.is_gift === true,
         amount: num(resub?.cumulative_months),
         message,
       };
@@ -1119,6 +1151,7 @@ function alertInstanceFromChatNotice(p: Record<string, unknown>): AlertInstance 
       return {
         ...baseInstance("gift_sub", chatter, login),
         tier: subTier(gift),
+        anonymous,
         amount: num(gift?.cumulative_total),
         detail: str(gift?.recipient_user_name),
       };
@@ -1128,6 +1161,7 @@ function alertInstanceFromChatNotice(p: Record<string, unknown>): AlertInstance 
       return {
         ...baseInstance("community_gift", chatter, login),
         tier: subTier(bomb),
+        anonymous,
         amount: num(bomb?.total),
       };
     }
@@ -1218,6 +1252,7 @@ export function alertInstanceFromSocketMessage(msg: {
           p.is_anonymous === true ? "Anonymous" : str(p.user_name) || "Anonymous",
           p.is_anonymous === true ? "" : str(p.user_login)
         ),
+        anonymous: p.is_anonymous === true,
         amount: num(p.bits),
         message: str(p.message),
       };
@@ -1372,6 +1407,8 @@ export function alertVariationParameters(event: AlertEventType): readonly AlertV
   if (ALERT_AMOUNT_LABELS[event]) out.push("amount");
   if (ALERT_TIER_EVENTS.includes(event)) out.push("tier");
   if (!ALERT_NAMELESS_EVENTS.includes(event)) out.push("name");
+  if (ALERT_GIFTED_EVENTS.includes(event)) out.push("gifted");
+  if (ALERT_ANONYMOUS_EVENTS.includes(event)) out.push("anonymous");
   return out;
 }
 
@@ -1416,6 +1453,10 @@ export function alertConditionMatches(
       const who = [normalizeAlertName(alert.name), normalizeAlertName(alert.login)].filter(Boolean);
       return condition.names.some((name) => who.includes(normalizeAlertName(name)));
     }
+    case "gifted":
+      return alert.gifted === condition.value;
+    case "anonymous":
+      return alert.anonymous === condition.value;
   }
 }
 
@@ -1432,6 +1473,8 @@ function conditionRank(condition: AlertVariationCondition): number {
     case "amount":
       return condition.operator === "session_top" ? 3 : condition.operator === "exact" ? 2 : 1;
     case "tier":
+    case "gifted":
+    case "anonymous":
       return 2;
     case "none":
       return 0;
@@ -1518,6 +1561,12 @@ export function alertVariationSummary(event: AlertEventType, variation: AlertVar
         : `Viewer: ${shown}${more > 0 ? ` and ${more} more` : ""}`;
       break;
     }
+    case "gifted":
+      when = condition.value ? "Gifted sub" : "Not gifted";
+      break;
+    case "anonymous":
+      when = condition.value ? "Anonymous" : "Not anonymous";
+      break;
   }
   return often ? `${when} · ${often}` : when;
 }

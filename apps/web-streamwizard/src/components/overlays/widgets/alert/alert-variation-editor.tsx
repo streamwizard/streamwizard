@@ -67,6 +67,9 @@ function defaultCondition(parameter: AlertVariationParameter): AlertVariationCon
       return { parameter, tier: "1000" };
     case "name":
       return { parameter, names: [] };
+    case "gifted":
+    case "anonymous":
+      return { parameter, value: true };
     case "none":
       return { parameter };
   }
@@ -337,6 +340,33 @@ export function AlertVariationEditor({
                 <p className="text-xs leading-snug text-muted-foreground">
                   Twitch usernames with commas between them. Capitals do not matter.
                 </p>
+              </div>
+            ) : null}
+
+            {condition.parameter === "gifted" || condition.parameter === "anonymous" ? (
+              <div className="space-y-1.5">
+                <Label id={`alert-variation-flag-${variation.id}`} className="text-xs">
+                  {condition.parameter === "gifted" ? "Plays for" : "Plays when the viewer is"}
+                </Label>
+                <Select
+                  value={condition.value ? "yes" : "no"}
+                  onValueChange={(v) => onPatch({ condition: { ...condition, value: v === "yes" } })}
+                >
+                  <SelectTrigger
+                    aria-labelledby={`alert-variation-flag-${variation.id}`}
+                    className="h-9 w-full text-sm"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yes" className="text-sm">
+                      {condition.parameter === "gifted" ? "Gifted subs" : "Anonymous"}
+                    </SelectItem>
+                    <SelectItem value="no" className="text-sm">
+                      {condition.parameter === "gifted" ? "Subs they paid for" : "Not anonymous"}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             ) : null}
 
