@@ -432,11 +432,18 @@ export function alertPresentationOf(source: AlertPresentation): AlertPresentatio
 
 // ─── Variations ─────────────────────────────────────────────────────────────
 
-export const ALERT_VARIATION_OPERATORS = ["exact", "at_least", "session_top"] as const;
+export const ALERT_VARIATION_OPERATORS = [
+  "exact",
+  "at_least",
+  "at_most",
+  "between",
+  "session_top",
+] as const;
 /**
  * exact: the amount equals the requirement · at_least: it is that or more ·
- * session_top: it is the biggest of its kind since the overlay loaded (and at
- * least the requirement, when one is set).
+ * at_most: it is that or less · between: it is from `value` to `max`, both
+ * ends included · session_top: it is the biggest of its kind since the overlay
+ * loaded (and at least the requirement, when one is set).
  */
 export type AlertVariationOperator = (typeof ALERT_VARIATION_OPERATORS)[number];
 
@@ -447,7 +454,13 @@ export type AlertSubTier = (typeof ALERT_SUB_TIERS)[number];
 /** What a variation looks at to decide whether it plays. One thing, never a mix. */
 export type AlertVariationCondition =
   | { parameter: "none" }
-  | { parameter: "amount"; operator: AlertVariationOperator; value: number }
+  | {
+      parameter: "amount";
+      operator: AlertVariationOperator;
+      value: number;
+      /** The top of a `between`, included. Only set on a `between`. */
+      max?: number;
+    }
   | { parameter: "tier"; tier: AlertSubTier }
   | { parameter: "name"; names: string[] }
   | { parameter: "gifted"; value: boolean }
@@ -891,11 +904,13 @@ function normalizeAlertCondition(raw: unknown, event: AlertEventType): AlertVari
         r.operator,
         "at_least"
       );
-      const value =
-        typeof r.value === "number" && Number.isFinite(r.value)
-          ? Math.min(1_000_000_000, Math.max(0, r.value))
-          : 0;
-      return { parameter: "amount", operator, value };
+      const amount = (v: unknown) =>
+        typeof v === "number" && Number.isFinite(v) ? Math.min(1_000_000_000, Math.max(0, v)) : 0;
+      const value = amount(r.value);
+      if (operator !== "between") return { parameter: "amount", operator, value };
+      // A missing top is a range of one; a reversed one is put the right way round.
+      const max = typeof r.max === "number" ? amount(r.max) : value;
+      return { parameter: "amount", operator, value: Math.min(value, max), max: Math.max(value, max) };
     }
     case "tier":
       return { parameter: "tier", tier: oneOf<AlertSubTier>(ALERT_SUB_TIERS, r.tier, "1000") };
@@ -1445,6 +1460,10 @@ export function alertConditionMatches(
     case "amount":
       if (condition.operator === "exact") return alert.amount === condition.value;
       if (condition.operator === "at_least") return alert.amount >= condition.value;
+      if (condition.operator === "at_most") return alert.amount <= condition.value;
+      if (condition.operator === "between") {
+        return alert.amount >= condition.value && alert.amount <= (condition.max ?? condition.value);
+      }
       // A tie with the record is not a new record.
       return alert.amount > sessionTop && alert.amount >= condition.value;
     case "tier":
@@ -1463,15 +1482,16 @@ export function alertConditionMatches(
 /**
  * How specific a condition is. With several variations matching one event the
  * most specific plays: one viewer by name beats a record, a record beats an
- * exact number, an exact number beats "at least", and all of them beat a
- * variation with no condition at all.
+ * exact number or a range, those beat "at least" and "at most", and all of
+ * them beat a variation with no condition at all.
  */
 function conditionRank(condition: AlertVariationCondition): number {
   switch (condition.parameter) {
     case "name":
       return 4;
     case "amount":
-      return condition.operator === "session_top" ? 3 : condition.operator === "exact" ? 2 : 1;
+      if (condition.operator === "session_top") return 3;
+      return condition.operator === "exact" || condition.operator === "between" ? 2 : 1;
     case "tier":
     case "gifted":
     case "anonymous":
@@ -1510,8 +1530,13 @@ export function pickAlertVariation(
   );
   if (matching.length === 0) return null;
 
+  // The higher floor wins; between two ceilings the lower one is the tighter fit.
   const requirement = (v: AlertVariation) =>
-    v.condition.parameter === "amount" ? v.condition.value : 0;
+    v.condition.parameter !== "amount"
+      ? 0
+      : v.condition.operator === "at_most"
+        ? -v.condition.value
+        : v.condition.value;
   const best = matching.reduce((a, b) => {
     const byRank = conditionRank(b.condition) - conditionRank(a.condition);
     if (byRank !== 0) return byRank > 0 ? b : a;
@@ -1546,7 +1571,11 @@ export function alertVariationSummary(event: AlertEventType, variation: AlertVar
           ? `${label}: exactly ${condition.value}`
           : condition.operator === "at_least"
             ? `${label}: at least ${condition.value}`
-            : condition.value > 0
+            : condition.operator === "at_most"
+              ? `${label}: at most ${condition.value}`
+              : condition.operator === "between"
+                ? `${label}: ${condition.value} to ${condition.max ?? condition.value}`
+                : condition.value > 0
               ? `${label}: biggest of the stream, at least ${condition.value}`
               : `${label}: biggest of the stream`;
       break;

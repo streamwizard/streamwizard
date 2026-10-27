@@ -99,5 +99,7 @@ export function alertParameterLabel(event: AlertEventType, parameter: AlertVaria
 export const OPERATOR_LABELS: Record<AlertVariationOperator, string> = {
   exact: "Exactly",
   at_least: "At least",
+  at_most: "At most",
+  between: "Between",
   session_top: "Biggest of the stream",
 };

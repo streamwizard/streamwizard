@@ -886,6 +886,35 @@ describe("which variation plays", () => {
     expect(pickAlertVariation(cheer(99), cheerAlert([more]), always)).toBeNull();
   });
 
+  it("matches at most, and between with both ends included", () => {
+    const most = variation("most", { parameter: "amount", operator: "at_most", value: 99 });
+    expect(pickAlertVariation(cheer(1), cheerAlert([most]), always)?.id).toBe("most");
+    expect(pickAlertVariation(cheer(99), cheerAlert([most]), always)?.id).toBe("most");
+    expect(pickAlertVariation(cheer(100), cheerAlert([most]), always)).toBeNull();
+
+    const range = variation("range", { parameter: "amount", operator: "between", value: 100, max: 999 });
+    expect(pickAlertVariation(cheer(99), cheerAlert([range]), always)).toBeNull();
+    expect(pickAlertVariation(cheer(100), cheerAlert([range]), always)?.id).toBe("range");
+    expect(pickAlertVariation(cheer(999), cheerAlert([range]), always)?.id).toBe("range");
+    expect(pickAlertVariation(cheer(1000), cheerAlert([range]), always)).toBeNull();
+  });
+
+  it("prefers a range over at least, and the tighter of two ceilings", () => {
+    const list = cheerAlert([
+      variation("least", atLeast(100)),
+      variation("range", { parameter: "amount", operator: "between", value: 100, max: 999 }),
+    ]);
+    expect(pickAlertVariation(cheer(500), list, always)?.id).toBe("range");
+    expect(pickAlertVariation(cheer(5000), list, always)?.id).toBe("least");
+
+    const ceilings = cheerAlert([
+      variation("under-500", { parameter: "amount", operator: "at_most", value: 500 }),
+      variation("under-100", { parameter: "amount", operator: "at_most", value: 100 }),
+    ]);
+    expect(pickAlertVariation(cheer(50), ceilings, always)?.id).toBe("under-100");
+    expect(pickAlertVariation(cheer(300), ceilings, always)?.id).toBe("under-500");
+  });
+
   it("plays the highest requirement a cheer reaches, whatever the list order", () => {
     const tiers = [atLeast(1000), atLeast(1), atLeast(10000), atLeast(100)].map((c) =>
       variation(`at-${c.parameter === "amount" ? c.value : 0}`, c)
@@ -1144,6 +1173,7 @@ describe("saved variations", () => {
     cfg.variants.cheer.variations = [
       { ...createAlertVariation("cheer", cfg.variants.cheer, "v1", "Big cheer"), chance: 12.5, condition: atLeast(1000) },
       { ...createAlertVariation("cheer", cfg.variants.cheer, "v2", "Regulars"), condition: { parameter: "name", names: ["toastcrumb"] } },
+      { ...createAlertVariation("cheer", cfg.variants.cheer, "v3", "Mid"), condition: { parameter: "amount", operator: "between", value: 100, max: 999 } },
     ];
     cfg.variants.sub.variations = [
       { ...createAlertVariation("sub", cfg.variants.sub, "v1", "Tier 3"), condition: { parameter: "tier", tier: "3000" } },
@@ -1185,6 +1215,24 @@ describe("saved variations", () => {
     expect(cond("cheer", { parameter: "gifted", value: true })).toEqual({ parameter: "none" });
     expect(cond("cheer", { parameter: "anonymous", value: false })).toEqual({ parameter: "anonymous", value: false });
     expect(cond("cheer", { parameter: "amount", operator: "at_least", value: -5 })).toEqual(atLeast(0));
+    // A range saved the wrong way round, one with no top, and a top on a non-range.
+    expect(cond("cheer", { parameter: "amount", operator: "between", value: 999, max: 100 })).toEqual({
+      parameter: "amount",
+      operator: "between",
+      value: 100,
+      max: 999,
+    });
+    expect(cond("cheer", { parameter: "amount", operator: "between", value: 50 })).toEqual({
+      parameter: "amount",
+      operator: "between",
+      value: 50,
+      max: 50,
+    });
+    expect(cond("cheer", { parameter: "amount", operator: "at_most", value: 50, max: 80 })).toEqual({
+      parameter: "amount",
+      operator: "at_most",
+      value: 50,
+    });
   });
 
   it("cleans usernames and holds the limits", () => {
@@ -1235,6 +1283,8 @@ describe("a variation's condition in plain words", () => {
     expect(say("cheer", atLeast(1000))).toBe("Bits: at least 1000");
     expect(say("resub", { parameter: "amount", operator: "exact", value: 12 })).toBe("Months: exactly 12");
     expect(say("raid", { parameter: "amount", operator: "session_top", value: 0 })).toBe("Viewers: biggest of the stream");
+    expect(say("cheer", { parameter: "amount", operator: "at_most", value: 99 })).toBe("Bits: at most 99");
+    expect(say("cheer", { parameter: "amount", operator: "between", value: 100, max: 999 })).toBe("Bits: 100 to 999");
     expect(say("cheer", { parameter: "amount", operator: "session_top", value: 500 })).toBe(
       "Bits: biggest of the stream, at least 500"
     );

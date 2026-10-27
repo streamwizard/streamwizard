@@ -370,6 +370,7 @@ const alertVariationConditionSchema = z.discriminatedUnion("parameter", [
     parameter: z.literal("amount"),
     operator: z.enum(ALERT_VARIATION_OPERATORS),
     value: z.number().min(0).max(1_000_000_000),
+    max: z.number().min(0).max(1_000_000_000).optional(),
   }),
   z.object({ parameter: z.literal("tier"), tier: z.enum(ALERT_SUB_TIERS) }),
   z.object({

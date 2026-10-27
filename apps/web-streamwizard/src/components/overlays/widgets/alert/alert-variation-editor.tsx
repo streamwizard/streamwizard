@@ -255,11 +255,16 @@ export function AlertVariationEditor({
                   </div>
                   <Select
                     value={condition.operator}
-                    onValueChange={(v) =>
+                    onValueChange={(v) => {
+                      const operator = v as AlertVariationOperator;
+                      const { value } = condition;
                       onPatch({
-                        condition: { ...condition, operator: v as AlertVariationOperator },
-                      })
-                    }
+                        condition:
+                          operator === "between"
+                            ? { parameter: "amount", operator, value, max: Math.max(value, condition.max ?? 0) }
+                            : { parameter: "amount", operator, value },
+                      });
+                    }}
                   >
                     <SelectTrigger
                       aria-labelledby={`alert-variation-operator-${variation.id}`}
@@ -278,16 +283,51 @@ export function AlertVariationEditor({
                 </div>
                 <div className="space-y-1.5">
                   <Label className="truncate text-xs">
-                    {condition.operator === "session_top" ? "At least" : amountTitle}
+                    {condition.operator === "session_top"
+                      ? "At least"
+                      : condition.operator === "between"
+                        ? "From"
+                        : amountTitle}
                   </Label>
                   <NumberField
                     value={condition.value}
                     min={0}
-                    aria-label={`${OPERATOR_LABELS[condition.operator]} ${amountTitle.toLowerCase()}`}
+                    aria-label={
+                      condition.operator === "between"
+                        ? `${amountTitle} from`
+                        : `${OPERATOR_LABELS[condition.operator]} ${amountTitle.toLowerCase()}`
+                    }
                     className="h-9 text-sm tabular-nums"
-                    onCommit={(value) => onPatch({ condition: { ...condition, value } })}
+                    onCommit={(value) =>
+                      onPatch({
+                        condition:
+                          condition.operator === "between"
+                            ? { ...condition, value, max: Math.max(value, condition.max ?? value) }
+                            : { ...condition, value },
+                      })
+                    }
                   />
                 </div>
+                {condition.operator === "between" ? (
+                  <div className="col-start-2 space-y-1.5">
+                    <Label className="truncate text-xs">To</Label>
+                    <NumberField
+                      value={condition.max ?? condition.value}
+                      min={0}
+                      aria-label={`${amountTitle} to`}
+                      className="h-9 text-sm tabular-nums"
+                      onCommit={(max) =>
+                        onPatch({
+                          condition: {
+                            ...condition,
+                            value: Math.min(condition.value, max),
+                            max: Math.max(condition.value, max),
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                ) : null}
               </div>
             ) : null}
 
