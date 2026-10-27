@@ -80,6 +80,7 @@ function AlertSettingsPanel({ item, updateItem }: OverlayInspectorAppendProps) {
     timing: false,
     animation: false,
     textAnimation: false,
+    css: false,
     variations: true,
     condition: true,
   });

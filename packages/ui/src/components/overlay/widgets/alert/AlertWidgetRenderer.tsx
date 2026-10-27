@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
+import { scopeCss } from "../../lib/scope-css";
 import type { OverlayItem, OverlayScene } from "../../types";
 import {
   alertEffectKeyframes,
@@ -85,14 +86,46 @@ const REDUCED_MOTION_CSS = `
 }
 `;
 
+/** An item id as it goes into an attribute selector: nothing that could end it. */
+function cssToken(id: string): string {
+  return id.replace(/[^\w-]/g, "");
+}
+
+/** A setting as it goes into a stylesheet: nothing that could end the declaration. */
+function cssValue(value: string): string {
+  return value.replace(/[;{}<>"\\]/g, "");
+}
+
+/**
+ * How the alert's text looks, as rules rather than inline styles: a custom
+ * CSS rule that comes after them, with the same selector, wins without
+ * `!important`.
+ */
+function alertTextCss(v: AlertPresentation, scope: string): string {
+  const shared =
+    `font-weight:${v.fontWeight};font-family:"${cssValue(v.fontFamily)}",sans-serif;` +
+    `text-align:${v.align};` +
+    `text-shadow:${v.textShadow ? "0 2px 8px rgba(0,0,0,0.6)" : "none"};` +
+    `letter-spacing:${v.letterSpacing}px;word-spacing:${v.wordSpacing}px;word-break:break-word;`;
+  // Smaller text reads better a touch looser: 1.3 against the title's 1.2.
+  const messageLineHeight = Math.round((v.lineHeight + 0.1) * 100) / 100;
+  return (
+    `${scope} [data-part="title"]{${shared}color:${cssValue(v.titleColor)};` +
+    `font-size:${v.fontSize}px;line-height:${v.lineHeight}}` +
+    `${scope} [data-part="message"]{${shared}color:${cssValue(v.messageColor)};` +
+    `font-size:${Math.round(v.fontSize * v.messageFontScale)}px;font-weight:400;` +
+    `line-height:${messageLineHeight}}` +
+    `${scope} [data-part="name"],${scope} [data-part="amount"]{color:${cssValue(v.accentColor)}}`
+  );
+}
+
 /**
  * Renders a title template as React nodes with `{name}` / `{amount}`
- * highlighted in the accent color.
+ * marked up for the accent color.
  */
 function renderAccentedTemplate(
   template: string,
   alert: AlertInstance,
-  accentColor: string,
   highlight: AlertHighlightAnimation
 ): ReactNode[] {
   const loop = alertEffectStyle(highlight, HIGHLIGHT_LOOP_MS, true);
@@ -100,9 +133,12 @@ function renderAccentedTemplate(
   return parts.map((part, i) => {
     if (part === "{name}" || part === "{amount}") {
       const text = part === "{name}" ? alert.name : alertAmountText(alert);
+      // The accent color comes from the alert's stylesheet, where custom CSS
+      // can override it.
+      const dataPart = part === "{name}" ? "name" : "amount";
       if (!loop) {
         return (
-          <span key={i} style={{ color: accentColor }}>
+          <span key={i} data-part={dataPart}>
             {text}
           </span>
         );
@@ -112,7 +148,7 @@ function renderAccentedTemplate(
       // transforms.
       if (highlight === "wave") {
         return (
-          <span key={i} style={{ color: accentColor, whiteSpace: "pre" }}>
+          <span key={i} data-part={dataPart} style={{ whiteSpace: "pre" }}>
             {[...text].map((letter, n) => (
               <span
                 key={n}
@@ -128,8 +164,9 @@ function renderAccentedTemplate(
       return (
         <span
           key={i}
+          data-part={dataPart}
           className="sw-alert-loop"
-          style={{ display: "inline-block", color: accentColor, ...loop }}
+          style={{ display: "inline-block", ...loop }}
         >
           {text}
         </span>
@@ -396,8 +433,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     cfg.maxNameLength > 0
       ? { ...alert, name: truncateAlertName(alert.name, cfg.maxNameLength) }
       : alert;
-  const fontFamily = `"${variant.fontFamily}", sans-serif`;
-  const textShadow = variant.textShadow ? "0 2px 8px rgba(0,0,0,0.6)" : "none";
+  const scope = `[data-sw-alert="${cssToken(item.id)}"]`;
   const alignItems =
     variant.align === "left"
       ? "flex-start"
@@ -415,6 +451,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     mediaUrl && mediaKind === "video" ? (
       <video
         key={seq}
+        data-part="media"
         src={mediaUrl}
         autoPlay
         loop={!matchVideo}
@@ -451,6 +488,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     ) : mediaUrl && mediaKind === "image" ? (
       <img
         key={seq}
+        data-part="media"
         src={mediaUrl}
         alt=""
         style={{
@@ -465,26 +503,8 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     ) : null;
 
   const title = (
-    <div
-      style={{
-        color: variant.titleColor,
-        fontSize: variant.fontSize,
-        fontWeight: variant.fontWeight,
-        fontFamily,
-        textAlign: variant.align,
-        textShadow,
-        lineHeight: variant.lineHeight,
-        letterSpacing: variant.letterSpacing,
-        wordSpacing: variant.wordSpacing,
-        wordBreak: "break-word",
-      }}
-    >
-      {renderAccentedTemplate(
-        variant.titleTemplate,
-        shown,
-        variant.accentColor,
-        variant.highlightAnimation
-      )}
+    <div data-part="title">
+      {renderAccentedTemplate(variant.titleTemplate, shown, variant.highlightAnimation)}
     </div>
   );
 
@@ -492,23 +512,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     ? renderAlertTemplate(variant.messageTemplate, shown).trim()
     : "";
   const message = messageText ? (
-    <div
-      style={{
-        color: variant.messageColor,
-        fontSize: Math.round(variant.fontSize * variant.messageFontScale),
-        fontWeight: 400,
-        fontFamily,
-        textAlign: variant.align,
-        textShadow,
-        // Smaller text reads better a touch looser; 1.3 against the title's 1.2.
-        lineHeight: Math.round((variant.lineHeight + 0.1) * 100) / 100,
-        letterSpacing: variant.letterSpacing,
-        wordSpacing: variant.wordSpacing,
-        wordBreak: "break-word",
-      }}
-    >
-      {messageText}
-    </div>
+    <div data-part="message">{messageText}</div>
   ) : null;
 
   // Only the lengths are read here, and those do not depend on the hold.
@@ -532,7 +536,19 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     textPhase === "waiting" || textPhase === "gone" || (textPhase === "out" && !textMotion);
 
   return (
-    <div style={{ width: "100%", height: "100%", overflow: "hidden", position: "relative" }}>
+    <div
+      data-sw-alert={cssToken(item.id)}
+      data-event={alert.event}
+      style={{
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+        position: "relative",
+        // Holds position: fixed in custom CSS to this box, so it can't cover
+        // the editor around it.
+        contain: "paint",
+      }}
+    >
       <style>
         {REDUCED_MOTION_CSS +
           alertEffectKeyframes([
@@ -541,10 +557,13 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
             variant.textAnimationIn,
             variant.textAnimationOut,
             variant.highlightAnimation,
-          ])}
+          ]) +
+          alertTextCss(variant, scope) +
+          scopeCss(variant.customCss, scope)}
       </style>
       <div
         className="sw-alert-anim"
+        data-part="box"
         style={{
           width: "100%",
           height: "100%",
@@ -563,6 +582,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
         <div
           className="sw-alert-anim"
           data-alert-text=""
+          data-part="text"
           style={{
             position: variant.layout === "overlay" ? "relative" : "static",
             zIndex: 1,

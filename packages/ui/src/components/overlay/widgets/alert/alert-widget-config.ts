@@ -463,7 +463,18 @@ export interface AlertPresentation {
   wordSpacing: number;
   /** The second line's size as a share of `fontSize`. */
   messageFontScale: number;
+  /**
+   * The streamer's own CSS for this alert, scoped to its box by `scopeCss`.
+   * Targets the documented `data-part` hooks; see ALERT_CSS_PARTS.
+   */
+  customCss: string;
 }
+
+/** The `data-part` hooks an alert's custom CSS can target. Keep the docs in step. */
+export const ALERT_CSS_PARTS = ["box", "media", "text", "title", "message", "name", "amount"] as const;
+
+/** Most characters of custom CSS one alert keeps. */
+export const ALERT_CUSTOM_CSS_MAX_LENGTH = 5000;
 
 /** Every key of `AlertPresentation`, for lifting one out of a larger object. */
 export const ALERT_PRESENTATION_KEYS = [
@@ -500,6 +511,7 @@ export const ALERT_PRESENTATION_KEYS = [
   "letterSpacing",
   "wordSpacing",
   "messageFontScale",
+  "customCss",
 ] as const satisfies readonly (keyof AlertPresentation)[];
 
 /** Just the presentation of an alert or variation, as its own object. */
@@ -734,6 +746,7 @@ export function createDefaultAlertVariantConfig(
     letterSpacing: 0,
     wordSpacing: 0,
     messageFontScale: 0.6,
+    customCss: "",
   };
 }
 
@@ -779,6 +792,7 @@ export const ALERT_LOOK_KEYS = [
   "letterSpacing",
   "wordSpacing",
   "messageFontScale",
+  "customCss",
 ] as const satisfies readonly (keyof AlertVariantConfig)[];
 
 /** Gives every alert the look of `from`, leaving the rest of each one alone. */
@@ -818,6 +832,7 @@ export const ALERT_LIVE_KEYS = [
   "letterSpacing",
   "wordSpacing",
   "messageFontScale",
+  "customCss",
 ] as const satisfies readonly (keyof AlertPresentation)[];
 
 /**
@@ -1049,6 +1064,10 @@ function normalizeAlertVariant(
     letterSpacing: inRange(r.letterSpacing, ALERT_TYPOGRAPHY_LIMITS.letterSpacing.min, ALERT_TYPOGRAPHY_LIMITS.letterSpacing.max, 1, base.letterSpacing),
     wordSpacing: inRange(r.wordSpacing, ALERT_TYPOGRAPHY_LIMITS.wordSpacing.min, ALERT_TYPOGRAPHY_LIMITS.wordSpacing.max, 1, base.wordSpacing),
     messageFontScale: inRange(r.messageFontScale, ALERT_TYPOGRAPHY_LIMITS.messageFontScale.min, ALERT_TYPOGRAPHY_LIMITS.messageFontScale.max, 2, base.messageFontScale),
+    customCss:
+      typeof r.customCss === "string"
+        ? r.customCss.slice(0, ALERT_CUSTOM_CSS_MAX_LENGTH)
+        : base.customCss,
     variations: normalizeAlertVariations(r.variations, event),
     randomPick: typeof r.randomPick === "boolean" ? r.randomPick : false,
   };

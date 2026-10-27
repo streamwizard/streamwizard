@@ -15,6 +15,7 @@ import {
   ALERT_ANIMATION_MAX_SECONDS,
   ALERT_ANIMATIONS_IN,
   ALERT_ANIMATIONS_OUT,
+  ALERT_CUSTOM_CSS_MAX_LENGTH,
   ALERT_MAX_NAME_LENGTH,
   ALERT_MAX_QUEUE_LIMIT,
   ALERT_TYPOGRAPHY_LIMITS,
@@ -388,6 +389,7 @@ const alertPresentationSchema = z.object({
     .min(ALERT_TYPOGRAPHY_LIMITS.messageFontScale.min)
     .max(ALERT_TYPOGRAPHY_LIMITS.messageFontScale.max)
     .default(0.6),
+  customCss: z.string().max(ALERT_CUSTOM_CSS_MAX_LENGTH).default(""),
 });
 
 const alertVariationConditionSchema = z.discriminatedUnion("parameter", [

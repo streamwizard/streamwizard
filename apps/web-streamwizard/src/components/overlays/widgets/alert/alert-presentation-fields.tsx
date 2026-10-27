@@ -12,12 +12,14 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Textarea,
 } from "@repo/ui";
 import {
   ALERT_ENTER_ANIMATIONS,
   ALERT_EXIT_ANIMATIONS,
   ALERT_HIGHLIGHT_ANIMATIONS,
   ALERT_TYPOGRAPHY_LIMITS,
+  ALERT_CUSTOM_CSS_MAX_LENGTH,
   type AlertEventType,
   type AlertHighlightAnimation,
   type AlertPresentation,
@@ -50,7 +52,8 @@ export type AlertFieldGroup =
   | "media"
   | "timing"
   | "animation"
-  | "textAnimation";
+  | "textAnimation"
+  | "css";
 
 /** Matches the limit `normalizeAlertWidgetConfig` holds a template to. */
 const TEMPLATE_MAX_LENGTH = 200;
@@ -557,6 +560,29 @@ export function AlertPresentationFields({
               onChange={(v) => onPatch({ textEarlyExitSeconds: Math.round(v * 10) / 10 })}
             />
           </FoldRow>
+        </div>
+      </InspectorSection>
+
+      <InspectorSection title="Custom CSS" {...group("css")}>
+        <div className="space-y-1.5">
+          <Label htmlFor={`alert-css-${event}`} className="sr-only">
+            Custom CSS
+          </Label>
+          <Textarea
+            id={`alert-css-${event}`}
+            value={value.customCss}
+            onChange={(e) => onPatch({ customCss: e.target.value })}
+            maxLength={ALERT_CUSTOM_CSS_MAX_LENGTH}
+            spellCheck={false}
+            rows={6}
+            placeholder={'[data-part="title"] {\n  -webkit-text-stroke: 2px #000;\n}'}
+            className="min-h-28 font-mono text-xs"
+          />
+          <p className="text-xs leading-snug text-muted-foreground">
+            Styles only this alert. Target <code>[data-part=&quot;title&quot;]</code>,{" "}
+            <code>message</code>, <code>name</code>, <code>amount</code>, <code>media</code>,{" "}
+            <code>text</code> or <code>box</code>. <code>:root</code> is the whole alert.
+          </p>
         </div>
       </InspectorSection>
     </>

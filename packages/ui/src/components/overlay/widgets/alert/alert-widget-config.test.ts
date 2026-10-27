@@ -824,6 +824,41 @@ describe("text spacing", () => {
   });
 });
 
+describe("custom CSS", () => {
+  it("is empty on a new alert and on one saved before it", () => {
+    expect(createDefaultAlertVariantConfig("follow").customCss).toBe("");
+    expect(normalizeAlertWidgetConfig({ variants: { follow: {} } }).variants.follow.customCss).toBe("");
+  });
+
+  it("keeps what was saved, up to the limit", () => {
+    const css = '[data-part="title"]{color:red}';
+    expect(normalizeAlertWidgetConfig({ variants: { follow: { customCss: css } } }).variants.follow.customCss).toBe(css);
+    const long = "a".repeat(6000);
+    expect(normalizeAlertWidgetConfig({ variants: { follow: { customCss: long } } }).variants.follow.customCss).toHaveLength(5000);
+    expect(normalizeAlertWidgetConfig({ variants: { follow: { customCss: 42 } } }).variants.follow.customCss).toBe("");
+  });
+
+  it("travels with the look and updates an alert already playing", () => {
+    expect(ALERT_LOOK_KEYS).toContain("customCss");
+    const cfg = createDefaultAlertWidgetConfig();
+    const started = { ...cfg.variants.follow };
+    cfg.variants.follow.customCss = ".x{}";
+    expect(alertLiveLook(cfg, "follow", null, started).customCss).toBe(".x{}");
+  });
+
+  it("is not stripped by the save schema, on an alert or a variation", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    cfg.variants.cheer.customCss = ".a{}";
+    cfg.variants.cheer.variations = [
+      { ...createAlertVariation("cheer", cfg.variants.cheer, "v1", "Big"), conditions: [atLeast(100)] },
+    ];
+    cfg.variants.cheer.variations[0]!.settings.customCss = ".b{}";
+    const saved = normalizeAlertWidgetConfig(alertWidgetItemConfigSchema.parse(cfg));
+    expect(saved.variants.cheer.customCss).toBe(".a{}");
+    expect(saved.variants.cheer.variations[0]?.settings.customCss).toBe(".b{}");
+  });
+});
+
 describe("resub wording", () => {
   const OLD_DEFAULT = "{name} subscribed for {amount} months in a row!";
 

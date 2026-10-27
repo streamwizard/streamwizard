@@ -157,12 +157,51 @@ In the editor: **Widgets → Library → Starters → Alert box → Add to canva
 
 ## Testing
 
-Open the widget's code editor (**Edit code** in its settings) and use the test
-buttons above the preview: Follow, Sub, Cheer, Raid. Hit **Connect** to test
-against real events from your channel.
+Every alert in the panel has a **Test** button. It plays that alert on the
+canvas with a sample viewer, so you can check the look before you go live. The
+play button on a variation tests that variation.
 
-## Making it fancier
+## Custom CSS
 
-The alert box is a regular custom widget you own. **Edit code** opens the
-full editor where you can change the animation, layout, or add more events.
-See [building widgets](/widgets/overview) if you want to go down that road.
+Want a gradient title, an outline, or a panel behind the text? Open an alert,
+then **Custom CSS**, and write CSS for that alert. It only styles that alert,
+on the canvas and in OBS. Other alerts and other widgets on the overlay are
+left alone.
+
+Point your rules at these parts:
+
+| Part | What it is |
+|---|---|
+| `[data-part="box"]` | Everything: media and text together |
+| `[data-part="media"]` | The image or video |
+| `[data-part="text"]` | The title and second line together |
+| `[data-part="title"]` | The title |
+| `[data-part="message"]` | The second line |
+| `[data-part="name"]` | The viewer's name in the title |
+| `[data-part="amount"]` | The amount in the title |
+
+`:root` means the whole alert. Your rules beat the panel's settings, no
+`!important` needed. For example, a black outline on the title and a pink
+name:
+
+```css
+[data-part="title"] {
+  -webkit-text-stroke: 2px #000;
+}
+[data-part="name"] {
+  color: #ff5fa2;
+}
+```
+
+Good to know:
+
+- **Use this look for all alerts** copies your CSS too.
+- Images in `url()` have to come from your [media library](/overlays/media-library).
+- `@import` and `@font-face` are skipped. For your own font, upload it to the media library and pick it in **Typography**.
+- Up to 5,000 characters per alert.
+- Size and position of the media follow the panel. To change those, add `!important`.
+
+## Building your own
+
+Need something the alert box can't do? Build it as a
+[custom widget](/widgets/overview) and write the whole thing yourself.
