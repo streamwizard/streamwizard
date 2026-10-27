@@ -42,6 +42,16 @@ describe("partitionUploadable", () => {
   });
 });
 
+describe("partitionUploadable with fonts", () => {
+  it("keeps a font the browser couldn't type", () => {
+    const font = file("Brand.woff2", "");
+    const ttf = file("Brand.ttf", "");
+    const { uploadable, skipped } = partitionUploadable([font, ttf]);
+    expect(uploadable).toEqual([font]);
+    expect(skipped).toEqual([ttf]);
+  });
+});
+
 describe("filesFromEntries", () => {
   it("walks nested folders, across every readEntries batch", async () => {
     const a = file("a.png", "image/png");

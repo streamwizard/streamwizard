@@ -46,8 +46,11 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     ),
     // Next.js inlines critical styles; Google Fonts load external stylesheets.
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    // Google Fonts actual font files
-    "font-src 'self' https://fonts.gstatic.com",
+    // Google Fonts actual font files, and fonts uploaded to the media library
+    // for overlay text, previewed in the editor.
+    ["font-src 'self' https://fonts.gstatic.com", process.env.NEXT_PUBLIC_ASSET_CDN_URL]
+      .filter(Boolean)
+      .join(" "),
     // Twitch CDN images + our own R2 CDN (e.g. error page gifs) + data URIs used
     // by the UI. The third-party emote CDNs are here for the widget editor
     // preview: widgets resolve 7TV/BTTV/FFZ emotes through /api/twitch and then

@@ -44,6 +44,15 @@ export {
   type OverlayActivityKind,
 } from "./components/overlay/lib/overlay-activity";
 export { itemFlipTransform, itemTransform } from "./components/overlay/lib/item-flip";
+export {
+  UPLOADED_FONT_PREFIX,
+  isUploadedFontRef,
+  uploadedFontFaceCss,
+  uploadedFontName,
+  uploadedFontRef,
+  uploadedFontUrl,
+} from "./components/overlay/lib/font-ref";
+export { scopeCss } from "./components/overlay/lib/scope-css";
 export { WidgetScaleFrame } from "./components/overlay/WidgetScaleFrame";
 export { formatCountdownMs, formatElapsedMs } from "./components/overlay/lib/format-countdown";
 export { formatClockWidgetDisplay } from "./components/overlay/lib/format-clock-widget";
