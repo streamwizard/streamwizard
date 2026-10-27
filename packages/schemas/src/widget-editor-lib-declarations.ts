@@ -74,15 +74,16 @@ interface StreamWizardSession {
 
 interface StreamWizardStateApi {
   /**
-   * Loads this widget instance's persisted state (or null when nothing was
-   * saved yet). Only available when the widget is placed on an overlay -
-   * throws in the editor preview.
+   * Loads this widget instance's persisted state ({} when nothing was saved
+   * yet). In the editor preview it reads the real saved state, or the editor's
+   * copy once the widget has saved something there.
    */
   get(): Promise<any | null>;
   /**
    * Persists this widget instance's state. Overwrites the previous value;
-   * spread the old state if you want to merge. Only available when the
-   * widget is placed on an overlay - throws in the editor preview.
+   * spread the old state if you want to merge. In the editor preview the
+   * write stays in the editor (demo panel, Saved data) and never reaches the
+   * real store.
    */
   set(state: Record<string, any>): Promise<void>;
 }
@@ -107,8 +108,8 @@ interface StreamWizardUserStateApi {
   getAll(): Promise<Record<string, any>>;
   /**
    * Writes one key. Rejects "sys." keys, values over 8KB, and keys outside the
-   * allowed character set. Only available when the widget is placed on an
-   * overlay - throws in the editor preview.
+   * allowed character set. In the editor preview the write stays in the
+   * editor and never reaches the real store; so do increment and delete.
    */
   set(key: string, value: any): Promise<void>;
   /**
@@ -123,8 +124,8 @@ interface StreamWizardUserStateApi {
   /**
    * Fires callback whenever ANY channel-state key changes - your own writes,
    * other widgets', or the server's (sys. keys included). Safe to register
-   * anywhere; in the editor preview it simply never fires. Returns an
-   * unsubscribe function.
+   * anywhere; in the editor preview it fires for the editor's own writes and
+   * for values typed into the demo panel. Returns an unsubscribe function.
    */
   onChange(callback: (key: string, value: any | null, updatedAt: string | null) => void): () => void;
   /** Like onChange, filtered to one key. Returns an unsubscribe function. */

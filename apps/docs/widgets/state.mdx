@@ -10,7 +10,7 @@ and sub goals survive OBS restarts and stream ends.
 ## The API
 
 ```js
-// Load what you saved last time (null on first run)
+// Load what you saved last time (an empty object on first run)
 const state = await StreamWizard.state.get();
 let deaths = state?.deaths ?? 0;
 
@@ -18,7 +18,8 @@ let deaths = state?.deaths ?? 0;
 await StreamWizard.state.set({ deaths });
 ```
 
-Two calls. `get()` returns your saved object or `null`; `set()` replaces it.
+Two calls. `get()` returns your saved object, or `{}` if nothing was saved yet;
+`set()` replaces it.
 Spread the old state if you're only changing one key.
 
 ## A complete counter
@@ -49,13 +50,14 @@ function render() {
 
 - **Per placement**: two copies of the same widget on different overlays have
   separate state.
-- **Editor preview has no state**: `get`/`set` throw there, because the
-  preview isn't attached to an overlay. Wrap in `try/catch` or `.catch()` if
-  you test in the editor a lot.
+- **The editor never changes your real state**: see
+  [testing in the editor](#testing-in-the-editor) below.
 - **Don't save on every frame**: batch it. Save after a change settles, not
   inside an animation loop.
 - Older widgets using `window.StreamWizard.stateUrl` with manual `fetch`
-  still work; `state.get`/`set` is the same API with the plumbing done.
+  still work on an overlay; `state.get`/`set` is the same API with the
+  plumbing done. In the editor `stateUrl` is `null`, so switch to
+  `state.get`/`set` to test them there.
 
 ## Channel state: `StreamWizard.userState`
 
@@ -112,8 +114,7 @@ window.addEventListener('onWidgetLoad', async () => {
 ```
 
 `subscribe(key, cb)` and `onChange(cb)` (all keys, `sys.` included) both
-return an unsubscribe function. Registering is safe anywhere — in the editor
-preview there is no socket, so the callback simply never fires. The raw frame
+return an unsubscribe function. Registering is safe anywhere. The raw frame
 also arrives as an `onEventReceived` with listener `streamwizard.user_state`
 and event `{ key, value, updatedAt }`, if you prefer one event handler.
 
@@ -145,3 +146,27 @@ addEventListener('onWidgetLoad', async () => {
   total = currentStream && savedStream !== currentStream ? 0 : (saved ?? 0);
 });
 ```
+
+## Testing in the editor
+
+Testing a counter shouldn't change the one on stream. In the overlay editor and
+the widget code editor, both APIs work, with one rule: **reads are real, writes
+stay in the editor.**
+
+- `state.get()`, `userState.get()` and `getAll()` read your real saved values
+  on the overlay editor canvas. The widget code editor has no overlay to read
+  from, so there they start empty.
+- `set`, `increment` and `delete` change an editor-only copy. Nothing is sent
+  to the real store, so your overlay in OBS never sees them.
+- `onChange` and `subscribe` fire for those editor writes, just like they would
+  live.
+
+Open the demo panel and select **Saved data** to see what your widget saved
+while you tested. You can type values there too: a channel value goes to
+`userState`, and the box under each widget is its own `state`. Typed values win
+over the real ones, and a widget whose `state` you edit reloads to pick it up.
+**Use real values again** throws the editor copy away.
+
+The tab shows up when a widget on the canvas uses `StreamWizard.state` or
+`StreamWizard.userState`. The values are kept per overlay in your browser and
+never leave it.

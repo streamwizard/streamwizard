@@ -158,6 +158,15 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
     [scene?.items]
   );
 
+  /** Custom widgets on the canvas, for the demo deck's Saved data tab. */
+  const canvasCustomWidgets = useMemo(
+    () =>
+      (scene?.items ?? [])
+        .filter((item) => item.type === "custom_widget")
+        .map((item) => ({ id: item.id, label: item.label })),
+    [scene?.items]
+  );
+
   /** Distinct item types on the canvas, so the demo deck offers only tests that something here can show. */
   const canvasWidgetTypes = useMemo(
     () => [...new Set((scene?.items ?? []).map((item) => item.type))],
@@ -769,6 +778,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
             open={demoOpen}
             onClose={() => setDemoOpen(false)}
             widgetTypes={canvasWidgetTypes}
+            customWidgets={canvasCustomWidgets}
             storageId={scene.id}
             sourceJs={canvasWidgetJs}
             mode={demoFireMode}

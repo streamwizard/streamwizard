@@ -221,13 +221,13 @@ const newDeaths = await StreamWizard.userState.increment('deaths');
 await StreamWizard.userState.delete('old_key');
 
 // Live updates: pushed to open overlays on every change, no polling. Both
-// return an unsubscribe function; safe to register in the editor preview
-// (there they just never fire).
+// return an unsubscribe function; in the editor they fire for the editor's
+// own writes.
 StreamWizard.userState.subscribe('deaths', (value) => render(value ?? 0));
 StreamWizard.userState.onChange((key, value) => console.log(key, value));
 ```
 
-The read/write calls throw in the editor preview — there's no session to authenticate with. Wrap in `try/catch`.
+In the editor, reads are real but writes stay in the editor: `set`, `increment` and `delete` never reach the real store, and the demo panel's **Saved data** tab shows (and edits) what was written. The widget code editor has no overlay, so reads start empty there. Reads can still fail on a network blip, so keep a `try/catch`.
 
 Channel keys are 1–64 characters of `a-z0-9_`, values any JSON up to 8KB, 200 keys per channel. `increment` works on numeric values only and rejects anything else. Changes also arrive as `onEventReceived` with listener `streamwizard.user_state` and event `{ key, value, updatedAt }`.
 

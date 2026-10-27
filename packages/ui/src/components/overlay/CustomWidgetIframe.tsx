@@ -19,6 +19,21 @@ export interface WidgetLogEntry {
   ts: number;
 }
 
+/**
+ * Editor-only values a document built with `editor: true` reads before the
+ * real store. `widgetState` undefined means "read the real one"; a `userState`
+ * value of null means the key was deleted in the editor.
+ */
+export interface EditorWidgetState {
+  widgetState?: Record<string, unknown>;
+  userState: Record<string, unknown>;
+}
+
+/** A write the widget made in the editor. It never reached the real store. */
+export type EditorStateWrite =
+  | { scope: "widget"; value: Record<string, unknown> }
+  | { scope: "user"; key: string; value: unknown };
+
 export interface CustomWidgetIframeProps {
   srcdoc: string;
   fieldData: Record<string, unknown>;
@@ -44,6 +59,9 @@ export interface CustomWidgetIframeProps {
    */
   reloadToken?: number;
   overlayItemId?: string;
+  /** Pushed in before 'onWidgetLoad' and again whenever it changes. Editor documents only. */
+  editorState?: EditorWidgetState;
+  onEditorStateWrite?: (write: EditorStateWrite) => void;
   style?: React.CSSProperties;
   className?: string;
   title?: string;
@@ -52,7 +70,7 @@ export interface CustomWidgetIframeProps {
 }
 
 export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWidgetIframeProps>(
-  function CustomWidgetIframe({ srcdoc, fieldData, userId = "", subscriberToken, wsRoom, onWsStatus, onLog, onFieldDataApplied, reloadToken, overlayItemId, style, className, title = "custom widget", tabIndex }, ref) {
+  function CustomWidgetIframe({ srcdoc, fieldData, userId = "", subscriberToken, wsRoom, onWsStatus, onLog, onFieldDataApplied, reloadToken, overlayItemId, editorState, onEditorStateWrite, style, className, title = "custom widget", tabIndex }, ref) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const fieldDataRef = useRef(fieldData);
     fieldDataRef.current = fieldData;
@@ -71,6 +89,10 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
     const editorMuted = useEditorAudioMuted();
     const editorMutedRef = useRef(editorMuted);
     editorMutedRef.current = editorMuted;
+    const editorStateRef = useRef(editorState);
+    editorStateRef.current = editorState;
+    const onEditorStateWriteRef = useRef(onEditorStateWrite);
+    onEditorStateWriteRef.current = onEditorStateWrite;
 
     useImperativeHandle(ref, () => ({
       postMessage: (msg) => iframeRef.current?.contentWindow?.postMessage(msg, "*"),
@@ -99,6 +121,10 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
 
       const sendLoad = () => {
         loadedRef.current = true;
+        // Ahead of 'onWidgetLoad', so a widget reading its state on load sees it.
+        if (editorStateRef.current) {
+          iframeRef.current?.contentWindow?.postMessage({ type: "swEditorState", ...editorStateRef.current }, "*");
+        }
         iframeRef.current?.contentWindow?.postMessage(
           {
             type: "onWidgetLoad",
@@ -137,6 +163,26 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
       if (!loadedRef.current) return;
       iframeRef.current?.contentWindow?.postMessage({ type: "swSetMuted", muted: editorMuted }, "*");
     }, [editorMuted]);
+
+    useEffect(() => {
+      if (!loadedRef.current || !editorState) return;
+      iframeRef.current?.contentWindow?.postMessage({ type: "swEditorState", ...editorState }, "*");
+    }, [editorState]);
+
+    useEffect(() => {
+      function handle(e: MessageEvent) {
+        if (e.source !== iframeRef.current?.contentWindow) return;
+        const data = e.data as { type?: string; scope?: string; key?: unknown; value?: unknown };
+        if (data?.type !== "swStateWrite") return;
+        if (data.scope === "widget" && typeof data.value === "object" && data.value !== null && !Array.isArray(data.value)) {
+          onEditorStateWriteRef.current?.({ scope: "widget", value: data.value as Record<string, unknown> });
+        } else if (data.scope === "user" && typeof data.key === "string") {
+          onEditorStateWriteRef.current?.({ scope: "user", key: data.key, value: data.value ?? null });
+        }
+      }
+      window.addEventListener("message", handle);
+      return () => window.removeEventListener("message", handle);
+    }, []);
 
     useEffect(() => {
       function handle(e: MessageEvent) {

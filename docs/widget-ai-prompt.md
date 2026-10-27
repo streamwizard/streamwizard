@@ -125,7 +125,7 @@ const saved = await StreamWizard.state.get().catch(() => null); // null when not
 await StreamWizard.state.set({ deaths: 4 });                    // replaces the whole blob — spread to merge
 ```
 
-`get()`/`set()` **throw in the editor preview** (no session there). Always wrap in `try/catch` or `.catch()`. Don't save inside an animation loop — debounce or batch.
+In the editor, reads are real but **writes stay in the editor** and never reach the real store. Still wrap reads in `try/catch` or `.catch()`: they can fail on a network blip. Don't save inside an animation loop — debounce or batch.
 
 ## Channel state — `StreamWizard.userState`
 
@@ -143,7 +143,7 @@ await StreamWizard.userState.increment('deaths', -1);             // signed
 await StreamWizard.userState.delete('old_key');
 
 // Live updates, pushed on every change (any widget, the server, chat commands).
-// Both return an unsubscribe fn. Safe in the editor preview — never fires there.
+// Both return an unsubscribe fn. In the editor they fire for the editor's own writes.
 StreamWizard.userState.subscribe('deaths', (value) => render(value ?? 0));
 StreamWizard.userState.onChange((key, value, updatedAt) => { /* all keys */ });
 ```

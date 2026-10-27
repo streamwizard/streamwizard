@@ -26,8 +26,10 @@ import {
   ALL_SIMULATOR_IDS,
   DEMO_SECTIONS,
   demoRelevance,
+  usesWidgetState,
   type DemoSectionId,
 } from "./demo-relevance";
+import { SavedDataSection } from "./demo-state-section";
 import { useDemoPanel, type UseDemoPanelOptions } from "./use-demo-panel";
 
 export interface DemoDeckProps extends UseDemoPanelOptions {
@@ -35,6 +37,8 @@ export interface DemoDeckProps extends UseDemoPanelOptions {
   onClose: () => void;
   /** Item types on the canvas, so the deck only offers tests something here can show. */
   widgetTypes: readonly string[];
+  /** Custom widgets on the canvas, for their own saved data in the Saved data tab. */
+  customWidgets: { id: string; label: string }[];
 }
 
 /**
@@ -45,15 +49,15 @@ export interface DemoDeckProps extends UseDemoPanelOptions {
  * Kept mounted while closed (the host hides it) so looping simulators keep
  * running and the picker keeps its state.
  */
-export function DemoDeck({ open, onClose, widgetTypes, ...options }: DemoDeckProps) {
+export function DemoDeck({ open, onClose, widgetTypes, customWidgets, ...options }: DemoDeckProps) {
   const panel = useDemoPanel(options);
   const [collapsed, setCollapsed] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const tabRefs = useRef(new Map<DemoSectionId, HTMLButtonElement>());
 
   const relevance = useMemo(
-    () => demoRelevance(widgetTypes, panel.detected),
-    [widgetTypes, panel.detected]
+    () => demoRelevance(widgetTypes, panel.detected, usesWidgetState(options.sourceJs ?? "")),
+    [widgetTypes, panel.detected, options.sourceJs]
   );
 
   // A simulator stays listed while it runs, even after its widget is deleted:
@@ -225,6 +229,7 @@ export function DemoDeck({ open, onClose, widgetTypes, ...options }: DemoDeckPro
               {active === "ads" && <AdsSection panel={panel} />}
               {active === "credits" && <CreditsSection panel={panel} />}
               {active === "simulate" && <SimulateSection panel={panel} simulatorIds={simulatorIds} />}
+              {active === "state" && <SavedDataSection storageId={panel.storageId} widgets={customWidgets} />}
               {active === "custom" && (
                 <CustomEventSection
                   panel={panel}

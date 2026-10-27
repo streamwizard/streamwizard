@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { asCustomWidgetConfig } from "@/types/overlays";
 import type { CustomWidgetItemConfig } from "@/types/overlays";
 import type { OverlayCanvasProps } from "../../registry/overlay-widget-registry.types";
@@ -15,6 +15,7 @@ import {
 } from "@repo/ui/overlay";
 import type { CustomWidgetIframeHandle, WidgetFieldSchema } from "@repo/ui/overlay";
 import { env } from "@/lib/env";
+import { applyEditorStateWrite, useEditorStateData } from "@/components/demo/editor-state-data";
 
 /**
  * Reloading the document restarts the widget's script, so a slider drag waits
@@ -48,6 +49,23 @@ function CustomWidgetCanvasInner({ item, scene }: OverlayCanvasProps) {
   // changes when a setting actually changes.
   const fieldValues = cfg.field_values ?? legacyValues;
   const hasBuiltRef = useRef(false);
+
+  // Real reads, editor-only writes: what this widget saves while previewing
+  // lands in the scene's editor copy, never in the real store.
+  const [stateData, updateStateData] = useEditorStateData(scene.id);
+  const ownState = stateData.widgetState[item.id];
+  const editorState = useMemo(
+    () => ({ userState: stateData.userState, widgetState: ownState }),
+    [stateData.userState, ownState]
+  );
+  // The widget's own writes come back here; anything else that changes its
+  // blob came from the demo panel, and the widget only reads it on load.
+  const lastWrittenRef = useRef(ownState);
+  useEffect(() => {
+    if (ownState === lastWrittenRef.current) return;
+    lastWrittenRef.current = ownState;
+    setReloadToken((n) => n + 1);
+  }, [ownState]);
 
   useEffect(() => {
     if (!cfg.widget_id) return;
@@ -174,6 +192,11 @@ function CustomWidgetCanvasInner({ item, scene }: OverlayCanvasProps) {
       fieldData={fieldData}
       reloadToken={reloadToken}
       onFieldDataApplied={(handled) => { appliedInPlaceRef.current = handled; }}
+      editorState={editorState}
+      onEditorStateWrite={(write) => {
+        if (write.scope === "widget") lastWrittenRef.current = write.value;
+        updateStateData((data) => applyEditorStateWrite(data, item.id, write));
+      }}
       subscriberToken={scene.subscriber_token}
       overlayItemId={item.id}
       className="w-full h-full"
