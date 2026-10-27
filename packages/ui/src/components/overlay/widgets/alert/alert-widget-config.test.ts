@@ -698,6 +698,53 @@ describe("the queue limit", () => {
   });
 });
 
+describe("video sound", () => {
+  const video = { mediaUrl: "https://cdn.test/a.webm", mediaKind: "video" };
+
+  it("plays at its own volume on a new alert", () => {
+    expect(createDefaultAlertVariantConfig("follow").videoVolume).toBe(0.8);
+  });
+
+  it("stays muted on a saved alert that also had a sound file", () => {
+    const cfg = normalizeAlertWidgetConfig({
+      variants: { follow: { ...video, soundUrl: "https://cdn.test/a.mp3", volume: 0.6 } },
+    });
+    expect(cfg.variants.follow.videoVolume).toBe(0);
+    expect(cfg.variants.follow.volume).toBe(0.6);
+  });
+
+  it("keeps the old shared volume on a saved alert with only a video", () => {
+    const cfg = normalizeAlertWidgetConfig({ variants: { follow: { ...video, volume: 0.6 } } });
+    expect(cfg.variants.follow.videoVolume).toBe(0.6);
+  });
+
+  it("keeps a saved video volume, sound file or not", () => {
+    const cfg = normalizeAlertWidgetConfig({
+      variants: { follow: { ...video, soundUrl: "https://cdn.test/a.mp3", videoVolume: 0.4 } },
+    });
+    expect(cfg.variants.follow.videoVolume).toBe(0.4);
+    expect(normalizeAlertWidgetConfig({ variants: { follow: { videoVolume: 7 } } }).variants.follow.videoVolume).toBe(1);
+  });
+
+  it("migrates a variation saved before it the same way", () => {
+    const cfg = normalizeAlertWidgetConfig({
+      variants: {
+        cheer: {
+          variations: [{ id: "v1", settings: { ...video, soundUrl: "https://cdn.test/a.mp3" } }],
+        },
+      },
+    });
+    expect(cfg.variants.cheer.variations[0]?.settings.videoVolume).toBe(0);
+  });
+
+  it("is not stripped by the save schema", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    cfg.variants.follow.videoVolume = 0.3;
+    const saved = alertWidgetItemConfigSchema.parse(cfg);
+    expect(normalizeAlertWidgetConfig(saved).variants.follow.videoVolume).toBe(0.3);
+  });
+});
+
 describe("resub wording", () => {
   const OLD_DEFAULT = "{name} subscribed for {amount} months in a row!";
 

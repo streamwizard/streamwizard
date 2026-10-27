@@ -400,10 +400,7 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
         : "center";
   const mediaUrl = variant.mediaUrl;
   const mediaKind = variant.mediaKind;
-  const hasSeparateSound = Boolean(variant.soundUrl);
-  const videoVolume = hasSeparateSound
-    ? 0
-    : Math.min(1, Math.max(0, variant.volume * cfg.masterVolume));
+  const videoVolume = Math.min(1, Math.max(0, variant.videoVolume * cfg.masterVolume));
   // Only a video can drive its own timing; without one the fixed duration
   // already scheduled in playNext stands.
   const matchVideo = mediaKind === "video" && variant.durationMode === "media";

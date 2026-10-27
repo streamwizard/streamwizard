@@ -402,8 +402,14 @@ export interface AlertPresentation {
   mediaKind: AlertMediaKind;
   /** CDN URL from the media library. Empty = no sound. */
   soundUrl: string;
-  /** 0–1. Applies to both the sound file and video audio for this event. */
+  /** 0–1. The sound file's volume. */
   volume: number;
+  /**
+   * 0–1. The video's own audio. Configs saved before it existed get 0 when they
+   * have a sound file, since the video used to be muted then, and `volume`
+   * otherwise.
+   */
+  videoVolume: number;
   /** e.g. `{name} just followed!` */
   titleTemplate: string;
   /** Secondary line; empty = hidden. `{message}` shows the viewer's message. */
@@ -457,6 +463,7 @@ export const ALERT_PRESENTATION_KEYS = [
   "mediaKind",
   "soundUrl",
   "volume",
+  "videoVolume",
   "titleTemplate",
   "messageTemplate",
   "durationSeconds",
@@ -581,7 +588,7 @@ export interface AlertVariantConfig extends AlertPresentation {
 export interface AlertWidgetItemConfig {
   /** Quiet gap between queued alerts. */
   gapSeconds: number;
-  /** Master volume 0–1, multiplied with each variant's volume. */
+  /** Master volume 0–1, multiplied with each variant's sound and video volume. */
   masterVolume: number;
   /**
    * Hold the next alert until this one's sound file has played out, instead of
@@ -679,6 +686,7 @@ export function createDefaultAlertVariantConfig(
     mediaKind: "",
     soundUrl: "",
     volume: 0.8,
+    videoVolume: 0.8,
     titleTemplate: DEFAULT_ALERT_VARIANT_TITLES[event],
     messageTemplate: DEFAULT_ALERT_VARIANT_MESSAGES[event],
     durationSeconds: 6,
@@ -845,6 +853,7 @@ function variantBaseFromLegacy(
   legacy: Record<string, unknown>
 ): AlertVariantConfig {
   const base = createDefaultAlertVariantConfig(event);
+  const soundUrl = typeof legacy.soundUrl === "string" ? legacy.soundUrl : base.soundUrl;
   return {
     ...base,
     mediaUrl: typeof legacy.mediaUrl === "string" ? legacy.mediaUrl : base.mediaUrl,
@@ -852,7 +861,9 @@ function variantBaseFromLegacy(
       legacy.mediaKind === "image" || legacy.mediaKind === "video"
         ? legacy.mediaKind
         : base.mediaKind,
-    soundUrl: typeof legacy.soundUrl === "string" ? legacy.soundUrl : base.soundUrl,
+    soundUrl,
+    // A sound file used to mute the video outright.
+    videoVolume: soundUrl ? 0 : base.videoVolume,
     durationSeconds:
       typeof legacy.durationSeconds === "number" && Number.isFinite(legacy.durationSeconds)
         ? Math.min(60, Math.max(1, Math.round(legacy.durationSeconds)))
@@ -894,6 +905,8 @@ function normalizeAlertVariant(
   const base = variantBaseFromLegacy(event, legacy);
   if (!raw || typeof raw !== "object") return base;
   const r = raw as Partial<AlertVariantConfig> & Record<string, unknown>;
+  const soundUrl = typeof r.soundUrl === "string" && r.soundUrl ? r.soundUrl : base.soundUrl;
+  const volume = clamp01(r.volume, base.volume);
   return {
     enabled: typeof r.enabled === "boolean" ? r.enabled : base.enabled,
     // Media is per event now; an empty variant URL means "no media", except on
@@ -905,8 +918,11 @@ function normalizeAlertVariant(
           ? r.mediaKind
           : ""
         : base.mediaKind,
-    soundUrl: typeof r.soundUrl === "string" && r.soundUrl ? r.soundUrl : base.soundUrl,
-    volume: clamp01(r.volume, base.volume),
+    soundUrl,
+    volume,
+    // Saved before the video had its own volume: it was muted under a sound
+    // file and followed `volume` otherwise, so it keeps sounding that way.
+    videoVolume: clamp01(r.videoVolume, soundUrl ? 0 : volume),
     titleTemplate:
       typeof r.titleTemplate === "string" &&
       r.titleTemplate.length <= 200 &&

@@ -329,6 +329,9 @@ const alertPresentationSchema = z.object({
   mediaKind: alertMediaKindSchema,
   soundUrl: z.string().max(2000).default(""),
   volume: z.number().min(0).max(1).default(0.8),
+  // No default: a config saved before this field gets its value from
+  // normalizeAlertWidgetConfig, which knows whether the video was muted.
+  videoVolume: z.number().min(0).max(1).optional(),
   titleTemplate: z.string().max(200).default(""),
   messageTemplate: z.string().max(200).default(""),
   durationSeconds: z.number().min(0).max(60).default(6),

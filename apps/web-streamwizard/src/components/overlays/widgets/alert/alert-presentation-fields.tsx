@@ -193,6 +193,11 @@ export function AlertPresentationFields({
 }: AlertPresentationFieldsProps) {
   // A leftover "media" mode on an image or an empty slot has no video to match,
   // so it reads (and behaves) as the fixed one.
+  const bothAudible =
+    value.mediaKind === "video" &&
+    Boolean(value.soundUrl) &&
+    value.volume > 0 &&
+    value.videoVolume > 0;
   const matchesVideo = value.mediaKind === "video" && value.durationMode === "media";
 
   const group = (id: AlertFieldGroup) => ({
@@ -375,17 +380,37 @@ export function AlertPresentationFields({
             previewVolume={value.volume * masterVolume}
             onChange={(soundUrl) => onPatch({ soundUrl })}
           />
-          <SliderField
-            id={`alert-volume-${event}`}
-            label="Volume"
-            unit="%"
-            value={Math.round(value.volume * 100)}
-            min={0}
-            max={100}
-            step={5}
-            hint="For the sound file. With no sound file picked, it sets the video's own audio instead."
-            onChange={(v) => onPatch({ volume: v / 100 })}
-          />
+          <InspectorReveal show={Boolean(value.soundUrl)}>
+            <SliderField
+              id={`alert-volume-${event}`}
+              label="Sound volume"
+              unit="%"
+              value={Math.round(value.volume * 100)}
+              min={0}
+              max={100}
+              step={5}
+              onChange={(v) => onPatch({ volume: v / 100 })}
+            />
+          </InspectorReveal>
+          <InspectorReveal show={value.mediaKind === "video"}>
+            <SliderField
+              id={`alert-video-volume-${event}`}
+              label="Video sound"
+              unit="%"
+              value={Math.round(value.videoVolume * 100)}
+              min={0}
+              max={100}
+              step={5}
+              hint="The video's own audio. Set it to 0 to play the video silently."
+              onChange={(v) => onPatch({ videoVolume: v / 100 })}
+            />
+          </InspectorReveal>
+          {bothAudible ? (
+            <p className="text-xs leading-snug text-muted-foreground">
+              The video&apos;s sound and the sound file play together. Turn one down if
+              that&apos;s too much.
+            </p>
+          ) : null}
         </div>
       </InspectorSection>
 
