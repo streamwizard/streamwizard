@@ -17,6 +17,7 @@ import {
   ALERT_ANIMATIONS_OUT,
   ALERT_MAX_NAME_LENGTH,
   ALERT_MAX_QUEUE_LIMIT,
+  ALERT_TYPOGRAPHY_LIMITS,
   ALERT_SUB_TIERS,
   ALERT_VARIATION_LIMITS,
   ALERT_VARIATION_MATCH_MODES,
@@ -367,6 +368,26 @@ const alertPresentationSchema = z.object({
   messageColor: hexColorSchema.default("#d4d4d8"),
   accentColor: hexColorSchema.default("#9e7aff"),
   textShadow: z.boolean().default(true),
+  lineHeight: z
+    .number()
+    .min(ALERT_TYPOGRAPHY_LIMITS.lineHeight.min)
+    .max(ALERT_TYPOGRAPHY_LIMITS.lineHeight.max)
+    .default(1.2),
+  letterSpacing: z
+    .number()
+    .min(ALERT_TYPOGRAPHY_LIMITS.letterSpacing.min)
+    .max(ALERT_TYPOGRAPHY_LIMITS.letterSpacing.max)
+    .default(0),
+  wordSpacing: z
+    .number()
+    .min(ALERT_TYPOGRAPHY_LIMITS.wordSpacing.min)
+    .max(ALERT_TYPOGRAPHY_LIMITS.wordSpacing.max)
+    .default(0),
+  messageFontScale: z
+    .number()
+    .min(ALERT_TYPOGRAPHY_LIMITS.messageFontScale.min)
+    .max(ALERT_TYPOGRAPHY_LIMITS.messageFontScale.max)
+    .default(0.6),
 });
 
 const alertVariationConditionSchema = z.discriminatedUnion("parameter", [

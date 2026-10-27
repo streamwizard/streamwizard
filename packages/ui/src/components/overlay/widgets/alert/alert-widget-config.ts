@@ -455,6 +455,14 @@ export interface AlertPresentation {
   /** Highlights `{name}` and `{amount}` inside the title. */
   accentColor: string;
   textShadow: boolean;
+  /** The title's line height; the second line sits 0.1 looser, as it always has. */
+  lineHeight: number;
+  /** px between letters, on both lines. */
+  letterSpacing: number;
+  /** px added between words, on both lines. */
+  wordSpacing: number;
+  /** The second line's size as a share of `fontSize`. */
+  messageFontScale: number;
 }
 
 /** Every key of `AlertPresentation`, for lifting one out of a larger object. */
@@ -488,6 +496,10 @@ export const ALERT_PRESENTATION_KEYS = [
   "messageColor",
   "accentColor",
   "textShadow",
+  "lineHeight",
+  "letterSpacing",
+  "wordSpacing",
+  "messageFontScale",
 ] as const satisfies readonly (keyof AlertPresentation)[];
 
 /** Just the presentation of an alert or variation, as its own object. */
@@ -717,6 +729,11 @@ export function createDefaultAlertVariantConfig(
     messageColor: "#d4d4d8",
     accentColor: "#9e7aff",
     textShadow: true,
+    // What the alert box always rendered, before these could be set.
+    lineHeight: 1.2,
+    letterSpacing: 0,
+    wordSpacing: 0,
+    messageFontScale: 0.6,
   };
 }
 
@@ -758,6 +775,10 @@ export const ALERT_LOOK_KEYS = [
   "messageColor",
   "accentColor",
   "textShadow",
+  "lineHeight",
+  "letterSpacing",
+  "wordSpacing",
+  "messageFontScale",
 ] as const satisfies readonly (keyof AlertVariantConfig)[];
 
 /** Gives every alert the look of `from`, leaving the rest of each one alone. */
@@ -793,6 +814,10 @@ export const ALERT_LIVE_KEYS = [
   "messageColor",
   "accentColor",
   "textShadow",
+  "lineHeight",
+  "letterSpacing",
+  "wordSpacing",
+  "messageFontScale",
 ] as const satisfies readonly (keyof AlertPresentation)[];
 
 /**
@@ -855,6 +880,21 @@ const animationSeconds = (n: unknown, fallback: number) =>
   typeof n === "number" && Number.isFinite(n)
     ? Math.round(Math.min(ALERT_ANIMATION_MAX_SECONDS, Math.max(0, n)) * 100) / 100
     : fallback;
+
+/** A number kept in range and rounded to `places` decimals, or the fallback. */
+const inRange = (n: unknown, min: number, max: number, places: number, fallback: number) => {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  const f = 10 ** places;
+  return Math.round(Math.min(max, Math.max(min, n)) * f) / f;
+};
+
+/** Ranges for the spacing settings, shared with the save schema and the panel. */
+export const ALERT_TYPOGRAPHY_LIMITS = {
+  lineHeight: { min: 0.8, max: 2.5 },
+  letterSpacing: { min: -5, max: 20 },
+  wordSpacing: { min: -10, max: 40 },
+  messageFontScale: { min: 0.3, max: 1 },
+} as const;
 
 const oneOf = <T extends string>(
   options: readonly string[],
@@ -1005,6 +1045,10 @@ function normalizeAlertVariant(
     accentColor:
       typeof r.accentColor === "string" ? r.accentColor : base.accentColor,
     textShadow: typeof r.textShadow === "boolean" ? r.textShadow : base.textShadow,
+    lineHeight: inRange(r.lineHeight, ALERT_TYPOGRAPHY_LIMITS.lineHeight.min, ALERT_TYPOGRAPHY_LIMITS.lineHeight.max, 2, base.lineHeight),
+    letterSpacing: inRange(r.letterSpacing, ALERT_TYPOGRAPHY_LIMITS.letterSpacing.min, ALERT_TYPOGRAPHY_LIMITS.letterSpacing.max, 1, base.letterSpacing),
+    wordSpacing: inRange(r.wordSpacing, ALERT_TYPOGRAPHY_LIMITS.wordSpacing.min, ALERT_TYPOGRAPHY_LIMITS.wordSpacing.max, 1, base.wordSpacing),
+    messageFontScale: inRange(r.messageFontScale, ALERT_TYPOGRAPHY_LIMITS.messageFontScale.min, ALERT_TYPOGRAPHY_LIMITS.messageFontScale.max, 2, base.messageFontScale),
     variations: normalizeAlertVariations(r.variations, event),
     randomPick: typeof r.randomPick === "boolean" ? r.randomPick : false,
   };

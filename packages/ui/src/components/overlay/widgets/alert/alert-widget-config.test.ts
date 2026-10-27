@@ -784,6 +784,46 @@ describe("long names", () => {
   });
 });
 
+describe("text spacing", () => {
+  it("starts at what the alert box always rendered", () => {
+    const v = createDefaultAlertVariantConfig("follow");
+    expect([v.lineHeight, v.letterSpacing, v.wordSpacing, v.messageFontScale]).toEqual([1.2, 0, 0, 0.6]);
+    // A box saved before these existed reads the same values.
+    const saved = normalizeAlertWidgetConfig({ variants: { follow: { fontSize: 40 } } }).variants.follow;
+    expect([saved.lineHeight, saved.letterSpacing, saved.wordSpacing, saved.messageFontScale]).toEqual([1.2, 0, 0, 0.6]);
+  });
+
+  it("keeps saved values and pulls junk back in range", () => {
+    const v = normalizeAlertWidgetConfig({
+      variants: { follow: { lineHeight: 1.55, letterSpacing: 2.5, wordSpacing: 99, messageFontScale: "big" } },
+    }).variants.follow;
+    expect(v.lineHeight).toBe(1.55);
+    expect(v.letterSpacing).toBe(2.5);
+    expect(v.wordSpacing).toBe(40);
+    expect(v.messageFontScale).toBe(0.6);
+  });
+
+  it("travels with the look and updates an alert already playing", () => {
+    for (const key of ["lineHeight", "letterSpacing", "wordSpacing", "messageFontScale"] as const) {
+      expect(ALERT_LOOK_KEYS).toContain(key);
+      expect(ALERT_PRESENTATION_KEYS).toContain(key);
+    }
+    const cfg = createDefaultAlertWidgetConfig();
+    const started = { ...cfg.variants.follow };
+    cfg.variants.follow.letterSpacing = 3;
+    expect(alertLiveLook(cfg, "follow", null, started).letterSpacing).toBe(3);
+  });
+
+  it("is not stripped by the save schema", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    cfg.variants.follow.lineHeight = 1.5;
+    cfg.variants.follow.messageFontScale = 0.8;
+    const saved = normalizeAlertWidgetConfig(alertWidgetItemConfigSchema.parse(cfg));
+    expect(saved.variants.follow.lineHeight).toBe(1.5);
+    expect(saved.variants.follow.messageFontScale).toBe(0.8);
+  });
+});
+
 describe("resub wording", () => {
   const OLD_DEFAULT = "{name} subscribed for {amount} months in a row!";
 

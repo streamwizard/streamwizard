@@ -473,7 +473,9 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
         fontFamily,
         textAlign: variant.align,
         textShadow,
-        lineHeight: 1.2,
+        lineHeight: variant.lineHeight,
+        letterSpacing: variant.letterSpacing,
+        wordSpacing: variant.wordSpacing,
         wordBreak: "break-word",
       }}
     >
@@ -493,12 +495,15 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
     <div
       style={{
         color: variant.messageColor,
-        fontSize: Math.round(variant.fontSize * 0.6),
+        fontSize: Math.round(variant.fontSize * variant.messageFontScale),
         fontWeight: 400,
         fontFamily,
         textAlign: variant.align,
         textShadow,
-        lineHeight: 1.3,
+        // Smaller text reads better a touch looser; 1.3 against the title's 1.2.
+        lineHeight: Math.round((variant.lineHeight + 0.1) * 100) / 100,
+        letterSpacing: variant.letterSpacing,
+        wordSpacing: variant.wordSpacing,
         wordBreak: "break-word",
       }}
     >

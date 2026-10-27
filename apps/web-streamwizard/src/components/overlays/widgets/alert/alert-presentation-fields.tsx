@@ -17,6 +17,7 @@ import {
   ALERT_ENTER_ANIMATIONS,
   ALERT_EXIT_ANIMATIONS,
   ALERT_HIGHLIGHT_ANIMATIONS,
+  ALERT_TYPOGRAPHY_LIMITS,
   type AlertEventType,
   type AlertHighlightAnimation,
   type AlertPresentation,
@@ -24,6 +25,7 @@ import {
 import {
   FontWeightSelect,
   GoogleFontSelect,
+  GroupLabel,
   InspectorHint,
   InspectorReveal,
   InspectorSection,
@@ -341,6 +343,49 @@ export function AlertPresentationFields({
               checked={value.textShadow}
               hint="A soft shadow behind the text, so it stays readable over a busy game."
               onCheckedChange={(textShadow) => onPatch({ textShadow })}
+            />
+
+            <GroupLabel>Spacing</GroupLabel>
+            <SliderField
+              id={`alert-line-height-${event}`}
+              label="Line height"
+              unit="%"
+              value={Math.round(value.lineHeight * 100)}
+              min={ALERT_TYPOGRAPHY_LIMITS.lineHeight.min * 100}
+              max={ALERT_TYPOGRAPHY_LIMITS.lineHeight.max * 100}
+              step={5}
+              hint="Room between the lines of a title that wraps. The second line follows it."
+              onChange={(v) => onPatch({ lineHeight: v / 100 })}
+            />
+            <SliderField
+              id={`alert-letter-spacing-${event}`}
+              label="Letter spacing"
+              unit="px"
+              value={value.letterSpacing}
+              min={ALERT_TYPOGRAPHY_LIMITS.letterSpacing.min}
+              max={ALERT_TYPOGRAPHY_LIMITS.letterSpacing.max}
+              step={0.5}
+              onChange={(letterSpacing) => onPatch({ letterSpacing })}
+            />
+            <SliderField
+              id={`alert-word-spacing-${event}`}
+              label="Word spacing"
+              unit="px"
+              value={value.wordSpacing}
+              min={ALERT_TYPOGRAPHY_LIMITS.wordSpacing.min}
+              max={ALERT_TYPOGRAPHY_LIMITS.wordSpacing.max}
+              onChange={(wordSpacing) => onPatch({ wordSpacing })}
+            />
+            <SliderField
+              id={`alert-message-scale-${event}`}
+              label="Second line size"
+              unit="%"
+              value={Math.round(value.messageFontScale * 100)}
+              min={ALERT_TYPOGRAPHY_LIMITS.messageFontScale.min * 100}
+              max={ALERT_TYPOGRAPHY_LIMITS.messageFontScale.max * 100}
+              step={5}
+              hint="How big the second line is next to the title."
+              onChange={(v) => onPatch({ messageFontScale: v / 100 })}
             />
           </FoldRow>
         </div>
