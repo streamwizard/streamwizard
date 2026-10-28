@@ -12,8 +12,19 @@ if (process.env.NODE_ENV !== "development" && process.env.NEXT_PUBLIC_POSTHOG_KE
   });
 }
 
+// Sentry waits until the browser is idle. Its chunk (SDK plus supabase-js for
+// the Supabase integration) is ~750 KB of script, and loading it at module time
+// competed with the first paint and hydration on every page. Errors thrown in
+// the first moment of a page load are missed; the timeout caps that window.
+// A visitor who accepts cookies before this runs still gets Replay, because the
+// consent check below happens at init.
+function whenIdle(fn: () => void) {
+  if ("requestIdleCallback" in window) requestIdleCallback(fn, { timeout: 3000 });
+  else setTimeout(fn, 1500);
+}
+
 if (process.env.NODE_ENV !== "development") {
-  import("@sentry/nextjs").then(async (Sentry) => {
+  whenIdle(() => void import("@sentry/nextjs").then(async (Sentry) => {
     const { getSentryOptions, createSupabaseIntegration, createConsoleLogsIntegration } =
       await import("@repo/sentry");
     Sentry.init({
@@ -32,7 +43,7 @@ if (process.env.NODE_ENV !== "development") {
       replaysSessionSampleRate: 0,
       replaysOnErrorSampleRate: 1.0,
     });
-  });
+  }));
 }
 
 export async function onRouterTransitionStart(...args: unknown[]) {
