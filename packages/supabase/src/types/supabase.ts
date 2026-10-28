@@ -2386,6 +2386,83 @@ export type Database = {
           },
         ]
       }
+      discord_voice_channels: {
+        Row: {
+          banned_user_ids: string[]
+          channel_id: string
+          created_at: string
+          guild_id: string
+          hidden: boolean
+          hub_id: string | null
+          locked: boolean
+          owner_discord_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          banned_user_ids?: string[]
+          channel_id: string
+          created_at?: string
+          guild_id: string
+          hidden?: boolean
+          hub_id?: string | null
+          locked?: boolean
+          owner_discord_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          banned_user_ids?: string[]
+          channel_id?: string
+          created_at?: string
+          guild_id?: string
+          hidden?: boolean
+          hub_id?: string | null
+          locked?: boolean
+          owner_discord_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_voice_channels_hub_id_fkey"
+            columns: ["hub_id"]
+            isOneToOne: false
+            referencedRelation: "discord_voice_hubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_voice_hubs: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          default_user_limit: number
+          guild_id: string
+          id: string
+          lobby_channel_id: string
+          name_template: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          default_user_limit?: number
+          guild_id: string
+          id?: string
+          lobby_channel_id: string
+          name_template?: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          default_user_limit?: number
+          guild_id?: string
+          id?: string
+          lobby_channel_id?: string
+          name_template?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       discord_voice_sessions: {
         Row: {
           channel_id: string
