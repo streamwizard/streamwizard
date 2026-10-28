@@ -273,7 +273,8 @@ nodes.post("/reconcile", nodeAuth(), async (c) => {
 // Returns the plan limits for an active subscription. Called by obs-instance-manager
 // when provisioning a container so it can enforce subscription-defined resource
 // allocations without needing direct Supabase access. Returns 404 if the
-// subscription doesn't exist or is not in an active/trialing/past_due state.
+// subscription doesn't exist, is not active/trialing (past_due is read-only),
+// or its paid period has ended.
 nodes.get("/subscriptions/:subscriptionId/limits", nodeAuth(), async (c) => {
   const subscriptionId = c.req.param("subscriptionId");
   const limits = await getSubscriptionLimits(supabase, subscriptionId);

@@ -104,15 +104,21 @@ export const selectStalePendingAssets = withMetrics(
 );
 
 /**
- * Admin reconcile: one page of known object keys, ordered by id so pages are
- * stable. PostgREST caps a response at max_rows (1000), so callers must page:
- * a short list would make real files look like orphans.
+ * Admin reconcile: one page of known object keys after `afterId`, ordered by
+ * id. PostgREST caps a response at max_rows (1000), so callers must page: a
+ * short list would make real files look like orphans.
+ *
+ * Keyset, not OFFSET: users delete rows while the sweep pages, and with OFFSET
+ * every delete shifted unseen rows back past the cursor, so their files looked
+ * orphaned and were deleted.
  */
-export const selectAssetKeysPage = withMetrics(
+export const selectAssetKeysAfter = withMetrics(
   "user_assets",
   "select",
-  async (client: DBClient, from: number, to: number) =>
-    client.from("user_assets").select("key").order("id").range(from, to),
+  async (client: DBClient, afterId: string | null, limit: number) => {
+    const query = client.from("user_assets").select("id, key").order("id").limit(limit);
+    return afterId ? query.gt("id", afterId) : query;
+  },
 );
 
 const ASSET_KEYS_PAGE_SIZE = 1000;
@@ -120,12 +126,21 @@ const ASSET_KEYS_PAGE_SIZE = 1000;
 /** Admin reconcile: every known object key, to spot orphans in the bucket. */
 export async function selectAllAssetKeys(client: DBClient): Promise<string[]> {
   const keys: string[] = [];
-  // Advance by what actually came back and stop on an empty page, so a
-  // project with a lower max_rows than the page size still gets every key.
+  let afterId: string | null = null;
+  // Stop on an empty page rather than a short one, so a project with a lower
+  // max_rows than the page size still gets every key.
   for (;;) {
-    const { data, error } = await selectAssetKeysPage(client, keys.length, keys.length + ASSET_KEYS_PAGE_SIZE - 1);
+    const { data, error } = await selectAssetKeysAfter(client, afterId, ASSET_KEYS_PAGE_SIZE);
     if (error) throw error;
     if (!data || data.length === 0) return keys;
     for (const row of data) keys.push(row.key);
+    afterId = data[data.length - 1]!.id;
   }
+}
+
+/** Admin reconcile: live re-check right before an object is deleted for good. */
+export async function assetKeyExists(client: DBClient, key: string): Promise<boolean> {
+  const { data, error } = await client.from("user_assets").select("id").eq("key", key).limit(1);
+  if (error) throw error;
+  return (data ?? []).length > 0;
 }

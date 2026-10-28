@@ -24,6 +24,11 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 // loop, not a security control. The allowlist above is the security control.
 const rateLimitByUser = new Map<string, { count: number; windowStart: number }>();
 
+// In the demo catalogue so editor previews can render it, but on the wire it is
+// a control-plane message: obs-auto-switcher reads it off the consumer feed.
+// Only the config save actions may send it.
+const NOT_BROADCASTABLE = new Set<string>(["streamwizard.auto_switcher_config"]);
+
 function withinRateLimit(userId: string, now: number): boolean {
   const entry = rateLimitByUser.get(userId);
   if (!entry || now - entry.windowStart >= RATE_LIMIT_WINDOW_MS) {
@@ -81,6 +86,9 @@ export async function sendTestEventToOverlay(
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isDemoEventType(event)) {
     return { ok: false, error: "Unknown event type" };
+  }
+  if (NOT_BROADCASTABLE.has(event)) {
+    return { ok: false, error: "This event can't be sent as a test" };
   }
 
   // DEMO_EVENT_DEFS is the widened view; DEMO_EVENTS keeps its literal types,

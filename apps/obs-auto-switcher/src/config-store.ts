@@ -6,7 +6,7 @@ import {
   type AutoSwitcherConfig,
   type AutoSwitcherThresholds,
 } from "@repo/schemas";
-import { selectEnabledAutoSwitcherConfigs } from "@repo/supabase/queries/auto-switcher";
+import { selectAutoSwitcherConfig, selectEnabledAutoSwitcherConfigs } from "@repo/supabase/queries/auto-switcher";
 import { env } from "./lib/env";
 
 export interface EffectiveConfig {
@@ -20,7 +20,9 @@ export type ConfigChangeHandler = (userId: string, config: EffectiveConfig | nul
 // the source of truth: boot + periodic reconciliation load it wholesale;
 // between reconciliations, streamwizard.auto_switcher_config pushes off the
 // consumer feed (sent by the web server actions through /internal/broadcast)
-// apply the same row within ~1s. There is deliberately NO Supabase realtime here.
+// get the change applied within ~1s. A push is only a hint: the row is
+// re-read from the DB for the user ws-server stamped on the envelope, never
+// taken from the pushed body. There is deliberately NO Supabase realtime here.
 //
 // The interval is tuned for egress, not latency: a config change that lands
 // normally is applied in ~1s by the push, so this poll only exists to heal a
@@ -64,11 +66,31 @@ export class ConfigStore {
     if (this.reconcileTimer) clearInterval(this.reconcileTimer);
   }
 
-  /** A config row pushed over the consumer feed. */
-  applyPush(payload: unknown): void {
-    const parsed = autoSwitcherConfigSchema.safeParse(payload);
-    if (!parsed.success) {
-      console.warn("[config-store] dropping malformed config push:", parsed.error.message);
+  /**
+   * A config push over the consumer feed. `envelopeUserId` is the room
+   * ws-server delivered it to; the body is caller-controlled (any producer of
+   * /internal/broadcast could send it), so it only names which row to re-read,
+   * and only when it agrees with the envelope.
+   */
+  async applyPush(envelopeUserId: string, payload: unknown): Promise<void> {
+    const bodyUserId = (payload as { user_id?: unknown } | null)?.user_id;
+    if (bodyUserId !== envelopeUserId) {
+      console.warn(`[config-store] dropping config push not bound to its room user=${envelopeUserId}`);
+      return;
+    }
+    try {
+      await this.reloadUser(envelopeUserId);
+    } catch (err) {
+      reportError(err, "config-store.push");
+    }
+  }
+
+  private async reloadUser(userId: string): Promise<void> {
+    const { data, error } = await selectAutoSwitcherConfig(supabase, userId);
+    if (error) throw error;
+    const parsed = data ? autoSwitcherConfigSchema.safeParse(data) : null;
+    if (!parsed?.success) {
+      if (this.configs.delete(userId)) this.onChange(userId, null);
       return;
     }
     this.applyRow(parsed.data);
