@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { OnMount, Monaco } from "@monaco-editor/react";
 import type { Widget } from "@/actions/widgets";
@@ -10,6 +10,11 @@ import { CustomWidgetIframe, scanWidgetListeners } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { UnsavedChangesDialog } from "@/components/modals/unsaved-changes-dialog";
 import { DemoEventPanel } from "@/components/demo/demo-event-panel";
+import {
+  PREVIEW_ITEM_ID,
+  applyEditorStateWrite,
+  useEditorStateData,
+} from "@/components/demo/editor-state-data";
 import {
   demoFirePayload,
   sendDemoEventLive,
@@ -106,6 +111,24 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
     fireTestEvent,
   } = preview;
   const { logs, setLogs, consoleOpen, setConsoleOpen, appendLog } = widgetConsole;
+
+  // The preview has no overlay to read real saved values from, so its
+  // StreamWizard.state lives entirely in this editor copy.
+  const [stateData, updateStateData] = useEditorStateData(widget.id);
+  const ownState = stateData.widgetState[PREVIEW_ITEM_ID];
+  const editorState = useMemo(
+    () => ({ userState: stateData.userState, widgetState: ownState }),
+    [stateData.userState, ownState]
+  );
+  // A blob typed into the demo panel only reaches a widget that reads it on
+  // load, so reload for that; the widget's own writes need no reload.
+  const [stateReloadToken, setStateReloadToken] = useState(0);
+  const lastWrittenRef = useRef(ownState);
+  useEffect(() => {
+    if (ownState === lastWrittenRef.current) return;
+    lastWrittenRef.current = ownState;
+    setStateReloadToken((n) => n + 1);
+  }, [ownState]);
   const { room: wsRoom, status: wsStatus, setStatus: setWsStatus, enabled: wsEnabled, toggle: toggleWs } = liveRoom;
 
   // Flags the pattern Demo mode replaces, so authors know the field and the
@@ -486,6 +509,12 @@ export function WidgetEditorClient({ widget }: { widget: Widget }) {
               wsRoom={wsRoom}
               onWsStatus={setWsStatus}
               onLog={appendLog}
+              reloadToken={stateReloadToken}
+              editorState={editorState}
+              onEditorStateWrite={(write) => {
+                if (write.scope === "widget") lastWrittenRef.current = write.value;
+                updateStateData((data) => applyEditorStateWrite(data, PREVIEW_ITEM_ID, write));
+              }}
               className="flex-1 min-w-0"
               title="Widget preview"
             />

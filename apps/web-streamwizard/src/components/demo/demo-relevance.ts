@@ -1,6 +1,6 @@
 import { WIDGET_SIMULATORS } from "@repo/ui/overlay";
 
-export type DemoSectionId = "alerts" | "poll" | "ads" | "credits" | "simulate" | "custom";
+export type DemoSectionId = "alerts" | "poll" | "ads" | "credits" | "simulate" | "state" | "custom";
 
 export const DEMO_SECTIONS: { id: DemoSectionId; label: string }[] = [
   { id: "alerts", label: "Alerts" },
@@ -8,6 +8,7 @@ export const DEMO_SECTIONS: { id: DemoSectionId; label: string }[] = [
   { id: "ads", label: "Ads" },
   { id: "credits", label: "Credits" },
   { id: "simulate", label: "Simulate" },
+  { id: "state", label: "Saved data" },
   { id: "custom", label: "Custom event" },
 ];
 
@@ -41,6 +42,11 @@ export interface DemoRelevance {
   nothingToTest: boolean;
 }
 
+/** The widget saves data between streams, so the editor's copy of it is worth showing. */
+export function usesWidgetState(js: string): boolean {
+  return /StreamWizard\s*\.\s*(state|userState)\b/.test(js);
+}
+
 /**
  * Which parts of the deck the canvas can actually show. A Poll row on a scene
  * with no poll fires into nothing, and six rows of that is how the old bar got
@@ -49,7 +55,8 @@ export interface DemoRelevance {
  */
 export function demoRelevance(
   widgetTypes: readonly string[],
-  customListeners: readonly string[]
+  customListeners: readonly string[],
+  usesState = false
 ): DemoRelevance {
   const types = new Set(widgetTypes);
   const listeners = new Set<string>(customListeners);
@@ -68,6 +75,11 @@ export function demoRelevance(
   if (types.has("ad_widget") || listensTo("channel.ad_break.")) sections.push("ads");
   if (types.has("credits_widget")) sections.push("credits");
   if (simulatorIds.length > 0) sections.push("simulate");
+  // Custom widgets that save data, and the built-ins that take typed values.
+  const takesValues = ["label_widget", "follower_goal_widget", "sub_goal_widget", "bits_goal_widget"].some((t) =>
+    types.has(t)
+  );
+  if (usesState || takesValues) sections.push("state");
   const nothingToTest = sections.length === 0;
   sections.push("custom");
 

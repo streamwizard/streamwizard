@@ -11,6 +11,8 @@ import {
   PollSection,
   SimulateSection,
 } from "./demo-sections";
+import { SavedDataSection } from "./demo-state-section";
+import { PREVIEW_ITEM_ID } from "./editor-state-data";
 import { useDemoPanel, type UseDemoPanelOptions } from "./use-demo-panel";
 
 export interface DemoEventPanelProps extends UseDemoPanelOptions {
@@ -27,6 +29,7 @@ const STRIP_SECTIONS = [
   { id: "simulate", label: "Simulate" },
   { id: "alerts", label: "Alerts" },
   { id: "poll", label: "Poll" },
+  { id: "state", label: "Saved data" },
 ] as const;
 
 type StripSectionId = (typeof STRIP_SECTIONS)[number]["id"];
@@ -72,6 +75,9 @@ export function DemoEventPanel({ className, ...options }: DemoEventPanelProps) {
           {active === "simulate" && <SimulateSection panel={panel} simulatorIds={simulatorIds} />}
           {active === "alerts" && <AlertsSection panel={panel} />}
           {active === "poll" && <PollSection panel={panel} />}
+          {active === "state" && (
+            <SavedDataSection storageId={panel.storageId} widgets={[{ id: PREVIEW_ITEM_ID, label: "This widget" }]} />
+          )}
         </div>
       </div>
     </TooltipProvider>

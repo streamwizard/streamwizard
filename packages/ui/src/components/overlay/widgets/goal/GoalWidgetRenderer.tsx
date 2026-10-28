@@ -30,6 +30,8 @@ import {
   type GoalWidgetState,
 } from "./goal-widget-state";
 import { buildGoalView } from "./goal-view";
+import { applyEditorGoalValue } from "./goal-editor-values";
+import { useEditorPreviewValues } from "../../hooks/use-editor-preview-values";
 import {
   Confetti,
   GOAL_KEYFRAMES,
@@ -213,7 +215,10 @@ export function GoalWidgetRenderer({ item, scene, isEditor = false }: GoalWidget
     return () => clearTimeout(id);
   }, [isEditor, demoAt]);
 
-  const goal = pickGoal(demo, types) ?? pickGoal(state, types);
+  // Test goals first, then numbers typed into the editor's Saved data tab
+  // (never set on a live overlay), then the real goal.
+  const editorValue = useEditorPreviewValues().goals[widgetType];
+  const goal = pickGoal(demo, types) ?? applyEditorGoalValue(pickGoal(state, types), editorValue, types[0]!);
 
   // Hide a finished goal after a beat, when the widget is set to. The exit
   // animation starts a little before the goal comes off screen.

@@ -108,7 +108,7 @@ function TestButton({
 }
 
 /** A quiet line under a section, for the one thing worth knowing about it. */
-function SectionNote({ children }: { children: ReactNode }) {
+export function SectionNote({ children }: { children: ReactNode }) {
   return <p className="text-[11px] leading-snug text-muted-foreground">{children}</p>;
 }
 

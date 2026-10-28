@@ -144,8 +144,8 @@ Variables are lost whenever the overlay reloads.
     the server, so two overlays can't overwrite each other.
   - Read-only keys written by StreamWizard: `sys.stream_id` (`null` when
     offline), `sys.stream_started_at`, `sys.is_live`.
-- Both throw in the editor preview, which isn't attached to an overlay. Wrap
-  calls in `try/catch` or add `.catch()`.
+- In the editor, reads are real but writes stay in the editor. Wrap reads in
+  `try/catch` or add `.catch()`: they can fail on a network blip.
 
 ## The events you'll use most
 

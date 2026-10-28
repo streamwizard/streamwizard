@@ -9,11 +9,11 @@ description: "Everything injected into your widget's sandbox: globals, lifecycle
 |--------|-----------|
 | `fieldData` | Values of your [fields](/widgets/fields), defaults merged with the streamer's overrides. Ready on your script's first line and replaced before each `onFieldsUpdate`, so it is always the latest. |
 | `StreamWizard.fieldData` | The same values as `fieldData`. Handy if you declared a `fieldData` of your own. |
-| `StreamWizard.state` | `get()` / `set()` persistence for this one placed widget, see [state](/widgets/state). |
+| `StreamWizard.state` | `get()` / `set()` persistence for this one placed widget, see [state](/widgets/state). In the editor, writes stay in the editor. |
 | `StreamWizard.userState` | `get(key)` / `getAll()` / `set(key, value)` / `increment(key, amount?)` / `delete(key)` / `subscribe(key, cb)` / `onChange(cb)` channel-wide state, also written by the server, pushed live to open overlays. See [state](/widgets/state). |
-| `StreamWizard.session` | `{ subscriberToken, overlayItemId }` once the widget runs on an overlay; `null` in the editor preview. |
-| `StreamWizard.stateUrl` | Raw state endpoint. Prefer `StreamWizard.state`. |
-| `StreamWizard.userStateUrl` | Raw channel-state endpoint. Prefer `StreamWizard.userState`. |
+| `StreamWizard.session` | `{ subscriberToken, overlayItemId }` once the widget runs on an overlay or the overlay editor canvas; `null` in the widget code editor. |
+| `StreamWizard.stateUrl` | Raw state endpoint. Prefer `StreamWizard.state`. `null` in the editor, so testing can't write to it. |
+| `StreamWizard.userStateUrl` | Raw channel-state endpoint. Prefer `StreamWizard.userState`. `null` in the editor, for the same reason. |
 | `gsap` | GSAP 3.12 animation library. |
 | `TextPlugin` | GSAP text animation; call `gsap.registerPlugin(TextPlugin)` first. |
 

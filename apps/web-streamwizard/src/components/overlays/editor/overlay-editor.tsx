@@ -2,6 +2,8 @@
 
 import { trackAction } from "@/lib/track-action";
 import { Button, Separator, SidebarTrigger, useSidebar } from "@repo/ui";
+import { EditorAudioProvider, EditorPreviewValuesProvider, normalizeLabelWidgetConfig } from "@repo/ui/overlay";
+import { useEditorStateData } from "@/components/demo/editor-state-data";
 import { Database } from "@repo/supabase";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
@@ -110,8 +112,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
     nudgeSelected,
     editorClipPreviewPaused,
     setEditorClipPreviewPaused,
-    editorClipPreviewForceMute,
-    setEditorClipPreviewForceMute,
+    editorAudioMuted,
+    setEditorAudioMuted,
     editorClipPreviewAutoplayBlocked,
     attemptEditorClipPreviewUnblock,
     runningSimulatorIds,
@@ -155,6 +157,35 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
         .map((item) => getCachedWidget(asCustomWidgetConfig(item.config).widget_id)?.js ?? "")
         .join("\n"),
     [scene?.items]
+  );
+
+  /** Custom widgets on the canvas, for the demo deck's Saved data tab. */
+  const canvasCustomWidgets = useMemo(
+    () =>
+      (scene?.items ?? [])
+        .filter((item) => item.type === "custom_widget")
+        .map((item) => ({ id: item.id, label: item.label })),
+    [scene?.items]
+  );
+
+  /** What the canvas's label widgets show, for the Saved data tab. */
+  const canvasLabelIds = useMemo(
+    () => [
+      ...new Set(
+        (scene?.items ?? [])
+          .filter((item) => item.type === "label_widget")
+          .map((item) => normalizeLabelWidgetConfig(item.config).labelId)
+      ),
+    ],
+    [scene?.items]
+  );
+
+  // Stream label and goal values typed into the demo deck's Saved data tab,
+  // fed to the canvas only.
+  const [editorStateData] = useEditorStateData(scene?.id ?? "");
+  const previewValues = useMemo(
+    () => ({ labels: editorStateData.labels, goals: editorStateData.goals }),
+    [editorStateData.labels, editorStateData.goals]
   );
 
   /** Distinct item types on the canvas, so the demo deck offers only tests that something here can show. */
@@ -561,16 +592,16 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={() =>
-                setEditorClipPreviewForceMute(!editorClipPreviewForceMute)
-              }
+              onClick={() => setEditorAudioMuted(!editorAudioMuted)}
+              aria-pressed={editorAudioMuted}
+              aria-label={editorAudioMuted ? "Turn editor sound back on" : "Mute editor sound"}
               title={
-                editorClipPreviewForceMute
-                  ? "Unmute clip preview (editor only; still respects saved clip mute in widget settings)"
-                  : "Mute clip preview in the editor"
+                editorAudioMuted
+                  ? "Editor sound is off. Click to turn it back on. Your overlay in OBS still plays sound."
+                  : "Mute alerts, clips and custom widgets in this editor. Your overlay in OBS still plays sound."
               }
             >
-              {editorClipPreviewForceMute ? (
+              {editorAudioMuted ? (
                 <VolumeX className="h-3 w-3" />
               ) : (
                 <Volume2 className="h-3 w-3" />
@@ -748,11 +779,16 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
         <div className="relative flex min-w-0 flex-1">
           {/* No scrolling here: pan and zoom own where the canvas sits. */}
           <div ref={canvasPaneRef} className="relative flex-1 overflow-hidden bg-muted/30">
-            <EditorCanvas
-              paneRef={canvasPaneRef}
-              onAddWidget={() => setWidgetSheetOpen(true)}
-              onOpenShortcuts={() => setShortcutsOpen(true)}
-            />
+            {/* Only the editor mounts this, so the mute can never reach OBS. */}
+            <EditorAudioProvider muted={editorAudioMuted}>
+              <EditorPreviewValuesProvider values={previewValues}>
+                <EditorCanvas
+                  paneRef={canvasPaneRef}
+                  onAddWidget={() => setWidgetSheetOpen(true)}
+                  onOpenShortcuts={() => setShortcutsOpen(true)}
+                />
+              </EditorPreviewValuesProvider>
+            </EditorAudioProvider>
           </div>
 
           {/* Floats over the canvas as a sibling of the pane, not inside it, so
@@ -765,6 +801,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
             open={demoOpen}
             onClose={() => setDemoOpen(false)}
             widgetTypes={canvasWidgetTypes}
+            customWidgets={canvasCustomWidgets}
+            labelIds={canvasLabelIds}
             storageId={scene.id}
             sourceJs={canvasWidgetJs}
             mode={demoFireMode}

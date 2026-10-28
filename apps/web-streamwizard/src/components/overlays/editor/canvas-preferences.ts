@@ -37,6 +37,8 @@ export interface CanvasPreferences {
   rulers: boolean;
   /** Track the pointer along the rulers. Only means anything while they are on. */
   rulerCursor: boolean;
+  /** Silence alerts, clips and custom widgets on the editor canvas. Never the live overlay. */
+  audioMuted: boolean;
 }
 
 export const CANVAS_BACKGROUND_KEY = "overlay-editor-canvas-background";
@@ -44,6 +46,7 @@ export const CANVAS_GRID_KEY = "overlay-editor-canvas-grid";
 export const CANVAS_RULERS_KEY = "overlay-editor-canvas-rulers";
 export const CANVAS_RULER_CURSOR_KEY = "overlay-editor-canvas-ruler-cursor";
 export const CANVAS_SNAP_ITEMS_KEY = "overlay-editor-snap-to-items";
+export const EDITOR_AUDIO_MUTED_KEY = "overlay-editor-audio-muted";
 
 export const GRID_SIZE_MIN = 5;
 export const GRID_SIZE_MAX = 500;
@@ -89,6 +92,7 @@ export const DEFAULT_CANVAS_PREFERENCES: CanvasPreferences = {
   // On by default: someone who turned the rulers on wants to read positions off
   // them, and the marker is the fastest way to do that.
   rulerCursor: true,
+  audioMuted: false,
 };
 
 export const CANVAS_BACKGROUND_LABELS: Record<CanvasBackground, string> = {
@@ -164,6 +168,7 @@ export function loadCanvasPreferences(): CanvasPreferences {
     rulers: readKey(CANVAS_RULERS_KEY) === "true",
     // Absent means never set, which should read as the default rather than off.
     rulerCursor: readKey(CANVAS_RULER_CURSOR_KEY) !== "false",
+    audioMuted: readKey(EDITOR_AUDIO_MUTED_KEY) === "true",
   };
 }
 
@@ -177,6 +182,10 @@ export function saveGridSettings(grid: GridSettings) {
 
 export function saveRulersVisible(visible: boolean) {
   writeKey(CANVAS_RULERS_KEY, String(visible));
+}
+
+export function saveEditorAudioMuted(muted: boolean) {
+  writeKey(EDITOR_AUDIO_MUTED_KEY, String(muted));
 }
 
 /**

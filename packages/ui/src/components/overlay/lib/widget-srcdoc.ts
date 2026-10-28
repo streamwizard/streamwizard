@@ -46,6 +46,13 @@ export function buildWidgetSrcdoc(
      * on every log for nobody's benefit.
      */
     forwardLogs?: boolean;
+    /**
+     * The document runs in a dashboard preview rather than on a live overlay.
+     * Installs the editor-only hooks: the editor's mute (`swSetMuted`) and
+     * editor state, where `state`/`userState` read the real saved values but
+     * every write stays in the editor (`swEditorState` in, `swStateWrite` out).
+     */
+    editor?: boolean;
   }
 ): string {
   const { resolvedHtml, resolvedCss } = resolveWidgetTemplate(html, extraCss, fields, fieldValues);
@@ -96,13 +103,184 @@ export function buildWidgetSrcdoc(
   <\/script>
 `
     : "";
+  // The editor's mute button. Best effort: it reaches every <audio>/<video>
+  // and every Audio() the widget plays, which is how widgets play sound, but
+  // not Web Audio. Only elements this muted are unmuted again, so a widget's
+  // own muted video stays muted. Installed first so it sees early play() calls.
+  const editorMute = opts?.editor
+    ? `  <script nonce="${nonce}">
+    (function () {
+      var muted = false;
+      var seen = [];
+      function hush(el) {
+        if (muted && !el.muted) { el.muted = true; el.__swEditorMuted = true; }
+      }
+      function track(el) {
+        seen = seen.filter(function (s) { return !s.ended; });
+        if (seen.indexOf(el) === -1) seen.push(el);
+        hush(el);
+      }
+      var play = HTMLMediaElement.prototype.play;
+      HTMLMediaElement.prototype.play = function () {
+        track(this);
+        return play.apply(this, arguments);
+      };
+      // autoplay never calls play(); its 'play' event doesn't bubble, so capture it.
+      document.addEventListener('play', function (e) {
+        if (e.target instanceof HTMLMediaElement) track(e.target);
+      }, true);
+      window.addEventListener('message', function (e) {
+        if (!e.data || e.data.type !== 'swSetMuted') return;
+        muted = e.data.muted === true;
+        var els = seen.concat(Array.prototype.slice.call(document.querySelectorAll('audio,video')));
+        els.forEach(function (el) {
+          if (muted) hush(el);
+          else if (el.__swEditorMuted) { el.muted = false; delete el.__swEditorMuted; }
+        });
+      });
+    })();
+  <\/script>
+`
+    : "";
+
+  // Writes never leave the editor: set/increment/delete land in an in-memory
+  // copy the editor owns, and reads prefer that copy over the real store.
+  // Registered before the runtime's own message listener so it can swallow a
+  // live 'streamwizard.user_state' frame for a key the editor is overriding.
+  const editorState = opts?.editor
+    ? `
+    (function () {
+      var sw = window.StreamWizard;
+      // undefined: not overridden. userState: key -> value, null = deleted here.
+      var widget;
+      var user = {};
+      // Writes the editor hasn't echoed back yet. Its snapshots trail behind,
+      // so one sent before a write must not roll that write back.
+      var pendingWidget;
+      var pendingUser = {};
+      function same(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+      function has(key) { return Object.prototype.hasOwnProperty.call(user, key); }
+      function tell(msg) {
+        try { parent.postMessage(msg, '*'); } catch (err) { /* parent gone */ }
+      }
+      function changed(key, value) {
+        window.dispatchEvent(new CustomEvent('onEventReceived', { detail: {
+          listener: 'streamwizard.user_state',
+          event: { key: key, value: value, updatedAt: new Date().toISOString() }
+        } }));
+      }
+      // Kept in here and taken off the global, so an older widget that
+      // fetch()es the raw URLs itself can't write past the editor either.
+      var stateUrl = sw.stateUrl;
+      var userStateUrl = sw.userStateUrl;
+      sw.stateUrl = null;
+      sw.userStateUrl = null;
+      function canReadWidget() {
+        var s = sw.session;
+        return !!(stateUrl && s && s.subscriberToken && s.overlayItemId && String(s.overlayItemId).indexOf('temp-') !== 0);
+      }
+      function canReadUser() {
+        return !!(userStateUrl && sw.session && sw.session.subscriberToken);
+      }
+      async function readReal(url, what) {
+        var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + sw.session.subscriberToken } });
+        if (!res.ok) throw new Error('Failed to load ' + what + ' (' + res.status + ')');
+        return res.json();
+      }
+
+      sw.state.get = async function () {
+        if (widget !== undefined) return widget;
+        if (!canReadWidget()) return {};
+        var body = await readReal(stateUrl + '?itemId=' + encodeURIComponent(sw.session.overlayItemId), 'widget state');
+        return body.state != null ? body.state : null;
+      };
+      sw.state.set = async function (state) {
+        // Same rule as the real route, so a widget that works here works live.
+        if (typeof state !== 'object' || state === null || Array.isArray(state)) {
+          throw new Error('Failed to save widget state (400)');
+        }
+        widget = state;
+        pendingWidget = state;
+        tell({ type: 'swStateWrite', scope: 'widget', value: state });
+      };
+      sw.userState.get = async function (key) {
+        if (has(key)) return user[key];
+        if (!canReadUser()) return null;
+        var body = await readReal(userStateUrl + '?key=' + encodeURIComponent(key), 'channel state');
+        return body.value != null ? body.value : null;
+      };
+      sw.userState.getAll = async function () {
+        var all = {};
+        if (canReadUser()) {
+          var body = await readReal(userStateUrl, 'channel state');
+          all = body.state != null ? body.state : {};
+        }
+        var out = {};
+        Object.keys(all).forEach(function (k) { out[k] = all[k]; });
+        Object.keys(user).forEach(function (k) {
+          if (user[k] === null) delete out[k]; else out[k] = user[k];
+        });
+        return out;
+      };
+      function write(key, value) {
+        // The real route's key rule; 'sys.' keys fail it too, as they do live.
+        if (!/^[a-z0-9_]{1,64}$/.test(String(key))) {
+          throw new Error('Failed to save channel state (400)');
+        }
+        user[key] = value;
+        pendingUser[key] = value;
+        tell({ type: 'swStateWrite', scope: 'user', key: key, value: value });
+        changed(key, value);
+      }
+      sw.userState.set = async function (key, value) { write(key, value == null ? null : value); };
+      sw.userState.increment = async function (key, amount) {
+        var current = await this.get(key);
+        if (current != null && typeof current !== 'number') {
+          throw new Error('Failed to increment channel state (' + key + ' is not a number)');
+        }
+        var next = (current || 0) + (amount == null ? 1 : amount);
+        write(key, next);
+        return next;
+      };
+      sw.userState.delete = async function (key) { write(key, null); };
+
+      window.addEventListener('message', function (e) {
+        var d = e.data;
+        if (!d) return;
+        if (d.type === 'swEditorState') {
+          var nextWidget = d.widgetState == null ? undefined : d.widgetState;
+          if (pendingWidget !== undefined && !same(pendingWidget, nextWidget)) nextWidget = widget;
+          else pendingWidget = undefined;
+          widget = nextWidget;
+          var next = {};
+          var given = d.userState || {};
+          Object.keys(given).forEach(function (k) { next[k] = given[k]; });
+          Object.keys(pendingUser).forEach(function (k) {
+            if (!same(pendingUser[k], next[k])) next[k] = user[k];
+            else delete pendingUser[k];
+          });
+          var before = user;
+          user = next;
+          // Values the streamer typed into the panel reach onChange like a real write.
+          Object.keys(next).forEach(function (k) {
+            if (JSON.stringify(before[k]) !== JSON.stringify(next[k])) changed(k, next[k]);
+          });
+          return;
+        }
+        if (d.type === 'onEventReceived' && d.payload && d.payload.listener === 'streamwizard.user_state' &&
+            d.payload.event && has(d.payload.event.key)) {
+          e.stopImmediatePropagation();
+        }
+      });
+    })();`
+    : "";
 
   return `<!DOCTYPE html>
 <html style="background:transparent!important;background-color:transparent!important;color-scheme:normal">
 <head>
   <meta name="color-scheme" content="normal">
   <meta http-equiv="Content-Security-Policy" content="connect-src ${connectSrc}">
-${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/script>
+${logForwarder}${editorMute}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/script>
   <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"><\/script>
   <script nonce="${nonce}" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/TextPlugin.min.js"><\/script>
   <script nonce="${nonce}">
@@ -139,12 +317,13 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
       fieldData: ${initialFieldData},
       // Typed wrapper around the raw state API; see the editor's autocomplete
       // (StreamWizardStateApi). Throws outside a placed overlay widget, where
-      // there is no session to authenticate with.
+      // there is no session to authenticate with. Editor documents swap these
+      // methods for the editor-only versions below.
       state: {
         _require: function() {
           var sw = window.StreamWizard;
           if (!sw.stateUrl || !sw.session || !sw.session.subscriberToken || !sw.session.overlayItemId) {
-            throw new Error('StreamWizard.state is only available when the widget runs on an overlay (not in the editor preview).');
+            throw new Error('StreamWizard.state is only available when the widget runs on an overlay or in the editor.');
           }
           return sw;
         },
@@ -177,7 +356,7 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
         _require: function() {
           var sw = window.StreamWizard;
           if (!sw.userStateUrl || !sw.session || !sw.session.subscriberToken) {
-            throw new Error('StreamWizard.userState is only available when the widget runs on an overlay (not in the editor preview).');
+            throw new Error('StreamWizard.userState is only available when the widget runs on an overlay or in the editor.');
           }
           return sw;
         },
@@ -234,8 +413,8 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
         // server, later chat commands) is pushed into the overlay's room and
         // relayed here as an onEventReceived with listener
         // 'streamwizard.user_state'. Registering is safe anywhere; in the
-        // editor preview there is no socket, so the callback simply never
-        // fires. Returns an unsubscribe function.
+        // editor it fires for the editor's own writes too. Returns an
+        // unsubscribe function.
         onChange: function(callback) {
           var handler = function(e) {
             var d = e.detail;
@@ -264,7 +443,7 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
         _require: function() {
           var sw = window.StreamWizard;
           if (!sw.twitch.twitchUrl || !sw.session || !sw.session.subscriberToken) {
-            throw new Error('StreamWizard.twitch is only available when the widget runs on an overlay (not in the editor preview).');
+            throw new Error('StreamWizard.twitch is only available when the widget runs on an overlay or in the editor.');
           }
           return sw;
         },
@@ -393,7 +572,7 @@ ${logForwarder}  <script nonce="${nonce}" src="https://cdn.tailwindcss.com"><\/s
     // property, not a declaration: widget JS shares this script, so a 'var',
     // 'let' or 'const' here would make an author's own top-level
     // 'const fieldData' a SyntaxError. Kept in step with StreamWizard.fieldData.
-    window.fieldData = window.StreamWizard.fieldData;
+    window.fieldData = window.StreamWizard.fieldData;${editorState}
     window.addEventListener('message', function(e) {
       if (e.data.type === 'onWidgetLoad') {
         if (e.data.payload && e.data.payload.session) window.StreamWizard.session = e.data.payload.session;
