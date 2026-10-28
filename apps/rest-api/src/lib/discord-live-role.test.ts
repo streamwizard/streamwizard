@@ -253,6 +253,14 @@ describe("reconcileLiveRoles", () => {
     expect(upserts[0]).toMatchObject({ discord_user_id: "d2", broadcaster_id: "b2", user_id: "u2", role_id: "r1" });
   });
 
+  it("takes the role back from a holder whose account was deleted (user_id set null)", async () => {
+    grants = [grant({ user_id: null })];
+    wanted = [];
+    expect(await mod.reconcileLiveRoles()).toEqual({ granted: 0, revoked: 1, moved: 0, failed: 0 });
+    expect(removed).toEqual([["d1", "r1"]]);
+    expect(deletes).toEqual(["d1"]);
+  });
+
   it("moves holders to a newly picked role", async () => {
     grants = [grant({ role_id: "old" })];
     wanted = [{ broadcasterId: "b1", userId: "u1", discordUserId: "d1" }];

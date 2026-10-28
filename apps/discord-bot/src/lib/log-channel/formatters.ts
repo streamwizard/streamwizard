@@ -245,6 +245,14 @@ const PLATFORM_FORMATTERS: { [T in PlatformOnly]: Formatter<T> } = {
       )
       .addFields([...identityFields(payload, event), ...byField("Unbanned by", payload)]),
 
+  "user.twitch_conflict": (payload, event) =>
+    withSubject(base(event, "user.twitch_conflict"), payload)
+      .setDescription(
+        `${bold(subjectName(payload), "Someone")} signed up, but another account already holds this Twitch ID. ` +
+          "Their account has no Twitch connection until an admin sorts it out.",
+      )
+      .addFields([...identityFields(payload, event), ...field("Account holding it", code(payload.existing_user_id))]),
+
   "admin.role_granted": (payload, event) =>
     withSubject(base(event, "admin.role_granted"), payload)
       .setDescription(`${bold(subjectName(payload), "A user")} is now **${escapeMarkdown(payload.role ?? "admin")}**.`)

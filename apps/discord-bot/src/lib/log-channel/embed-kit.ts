@@ -30,6 +30,7 @@ export const STYLE: Record<PlatformEventType, { emoji: string; color: number }> 
   "user.deleted": { emoji: "🗑️", color: DANGER_RED },
   "user.banned": { emoji: "⛔", color: DANGER_RED },
   "user.unbanned": { emoji: "🔓", color: TWITCH_PURPLE },
+  "user.twitch_conflict": { emoji: "⚠️", color: DANGER_RED },
   "discord.linked": { emoji: "🔗", color: TWITCH_PURPLE },
   "discord.unlinked": { emoji: "✂️", color: DANGER_RED },
   "subscription.granted": { emoji: "🎟️", color: TWITCH_PURPLE },
