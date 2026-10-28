@@ -6,6 +6,7 @@ import {
   ALERT_EVENT_LABELS,
   ALERT_EVENT_SUBSCRIPTION_TYPES,
   ALERT_EVENT_TYPES,
+  ALERT_EVENT_TWITCH_FEATURES,
   ALERT_LOOK_KEYS,
   ALERT_NAME_LABELS,
   ALERT_MAX_HOLD_MS,
@@ -38,6 +39,7 @@ import {
   createDefaultAlertWidgetConfig,
   normalizeAlertWidgetConfig,
   renderAlertTemplate,
+  truncateAlertName,
   type AlertEventType,
 } from "./alert-widget-config";
 import { buildWidgetTestEvent } from "@repo/schemas";
@@ -341,6 +343,88 @@ describe("notice payloads", () => {
   });
 });
 
+describe("alerts behind an extra Twitch permission", () => {
+  const ban = (extra: Record<string, unknown>) =>
+    alertInstanceFromSocketMessage({
+      type: "channel.ban",
+      payload: {
+        user_name: "TrollBot", user_login: "trollbot", moderator_user_name: "ninetoad",
+        reason: "spam", banned_at: "2026-10-27T12:00:00Z", ...extra,
+      },
+    });
+
+  it("tells a ban from a timeout, and times the timeout", () => {
+    const banned = ban({ is_permanent: true, ends_at: null });
+    expect(banned?.event).toBe("ban");
+    expect(banned?.name).toBe("TrollBot");
+    expect(banned?.message).toBe("spam");
+    expect(renderAlertTemplate("{name} by {moderator}", banned!)).toBe("TrollBot by ninetoad");
+
+    const timedOut = ban({ is_permanent: false, ends_at: "2026-10-27T12:10:00Z" });
+    expect(timedOut?.event).toBe("timeout");
+    expect(timedOut?.amount).toBe(600);
+    // A timeout without a readable end still fires, just without a length.
+    expect(ban({ is_permanent: false, ends_at: null })?.amount).toBe(0);
+  });
+
+  it("names the new VIP and the new mod", () => {
+    const vip = alertInstanceFromSocketMessage({ type: "channel.vip.add", payload: { user_name: "Toast", user_login: "toast" } });
+    expect(vip).toMatchObject({ event: "vip_added", name: "Toast", login: "toast" });
+    const mod = alertInstanceFromSocketMessage({ type: "channel.moderator.add", payload: { user_name: "Nine", user_login: "nine" } });
+    expect(mod).toMatchObject({ event: "mod_added", name: "Nine", login: "nine" });
+  });
+
+  it("only these ask for a permission, and none of them start on", () => {
+    expect(ALERT_EVENT_TWITCH_FEATURES).toEqual({
+      ban: "alert_bans",
+      timeout: "alert_bans",
+      vip_added: "alert_vips",
+      mod_added: "alert_mods",
+    });
+    for (const event of ["ban", "timeout", "vip_added", "mod_added", "prediction_start", "prediction_result", "goal_achieved"] as const) {
+      expect(ALERT_DEFAULT_ON_EVENTS).not.toContain(event);
+    }
+  });
+});
+
+describe("prediction and goal alerts", () => {
+  it("opens a prediction on its question", () => {
+    const alert = alertInstanceFromSocketMessage({ type: "channel.prediction.begin", payload: { title: "Clutch or throw?" } });
+    expect(alert).toMatchObject({ event: "prediction_start", name: "Clutch or throw?" });
+  });
+
+  it("names the winning outcome and its points, and skips a canceled prediction", () => {
+    const outcomes = [
+      { id: "1", title: "Clutch", channel_points: 15000 },
+      { id: "2", title: "Throw", channel_points: 9000 },
+    ];
+    const won = alertInstanceFromSocketMessage({
+      type: "channel.prediction.end",
+      payload: { status: "resolved", winning_outcome_id: "2", outcomes },
+    });
+    expect(won).toMatchObject({ event: "prediction_result", name: "Throw", amount: 9000 });
+    expect(
+      alertInstanceFromSocketMessage({ type: "channel.prediction.end", payload: { status: "canceled", winning_outcome_id: "", outcomes } })
+    ).toBeNull();
+  });
+
+  it("fires on a goal that was hit, not one that ran out", () => {
+    const hit = alertInstanceFromSocketMessage({
+      type: "channel.goal.end",
+      payload: { type: "subscription_count", description: "Road to 250", target_amount: 250, is_achieved: true },
+    });
+    expect(hit).toMatchObject({ event: "goal_achieved", name: "Road to 250", amount: 250 });
+    const unnamed = alertInstanceFromSocketMessage({
+      type: "channel.goal.end",
+      payload: { type: "follower", description: "", target_amount: 100, is_achieved: true },
+    });
+    expect(unnamed?.name).toBe("Follower goal");
+    expect(
+      alertInstanceFromSocketMessage({ type: "channel.goal.end", payload: { type: "follow", target_amount: 100, is_achieved: false } })
+    ).toBeNull();
+  });
+});
+
 describe("dedicated subscriptions the alert box still owns", () => {
   it("reads a redemption's reward and cost", () => {
     const alert = alertInstanceFromSocketMessage({
@@ -578,10 +662,10 @@ describe("config migration", () => {
 });
 
 describe("alert type coverage", () => {
-  it("configures 23 alerts", () => {
-    // 29 in the public catalog minus the six that need an OAuth scope
-    // StreamWizard does not request yet (ban, VIP, mod, 2x prediction, goal).
-    expect(ALERT_EVENT_TYPES.length).toBe(23);
+  it("configures 30 alerts", () => {
+    // The 29 in the public catalog, plus timeout, which the catalog folds
+    // into its ban demo.
+    expect(ALERT_EVENT_TYPES.length).toBe(30);
   });
 
   it("still ships the six the widget started with", () => {
@@ -612,6 +696,166 @@ describe("the queue limit", () => {
       maxQueue: 20,
     });
     expect(saved.maxQueue).toBe(20);
+  });
+});
+
+describe("video sound", () => {
+  const video = { mediaUrl: "https://cdn.test/a.webm", mediaKind: "video" };
+
+  it("plays at its own volume on a new alert", () => {
+    expect(createDefaultAlertVariantConfig("follow").videoVolume).toBe(0.8);
+  });
+
+  it("stays muted on a saved alert that also had a sound file", () => {
+    const cfg = normalizeAlertWidgetConfig({
+      variants: { follow: { ...video, soundUrl: "https://cdn.test/a.mp3", volume: 0.6 } },
+    });
+    expect(cfg.variants.follow.videoVolume).toBe(0);
+    expect(cfg.variants.follow.volume).toBe(0.6);
+  });
+
+  it("keeps the old shared volume on a saved alert with only a video", () => {
+    const cfg = normalizeAlertWidgetConfig({ variants: { follow: { ...video, volume: 0.6 } } });
+    expect(cfg.variants.follow.videoVolume).toBe(0.6);
+  });
+
+  it("keeps a saved video volume, sound file or not", () => {
+    const cfg = normalizeAlertWidgetConfig({
+      variants: { follow: { ...video, soundUrl: "https://cdn.test/a.mp3", videoVolume: 0.4 } },
+    });
+    expect(cfg.variants.follow.videoVolume).toBe(0.4);
+    expect(normalizeAlertWidgetConfig({ variants: { follow: { videoVolume: 7 } } }).variants.follow.videoVolume).toBe(1);
+  });
+
+  it("migrates a variation saved before it the same way", () => {
+    const cfg = normalizeAlertWidgetConfig({
+      variants: {
+        cheer: {
+          variations: [{ id: "v1", settings: { ...video, soundUrl: "https://cdn.test/a.mp3" } }],
+        },
+      },
+    });
+    expect(cfg.variants.cheer.variations[0]?.settings.videoVolume).toBe(0);
+  });
+
+  it("is not stripped by the save schema", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    cfg.variants.follow.videoVolume = 0.3;
+    const saved = alertWidgetItemConfigSchema.parse(cfg);
+    expect(normalizeAlertWidgetConfig(saved).variants.follow.videoVolume).toBe(0.3);
+  });
+});
+
+describe("long names", () => {
+  it("cuts a name past the limit and ends it in an ellipsis", () => {
+    const name = "abcdefghijklmnopqrstuvwxy"; // 25, Twitch's most
+    expect(truncateAlertName(name, 12)).toBe("abcdefghijkl…");
+    expect(truncateAlertName("short", 12)).toBe("short");
+    expect(truncateAlertName("exactlytwelv", 12)).toBe("exactlytwelv");
+  });
+
+  it("leaves every name whole at 0", () => {
+    expect(truncateAlertName("abcdefghijklmnopqrstuvwxy", 0)).toBe("abcdefghijklmnopqrstuvwxy");
+  });
+
+  it("never splits an emoji or a CJK character", () => {
+    expect(truncateAlertName("🎉🎉🎉🎉", 2)).toBe("🎉🎉…");
+    expect(truncateAlertName("配信者の名前", 3)).toBe("配信者…");
+  });
+
+  it("has no limit on a new box or one saved before the setting", () => {
+    expect(createDefaultAlertWidgetConfig().maxNameLength).toBe(0);
+    expect(normalizeAlertWidgetConfig({ gapSeconds: 2, variants: {} }).maxNameLength).toBe(0);
+  });
+
+  it("keeps a saved limit inside Twitch's 25", () => {
+    expect(normalizeAlertWidgetConfig({ maxNameLength: 12 }).maxNameLength).toBe(12);
+    expect(normalizeAlertWidgetConfig({ maxNameLength: 99 }).maxNameLength).toBe(25);
+    expect(normalizeAlertWidgetConfig({ maxNameLength: -3 }).maxNameLength).toBe(0);
+    expect(normalizeAlertWidgetConfig({ maxNameLength: "x" }).maxNameLength).toBe(0);
+  });
+
+  it("is not stripped by the save schema", () => {
+    const saved = alertWidgetItemConfigSchema.parse({
+      ...createDefaultAlertWidgetConfig(),
+      maxNameLength: 12,
+    });
+    expect(saved.maxNameLength).toBe(12);
+  });
+});
+
+describe("text spacing", () => {
+  it("starts at what the alert box always rendered", () => {
+    const v = createDefaultAlertVariantConfig("follow");
+    expect([v.lineHeight, v.letterSpacing, v.wordSpacing, v.messageFontScale]).toEqual([1.2, 0, 0, 0.6]);
+    // A box saved before these existed reads the same values.
+    const saved = normalizeAlertWidgetConfig({ variants: { follow: { fontSize: 40 } } }).variants.follow;
+    expect([saved.lineHeight, saved.letterSpacing, saved.wordSpacing, saved.messageFontScale]).toEqual([1.2, 0, 0, 0.6]);
+  });
+
+  it("keeps saved values and pulls junk back in range", () => {
+    const v = normalizeAlertWidgetConfig({
+      variants: { follow: { lineHeight: 1.55, letterSpacing: 2.5, wordSpacing: 99, messageFontScale: "big" } },
+    }).variants.follow;
+    expect(v.lineHeight).toBe(1.55);
+    expect(v.letterSpacing).toBe(2.5);
+    expect(v.wordSpacing).toBe(40);
+    expect(v.messageFontScale).toBe(0.6);
+  });
+
+  it("travels with the look and updates an alert already playing", () => {
+    for (const key of ["lineHeight", "letterSpacing", "wordSpacing", "messageFontScale"] as const) {
+      expect(ALERT_LOOK_KEYS).toContain(key);
+      expect(ALERT_PRESENTATION_KEYS).toContain(key);
+    }
+    const cfg = createDefaultAlertWidgetConfig();
+    const started = { ...cfg.variants.follow };
+    cfg.variants.follow.letterSpacing = 3;
+    expect(alertLiveLook(cfg, "follow", null, started).letterSpacing).toBe(3);
+  });
+
+  it("is not stripped by the save schema", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    cfg.variants.follow.lineHeight = 1.5;
+    cfg.variants.follow.messageFontScale = 0.8;
+    const saved = normalizeAlertWidgetConfig(alertWidgetItemConfigSchema.parse(cfg));
+    expect(saved.variants.follow.lineHeight).toBe(1.5);
+    expect(saved.variants.follow.messageFontScale).toBe(0.8);
+  });
+});
+
+describe("custom CSS", () => {
+  it("is empty on a new alert and on one saved before it", () => {
+    expect(createDefaultAlertVariantConfig("follow").customCss).toBe("");
+    expect(normalizeAlertWidgetConfig({ variants: { follow: {} } }).variants.follow.customCss).toBe("");
+  });
+
+  it("keeps what was saved, up to the limit", () => {
+    const css = '[data-part="title"]{color:red}';
+    expect(normalizeAlertWidgetConfig({ variants: { follow: { customCss: css } } }).variants.follow.customCss).toBe(css);
+    const long = "a".repeat(6000);
+    expect(normalizeAlertWidgetConfig({ variants: { follow: { customCss: long } } }).variants.follow.customCss).toHaveLength(5000);
+    expect(normalizeAlertWidgetConfig({ variants: { follow: { customCss: 42 } } }).variants.follow.customCss).toBe("");
+  });
+
+  it("travels with the look and updates an alert already playing", () => {
+    expect(ALERT_LOOK_KEYS).toContain("customCss");
+    const cfg = createDefaultAlertWidgetConfig();
+    const started = { ...cfg.variants.follow };
+    cfg.variants.follow.customCss = ".x{}";
+    expect(alertLiveLook(cfg, "follow", null, started).customCss).toBe(".x{}");
+  });
+
+  it("is not stripped by the save schema, on an alert or a variation", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    cfg.variants.cheer.customCss = ".a{}";
+    cfg.variants.cheer.variations = [
+      { ...createAlertVariation("cheer", cfg.variants.cheer, "v1", "Big"), conditions: [atLeast(100)] },
+    ];
+    cfg.variants.cheer.variations[0]!.settings.customCss = ".b{}";
+    const saved = normalizeAlertWidgetConfig(alertWidgetItemConfigSchema.parse(cfg));
+    expect(saved.variants.cheer.customCss).toBe(".a{}");
+    expect(saved.variants.cheer.variations[0]?.settings.customCss).toBe(".b{}");
   });
 });
 
@@ -795,12 +1039,12 @@ function cheer(bits: number, name = "toastcrumb"): AlertInstance {
 
 function variation(
   id: string,
-  condition: AlertVariationCondition,
+  condition: AlertVariationCondition | null,
   extra: Partial<AlertVariation> = {}
 ): AlertVariation {
   return {
     ...createAlertVariation("cheer", createDefaultAlertVariantConfig("cheer"), id, id),
-    condition,
+    conditions: condition ? [condition] : [],
     ...extra,
   };
 }
@@ -819,10 +1063,13 @@ const atLeast = (value: number): AlertVariationCondition => ({
 });
 
 describe("which alerts take variations", () => {
-  it("is the seventeen that have something to match on", () => {
+  it("is the twenty that have something to match on", () => {
     expect([...ALERT_VARIATION_EVENTS].sort() as string[]).toEqual(
       [
         "ad_break",
+        "goal_achieved",
+        "prediction_result",
+        "timeout",
         "bits_badge",
         "charity_donation",
         "cheer",
@@ -850,14 +1097,15 @@ describe("which alerts take variations", () => {
   });
 
   it("offers each alert only what its events carry", () => {
-    expect(alertVariationParameters("cheer")).toEqual(["none", "amount", "name"]);
-    expect(alertVariationParameters("sub")).toEqual(["none", "tier", "name"]);
-    expect(alertVariationParameters("resub")).toEqual(["none", "amount", "tier", "name"]);
+    expect(alertVariationParameters("cheer")).toEqual(["amount", "name", "anonymous"]);
+    expect(alertVariationParameters("sub")).toEqual(["tier", "name", "gifted"]);
+    expect(alertVariationParameters("resub")).toEqual(["amount", "tier", "name", "gifted"]);
+    expect(alertVariationParameters("gift_sub")).toEqual(["amount", "tier", "name", "anonymous"]);
     // No year in the payload: a modiversary can only be told apart by who it is.
-    expect(alertVariationParameters("modiversary")).toEqual(["none", "name"]);
+    expect(alertVariationParameters("modiversary")).toEqual(["name"]);
     // Nobody to name on an ad break or a poll.
-    expect(alertVariationParameters("ad_break")).toEqual(["none", "amount"]);
-    expect(alertVariationParameters("poll_winner")).toEqual(["none", "amount"]);
+    expect(alertVariationParameters("ad_break")).toEqual(["amount"]);
+    expect(alertVariationParameters("poll_winner")).toEqual(["amount"]);
   });
 
   it("keeps the biggest-of-the-stream condition to the events people celebrate it on", () => {
@@ -885,6 +1133,35 @@ describe("which variation plays", () => {
     expect(pickAlertVariation(cheer(99), cheerAlert([more]), always)).toBeNull();
   });
 
+  it("matches at most, and between with both ends included", () => {
+    const most = variation("most", { parameter: "amount", operator: "at_most", value: 99 });
+    expect(pickAlertVariation(cheer(1), cheerAlert([most]), always)?.id).toBe("most");
+    expect(pickAlertVariation(cheer(99), cheerAlert([most]), always)?.id).toBe("most");
+    expect(pickAlertVariation(cheer(100), cheerAlert([most]), always)).toBeNull();
+
+    const range = variation("range", { parameter: "amount", operator: "between", value: 100, max: 999 });
+    expect(pickAlertVariation(cheer(99), cheerAlert([range]), always)).toBeNull();
+    expect(pickAlertVariation(cheer(100), cheerAlert([range]), always)?.id).toBe("range");
+    expect(pickAlertVariation(cheer(999), cheerAlert([range]), always)?.id).toBe("range");
+    expect(pickAlertVariation(cheer(1000), cheerAlert([range]), always)).toBeNull();
+  });
+
+  it("prefers a range over at least, and the tighter of two ceilings", () => {
+    const list = cheerAlert([
+      variation("least", atLeast(100)),
+      variation("range", { parameter: "amount", operator: "between", value: 100, max: 999 }),
+    ]);
+    expect(pickAlertVariation(cheer(500), list, always)?.id).toBe("range");
+    expect(pickAlertVariation(cheer(5000), list, always)?.id).toBe("least");
+
+    const ceilings = cheerAlert([
+      variation("under-500", { parameter: "amount", operator: "at_most", value: 500 }),
+      variation("under-100", { parameter: "amount", operator: "at_most", value: 100 }),
+    ]);
+    expect(pickAlertVariation(cheer(50), ceilings, always)?.id).toBe("under-100");
+    expect(pickAlertVariation(cheer(300), ceilings, always)?.id).toBe("under-500");
+  });
+
   it("plays the highest requirement a cheer reaches, whatever the list order", () => {
     const tiers = [atLeast(1000), atLeast(1), atLeast(10000), atLeast(100)].map((c) =>
       variation(`at-${c.parameter === "amount" ? c.value : 0}`, c)
@@ -901,7 +1178,7 @@ describe("which variation plays", () => {
       variation("exact", { parameter: "amount", operator: "exact", value: 100 }),
       variation("top", { parameter: "amount", operator: "session_top", value: 0 }),
       variation("named", { parameter: "name", names: ["toastcrumb"] }),
-      variation("any", { parameter: "none" }),
+      variation("any", null),
     ];
     const pick = (ids: string[], bits: number) =>
       pickAlertVariation(cheer(bits), cheerAlert(list.filter((v) => ids.includes(v.id))), always)?.id;
@@ -961,6 +1238,46 @@ describe("which variation plays", () => {
     expect(pickAlertVariation(sub({ sub_tier: "1000", is_prime: false }), tiered, always)).toBeNull();
   });
 
+  it("tells a gifted sub from one the viewer paid for", () => {
+    const sub = (block: Record<string, unknown>) =>
+      alertInstanceFromSocketMessage(notice("sub", { sub: block }))!;
+    const resub = (block: Record<string, unknown>) =>
+      alertInstanceFromSocketMessage(notice("resub", { resub: { cumulative_months: 3, ...block } }))!;
+    const gifted = (event: "sub" | "resub") => ({
+      ...createDefaultAlertVariantConfig(event),
+      variations: [variation("gift", { parameter: "gifted", value: true })],
+    });
+    const paid = { ...gifted("sub"), variations: [variation("paid", { parameter: "gifted", value: false })] };
+
+    expect(pickAlertVariation(sub({ sub_plan: "1000", is_gift: true }), gifted("sub"), always)?.id).toBe("gift");
+    expect(pickAlertVariation(sub({ sub_plan: "1000", is_gift: false }), gifted("sub"), always)).toBeNull();
+    expect(pickAlertVariation(sub({ sub_plan: "1000", is_gift: false }), paid, always)?.id).toBe("paid");
+    expect(pickAlertVariation(resub({ is_gift: true }), gifted("resub"), always)?.id).toBe("gift");
+    // A payload that does not say counts as paid for.
+    expect(pickAlertVariation(sub({ sub_plan: "1000" }), paid, always)?.id).toBe("paid");
+  });
+
+  it("tells an anonymous cheer or gift from a named one", () => {
+    const anon = (event: AlertEventType) => ({
+      ...createDefaultAlertVariantConfig(event),
+      variations: [variation("anon", { parameter: "anonymous", value: true })],
+    });
+    const anonCheer = alertInstanceFromSocketMessage({
+      type: "channel.cheer",
+      payload: { is_anonymous: true, user_name: null, bits: 100, message: "" },
+    })!;
+    expect(anonCheer.anonymous).toBe(true);
+    expect(pickAlertVariation(anonCheer, anon("cheer"), always)?.id).toBe("anon");
+    expect(pickAlertVariation(cheer(100), anon("cheer"), always)).toBeNull();
+
+    const gift = (anonymous: boolean) =>
+      alertInstanceFromSocketMessage(
+        notice("community_sub_gift", { community_sub_gift: { total: 5 } }, { chatter_is_anonymous: anonymous })
+      )!;
+    expect(pickAlertVariation(gift(true), anon("community_gift"), always)?.id).toBe("anon");
+    expect(pickAlertVariation(gift(false), anon("community_gift"), always)).toBeNull();
+  });
+
   it("ignores a variation that is switched off", () => {
     const off = cheerAlert([variation("big", atLeast(100), { enabled: false }), variation("small", atLeast(1))]);
     expect(pickAlertVariation(cheer(500), off, always)?.id).toBe("small");
@@ -1000,6 +1317,72 @@ describe("which variation plays", () => {
   });
 });
 
+describe("several conditions on one variation", () => {
+  const resub = (months: number, tier: string) =>
+    alertInstanceFromSocketMessage(
+      notice("resub", { resub: { cumulative_months: months, sub_plan: tier } })
+    )!;
+  const tier3 = { parameter: "tier", tier: "3000" } as const;
+  const sixMonths = { parameter: "amount", operator: "at_least", value: 6 } as const;
+  const resubAlert = (variations: AlertVariation[]) => ({
+    ...createDefaultAlertVariantConfig("resub"),
+    variations,
+  });
+  const both = (match: "all" | "any") =>
+    resubAlert([variation("loyal", null, { match, conditions: [tier3, sixMonths] })]);
+
+  it("plays on all only when every condition holds", () => {
+    expect(pickAlertVariation(resub(6, "3000"), both("all"), always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(12, "3000"), both("all"), always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(5, "3000"), both("all"), always)).toBeNull();
+    expect(pickAlertVariation(resub(6, "1000"), both("all"), always)).toBeNull();
+    expect(pickAlertVariation(resub(1, "1000"), both("all"), always)).toBeNull();
+  });
+
+  it("plays on any when one condition holds", () => {
+    expect(pickAlertVariation(resub(6, "3000"), both("any"), always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(5, "3000"), both("any"), always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(6, "1000"), both("any"), always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(1, "1000"), both("any"), always)).toBeNull();
+  });
+
+  it("plays every time with no conditions, whatever all or any says", () => {
+    for (const match of ["all", "any"] as const) {
+      const empty = resubAlert([variation("every", null, { match })]);
+      expect(pickAlertVariation(resub(1, "1000"), empty, always)?.id).toBe("every");
+    }
+  });
+
+  it("makes a range out of two amounts that both have to hold", () => {
+    const range = cheerAlert([
+      variation("mid", null, {
+        conditions: [atLeast(100), { parameter: "amount", operator: "at_most", value: 999 }],
+      }),
+    ]);
+    expect(pickAlertVariation(cheer(100), range, always)?.id).toBe("mid");
+    expect(pickAlertVariation(cheer(999), range, always)?.id).toBe("mid");
+    expect(pickAlertVariation(cheer(1000), range, always)).toBeNull();
+  });
+
+  it("lets more conditions that all hold beat fewer of the same kind", () => {
+    const list = resubAlert([
+      variation("tier", tier3),
+      variation("loyal", null, { conditions: [tier3, sixMonths] }),
+    ]);
+    expect(pickAlertVariation(resub(12, "3000"), list, always)?.id).toBe("loyal");
+    expect(pickAlertVariation(resub(1, "3000"), list, always)?.id).toBe("tier");
+  });
+
+  it("ranks any by its loosest condition, so it does not beat a single tighter one", () => {
+    const list = resubAlert([
+      variation("either", null, { match: "any", conditions: [tier3, sixMonths] }),
+      variation("tier", tier3),
+    ]);
+    // Both match a Tier 3 at 12 months; "either" could have got in on months alone.
+    expect(pickAlertVariation(resub(12, "3000"), list, always)?.id).toBe("tier");
+  });
+});
+
 describe("a variation's settings", () => {
   it("starts as a full copy of what it was made from", () => {
     const base = { ...createDefaultAlertVariantConfig("cheer"), fontSize: 64, mediaUrl: "https://cdn.example/a.webm", mediaKind: "video" as const };
@@ -1014,10 +1397,10 @@ describe("a variation's settings", () => {
 
   it("starts on the condition its event is most likely wanted for", () => {
     const from = (event: AlertEventType) =>
-      createAlertVariation(event, createDefaultAlertVariantConfig(event), "v", "v").condition;
-    expect(from("cheer")).toEqual({ parameter: "amount", operator: "at_least", value: 1 });
-    expect(from("sub")).toEqual({ parameter: "tier", tier: "1000" });
-    expect(from("modiversary")).toEqual({ parameter: "name", names: [] });
+      createAlertVariation(event, createDefaultAlertVariantConfig(event), "v", "v").conditions;
+    expect(from("cheer")).toEqual([{ parameter: "amount", operator: "at_least", value: 1 }]);
+    expect(from("sub")).toEqual([{ parameter: "tier", tier: "1000" }]);
+    expect(from("modiversary")).toEqual([{ parameter: "name", names: [] }]);
   });
 
   it("stays put when the alert it came from changes", () => {
@@ -1101,11 +1484,13 @@ describe("saved variations", () => {
     const cfg = createDefaultAlertWidgetConfig();
     cfg.variants.cheer.randomPick = true;
     cfg.variants.cheer.variations = [
-      { ...createAlertVariation("cheer", cfg.variants.cheer, "v1", "Big cheer"), chance: 12.5, condition: atLeast(1000) },
-      { ...createAlertVariation("cheer", cfg.variants.cheer, "v2", "Regulars"), condition: { parameter: "name", names: ["toastcrumb"] } },
+      { ...createAlertVariation("cheer", cfg.variants.cheer, "v1", "Big cheer"), chance: 12.5, conditions: [atLeast(1000)] },
+      { ...createAlertVariation("cheer", cfg.variants.cheer, "v2", "Regulars"), conditions: [{ parameter: "name", names: ["toastcrumb"] }] },
+      { ...createAlertVariation("cheer", cfg.variants.cheer, "v3", "Mid"), conditions: [{ parameter: "amount", operator: "between", value: 100, max: 999 }] },
     ];
     cfg.variants.sub.variations = [
-      { ...createAlertVariation("sub", cfg.variants.sub, "v1", "Tier 3"), condition: { parameter: "tier", tier: "3000" } },
+      { ...createAlertVariation("sub", cfg.variants.sub, "v1", "Tier 3"), conditions: [{ parameter: "tier", tier: "3000" }] },
+      { ...createAlertVariation("sub", cfg.variants.sub, "v2", "Gifted"), conditions: [{ parameter: "gifted", value: true }] },
     ];
     const normalized = normalizeAlertWidgetConfig(cfg);
     expect(normalized).toEqual(cfg);
@@ -1128,18 +1513,82 @@ describe("saved variations", () => {
     const cond = (event: AlertEventType, condition: unknown) =>
       normalizeAlertWidgetConfig({
         ...cfg,
-        variants: { ...cfg.variants, [event]: { ...cfg.variants[event], variations: [{ ...raw, condition }] } },
-      }).variants[event].variations[0]!.condition;
+        variants: { ...cfg.variants, [event]: { ...cfg.variants[event], variations: [{ ...raw, conditions: [condition] }] } },
+      }).variants[event].variations[0]!.conditions[0] ?? null;
 
     // A tier on a cheer, a record on a watch streak, junk.
-    expect(cond("cheer", { parameter: "tier", tier: "3000" })).toEqual({ parameter: "none" });
+    expect(cond("cheer", { parameter: "tier", tier: "3000" })).toBeNull();
     expect(cond("watch_streak", { parameter: "amount", operator: "session_top", value: 5 })).toEqual({
       parameter: "amount",
       operator: "at_least",
       value: 5,
     });
-    expect(cond("cheer", "nonsense")).toEqual({ parameter: "none" });
+    expect(cond("cheer", "nonsense")).toBeNull();
+    // Gifted is a sub thing; a cheer has nothing to say about it.
+    expect(cond("cheer", { parameter: "gifted", value: true })).toBeNull();
+    expect(cond("cheer", { parameter: "anonymous", value: false })).toEqual({ parameter: "anonymous", value: false });
     expect(cond("cheer", { parameter: "amount", operator: "at_least", value: -5 })).toEqual(atLeast(0));
+    // A range saved the wrong way round, one with no top, and a top on a non-range.
+    expect(cond("cheer", { parameter: "amount", operator: "between", value: 999, max: 100 })).toEqual({
+      parameter: "amount",
+      operator: "between",
+      value: 100,
+      max: 999,
+    });
+    expect(cond("cheer", { parameter: "amount", operator: "between", value: 50 })).toEqual({
+      parameter: "amount",
+      operator: "between",
+      value: 50,
+      max: 50,
+    });
+    expect(cond("cheer", { parameter: "amount", operator: "at_most", value: 50, max: 80 })).toEqual({
+      parameter: "amount",
+      operator: "at_most",
+      value: 50,
+    });
+  });
+
+  it("reads a variation saved with one condition as a list of one", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    const { conditions: _, ...old } = createAlertVariation("cheer", cfg.variants.cheer, "v1", "Old");
+    const read = (condition: unknown) =>
+      normalizeAlertWidgetConfig({
+        ...cfg,
+        variants: { ...cfg.variants, cheer: { ...cfg.variants.cheer, variations: [{ ...old, condition }] } },
+      }).variants.cheer.variations[0]!;
+
+    expect(read(atLeast(1000))).toMatchObject({ match: "all", conditions: [atLeast(1000)] });
+    expect(read({ parameter: "none" }).conditions).toEqual([]);
+
+    // Through the save schema too, which would otherwise drop the key it does not know.
+    const parsed = alertWidgetItemConfigSchema.parse({
+      ...cfg,
+      variants: { ...cfg.variants, cheer: { ...cfg.variants.cheer, variations: [{ ...old, condition: atLeast(1000) }] } },
+    });
+    expect(normalizeAlertWidgetConfig(parsed).variants.cheer.variations[0]!.conditions).toEqual([atLeast(1000)]);
+    const parsedNone = alertWidgetItemConfigSchema.parse({
+      ...cfg,
+      variants: { ...cfg.variants, cheer: { ...cfg.variants.cheer, variations: [{ ...old, condition: { parameter: "none" } }] } },
+    });
+    expect(normalizeAlertWidgetConfig(parsedNone).variants.cheer.variations[0]!.conditions).toEqual([]);
+  });
+
+  it("keeps all or any, and no more than five conditions", () => {
+    const cfg = createDefaultAlertWidgetConfig();
+    const raw = createAlertVariation("cheer", cfg.variants.cheer, "v1", "x");
+    const read = (extra: Record<string, unknown>) =>
+      normalizeAlertWidgetConfig({
+        ...cfg,
+        variants: { ...cfg.variants, cheer: { ...cfg.variants.cheer, variations: [{ ...raw, ...extra }] } },
+      }).variants.cheer.variations[0]!;
+
+    expect(read({ match: "any" }).match).toBe("any");
+    expect(read({ match: "most" }).match).toBe("all");
+    expect(read({ conditions: Array.from({ length: 8 }, (_, i) => atLeast(i)) }).conditions).toHaveLength(5);
+    // One bad row goes; the rest stay.
+    expect(read({ conditions: [atLeast(1), { parameter: "tier", tier: "3000" }, "junk"] }).conditions).toEqual([
+      atLeast(1),
+    ]);
   });
 
   it("cleans usernames and holds the limits", () => {
@@ -1152,7 +1601,7 @@ describe("saved variations", () => {
         cheer: {
           ...cfg.variants.cheer,
           variations: [
-            { ...raw, name: "n".repeat(200), chance: 250, condition: { parameter: "name", names: [" @ToastCrumb ", "toastcrumb", "", 7, "NineToad"] } },
+            { ...raw, name: "n".repeat(200), chance: 250, conditions: [{ parameter: "name", names: [" @ToastCrumb ", "toastcrumb", "", 7, "NineToad"] }] },
             ...Array.from({ length: 30 }, (_, i) => ({ ...raw, id: `extra-${i}` })),
           ],
         },
@@ -1162,7 +1611,7 @@ describe("saved variations", () => {
     expect(out).toHaveLength(20);
     expect(out[0]!.name).toHaveLength(60);
     expect(out[0]!.chance).toBe(100);
-    expect(out[0]!.condition).toEqual({ parameter: "name", names: ["toastcrumb", "ninetoad"] });
+    expect(out[0]!.conditions).toEqual([{ parameter: "name", names: ["toastcrumb", "ninetoad"] }]);
   });
 
   it("gives variations that lost or share an id one of their own, the same on every read", () => {
@@ -1179,10 +1628,10 @@ describe("saved variations", () => {
 });
 
 describe("a variation's condition in plain words", () => {
-  const say = (event: AlertEventType, condition: AlertVariationCondition, chance = 100) =>
+  const say = (event: AlertEventType, condition: AlertVariationCondition | null, chance = 100) =>
     alertVariationSummary(event, {
       ...createAlertVariation(event, createDefaultAlertVariantConfig(event), "v", "v"),
-      condition,
+      conditions: condition ? [condition] : [],
       chance,
     });
 
@@ -1190,6 +1639,8 @@ describe("a variation's condition in plain words", () => {
     expect(say("cheer", atLeast(1000))).toBe("Bits: at least 1000");
     expect(say("resub", { parameter: "amount", operator: "exact", value: 12 })).toBe("Months: exactly 12");
     expect(say("raid", { parameter: "amount", operator: "session_top", value: 0 })).toBe("Viewers: biggest of the stream");
+    expect(say("cheer", { parameter: "amount", operator: "at_most", value: 99 })).toBe("Bits: at most 99");
+    expect(say("cheer", { parameter: "amount", operator: "between", value: 100, max: 999 })).toBe("Bits: 100 to 999");
     expect(say("cheer", { parameter: "amount", operator: "session_top", value: 500 })).toBe(
       "Bits: biggest of the stream, at least 500"
     );
@@ -1203,11 +1654,33 @@ describe("a variation's condition in plain words", () => {
     expect(say("cheer", { parameter: "name", names: [] })).toBe("Viewer: nobody yet");
   });
 
+  it("says whether it is a gift, and whether it is anonymous", () => {
+    expect(say("sub", { parameter: "gifted", value: true })).toBe("Gifted sub");
+    expect(say("resub", { parameter: "gifted", value: false })).toBe("Not gifted");
+    expect(say("cheer", { parameter: "anonymous", value: true })).toBe("Anonymous");
+    expect(say("cheer", { parameter: "anonymous", value: false })).toBe("Not anonymous");
+  });
+
+  it("joins several conditions with and, or or", () => {
+    const loyal = (match: "all" | "any") =>
+      alertVariationSummary("resub", {
+        ...createAlertVariation("resub", createDefaultAlertVariantConfig("resub"), "v", "v"),
+        match,
+        conditions: [
+          { parameter: "tier", tier: "3000" },
+          { parameter: "amount", operator: "at_least", value: 6 },
+        ],
+        chance: 25,
+      });
+    expect(loyal("all")).toBe("Sub tier: Tier 3 and Months: at least 6 · 25% of the time");
+    expect(loyal("any")).toBe("Sub tier: Tier 3 or Months: at least 6 · 25% of the time");
+  });
+
   it("adds how often, when it is not every time", () => {
     expect(say("cheer", atLeast(100), 25)).toBe("Bits: at least 100 · 25% of the time");
     expect(say("cheer", atLeast(100), 12.5)).toBe("Bits: at least 100 · 12.5% of the time");
-    expect(say("cheer", { parameter: "none" })).toBe("Every time");
-    expect(say("cheer", { parameter: "none" }, 10)).toBe("10% of the time");
+    expect(say("cheer", null)).toBe("Every time");
+    expect(say("cheer", null, 10)).toBe("10% of the time");
   });
 });
 

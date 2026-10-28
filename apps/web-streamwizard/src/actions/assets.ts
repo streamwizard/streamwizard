@@ -132,7 +132,7 @@ export async function createAssetUpload(input: {
   const { supabase, user } = ctx;
 
   const kind = kindFromMime(input.mimeType);
-  if (!kind) return { data: null, error: "That file type isn't supported. Upload an image, sound, or video." };
+  if (!kind) return { data: null, error: "That file type isn't supported. Upload an image, sound, video, or font." };
   if (!Number.isFinite(input.sizeBytes) || input.sizeBytes <= 0) {
     return { data: null, error: "Can't read that file's size." };
   }

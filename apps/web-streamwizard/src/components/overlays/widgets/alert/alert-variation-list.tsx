@@ -88,7 +88,7 @@ export function AlertVariationList({
       <div className="space-y-3">
         {variations.length === 0 ? (
           <p className="text-xs leading-snug text-muted-foreground">
-            A variation plays instead of this alert when its condition is met. A louder one for a
+            A variation plays instead of this alert when its conditions are met. A louder one for a
             big number, or one for a single viewer.
           </p>
         ) : (
@@ -135,7 +135,7 @@ export function AlertVariationList({
                   className="relative z-10 size-7"
                   disabled={testBusy}
                   aria-label={`Test the ${variation.name} variation`}
-                  title="Plays this variation, whatever its condition"
+                  title="Plays this variation, whatever its conditions"
                   onClick={() => onTest(variation.id)}
                 >
                   <Play className="size-3.5" />
@@ -200,7 +200,7 @@ export function AlertVariationList({
             id={`alert-random-pick-${itemId}-${event}`}
             label="Pick at random when several match"
             checked={randomPick}
-            hint="When more than one variation has the same condition, a random one plays each time. Off, the first in the list always wins. Use it to rotate a few alerts on one condition."
+            hint="When more than one variation has the same conditions, a random one plays each time. Off, the first in the list always wins. Use it to rotate a few alerts on the same conditions."
             onCheckedChange={onRandomPickChange}
           />
         ) : null}

@@ -1,4 +1,8 @@
-import { buildWidgetTestEvent, type WidgetTestEventType } from "@repo/schemas";
+import {
+  buildWidgetTestEvent,
+  type TwitchScopeFeature,
+  type WidgetTestEventType,
+} from "@repo/schemas";
 import {
   ALERT_ENTER_ANIMATIONS,
   ALERT_EXIT_ANIMATIONS,
@@ -21,10 +25,9 @@ import {
  * the way the public /overlays catalog groups them so the marketing page and
  * the settings panel read as the same product.
  *
- * Six more events from that catalog are missing on purpose -- ban, VIP added,
- * mod added, both predictions and goal achieved each need an OAuth scope
- * StreamWizard does not request yet, so shipping them means re-consent for
- * every existing user. They are tracked separately.
+ * The Mod alerts need one more Twitch permission each, asked for only when
+ * the streamer turns one on (see `ALERT_EVENT_TWITCH_FEATURES`), so an
+ * existing account never sees a consent screen for alerts it does not use.
  */
 export const ALERT_EVENT_CATEGORIES = [
   {
@@ -62,7 +65,15 @@ export const ALERT_EVENT_CATEGORIES = [
       "ad_break",
       "poll_start",
       "poll_winner",
+      "prediction_start",
+      "prediction_result",
+      "goal_achieved",
     ],
+  },
+  {
+    id: "moderation",
+    label: "Mod",
+    events: ["ban", "timeout", "vip_added", "mod_added"],
   },
 ] as const;
 
@@ -98,6 +109,13 @@ export const ALERT_EVENT_LABELS: Record<AlertEventType, string> = {
   ad_break: "Ad break",
   poll_start: "Poll start",
   poll_winner: "Poll winner",
+  prediction_start: "Prediction start",
+  prediction_result: "Prediction result",
+  goal_achieved: "Goal achieved",
+  ban: "Ban",
+  timeout: "Timeout",
+  vip_added: "VIP added",
+  mod_added: "Mod added",
 };
 
 /**
@@ -130,6 +148,13 @@ export const ALERT_AMOUNT_LABELS: Record<AlertEventType, string | null> = {
   ad_break: "seconds",
   poll_start: null,
   poll_winner: "votes",
+  prediction_start: null,
+  prediction_result: "points",
+  goal_achieved: "target",
+  ban: null,
+  timeout: "seconds",
+  vip_added: null,
+  mod_added: null,
 };
 
 /**
@@ -161,6 +186,13 @@ export const ALERT_NAME_LABELS: Record<AlertEventType, string> = {
   ad_break: "your channel",
   poll_start: "the poll question",
   poll_winner: "the winning choice",
+  prediction_start: "the prediction question",
+  prediction_result: "the winning outcome",
+  goal_achieved: "the goal",
+  ban: "who was banned",
+  timeout: "who was timed out",
+  vip_added: "the new VIP",
+  mod_added: "the new mod",
 };
 
 /**
@@ -190,6 +222,10 @@ export const ALERT_MESSAGE_EVENTS: readonly AlertEventType[] = [
   "announcement",
   "charity_donation",
   "redemption",
+  // The ban reason. Not in the default text: it is the mod's note, and a
+  // streamer should choose to put it on screen.
+  "ban",
+  "timeout",
 ];
 
 /**
@@ -207,17 +243,45 @@ export const ALERT_GIFTER_EVENTS: readonly AlertEventType[] = [
  * on a charity alert would read like a bug.
  */
 export const ALERT_DETAIL_TOKENS: Partial<
-  Record<AlertEventType, "reward" | "charity" | "recipient">
+  Record<AlertEventType, "reward" | "charity" | "recipient" | "moderator">
 > = {
   redemption: "reward",
   charity_donation: "charity",
   gift_sub: "recipient",
+  ban: "moderator",
+  timeout: "moderator",
+};
+
+/**
+ * The alerts behind a Twitch permission StreamWizard does not ask for at
+ * sign-in. Their events only arrive once the streamer grants it, so the
+ * editor asks for it when one of them is turned on.
+ */
+export const ALERT_EVENT_TWITCH_FEATURES: Partial<Record<AlertEventType, TwitchScopeFeature>> = {
+  ban: "alert_bans",
+  timeout: "alert_bans",
+  vip_added: "alert_vips",
+  mod_added: "alert_mods",
 };
 
 /** Events whose payload names a sub plan: what a tier condition reads. */
 export const ALERT_TIER_EVENTS: readonly AlertEventType[] = [
   "sub",
   "resub",
+  "gift_sub",
+  "community_gift",
+];
+
+/**
+ * Events whose payload says whether the sub was a gift: what a gifted
+ * condition reads. A gifted sub reaches its recipient's alert this way; the
+ * gifter's own alert is the gift sub one.
+ */
+export const ALERT_GIFTED_EVENTS: readonly AlertEventType[] = ["sub", "resub"];
+
+/** Events a viewer can send without their name on it: what an anonymous condition reads. */
+export const ALERT_ANONYMOUS_EVENTS: readonly AlertEventType[] = [
+  "cheer",
   "gift_sub",
   "community_gift",
 ];
@@ -259,10 +323,20 @@ export const ALERT_VARIATION_EVENTS: readonly AlertEventType[] = [
   "shoutout_sent",
   "ad_break",
   "poll_winner",
+  "prediction_result",
+  "goal_achieved",
+  "timeout",
 ];
 
 /** Events whose `{name}` is not a person, so there is no username to match. */
-const ALERT_NAMELESS_EVENTS: readonly AlertEventType[] = ["ad_break", "poll_start", "poll_winner"];
+const ALERT_NAMELESS_EVENTS: readonly AlertEventType[] = [
+  "ad_break",
+  "poll_start",
+  "poll_winner",
+  "prediction_start",
+  "prediction_result",
+  "goal_achieved",
+];
 
 // ─── Config ─────────────────────────────────────────────────────────────────
 
@@ -328,8 +402,14 @@ export interface AlertPresentation {
   mediaKind: AlertMediaKind;
   /** CDN URL from the media library. Empty = no sound. */
   soundUrl: string;
-  /** 0–1. Applies to both the sound file and video audio for this event. */
+  /** 0–1. The sound file's volume. */
   volume: number;
+  /**
+   * 0–1. The video's own audio. Configs saved before it existed get 0 when they
+   * have a sound file, since the video used to be muted then, and `volume`
+   * otherwise.
+   */
+  videoVolume: number;
   /** e.g. `{name} just followed!` */
   titleTemplate: string;
   /** Secondary line; empty = hidden. `{message}` shows the viewer's message. */
@@ -375,7 +455,26 @@ export interface AlertPresentation {
   /** Highlights `{name}` and `{amount}` inside the title. */
   accentColor: string;
   textShadow: boolean;
+  /** The title's line height; the second line sits 0.1 looser, as it always has. */
+  lineHeight: number;
+  /** px between letters, on both lines. */
+  letterSpacing: number;
+  /** px added between words, on both lines. */
+  wordSpacing: number;
+  /** The second line's size as a share of `fontSize`. */
+  messageFontScale: number;
+  /**
+   * The streamer's own CSS for this alert, scoped to its box by `scopeCss`.
+   * Targets the documented `data-part` hooks; see ALERT_CSS_PARTS.
+   */
+  customCss: string;
 }
+
+/** The `data-part` hooks an alert's custom CSS can target. Keep the docs in step. */
+export const ALERT_CSS_PARTS = ["box", "media", "text", "title", "message", "name", "amount"] as const;
+
+/** Most characters of custom CSS one alert keeps. */
+export const ALERT_CUSTOM_CSS_MAX_LENGTH = 5000;
 
 /** Every key of `AlertPresentation`, for lifting one out of a larger object. */
 export const ALERT_PRESENTATION_KEYS = [
@@ -383,6 +482,7 @@ export const ALERT_PRESENTATION_KEYS = [
   "mediaKind",
   "soundUrl",
   "volume",
+  "videoVolume",
   "titleTemplate",
   "messageTemplate",
   "durationSeconds",
@@ -407,6 +507,11 @@ export const ALERT_PRESENTATION_KEYS = [
   "messageColor",
   "accentColor",
   "textShadow",
+  "lineHeight",
+  "letterSpacing",
+  "wordSpacing",
+  "messageFontScale",
+  "customCss",
 ] as const satisfies readonly (keyof AlertPresentation)[];
 
 /** Just the presentation of an alert or variation, as its own object. */
@@ -418,11 +523,18 @@ export function alertPresentationOf(source: AlertPresentation): AlertPresentatio
 
 // ─── Variations ─────────────────────────────────────────────────────────────
 
-export const ALERT_VARIATION_OPERATORS = ["exact", "at_least", "session_top"] as const;
+export const ALERT_VARIATION_OPERATORS = [
+  "exact",
+  "at_least",
+  "at_most",
+  "between",
+  "session_top",
+] as const;
 /**
  * exact: the amount equals the requirement · at_least: it is that or more ·
- * session_top: it is the biggest of its kind since the overlay loaded (and at
- * least the requirement, when one is set).
+ * at_most: it is that or less · between: it is from `value` to `max`, both
+ * ends included · session_top: it is the biggest of its kind since the overlay
+ * loaded (and at least the requirement, when one is set).
  */
 export type AlertVariationOperator = (typeof ALERT_VARIATION_OPERATORS)[number];
 
@@ -430,14 +542,25 @@ export type AlertVariationOperator = (typeof ALERT_VARIATION_OPERATORS)[number];
 export const ALERT_SUB_TIERS = ["prime", "1000", "2000", "3000"] as const;
 export type AlertSubTier = (typeof ALERT_SUB_TIERS)[number];
 
-/** What a variation looks at to decide whether it plays. One thing, never a mix. */
+/** One thing a variation looks at to decide whether it plays. */
 export type AlertVariationCondition =
-  | { parameter: "none" }
-  | { parameter: "amount"; operator: AlertVariationOperator; value: number }
+  | {
+      parameter: "amount";
+      operator: AlertVariationOperator;
+      value: number;
+      /** The top of a `between`, included. Only set on a `between`. */
+      max?: number;
+    }
   | { parameter: "tier"; tier: AlertSubTier }
-  | { parameter: "name"; names: string[] };
+  | { parameter: "name"; names: string[] }
+  | { parameter: "gifted"; value: boolean }
+  | { parameter: "anonymous"; value: boolean };
 
 export type AlertVariationParameter = AlertVariationCondition["parameter"];
+
+/** all: every condition has to hold · any: one is enough. */
+export const ALERT_VARIATION_MATCH_MODES = ["all", "any"] as const;
+export type AlertVariationMatch = (typeof ALERT_VARIATION_MATCH_MODES)[number];
 
 /**
  * An alternative version of an alert that plays instead of it when its
@@ -456,7 +579,13 @@ export interface AlertVariation {
   enabled: boolean;
   /** 0–100, decimals allowed. How often a matching event actually plays it. */
   chance: number;
-  condition: AlertVariationCondition;
+  /** Whether every condition has to hold, or one is enough. */
+  match: AlertVariationMatch;
+  /**
+   * What it looks at. Empty means it matches every event of its alert, so only
+   * its chance and the other variations decide whether it plays.
+   */
+  conditions: AlertVariationCondition[];
   settings: AlertPresentation;
 }
 
@@ -465,6 +594,8 @@ export const ALERT_VARIATION_LIMITS = {
   nameLength: 60,
   /** Usernames in one name condition. */
   names: 50,
+  /** Conditions on one variation. */
+  conditions: 5,
 } as const;
 
 /** Everything about one alert type: its presentation, its gate, its variations. */
@@ -481,7 +612,7 @@ export interface AlertVariantConfig extends AlertPresentation {
 export interface AlertWidgetItemConfig {
   /** Quiet gap between queued alerts. */
   gapSeconds: number;
-  /** Master volume 0–1, multiplied with each variant's volume. */
+  /** Master volume 0–1, multiplied with each variant's sound and video volume. */
   masterVolume: number;
   /**
    * Hold the next alert until this one's sound file has played out, instead of
@@ -494,6 +625,11 @@ export interface AlertWidgetItemConfig {
    * dropped. Without a ceiling a follow-bot wave parks the box for hours.
    */
   maxQueue: number;
+  /**
+   * Longest viewer name shown in full; longer ones end in "…". 0 = no limit.
+   * Twitch names run to 25 characters, which is the most this goes up to.
+   */
+  maxNameLength: number;
 
   variants: Record<AlertEventType, AlertVariantConfig>;
 }
@@ -525,6 +661,13 @@ export const DEFAULT_ALERT_VARIANT_TITLES: Record<AlertEventType, string> = {
   ad_break: "Ads for {amount} seconds. Stretch.",
   poll_start: "New poll: {name}",
   poll_winner: "{name} won the poll with {amount} votes!",
+  prediction_start: "New prediction: {name}",
+  prediction_result: "{name} wins the prediction!",
+  goal_achieved: "Goal hit: {name}!",
+  ban: "{name} met the banhammer.",
+  timeout: "{name} is in timeout for {amount} seconds.",
+  vip_added: "{name} is a VIP now!",
+  mod_added: "{name} has the sword now.",
 };
 
 const DEFAULT_ALERT_VARIANT_MESSAGES: Record<AlertEventType, string> = {
@@ -551,6 +694,13 @@ const DEFAULT_ALERT_VARIANT_MESSAGES: Record<AlertEventType, string> = {
   ad_break: "",
   poll_start: "",
   poll_winner: "",
+  prediction_start: "",
+  prediction_result: "",
+  goal_achieved: "",
+  ban: "",
+  timeout: "",
+  vip_added: "",
+  mod_added: "",
 };
 
 export function createDefaultAlertVariantConfig(
@@ -565,6 +715,7 @@ export function createDefaultAlertVariantConfig(
     mediaKind: "",
     soundUrl: "",
     volume: 0.8,
+    videoVolume: 0.8,
     titleTemplate: DEFAULT_ALERT_VARIANT_TITLES[event],
     messageTemplate: DEFAULT_ALERT_VARIANT_MESSAGES[event],
     durationSeconds: 6,
@@ -590,6 +741,12 @@ export function createDefaultAlertVariantConfig(
     messageColor: "#d4d4d8",
     accentColor: "#9e7aff",
     textShadow: true,
+    // What the alert box always rendered, before these could be set.
+    lineHeight: 1.2,
+    letterSpacing: 0,
+    wordSpacing: 0,
+    messageFontScale: 0.6,
+    customCss: "",
   };
 }
 
@@ -599,6 +756,7 @@ export function createDefaultAlertWidgetConfig(): AlertWidgetItemConfig {
     masterVolume: 0.8,
     waitForSound: false,
     maxQueue: 50,
+    maxNameLength: 0,
     variants: Object.fromEntries(
       ALERT_EVENT_TYPES.map((e) => [e, createDefaultAlertVariantConfig(e)])
     ) as Record<AlertEventType, AlertVariantConfig>,
@@ -630,6 +788,11 @@ export const ALERT_LOOK_KEYS = [
   "messageColor",
   "accentColor",
   "textShadow",
+  "lineHeight",
+  "letterSpacing",
+  "wordSpacing",
+  "messageFontScale",
+  "customCss",
 ] as const satisfies readonly (keyof AlertVariantConfig)[];
 
 /** Gives every alert the look of `from`, leaving the rest of each one alone. */
@@ -665,6 +828,11 @@ export const ALERT_LIVE_KEYS = [
   "messageColor",
   "accentColor",
   "textShadow",
+  "lineHeight",
+  "letterSpacing",
+  "wordSpacing",
+  "messageFontScale",
+  "customCss",
 ] as const satisfies readonly (keyof AlertPresentation)[];
 
 /**
@@ -701,6 +869,19 @@ const LEGACY_RESUB_TITLE = "{name} subscribed for {amount} months in a row!";
 /** Hard ceiling on `maxQueue`, shared with the persisted schema. */
 export const ALERT_MAX_QUEUE_LIMIT = 200;
 
+/** Twitch's own limit on a name, so the most `maxNameLength` is worth setting. */
+export const ALERT_MAX_NAME_LENGTH = 25;
+
+/**
+ * `name` cut to `max` characters with an ellipsis. Counts code points, so an
+ * emoji or a CJK character is never split in half. 0 leaves it whole.
+ */
+export function truncateAlertName(name: string, max: number): string {
+  if (max <= 0) return name;
+  const chars = Array.from(name);
+  return chars.length > max ? `${chars.slice(0, max).join("")}…` : name;
+}
+
 const clamp01 = (n: unknown, fallback: number) =>
   typeof n === "number" && Number.isFinite(n)
     ? Math.min(1, Math.max(0, n))
@@ -714,6 +895,21 @@ const animationSeconds = (n: unknown, fallback: number) =>
   typeof n === "number" && Number.isFinite(n)
     ? Math.round(Math.min(ALERT_ANIMATION_MAX_SECONDS, Math.max(0, n)) * 100) / 100
     : fallback;
+
+/** A number kept in range and rounded to `places` decimals, or the fallback. */
+const inRange = (n: unknown, min: number, max: number, places: number, fallback: number) => {
+  if (typeof n !== "number" || !Number.isFinite(n)) return fallback;
+  const f = 10 ** places;
+  return Math.round(Math.min(max, Math.max(min, n)) * f) / f;
+};
+
+/** Ranges for the spacing settings, shared with the save schema and the panel. */
+export const ALERT_TYPOGRAPHY_LIMITS = {
+  lineHeight: { min: 0.8, max: 2.5 },
+  letterSpacing: { min: -5, max: 20 },
+  wordSpacing: { min: -10, max: 40 },
+  messageFontScale: { min: 0.3, max: 1 },
+} as const;
 
 const oneOf = <T extends string>(
   options: readonly string[],
@@ -731,6 +927,7 @@ function variantBaseFromLegacy(
   legacy: Record<string, unknown>
 ): AlertVariantConfig {
   const base = createDefaultAlertVariantConfig(event);
+  const soundUrl = typeof legacy.soundUrl === "string" ? legacy.soundUrl : base.soundUrl;
   return {
     ...base,
     mediaUrl: typeof legacy.mediaUrl === "string" ? legacy.mediaUrl : base.mediaUrl,
@@ -738,7 +935,9 @@ function variantBaseFromLegacy(
       legacy.mediaKind === "image" || legacy.mediaKind === "video"
         ? legacy.mediaKind
         : base.mediaKind,
-    soundUrl: typeof legacy.soundUrl === "string" ? legacy.soundUrl : base.soundUrl,
+    soundUrl,
+    // A sound file used to mute the video outright.
+    videoVolume: soundUrl ? 0 : base.videoVolume,
     durationSeconds:
       typeof legacy.durationSeconds === "number" && Number.isFinite(legacy.durationSeconds)
         ? Math.min(60, Math.max(1, Math.round(legacy.durationSeconds)))
@@ -780,6 +979,8 @@ function normalizeAlertVariant(
   const base = variantBaseFromLegacy(event, legacy);
   if (!raw || typeof raw !== "object") return base;
   const r = raw as Partial<AlertVariantConfig> & Record<string, unknown>;
+  const soundUrl = typeof r.soundUrl === "string" && r.soundUrl ? r.soundUrl : base.soundUrl;
+  const volume = clamp01(r.volume, base.volume);
   return {
     enabled: typeof r.enabled === "boolean" ? r.enabled : base.enabled,
     // Media is per event now; an empty variant URL means "no media", except on
@@ -791,8 +992,11 @@ function normalizeAlertVariant(
           ? r.mediaKind
           : ""
         : base.mediaKind,
-    soundUrl: typeof r.soundUrl === "string" && r.soundUrl ? r.soundUrl : base.soundUrl,
-    volume: clamp01(r.volume, base.volume),
+    soundUrl,
+    volume,
+    // Saved before the video had its own volume: it was muted under a sound
+    // file and followed `volume` otherwise, so it keeps sounding that way.
+    videoVolume: clamp01(r.videoVolume, soundUrl ? 0 : volume),
     titleTemplate:
       typeof r.titleTemplate === "string" &&
       r.titleTemplate.length <= 200 &&
@@ -856,17 +1060,28 @@ function normalizeAlertVariant(
     accentColor:
       typeof r.accentColor === "string" ? r.accentColor : base.accentColor,
     textShadow: typeof r.textShadow === "boolean" ? r.textShadow : base.textShadow,
+    lineHeight: inRange(r.lineHeight, ALERT_TYPOGRAPHY_LIMITS.lineHeight.min, ALERT_TYPOGRAPHY_LIMITS.lineHeight.max, 2, base.lineHeight),
+    letterSpacing: inRange(r.letterSpacing, ALERT_TYPOGRAPHY_LIMITS.letterSpacing.min, ALERT_TYPOGRAPHY_LIMITS.letterSpacing.max, 1, base.letterSpacing),
+    wordSpacing: inRange(r.wordSpacing, ALERT_TYPOGRAPHY_LIMITS.wordSpacing.min, ALERT_TYPOGRAPHY_LIMITS.wordSpacing.max, 1, base.wordSpacing),
+    messageFontScale: inRange(r.messageFontScale, ALERT_TYPOGRAPHY_LIMITS.messageFontScale.min, ALERT_TYPOGRAPHY_LIMITS.messageFontScale.max, 2, base.messageFontScale),
+    customCss:
+      typeof r.customCss === "string"
+        ? r.customCss.slice(0, ALERT_CUSTOM_CSS_MAX_LENGTH)
+        : base.customCss,
     variations: normalizeAlertVariations(r.variations, event),
     randomPick: typeof r.randomPick === "boolean" ? r.randomPick : false,
   };
 }
 
-function normalizeAlertCondition(raw: unknown, event: AlertEventType): AlertVariationCondition {
-  const none: AlertVariationCondition = { parameter: "none" };
-  if (!raw || typeof raw !== "object") return none;
+/** A saved condition made safe, or null when this alert cannot have it. */
+function normalizeAlertCondition(
+  raw: unknown,
+  event: AlertEventType
+): AlertVariationCondition | null {
+  if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   const allowed = alertVariationParameters(event);
-  if (!allowed.includes(r.parameter as AlertVariationParameter)) return none;
+  if (!allowed.includes(r.parameter as AlertVariationParameter)) return null;
 
   switch (r.parameter) {
     case "amount": {
@@ -875,11 +1090,13 @@ function normalizeAlertCondition(raw: unknown, event: AlertEventType): AlertVari
         r.operator,
         "at_least"
       );
-      const value =
-        typeof r.value === "number" && Number.isFinite(r.value)
-          ? Math.min(1_000_000_000, Math.max(0, r.value))
-          : 0;
-      return { parameter: "amount", operator, value };
+      const amount = (v: unknown) =>
+        typeof v === "number" && Number.isFinite(v) ? Math.min(1_000_000_000, Math.max(0, v)) : 0;
+      const value = amount(r.value);
+      if (operator !== "between") return { parameter: "amount", operator, value };
+      // A missing top is a range of one; a reversed one is put the right way round.
+      const max = typeof r.max === "number" ? amount(r.max) : value;
+      return { parameter: "amount", operator, value: Math.min(value, max), max: Math.max(value, max) };
     }
     case "tier":
       return { parameter: "tier", tier: oneOf<AlertSubTier>(ALERT_SUB_TIERS, r.tier, "1000") };
@@ -892,9 +1109,28 @@ function normalizeAlertCondition(raw: unknown, event: AlertEventType): AlertVari
         : [];
       return { parameter: "name", names };
     }
+    case "gifted":
+    case "anonymous":
+      return { parameter: r.parameter, value: r.value !== false };
     default:
-      return none;
+      return null;
   }
+}
+
+/**
+ * A variation's conditions, from either shape it has been saved in. Before
+ * SW-251 a variation held one `condition`, with `{ parameter: "none" }` for
+ * none; that reads as a list of one, or an empty list.
+ */
+function normalizeAlertConditions(
+  v: Record<string, unknown>,
+  event: AlertEventType
+): AlertVariationCondition[] {
+  const raw = Array.isArray(v.conditions) ? v.conditions : v.condition ? [v.condition] : [];
+  return raw
+    .map((c) => normalizeAlertCondition(c, event))
+    .filter((c): c is AlertVariationCondition => c !== null)
+    .slice(0, ALERT_VARIATION_LIMITS.conditions);
 }
 
 function normalizeAlertVariations(raw: unknown, event: AlertEventType): AlertVariation[] {
@@ -920,7 +1156,8 @@ function normalizeAlertVariations(raw: unknown, event: AlertEventType): AlertVar
           typeof v.chance === "number" && Number.isFinite(v.chance)
             ? Math.min(100, Math.max(0, v.chance))
             : 100,
-        condition: normalizeAlertCondition(v.condition, event),
+        match: v.match === "any" ? "any" : "all",
+        conditions: normalizeAlertConditions(v, event),
         // The same coercion an alert gets, then only the part a variation has.
         settings: alertPresentationOf(normalizeAlertVariant(v.settings, event)),
       };
@@ -974,6 +1211,10 @@ export function normalizeAlertWidgetConfig(
       typeof r.maxQueue === "number" && Number.isFinite(r.maxQueue)
         ? Math.min(ALERT_MAX_QUEUE_LIMIT, Math.max(1, Math.round(r.maxQueue)))
         : base.maxQueue,
+    maxNameLength:
+      typeof r.maxNameLength === "number" && Number.isFinite(r.maxNameLength)
+        ? Math.min(ALERT_MAX_NAME_LENGTH, Math.max(0, Math.round(r.maxNameLength)))
+        : base.maxNameLength,
     variants: Object.fromEntries(
       ALERT_EVENT_TYPES.map((e) => [
         e,
@@ -996,6 +1237,10 @@ export interface AlertInstance {
   login: string;
   /** The sub plan on a sub event; empty on everything else. */
   tier: AlertSubTier | "";
+  /** The sub was a gift. False wherever the payload does not say. */
+  gifted: boolean;
+  /** The viewer sent it without their name. False wherever the payload does not say. */
+  anonymous: boolean;
   /** bits / viewers / gifts / months / …; 0 when the event has no amount. */
   amount: number;
   /**
@@ -1015,6 +1260,30 @@ export interface AlertInstance {
   detail: string;
 }
 
+/**
+ * What a goal is called when the streamer left its description empty. Twitch
+ * says "follow" on these events and "follower" elsewhere; both read the same.
+ */
+function goalLabel(type: string): string {
+  switch (type) {
+    case "follow":
+    case "follower":
+      return "Follower goal";
+    case "subscription":
+    case "subscription_count":
+      return "Sub goal";
+    case "new_subscription":
+    case "new_subscription_count":
+      return "New sub goal";
+    case "new_bit":
+      return "Bits goal";
+    case "new_cheerer":
+      return "Cheerers goal";
+    default:
+      return "Goal";
+  }
+}
+
 /** An anonymous gifter has no name in the payload; the alert still needs one. */
 const ANONYMOUS_GIFTER = "an anonymous gifter";
 
@@ -1024,6 +1293,8 @@ function baseInstance(event: AlertEventType, name: string, login = ""): AlertIns
     name,
     login,
     tier: "",
+    gifted: false,
+    anonymous: false,
     amount: 0,
     amountText: "",
     message: "",
@@ -1099,13 +1370,20 @@ function alertInstanceFromChatNotice(p: Record<string, unknown>): AlertInstance 
   const block = (key: string) => (p[key] ?? null) as Record<string, unknown> | null;
 
   switch (noticeType) {
-    case "sub":
-      return { ...baseInstance("sub", chatter, login), tier: subTier(block("sub")) };
+    case "sub": {
+      const sub = block("sub");
+      return {
+        ...baseInstance("sub", chatter, login),
+        tier: subTier(sub),
+        gifted: sub?.is_gift === true,
+      };
+    }
     case "resub": {
       const resub = block("resub");
       return {
         ...baseInstance("resub", chatter, login),
         tier: subTier(resub),
+        gifted: resub?.is_gift === true,
         amount: num(resub?.cumulative_months),
         message,
       };
@@ -1119,6 +1397,7 @@ function alertInstanceFromChatNotice(p: Record<string, unknown>): AlertInstance 
       return {
         ...baseInstance("gift_sub", chatter, login),
         tier: subTier(gift),
+        anonymous,
         amount: num(gift?.cumulative_total),
         detail: str(gift?.recipient_user_name),
       };
@@ -1128,6 +1407,7 @@ function alertInstanceFromChatNotice(p: Record<string, unknown>): AlertInstance 
       return {
         ...baseInstance("community_gift", chatter, login),
         tier: subTier(bomb),
+        anonymous,
         amount: num(bomb?.total),
       };
     }
@@ -1218,6 +1498,7 @@ export function alertInstanceFromSocketMessage(msg: {
           p.is_anonymous === true ? "Anonymous" : str(p.user_name) || "Anonymous",
           p.is_anonymous === true ? "" : str(p.user_login)
         ),
+        anonymous: p.is_anonymous === true,
         amount: num(p.bits),
         message: str(p.message),
       };
@@ -1281,6 +1562,54 @@ export function alertInstanceFromSocketMessage(msg: {
     case "channel.poll.begin":
       return baseInstance("poll_start", str(p.title));
 
+    case "channel.prediction.begin":
+      return baseInstance("prediction_start", str(p.title));
+
+    case "channel.prediction.end": {
+      // A canceled prediction has no winner, and handing everyone their
+      // points back is nothing to celebrate.
+      if (p.status !== "resolved") return null;
+      const outcomes = Array.isArray(p.outcomes) ? (p.outcomes as Record<string, unknown>[]) : [];
+      const winner = outcomes.find((o) => str(o.id) === str(p.winning_outcome_id));
+      if (!winner) return null;
+      return {
+        ...baseInstance("prediction_result", str(winner.title)),
+        amount: num(winner.channel_points),
+      };
+    }
+
+    case "channel.goal.end":
+      // A goal that ran out without being reached ends too; only a hit is an alert.
+      if (p.is_achieved !== true) return null;
+      return {
+        ...baseInstance("goal_achieved", str(p.description) || goalLabel(str(p.type))),
+        amount: num(p.target_amount),
+      };
+
+    case "channel.ban": {
+      // Twitch sends a timeout as a ban that is not permanent, with its end.
+      if (p.is_permanent === true) {
+        return {
+          ...baseInstance("ban", str(p.user_name), str(p.user_login)),
+          message: str(p.reason),
+          detail: str(p.moderator_user_name),
+        };
+      }
+      const seconds = (Date.parse(str(p.ends_at)) - Date.parse(str(p.banned_at))) / 1000;
+      return {
+        ...baseInstance("timeout", str(p.user_name), str(p.user_login)),
+        amount: Number.isFinite(seconds) ? Math.max(0, Math.round(seconds)) : 0,
+        message: str(p.reason),
+        detail: str(p.moderator_user_name),
+      };
+    }
+
+    case "channel.vip.add":
+      return baseInstance("vip_added", str(p.user_name), str(p.user_login));
+
+    case "channel.moderator.add":
+      return baseInstance("mod_added", str(p.user_name), str(p.user_login));
+
     case "channel.poll.end": {
       // An archived or terminated poll has no winner worth announcing.
       if (p.status !== "completed") return null;
@@ -1317,6 +1646,7 @@ export const ALERT_TEMPLATE_TOKENS = [
   "reward",
   "charity",
   "recipient",
+  "moderator",
 ] as const;
 export type AlertTemplateToken = (typeof ALERT_TEMPLATE_TOKENS)[number];
 
@@ -1357,7 +1687,7 @@ export function renderAlertTemplate(
       case "gifter":
         return alert.gifter;
       default:
-        // reward / charity / recipient all read the one `detail` field.
+        // reward / charity / recipient / moderator all read the one `detail` field.
         return alert.detail;
     }
   });
@@ -1368,10 +1698,12 @@ export function renderAlertTemplate(
 /** What a variation on this event may look at. Empty = the event takes none. */
 export function alertVariationParameters(event: AlertEventType): readonly AlertVariationParameter[] {
   if (!ALERT_VARIATION_EVENTS.includes(event)) return [];
-  const out: AlertVariationParameter[] = ["none"];
+  const out: AlertVariationParameter[] = [];
   if (ALERT_AMOUNT_LABELS[event]) out.push("amount");
   if (ALERT_TIER_EVENTS.includes(event)) out.push("tier");
   if (!ALERT_NAMELESS_EVENTS.includes(event)) out.push("name");
+  if (ALERT_GIFTED_EVENTS.includes(event)) out.push("gifted");
+  if (ALERT_ANONYMOUS_EVENTS.includes(event)) out.push("anonymous");
   return out;
 }
 
@@ -1403,11 +1735,13 @@ export function alertConditionMatches(
   sessionTop: number
 ): boolean {
   switch (condition.parameter) {
-    case "none":
-      return true;
     case "amount":
       if (condition.operator === "exact") return alert.amount === condition.value;
       if (condition.operator === "at_least") return alert.amount >= condition.value;
+      if (condition.operator === "at_most") return alert.amount <= condition.value;
+      if (condition.operator === "between") {
+        return alert.amount >= condition.value && alert.amount <= (condition.max ?? condition.value);
+      }
       // A tie with the record is not a new record.
       return alert.amount > sessionTop && alert.amount >= condition.value;
     case "tier":
@@ -1416,26 +1750,85 @@ export function alertConditionMatches(
       const who = [normalizeAlertName(alert.name), normalizeAlertName(alert.login)].filter(Boolean);
       return condition.names.some((name) => who.includes(normalizeAlertName(name)));
     }
+    case "gifted":
+      return alert.gifted === condition.value;
+    case "anonymous":
+      return alert.anonymous === condition.value;
   }
 }
 
 /**
  * How specific a condition is. With several variations matching one event the
  * most specific plays: one viewer by name beats a record, a record beats an
- * exact number, an exact number beats "at least", and all of them beat a
- * variation with no condition at all.
+ * exact number or a range, those beat "at least" and "at most", and all of
+ * them beat a variation with no condition at all.
  */
 function conditionRank(condition: AlertVariationCondition): number {
   switch (condition.parameter) {
     case "name":
       return 4;
     case "amount":
-      return condition.operator === "session_top" ? 3 : condition.operator === "exact" ? 2 : 1;
+      if (condition.operator === "session_top") return 3;
+      return condition.operator === "exact" || condition.operator === "between" ? 2 : 1;
     case "tier":
+    case "gifted":
+    case "anonymous":
       return 2;
-    case "none":
-      return 0;
   }
+}
+
+/** How high an amount condition sets the bar. A ceiling counts down: the tighter one is higher. */
+function conditionRequirement(condition: AlertVariationCondition): number | null {
+  if (condition.parameter !== "amount") return null;
+  return condition.operator === "at_most" ? -condition.value : condition.value;
+}
+
+/**
+ * Whether a variation's conditions hold for an alert: all of them, or any one,
+ * as it is set. No conditions always holds.
+ */
+export function alertVariationMatches(
+  alert: AlertInstance,
+  variation: Pick<AlertVariation, "match" | "conditions">,
+  sessionTop: number
+): boolean {
+  const { match, conditions } = variation;
+  if (conditions.length === 0) return true;
+  const holds = (c: AlertVariationCondition) => alertConditionMatches(alert, c, sessionTop);
+  return match === "any" ? conditions.some(holds) : conditions.every(holds);
+}
+
+/**
+ * How specific a variation is, as [rank, depth, requirement] -- compared in
+ * that order, higher first.
+ *
+ * rank: "all" is as specific as its most specific condition, since every one
+ * has to hold; "any" only as specific as its least, since that one alone can
+ * let it through. No conditions is 0.
+ * depth: under "all", each extra condition narrows it, so more wins a tie.
+ * requirement: the highest bar set by an amount condition ("any": the lowest).
+ */
+function variationSpecificity(v: AlertVariation): [number, number, number] {
+  if (v.conditions.length === 0) return [0, 0, 0];
+  const all = v.match === "all";
+  const pick = (values: number[]) => (all ? Math.max(...values) : Math.min(...values));
+  const requirements = v.conditions
+    .map(conditionRequirement)
+    .filter((r): r is number => r !== null);
+  return [
+    pick(v.conditions.map(conditionRank)),
+    all ? v.conditions.length : 1,
+    requirements.length ? pick(requirements) : 0,
+  ];
+}
+
+function compareSpecificity(a: AlertVariation, b: AlertVariation): number {
+  const sa = variationSpecificity(a);
+  const sb = variationSpecificity(b);
+  for (let i = 0; i < sa.length; i++) {
+    if (sa[i] !== sb[i]) return sa[i]! - sb[i]!;
+  }
+  return 0;
 }
 
 export interface AlertVariationContext {
@@ -1448,11 +1841,13 @@ export interface AlertVariationContext {
 /**
  * The variation that plays for an alert, or null for the alert itself.
  *
- * Off variations and ones that miss their condition or their chance roll are
- * out. Of the rest the most specific kind of condition wins, then the highest
- * requirement -- a 1000-bit cheer plays "at least 1000", not "at least 100".
- * Still tied, the first in the list plays, or a random one when the alert is
- * set to pick at random (how several alerts rotate on one condition).
+ * Off variations and ones that miss their conditions or their chance roll are
+ * out. Of the rest the most specific wins (see `variationSpecificity`): the
+ * most specific kind of condition, then the most conditions that all have to
+ * hold, then the highest requirement -- a 1000-bit cheer plays "at least 1000",
+ * not "at least 100". Still tied, the first in the list plays, or a random one
+ * when the alert is set to pick at random (how several alerts rotate on one
+ * condition).
  */
 export function pickAlertVariation(
   alert: AlertInstance,
@@ -1462,23 +1857,13 @@ export function pickAlertVariation(
   const matching = variant.variations.filter(
     (v) =>
       v.enabled &&
-      alertConditionMatches(alert, v.condition, sessionTop) &&
+      alertVariationMatches(alert, v, sessionTop) &&
       random() * 100 < v.chance
   );
   if (matching.length === 0) return null;
 
-  const requirement = (v: AlertVariation) =>
-    v.condition.parameter === "amount" ? v.condition.value : 0;
-  const best = matching.reduce((a, b) => {
-    const byRank = conditionRank(b.condition) - conditionRank(a.condition);
-    if (byRank !== 0) return byRank > 0 ? b : a;
-    return requirement(b) > requirement(a) ? b : a;
-  });
-  const tied = matching.filter(
-    (v) =>
-      conditionRank(v.condition) === conditionRank(best.condition) &&
-      requirement(v) === requirement(best)
-  );
+  const best = matching.reduce((a, b) => (compareSpecificity(b, a) > 0 ? b : a));
+  const tied = matching.filter((v) => compareSpecificity(v, best) === 0);
   if (tied.length === 1 || !variant.randomPick) return tied[0]!;
   return tied[Math.min(tied.length - 1, Math.floor(random() * tied.length))]!;
 }
@@ -1488,38 +1873,64 @@ export function pickAlertVariation(
  * "Bits: at least 1000", "Viewer: toastcrumb, ninetoad · 25% of the time".
  */
 export function alertVariationSummary(event: AlertEventType, variation: AlertVariation): string {
-  const { condition, chance } = variation;
+  const { conditions, match, chance } = variation;
+  const often = chance >= 100 ? "" : `${Number(chance.toFixed(2))}% of the time`;
+  if (conditions.length === 0) return often || "Every time";
+
+  const when = conditions
+    .map((condition) => alertConditionSummary(event, condition))
+    .join(match === "any" ? " or " : " and ");
+  return often ? `${when} · ${often}` : when;
+}
+
+/** One condition in plain words: "Bits: at least 1000", "Sub tier: Tier 3". */
+export function alertConditionSummary(
+  event: AlertEventType,
+  condition: AlertVariationCondition
+): string {
   const unit = ALERT_AMOUNT_LABELS[event] ?? "amount";
   const label = unit.charAt(0).toUpperCase() + unit.slice(1);
-  const often = chance >= 100 ? "" : `${Number(chance.toFixed(2))}% of the time`;
 
-  let when: string;
   switch (condition.parameter) {
-    case "none":
-      return often || "Every time";
     case "amount":
-      when =
-        condition.operator === "exact"
-          ? `${label}: exactly ${condition.value}`
-          : condition.operator === "at_least"
-            ? `${label}: at least ${condition.value}`
-            : condition.value > 0
-              ? `${label}: biggest of the stream, at least ${condition.value}`
-              : `${label}: biggest of the stream`;
-      break;
+      if (condition.operator === "exact") return `${label}: exactly ${condition.value}`;
+      if (condition.operator === "at_least") return `${label}: at least ${condition.value}`;
+      if (condition.operator === "at_most") return `${label}: at most ${condition.value}`;
+      if (condition.operator === "between") {
+        return `${label}: ${condition.value} to ${condition.max ?? condition.value}`;
+      }
+      return condition.value > 0
+        ? `${label}: biggest of the stream, at least ${condition.value}`
+        : `${label}: biggest of the stream`;
     case "tier":
-      when = `Sub tier: ${alertTierLabel(condition.tier)}`;
-      break;
+      return `Sub tier: ${alertTierLabel(condition.tier)}`;
     case "name": {
       const shown = condition.names.slice(0, 3).join(", ");
       const more = condition.names.length - 3;
-      when = condition.names.length === 0
+      return condition.names.length === 0
         ? "Viewer: nobody yet"
         : `Viewer: ${shown}${more > 0 ? ` and ${more} more` : ""}`;
-      break;
     }
+    case "gifted":
+      return condition.value ? "Gifted sub" : "Not gifted";
+    case "anonymous":
+      return condition.value ? "Anonymous" : "Not anonymous";
   }
-  return often ? `${when} · ${often}` : when;
+}
+
+/** A fresh condition on `parameter`, as the editor adds one. */
+export function createAlertCondition(parameter: AlertVariationParameter): AlertVariationCondition {
+  switch (parameter) {
+    case "amount":
+      return { parameter, operator: "at_least", value: 1 };
+    case "tier":
+      return { parameter, tier: "1000" };
+    case "name":
+      return { parameter, names: [] };
+    case "gifted":
+    case "anonymous":
+      return { parameter, value: true };
+  }
 }
 
 /**
@@ -1534,19 +1945,14 @@ export function createAlertVariation(
   name: string
 ): AlertVariation {
   const parameters = alertVariationParameters(event);
-  const condition: AlertVariationCondition = parameters.includes("amount")
-    ? { parameter: "amount", operator: "at_least", value: 1 }
-    : parameters.includes("tier")
-      ? { parameter: "tier", tier: "1000" }
-      : parameters.includes("name")
-        ? { parameter: "name", names: [] }
-        : { parameter: "none" };
+  const first = (["amount", "tier", "name"] as const).find((p) => parameters.includes(p));
   return {
     id,
     name: name.slice(0, ALERT_VARIATION_LIMITS.nameLength),
     enabled: true,
     chance: 100,
-    condition,
+    match: "all",
+    conditions: first ? [createAlertCondition(first)] : [],
     settings: alertPresentationOf(settings),
   };
 }
@@ -1681,6 +2087,13 @@ export const ALERT_EVENT_SUBSCRIPTION_TYPES: Record<
   ad_break: { type: "channel.ad_break.begin" },
   poll_start: { type: "channel.poll.begin" },
   poll_winner: { type: "channel.poll.end" },
+  prediction_start: { type: "channel.prediction.begin" },
+  prediction_result: { type: "channel.prediction.end" },
+  goal_achieved: { type: "channel.goal.end" },
+  ban: { type: "channel.ban" },
+  timeout: { type: "channel.ban", variant: "timeout" },
+  vip_added: { type: "channel.vip.add" },
+  mod_added: { type: "channel.moderator.add" },
 };
 
 /**

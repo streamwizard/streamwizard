@@ -2,7 +2,7 @@
 // and keeping out what the library would refuse anyway. Kept out of the
 // component so they can be tested without a browser.
 
-import { kindFromMime } from "./asset-mime";
+import { kindFromMime, uploadMimeType } from "./asset-mime";
 
 /**
  * Files worth sending: not hidden (.DS_Store and friends ride along in every
@@ -13,7 +13,7 @@ export function partitionUploadable(files: File[]): { uploadable: File[]; skippe
   const uploadable: File[] = [];
   const skipped: File[] = [];
   for (const file of files) {
-    if (!file.name.startsWith(".") && kindFromMime(file.type)) uploadable.push(file);
+    if (!file.name.startsWith(".") && kindFromMime(uploadMimeType(file))) uploadable.push(file);
     else skipped.push(file);
   }
   return { uploadable, skipped };

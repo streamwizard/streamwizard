@@ -40,7 +40,7 @@ export function AlertBoxSection() {
             Follows, subs, cheers, raids. <br /> Each one gets your media.
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-            29 events, including the ones most alert tools skip: watch streaks, modiversaries, shoutouts, the
+            30 events, including the ones most alert tools skip: watch streaks, modiversaries, shoutouts, the
             banhammer. Every one with its own media, its own sound, and a line you wrote. Fire a few below: the layout
             and entrance you pick are the same settings the editor has.
           </p>

@@ -191,6 +191,30 @@ export const CONDUIT_SUBSCRIPTIONS: readonly EventSubSubscriptionConfig[] = [
     condition: (userId) => ({ broadcaster_user_id: userId }),
     requiredScope: "channel:read:goals",
   },
+  /*
+   * Alert box events behind an on-demand scope set (alert_bans, alert_vips,
+   * alert_mods in @repo/schemas). They are only created once the streamer
+   * turns that alert on and grants the scope. channel.moderate is left out on
+   * purpose: its ban and raid actions would fire those alerts a second time.
+   */
+  {
+    type: "channel.ban",
+    version: "1",
+    condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:moderate",
+  },
+  {
+    type: "channel.vip.add",
+    version: "1",
+    condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "channel:read:vips",
+  },
+  {
+    type: "channel.moderator.add",
+    version: "1",
+    condition: (userId) => ({ broadcaster_user_id: userId }),
+    requiredScope: "moderation:read",
+  },
 ];
 
 /** Delivered to rest-api's webhook. Needs HTTPS, so development skips these. */

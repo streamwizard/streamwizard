@@ -44,6 +44,15 @@ export {
   type OverlayActivityKind,
 } from "./components/overlay/lib/overlay-activity";
 export { itemFlipTransform, itemTransform } from "./components/overlay/lib/item-flip";
+export {
+  UPLOADED_FONT_PREFIX,
+  isUploadedFontRef,
+  uploadedFontFaceCss,
+  uploadedFontName,
+  uploadedFontRef,
+  uploadedFontUrl,
+} from "./components/overlay/lib/font-ref";
+export { scopeCss } from "./components/overlay/lib/scope-css";
 export { WidgetScaleFrame } from "./components/overlay/WidgetScaleFrame";
 export { formatCountdownMs, formatElapsedMs } from "./components/overlay/lib/format-countdown";
 export { formatClockWidgetDisplay } from "./components/overlay/lib/format-clock-widget";
@@ -116,8 +125,16 @@ export {
   ALERT_DETAIL_TOKENS,
   ALERT_TEMPLATE_TOKENS,
   ALERT_LOOK_KEYS,
+  ALERT_MAX_NAME_LENGTH,
+  ALERT_TYPOGRAPHY_LIMITS,
+  ALERT_CSS_PARTS,
+  ALERT_CUSTOM_CSS_MAX_LENGTH,
+  truncateAlertName,
   ALERT_PRESENTATION_KEYS,
   ALERT_TIER_EVENTS,
+  ALERT_GIFTED_EVENTS,
+  ALERT_ANONYMOUS_EVENTS,
+  ALERT_EVENT_TWITCH_FEATURES,
   ALERT_SESSION_TOP_EVENTS,
   ALERT_VARIATION_EVENTS,
   ALERT_VARIATION_OPERATORS,
@@ -145,6 +162,10 @@ export {
   alertVariationParameters,
   alertVariationOperators,
   alertVariationSummary,
+  alertConditionSummary,
+  alertVariationMatches,
+  createAlertCondition,
+  ALERT_VARIATION_MATCH_MODES,
   alertConditionMatches,
   alertTierLabel,
   alertForcedVariationId,
@@ -165,6 +186,7 @@ export {
   type AlertVariationContext,
   type AlertVariationOperator,
   type AlertVariationParameter,
+  type AlertVariationMatch,
   type AlertSubTier,
   type AlertForcedVariation,
   type AlertMediaKind,

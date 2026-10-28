@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Upload, Music, Video, FileJson, Trash2, Loader2, Copy, ImageIcon, FolderUp } from "lucide-react";
+import { Upload, Music, Video, FileJson, Trash2, Loader2, Copy, ImageIcon, FolderUp, Type } from "lucide-react";
 import { Button, Progress } from "@repo/ui";
 import { cn } from "@repo/ui";
 import { toast } from "sonner";
@@ -12,7 +12,7 @@ import {
   type AssetListing,
   type UserAsset,
 } from "@/actions/assets";
-import type { AssetKind } from "@/lib/asset-mime";
+import { uploadMimeType, type AssetKind } from "@/lib/asset-mime";
 import { formatBytes } from "@/lib/format";
 import { filesFromDrop, partitionUploadable } from "@/lib/media-upload";
 import { MediaPreviewDialog } from "./media-preview-dialog";
@@ -24,11 +24,17 @@ interface Uploading {
 }
 
 // Browser PUTs straight to the presigned R2 URL; XHR gives real progress.
-function putToPresignedUrl(url: string, file: File, onProgress: (percent: number) => void): Promise<void> {
+function putToPresignedUrl(
+  url: string,
+  file: File,
+  mimeType: string,
+  onProgress: (percent: number) => void,
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("PUT", url);
-    xhr.setRequestHeader("Content-Type", file.type);
+    // Has to match the type the URL was signed for.
+    xhr.setRequestHeader("Content-Type", mimeType);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     };
@@ -49,7 +55,8 @@ function KindIcon({ asset }: { asset: UserAsset }) {
       <img src={asset.url} alt={asset.file_name} className="h-10 w-10 rounded object-cover bg-muted" />
     );
   }
-  const Icon = asset.kind === "audio" ? Music : asset.kind === "video" ? Video : FileJson;
+  const Icon =
+    asset.kind === "audio" ? Music : asset.kind === "video" ? Video : asset.kind === "font" ? Type : FileJson;
   return (
     <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
       <Icon className="h-5 w-5 text-muted-foreground" />
@@ -91,7 +98,7 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
     const { uploadable: incoming, skipped } = partitionUploadable(picked);
     if (skipped.length > 0) {
       const n = skipped.length;
-      toast.info(`Skipped ${n} ${n === 1 ? "file" : "files"} that ${n === 1 ? "isn't" : "aren't"} an image, sound, video or Lottie JSON.`);
+      toast.info(`Skipped ${n} ${n === 1 ? "file" : "files"} that ${n === 1 ? "isn't" : "aren't"} an image, sound, video, font or Lottie JSON.`);
     }
     // One file gets its own toast; a batch gets one at the end, not one per file.
     const single = incoming.length === 1;
@@ -100,14 +107,15 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
       const id = crypto.randomUUID();
       setUploads((prev) => [...prev, { id, name: file.name, progress: 0 }]);
       try {
+        const mimeType = uploadMimeType(file);
         const { data, error } = await createAssetUpload({
           fileName: file.name,
-          mimeType: file.type,
+          mimeType,
           sizeBytes: file.size,
         });
         if (error || !data) throw new Error(error ?? "Failed to start the upload.");
 
-        await putToPresignedUrl(data.uploadUrl, file, (p) =>
+        await putToPresignedUrl(data.uploadUrl, file, mimeType, (p) =>
           setUploads((prev) => prev.map((u) => (u.id === id ? { ...u, progress: p } : u))),
         );
 
@@ -186,8 +194,13 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
         <div className="text-center">
           <p className="text-sm font-medium">Drop files or a folder here, or click to browse</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Images, sounds, and videos for your overlays. Up to 10MB per file.
+            Images, sounds, videos, and fonts (.woff2, .woff) for your overlays. Up to 10MB per file.
           </p>
+          {!kindFilter || kindFilter.includes("font") ? (
+            <p className="text-xs text-muted-foreground mt-1">
+              Only upload fonts you have the right to use on stream.
+            </p>
+          ) : null}
         </div>
         <Button
           type="button"
@@ -205,7 +218,7 @@ export function MediaLibrary({ initialListing, onSelect, kindFilter }: MediaLibr
           ref={inputRef}
           type="file"
           multiple
-          accept="image/*,audio/*,video/*,.json"
+          accept="image/*,audio/*,video/*,.json,.woff,.woff2,font/woff,font/woff2"
           className="hidden"
           onChange={(e) => {
             if (e.target.files?.length) void upload(Array.from(e.target.files));

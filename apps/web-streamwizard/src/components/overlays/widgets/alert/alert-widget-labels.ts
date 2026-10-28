@@ -25,7 +25,9 @@ export function alertTokenMeaning(event: AlertEventType, token: AlertTemplateTok
     case "amount":
       return `{amount} is ${ALERT_AMOUNT_LABELS[event] ?? "the number"}.`;
     case "message":
-      return "{message} is what the viewer wrote.";
+      return event === "ban" || event === "timeout"
+        ? "{message} is the reason the mod gave."
+        : "{message} is what the viewer wrote.";
     case "gifter":
       return "{gifter} is who gave the original sub.";
     case "reward":
@@ -34,6 +36,8 @@ export function alertTokenMeaning(event: AlertEventType, token: AlertTemplateTok
       return "{charity} is the charity.";
     case "recipient":
       return "{recipient} is who got the sub.";
+    case "moderator":
+      return "{moderator} is the mod who did it.";
   }
 }
 
@@ -81,19 +85,23 @@ export function alertAmountTitle(event: AlertEventType): string {
 /** What a variation can look at, as the choice reads in the editor. */
 export function alertParameterLabel(event: AlertEventType, parameter: AlertVariationParameter): string {
   switch (parameter) {
-    case "none":
-      return "Nothing, chance only";
     case "amount":
       return alertAmountTitle(event);
     case "tier":
       return "Sub tier";
     case "name":
       return "Viewer name";
+    case "gifted":
+      return "Gifted sub";
+    case "anonymous":
+      return "Anonymous";
   }
 }
 
 export const OPERATOR_LABELS: Record<AlertVariationOperator, string> = {
   exact: "Exactly",
   at_least: "At least",
+  at_most: "At most",
+  between: "Between",
   session_top: "Biggest of the stream",
 };

@@ -43,9 +43,9 @@ import {
 import { useDemoTracking } from "../analytics/use-demo-tracking";
 
 /*
- * The alert box's own demo, cycling the full 29-event roadmap catalog from
- * alert-catalog.ts (the SW-198 list; the built-in widget fires six of them
- * today, the rest is what it is growing into). 29 chips in one row is a wall,
+ * The alert box's own demo, cycling the full 30-event catalog from
+ * alert-catalog.ts, the same events the built-in widget fires. 30 chips in one
+ * row is a wall,
  * so the chips sit behind four category tabs; the auto-cycle walks all of
  * them and drags the active tab along, and picking a tab by hand holds it for
  * a while so the cycle does not yank the list away mid-read. The layout and
