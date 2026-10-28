@@ -4,6 +4,7 @@ import { closeGuildSessions, invalidateSettingsCache } from "../../lib/activity-
 import { invalidateLogSettingsCache } from "../../lib/log-channel/worker";
 import { invalidateCommandPermissionCache, invalidateGuildPermissionCache } from "../../lib/permissions";
 import { invalidateTicketConfig } from "../../lib/tickets";
+import { invalidateVoiceHubs } from "../../lib/voice/store";
 import type { AppEnv } from "../types";
 import { readJson } from "../validation";
 
@@ -39,5 +40,11 @@ cacheRoutes.post("/cache/activity", async (c) => {
 // Ticket settings, categories and products: anything saved under Discord, Tickets.
 cacheRoutes.post("/cache/tickets", (c) => {
   invalidateTicketConfig(c.get("guild").id);
+  return c.json({ ok: true });
+});
+
+// Join-to-create hubs: added, edited or removed under Discord, Voice channels.
+cacheRoutes.post("/cache/voice-hubs", (c) => {
+  invalidateVoiceHubs(c.get("guild").id);
   return c.json({ ok: true });
 });

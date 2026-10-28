@@ -4,6 +4,7 @@ import { startAnnouncementScheduler } from "../lib/announcements/scheduler";
 import { startLogWorker } from "../lib/log-channel/worker";
 import { reconcileOpenTickets } from "../lib/tickets/reconcile";
 import { startTicketSweeper } from "../lib/tickets/sweeper";
+import { reconcileTempChannels } from "../lib/voice/lifecycle";
 import { reportError } from "@repo/sentry";
 import type { BotEvent } from "../types/discord";
 
@@ -20,6 +21,11 @@ export default {
     } catch (error) {
       reportError(error, "discord-bot ready: reconcile voice sessions");
     }
+
+    // Delete temp voice channels that emptied while the bot was down, forget
+    // the ones that are gone, and seat anyone waiting in a lobby. Off the
+    // ready path: it can create and delete channels.
+    void reconcileTempChannels(client).catch((error) => reportError(error, "discord-bot ready: reconcile voice channels"));
 
     // Post platform events (new users, Discord links, deletions, ...) to the log channel.
     await startLogWorker(client);
