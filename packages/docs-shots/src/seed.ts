@@ -315,10 +315,10 @@ export async function seedShotData(opts: { onboarding?: boolean } = {}): Promise
   const supabase = localSupabase();
   const userId = SMOKE_USER_ID;
 
-  // user_metadata.sub is the Twitch user id the OAuth sign-in writes, and it
-  // is what the dashboard reads to find the broadcaster: not
-  // integrations_twitch. A password smoke account has never been through
-  // Twitch, so nothing fills it in.
+  // A password smoke account has never been through Twitch, so it has no
+  // Twitch identity; the web app falls back to its integrations_twitch row
+  // (seeded below) for the broadcaster id. user_metadata.sub is still set so
+  // client UI that shows the channel has something to show.
   //
   // Without a display name the dashboard's user menu throws; without the
   // preference below the onboarding wizard covers every page.
