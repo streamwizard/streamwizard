@@ -10,7 +10,6 @@ import {
 } from "@repo/ui/overlay";
 import type { OverlayWidgetProps } from "@repo/ui/overlay";
 import { getNextOverlayClip, type ClipCursor } from "@/actions/clips";
-import type { Json } from "@repo/supabase";
 
 function parseCompositeConfig(raw: unknown): ClipsWidgetConfig {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {
@@ -20,7 +19,7 @@ function parseCompositeConfig(raw: unknown): ClipsWidgetConfig {
 }
 
 export function ClipsWidgetContainer({ scene, item }: OverlayWidgetProps) {
-  const sceneUserId = scene.user_id;
+  const subscriberToken = scene.subscriber_token;
 
   // item.config is already the composite config (display fields merged server-side by overlay action)
   const config = useMemo(() => parseCompositeConfig(item.config), [item.config]);
@@ -31,9 +30,11 @@ export function ClipsWidgetContainer({ scene, item }: OverlayWidgetProps) {
       excludeClipIds: string[]
     ): Promise<NextClipResult | null> => {
       try {
+        // The server looks the owner and the filters up from the scene's own
+        // credential; item.config here only drives the renderer.
         const next = await getNextOverlayClip(
-          sceneUserId,
-          item.config as unknown as Json,
+          subscriberToken,
+          item.id,
           (cursor as ClipCursor | null) ?? null,
           excludeClipIds
         );
@@ -42,7 +43,7 @@ export function ClipsWidgetContainer({ scene, item }: OverlayWidgetProps) {
           // for every clip we tried. The server side logs which; from here they
           // look identical.
           console.warn("[clips] getNextOverlayClip returned null", {
-            sceneUserId,
+            itemId: item.id,
             sort: config.sort,
             timeWindow: config.timeWindow,
             hadCursor: cursor != null,
@@ -72,7 +73,7 @@ export function ClipsWidgetContainer({ scene, item }: OverlayWidgetProps) {
         return null;
       }
     },
-    [sceneUserId, item.config, config.sort, config.timeWindow]
+    [subscriberToken, item.id, item.config, config.sort, config.timeWindow]
   );
 
   return <ClipsWidgetRenderer config={config} fetchNextClip={fetchNextClip} />;

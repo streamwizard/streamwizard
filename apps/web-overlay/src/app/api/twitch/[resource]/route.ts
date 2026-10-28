@@ -22,6 +22,7 @@ import {
   bearerToken,
   broadcasterIdForToken,
   corsHeaders,
+  isPlausibleToken,
   isRateLimited,
 } from "@/lib/widget-api";
 
@@ -114,6 +115,9 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/twitch/[reso
     return NextResponse.json({ error: "Missing token" }, { status: 401, headers });
   }
 
+  if (!isPlausibleToken(token)) {
+    return NextResponse.json({ error: "Not found or unauthorized" }, { status: 403, headers });
+  }
   if (isRateLimited(token)) {
     return NextResponse.json({ error: "Rate limited" }, { status: 429, headers });
   }

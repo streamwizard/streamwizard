@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reportError } from "@repo/sentry";
-import { bearerToken, corsHeaders, isRateLimited, userIdForToken } from "@/lib/widget-api";
+import { bearerToken, corsHeaders, isPlausibleToken, isRateLimited, userIdForToken } from "@/lib/widget-api";
 import { userStateService } from "@/lib/user-state-service";
 
 /**
@@ -22,6 +22,9 @@ const RESERVED_PREFIX = "sys.";
 const KEY_PATTERN = /^[a-z0-9_]{1,64}$/;
 const MAX_VALUE_BYTES = 8192;
 const OPS = new Set(["set", "increment", "delete"]);
+// A value is capped at MAX_VALUE_BYTES; the rest of a body is a token, a key
+// and an op. Checked before parsing so a huge body never becomes an object.
+const MAX_BODY_BYTES = MAX_VALUE_BYTES + 1024;
 
 export function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
@@ -41,6 +44,7 @@ export async function GET(req: NextRequest) {
   if (!token) {
     return NextResponse.json({ error: "Missing token" }, { status: 400, headers });
   }
+  if (!isPlausibleToken(token)) return unauthorized(req);
   if (isRateLimited(token)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429, headers });
   }
@@ -67,9 +71,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const headers = corsHeaders(req);
 
+  const raw = await req.text();
+  if (Buffer.byteLength(raw, "utf8") > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Body too large" }, { status: 413, headers });
+  }
   let body: unknown;
   try {
-    body = await req.json();
+    body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers });
   }
@@ -89,6 +97,7 @@ export async function POST(req: NextRequest) {
       { status: 400, headers }
     );
   }
+  if (!isPlausibleToken(token)) return unauthorized(req);
   if (isRateLimited(token)) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429, headers });
   }

@@ -6,8 +6,8 @@ import {
   pickRandomOverlayClip,
 } from "@repo/supabase/queries/clips";
 import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
-import type { Json } from "@repo/supabase";
 import { slimClipsWidgetItemConfig, type ClipsWidgetItemConfig } from "@repo/ui/overlay";
+import { TtlCache } from "@repo/ttl-cache";
 import {
   buildOverlayClipQuery,
   getTimeWindowDates,
@@ -16,6 +16,7 @@ import {
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
 import { getClipDownloadUrl } from "@/actions/twitch";
+import { isUuid, resolveOverlayItem, type AuthorizedOverlayItem } from "@/lib/overlay-item-auth";
 
 /** Minimal clip identity for Twitch Helix downloads (broadcaster id from clips row). */
 export type PlaylistClip = {
@@ -58,24 +59,24 @@ type ClipScope =
   | { kind: "broadcaster"; twitchUserId: string }
   | { kind: "empty" };
 
-const FOLDER_SCOPE_TTL_MS = 60_000;
+const MAX_FOLDERS = 50;
 
 /**
  * Folder membership barely changes mid-stream, and the widget now resolves scope
  * on every clip transition — without this the junction table gets queried once
- * per clip for the whole broadcast.
+ * per clip for the whole broadcast. Bounded, with a short negative TTL: it was
+ * a plain Map that grew with every caller-chosen key.
  */
-const folderScopeCache = new Map<string, { ids: string[]; cachedAt: number }>();
+const folderScopeCache = new TtlCache<string[]>({ ttlMs: 60_000, negativeTtlMs: 10_000, maxEntries: 2000 });
 
 async function getTwitchClipIdsInFolders(
   ownerUserId: string,
   folderIds: string[]
 ): Promise<{ ok: true; ids: string[] } | { ok: false }> {
-  const cacheKey = `${ownerUserId}:${[...folderIds].sort().join(",")}`;
+  if (folderIds.length > MAX_FOLDERS || !folderIds.every(isUuid)) return { ok: false };
+  const cacheKey = `${ownerUserId}:${[...new Set(folderIds)].sort().join(",")}`;
   const cached = folderScopeCache.get(cacheKey);
-  if (cached && Date.now() - cached.cachedAt < FOLDER_SCOPE_TTL_MS) {
-    return { ok: true, ids: cached.ids };
-  }
+  if (cached !== undefined) return { ok: true, ids: cached ?? [] };
 
   const { data, error } = await getClipFolderJunctions(
     supabaseAdmin,
@@ -93,7 +94,7 @@ async function getTwitchClipIdsInFolders(
   const junctionRows = (data ?? []) as { clip_id: string }[];
 
   const ids = [...new Set(junctionRows.map((r) => r.clip_id).filter(Boolean))];
-  folderScopeCache.set(cacheKey, { ids, cachedAt: Date.now() });
+  folderScopeCache.set(cacheKey, ids.length ? ids : null);
 
   return { ok: true, ids };
 }
@@ -108,6 +109,7 @@ async function resolveClipScope(
   sceneUserId: string,
   config: ClipsWidgetItemConfig
 ): Promise<ClipScope> {
+  if (!Array.isArray(config.folderIds)) return { kind: "empty" };
   if (config.folderIds.length > 0) {
     const junction = await getTwitchClipIdsInFolders(sceneUserId, config.folderIds);
     if (!junction.ok || junction.ids.length === 0) return { kind: "empty" };
@@ -266,6 +268,37 @@ function isKnownDeadClip(twitchClipId: string): boolean {
 }
 
 /**
+ * The overlay asks once per clip transition. The scene and item behind a
+ * (token, item) pair change rarely, so a short cache saves two lookups per
+ * clip; a config saved in the editor applies within CREDENTIAL_TTL_MS.
+ */
+const CREDENTIAL_TTL_MS = 30_000;
+const clipsItems = new TtlCache<AuthorizedOverlayItem>({
+  ttlMs: CREDENTIAL_TTL_MS,
+  negativeTtlMs: 10_000,
+  maxEntries: 2000,
+});
+
+const MAX_EXCLUDED = 200;
+const TWITCH_CLIP_ID = /^[A-Za-z0-9_-]{1,128}$/;
+
+function parseCursor(raw: unknown): ClipCursor | null {
+  if (!raw || typeof raw !== "object") return null;
+  const { sortValue, clipId } = raw as Record<string, unknown>;
+  if (!isUuid(clipId)) return null;
+  if (sortValue === null || (typeof sortValue === "number" && Number.isFinite(sortValue))) {
+    return { sortValue, clipId };
+  }
+  if (typeof sortValue === "string" && sortValue.length <= 64) return { sortValue, clipId };
+  return null;
+}
+
+function parseExcluded(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((id): id is string => typeof id === "string" && TWITCH_CLIP_ID.test(id)).slice(-MAX_EXCLUDED);
+}
+
+/**
  * One clip, ready to play. The widget keeps three players in a ring — one
  * showing, one buffered, one loading — so this is called once per transition
  * and never blocks what is on screen.
@@ -277,12 +310,25 @@ function isKnownDeadClip(twitchClipId: string): boolean {
  * shows its empty state rather than stalling.
  */
 export async function getNextOverlayClip(
-  sceneUserId: string,
-  config: Json,
-  cursor: ClipCursor | null,
-  excludeTwitchClipIds: string[]
+  subscriberToken: string,
+  overlayItemId: string,
+  rawCursor: ClipCursor | null,
+  rawExcludeTwitchClipIds: string[]
 ): Promise<NextOverlayClip | null> {
-  const c = slimClipsWidgetItemConfig(config);
+  // The tenant and the filters come from the overlay credential, never from
+  // the caller (see resolveOverlayItem).
+  const item =
+    typeof subscriberToken === "string" && typeof overlayItemId === "string"
+      ? await clipsItems.fetch(`${subscriberToken}:${overlayItemId}`, () =>
+          resolveOverlayItem(subscriberToken, overlayItemId)
+        )
+      : null;
+  if (!item || item.type !== "clips_widget") return null;
+
+  const sceneUserId = item.userId;
+  const c = slimClipsWidgetItemConfig(item.config);
+  const cursor = parseCursor(rawCursor);
+  const excludeTwitchClipIds = parseExcluded(rawExcludeTwitchClipIds);
 
   const scope = await resolveClipScope(sceneUserId, c);
   if (scope.kind === "empty") return null;
