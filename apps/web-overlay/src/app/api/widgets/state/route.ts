@@ -6,13 +6,14 @@ import { getOverlaySceneBySubscriberToken, overlayItemBelongsToScene } from "@re
 import { selectWidgetInstanceStateByItem, updateWidgetInstanceState } from "@repo/supabase/queries/overlay-widgets";
 // Was a second copy of the same allowlist. Shared now so the sandboxed-iframe
 // origin can't be handled in one route and forgotten in the other.
-import { corsHeaders } from "@/lib/widget-api";
+import { corsHeaders, isPlausibleToken } from "@/lib/widget-api";
 
 export function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
 }
 
 async function resolveInstance(token: string, itemId: string) {
+  if (!isPlausibleToken(token)) return null;
   // Step 1: resolve subscriber_token → scene_id
   const { data: scene } = await getOverlaySceneBySubscriberToken(supabaseAdmin, token);
   if (!scene) return null;
@@ -21,7 +22,7 @@ async function resolveInstance(token: string, itemId: string) {
   if (!(await overlayItemBelongsToScene(supabaseAdmin, itemId, scene.id))) return null;
 
   // Step 3: fetch the widget instance row
-  const { data: instance } = await selectWidgetInstanceStateByItem(supabaseAdmin, itemId);
+  const { data: instance } = await selectWidgetInstanceStateByItem(supabaseAdmin, itemId, scene.user_id);
   return instance ?? null;
 }
 

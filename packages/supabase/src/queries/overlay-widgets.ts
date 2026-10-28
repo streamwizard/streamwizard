@@ -88,15 +88,16 @@ export async function selectWidgetInstanceFieldValues(client: DBClient, instance
 }
 
 /**
- * Runtime state for the widget placed on one overlay item. No user filter:
- * the overlay API has already proven the item belongs to the caller's scene
- * through the subscriber token.
+ * Runtime state for the widget placed on one overlay item. The overlay API has
+ * already proven the item belongs to the caller's scene through the subscriber
+ * token; `ownerId` (that scene's user) also pins the row to the item's owner.
  */
-export async function selectWidgetInstanceStateByItem(client: DBClient, overlayItemId: string) {
+export async function selectWidgetInstanceStateByItem(client: DBClient, overlayItemId: string, ownerId: string) {
   return client
     .from("overlay_widget_instances")
     .select("id, widget_state")
     .eq("overlay_item_id", overlayItemId)
+    .eq("user_id", ownerId)
     .maybeSingle();
 }
 
@@ -139,7 +140,9 @@ export async function insertLibraryEntry(
   client: DBClient,
   entry: { widget_id: string; user_id: string; title: string; description: string; tags: string[] },
 ) {
-  return client.from("overlay_widget_library_entries").insert({ ...entry, is_approved: false });
+  // No is_approved: authenticated has no INSERT on it (moderation is
+  // service-role only) and the column defaults to false.
+  return client.from("overlay_widget_library_entries").insert(entry);
 }
 
 // ── Library moderation (service role, web-admin) ─────────────────────────────

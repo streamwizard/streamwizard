@@ -103,10 +103,23 @@ async function recordIncrement(
 // Message + reaction tracking
 // ---------------------------------------------------------------------------
 
-function isChannelIgnored(ctx: TrackingContext, channelId: string | null, parentId: string | null): boolean {
-  if (channelId && ctx.ignoredChannelIds.has(channelId)) return true;
-  if (parentId && ctx.ignoredChannelIds.has(parentId)) return true;
-  return false;
+/**
+ * `categoryId` is a thread's grandparent: a thread under an ignored category
+ * is ignored too (see channelScope in server-log/refs.ts).
+ */
+function isChannelIgnored(
+  ctx: TrackingContext,
+  channelId: string | null,
+  parentId: string | null,
+  categoryId: string | null = null,
+): boolean {
+  return [channelId, parentId, categoryId].some((id) => !!id && ctx.ignoredChannelIds.has(id));
+}
+
+function threadCategoryId(guild: { channels: { cache: { get(id: string): { parentId?: string | null } | undefined } } } | null, channel: unknown): string | null {
+  const c = channel as { parentId?: string | null; isThread?: () => boolean } | null;
+  if (!guild || !c?.parentId || typeof c.isThread !== "function" || !c.isThread()) return null;
+  return guild.channels.cache.get(c.parentId)?.parentId ?? null;
 }
 
 export async function recordMessage(message: Message): Promise<void> {
@@ -114,7 +127,14 @@ export async function recordMessage(message: Message): Promise<void> {
   try {
     const ctx = await getContext(message.guildId);
     if (!ctx.settings.tracking_enabled || !ctx.settings.track_messages) return;
-    if (isChannelIgnored(ctx, message.channelId, "parentId" in message.channel ? message.channel.parentId : null))
+    if (
+      isChannelIgnored(
+        ctx,
+        message.channelId,
+        "parentId" in message.channel ? message.channel.parentId : null,
+        threadCategoryId(message.guild, message.channel),
+      )
+    )
       return;
     await recordIncrement(message.guildId, message.author.id, utcDate(), { messages: 1 });
   } catch (error) {
@@ -135,7 +155,7 @@ export async function recordReaction(
 
     const channel = reaction.message.channel;
     const parentId = channel && "parentId" in channel ? channel.parentId : null;
-    if (isChannelIgnored(ctx, reaction.message.channelId, parentId)) return;
+    if (isChannelIgnored(ctx, reaction.message.channelId, parentId, threadCategoryId(reaction.message.guild, channel))) return;
 
     const date = utcDate();
     const writes: Promise<void>[] = [recordIncrement(guildId, user.id, date, { reactionsAdded: 1 })];

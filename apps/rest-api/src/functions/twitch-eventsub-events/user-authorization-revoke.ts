@@ -5,6 +5,7 @@ import { deleteTicketAttachments } from "@repo/supabase/queries/tickets";
 import { getTwitchIntegrationByBroadcasterId, deleteUserData } from "@repo/supabase/queries/user";
 import type { UserAuthorizationRevokeEvent } from "@repo/schemas";
 import { r2 } from "../../lib/r2";
+import { revokeAllUserSockets } from "../../lib/ws-server";
 
 // The user disconnected StreamWizard on Twitch. Same clean-up as the
 // delete-account action, minus the Twitch-side steps the user already did.
@@ -60,4 +61,6 @@ export const handleUserAuthorizationRevoke = async (event: UserAuthorizationRevo
   const { error: authError } = await supabase.auth.admin.deleteUser(userId);
 
   if (authError) throw authError;
+
+  await revokeAllUserSockets(userId);
 };

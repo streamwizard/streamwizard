@@ -14,6 +14,7 @@ import {
   selectIngestKeys,
 } from "@repo/supabase/queries/ingest";
 import { tryAuthContext } from "@/lib/auth";
+import { canCreateIngestKeys, INGEST_PLAN_REQUIRED } from "@/lib/ingest-access";
 import { track } from "@/lib/track";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
@@ -125,6 +126,7 @@ export async function createIngestKey(label: string): Promise<{ data: IngestStre
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { user } = ctx;
+  if (!(await canCreateIngestKeys(ctx.supabase))) return { data: null, error: INGEST_PLAN_REQUIRED };
 
   const adminClient = createAdminClient();
 
@@ -178,6 +180,7 @@ export async function rotateIngestKey(id: string): Promise<{ data: IngestStreamK
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { user } = ctx;
+  if (!(await canCreateIngestKeys(ctx.supabase))) return { data: null, error: INGEST_PLAN_REQUIRED };
 
   const adminClient = createAdminClient();
   const { data, error } = await rotateIngestKeySecret(adminClient, id, user.id, generateStreamKey());

@@ -22,6 +22,12 @@ export interface ConnectionData {
    * secret, so a forged source can mislabel but not escalate.
    */
   source?: string;
+  /**
+   * Publisher/subscriber only: the credential the upgrade was authorised with,
+   * so it can be re-checked later (see revoke.ts). "scene" is an overlay's
+   * subscriber_token, "session" a dashboard user's Supabase JWT.
+   */
+  credential?: { kind: "scene" | "session"; token: string };
 }
 
 export interface RoomData {

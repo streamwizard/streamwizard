@@ -1,12 +1,7 @@
 "use client";
 
-import {
-  AUTO_SWITCHER_PRESET_THRESHOLDS,
-  AUTO_SWITCHER_SENSITIVITY_PRESETS,
-  PRESET_COPY,
-  type AutoSwitcherSensitivityPreset,
-  type AutoSwitcherThresholds,
-} from "@repo/schemas";
+import { AUTO_SWITCHER_PRESET_THRESHOLDS, AUTO_SWITCHER_SENSITIVITY_PRESETS, PRESET_COPY } from "@repo/schemas/auto-switcher-constants";
+import type { AutoSwitcherSensitivityPreset, AutoSwitcherThresholds } from "@repo/schemas";
 import { useSwitcherDemo, useSwitcherViewport } from "./switcher-demo-store";
 
 /*

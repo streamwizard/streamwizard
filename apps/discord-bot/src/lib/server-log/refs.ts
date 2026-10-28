@@ -119,9 +119,43 @@ export function diffFields<T extends Record<string, unknown>>(before: T, after: 
 }
 
 /** Ignored channels match the channel itself or its category. */
-export function isIgnoredChannel(ignoredIds: Iterable<string>, channelId: string, parentId?: string | null): boolean {
+export function isIgnoredChannel(
+  ignoredIds: Iterable<string>,
+  channelId: string,
+  parentId?: string | null,
+  categoryId?: string | null,
+): boolean {
   const ignored = new Set(ignoredIds);
-  return ignored.has(channelId) || (!!parentId && ignored.has(parentId));
+  return [channelId, parentId, categoryId].some((id) => !!id && ignored.has(id));
+}
+
+/**
+ * The ids a channel filter has to look at. For a channel: itself and its
+ * category. For a thread: itself, the channel it hangs off, and that channel's
+ * category. Threads used to be checked as if their parent channel were their
+ * category, so a thread under an ignored category, in an open ticket or in a
+ * log channel was logged anyway.
+ */
+export interface ChannelScope {
+  channelId: string;
+  parentId: string | null;
+  categoryId: string | null;
+}
+
+type ScopeChannel = { parentId?: string | null; isThread?: () => boolean } | null | undefined;
+
+export function channelScope(
+  channel: ScopeChannel,
+  channelId: string,
+  lookupParentOf: (id: string) => string | null | undefined,
+): ChannelScope {
+  const parentId = channel?.parentId ?? null;
+  const isThread = typeof channel?.isThread === "function" && channel.isThread();
+  return {
+    channelId,
+    parentId,
+    categoryId: isThread && parentId ? (lookupParentOf(parentId) ?? null) : null,
+  };
 }
 
 const MAX_TEXT = 1900;

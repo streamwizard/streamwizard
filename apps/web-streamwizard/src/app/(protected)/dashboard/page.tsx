@@ -10,6 +10,7 @@ import {
 } from "@repo/supabase/queries/stream-analytics";
 import { getUserPreferences } from "@repo/supabase/queries/user";
 import { ClipDialogProvider } from "@/providers/clip-dialog-provider";
+import { resolveBroadcasterId } from "@/lib/auth";
 import { BroadcasterProfileStrip } from "@/components/stream-analytics/broadcaster-profile-strip";
 import { StatsRow } from "@/components/stream/StatsRow";
 import { RecentClipsSection } from "@/components/stream/RecentClipsSection";
@@ -64,7 +65,7 @@ export default async function DashboardPage() {
 
   if (error || !data.user) redirect("/login");
 
-  const broadcasterId = data.user.user_metadata.sub as string;
+  const broadcasterId = (await resolveBroadcasterId(supabase, data.user)) ?? "";
 
   const [stream, prefs] = await Promise.all([
     getLatestStreamForBroadcaster(supabase, broadcasterId),

@@ -1,4 +1,4 @@
-import { AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS } from "@repo/schemas";
+import { AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS } from "@repo/schemas/auto-switcher-constants";
 import { SectionView } from "@/components/public/analytics/section-view";
 import { Reveal } from "@/components/public/home/reveal";
 import { ChatNoticeFeed } from "./chat-notice-feed";

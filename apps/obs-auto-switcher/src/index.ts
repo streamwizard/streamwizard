@@ -29,7 +29,7 @@ const configStore = new ConfigStore((userId, config) => engine.onConfigChanged(u
 
 const statsFeed = new StatsFeed(env.WS_SERVER_URL, env.CONSUMER_SECRET, {
   onIngestStats: (userId, payload) => engine.onStats(userId, payload),
-  onConfigPush: (_userId, payload) => configStore.applyPush(payload),
+  onConfigPush: (userId, payload) => void configStore.applyPush(userId, payload),
   onSessionEnded: (userId, payload) => engine.onSessionEnded(userId, payload),
 });
 

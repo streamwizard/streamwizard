@@ -17,11 +17,14 @@ import { asClipDisplayFieldConfig } from "@/types/overlays";
 
 export const MIN_ITEM_SIZE = 50;
 
-let tempIdCounter = 0;
-
+/**
+ * Id for an item that isn't saved yet. Random rather than a counter: a counter
+ * starts over on every reload or hot reload, while the scene can still hold
+ * `temp-` items from before (a restored draft), so the next duplicate would
+ * get an id already on the canvas.
+ */
 export function nextTempId(): string {
-  tempIdCounter++;
-  return `temp-${tempIdCounter}`;
+  return `temp-${crypto.randomUUID()}`;
 }
 
 /**

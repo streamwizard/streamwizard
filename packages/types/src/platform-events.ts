@@ -66,6 +66,7 @@ export const PLATFORM_EVENTS = {
   "user.deleted": { label: "Account deleted", group: "platform", defaultEnabled: true },
   "user.banned": { label: "User banned", group: "platform", defaultEnabled: true },
   "user.unbanned": { label: "User unbanned", group: "platform", defaultEnabled: true },
+  "user.twitch_conflict": { label: "Twitch account already linked", group: "platform", defaultEnabled: true },
   "discord.linked": { label: "Discord linked", group: "platform", defaultEnabled: true },
   "discord.unlinked": { label: "Discord unlinked", group: "platform", defaultEnabled: true },
   "subscription.granted": { label: "Plan granted", group: "platform", defaultEnabled: true },
@@ -296,6 +297,8 @@ export interface PlatformEventPayloads {
       discord_banned?: boolean | null;
     };
   "user.unbanned": SubjectIdentity & ActorIdentity & { discord_unbanned?: boolean | null };
+  /** Signup whose Twitch id another account already holds: no Twitch integration was created. */
+  "user.twitch_conflict": SubjectIdentity & { existing_user_id?: string | null };
   "admin.role_granted": SubjectIdentity & { role: string };
   "admin.role_revoked": SubjectIdentity & { role: string };
   "feedback.submitted": SubjectIdentity & {

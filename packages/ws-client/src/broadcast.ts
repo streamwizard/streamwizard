@@ -64,3 +64,16 @@ export function broadcastToUser(
 ): Promise<BroadcastResult> {
   return postInternal("/internal/broadcast", { userId, type, payload }, config);
 }
+
+/**
+ * Asks ws-server to end a user's live sockets after their credential changed:
+ * "scene" re-checks overlay keys (after a key reset or scene delete), "session"
+ * closes dashboard sockets, "all" closes everything (ban, account deletion).
+ */
+export function revokeUserSockets(
+  userId: string,
+  scope: "scene" | "session" | "all",
+  config: BroadcastConfig,
+): Promise<BroadcastResult> {
+  return postInternal("/internal/revoke", { userId, scope }, config);
+}

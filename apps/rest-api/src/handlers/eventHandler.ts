@@ -61,9 +61,10 @@ export class HandlerRegistry {
    */
   async processTwitchEvent(
     eventType: EventSubSubscriptionType,
-    data: EventSubNotificationPayload
+    data: EventSubNotificationPayload,
+    condition?: Record<string, unknown>
   ): Promise<void> {
-    const broadcasterId = extractReceivingBroadcasterId(data as unknown as Record<string, unknown>);
+    const broadcasterId = extractReceivingBroadcasterId(eventType, condition, data as unknown as Record<string, unknown>);
 
     if (!broadcasterId) {
       console.log("No broadcaster id found in event");
@@ -93,14 +94,27 @@ export class HandlerRegistry {
 
 export const handlers = new HandlerRegistry();
 
+const CONDITION_KEYS = ["to_broadcaster_user_id", "broadcaster_user_id", "from_broadcaster_user_id", "user_id"] as const;
+
 /**
- * Extract the broadcaster ID from an EventSub event payload
+ * The channel a notification belongs to: the one in its subscription
+ * condition. Body fields are only a fallback, and to_broadcaster_user_id there
+ * only counts for raids (on channel.shoutout.create it is the other channel).
+ * Same rule as streamwizard-bot's copy.
  */
-function extractReceivingBroadcasterId(event: Record<string, unknown>): string | null {
+export function extractReceivingBroadcasterId(
+  eventType: string,
+  condition: Record<string, unknown> | null | undefined,
+  event: Record<string, unknown>,
+): string | null {
+  for (const key of CONDITION_KEYS) {
+    const value = condition?.[key];
+    if (typeof value === "string" && value) return value;
+  }
+
   if (!event) return null;
 
-  // Direct to_broadcaster_user_id (raid events)
-  if (typeof event.to_broadcaster_user_id === "string" && event.to_broadcaster_user_id) {
+  if (eventType === "channel.raid" && typeof event.to_broadcaster_user_id === "string" && event.to_broadcaster_user_id) {
     return event.to_broadcaster_user_id;
   }
 
@@ -112,7 +126,7 @@ function extractReceivingBroadcasterId(event: Record<string, unknown>): string |
   // Check nested data array
   if (Array.isArray(event.data) && event.data.length > 0) {
     const d0 = event.data[0] as Record<string, unknown>;
-    if (d0?.to_broadcaster_user_id) return d0.to_broadcaster_user_id as string;
+    if (eventType === "channel.raid" && d0?.to_broadcaster_user_id) return d0.to_broadcaster_user_id as string;
     if (d0?.broadcaster_user_id) return d0.broadcaster_user_id as string;
   }
 

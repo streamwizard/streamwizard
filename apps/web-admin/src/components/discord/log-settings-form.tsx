@@ -35,6 +35,7 @@ const HINTS: Partial<Record<PlatformEventType, string>> = {
   "user.deleted": "Someone deletes their account, disconnects StreamWizard on Twitch, or an admin removes them.",
   "user.banned": "An admin bans a user from the Users page.",
   "user.unbanned": "An admin lifts a ban.",
+  "user.twitch_conflict": "Someone signs up with a Twitch account another StreamWizard account already holds.",
   "discord.linked": "A user links a Discord account.",
   "discord.unlinked": "A user unlinks their Discord account.",
   "subscription.granted": "An admin grants a plan.",
