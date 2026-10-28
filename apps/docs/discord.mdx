@@ -68,6 +68,34 @@ ticket, pick what it's about (bug, feature, support or something else), and you
 get a private channel with the team. You'll be sent a transcript when it's
 closed.
 
+## Your own voice channel
+
+Join a lobby voice channel in the server (staff pick which ones) and the bot
+makes you a voice channel of your own and moves you in. It's yours to run, and
+it's deleted when the last person leaves. You don't need to link anything for
+this.
+
+Run these while you're in your channel, or from its chat:
+
+| Command | What it does |
+|---|---|
+| `/voice-lock` | Nobody new can join. Whoever is in it now can still come back. |
+| `/voice-unlock` | Opens it up again. |
+| `/voice-hide` | Only the people in it now can see it. |
+| `/voice-reveal` | Makes it visible again. |
+| `/voice-rename` | Renames it. Discord allows 2 renames per channel every 10 minutes, and the bot tells you when you can go again. |
+| `/voice-limit` | Sets how many people fit, up to 99. 0 removes the limit. |
+| `/voice-kick` | Disconnects someone. They can come back unless it's locked. |
+| `/voice-ban` | Disconnects someone and keeps them from seeing or joining it. |
+| `/voice-unban` | Lets them back in. |
+| `/voice-transfer` | Hands the channel to someone in it. |
+| `/voice-claim` | Takes over a channel whose owner left. |
+| `/voice-owner` | Shows who owns it. Anyone can run this one. |
+
+Everything except `/voice-claim` and `/voice-owner` is for the owner only. You
+can own one channel at a time: join the lobby again and you're moved back to
+the one you have.
+
 ## If something's wrong
 
 <AccordionGroup>
