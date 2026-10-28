@@ -14,7 +14,7 @@ A ticket has:
 
 - A number, like #0042
 - A category (Bug, Feature request, Billing, ...) and optionally a product (Cloud OBS, Overlays, ...)
-- A subject and the answers to the category's form
+- A subject and the answers to the category's form, plus any files the form asked for (they are posted in the ticket's first message; a file the bot couldn't re-upload is named in a note just below it)
 - A status: open or closed
 - Optionally a priority (low, medium, high), a claimer, added members, a pending close request, and a rating from the member once it is closed
 
