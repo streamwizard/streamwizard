@@ -26,7 +26,7 @@ export function CustomWidgetContainer({ scene, item }: OverlayWidgetProps) {
     let cancelled = false;
     const fieldValues = JSON.parse(fieldValuesKey) as Record<string, unknown> | null;
 
-    loadCustomWidgetData(cfg.widget_id, scene.user_id, cfg.instance_id || undefined, fieldValues ?? undefined).then(
+    loadCustomWidgetData(scene.subscriber_token, item.id, fieldValues ?? undefined).then(
       ({ data, error }) => {
         if (cancelled) return;
         if (!data) {
@@ -39,7 +39,7 @@ export function CustomWidgetContainer({ scene, item }: OverlayWidgetProps) {
     );
 
     return () => { cancelled = true; };
-  }, [cfg.widget_id, cfg.instance_id, fieldValuesKey, scene.user_id]);
+  }, [cfg.widget_id, cfg.instance_id, fieldValuesKey, scene.subscriber_token, item.id]);
 
   if (!srcdoc) return null;
 
