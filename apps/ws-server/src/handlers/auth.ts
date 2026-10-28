@@ -20,15 +20,18 @@ let nextConnId = 1;
  * publisher and subscriber paths: a Supabase JWT (a signed-in dashboard user)
  * or an overlay scene's subscriber token (a browser source or the GPS overlay
  * page, which have no session).
+ *
+ * The kind and token are kept on the socket so revoke.ts can re-check them
+ * after a key reset, a scene delete or an account deletion.
  */
-async function resolveUserIdFromToken(token: string): Promise<string | null> {
+async function resolveToken(token: string): Promise<{ userId: string; credential: NonNullable<ConnectionData["credential"]> } | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser(token);
-  if (user) return user.id;
+  if (user) return { userId: user.id, credential: { kind: "session", token } };
 
   const { data: scene } = await getOverlaySceneBySubscriberToken(supabase, token);
-  return scene?.user_id ?? null;
+  return scene ? { userId: scene.user_id, credential: { kind: "scene", token } } : null;
 }
 
 /**
@@ -145,11 +148,12 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       return new Response("Unauthorized: missing token", { status: 401 });
     }
 
-    const resolvedUserId = await resolveUserIdFromToken(token);
-    if (!resolvedUserId) {
+    const resolved = await resolveToken(token);
+    if (!resolved) {
       trackWsAuthFailure("publisher", "invalid_token");
       return new Response("Unauthorized: invalid token", { status: 401 });
     }
+    const resolvedUserId = resolved.userId;
 
     const session_id = crypto.randomUUID();
     const stream_id = await findCurrentStreamId(resolvedUserId);
@@ -159,6 +163,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       userId: resolvedUserId,
       session_id,
       channels: new Set<OverlayEventType>(),
+      credential: resolved.credential,
     });
     if (failed) return failed;
 
@@ -188,15 +193,16 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     return new Response("Unauthorized: missing token", { status: 401 });
   }
 
-  const subscriberUserId = await resolveUserIdFromToken(subscriberToken);
-  if (!subscriberUserId) {
+  const subscriber = await resolveToken(subscriberToken);
+  if (!subscriber) {
     trackWsAuthFailure("subscriber", "invalid_token");
     return new Response("Unauthorized: invalid token", { status: 401 });
   }
 
   return upgradeOrFail(server, req, "subscriber", {
     role: "subscriber",
-    userId: subscriberUserId,
+    userId: subscriber.userId,
     channels: parseCsvSet<OverlayEventType>(url, "channels"),
+    credential: subscriber.credential,
   });
 }

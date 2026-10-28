@@ -6,6 +6,7 @@ import { trackWsConnection, trackWsMessage, trackWsMessageDrop, trackWsRoomEvent
 import { rooms, broadcastToRoom } from "../rooms";
 import { monitors, broadcastToMonitors, broadcastNodeBandwidth, broadcastSnapshot, addBotSocket, removeBotSocket } from "../monitor";
 import { addConsumer, removeConsumer } from "../consumers";
+import { trackCredentialSocket, untrackCredentialSocket } from "../revoke";
 import { routeBotBroadcast } from "../bot-router";
 import { updateNodeBandwidth } from "../ingest-nodes";
 import type { ConnectionData, ServerWebSocket } from "../types";
@@ -22,6 +23,7 @@ export const websocketHandlers = {
     }
 
     trackWsConnection(role, "open", undefined, ws.data.source);
+    trackCredentialSocket(ws);
 
     if (role === "publisher") {
       const room = rooms.get(userId);
@@ -241,6 +243,7 @@ export const websocketHandlers = {
     }
 
     trackWsConnection(role, "close", durationMs, ws.data.source);
+    untrackCredentialSocket(ws);
 
     if (role === "bot") {
       removeBotSocket(ws);

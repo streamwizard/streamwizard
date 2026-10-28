@@ -1,5 +1,5 @@
 import { reportError } from "@repo/sentry";
-import { broadcastToUser, postInternal, type BroadcastConfig, type BroadcastResult } from "@repo/ws-client";
+import { broadcastToUser, postInternal, revokeUserSockets, type BroadcastConfig, type BroadcastResult } from "@repo/ws-client";
 import { env } from "./env";
 
 const wsConfig: BroadcastConfig = {
@@ -49,4 +49,9 @@ export async function postInternalBroadcast(userId: string, type: string, payloa
 export async function notifyStreamStatus(broadcasterId: string, streamId: string | null): Promise<void> {
   const result = await postInternal("/internal/stream-status", { broadcasterId, streamId }, wsConfig);
   logFailure("stream-status", `broadcaster=${broadcasterId}`, result);
+}
+
+/** Ends every live ws-server socket of a deleted user. Best-effort, like the pushes above. */
+export async function revokeAllUserSockets(userId: string): Promise<void> {
+  logFailure("revoke", "scope=all", await revokeUserSockets(userId, "all", wsConfig));
 }
