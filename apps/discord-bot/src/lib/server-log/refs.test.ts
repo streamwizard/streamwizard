@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { PermissionFlagsBits } from "discord.js";
 import { matchAuditEntry } from "./audit";
-import { diffFields, diffPermissions, diffRoleIds, hexColor, isIgnoredChannel, messageText } from "./refs";
+import { channelScope, diffFields, diffPermissions, diffRoleIds, hexColor, isIgnoredChannel, messageText } from "./refs";
 
 describe("server log diff helpers", () => {
   test("diffRoleIds ignores @everyone", () => {
@@ -18,6 +18,28 @@ describe("server log diff helpers", () => {
     expect(diffFields({ name: "a", nsfw: false, topic: null }, { name: "b", nsfw: false, topic: null })).toEqual({
       name: { from: "a", to: "b" },
     });
+  });
+
+  test("isIgnoredChannel also matches a thread's category", () => {
+    expect(isIgnoredChannel(["cat"], "thread", "chan", "cat")).toBe(true);
+    expect(isIgnoredChannel(["other"], "thread", "chan", "cat")).toBe(false);
+  });
+
+  test("channelScope resolves a thread to its channel and that channel's category", () => {
+    const categories: Record<string, string> = { chan: "cat" };
+    const lookup = (id: string) => categories[id];
+    expect(channelScope({ parentId: "chan", isThread: () => true }, "thread", lookup)).toEqual({
+      channelId: "thread",
+      parentId: "chan",
+      categoryId: "cat",
+    });
+    // A plain channel's parent already is its category.
+    expect(channelScope({ parentId: "cat", isThread: () => false }, "chan", lookup)).toEqual({
+      channelId: "chan",
+      parentId: "cat",
+      categoryId: null,
+    });
+    expect(channelScope(null, "chan", lookup)).toEqual({ channelId: "chan", parentId: null, categoryId: null });
   });
 
   test("isIgnoredChannel matches the channel or its category", () => {
