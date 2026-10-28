@@ -21,7 +21,7 @@ async function resolveInstance(token: string, itemId: string) {
   if (!(await overlayItemBelongsToScene(supabaseAdmin, itemId, scene.id))) return null;
 
   // Step 3: fetch the widget instance row
-  const { data: instance } = await selectWidgetInstanceStateByItem(supabaseAdmin, itemId);
+  const { data: instance } = await selectWidgetInstanceStateByItem(supabaseAdmin, itemId, scene.user_id);
   return instance ?? null;
 }
 

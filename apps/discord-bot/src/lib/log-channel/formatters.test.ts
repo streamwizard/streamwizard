@@ -183,6 +183,16 @@ describe("log channel formatters", () => {
     expect(JSON.stringify(embed)).not.toContain("x@example.com");
   });
 
+  test("twitch conflict: red, names the signup and the account holding the Twitch id", () => {
+    const embed = formatPlatformEvent(
+      event("user.twitch_conflict", { ...identity, existing_user_id: "00000000-0000-0000-0000-000000000001" }),
+    ).toJSON();
+    expect(embed.color).toBe(DANGER_RED);
+    expect(embed.description).toContain("**logtester** signed up, but another account already holds this Twitch ID.");
+    expect(fieldValue(embed, "Twitch ID")).toBe("`999000111`");
+    expect(fieldValue(embed, "Account holding it")).toBe("`00000000-0000-0000-0000-000000000001`");
+  });
+
   test("non-https avatars are ignored", () => {
     const embed = formatPlatformEvent(
       event("user.created", { ...identity, avatar_url: "http://evil.example/a.png" }),
