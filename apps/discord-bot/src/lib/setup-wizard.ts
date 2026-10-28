@@ -6,6 +6,7 @@ import {
   ChannelType,
   EmbedBuilder,
   MessageFlags,
+  PermissionFlagsBits,
   RoleSelectMenuBuilder,
 } from "discord.js";
 import type { AnySelectMenuInteraction, ButtonInteraction, ChatInputCommandInteraction, Guild } from "discord.js";
@@ -29,6 +30,7 @@ import { cleanUpOldWelcomeChannel } from "./welcome";
 import { closeGuildSessions, invalidateSettingsCache } from "./activity-tracker";
 import { reportError } from "@repo/sentry";
 import { TWITCH_PURPLE } from "./branding";
+import { whyCannotHandOut } from "./role-grant-check";
 
 // customId namespace for the /setup wizard's components. interactionCreate
 // routes anything starting with "setup:" here. Each step writes straight to
@@ -328,6 +330,12 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
     await interaction.update({ content: "This can only be used in a server.", embeds: [], components: [] });
     return;
   }
+  // /setup checked this when the wizard opened; the permission can be taken
+  // away while the (ephemeral) wizard is still on screen.
+  if (!interaction.memberPermissions.has(PermissionFlagsBits.ManageGuild)) {
+    await interaction.update({ content: "You need Manage Server to run setup.", embeds: [], components: [] });
+    return;
+  }
 
   const guildId = interaction.guildId;
 
@@ -361,11 +369,26 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
     case SETUP_IDS.verifiedRole: {
       const roleId = interaction.isRoleSelectMenu() ? interaction.values[0] : undefined;
       if (roleId) {
+        const role = interaction.guild.roles.cache.get(roleId);
+        const refusal = whyCannotHandOut({
+          role: role ? { id: role.id, position: role.position, managed: role.managed } : null,
+          guildId,
+          botHighestPosition: interaction.guild.members.me?.roles.highest.position ?? null,
+          isOwner: interaction.user.id === interaction.guild.ownerId,
+          hasManageRoles: interaction.memberPermissions.has(PermissionFlagsBits.ManageRoles),
+          actorHighestPosition: interaction.member.roles.highest.position,
+        });
+        if (refusal) {
+          await interaction.update({ ...stepVerifiedRole(), content: refusal });
+          return;
+        }
+
         const previousSettings = await getGuildSettings(supabase, guildId);
         const oldRoleId = previousSettings?.verified_role_id;
 
         await setVerifiedRoleId(supabase, guildId, roleId);
-        await interaction.update(stepActivityPrompt());
+        // Clears a refusal message left by an earlier pick.
+        await interaction.update({ ...stepActivityPrompt(), content: "" });
 
         // Runs after the reply: fetching every member and swapping roles one by
         // one can outlast Discord's 3-second interaction window on big servers.
@@ -375,11 +398,11 @@ export async function handleSetupInteraction(interaction: ButtonInteraction | An
         }
         return;
       }
-      await interaction.update(stepActivityPrompt());
+      await interaction.update({ ...stepActivityPrompt(), content: "" });
       return;
     }
     case SETUP_IDS.verifiedRoleSkip: {
-      await interaction.update(stepActivityPrompt());
+      await interaction.update({ ...stepActivityPrompt(), content: "" });
       return;
     }
     case SETUP_IDS.activityEnable: {
