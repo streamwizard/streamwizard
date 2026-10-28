@@ -186,6 +186,11 @@ export async function getOverlaySceneBySubscriberToken(client: DBClient, token: 
     .maybeSingle();
 }
 
+/** ws-server re-check: which of these subscriber tokens still exist, and whose they are. */
+export async function selectSceneOwnersByTokens(client: DBClient, tokens: string[]) {
+  return client.from("overlay_scenes").select("subscriber_token, user_id").in("subscriber_token", tokens);
+}
+
 export async function getLatestSubscriberToken(client: DBClient, userId: string) {
   return client
     .from("overlay_scenes")

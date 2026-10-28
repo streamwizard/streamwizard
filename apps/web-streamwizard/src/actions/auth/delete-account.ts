@@ -13,6 +13,7 @@ import { redirect } from "next/navigation";
 import { removeRole } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 import { track } from "@/lib/track";
+import { revokeWsSockets } from "@/lib/ws-revoke";
 
 export async function deleteAccount() {
   const ctx = await tryAuthContext();
@@ -100,6 +101,8 @@ export async function deleteAccount() {
     reportError(authError, "actions/delete-account");
     return { success: false, error: authError.message };
   }
+
+  await revokeWsSockets(user.id, "all");
 
   // PostHog's existing data is left alone on purpose: the policy allows
   // analytics linked to the account for 12 months after last activity, and

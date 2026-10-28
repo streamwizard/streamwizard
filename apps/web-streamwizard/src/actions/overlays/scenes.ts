@@ -23,6 +23,7 @@ import { createSceneSchema, updateSceneSchema } from "@/schemas/overlay";
 import type { ClipDisplayFieldItemConfig } from "@/types/overlays";
 import { overlayItemFromDbRow } from "@/types/overlays";
 import { tryAuthContext } from "@/lib/auth";
+import { revokeWsSockets } from "@/lib/ws-revoke";
 import { sanitizeGroups } from "@/components/overlays/editor/item-groups";
 import { OVERLAYS_ERROR_SCOPE, generateSlug } from "./shared";
 
@@ -144,6 +145,8 @@ export async function deleteOverlayScene(id: string) {
     return { success: false, error: error.message };
   }
 
+  // Overlays still open with this scene's key lose their socket now.
+  await revokeWsSockets(ctx.user.id, "scene");
   await track("overlay_deleted", { overlay_id: id }, ctx.user);
 
   revalidatePath("/dashboard/overlays");
@@ -272,6 +275,10 @@ export async function resetSceneSubscriberToken(sceneId: string): Promise<{ erro
 
   revalidatePath("/dashboard/overlays");
   if (error) reportError(error, OVERLAYS_ERROR_SCOPE);
-  else await track("overlay_key_reset", { overlay_id: sceneId }, ctx.user);
+  else {
+    // The old key stops working for sockets that are already open, too.
+    await revokeWsSockets(ctx.user.id, "scene");
+    await track("overlay_key_reset", { overlay_id: sceneId }, ctx.user);
+  }
   return { error: error?.message ?? null };
 }

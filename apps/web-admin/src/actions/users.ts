@@ -17,6 +17,7 @@ import { actorIdentity, eventIdentity } from "@/lib/platform-events";
 import { PERMANENT_BAN, type BanNote } from "@/lib/user-auth";
 import { helixConfigured, loadUserEventSub } from "@/lib/user-eventsub-server";
 import { userDisplayName } from "@/lib/users";
+import { revokeWsSockets } from "@/lib/ws-revoke";
 
 // Admin actions on one user (/users/[id]). Plan grants live in
 // actions/subscriptions.ts. Role and Discord changes are logged to
@@ -247,6 +248,8 @@ export async function banUserAction(
   }
 
   const warnings: string[] = [];
+  // Dashboard sockets ride the session; end them with it.
+  await revokeWsSockets(userId, "session");
   try {
     await revokeUserSessions(supabaseAdmin, userId);
   } catch (e) {
@@ -431,6 +434,7 @@ export async function deleteUserAction(
     reportError(error, "actions/users:delete-auth");
     return { error: error.message, warnings };
   }
+  await revokeWsSockets(userId, "all");
 
   revalidatePath("/users");
   return { error: null, warnings };
