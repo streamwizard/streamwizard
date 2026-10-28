@@ -310,6 +310,15 @@
   background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
 }
 
+/* Long marketing pages: the browser skips layout and paint for a section until
+   it nears the viewport. `auto` remembers the real height once it has been
+   rendered, so the scrollbar settles after the first pass. Paint containment
+   clips anything drawn outside the box, so keep glows inside the section. */
+@utility below-fold {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+
 @utility hero-logo-cloud {
   & p {
     font-size: 0.75rem;

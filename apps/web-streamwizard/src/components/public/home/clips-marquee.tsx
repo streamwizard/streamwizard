@@ -225,7 +225,10 @@ const DRAG_THRESHOLD_PX = 6;
 function DraggableMarquee({ renderSet }: { renderSet: (clone: boolean) => React.ReactNode }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const setRef = useRef<HTMLDivElement>(null);
-  const [copies, setCopies] = useState(2);
+  // One set in the server HTML: 12 cards is ~3,000 px, wider than nearly any
+  // screen, and the strip doesn't move before hydration. The clones (dozens of
+  // cards and icons in the DOM) appear once the measure effect below runs.
+  const [copies, setCopies] = useState(1);
 
   // Width of one content set (incl. trailing gap) — read inside the transform
   // every frame, so a ref rather than state.
