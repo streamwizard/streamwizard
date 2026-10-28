@@ -9,6 +9,7 @@ import { validateTwitchToken } from "@repo/twitch-api";
 import { track } from "@/lib/track";
 import { reportError } from "@repo/sentry";
 import { safeNextPath } from "@/lib/safe-next-path";
+import { resolveBroadcasterId } from "@/lib/auth";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -103,7 +104,8 @@ export async function GET(request: Request) {
       reportError(scopeErr, "auth/callback/twitch: scope sync failed");
     }
 
-    await checkEventSubscriptions(data.session.user.user_metadata.sub, grantedScopes);
+    const broadcasterId = await resolveBroadcasterId(supabase, data.session.user);
+    if (broadcasterId) await checkEventSubscriptions(broadcasterId, grantedScopes);
     if (!error) {
       // The other side of `login_clicked`: without this the OAuth funnel has a
       // click and then silence, and drop-off at Twitch is invisible.

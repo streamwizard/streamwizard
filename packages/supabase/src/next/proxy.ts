@@ -1,9 +1,15 @@
 import { createServerClient } from "@supabase/ssr";
+import type { JwtPayload } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/settings", "/account", "/deck"];
 
-export async function updateSession(request: NextRequest) {
+/**
+ * Refresh the Supabase session cookies for this request and return the
+ * verified JWT claims (null when signed out). updateSession is built on this;
+ * apps with their own gate (web-admin) call it directly.
+ */
+export async function refreshSession(request: NextRequest): Promise<{ response: NextResponse; claims: JwtPayload | null }> {
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -32,7 +38,11 @@ export async function updateSession(request: NextRequest) {
   });
 
   const { data } = await supabase.auth.getClaims();
-  const user = data?.claims;
+  return { response: supabaseResponse, claims: data?.claims ?? null };
+}
+
+export async function updateSession(request: NextRequest) {
+  const { response: supabaseResponse, claims: user } = await refreshSession(request);
 
   const isProtected = PROTECTED_PREFIXES.some((prefix) => request.nextUrl.pathname.startsWith(prefix));
 
