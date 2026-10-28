@@ -12,7 +12,7 @@ mock.module("@repo/sentry", () => ({
 // Keeps the env schema (and R2 credentials) out of the test.
 mock.module("../lib/r2", () => ({ r2: null }));
 
-const { createAssetReconciler, ORPHAN_GRACE_MS } = await import("./asset-reconciler");
+const { createAssetReconciler, MAX_ORPHANS_PER_SWEEP, ORPHAN_GRACE_MS } = await import("./asset-reconciler");
 
 const NOW = new Date("2026-10-03T12:00:00Z").getTime();
 const ago = (ms: number) => new Date(NOW - ms);
@@ -30,6 +30,7 @@ describe("asset reconciler", () => {
   const make = (opts: {
     stale?: { id: string; user_id: string; key: string }[];
     keys?: string[];
+    liveKeys?: string[];
     objects?: R2ObjectInfo[];
     deleteObject?: (key: string) => Promise<void>;
   }) =>
@@ -39,6 +40,7 @@ describe("asset reconciler", () => {
         deletedRows.push([id, userId]);
       },
       selectAllKeys: async () => opts.keys ?? [],
+      keyExists: async (key) => (opts.liveKeys ?? []).includes(key),
       listObjects: async () => opts.objects ?? [],
       deleteObject:
         opts.deleteObject ??
@@ -87,6 +89,31 @@ describe("asset reconciler", () => {
     }).sweep();
     expect(result.removedOrphans).toBe(0);
     expect(deletedObjects).toEqual([]);
+  });
+
+  it("re-checks the live table: a key the snapshot missed is not deleted", async () => {
+    const result = await make({
+      keys: [],
+      liveKeys: ["assets/u2/b1/still-there.png"],
+      objects: [
+        { key: "assets/u2/b1/still-there.png", size: 1, lastModified: ago(ORPHAN_GRACE_MS + 1) },
+        { key: "assets/u1/a1/orphan.png", size: 1, lastModified: ago(ORPHAN_GRACE_MS + 1) },
+      ],
+    }).sweep();
+    expect(result.removedOrphans).toBe(1);
+    expect(deletedObjects).toEqual(["assets/u1/a1/orphan.png"]);
+  });
+
+  it("stops at the per-sweep orphan cap and reports it", async () => {
+    const objects = Array.from({ length: MAX_ORPHANS_PER_SWEEP + 5 }, (_, i) => ({
+      key: `assets/u1/a${i}/x.png`,
+      size: 1,
+      lastModified: ago(ORPHAN_GRACE_MS + 1),
+    }));
+    const result = await make({ objects }).sweep();
+    expect(result.removedOrphans).toBe(MAX_ORPHANS_PER_SWEEP);
+    expect(deletedObjects).toHaveLength(MAX_ORPHANS_PER_SWEEP);
+    expect(reported).toEqual(["asset-reconciler: orphan cap"]);
   });
 
   it("shares one in-flight sweep", async () => {
