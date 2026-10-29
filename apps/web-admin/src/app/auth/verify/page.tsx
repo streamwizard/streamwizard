@@ -12,21 +12,16 @@ export default async function VerifyPage() {
   if (!session) redirect(to);
   if (session.strong) redirect("/overview");
 
-  const totpFactorId = session.totpFactors[0]?.id ?? null;
-  const hasPasskey = session.passkeys.length > 0;
-  if (!totpFactorId && !hasPasskey) redirect("/auth/setup");
+  const totpFactorId = session.totpFactors[0]?.id;
+  if (!totpFactorId) redirect("/auth/setup");
 
   return (
     <AuthShell
       title="One more step"
-      description={
-        totpFactorId
-          ? "Confirm it's you with your authenticator app."
-          : "This account signs in with a passkey. Use it to continue."
-      }
+      description="Confirm it's you with your authenticator app."
       email={session.email}
     >
-      <VerifyPanel totpFactorId={totpFactorId} hasPasskey={hasPasskey} />
+      <VerifyPanel totpFactorId={totpFactorId} />
     </AuthShell>
   );
 }

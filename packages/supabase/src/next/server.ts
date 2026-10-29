@@ -1,5 +1,4 @@
 import type { Database } from "../types/supabase";
-import { PASSKEY_AUTH_OPTIONS } from "../auth/passkey-options";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { NextRequest, NextResponse } from "next/server";
@@ -22,7 +21,6 @@ export async function createClient() {
   const { url, key } = resolveSupabaseEnv();
 
   return createServerClient<Database>(url, key, {
-    auth: PASSKEY_AUTH_OPTIONS,
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -48,7 +46,6 @@ export function createRouteHandlerClient(request: NextRequest, response: NextRes
   const { url, key } = resolveSupabaseEnv();
 
   return createServerClient<Database>(url, key, {
-    auth: PASSKEY_AUTH_OPTIONS,
     cookies: {
       getAll() {
         return request.cookies.getAll();

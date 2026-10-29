@@ -83,7 +83,7 @@ export function AdminRoleDialog({ userId, name, isAdmin, open, onOpenChange }: C
       description={
         isAdmin
           ? "They lose access to this dashboard on their next page load."
-          : "They get full access to this dashboard, including every user, plan and the Discord server settings. They still need a passkey or authenticator app to get in."
+          : "They get full access to this dashboard, including every user, plan and the Discord server settings. They still need an authenticator app to get in."
       }
       confirm={isAdmin ? "Remove admin" : "Make admin"}
       destructive={isAdmin}

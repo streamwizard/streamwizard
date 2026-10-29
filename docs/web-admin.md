@@ -4,39 +4,31 @@
 
 ## Access model
 
-- Sign-in: Twitch OAuth via Supabase (own cookie/domain — separate session from the main app), **or** a passkey (no Twitch redirect).
+- Sign-in: Twitch OAuth via Supabase (own cookie/domain — separate session from the main app), then an authenticator-app code.
 - Gate: `src/lib/admin-session.ts` (`getAdminSession()` / `requireAdminSession()`) is the single decision point. It requires a `user_roles` row with `role = 'admin'` (service-role lookup) **and** a strong session (see "Second factor" below). Non-admins land on `/no-access`; admins with a weak session land on `/auth/verify` or `/auth/setup`.
-- `src/app/(monitor)/layout.tsx` and `src/app/vnc/layout.tsx` (bare full-screen popup outside the group) both call `requireAdminSession()`.
+- `src/proxy.ts` applies the same rule before any page renders, and `src/app/(monitor)/layout.tsx` and `src/app/vnc/layout.tsx` (bare full-screen popup outside the group) both call `requireAdminSession()`.
 - Every server action re-checks via `src/lib/assert-admin.ts` (`assertAdmin()`, returns the acting admin's user id) — actions are their own POST endpoints, the layout guard doesn't cover them. It applies the same rule and throws `Not signed in` / `Not authorized` / `Verification required`.
 - Calls to obs-instance-manager's `/admin/instances/*` go through server actions in `src/actions/nodes.ts` for the same reason: that service checks the JWT and the role, not the second factor.
+- In the database, admin RLS policies use `public.is_strong_admin()`: the admin role **and** `aal2`.
 - The old `app_metadata.is_admin` JWT claim is no longer read anywhere; `user_roles` is the single source of admin truth.
 
 ## Second factor
 
-Twitch alone is one factor. A session is **strong** when either:
+Twitch alone is one factor. A session is **strong** when `aal === 'aal2'`: the admin entered an authenticator-app (TOTP) code after the Twitch redirect. Helpers live in `packages/supabase/src/auth/session-strength.ts`.
 
-- `aal === 'aal2'`: the admin entered an authenticator-app (TOTP) code after the Twitch redirect, or
-- `amr` contains `passkey`: the session was created by `signInWithPasskey()` (GoTrue leaves `aal` at `aal1` for these).
-
-Helpers live in `packages/supabase/src/auth/session-strength.ts`. Every Supabase client factory in `packages/supabase/src/next/*` opts into the passkeys beta (`auth.experimental.passkey`), which is inert for the main app.
+Passkeys were removed in SW-483. They are a Supabase beta, and GoTrue lets any signed-in session register one, so a stolen Twitch session could add its own passkey and sign in with it. TOTP is a real MFA factor: once an admin has a verified one, GoTrue refuses to enrol another factor unless the session is already `aal2`.
 
 | State after sign-in | Where the admin lands |
 |---|---|
 | Strong session | dashboard |
-| Weak, has a TOTP factor and/or a passkey | `/auth/verify` — enter the code, or sign in with the passkey instead |
-| Weak, has neither | `/auth/setup` — forced enrolment (at least one; both recommended) |
+| Weak, has a TOTP factor | `/auth/verify` — enter the code |
+| Weak, no TOTP factor | `/auth/setup` — forced enrolment |
 
-`/security` (in the user menu at the bottom of the sidebar) manages both methods: add/remove the authenticator, add/rename/remove passkeys. Removing the last remaining method is refused server-side (`src/actions/security.ts`). Supabase allows one verified TOTP factor per user; passkeys are one per device.
+`/security` (in the user menu at the bottom of the sidebar) shows the connected authenticator. It can't be removed there: it is the only second factor.
 
-Passkeys are registered against a Relying Party ID that is baked into each credential, so it is scoped to the admin host and must never change afterwards:
+TOTP enroll + verify must be on in every environment (local `supabase/config.toml`, staging and prod in the dashboard under Authentication → Multi-Factor). Passkeys must be off (Authentication → Passkeys).
 
-| Env | `rp_id` | `rp_origins` | TOTP |
-|---|---|---|---|
-| local (`supabase/config.toml`) | `localhost` | `http://localhost:3003` | enroll + verify on |
-| staging (dashboard → Authentication → Passkeys / Multi-Factor) | `admin-staging.streamwizard.org` | `https://admin-staging.streamwizard.org` | enroll + verify on |
-| prod (same) | `admin.streamwizard.org` | `https://admin.streamwizard.org` | enroll + verify on |
-
-**Locked out** (lost phone and passkey): in the Supabase dashboard, Authentication → Users → the admin → delete their TOTP factor and/or passkeys. Their next Twitch sign-in lands on `/auth/setup`. There is deliberately no in-app reset.
+**Lost phone**: another admin removes the authenticator on the user's page (`/users/<id>`, Authentication card), or in the Supabase dashboard, Authentication → Users → the admin → delete their TOTP factor. Their next Twitch sign-in lands on `/auth/setup`.
 
 ## Navigation
 

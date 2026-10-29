@@ -45,8 +45,12 @@ describe("web-admin proxy gate", () => {
     claims = { sub: "u1", aal: "aal2" };
     admin = true;
     expect(await hit("/overview")).toBeNull();
+  });
+
+  test("passkey sign-in no longer counts as a second factor (SW-483)", async () => {
     claims = { sub: "u1", aal: "aal1", amr: [{ method: "passkey" }] };
-    expect(await hit("/users")).toBeNull();
+    admin = true;
+    expect(await hit("/users")).toBe("/auth/verify");
   });
 
   test("auth, login and api paths stay reachable", async () => {

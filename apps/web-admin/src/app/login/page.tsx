@@ -1,6 +1,5 @@
 import { signInWithTwitch } from "@/actions/auth";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { PasskeySignInButton } from "@/components/auth/passkey-sign-in-button";
 
 interface LoginPageProps {
   searchParams: Promise<{ error?: string }>;
@@ -40,10 +39,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Login with Twitch
         </button>
       </form>
-
-      {/* Passkey path: admins who registered one skip Twitch and the
-            authenticator step entirely. Renders nothing without WebAuthn. */}
-      <PasskeySignInButton />
 
       <p className="text-center text-xs text-muted-foreground">Twitch sign-in asks for your authenticator code next.</p>
     </AuthShell>

@@ -12,15 +12,9 @@ export default async function SecurityPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Security" description="Second factors for your admin account. Keep both so one lost device can't lock you out." />
+      <PageHeader title="Security" description="The second factor for your admin account." />
       <SecuritySettings
         totp={totp ? { id: totp.id, friendlyName: totp.friendly_name || "Authenticator app", createdAt: totp.created_at } : null}
-        passkeys={session.passkeys.map((p) => ({
-          id: p.id,
-          friendlyName: p.friendly_name || "Passkey",
-          createdAt: p.created_at,
-          lastUsedAt: p.last_used_at ?? null,
-        }))}
       />
     </div>
   );

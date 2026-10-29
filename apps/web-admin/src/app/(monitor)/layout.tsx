@@ -14,7 +14,7 @@ import { homeEnv } from "@/lib/home-env";
 import { getDiscordSetupGaps } from "@/lib/discord/setup-status";
 
 export default async function MonitorLayout({ children }: { children: React.ReactNode }) {
-  // Admin role + strong session (TOTP verified or passkey sign-in). Weak
+  // Admin role + strong session (TOTP verified this session). Weak
   // sessions are bounced to /auth/verify or /auth/setup by the helper.
   const session = await requireAdminSession();
 
