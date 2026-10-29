@@ -38,6 +38,7 @@ describe("findNavLocation", () => {
     expect(at("/discord")).toEqual({ item: "Server settings", tab: "Overview" });
     expect(at("/discord/welcome")).toEqual({ item: "Server settings", tab: "Welcome" });
     expect(at("/discord/live")).toEqual({ item: "Server settings", tab: "Go-live" });
+    expect(at("/discord/voice")).toEqual({ item: "Server settings", tab: "Voice channels" });
     expect(at("/discord/tickets")).toEqual({ item: "Tickets", tab: "Queue" });
     expect(at("/discord/tickets/settings/categories/abc")).toEqual({ item: "Tickets", tab: "Settings" });
     expect(at("/discord/logs/settings")).toEqual({ item: "Event log", tab: "Routing" });

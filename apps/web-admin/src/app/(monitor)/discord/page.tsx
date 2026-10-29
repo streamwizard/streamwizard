@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   Activity,
+  AudioLines,
   ChevronRight,
   DoorOpen,
   RadioTower,
@@ -14,6 +15,7 @@ import { getGuildCommandPermissions, getGuildSettings } from "@repo/supabase/que
 import { getActivitySettings, getIgnoredChannelIds } from "@repo/supabase/queries/discord-activity";
 import { listDiscordSettingsAudit } from "@repo/supabase/queries/discord-audit";
 import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord-live";
+import { listVoiceChannels, listVoiceHubs } from "@repo/supabase/queries/discord-voice";
 import { getLogRouting, resolveLogRoute } from "@repo/supabase/queries/platform-events";
 import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets";
 import { PLATFORM_EVENT_TYPES } from "@repo/types";
@@ -80,6 +82,8 @@ export default async function DiscordOverviewPage() {
     audit,
     logRouting,
     liveOptIns,
+    voiceHubs,
+    voiceChannels,
   ] = await Promise.all([
     getGuild(),
     getGuildChannels(),
@@ -93,6 +97,8 @@ export default async function DiscordOverviewPage() {
     listDiscordSettingsAudit(supabaseAdmin, guildId, 10),
     getLogRouting(supabaseAdmin, guildId),
     listDiscordLiveOptIns(supabaseAdmin),
+    listVoiceHubs(supabaseAdmin, guildId),
+    listVoiceChannels(supabaseAdmin, guildId),
   ]);
   const postedEventTypes = PLATFORM_EVENT_TYPES.filter((type) => resolveLogRoute(logRouting, type).enabled).length;
 
@@ -176,6 +182,18 @@ export default async function DiscordOverviewPage() {
               `Posts: ${welcome?.live_enabled ? label(welcome.live_channel_id, "no channel") : "off"}`,
               `Live role: ${label(welcome?.live_role_id, "off")}`,
               `${liveOptIns.length} streamer${liveOptIns.length === 1 ? "" : "s"} linked`,
+            ]}
+          />
+          <FeatureRow
+            href="/discord/voice"
+            title="Voice channels"
+            icon={AudioLines}
+            enabled={voiceHubs.length > 0}
+            lines={[
+              voiceHubs.length
+                ? `${voiceHubs.length} ${voiceHubs.length === 1 ? "lobby" : "lobbies"}`
+                : "No lobbies",
+              `${voiceChannels.length} open now`,
             ]}
           />
           <FeatureRow
