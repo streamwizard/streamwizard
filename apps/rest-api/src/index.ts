@@ -18,6 +18,7 @@ import { twitchTokenValidator } from "./services/twitch-token-validator";
 import { liveRoleSweeper } from "./services/discord-live-role-sweeper";
 import { backupPoller } from "./services/backup-poller";
 import { assetReconciler } from "./services/asset-reconciler";
+import { cmsScheduler } from "./services/cms-scheduler";
 import { internalBackups, proxmoxWebhook } from "./routes/backups";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
 import nodes from "./routes/nodes";
@@ -172,6 +173,9 @@ if (backupPoller) {
   backupPoller.start();
   console.log("[backup-poller] active");
 }
+// Blog and guides: scheduled posts go live, failed cache refreshes retry.
+// Always on; the cache refresh is skipped without CMS_SITE_URL + secret.
+cmsScheduler.start();
 // Media library hygiene: abandoned uploads and R2 objects with no row. Null
 // (off) unless the R2 env vars are set.
 if (assetReconciler) {

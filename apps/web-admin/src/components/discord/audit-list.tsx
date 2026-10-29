@@ -10,6 +10,8 @@ const SECTION_LABELS: Record<string, string> = {
   logs: "Log channel",
   messages: "Messages",
   announcements: "Announcements",
+  live: "Go-live",
+  voice: "Voice channels",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -25,6 +27,8 @@ const ACTION_LABELS: Record<string, string> = {
   "announcements:update": "Changed an announcement's schedule",
   "announcements:publish": "Posted an announcement",
   "announcements:delete": "Deleted an announcement",
+  "voice:create": "Added a voice lobby",
+  "voice:delete": "Removed a voice lobby",
 };
 
 function formatValue(value: Json | undefined, names: Map<string, string>): string {

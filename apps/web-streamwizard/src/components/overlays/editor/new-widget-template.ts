@@ -41,8 +41,9 @@ export const DEFAULT_WIDGET_JS = `/*
  *   gsap               — GSAP animation library
  *   TextPlugin         — GSAP text animation (gsap.registerPlugin(TextPlugin))
  *   fieldData          — values from your Fields tab
- *   StreamWizard.state — persist data between streams (get/set); only works
- *                        on a live overlay, not in the editor preview
+ *   StreamWizard.state — persist data between streams (get/set). In the
+ *                        editor it reads your real saved data, but what
+ *                        it saves stays in the editor (demo panel → Saved data)
  *
  * Events arrive as Twitch EventSub payloads. The listener name is the
  * EventSub type: 'channel.follow', 'channel.subscribe', 'channel.cheer',

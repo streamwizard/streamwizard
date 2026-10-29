@@ -22,6 +22,22 @@ interface Preferences {
   onboarding_completed?: boolean;
 }
 
+// Blog posts and guides. Same on every content event so any of them can be
+// broken down by post, type, category or author. Slugs, never user ids.
+export interface ContentProps {
+  content_type: "blog" | "guide";
+  content_id: string;
+  slug: string;
+  /** Primary category slug. */
+  category: string | null;
+  categories: string[];
+  tags: string[];
+  authors: string[];
+  reading_time_minutes: number;
+  word_count: number;
+  difficulty: "beginner" | "intermediate" | "advanced" | null;
+}
+
 export interface EventMap {
   // Anonymous and cookieless. `gpc`: the browser's Global Privacy Control
   // answered before the banner could ask.
@@ -161,6 +177,24 @@ export interface EventMap {
   // Demos add their own detail (which tab, which scene), hence the open tail.
   demo_interacted: { demo: string; action: string; first_touch: boolean; [detail: string]: unknown };
   faq_opened: { question: string };
+
+  // Blog posts and guides (the public detail pages).
+  content_viewed: ContentProps;
+  // The article body passing 25, 50, 75 and 100 percent, once each per view.
+  content_read_depth_reached: ContentProps & { depth: 25 | 50 | 75 | 100 };
+  // Seconds the tab was visible, sent when the reader leaves or hides it.
+  content_read_time: ContentProps & { active_seconds: number };
+  // A link inside the article. `target`: the path for our own pages, the host for others.
+  content_link_clicked: ContentProps & { link_type: "internal" | "external"; target: string };
+  // The /blog or /guides index after a search or filter change. Never the
+  // query itself, only its length; `filters` names the active controls.
+  content_searched: { content_type: "blog" | "guide"; query_length: number; result_count: number };
+  content_filtered: {
+    content_type: "blog" | "guide";
+    filters: ("category" | "tag" | "level")[];
+    tag_count: number;
+    result_count: number;
+  };
 }
 
 export type AppEvent = keyof EventMap;

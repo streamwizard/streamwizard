@@ -1,7 +1,5 @@
-import {
-  AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS,
-  type AutoSwitcherThresholds,
-} from "@repo/schemas";
+import { AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS } from "@repo/schemas/auto-switcher-constants";
+import type { AutoSwitcherThresholds } from "@repo/schemas";
 
 /*
  * The walk the cloud OBS page simulates, and the rules it is judged by. Pure

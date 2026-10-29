@@ -35,6 +35,8 @@ export const EDITOR_SHORTCUT_GROUPS: EditorShortcutGroup[] = [
       { action: "Redo", combos: [[MOD_KEY_TOKEN, "Shift", "Z"], [MOD_KEY_TOKEN, "Y"]] },
       { action: "Duplicate what's selected", combos: [[MOD_KEY_TOKEN, "D"]] },
       { action: "Delete what's selected", combos: [["Delete"], ["Backspace"]] },
+      { action: "Group what's selected", combos: [[MOD_KEY_TOKEN, "G"]] },
+      { action: "Ungroup", combos: [[MOD_KEY_TOKEN, "Shift", "G"]] },
     ],
   },
   {
@@ -45,6 +47,7 @@ export const EDITOR_SHORTCUT_GROUPS: EditorShortcutGroup[] = [
         action: "Add a widget to the selection, or drop it back out",
         combos: [["Shift", "Click"], [MOD_KEY_TOKEN, "Click"]],
       },
+      { action: "Select one item inside a group, a level at a time", combos: [["Double-click"]] },
       { action: "Deselect everything", combos: [["Esc"]] },
     ],
   },

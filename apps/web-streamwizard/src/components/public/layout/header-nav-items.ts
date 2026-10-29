@@ -1,8 +1,11 @@
 import {
   BarChart3,
+  BookOpen,
   Film,
+  GraduationCap,
   Layers,
   MessageCircle,
+  Newspaper,
   Radio,
   Scissors,
   Signpost,
@@ -10,7 +13,7 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { pricingLink, productLinks } from "@/lib/constant";
+import { contentLinks, docsLink, pricingLink, productLinks } from "@/lib/constant";
 
 export interface NavItem {
   name: string;
@@ -64,6 +67,36 @@ export const productNavItems: NavItem[] = [
     description: "Your last broadcast, minute by minute.",
   },
 ];
+
+/** Guides and the blog, in the Learn menu. */
+export const contentNavItems: NavItem[] = [
+  {
+    name: "Guides",
+    href: contentLinks.guides,
+    cta: "guides",
+    icon: GraduationCap,
+    description: "Step-by-step guides for overlays, alerts, clips and Cloud OBS.",
+  },
+  {
+    name: "Blog",
+    href: contentLinks.blog,
+    cta: "blog",
+    icon: Newspaper,
+    description: "What we shipped, why we built it that way, and what we learned.",
+  },
+];
+
+/**
+ * Docs, as the Learn menu's last entry. With a separate Docs link the bar
+ * doesn't fit at 1024px, and the docs belong with the guides anyway.
+ */
+export const docsNavItem: NavItem = {
+  name: "Docs",
+  href: docsLink,
+  cta: "docs",
+  icon: BookOpen,
+  description: "Every widget, setting and integration, explained.",
+};
 
 /**
  * Legal pages. The footer carries these too, but on mobile the footer is a long

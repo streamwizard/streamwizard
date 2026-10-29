@@ -13,6 +13,10 @@
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "bun x turbo run check-types",
+    "test:db": "supabase test db --local",
+    "cms:mock": "bun scripts/cms-mock/seed.ts seed",
+    "cms:mock:reset": "bun scripts/cms-mock/seed.ts reset",
+    "cms:mock:remove": "bun scripts/cms-mock/seed.ts remove",
     "gen-types": "supabase gen types typescript --project-id jgxdrljoqployiyjedst --schema public > packages/supabase/src/types/supabase.ts"
   },
   "devDependencies": {

@@ -41,6 +41,21 @@ export async function getUserAssetQuotaMb(
   return max;
 }
 
+/**
+ * Statuses that may start or change things: get_product_access's can_interact.
+ * past_due keeps read access (can_access) but is read-only.
+ */
+export const INTERACTIVE_SUBSCRIPTION_STATUSES = ["active", "trialing"] as const;
+
+/**
+ * PostgREST `.or()` filter for "the paid period hasn't ended", the other half
+ * of get_product_access. A grant with an expiry stays `active` in the table
+ * after it lapses, so status alone is not enough.
+ */
+export function periodNotOverFilter(now: Date = new Date()): string {
+  return `current_period_end.is.null,current_period_end.gt.${now.toISOString()}`;
+}
+
 export type ProductAccess = {
   canAccess: boolean;
   canInteract: boolean;
@@ -69,7 +84,8 @@ export async function getSubscriptionLimits(
     .from("user_subscriptions")
     .select("plans(limits)")
     .eq("id", subscriptionId)
-    .in("status", ["active", "trialing", "past_due"])
+    .in("status", INTERACTIVE_SUBSCRIPTION_STATUSES)
+    .or(periodNotOverFilter())
     .maybeSingle();
   if (!data) return null;
   const plan = Array.isArray(data.plans) ? data.plans[0] : data.plans;
@@ -77,7 +93,10 @@ export async function getSubscriptionLimits(
   return plan.limits as unknown as CloudObsPlanLimits;
 }
 
-/** Returns the ID of the user's active subscription for the given product, or null. */
+/**
+ * Returns the ID of the user's subscription for the given product that may
+ * launch things (active or trialing, period not over), or null.
+ */
 export async function getUserActiveSubscriptionId(
   supabase: SupabaseClient<Database>,
   userId: string,
@@ -88,7 +107,8 @@ export async function getUserActiveSubscriptionId(
     .select("id, plans!inner(product_id)")
     .eq("user_id", userId)
     .eq("plans.product_id", productId)
-    .in("status", ["active", "trialing", "past_due"])
+    .in("status", INTERACTIVE_SUBSCRIPTION_STATUSES)
+    .or(periodNotOverFilter())
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

@@ -11,14 +11,13 @@ export default async function SetupPage() {
   const { session, redirect: to } = await getAdminInventory();
   if (!session) redirect(to);
   if (session.strong) redirect("/overview");
-  if (session.totpFactors.length > 0 || session.passkeys.length > 0) redirect("/auth/verify");
+  if (session.totpFactors.length > 0) redirect("/auth/verify");
 
   return (
     <AuthShell
       title="Protect your admin account"
-      description="Set up a second factor before using the dashboard. We recommend both, so losing one device doesn't lock you out."
+      description="Set up an authenticator app before using the dashboard. You'll enter a code from it after each Twitch sign-in."
       email={session.email}
-      maxWidth="max-w-2xl"
     >
       <SecuritySetup />
     </AuthShell>

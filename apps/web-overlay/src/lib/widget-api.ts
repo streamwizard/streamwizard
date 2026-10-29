@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
+import { TtlCache } from "@repo/ttl-cache";
 
 /**
  * Shared plumbing for the API routes overlay widgets call from inside their
@@ -58,6 +59,18 @@ export function bearerToken(req: NextRequest): string | null {
   return null;
 }
 
+const TOKEN_FORMAT = /^[0-9a-f]{64}$/;
+
+/**
+ * subscriber_token is always 32 random bytes as lowercase hex (the column
+ * default and resetSceneSubscriberToken). Routes answer 403 for anything else
+ * before it reaches the rate limiter or the database, so a made-up string of
+ * any size never gets stored.
+ */
+export function isPlausibleToken(token: unknown): token is string {
+  return typeof token === "string" && TOKEN_FORMAT.test(token);
+}
+
 /**
  * subscriber_token → the scene's Twitch channel id.
  *
@@ -91,26 +104,23 @@ export async function broadcasterIdForToken(token: string): Promise<string | nul
  * Per-instance, since it lives in memory — acceptable because the asset cache
  * and the live single-flight already collapse upstream calls regardless of how
  * many viewers get through.
+ *
+ * Bounded: it used to be a plain Map keyed by whatever token string arrived,
+ * unauthenticated, so junk tokens grew it without limit. Now only tokens in
+ * the real format are counted (callers check isPlausibleToken first), and the
+ * cache evicts its oldest entries past maxEntries.
  */
 const RATE_LIMIT = 60;
 const RATE_WINDOW_MS = 60_000;
-const buckets = new Map<string, { count: number; resetAt: number }>();
+const buckets = new TtlCache<{ count: number }>({ ttlMs: RATE_WINDOW_MS, maxEntries: 5000 });
 
 export function isRateLimited(token: string): boolean {
-  const now = Date.now();
+  if (!isPlausibleToken(token)) return true;
   const entry = buckets.get(token);
-  if (!entry || now > entry.resetAt) {
-    buckets.set(token, { count: 1, resetAt: now + RATE_WINDOW_MS });
+  if (!entry) {
+    buckets.set(token, { count: 1 });
     return false;
   }
   entry.count++;
   return entry.count > RATE_LIMIT;
 }
-
-// Bounded cleanup so a long-lived server doesn't accumulate dead tokens.
-setInterval(() => {
-  const now = Date.now();
-  for (const [token, entry] of buckets) {
-    if (now > entry.resetAt) buckets.delete(token);
-  }
-}, RATE_WINDOW_MS).unref?.();

@@ -370,8 +370,11 @@ type EventReceivedDetail =
   | { listener: "user.update";                                                   event: UserUpdateEvent }
   | { listener: "user.whisper.message";                                          event: UserWhisperMessageEvent };`.trim();
 
+// buildWidgetSrcdoc in @repo/ui sets the fieldData global before the author's
+// JS runs and replaces it on onWidgetLoad and onFieldsUpdate. It is the same
+// object as StreamWizard.fieldData (widget-editor-lib-declarations.ts).
 const globalDeclarations = `
-declare const fieldData: Record<string, any>;
+declare var fieldData: Record<string, any>;
 
 interface WidgetLoadDetail {
   fieldData: Record<string, any>;
@@ -381,6 +384,7 @@ interface WidgetLoadDetail {
 
 declare function addEventListener(event: "onWidgetLoad", callback: (obj: { detail: WidgetLoadDetail }) => void): void;
 declare function addEventListener(event: "onEventReceived", callback: (obj: { detail: EventReceivedDetail }) => void): void;
+declare function addEventListener(event: "onFieldsUpdate", callback: (obj: { detail: { fieldData: Record<string, any> } }) => void): void;
 declare function addEventListener(event: "onSessionUpdate", callback: (obj: { detail: { session: Record<string, any> } }) => void): void;`.trim();
 
 const declarations = [

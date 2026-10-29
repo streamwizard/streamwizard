@@ -82,7 +82,7 @@ export function useOverlayDraft(initialScene: OverlaySceneWithItems): OverlayDra
   useEffect(() => {
     if (!settled || !scene || !isDirty) return;
     const timer = setTimeout(
-      () => writeOverlayDraft(scene.id, scene.items),
+      () => writeOverlayDraft(scene.id, scene.items, scene.groups),
       DRAFT_WRITE_DEBOUNCE_MS
     );
     return () => clearTimeout(timer);
@@ -97,7 +97,11 @@ export function useOverlayDraft(initialScene: OverlaySceneWithItems): OverlayDra
 
   const onRestore = useCallback(() => {
     if (offered) {
-      setScene({ ...initialScene, items: offered.items });
+      setScene({
+        ...initialScene,
+        items: offered.items,
+        groups: Array.isArray(offered.groups) ? offered.groups : [],
+      });
       // setScene lands a clean scene; restored work is unsaved by definition.
       markDirty();
     }

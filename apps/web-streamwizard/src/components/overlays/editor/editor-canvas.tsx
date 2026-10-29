@@ -7,6 +7,8 @@ import {
   isRootLayerType,
 } from "../registry/overlay-widget-registry";
 import { LayerContextMenu } from "./layer-context-menu";
+import { selectedGroupId } from "./item-groups";
+import { selectionBounds } from "./selection-layout";
 import { selectPrimarySelectedId, useOverlayStore } from "@/stores/overlay-editor-store";
 import { useCanvasGestures } from "@/hooks/overlays/use-canvas-gestures";
 import { useCanvasViewport } from "@/hooks/overlays/use-canvas-viewport";
@@ -19,6 +21,7 @@ import {
   getItemScale,
   itemFlipTransform,
   resolveAnchoredPosition,
+  withAbsolutePosition,
 } from "@repo/ui/overlay";
 
 /** On-screen size of a resize handle; divided by zoom because the canvas is scaled. */
@@ -40,7 +43,7 @@ interface EditorCanvasProps {
 }
 
 export function EditorCanvas({ paneRef, onAddWidget, onOpenShortcuts }: EditorCanvasProps) {
-  const { scene, selectedItemIds, zoom, panX, panY, canvasBackground, grid, rulersVisible, rulerCursorVisible, selectItem, selectClipDisplayFieldForEdit, updateItem, setRenameRequestId } = useOverlayStore();
+  const { scene, selectedItemIds, zoom, panX, panY, canvasBackground, grid, rulersVisible, rulerCursorVisible, selectItem, selectFromCanvas, selectClipDisplayFieldForEdit, updateItem, setRenameRequestId } = useOverlayStore();
 
   const primarySelectedId = selectPrimarySelectedId({ selectedItemIds });
 
@@ -68,6 +71,16 @@ export function EditorCanvas({ paneRef, onAddWidget, onOpenShortcuts }: EditorCa
       isRootLayerType(i.type),
     )
     .sort((a, b) => a.z_index - b.z_index);
+
+  // A selected group gets one dashed box around all of it, so it reads as a
+  // unit rather than as several items that happen to be selected together.
+  const groupBounds = selectedGroupId(selectedItemIds, scene.items, scene.groups ?? [])
+    ? selectionBounds(
+        scene.items
+          .filter((i) => selectedItemIds.includes(i.id) && i.is_visible)
+          .map((i) => withAbsolutePosition(i, scene)),
+      )
+    : null;
 
   const selected = scene.items.find((i) => i.id === primarySelectedId);
 
@@ -242,7 +255,12 @@ export function EditorCanvas({ paneRef, onAddWidget, onOpenShortcuts }: EditorCa
                     e.stopPropagation();
                   }}
                   onContextMenu={() => {
-                    if (!selectedItemIds.includes(item.id)) selectItem(item.id);
+                    if (!selectedItemIds.includes(item.id)) selectFromCanvas(item.id, "click");
+                  }}
+                  onDoubleClick={(e) => {
+                    // Steps into a group one level per double-click.
+                    e.stopPropagation();
+                    selectFromCanvas(item.id, "drill");
                   }}
                   onMouseDown={(e) => {
                     // Space turns the whole canvas into a pan surface, widgets
@@ -433,6 +451,20 @@ export function EditorCanvas({ paneRef, onAddWidget, onOpenShortcuts }: EditorCa
               }
             />
           ))}
+
+          {groupBounds && (
+            <div
+              className="absolute border-dashed border-primary pointer-events-none"
+              style={{
+                left: groupBounds.x,
+                top: groupBounds.y,
+                width: groupBounds.w,
+                height: groupBounds.h,
+                borderWidth: 1 / zoom,
+                zIndex: 9998,
+              }}
+            />
+          )}
 
           {marqueeRect && (
             <div

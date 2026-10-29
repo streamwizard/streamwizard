@@ -1,0 +1,142 @@
+---
+title: "Clips on your overlay"
+description: "Rotating Twitch clips with your own captions, for starting soon screens and breaks."
+---
+
+The clips widget plays your synced Twitch clips on a loop, with captions you
+place yourself. It's what most people put on a starting soon or BRB screen.
+
+## Before you start
+
+- You have an overlay. [Make one first](/overlays/quickstart) if you don't.
+- You've [synced your clips](/clips/overview). The widget plays from your
+  StreamWizard clip library, not from Twitch directly.
+
+## Add the clips widget
+
+<Steps>
+  <Step title="Add the widget">
+    In the overlay editor, open **Widgets → Media** and pick **Clips**. It
+    arrives at the full size of your overlay.
+  </Step>
+  <Step title="Choose which clips play">
+    **Source Mode** under **Clip Source** is **All Clips** to start with.
+    Switch it to **Specific Folders** and tick the folders you want.
+  </Step>
+  <Step title="Check the preview">
+    The editor plays a sample of your clips right on the canvas so you can see
+    the captions land.
+  </Step>
+</Steps>
+
+## Choosing which clips play
+
+| Source Mode | What it plays |
+|---|---|
+| **All Clips** | Everything in your library. |
+| **Specific Folders** | Only clips in the folders you tick. |
+| **By Game / Category** | Only clips from the game IDs you add. |
+| **Custom Filters** | Folders, games and creators combined. |
+
+**Time Window** narrows it further by when the clip was made, from
+**Last 7 Days** through to **All Time**, or a **Custom Range** with your own
+dates.
+
+**Sort & Limits** sets the order. It's **Random** by default, which is what you
+want for a looping break screen. A clip that just played is kept out of the
+draw for ten minutes so you don't see it twice in a row.
+
+<Tip>
+Point the widget at a folder rather than at everything. A "best of" folder you
+curate makes a far better break screen than a random pick from every clip
+you've ever synced.
+</Tip>
+
+## Captions
+
+Adding the widget also adds six caption fields as separate layers:
+**Title**, **Creator**, **Game**, **Date**, **View count** and **Duration**.
+Each one is its own item in the layers panel, so you show, hide, lock and drag
+them individually.
+
+**View count** is the one that starts switched off. Turn it on from the layers
+panel, not from the widget's settings.
+
+Select a caption to get its own panel, where position and size are percentages
+of the clip box rather than pixels. That way the captions stay put if you
+resize the widget. You can also just drag them on the canvas.
+
+A caption with nothing to say prints nothing, so a clip with no game recorded
+drops the **Game** line rather than showing an empty one.
+
+## Sound
+
+**Muted** under **Playback** is **off** by default, so clips play with sound.
+
+<Warning>
+Browsers block autoplaying audio until something on the page has been
+interacted with, and an OBS browser source never gets that interaction. If your
+clips start silently or refuse to play at all, either turn **Muted** on, or
+turn on **Control audio via OBS** in the browser source properties, which is
+exempt from the rule.
+</Warning>
+
+**Volume** does nothing while **Muted** is on.
+
+## Settings
+
+**Playback**
+
+| Setting | Default | Notes |
+|---|---|---|
+| **Muted** | Off | See the warning above. |
+| **Volume** | 100% | Ignored while muted. |
+| **Clip transition** | Hard cut | Or **Crossfade**. |
+| **Crossfade** | 600 ms | 200 to 3000. Only with **Crossfade**. |
+
+**Sort & Limits**
+
+| Setting | Default |
+|---|---|
+| **Sort By** | Random |
+| **Min View Count** | 0 |
+| **Featured Only** | Off |
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="No clips match filters">
+    The filters are stricter than your library. Widen **Time Window**, drop
+    **Min View Count**, or switch **Source Mode** back to **All Clips** to
+    confirm clips are syncing at all.
+  </Accordion>
+  <Accordion title="Clips play silently in OBS">
+    See the sound warning above. This is a browser rule, not a StreamWizard
+    setting.
+  </Accordion>
+  <Accordion title="I changed the folder and nothing happened">
+    Folder membership is cached on the overlay for a minute. Give it a moment,
+    or refresh the browser source.
+  </Accordion>
+  <Accordion title="Filters I set earlier seem to be ignored">
+    Each **Source Mode** only uses its own fields. Game IDs typed while you were
+    on **By Game / Category** are kept but ignored once you switch to
+    **Specific Folders**.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+**Reset to Defaults** at the bottom of the panel clears everything including
+your clip source, not just the look.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Organize clips into folders" href="/clips/folders">
+    Build the "best of" folder this widget should point at.
+  </Card>
+  <Card title="Images and video" href="/overlays/images-and-video">
+    Your own files instead of clips.
+  </Card>
+</CardGroup>

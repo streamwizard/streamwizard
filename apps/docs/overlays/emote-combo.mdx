@@ -1,0 +1,145 @@
+---
+title: "Emote combo"
+description: "When chat spams the same emote, a counter shows it on stream and punches up with every hit."
+---
+
+import TestEvents from '/snippets/widget-test-events.mdx';
+
+When enough of your chat types the same emote at once, the combo counter puts
+it on screen and counts up with every hit. It works with your 7TV, BTTV and FFZ
+emotes as well as Twitch ones.
+
+<Frame caption="The combo counter partway through a run.">
+  <img src="/images/overlays/emote-combo-widget.png" alt="A Kappa emote beside the text x5 COMBO." />
+</Frame>
+
+## Before you start
+
+- You have an overlay. [Make one first](/overlays/quickstart) if you don't.
+
+## Add the combo counter
+
+<Steps>
+  <Step title="Add the widget">
+    In the overlay editor, open **Widgets → Alerts & chat** and pick
+    **Emote combo**. It lands in the middle of your overlay at 480 × 160.
+  </Step>
+  <Step title="Try it">
+    Select **Start a test combo**. A run of Kappa messages arrives from made-up
+    viewers so you can see the counter climb.
+  </Step>
+  <Step title="Set how easily it triggers">
+    **Shows from** under **Combo** is how many hits it takes before anything
+    appears. The default is 3, which suits a small chat. Raise it if your chat
+    is big enough that three people typing the same emote means nothing.
+  </Step>
+</Steps>
+
+## How a combo is counted
+
+**Counts when** picks between two ways of deciding a combo is still running:
+
+- **Time window** keeps counting as long as the next hit lands inside
+  **Time window** seconds. This is the default and the forgiving one.
+- **Back to back** ends the combo as soon as someone posts a message without
+  that emote. **Ends after quiet for** then only controls how long silence can
+  last before it closes.
+
+**Count each viewer once** is on by default, so one person spamming can't run
+the number up on their own.
+
+<Warning>
+With **Count each viewer once** on, a repeat from someone already counted
+doesn't refresh the timer either. One person typing the emote over and over
+can watch the combo time out underneath them. Turn it off if that's a chat
+you'd rather reward.
+</Warning>
+
+One message counts once per emote no matter how many times it's typed in that
+message, which is the opposite of how the [emote wall](/overlays/emote-wall)
+treats repeats.
+
+## Designs
+
+**Style** under **Look** has three:
+
+| Style | What it looks like |
+|---|---|
+| **Punch** | Emote and text side by side, no chrome. The default. |
+| **Pill** | The same row inside a dark rounded pill with a coloured border. |
+| **Stack** | Emote above the text, bigger on both. |
+
+<Note>
+**Emote size** and **Font size** aren't literal pixels in every style.
+**Pill** renders both at 60% of what you set, and **Stack** renders them
+larger. Set the sliders by eye on the style you've actually picked.
+</Note>
+
+## Settings
+
+**Combo**
+
+| Setting | Default | Range |
+|---|---|---|
+| **Time window** | 8 s | 2 to 60 |
+| **Shows from** | 3 | 2 to 100 |
+| **Combos on screen** | 1 | 1 to 3 |
+| **Final count stays** | 3 s | 0 to 15 |
+
+With **Combos on screen** above 1 you also get **Line up**, which stacks them
+or puts them in a row.
+
+**Look**
+
+**Text** is the line itself, and takes two tokens: `{count}` for the number and
+`{emote}` for the emote's name. The default is `x{count} COMBO`.
+
+**Milestones** is a space-separated list, `10 25 50` by default. The counter
+makes more of itself each time it passes one.
+
+<Tip>
+`{emote}` inserts the emote's **name as text**, not the picture. The picture is
+always drawn beside or above the text anyway, so `x{count} COMBO {emote}` reads
+`x12 COMBO Kappa` next to a Kappa. Most people want to leave it out.
+</Tip>
+
+**Filters** works the same as the emote wall's: **Emote sets**,
+**Skip !commands**, **Blocked emotes** and **Hidden accounts**, with the same
+eight bots hidden out of the box.
+
+## See it before you go live
+
+<TestEvents />
+
+**Preview** next to the test button replays a combo using your current look.
+It ignores your detection settings on purpose, so it always counts, whatever
+**Counts when** and **Count each viewer once** are set to.
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="Nothing ever shows up">
+    **Shows from** may be higher than your chat reaches. Combos that never hit
+    the number are dropped silently rather than shown small.
+  </Accordion>
+  <Accordion title="The counter is cut off">
+    The box is 480 × 160 by default and hides anything that doesn't fit. A
+    large **Font size** or **Emote size** needs a bigger box.
+  </Accordion>
+  <Accordion title="A combo ends while chat is still going">
+    In **Back to back** mode any message without the emote ends it. Messages
+    from **Hidden accounts** and, with **Skip !commands** on, `!` commands are
+    thrown away before the counter sees them, so those don't break it.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Emote wall" href="/overlays/emote-wall">
+    Put the emotes themselves on screen.
+  </Card>
+  <Card title="Hype train" href="/overlays/hype-train">
+    A train that fills up with everyone who chipped in.
+  </Card>
+</CardGroup>

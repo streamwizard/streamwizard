@@ -128,7 +128,7 @@ test("setScene with an id map keeps history and rewrites temp ids", () => {
   useOverlayStore.getState().setScene(makeScene([makeItem("temp-1", { title: "one" })]));
   useOverlayStore.setState({
     history: {
-      past: [{ items: [makeItem("temp-1", { title: "before" })], width: 1920, height: 1080 }],
+      past: [{ items: [makeItem("temp-1", { title: "before" })], groups: [], width: 1920, height: 1080 }],
       future: [],
     },
   });
@@ -147,7 +147,7 @@ test("a clip child's parent ref follows the remap", () => {
   useOverlayStore.getState().setScene(makeScene([]));
   useOverlayStore.setState({
     history: {
-      past: [{ items: [makeItem("temp-p", {}), child], width: 1920, height: 1080 }],
+      past: [{ items: [makeItem("temp-p", {}), child], groups: [], width: 1920, height: 1080 }],
       future: [],
     },
   });

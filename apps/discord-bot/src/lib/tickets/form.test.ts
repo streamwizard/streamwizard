@@ -41,6 +41,8 @@ const field = (id: string, kind: string, patch: Partial<TicketFormField> = {}): 
   required: true,
   min_length: null,
   max_length: null,
+  min_files: null,
+  max_files: null,
   options: [],
   position: 0,
   created_at: "2026-01-01T00:00:00Z",
@@ -61,9 +63,19 @@ const product = (slug: string, label: string): TicketProduct => ({
   updated_at: "2026-01-01T00:00:00Z",
 });
 
-const reader = (values: Record<string, string>): FormReader => ({
+type Uploaded = ReturnType<FormReader["files"]>;
+
+const reader = (values: Record<string, string>, files: Record<string, NonNullable<Uploaded>> = {}): FormReader => ({
   text: (id) => values[id] ?? null,
   select: (id) => values[id] ?? null,
+  files: (id) => files[id] ?? null,
+});
+
+const upload = (name: string) => ({
+  name,
+  url: `https://cdn.discordapp.com/ephemeral-attachments/1/2/${name}`,
+  size: 1000,
+  contentType: "image/png",
 });
 
 const PRODUCTS = [product("cloud_obs", "Cloud OBS"), product("clips", "Clips")];
@@ -119,6 +131,7 @@ describe("ticket form", () => {
       product: "cloud_obs",
       // The option's label, not its value: that is what staff read.
       answers: [{ fieldId: "f-os", label: "Operating system", value: "macOS" }],
+      files: [],
     });
   });
 
@@ -139,6 +152,7 @@ describe("ticket form", () => {
       description: "",
       product: null,
       answers: [],
+      files: [],
     });
   });
 
@@ -150,6 +164,64 @@ describe("ticket form", () => {
     expect(result.subject).toBe("Bug");
     expect(result.description).toBe("");
     expect(storedDescription(result)).toBe("**What happened?**\nCrash\n\n**Since when?**\nToday");
+  });
+});
+
+describe("ticket form file uploads", () => {
+  const SHOTS = field("f-shots", "file", { label: "Screenshots", required: false, max_files: 3 });
+
+  test("a file field becomes an upload inside a label, counted like any other question", () => {
+    const modal = buildTicketModal(category(), [field("f-subject", "subject"), SHOTS], [])?.toJSON();
+    expect(modal?.components).toHaveLength(2);
+    const label = modal?.components[1] as unknown as { type: number; label: string; description?: string; component: Record<string, unknown> };
+    expect(label.label).toBe("Screenshots");
+    // No hint of its own: the label says which files are welcome.
+    expect(label.description).toContain("PDF");
+    expect(label.component).toMatchObject({ type: 19, custom_id: "f-shots", required: false, min_values: 0, max_values: 3 });
+  });
+
+  test("a required upload asks for at least one file, and its hint replaces the default", () => {
+    const shots = field("f-shots", "file", { required: true, min_files: 2, max_files: 40, placeholder: "Show us the error" });
+    const label = buildTicketModal(category(), [shots], [])?.toJSON().components[0] as unknown as {
+      description: string;
+      component: Record<string, unknown>;
+    };
+    expect(label.description).toBe("Show us the error");
+    expect(label.component).toMatchObject({ required: true, min_values: 2, max_values: 10 });
+  });
+
+  test("six fields with an upload still stop at Discord's five", () => {
+    const many = [...Array.from({ length: 5 }, (_, i) => field(`f-${i}`, "text")), SHOTS];
+    expect(askableFields(many, [])).toHaveLength(5);
+  });
+
+  test("files come back with their field, and add no answer", () => {
+    const form = [field("f-subject", "subject"), SHOTS];
+    const result = readTicketForm(category(), form, [], reader({ "f-subject": "Crash" }, { "f-shots": [upload("a.png"), upload("b.png")] }));
+    expect(result).not.toBe("stale");
+    if (result === "stale") return;
+    expect(result.answers).toEqual([]);
+    expect(result.files.map((f) => [f.fieldId, f.name])).toEqual([
+      ["f-shots", "a.png"],
+      ["f-shots", "b.png"],
+    ]);
+  });
+
+  test("never more files than the field takes, even if the form changed while open", () => {
+    const four = ["a", "b", "c", "d"].map((n) => upload(`${n}.png`));
+    const result = readTicketForm(category(), [SHOTS], [], reader({}, { "f-shots": four }));
+    expect(result !== "stale" && result.files.map((f) => f.name)).toEqual(["a.png", "b.png", "c.png"]);
+  });
+
+  test("an optional upload left empty is fine; a required one missing means the form changed", () => {
+    expect(readTicketForm(category(), [SHOTS], [], reader({}))).toMatchObject({ files: [], subject: "Bug" });
+    const required = field("f-shots", "file", { required: true });
+    expect(readTicketForm(category(), [required], [], reader({}))).toBe("stale");
+  });
+
+  test("a form with only an upload stores no description", () => {
+    const result = readTicketForm(category(), [SHOTS], [], reader({}, { "f-shots": [upload("a.png")] }));
+    expect(result !== "stale" && storedDescription(result)).toBe("");
   });
 });
 

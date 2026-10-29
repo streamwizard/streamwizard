@@ -26,7 +26,7 @@ export type OgImageCopy = {
 };
 
 export async function renderOgImage({ eyebrow, title, subline, accent = TWITCH_PURPLE }: OgImageCopy) {
-  // Static cuts, not the GeistVF.woff the app renders with: Satori's parser
+  // Static cuts, not the GeistVF.woff2 the app renders with: Satori's parser
   // cannot read a variable font and dies on it ("names[p.parseUShort()]").
   // These two files exist only for the social cards.
   const fontDir = join(process.cwd(), "src/app/fonts");

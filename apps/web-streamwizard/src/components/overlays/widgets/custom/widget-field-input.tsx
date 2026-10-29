@@ -230,6 +230,8 @@ export function WidgetFieldInput({
         id={id}
         value={String(value ?? "")}
         onValueChange={onChange}
+        // The widget's own code loads this font from Google by name.
+        allowUploaded={false}
       />
     );
   }

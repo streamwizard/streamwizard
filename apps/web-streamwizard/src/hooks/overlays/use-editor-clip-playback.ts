@@ -12,8 +12,9 @@ import { useOverlayStore } from "@/stores/overlay-editor-store";
 export function useEditorClipPlayback(): EditorClipPlaybackControls {
   const previewPaused = useOverlayStore((s) => s.editorClipPreviewPaused);
   const setPreviewPaused = useOverlayStore((s) => s.setEditorClipPreviewPaused);
-  const previewForceMute = useOverlayStore((s) => s.editorClipPreviewForceMute);
-  const setPreviewForceMute = useOverlayStore((s) => s.setEditorClipPreviewForceMute);
+  // The editor-wide mute: clips follow the same switch as alerts.
+  const previewForceMute = useOverlayStore((s) => s.editorAudioMuted);
+  const setPreviewForceMute = useOverlayStore((s) => s.setEditorAudioMuted);
   const autoplayBlocked = useOverlayStore((s) => s.editorClipPreviewAutoplayBlocked);
   const setAutoplayBlocked = useOverlayStore((s) => s.setEditorClipPreviewAutoplayBlocked);
   const resumeTick = useOverlayStore((s) => s.editorClipPreviewResumeTick);

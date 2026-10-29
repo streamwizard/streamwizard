@@ -1,0 +1,71 @@
+---
+title: "Download a clip"
+description: "Get an MP4 out of StreamWizard, landscape for YouTube or portrait for shorts."
+---
+
+Any clip in your library can be downloaded as an MP4, in landscape or portrait.
+Portrait is the one you want for TikTok, Reels and Shorts.
+
+<Frame caption="A clip open, with Download next to the other actions.">
+  <img src="/images/clips/clip-dialog.png" alt="An open clip showing its title, creator, category and views, with Add to folder, Download, Copy URL and Open on Twitch buttons." />
+</Frame>
+
+## Download one
+
+<Steps>
+  <Step title="Open the clip">
+    Select a clip to open it, or use the **⋯** menu on its card without opening
+    it.
+  </Step>
+  <Step title="Pick a shape">
+    Select **Download**, then **Landscape** or **Portrait**. From the card
+    menu they're **Download Landscape** and **Download Portrait**.
+  </Step>
+  <Step title="Wait for it">
+    StreamWizard asks Twitch for the file and passes it to your browser. It
+    saves as `clip title-landscape.mp4` or `clip title-portrait.mp4`.
+  </Step>
+</Steps>
+
+Portrait is Twitch's own crop, made for vertical video. StreamWizard doesn't
+re-frame it, so what you get is what Twitch produces.
+
+## Only your own channel
+
+Downloads work for clips from channels that have connected StreamWizard. That's
+your own channel, and anyone else's who uses StreamWizard.
+
+A clip from a channel that never authorized StreamWizard can't be downloaded.
+Twitch refuses to sign the file, and there's no way around it from here. You'll
+see a 401 error if you try.
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="There's no Download button on this clip">
+    The button is hidden when StreamWizard doesn't know which channel the clip
+    belongs to, which happens with older or partially synced rows. Run a
+    [sync](/clips/syncing) and look again.
+  </Accordion>
+  <Accordion title="No portrait download URL available">
+    Twitch doesn't have a vertical version of that clip. Older clips often
+    don't. Landscape still works.
+  </Accordion>
+  <Accordion title="Twitch API error: 401">
+    The clip is from a channel that hasn't connected StreamWizard. See above.
+  </Accordion>
+  <Accordion title="Clip not found">
+    The clip isn't in your StreamWizard library, only on Twitch. Sync first.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Organize clips into folders" href="/clips/folders">
+    Build the set you're going to post from.
+  </Card>
+  <Card title="Clips on your overlay" href="/overlays/clips-widget">
+    Play them on stream instead of downloading them.
+  </Card>
+</CardGroup>

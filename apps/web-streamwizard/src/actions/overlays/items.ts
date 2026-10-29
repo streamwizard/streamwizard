@@ -4,13 +4,23 @@ import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
 import type { Database } from "@repo/supabase";
 import {
+  deleteOverlayItemGroupsByIds,
   deleteOverlayItemsByIds,
+  getOverlayItemGroups,
   getOverlayItems,
   insertOverlayItemsReturningIds,
   updateOverlayItemData,
+  upsertOverlayItemGroups,
 } from "@repo/supabase/queries/overlays";
-import { overlayItemSchema } from "@/schemas/overlay";
-import { overlayItemFromDbRow, type OverlayItem, type OverlayItemConfig, type OverlaySceneWithItems } from "@/types/overlays";
+import { overlayItemGroupSchema, overlayItemSchema } from "@/schemas/overlay";
+import {
+  overlayItemFromDbRow,
+  type OverlayItem,
+  type OverlayItemConfig,
+  type OverlayItemGroup,
+  type OverlaySceneWithItems,
+} from "@/types/overlays";
+import { sanitizeGroups } from "@/components/overlays/editor/item-groups";
 import { tryAuthContext } from "@/lib/auth";
 import { track } from "@/lib/track";
 import { diffOverlaySave, type StoredOverlayItem, type WidgetRef } from "./save-diff";
@@ -43,21 +53,29 @@ interface OverlayItemInput {
   crop_left: number;
   z_index: number;
   rotation: number;
+  flip_h: boolean;
+  flip_v: boolean;
   opacity: number;
   is_visible: boolean;
   is_locked: boolean;
   label: string;
   config: OverlayItemConfig;
+  group_id?: string | null;
 }
 
 /**
  * Persists the editor's whole item list in one go: deletes what's gone, updates
  * what stayed, inserts what's new (roots before clip-field children, so the
  * children can be re-pointed at their new parent ids).
+ *
+ * Groups go around that: written before the items (the items point at them)
+ * and the stale ones deleted after (nothing points at them any more). Group
+ * ids come from the editor, so they need no remap.
  */
 export async function saveAllOverlayItems(
   sceneId: string,
-  items: Array<OverlayItemInput & { temp_id: string }>,
+  rawItems: Array<OverlayItemInput & { temp_id: string }>,
+  rawGroups: OverlayItemGroup[] = [],
 ): Promise<{
   success: boolean;
   error: string | null;
@@ -68,6 +86,32 @@ export async function saveAllOverlayItems(
   const ctx = await tryAuthContext();
   if (!ctx) return { success: false, error: "Unauthorized", data: null, idMap: {} };
   const { supabase } = ctx;
+
+  for (const group of rawGroups) {
+    const parsed = overlayItemGroupSchema.safeParse({ ...group, scene_id: sceneId });
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.message, data: null, idMap: {} };
+    }
+  }
+  // Only the group tree is cleaned here (dangling refs, cycles, empty groups);
+  // each item is still validated on its own below.
+  const sanitized = sanitizeGroups(
+    rawItems as unknown as OverlayItem[],
+    rawGroups.map((g) => ({ ...g, scene_id: sceneId, label: g.label.trim() })),
+  );
+  const items = sanitized.items as unknown as typeof rawItems;
+  const groups = sanitized.groups;
+
+  if (groups.length > 0) {
+    const { error: groupErr } = await upsertOverlayItemGroups(
+      supabase,
+      groups.map(({ id, parent_group_id, label }) => ({ id, scene_id: sceneId, parent_group_id, label })),
+    );
+    if (groupErr) {
+      reportError(groupErr, OVERLAYS_ERROR_SCOPE);
+      return { success: false, error: groupErr.message, data: null, idMap: {} };
+    }
+  }
 
   const idMap = new Map<string, string>();
   // Existing rows as this save wrote them, for the "what changed" event.
@@ -172,6 +216,21 @@ export async function saveAllOverlayItems(
       const row = insertedChildren?.[idx];
       if (row?.id) idMap.set(item.temp_id, row.id);
     });
+  }
+
+  // Last, so no item still points at a group being removed.
+  const { data: dbGroups, error: groupsFetchErr } = await getOverlayItemGroups(supabase, sceneId);
+  if (groupsFetchErr) {
+    reportError(groupsFetchErr, OVERLAYS_ERROR_SCOPE);
+  } else {
+    const keepGroupIds = new Set(groups.map((g) => g.id));
+    const staleGroupIds = (dbGroups ?? []).map((g) => g.id).filter((id) => !keepGroupIds.has(id));
+    if (staleGroupIds.length > 0) {
+      const { error: groupDelErr } = await deleteOverlayItemGroupsByIds(supabase, sceneId, staleGroupIds);
+      // A leftover empty group is harmless (the editor prunes it on load), so
+      // this doesn't fail a save that has already written every item.
+      if (groupDelErr) reportError(groupDelErr, OVERLAYS_ERROR_SCOPE);
+    }
   }
 
   revalidatePath("/dashboard/overlays");

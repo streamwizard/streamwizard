@@ -2,7 +2,7 @@
 // kept out of actions/assets.ts because a "use server" module may only export
 // async functions.
 
-export type AssetKind = "image" | "audio" | "video" | "lottie";
+export type AssetKind = "image" | "audio" | "video" | "lottie" | "font";
 
 // Explicit allowlist — never prefix-match. image/svg+xml is deliberately
 // excluded: SVG can carry <script> and the CDN domain is same-site with the
@@ -22,6 +22,9 @@ const MIME_TO_KIND: Record<string, AssetKind> = {
   "video/mp4": "video",
   "video/webm": "video",
   "application/json": "lottie",
+  // Fonts for overlay text (SW-241). Overlays load them with @font-face.
+  "font/woff2": "font",
+  "font/woff": "font",
 };
 
 // Browsers and OSes don't agree on a few audio types (Chrome on Windows
@@ -32,9 +35,28 @@ const MIME_ALIASES: Record<string, string> = {
   "audio/wave": "audio/wav",
   "audio/vnd.wave": "audio/wav",
   "audio/mp3": "audio/mpeg",
+  "application/font-woff": "font/woff",
+  "application/x-font-woff": "font/woff",
+  "application/font-woff2": "font/woff2",
 };
 
 export function kindFromMime(mime: string): AssetKind | null {
   const normalised = mime.toLowerCase();
   return MIME_TO_KIND[MIME_ALIASES[normalised] ?? normalised] ?? null;
+}
+
+// Plenty of systems have no type registered for web fonts, so the browser
+// hands over "" or application/octet-stream. Only fonts are guessed from the
+// extension; every other kind still needs a type the browser vouches for.
+const FONT_EXTENSIONS: Record<string, string> = {
+  woff2: "font/woff2",
+  woff: "font/woff",
+};
+
+/** The type to upload `file` as: the browser's, or a font's from its extension. */
+export function uploadMimeType(file: { name: string; type: string }): string {
+  if (kindFromMime(file.type)) return file.type;
+  const ext = file.name.slice(file.name.lastIndexOf(".") + 1).toLowerCase();
+  const font = FONT_EXTENSIONS[ext];
+  return font && (file.type === "" || file.type === "application/octet-stream") ? font : file.type;
 }

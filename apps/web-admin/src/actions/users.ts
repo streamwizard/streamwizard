@@ -17,6 +17,7 @@ import { actorIdentity, eventIdentity } from "@/lib/platform-events";
 import { PERMANENT_BAN, type BanNote } from "@/lib/user-auth";
 import { helixConfigured, loadUserEventSub } from "@/lib/user-eventsub-server";
 import { userDisplayName } from "@/lib/users";
+import { revokeWsSockets } from "@/lib/ws-revoke";
 
 // Admin actions on one user (/users/[id]). Plan grants live in
 // actions/subscriptions.ts. Role and Discord changes are logged to
@@ -171,28 +172,16 @@ export async function resyncEventSubAction(userId: string): Promise<ResyncResult
 }
 
 // ── Second factors ──────────────────────────────────────────────────────────
-// For an admin who lost their phone or security key: removing every factor
-// sends them through /auth/setup on their next sign-in. Your own factors are
-// managed on /security, which keeps the "at least one" rule.
+// For an admin who lost their phone: removing their authenticator sends them
+// through /auth/setup on their next sign-in. You can't remove your own (it is
+// your only second factor); another admin has to.
 
 export async function removeUserTotpAction(userId: string, factorId: string): Promise<Result> {
   const actorId = await assertAdmin();
-  if (actorId === userId) return { error: "Manage your own factors on the Security page." };
+  if (actorId === userId) return { error: "Another admin has to reset your authenticator." };
   const { error } = await supabaseAdmin.auth.admin.mfa.deleteFactor({ id: factorId, userId });
   if (error) {
     reportError(error, "actions/users:remove-totp");
-    return { error: error.message };
-  }
-  revalidateUser(userId);
-  return { error: null };
-}
-
-export async function removeUserPasskeyAction(userId: string, passkeyId: string): Promise<Result> {
-  const actorId = await assertAdmin();
-  if (actorId === userId) return { error: "Manage your own passkeys on the Security page." };
-  const { error } = await supabaseAdmin.auth.admin.passkey.deletePasskey({ userId, passkeyId });
-  if (error) {
-    reportError(error, "actions/users:remove-passkey");
     return { error: error.message };
   }
   revalidateUser(userId);
@@ -247,6 +236,8 @@ export async function banUserAction(
   }
 
   const warnings: string[] = [];
+  // Dashboard sockets ride the session; end them with it.
+  await revokeWsSockets(userId, "session");
   try {
     await revokeUserSessions(supabaseAdmin, userId);
   } catch (e) {
@@ -431,6 +422,7 @@ export async function deleteUserAction(
     reportError(error, "actions/users:delete-auth");
     return { error: error.message, warnings };
   }
+  await revokeWsSockets(userId, "all");
 
   revalidatePath("/users");
   return { error: null, warnings };

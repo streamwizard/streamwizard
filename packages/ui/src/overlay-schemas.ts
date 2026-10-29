@@ -15,9 +15,13 @@ import {
   ALERT_ANIMATION_MAX_SECONDS,
   ALERT_ANIMATIONS_IN,
   ALERT_ANIMATIONS_OUT,
+  ALERT_CUSTOM_CSS_MAX_LENGTH,
+  ALERT_MAX_NAME_LENGTH,
   ALERT_MAX_QUEUE_LIMIT,
+  ALERT_TYPOGRAPHY_LIMITS,
   ALERT_SUB_TIERS,
   ALERT_VARIATION_LIMITS,
+  ALERT_VARIATION_MATCH_MODES,
   ALERT_VARIATION_OPERATORS,
   migrateAlertAnimationIn,
   migrateAlertAnimationOut,
@@ -328,6 +332,9 @@ const alertPresentationSchema = z.object({
   mediaKind: alertMediaKindSchema,
   soundUrl: z.string().max(2000).default(""),
   volume: z.number().min(0).max(1).default(0.8),
+  // No default: a config saved before this field gets its value from
+  // normalizeAlertWidgetConfig, which knows whether the video was muted.
+  videoVolume: z.number().min(0).max(1).optional(),
   titleTemplate: z.string().max(200).default(""),
   messageTemplate: z.string().max(200).default(""),
   durationSeconds: z.number().min(0).max(60).default(6),
@@ -362,20 +369,43 @@ const alertPresentationSchema = z.object({
   messageColor: hexColorSchema.default("#d4d4d8"),
   accentColor: hexColorSchema.default("#9e7aff"),
   textShadow: z.boolean().default(true),
+  lineHeight: z
+    .number()
+    .min(ALERT_TYPOGRAPHY_LIMITS.lineHeight.min)
+    .max(ALERT_TYPOGRAPHY_LIMITS.lineHeight.max)
+    .default(1.2),
+  letterSpacing: z
+    .number()
+    .min(ALERT_TYPOGRAPHY_LIMITS.letterSpacing.min)
+    .max(ALERT_TYPOGRAPHY_LIMITS.letterSpacing.max)
+    .default(0),
+  wordSpacing: z
+    .number()
+    .min(ALERT_TYPOGRAPHY_LIMITS.wordSpacing.min)
+    .max(ALERT_TYPOGRAPHY_LIMITS.wordSpacing.max)
+    .default(0),
+  messageFontScale: z
+    .number()
+    .min(ALERT_TYPOGRAPHY_LIMITS.messageFontScale.min)
+    .max(ALERT_TYPOGRAPHY_LIMITS.messageFontScale.max)
+    .default(0.6),
+  customCss: z.string().max(ALERT_CUSTOM_CSS_MAX_LENGTH).default(""),
 });
 
 const alertVariationConditionSchema = z.discriminatedUnion("parameter", [
-  z.object({ parameter: z.literal("none") }),
   z.object({
     parameter: z.literal("amount"),
     operator: z.enum(ALERT_VARIATION_OPERATORS),
     value: z.number().min(0).max(1_000_000_000),
+    max: z.number().min(0).max(1_000_000_000).optional(),
   }),
   z.object({ parameter: z.literal("tier"), tier: z.enum(ALERT_SUB_TIERS) }),
   z.object({
     parameter: z.literal("name"),
     names: z.array(z.string().max(64)).max(ALERT_VARIATION_LIMITS.names),
   }),
+  z.object({ parameter: z.literal("gifted"), value: z.boolean() }),
+  z.object({ parameter: z.literal("anonymous"), value: z.boolean() }),
 ]);
 
 /**
@@ -383,14 +413,28 @@ const alertVariationConditionSchema = z.discriminatedUnion("parameter", [
  * the usual reason: a z.object strips what it does not know, so a key missing
  * here would vanish from every variation on save.
  */
-const alertVariationSchema = z.object({
-  id: z.string().min(1).max(64),
-  name: z.string().max(ALERT_VARIATION_LIMITS.nameLength),
-  enabled: z.boolean().default(true),
-  chance: z.number().min(0).max(100).default(100),
-  condition: alertVariationConditionSchema,
-  settings: alertPresentationSchema,
-});
+const alertVariationSchema = z.preprocess(
+  (raw) => {
+    // Before SW-251 a variation held one `condition`, `{ parameter: "none" }`
+    // for none. An old save or export would otherwise lose it here.
+    if (!raw || typeof raw !== "object" || "conditions" in raw || !("condition" in raw)) return raw;
+    const { condition, ...rest } = raw as Record<string, unknown>;
+    const none = (condition as { parameter?: unknown } | null)?.parameter === "none";
+    return { ...rest, conditions: condition && !none ? [condition] : [] };
+  },
+  z.object({
+    id: z.string().min(1).max(64),
+    name: z.string().max(ALERT_VARIATION_LIMITS.nameLength),
+    enabled: z.boolean().default(true),
+    chance: z.number().min(0).max(100).default(100),
+    match: z.enum(ALERT_VARIATION_MATCH_MODES).default("all"),
+    conditions: z
+      .array(alertVariationConditionSchema)
+      .max(ALERT_VARIATION_LIMITS.conditions)
+      .default([]),
+    settings: alertPresentationSchema,
+  })
+);
 
 const alertVariantConfigSchema = alertPresentationSchema.extend({
   enabled: z.boolean().default(true),
@@ -413,6 +457,7 @@ export const alertWidgetItemConfigSchema = z.object({
   masterVolume: z.number().min(0).max(1).default(0.8),
   waitForSound: z.boolean().default(false),
   maxQueue: z.number().int().min(1).max(ALERT_MAX_QUEUE_LIMIT).default(50),
+  maxNameLength: z.number().int().min(0).max(ALERT_MAX_NAME_LENGTH).default(0),
   variants: z.object(
     Object.fromEntries(
       ALERT_EVENT_TYPES.map((event) => [event, alertVariantConfigSchema.optional()])
@@ -1148,6 +1193,8 @@ const overlayItemBoxFields = {
   // Payloads from before flipping existed carry neither; unflipped is what they meant.
   flip_h: z.boolean().default(false),
   flip_v: z.boolean().default(false),
+  // The item's innermost user group. Payloads from before groups carry none.
+  group_id: z.string().uuid().nullable().default(null),
 };
 
 export const overlayItemSchema = z.discriminatedUnion("type", [
@@ -1242,6 +1289,14 @@ export const overlayItemSchema = z.discriminatedUnion("type", [
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("shape_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: shapeWidgetItemConfigSchema }),
   z.object({ id: z.string().uuid().optional(), scene_id: z.string().uuid(), type: z.literal("slideshow_widget"), ...overlayItemBoxFields, z_index: z.number().int(), rotation: z.number().min(-360).max(360), opacity: z.number().min(0).max(1), is_visible: z.boolean(), is_locked: z.boolean(), label: z.string().min(1).max(100), config: slideshowWidgetItemConfigSchema }),
 ]);
+
+/** A user group in the editor's layers tree; see `OverlayItemGroup`. */
+export const overlayItemGroupSchema = z.object({
+  id: z.string().uuid(),
+  scene_id: z.string().uuid(),
+  parent_group_id: z.string().uuid().nullable(),
+  label: z.string().trim().min(1).max(100),
+});
 
 export const createSceneSchema = z.object({
   name: z.string().min(1).max(100),

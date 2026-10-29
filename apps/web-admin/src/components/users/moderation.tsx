@@ -23,7 +23,6 @@ import {
 import {
   banUserAction,
   deleteUserAction,
-  removeUserPasskeyAction,
   removeUserTotpAction,
   unbanUserAction,
   type ModerationResult,
@@ -303,15 +302,13 @@ export function DeleteUserDialog({
   );
 }
 
-/** Removes one TOTP factor or passkey after a confirm. */
+/** Removes one TOTP factor after a confirm. */
 export function RemoveFactorButton({
   userId,
-  kind,
   id,
   label,
 }: {
   userId: string;
-  kind: "totp" | "passkey";
   id: string;
   label: string;
 }) {
@@ -321,7 +318,7 @@ export function RemoveFactorButton({
   const remove = (event: React.MouseEvent) => {
     event.preventDefault();
     startTransition(async () => {
-      const result = kind === "totp" ? await removeUserTotpAction(userId, id) : await removeUserPasskeyAction(userId, id);
+      const result = await removeUserTotpAction(userId, id);
       if (result.error) {
         toast.error(result.error);
         return;

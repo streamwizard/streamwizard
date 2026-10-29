@@ -1,12 +1,11 @@
 import { ALERTS, type DemoAlert } from "../home/overlay-demo-alert";
 
 /*
- * The full 29-event alert catalog the playground cycles: the roadmap list from
- * SW-198's EventSub audit, grouped the way the tabs group them. The 15 events
- * the home demo already plays are picked from the shared ALERTS list by kind,
- * so their wording exists exactly once; the 14 others are demo entries in the
- * same shape, with the same cast. The home bento stays on the shared 15 on
- * purpose: its card has no room for 29 chips.
+ * The full 30-event alert catalog the playground cycles, grouped the way the
+ * tabs group them. The 15 events the home demo already plays are picked from
+ * the shared ALERTS list by kind, so their wording exists exactly once; the 15
+ * others are demo entries in the same shape, with the same cast. The home
+ * bento stays on the shared 15 on purpose: its card has no room for 30 chips.
  */
 
 export type AlertCategoryId = "community" | "money" | "channel" | "moderation";
@@ -138,6 +137,15 @@ const BAN: DemoAlert = {
   media: "hammer.webm",
 };
 
+const TIMEOUT: DemoAlert = {
+  kind: "Timeout",
+  name: "capslockcarl",
+  rest: " is in timeout for 600 seconds.",
+  anim: "slide_down",
+  template: "{name} is in timeout for {amount} seconds.",
+  media: "hammer.webm",
+};
+
 const VIP_ADDED: DemoAlert = {
   kind: "VIP added",
   name: "toastcrumb",
@@ -200,7 +208,7 @@ export const ALERT_CATALOG: AlertCategory[] = [
   {
     id: "moderation",
     label: "Mod",
-    alerts: [BAN, VIP_ADDED, MOD_ADDED],
+    alerts: [BAN, TIMEOUT, VIP_ADDED, MOD_ADDED],
   },
 ];
 

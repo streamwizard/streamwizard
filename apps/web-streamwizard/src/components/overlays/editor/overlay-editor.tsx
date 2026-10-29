@@ -2,6 +2,8 @@
 
 import { trackAction } from "@/lib/track-action";
 import { Button, Separator, SidebarTrigger, useSidebar } from "@repo/ui";
+import { EditorAudioProvider, EditorPreviewValuesProvider, normalizeLabelWidgetConfig } from "@repo/ui/overlay";
+import { useEditorStateData } from "@/components/demo/editor-state-data";
 import { Database } from "@repo/supabase";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
@@ -44,6 +46,7 @@ import type {
 import { EditorCanvas } from "./editor-canvas";
 import { EditorLayers } from "./editor-layers";
 import { EditorInspector } from "./editor-inspector";
+import type { OverlayRenderMode } from "../registry/overlay-widget-registry.types";
 import { OverlayWidgetSheet } from "./overlay-widget-sheet";
 import { WidgetLibraryModal } from "./widget-library-modal";
 import { ShortcutsDialog } from "./shortcuts-dialog";
@@ -61,6 +64,8 @@ interface OverlayEditorProps {
   clipFolders: Database["public"]["Tables"]["clip_folders"]["Row"][];
   /** Widget rows for the scene's custom widgets, fetched with the page. */
   initialWidgets: Widget[];
+  /** The overlay's type, which decides what the widget list offers. */
+  renderMode: OverlayRenderMode;
 }
 
 /**
@@ -71,7 +76,7 @@ interface OverlayEditorProps {
 const OVERLAY_SURFACE_SELECTOR =
   '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], [data-radix-popper-content-wrapper]';
 
-export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: OverlayEditorProps) {
+export function OverlayEditor({ initialScene, clipFolders, initialWidgets, renderMode }: OverlayEditorProps) {
   // Before first render, so the canvas never has to fetch what the page already
   // loaded.
   useState(() => primeWidgetCache(initialWidgets));
@@ -102,11 +107,13 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     clearSelection,
     removeSelectedItems,
     duplicateSelectedItems,
+    groupSelected,
+    ungroupSelected,
     nudgeSelected,
     editorClipPreviewPaused,
     setEditorClipPreviewPaused,
-    editorClipPreviewForceMute,
-    setEditorClipPreviewForceMute,
+    editorAudioMuted,
+    setEditorAudioMuted,
     editorClipPreviewAutoplayBlocked,
     attemptEditorClipPreviewUnblock,
     runningSimulatorIds,
@@ -150,6 +157,35 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         .map((item) => getCachedWidget(asCustomWidgetConfig(item.config).widget_id)?.js ?? "")
         .join("\n"),
     [scene?.items]
+  );
+
+  /** Custom widgets on the canvas, for the demo deck's Saved data tab. */
+  const canvasCustomWidgets = useMemo(
+    () =>
+      (scene?.items ?? [])
+        .filter((item) => item.type === "custom_widget")
+        .map((item) => ({ id: item.id, label: item.label })),
+    [scene?.items]
+  );
+
+  /** What the canvas's label widgets show, for the Saved data tab. */
+  const canvasLabelIds = useMemo(
+    () => [
+      ...new Set(
+        (scene?.items ?? [])
+          .filter((item) => item.type === "label_widget")
+          .map((item) => normalizeLabelWidgetConfig(item.config).labelId)
+      ),
+    ],
+    [scene?.items]
+  );
+
+  // Stream label and goal values typed into the demo deck's Saved data tab,
+  // fed to the canvas only.
+  const [editorStateData] = useEditorStateData(scene?.id ?? "");
+  const previewValues = useMemo(
+    () => ({ labels: editorStateData.labels, goals: editorStateData.goals }),
+    [editorStateData.labels, editorStateData.goals]
   );
 
   /** Distinct item types on the canvas, so the demo deck offers only tests that something here can show. */
@@ -199,10 +235,13 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       crop_left: item.crop_left,
       z_index: item.z_index,
       rotation: item.rotation,
+      flip_h: item.flip_h,
+      flip_v: item.flip_v,
       opacity: item.opacity,
       is_visible: item.is_visible,
       is_locked: item.is_locked,
       label: item.label,
+      group_id: item.group_id ?? null,
       config: item.config as OverlayItemConfig,
     }));
 
@@ -226,7 +265,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
       persistedSizeRef.current = { width: scene.width, height: scene.height };
     }
 
-    const { success, error, data, idMap } = await saveAllOverlayItems(scene.id, items);
+    const { success, error, data, idMap } = await saveAllOverlayItems(scene.id, items, scene.groups ?? []);
 
     if (success) {
       toast.success("Overlay saved");
@@ -410,6 +449,14 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         duplicateSelectedItems();
         return;
       }
+      // Ctrl+G is the browser's find-next; in the editor it groups, as in
+      // every design tool. Shift+G alone (no Ctrl) is still the grid toggle.
+      if (mod && e.key.toLowerCase() === "g") {
+        e.preventDefault();
+        if (e.shiftKey) ungroupSelected();
+        else groupSelected();
+        return;
+      }
       if (e.key === "Escape") {
         // Radix overlays handle their own Escape and preventDefault it.
         if (!e.defaultPrevented) clearSelection();
@@ -450,6 +497,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
     clearSelection,
     removeSelectedItems,
     duplicateSelectedItems,
+    groupSelected,
+    ungroupSelected,
     nudgeSelected,
   ]);
 
@@ -543,16 +592,16 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
               variant="ghost"
               size="icon"
               className="h-7 w-7"
-              onClick={() =>
-                setEditorClipPreviewForceMute(!editorClipPreviewForceMute)
-              }
+              onClick={() => setEditorAudioMuted(!editorAudioMuted)}
+              aria-pressed={editorAudioMuted}
+              aria-label={editorAudioMuted ? "Turn editor sound back on" : "Mute editor sound"}
               title={
-                editorClipPreviewForceMute
-                  ? "Unmute clip preview (editor only; still respects saved clip mute in widget settings)"
-                  : "Mute clip preview in the editor"
+                editorAudioMuted
+                  ? "Editor sound is off. Click to turn it back on. Your overlay in OBS still plays sound."
+                  : "Mute alerts, clips and custom widgets in this editor. Your overlay in OBS still plays sound."
               }
             >
-              {editorClipPreviewForceMute ? (
+              {editorAudioMuted ? (
                 <VolumeX className="h-3 w-3" />
               ) : (
                 <Volume2 className="h-3 w-3" />
@@ -730,11 +779,16 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         <div className="relative flex min-w-0 flex-1">
           {/* No scrolling here: pan and zoom own where the canvas sits. */}
           <div ref={canvasPaneRef} className="relative flex-1 overflow-hidden bg-muted/30">
-            <EditorCanvas
-              paneRef={canvasPaneRef}
-              onAddWidget={() => setWidgetSheetOpen(true)}
-              onOpenShortcuts={() => setShortcutsOpen(true)}
-            />
+            {/* Only the editor mounts this, so the mute can never reach OBS. */}
+            <EditorAudioProvider muted={editorAudioMuted}>
+              <EditorPreviewValuesProvider values={previewValues}>
+                <EditorCanvas
+                  paneRef={canvasPaneRef}
+                  onAddWidget={() => setWidgetSheetOpen(true)}
+                  onOpenShortcuts={() => setShortcutsOpen(true)}
+                />
+              </EditorPreviewValuesProvider>
+            </EditorAudioProvider>
           </div>
 
           {/* Floats over the canvas as a sibling of the pane, not inside it, so
@@ -747,6 +801,8 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
             open={demoOpen}
             onClose={() => setDemoOpen(false)}
             widgetTypes={canvasWidgetTypes}
+            customWidgets={canvasCustomWidgets}
+            labelIds={canvasLabelIds}
             storageId={scene.id}
             sourceJs={canvasWidgetJs}
             mode={demoFireMode}
@@ -766,6 +822,7 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets }: Ove
         onOpenChange={setWidgetSheetOpen}
         onAddWidget={(type, presetId) => addItem(type, presetId)}
         onOpenLibrary={() => setWidgetLibraryOpen(true)}
+        renderMode={renderMode}
       />
 
       <WidgetLibraryModal

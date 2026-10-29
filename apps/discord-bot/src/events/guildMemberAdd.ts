@@ -11,11 +11,15 @@ import {
 import type { BotEvent } from "../types/discord";
 import { reportError } from "@repo/sentry";
 import { trackServer } from "@repo/posthog/server";
+import { admitInvitedMember } from "../lib/voice/lifecycle";
 
 export default {
   name: Events.GuildMemberAdd,
   async execute(member) {
     console.log(`[guildMemberAdd] Member "${member.user.tag}" joined guild "${member.guild.name}"`);
+
+    // A /voice-invite link: let them into its channel. Never waits on, or breaks, the welcome below.
+    void admitInvitedMember(member).catch((error) => reportError(error, "discord-bot voice: admit invited member"));
 
     // Connection info is fetched before the welcome-settings early returns so
     // every join gets counted, welcome message or not.

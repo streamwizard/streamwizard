@@ -3,6 +3,10 @@ title: "Alerts"
 description: "Follow, sub, cheer, and raid alerts with your own image and sound. No code needed."
 ---
 
+<Frame caption="A follow alert playing.">
+  <img src="/images/overlays/alert-widget.png" alt="A follow alert on stream naming the new follower." />
+</Frame>
+
 ## The fast way: Alert box template
 
 **New Overlay → Alert box**. That's it. The overlay comes with an alert
@@ -14,8 +18,8 @@ raids? Switch the rest off.
 
 Click an alert to set it up:
 
-- **Text**: the title and an optional second line. Click a chip like `{name}` to drop it in. Font, size, and colors sit under **Typography**.
-- **Media and sound**: pick from your [media library](/overlays/media-library), choose where the image or video sits, and set the volume.
+- **Text**: the title and an optional second line. Click a chip like `{name}` to drop it in. Font, size, colors, and spacing (line height, letter and word spacing, how big the second line is) sit under **Typography**. The font can be any Google font or [your own](/overlays/media-library#your-own-fonts).
+- **Media and sound**: pick from your [media library](/overlays/media-library), choose where the image or video sits, and set the volumes. The sound file and the video's own sound each have a slider, so you can play both, or turn the video down to 0 to let the sound file speak alone.
 - **Timing**: seconds on screen, and a minimum (bits, viewers) before it fires.
 - **Animation**: how the alert comes in and leaves, and what its text does in between. See [Animation](#animation).
 
@@ -25,6 +29,56 @@ Alerts queue. If three people follow at once, you get three alerts back to
 back, not one mangled one. The line holds 50 by default and skips anything past
 that, so a follow-bot wave can't book your alerts for an hour. Change it with
 **Most alerts waiting**.
+
+Long names can push a layout around. **Longest name**, under **All alerts**,
+cuts any name past that many letters and ends it in "…". It's off (0) until you
+set it.
+
+## What you can alert on
+
+There are 30 alerts, in four groups. The template switches on the usual four,
+and the rest are waiting in the panel.
+
+| Community | Money | Channel | Mod |
+|---|---|---|---|
+| Follow | Sub | Raid | Ban |
+| Reward redeemed | Resub | Shoutout received | Timeout |
+| Watch streak | Gift sub | Shoutout sent | VIP added |
+| Modiversary | Gift bomb | Announcement | Mod added |
+| | Gift upgrade | Ad break | |
+| | Prime upgrade | Poll start | |
+| | Pay it forward | Poll winner | |
+| | Cheer | Prediction start | |
+| | Bits badge | Prediction result | |
+| | Charity donation | Goal achieved | |
+| | Hype train start | | |
+| | Hype train end | | |
+
+**Reward redeemed** is the one people miss. It fires on channel point
+redemptions, so any reward you've set up on Twitch can have its own alert with
+its own sound.
+
+### Mod alerts ask Twitch first
+
+Ban, Timeout, VIP added, and Mod added need one more Twitch permission each.
+StreamWizard doesn't ask for them when you sign in, only when you turn one of
+these alerts on. You'll see why, then Twitch's own screen, then you're back in
+the editor. Turn the alert on again and it's live. Save your overlay before you
+go: the trip to Twitch leaves the editor.
+
+Twitch calls the ban permission "moderate". StreamWizard only reads who was
+banned or timed out, and by whom. It never bans anyone. VIP and mod are read
+only too.
+
+Say no on Twitch's screen and nothing breaks: the alert stays off, and you can
+try again whenever you like.
+
+A few things to know:
+
+- A timeout is its own alert, so a busy mod team doesn't flood your stream. `{amount}` is how long it lasts, in seconds.
+- `{message}` on a ban or timeout is the reason the mod typed, and `{moderator}` is who did it. Neither is in the default text.
+- Prediction result names the winning outcome, with its channel points in `{amount}`. A canceled prediction plays nothing.
+- Goal achieved only plays when the goal was hit, not when it ran out.
 
 ## Animation
 
@@ -56,8 +110,8 @@ while a small one fades.
 
 ## Variations
 
-A variation is another version of an alert that plays instead of it when a
-condition is met. A louder cheer alert from 1000 bits up. A different video for
+A variation is another version of an alert that plays instead of it when its
+conditions are met. A louder cheer alert from 1000 bits up. A different video for
 a 12 month resub. One alert just for your mods.
 
 Open an alert, go to **Variations**, and hit **Add variation**. Start from the
@@ -65,22 +119,30 @@ alert itself or copy any other alert or variation. Each one has its own text,
 media, sound, and style. It is a separate copy: changing the alert later does
 not change its variations.
 
-A variation can look at one thing:
+A variation checks one or more conditions:
 
-- **A number**: bits, months, viewers, gifts. Exactly, at least, or the biggest of the stream.
+- **A number**: bits, months, viewers, gifts. Exactly, at least, at most, between two numbers (both included), or the biggest of the stream.
 - **Sub tier**: Prime, Tier 1, Tier 2, or Tier 3.
 - **Viewer name**: one or more usernames, commas between them.
-- **Nothing**: chance only.
+- **Gifted sub**: on subs and resubs, a gifted sub or one the viewer paid for.
+- **Anonymous**: on cheers, gift subs, and gift bombs, sent anonymously or not.
+
+Add up to five. With two or more, pick **All of them** (a Tier 3 sub that is
+also 6 months or more) or **Any of them** (either one is enough). No conditions
+means it plays every time.
 
 **Chance** sets how often it plays when it matches. 25 is about one in four.
 
 When several match, the most specific one plays: a viewer by name, then the
-biggest of the stream, then an exact number or tier, then "at least". Between
-two "at least" variations the higher number wins, so 1000 bits plays your 1000
-variation, not your 100 one. Still tied? The first in the list plays, or switch
-on **Pick at random when several match** to rotate them.
+biggest of the stream, then an exact number, a range, a tier, gifted, or
+anonymous, then "at least" and "at most". A variation where all of several
+conditions have to hold beats one with fewer of the same kind. One set to
+"Any of them" counts only as its loosest condition. Between two "at least"
+variations the higher number wins, so 1000 bits plays your 1000 variation, not
+your 100 one. Still tied? The first in the list plays, or switch on **Pick at
+random when several match** to rotate them.
 
-The play button on a variation tests that exact one, whatever its condition.
+The play button on a variation tests that exact one, whatever its conditions.
 
 A few things to know:
 
@@ -95,12 +157,51 @@ In the editor: **Widgets → Library → Starters → Alert box → Add to canva
 
 ## Testing
 
-Open the widget's code editor (**Edit code** in its settings) and use the test
-buttons above the preview: Follow, Sub, Cheer, Raid. Hit **Connect** to test
-against real events from your channel.
+Every alert in the panel has a **Test** button. It plays that alert on the
+canvas with a sample viewer, so you can check the look before you go live. The
+play button on a variation tests that variation.
 
-## Making it fancier
+## Custom CSS
 
-The alert box is a regular custom widget you own. **Edit code** opens the
-full editor where you can change the animation, layout, or add more events.
-See [building widgets](/widgets/overview) if you want to go down that road.
+Want a gradient title, an outline, or a panel behind the text? Open an alert,
+then **Custom CSS**, and write CSS for that alert. It only styles that alert,
+on the canvas and in OBS. Other alerts and other widgets on the overlay are
+left alone.
+
+Point your rules at these parts:
+
+| Part | What it is |
+|---|---|
+| `[data-part="box"]` | Everything: media and text together |
+| `[data-part="media"]` | The image or video |
+| `[data-part="text"]` | The title and second line together |
+| `[data-part="title"]` | The title |
+| `[data-part="message"]` | The second line |
+| `[data-part="name"]` | The viewer's name in the title |
+| `[data-part="amount"]` | The amount in the title |
+
+`:root` means the whole alert. Your rules beat the panel's settings, no
+`!important` needed. For example, a black outline on the title and a pink
+name:
+
+```css
+[data-part="title"] {
+  -webkit-text-stroke: 2px #000;
+}
+[data-part="name"] {
+  color: #ff5fa2;
+}
+```
+
+Good to know:
+
+- **Use this look for all alerts** copies your CSS too.
+- Images in `url()` have to come from your [media library](/overlays/media-library).
+- `@import` and `@font-face` are skipped. For your own font, upload it to the media library and pick it in **Typography**.
+- Up to 5,000 characters per alert.
+- Size and position of the media follow the panel. To change those, add `!important`.
+
+## Building your own
+
+Need something the alert box can't do? Build it as a
+[custom widget](/widgets/overview) and write the whole thing yourself.

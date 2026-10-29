@@ -7,6 +7,7 @@ import {
   type ErrorEvent,
   type Event,
   type Log,
+  type TransactionEvent,
 } from "@sentry/core";
 
 export interface SentryConfig {
@@ -43,10 +44,10 @@ const IGNORED_LOG_PATTERNS: RegExp[] = [
 export function scrubLog(log: Log): Log | null {
   const message = String(log.message);
   if (IGNORED_LOG_PATTERNS.some((re) => re.test(message))) return null;
-  log.message = redactString(message);
+  log.message = redactPreviewPath(redactString(message));
   if (log.attributes) {
     for (const [key, value] of Object.entries(log.attributes)) {
-      if (typeof value === "string") log.attributes[key] = redactString(value);
+      if (typeof value === "string") log.attributes[key] = redactPreviewPath(redactString(value));
     }
   }
   return log;
@@ -88,7 +89,29 @@ function scrubEvent<T extends Event>(event: T): T {
     }
   }
   if (event.message) event.message = redactString(event.message);
-  return event;
+  return maskPreviewPaths(event);
+}
+
+// CMS preview links carry their secret in the path: /preview/<token>. It can
+// sit anywhere in an event (request URL, breadcrumbs, span attributes, the
+// transaction name), so every string is checked.
+const PREVIEW_PATH = /\/preview\/[A-Za-z0-9_-]{8,}/g;
+
+export function redactPreviewPath(value: string): string {
+  return value.includes("/preview/") ? value.replace(PREVIEW_PATH, "/preview/[token]") : value;
+}
+
+function maskPreviewPaths<T>(value: T, depth = 0): T {
+  if (typeof value === "string") return redactPreviewPath(value) as T;
+  if (depth > 12 || value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) value[i] = maskPreviewPaths(value[i], depth + 1);
+    return value;
+  }
+  for (const [key, item] of Object.entries(value)) {
+    (value as Record<string, unknown>)[key] = maskPreviewPaths(item, depth + 1);
+  }
+  return value;
 }
 
 // The free plan has no per-project rate limits, so one error thrown in a loop
@@ -171,6 +194,7 @@ export function getSentryOptions(config: SentryConfig) {
       tags: { service: config.service },
     },
     beforeSend: (event: ErrorEvent) => (errorLimiter(event) ? scrubEvent(event) : null),
+    beforeSendTransaction: (event: TransactionEvent) => maskPreviewPaths(event),
     beforeSendLog: (log: Log) => scrubLog(log),
   };
 }

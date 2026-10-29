@@ -6,7 +6,7 @@ import { tryAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getTwitchScopes } from "@repo/supabase/queries/twitch-scopes";
 import { missingTwitchScopes } from "@repo/schemas";
-import { getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions";
+import { getProductAccess, getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions";
 import {
   type ObsInstance,
   getInstanceNodeApiUrl,
@@ -89,17 +89,20 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
 
   const adminClient = createAdminClient();
 
-  const [node, subscriptionId, twitchScopes] = await Promise.all([
+  const [node, subscriptionId, twitchScopes, access] = await Promise.all([
     pickAvailableNode(adminClient),
     getUserActiveSubscriptionId(adminClient, userId, "cloud_obs"),
     getTwitchScopes(supabase),
+    getProductAccess(supabase, "cloud_obs"),
   ]);
 
   if (!node?.api_url) {
     await track("cloud_obs_launch_failed", { reason: "no_capacity" }, ctx.user);
     return { data: null, error: "No Cloud OBS capacity is available right now. Please try again later." };
   }
-  if (!subscriptionId) {
+  // Same rule as the page gate: an expired grant or a past_due plan is
+  // read-only, so it can't start a new instance.
+  if (!subscriptionId || !access.canInteract) {
     await track("cloud_obs_launch_failed", { reason: "no_subscription" }, ctx.user);
     return { data: null, error: "No active Cloud OBS subscription found." };
   }

@@ -25,8 +25,11 @@ import {
   APP_MEMORY_WARN_PCT,
   APP_RESTART_LOOP_COUNT,
   APP_RESTART_LOOP_WINDOW_MIN,
+  SERVER_CPU_WARN_PCT,
   SERVER_DISK_CRIT_PCT,
   SERVER_DISK_WARN_PCT,
+  SERVER_MEM_CRIT_PCT,
+  SERVER_MEM_WARN_PCT,
   SERVER_OOM_WINDOW_MIN,
   TELEGRAF_SILENT_MIN,
 } from "./thresholds";
@@ -318,6 +321,43 @@ export function appRules(overrides: RuleOverrides): AlertRule[] {
           }
           return breaches;
         },
+      },
+      overrides,
+    ),
+    thresholdRule(
+      {
+        id: "server.cpu_high",
+        title: "Dokploy server CPU high",
+        // Five ticks, so an image build or a deploy doesn't page anyone; a
+        // server pinned that long is starving the apps on it.
+        forTicks: 5,
+        envs: ["prod"],
+        warn: SERVER_CPU_WARN_PCT,
+        unit: "%",
+        fetch: async (ctx) => {
+          const host = await reportingHost(ctx);
+          const value = host ? (await server(ctx))?.cpuPct : null;
+          return host && value != null ? [{ entityId: host, value }] : [];
+        },
+        format: (id, v, t) => `CPU on ${id} at ${v.toFixed(0)}% (warn > ${t.warn}%)`,
+      },
+      overrides,
+    ),
+    thresholdRule(
+      {
+        id: "server.mem_high",
+        title: "Dokploy server memory high",
+        forTicks: 2,
+        envs: ["prod"],
+        warn: SERVER_MEM_WARN_PCT,
+        crit: SERVER_MEM_CRIT_PCT,
+        unit: "%",
+        fetch: async (ctx) => {
+          const host = await reportingHost(ctx);
+          const value = host ? (await server(ctx))?.memUsedPct : null;
+          return host && value != null ? [{ entityId: host, value }] : [];
+        },
+        format: (id, v, t) => `Memory on ${id} at ${v.toFixed(0)}% (warn > ${t.warn}%)`,
       },
       overrides,
     ),

@@ -112,6 +112,24 @@ export interface OverlayItem {
   is_locked: boolean;
   label: string;
   config: OverlayItemConfig;
+  /**
+   * The innermost user group this item sits in, or null/absent when it is
+   * ungrouped. Editor structure only: the live overlay ignores it. Clip
+   * display fields never carry one; they follow their clips widget instead.
+   */
+  group_id?: string | null;
+}
+
+/**
+ * A named group in the editor's layers tree. Groups nest through
+ * `parent_group_id`; items point at their innermost group. The id is made by
+ * the editor, so a new group saves without a temp-id remap.
+ */
+export interface OverlayItemGroup {
+  id: string;
+  scene_id: string;
+  parent_group_id: string | null;
+  label: string;
 }
 
 export interface OverlayScene {
@@ -129,6 +147,8 @@ export interface OverlayScene {
 
 export interface OverlaySceneWithItems extends OverlayScene {
   items: OverlayItem[];
+  /** The editor's groups. Absent wherever groups don't matter (the live overlay). */
+  groups?: OverlayItemGroup[];
 }
 
 export function isTextWidgetItem(item: OverlayItem): boolean {
@@ -197,6 +217,8 @@ export interface OverlayItemDbRow {
   is_locked: boolean;
   label: string;
   config: unknown;
+  /** Absent on rows written before groups landed. */
+  group_id?: string | null;
 }
 
 export function overlayItemFromDbRow(row: OverlayItemDbRow): OverlayItem {
@@ -217,6 +239,7 @@ export function overlayItemFromDbRow(row: OverlayItemDbRow): OverlayItem {
     // A legacy row with no anchor is measured from the top-left, as it always was.
     anchor_x: anchor.x,
     anchor_y: anchor.y,
+    group_id: row.group_id ?? null,
     config: row.config as OverlayItemConfig,
   };
 }

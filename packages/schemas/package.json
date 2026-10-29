@@ -10,6 +10,10 @@
     ".": {
       "types": "./index.ts",
       "default": "./index.ts"
+    },
+    "./auto-switcher-constants": {
+      "types": "./src/auto-switcher-constants.ts",
+      "default": "./src/auto-switcher-constants.ts"
     }
   },
   "scripts": {

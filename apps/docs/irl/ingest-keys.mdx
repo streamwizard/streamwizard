@@ -1,0 +1,129 @@
+---
+title: "Ingest keys"
+description: "The private address your phone or encoder streams to, and the URLs that go with it."
+tag: "Soon"
+---
+
+import OverlayUrlWarning from '/snippets/overlay-url-warning.mdx';
+import IrlComingSoon from '/snippets/irl-coming-soon.mdx';
+
+<IrlComingSoon />
+
+Your ingest key is how StreamWizard knows an incoming feed is yours. You paste
+it into your encoder, point that encoder at one of the two URLs here, and your
+IRL feed arrives in your cloud OBS.
+
+<Warning>
+Your stream key is a password. Anyone who has it can stream as you. Don't show
+it on stream, don't paste it in Discord, and rotate it the moment you think it
+has leaked.
+</Warning>
+
+## Before you start
+
+- Ingest keys are part of cloud OBS. Without it, **IRL** doesn't appear in the
+  sidebar.
+
+## Make your key
+
+<Steps>
+  <Step title="Open the ingest page">
+    Go to **IRL → Ingest**.
+  </Step>
+  <Step title="Name it and create it">
+    Give it a label so you recognise it later, like `Belabox` or `phone`, then
+    select **Create key**.
+  </Step>
+  <Step title="Copy your settings">
+    Three fields appear: an **SRT URL**, an **SRTLA URL** and a **Stream ID**.
+    The Stream ID is your key.
+  </Step>
+</Steps>
+
+You get one key. That's deliberate: there's nothing to manage and nothing to
+mix up. If you need a new one, rotate the one you have.
+
+## Which URL to use
+
+| Your setup | Use |
+|---|---|
+| One connection, one modem | The **SRT URL**, on port 8888 |
+| Bonded, several connections at once | The **SRTLA URL**, on port 5000 |
+
+Belabox, Moblin and IRLToolkit all bond, so they take the SRTLA URL. Both URLs
+take the same key.
+
+Most encoders have a separate field for the URL and for the stream ID. Paste
+the stream ID into the field called **streamid**. If your encoder only gives
+you one box, put them together:
+
+```
+srt://your-host:8888?streamid=your-stream-id
+```
+
+## Getting the key onto your phone
+
+Typing 64 characters on a phone is miserable, so there's a Discord button next
+to your key that sends it to you as a DM. You need your Discord account
+[linked](/discord) for it to work.
+
+The DM hides the key behind a spoiler, so you can open it on stream without
+showing it. It arrives automatically when you first create a key, too.
+
+## Watching the feed come in
+
+**Live ingest status** at the top of the page shows what's actually arriving:
+
+- **Bitrate**, always.
+- **RTT**, **packet loss** and a **bandwidth estimate** on SRT and SRTLA.
+
+A badge rates the connection as **good**, **unstable** or **poor connection**
+based on round-trip time and loss.
+
+<Note>
+The stats update about every two seconds while you're pushing a feed, and clear
+to **No active stream right now** if nothing arrives for six seconds. They
+don't reconnect on their own, so if the card goes quiet while you know you're
+streaming, refresh the page.
+</Note>
+
+## Rotating and deleting
+
+**Rotate** replaces the key in place. There's no confirmation, and the old key
+stops authenticating straight away, so anything still using it fails the next
+time it reconnects. Update your encoder before you next go live.
+
+**Delete** needs a confirmation, because any encoder using that key stops
+working immediately and it can't be undone.
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="Your encoder won't connect">
+    Check the stream ID went into the **streamid** field rather than into the
+    URL, and that a bonded encoder is using the SRTLA URL on port 5000 rather
+    than the SRT URL on 8888.
+  </Accordion>
+  <Accordion title="Connect Discord in Settings → Integrations first">
+    The DM button needs a linked Discord account. See [Discord](/discord).
+  </Accordion>
+  <Accordion title="Everything is disabled">
+    If your subscription payment is overdue you can still read the page, but
+    creating, rotating and deleting are switched off until it's settled. Copy
+    buttons keep working.
+  </Accordion>
+  <Accordion title="The key says Never used">
+    Nothing has connected with it yet. That's expected on a key you just made.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Cloud OBS setup" href="/irl/cloud-obs">
+    Get the instance running that this feed arrives in.
+  </Card>
+  <Card title="The auto switcher" href="/irl/auto-switcher">
+    Switch scenes automatically when the connection drops.
+  </Card>
+</CardGroup>

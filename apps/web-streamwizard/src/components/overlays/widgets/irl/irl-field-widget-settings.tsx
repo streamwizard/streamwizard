@@ -50,7 +50,7 @@ export function IrlFieldWidgetSettings({ item, updateItem }: OverlayInspectorApp
         <div>
           <Label className="text-xs">Mock data</Label>
           <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">
-            Show sample values for layout design.
+            Sample values for laying the widget out. Editor only, never on stream.
           </p>
         </div>
         <Switch

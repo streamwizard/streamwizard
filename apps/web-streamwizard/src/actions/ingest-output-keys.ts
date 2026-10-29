@@ -11,6 +11,7 @@ import {
   selectOutputKeys,
 } from "@repo/supabase/queries/ingest";
 import { tryAuthContext } from "@/lib/auth";
+import { canCreateIngestKeys, INGEST_PLAN_REQUIRED } from "@/lib/ingest-access";
 import { track } from "@/lib/track";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
@@ -43,6 +44,7 @@ export async function createOutputKey(
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { user } = ctx;
+  if (!(await canCreateIngestKeys(ctx.supabase))) return { data: null, error: INGEST_PLAN_REQUIRED };
 
   const adminClient = createAdminClient();
   if (!(await assertOwnsKey(adminClient, keyId, user.id))) {
@@ -85,6 +87,7 @@ export async function rotateOutputKey(
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { user } = ctx;
+  if (!(await canCreateIngestKeys(ctx.supabase))) return { data: null, error: INGEST_PLAN_REQUIRED };
 
   const adminClient = createAdminClient();
   const { data, error } = await rotateOutputKeySecret(adminClient, id, user.id, generateOutputKey());

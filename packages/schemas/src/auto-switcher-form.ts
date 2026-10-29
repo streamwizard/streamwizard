@@ -4,6 +4,7 @@ import {
   type AutoSwitcherSensitivityPreset,
   type AutoSwitcherThresholds,
 } from "./auto-switcher";
+import { AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS } from "./auto-switcher-constants";
 
 // The switcher settings form, shared by the streamer dashboard, the phone deck
 // and web-admin's per-user editor so the three surfaces can't drift on
@@ -39,23 +40,7 @@ export const autoSwitcherFormSchema = autoSwitcherConfigSchema
 
 export type AutoSwitcherFormValues = z.infer<typeof autoSwitcherFormSchema>;
 
-/**
- * The chat notice templates a fresh config starts with, matching the column
- * defaults in SQL. Exported because the public cloud OBS page shows them as
- * the shipped defaults, and a marketing page quoting a different string than
- * the product hands out is the kind of drift nobody notices for a year.
- */
-export const AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS = {
-  degraded: "Connection unstable — switching to backup scene ({bitrate} kbps, {rtt} ms RTT)",
-  offline: "Stream signal lost — hang tight!",
-  recovered: "Signal restored — back live!",
-} as const;
-
-export const PRESET_COPY: Record<AutoSwitcherSensitivityPreset, { title: string; blurb: string }> = {
-  relaxed: { title: "Relaxed", blurb: "Waits ~6s of bad signal before switching, ~15s stable before switching back. Rides out tunnels and dead spots." },
-  balanced: { title: "Balanced", blurb: "Switches after ~4s bad, back after ~8s stable. The right pick for most IRL setups." },
-  fast: { title: "Fast", blurb: "Switches after ~2s bad, back after ~5s stable. For when a single frozen frame is one too many." },
-};
+export { AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS, PRESET_COPY } from "./auto-switcher-constants";
 
 /**
  * The subset of the config row the form reads. Declared structurally so this

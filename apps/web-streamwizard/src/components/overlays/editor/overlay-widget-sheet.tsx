@@ -17,6 +17,7 @@ import {
 } from "../registry/overlay-widget-registry";
 import type {
   OverlayLibraryEntry,
+  OverlayRenderMode,
   WidgetCategory,
 } from "../registry/overlay-widget-registry.types";
 import { filterLibraryWidgets } from "./widget-search";
@@ -30,6 +31,7 @@ const CATEGORY_LABELS: Record<WidgetCategory, string> = {
   credits: "Credits",
   labels: "Labels",
   layout: "Layout",
+  irl: "IRL",
   other: "Other",
 };
 
@@ -38,6 +40,8 @@ interface OverlayWidgetSheetProps {
   onOpenChange: (open: boolean) => void;
   onAddWidget: (type: RootOverlayItemType, presetId?: string) => void;
   onOpenLibrary: () => void;
+  /** Which widgets this overlay offers: the IRL ones only show on a GPS overlay. */
+  renderMode: OverlayRenderMode;
 }
 
 export function OverlayWidgetSheet({
@@ -45,6 +49,7 @@ export function OverlayWidgetSheet({
   onOpenChange,
   onAddWidget,
   onOpenLibrary,
+  renderMode,
 }: OverlayWidgetSheetProps) {
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -87,7 +92,7 @@ export function OverlayWidgetSheet({
           Its own component so closing the sheet unmounts it: reopening starts
           from an empty search rather than whatever was typed last time.
         */}
-        <WidgetPicker searchRef={searchRef} onAddWidget={onAddWidget} />
+        <WidgetPicker searchRef={searchRef} onAddWidget={onAddWidget} renderMode={renderMode} />
       </SheetContent>
     </Sheet>
   );
@@ -96,17 +101,19 @@ export function OverlayWidgetSheet({
 function WidgetPicker({
   searchRef,
   onAddWidget,
+  renderMode,
 }: {
   searchRef: React.RefObject<HTMLInputElement | null>;
   onAddWidget: (type: RootOverlayItemType, presetId?: string) => void;
+  renderMode: OverlayRenderMode;
 }) {
   const [query, setQuery] = useState("");
   const searching = query.trim() !== "";
 
-  const byCategory = useMemo(() => groupLibraryEntriesByCategory(), []);
+  const byCategory = useMemo(() => groupLibraryEntriesByCategory(renderMode), [renderMode]);
   const matches = useMemo(
-    () => (searching ? filterLibraryWidgets(getLibraryEntries(), query) : []),
-    [searching, query]
+    () => (searching ? filterLibraryWidgets(getLibraryEntries(renderMode), query) : []),
+    [searching, query, renderMode]
   );
 
   return (

@@ -17,24 +17,25 @@ import {
   DialogTitle,
 } from "@repo/ui";
 import { formatDate } from "@/lib/format";
-import type { RealClipCard } from "./demo-data";
+import { clipAlt, type RealClipCard } from "./demo-data";
 
 /* Same parent list the product's clip players use (twitch-clip-dialog.tsx). */
 const EMBED_PARENTS = "&parent=localhost&parent=streamwizard.org&parent=staging.streamwizard.org&autoplay=true";
 
-function ClipCard({ clip, onOpen, tabIndex }: { clip: RealClipCard; onOpen: () => void; tabIndex?: number }) {
+function ClipCard({ clip, onOpen, clone = false }: { clip: RealClipCard; onOpen: () => void; clone?: boolean }) {
   return (
     <button
       type="button"
       onClick={onOpen}
-      tabIndex={tabIndex}
+      tabIndex={clone ? -1 : undefined}
       className="group w-60 shrink-0 cursor-pointer rounded-xl border border-white/[0.07] bg-white/[0.04] p-2.5 text-left transition-colors hover:border-white/[0.14] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
       aria-label={`Play clip: ${clip.title}`}
     >
       <div className="relative aspect-video overflow-hidden rounded-lg border border-white/[0.06] bg-black">
         <Image
           src={clip.thumbnailUrl}
-          alt=""
+          // A clone repeats a card that is already described once.
+          alt={clone ? "" : clipAlt(clip)}
           fill
           sizes="240px"
           className="object-cover"
@@ -224,7 +225,10 @@ const DRAG_THRESHOLD_PX = 6;
 function DraggableMarquee({ renderSet }: { renderSet: (clone: boolean) => React.ReactNode }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const setRef = useRef<HTMLDivElement>(null);
-  const [copies, setCopies] = useState(2);
+  // One set in the server HTML: 12 cards is ~3,000 px, wider than nearly any
+  // screen, and the strip doesn't move before hydration. The clones (dozens of
+  // cards and icons in the DOM) appear once the measure effect below runs.
+  const [copies, setCopies] = useState(1);
 
   // Width of one content set (incl. trailing gap) — read inside the transform
   // every frame, so a ref rather than state.
@@ -351,7 +355,7 @@ export function ClipsMarquee({ clips }: { clips: RealClipCard[] }) {
         key={clip.id}
         clip={clip}
         onOpen={() => setOpenIndex(i)}
-        tabIndex={clone ? -1 : undefined}
+        clone={clone}
       />
     ));
 

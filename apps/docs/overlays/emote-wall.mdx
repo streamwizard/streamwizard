@@ -1,0 +1,153 @@
+---
+title: "Emote wall"
+description: "Chat emotes fly across your stream, and follows, subs, cheers and raids set off a big burst."
+---
+
+import AddOverlayToObs from '/snippets/add-overlay-to-obs.mdx';
+import TestEvents from '/snippets/widget-test-events.mdx';
+
+The emote wall puts every emote your chat types on screen, flying across your
+stream. Follows, subs, cheers and raids set off a burst of them. It knows your
+7TV, BTTV and FFZ emotes as well as your Twitch ones.
+
+<Frame caption="Emotes flying after a cheer.">
+  <img src="/images/overlays/emote-wall-widget.png" alt="Twitch emotes scattered across the screen mid-burst." />
+</Frame>
+
+## Before you start
+
+- You have an overlay. [Make one first](/overlays/quickstart) if you don't.
+- Your 7TV, BTTV or FFZ emotes work automatically if those accounts are
+  attached to your Twitch channel. There's nothing to link in StreamWizard.
+
+## Add the emote wall
+
+<Steps>
+  <Step title="Add the widget">
+    In the overlay editor, open **Widgets → Alerts & chat** and pick
+    **Emote wall**.
+  </Step>
+  <Step title="Leave it full screen">
+    The wall is added at the full size of your overlay, because emotes should be
+    able to go anywhere. If you shrink the box, emotes stay inside it.
+  </Step>
+  <Step title="Try it">
+    Select **Send a test message** at the top of the settings to throw a handful
+    of emotes across the canvas.
+  </Step>
+</Steps>
+
+## Pick how emotes move
+
+**Animation** under **Chat emotes** sets the style for emotes typed in chat:
+
+| Animation | What it does |
+|---|---|
+| **Float up** | Drift upward from the bottom. The quiet default. |
+| **Rain** | Fall from the top. |
+| **Bounce** | Fall and bounce off the floor. |
+| **Explosion** | Burst outward from the middle. |
+| **Fireworks** | Launch, then scatter. |
+| **Spiral** | Curl outward in a spiral. |
+| **Zoom** | Rush at the camera. |
+| **Slide across** | Travel sideways. |
+
+Each event gets its own animation too, so chat can float up quietly while a
+raid sets off fireworks. Select **Preview animation** next to the picker to
+watch one without touching chat.
+
+## Set up the bursts
+
+**Events** has a row for each thing that can trigger a burst: **Follow**,
+**New sub**, **Resub**, **Gift subs**, **Cheer** and **Raid**. Turn one on and
+you get its own animation, an **Emotes** count, and **Which emotes** to pick
+what flies.
+
+Leave **Which emotes** empty and the wall uses the emotes from the viewer's own
+message, or your channel emotes if there weren't any.
+
+Big events send more. A cheer scales with the bits, a raid with the viewers,
+and gift subs with how many were given. It's square-rooted rather than
+multiplied, so 400 bits sends about double a 100-bit cheer, not four times as
+many. 300 emotes is the hard ceiling for any one burst.
+
+<Note>
+Gifted subs arrive from Twitch as a sub for each recipient plus one gift event
+for the gifter. The wall deliberately ignores the recipients so you get one
+burst instead of twenty. That means turning **Gift subs** off turns off
+everything gift related, including the recipients.
+</Note>
+
+## Settings
+
+**Look**
+
+| Setting | Default | Range |
+|---|---|---|
+| **Emote size** | 56 px | 16 to 256 |
+| **Time on screen** | 5 s | 1 to 20 |
+| **Most at once** | 150 | 10 to 500 |
+
+**Most at once** is the one to turn down if OBS starts stuttering. When the
+wall is full, the oldest emotes go first.
+
+**Filters**
+
+| Setting | Default | What it does |
+|---|---|---|
+| **Skip !commands** | On | Messages starting with `!` send no emotes. |
+| **Cooldown per viewer** | 0 s | How long before the same person's emotes show again. |
+| **Blocked emotes** | Empty | Emote codes that never fly. |
+| **Hidden accounts** | 8 bots | Logins whose messages are ignored. |
+
+**Hidden accounts** starts with the usual bots already in it: `streamwizardbot`,
+`nightbot`, `streamelements`, `streamlabs`, `moobot`, `fossabot`, `wizebot` and
+`sery_bot`. Remove one if you want its messages to count.
+
+**Emote sets** under **Chat emotes** toggles **7TV**, **BTTV** and **FFZ**.
+Twitch emotes always show, so turning all three off gives you a Twitch-only
+wall rather than an empty one.
+
+## See it before you go live
+
+<TestEvents />
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="Nothing happens when chat types">
+    Check that **Show emotes from chat** is on, and that the account testing it
+    isn't in **Hidden accounts**. If you're testing with your own bot, note that
+    `streamwizardbot` is hidden by default.
+  </Accordion>
+  <Accordion title="A blocked emote still shows up">
+    **Blocked emotes** are case-sensitive, the same way chat is. `kappa` will
+    not block `Kappa`. Blocking reliably stops an emote coming from chat; an
+    emote you picked yourself under **Which emotes** is sent regardless.
+  </Accordion>
+  <Accordion title="My 7TV or BTTV emotes went missing">
+    If the provider had an outage, StreamWizard caches the empty result for an
+    hour. Your emotes come back on their own once that hour is up.
+  </Accordion>
+  <Accordion title="OBS stutters while the wall is busy">
+    Turn **Most at once** down, then **Emote size**. A 256 px emote at 500 on
+    screen is a lot of pixels for OBS to composite every frame.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+If a viewer has reduced motion turned on in their system settings, the wall
+sends a third as many emotes and stops them spinning. That's on the viewer's
+machine, not yours, so it doesn't change what goes out on stream.
+</Note>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Emote combo" href="/overlays/emote-combo">
+    Count it when chat spams the same emote.
+  </Card>
+  <Card title="Chat box" href="/overlays/chat">
+    Put the messages themselves on screen.
+  </Card>
+</CardGroup>

@@ -119,6 +119,10 @@
       "types": "./src/queries/discord-activity.ts",
       "default": "./src/queries/discord-activity.ts"
     },
+    "./queries/discord-voice": {
+      "types": "./src/queries/discord-voice.ts",
+      "default": "./src/queries/discord-voice.ts"
+    },
     "./queries/tickets": {
       "types": "./src/queries/tickets.ts",
       "default": "./src/queries/tickets.ts"
@@ -214,6 +218,38 @@
     "./queries/assets": {
       "types": "./src/queries/assets.ts",
       "default": "./src/queries/assets.ts"
+    },
+    "./queries/cms/assets": {
+      "types": "./src/queries/cms/assets.ts",
+      "default": "./src/queries/cms/assets.ts"
+    },
+    "./queries/cms/comments": {
+      "types": "./src/queries/cms/comments.ts",
+      "default": "./src/queries/cms/comments.ts"
+    },
+    "./queries/cms/content": {
+      "types": "./src/queries/cms/content.ts",
+      "default": "./src/queries/cms/content.ts"
+    },
+    "./queries/cms/authors": {
+      "types": "./src/queries/cms/authors.ts",
+      "default": "./src/queries/cms/authors.ts"
+    },
+    "./queries/cms/preview": {
+      "types": "./src/queries/cms/preview.ts",
+      "default": "./src/queries/cms/preview.ts"
+    },
+    "./queries/cms/published": {
+      "types": "./src/queries/cms/published.ts",
+      "default": "./src/queries/cms/published.ts"
+    },
+    "./queries/cms/schedule": {
+      "types": "./src/queries/cms/schedule.ts",
+      "default": "./src/queries/cms/schedule.ts"
+    },
+    "./queries/cms/taxonomy": {
+      "types": "./src/queries/cms/taxonomy.ts",
+      "default": "./src/queries/cms/taxonomy.ts"
     },
     "./queries/data-export": {
       "types": "./src/queries/data-export.ts",

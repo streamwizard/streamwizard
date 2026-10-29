@@ -1,0 +1,94 @@
+---
+title: "Export and import an overlay"
+description: "Move an overlay between accounts, back one up, or hand one to a friend as a file."
+---
+
+An overlay can be saved to a file and loaded into any StreamWizard account.
+Use it to back one up, move between accounts, or share a layout you built.
+
+## Export one
+
+On the overlay's card in **Overlays**, open the **⋯** menu and select
+**Export**. You get a `.streamwizard.json` file named after the overlay.
+
+## Import one
+
+Select **Import** above the overlay list and pick a file. You get a new
+overlay, switched on, with its own browser source URL.
+
+Importing never touches an existing overlay. It always makes a new one.
+
+## What travels with the file
+
+| Included | Not included |
+|---|---|
+| The layout: every widget, where it sits, its settings | Your overlay's URL or its key |
+| The canvas size and type | The media and sounds themselves |
+| Custom widget code, including fields | Your clip folder choices |
+| Your groups and their names | |
+
+### Media is linked, not packed
+
+An alert that uses your own sound keeps a link to that sound on
+StreamWizard's CDN. The file doesn't contain the audio. Someone importing your
+overlay gets a working overlay that plays **your** copy of the file, so
+anything you later delete from your media library stops working for them too.
+
+If you're sharing a layout properly, expect to tell people to swap in their own
+media.
+
+### Clip filters are cleared
+
+A clips widget's folders, games and creators name **your** folders, which mean
+nothing in someone else's account. Import clears them and tells you so. Pick
+your own in the editor afterwards.
+
+## Is an export safe to share?
+
+Mostly yes, and deliberately so. The file never contains your overlay's
+subscriber key, its URL, its slug or your account id, which is what would
+otherwise let someone read your overlay's live data.
+
+Two things to check before you post one publicly:
+
+<Warning>
+**Custom widget code travels in full.** If you hard-coded an API key, a webhook
+URL or a personal link into a custom widget, it's in the file. Read the widget
+code before sharing an overlay that uses one.
+</Warning>
+
+Media and sound links point at your own CDN files, so anyone who imports your
+overlay can fetch them.
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="That's not a StreamWizard overlay file">
+    The file isn't an overlay export. Check you picked the
+    `.streamwizard.json` file rather than something else.
+  </Accordion>
+  <Accordion title="This file came from a newer version of StreamWizard">
+    It was exported by a newer build than the one you're on. There's nothing to
+    do but wait for the update.
+  </Accordion>
+  <Accordion title="This overlay file is damaged or incomplete">
+    Nothing was imported, deliberately. Import is all or nothing, so a bad file
+    never leaves you with half a scene. Export it again from the source
+    account.
+  </Accordion>
+  <Accordion title="Some clip fields were left out">
+    A clips widget's caption fields were in the file but their widget wasn't.
+    The rest of the overlay imported normally.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Using the overlay editor" href="/overlays/editor">
+    Lay the imported overlay out.
+  </Card>
+  <Card title="Media library" href="/overlays/media-library">
+    Swap in your own images and sounds.
+  </Card>
+</CardGroup>

@@ -24,14 +24,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { BookOpen, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { BsTwitch } from "react-icons/bs";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import type { IconType } from "react-icons";
 import TwitchLogin from "@/components/buttons/twitch-login";
-import { docsLink, socialLinks } from "@/lib/constant";
+import { socialLinks } from "@/lib/constant";
 import { TrackedLink } from "../analytics/tracked-link";
-import { companyNavItems, legalNavItems, productNavItems, type NavItem } from "./header-nav-items";
+import {
+  companyNavItems,
+  contentNavItems,
+  docsNavItem,
+  legalNavItems,
+  productNavItems,
+  type NavItem,
+} from "./header-nav-items";
 
 /*
  * The public header.
@@ -44,10 +51,11 @@ import { companyNavItems, legalNavItems, productNavItems, type NavItem } from ".
 
 const SCROLL_THRESHOLD = 24;
 
-const navSections = [
-  { value: "product", label: "Product", items: productNavItems },
-  { value: "company", label: "Company", items: companyNavItems },
-];
+const productSection = { value: "product", label: "Product", items: productNavItems };
+// Docs joins Learn (and leaves the bar) while guides and blog are on.
+const learnItems = [...contentNavItems, docsNavItem];
+const learnSection = { value: "learn", label: "Learn", items: learnItems };
+const companySection = { value: "company", label: "Company", items: companyNavItems };
 
 /*
  * Brand marks have no lucide equivalent, so the socials keep react-icons.
@@ -62,7 +70,7 @@ const socialIcons: Record<string, IconType> = {
 
 
 /*
- * The Product dropdown. Radix anchors the panel to the trigger's left edge,
+ * The Product (and Learn) dropdown. Radix anchors the panel to the trigger's left edge,
  * which is what we want now that the trigger is the leftmost item in the bar:
  * a 32rem panel opening rightwards clears the viewport at every width the bar
  * is visible at. Right-aligning it instead pushed it 125px off the left edge
@@ -72,14 +80,20 @@ function NavDropdown({
   label,
   items,
   columns,
+  section,
   isCurrent,
+  isWithin,
 }: {
   label: string;
   items: NavItem[];
   columns: 1 | 2;
+  /** Analytics section name; the staging "Landing page" dashboard groups on it. */
+  section: string;
   isCurrent: (href: string) => boolean;
+  /** The page or one below it, so a blog post lights up the Learn trigger. */
+  isWithin: (href: string) => boolean;
 }) {
-  const active = items.some((item) => isCurrent(item.href));
+  const active = items.some((item) => isWithin(item.href));
 
   return (
     <NavigationMenuItem>
@@ -114,7 +128,8 @@ function NavDropdown({
                 <TrackedLink
                   href={item.href}
                   cta={item.cta}
-                  section="header_product_menu"
+                  section={section}
+                  {...(item.href.startsWith("/") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
                   aria-current={isCurrent(item.href) ? "page" : undefined}
                   className={cn(
                     "flex flex-row items-start gap-3 rounded-md p-3 transition-colors hover:bg-accent/60",
@@ -155,6 +170,8 @@ export default function Header({ isAuthenticated = false }: { isAuthenticated?: 
   const closeMenu = () => setMenuOpen(false);
 
   const isCurrent = (href: string) => pathname === href;
+  const isWithin = (href: string) => isCurrent(href) || pathname.startsWith(`${href}/`);
+  const navSections = [productSection, learnSection, companySection];
 
   return (
     <header
@@ -175,7 +192,22 @@ export default function Header({ isAuthenticated = false }: { isAuthenticated?: 
           <div className="hidden items-center gap-1 lg:flex">
             <NavigationMenu viewport={false}>
               <NavigationMenuList>
-                <NavDropdown label="Product" items={productNavItems} columns={2} isCurrent={isCurrent} />
+                <NavDropdown
+                  label="Product"
+                  items={productNavItems}
+                  columns={2}
+                  section="header_product_menu"
+                  isCurrent={isCurrent}
+                  isWithin={isWithin}
+                />
+                <NavDropdown
+                  label="Learn"
+                  items={learnItems}
+                  columns={1}
+                  section="header_learn_menu"
+                  isCurrent={isCurrent}
+                  isWithin={isWithin}
+                />
               </NavigationMenuList>
             </NavigationMenu>
 
@@ -195,18 +227,6 @@ export default function Header({ isAuthenticated = false }: { isAuthenticated?: 
               </TrackedLink>
             ))}
 
-            <TrackedLink
-              href={docsLink}
-              cta="docs"
-              section="header"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 rounded-md px-2.5 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <BookOpen className="h-4 w-4" aria-hidden="true" />
-              Docs
-            </TrackedLink>
-
             {/* Plain rule: Separator's data-[orientation=vertical]:h-full outranks any
                 height set here, so it would stretch to the full 4rem row. */}
             <div aria-hidden="true" className="mx-1 h-5 w-px shrink-0 bg-border" />
@@ -215,7 +235,7 @@ export default function Header({ isAuthenticated = false }: { isAuthenticated?: 
               {socialLinks.map((social) => {
                 const Icon = socialIcons[social.name];
                 return (
-                  <Button key={social.href} asChild variant="ghost" size="icon-sm">
+                  <Button key={social.href} asChild variant="ghost" size="icon-lg">
                     <TrackedLink
                       href={social.href}
                       cta={social.cta}
@@ -280,7 +300,7 @@ export default function Header({ isAuthenticated = false }: { isAuthenticated?: 
                 <div className="flex-1 overflow-y-auto p-4">
                   {/* Both sections open by default: the sheet is the only nav on mobile,
                       so hiding half of it behind a tap would be worse than scrolling. */}
-                  <Accordion type="multiple" defaultValue={["product", "company"]}>
+                  <Accordion type="multiple" defaultValue={["product", "learn", "company"]}>
                     {navSections.map((section) => (
                       <AccordionItem key={section.value} value={section.value} className="border-none">
                         <AccordionTrigger className="py-2 text-xs font-medium uppercase tracking-widest text-muted-foreground hover:no-underline">
@@ -294,6 +314,7 @@ export default function Header({ isAuthenticated = false }: { isAuthenticated?: 
                                 href={item.href}
                                 cta={item.cta}
                                 section="header_menu"
+                                {...(item.href.startsWith("/") ? {} : { target: "_blank", rel: "noopener noreferrer" })}
                                 onClick={closeMenu}
                                 aria-current={isCurrent(item.href) ? "page" : undefined}
                                 className={cn(
@@ -315,21 +336,6 @@ export default function Header({ isAuthenticated = false }: { isAuthenticated?: 
                       </AccordionItem>
                     ))}
                   </Accordion>
-
-                  <Separator className="my-3" />
-
-                  <TrackedLink
-                    href={docsLink}
-                    cta="docs"
-                    section="header_menu"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={closeMenu}
-                    className="flex items-center gap-3 rounded-md p-2 text-sm text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground"
-                  >
-                    <BookOpen className="h-4 w-4" aria-hidden="true" />
-                    Docs
-                  </TrackedLink>
 
                   <Separator className="my-3" />
 
@@ -356,7 +362,7 @@ export default function Header({ isAuthenticated = false }: { isAuthenticated?: 
                     {socialLinks.map((social) => {
                       const Icon = socialIcons[social.name];
                       return (
-                        <Button key={social.href} asChild variant="ghost" size="icon">
+                        <Button key={social.href} asChild variant="ghost" size="icon-lg">
                           <TrackedLink
                             href={social.href}
                             cta={social.cta}

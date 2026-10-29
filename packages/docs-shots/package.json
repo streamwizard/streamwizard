@@ -1,0 +1,25 @@
+{
+  "name": "@repo/docs-shots",
+  "version": "0.0.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "shots": "bun src/cli.ts",
+    "shots:check": "bun src/cli.ts --check",
+    "shots:types": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "@types/pngjs": "^6.0.5",
+    "pixelmatch": "^6.0.0",
+    "playwright": "1.62.1",
+    "pngjs": "^7.0.0",
+    "sharp": "^0.34.4",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@repo/schemas": "workspace:*"
+  }
+}

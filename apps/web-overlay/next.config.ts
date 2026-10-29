@@ -90,7 +90,8 @@ const overlaySceneFontsCsp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
-  "font-src 'self' data: https://fonts.gstatic.com",
+  // mediaHosts: fonts streamers upload to the media library (SW-241).
+  `font-src 'self' data: https://fonts.gstatic.com ${mediaHosts}`,
   `img-src 'self' data: blob: ${mediaHosts} ${widgetImageHosts}`,
   `media-src 'self' blob: data: ${mediaHosts} ${twitchClipCdn}`,
   // mediaHosts is here as well as in media-src: the per-widget <meta> policy

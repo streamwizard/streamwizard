@@ -1,8 +1,16 @@
-import { LabelBuilder, ModalBuilder, StringSelectMenuBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
+import {
+  FileUploadBuilder,
+  LabelBuilder,
+  ModalBuilder,
+  StringSelectMenuBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+} from "discord.js";
 import {
   TICKET_FIELD_TEXT_MAX,
   TICKET_FORM_MAX_FIELDS,
   TICKET_SUBJECT_MAX,
+  ticketFileCounts,
   ticketSelectOptions,
   type TicketAnswerInput,
   type TicketCategory,
@@ -10,6 +18,7 @@ import {
   type TicketProduct,
 } from "@repo/supabase/queries/ticket-config";
 import { TICKET_IDS, ticketId } from "./ids";
+import { UPLOAD_TYPES_HINT, type TicketUpload } from "./uploads";
 
 // A category's ticket form: built from the fields web-admin configured, and
 // read back by field id. Reading is pure (it takes lookups, not an
@@ -38,6 +47,17 @@ export type TicketFormPrefill = Partial<Record<"description" | "subject", string
 
 function fieldComponent(field: TicketFormField, products: TicketProduct[], prefill: TicketFormPrefill = {}): LabelBuilder {
   const label = new LabelBuilder().setLabel(field.label.slice(0, 45));
+
+  if (field.kind === "file") {
+    // An upload has no placeholder, so the field's hint sits under the label instead.
+    const { min, max } = ticketFileCounts(field);
+    const upload = new FileUploadBuilder()
+      .setCustomId(field.id)
+      .setRequired(field.required)
+      .setMinValues(min)
+      .setMaxValues(max);
+    return label.setDescription((field.placeholder || UPLOAD_TYPES_HINT).slice(0, 100)).setFileUploadComponent(upload);
+  }
 
   if (field.kind === "product" || field.kind === "select") {
     const options =
@@ -87,6 +107,8 @@ export function buildTicketModal(
 export interface FormReader {
   text(fieldId: string): string | null;
   select(fieldId: string): string | null;
+  /** The files of an upload field: empty when none were attached. */
+  files(fieldId: string): Omit<TicketUpload, "fieldId">[] | null;
 }
 
 export interface TicketFormResult {
@@ -95,6 +117,8 @@ export interface TicketFormResult {
   description: string;
   product: string | null;
   answers: TicketAnswerInput[];
+  /** From upload fields, in form order. They go on the ticket's first message, not in the answers. */
+  files: TicketUpload[];
 }
 
 /**
@@ -112,8 +136,21 @@ export function readTicketForm(
   let description = "";
   let product: string | null = null;
   const answers: TicketAnswerInput[] = [];
+  const files: TicketUpload[] = [];
 
   for (const field of askableFields(fields, products)) {
+    if (field.kind === "file") {
+      const attached = reader.files(field.id);
+      if (attached === null) {
+        if (field.required) return "stale";
+        continue;
+      }
+      // Discord holds an upload to the field's limit; this covers a form edited while it was open.
+      const { max } = ticketFileCounts(field);
+      files.push(...attached.slice(0, max).map((file) => ({ ...file, fieldId: field.id })));
+      continue;
+    }
+
     const isSelect = field.kind === "product" || field.kind === "select";
     const raw = isSelect ? reader.select(field.id) : reader.text(field.id);
     if (raw === null) {
@@ -134,7 +171,7 @@ export function readTicketForm(
   }
 
   // A form without a subject files the ticket under the category's name.
-  return { subject: subject || category.name, description, product, answers };
+  return { subject: subject || category.name, description, product, answers, files };
 }
 
 /**

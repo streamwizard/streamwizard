@@ -1,0 +1,3 @@
+[test]
+# Stubs Next-only guards that throw outside a Next build. See test/setup.ts.
+preload = ["./test/setup.ts"]

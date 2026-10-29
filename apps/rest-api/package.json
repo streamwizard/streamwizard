@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@repo/backups": "workspace:*",
+    "@repo/cms": "workspace:*",
     "@repo/discord-api": "workspace:*",
     "@repo/logger": "workspace:*",
     "@repo/metrics": "workspace:*",

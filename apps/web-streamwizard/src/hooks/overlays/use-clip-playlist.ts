@@ -226,7 +226,8 @@ export function useClipPlaylist({
         const signedUrl = data.landscape_url;
         if (!signedUrl) return null;
 
-        const proxiedUrl = `/api/overlays/preview/stream?url=${encodeURIComponent(signedUrl)}`;
+        // The proxy resolves the signed URL itself from the clip id.
+        const proxiedUrl = `/api/overlays/preview/stream?clipId=${encodeURIComponent(clip.twitch_clip_id)}`;
         urlCacheRef.current[clip.twitch_clip_id] = proxiedUrl;
         return proxiedUrl;
       } catch {

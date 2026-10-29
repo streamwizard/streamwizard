@@ -177,18 +177,11 @@ minimum_password_length = 6
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
 
-# Passkey sign-ins (beta). Only web-admin (port 3003) uses them: admins can
-# sign in with a passkey instead of Twitch + authenticator. The RP ID is bound
-# into every registered passkey, so the hosted projects scope it to the admin
-# host (admin.streamwizard.org / admin-staging.streamwizard.org, set in the
-# dashboard) and changing it later invalidates all of them.
+# Passkey sign-ins (beta) are off. web-admin used them as a second factor
+# until SW-483: GoTrue lets any signed-in session register a passkey, so a
+# stolen Twitch session could add its own. Admins use TOTP only.
 [auth.passkey]
-enabled = true
-
-[auth.webauthn]
-rp_display_name = "StreamWizard Admin"
-rp_id = "localhost"
-rp_origins = ["http://localhost:3003"]
+enabled = false
 
 [auth.rate_limit]
 # Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
@@ -294,7 +287,7 @@ auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
 max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP). web-admin requires admins to pass
-# a TOTP challenge after Twitch sign-in (or to sign in with a passkey).
+# a TOTP challenge after Twitch sign-in.
 [auth.mfa.totp]
 enroll_enabled = true
 verify_enabled = true

@@ -17,6 +17,7 @@ import {
   saveRulerCursor,
   saveSnapToItems,
   saveRulersVisible,
+  saveEditorAudioMuted,
   type CanvasBackground,
   type GridSettings,
   type SnapAxes,
@@ -48,11 +49,31 @@ import {
   pinToSceneEdge,
   touchesGeometry,
 } from "@/components/overlays/editor/overlay-item-helpers";
+import {
+  clickSelection,
+  cloneGroupSubtrees,
+  drillSelection,
+  groupItemIds,
+  indexGroups,
+  moveNodeToGroup as moveNodeInTree,
+  nextGroupLabel,
+  nodeItemIds,
+  nodeParentId,
+  normalizeLayerOrder,
+  orderedChildren,
+  pruneEmptyGroups,
+  sanitizeGroups,
+  selectionNodes,
+  ungroup,
+  wrapInGroup,
+  type LayerNode,
+} from "@/components/overlays/editor/item-groups";
 import { resolveAnchoredPosition, withAbsolutePosition } from "@repo/ui/overlay";
 import type {
   ClipDisplayFieldItemConfig,
   DisplayFieldKey,
   OverlayItem,
+  OverlayItemGroup,
   RootOverlayItemType,
   OverlaySceneWithItems,
 } from "@/types/overlays";
@@ -65,9 +86,36 @@ import { asClipDisplayFieldConfig } from "@/types/overlays";
  */
 export interface EditorSnapshot {
   items: OverlayItem[];
+  /** Groups change together with items (group, ungroup, delete), so they undo together. */
+  groups: OverlayItemGroup[];
   width: number;
   height: number;
 }
+
+/** One shared empty list, so a scene without groups never looks changed to the no-op check. */
+const NO_GROUPS: OverlayItemGroup[] = [];
+
+function sceneGroups(scene: OverlaySceneWithItems): OverlayItemGroup[] {
+  return scene.groups ?? NO_GROUPS;
+}
+
+/**
+ * Applies a structural edit: drops groups left empty and re-stacks so every
+ * group is one contiguous block in layer order, which is what lets the layers
+ * panel draw it as one row. `override` forces one container's child order.
+ */
+function restructure(
+  scene: OverlaySceneWithItems,
+  items: OverlayItem[],
+  groups: OverlayItemGroup[],
+  override?: { containerId: string | null; children: LayerNode[] }
+): OverlaySceneWithItems {
+  const kept = pruneEmptyGroups(items, groups);
+  const order = normalizeLayerOrder(items, kept, override);
+  return { ...scene, items: applyLayerOrder(items, order), groups: kept };
+}
+
+export type LayerMove = "up" | "down" | "front" | "back";
 
 const HISTORY_LIMIT = 50;
 const NUDGE_HISTORY_COALESCE_MS = 400;
@@ -116,6 +164,15 @@ interface OverlayEditorState {
     parentClipItemId: string,
     fieldKey: DisplayFieldKey
   ) => void;
+  /**
+   * What a click on an item's canvas box selects: its outermost group, or a
+   * sibling when the selection is already inside that group. `drill` (a
+   * double-click) goes one level deeper; `toggle` adds or removes that unit.
+   * Returns the new selection so a drag can start on it straight away.
+   */
+  selectFromCanvas: (itemId: string, mode: "click" | "toggle" | "drill") => string[];
+  /** A layers-panel row: exactly that item, or every item of that group. */
+  selectNode: (node: LayerNode, extend?: boolean) => void;
   setZoom: (zoom: number) => void;
   /**
    * Changes the scene's resolution in the editor only; the row is written on
@@ -176,11 +233,30 @@ interface OverlayEditorState {
   toggleItemVisibility: (id: string) => void;
   toggleItemLock: (id: string) => void;
 
-  /** Editor-only: optional clip preview controls (pause / force-mute / autoplay), not persisted. */
+  /** User groups (SW-236). Each is one undo step. */
+  groupSelected: () => void;
+  ungroupSelected: () => void;
+  renameGroup: (groupId: string, label: string) => void;
+  /** Moves an item or group into another group, or out to the root with `null`. */
+  moveNodeToGroup: (node: LayerNode, groupId: string | null) => void;
+  /** Restacks one container's direct children (a layers-panel drag). */
+  setChildOrder: (containerId: string | null, children: LayerNode[]) => void;
+  /** Up/down/front/back among the node's siblings, never out of its group. */
+  reorderNode: (node: LayerNode, move: LayerMove) => void;
+  /** Hides every item of the group, or shows them all when all are hidden. Same for lock. */
+  toggleGroupVisibility: (groupId: string) => void;
+  toggleGroupLock: (groupId: string) => void;
+
+  /**
+   * Editor-only sound switch: alerts, clip previews and custom widgets on the
+   * canvas. Kept across sessions; the live overlay never reads it.
+   */
+  editorAudioMuted: boolean;
+  setEditorAudioMuted: (muted: boolean) => void;
+
+  /** Editor-only: optional clip preview controls (pause / autoplay), not persisted. */
   editorClipPreviewPaused: boolean;
   setEditorClipPreviewPaused: (paused: boolean) => void;
-  editorClipPreviewForceMute: boolean;
-  setEditorClipPreviewForceMute: (forceMute: boolean) => void;
   editorClipPreviewAutoplayBlocked: boolean;
   setEditorClipPreviewAutoplayBlocked: (blocked: boolean) => void;
   editorClipPreviewResumeTick: number;
@@ -346,6 +422,64 @@ function recordConfigEdit(
 }
 
 
+/**
+ * Copies nodes: an item gets one copy, a group a copy of its whole subtree
+ * under fresh group ids.
+ *
+ * A copy made inside a group stays in that group and is stacked just above
+ * its original, so the group doesn't jump to the top of the layers. A copy of
+ * an ungrouped item still goes on top, as it always has.
+ */
+function duplicateNodes(
+  scene: OverlaySceneWithItems,
+  nodes: LayerNode[]
+): { scene: OverlaySceneWithItems; selection: string[] } | null {
+  const groups = sceneGroups(scene);
+  const index = indexGroups(groups);
+  const topGroupIds = nodes.filter((n) => n.kind === "group").map((n) => n.id);
+  const cloned = cloneGroupSubtrees(
+    topGroupIds,
+    groups,
+    () => crypto.randomUUID(),
+    (g) => `${g.label} (Copy)`.slice(0, 100)
+  );
+
+  let items = scene.items;
+  let maxZ = items.reduce((max, item) => Math.max(max, item.z_index), 0);
+  const selection: string[] = [];
+  let stackedInPlace = false;
+
+  for (const node of nodes) {
+    for (const id of nodeItemIds(node, scene.items, index)) {
+      const original = scene.items.find((i) => i.id === id);
+      if (!original) continue;
+      const grouped = node.kind === "group" || !!nodeParentId(node, scene.items, index);
+      // buildDuplicate stacks at `maxZ + 1`; half a step above the original
+      // puts the copy right on top of it until the re-stack makes it whole.
+      const dup = buildDuplicate({ ...scene, items }, id, grouped ? original.z_index - 0.5 : maxZ);
+      if (!dup) continue;
+      const copies = dup.items.map((i) =>
+        i.group_id && cloned.idMap.has(i.group_id)
+          ? { ...i, group_id: cloned.idMap.get(i.group_id)! }
+          : i
+      );
+      items = [...items, ...copies];
+      selection.push(dup.parentId);
+      if (grouped) stackedInPlace = true;
+      else maxZ += 1;
+    }
+  }
+  if (selection.length === 0) return null;
+
+  const nextGroups = cloned.groups.length > 0 ? [...groups, ...cloned.groups] : groups;
+  return {
+    scene: stackedInPlace
+      ? restructure(scene, items, nextGroups)
+      : { ...scene, items, groups: nextGroups },
+    selection,
+  };
+}
+
 export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   scene: null,
   selectedItemIds: [],
@@ -365,6 +499,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       grid: prefs.grid,
       rulersVisible: prefs.rulers,
       rulerCursorVisible: prefs.rulerCursor,
+      editorAudioMuted: prefs.audioMuted,
     };
   })(),
 
@@ -397,8 +532,12 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     set({ rulerCursorVisible: visible });
   },
 
-  setScene: (scene, options) => {
+  setScene: (incoming, options) => {
     resetConfigEditCoalescing();
+    // Whatever the database holds, the editor works on a clean tree: no empty
+    // groups, no dangling or circular references.
+    const clean = sanitizeGroups(incoming.items, incoming.groups ?? NO_GROUPS);
+    const scene = { ...incoming, items: clean.items, groups: clean.groups };
     set((state) => {
       const surviving = new Set(scene.items.map((i) => i.id));
       return {
@@ -457,6 +596,58 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     if (child) set({ selectedItemIds: [child.id] });
   },
 
+  selectFromCanvas: (itemId, mode) => {
+    const { scene, selectedItemIds } = get();
+    if (!scene) return selectedItemIds;
+    const item = scene.items.find((i) => i.id === itemId);
+    if (!item) return selectedItemIds;
+    // Clip children have their own click handling and are never grouped.
+    if (!isRootLayerType(item.type)) {
+      set({ selectedItemIds: [itemId] });
+      return [itemId];
+    }
+
+    const groups = sceneGroups(scene);
+    let next: string[];
+    if (mode === "drill") {
+      next = drillSelection(itemId, selectedItemIds, scene.items, groups);
+    } else if (mode === "toggle") {
+      // The unit a plain click would pick, toggled as a whole, so a
+      // Shift-click never splits a group.
+      const unit = clickSelection(itemId, [], scene.items, groups);
+      const roots = selectedItemIds.filter((sid) => {
+        const s = scene.items.find((i) => i.id === sid);
+        return s && isRootLayerType(s.type);
+      });
+      next = unit.every((id) => roots.includes(id))
+        ? roots.filter((id) => !unit.includes(id))
+        : [...roots, ...unit.filter((id) => !roots.includes(id))];
+    } else {
+      next = clickSelection(itemId, selectedItemIds, scene.items, groups);
+    }
+    set({ selectedItemIds: next });
+    return next;
+  },
+
+  selectNode: (node, extend) => {
+    const { scene, selectedItemIds } = get();
+    if (!scene) return;
+    const ids = nodeItemIds(node, scene.items, indexGroups(sceneGroups(scene)));
+    if (!extend) {
+      set({ selectedItemIds: ids });
+      return;
+    }
+    const roots = selectedItemIds.filter((sid) => {
+      const s = scene.items.find((i) => i.id === sid);
+      return s && isRootLayerType(s.type);
+    });
+    set({
+      selectedItemIds: ids.every((id) => roots.includes(id))
+        ? roots.filter((id) => !ids.includes(id))
+        : [...roots, ...ids.filter((id) => !roots.includes(id))],
+    });
+  },
+
   setZoom: (zoom) => set({ zoom: clampZoom(zoom) }),
 
   setSceneResolution: (width, height, mode) => {
@@ -493,6 +684,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     const { scene, history } = get();
     if (!scene) return;
     const items = snapshot ?? scene.items;
+    const groups = sceneGroups(scene);
     // Skip no-op pushes (e.g. focusing an input without editing) so undo never
     // appears to do nothing; the items reference only changes when something
     // mutated, and the size only when the resolution did.
@@ -500,6 +692,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     if (
       last &&
       last.items === items &&
+      last.groups === groups &&
       last.width === scene.width &&
       last.height === scene.height
     ) {
@@ -507,7 +700,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     }
     const past = [
       ...history.past,
-      { items, width: scene.width, height: scene.height },
+      { items, groups, width: scene.width, height: scene.height },
     ].slice(-HISTORY_LIMIT);
     set({ history: { past, future: [] } });
   },
@@ -521,6 +714,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       scene: {
         ...scene,
         items: previous.items,
+        groups: previous.groups,
         width: previous.width,
         height: previous.height,
       },
@@ -528,7 +722,7 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
         past: history.past.slice(0, -1),
         future: [
           ...history.future,
-          { items: scene.items, width: scene.width, height: scene.height },
+          { items: scene.items, groups: sceneGroups(scene), width: scene.width, height: scene.height },
         ],
       },
       selectedItemIds: selectedItemIds.filter((id) => surviving.has(id)),
@@ -545,13 +739,14 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       scene: {
         ...scene,
         items: next.items,
+        groups: next.groups,
         width: next.width,
         height: next.height,
       },
       history: {
         past: [
           ...history.past,
-          { items: scene.items, width: scene.width, height: scene.height },
+          { items: scene.items, groups: sceneGroups(scene), width: scene.width, height: scene.height },
         ].slice(-HISTORY_LIMIT),
         future: history.future.slice(0, -1),
       },
@@ -663,13 +858,11 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     if (!scene) return;
 
     const idsToRemove = cascadeIds(scene, id);
+    const items = scene.items.filter((i) => !idsToRemove.has(i.id));
 
     pushHistory();
     set({
-      scene: {
-        ...scene,
-        items: scene.items.filter((i) => !idsToRemove.has(i.id)),
-      },
+      scene: { ...scene, items, groups: pruneEmptyGroups(items, sceneGroups(scene)) },
       selectedItemIds: selectedItemIds.filter((sid) => !idsToRemove.has(sid)),
       isDirty: true,
     });
@@ -707,13 +900,12 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       for (const rid of cascadeIds(scene, id)) idsToRemove.add(rid);
     }
     if (idsToRemove.size === 0) return;
+    const items = scene.items.filter((i) => !idsToRemove.has(i.id));
 
     pushHistory();
     set({
-      scene: {
-        ...scene,
-        items: scene.items.filter((i) => !idsToRemove.has(i.id)),
-      },
+      // A group whose items all went goes with them; undo brings both back.
+      scene: { ...scene, items, groups: pruneEmptyGroups(items, sceneGroups(scene)) },
       selectedItemIds: [],
       isDirty: true,
     });
@@ -723,43 +915,26 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     const { scene, pushHistory } = get();
     if (!scene) return;
 
-    const maxZ = scene.items.reduce((max, item) => Math.max(max, item.z_index), 0);
-    const dup = buildDuplicate(scene, id, maxZ);
+    const dup = duplicateNodes(scene, [{ kind: "item", id }]);
     if (!dup) return;
 
     pushHistory();
-    set({
-      scene: { ...scene, items: [...scene.items, ...dup.items] },
-      selectedItemIds: [dup.parentId],
-      isDirty: true,
-    });
+    set({ scene: dup.scene, selectedItemIds: dup.selection, isDirty: true });
   },
 
   duplicateSelectedItems: () => {
     const { scene, selectedItemIds, pushHistory } = get();
     if (!scene || selectedItemIds.length === 0) return;
 
-    let items = scene.items;
-    let maxZ = items.reduce((max, item) => Math.max(max, item.z_index), 0);
-    const newSelection: string[] = [];
-    const added: OverlayItem[] = [];
-
-    for (const id of selectedItemIds) {
-      const dup = buildDuplicate({ ...scene, items }, id, maxZ);
-      if (!dup) continue;
-      added.push(...dup.items);
-      items = [...items, ...dup.items];
-      newSelection.push(dup.parentId);
-      maxZ += 1;
-    }
-    if (added.length === 0) return;
+    // A wholly selected group is copied as a group; anything else item by item.
+    const dup = duplicateNodes(
+      scene,
+      selectionNodes(selectedItemIds, scene.items, sceneGroups(scene))
+    );
+    if (!dup) return;
 
     pushHistory();
-    set({
-      scene: { ...scene, items },
-      selectedItemIds: newSelection,
-      isDirty: true,
-    });
+    set({ scene: dup.scene, selectedItemIds: dup.selection, isDirty: true });
   },
 
   nudgeSelected: (dx, dy) => {
@@ -859,29 +1034,10 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
   },
 
   reorderItem: (id, direction) => {
-    const { scene, pushHistory } = get();
-    if (!scene) return;
-
-    const item = scene.items.find((i) => i.id === id);
+    const { scene, reorderNode } = get();
+    const item = scene?.items.find((i) => i.id === id);
     if (!item || !isRootLayerType(item.type)) return;
-
-    const roots = scene.items
-      .filter((i) => isRootLayerType(i.type))
-      .sort((a, b) => b.z_index - a.z_index);
-    const idx = roots.findIndex((r) => r.id === id);
-    if (idx === -1) return;
-
-    const swapIdx = direction === "up" ? idx - 1 : idx + 1;
-    if (swapIdx < 0 || swapIdx >= roots.length) return;
-
-    const order = roots.map((r) => r.id);
-    [order[idx], order[swapIdx]] = [order[swapIdx]!, order[idx]!];
-
-    pushHistory();
-    set({
-      scene: { ...scene, items: applyLayerOrder(scene.items, order) },
-      isDirty: true,
-    });
+    reorderNode({ kind: "item", id }, direction);
   },
 
   setLayerOrder: (orderedIdsTopFirst) => {
@@ -889,33 +1045,17 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     if (!scene) return;
 
     pushHistory();
+    // A free-form order may split a group; re-stacking keeps each one whole.
+    const items = applyLayerOrder(scene.items, orderedIdsTopFirst);
     set({
-      scene: { ...scene, items: applyLayerOrder(scene.items, orderedIdsTopFirst) },
+      scene: restructure(scene, items, sceneGroups(scene)),
       isDirty: true,
     });
   },
 
-  bringToFront: (id) => {
-    const { scene, setLayerOrder } = get();
-    if (!scene) return;
-    const order = scene.items
-      .filter((i) => isRootLayerType(i.type))
-      .sort((a, b) => b.z_index - a.z_index)
-      .map((i) => i.id)
-      .filter((iid) => iid !== id);
-    setLayerOrder([id, ...order]);
-  },
+  bringToFront: (id) => get().reorderNode({ kind: "item", id }, "front"),
 
-  sendToBack: (id) => {
-    const { scene, setLayerOrder } = get();
-    if (!scene) return;
-    const order = scene.items
-      .filter((i) => isRootLayerType(i.type))
-      .sort((a, b) => b.z_index - a.z_index)
-      .map((i) => i.id)
-      .filter((iid) => iid !== id);
-    setLayerOrder([...order, id]);
-  },
+  sendToBack: (id) => get().reorderNode({ kind: "item", id }, "back"),
 
   renameItem: (id, label) => {
     const { scene, pushHistory } = get();
@@ -962,6 +1102,128 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
     });
   },
 
+  groupSelected: () => {
+    const { scene, selectedItemIds, pushHistory } = get();
+    if (!scene) return;
+    const groups = sceneGroups(scene);
+    const nodes = selectionNodes(selectedItemIds, scene.items, groups);
+    if (nodes.length === 0) return;
+
+    const next = wrapInGroup(nodes, scene.items, groups, {
+      id: crypto.randomUUID(),
+      scene_id: scene.id,
+      label: nextGroupLabel(groups),
+    });
+    pushHistory();
+    set({ scene: restructure(scene, next.items, next.groups), isDirty: true });
+  },
+
+  ungroupSelected: () => {
+    const { scene, selectedItemIds, pushHistory } = get();
+    if (!scene) return;
+    const groups = sceneGroups(scene);
+    const groupIds = selectionNodes(selectedItemIds, scene.items, groups)
+      .filter((n) => n.kind === "group")
+      .map((n) => n.id);
+    if (groupIds.length === 0) return;
+
+    // Only the tree changes: positions and stacking stay exactly as they were,
+    // and the selection keeps the same items.
+    const next = ungroup(groupIds, scene.items, groups);
+    pushHistory();
+    set({ scene: { ...scene, items: next.items, groups: next.groups }, isDirty: true });
+  },
+
+  renameGroup: (groupId, label) => {
+    const { scene, pushHistory } = get();
+    if (!scene) return;
+    const trimmed = label.trim();
+    const groups = sceneGroups(scene);
+    const group = groups.find((g) => g.id === groupId);
+    if (!group || !trimmed || trimmed === group.label) return;
+    pushHistory();
+    set({
+      scene: {
+        ...scene,
+        groups: groups.map((g) => (g.id === groupId ? { ...g, label: trimmed.slice(0, 100) } : g)),
+      },
+      isDirty: true,
+    });
+  },
+
+  moveNodeToGroup: (node, groupId) => {
+    const { scene, pushHistory } = get();
+    if (!scene) return;
+    const groups = sceneGroups(scene);
+    const next = moveNodeInTree(node, groupId, scene.items, groups);
+    if (next.items === scene.items && next.groups === groups) return;
+    pushHistory();
+    set({ scene: restructure(scene, next.items, next.groups), isDirty: true });
+  },
+
+  setChildOrder: (containerId, children) => {
+    const { scene, pushHistory } = get();
+    if (!scene) return;
+    pushHistory();
+    set({
+      scene: restructure(scene, scene.items, sceneGroups(scene), { containerId, children }),
+      isDirty: true,
+    });
+  },
+
+  reorderNode: (node, move) => {
+    const { scene, setChildOrder } = get();
+    if (!scene) return;
+    const groups = sceneGroups(scene);
+    const containerId = nodeParentId(node, scene.items, indexGroups(groups));
+    const children = orderedChildren(containerId, scene.items, groups);
+    const idx = children.findIndex((c) => c.kind === node.kind && c.id === node.id);
+    if (idx === -1) return;
+
+    const next = [...children];
+    const [moved] = next.splice(idx, 1);
+    const target =
+      move === "front" ? 0
+      : move === "back" ? next.length
+      : move === "up" ? idx - 1
+      : idx + 1;
+    if (target < 0 || target > next.length || target === idx) return;
+    next.splice(target, 0, moved!);
+    setChildOrder(containerId, next);
+  },
+
+  toggleGroupVisibility: (groupId) => {
+    const { scene, pushHistory } = get();
+    if (!scene) return;
+    const members = new Set(groupItemIds(groupId, scene.items, indexGroups(sceneGroups(scene))));
+    if (members.size === 0) return;
+    const showAll = scene.items.every((i) => !members.has(i.id) || !i.is_visible);
+    pushHistory();
+    set({
+      scene: {
+        ...scene,
+        items: scene.items.map((i) => (members.has(i.id) ? { ...i, is_visible: showAll } : i)),
+      },
+      isDirty: true,
+    });
+  },
+
+  toggleGroupLock: (groupId) => {
+    const { scene, pushHistory } = get();
+    if (!scene) return;
+    const members = new Set(groupItemIds(groupId, scene.items, indexGroups(sceneGroups(scene))));
+    if (members.size === 0) return;
+    const lockAll = scene.items.some((i) => members.has(i.id) && !i.is_locked);
+    pushHistory();
+    set({
+      scene: {
+        ...scene,
+        items: scene.items.map((i) => (members.has(i.id) ? { ...i, is_locked: lockAll } : i)),
+      },
+      isDirty: true,
+    });
+  },
+
   editorClipPreviewPaused: false,
   setEditorClipPreviewPaused: (paused) =>
     set({
@@ -969,9 +1231,10 @@ export const useOverlayStore = create<OverlayEditorState>((set, get) => ({
       ...(!paused ? { editorClipPreviewAutoplayBlocked: false } : {}),
     }),
 
-  editorClipPreviewForceMute: false,
-  setEditorClipPreviewForceMute: (forceMute) =>
-    set({ editorClipPreviewForceMute: forceMute }),
+  setEditorAudioMuted: (muted) => {
+    saveEditorAudioMuted(muted);
+    set({ editorAudioMuted: muted });
+  },
 
   editorClipPreviewAutoplayBlocked: false,
   setEditorClipPreviewAutoplayBlocked: (blocked) =>

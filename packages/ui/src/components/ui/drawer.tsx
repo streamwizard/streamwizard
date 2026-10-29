@@ -3,6 +3,7 @@
 import * as React from "react"
 import { Drawer as DrawerPrimitive } from "vaul"
 
+import { PortalContainerContext, usePortalContainer } from "../../lib/portal-container"
 import { cn } from "@/lib/utils"
 
 function Drawer({
@@ -48,12 +49,15 @@ function DrawerOverlay({
 function DrawerContent({
   className,
   children,
+  ref,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+  const [container, setRef] = usePortalContainer(ref)
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerOverlay />
       <DrawerPrimitive.Content
+        ref={setRef}
         data-slot="drawer-content"
         className={cn(
           "group/drawer-content fixed z-50 flex h-auto flex-col bg-background",
@@ -66,7 +70,7 @@ function DrawerContent({
         {...props}
       >
         <div className="mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full bg-muted group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
-        {children}
+        <PortalContainerContext.Provider value={container}>{children}</PortalContainerContext.Provider>
       </DrawerPrimitive.Content>
     </DrawerPortal>
   )

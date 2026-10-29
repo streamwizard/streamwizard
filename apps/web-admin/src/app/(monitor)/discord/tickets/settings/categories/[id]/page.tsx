@@ -6,6 +6,7 @@ import {
   isActiveProduct,
   listCategoryFormFields,
   listTicketProducts,
+  TICKET_FIELD_FILES_MAX,
   TICKET_FIELD_LABEL_MAX,
   TICKET_FIELD_PLACEHOLDER_MAX,
   TICKET_FIELD_TEXT_MAX,
@@ -70,6 +71,8 @@ export default async function DiscordTicketCategoryPage({ params }: { params: Pr
     required: field.required,
     minLength: field.min_length,
     maxLength: field.max_length,
+    minFiles: field.min_files,
+    maxFiles: field.max_files,
     options: ticketSelectOptions(field).map((option) => ({
       label: option.label,
       value: option.value,
@@ -112,6 +115,7 @@ export default async function DiscordTicketCategoryPage({ params }: { params: Pr
             subjectMax: TICKET_SUBJECT_MAX,
             maxOptions: TICKET_SELECT_MAX_OPTIONS,
             optionMax: TICKET_SELECT_OPTION_MAX,
+            filesMax: TICKET_FIELD_FILES_MAX,
           }}
         />
 

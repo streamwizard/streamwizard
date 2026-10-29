@@ -2,7 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useDebounce } from "@uidotdev/usehooks";
-import { Check, ChevronsUpDown } from "lucide-react";
+import { Check, ChevronsUpDown, Upload } from "lucide-react";
+import {
+  isUploadedFontRef,
+  uploadedFontName,
+  uploadedFontRef,
+} from "@repo/ui/overlay";
+import { listAssets } from "@/actions/assets";
+import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { Button } from "@repo/ui";
 import {
   Command,
@@ -46,6 +53,21 @@ export interface GoogleFontSelectProps {
   labelClassName?: string;
   triggerClassName?: string;
   searchPlaceholder?: string;
+  /**
+   * Offer fonts from the media library above the Google ones. Off for custom
+   * widget fields: a widget's own code loads its font from Google by name.
+   */
+  allowUploaded?: boolean;
+}
+
+interface UploadedFont {
+  ref: string;
+  name: string;
+}
+
+/** Display name for any value the picker can hold. */
+function fontLabel(family: string): string {
+  return isUploadedFontRef(family) ? uploadedFontName(family) : family;
 }
 
 export function GoogleFontSelect({
@@ -59,8 +81,12 @@ export function GoogleFontSelect({
   labelClassName,
   triggerClassName,
   searchPlaceholder = "Search all Google Fonts…",
+  allowUploaded = true,
 }: GoogleFontSelectProps) {
   const [open, setOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
+  // Fonts in the media library; null until the list first opens.
+  const [uploaded, setUploaded] = useState<UploadedFont[] | null>(null);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, SEARCH_DEBOUNCE_MS);
 
@@ -72,6 +98,25 @@ export function GoogleFontSelect({
   );
 
   useGoogleFont(value);
+
+  // Loaded when the list opens, so a font uploaded on the Media page since
+  // shows up without a reload.
+  useEffect(() => {
+    if (!open || !allowUploaded) return;
+    let cancelled = false;
+    void listAssets().then(({ data }) => {
+      if (cancelled || !data) return;
+      setUploaded(
+        data.files.flatMap((file) => {
+          const ref = file.kind === "font" ? uploadedFontRef(file.url) : null;
+          return ref ? [{ ref, name: uploadedFontName(ref) }] : [];
+        })
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, allowUploaded]);
 
   useEffect(() => {
     if (familiesProp?.length) {
@@ -154,13 +199,21 @@ export function GoogleFontSelect({
     };
   }, [debouncedSearch, defaultVisible, searchPool, value]);
 
+  const shownUploads = useMemo(() => {
+    const q = debouncedSearch.trim().toLowerCase();
+    return (uploaded ?? []).filter((f) => !q || f.name.toLowerCase().includes(q));
+  }, [uploaded, debouncedSearch]);
+  // A font picked from the library and deleted there since.
+  const valueRemoved =
+    isUploadedFontRef(value) && uploaded !== null && !uploaded.some((f) => f.ref === value);
+
   const batchForPreview = useMemo(
-    () => displayedFamilies.slice(0, MAX_SEARCH_RESULTS),
-    [displayedFamilies]
+    () => [...shownUploads.map((f) => f.ref), ...displayedFamilies.slice(0, MAX_SEARCH_RESULTS)],
+    [shownUploads, displayedFamilies]
   );
   useGoogleFontsBatch(batchForPreview.length ? batchForPreview : undefined);
 
-  const labelText = label === undefined ? "Font (Google Fonts)" : label;
+  const labelText = label === undefined ? "Font" : label;
   const showLabel = labelText.length > 0;
 
   const isSearching = debouncedSearch.trim().length > 0;
@@ -188,7 +241,7 @@ export function GoogleFontSelect({
           )}
           style={{ fontFamily: `"${value}", sans-serif` }}
         >
-          <span className="truncate">{value}</span>
+          <span className="truncate">{fontLabel(value)}</span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -238,8 +291,50 @@ export function GoogleFontSelect({
                 ? "No fonts match your search."
                 : "No fonts to show."}
             </CommandEmpty>
+            {allowUploaded ? (
+              <CommandGroup heading="Your fonts">
+                {shownUploads.map((font) => (
+                  <CommandItem
+                    key={font.ref}
+                    value={font.ref}
+                    onSelect={() => {
+                      onValueChange(font.ref);
+                      setOpen(false);
+                    }}
+                  >
+                    <Check
+                      className={cn(
+                        "mr-2 h-4 w-4 shrink-0",
+                        value === font.ref ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <span className="truncate" style={{ fontFamily: `"${font.ref}", sans-serif` }}>
+                      {font.name}
+                    </span>
+                  </CommandItem>
+                ))}
+                {valueRemoved ? (
+                  <CommandItem value={value} disabled>
+                    <Check className="mr-2 h-4 w-4 shrink-0" />
+                    <span className="truncate">
+                      {fontLabel(value)} (deleted from your media, showing a fallback)
+                    </span>
+                  </CommandItem>
+                ) : null}
+                <CommandItem
+                  value="upload-a-font"
+                  onSelect={() => {
+                    setOpen(false);
+                    setUploadOpen(true);
+                  }}
+                >
+                  <Upload className="mr-2 h-4 w-4 shrink-0" />
+                  Upload a font
+                </CommandItem>
+              </CommandGroup>
+            ) : null}
             {displayedFamilies.length > 0 ? (
-              <CommandGroup>
+              <CommandGroup heading={allowUploaded ? "Google Fonts" : undefined}>
                 {displayedFamilies.map((family) => (
                   <CommandItem
                     key={family}
@@ -271,8 +366,27 @@ export function GoogleFontSelect({
     </Popover>
   );
 
+  const upload = allowUploaded ? (
+    <AssetPickerDialog
+      open={uploadOpen}
+      onOpenChange={setUploadOpen}
+      kindFilter={["font"]}
+      title="Pick a font"
+      onSelect={(asset) => {
+        const ref = uploadedFontRef(asset.url);
+        if (ref) onValueChange(ref);
+        setUploaded(null);
+      }}
+    />
+  ) : null;
+
   if (!showLabel) {
-    return <div className={className}>{trigger}</div>;
+    return (
+      <div className={className}>
+        {trigger}
+        {upload}
+      </div>
+    );
   }
 
   return (
@@ -281,6 +395,7 @@ export function GoogleFontSelect({
         {labelText}
       </Label>
       {trigger}
+      {upload}
     </div>
   );
 }

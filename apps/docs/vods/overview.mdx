@@ -1,0 +1,113 @@
+---
+title: "Your VODs"
+description: "Every archived broadcast on your channel, with the stream's own events laid over it."
+---
+
+**VODs** lists the past broadcasts Twitch still has for your channel. Open one
+and you get the recording with your follows, subs, raids, cheers and clips
+marked along the timeline, so you can find the moment instead of scrubbing for
+it.
+
+<Frame caption="Your archived broadcasts, newest first.">
+  <img src="/images/vods/vod-list.png" alt="The VODs page listing past broadcasts with thumbnails, durations and view counts." />
+</Frame>
+
+## What's in the list
+
+| Column | What it is |
+|---|---|
+| **Thumbnail** | Twitch's preview image. |
+| **Title** | The stream title, with a red **Live** badge if that broadcast is still running. |
+| **Duration** | How long the stream was. |
+| **Views** | Views on the VOD, abbreviated past a thousand. |
+| **Created** | When the stream started. |
+| **Language** | The channel language at the time. |
+| **Type** | Always `archive` here. |
+
+Select any row to open it.
+
+<Note>
+Only **archived broadcasts** are listed. Highlights and uploads you made on
+Twitch aren't shown, because StreamWizard asks Twitch for archives
+specifically.
+</Note>
+
+## Twitch deletes VODs on a timer
+
+This is the thing worth knowing before you plan around VODs.
+
+| Account | Twitch keeps VODs for |
+|---|---|
+| Standard | 14 days |
+| Partner, Turbo or Prime | 60 days |
+
+The list comes from Twitch live rather than from anything StreamWizard stores,
+so a VOD that has aged out simply stops appearing, and its page reads
+**VOD Not Found**. StreamWizard doesn't warn you before that happens.
+
+<Warning>
+If a VOD matters to you, clip it or download it before it expires.
+Your stream's events and your clips stay in StreamWizard after the VOD is gone,
+but the recording itself is Twitch's and StreamWizard can't get it back.
+</Warning>
+
+## Moving through the list
+
+A hundred VODs load at a time. **Previous** and **Next** page through the rest.
+It's a running sequence rather than numbered pages, so you move one step at a
+time.
+
+**Refresh** re-asks Twitch. Use it if you've just finished a stream and the new
+VOD isn't listed yet.
+
+## Deleting VODs
+
+<Steps>
+  <Step title="Select them">
+    Tick the box on each VOD you want gone. The box in the header selects
+    everything on the current page.
+  </Step>
+  <Step title="Delete">
+    Select **Delete Selected**. The dialog lists every title it's about to
+    delete so you can check before confirming.
+  </Step>
+</Steps>
+
+<Warning>
+Deleting a VOD can't be undone, and it deletes it on Twitch, not just in
+StreamWizard. Clips already made from it survive.
+</Warning>
+
+Twitch allows five per request, so the button won't run with more than five
+selected. Changing page clears your selection.
+
+## If something's wrong
+
+<AccordionGroup>
+  <Accordion title="Failed to load videos">
+    Usually your Twitch connection. Open **Settings → Integrations** and check
+    Twitch is connected, and see
+    [Connect Twitch keeps appearing](/troubleshooting/connect-twitch) if your
+    account predates the VOD features.
+  </Accordion>
+  <Accordion title="VOD Not Found when opening one">
+    Either Twitch has deleted it on the timer above, or you deleted it. Both
+    look the same from here.
+  </Accordion>
+  <Accordion title="A stream I did isn't listed">
+    A stream only has a VOD if you had archiving turned on in Twitch when you
+    went live. StreamWizard still tracks the stream and its events either way,
+    but without a VOD there's no recording to open.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Make a clip from a VOD" href="/vods/clip-from-vod">
+    Cut a moment you missed live.
+  </Card>
+  <Card title="Read the timeline" href="/vods/timeline">
+    Find the moment by what happened, not by scrubbing.
+  </Card>
+</CardGroup>

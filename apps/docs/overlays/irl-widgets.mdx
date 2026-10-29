@@ -1,0 +1,153 @@
+---
+title: "IRL GPS widgets"
+description: "Speed, heading, altitude, position and accuracy from your phone's GPS, as separate widgets you place yourself."
+---
+
+import OverlayUrlWarning from '/snippets/overlay-url-warning.mdx';
+
+Six small widgets, one number each: **Speed**, **Heading**, **Altitude**,
+**Latitude**, **Longitude** and **Accuracy**. They read your phone's GPS while
+you're out walking. They're under **Widgets → IRL**, named `IRL · Speed` and
+so on, and only show up when you're editing a GPS overlay.
+
+If you want the whole bar laid out for you rather than six separate numbers,
+use the [walking stats](/irl/walking-stats) template instead. These widgets are
+for building your own.
+
+<Frame caption="The IRL speed widget reading a live GPS fix.">
+  <img src="/images/overlays/irl-speed-widget.png" alt="A small readout on stream showing 40.3 km/h." />
+</Frame>
+
+## How the GPS gets to the widget
+
+This is the part worth understanding before you place anything, because there
+are two scenes involved.
+
+1. **A GPS scene, open on your phone.** When you make an overlay you choose its
+   type. A **GPS** overlay is the one that reads the phone's location, and it
+   only does that while its URL is open in a browser on the phone, normally as
+   a web overlay inside IRL Pro.
+2. **Your widgets, on that GPS overlay.** The phone publishes each fix, and
+   the widgets subscribe to it. The widget list only offers the IRL widgets
+   on a GPS overlay. One already placed on an OBS overlay keeps working, as
+   long as the GPS overlay is open on your phone.
+
+So the phone has to be holding that page open. Close it, lose signal, or deny
+the location permission, and the widgets have nothing to show.
+
+<OverlayUrlWarning />
+
+A GPS overlay URL deserves more care than most: it's a live feed of where you
+physically are.
+
+## Set it up
+
+<Steps>
+  <Step title="Make a GPS overlay">
+    In **Overlays**, create a new overlay and set its type to **GPS**.
+  </Step>
+  <Step title="Add the widgets you want">
+    Open **Widgets → IRL** and add **IRL · Speed**, **IRL · Heading** or
+    whichever you need. Each is 200 × 50 to start with.
+  </Step>
+  <Step title="Open it on your phone">
+    Put the overlay URL into IRL Pro as a web overlay, at 1920 × 1080 rather
+    than the app's 1280 × 720 default, with view mode set to
+    **Preview + stream**.
+  </Step>
+  <Step title="Allow location">
+    In IRL Pro, turn on **Web overlay geo enabled** under gear →
+    Advanced options → WebViews. In Android, give the app **Precise** location,
+    **While using the app**. This is the step that catches people out.
+  </Step>
+</Steps>
+
+## What each widget shows
+
+| Widget | Shows | Units |
+|---|---|---|
+| **IRL · Speed** | How fast you're moving, one decimal | **km/h** or **mph** |
+| **IRL · Heading** | Degrees plus a compass point, like `247° SW` | Fixed |
+| **IRL · Altitude** | Height above sea level | Metres only |
+| **IRL · Latitude** | Your latitude to five decimals | Fixed |
+| **IRL · Longitude** | Your longitude to five decimals | Fixed |
+| **IRL · Accuracy** | How good the fix is, like `±5 m` | Metres only |
+
+**Speed unit** is the only unit setting, and it only appears on the speed
+widget. Altitude and accuracy are always in metres.
+
+## Mock data
+
+**Mock data** at the top of the settings fills the widget with a sample fix so
+you can lay things out at your desk without a phone running.
+
+It only applies in the editor. On stream the widget ignores it and shows your
+real GPS, or an honest **OFFLINE** if the phone isn't publishing, so a widget
+left on mock can't put made-up numbers in front of your viewers.
+
+<Note>
+Mock values carry a small `MOCK·` label in the editor, so you can tell at a
+glance that what you're looking at isn't a real fix.
+</Note>
+
+## What the widget shows when there's no fix
+
+| On screen | What it means |
+|---|---|
+| **Connecting…** | Still opening the connection. |
+| **Waiting for GPS…** | Connected, no fix yet. Normal indoors. |
+| **OFFLINE** | The phone isn't publishing. The page is closed, or it lost signal. |
+| **No data** | Connected with a fix, but this value is missing. Altitude only. |
+
+The editor shows exactly what the overlay shows, so at a desk with no phone
+running you'll sit on **Connecting…** or **Waiting for GPS…**. That's correct,
+not a fault.
+
+<Note>
+A speed with no fix prints `0.0 km/h` rather than a dash, so standing still and
+having no speed reading look the same on screen. If you want to tell them apart,
+put an **IRL · Accuracy** widget next to it.
+</Note>
+
+## Settings
+
+Each widget has the same **Typography** group: **Font (Google Fonts)**,
+**Font size** (28 px by default), **Color**, **Weight** and **Alignment**.
+There's no outline, shadow, background or label option, so pair them with
+[text and shapes](/overlays/text-and-shapes) if you need a backdrop or a caption.
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="Everything says OFFLINE">
+    The phone isn't publishing. Check the overlay page is still open on the
+    phone, that **Web overlay geo enabled** is on in IRL Pro, and that Android
+    hasn't revoked location while the screen was off.
+  </Accordion>
+  <Accordion title="The numbers never move">
+    Only one phone can publish at a time. If you opened the GPS overlay on a
+    second device, the first one holds the connection for 15 seconds before the
+    new one can take over. Close the one you aren't using.
+  </Accordion>
+  <Accordion title="The editor shows numbers but my stream doesn't">
+    Check whether **Mock data** is on. Mock values only ever appear in the
+    editor, so a widget that looks fine there can still be waiting for a real
+    fix from your phone on stream.
+  </Accordion>
+  <Accordion title="My font didn't apply">
+    The font loads reliably on the live overlay. In the editor it may only
+    render while the widget's settings panel is open, because that's what
+    fetches it.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Walking stats" href="/irl/walking-stats">
+    The ready-made bar, if you don't want to build one.
+  </Card>
+  <Card title="IRL streaming overview" href="/irl/overview">
+    How the rest of the IRL setup fits together.
+  </Card>
+</CardGroup>

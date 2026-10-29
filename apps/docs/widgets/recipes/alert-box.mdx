@@ -39,12 +39,18 @@ it directly.
 ## JS
 
 ```js
-var duration = Number(fieldData.alertDuration) || 5;
-var accent = fieldData.accentColor || '#9e7aff';
+var fieldData = {};
+var duration = 5;
+var accent = '#9e7aff';
 var busy = false;
 var queue = [];
 
-window.addEventListener('onWidgetLoad', function () {
+window.addEventListener('onWidgetLoad', function (e) {
+  // Field values arrive with this event, after the lines above have run.
+  fieldData = e.detail.fieldData || {};
+  duration = Number(fieldData.alertDuration) || 5;
+  accent = fieldData.accentColor || '#9e7aff';
+
   var img = document.getElementById('alert-image');
   if (!fieldData.alertImage) img.style.display = 'none';
   document.getElementById('alert-title').style.color = accent;

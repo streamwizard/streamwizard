@@ -1,11 +1,15 @@
 ---
 title: "Media library"
-description: "Upload alert images, sounds, and videos once. Use them in any overlay or widget."
+description: "Upload alert images, sounds, videos, and fonts once. Use them in any overlay or widget."
 ---
 
 **Dashboard → Media** is your storage for overlay files: alert images, sound
-effects, video loops, and Lottie animations. Upload once, pick them anywhere
+effects, video loops, fonts, and Lottie animations. Upload once, pick them anywhere
 a widget asks for an image or sound.
+
+<Frame caption="Your uploaded images, sounds and video.">
+  <img src="/images/overlays/media-library.png" alt="The media library page with its storage meter and upload area." />
+</Frame>
 
 ## Uploading
 
@@ -14,19 +18,72 @@ Drag files onto the page or click to browse. Supported:
 - **Images**: PNG, JPEG, WebP, GIF, AVIF
 - **Audio**: MP3, WAV, OGG
 - **Video**: MP4, WebM
+- **Fonts**: WOFF2, WOFF
 - **Lottie**: JSON animations
 
 Up to 10MB per file. SVG is not supported.
 
+## Which format to use
+
+Every format above uploads, but some do the job in a fraction of the space.
+Smaller files load faster on your overlay and leave more of your storage free.
+
+| For | Use | Why |
+|---|---|---|
+| Alert animations, stingers, anything that moves | **WebM** | Keeps the transparent background, so only your animation shows on stream. Small files too. |
+| Video with a solid background | **MP4** or **WebM** | Both play fine. MP4 has no transparency, so whatever is behind your animation in the file shows on stream as well. |
+| Logos, frames, anything with see-through parts | **PNG** or **WebP** | Both keep transparency and sharp edges. WebP is usually smaller. |
+| Photos and screenshots | **WebP** or **AVIF** | AVIF is the smallest for photos. JPEG works too, without transparency. |
+| Sounds | **MP3** or **OGG** | WAV works, but a 10MB WAV only holds about a minute of audio. |
+
+### Swap GIFs for WebM
+
+A GIF works everywhere, but it's stuck at 256 colours and the files are big.
+The same clip as a WebM is usually a small fraction of the size and looks
+better. If your alert is a GIF, convert it to WebM before you upload it. Most
+video converters and many online GIF tools export WebM.
+
+### Keep sounds at the same loudness
+
+The alert box has a **Sound volume** slider on every alert and a **Master volume**
+for the whole box. They're there for fine tuning. If one sound file is much
+louder than the rest, fix the file and save yourself chasing it with sliders.
+Keep alert sounds short, a few seconds at most, so they don't talk over you.
+
+### Your own fonts
+
+Got a brand font? Upload it as **WOFF2** (or WOFF) and it shows up under
+**Your fonts** in every font picker: alerts, text, labels, goals, chat, and
+the rest. Only upload fonts you have the right to use on stream. Most font
+licences cover a stream overlay, but check yours.
+
+One file covers every weight, so pick the file for the weight you want. Have
+a TTF or OTF? Convert it to WOFF2 first: it's the same font, smaller.
+
+Deleted a font that an overlay still uses? The text falls back to a plain
+font until you pick another.
+
+Fonts from the library are for the built-in widgets. A
+[custom widget](/widgets/overview) loads its own fonts in its code.
+
+### Lottie animations
+
+A Lottie file is a vector animation saved as JSON, often a few kilobytes where a
+video would be a few megabytes. The built-in widgets take images and video, not
+Lottie, so a Lottie file is for [custom widgets](/widgets/overview): use
+**Insert asset** in the widget editor to get its URL into your code.
+
 ## Storage limits
 
-The bar at the top shows what you're using. Every account gets 100MB.
-Deleting a file frees its space right away.
+The bar at the top shows what you're using. Every account gets 100MB, and some
+paid plans get more. Deleting a file frees its space right away.
 
 ## Using your files
 
-- **In widget settings**: image and sound fields show a **Choose** button that
-  opens your library.
+- **In widget settings**: an empty image or sound field shows **Add an image**
+  or **Add a video**, which opens your library. A filled one offers
+  **Replace** and **Remove**. The picker only lists files of the kind that
+  field takes, so a sound never shows up in an image slot.
 - **In widget code**: the **Insert asset** button in the widget editor drops
   the file's URL at your cursor.
 - **Anywhere else**: every file has a **Copy URL** button. The URL is public,
@@ -36,3 +93,15 @@ Deleting a file frees its space right away.
 Deleting a file breaks any overlay still pointing at it. Swap it out in the
 widget settings first.
 </Warning>
+
+## Why SVG isn't allowed
+
+An SVG is code as much as it is a picture, and it can carry scripts. Allowing
+them would mean anything in your library could run code on your overlay.
+Export a PNG or WebP instead.
+
+## What happens if you delete your account
+
+Your uploads go with it. Deleting your StreamWizard account removes every file
+in your media library, and that can't be undone. If you want to keep anything,
+use **Copy URL** and download it first.

@@ -39,6 +39,7 @@ import {
   ChannelPredictionProgressEventSchema,
 } from "./polls-predictions";
 import { StreamOfflineEventSchema, StreamOnlineEventSchema } from "./stream";
+import { ChannelModeratorAddEventSchema, ChannelVipAddEventSchema } from "./moderate";
 
 /**
  * Canonical synthetic EventSub payloads, used everywhere a StreamWizard surface
@@ -509,6 +510,38 @@ export const WIDGET_TEST_EVENTS = {
       ends_at: null,
       is_permanent: true,
     }),
+    variants: {
+      // The same event: Twitch sends a timeout as a ban that is not permanent.
+      timeout: {
+        label: "Timeout",
+        build: (o?: WidgetTestEventOptions) => {
+          const at = Date.now();
+          return {
+            ...viewer(o),
+            ...BROADCASTER,
+            moderator_user_id: "3",
+            moderator_user_login: "mod",
+            moderator_user_name: "Mod",
+            reason: "Testing",
+            banned_at: new Date(at).toISOString(),
+            ends_at: new Date(at + 600_000).toISOString(),
+            is_permanent: false,
+          };
+        },
+      },
+    },
+  },
+  "channel.vip.add": {
+    label: "VIP added",
+    group: "Channel",
+    schema: ChannelVipAddEventSchema,
+    build: (o?) => ({ ...viewer(o), ...BROADCASTER }),
+  },
+  "channel.moderator.add": {
+    label: "Mod added",
+    group: "Channel",
+    schema: ChannelModeratorAddEventSchema,
+    build: (o?) => ({ ...viewer(o), ...BROADCASTER }),
   },
   "channel.chat.message": {
     label: "Chat message",

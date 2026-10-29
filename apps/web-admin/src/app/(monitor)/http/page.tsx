@@ -1,5 +1,7 @@
+import { TriangleAlert } from "lucide-react";
 import { queryHttpRequestCount, queryHttpRequests, queryHttpRouteStats } from "@repo/metrics";
 import type { HttpRequestPoint, HttpRouteStatPoint } from "@repo/metrics";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui";
 import { HttpRequestChart } from "@/components/charts/http-request-chart";
 import { HttpRouteTable } from "@/components/charts/http-route-table";
 import { PageHeader } from "@/components/widgets/page-header";
@@ -17,6 +19,8 @@ export default async function HttpDashboard() {
   let requests: HttpRequestPoint[] = [];
   let routeStats: HttpRouteStatPoint[] = [];
   let counts: { time: string; count: number; status: string }[] = [];
+  // Zeros would read as "no traffic", which is the opposite of what we know.
+  let metricsFailed = false;
 
   try {
     [requests, routeStats, counts] = await Promise.all([
@@ -24,8 +28,9 @@ export default async function HttpDashboard() {
       queryHttpRouteStats(STATS_RANGE),
       queryHttpRequestCount(STATS_RANGE),
     ]);
-  } catch {
-    // InfluxDB not available — show empty state
+  } catch (error) {
+    metricsFailed = true;
+    console.warn("[http] InfluxDB query failed:", error instanceof Error ? error.message : error);
   }
 
   // Real request counts, not the number of aggregated points on the chart.
@@ -35,6 +40,7 @@ export default async function HttpDashboard() {
   const routeRequests = routeStats.reduce((acc, r) => acc + r.requestCount, 0);
   const avgLatency =
     routeRequests > 0 ? Math.round(routeStats.reduce((acc, r) => acc + r.avgDurationMs * r.requestCount, 0) / routeRequests) : null;
+  const count = (n: number) => (metricsFailed ? "—" : n.toLocaleString("en-US"));
 
   return (
     <div className="space-y-6">
@@ -43,10 +49,20 @@ export default async function HttpDashboard() {
         description="Requests, latency and errors for rest-api. The stat cards cover the last 24 hours and load once. The chart and routes follow the header range and refresh."
       />
 
+      {metricsFailed && (
+        <Alert>
+          <TriangleAlert aria-hidden />
+          <AlertTitle>Metrics unavailable</AlertTitle>
+          <AlertDescription>
+            InfluxDB didn&apos;t answer, so the numbers below are missing, not zero. Refresh to try again.
+          </AlertDescription>
+        </Alert>
+      )}
+
       <StatGrid cols={3}>
-        <StatCard title="Total requests" value={totalRequests.toLocaleString("en-US")} description={STATS_WINDOW} />
+        <StatCard title="Total requests" value={count(totalRequests)} description={STATS_WINDOW} />
         <StatCard title="Avg latency" value={avgLatency === null ? "—" : `${avgLatency}ms`} description={STATS_WINDOW} />
-        <StatCard title="Errors (4xx/5xx)" value={errorCount.toLocaleString("en-US")} description={STATS_WINDOW} />
+        <StatCard title="Errors (4xx/5xx)" value={count(errorCount)} description={STATS_WINDOW} />
       </StatGrid>
 
       <HttpRequestChart initialData={requests} />

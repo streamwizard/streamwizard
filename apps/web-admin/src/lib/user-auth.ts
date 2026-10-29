@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import type { Factor, PasskeyListItem } from "@repo/supabase/auth/session-strength";
+import type { Factor } from "@repo/supabase/auth/session-strength";
 
 // Server-only. The Supabase Auth side of a user for /users/[id]: sign-in
 // history, ban state, second factors. Kept apart from the DB queries because
@@ -22,7 +22,6 @@ export interface UserAuthState {
   providers: string[];
   /** Every TOTP factor, verified or not (an unverified one is a setup left halfway). */
   totpFactors: Factor[];
-  passkeys: PasskeyListItem[];
 }
 
 /** Far enough ahead to mean "until an admin lifts it". */
@@ -39,7 +38,6 @@ export const loadUserAuthState = cache(async (userId: string): Promise<UserAuthS
   if (error || !data.user) return null;
   const user = data.user;
 
-  const passkeys = await supabaseAdmin.auth.admin.passkey.listPasskeys({ userId });
   const bannedUntil = user.banned_until && new Date(user.banned_until).getTime() > Date.now() ? user.banned_until : null;
 
   return {
@@ -48,7 +46,5 @@ export const loadUserAuthState = cache(async (userId: string): Promise<UserAuthS
     ban: bannedUntil ? readBanNote(user.app_metadata) : null,
     providers: [...new Set((user.identities ?? []).map((identity) => identity.provider))],
     totpFactors: (user.factors ?? []).filter((factor) => factor.factor_type === "totp"),
-    // Passkeys off on the project (local config) reads as none, like the admin gate.
-    passkeys: passkeys.error ? [] : (passkeys.data ?? []),
   };
 });

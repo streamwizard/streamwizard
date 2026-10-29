@@ -1,4 +1,4 @@
-import { ActionRowBuilder, ChannelType, MessageFlags, StringSelectMenuBuilder } from "discord.js";
+import { ActionRowBuilder, ChannelType, MessageFlags, PermissionFlagsBits, StringSelectMenuBuilder } from "discord.js";
 import type {
   ButtonInteraction,
   ChatInputCommandInteraction,
@@ -41,6 +41,7 @@ import { FIELD_IDS, TICKET_IDS } from "./ids";
 import { buildTicketIntroMessage } from "./intro";
 import { peekPendingOpen, takePendingOpen } from "./pending";
 import { ticketStatsValues } from "./stats";
+import { guildUploadLimit, postWithUploads, skippedForOpener, skippedForStaff, type SkippedUpload } from "./uploads";
 
 const NOT_SET_UP = "Ticketing isn't set up in this server yet.";
 const NOT_FROM_DM = "Tickets can't be opened from a DM here. Head to the server and use the ticket panel.";
@@ -194,6 +195,7 @@ async function startTicket(interaction: OpenInteraction, context: OpenContext, c
     description: pending?.description ?? "",
     product: null,
     answers: [],
+    files: [],
   });
 }
 
@@ -280,6 +282,15 @@ function modalReader(interaction: ModalSubmitInteraction): FormReader {
   return {
     text: (id) => (has(id) ? interaction.fields.getTextInputValue(id) : null),
     select: (id) => (has(id) ? (interaction.fields.getStringSelectValues(id)[0] ?? "") : null),
+    files: (id) =>
+      has(id)
+        ? [...(interaction.fields.getUploadedFiles(id)?.values() ?? [])].map((file) => ({
+            name: file.name,
+            url: file.url,
+            size: file.size,
+            contentType: file.contentType,
+          }))
+        : null,
   };
 }
 
@@ -298,6 +309,8 @@ function legacyReader(interaction: ModalSubmitInteraction, config: TicketConfig,
   return {
     text: (id) => (has(legacyId(id)) ? interaction.fields.getTextInputValue(legacyId(id)!) : null),
     select: (id) => (has(legacyId(id)) ? (interaction.fields.getStringSelectValues(legacyId(id)!)[0] ?? "") : null),
+    // Those forms predate uploads.
+    files: () => null,
   };
 }
 
@@ -441,6 +454,8 @@ async function createTicketChannel(
   // with nothing tracking it — remove it (and close the row, if it got that far)
   // and let the handler report the error. The allocated ticket number is skipped.
   let ticketCreated = false;
+  // Files from the form that couldn't be re-uploaded. The ticket opens without them.
+  let skippedFiles: SkippedUpload[] = [];
   try {
     const ticket = await createTicket(supabase, {
       guildId: guild.id,
@@ -480,7 +495,22 @@ async function createTicketChannel(
     const lines = [intro.content];
     if (pending?.referencesMessageUrl) lines.push(`About this message: ${pending.referencesMessageUrl}`);
     if (forSomeoneElse) lines.push(`Opened by ${member} on their behalf.`);
-    await channel.send({ ...intro, content: lines.join("\n").slice(0, 2000) });
+    // The form's files go on this first message: Discord's links to them expire.
+    const me = guild.members.me;
+    skippedFiles = await postWithUploads(channel, { ...intro, content: lines.join("\n").slice(0, 2000) }, form.files, {
+      // The interaction knows the guild's limit; a DM interaction only knows the DM's.
+      limitBytes:
+        interaction.guildId === guild.id && interaction.attachmentSizeLimit > 0
+          ? interaction.attachmentSizeLimit
+          : guildUploadLimit(guild.premiumTier),
+      canAttach: me ? channel.permissionsFor(me).has(PermissionFlagsBits.AttachFiles) : true,
+      ticketId: ticket.id,
+    });
+    if (skippedFiles.length > 0) {
+      await channel
+        .send({ content: skippedForStaff(skippedFiles).slice(0, 2000), allowedMentions: { parse: [] } })
+        .catch((error) => reportError(error, "discord-bot tickets: skipped files notice", { ticketId: ticket.id }));
+    }
   } catch (error) {
     if (ticketCreated) {
       // Closed straight in the DB, not through finalizeTicketClose: a ticket
@@ -497,8 +527,9 @@ async function createTicketChannel(
     throw error;
   }
 
-  await finish(
-    interaction,
-    forSomeoneElse ? `✅ Opened <#${channel.id}> for ${opener.displayName}.` : `✅ Your ticket is open: <#${channel.id}>`,
-  );
+  const opened = forSomeoneElse
+    ? `✅ Opened <#${channel.id}> for ${opener.displayName}.`
+    : `✅ Your ticket is open: <#${channel.id}>`;
+  const notAttached = skippedForOpener(skippedFiles);
+  await finish(interaction, (notAttached ? `${opened}\n${notAttached}` : opened).slice(0, 2000));
 }

@@ -42,7 +42,7 @@ import {
 import { useCategorySavePart } from "./ticket-category-save";
 import { MoveMenuItems, TicketRowMenu } from "./ticket-row-menu";
 
-type FieldKind = "subject" | "description" | "product" | "text" | "select";
+type FieldKind = "subject" | "description" | "product" | "text" | "select" | "file";
 
 interface OptionDraft {
   label: string;
@@ -61,6 +61,9 @@ export interface TicketFieldDraft {
   required: boolean;
   minLength: number | null;
   maxLength: number | null;
+  /** File uploads only. Null: at least one when required, and as many as Discord takes. */
+  minFiles: number | null;
+  maxFiles: number | null;
   options: OptionDraft[];
 }
 
@@ -72,6 +75,8 @@ interface Limits {
   subjectMax: number;
   maxOptions: number;
   optionMax: number;
+  /** Discord takes 10 files in one upload. */
+  filesMax: number;
 }
 
 interface TicketFormEditorProps {
@@ -88,6 +93,16 @@ const KINDS: Record<FieldKind, { name: string; hint: string; once: boolean }> = 
   product: { name: "Product", hint: "A dropdown of your products. Filters the ticket list.", once: true },
   text: { name: "Text question", hint: "Anything else you want to ask.", once: false },
   select: { name: "Dropdown question", hint: "Pick one from options you write.", once: false },
+  file: { name: "File upload", hint: "Screenshots, PDFs, logs or zips. Posted in the new ticket.", once: false },
+};
+
+/** Free text, the kinds with a placeholder, a style and lengths. */
+const isTextKind = (kind: FieldKind) => kind === "subject" || kind === "description" || kind === "text";
+
+/** What a file question's row says when it has no hint of its own. */
+const filesSummary = (field: TicketFieldDraft, filesMax: number) => {
+  const max = field.maxFiles ?? filesMax;
+  return max === 1 ? "One file" : `Up to ${max} files`;
 };
 
 const isNew = (id: string) => id.startsWith("new-");
@@ -95,12 +110,14 @@ const isNew = (id: string) => id.startsWith("new-");
 const blank = (kind: FieldKind): TicketFieldDraft => ({
   id: `new-${crypto.randomUUID()}`,
   kind,
-  label: kind === "text" || kind === "select" ? "" : KINDS[kind].name,
+  label: kind === "text" || kind === "select" || kind === "file" ? "" : KINDS[kind].name,
   placeholder: "",
   style: kind === "description" ? "paragraph" : "short",
   required: true,
   minLength: null,
   maxLength: null,
+  minFiles: null,
+  maxFiles: null,
   options: [],
 });
 
@@ -148,6 +165,8 @@ export function TicketFormEditor({ categoryId, initial, hasProducts, limits }: T
           required: field.required,
           minLength: field.minLength,
           maxLength: field.maxLength,
+          minFiles: field.minFiles,
+          maxFiles: field.maxFiles,
           options: field.options.map((o) => ({
             label: o.label,
             value: o.value,
@@ -231,7 +250,9 @@ export function TicketFormEditor({ categoryId, initial, hasProducts, limits }: T
                       ? "Skipped in Discord until you add a product."
                       : field.kind === "select"
                         ? field.options.map((o) => o.label).join(", ") || "No options yet"
-                        : field.placeholder || KINDS[field.kind].hint}
+                        : field.kind === "file"
+                          ? field.placeholder || filesSummary(field, limits.filesMax)
+                          : field.placeholder || KINDS[field.kind].hint}
                   </p>
                 </div>
                 <div className="hidden shrink-0 items-center gap-1 md:flex">
@@ -322,7 +343,8 @@ function FieldDialog({
   const set = <K extends keyof TicketFieldDraft>(key: K, value: TicketFieldDraft[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
 
-  const isText = draft.kind === "subject" || draft.kind === "description" || draft.kind === "text";
+  const isText = isTextKind(draft.kind);
+  const isFile = draft.kind === "file";
   const ceiling = draft.kind === "subject" ? limits.subjectMax : limits.textMax;
   const number = (value: string, max: number): number | null => {
     const parsed = Number.parseInt(value, 10);
@@ -335,8 +357,10 @@ function FieldDialog({
       draft.options.map((o, i) => (i === index ? { ...o, ...patch } : o)),
     );
 
+  const filesCrossed = isFile && draft.required && (draft.minFiles ?? 1) > (draft.maxFiles ?? limits.filesMax);
   const ready =
     draft.label.trim().length > 0 &&
+    !filesCrossed &&
     (draft.kind !== "select" || (draft.options.length > 0 && draft.options.every((o) => o.label.trim())));
 
   const submit = () => {
@@ -345,6 +369,9 @@ function FieldDialog({
       ...draft,
       label: draft.label.trim(),
       placeholder: draft.placeholder.trim(),
+      // The minimum is hidden for an optional upload, so it isn't kept either.
+      minFiles: isFile && draft.required ? draft.minFiles : null,
+      maxFiles: isFile ? draft.maxFiles : null,
       // An option keeps its value once it has one, so old answers still match it.
       options: draft.options.map((o) => {
         const value = o.value || optionValue(o.label, taken);
@@ -383,7 +410,7 @@ function FieldDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor={`${id}-placeholder`}>Placeholder</Label>
+            <Label htmlFor={`${id}-placeholder`}>{isFile ? "Hint" : "Placeholder"}</Label>
             <Input
               id={`${id}-placeholder`}
               value={draft.placeholder}
@@ -391,8 +418,55 @@ function FieldDialog({
               maxLength={limits.placeholderMax}
               className="h-11 md:h-9"
             />
-            <p className="text-xs text-muted-foreground">Grey hint text inside the empty field. Optional.</p>
+            <p className="text-xs text-muted-foreground">
+              {isFile
+                ? "Small text under the question. Optional. Leave it empty and members see which file types work."
+                : "Grey hint text inside the empty field. Optional."}
+            </p>
           </div>
+
+          {isFile && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {/* An optional upload can be left empty, so a minimum only means something when it's required. */}
+              {draft.required && (
+                <div className="space-y-2">
+                  <Label htmlFor={`${id}-min-files`}>Fewest files</Label>
+                  <Input
+                    id={`${id}-min-files`}
+                    type="number"
+                    min={1}
+                    max={limits.filesMax}
+                    value={draft.minFiles ?? ""}
+                    onChange={(event) => set("minFiles", number(event.target.value, limits.filesMax) || null)}
+                    placeholder="1"
+                    className="h-11 md:h-9"
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor={`${id}-max-files`}>Most files</Label>
+                <Input
+                  id={`${id}-max-files`}
+                  type="number"
+                  min={1}
+                  max={limits.filesMax}
+                  value={draft.maxFiles ?? ""}
+                  onChange={(event) => set("maxFiles", number(event.target.value, limits.filesMax) || null)}
+                  placeholder={String(limits.filesMax)}
+                  className="h-11 md:h-9"
+                />
+              </div>
+              {filesCrossed && (
+                <p className="text-xs text-destructive sm:col-span-2" role="alert">
+                  Fewest can&apos;t be more than most.
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                Discord takes up to {limits.filesMax} files here. Images (PNG, JPG, GIF, WebP), PDF, TXT, LOG and ZIP get
+                through, up to your server&apos;s upload size.
+              </p>
+            </div>
+          )}
 
           {draft.kind === "text" && (
             <div className="space-y-2">

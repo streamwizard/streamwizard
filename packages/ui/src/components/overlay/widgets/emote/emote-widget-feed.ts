@@ -172,6 +172,12 @@ function eventMessageEmotes(
 /**
  * What a burst shows. The streamer's own picks win; otherwise the emotes in
  * the viewer's message, then every channel emote, then Kappa.
+ *
+ * `Blocked emotes` applies to every one of those branches, which the panel
+ * promises ("These never show, from chat or in bursts"). Picks are filtered by
+ * code because that is what the streamer chose; the other branches are filtered
+ * by resolved URL, since a message fragment carries Twitch's emote id and no
+ * code to compare against.
  */
 export function burstEmoteUrls(
   burst: Pick<EmoteWidgetBurst, "emotes">,
@@ -180,19 +186,31 @@ export function burstEmoteUrls(
   assets: ChatAssets,
   blocked: readonly string[] = [],
 ): string[] {
+  const skip = new Set(blocked);
+  const blockedUrls = new Set(
+    blocked
+      .map((code) => emoteUrlForCode(code, channel, assets))
+      .filter((url): url is string => !!url),
+  );
+  const allowed = (urls: string[]) => urls.filter((url) => !blockedUrls.has(url));
+
   if (burst.emotes.length > 0) {
-    const picked = burst.emotes
-      .map((pick) => pick.url || emoteUrlForCode(pick.code, channel, assets))
-      .filter((url): url is string => !!url);
+    const picked = allowed(
+      burst.emotes
+        .filter((pick) => !skip.has(pick.code))
+        .map((pick) => pick.url || emoteUrlForCode(pick.code, channel, assets))
+        .filter((url): url is string => !!url),
+    );
     if (picked.length > 0) return picked;
   }
   if (payload) {
-    const fromMessage = eventMessageEmotes(payload, channel, assets);
+    const fromMessage = allowed(eventMessageEmotes(payload, channel, assets));
     if (fromMessage.length > 0) return fromMessage;
   }
-  const skip = new Set(blocked);
-  const own = Object.entries(channel)
-    .filter(([code]) => !skip.has(code))
-    .map(([, e]) => e.url_4x);
+  const own = allowed(
+    Object.entries(channel)
+      .filter(([code]) => !skip.has(code))
+      .map(([, e]) => e.url_4x),
+  );
   return own.length > 0 ? own : [FALLBACK_EMOTE_URL];
 }
