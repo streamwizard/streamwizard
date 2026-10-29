@@ -1,5 +1,6 @@
 import { VOICE_USER_LIMIT_MAX } from "@repo/supabase/queries/discord-voice";
 import { reasonFor, voiceCommand, voiceCommandData } from "../../lib/voice/command";
+import { rememberOwnerPrefs } from "../../lib/voice/store";
 
 export default voiceCommand({
   data: voiceCommandData("voice-limit", "Change the user limit of the temporary voice channel").addIntegerOption((opt) =>
@@ -15,6 +16,7 @@ export default voiceCommand({
     const limit = ctx.interaction.options.getInteger("user_limit", true);
     if (limit === ctx.channel.userLimit) return limit === 0 ? "There's no limit already." : `The limit is already ${limit}.`;
     await ctx.channel.setUserLimit(limit, reasonFor(ctx, "User limit changed"));
+    await rememberOwnerPrefs(ctx.temp, ctx.member.id, { user_limit: limit });
     return limit === 0 ? "No user limit now." : `Limit set to ${limit}.`;
   },
 });

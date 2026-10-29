@@ -2445,6 +2445,8 @@ export type Database = {
           id: string
           lobby_channel_id: string
           name_template: string
+          remember_owner_settings: boolean
+          staff_role_ids: string[] | null
           updated_at: string
         }
         Insert: {
@@ -2455,6 +2457,8 @@ export type Database = {
           id?: string
           lobby_channel_id: string
           name_template?: string
+          remember_owner_settings?: boolean
+          staff_role_ids?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -2465,7 +2469,86 @@ export type Database = {
           id?: string
           lobby_channel_id?: string
           name_template?: string
+          remember_owner_settings?: boolean
+          staff_role_ids?: string[] | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      discord_voice_owner_prefs: {
+        Row: {
+          banned_user_ids: string[]
+          created_at: string
+          discord_user_id: string
+          guild_id: string
+          hidden: boolean
+          hub_id: string
+          locked: boolean
+          name: string | null
+          updated_at: string
+          user_limit: number | null
+        }
+        Insert: {
+          banned_user_ids?: string[]
+          created_at?: string
+          discord_user_id: string
+          guild_id: string
+          hidden?: boolean
+          hub_id: string
+          locked?: boolean
+          name?: string | null
+          updated_at?: string
+          user_limit?: number | null
+        }
+        Update: {
+          banned_user_ids?: string[]
+          created_at?: string
+          discord_user_id?: string
+          guild_id?: string
+          hidden?: boolean
+          hub_id?: string
+          locked?: boolean
+          name?: string | null
+          updated_at?: string
+          user_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discord_voice_owner_prefs_hub_id_fkey"
+            columns: ["hub_id"]
+            isOneToOne: false
+            referencedRelation: "discord_voice_hubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discord_voice_rename_blocks: {
+        Row: {
+          blocked_by_discord_user_id: string
+          blocked_by_username: string
+          created_at: string
+          discord_user_id: string
+          guild_id: string
+          reason: string | null
+          username: string
+        }
+        Insert: {
+          blocked_by_discord_user_id: string
+          blocked_by_username: string
+          created_at?: string
+          discord_user_id: string
+          guild_id: string
+          reason?: string | null
+          username: string
+        }
+        Update: {
+          blocked_by_discord_user_id?: string
+          blocked_by_username?: string
+          created_at?: string
+          discord_user_id?: string
+          guild_id?: string
+          reason?: string | null
+          username?: string
         }
         Relationships: []
       }
@@ -2496,6 +2579,27 @@ export type Database = {
           joined_at?: string
           left_at?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      discord_voice_settings: {
+        Row: {
+          created_at: string
+          guild_id: string
+          staff_role_ids: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          guild_id: string
+          staff_role_ids?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          guild_id?: string
+          staff_role_ids?: string[]
+          updated_at?: string
         }
         Relationships: []
       }

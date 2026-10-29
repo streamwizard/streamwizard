@@ -1,4 +1,5 @@
 import { Events } from "discord.js";
+import { forgetChannelInvites } from "../lib/voice/invites";
 import { forgetRenameHistory } from "../lib/voice/rename";
 import { forgetTempChannels, getTempChannel } from "../lib/voice/store";
 import type { BotEvent } from "../types/discord";
@@ -12,5 +13,6 @@ export default {
     if (channel.isDMBased() || !getTempChannel(channel.id)) return;
     await forgetTempChannels([channel.id]);
     forgetRenameHistory(channel.id);
+    forgetChannelInvites(channel.id);
   },
 } satisfies BotEvent<typeof Events.ChannelDelete>;

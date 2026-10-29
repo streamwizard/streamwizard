@@ -23,9 +23,10 @@ export default voiceCommand({
       if (isOwnerTaken(error)) return `${user} already owns a channel. One channel each.`;
       throw error;
     }
-    // The previous owner stays in as a guest when the channel is locked or hidden.
+    // The previous owner stays in as a guest when the channel is locked or
+    // hidden. That's the actor, unless staff moved someone else's channel.
     await applyTempPermissions(ctx.channel, { ...ctx.temp, ownerId: user.id, bannedUserIds }, {
-      add: [ctx.member.id],
+      add: [ctx.temp.ownerId],
       reason: reasonFor(ctx, "Ownership transferred"),
     });
     return `${user} owns this channel now.`;

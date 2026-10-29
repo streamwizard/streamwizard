@@ -5,6 +5,7 @@ import { canRunCommand } from "../lib/permissions";
 import { handleTicketInteraction } from "../lib/tickets";
 import { handleSetupInteraction } from "../lib/setup-wizard";
 import { handleBuiltButton, isBuiltButton } from "../lib/built-buttons";
+import { handleVoiceInteraction, isVoiceInteraction } from "../lib/voice/buttons";
 import { trackCommand } from "../lib/command-tracking";
 
 export default {
@@ -32,6 +33,12 @@ export default {
 
     if ((interaction.isButton() || interaction.isAnySelectMenu()) && interaction.customId.startsWith("setup:")) {
       await handleSetupInteraction(interaction);
+      return;
+    }
+
+    // Buttons on a temp voice channel's pinned message, and the Invite modal.
+    if ((interaction.isButton() || interaction.isModalSubmit()) && isVoiceInteraction(interaction.customId)) {
+      await handleVoiceInteraction(interaction);
       return;
     }
 

@@ -11,10 +11,33 @@ import {
 } from "discord.js";
 import type { VoiceHub } from "@repo/supabase/queries/discord-voice";
 import { reportError } from "@repo/sentry";
-import { asTempVoiceChannel, deleteTempChannel, humanCount, rawOverwrites } from "./channel";
+import {
+  applyTempPermissions,
+  asTempVoiceChannel,
+  botExtraPermissions,
+  deleteTempChannel,
+  humanCount,
+  postVoiceHelp,
+  rawOverwrites,
+  refreshVoicePanel,
+} from "./channel";
+import { serialized } from "./command";
+import { forgetChannelInvites, forgetInvites, pendingInvites, usedInviteCodes } from "./invites";
 import { buildTempOverwrites } from "./overwrites";
-import { reconcileAction } from "./rules";
-import { addTempChannel, ensureLoaded, findOwnedChannel, forgetTempChannels, getHubs, getTempChannel, listTempChannels } from "./store";
+import { startingState } from "./prefs";
+import { reconcileAction, type TempChannel } from "./rules";
+import {
+  addTempChannel,
+  ensureLoaded,
+  findOwnedChannel,
+  forgetTempChannels,
+  getHubs,
+  getStaffRoleIds,
+  getTempChannel,
+  isRenameBlocked,
+  listTempChannels,
+  loadOwnerPrefs,
+} from "./store";
 import { renderChannelName } from "./template";
 
 // Join-to-create: a member joins a hub's lobby, gets a channel of their own,
@@ -91,33 +114,60 @@ export async function createForMember(member: GuildMember, hub: VoiceHub, lobby:
     }
 
     const parent = resolveParent(guild, hub, lobby);
+    // A channel without its staff roles still beats no channel; the next
+    // permission change (or settings save) puts them on.
+    const staffRoleIds = await getStaffRoleIds(guild.id, hub.id).catch((error: unknown) => {
+      reportError(error, "discord-bot voice: load staff roles", { guildId: guild.id, hubId: hub.id });
+      return [];
+    });
+    // What the owner had last time in this hub, the hub's defaults otherwise.
+    // A member blocked from renaming gets the lobby's name whatever they saved.
+    const prefs = await loadOwnerPrefs(hub, member.id);
+    const blocked = prefs?.name ? await isRenameBlocked(guild.id, member.id) : false;
+    const start = startingState(hub, prefs && blocked ? { ...prefs, name: null } : prefs, {
+      templateName: renderChannelName(hub.name_template, { username: member.user.username, displayname: member.displayName }),
+      ownerId: member.id,
+    });
     const channel = await guild.channels.create({
-      name: renderChannelName(hub.name_template, { username: member.user.username, displayname: member.displayName }),
+      name: start.name,
       type: ChannelType.GuildVoice,
       parent: parent?.id ?? null,
-      userLimit: hub.default_user_limit,
+      userLimit: start.userLimit,
       bitrate: lobby.bitrate,
       permissionOverwrites: buildTempOverwrites({
         parent: parent ? rawOverwrites(parent) : [],
         everyoneId: guild.id,
         botId: guild.client.user.id,
         ownerId: member.id,
-        locked: false,
-        hidden: false,
-        bannedUserIds: [],
+        locked: start.locked,
+        hidden: start.hidden,
+        bannedUserIds: start.bannedUserIds,
         guestIds: [],
+        botExtraPermissions: botExtraPermissions(guild),
+        staffRoleIds,
       }),
       reason: `Temporary voice channel for ${member.user.tag}`,
     });
 
+    let temp: TempChannel;
     try {
-      await addTempChannel({ channel_id: channel.id, guild_id: guild.id, hub_id: hub.id, owner_discord_user_id: member.id });
+      temp = await addTempChannel({
+        channel_id: channel.id,
+        guild_id: guild.id,
+        hub_id: hub.id,
+        owner_discord_user_id: member.id,
+        locked: start.locked,
+        hidden: start.hidden,
+        banned_user_ids: start.bannedUserIds,
+      });
     } catch (error) {
       await channel.delete("Couldn't save the temporary voice channel").catch(() => {});
       throw error;
     }
 
-    if (!(await moveMember(member, lobby.id, channel.id, "Moved into their temporary channel")) && humanCount(channel) === 0) {
+    if (await moveMember(member, lobby.id, channel.id, "Moved into their temporary channel")) {
+      void postVoiceHelp(channel, temp);
+    } else if (humanCount(channel) === 0) {
       await deleteTempChannel(guild, channel.id, "Its owner left before it was ready");
     }
   } finally {
@@ -185,5 +235,73 @@ export async function reconcileTempChannels(client: Client<true>): Promise<void>
     } catch (error) {
       reportError(error, "discord-bot voice: reconcile", { guildId: guild.id });
     }
+  }
+}
+
+/**
+ * A new member who joined through a /voice-invite link gets into that link's
+ * channel past a lock or hide. The used link is the pending one missing from
+ * its channel's invites. Two gone at once can't be told apart, so neither
+ * joiner is let in; their owners can /voice-invite them by name.
+ */
+export async function admitInvitedMember(member: GuildMember): Promise<void> {
+  const guild = member.guild;
+  const candidates = pendingInvites(guild.id);
+  if (candidates.length === 0 || member.user.bot) return;
+  await ensureLoaded();
+
+  const live = new Set<string>();
+  for (const channelId of new Set(candidates.map((invite) => invite.channelId))) {
+    const channel = asTempVoiceChannel(guild.channels.cache.get(channelId));
+    if (!channel) {
+      // Gone without a delete event: its links went with it, they weren't used.
+      forgetChannelInvites(channelId);
+      for (const invite of candidates) if (invite.channelId === channelId) live.add(invite.code);
+      continue;
+    }
+    try {
+      for (const code of (await channel.fetchInvites(false)).keys()) live.add(code);
+    } catch (error) {
+      // Can't tell which of this channel's links were used: treat them as unused.
+      for (const invite of candidates) if (invite.channelId === channelId) live.add(invite.code);
+      reportError(error, "discord-bot voice: fetch invites", { guildId: guild.id, channelId });
+    }
+  }
+
+  const used = usedInviteCodes(candidates, live, Date.now());
+  forgetInvites(used);
+  if (used.length !== 1) {
+    if (used.length > 1) console.warn(`[voice] ${used.length} invite links used at once in ${guild.id}; letting nobody in`);
+    return;
+  }
+
+  const channelId = candidates.find((invite) => invite.code === used[0])!.channelId;
+  const channel = asTempVoiceChannel(guild.channels.cache.get(channelId));
+  if (!channel) return;
+  await serialized(channelId, async () => {
+    const temp = getTempChannel(channelId);
+    if (!temp || !(temp.locked || temp.hidden) || temp.bannedUserIds.includes(member.id)) return;
+    await applyTempPermissions(channel, temp, { add: [member.id], reason: `Joined through a /voice-invite link (${member.user.tag})` });
+  });
+}
+
+/**
+ * After a hub or the voice settings change: rewrites every open temp
+ * channel's permissions in the server, so new or removed voice staff roles
+ * apply now instead of on the channel's next lock or ban. One channel at a
+ * time, each through its command queue.
+ */
+export async function refreshTempPermissions(guild: Guild): Promise<void> {
+  await ensureLoaded();
+  for (const { channelId } of listTempChannels(guild.id)) {
+    const channel = asTempVoiceChannel(guild.channels.cache.get(channelId));
+    if (!channel) continue;
+    await serialized(channelId, async () => {
+      const temp = getTempChannel(channelId);
+      if (!temp) return;
+      await applyTempPermissions(channel, temp, { reason: "Voice settings changed in the dashboard" });
+      // The lobby may have started or stopped remembering settings.
+      await refreshVoicePanel(channel);
+    }).catch((error) => reportError(error, "discord-bot voice: refresh permissions", { guildId: guild.id, channelId }));
   }
 }

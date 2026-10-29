@@ -6,15 +6,37 @@ import { OverwriteType, PermissionFlagsBits, type OverwriteData } from "discord.
 // members-only category stays members-only), and recomputing means "unlock"
 // restores exactly what the category allowed instead of guessing.
 
-const { ViewChannel, Connect, ManageChannels, MoveMembers } = PermissionFlagsBits;
+const {
+  ViewChannel,
+  Connect,
+  ManageChannels,
+  MoveMembers,
+  SendMessages,
+  EmbedLinks,
+  ReadMessageHistory,
+  PinMessages,
+  CreateInstantInvite,
+} = PermissionFlagsBits;
 
 /** What the owner gets: in even when locked or hidden, and enough to manage the channel by hand. */
 export const OWNER_PERMISSIONS = ViewChannel | Connect | ManageChannels | MoveMembers;
 /** The bot keeps the same, so a hidden or locked channel never shuts it out. */
 export const BOT_PERMISSIONS = ViewChannel | Connect | ManageChannels | MoveMembers;
+/**
+ * What the bot needs to post and pin the command list in the channel's chat,
+ * and to make /voice-invite links. Only granted when the bot has them
+ * server-wide: Discord refuses an overwrite that hands the bot a permission
+ * it doesn't have, and that would fail the whole channel.
+ */
+export const BOT_EXTRA_PERMISSIONS = SendMessages | EmbedLinks | ReadMessageHistory | PinMessages | CreateInstantInvite;
 /** Whoever was in the channel when it got locked or hidden keeps getting back in. */
 export const GUEST_PERMISSIONS = ViewChannel | Connect;
 export const BANNED_PERMISSIONS = ViewChannel | Connect;
+/**
+ * Voice staff roles: in past a lock, a hide and a full channel (Move Members
+ * is what lets someone join past the user limit). The bot has all three.
+ */
+export const STAFF_PERMISSIONS = ViewChannel | Connect | MoveMembers;
 
 export interface RawOverwrite {
   id: string;
@@ -35,6 +57,10 @@ export interface TempOverwriteInput {
   bannedUserIds: readonly string[];
   /** Members let in past a lock or a hide. Ignored while the channel is neither. */
   guestIds: readonly string[];
+  /** Which BOT_EXTRA_PERMISSIONS the bot has server-wide, granted on top of BOT_PERMISSIONS. */
+  botExtraPermissions?: bigint;
+  /** Voice staff roles for this channel (its hub's, or the server's). */
+  staffRoleIds?: readonly string[];
 }
 
 /**
@@ -63,9 +89,15 @@ export function buildTempOverwrites(input: TempOverwriteInput): OverwriteData[] 
   if (input.hidden) shut(ViewChannel);
   if (input.locked || input.hidden) for (const id of input.guestIds) grant(id, GUEST_PERMISSIONS);
   for (const id of input.bannedUserIds) refuse(id, BANNED_PERMISSIONS);
+  // After the lock and hide, which strip role allows. A member-level ban
+  // still beats this: Discord applies member overwrites after role ones.
+  for (const id of input.staffRoleIds ?? []) {
+    if (id === input.everyoneId) continue;
+    update(id, OverwriteType.Role, (o) => ({ ...o, allow: o.allow | STAFF_PERMISSIONS, deny: o.deny & ~STAFF_PERMISSIONS }));
+  }
   // Last, so a stale ban entry can never lock out the owner or the bot.
   grant(input.ownerId, OWNER_PERMISSIONS);
-  grant(input.botId, BOT_PERMISSIONS);
+  grant(input.botId, BOT_PERMISSIONS | ((input.botExtraPermissions ?? 0n) & BOT_EXTRA_PERMISSIONS));
 
   return [...map]
     .filter(([, o]) => o.allow !== 0n || o.deny !== 0n)
