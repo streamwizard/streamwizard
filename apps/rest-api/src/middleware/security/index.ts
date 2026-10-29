@@ -9,8 +9,6 @@
 // Core security middleware
 export { enforceHttps } from './https';
 export { bruteForceProtection } from './brute-force';
-export { ipWhitelisting, originWhitelisting } from './whitelisting';
-export { auditApiKeyUsage } from './audit';
 export { securityHeaders } from './headers';
 
 // Utilities
@@ -20,8 +18,6 @@ export type { SecurityEventMetadata } from './utils';
 // Import for the securityMiddleware object
 import { enforceHttps } from './https';
 import { bruteForceProtection } from './brute-force';
-import { ipWhitelisting, originWhitelisting } from './whitelisting';
-import { auditApiKeyUsage } from './audit';
 import { securityHeaders } from './headers';
 import { requestId, safeErrorHandler } from './utils';
 
@@ -37,19 +33,12 @@ import { requestId, safeErrorHandler } from './utils';
  * app.use('*', securityMiddleware.enforceHttps());
  * app.use('*', securityMiddleware.securityHeaders());
  * app.use('/api/*', securityMiddleware.bruteForceProtection());
- * app.use('/api/*', securityMiddleware.ipWhitelisting());
- * app.use('/api/*', securityMiddleware.originWhitelisting());
- * app.use('/api/*', securityMiddleware.auditApiKeyUsage());
- * app.use('/api/*', securityMiddleware.validateTenantAccess());
  * app.use('*', securityMiddleware.safeErrorHandler());
  * ```
  */
 export const securityMiddleware = {
   enforceHttps,
   bruteForceProtection,
-  ipWhitelisting,
-  originWhitelisting,
-  auditApiKeyUsage,
   securityHeaders,
   requestId,
   safeErrorHandler
