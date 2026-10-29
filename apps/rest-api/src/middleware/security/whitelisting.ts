@@ -1,5 +1,6 @@
 // middleware/security/whitelisting.ts
 import { Context, Next } from "hono";
+import { clientIp as getClientIp } from "./client-ip";
 import { logSecurityEvent } from "./utils";
 
 /**
@@ -24,11 +25,7 @@ export function ipWhitelisting() {
       return;
     }
 
-    const clientIp =
-      c.req.header("x-forwarded-for")?.split(",")?.[0]?.trim() ||
-      c.req.header("x-real-ip") ||
-      c.req.header("cf-connecting-ip") ||
-      "unknown";
+    const clientIp = getClientIp(c);
 
     // Check if IP is whitelisted
     const isAllowed = allowedIps.some((allowedIp) => {

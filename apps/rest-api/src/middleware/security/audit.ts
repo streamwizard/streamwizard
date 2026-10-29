@@ -1,5 +1,6 @@
 // middleware/security/audit.ts
 import { Context, Next } from "hono";
+import { clientIp } from "./client-ip";
 import { logSecurityEvent } from "./utils";
 import { supabase } from "@repo/supabase";
 
@@ -18,10 +19,7 @@ export function auditApiKeyUsage() {
     if (!keyData) return;
 
     const duration = Date.now() - startTime;
-    const ip =
-      c.req.header("x-forwarded-for")?.split(",")?.[0]?.trim() ||
-      c.req.header("x-real-ip") ||
-      "unknown";
+    const ip = clientIp(c);
 
     // Log every request (or batch them for performance)
     // In production, consider sampling or batching

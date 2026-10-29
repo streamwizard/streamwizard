@@ -1,5 +1,6 @@
 // middleware/security/brute-force.ts
 import { Context, Next } from "hono";
+import { clientIp } from "./client-ip";
 import { logSecurityEvent } from "./utils";
 
 /**
@@ -24,6 +25,11 @@ interface BruteForceOptions {
 // In production, use Redis instead of in-memory Map
 const bruteForceStore = new Map<string, BruteForceRecord>();
 
+// Routes that prove the caller another way (Twitch's HMAC signature, bearer
+// secrets, node API keys). Their callers are a handful of fixed machines, so
+// a lockout here could only ever block Twitch or our own nodes (SW-482).
+const EXEMPT_PREFIXES = ["/webhooks/", "/internal/", "/api/nodes", "/api/ingest-nodes"];
+
 // Clean up expired records every 5 minutes
 setInterval(
   () => {
@@ -46,11 +52,12 @@ export function bruteForceProtection(options: Partial<BruteForceOptions> = {}) {
   };
 
   return async (c: Context, next: Next) => {
-    const ip =
-      c.req.header("x-forwarded-for")?.split(",")?.[0]?.trim() ||
-      c.req.header("x-real-ip") ||
-      c.req.header("cf-connecting-ip") || // Cloudflare
-      "unknown";
+    if (EXEMPT_PREFIXES.some((prefix) => c.req.path.startsWith(prefix))) {
+      await next();
+      return;
+    }
+
+    const ip = clientIp(c);
 
     const now = Date.now();
     let record = bruteForceStore.get(ip);
