@@ -10,7 +10,12 @@ mock.module("@repo/supabase/next/proxy", () => ({
 mock.module("@repo/supabase/next/admin", () => ({ supabaseAdmin: {} }));
 mock.module("@repo/supabase/queries/obs-nodes", () => ({ isUserAdmin: async () => admin }));
 
-const { proxy } = await import("./proxy");
+const { proxy, config } = await import("./proxy");
+// Next's own matcher compiler, so the test sees exactly what the build does.
+// Exported at runtime but missing from Next's type declarations.
+const { getMiddlewareMatchers } = (await import("next/dist/build/analysis/get-page-static-info")) as unknown as {
+  getMiddlewareMatchers: (matcher: unknown, config: { i18n: undefined; basePath: string }) => { regexp: string }[];
+};
 
 async function hit(path: string, headers: Record<string, string> = {}) {
   const res = await proxy(new NextRequest(`https://admin.test${path}`, { headers }));
@@ -58,5 +63,18 @@ describe("web-admin proxy gate", () => {
       expect(await hit(path)).toBeNull();
     }
     expect(await hit("/loginx")).toBe("/login");
+  });
+
+  test("the matcher runs the proxy on every page, file-like paths included (SW-485)", () => {
+    const [matcher] = getMiddlewareMatchers(config.matcher, { i18n: undefined, basePath: "" });
+    expect(matcher).toBeDefined();
+    const runsProxy = (path: string) => new RegExp(matcher!.regexp).test(path);
+    // Dynamic routes accept these; skipping them skipped the admin gate.
+    for (const path of ["/discord/tickets/12.css", "/discord/tickets/12.html", "/users/abc.png", "/vms/pve1.ico/101", "/overview", "/login"]) {
+      expect(runsProxy(path)).toBe(true);
+    }
+    for (const path of ["/_next/static/chunks/app.js", "/_next/image", "/favicon.ico", "/icon.png", "/apple-icon.png"]) {
+      expect(runsProxy(path)).toBe(false);
+    }
   });
 });
