@@ -7,15 +7,19 @@ import {
   createVoiceHub,
   deleteVoiceHub,
   findUnknownVoicePlaceholders,
+  getVoiceSettings,
   listVoiceHubs,
+  unblockVoiceRename,
   updateVoiceHub,
+  upsertVoiceSettings,
   VOICE_HUBS_MAX,
   VOICE_NAME_TEMPLATE_MAX,
+  VOICE_STAFF_ROLES_MAX,
   VOICE_USER_LIMIT_MAX,
   type VoiceHub,
   type VoiceHubInput,
 } from "@repo/supabase/queries/discord-voice";
-import { assertChannel } from "@/lib/discord/api";
+import { assertChannel, assertRole } from "@/lib/discord/api";
 import { DashboardError, requireDiscordAdmin, toActionError, type DiscordActionResult } from "@/lib/discord/action";
 import { recordChange } from "@/lib/discord/audit";
 import { callBot, staleWarning } from "@/lib/discord/bot-bridge";
@@ -26,6 +30,11 @@ import { nullableSnowflakeSchema, snowflakeSchema } from "@/schemas/discord";
 // every save asks it to drop that copy.
 
 const idSchema = z.string().uuid();
+
+const staffRolesSchema = z
+  .array(snowflakeSchema)
+  .max(VOICE_STAFF_ROLES_MAX, `That's more than ${VOICE_STAFF_ROLES_MAX} staff roles.`)
+  .transform((ids) => [...new Set(ids)]);
 
 const hubSchema = z.object({
   lobbyChannelId: snowflakeSchema,
@@ -40,6 +49,9 @@ const hubSchema = z.object({
     .int()
     .min(0)
     .max(VOICE_USER_LIMIT_MAX, `Discord stops at ${VOICE_USER_LIMIT_MAX} people.`),
+  /** Null: the hub uses the server's voice staff roles. */
+  staffRoleIds: staffRolesSchema.nullable(),
+  rememberOwnerSettings: z.boolean(),
 });
 export type VoiceHubFormInput = z.infer<typeof hubSchema>;
 
@@ -64,6 +76,8 @@ const toRow = (input: VoiceHubFormInput): VoiceHubInput => ({
   category_id: input.categoryId,
   name_template: input.nameTemplate,
   default_user_limit: input.defaultUserLimit,
+  staff_role_ids: input.staffRoleIds,
+  remember_owner_settings: input.rememberOwnerSettings,
 });
 
 const auditValues = (hub: VoiceHubInput) => ({
@@ -71,7 +85,14 @@ const auditValues = (hub: VoiceHubInput) => ({
   category_id: hub.category_id,
   name_template: hub.name_template,
   default_user_limit: hub.default_user_limit,
+  staff_role_ids: hub.staff_role_ids ? [...hub.staff_role_ids].sort() : null,
+  remember_owner_settings: hub.remember_owner_settings,
 });
+
+/** New role ids only: a stored role deleted in Discord can still be removed, or kept, without failing the save. */
+async function assertNewRoles(next: readonly string[] | null, current: readonly string[] | null | undefined): Promise<void> {
+  for (const id of next ?? []) if (!current?.includes(id)) await assertRole(id);
+}
 
 /** Checks only the ids that changed, so a category deleted in Discord doesn't block fixing the name. */
 async function assertChannels(next: VoiceHubFormInput, current: VoiceHub | null, others: VoiceHub[]): Promise<void> {
@@ -80,6 +101,7 @@ async function assertChannels(next: VoiceHubFormInput, current: VoiceHub | null,
   }
   if (next.lobbyChannelId !== current?.lobby_channel_id) await assertChannel(next.lobbyChannelId, ["voice"]);
   if (next.categoryId && next.categoryId !== current?.category_id) await assertChannel(next.categoryId, ["category"]);
+  await assertNewRoles(next.staffRoleIds, current?.staff_role_ids);
 }
 
 async function finish(guildId: string): Promise<DiscordActionResult> {
@@ -139,5 +161,54 @@ export async function removeVoiceHubAction(id: string): Promise<DiscordActionRes
     return finish(guildId);
   } catch (error) {
     return toActionError(error, "remove voice hub", "Couldn't remove the lobby. Try again?");
+  }
+}
+
+const settingsSchema = z.object({ staffRoleIds: staffRolesSchema });
+export type VoiceSettingsInput = z.input<typeof settingsSchema>;
+
+/** The server's voice staff roles: lobbies without their own list use these. */
+export async function saveVoiceSettingsAction(input: VoiceSettingsInput): Promise<DiscordActionResult> {
+  try {
+    const { userId, guildId } = await requireDiscordAdmin();
+    const parsed = settingsSchema.safeParse(input);
+    if (!parsed.success) throw new DashboardError(parsed.error.issues[0]?.message ?? "Invalid settings");
+    const next = parsed.data.staffRoleIds;
+
+    const current = (await getVoiceSettings(supabaseAdmin, guildId))?.staff_role_ids ?? [];
+    await assertNewRoles(next, current);
+    await upsertVoiceSettings(supabaseAdmin, guildId, { staff_role_ids: next });
+    await recordChange({
+      userId,
+      guildId,
+      section: "voice",
+      before: { staff_role_ids: [...current].sort() },
+      after: { staff_role_ids: [...next].sort() },
+    });
+    return finish(guildId);
+  } catch (error) {
+    return toActionError(error, "save voice settings", "Couldn't save the voice staff roles. Try again?");
+  }
+}
+
+/** Lifts a rename block staff set with /voice-rename-block. */
+export async function unblockVoiceRenameAction(discordUserId: string): Promise<DiscordActionResult> {
+  try {
+    const { userId, guildId } = await requireDiscordAdmin();
+    const parsed = snowflakeSchema.safeParse(discordUserId);
+    if (!parsed.success) throw new DashboardError("That member isn't blocked anymore. Refresh the page?");
+
+    const lifted = await unblockVoiceRename(supabaseAdmin, guildId, parsed.data);
+    if (!lifted) throw new DashboardError("That member isn't blocked anymore. Refresh the page?");
+    await recordChange({
+      userId,
+      guildId,
+      section: "voice",
+      action: "delete",
+      before: { rename_block: { discord_user_id: lifted.discord_user_id, username: lifted.username, reason: lifted.reason } },
+    });
+    return finish(guildId);
+  } catch (error) {
+    return toActionError(error, "lift voice rename block", "Couldn't lift the block. Try again?");
   }
 }

@@ -35,7 +35,7 @@ export function ownerRefusal(actorId: string, temp: Pick<TempChannel, "ownerId">
     : `Only the channel owner can do that. ${user(temp.ownerId)} left, so /voice-claim makes it yours.`;
 }
 
-export type TargetAction = "kick" | "ban" | "unban" | "transfer";
+export type TargetAction = "kick" | "ban" | "unban" | "transfer" | "invite";
 
 export interface TargetCheck {
   actorId: string;
@@ -48,29 +48,47 @@ export interface TargetCheck {
   targetInChannel: boolean;
   /** Another temp channel the target owns, if any. */
   targetOwnsOther: string | null;
+  /** Has one of this channel's voice staff roles. */
+  targetIsStaff?: boolean;
 }
 
-/** Why the owner can't point `action` at this member. Null when they can. */
+/** Why the owner (or voice staff, on their behalf) can't point `action` at this member. Null when they can. */
 export function targetRefusal(
   action: TargetAction,
-  temp: Pick<TempChannel, "bannedUserIds">,
+  temp: Pick<TempChannel, "ownerId" | "bannedUserIds">,
   check: TargetCheck,
 ): string | null {
   const { actorId, botId, targetId } = check;
   const target = user(targetId);
 
+  const actorIsOwner = actorId === temp.ownerId;
   if (targetId === actorId) {
     if (action === "kick") return "You can't kick yourself. Leaving works.";
-    if (action === "ban") return "You can't ban yourself from your own channel.";
+    if (action === "ban") return actorIsOwner ? "You can't ban yourself from your own channel." : "You can't ban yourself.";
     if (action === "unban") return "You're not banned here.";
-    return "It's already yours.";
+    if (action === "invite") return actorIsOwner ? "You're already in. It's your channel." : "You're staff here, so you get in anyway.";
+    // Staff can transfer a channel they don't own; to themselves, that's a claim.
+    return actorId === temp.ownerId ? "It's already yours." : "To take it yourself, use /voice-claim.";
   }
+  if (targetId === botId && action === "transfer") {
+    return "Flattered, but I'd never leave and this channel would never close. Pick a human.";
+  }
+  if (targetId === botId && action === "invite") return "I'm already here. I'm always here.";
   if (targetId === botId && action !== "unban") return "I keep this channel running, so I'm staying.";
+
+  // Voice staff acting on the owner's behalf, pointed at the owner.
+  if (targetId === temp.ownerId && action !== "transfer") {
+    if (action === "ban") return `${target} owns this channel, so they can't be banned from it. /voice-transfer it to someone else first.`;
+    if (action === "unban") return `${target} owns this channel. They're not banned.`;
+    if (action === "invite") return `${target} owns this channel. They can always get in.`;
+  }
 
   switch (action) {
     case "kick":
+      if (check.targetIsStaff) return `${target} is staff here, so they can't be kicked or banned.`;
       return check.targetInChannel ? null : `${target} isn't in this channel.`;
     case "ban":
+      if (check.targetIsStaff) return `${target} is staff here, so they can't be kicked or banned.`;
       if (temp.bannedUserIds.includes(targetId)) return `${target} is already banned here.`;
       if (!check.targetIsMember) return `${target} isn't in this server.`;
       if (temp.bannedUserIds.length >= BANNED_MAX) return `This channel has ${BANNED_MAX} bans already. Unban someone first.`;
@@ -78,11 +96,37 @@ export function targetRefusal(
     case "unban":
       return temp.bannedUserIds.includes(targetId) ? null : `${target} isn't banned here.`;
     case "transfer":
-      if (check.targetIsBot) return "Bots can't own a channel.";
+      if (targetId === temp.ownerId) return `${target} already owns this channel.`;
+      if (check.targetIsBot) return `${target} is a bot. It would run this channel in total silence forever. Pick a human.`;
       if (!check.targetInChannel) return `${target} needs to be in the channel first.`;
       if (check.targetOwnsOther) return `${target} already owns ${channel(check.targetOwnsOther)}. One channel each.`;
       return null;
+    case "invite":
+      if (check.targetIsBot) return `${target} is a bot. It would just sit there in silence. Invite a human.`;
+      if (!check.targetIsMember) return `${target} isn't in this server. Run /voice-invite without a member to get a link for them.`;
+      if (temp.bannedUserIds.includes(targetId)) return `${target} is banned here. Unban them first with /voice-unban.`;
+      if (check.targetInChannel) return `${target} is already in here.`;
+      return null;
   }
+}
+
+export interface RenameBlockCheck {
+  actorId: string;
+  targetId: string;
+  targetIsBot: boolean;
+  /** Has a voice staff role somewhere in the server. */
+  targetIsStaff: boolean;
+  alreadyBlocked: boolean;
+}
+
+/** Why staff can't block this member from renaming. Null when they can. */
+export function renameBlockRefusal(check: RenameBlockCheck): string | null {
+  const target = user(check.targetId);
+  if (check.targetId === check.actorId) return "You can't block yourself.";
+  if (check.targetIsBot) return `${target} is a bot. It doesn't rename anything.`;
+  if (check.targetIsStaff) return `${target} is voice staff, so they can't be blocked from renaming.`;
+  if (check.alreadyBlocked) return `${target} is already blocked from renaming.`;
+  return null;
 }
 
 export interface ClaimCheck {
@@ -92,13 +136,15 @@ export interface ClaimCheck {
   ownerPresent: boolean;
   /** Another temp channel the claimer owns, if any. */
   claimerOwnsOther: string | null;
+  /** Has one of this channel's voice staff roles: may take it over with the owner still there. */
+  claimerIsStaff?: boolean;
 }
 
-/** /voice-claim only takes a channel whose owner has left. Null when the claim goes through. */
+/** /voice-claim takes a channel whose owner has left, or any channel for voice staff. Null when the claim goes through. */
 export function claimRefusal(check: ClaimCheck): string | null {
   if (check.claimerId === check.ownerId) return "It's already yours.";
   if (!check.claimerInChannel) return "Join the channel first, then claim it.";
-  if (check.ownerPresent) return `${user(check.ownerId)} is still here. You can claim it once they leave.`;
+  if (check.ownerPresent && !check.claimerIsStaff) return `${user(check.ownerId)} is still here. You can claim it once they leave.`;
   if (check.claimerOwnsOther) return `You already own ${channel(check.claimerOwnsOther)}. One channel each.`;
   return null;
 }

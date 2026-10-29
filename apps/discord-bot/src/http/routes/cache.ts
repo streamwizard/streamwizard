@@ -1,9 +1,11 @@
 import { Hono } from "hono";
 import { z } from "zod";
+import { reportError } from "@repo/sentry";
 import { closeGuildSessions, invalidateSettingsCache } from "../../lib/activity-tracker";
 import { invalidateLogSettingsCache } from "../../lib/log-channel/worker";
 import { invalidateCommandPermissionCache, invalidateGuildPermissionCache } from "../../lib/permissions";
 import { invalidateTicketConfig } from "../../lib/tickets";
+import { refreshTempPermissions } from "../../lib/voice/lifecycle";
 import { invalidateVoiceHubs } from "../../lib/voice/store";
 import type { AppEnv } from "../types";
 import { readJson } from "../validation";
@@ -43,8 +45,11 @@ cacheRoutes.post("/cache/tickets", (c) => {
   return c.json({ ok: true });
 });
 
-// Join-to-create hubs: added, edited or removed under Discord, Voice channels.
+// Join-to-create hubs and voice staff roles: saved under Discord, Voice
+// channels. Open channels get the new staff roles in the background.
 cacheRoutes.post("/cache/voice-hubs", (c) => {
-  invalidateVoiceHubs(c.get("guild").id);
+  const guild = c.get("guild");
+  invalidateVoiceHubs(guild.id);
+  void refreshTempPermissions(guild).catch((error) => reportError(error, "discord-bot voice: refresh permissions"));
   return c.json({ ok: true });
 });

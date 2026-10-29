@@ -23,6 +23,7 @@ import {
   DropdownMenuSeparator,
   Input,
   Label,
+  Switch,
 } from "@repo/ui";
 import {
   createVoiceHubAction,
@@ -39,7 +40,7 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/widgets/responsive-dialog";
-import { Picker } from "./pickers";
+import { MultiPicker, Picker } from "./pickers";
 import { TicketRowMenu } from "./ticket-row-menu";
 import { toastResult } from "./toast-result";
 
@@ -53,6 +54,10 @@ interface VoiceHubsManagerProps {
   items: VoiceHubView[];
   voiceChannels: PickerOption[];
   categories: PickerOption[];
+  roles: PickerOption[];
+  /** The server's voice staff roles, what a lobby without its own uses. */
+  serverStaffRoleIds: string[];
+  staffRolesMax: number;
   /** id → "#name" or category name, for the rows. */
   names: Record<string, string>;
   limit: number;
@@ -77,6 +82,9 @@ export function VoiceHubsManager({
   items,
   voiceChannels,
   categories,
+  roles,
+  serverStaffRoleIds,
+  staffRolesMax,
   names,
   limit,
   templateMax,
@@ -135,6 +143,7 @@ export function VoiceHubsManager({
                     Makes &ldquo;{previewName(item.nameTemplate)}&rdquo; in {label(item.categoryId, "the lobby's category")}
                     {" · "}
                     {item.defaultUserLimit === 0 ? "no user limit" : `${item.defaultUserLimit} people max`}
+                    {item.staffRoleIds && " · own staff roles"}
                   </p>
                 </div>
                 <div className="hidden shrink-0 items-center gap-1 md:flex">
@@ -195,6 +204,9 @@ export function VoiceHubsManager({
         pending={pending}
         voiceChannels={voiceChannels}
         categories={categories}
+        roles={roles}
+        serverStaffRoleIds={serverStaffRoleIds}
+        staffRolesMax={staffRolesMax}
         templateMax={templateMax}
         userLimitMax={userLimitMax}
         defaultTemplate={defaultTemplate}
@@ -221,6 +233,9 @@ function HubDialog({
   pending,
   voiceChannels,
   categories,
+  roles,
+  serverStaffRoleIds,
+  staffRolesMax,
   templateMax,
   userLimitMax,
   defaultTemplate,
@@ -232,6 +247,9 @@ function HubDialog({
   pending: boolean;
   voiceChannels: PickerOption[];
   categories: PickerOption[];
+  roles: PickerOption[];
+  serverStaffRoleIds: string[];
+  staffRolesMax: number;
   templateMax: number;
   userLimitMax: number;
   defaultTemplate: string;
@@ -247,13 +265,26 @@ function HubDialog({
           categoryId: editing.categoryId,
           nameTemplate: editing.nameTemplate,
           defaultUserLimit: editing.defaultUserLimit,
+          staffRoleIds: editing.staffRoleIds,
+          rememberOwnerSettings: editing.rememberOwnerSettings,
         }
-      : { lobbyChannelId: "", categoryId: null, nameTemplate: defaultTemplate, defaultUserLimit: 0 },
+      : {
+          lobbyChannelId: "",
+          categoryId: null,
+          nameTemplate: defaultTemplate,
+          defaultUserLimit: 0,
+          staffRoleIds: null,
+          rememberOwnerSettings: true,
+        },
   );
   const set = <K extends keyof VoiceHubFormInput>(key: K, value: VoiceHubFormInput[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
   const limitValid = Number.isInteger(draft.defaultUserLimit) && draft.defaultUserLimit >= 0 && draft.defaultUserLimit <= userLimitMax;
-  const valid = draft.lobbyChannelId && draft.nameTemplate.trim() && limitValid;
+  const staffValid = !draft.staffRoleIds || draft.staffRoleIds.length <= staffRolesMax;
+  const valid = draft.lobbyChannelId && draft.nameTemplate.trim() && limitValid && staffValid;
+  const serverStaff = serverStaffRoleIds.length === 0
+    ? "none set yet"
+    : serverStaffRoleIds.map((roleId) => roles.find((role) => role.value === roleId)?.label ?? "Unknown role").join(", ");
 
   return (
     <ResponsiveDialog open={editing !== null} onOpenChange={(open) => !open && onClose()}>
@@ -339,6 +370,55 @@ function HubDialog({
             <p id={`${id}-limit-hint`} className="text-xs text-muted-foreground">
               0 is no limit, up to {userLimitMax}. Owners can change it with /voice-limit.
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor={`${id}-remember`}>Remember owner settings</Label>
+              <Switch
+                id={`${id}-remember`}
+                checked={draft.rememberOwnerSettings}
+                onCheckedChange={(on) => set("rememberOwnerSettings", on)}
+                disabled={pending}
+                aria-describedby={`${id}-remember-hint`}
+              />
+            </div>
+            <p id={`${id}-remember-hint`} className="text-xs text-muted-foreground">
+              Owners get their last name, limit, bans, lock and hide back next time. /voice-reset forgets them.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-4">
+              <Label htmlFor={`${id}-server-staff`}>Use the server&apos;s staff roles</Label>
+              <Switch
+                id={`${id}-server-staff`}
+                checked={draft.staffRoleIds === null}
+                // Turning it off starts from the server's list, so tweaking one role is one click.
+                onCheckedChange={(on) => set("staffRoleIds", on ? null : serverStaffRoleIds)}
+                disabled={pending}
+              />
+            </div>
+            {draft.staffRoleIds === null ? (
+              <p className="text-xs text-muted-foreground">Voice staff here: {serverStaff}.</p>
+            ) : (
+              <>
+                <MultiPicker
+                  id={`${id}-staff`}
+                  options={roles}
+                  value={draft.staffRoleIds}
+                  onChange={(value) => set("staffRoleIds", value)}
+                  placeholder="Pick roles"
+                  emptyText="No roles match"
+                  disabled={pending}
+                />
+                <p className={staffValid ? "text-xs text-muted-foreground" : "text-xs text-destructive"}>
+                  {staffValid
+                    ? "Only these roles are voice staff in this lobby's channels. Leave it empty for none."
+                    : `Up to ${staffRolesMax} roles.`}
+                </p>
+              </>
+            )}
           </div>
 
           <ResponsiveDialogFooter>
