@@ -319,8 +319,12 @@ export async function ensureTicketDefaults(client: DBClient, guildId: string): P
 export type TicketFormField = Database["public"]["Tables"]["discord_ticket_form_fields"]["Row"];
 export type TicketAnswer = Database["public"]["Tables"]["discord_ticket_answers"]["Row"];
 
-/** subject, description and product fill the ticket's own columns; text and select become answers. */
-export const TICKET_FIELD_KINDS = ["subject", "description", "product", "text", "select"] as const;
+/**
+ * subject, description and product fill the ticket's own columns; text and
+ * select become answers. A file field asks for uploads: they land in the
+ * ticket's first message, not in an answer.
+ */
+export const TICKET_FIELD_KINDS = ["subject", "description", "product", "text", "select", "file"] as const;
 export type TicketFieldKind = (typeof TICKET_FIELD_KINDS)[number];
 
 /** Kinds a form can hold only once, because each maps onto one ticket column. */
@@ -335,6 +339,23 @@ export const TICKET_FIELD_TEXT_MAX = 4000;
 export const TICKET_SUBJECT_MAX = 100;
 export const TICKET_SELECT_MAX_OPTIONS = 25;
 export const TICKET_SELECT_OPTION_MAX = 100;
+/** Discord takes up to 10 files in one upload component. */
+export const TICKET_FIELD_FILES_MAX = 10;
+
+/**
+ * How many files a file field asks for, kept within what Discord accepts. An
+ * optional field takes zero; a required one at least one. Null columns mean
+ * "no minimum beyond required" and "as many as Discord allows".
+ */
+export function ticketFileCounts(field: Pick<TicketFormField, "required" | "min_files" | "max_files">): {
+  min: number;
+  max: number;
+} {
+  const clamp = (value: number, low: number, high: number) => Math.min(Math.max(Math.trunc(value), low), high);
+  const max = clamp(field.max_files ?? TICKET_FIELD_FILES_MAX, 1, TICKET_FIELD_FILES_MAX);
+  const min = field.required ? clamp(field.min_files ?? 1, 1, max) : 0;
+  return { min, max };
+}
 
 export interface TicketSelectOption {
   label: string;
@@ -414,6 +435,9 @@ export interface TicketFormFieldInput {
   required: boolean;
   min_length: number | null;
   max_length: number | null;
+  /** File fields only: how many files, within Discord's 10. */
+  min_files: number | null;
+  max_files: number | null;
   options: TicketSelectOption[];
 }
 
@@ -441,6 +465,8 @@ export async function saveCategoryForm(client: DBClient, categoryId: string, fie
       required: field.required,
       min_length: field.min_length,
       max_length: field.max_length,
+      min_files: field.min_files,
+      max_files: field.max_files,
       options: field.options as unknown as Database["public"]["Tables"]["discord_ticket_form_fields"]["Insert"]["options"],
       position,
     };

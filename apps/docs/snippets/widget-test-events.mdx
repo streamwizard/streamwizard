@@ -1,0 +1,28 @@
+You don't need a real follower to see a widget work. In the overlay editor,
+select **Demo** in the toolbar to open the demo panel, pick an event and
+select **Fire**.
+
+The **Local** and **Live** switch decides where those events go:
+
+| Mode | Where the event lands |
+|---|---|
+| **Local** | This canvas only. Nothing leaves the editor. |
+| **Live** | Through the overlay server, so this canvas and every overlay you have open get the same event. |
+
+Live stays greyed out until the editor is connected to live events. Local is
+the safe default while you're still building: nothing reaches a stream you
+happen to have running.
+
+The mode covers every test in the editor, including the **Test** buttons inside
+the alert box settings.
+
+Testing the same alert for an hour? Select the speaker button in the editor
+toolbar to mute the editor. It silences alerts, clips and custom widgets on the
+canvas, and stays muted the next time you open the editor. Your overlay in OBS
+still plays sound.
+
+<Tip>
+Simulators keep running after you close the demo panel, which is what you want
+when you're dragging a widget around and need events arriving the whole time.
+The **Demo** button shows a count while any are running.
+</Tip>

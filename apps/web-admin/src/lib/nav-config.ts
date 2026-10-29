@@ -6,7 +6,10 @@ import {
   Cpu,
   Database,
   DatabaseBackup,
+  FileText,
+  FolderTree,
   Globe,
+  Images,
   LayoutDashboard,
   Megaphone,
   Package,
@@ -15,6 +18,7 @@ import {
   ScrollText,
   Server,
   Ticket,
+  UserPen,
   Users,
   Waypoints,
   Zap,
@@ -83,6 +87,26 @@ export const navGroups: NavGroup[] = [
     ],
   },
   {
+    // Blog posts and guides for streamwizard.org: who wrote them, what they're
+    // about, the images they use.
+    label: "Content",
+    items: [
+      { href: "/content", label: "Posts", icon: FileText },
+      { href: "/content/media", label: "Media", icon: Images },
+      { href: "/content/authors", label: "Authors", icon: UserPen },
+      {
+        href: "/content/categories",
+        label: "Topics",
+        icon: FolderTree,
+        match: ["/content/tags"],
+        tabs: [
+          { href: "/content/categories", label: "Categories" },
+          { href: "/content/tags", label: "Tags" },
+        ],
+      },
+    ],
+  },
+  {
     label: "Discord",
     items: [
       { href: "/discord/announcements", label: "Announcements", icon: Megaphone },
@@ -101,12 +125,13 @@ export const navGroups: NavGroup[] = [
         label: "Server settings",
         icon: Bot,
         exact: true,
-        match: ["/discord/welcome", "/discord/activity", "/discord/live", "/discord/permissions"],
+        match: ["/discord/welcome", "/discord/activity", "/discord/live", "/discord/voice", "/discord/permissions"],
         tabs: [
           { href: "/discord", label: "Overview", exact: true },
           { href: "/discord/welcome", label: "Welcome" },
           { href: "/discord/activity", label: "Activity tracking" },
           { href: "/discord/live", label: "Go-live" },
+          { href: "/discord/voice", label: "Voice channels" },
           { href: "/discord/permissions", label: "Permissions" },
         ],
       },

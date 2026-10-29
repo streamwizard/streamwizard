@@ -45,6 +45,12 @@ export const productLinks = {
  */
 export const pricingLink = "/pricing";
 
+/** The guides and blog indexes. */
+export const contentLinks = {
+  guides: "/guides",
+  blog: "/blog",
+} as const;
+
 /**
  * Deep links for the cross-page doors. A band that names one section on another
  * page ("see the clips rotator") should land on that section, not on the top of

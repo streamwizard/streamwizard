@@ -44,6 +44,8 @@ const PRIVATE_PREFIXES = [
   "/ingest",
   "/monitoring",
   "/_next",
+  // CMS draft previews: the path is the secret.
+  "/preview",
 ];
 
 export function isPublicPageRequest(method: string, pathname: string): boolean {

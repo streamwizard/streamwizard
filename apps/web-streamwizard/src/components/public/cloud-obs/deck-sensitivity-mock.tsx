@@ -1,6 +1,7 @@
 "use client";
 
-import { PRESET_COPY, type AutoSwitcherSensitivityPreset, type AutoSwitcherStatus } from "@repo/schemas";
+import { PRESET_COPY } from "@repo/schemas/auto-switcher-constants";
+import type { AutoSwitcherSensitivityPreset, AutoSwitcherStatus } from "@repo/schemas";
 import { Badge } from "@repo/ui";
 import { ChoiceCards, SettingSection, StepperRow, SwitchRow } from "@/components/deck/setting-row";
 import { SwitcherStatusStrip } from "@/components/deck/switcher-status-strip";

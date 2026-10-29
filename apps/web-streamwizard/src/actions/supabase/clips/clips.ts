@@ -51,7 +51,7 @@ export async function createClipFolder(folderName: string, user_id: string, pare
   try {
     const data = await _createClipFolder(supabase, folderName, user_id, parentFolderId);
     await track("clip_folder_created", { is_subfolder: !!parentFolderId });
-    revalidatePath("/dashboard/clips", "layout");
+    revalidatePath("/dashboard", "layout");
     return { success: true, message: "Folder created successfully", data };
   } catch (error) {
     console.error("Error creating folder:", error);
@@ -63,7 +63,7 @@ export async function editClipFolder(folderId: string, folderName: string, user_
   const supabase = await createClient();
   try {
     await _editClipFolder(supabase, folderId, folderName, user_id);
-    revalidatePath("/dashboard/clips", "layout");
+    revalidatePath("/dashboard", "layout");
     return { success: true, message: "Folder edited successfully" };
   } catch (error) {
     console.error("Error editing folder:", error);
@@ -76,7 +76,7 @@ export async function deleteClipFolder(folderId: string) {
   try {
     await _deleteClipFolder(supabase, folderId);
     await track("clip_folder_deleted", {});
-    revalidatePath("/dashboard/clips", "layout");
+    revalidatePath("/dashboard", "layout");
     return { success: true, message: "Folder deleted successfully" };
   } catch (error) {
     console.error("Error deleting folder:", error);

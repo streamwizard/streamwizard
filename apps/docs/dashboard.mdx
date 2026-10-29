@@ -1,38 +1,117 @@
 ---
-title: "Dashboard"
-description: "Your last stream, broken down. Viewers, clips, and activity, all in one place."
+title: "Your dashboard"
+description: "Your last stream, broken down: viewers, your best hour, what happened and when."
 ---
 
-The dashboard is your **Stream Analytics** view: everything from your last
-broadcast, pulled together so you don't have to keep five Twitch tabs open.
+The dashboard is your last broadcast in numbers. It's read-only and there's
+nothing to set up. Stream something and it fills in.
 
-It's read-only. There's nothing to set up here. It just reflects what happened
-while you were live. Stream something and it fills in.
+Before your first stream it says **Nothing here yet**, and that's the whole
+page.
 
-<Frame caption="Stream Analytics: viewer stats, chart, activity feed, and recent clips.">
-  <img src="/images/dashboard/overview.png" alt="Dashboard overview" />
+<Frame caption="The dashboard after a stream.">
+  <img src="/images/dashboard/overview.png" alt="The StreamWizard dashboard showing stat cards, a viewer chart and the stream info panel." />
 </Frame>
 
 ## What's on it
 
-- **Viewer stats:** peak and average viewers, plus a minute-by-minute chart.
-  Find out exactly when your audience peaked, and when they left.
-- **Activity feed:** follows, subs, raids, and channel points, in the order
-  they happened. One feed, not five tabs.
-- **Recent streams:** a list of your past broadcasts to jump back to.
-- **Stream info:** the title and category of your latest stream.
-- **Recent clips:** clips from the stream, pulled in automatically. Sort and
-  file them over on the [clips page](/clips/overview).
+### The six stat cards
 
-## Stats on or off
+Time in ads, peak viewers, average viewers, time on air, new follows and new
+subs. Each compares itself to your previous stream, so you get
+`+12 from last stream` rather than a number with no context.
 
-The **Show stream stats** preference (from [onboarding](/onboarding), and
-changeable any time in [Settings](/settings)) controls the viewer-stats section. Turn it
-off and the dashboard leads with your clips instead. Handy if peak-viewer
-numbers tend to get in your head mid-stream.
+**Time on air** shows a dash while you're still live, since it needs an end to
+measure to.
 
-## Nothing there yet?
+Turn these off with **Show stream stats** in
+[preferences](/account/preferences).
 
-Haven't streamed since connecting? The dashboard shows an empty state until your
-first broadcast. Go stream something. We'll track viewers, clips, and chat
-activity while you're live.
+### Viewers over time
+
+Your viewer count across the stream, with markers for clips, subs and follows
+laid over it. Select a clip marker to watch that clip without leaving the page.
+
+<Note>
+StreamWizard asks Twitch for your viewer count **every five minutes**, so a
+four hour stream is about fifty real readings joined up rather than a smoothed
+curve. Nothing here is invented between samples.
+</Note>
+
+### Best time to stream
+
+Ranks each hour of your stream by viewers and chat activity together, and tells
+you which hour won. The **(i)** next to it explains why that hour was picked,
+in words, for your specific stream.
+
+Bits are shown per hour but don't count toward the ranking.
+
+### Stats by category
+
+If you played more than one thing, this splits the stream by category with
+duration, viewers, follows, subs and bits for each.
+
+Category changes shorter than a minute are ignored, so flicking through the
+category picker doesn't produce a row.
+
+### Activity feed
+
+Everything that happened, newest first, with filters for follows, subs, bits,
+raids, rewards and updates. Each row shows how far into the stream it was.
+
+While you're live this updates on its own, with no refresh.
+
+### Recent streams
+
+Your last five broadcasts with their peak viewers, and whether that's up or
+down on the one before.
+
+### Recent clips
+
+A strip of your newest clips. These are your newest clips overall rather than
+only this stream's.
+
+## Editing your stream title and category
+
+The panel on the right isn't read-only. Select **Edit** to change your stream
+title and category, and **Save** writes it to Twitch.
+
+This works while you're offline too, in which case it applies to your next
+stream. Titles are capped at 140 characters by Twitch.
+
+## How fresh is it
+
+Everything comes from StreamWizard's own record of your stream rather than a
+live Twitch read, which is why it works after the VOD is gone.
+
+The activity feed updates live. Everything else is current as of when you
+loaded the page, so a live stream's chart gains a point when you reload, not
+while you watch.
+
+## If something's missing
+
+<AccordionGroup>
+  <Accordion title="My first stream isn't here">
+    StreamWizard only has streams from after you signed up. There's no
+    backfill of broadcasts from before that.
+  </Accordion>
+  <Accordion title="There's no replay to scrub">
+    Twitch didn't keep a VOD for that stream, which happens when archiving is
+    off. The stats, clips and activity feed are all still here. See
+    [your VODs](/vods/overview).
+  </Accordion>
+  <Accordion title="The chart stopped while I'm still live">
+    It advances when you reload, by one point every five minutes.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Your VODs" href="/vods/overview">
+    The recording, with the same events on its timeline.
+  </Card>
+  <Card title="Preferences" href="/account/preferences">
+    Turn the stat cards off if you would rather see clips.
+  </Card>
+</CardGroup>

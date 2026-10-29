@@ -2,13 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useInView } from "motion/react";
-import {
-  AUTO_SWITCHER_PRESET_THRESHOLDS,
-  PRESET_COPY,
-  type AutoSwitcherSensitivityPreset,
-  type AutoSwitcherStatus,
-  type AutoSwitcherThresholds,
-} from "@repo/schemas";
+// The zod-free entry: the package root would ship zod to the home page.
+import { AUTO_SWITCHER_PRESET_THRESHOLDS, PRESET_COPY } from "@repo/schemas/auto-switcher-constants";
+import type { AutoSwitcherSensitivityPreset, AutoSwitcherStatus, AutoSwitcherThresholds } from "@repo/schemas";
 import { Badge, Button, Card, CardContent, Input, cn } from "@repo/ui";
 import { ChatMessage, EMPTY_CHAT_ASSETS } from "@repo/ui/chat";
 import {

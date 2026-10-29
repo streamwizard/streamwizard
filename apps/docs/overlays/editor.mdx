@@ -1,0 +1,144 @@
+---
+title: "Using the overlay editor"
+description: "Moving around the canvas, arranging widgets, and the shortcuts worth learning."
+---
+
+The editor is where you lay an overlay out. This page is about the editor
+itself. For what each widget does, see the widget pages.
+
+<Note>
+Editing needs a desktop. On a phone you can still turn overlays on and off from
+the list, but the canvas needs a bigger screen.
+</Note>
+
+<Frame caption="The overlay editor: layers on the left, canvas in the middle, inspector on the right.">
+  <img src="/images/overlays/overlay-editor.png" alt="The StreamWizard overlay editor with a starting soon layout on the canvas." />
+</Frame>
+
+## Moving around
+
+| To do this | Use |
+|---|---|
+| Pan the canvas | Hold **Space** and drag, or press **H** for the hand tool |
+| Back to selecting | **V** |
+| Zoom around the cursor | **Ctrl + scroll** |
+| Fit the whole scene on screen | **Shift + 1** |
+| Back to 100% | **Shift + 0** |
+
+The zoom readout in the toolbar is also a button: select it to go back to 100%
+and recentre.
+
+## Arranging widgets
+
+Drag to move, drag a handle to resize. Guides appear as you line things up,
+with the gap measured between them.
+
+- **Arrow keys** nudge by one pixel, **Shift + arrows** by ten.
+- **Alt + drag** flips whichever snapping is on, just for that drag.
+- **Alt + drag a resize handle** crops instead of resizing.
+- **Shift + drag a corner** stretches instead of scaling.
+
+Select several widgets and the inspector offers alignment, **Space evenly**
+(needs three or more), **Match the first one you picked** for width or height,
+and flip.
+
+## Layers
+
+The panel on the left lists everything on the canvas, topmost first. Drag the
+handle to reorder, or right-click for **Bring to front** and friends.
+
+Each row has a visibility toggle and a lock. Locking is the one to reach for
+once a background is where you want it, so you stop dragging it by accident.
+
+Double-click a name to rename it.
+
+### Groups
+
+A logo, its label and the panel behind them belong together. Select them and
+press **Ctrl+G** so they stay together. Right-click → **Group selection** and
+**Group these** in the inspector do the same.
+
+- Select any part of a group on the canvas and you get the whole group. Drag,
+  duplicate or delete it as one thing, and one **Ctrl+Z** undoes it.
+- **Double-click** to get inside a group and pick one item. Each double-click
+  goes one level deeper, because groups can sit inside other groups.
+- In the layers panel a group is one row you can collapse. Its eye and lock
+  apply to everything inside. Selecting an item's row picks just that item.
+- Rename a group by double-clicking its row, or in the inspector while it's
+  selected. New groups start as **Group 1**, **Group 2** and so on.
+- **Ctrl+Shift+G** ungroups one level. Nothing moves.
+- Right-click an item for **Move to group** or **Remove from group**.
+
+Locked items stay where they are when you move their group. The clips widget's
+caption fields are part of the clips widget, not a group, so they always follow
+it.
+
+## The canvas view
+
+The eye icon opens settings that are **yours alone and never go on stream**:
+the backdrop behind your widgets, a grid, and the rulers.
+
+Snapping lives here too, so you can turn off snapping to other widgets while
+keeping snapping to the grid.
+
+<Tip>
+Twitch draws its own controls over your stream, mostly along the bottom edge.
+Keep anything that has to stay readable away from the edges.
+</Tip>
+
+## Saving
+
+Nothing saves on its own. **Ctrl+S** or the **Save** button writes your changes,
+and the button tells you whether there's anything to write.
+
+If you close the tab with unsaved work, your browser warns you. Navigating
+inside StreamWizard gets a proper dialog instead.
+
+### Picking up where you left off
+
+Your in-progress changes are kept in your browser as you work, so if the tab
+crashes you aren't starting again. Next time you open that overlay you'll be
+asked whether to restore them.
+
+It always asks rather than restoring silently, so a draft left in one tab can't
+quietly overwrite work you saved in another. Restoring still needs a save.
+
+## Changing the canvas size
+
+The size next to the overlay's name opens **Canvas size**. Match it to your OBS
+canvas.
+
+When you change it, pick what happens to what's already there:
+
+- **Scale to fit** resizes and repositions everything so the layout looks the
+  same.
+- **Keep positions** leaves everything where it is, which can push widgets off
+  the edge.
+
+Nothing changes for viewers until you save.
+
+<Tip>
+**Pinned to** in a widget's **Advanced** section decides which edge its
+position is measured from. Pin something bottom-right and it stays in that
+corner when the canvas size changes. Picking a pin doesn't move the widget.
+</Tip>
+
+## Testing without going live
+
+The **Demo** button feeds fake events to every widget on the canvas. See
+[testing widgets](/overlays/overview) for what the Local and Live modes do.
+
+## Every shortcut
+
+Press **?** in the editor for the full list.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="The widget library" href="/overlays/widget-library">
+    Starters, your own widgets, and the public library.
+  </Card>
+  <Card title="Move an overlay between accounts" href="/overlays/import-export">
+    Export a scene to a file and import it elsewhere.
+  </Card>
+</CardGroup>

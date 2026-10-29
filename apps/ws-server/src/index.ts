@@ -8,6 +8,7 @@ import { websocketHandlers } from "./handlers/ws";
 import { rooms } from "./rooms";
 import { monitors, broadcastSnapshot, getBotSockets } from "./monitor";
 import { consumers } from "./consumers";
+import { sweepSceneCredentials } from "./revoke";
 import { isMetricsEnabled, initMetrics, BUCKETS } from "@repo/metrics";
 import type { ConnectionData } from "./types";
 
@@ -45,6 +46,14 @@ setInterval(() => {
 
 // Send a room snapshot to connected monitors every 5 s
 setInterval(broadcastSnapshot, 5_000);
+
+// Backstop for /internal/revoke: once a minute, close sockets whose overlay
+// key was reset or whose scene is gone. One query for every open overlay.
+setInterval(() => {
+  void sweepSceneCredentials().then((closed) => {
+    if (closed > 0) console.log(`[revoke] sweep closed ${closed} stale overlay socket(s)`);
+  });
+}, 60_000);
 
 // Without a signal handler the container is killed outright on deploy and any
 // queued Sentry event dies with it.

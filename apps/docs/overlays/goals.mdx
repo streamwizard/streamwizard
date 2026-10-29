@@ -7,6 +7,10 @@ The goal widgets show the goals you run on Twitch. Make a goal in your
 Twitch Creator Dashboard, and the bar on your overlay fills as followers,
 subs and cheers come in. No refreshing, no typing numbers in by hand.
 
+<Frame caption="A follower goal partway to its target, in the Text design.">
+  <img src="/images/overlays/goal-widget.png" alt="A follower goal reading ROAD TO 1,000 FOLLOWERS, 787 of 1,000." />
+</Frame>
+
 ## Pick your goal
 
 In the overlay editor, open **Widgets → Goals**:
@@ -57,6 +61,7 @@ switching resizes the box to fit.
 
 | Design | What it looks like | Good for |
 |---|---|---|
+| **Text** | Just the words: the title on one line, the numbers under it, big and outlined. No bar, no plate | Reading over busy footage, where a bar would be in the way |
 | **Bar** | Title and numbers over a rounded bar | The all-rounder |
 | **Strip** | One line of text with a thin line of progress under it | Tickers, corners, tight spots |
 | **Ring** | A circle filling up, the current number big in the middle | Next to your camera |
@@ -75,6 +80,10 @@ there** (90%) and **Reached**. They play a fake goal on the canvas, or on
 your live overlay when the demo bar is set to Live. After a test, **Back to
 your Twitch goal** puts the real numbers back. A Live test on your stream
 clears itself after 15 seconds.
+
+To hold the bar at any number, open the demo panel, select **Saved data** and
+type the current amount and the target next to your goal. That works even with
+no goal running on Twitch yet. Only the editor sees these numbers, never OBS.
 
 ## Settings
 

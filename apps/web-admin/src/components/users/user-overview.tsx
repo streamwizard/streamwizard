@@ -244,28 +244,7 @@ export function UserOverview({
                           {factor.status !== "verified" && <span className="text-muted-foreground"> (not finished)</span>}
                         </span>
                         {!isSelf && (
-                          <RemoveFactorButton userId={user.id} kind="totp" id={factor.id} label={factor.friendly_name || "this authenticator"} />
-                        )}
-                      </span>
-                    ))}
-                  </span>
-                )}
-              </Row>
-              <Row label="Passkeys">
-                {auth.passkeys.length === 0 ? (
-                  <span className="text-muted-foreground">None</span>
-                ) : (
-                  <span className="flex flex-col items-end gap-1">
-                    {auth.passkeys.map((passkey) => (
-                      <span key={passkey.id} className="flex items-center gap-1">
-                        <span>
-                          {passkey.friendly_name || "Passkey"}
-                          <span className="block text-xs text-muted-foreground">
-                            {passkey.last_used_at ? `Last used ${formatDateTime(passkey.last_used_at)}` : "Never used"}
-                          </span>
-                        </span>
-                        {!isSelf && (
-                          <RemoveFactorButton userId={user.id} kind="passkey" id={passkey.id} label={passkey.friendly_name || "this passkey"} />
+                          <RemoveFactorButton userId={user.id} id={factor.id} label={factor.friendly_name || "this authenticator"} />
                         )}
                       </span>
                     ))}
@@ -276,11 +255,11 @@ export function UserOverview({
           )}
           {isSelf && (
             <p className="mt-3 text-xs text-muted-foreground">
-              Your own factors live on the{" "}
+              Your own authenticator is on the{" "}
               <Link href="/security" className="underline">
                 Security page
               </Link>
-              .
+              . Another admin has to reset it.
             </p>
           )}
         </CardContent>

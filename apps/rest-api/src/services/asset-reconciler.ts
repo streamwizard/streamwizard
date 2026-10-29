@@ -1,7 +1,7 @@
 import { reportError } from "@repo/sentry";
 import type { R2ObjectInfo, R2Storage } from "@repo/storage";
 import { supabase } from "@repo/supabase";
-import { deleteUserAsset, selectAllAssetKeys, selectStalePendingAssets } from "@repo/supabase/queries/assets";
+import { assetKeyExists, deleteUserAsset, selectAllAssetKeys, selectStalePendingAssets } from "@repo/supabase/queries/assets";
 import { r2 } from "../lib/r2";
 
 /**
@@ -15,6 +15,11 @@ import { r2 } from "../lib/r2";
  * always inserted before its upload URL is minted, but an upload that lands
  * between the key snapshot and the bucket listing would otherwise look
  * orphaned. After the grace window it either has a row or it's abandoned.
+ *
+ * The key snapshot is taken over several requests while users keep changing
+ * the table, so every orphan is re-checked against the live table right
+ * before its delete, and one sweep deletes at most MAX_ORPHANS_PER_SWEEP: a
+ * bad snapshot should stop at a report, not empty the bucket.
  */
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000;
 const FIRST_SWEEP_DELAY_MS = 30 * 1000;
@@ -24,6 +29,7 @@ export const PENDING_RESERVATION_MS = 60 * 60 * 1000;
 /** Upload URLs live 5 minutes; 15 leaves room for slow uploads and clock skew. */
 export const ORPHAN_GRACE_MS = 15 * 60 * 1000;
 const ASSET_PREFIX = "assets/";
+export const MAX_ORPHANS_PER_SWEEP = 200;
 
 export interface AssetReconcileResult {
   removedPending: number;
@@ -34,6 +40,7 @@ export interface AssetReconcilerDeps {
   selectStalePending: (cutoff: string) => Promise<{ id: string; user_id: string; key: string }[]>;
   deleteRow: (id: string, userId: string) => Promise<void>;
   selectAllKeys: () => Promise<string[]>;
+  keyExists: (key: string) => Promise<boolean>;
   listObjects: (prefix: string) => Promise<R2ObjectInfo[]>;
   deleteObject: (key: string) => Promise<void>;
   now?: () => number;
@@ -62,6 +69,11 @@ export function createAssetReconciler(deps: AssetReconcilerDeps) {
       if (known.has(obj.key)) continue;
       const age = obj.lastModified ? startedAt - obj.lastModified.getTime() : 0;
       if (age < ORPHAN_GRACE_MS) continue;
+      if (await deps.keyExists(obj.key)) continue;
+      if (removedOrphans >= MAX_ORPHANS_PER_SWEEP) {
+        reportError(new Error(`asset-reconciler: orphan cap of ${MAX_ORPHANS_PER_SWEEP} hit, stopping this sweep`), "asset-reconciler: orphan cap");
+        break;
+      }
       await deps.deleteObject(obj.key);
       removedOrphans += 1;
     }
@@ -112,6 +124,7 @@ function createLiveAssetReconciler(storage: R2Storage) {
       if (error) throw error;
     },
     selectAllKeys: () => selectAllAssetKeys(supabase),
+    keyExists: (key) => assetKeyExists(supabase, key),
     listObjects: (prefix) => storage.listPrefix(prefix),
     deleteObject: (key) => storage.deleteObject(key),
   });

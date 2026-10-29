@@ -38,12 +38,26 @@ export default function Home() {
       <JsonLd schema={faqPageSchema(FAQ_ITEMS)} />
       <Hero />
       <TrustBand />
-      <CloudObsShowcase />
-      <OverlaysSection />
-      <ClipsVods />
-      <VodClipping />
-      <AnalyticsDemo />
-      <Faq />
+      {/* Everything past the fold: rendered when scrolled near (see below-fold
+          in globals.css). Cuts the first layout of a ~2,700-element page. */}
+      <div className="below-fold">
+        <CloudObsShowcase />
+      </div>
+      <div className="below-fold">
+        <OverlaysSection />
+      </div>
+      <div className="below-fold">
+        <ClipsVods />
+      </div>
+      <div className="below-fold">
+        <VodClipping />
+      </div>
+      <div className="below-fold">
+        <AnalyticsDemo />
+      </div>
+      <div className="below-fold">
+        <Faq />
+      </div>
       <FinalCta />
     </div>
   );

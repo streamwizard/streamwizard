@@ -1,11 +1,18 @@
 /** Shared overlay vocabulary: item type unions, text styling, GPS payloads. */
 
+import { isUploadedFontRef, UPLOADED_FONT_PREFIX } from "../lib/font-ref";
+
 export type GoogleFontFamily = string;
 
 export const DEFAULT_GOOGLE_FONT_FAMILY: GoogleFontFamily = "Inter";
 
+/**
+ * A family a font setting can hold: a Google font name, or a font uploaded to
+ * the media library (see font-ref.ts), which has to be exactly that shape.
+ */
 export function isValidGoogleFontFamilyName(v: string): boolean {
   const t = v.trim();
+  if (t.startsWith(UPLOADED_FONT_PREFIX)) return isUploadedFontRef(t);
   return t.length > 0 && t.length <= 200 && !/[<>]/.test(t);
 }
 

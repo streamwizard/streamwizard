@@ -15,58 +15,126 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
+        "tab": "Help",
         "groups": [
           {
             "group": "Get started",
-            "pages": ["index", "onboarding"]
+            "pages": [
+              "index",
+              "onboarding",
+              "dashboard"
+            ]
           },
           {
-            "group": "Using StreamWizard",
+            "group": "Overlays",
             "pages": [
-              "dashboard",
+              "overlays/overview",
+              "overlays/quickstart",
+              "overlays/editor",
+              "overlays/obs-setup",
+              "overlays/widget-library",
+              "overlays/media-library",
+              "overlays/import-export"
+            ]
+          },
+          {
+            "group": "Overlay widgets",
+            "pages": [
+              "overlays/widgets",
               {
-                "group": "Clips",
+                "group": "Chat and alerts",
                 "pages": [
-                  "clips/overview",
-                  "clips/filtering",
-                  "clips/folders"
-                ]
-              },
-              {
-                "group": "IRL streaming",
-                "pages": [
-                  "irl/overview",
-                  "irl/cloud-obs",
-                  "irl/irl-pro",
-                  "irl/auto-switcher",
-                  "irl/switcher-monitor",
-                  "irl/walking-stats",
-                  "irl/deck"
-                ]
-              },
-              {
-                "group": "Overlays",
-                "pages": [
-                  "overlays/overview",
-                  "overlays/quickstart",
                   "overlays/alerts",
                   "overlays/chat",
-                  "overlays/goals",
-                  "overlays/polls",
-                  "overlays/ads",
-                  "overlays/credits",
-                  "overlays/media-library",
-                  "overlays/obs-setup"
+                  "overlays/emote-wall",
+                  "overlays/emote-combo",
+                  "overlays/hype-train"
                 ]
               },
-              "settings"
+              {
+                "group": "Goals, polls and ads",
+                "pages": [
+                  "overlays/goals",
+                  "overlays/polls",
+                  "overlays/predictions",
+                  "overlays/ads"
+                ]
+              },
+              {
+                "group": "On-screen info",
+                "pages": [
+                  "overlays/stream-labels",
+                  "overlays/time-widgets",
+                  "overlays/credits"
+                ]
+              },
+              {
+                "group": "Pictures, text and shapes",
+                "pages": [
+                  "overlays/clips-widget",
+                  "overlays/images-and-video",
+                  "overlays/text-and-shapes",
+                  "overlays/irl-widgets"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Clips",
+            "pages": [
+              "clips/overview",
+              "clips/syncing",
+              "clips/filtering",
+              "clips/folders",
+              "clips/downloading"
+            ]
+          },
+          {
+            "group": "VODs",
+            "pages": [
+              "vods/overview",
+              "vods/clip-from-vod",
+              "vods/timeline"
+            ]
+          },
+          {
+            "group": "IRL streaming",
+            "pages": [
+              "irl/overview",
+              "irl/cloud-obs",
+              "irl/ingest-keys",
+              "irl/irl-pro",
+              "irl/auto-switcher",
+              "irl/switcher-monitor",
+              "irl/walking-stats",
+              "irl/deck"
+            ]
+          },
+          {
+            "group": "Account",
+            "pages": [
+              "account/overview",
+              "account/your-data",
+              "account/preferences",
+              "account/integrations",
+              "discord"
+            ]
+          },
+          {
+            "group": "Troubleshooting",
+            "pages": [
+              "troubleshooting/overlay-blank",
+              "troubleshooting/alerts-not-playing",
+              "troubleshooting/widget-shows-nothing",
+              "troubleshooting/connect-twitch",
+              "troubleshooting/clips-not-syncing",
+              "troubleshooting/contact-support"
             ]
           }
         ]
       },
       {
-        "tab": "Widgets",
+        "tab": "Build widgets",
         "groups": [
           {
             "group": "Build widgets",
@@ -76,7 +144,8 @@
               "widgets/fields",
               "widgets/state",
               "widgets/testing",
-              "widgets/publishing"
+              "widgets/publishing",
+              "widgets/ai-assistant"
             ]
           },
           {
@@ -100,7 +169,9 @@
         "groups": [
           {
             "group": "For developers",
-            "pages": ["contributing/first-contribution"]
+            "pages": [
+              "contributing/first-contribution"
+            ]
           }
         ]
       }
@@ -109,15 +180,91 @@
   "navbar": {
     "links": [
       {
-        "label": "Dashboard",
-        "href": "https://streamwizard.org/dashboard"
+        "label": "Home",
+        "href": "https://streamwizard.org"
       }
-    ]
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Open dashboard",
+      "href": "https://streamwizard.org/dashboard"
+    }
   },
   "footer": {
     "socials": {
       "x": "https://x.com/streamwizard",
       "discord": "https://discord.streamwizard.org"
+    },
+    "links": [
+      {
+        "header": "Product",
+        "items": [
+          {
+            "label": "Clips",
+            "href": "https://streamwizard.org/clips"
+          },
+          {
+            "label": "VODs",
+            "href": "https://streamwizard.org/vods"
+          },
+          {
+            "label": "Overlays",
+            "href": "https://streamwizard.org/overlays"
+          },
+          {
+            "label": "Cloud OBS",
+            "href": "https://streamwizard.org/cloud-obs"
+          },
+          {
+            "label": "Pricing",
+            "href": "https://streamwizard.org/pricing"
+          }
+        ]
+      },
+      {
+        "header": "Learn",
+        "items": [
+          {
+            "label": "Guides",
+            "href": "https://streamwizard.org/guides"
+          },
+          {
+            "label": "Blog",
+            "href": "https://streamwizard.org/blog"
+          },
+          {
+            "label": "Roadmap",
+            "href": "https://streamwizard.org/roadmap"
+          }
+        ]
+      },
+      {
+        "header": "Company",
+        "items": [
+          {
+            "label": "About",
+            "href": "https://streamwizard.org/about"
+          },
+          {
+            "label": "Contact",
+            "href": "https://streamwizard.org/contact"
+          },
+          {
+            "label": "Privacy",
+            "href": "https://streamwizard.org/privacy-policy"
+          },
+          {
+            "label": "Terms",
+            "href": "https://streamwizard.org/terms-of-service"
+          }
+        ]
+      }
+    ]
+  },
+  "redirects": [
+    {
+      "source": "/settings",
+      "destination": "/account/overview"
     }
-  }
+  ]
 }

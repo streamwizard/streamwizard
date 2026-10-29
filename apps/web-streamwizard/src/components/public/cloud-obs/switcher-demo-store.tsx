@@ -10,7 +10,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AUTO_SWITCHER_PRESET_THRESHOLDS, type AutoSwitcherSensitivityPreset, type AutoSwitcherThresholds } from "@repo/schemas";
+import { AUTO_SWITCHER_PRESET_THRESHOLDS } from "@repo/schemas/auto-switcher-constants";
+import type { AutoSwitcherSensitivityPreset, AutoSwitcherThresholds } from "@repo/schemas";
 import { useDemoTracking } from "../analytics/use-demo-tracking";
 import {
   METRIC_KEYS,

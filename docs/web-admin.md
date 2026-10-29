@@ -4,39 +4,31 @@
 
 ## Access model
 
-- Sign-in: Twitch OAuth via Supabase (own cookie/domain — separate session from the main app), **or** a passkey (no Twitch redirect).
+- Sign-in: Twitch OAuth via Supabase (own cookie/domain — separate session from the main app), then an authenticator-app code.
 - Gate: `src/lib/admin-session.ts` (`getAdminSession()` / `requireAdminSession()`) is the single decision point. It requires a `user_roles` row with `role = 'admin'` (service-role lookup) **and** a strong session (see "Second factor" below). Non-admins land on `/no-access`; admins with a weak session land on `/auth/verify` or `/auth/setup`.
-- `src/app/(monitor)/layout.tsx` and `src/app/vnc/layout.tsx` (bare full-screen popup outside the group) both call `requireAdminSession()`.
+- `src/proxy.ts` applies the same rule before any page renders, and `src/app/(monitor)/layout.tsx` and `src/app/vnc/layout.tsx` (bare full-screen popup outside the group) both call `requireAdminSession()`.
 - Every server action re-checks via `src/lib/assert-admin.ts` (`assertAdmin()`, returns the acting admin's user id) — actions are their own POST endpoints, the layout guard doesn't cover them. It applies the same rule and throws `Not signed in` / `Not authorized` / `Verification required`.
 - Calls to obs-instance-manager's `/admin/instances/*` go through server actions in `src/actions/nodes.ts` for the same reason: that service checks the JWT and the role, not the second factor.
+- In the database, admin RLS policies use `public.is_strong_admin()`: the admin role **and** `aal2`.
 - The old `app_metadata.is_admin` JWT claim is no longer read anywhere; `user_roles` is the single source of admin truth.
 
 ## Second factor
 
-Twitch alone is one factor. A session is **strong** when either:
+Twitch alone is one factor. A session is **strong** when `aal === 'aal2'`: the admin entered an authenticator-app (TOTP) code after the Twitch redirect. Helpers live in `packages/supabase/src/auth/session-strength.ts`.
 
-- `aal === 'aal2'`: the admin entered an authenticator-app (TOTP) code after the Twitch redirect, or
-- `amr` contains `passkey`: the session was created by `signInWithPasskey()` (GoTrue leaves `aal` at `aal1` for these).
-
-Helpers live in `packages/supabase/src/auth/session-strength.ts`. Every Supabase client factory in `packages/supabase/src/next/*` opts into the passkeys beta (`auth.experimental.passkey`), which is inert for the main app.
+Passkeys were removed in SW-483. They are a Supabase beta, and GoTrue lets any signed-in session register one, so a stolen Twitch session could add its own passkey and sign in with it. TOTP is a real MFA factor: once an admin has a verified one, GoTrue refuses to enrol another factor unless the session is already `aal2`.
 
 | State after sign-in | Where the admin lands |
 |---|---|
 | Strong session | dashboard |
-| Weak, has a TOTP factor and/or a passkey | `/auth/verify` — enter the code, or sign in with the passkey instead |
-| Weak, has neither | `/auth/setup` — forced enrolment (at least one; both recommended) |
+| Weak, has a TOTP factor | `/auth/verify` — enter the code |
+| Weak, no TOTP factor | `/auth/setup` — forced enrolment |
 
-`/security` (in the user menu at the bottom of the sidebar) manages both methods: add/remove the authenticator, add/rename/remove passkeys. Removing the last remaining method is refused server-side (`src/actions/security.ts`). Supabase allows one verified TOTP factor per user; passkeys are one per device.
+`/security` (in the user menu at the bottom of the sidebar) shows the connected authenticator. It can't be removed there: it is the only second factor.
 
-Passkeys are registered against a Relying Party ID that is baked into each credential, so it is scoped to the admin host and must never change afterwards:
+TOTP enroll + verify must be on in every environment (local `supabase/config.toml`, staging and prod in the dashboard under Authentication → Multi-Factor). Passkeys must be off (Authentication → Passkeys).
 
-| Env | `rp_id` | `rp_origins` | TOTP |
-|---|---|---|---|
-| local (`supabase/config.toml`) | `localhost` | `http://localhost:3003` | enroll + verify on |
-| staging (dashboard → Authentication → Passkeys / Multi-Factor) | `admin-staging.streamwizard.org` | `https://admin-staging.streamwizard.org` | enroll + verify on |
-| prod (same) | `admin.streamwizard.org` | `https://admin.streamwizard.org` | enroll + verify on |
-
-**Locked out** (lost phone and passkey): in the Supabase dashboard, Authentication → Users → the admin → delete their TOTP factor and/or passkeys. Their next Twitch sign-in lands on `/auth/setup`. There is deliberately no in-app reset.
+**Lost phone**: another admin removes the authenticator on the user's page (`/users/<id>`, Authentication card), or in the Supabase dashboard, Authentication → Users → the admin → delete their TOTP factor. Their next Twitch sign-in lands on `/auth/setup`.
 
 ## Navigation
 
@@ -48,6 +40,11 @@ The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages ar
 | Support | Tickets | `/discord/tickets` | Queue, Stats, Settings |
 | Support | Users | `/users` | |
 | Support | Widget review | `/widget-library` | |
+| Content | Posts | `/content` | |
+| Content | Media | `/content`, `/content/[id]`, `/content/[id]/revisions` | Blog posts and guides. **List**: search, filter (type, status, author, category), sort, trash with restore; *New blog post* / *New guide* create a draft credited to the admin's own author profile when there is one. **Editor**: Tiptap body (headings H2–H4, lists, quotes, callouts, code blocks, tables, links, images from Media with inline alt text, YouTube/Twitch embeds), guide sections, and a sidebar that stays in view on wide screens: a readiness line (opens Checks), **Outline** (every heading; click to jump there, the current one is marked), details, SEO, guide fields and **Checks** (what blocks publishing, accessibility). Revisions, *Save version* (also Ctrl/Cmd+S), *Find and replace* (also Ctrl/Cmd+H) and the trash sit in the `⋯` menu next to Publish. Writing: one formatting toolbar for the whole post (it works on the last text you clicked into), a small menu on selected text (bold, italic, link, H2, H3), images pasted or dropped straight into the text (the upload dialog opens with the file, asking only for alt text), images resized by dragging either side or with S/M/L/Full (stored as `size`, a percentage of the text column, 25–99; full width stores nothing) and placed left, centre or right (`align`, `left`/`right`; centred stores nothing; no text wraps around them, so phones read the same), with alt text and caption in the small bar that shows while an image is selected, a link dialog that searches your posts, guides and this page's headings, guide sections that fold (with a word count each), tone checks under *Worth a look* (em dashes, more than one `!`, stacked emoji, filler words from `docs/tone_of_voice.md`), a search result preview in the SEO tab, and on wide screens a side-by-side preview that reloads after every save (needs `CMS_ADMIN_URL` on web-streamwizard). Revisions has *Compare* per row: each changed field, red for that version and green for the draft, with heading levels spelled out. Everything autosaves into the working copy through `cms_save_draft` (one transaction, `lock_version` check: a second tab's save pauses autosave and asks for a reload). The live site doesn't change here. **Revisions**: autosaves at most one per 10 minutes, *Save version* always, restore puts a revision back into the draft and keeps the replaced state. **Preview** opens the saved draft on the site for an hour; the link button makes shareable links (1 h, 24 h, 7 d; shown once, only the hash is stored, revocable). They open `/preview/[token]` on web-streamwizard (needs `CMS_SITE_URL`). **Publish** saves, re-runs the Checks on the server and puts the saved draft live through `cms_publish` (a live post shows **Update** instead, with *Small fix* to keep the public "Updated" date); the arrow menu has **Unpublish** (back to draft) and **Archive**, both confirmed first, and an archived post has *Publish again* and *Back to drafts*. **Schedule…** (same menu, drafts) picks a time in the admin's timezone after the same checks; a scheduled post shows *Publish now*, *Change the time…* and *Cancel the schedule*, and the rest-api scheduler (`services/cms-scheduler.ts`, 30 s tick) publishes it on the scheduling admin's behalf. If it can't (say its only author was removed) it goes back to a draft with a *Schedule failed* badge and a `content.schedule_failed` event. A slug change on a live post keeps the old URL working (308). Every move refreshes the site's cached pages right away and writes a `content.*` platform event (log group *Blog and guides*); the trash does too |
+| `/content/media` | |
+| Content | Authors | `/content/authors` | |
+| Content | Topics | `/content/categories` | Categories, Tags (`/content/tags`) |
 | Discord | Announcements | `/discord/announcements` | |
 | Discord | Messages | `/discord/messages` | |
 | Discord | Event log | `/discord/logs` | Log, Routing (`/discord/logs/settings`) |
@@ -90,6 +87,9 @@ The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages ar
 | `/widget-library` | Moderation queue for community widget submissions (sandboxed iframe previews) |
 | `/discord/messages`, `/discord/messages/[id]` | Discord messages built visually (banners + embeds, themes, drag to reorder). A server has as many as it likes, each with a name and any text or announcement channel. Draft autosaves to `discord_built_messages`; **Publish** has the bot send or update the message, **Delete** has it remove the message from Discord too. The builder is `MessageBuilder` from `@repo/ui/message-builder`, the data model, limits, presets and starting templates are `@repo/discord-message` |
 | `/discord/announcements`, `/discord/announcements/[id]` | One-off announcements for the Discord: a simple form (title, text, colour, image, one link button, a ping: nobody, @everyone, @here or a role) next to a Discord-style preview. Rows live in `discord_announcements` with a status (`draft`, `scheduled`, `posting`, `posted`, `failed`). **Post now** has the bot send it, or edit the message in place (no second ping); **Post later** sets a time and the bot's scheduler (30 s tick, conditional claim) sends it; **Delete** removes it from Discord too. The shape, limits and Discord payload are `@repo/discord-message`'s `announcement` module |
+| `/content/media` | Images for blog posts, guides and author avatars (`cms_assets`, R2 prefix `cms/`). Upload asks for alt text (or **Decorative**) first; the browser PUTs straight to a presigned R2 URL and the server confirms with a HEAD. Search, edit alt text, copy URL; **Delete** only shows on images nothing uses (same check as `cms_unreferenced_assets`). Alt edits reach live posts on their next Update |
+| `/content/authors`, `/content/authors/[id]` | Public author profiles: name, slug, role, bio, avatar (from Media), social links (https, checked per platform), optional private link to a StreamWizard account. Soft delete (posts keep the credit) and restore |
+| `/content/categories`, `/content/tags` | Topics shared by blog posts and guides. Categories have a description and an order; tags can be merged into another tag. Deleting either takes it off its posts, not the posts away |
 | `/vnc?nodeId&instanceId&name` | noVNC popup onto an instance's OBS desktop (opened from node/instance pages) |
 
 ## How it talks to obs-instance-manager
@@ -126,7 +126,9 @@ Scene pickers populate only while the instance's OBS is running (obsws session);
 | `STREAMWIZARD_API_URL` | yes | embedded in node install commands (`/obs`, `/ingest`) |
 | `TOKEN_ENCRYPTION_KEY` | yes | encrypt/decrypt OBS WS passwords — **must be byte-identical to web-streamwizard's** |
 | `WS_SERVER_URL`, `CONSUMER_SECRET` | no | ~1s auto-switcher config pushes (fallback: 60s reconcile) |
-| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ASSETS_BUCKET`, `NEXT_PUBLIC_CDN_URL` | no | banner image uploads in the Discord message builder (`discord-banners/` prefix). Without them banners use theme images only. The bot needs the same `NEXT_PUBLIC_CDN_URL`: it only attaches uploads that start with it |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_ASSETS_BUCKET`, `NEXT_PUBLIC_CDN_URL` | no | banner image uploads in the Discord message builder (`discord-banners/` prefix) and Content section images (`cms/` prefix, presigned PUT from the browser: the bucket's CORS must allow this app's origin). Without them banners use theme images only and Media can't upload. The bot needs the same `NEXT_PUBLIC_CDN_URL`: it only attaches uploads that start with it |
+| `CMS_SITE_URL`, `CMS_REVALIDATE_SECRET` | no | `CMS_SITE_URL` is web-streamwizard's origin: preview links point there, and Content section changes refresh its cached pages (`POST {url}/api/revalidate`, secret shared with web-streamwizard). Without the secret saves still land and the site catches up within the hour; without the URL there are no preview links. A refresh the site doesn't confirm goes into `cms_revalidate_queue`; rest-api retries it (same two vars there). Changed posts are pinged to IndexNow by the site, on production only |
+| `CMS_ADMIN_URL` (on web-streamwizard) | no | The admin's origin. Lets `/preview/[token]` be framed by it (CSP `frame-ancestors`, those routes only) for the editor's side-by-side preview. Unset: previews can't be framed, everything else is unchanged |
 | `SENTRY_DSN`, `ALERT_*`, `DISCORD_BOT_TOKEN`, `TELEGRAM_*`, `MONITOR_SECRET` | no | observability + alert routing |
 
 ## Known gaps / roadmap

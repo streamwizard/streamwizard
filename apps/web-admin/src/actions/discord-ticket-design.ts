@@ -20,6 +20,7 @@ import {
   saveCategoryForm,
   setCategoryOpeningMessage,
   SINGLE_TICKET_FIELD_KINDS,
+  TICKET_FIELD_FILES_MAX,
   TICKET_FIELD_KINDS,
   TICKET_FIELD_LABEL_MAX,
   TICKET_FIELD_PLACEHOLDER_MAX,
@@ -65,10 +66,16 @@ const fieldSchema = z
     required: z.boolean(),
     minLength: z.number().int().min(0).max(TICKET_FIELD_TEXT_MAX).nullable(),
     maxLength: z.number().int().min(1).max(TICKET_FIELD_TEXT_MAX).nullable(),
+    // Older clients don't send these; only a file question uses them.
+    minFiles: z.number().int().min(0).max(TICKET_FIELD_FILES_MAX).nullable().default(null),
+    maxFiles: z.number().int().min(1).max(TICKET_FIELD_FILES_MAX).nullable().default(null),
     options: z.array(optionSchema).max(TICKET_SELECT_MAX_OPTIONS),
   })
   .refine((f) => f.minLength === null || f.maxLength === null || f.minLength <= f.maxLength, {
     message: "A question's shortest answer can't be longer than its longest.",
+  })
+  .refine((f) => f.minFiles === null || f.maxFiles === null || f.minFiles <= f.maxFiles, {
+    message: "A file question can't ask for more files than it takes.",
   })
   .refine((f) => f.kind !== "select" || f.options.length > 0, { message: "A dropdown needs at least one option." })
   .refine((f) => new Set(f.options.map((o) => o.value)).size === f.options.length, {
@@ -106,21 +113,32 @@ export async function saveTicketCategoryFormAction(
     await saveCategoryForm(
       supabaseAdmin,
       category.id,
-      next.map((field) => ({
-        id: field.id,
-        kind: field.kind,
-        label: field.label,
-        placeholder: field.placeholder,
-        // Only free text has a style and lengths; a dropdown has options.
-        style: field.kind === "select" || field.kind === "product" ? "short" : field.style,
-        required: field.required,
-        min_length: field.kind === "select" || field.kind === "product" ? null : field.minLength,
-        max_length: field.kind === "select" || field.kind === "product" ? null : field.maxLength,
-        options:
-          field.kind === "select"
-            ? field.options.map((o) => ({ label: o.label, value: o.value, description: o.description, emoji: o.emoji ?? null }))
-            : [],
-      })),
+      next.map((field) => {
+        // Only free text has a style and lengths; a dropdown has options; an upload has a file count.
+        const isText = field.kind === "subject" || field.kind === "description" || field.kind === "text";
+        const isFile = field.kind === "file";
+        return {
+          id: field.id,
+          kind: field.kind,
+          label: field.label,
+          placeholder: field.placeholder,
+          style: isText ? field.style : "short",
+          required: field.required,
+          min_length: isText ? field.minLength : null,
+          max_length: isText ? field.maxLength : null,
+          min_files: isFile ? field.minFiles : null,
+          max_files: isFile ? field.maxFiles : null,
+          options:
+            field.kind === "select"
+              ? field.options.map((o) => ({
+                  label: o.label,
+                  value: o.value,
+                  description: o.description,
+                  emoji: o.emoji ?? null,
+                }))
+              : [],
+        };
+      }),
     );
 
     const summary = (list: { kind: string; label: string }[]) => list.map((f) => `${f.label} (${f.kind})`);

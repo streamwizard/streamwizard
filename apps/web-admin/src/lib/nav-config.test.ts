@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { BOTTOM_NAV_HREFS, findNavItem, findNavLocation, getHeaderControls, getNavTrail, navGroups } from "./nav-config";
+import {
+  BOTTOM_NAV_HREFS,
+  findNavItem,
+  findNavLocation,
+  getHeaderControls,
+  getNavTrail,
+  navGroups,
+} from "./nav-config";
 
 const at = (pathname: string) => {
   const location = findNavLocation(pathname);
@@ -31,11 +38,21 @@ describe("findNavLocation", () => {
     expect(at("/discord")).toEqual({ item: "Server settings", tab: "Overview" });
     expect(at("/discord/welcome")).toEqual({ item: "Server settings", tab: "Welcome" });
     expect(at("/discord/live")).toEqual({ item: "Server settings", tab: "Go-live" });
+    expect(at("/discord/voice")).toEqual({ item: "Server settings", tab: "Voice channels" });
     expect(at("/discord/tickets")).toEqual({ item: "Tickets", tab: "Queue" });
     expect(at("/discord/tickets/settings/categories/abc")).toEqual({ item: "Tickets", tab: "Settings" });
     expect(at("/discord/logs/settings")).toEqual({ item: "Event log", tab: "Routing" });
     expect(at("/discord/messages/abc")).toEqual({ item: "Messages", tab: null });
     expect(at("/discord/announcements")).toEqual({ item: "Announcements", tab: null });
+  });
+
+  test("Content pages keep their item, author pages included", () => {
+    expect(at("/content")).toEqual({ item: "Posts", tab: null });
+    expect(at("/content/abc/revisions")).toEqual({ item: "Posts", tab: null });
+    expect(at("/content/media")).toEqual({ item: "Media", tab: null });
+    expect(at("/content/authors/abc")).toEqual({ item: "Authors", tab: null });
+    expect(at("/content/categories")).toEqual({ item: "Topics", tab: "Categories" });
+    expect(at("/content/tags")).toEqual({ item: "Topics", tab: "Tags" });
   });
 
   test("a single ticket belongs to Tickets but to none of its tabs", () => {

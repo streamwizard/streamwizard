@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
 import { selectOverlayWidget, selectWidgetInstanceFieldValues } from "@repo/supabase/queries/overlay-widgets";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
+import { isUuid, resolveOverlayItem } from "@/lib/overlay-item-auth";
 
 export interface CustomWidgetData {
   html: string;
@@ -17,13 +18,26 @@ export interface CustomWidgetData {
  * `fieldValues` comes from the overlay item's config, which the scene payload
  * already carries. The instance row is only queried for items saved before
  * field values moved into the config.
+ *
+ * The owner, widget and instance come from the item behind the overlay's own
+ * credential (subscriber_token + item id), never from the caller: this runs on
+ * the service role, and taking an owner id as an argument let anyone read any
+ * streamer's widget code.
  */
 export async function loadCustomWidgetData(
-  widgetId: string,
-  ownerUserId: string,
-  instanceId?: string,
+  subscriberToken: string,
+  overlayItemId: string,
   fieldValues?: Record<string, unknown>
 ): Promise<{ data: CustomWidgetData | null; error: string | null }> {
+  const item = await resolveOverlayItem(subscriberToken, overlayItemId);
+  const config = (item?.type === "custom_widget" ? item.config : null) as
+    | { widget_id?: unknown; instance_id?: unknown }
+    | null;
+  if (!item || !config || !isUuid(config.widget_id)) return { data: null, error: "Widget not found" };
+
+  const widgetId = config.widget_id;
+  const ownerUserId = item.userId;
+  const instanceId = isUuid(config.instance_id) ? config.instance_id : undefined;
   const needsInstance = fieldValues === undefined && Boolean(instanceId);
   const [{ data: widget, error: wErr }, { data: instance, error: iErr }] = await Promise.all([
     selectOverlayWidget(supabaseAdmin, widgetId, ownerUserId),

@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Dropped legacy app token columns from the database schema
+- IRL GPS fixes are only stored while the streamer is live. The overlay still shows the live position before going live, but nothing is saved off stream (SW-76)
 
 ### Fixed
 - IRL field widgets never showed live GPS or went offline: the geo frame nests its status inside `payload`, but the consumer read it from the top level

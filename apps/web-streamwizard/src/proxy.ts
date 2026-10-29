@@ -7,6 +7,15 @@ import { buildCsp } from "@/lib/csp";
 // They reach the proxy only so a crawler fetching them can be recorded.
 const CRAWLER_FILES = new Set(["/robots.txt", "/sitemap.xml", "/llms.txt"]);
 
+/** The admin app's origin (CMS_ADMIN_URL), allowed to frame draft previews. Null when unset or invalid. */
+function adminOrigin(): string | null {
+  try {
+    return process.env.CMS_ADMIN_URL ? new URL(process.env.CMS_ADMIN_URL).origin : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function proxy(request: NextRequest, event: NextFetchEvent) {
   // Handed to waitUntil, so the response does not wait for PostHog.
   const crawlerLog = logCrawlerVisit(request);
@@ -29,7 +38,8 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   // NODE_ENV is "staging" there (see src/lib/env.ts), which the built-in
   // NodeJS.ProcessEnv type doesn't know about, hence the cast.
   const cloudflareAccess = (process.env.NODE_ENV as string) === "staging";
-  const csp = buildCsp(nonce, { monaco: needsMonaco, cloudflareAccess });
+  const frameAncestor = request.nextUrl.pathname.startsWith("/preview/") ? adminOrigin() : null;
+  const csp = buildCsp(nonce, { monaco: needsMonaco, cloudflareAccess, frameAncestor });
   request.headers.set("content-security-policy", csp);
   // Next reads the nonce from the CSP header above for its own inline scripts,
   // but libraries that inject their own inline <script> (next-themes' anti-flash

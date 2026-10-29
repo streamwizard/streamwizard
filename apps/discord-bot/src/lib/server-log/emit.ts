@@ -12,7 +12,7 @@ import {
 import { getLogChannelIds, getLogRoutingFor } from "../log-channel/worker";
 import { isOpenTicketChannel } from "../ticket-activity";
 import { findAuditEntry } from "./audit";
-import { isIgnoredChannel } from "./refs";
+import { channelScope, isIgnoredChannel, type ChannelScope } from "./refs";
 
 // Queues Discord server events into platform_events, the same table and
 // worker as platform events. Unlike platform events, a server event that's
@@ -158,16 +158,28 @@ export async function emitAuditedEvent<T extends PlatformEventType>(
 
 /**
  * Whether messages in this channel are logged at all: a guild with routing,
- * the channel and its category not ignored, not a log channel, not an open
- * ticket.
+ * the channel, its parent and (for a thread) the parent's category not
+ * ignored, and neither the channel nor a thread's parent a log channel or an
+ * open ticket.
  */
-export async function isLoggedChannel(guild: Guild, channelId: string, parentId?: string | null): Promise<boolean> {
+export async function isLoggedChannel(guild: Guild, scope: ChannelScope): Promise<boolean> {
   const routing = await getLogRoutingFor(guild.client, guild.id);
   if (!routing) return false;
-  if (isIgnoredChannel(routing.ignoredChannelIds, channelId, parentId)) return false;
-  if ((await getLogChannelIds(guild.client, guild.id)).has(channelId)) return false;
-  if (await isOpenTicketChannel(guild.id, channelId).catch(() => false)) return false;
+  if (isIgnoredChannel(routing.ignoredChannelIds, scope.channelId, scope.parentId, scope.categoryId)) return false;
+  // For a plain channel parentId is its category, which is never a log
+  // channel or a ticket, so checking it costs nothing and covers threads.
+  const own = [scope.channelId, scope.parentId].filter((id): id is string => !!id);
+  const logChannels = await getLogChannelIds(guild.client, guild.id);
+  if (own.some((id) => logChannels.has(id))) return false;
+  for (const id of own) {
+    if (await isOpenTicketChannel(guild.id, id).catch(() => false)) return false;
+  }
   return true;
+}
+
+/** channelScope with the guild's channel cache resolving a thread's category. */
+export function guildChannelScope(guild: Guild, channel: Parameters<typeof channelScope>[0], channelId: string): ChannelScope {
+  return channelScope(channel, channelId, (id) => guild.channels.cache.get(id)?.parentId);
 }
 
 /**
@@ -176,7 +188,6 @@ export async function isLoggedChannel(guild: Guild, channelId: string, parentId?
  */
 export async function shouldLogMessage(guild: Guild, message: Message | PartialMessage): Promise<boolean> {
   if (message.author?.bot || message.webhookId) return false;
-  const channel = message.channel;
-  const parentId = channel && "parentId" in channel ? channel.parentId : null;
-  return isLoggedChannel(guild, message.channelId, parentId);
+  const channel = message.channel as Parameters<typeof channelScope>[0];
+  return isLoggedChannel(guild, guildChannelScope(guild, channel, message.channelId));
 }

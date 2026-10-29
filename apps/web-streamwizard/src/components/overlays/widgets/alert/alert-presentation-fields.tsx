@@ -12,11 +12,14 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Textarea,
 } from "@repo/ui";
 import {
   ALERT_ENTER_ANIMATIONS,
   ALERT_EXIT_ANIMATIONS,
   ALERT_HIGHLIGHT_ANIMATIONS,
+  ALERT_TYPOGRAPHY_LIMITS,
+  ALERT_CUSTOM_CSS_MAX_LENGTH,
   type AlertEventType,
   type AlertHighlightAnimation,
   type AlertPresentation,
@@ -24,6 +27,7 @@ import {
 import {
   FontWeightSelect,
   GoogleFontSelect,
+  GroupLabel,
   InspectorHint,
   InspectorReveal,
   InspectorSection,
@@ -48,7 +52,8 @@ export type AlertFieldGroup =
   | "media"
   | "timing"
   | "animation"
-  | "textAnimation";
+  | "textAnimation"
+  | "css";
 
 /** Matches the limit `normalizeAlertWidgetConfig` holds a template to. */
 const TEMPLATE_MAX_LENGTH = 200;
@@ -193,6 +198,11 @@ export function AlertPresentationFields({
 }: AlertPresentationFieldsProps) {
   // A leftover "media" mode on an image or an empty slot has no video to match,
   // so it reads (and behaves) as the fixed one.
+  const bothAudible =
+    value.mediaKind === "video" &&
+    Boolean(value.soundUrl) &&
+    value.volume > 0 &&
+    value.videoVolume > 0;
   const matchesVideo = value.mediaKind === "video" && value.durationMode === "media";
 
   const group = (id: AlertFieldGroup) => ({
@@ -337,6 +347,49 @@ export function AlertPresentationFields({
               hint="A soft shadow behind the text, so it stays readable over a busy game."
               onCheckedChange={(textShadow) => onPatch({ textShadow })}
             />
+
+            <GroupLabel>Spacing</GroupLabel>
+            <SliderField
+              id={`alert-line-height-${event}`}
+              label="Line height"
+              unit="%"
+              value={Math.round(value.lineHeight * 100)}
+              min={ALERT_TYPOGRAPHY_LIMITS.lineHeight.min * 100}
+              max={ALERT_TYPOGRAPHY_LIMITS.lineHeight.max * 100}
+              step={5}
+              hint="Room between the lines of a title that wraps. The second line follows it."
+              onChange={(v) => onPatch({ lineHeight: v / 100 })}
+            />
+            <SliderField
+              id={`alert-letter-spacing-${event}`}
+              label="Letter spacing"
+              unit="px"
+              value={value.letterSpacing}
+              min={ALERT_TYPOGRAPHY_LIMITS.letterSpacing.min}
+              max={ALERT_TYPOGRAPHY_LIMITS.letterSpacing.max}
+              step={0.5}
+              onChange={(letterSpacing) => onPatch({ letterSpacing })}
+            />
+            <SliderField
+              id={`alert-word-spacing-${event}`}
+              label="Word spacing"
+              unit="px"
+              value={value.wordSpacing}
+              min={ALERT_TYPOGRAPHY_LIMITS.wordSpacing.min}
+              max={ALERT_TYPOGRAPHY_LIMITS.wordSpacing.max}
+              onChange={(wordSpacing) => onPatch({ wordSpacing })}
+            />
+            <SliderField
+              id={`alert-message-scale-${event}`}
+              label="Second line size"
+              unit="%"
+              value={Math.round(value.messageFontScale * 100)}
+              min={ALERT_TYPOGRAPHY_LIMITS.messageFontScale.min * 100}
+              max={ALERT_TYPOGRAPHY_LIMITS.messageFontScale.max * 100}
+              step={5}
+              hint="How big the second line is next to the title."
+              onChange={(v) => onPatch({ messageFontScale: v / 100 })}
+            />
           </FoldRow>
         </div>
       </InspectorSection>
@@ -375,17 +428,37 @@ export function AlertPresentationFields({
             previewVolume={value.volume * masterVolume}
             onChange={(soundUrl) => onPatch({ soundUrl })}
           />
-          <SliderField
-            id={`alert-volume-${event}`}
-            label="Volume"
-            unit="%"
-            value={Math.round(value.volume * 100)}
-            min={0}
-            max={100}
-            step={5}
-            hint="For the sound file. With no sound file picked, it sets the video's own audio instead."
-            onChange={(v) => onPatch({ volume: v / 100 })}
-          />
+          <InspectorReveal show={Boolean(value.soundUrl)}>
+            <SliderField
+              id={`alert-volume-${event}`}
+              label="Sound volume"
+              unit="%"
+              value={Math.round(value.volume * 100)}
+              min={0}
+              max={100}
+              step={5}
+              onChange={(v) => onPatch({ volume: v / 100 })}
+            />
+          </InspectorReveal>
+          <InspectorReveal show={value.mediaKind === "video"}>
+            <SliderField
+              id={`alert-video-volume-${event}`}
+              label="Video sound"
+              unit="%"
+              value={Math.round(value.videoVolume * 100)}
+              min={0}
+              max={100}
+              step={5}
+              hint="The video's own audio. Set it to 0 to play the video silently."
+              onChange={(v) => onPatch({ videoVolume: v / 100 })}
+            />
+          </InspectorReveal>
+          {bothAudible ? (
+            <p className="text-xs leading-snug text-muted-foreground">
+              The video&apos;s sound and the sound file play together. Turn one down if
+              that&apos;s too much.
+            </p>
+          ) : null}
         </div>
       </InspectorSection>
 
@@ -487,6 +560,29 @@ export function AlertPresentationFields({
               onChange={(v) => onPatch({ textEarlyExitSeconds: Math.round(v * 10) / 10 })}
             />
           </FoldRow>
+        </div>
+      </InspectorSection>
+
+      <InspectorSection title="Custom CSS" {...group("css")}>
+        <div className="space-y-1.5">
+          <Label htmlFor={`alert-css-${event}`} className="sr-only">
+            Custom CSS
+          </Label>
+          <Textarea
+            id={`alert-css-${event}`}
+            value={value.customCss}
+            onChange={(e) => onPatch({ customCss: e.target.value })}
+            maxLength={ALERT_CUSTOM_CSS_MAX_LENGTH}
+            spellCheck={false}
+            rows={6}
+            placeholder={'[data-part="title"] {\n  -webkit-text-stroke: 2px #000;\n}'}
+            className="min-h-28 font-mono text-xs"
+          />
+          <p className="text-xs leading-snug text-muted-foreground">
+            Styles only this alert. Target <code>[data-part=&quot;title&quot;]</code>,{" "}
+            <code>message</code>, <code>name</code>, <code>amount</code>, <code>media</code>,{" "}
+            <code>text</code> or <code>box</code>. <code>:root</code> is the whole alert.
+          </p>
         </div>
       </InspectorSection>
     </>

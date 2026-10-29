@@ -101,6 +101,14 @@ const schema = z.object({
   // Bearer secret for /internal/* (server-to-server from web-admin). Unset =
   // those routes answer 404.
   REST_API_INTERNAL_SECRET: z.string().min(32).optional(),
+
+  // Blog and guides (services/cms-scheduler.ts). CMS_SITE_URL is
+  // web-streamwizard's origin; the scheduler POSTs {url}/api/revalidate with
+  // the secret it shares with web-streamwizard and web-admin. Optional and
+  // paired: without both, scheduled posts still go live on time and the
+  // site catches up within the hour.
+  CMS_SITE_URL: z.string().url().optional(),
+  CMS_REVALIDATE_SECRET: z.string().min(32).optional(),
 });
 
 export const env = schema.parse(process.env);

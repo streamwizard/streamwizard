@@ -7,7 +7,6 @@ import {
   verifiedTotpFactors,
   type Factor,
   type JwtPayload,
-  type PasskeyListItem,
   type User,
 } from "@repo/supabase/auth/session-strength";
 
@@ -18,8 +17,7 @@ export type AdminSession = {
   claims: JwtPayload;
   /** Verified TOTP factors (Supabase allows at most one). */
   totpFactors: Factor[];
-  passkeys: PasskeyListItem[];
-  /** `aal2` (TOTP verified this session) or signed in with a passkey. */
+  /** `aal2`: TOTP verified this session. */
   strong: boolean;
 };
 
@@ -34,11 +32,10 @@ export type AdminSessionResult =
  *
  * 1. Signed in, and `user_roles` says `admin` (service-role lookup).
  * 2. The session is strong: the admin completed a TOTP challenge after the
- *    Twitch redirect (`aal2`), or signed in with a passkey (`amr` carries
- *    `passkey`). Twitch alone is one factor and is not enough.
+ *    Twitch redirect (`aal2`). Twitch alone is one factor and is not enough.
  *
  * When (2) fails the caller is told where to send the user: `/auth/verify`
- * if they already have a factor to prove, `/auth/setup` if they have none.
+ * if they already have a TOTP factor to prove, `/auth/setup` if they have none.
  * Layouts redirect; server actions throw (see assert-admin.ts).
  */
 // "Auth session missing!" is a logged-out visit, not a failure; logging it as a
@@ -53,8 +50,7 @@ export async function getAdminSession(): Promise<AdminSessionResult> {
 
   const { session } = inventory;
   if (!session.strong) {
-    const hasAnyFactor = session.totpFactors.length > 0 || session.passkeys.length > 0;
-    return { session: null, redirect: hasAnyFactor ? "/auth/verify" : "/auth/setup" };
+    return { session: null, redirect: session.totpFactors.length > 0 ? "/auth/verify" : "/auth/setup" };
   }
   return { session, redirect: null };
 }
@@ -92,7 +88,7 @@ async function loadAdminInventory(): Promise<
     return { session: null, redirect: "/login?error=signin_required" };
   }
 
-  // getUser() is what carries `factors`; getClaims() is what carries aal/amr.
+  // getUser() is what carries `factors`; getClaims() is what carries aal.
   const { data: userData, error: userError } = await supabase.auth.getUser();
   if (userError || !userData.user) {
     if (userError && !isMissingSession(userError)) {
@@ -113,20 +109,8 @@ async function loadAdminInventory(): Promise<
       user,
       claims,
       totpFactors: verifiedTotpFactors(user),
-      passkeys: await listPasskeys(user.id),
       strong: isStrongSession(claims),
     },
     redirect: null,
   };
-}
-
-async function listPasskeys(userId: string): Promise<PasskeyListItem[]> {
-  const { data, error } = await supabaseAdmin.auth.admin.passkey.listPasskeys({ userId });
-  if (error) {
-    // Passkeys disabled on the project (local config not flipped yet, or the
-    // hosted toggle off) must not lock every admin out: treat as "none".
-    console.warn("[web-admin] listPasskeys failed:", error.message);
-    return [];
-  }
-  return data ?? [];
 }

@@ -1,0 +1,154 @@
+---
+title: "Discord"
+description: "What linking your Discord account gets you, and how to turn any of it off."
+---
+
+StreamWizard runs its support and its community in Discord. Linking your
+Discord account connects it to your StreamWizard account, which gets you
+go-live posts, a Live role while you stream, and support tickets that already
+know who you are.
+
+Linking is optional. Everything else in StreamWizard works without it.
+
+<Frame caption="Linking Discord from Settings → Integrations.">
+  <img src="/images/account/integrations.png" alt="The integrations page showing the Discord section with a Connect Discord button." />
+</Frame>
+
+## What you get
+
+**We post when you go live.** Your title, game and a link land in the
+StreamWizard server the moment you go live.
+
+**You show as live.** You get the Live role while you stream, so you sit at the
+top of the member list. It comes off when you go offline.
+
+**Support already knows your account.** Open a ticket and we can see which
+StreamWizard account is yours, with no "what's your username" back and forth.
+
+**Your ingest key, by DM.** On the IRL ingest page you can have StreamWizard
+send your key to you in a Discord DM rather than copying it off a screen you
+might be streaming.
+
+## Link your account
+
+<Steps>
+  <Step title="Join the server">
+    You need to be a member before any roles can be handed out. Join at
+    [discord.streamwizard.org](https://discord.streamwizard.org).
+  </Step>
+  <Step title="Link it">
+    Go to **Settings → Integrations** and select **Link Discord**. You'll be
+    sent to Discord to approve it.
+  </Step>
+  <Step title="Check it took">
+    The integrations page shows your Discord username once it's linked. The
+    onboarding wizard also walks you through this on your first visit.
+  </Step>
+</Steps>
+
+We only ask Discord for your account ID. Not your email, not your servers, not
+your messages.
+
+## Turn the announcements off
+
+Both are on once you link, and both are yours to switch off in
+**Settings → Preferences**:
+
+| Setting | What it does |
+|---|---|
+| **Post in the StreamWizard Discord when I go live** | The go-live post. |
+| **Show me as live in the StreamWizard Discord** | The Live role while you stream. |
+
+Turning them off doesn't unlink your account, so tickets still know who you are.
+
+## Support tickets
+
+Support happens in Discord rather than over email. In the server, start a
+ticket, pick what it's about (bug, feature, support or something else), and you
+get a private channel with the team. You'll be sent a transcript when it's
+closed.
+
+## Your own voice channel
+
+Join a lobby voice channel in the server (staff pick which ones) and the bot
+makes you a voice channel of your own and moves you in. It's yours to run, and
+it's deleted when the last person leaves. You don't need to link anything for
+this.
+
+The bot pins a list of these commands in your channel's chat, so you don't
+have to remember them. Under it are your channel's current settings (owner,
+locked or hidden, user limit, who's banned), kept up to date as you change
+them, with two buttons: **Invite** and **Reset to defaults**. **Invite** opens
+a window with a one-time link to copy for someone outside the server, and a
+picker for people who are already in it (up to 5 at once). Only the owner can
+use the buttons, and voice staff. Run them while you're in your channel, or from its chat:
+
+| Command | What it does |
+|---|---|
+| `/voice-lock` | Nobody new can join. Whoever is in it now can still come back. |
+| `/voice-unlock` | Opens it up again. |
+| `/voice-hide` | Only the people in it now can see it. |
+| `/voice-reveal` | Makes it visible again. |
+| `/voice-rename` | Renames it. Discord allows 2 renames per channel every 10 minutes, and the bot tells you when you can go again. |
+| `/voice-limit` | Sets how many people fit, up to 99. 0 removes the limit. |
+| `/voice-invite` | Pick a member and they can get in, even when it's locked or hidden. The bot DMs them a link. Leave the member empty and you get a one-time link (good for an hour) for someone outside the server: joining through it gets them in too. Links only work if the server lets you make invites. |
+| `/voice-kick` | Disconnects someone. They can come back unless it's locked. |
+| `/voice-ban` | Disconnects someone and keeps them from seeing or joining it. |
+| `/voice-unban` | Lets them back in. |
+| `/voice-transfer` | Hands the channel to someone in it. |
+| `/voice-claim` | Takes over a channel whose owner left. |
+| `/voice-owner` | Shows who owns it. Anyone can run this one. |
+| `/voice-reset` | Puts your channel back to the lobby's defaults (open, visible, nobody banned, the lobby's name and user limit) and forgets your saved settings. The **Reset to defaults** button under the pinned settings does the same. |
+
+Everything except `/voice-claim` and `/voice-owner` is for the owner (and
+voice staff, see below). You
+can own one channel at a time: join the lobby again and you're moved back to
+the one you have.
+
+The bot remembers how you set up your channel: its name, user limit, bans, and
+whether it's locked or hidden. Your next channel from the same lobby starts
+that way. Each lobby remembers on its own. Staff can turn this off per lobby
+with **Remember owner settings** in the dashboard.
+
+Staff pick **voice staff roles** in the dashboard, for the whole server or per
+lobby. People with one can't be kicked or banned from a voice channel, always
+get in (locked, hidden or full), and `/voice-claim` lets them take a channel
+over even while its owner is there. They can also run every owner command and
+button on any channel, without owning it: invite, rename, lock, ban, reset and
+the rest. They can't ban the owner. What staff change isn't saved as the
+owner's settings, and a reset by staff leaves those saved settings alone. When
+staff take over or hand over a channel, the old owner stays in as a guest.
+
+Someone picked a bad name? Voice staff (or anyone with Manage Channels) run
+`/voice-rename-block` on them. Their channel goes back to the lobby's name, the
+name they had saved is forgotten, and they can't rename any voice channel in
+the server until staff run `/voice-rename-unblock`. Staff can see and lift
+blocks in the dashboard too, under **Blocked from renaming**.
+
+## If something's wrong
+
+<AccordionGroup>
+  <Accordion title="You're not in the server">
+    Your account is linked, but roles can't be given to someone who isn't a
+    member. Join the server and your role appears on its own.
+  </Accordion>
+  <Accordion title="Your role didn't arrive">
+    The link worked and the role grant didn't. Select **Re-verify** on the
+    integrations page to try again.
+  </Accordion>
+  <Accordion title="You can't unlink">
+    If Discord is the only way you sign in, unlinking would lock you out, so
+    it's blocked. Add another sign-in method first, then unlink.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Settings" href="/settings">
+    The rest of your account preferences.
+  </Card>
+  <Card title="Onboarding" href="/onboarding">
+    The first-run walkthrough, which covers this too.
+  </Card>
+</CardGroup>

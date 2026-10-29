@@ -300,6 +300,36 @@ describe("app and server rules", () => {
       expect(await evaluate("server.disk_high")).toEqual([]);
     });
 
+    test("server.cpu_high warns only, and waits out a build", async () => {
+      expect(rule("server.cpu_high").forTicks).toBe(5);
+      influxServer = { host: "dokploy", time: ago(20), cpuPct: 94 };
+      expect(await evaluate("server.cpu_high")).toEqual([
+        { entityId: "dokploy", severity: "warn", value: 94, message: "CPU on dokploy at 94% (warn > 90%)" },
+      ]);
+      influxServer = { host: "dokploy", time: ago(20), cpuPct: 100 };
+      expect((await evaluate("server.cpu_high"))[0]?.severity).toBe("warn");
+      influxServer = { host: "dokploy", time: ago(20), cpuPct: 40 };
+      expect(await evaluate("server.cpu_high")).toEqual([]);
+    });
+
+    test("server.mem_high warns and goes crit before the kernel starts killing", async () => {
+      influxServer = { host: "dokploy", time: ago(20), memUsedPct: 91 };
+      expect(await evaluate("server.mem_high")).toEqual([
+        { entityId: "dokploy", severity: "warn", value: 91, message: "Memory on dokploy at 91% (warn > 90%)" },
+      ]);
+      influxServer = { host: "dokploy", time: ago(20), memUsedPct: 97 };
+      expect((await evaluate("server.mem_high"))[0]?.severity).toBe("crit");
+      influxServer = { host: "dokploy", time: ago(20), memUsedPct: 60 };
+      expect(await evaluate("server.mem_high")).toEqual([]);
+    });
+
+    test("server CPU and memory stay quiet while Telegraf is silent", async () => {
+      influxLastReports = [{ tagValue: "dokploy", lastSeen: ago(600) }];
+      influxServer = { host: "dokploy", time: ago(600), cpuPct: 99, memUsedPct: 99 };
+      expect(await evaluate("server.cpu_high")).toEqual([]);
+      expect(await evaluate("server.mem_high")).toEqual([]);
+    });
+
     test("server.oom_kill warns when the kernel killed something", async () => {
       expect(await evaluate("server.oom_kill")).toEqual([]);
       influxOomKills = 2;

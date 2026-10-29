@@ -1,11 +1,13 @@
 "use server";
 
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
 import { track } from "@/lib/track";
 import {
   createOverlayScene as createSceneRow,
   deleteOverlayScene as deleteSceneRow,
+  insertOverlayItemGroups,
   insertOverlayItems,
   insertOverlayItemsReturningIds,
 } from "@repo/supabase/queries/overlays";
@@ -20,8 +22,10 @@ import {
 import type {
   ClipDisplayFieldItemConfig,
   CustomWidgetItemConfig,
+  OverlayItem,
 } from "@/types/overlays";
 import { createWidget, deleteWidget, getWidgetsByIds } from "@/actions/widgets";
+import { sanitizeGroups } from "@/components/overlays/editor/item-groups";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
 import { tryAuthContext } from "@/lib/auth";
 import { getOverlayScene } from "./scenes";
@@ -50,6 +54,14 @@ export async function exportOverlayScene(sceneId: string): Promise<{
 
   const refById = new Map<string, string>();
   scene.items.forEach((item, index) => refById.set(item.id, `item-${index}`));
+
+  const groupRefById = new Map<string, string>();
+  (scene.groups ?? []).forEach((group, index) => groupRefById.set(group.id, `group-${index}`));
+  const groups = (scene.groups ?? []).map((group) => ({
+    ref: groupRefById.get(group.id)!,
+    parent_ref: group.parent_group_id ? (groupRefById.get(group.parent_group_id) ?? null) : null,
+    label: group.label,
+  }));
 
   const widgetIds = scene.items
     .filter((item) => item.type === "custom_widget")
@@ -120,6 +132,7 @@ export async function exportOverlayScene(sceneId: string): Promise<{
       is_locked: item.is_locked,
       label: item.label,
       config,
+      group_ref: item.group_id ? (groupRefById.get(item.group_id) ?? null) : null,
     };
   });
 
@@ -142,6 +155,7 @@ export async function exportOverlayScene(sceneId: string): Promise<{
       },
       items,
       widgets,
+      groups,
     },
     error: null,
   };
@@ -217,7 +231,7 @@ export async function importOverlayScene(rawJson: string): Promise<{
     };
   }
 
-  const { scene: sceneMeta, items, widgets } = doc.data;
+  const { scene: sceneMeta, items, widgets, groups } = doc.data;
 
   if (new Set(items.map((item) => item.ref)).size !== items.length) {
     return { data: null, error: "This overlay file lists the same item twice.", notes: [] };
@@ -297,11 +311,43 @@ export async function importOverlayScene(rawJson: string): Promise<{
     return { data: null, error: sceneError?.message ?? "Couldn't create the overlay.", notes: [] };
   }
 
+  // Groups get fresh ids and go in before the items that point at them.
+  // sanitizeGroups drops dangling refs, cycles and empty groups from a
+  // hand-edited file, and orders parents first.
+  const groupIdByRef = new Map(groups.map((group) => [group.ref, randomUUID()]));
+  const { groups: groupRows } = sanitizeGroups(
+    items.map((item) => ({
+      id: item.ref,
+      type: item.type,
+      group_id: item.group_ref ? (groupIdByRef.get(item.group_ref) ?? null) : null,
+    })) as unknown as OverlayItem[],
+    groups.map((group) => ({
+      id: groupIdByRef.get(group.ref)!,
+      scene_id: newScene.id,
+      parent_group_id: group.parent_ref ? (groupIdByRef.get(group.parent_ref) ?? null) : null,
+      label: group.label,
+    })),
+  );
+  const keptGroupIds = new Set(groupRows.map((group) => group.id));
+  if (groupRows.length > 0) {
+    const { error: groupError } = await insertOverlayItemGroups(supabase, groupRows);
+    if (groupError) {
+      reportError(groupError, OVERLAYS_ERROR_SCOPE);
+      await rollback(newScene.id);
+      return { data: null, error: "Couldn't rebuild this overlay's groups.", notes: [] };
+    }
+  }
+  const groupIdFor = (item: ExportedOverlayItem) => {
+    const id = item.group_ref ? groupIdByRef.get(item.group_ref) : undefined;
+    return id && keptGroupIds.has(id) ? id : null;
+  };
+
   function rowFor(item: ExportedOverlayItem, config: Record<string, unknown>) {
     const parsed = overlayItemSchema.safeParse({
       ...item,
       id: undefined,
       scene_id: newScene!.id,
+      group_id: groupIdFor(item),
       config,
     });
     // Already validated above; a failure here would be a bug, not bad input.

@@ -21,6 +21,8 @@ import {
   type LabelWidgetItemConfig,
 } from "./label-widget-config";
 import { useStreamLabels } from "./use-stream-labels";
+import { applyEditorLabelValue } from "./label-editor-values";
+import { useEditorPreviewValues } from "../../hooks/use-editor-preview-values";
 
 export interface LabelWidgetRendererProps {
   item: OverlayItem;
@@ -106,8 +108,13 @@ export function LabelWidgetRenderer({ item, scene, isEditor = false }: LabelWidg
 
   const { status, snapshot } = useStreamLabels({ isEditor, token: scene?.subscriber_token, sceneId: scene?.id });
   const def = getLabelDefinition(cfg.labelId);
+  // Values typed into the editor's Saved data tab. Never set on a live overlay.
+  const editorValue = useEditorPreviewValues().labels[def.id];
 
-  let lines = linesFor(applyLabelEventKinds(resolveLabel(snapshot, def, cfg.period), def, cfg), cfg);
+  let lines = linesFor(
+    applyLabelEventKinds(applyEditorLabelValue(resolveLabel(snapshot, def, cfg.period), def, editorValue), def, cfg),
+    cfg
+  );
   // The editor fills an empty label with sample data, dimmed, so the layout
   // can be judged before the channel has a single follower.
   let preview = false;

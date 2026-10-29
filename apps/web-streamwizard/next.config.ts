@@ -25,6 +25,12 @@ const nextConfig = {
     root: path.resolve(__dirname, "../.."),
   },
   output: "standalone",
+  // Post and guide share cards render on request (lib/cms/og.tsx), not at
+  // build like the other OG images, so the server needs the font files.
+  outputFileTracingIncludes: {
+    "/blog/**": ["./src/app/fonts/Geist-*.ttf"],
+    "/guides/**": ["./src/app/fonts/Geist-*.ttf"],
+  },
   skipTrailingSlashRedirect: true,
   async headers() {
     return [
@@ -35,7 +41,6 @@ const nextConfig = {
           // script-src can carry a nonce instead of 'unsafe-inline'.
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
           { key: "X-Content-Type-Options", value: "nosniff" },
-          { key: "X-Frame-Options", value: "DENY" },
           // None of these run in this app. The GPS widgets that need
           // geolocation live in web-overlay on its own origin, and the only
           // iframes here are Twitch embeds, which delegate autoplay/fullscreen
@@ -50,6 +55,25 @@ const nextConfig = {
             key: "Referrer-Policy",
             value: process.env.NODE_ENV === "development" ? "no-referrer" : "strict-origin-when-cross-origin",
           },
+        ],
+      },
+      // Every page but the CMS draft previews: those may be framed by the
+      // admin's editor (side-by-side preview), which X-Frame-Options can't
+      // allow for one origin. The CSP frame-ancestors from src/proxy.ts covers
+      // them instead: the admin origin there, 'none' everywhere else.
+      {
+        source: "/:path((?!preview/).*)",
+        headers: [{ key: "X-Frame-Options", value: "DENY" }],
+      },
+      // CMS draft previews: the token in the path is the secret, so it must
+      // never travel in a Referer, and no crawler should keep it. No
+      // Cache-Control here: Next overrides it on pages, and the page is
+      // dynamic, so it already goes out as private, no-store.
+      {
+        source: "/preview/:path*",
+        headers: [
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
         ],
       },
     ];
@@ -86,7 +110,8 @@ const nextConfig = {
     // no release, so they never line up with the uploaded source maps.
     SENTRY_RELEASE: process.env.SENTRY_RELEASE ?? "",
     NEXT_PUBLIC_POSTHOG_KEY: process.env.NEXT_PUBLIC_POSTHOG_KEY ?? process.env.POSTHOG_KEY ?? "",
-    NEXT_PUBLIC_POSTHOG_HOST: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com",
+    NEXT_PUBLIC_POSTHOG_HOST:
+      process.env.NEXT_PUBLIC_POSTHOG_HOST ?? process.env.POSTHOG_HOST ?? "https://eu.i.posthog.com",
     NEXT_PUBLIC_ASSET_CDN_URL:
       process.env.NEXT_PUBLIC_ASSET_CDN_URL ?? process.env.ASSET_CDN_URL ?? process.env.NEXT_PUBLIC_CDN_URL ?? "",
   },

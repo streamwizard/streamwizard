@@ -1,0 +1,125 @@
+---
+title: "Images and video"
+description: "Put your own pictures and video on stream: logos, webcam frames, sponsors, animated backgrounds."
+---
+
+Three widgets for your own files. **Image** shows one picture, **Video** plays
+one video, and **Slideshow** rotates through several pictures in one spot.
+
+All three pull from your [media library](/overlays/media-library), and all three
+live under **Widgets → Media**.
+
+## Before you start
+
+- Upload what you want to use to the [media library](/overlays/media-library)
+  first, or upload it from the picker while you work.
+
+## Image
+
+<Steps>
+  <Step title="Add the widget">
+    Open **Widgets → Media** and pick **Image**.
+  </Step>
+  <Step title="Pick a file">
+    Select **Add an image** and choose from your media library. PNG, JPG, WebP
+    or GIF. A transparent PNG stays transparent, and GIFs animate.
+  </Step>
+  <Step title="Set how it fills the box">
+    **Sizing** is **Fit**, **Fill** or **Stretch**.
+  </Step>
+</Steps>
+
+| Sizing | What it does |
+|---|---|
+| **Fit** | Shows the whole image, letterboxed if it doesn't match the box. |
+| **Fill** | Covers the box and trims what sticks out. |
+| **Stretch** | Ignores the image's own shape. |
+
+**Rounded corners** is a percentage, so 100% on a square box makes a circle and
+on a wide box makes a pill. It rounds the box, so it works best with **Fill**.
+
+<Note>
+Picking a file changes the widget's height to match the picture's shape, keeping
+the width you had. That's usually what you want, and it doesn't happen if you've
+cropped the item.
+</Note>
+
+## Video
+
+Same picker, same **Sizing** and **Rounded corners**, plus playback.
+
+| Setting | Default | Notes |
+|---|---|---|
+| **Loop** | On | Off plays once on load and holds the last frame. |
+| **Volume** | 0% | Muted. |
+
+MP4 or WebM. A WebM with transparency keeps its transparency on stream, which
+is how you do animated overlays without a green screen.
+
+<Warning>
+The editor always plays video silently, whatever **Volume** says. You'll only
+hear it in OBS. And because browsers block audible autoplay, a video with sound
+may come out muted anyway outside OBS.
+</Warning>
+
+## Slideshow
+
+Several images taking turns in one spot. Sponsors, socials, your schedule, fan
+art.
+
+Add images with **Add your first image**, then **Add another image**. They play
+top to bottom, and the arrows on each row change the order. Twenty images is the
+limit.
+
+| Setting | Default | Range |
+|---|---|---|
+| **Time per image** | 5 s | 1 to 120 |
+| **Transition** | Fade | **Fade**, **Slide** or **Cut** |
+| **Shuffle** | Off | Appears once you have more than two images |
+
+**Shuffle** never picks the same image twice in a row.
+
+<Note>
+Only the first image you add resizes the widget. Everything after that fits into
+the shape the first one set, so add your most representative image first, or set
+the box by hand.
+</Note>
+
+## Settings that trip people up
+
+<AccordionGroup>
+  <Accordion title="The widget is invisible on stream">
+    A widget with no file chosen shows a dashed placeholder in the editor and
+    **nothing at all** on stream. That's by design, but it does mean an
+    unfinished widget looks broken rather than empty.
+  </Accordion>
+  <Accordion title="I can't upload an SVG">
+    SVGs aren't accepted. They can carry scripts, so allowing them would mean
+    anything in your media library could run code on your overlay. Export a PNG
+    or WebP instead.
+  </Accordion>
+  <Accordion title="My rounded corners don't follow the picture">
+    Rounding is applied to the box, not the image inside it. With **Fit** the
+    picture is letterboxed inside that box, so the corners you rounded aren't
+    the picture's. Use **Fill**.
+  </Accordion>
+  <Accordion title="Shuffle isn't there">
+    It only appears above two images. With exactly two, shuffling and
+    alternating are the same thing.
+  </Accordion>
+  <Accordion title="The file is too big to upload">
+    Files cap at 10 MB each, and your whole library at 100 MB on the free plan.
+    The meter at the top of the media library shows what's left.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Media library" href="/overlays/media-library">
+    Upload and manage the files these widgets use.
+  </Card>
+  <Card title="Text and shapes" href="/overlays/text-and-shapes">
+    Frames and backdrops to put them in.
+  </Card>
+</CardGroup>

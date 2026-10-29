@@ -261,4 +261,28 @@ describe("emote widget feed", () => {
     expect(burstEmoteUrls({ emotes: [] }, {}, {}, ASSETS)).toEqual([FALLBACK_EMOTE_URL]);
     expect(burstEmoteUrls({ emotes: [] }, {}, CHANNEL, ASSETS, ["wizHype"])).toEqual([FALLBACK_EMOTE_URL]);
   });
+
+  it("blocked emotes are dropped from every burst source, not just channel emotes", () => {
+    // A pick the streamer later blocked: falls through to the channel emotes.
+    expect(
+      burstEmoteUrls({ emotes: [{ code: "catJAM", url: "" }] }, {}, CHANNEL, ASSETS, ["catJAM"]),
+    ).toEqual(["own/4"]);
+
+    // A pick stored by URL rather than code is blocked by its resolved URL.
+    expect(
+      burstEmoteUrls({ emotes: [{ code: "", url: "7tv/4" }] }, {}, CHANNEL, ASSETS, ["catJAM"]),
+    ).toEqual(["own/4"]);
+
+    // Emotes lifted out of the viewer's message honour the block too.
+    const resub = { message: { text: "love it catJAM", emotes: [] } };
+    expect(burstEmoteUrls({ emotes: [] }, resub, CHANNEL, ASSETS, ["catJAM"])).toEqual(["own/4"]);
+
+    // Blocking everything still leaves the fallback rather than an empty burst.
+    expect(
+      burstEmoteUrls({ emotes: [{ code: "catJAM", url: "" }] }, {}, CHANNEL, ASSETS, [
+        "catJAM",
+        "wizHype",
+      ]),
+    ).toEqual([FALLBACK_EMOTE_URL]);
+  });
 });

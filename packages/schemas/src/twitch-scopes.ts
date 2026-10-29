@@ -60,18 +60,32 @@ export const TWITCH_SCOPE_SETS = {
   // GET /api/nodes/users/:id/stream-key). Only accounts holding the cloud_obs
   // product can use it, so only they are asked for it.
   cloud_obs: ["channel:read:stream_key"],
+  // Alert box events that need one more permission each, asked for only when
+  // the streamer turns that alert on. Apart, so a VIP alert never makes the
+  // consent screen say "moderate".
+  // channel.ban: the ban and timeout alerts.
+  alert_bans: ["channel:moderate"],
+  // channel.vip.add: the new VIP alert.
+  alert_vips: ["channel:read:vips"],
+  // channel.moderator.add: the new mod alert.
+  alert_mods: ["moderation:read"],
 } as const satisfies Record<string, readonly string[]>;
 
 export type TwitchScopeFeature = Exclude<keyof typeof TWITCH_SCOPE_SETS, "base">;
 export type TwitchScope = (typeof TWITCH_SCOPE_SETS)[keyof typeof TWITCH_SCOPE_SETS][number];
 
 /**
- * The product (products.id) that entitles an account to each feature set.
- * The authorize action only requests a set whose product the user holds, so
- * a crafted call cannot widen consent beyond what the account can use.
+ * The product (products.id) that entitles an account to each feature set, or
+ * null for a set any account may turn on. The authorize action only requests
+ * a product set whose product the user holds, so a crafted call cannot widen
+ * consent beyond what the account can use; a free set is only requested when
+ * the user asks for it, or already granted it.
  */
-export const TWITCH_SCOPE_FEATURE_PRODUCTS: Record<TwitchScopeFeature, string> = {
+export const TWITCH_SCOPE_FEATURE_PRODUCTS: Record<TwitchScopeFeature, string | null> = {
   cloud_obs: "cloud_obs",
+  alert_bans: null,
+  alert_vips: null,
+  alert_mods: null,
 };
 
 export const TWITCH_SCOPE_FEATURES = Object.keys(TWITCH_SCOPE_FEATURE_PRODUCTS) as TwitchScopeFeature[];
@@ -99,4 +113,55 @@ export function missingTwitchScopes(granted: readonly string[] | null | undefine
   if (granted == null) return [];
   const have = new Set(granted);
   return TWITCH_SCOPE_SETS[feature].filter((scope) => !have.has(scope));
+}
+
+/**
+ * Whether a stored token carries every scope of a feature set. Unlike
+ * `missingTwitchScopes`, an unsynced token (null) counts as not granted: it is
+ * for the sets asked for on demand, which no token from before them can hold.
+ */
+export function hasTwitchFeature(granted: readonly string[] | null | undefined, feature: TwitchScopeFeature): boolean {
+  if (granted == null) return false;
+  return missingTwitchScopes(granted, feature).length === 0;
+}
+
+/**
+ * The feature sets one authorization should ask for. Twitch replaces the
+ * token with exactly what is requested, so this keeps what the account has:
+ * every product set it is entitled to, every free set its token already
+ * carries, plus `requested`. A free set nobody asked for is never added, so a
+ * cloud OBS user is not handed a "moderate" consent screen.
+ */
+export function twitchAuthorizationFeatures({
+  entitled,
+  granted,
+  requested,
+}: {
+  /** Product sets whose product the account holds. */
+  entitled: readonly TwitchScopeFeature[];
+  /** The stored token's scopes. */
+  granted: readonly string[] | null | undefined;
+  /** The set that triggered this authorization; "base" when none did. */
+  requested: TwitchScopeFeature | "base";
+}): TwitchScopeFeature[] {
+  const out = new Set<TwitchScopeFeature>(entitled);
+  for (const feature of TWITCH_SCOPE_FEATURES) {
+    if (TWITCH_SCOPE_FEATURE_PRODUCTS[feature] === null && hasTwitchFeature(granted, feature)) out.add(feature);
+  }
+  if (requested !== "base" && TWITCH_SCOPE_FEATURE_PRODUCTS[requested] === null) out.add(requested);
+  return [...out];
+}
+
+/**
+ * The feature sets a previous token had and a new one lost. A plain sign-in
+ * asks for base only, so without a second, silent round trip a re-login would
+ * quietly take back a stream key or turn a granted alert off.
+ */
+export function lostTwitchFeatures(
+  before: readonly string[] | null | undefined,
+  after: readonly string[] | null | undefined
+): TwitchScopeFeature[] {
+  return TWITCH_SCOPE_FEATURES.filter(
+    (feature) => hasTwitchFeature(before, feature) && !hasTwitchFeature(after, feature)
+  );
 }

@@ -231,12 +231,12 @@ Card background is `#0a0a0a`, not `--background`. Cards render outside the theme
 
 | Face | Variable | Source | Applied to |
 |---|---|---|---|
-| Geist Sans | `--font-geist-sans` | `next/font/local`, `src/app/fonts/GeistVF.woff` (variable, 100 to 900) | `body`, everything by default |
-| Geist Mono | `--font-geist-mono` | `next/font/local`, `src/app/fonts/GeistMonoVF.woff` | `code, pre, kbd, samp` |
+| Geist Sans | `--font-geist-sans` | `next/font/local`, `src/app/fonts/GeistVF.woff2` (variable, 100 to 900) | `body`, everything by default |
+| Geist Mono | `--font-geist-mono` | `next/font/local`, `src/app/fonts/GeistMonoVF.woff2` | `code, pre, kbd, samp` |
 | Geist static cuts | none | `Geist-Regular.ttf`, `Geist-SemiBold.ttf` | Social cards only |
 | Inter | per widget | Google Fonts, at render time in the overlay | Overlay widget default |
 
-**Do not delete the static TTFs.** `Geist-Regular.ttf` and `Geist-SemiBold.ttf` exist only because Satori cannot parse a variable font and crashes on it when generating social cards. They look redundant next to `GeistVF.woff`. They are not. This is written down here so nobody tidies the fonts directory and breaks every OG image.
+**Do not delete the static TTFs.** `Geist-Regular.ttf` and `Geist-SemiBold.ttf` exist only because Satori cannot parse a variable font and crashes on it when generating social cards. They look redundant next to `GeistVF.woff2`. They are not. This is written down here so nobody tidies the fonts directory and breaks every OG image.
 
 Fonts are self-hosted for the app. There is no Google Fonts link in the app shell, and adding one is a regression.
 

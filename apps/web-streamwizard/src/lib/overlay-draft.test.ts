@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from "bun:test";
+import { afterAll, beforeEach, expect, test } from "bun:test";
 import {
   clearOverlayDraft,
   isDraftNewerThan,
@@ -56,11 +56,25 @@ beforeEach(() => {
   rows = installLocalStorage();
 });
 
+// bun runs every test file in one process: a window left behind makes later
+// files think they're in a browser (next/image then reads `document`).
+afterAll(() => {
+  delete (globalThis as { window?: unknown }).window;
+});
+
 test("a written draft reads back with its items", () => {
   writeOverlayDraft("scene-1", [makeItem("Hello")]);
   const draft = readOverlayDraft("scene-1");
   expect(draft?.items).toHaveLength(1);
   expect(draft?.items[0]?.label).toBe("Hello");
+});
+
+test("a draft keeps the groups", () => {
+  const group = { id: "g-1", scene_id: "scene-1", parent_group_id: null, label: "Header" };
+  writeOverlayDraft("scene-1", [{ ...makeItem("Hello"), group_id: "g-1" }], [group]);
+  const draft = readOverlayDraft("scene-1");
+  expect(draft?.groups).toEqual([group]);
+  expect(draft?.items[0]?.group_id).toBe("g-1");
 });
 
 test("clearing removes the draft", () => {

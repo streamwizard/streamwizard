@@ -13,6 +13,10 @@ export type CspOptions = {
   // never gets the chance to reauth. Production has no Access in front of it,
   // so this is staging-only. See src/proxy.ts.
   cloudflareAccess?: boolean;
+  // CMS draft previews (/preview/[token]) are shown next to the editor in the
+  // admin app. The admin's origin goes here for those routes only; every other
+  // page keeps frame-ancestors 'none'. See src/proxy.ts.
+  frameAncestor?: string | null;
 };
 
 /** Production R2 CDN. The landing page demo clips are served from here only. */
@@ -26,7 +30,7 @@ const TWITCH_CLIP_CDN = "https://*.cloudfront.net";
 // and stamps it on its inline (hydration/RSC) scripts, which is what lets us
 // drop 'unsafe-inline' from script-src.
 export function buildCsp(nonce: string, options: CspOptions = {}): string {
-  const { monaco = false, cloudflareAccess = false } = options;
+  const { monaco = false, cloudflareAccess = false, frameAncestor = null } = options;
   const supabaseUrl = process.env.SUPABASE_URL ?? "";
   // Supabase realtime uses WebSocket — derive wss:// from the https:// URL
   const supabaseWs = supabaseUrl.replace(/^https:\/\//, "wss://");
@@ -37,16 +41,16 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     // Inline scripts must carry the per-request nonce. player.twitch.tv is
     // needed for the Twitch embedded player script. Monaco's 'unsafe-eval' is
     // added only on the editor route (see monaco option).
-    [
-      "script-src 'self'",
-      `'nonce-${nonce}'`,
-      "https://player.twitch.tv",
-      ...(monaco ? ["'unsafe-eval'"] : []),
-    ].join(" "),
+    ["script-src 'self'", `'nonce-${nonce}'`, "https://player.twitch.tv", ...(monaco ? ["'unsafe-eval'"] : [])].join(
+      " ",
+    ),
     // Next.js inlines critical styles; Google Fonts load external stylesheets.
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-    // Google Fonts actual font files
-    "font-src 'self' https://fonts.gstatic.com",
+    // Google Fonts actual font files, and fonts uploaded to the media library
+    // for overlay text, previewed in the editor.
+    ["font-src 'self' https://fonts.gstatic.com", process.env.NEXT_PUBLIC_ASSET_CDN_URL]
+      .filter(Boolean)
+      .join(" "),
     // Twitch CDN images + our own R2 CDN (e.g. error page gifs) + data URIs used
     // by the UI. The third-party emote CDNs are here for the widget editor
     // preview: widgets resolve 7TV/BTTV/FFZ emotes through /api/twitch and then
@@ -113,20 +117,18 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       .filter(Boolean)
       .join(" "),
     // Twitch embedded player and clips use iframes served from these origins
-    "frame-src https://player.twitch.tv https://clips.twitch.tv",
+    // Twitch players, plus YouTube (privacy-enhanced domain) for embeds in blog posts and guides.
+    "frame-src https://player.twitch.tv https://clips.twitch.tv https://www.youtube-nocookie.com",
     // Explicit manifest-src (rather than relying on the default-src fallback)
     // so we can carve out the Cloudflare Access reauth redirect on staging
     // without loosening default-src for everything else.
-    [
-      "manifest-src 'self'",
-      ...(cloudflareAccess ? ["https://streamwizard.cloudflareaccess.com"] : []),
-    ].join(" "),
+    ["manifest-src 'self'", ...(cloudflareAccess ? ["https://streamwizard.cloudflareaccess.com"] : [])].join(" "),
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
     // Modern replacement for the X-Frame-Options: DENY set in next.config.ts;
     // both are kept so older browsers stay covered.
-    "frame-ancestors 'none'",
+    `frame-ancestors ${frameAncestor ?? "'none'"}`,
   ];
 
   // Workers, on every route rather than just the editor: Sentry's replay

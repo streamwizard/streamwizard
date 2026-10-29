@@ -1,0 +1,106 @@
+---
+title: "Read the VOD timeline"
+description: "Your follows, subs, raids, cheers and clips laid over the recording, so you can jump to the moment instead of scrubbing."
+---
+
+The timeline under the player isn't just a scrub bar. Everything that happened
+during the stream is marked on it, so finding "the bit where we got raided" is
+one click rather than five minutes of dragging.
+
+<Frame caption="The timeline, with every event marked on it.">
+  <img src="/images/vods/vod-timeline.png" alt="A VOD timeline with coloured event markers and a stream events panel listing follows, cheers, subs and a raid." />
+</Frame>
+
+## What's on the timeline
+
+| On the bar | What it means |
+|---|---|
+| **Coloured dots** | Something happened: a follow, sub, raid, cheer, clip or marker. |
+| **Red stripes** | A muted segment. Twitch muted the audio over copyrighted music. |
+| **Amber stripes** | An ad break. |
+| **White line** | Where you are in the recording. |
+
+Select a dot to jump to that moment. Hover one to see what it was and when.
+
+<Tip>
+Muted segments are worth checking before you clip. A clip that lands inside a
+red stripe has no sound, and there's nothing to be done about it afterwards.
+</Tip>
+
+## The events panel
+
+The panel beside the player lists the same events as rows, in order, with who
+did it and how much. A cheer shows the bits, a raid shows the viewers, a gift
+sub shows how many.
+
+Select a row to jump the player to it. Events you've already passed are dimmed,
+so you can see at a glance where you are.
+
+Right-click a row, or a dot on the timeline, for more. Clips get
+**View Clip**, **View on Twitch** and **Copy URL**, plus
+**Add to Folder** so you can file a clip without leaving the VOD. Everything
+else gets **Seek Here**.
+
+## Showing less
+
+A busy stream puts a lot on the timeline. **Filters** at the top right controls
+what's drawn, and it drives the timeline and the panel together.
+
+Chat messages, channel updates and moderation actions are hidden to start with,
+because they'd bury everything else. Follows, subs, gifts, raids, cheers,
+shoutouts, channel point redemptions, bans, scene switches, clips and markers
+are shown. **Select All** turns on everything the VOD has, including chat.
+
+Each type shows how many of it this VOD has, so you can tell what's worth
+turning on.
+
+## Zooming in
+
+Zoom when markers are packed too closely to tell apart.
+
+- **Shift + scroll** zooms around the point you're looking at.
+- The **+** and **−** buttons step in and out, up to 20×.
+- Drag the bar to pan once you're zoomed in.
+- On a touchscreen, pinch to zoom and drag with one finger to pan.
+
+## Stream markers
+
+Markers you made during the stream show as yellow flags, with whatever note you
+left on them.
+
+<Note>
+Markers are made while you're live, from the [deck](/irl/deck) or chat, not
+from this page. Twitch places a marker at the live playhead, so there's no way
+to add one to a past broadcast.
+</Note>
+
+## If it doesn't work
+
+<AccordionGroup>
+  <Accordion title="The events panel is empty">
+    Either nothing is selected in **Filters**, or StreamWizard has no events
+    stored for this stream. Streams from before you joined StreamWizard have no
+    event history, and the VOD still plays normally.
+  </Accordion>
+  <Accordion title="There are no dots but the stream was busy">
+    Check **Filters** first. If every type is on and it's still empty, the
+    events for that stream weren't matched to this VOD, which can happen when
+    the VOD was still processing.
+  </Accordion>
+  <Accordion title="The legend doesn't list event types">
+    It shows the progress bar, playhead and any muted or ad segments. Per-type
+    colours are in the **Filters** list, where each type sits next to its own
+    icon.
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Make a clip from a VOD" href="/vods/clip-from-vod">
+    Turn the moment you found into a clip.
+  </Card>
+  <Card title="Your VODs" href="/vods/overview">
+    The list, and how long Twitch keeps them.
+  </Card>
+</CardGroup>

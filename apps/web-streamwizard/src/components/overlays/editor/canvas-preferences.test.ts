@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from "bun:test";
+import { afterAll, beforeEach, expect, test } from "bun:test";
 import {
   DEFAULT_CANVAS_PREFERENCES,
   clampGridSize,
@@ -13,6 +13,7 @@ import {
   DEFAULT_GRID_COLOR,
   clampGridLineWidth,
   isHexColor,
+  saveEditorAudioMuted,
   saveRulerCursor,
   saveSnapToItems,
   saveRulersVisible,
@@ -35,6 +36,12 @@ beforeEach(() => {
   installLocalStorage();
 });
 
+// bun runs every test file in one process: a window left behind makes later
+// files think they're in a browser (next/image then reads `document`).
+afterAll(() => {
+  delete (globalThis as { window?: unknown }).window;
+});
+
 test("preferences default to a checkerboard with the grid hidden", () => {
   const prefs = loadCanvasPreferences();
   expect(prefs).toEqual(DEFAULT_CANVAS_PREFERENCES);
@@ -51,6 +58,7 @@ test("saved preferences come back after a reload", () => {
     lineWidth: 2,
   });
   saveRulersVisible(true);
+  saveEditorAudioMuted(true);
 
   expect(loadCanvasPreferences()).toEqual({
     background: "dark",
@@ -58,6 +66,7 @@ test("saved preferences come back after a reload", () => {
     grid: { visible: true, size: 25, snap: true, color: "#22d3ee", lineWidth: 2 },
     rulers: true,
     rulerCursor: true,
+    audioMuted: true,
   });
 });
 
@@ -85,6 +94,14 @@ test("the ruler cursor is on unless it was explicitly turned off", () => {
   expect(loadCanvasPreferences().rulerCursor).toBe(false);
   saveRulerCursor(true);
   expect(loadCanvasPreferences().rulerCursor).toBe(true);
+});
+
+test("editor sound is on until someone mutes it, and the mute is remembered", () => {
+  expect(loadCanvasPreferences().audioMuted).toBe(false);
+  saveEditorAudioMuted(true);
+  expect(loadCanvasPreferences().audioMuted).toBe(true);
+  saveEditorAudioMuted(false);
+  expect(loadCanvasPreferences().audioMuted).toBe(false);
 });
 
 test("a background value that is not one of ours falls back", () => {

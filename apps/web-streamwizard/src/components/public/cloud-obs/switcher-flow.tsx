@@ -3,12 +3,8 @@
 import { useState } from "react";
 import { MotionConfig, motion } from "motion/react";
 import { Footprints, RotateCcw, SlidersHorizontal } from "lucide-react";
-import {
-  PRESET_COPY,
-  AUTO_SWITCHER_SENSITIVITY_PRESETS,
-  type AutoSwitcherSensitivityPreset,
-  type AutoSwitcherThresholds,
-} from "@repo/schemas";
+import { PRESET_COPY, AUTO_SWITCHER_SENSITIVITY_PRESETS } from "@repo/schemas/auto-switcher-constants";
+import type { AutoSwitcherSensitivityPreset, AutoSwitcherThresholds } from "@repo/schemas";
 import { EdgeLine, FanEdges, MergeEdges, TickDot, type EdgeTone } from "./flow-edges";
 import { IngestNode, PhoneNode, SceneNode, SwitcherNode, TwitchNode, signalBreaches } from "./flow-nodes";
 import {

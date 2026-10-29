@@ -42,7 +42,7 @@ describe("buildSubscriptionInventory", () => {
   });
 
   test("flags types StreamWizard doesn't subscribe to, and a capped scan", () => {
-    const inv = buildSubscriptionInventory([sub("channel.ban", "enabled", "websocket")], totals, true, "t");
+    const inv = buildSubscriptionInventory([sub("user.whisper.message", "enabled", "websocket")], totals, true, "t");
     expect(inv.types[0]?.expected).toBe(false);
     expect(inv.partial).toBe(true);
   });

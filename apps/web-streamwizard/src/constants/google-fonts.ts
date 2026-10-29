@@ -1,3 +1,5 @@
+import { isUploadedFontRef, UPLOADED_FONT_PREFIX } from "@repo/ui/overlay";
+
 /**
  * Offline fallback when metadata fetch fails (subset of fonts.google.com).
  * The editor loads the full catalog via `getGoogleFontsCatalog()` in `src/lib/google-fonts-catalog.ts`.
@@ -53,6 +55,7 @@ const fontNameUnsafe = /[<>]/;
  */
 export function isValidGoogleFontFamilyName(value: string): boolean {
   const t = value.trim();
+  if (t.startsWith(UPLOADED_FONT_PREFIX)) return isUploadedFontRef(t);
   if (t.length < 1 || t.length > 200) return false;
   if (fontNameUnsafe.test(t)) return false;
   return /^[\p{L}\p{M}\p{N}\s'+\-.,&()]+$/u.test(t);

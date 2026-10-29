@@ -16,7 +16,7 @@ type EnrollState =
 /**
  * TOTP enrolment: create the factor, show the QR + secret, verify one code.
  * Verifying also upgrades the current session to aal2, so the caller can go
- * straight to the dashboard afterwards. Shared by /auth/setup and /security.
+ * straight to the dashboard afterwards. Used by /auth/setup.
  */
 export function TotpEnroll({ onVerified }: { onVerified: () => void }) {
   const [state, setState] = useState<EnrollState>({ step: "loading" });

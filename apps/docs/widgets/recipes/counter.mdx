@@ -36,7 +36,7 @@ was right" moments.
 var count = 0;
 
 window.addEventListener('onWidgetLoad', async function () {
-  // The editor preview has no state; catch and start at 0 there.
+  // A failed read (a network blip) shouldn't break the widget; start at 0.
   var state = await StreamWizard.state.get().catch(function () { return null; });
   count = (state && state.count) || 0;
   render();
@@ -44,7 +44,7 @@ window.addEventListener('onWidgetLoad', async function () {
 
 window.addEventListener('onEventReceived', function (e) {
   if (e.detail.listener !== 'channel.channel_points_custom_reward_redemption.add') return;
-  if (e.detail.event.reward.title !== fieldData.rewardTitle) return;
+  if (e.detail.event.reward.title !== StreamWizard.fieldData.rewardTitle) return;
 
   count++;
   render();

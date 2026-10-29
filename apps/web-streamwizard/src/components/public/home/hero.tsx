@@ -1,7 +1,10 @@
 import Image from "next/image";
 import { TrackedLink } from "../analytics/tracked-link";
 import { FaDiscord } from "react-icons/fa";
-import { BorderBeam } from "@repo/ui";
+// Deep import: this is a server component, and pulling a client component
+// through the `@repo/ui` barrel put every client module in the kit (recharts,
+// cmdk, vaul...) into the home page bundle.
+import { BorderBeam } from "@repo/ui/components/ui/border-beam";
 import TwitchLogin from "@/components/buttons/twitch-login";
 import { discordInviteLink } from "@/lib/constant";
 
@@ -37,7 +40,9 @@ export function Hero() {
           </div>
         </div>
 
-        <div className="animate-in fade-in fill-mode-backwards relative z-10 mt-16 rounded-xl delay-200 duration-1000 [--animation-delay:200ms] before:pointer-events-none before:absolute before:-z-10 before:content-[''] before:[inset:-5rem] before:bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--color-three),transparent_70%),transparent_70%)] before:opacity-50 before:filter-[blur(120px)] after:pointer-events-none after:absolute after:inset-0 after:z-50 after:rounded-[inherit] after:bg-[linear-gradient(to_top,var(--background)_10%,transparent_60%)] after:content-[''] motion-reduce:animate-none">
+        {/* No entrance animation here: the screenshot is the LCP element, and
+            a fade that starts hidden held LCP back until it ran. */}
+        <div className="relative z-10 mt-16 rounded-xl before:pointer-events-none before:absolute before:-z-10 before:content-[''] before:[inset:-5rem] before:bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--color-three),transparent_70%),transparent_70%)] before:opacity-50 before:filter-[blur(120px)] after:pointer-events-none after:absolute after:inset-0 after:z-50 after:rounded-[inherit] after:bg-[linear-gradient(to_top,var(--background)_10%,transparent_60%)] after:content-['']">
           {/* Real intrinsic dimensions so the browser reserves space from the aspect ratio. LCP element. */}
           <Image
             src="/img/landing-page/hero-dark.webp"

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,6 +12,7 @@ import { useClipFolderDialog } from "@/providers/clip-folder-dialog-provider";
 import { Database } from "@repo/supabase";
 import {
   buildClipFolderTree,
+  formatFolderClipCount,
   getActiveFolderHref,
   getFolderUrl,
   type ClipFolderNode,
@@ -19,13 +22,8 @@ import { Clapperboard, ChevronRight, EllipsisVertical, Folder, FolderOpen, Plus 
 import Link from "next/link";
 import { Button } from "@repo/ui";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
-import {
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-} from "@repo/ui";
+import { SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from "@repo/ui";
+import { useCloseMobileSidebar } from "./use-close-mobile-sidebar";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 
@@ -49,6 +47,7 @@ type FolderTreeHandlers = {
   onCreateSubfolder: (folder: ClipFolderNode) => void;
   onEditFolder: (folder: ClipFolderNode) => void;
   onDeleteFolder: (folder: ClipFolderNode) => void;
+  onNavigate: () => void;
 };
 
 function FolderTreeIndent({ guides, isLast }: { guides: boolean[]; isLast: boolean }) {
@@ -100,6 +99,7 @@ function FolderTreeNode({
   onCreateSubfolder,
   onEditFolder,
   onDeleteFolder,
+  onNavigate,
 }: {
   folder: ClipFolderNode;
   guides: boolean[];
@@ -140,6 +140,7 @@ function FolderTreeNode({
         </div>
         <Link
           href={folderUrl}
+          onClick={onNavigate}
           className={cn(
             "flex min-w-0 flex-1 items-center gap-1.5 rounded-md py-1.5 pr-1.5",
             guides.length > 0 ? "text-[13px]" : "text-sm",
@@ -162,7 +163,9 @@ function FolderTreeNode({
                   ? "bg-sidebar-accent-foreground/10 text-sidebar-accent-foreground/70"
                   : "bg-sidebar-foreground/[0.07] text-sidebar-foreground/55"
               )}
-              aria-label={`${clipCount} ${clipCount === 1 ? "clip" : "clips"}`}
+              // The pill shows the bare direct count (no room for "12 · 48" here),
+              // but the wording comes from the same formatter the overview page uses.
+              aria-label={formatFolderClipCount({ direct: clipCount, total: clipCount }).aria}
             >
               {clipCount}
             </span>
@@ -216,6 +219,7 @@ function FolderTreeNode({
               onCreateSubfolder={onCreateSubfolder}
               onEditFolder={onEditFolder}
               onDeleteFolder={onDeleteFolder}
+              onNavigate={onNavigate}
             />
           ))}
         </ul>
@@ -226,6 +230,7 @@ function FolderTreeNode({
 
 export default function SidebarClips({ clipFolders, clipCounts }: Props) {
   const pathname = usePathname();
+  const closeMobile = useCloseMobileSidebar();
   const { openCreateFolder, openRenameFolder, openDeleteFolder } = useClipFolderDialog();
   const activeFolderHref = getActiveFolderHref(pathname, clipFolders);
   const inFolder = !!activeFolderHref;
@@ -236,7 +241,10 @@ export default function SidebarClips({ clipFolders, clipCounts }: Props) {
     if (inFolder) setIsOpen(true);
   }
   const folderTree = buildClipFolderTree(clipFolders);
+  // Exact match, unlike the startsWith checks on its neighbours: /dashboard/clips/<name>
+  // is the folder route, so a prefix match would light Clips up on every folder page.
   const isClipsActive = pathname === "/dashboard/clips";
+  const isFoldersActive = pathname.startsWith("/dashboard/folders") || inFolder;
 
   const createFolderButton = (parentFolder?: ClipFolderNode) => {
     openCreateFolder(parentFolder?.id, parentFolder?.name);
@@ -256,56 +264,58 @@ export default function SidebarClips({ clipFolders, clipCounts }: Props) {
     onCreateSubfolder: createFolderButton,
     onEditFolder: editFolderButton,
     onDeleteFolder: deleteFolderButton,
+    onNavigate: closeMobile,
   };
 
   return (
-    <SidebarMenuItem>
-      <SidebarMenuButton asChild isActive={isClipsActive && !activeFolderHref}>
-        <Link href="/dashboard/clips">
-          <Clapperboard className="mr-2 h-4 w-4" />
-          Clips
-        </Link>
-      </SidebarMenuButton>
+    <>
+      <SidebarMenuItem>
+        <SidebarMenuButton asChild isActive={isClipsActive}>
+          <Link href="/dashboard/clips" onClick={closeMobile}>
+            <Clapperboard className="mr-2 h-4 w-4" />
+            Clips
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
 
-      <SidebarMenuSub className="border-0">
-        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-          <SidebarMenuSubItem>
-            <div className="flex min-w-0 items-center gap-0.5">
-              <CollapsibleTrigger asChild>
-                <SidebarMenuSubButton isActive={!!activeFolderHref} className="min-w-0 flex-1">
-                  {isOpen ? <FolderOpen /> : <Folder />}
-                  <span>Folders</span>
-                  <ChevronRight className={cn("ml-auto size-3.5 shrink-0 transition-transform", isOpen && "rotate-90")} />
-                </SidebarMenuSubButton>
-              </CollapsibleTrigger>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-6 shrink-0"
-                onClick={() => createFolderButton()}
-              >
-                <Plus className="size-3.5" />
-                <span className="sr-only">Create new folder</span>
-              </Button>
-            </div>
+      <Collapsible asChild open={isOpen} onOpenChange={setIsOpen}>
+        <SidebarMenuItem>
+          {/* pr-14 clears both actions below; the cva default only reserves room for one. */}
+          <SidebarMenuButton asChild isActive={isFoldersActive} className="pr-14">
+            <Link href="/dashboard/folders" onClick={closeMobile}>
+              {isOpen ? <FolderOpen className="mr-2 h-4 w-4" /> : <Folder className="mr-2 h-4 w-4" />}
+              Folders
+            </Link>
+          </SidebarMenuButton>
 
-            <CollapsibleContent className="outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
-              <ul className="list-none py-0.5">
-                {folderTree.map((folder, index) => (
-                  <FolderTreeNode
-                    key={folder.id}
-                    folder={folder}
-                    guides={[]}
-                    isLast={index === folderTree.length - 1}
-                    {...folderHandlers}
-                  />
-                ))}
-              </ul>
-            </CollapsibleContent>
-          </SidebarMenuSubItem>
-        </Collapsible>
-      </SidebarMenuSub>
-    </SidebarMenuItem>
+          <SidebarMenuAction showOnHover className="right-7" onClick={() => createFolderButton()}>
+            <Plus />
+            <span className="sr-only">Create new folder</span>
+          </SidebarMenuAction>
+
+          <CollapsibleTrigger asChild>
+            <SidebarMenuAction aria-label={isOpen ? "Collapse folders" : "Expand folders"}>
+              <ChevronRight className={cn("transition-transform", isOpen && "rotate-90")} />
+            </SidebarMenuAction>
+          </CollapsibleTrigger>
+
+          <CollapsibleContent className="outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95">
+            {/* Keeps the tree indented exactly as SidebarMenuSub used to, now that
+                the Folders row itself sits level with Vods and Clips. */}
+            <ul className="mx-3.5 list-none px-2.5 py-0.5 group-data-[collapsible=icon]:hidden">
+              {folderTree.map((folder, index) => (
+                <FolderTreeNode
+                  key={folder.id}
+                  folder={folder}
+                  guides={[]}
+                  isLast={index === folderTree.length - 1}
+                  {...folderHandlers}
+                />
+              ))}
+            </ul>
+          </CollapsibleContent>
+        </SidebarMenuItem>
+      </Collapsible>
+    </>
   );
 }

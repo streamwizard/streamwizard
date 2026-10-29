@@ -1,5 +1,5 @@
 import { AuditLogEvent, Events } from "discord.js";
-import { emitAuditedEvent, isLoggedChannel } from "../../lib/server-log/emit";
+import { emitAuditedEvent, guildChannelScope, isLoggedChannel } from "../../lib/server-log/emit";
 import type { BotEvent } from "../../types/discord";
 import { truncate } from "../../lib/log-channel/embed-kit";
 import { channelRef, displayNameOf } from "../../lib/server-log/refs";
@@ -19,7 +19,7 @@ export default {
       "message.bulk_deleted",
       { type: AuditLogEvent.MessageBulkDelete, targetId: channel.id },
       async () => {
-        if (!(await isLoggedChannel(channel.guild, channel.id, channel.parentId))) return null;
+        if (!(await isLoggedChannel(channel.guild, guildChannelScope(channel.guild, channel, channel.id)))) return null;
         const lines = [...messages.values()]
           .filter((message) => !message.partial && !message.author.bot)
           .sort((a, b) => a.createdTimestamp - b.createdTimestamp)
