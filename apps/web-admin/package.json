@@ -21,6 +21,7 @@
     "@repo/discord-api": "workspace:*",
     "@repo/discord-message": "workspace:*",
     "@repo/metrics": "workspace:*",
+    "@repo/node-token": "workspace:*",
     "@repo/obs-web": "workspace:*",
     "@repo/proxmox": "workspace:*",
     "@repo/schemas": "workspace:*",

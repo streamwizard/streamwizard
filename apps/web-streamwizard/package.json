@@ -49,6 +49,7 @@
     "@redux-devtools/extension": "^3.3.0",
     "@repo/cms": "workspace:*",
     "@repo/discord-api": "workspace:*",
+    "@repo/node-token": "workspace:*",
     "@repo/obs-web": "workspace:*",
     "@repo/posthog": "workspace:*",
     "@repo/schemas": "workspace:*",

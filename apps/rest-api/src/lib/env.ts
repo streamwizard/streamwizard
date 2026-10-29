@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseNodeTokenJwks } from "./node-token-jwks";
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
@@ -109,6 +110,25 @@ const schema = z.object({
   // site catches up within the hour.
   CMS_SITE_URL: z.string().url().optional(),
   CMS_REVALIDATE_SECRET: z.string().min(32).optional(),
+
+  // Public half of the node-token key pair (@repo/node-token) as a JWKS,
+  // {"keys":[...]}. Sent to OBS nodes in GET /api/nodes/me so they can verify
+  // the 60-second tokens web-admin and web-streamwizard sign for them. Not a
+  // secret, and one value per environment, not per node. Several keys may be
+  // listed during a rotation. A private key here is refused at boot so it
+  // can never reach a node. Optional: without it /me sends null.
+  NODE_TOKEN_PUBLIC_JWKS: z
+    .string()
+    .optional()
+    .transform((raw, ctx) => {
+      if (!raw) return null;
+      const jwks = parseNodeTokenJwks(raw);
+      if (!jwks) {
+        ctx.addIssue({ code: "custom", message: "must be a JWKS of Ed25519 public keys, each with a kid" });
+        return z.NEVER;
+      }
+      return jwks;
+    }),
 });
 
 export const env = schema.parse(process.env);
