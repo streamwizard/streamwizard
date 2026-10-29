@@ -1,31 +1,26 @@
-import type { Factor, JwtPayload, PasskeyListItem, User } from "@supabase/supabase-js";
+import type { Factor, JwtPayload, User } from "@supabase/supabase-js";
 
 // Re-exported so apps that only depend on @repo/supabase can type their gates
 // without adding a direct @supabase/supabase-js dependency.
-export type { Factor, JwtPayload, PasskeyListItem, User };
+export type { Factor, JwtPayload, User };
 
 /**
  * A "strong" session is one that proves more than a single OAuth redirect:
+ * the user completed a TOTP challenge after signing in, so the session is
+ * `aal2`.
  *
- * - `aal2`: the user completed an MFA challenge (TOTP) after signing in, or
- * - the session was created by a passkey ceremony, which GoTrue records as an
- *   `amr` entry with method `passkey` while leaving `aal` at `aal1`.
+ * Passkey sign-in used to count too, but passkeys are a Supabase beta and
+ * GoTrue lets any signed-in session register one, so a stolen Twitch session
+ * could add its own and pass this check (SW-483). TOTP is a real MFA factor:
+ * once an admin has one verified, GoTrue refuses to enrol another factor
+ * without aal2.
  *
- * web-admin requires one of the two before rendering anything or running a
- * server action; see apps/web-admin/src/lib/admin-session.ts.
+ * web-admin requires a strong session before rendering anything or running a
+ * server action; see apps/web-admin/src/lib/admin-session.ts. The SQL twin is
+ * public.is_strong_admin().
  */
-export function isStrongSession(claims: Pick<JwtPayload, "aal" | "amr"> | null | undefined): boolean {
-  if (!claims) return false;
-  if (claims.aal === "aal2") return true;
-  return sessionMethods(claims).includes("passkey");
-}
-
-/** AMR entries arrive as `{ method, timestamp }` objects, but older tokens (and
- * some client-side decoders) surface plain strings. Normalise to method names. */
-export function sessionMethods(claims: Pick<JwtPayload, "amr"> | null | undefined): string[] {
-  const amr = claims?.amr;
-  if (!Array.isArray(amr)) return [];
-  return amr.map((entry) => (typeof entry === "string" ? entry : entry.method)).filter(Boolean);
+export function isStrongSession(claims: Pick<JwtPayload, "aal"> | null | undefined): boolean {
+  return claims?.aal === "aal2";
 }
 
 export function verifiedTotpFactors(user: Pick<User, "factors"> | null | undefined): Factor[] {
