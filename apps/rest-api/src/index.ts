@@ -75,9 +75,6 @@ app.use("*", securityMiddleware.securityHeaders());
 // 6. Brute force protection (after auth, before routes)
 app.use("*", securityMiddleware.bruteForceProtection());
 
-// 10. Audit logging
-// app.use("*", securityMiddleware.auditApiKeyUsage());
-
 // 11. Safe error handler (should be last)
 app.use("*", securityMiddleware.safeErrorHandler());
 

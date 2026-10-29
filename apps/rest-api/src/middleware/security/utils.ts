@@ -9,11 +9,8 @@ import { Sentry } from "../../sentry";
  */
 export interface SecurityEventMetadata {
   ip?: string;
-  api_key_id?: string;
   client_ip?: string;
-  allowed_ips?: string[];
   origin?: string;
-  allowed_origins?: string[];
   attempts?: number;
   blocked_until?: string;
   endpoint?: string;
