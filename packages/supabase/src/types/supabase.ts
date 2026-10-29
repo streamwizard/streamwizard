@@ -1948,7 +1948,9 @@ export type Database = {
           id: string
           kind: string
           label: string
+          max_files: number | null
           max_length: number | null
+          min_files: number | null
           min_length: number | null
           options: Json
           placeholder: string
@@ -1963,7 +1965,9 @@ export type Database = {
           id?: string
           kind: string
           label: string
+          max_files?: number | null
           max_length?: number | null
+          min_files?: number | null
           min_length?: number | null
           options?: Json
           placeholder?: string
@@ -1978,7 +1982,9 @@ export type Database = {
           id?: string
           kind?: string
           label?: string
+          max_files?: number | null
           max_length?: number | null
+          min_files?: number | null
           min_length?: number | null
           options?: Json
           placeholder?: string
