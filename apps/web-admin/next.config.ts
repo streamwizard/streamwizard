@@ -45,7 +45,13 @@ const nextConfig: NextConfig = {
         // crawler never fetches the URL, so it never sees this header, and the
         // URL can still be indexed bare. noindex has to be readable to work.
         source: "/(.*)",
-        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, nofollow" },
+          // The proxy's CSP carries frame-ancestors 'none', but only on the
+          // requests it runs for, and in dev it is report-only. This header is
+          // on every response, so no admin page can be framed (SW-485).
+          { key: "X-Frame-Options", value: "DENY" },
+        ],
       },
     ];
   },

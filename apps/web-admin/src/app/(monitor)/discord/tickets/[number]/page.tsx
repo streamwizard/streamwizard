@@ -20,15 +20,18 @@ export const dynamic = "force-dynamic";
 // Reads once, then hands off: the client page follows the ticket's rows over
 // Supabase Realtime, so nothing here runs again while it's open.
 export default async function DiscordTicketPage({ params }: { params: Promise<{ number: string }> }) {
+  // Admin first: looking the ticket up before this told anyone who reached
+  // the page whether a ticket number exists.
+  const adminUserId = await assertAdmin();
+
+  // Digits only. parseInt would read "12.css" as ticket 12.
   const { number } = await params;
-  const ticketNumber = Number.parseInt(number, 10);
-  if (!Number.isInteger(ticketNumber)) notFound();
+  if (!/^\d+$/.test(number)) notFound();
+  const ticketNumber = Number(number);
 
   const { guildId } = requireDiscordContext();
   const ticket = await getTicketByNumber(supabaseAdmin, guildId, ticketNumber);
   if (!ticket) notFound();
-
-  const adminUserId = await assertAdmin();
   const [snapshot, linkedAccount, adminDiscordId, categories, products, answers, tags] = await Promise.all([
     buildTicketSnapshot(ticket),
     getLinkedStreamWizardAccount(supabaseAdmin, ticket.opener_discord_user_id, ticket.opener_user_id),

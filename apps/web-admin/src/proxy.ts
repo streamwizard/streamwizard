@@ -60,9 +60,12 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Every path except Next's own output (/_next/…) and the three icon files.
+// No "skip anything with a file extension" rule: dynamic routes accept such
+// paths (/discord/tickets/12.css renders ticket 12), and a skipped request
+// skips the admin gate and the CSP with it (SW-485). The icons are skipped so
+// the login page can show them to signed-out visitors. Next reads this
+// statically, so it has to stay an inline string literal.
 export const config = {
-  matcher: [
-    "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    "/(api|trpc)(.*)",
-  ],
+  matcher: ["/((?!_next/|favicon\\.ico$|icon\\.png$|apple-icon\\.png$).*)"],
 };
