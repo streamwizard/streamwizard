@@ -63,6 +63,11 @@ export const env = createEnv({
     // Shared with web-admin and rest-api: they send it to POST /api/revalidate
     // after a blog post or guide changes. Unset = the endpoint 404s.
     CMS_REVALIDATE_SECRET: z.string().min(32).optional(),
+    // Ed25519 private JWK that signs the 60-second node tokens sent to OBS
+    // nodes instead of the user's Supabase session (@repo/node-token). Secret,
+    // one per environment, never per node. Optional so the app boots without
+    // it; node calls fail with a clear error until it is set.
+    NODE_TOKEN_SIGNING_JWK: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -105,6 +110,7 @@ export const env = createEnv({
     R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
     R2_ASSETS_BUCKET: process.env.R2_ASSETS_BUCKET,
     CMS_REVALIDATE_SECRET: process.env.CMS_REVALIDATE_SECRET,
+    NODE_TOKEN_SIGNING_JWK: process.env.NODE_TOKEN_SIGNING_JWK,
     // Derived in next.config.ts env: block from their non-prefixed Doppler counterparts
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

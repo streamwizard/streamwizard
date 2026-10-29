@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CloudOBSViewer } from "@repo/obs-web";
 import { getInstanceNodeApiUrlAction } from "@/actions/nodes";
 import { mintNoVncConnection } from "@repo/obs-web";
+import { nodeToken } from "@/lib/node-token";
 
 function ObsViewerContent() {
   const searchParams = useSearchParams();
@@ -36,6 +37,7 @@ function ObsViewerContent() {
     return mintNoVncConnection(apiUrl, {
       ticketPath: `/instances/${instanceId}/ws-ticket`,
       wsPath: `/instances/${instanceId}/novnc`,
+      getToken: () => nodeToken(instanceId, "ws-ticket"),
     });
   }, [apiUrl, instanceId]);
 

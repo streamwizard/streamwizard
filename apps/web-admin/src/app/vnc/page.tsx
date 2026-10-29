@@ -6,12 +6,13 @@ import { CloudOBSViewer } from "@repo/obs-web";
 import { getNodeApiUrlAction } from "@/actions/nodes";
 import { DesktopOnly } from "@/components/widgets/desktop-only";
 import { mintNoVncConnection } from "@repo/obs-web";
+import { adminNodeToken } from "@/lib/node-token";
 
 // Admin's noVNC proxy lives at /admin/instances/:id/novnc on the node's API
 // (vs. the end-user /instances/:id/novnc), gated by the admin's own role
 // instead of instance ownership. A fresh single-use ws-ticket rides on the
-// socket -- the admin's JWT only ever travels in the Authorization header of
-// the ticket-mint POST (see lib/ws-ticket.ts).
+// socket; the ticket-mint POST carries a 60-second admin node token, never the
+// admin's session (see lib/node-token.ts).
 //
 // apiUrl must come from a trusted lookup (getNodeApiUrlAction), never the query
 // string -- the URL gets a ticket appended and dialed as a WebSocket, so an
@@ -45,6 +46,7 @@ function AdminVncView() {
     return mintNoVncConnection(apiUrl, {
       ticketPath: `/admin/instances/${instanceId}/ws-ticket`,
       wsPath: `/admin/instances/${instanceId}/novnc`,
+      getToken: () => adminNodeToken({ instanceId }, "admin:ws-ticket"),
     });
   }, [apiUrl, instanceId]);
 
