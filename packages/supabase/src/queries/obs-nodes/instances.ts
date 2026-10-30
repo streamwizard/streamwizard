@@ -221,6 +221,20 @@ export async function userHasInstanceOnNode(client: DBClient, userId: string, no
   return (count ?? 0) > 0;
 }
 
+/** Instances that are up right now, for the plan sweep and for stopping a
+ * user's containers when their plan goes away. */
+export async function listRunningObsInstancesByNode(client: DBClient, nodeId: string): Promise<ObsInstance[]> {
+  const { data, error } = await client.from("obs_instances").select("*").eq("node_id", nodeId).eq("status", "running");
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function listRunningObsInstancesByUser(client: DBClient, userId: string): Promise<ObsInstance[]> {
+  const { data, error } = await client.from("obs_instances").select("*").eq("user_id", userId).eq("status", "running");
+  if (error) throw error;
+  return data ?? [];
+}
+
 /** A user's instances that live on this node — the only ones a node manager
  * can act on locally (it resolves each container_id against its own Docker). */
 export async function listObsInstancesByUserOnNode(client: DBClient, userId: string, nodeId: string): Promise<ObsInstance[]> {

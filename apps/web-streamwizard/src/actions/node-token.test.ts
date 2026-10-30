@@ -2,16 +2,21 @@ import { beforeAll, expect, mock, test } from "bun:test";
 import { calculateJwkThumbprint, createLocalJWKSet, exportJWK, generateKeyPair, jwtVerify, type JSONWebKeySet } from "jose";
 
 // The client picks both arguments of mintNodeTokenAction, so these pin what
-// the server refuses: other people's instances and admin scopes.
+// the server refuses: other people's instances, admin scopes and callers
+// whose Cloud OBS plan is gone.
 
 let signedIn: { id: string } | null = { id: "user-1" };
+let access = { canAccess: true, canInteract: true };
 const instances: Record<string, { userId: string; nodeId: string }> = {
   "i-42": { userId: "user-1", nodeId: "node-a" },
   "i-99": { userId: "user-2", nodeId: "node-b" },
 };
 
 mock.module("@/lib/auth", () => ({
-  tryAuthContext: async () => (signedIn ? { user: signedIn } : null),
+  tryAuthContext: async () => (signedIn ? { user: signedIn, supabase: {} } : null),
+}));
+mock.module("@repo/supabase/queries/subscriptions", () => ({
+  getProductAccess: async () => ({ ...access, status: "active", plan: null }),
 }));
 mock.module("@repo/supabase/next/admin", () => ({ createAdminClient: () => ({}) }));
 mock.module("@repo/supabase/queries/obs-nodes", () => ({
@@ -54,5 +59,26 @@ test("refuses signed-out callers", async () => {
     expect(await mintNodeTokenAction("i-42", "files")).toEqual({ data: null, error: "Unauthenticated" });
   } finally {
     signedIn = { id: "user-1" };
+  }
+});
+
+test("refuses every scope once the plan is revoked", async () => {
+  access = { canAccess: false, canInteract: false };
+  try {
+    for (const scope of ["instances:control", "ws-ticket", "files"] as const) {
+      expect(await mintNodeTokenAction("i-42", scope)).toEqual({ data: null, error: "Your Cloud OBS plan isn't active." });
+    }
+  } finally {
+    access = { canAccess: true, canInteract: true };
+  }
+});
+
+test("a past_due plan can still control its instance but not create one", async () => {
+  access = { canAccess: true, canInteract: false };
+  try {
+    expect((await mintNodeTokenAction("i-42", "instances:control")).data?.token).toBeString();
+    expect(await mintNodeTokenAction("i-42", "instances:create")).toEqual({ data: null, error: "Your Cloud OBS plan isn't active." });
+  } finally {
+    access = { canAccess: true, canInteract: true };
   }
 });

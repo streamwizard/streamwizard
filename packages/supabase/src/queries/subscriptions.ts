@@ -115,6 +115,28 @@ export async function getUserActiveSubscriptionId(
   return data?.id ?? null;
 }
 
+/**
+ * Which of these users hold a plan for the product that may start things
+ * (same rule as getUserActiveSubscriptionId). One query for a whole node's
+ * running instances, so the plan sweep doesn't do a lookup per user.
+ */
+export async function usersWithActiveSubscription(
+  supabase: SupabaseClient<Database>,
+  userIds: string[],
+  productId: string,
+): Promise<Set<string>> {
+  if (userIds.length === 0) return new Set();
+  const { data, error } = await supabase
+    .from("user_subscriptions")
+    .select("user_id, plans!inner(product_id)")
+    .in("user_id", userIds)
+    .eq("plans.product_id", productId)
+    .in("status", INTERACTIVE_SUBSCRIPTION_STATUSES)
+    .or(periodNotOverFilter());
+  if (error) throw error;
+  return new Set((data ?? []).map((row) => row.user_id));
+}
+
 export async function getProductAccess(
   supabase: SupabaseClient<Database>,
   productId: string
