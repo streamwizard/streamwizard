@@ -1,4 +1,5 @@
 import { TwitchApi } from "@repo/twitch-api";
+import { TtlCache } from "@repo/ttl-cache";
 import { ASSET_TTL, getCached, peekCached, peekMemory, setCached, singleFlight } from "./cache";
 import type {
   BadgeMap,
@@ -157,12 +158,33 @@ function toPublicUser(u: { id: string; login: string; display_name: string; prof
 }
 
 /**
+ * Ids Helix looked up and didn't return (banned, deleted, or never existed).
+ * Without this a missing id costs a cache read and a Helix call on every
+ * request that names it, and the Helix call spends the app token's bucket,
+ * which every other app-token lookup shares.
+ */
+const UNKNOWN_USER_TTL_MS = 10 * 60 * 1000;
+const unknownUsers = new TtlCache<true>({ ttlMs: UNKNOWN_USER_TTL_MS, maxEntries: 5000 });
+
+export interface ResolveUsersOptions {
+  /**
+   * Asked once before each Helix batch. Returning false skips the batch, so
+   * the caller gets only what was already cached. Lets a caller taking ids
+   * from the outside cap how much of the shared app token it spends.
+   */
+  allowFetch?: () => boolean;
+}
+
+/**
  * Cached per user, fetched in batches of 100. Ids already in cache never reach
  * Helix, so a chat widget resolving avatars for a busy channel converges on
  * zero upstream calls.
  */
-export async function resolveUsers(userIds: string[]): Promise<Record<string, PublicUser>> {
-  const unique = [...new Set(userIds)];
+export async function resolveUsers(
+  userIds: string[],
+  options: ResolveUsersOptions = {}
+): Promise<Record<string, PublicUser>> {
+  const unique = [...new Set(userIds)].filter((id) => !unknownUsers.get(id));
   const out: Record<string, PublicUser> = {};
   const missing: string[] = [];
 
@@ -175,6 +197,7 @@ export async function resolveUsers(userIds: string[]): Promise<Record<string, Pu
   );
 
   for (let i = 0; i < missing.length; i += 100) {
+    if (options.allowFetch && !options.allowFetch()) break;
     const chunk = missing.slice(i, i + 100);
     const users = await new TwitchApi(null).search.lookupUsers(chunk);
     await Promise.all(
@@ -184,6 +207,9 @@ export async function resolveUsers(userIds: string[]): Promise<Record<string, Pu
         await setCached(keys.user(u.id), publicUser, ASSET_TTL.user);
       })
     );
+    for (const id of chunk) {
+      if (!out[id]) unknownUsers.set(id, true);
+    }
   }
 
   return out;
