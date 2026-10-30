@@ -65,6 +65,7 @@ import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { env } from "@/lib/env";
 import { isLegacySlug } from "@/lib/overlay-slug";
+import { formatDate } from "@/lib/format";
 import {
   createOverlayScene,
   deleteOverlayScene,
@@ -586,7 +587,7 @@ export function OverlayScenesList({
                     </div>
                     <CardDescription className="text-xs">
                       {scene.width}x{scene.height} · Updated{" "}
-                      {new Date(scene.updated_at).toLocaleDateString()}
+                      {formatDate(scene.updated_at)}
                     </CardDescription>
                     {isLegacySlug(scene.slug) && (
                       <button
