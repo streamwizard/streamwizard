@@ -19,6 +19,48 @@ export const MESSAGE_TYPE_NOTIFICATION = "notification";
 export const MESSAGE_TYPE_REVOCATION = "revocation";
 
 /**
+ * Twitch says to reject messages older than 10 minutes. The same window caps
+ * how far in the future a timestamp may be, and how long message ids are kept
+ * for dedupe: anything older is rejected on its timestamp anyway.
+ */
+export const MAX_MESSAGE_AGE_MS = 10 * 60 * 1000;
+
+/**
+ * True when the signed timestamp is within MAX_MESSAGE_AGE_MS of now, in
+ * either direction. Twitch sends RFC 3339 with nanoseconds, which Date.parse
+ * accepts (it drops the extra digits).
+ */
+export function isTimestampFresh(timestamp: string, now = Date.now()): boolean {
+    const sentAt = Date.parse(timestamp);
+    if (Number.isNaN(sentAt)) return false;
+    return Math.abs(now - sentAt) <= MAX_MESSAGE_AGE_MS;
+}
+
+/**
+ * The message type header is not covered by the signature, so check it
+ * against the signed body: a notification carries an `event`, a verification
+ * carries a `challenge`, and a revocation carries neither.
+ */
+export function bodyMatchesMessageType(messageType: string, body: unknown): boolean {
+    if (!body || typeof body !== "object") return false;
+    const b = body as Record<string, unknown>;
+    if (!b.subscription || typeof b.subscription !== "object") return false;
+    const hasEvent = b.event != null && typeof b.event === "object";
+    const hasChallenge = typeof b.challenge === "string";
+
+    switch (messageType) {
+        case MESSAGE_TYPE_NOTIFICATION:
+            return hasEvent && !hasChallenge;
+        case MESSAGE_TYPE_VERIFICATION:
+            return hasChallenge && !hasEvent;
+        case MESSAGE_TYPE_REVOCATION:
+            return !hasEvent && !hasChallenge;
+        default:
+            return false;
+    }
+}
+
+/**
  * HMAC prefix used by Twitch
  */
 const HMAC_PREFIX = "sha256=";
