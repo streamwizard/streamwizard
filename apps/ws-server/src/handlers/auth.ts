@@ -21,17 +21,35 @@ let nextConnId = 1;
  * or an overlay scene's subscriber token (a browser source or the GPS overlay
  * page, which have no session).
  *
+ * The two shapes never overlap, so each token costs at most one Supabase call
+ * and anything of neither shape costs none: subscriber_token is always 32
+ * random bytes as lowercase hex, a JWT is three base64url segments.
+ *
  * The kind and token are kept on the socket so revoke.ts can re-check them
  * after a key reset, a scene delete or an account deletion.
  */
-async function resolveToken(token: string): Promise<{ userId: string; credential: NonNullable<ConnectionData["credential"]> } | null> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser(token);
-  if (user) return { userId: user.id, credential: { kind: "session", token } };
+const SCENE_TOKEN = /^[0-9a-f]{64}$/;
+const JWT = /^[\w-]+\.[\w-]+\.[\w-]+$/;
+const MAX_JWT_LENGTH = 16_384;
 
-  const { data: scene } = await getOverlaySceneBySubscriberToken(supabase, token);
-  return scene ? { userId: scene.user_id, credential: { kind: "scene", token } } : null;
+async function resolveToken(token: string): Promise<{ userId: string; credential: NonNullable<ConnectionData["credential"]> } | null> {
+  if (SCENE_TOKEN.test(token)) {
+    const { data: scene } = await getOverlaySceneBySubscriberToken(supabase, token);
+    return scene ? { userId: scene.user_id, credential: { kind: "scene", token } } : null;
+  }
+
+  if (token.length <= MAX_JWT_LENGTH && JWT.test(token)) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser(token);
+    return user ? { userId: user.id, credential: { kind: "session", token } } : null;
+  }
+
+  return null;
+}
+
+function clientIp(req: Request): string {
+  return req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "unknown";
 }
 
 /**
@@ -142,6 +160,11 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
 
   // --- Publisher ---
   if (role === "publisher") {
+    if (isRateLimited("publisher", clientIp(req))) {
+      trackWsAuthFailure("publisher", "rate_limited");
+      return new Response("Too Many Requests", { status: 429 });
+    }
+
     const token = url.searchParams.get("token");
     if (!token) {
       trackWsAuthFailure("publisher", "missing_token");
@@ -181,8 +204,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
   }
 
   // --- Subscriber ---
-  const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "unknown";
-  if (isRateLimited(ip)) {
+  if (isRateLimited("subscriber", clientIp(req))) {
     trackWsAuthFailure("subscriber", "rate_limited");
     return new Response("Too Many Requests", { status: 429 });
   }

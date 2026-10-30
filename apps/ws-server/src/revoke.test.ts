@@ -14,7 +14,9 @@ let queries: string[][];
 
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
+// Mocks are process-wide in bun test, so keep every export auth.ts links against.
 mock.module("@repo/supabase/queries/overlays", () => ({
+  getOverlaySceneBySubscriberToken: async () => ({ data: null }),
   selectSceneOwnersByTokens: async (_client: unknown, tokens: string[]) => {
     queries.push(tokens);
     return {
@@ -101,6 +103,7 @@ describe("ws credential revocation", () => {
   test("a failed lookup closes nothing", async () => {
     const ws = open(socket("scene", "key"));
     mock.module("@repo/supabase/queries/overlays", () => ({
+      getOverlaySceneBySubscriberToken: async () => ({ data: null }),
       selectSceneOwnersByTokens: async () => ({ data: null, error: new Error("db down") }),
     }));
     expect(await sweepSceneCredentials()).toBe(0);
