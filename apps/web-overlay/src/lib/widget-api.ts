@@ -63,7 +63,7 @@ const TOKEN_FORMAT = /^[0-9a-f]{64}$/;
 
 /**
  * subscriber_token is always 32 random bytes as lowercase hex (the column
- * default and resetSceneSubscriberToken). Routes answer 403 for anything else
+ * default and resetSceneUrl). Routes answer 403 for anything else
  * before it reaches the rate limiter or the database, so a made-up string of
  * any size never gets stored.
  */

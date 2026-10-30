@@ -17,12 +17,14 @@ import {
   insertOverlayItems,
   insertOverlayItemsReturningIds,
   updateOverlayScene as updateSceneRow,
-  updateSceneSubscriberToken,
+  updateSceneUrlCredentials,
 } from "@repo/supabase/queries/overlays";
 import { createSceneSchema, updateSceneSchema } from "@/schemas/overlay";
 import type { ClipDisplayFieldItemConfig } from "@/types/overlays";
 import { overlayItemFromDbRow } from "@/types/overlays";
+import { createAdminClient } from "@repo/supabase/next/admin";
 import { tryAuthContext } from "@/lib/auth";
+import { isLegacySlug } from "@/lib/overlay-slug";
 import { revokeWsSockets } from "@/lib/ws-revoke";
 import { sanitizeGroups } from "@/components/overlays/editor/item-groups";
 import { OVERLAYS_ERROR_SCOPE, generateSlug } from "./shared";
@@ -266,19 +268,33 @@ export async function duplicateOverlayScene(id: string) {
   return { data: newScene, error: null };
 }
 
-export async function resetSceneSubscriberToken(sceneId: string): Promise<{ error: string | null }> {
+/**
+ * New URL and new subscriber token together. The URL is what hands out the
+ * token, so changing only the token would leave anyone with the old URL able
+ * to fetch the new one. Both columns are service-role only, so the write goes
+ * through the admin client after the owner check.
+ */
+export async function resetSceneUrl(sceneId: string): Promise<{ data: { slug: string } | null; error: string | null }> {
   const ctx = await tryAuthContext();
-  if (!ctx) return { error: "Unauthorized" };
+  if (!ctx) return { data: null, error: "Unauthorized" };
 
-  const newToken = randomBytes(32).toString("hex");
-  const { error } = await updateSceneSubscriberToken(ctx.supabase, sceneId, ctx.user.id, newToken);
+  const { data: scene, error: fetchError } = await getOverlaySceneRow(ctx.supabase, sceneId, ctx.user.id);
+  if (fetchError) reportError(fetchError, OVERLAYS_ERROR_SCOPE);
+  if (fetchError || !scene) return { data: null, error: fetchError?.message ?? "Not found" };
+
+  const { data, error } = await updateSceneUrlCredentials(createAdminClient(), sceneId, ctx.user.id, {
+    slug: generateSlug(scene.name),
+    subscriber_token: randomBytes(32).toString("hex"),
+  });
 
   revalidatePath("/dashboard/overlays");
-  if (error) reportError(error, OVERLAYS_ERROR_SCOPE);
-  else {
-    // The old key stops working for sockets that are already open, too.
-    await revokeWsSockets(ctx.user.id, "scene");
-    await track("overlay_key_reset", { overlay_id: sceneId }, ctx.user);
+  if (error || !data) {
+    if (error) reportError(error, OVERLAYS_ERROR_SCOPE);
+    return { data: null, error: error?.message ?? "Couldn't reset the overlay URL." };
   }
-  return { error: error?.message ?? null };
+
+  // Sockets opened with the old token close now, not at the next sweep.
+  await revokeWsSockets(ctx.user.id, "scene");
+  await track("overlay_url_reset", { overlay_id: sceneId, legacy_slug: isLegacySlug(scene.slug) }, ctx.user);
+  return { data: { slug: data.slug }, error: null };
 }
