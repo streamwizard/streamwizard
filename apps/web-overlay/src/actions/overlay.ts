@@ -13,6 +13,8 @@ import {
 } from "@/lib/overlay-route-params";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
+import { MissLimiter } from "@repo/ttl-cache/miss-limiter";
+import { headers } from "next/headers";
 import {
   DISPLAY_FIELD_KEYS,
   type DisplayFieldKey,
@@ -26,6 +28,16 @@ type LoadOverlayErrorCode =
 type LoadOverlayResult =
   | { ok: true; scene: OverlaySceneRow; items: OverlayItemRow[] }
   | { ok: false; code: LoadOverlayErrorCode; message: string };
+
+// Overlay pages load once and then stay open, so a real visitor misses a slug
+// a handful of times at most (a typo, a deleted overlay).
+const slugMisses = new MissLimiter({ limit: 30, windowMs: 60_000 });
+
+const SLUG_NOT_FOUND: LoadOverlayResult = {
+  ok: false,
+  code: "SCENE_NOT_FOUND",
+  message: "No active overlay scene found for that URL.",
+};
 
 function asRecord(j: Json): Record<string, unknown> {
   return typeof j === "object" && j !== null && !Array.isArray(j)
@@ -292,5 +304,13 @@ export async function loadOverlaySceneByOverlayId(
   if (isOverlaySceneUuid(decoded)) {
     return loadOverlayBySlugOrId({ sceneId: decoded });
   }
-  return loadOverlayBySlugOrId({ slug: decoded });
+
+  // The slug is the overlay's only secret, so a caller that keeps missing is
+  // guessing. Past the limit every slug answers "not found" without a query.
+  const ip = (await headers()).get("cf-connecting-ip")?.trim();
+  if (ip && slugMisses.isBlocked(ip)) return SLUG_NOT_FOUND;
+
+  const result = await loadOverlayBySlugOrId({ slug: decoded });
+  if (ip && !result.ok && result.code === "SCENE_NOT_FOUND") slugMisses.recordMiss(ip);
+  return result;
 }

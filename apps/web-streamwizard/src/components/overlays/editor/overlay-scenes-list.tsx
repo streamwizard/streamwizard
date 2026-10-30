@@ -52,6 +52,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ShieldAlert,
   Star,
   Trash2,
   Upload,
@@ -63,11 +64,13 @@ import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 import { env } from "@/lib/env";
+import { isLegacySlug } from "@/lib/overlay-slug";
+import { formatDate } from "@/lib/format";
 import {
   createOverlayScene,
   deleteOverlayScene,
   duplicateOverlayScene,
-  resetSceneSubscriberToken,
+  resetSceneUrl,
   updateOverlayScene,
 } from "@/actions/overlays/scenes";
 import { createOverlayFromTemplate } from "@/actions/overlays/templates";
@@ -119,8 +122,10 @@ export function OverlayScenesList({
   const [templateId, setTemplateId] = useState("blank");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createdScene, setCreatedScene] = useState<OverlayScene | null>(null);
-  const [resetKeyScene, setResetKeyScene] = useState<OverlayScene | null>(null);
-  const [isResettingKey, setIsResettingKey] = useState(false);
+  const [resetUrlScene, setResetUrlScene] = useState<OverlayScene | null>(null);
+  const [isResettingUrl, setIsResettingUrl] = useState(false);
+  // Shown after a reset: the old URL is dead, so the new one has to be copied somewhere.
+  const [newUrlScene, setNewUrlScene] = useState<OverlayScene | null>(null);
   const [deleteScene, setDeleteScene] = useState<OverlayScene | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -261,25 +266,26 @@ export function OverlayScenesList({
   }
 
   /**
-   * Rotates the scene's subscriber token — the key an open overlay page uses to
-   * read and write its own widget state. The browser-source URL keeps working;
-   * anything still holding the old key stops.
+   * Gives the scene a new URL and a new subscriber token. The old URL stops
+   * loading and every page that has it open goes blank, so the new URL is
+   * shown right away for the streamer to paste into OBS (or their phone).
    */
-  async function handleResetKey() {
-    if (!resetKeyScene) return;
-    setIsResettingKey(true);
+  async function handleResetUrl() {
+    if (!resetUrlScene) return;
+    const scene = resetUrlScene;
+    setIsResettingUrl(true);
 
-    const { error } = await resetSceneSubscriberToken(resetKeyScene.id);
+    const { data, error } = await resetSceneUrl(scene.id);
 
-    setIsResettingKey(false);
-    setResetKeyScene(null);
+    setIsResettingUrl(false);
+    setResetUrlScene(null);
 
-    if (error) {
-      toast.error(error);
-    } else {
-      toast.success("Overlay key reset. Refresh the browser source in OBS.");
-      router.refresh();
+    if (error || !data) {
+      toast.error(error ?? "Couldn't reset the overlay URL.");
+      return;
     }
+    setNewUrlScene({ ...scene, slug: data.slug });
+    router.refresh();
   }
 
   async function handleToggleFavourite(scene: OverlayScene) {
@@ -581,8 +587,18 @@ export function OverlayScenesList({
                     </div>
                     <CardDescription className="text-xs">
                       {scene.width}x{scene.height} · Updated{" "}
-                      {new Date(scene.updated_at).toLocaleDateString()}
+                      {formatDate(scene.updated_at)}
                     </CardDescription>
+                    {isLegacySlug(scene.slug) && (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 text-xs text-amber-600 hover:underline dark:text-amber-400"
+                        onClick={() => setResetUrlScene(scene)}
+                      >
+                        <ShieldAlert className="h-3 w-3" aria-hidden />
+                        Old URL format. Upgrade it
+                      </button>
+                    )}
                   </div>
                   <Button
                     variant="ghost"
@@ -626,9 +642,9 @@ export function OverlayScenesList({
                         <Download className="mr-2 h-4 w-4" />
                         Export
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setResetKeyScene(scene)}>
+                      <DropdownMenuItem onClick={() => setResetUrlScene(scene)}>
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        Reset overlay key
+                        Reset overlay URL
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => setDeleteScene(scene)}
@@ -681,24 +697,66 @@ export function OverlayScenesList({
         </div>
       )}
 
-      <AlertDialog open={resetKeyScene !== null} onOpenChange={(open) => !open && setResetKeyScene(null)}>
+      <AlertDialog open={resetUrlScene !== null} onOpenChange={(open) => !open && setResetUrlScene(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Reset the key for {resetKeyScene?.name}?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {resetUrlScene && isLegacySlug(resetUrlScene.slug)
+                ? `Get a new URL for ${resetUrlScene.name}?`
+                : `Reset the URL for ${resetUrlScene?.name}?`}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              Do this if someone else got hold of your overlay. The URL stays the same, but every
-              browser source that has this overlay open right now goes blank until you refresh it in
-              OBS.
+              {resetUrlScene && isLegacySlug(resetUrlScene.slug)
+                ? "This overlay still has an old, short URL that's easier to guess. The new one isn't. "
+                : "Do this if someone else got hold of your overlay URL. "}
+              The current URL stops working right away, so you&apos;ll need to paste the new one into{" "}
+              {resetUrlScene?.render_mode === "gps" ? "your phone's browser" : "the browser source in OBS"}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isResettingKey}>Never mind</AlertDialogCancel>
-            <AlertDialogAction onClick={handleResetKey} disabled={isResettingKey}>
-              {isResettingKey ? "Resetting..." : "Reset key"}
+            <AlertDialogCancel disabled={isResettingUrl}>Never mind</AlertDialogCancel>
+            <AlertDialogAction onClick={handleResetUrl} disabled={isResettingUrl}>
+              {isResettingUrl ? "Resetting..." : "Get new URL"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={newUrlScene !== null} onOpenChange={(open) => !open && setNewUrlScene(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Your new overlay URL</DialogTitle>
+          </DialogHeader>
+          {newUrlScene && (
+            <div className="space-y-4 py-2">
+              <div className="flex gap-2">
+                <Input readOnly value={getOverlayUrl(newUrlScene)} className="text-sm" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  title="Copy URL"
+                  onClick={() => {
+                    navigator.clipboard.writeText(getOverlayUrl(newUrlScene));
+                    trackAction("overlay_url_copied", { overlay_id: newUrlScene.id, location: "url_reset_dialog" });
+                    toast.success("Overlay URL copied");
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {newUrlScene.render_mode === "gps"
+                  ? "Open it in your phone's browser. The old URL doesn't load anymore."
+                  : "In OBS, open the browser source's properties and swap in this URL. The old one doesn't load anymore."}
+              </p>
+              <Button className="w-full" onClick={() => setNewUrlScene(null)}>
+                Done
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={deleteScene !== null}
