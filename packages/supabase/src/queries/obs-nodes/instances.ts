@@ -73,6 +73,24 @@ export async function getInstanceNodeApiUrl(
   return node?.api_url ?? null;
 }
 
+/** The node an instance the user owns runs on: its id (the audience of a node
+ *  token) and its api_url. Same ownership predicate as getInstanceNodeApiUrl. */
+export async function getInstanceNode(
+  client: DBClient,
+  instanceId: string,
+  userId: string,
+): Promise<{ nodeId: string; apiUrl: string | null } | null> {
+  const { data } = await client
+    .from("obs_instances")
+    .select("node_id, obs_nodes(api_url)")
+    .eq("id", instanceId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (!data) return null;
+  const node = Array.isArray(data.obs_nodes) ? data.obs_nodes[0] : data.obs_nodes;
+  return { nodeId: data.node_id, apiUrl: node?.api_url ?? null };
+}
+
 // ── Instance CRUD (used by node-authenticated API endpoints) ─────────────────
 
 export async function listObsInstancesByNode(client: DBClient, nodeId: string): Promise<ObsInstance[]> {

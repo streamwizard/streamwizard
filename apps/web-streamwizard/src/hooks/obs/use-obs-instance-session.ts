@@ -10,6 +10,7 @@ import {
   getMyLatestInstanceAction,
 } from "@/actions/nodes";
 import { useObsLifecycleNotifications } from "@/hooks/obs/use-obs-lifecycle-notifications";
+import { nodeToken } from "@/lib/node-token";
 
 export type ContainerStatus = "running" | "stopped" | "unknown";
 
@@ -81,6 +82,7 @@ export function useObsInstanceSession(options?: {
       ticketPath: `/instances/${instanceId}/ws-ticket`,
       wsPath: `/instances/${instanceId}/obsws`,
       scope: "obsws",
+      getToken: () => nodeToken(instanceId, "ws-ticket"),
     });
   }, [apiUrl, instanceId]);
 

@@ -42,6 +42,7 @@ const ME_TTL_MS = 30 * 1000;
 
 type NodeMePayload = NonNullable<Awaited<ReturnType<typeof getNodeById>>> & {
   command_key_hash: string | null;
+  node_token_jwks: typeof env.NODE_TOKEN_PUBLIC_JWKS;
 };
 
 const meByNodeId = new TtlCache<NodeMePayload>({ ttlMs: ME_TTL_MS });
@@ -294,7 +295,9 @@ nodes.get("/me", nodeAuth(), async (c) => {
     // command_key_hash lets the node validate the obs-auto-switcher's Bearer on
     // its /obs route without ever holding the plaintext command key.
     const command_key_hash = await getNodeCommandKeyHash(supabase, nodeId);
-    return { ...node, command_key_hash };
+    // Public keys only (env.ts refuses a private one). The node verifies the
+    // short-lived tokens web-admin and web-streamwizard sign with them.
+    return { ...node, command_key_hash, node_token_jwks: env.NODE_TOKEN_PUBLIC_JWKS };
   });
   if (!payload) return c.json({ error: "Node not found" }, 404);
   return c.json(payload);

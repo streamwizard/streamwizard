@@ -1,8 +1,9 @@
-import { supabase } from "@repo/supabase/next/client";
+import { nodeAuthHeader } from "@/lib/node-token";
 
 // Client helpers for the obs-instance-manager media file-manager API
-// (/instances/:id/files*). Same Bearer-from-session pattern as
-// instance-actions.ts; apiUrl is the resolved node URL for the instance.
+// (/instances/:id/files*). Each request carries a fresh "files" node token for
+// this one instance, same as instance-actions.ts; apiUrl is the resolved node
+// URL for the instance.
 
 export interface MediaFile {
   path: string;
@@ -16,11 +17,8 @@ export interface MediaListing {
   quota_bytes: number;
 }
 
-async function authHeader(): Promise<string> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) throw new Error("Not signed in.");
-  return `Bearer ${token}`;
+function authHeader(instanceId: string): Promise<string> {
+  return nodeAuthHeader(instanceId, "files");
 }
 
 function base(apiUrl: string, instanceId: string): string {
@@ -28,7 +26,7 @@ function base(apiUrl: string, instanceId: string): string {
 }
 
 export async function listMediaFiles(apiUrl: string, instanceId: string): Promise<MediaListing> {
-  const res = await fetch(base(apiUrl, instanceId), { headers: { Authorization: await authHeader() } });
+  const res = await fetch(base(apiUrl, instanceId), { headers: { Authorization: await authHeader(instanceId) } });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? `Failed to list files (${res.status})`);
@@ -48,7 +46,7 @@ export function uploadMediaFile(
   return new Promise(async (resolve, reject) => {
     let auth: string;
     try {
-      auth = await authHeader();
+      auth = await authHeader(instanceId);
     } catch (err) {
       reject(err);
       return;
@@ -89,7 +87,7 @@ export async function renameMediaFile(
 ): Promise<{ scene_reference_warning: boolean }> {
   const res = await fetch(`${base(apiUrl, instanceId)}/rename`, {
     method: "PATCH",
-    headers: { Authorization: await authHeader(), "Content-Type": "application/json" },
+    headers: { Authorization: await authHeader(instanceId), "Content-Type": "application/json" },
     body: JSON.stringify({ from, to }),
   });
   if (!res.ok) {
@@ -102,7 +100,7 @@ export async function renameMediaFile(
 export async function deleteMediaFile(apiUrl: string, instanceId: string, path: string): Promise<MediaListing> {
   const res = await fetch(base(apiUrl, instanceId), {
     method: "DELETE",
-    headers: { Authorization: await authHeader(), "Content-Type": "application/json" },
+    headers: { Authorization: await authHeader(instanceId), "Content-Type": "application/json" },
     body: JSON.stringify({ path }),
   });
   if (!res.ok) {

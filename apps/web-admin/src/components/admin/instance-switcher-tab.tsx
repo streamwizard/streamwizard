@@ -5,6 +5,7 @@ import { Badge } from "@repo/ui";
 import { AutoSwitcherForm, AutoSwitcherOverrideControls, mintWsUrl, useObsWebSocket } from "@repo/obs-web";
 import type { AutoSwitcherFormValues } from "@repo/schemas";
 import { getInstanceObsWsPasswordAdminAction } from "@/actions/nodes";
+import { adminNodeToken } from "@/lib/node-token";
 import { clearSceneOverrideForUser, setSceneOverrideForUser, upsertAutoSwitcherConfigForUser } from "@/actions/auto-switcher";
 import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher";
 
@@ -36,6 +37,7 @@ export function InstanceSwitcherTab({ userId, instanceId, apiUrl, instanceRunnin
       ticketPath: `/admin/instances/${instanceId}/ws-ticket`,
       wsPath: `/admin/instances/${instanceId}/obsws`,
       scope: "obsws",
+      getToken: () => adminNodeToken({ instanceId }, "admin:ws-ticket"),
     });
   }, [apiUrl, instanceId]);
 

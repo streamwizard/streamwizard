@@ -1,16 +1,12 @@
-import { supabase } from "@repo/supabase/next/client";
+import { nodeAuthHeader } from "@/lib/node-token";
 
 // Calls obs-instance-manager's user-scoped POST /instances/:id/start|stop.
 // Used by the end-user pages (deck, cloud OBS dashboard) where the caller
-// owns the instance.
+// owns the instance. Authorized with a node token, never the session.
 export async function toggleInstance(apiUrl: string, instanceId: string, action: "start" | "stop"): Promise<{ status: string }> {
-  const { data } = await supabase.auth.getSession();
-  const token = data.session?.access_token;
-  if (!token) throw new Error("Not signed in.");
-
   const res = await fetch(`${apiUrl.replace(/\/$/, "")}/instances/${instanceId}/${action}`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { Authorization: await nodeAuthHeader(instanceId, "instances:control") },
   });
 
   if (!res.ok) {

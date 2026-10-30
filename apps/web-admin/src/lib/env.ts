@@ -89,6 +89,11 @@ export const env = createEnv({
     // (stream.online/offline, channel.update) with it. Without it the resync
     // still creates conduit subscriptions and reports the webhook ones.
     TWITCH_WEBHOOK_SECRET: z.string().min(1).optional(),
+    // Ed25519 private JWK that signs the 60-second node tokens sent to OBS
+    // nodes instead of the user's Supabase session (@repo/node-token). Secret,
+    // one per environment, never per node. Optional so the app boots without
+    // it; node calls fail with a clear error until it is set.
+    NODE_TOKEN_SIGNING_JWK: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_WS_SERVER_URL: z.string().min(1).optional(),
@@ -134,6 +139,7 @@ export const env = createEnv({
     TWITCH_CLIENT_SECRET: process.env.TWITCH_CLIENT_SECRET,
     TWITCH_CONDUIT_ID: process.env.TWITCH_CONDUIT_ID,
     TWITCH_WEBHOOK_SECRET: process.env.TWITCH_WEBHOOK_SECRET,
+    NODE_TOKEN_SIGNING_JWK: process.env.NODE_TOKEN_SIGNING_JWK,
     NEXT_PUBLIC_WS_SERVER_URL: process.env.NEXT_PUBLIC_WS_SERVER_URL,
     NEXT_PUBLIC_MONITOR_SECRET: process.env.NEXT_PUBLIC_MONITOR_SECRET,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

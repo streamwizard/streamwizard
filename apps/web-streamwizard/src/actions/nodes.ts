@@ -6,6 +6,7 @@ import { tryAuthContext } from "@/lib/auth";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getTwitchScopes } from "@repo/supabase/queries/twitch-scopes";
 import { missingTwitchScopes } from "@repo/schemas";
+import { signNodeToken } from "@repo/node-token";
 import { getProductAccess, getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions";
 import {
   type ObsInstance,
@@ -118,9 +119,14 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
   const { encryptToken } = await import("@repo/supabase/crypto");
   const { ciphertext, iv, authTag } = encryptToken(obsWsPassword);
 
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData.session?.access_token;
-  if (!token) return { data: null, error: "No active session." };
+  // A 60-second token for this node and this one action, not the session.
+  let token: string;
+  try {
+    token = await signNodeToken({ nodeId: node.id, userId, scope: "instances:create", role: "user" });
+  } catch (err) {
+    console.error("node token signing failed", err);
+    return { data: null, error: "Couldn't reach Cloud OBS right now. Please try again later." };
+  }
 
   const res = await fetch(`${node.api_url.replace(/\/$/, "")}/instances`, {
     method: "POST",
