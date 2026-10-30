@@ -3,6 +3,7 @@
 import { randomUUID } from "crypto";
 import { track } from "@/lib/track";
 import { tryAuthContext } from "@/lib/auth";
+import { getCloudObsAccess, NO_CLOUD_OBS_PLAN } from "@/lib/cloud-obs-access";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getTwitchScopes } from "@repo/supabase/queries/twitch-scopes";
 import { missingTwitchScopes } from "@repo/schemas";
@@ -20,11 +21,21 @@ import {
 // All actions below use the admin client so they can join across
 // obs_instances and obs_nodes without requiring RLS policies on obs_nodes that
 // would expose node data to end users. Ownership is enforced in the query
-// predicate (user_id = userId) rather than via RLS.
+// predicate (user_id = userId) rather than via RLS. The lookups also need the
+// plan (canAccess), like the pages they serve: after a revoke the browser can
+// still hold an instance id, and these hand out the node URL and OBS password.
+
+async function cloudObsContext() {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { ctx: null, error: "Unauthenticated" };
+  const access = await getCloudObsAccess(ctx.supabase);
+  if (!access.canAccess) return { ctx: null, error: NO_CLOUD_OBS_PLAN };
+  return { ctx, error: null };
+}
 
 export async function getMyRunningInstanceAction(): Promise<{ data: ObsInstance | null; error: string | null }> {
-  const ctx = await tryAuthContext();
-  if (!ctx) return { data: null, error: "Unauthenticated" };
+  const { ctx, error } = await cloudObsContext();
+  if (!ctx) return { data: null, error };
   const userId = ctx.user.id;
   const adminClient = createAdminClient();
   const instance = await getUserRunningInstance(adminClient, userId);
@@ -38,8 +49,8 @@ export async function getMyRunningInstanceAction(): Promise<{ data: ObsInstance 
 export async function getInstanceNodeApiUrlAction(
   instanceId: string,
 ): Promise<{ data: { apiUrl: string } | null; error: string | null }> {
-  const ctx = await tryAuthContext();
-  if (!ctx) return { data: null, error: "Unauthenticated" };
+  const { ctx, error } = await cloudObsContext();
+  if (!ctx) return { data: null, error };
   const userId = ctx.user.id;
   const adminClient = createAdminClient();
   const apiUrl = await getInstanceNodeApiUrl(adminClient, instanceId, userId);
@@ -50,8 +61,8 @@ export async function getInstanceNodeApiUrlAction(
 export async function getInstanceObsWsPasswordAction(
   instanceId: string,
 ): Promise<{ data: { password: string } | null; error: string | null }> {
-  const ctx = await tryAuthContext();
-  if (!ctx) return { data: null, error: "Unauthenticated" };
+  const { ctx, error } = await cloudObsContext();
+  if (!ctx) return { data: null, error };
   const userId = ctx.user.id;
 
   const adminClient = createAdminClient();
@@ -67,8 +78,8 @@ export async function getInstanceObsWsPasswordAction(
 
 /** Returns the user's most recent instance regardless of status (e.g. stopped). */
 export async function getMyLatestInstanceAction(): Promise<{ data: ObsInstance | null; error: string | null }> {
-  const ctx = await tryAuthContext();
-  if (!ctx) return { data: null, error: "Unauthenticated" };
+  const { ctx, error } = await cloudObsContext();
+  if (!ctx) return { data: null, error };
   const userId = ctx.user.id;
   const adminClient = createAdminClient();
   const instance = await getUserLatestInstance(adminClient, userId);
