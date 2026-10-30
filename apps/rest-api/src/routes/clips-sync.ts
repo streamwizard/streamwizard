@@ -14,11 +14,11 @@ import { syncTwitch } from "../functions/sync-twitch";
  *
  * Request:
  * - Headers: Authorization: Bearer <token> OR Cookie with Supabase auth token
- * - Body (optional): { skipRecentCheck?: boolean }
+ * - No body. The one-hour throttle can't be turned off from here.
  *
  * Response:
  * - 200: { success: true, clipsCount: number, message: string }
- * - 204: { success: true, skipped: true, message: string } (if sync was skipped due to recent sync)
+ * - 429: { success: false, skipped: true, lastSync, message } (a sync is running or ran in the last hour)
  * - 400: { error: string }
  * - 401: { error: string } (if not authenticated)
  * - 404: { error: string } (if Twitch integration not found)
@@ -34,15 +34,6 @@ export async function syncClipsHandler(c: Context) {
     }
 
     const userId = user.id;
-
-    // Get optional parameters from request body
-    let skipRecentCheck = false;
-    try {
-      const body = await c.req.json();
-      skipRecentCheck = body?.skipRecentCheck === true;
-    } catch {
-      // No body or invalid JSON, use defaults
-    }
 
     // Look up the user's Twitch integration to get their broadcaster_id
     const { data: integration, error: integrationError } = await getTwitchIntegrationWithTokenByUserId(supabase, userId);
@@ -72,17 +63,17 @@ export async function syncClipsHandler(c: Context) {
     const TwitchAPI = new TwitchApi(integration.twitch_user_id);
 
     // Trigger the sync
-    const totalClips = await syncTwitch(integration.twitch_user_id, TwitchAPI, { skipRecentCheck });
+    const totalClips = await syncTwitch(integration.twitch_user_id, TwitchAPI);
 
-    // Check if sync was skipped
-    if (totalClips === null || (typeof totalClips === "object" && "skipped" in totalClips)) {
-      const lastSync = totalClips && "lastSync" in totalClips ? totalClips.lastSync : null;
+    if ("skipped" in totalClips) {
       return c.json(
         {
           success: false,
           skipped: true,
-          lastSync,
-          message: "Sync skipped. Last sync was less than an hour ago.",
+          lastSync: totalClips.lastSync,
+          message: totalClips.running
+            ? "Already syncing your clips. Give it a minute."
+            : "Synced less than an hour ago. Try again later.",
         },
         429,
       );
