@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { importJWK, SignJWT, type JWK } from "jose";
+import { createLocalJWKSet, errors, importJWK, jwtVerify, SignJWT, type JSONWebKeySet, type JWK } from "jose";
 
 // Short-lived tokens for calls to an OBS node's API (obs-instance-manager).
 //
@@ -86,6 +86,46 @@ export async function signNodeToken(input: NodeTokenInput): Promise<string> {
     .setExpirationTime(`${NODE_TOKEN_TTL_SECONDS}s`)
     .setJti(randomUUID())
     .sign(key);
+}
+
+export interface VerifiedNodeToken {
+  userId: string;
+  scope: NodeTokenScope;
+  instanceId: string | null;
+  role: "user" | "admin";
+  jti: string;
+  /** Unix seconds. */
+  expiresAt: number;
+}
+
+const CLOCK_TOLERANCE_SECONDS = 5;
+
+/**
+ * Checks a node token outside the node, for a service a node forwards it to
+ * (rest-api, when a node creates an instance for the user who asked it to).
+ * Same rules the node applies: our issuer, aud = that node, EdDSA, at most a
+ * minute old. Throws on anything else.
+ */
+export async function verifyNodeToken(token: string, jwks: JSONWebKeySet, nodeId: string): Promise<VerifiedNodeToken> {
+  const { payload } = await jwtVerify(token, createLocalJWKSet(jwks), {
+    issuer: NODE_TOKEN_ISSUER,
+    audience: nodeId,
+    algorithms: ["EdDSA"],
+    maxTokenAge: `${NODE_TOKEN_TTL_SECONDS}s`,
+    clockTolerance: CLOCK_TOLERANCE_SECONDS,
+    requiredClaims: ["sub", "exp", "iat", "jti"],
+  });
+
+  const { sub, scope, role, iid, jti, exp } = payload;
+  if (typeof sub !== "string" || !sub) throw new errors.JWTClaimValidationFailed("missing sub", payload, "sub");
+  if (!isUserNodeScope(scope) && !isAdminNodeScope(scope)) {
+    throw new errors.JWTClaimValidationFailed("unknown scope", payload, "scope");
+  }
+  if (role !== "user" && role !== "admin") throw new errors.JWTClaimValidationFailed("unknown role", payload, "role");
+  if (iid !== undefined && typeof iid !== "string") throw new errors.JWTClaimValidationFailed("bad iid", payload, "iid");
+  if (typeof jti !== "string" || !jti) throw new errors.JWTClaimValidationFailed("missing jti", payload, "jti");
+
+  return { userId: sub, scope, instanceId: iid ?? null, role, jti, expiresAt: exp! };
 }
 
 /** Test-only: forget the parsed key so a test can swap NODE_TOKEN_SIGNING_JWK. */

@@ -1,6 +1,6 @@
 import { beforeAll, beforeEach, expect, test } from "bun:test";
 import { calculateJwkThumbprint, createLocalJWKSet, decodeProtectedHeader, exportJWK, generateKeyPair, jwtVerify, type JSONWebKeySet } from "jose";
-import { isAdminNodeScope, isUserNodeScope, NODE_TOKEN_ISSUER, resetSigningKey, signNodeToken } from "./index";
+import { isAdminNodeScope, isUserNodeScope, NODE_TOKEN_ISSUER, resetSigningKey, signNodeToken, verifyNodeToken } from "./index";
 
 let jwks: JSONWebKeySet;
 let kid: string;
@@ -82,4 +82,27 @@ test("user and admin scopes don't overlap", () => {
   expect(isAdminNodeScope("admin:instances")).toBe(true);
   expect(isAdminNodeScope("files")).toBe(false);
   expect(isUserNodeScope("anything")).toBe(false);
+});
+
+test("verifyNodeToken returns the claims for the node it names", async () => {
+  const token = await signNodeToken({ nodeId: "node-a", userId: "user-1", scope: "instances:create", role: "user" });
+  const claims = await verifyNodeToken(token, jwks, "node-a");
+  expect(claims.userId).toBe("user-1");
+  expect(claims.scope).toBe("instances:create");
+  expect(claims.role).toBe("user");
+  expect(claims.instanceId).toBeNull();
+  expect(typeof claims.jti).toBe("string");
+  expect(claims.expiresAt).toBeGreaterThan(Date.now() / 1000);
+});
+
+test("verifyNodeToken refuses a token for another node", async () => {
+  const token = await signNodeToken({ nodeId: "node-a", userId: "user-1", scope: "instances:create", role: "user" });
+  await expect(verifyNodeToken(token, jwks, "node-b")).rejects.toThrow();
+});
+
+test("verifyNodeToken refuses a token signed with another key", async () => {
+  const other = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
+  const otherJwk = await exportJWK(other.publicKey);
+  const token = await signNodeToken({ nodeId: "node-a", userId: "user-1", scope: "instances:create", role: "user" });
+  await expect(verifyNodeToken(token, { keys: [{ ...otherJwk, kid, alg: "EdDSA" }] }, "node-a")).rejects.toThrow();
 });
