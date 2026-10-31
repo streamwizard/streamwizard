@@ -93,6 +93,23 @@ export async function getSubscriptionLimits(
   return plan.limits as unknown as CloudObsPlanLimits;
 }
 
+/** True when the subscription is the user's own and may launch things. */
+export async function isActiveSubscriptionOfUser(
+  supabase: SupabaseClient<Database>,
+  subscriptionId: string,
+  userId: string,
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("user_subscriptions")
+    .select("id")
+    .eq("id", subscriptionId)
+    .eq("user_id", userId)
+    .in("status", INTERACTIVE_SUBSCRIPTION_STATUSES)
+    .or(periodNotOverFilter())
+    .maybeSingle();
+  return data !== null;
+}
+
 /**
  * Returns the ID of the user's subscription for the given product that may
  * launch things (active or trialing, period not over), or null.
