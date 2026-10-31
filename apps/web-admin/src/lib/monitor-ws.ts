@@ -6,7 +6,7 @@ export type MonitorEnvelope = {
   ts: number;
   kind: "message" | "connect" | "disconnect" | "room";
   direction: "inbound" | "outbound" | "system";
-  role: "publisher" | "subscriber" | "bot" | "consumer";
+  role: "subscriber" | "bot" | "consumer";
   roomId: string;
   eventType?: string;
   payload?: unknown;
@@ -14,9 +14,7 @@ export type MonitorEnvelope = {
   source?: string;
   meta?: {
     subscriberCount?: number;
-    hasPublisher?: boolean;
     durationMs?: number;
-    sessionId?: string;
     /** Bot messages: false when no room existed (mirrored for ops anyway). */
     delivered?: boolean;
   };
@@ -63,17 +61,14 @@ export type MonitorNodeBandwidth = {
 
 export type ConnectionSnapshot = {
   connId: string;
-  role: "publisher" | "subscriber";
+  role: "subscriber";
   connectedAt: number;
   channels: string[];
 };
 
 export type RoomSnapshot = {
   roomId: string;
-  hasPublisher: boolean;
   subscriberCount: number;
-  sessionId: string;
-  streamId: string | null;
   connections: ConnectionSnapshot[];
 };
 

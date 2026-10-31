@@ -1,6 +1,6 @@
 "use client";
 
-import { Radio, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { DataList } from "@/components/widgets/data-list";
 import { PageHeader } from "@/components/widgets/page-header";
@@ -8,7 +8,6 @@ import { StatCard } from "@/components/widgets/stat-card";
 import { StatGrid } from "@/components/widgets/stat-grid";
 import { StatusIndicator } from "@/components/widgets/status-indicator";
 import { useWideScreen } from "@/hooks/use-wide-screen";
-import { cn } from "@/lib/utils";
 import { useMonitor } from "@/components/ws-monitor-provider";
 
 export function WsRoomTable() {
@@ -18,7 +17,6 @@ export function WsRoomTable() {
 
   const rooms = snapshot?.rooms ?? [];
   const totalConnections = snapshot?.totalConnections ?? 0;
-  const publishersOnline = rooms.filter((r) => r.hasPublisher).length;
   const totalSubscribers = rooms.reduce((acc, r) => acc + r.subscriberCount, 0);
 
   const recentByRoom = new Map<string, { eventType: string; ts: number }>();
@@ -40,10 +38,9 @@ export function WsRoomTable() {
         />
       </PageHeader>
 
-      <StatGrid cols={4}>
+      <StatGrid cols={3}>
         <StatCard title="Active rooms" value={rooms.length} />
         <StatCard title="Connections" value={totalConnections} />
-        <StatCard title="Publishers online" value={publishersOnline} />
         <StatCard title="Total subscribers" value={totalSubscribers} />
       </StatGrid>
 
@@ -71,23 +68,6 @@ export function WsRoomTable() {
                   cell: (room) => <span className="font-mono text-xs break-all">{room.roomId}</span>,
                 },
                 {
-                  key: "publisher",
-                  header: "Publisher",
-                  mobile: "badge",
-                  cell: (room) => (
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "font-normal",
-                        room.hasPublisher ? "border-green-600/30 bg-green-600/20 text-green-700 dark:text-green-400" : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      <Radio className="mr-1 h-3 w-3" aria-hidden />
-                      {room.hasPublisher ? "Online" : "Offline"}
-                    </Badge>
-                  ),
-                },
-                {
                   key: "subscribers",
                   header: "Subscribers",
                   cell: (room) => (
@@ -96,18 +76,6 @@ export function WsRoomTable() {
                       {room.subscriberCount}
                     </span>
                   ),
-                },
-                {
-                  key: "stream",
-                  header: "Stream",
-                  // The whole id, wrapped: a cut-off id can't be read or copied on a phone.
-                  className: "whitespace-normal",
-                  cell: (room) =>
-                    room.streamId ? (
-                      <span className="font-mono text-xs break-all text-muted-foreground">{room.streamId}</span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    ),
                 },
                 {
                   key: "last-event",

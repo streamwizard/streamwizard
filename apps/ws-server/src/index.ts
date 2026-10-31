@@ -25,7 +25,6 @@ const server = Bun.serve<ConnectionData>({
 // Ping all connections every 30 s to keep them alive through Cloudflare (100 s idle timeout)
 setInterval(() => {
   for (const room of rooms.values()) {
-    room.publisher?.ping();
     for (const sub of room.subscribers) {
       sub.ping();
     }

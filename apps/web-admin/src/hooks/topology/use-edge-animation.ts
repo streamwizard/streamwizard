@@ -84,11 +84,6 @@ export function useEdgeAnimation(
         for (const ce of connEdges) {
           emit(ce.id, DOT_TRAVEL_MS * 2, true);
         }
-      } else if (evt.role === "publisher") {
-        emit(roomEdgeId, 0, !hasConnEdges);
-        for (const ce of connEdges) {
-          emit(ce.id, DOT_TRAVEL_MS, true);
-        }
       }
     }
   }, [events, enabled, emitDot]);

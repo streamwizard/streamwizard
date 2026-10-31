@@ -9,7 +9,6 @@ import type { StreamOfflineEvent } from "@repo/schemas";
 import { syncTwitch } from "../sync-twitch";
 import { streamEventsLogger } from "@repo/logger";
 import { viewerCountPoller } from "../../services/viewer-count-poller";
-import { notifyStreamStatus } from "../../lib/ws-server";
 import { setStreamUserState } from "../../lib/user-state";
 import { findVideoIdForStream } from "../../lib/stream-video";
 import { markStreamOffline } from "../../lib/stream-offline-marker";
@@ -55,9 +54,6 @@ export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: 
     broadcaster_name: event.broadcaster_user_name,
   });
 
-  // Clear stream_id on a still-connected GPS overlay room so fixes logged
-  // after the stream ends aren't attributed to it.
-  await notifyStreamStatus(event.broadcaster_user_id, null);
   await setStreamUserState(event.broadcaster_user_id, null);
 
   // Last chance to attach the archive video to the stream row. The poller

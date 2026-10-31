@@ -45,7 +45,6 @@ function RoomTopologyInner({ roomId }: { roomId: string }) {
 
   const room = snapshot?.rooms.find((r) => r.roomId === roomId) ?? null;
 
-  const DOT_TRAVEL_MS = 600;
   type EdgeState = { trigger: number; isLast: boolean };
   const [activeEdges, setActiveEdges] = useState<Map<string, EdgeState>>(new Map());
   const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
@@ -85,13 +84,9 @@ function RoomTopologyInner({ roomId }: { roomId: string }) {
       if (evt === prevHead) break;
       if (evt.kind !== "message" || evt.roomId !== roomId) continue;
 
-      if (evt.role === "publisher" || evt.role === "bot") {
-        const pubConn = conns.find((c) => c.role === "publisher");
-        if (pubConn) {
-          activateEdge(`e-conn-${pubConn.connId}-room`, 0, !hasSubscribers);
-        }
+      if (evt.role === "bot" && hasSubscribers) {
         for (const subEdgeId of subEdgeIds) {
-          activateEdge(subEdgeId, pubConn ? DOT_TRAVEL_MS : 0, true);
+          activateEdge(subEdgeId, 0, true);
         }
       }
     }
@@ -118,39 +113,13 @@ function RoomTopologyInner({ roomId }: { roomId: string }) {
       position: { x: CENTER_X - 80, y: CENTER_Y - 40 },
       data: {
         roomId: room.roomId,
-        hasPublisher: room.hasPublisher,
         subscriberCount: room.subscriberCount,
-        streamId: room.streamId,
         isAnimating,
       },
     });
 
     const conns = room.connections ?? [];
-    const publishers = conns.filter((c) => c.role === "publisher");
     const subscribers = conns.filter((c) => c.role === "subscriber");
-
-    publishers.forEach((pub, i) => {
-      const nodeId = `conn-${pub.connId}`;
-      nodes.push({
-        id: nodeId,
-        type: "connectionNode",
-        position: { x: CENTER_X - 280 - i * 30, y: CENTER_Y - 30 },
-        data: {
-          connId: pub.connId,
-          role: pub.role,
-          connectedAt: pub.connectedAt,
-          channels: pub.channels,
-        },
-      });
-      edges.push({
-        id: `e-${nodeId}-room`,
-        source: nodeId,
-        target: "room-center",
-        type: "animatedEdge",
-        style: { stroke: "#60a5fa", strokeWidth: 2 },
-        data: { dotColor: "#60a5fa" },
-      });
-    });
 
     const subCount = subscribers.length;
     subscribers.forEach((sub, i) => {
@@ -241,8 +210,6 @@ function RoomTopologyInner({ roomId }: { roomId: string }) {
               <>
                 <span className="text-muted-foreground/40">|</span>
                 <span>{room.subscriberCount} subscribers</span>
-                <span className="text-muted-foreground/40">|</span>
-                <span>Publisher {room.hasPublisher ? "online" : "offline"}</span>
               </>
             )}
           </p>

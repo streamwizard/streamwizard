@@ -123,9 +123,7 @@ export function useTopologyLayout(
         position: { x: 0, y: 0 },
         data: {
           roomId: room.roomId,
-          hasPublisher: room.hasPublisher,
           subscriberCount: room.subscriberCount,
-          streamId: room.streamId,
           isAnimating: false,
         },
       });
@@ -156,7 +154,7 @@ export function useTopologyLayout(
             },
           });
 
-          const connColor = conn.role === "publisher" ? "#60a5fa" : "#4ade80";
+          const connColor = "#4ade80";
           edges.push({
             id: `e-${roomNodeId}-${connNodeId}`,
             source: roomNodeId,

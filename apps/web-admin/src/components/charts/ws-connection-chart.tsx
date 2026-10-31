@@ -24,7 +24,6 @@ interface Props {
 }
 
 const ROLE_SERIES = [
-  { role: "publisher", gradientId: "gPublisher", color: "var(--chart-1)" },
   { role: "subscriber", gradientId: "gSubscriber", color: "var(--chart-2)" },
   { role: "bot", gradientId: "gBot", color: "var(--chart-3)" },
 ] as const;

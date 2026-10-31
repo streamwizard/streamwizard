@@ -7,7 +7,7 @@ import { env } from "./env";
 /**
  * The widget route's user-state service. Web-overlay holds no bot socket, so
  * pushes go over ws-server's /internal/broadcast HTTP endpoint — the same
- * server-to-server path rest-api uses for stream-status. Best-effort by
+ * server-to-server path rest-api uses for user state. Best-effort by
  * design (the service already treats broadcast failures as log-and-continue);
  * unconfigured CONSUMER_SECRET simply means no live push.
  */

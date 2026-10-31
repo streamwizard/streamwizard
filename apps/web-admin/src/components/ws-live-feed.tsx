@@ -12,7 +12,6 @@ import { useMonitor } from "@/components/ws-monitor-provider";
 import type { MonitorEnvelope } from "@/lib/monitor-ws";
 
 const ROLE_COLORS: Record<string, string> = {
-  publisher: "bg-blue-600/20 text-blue-400 border-blue-600/30",
   subscriber: "bg-green-600/20 text-green-400 border-green-600/30",
   bot: "bg-purple-600/20 text-purple-400 border-purple-600/30",
   consumer: "bg-orange-600/20 text-orange-400 border-orange-600/30",
@@ -36,7 +35,7 @@ function formatTs(ts: number): string {
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", fractionalSecondDigits: 1 } as Intl.DateTimeFormatOptions);
 }
 
-type RoleFilter = "all" | "publisher" | "subscriber" | "bot" | "consumer";
+type RoleFilter = "all" | "subscriber" | "bot" | "consumer";
 type KindFilter = "all" | "message" | "connect" | "disconnect" | "room";
 
 export function WsLiveFeed() {
@@ -96,7 +95,6 @@ export function WsLiveFeed() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All roles</SelectItem>
-              <SelectItem value="publisher">Publisher</SelectItem>
               <SelectItem value="subscriber">Subscriber</SelectItem>
               <SelectItem value="bot">Bot</SelectItem>
               <SelectItem value="consumer">Consumer</SelectItem>
@@ -211,9 +209,7 @@ function EventDetail({ event }: { event: MonitorEnvelope }) {
       {event.meta && (
         <div className="flex gap-4 text-muted-foreground">
           {event.meta.subscriberCount !== undefined && <span>Subscribers: {event.meta.subscriberCount}</span>}
-          {event.meta.hasPublisher !== undefined && <span>Publisher: {event.meta.hasPublisher ? "yes" : "no"}</span>}
           {event.meta.durationMs !== undefined && <span>Duration: {(event.meta.durationMs / 1000).toFixed(1)}s</span>}
-          {event.meta.sessionId && <span className="font-mono">Session: {event.meta.sessionId.slice(0, 8)}…</span>}
         </div>
       )}
       {event.payload !== undefined && event.payload !== null && (
