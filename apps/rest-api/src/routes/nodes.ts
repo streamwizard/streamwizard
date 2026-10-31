@@ -22,11 +22,12 @@ import {
   updateObsInstanceByContainerIdForNode,
   userHasInstanceOnNode,
 } from "@repo/supabase/queries/obs-nodes";
-import { getSubscriptionLimits } from "@repo/supabase/queries/subscriptions";
+import { getSubscriptionLimits, isActiveSubscriptionOfUser } from "@repo/supabase/queries/subscriptions";
 import { env } from "../lib/env";
 import { mintTailscaleAuthKey } from "../lib/tailscale";
 import { nodeAuth } from "../middleware/node-auth";
 import { getStreamKeyForUser } from "../lib/twitch-stream-key";
+import { checkInstanceCreateToken } from "../lib/instance-create-token";
 import { TtlCache } from "@repo/ttl-cache";
 
 const nodes = new Hono();
@@ -370,6 +371,23 @@ nodes.post("/instances", nodeAuth(), async (c) => {
   if (!parsed.success) {
     return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
   }
+  const { user_id: userId, subscription_id: subscriptionId } = parsed.data;
+
+  // user_id comes from the node, so it has to be backed by the user's own
+  // launch token. See lib/instance-create-token.ts.
+  const tokenCheck = await checkInstanceCreateToken({
+    token: c.req.header("X-Node-Token"),
+    nodeId,
+    userId,
+    jwks: env.NODE_TOKEN_PUBLIC_JWKS,
+    required: env.NODE_CREATE_TOKEN_REQUIRED,
+  });
+  if (!tokenCheck.ok) return c.json({ error: tokenCheck.error }, tokenCheck.status);
+
+  if (subscriptionId && !(await isActiveSubscriptionOfUser(supabase, subscriptionId, userId))) {
+    return c.json({ error: "Subscription not found or inactive" }, 403);
+  }
+
   try {
     // node_id is forced to the authenticated node, never taken from the body.
     const instance = await insertObsInstance(supabase, { ...parsed.data, node_id: nodeId });
@@ -451,7 +469,8 @@ nodes.get("/users/:userId/stream-key", nodeAuth(), async (c) => {
 
   // The stream key is a live broadcast credential. Only hand it to a node that
   // actually hosts an instance for this user — otherwise a single compromised
-  // node key could enumerate every user's Twitch stream key.
+  // node key could enumerate every user's Twitch stream key. That only holds
+  // because a row needs the user's own launch token (POST /instances).
   if (!(await userHasInstanceOnNode(supabase, userId, nodeId))) {
     return c.json({ error: "Forbidden" }, 403);
   }
