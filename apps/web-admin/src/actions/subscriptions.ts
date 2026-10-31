@@ -14,10 +14,12 @@ import {
   getPlanProductId,
   getPlanWithProduct,
   getSubscriptionWithPlan,
+  getUserActiveSubscriptionId,
   updateSubscriptionGrant,
   upsertSubscriptionGrant,
 } from "@repo/supabase/queries/subscriptions";
-import { updateObsInstancesByUser } from "@repo/supabase/queries/obs-nodes";
+import { listRunningObsInstancesByUser, updateObsInstancesByUser } from "@repo/supabase/queries/obs-nodes";
+import { toggleInstanceAdminAction } from "@/actions/nodes";
 import { revalidatePath } from "next/cache";
 
 // Product whose plans carry cloud-OBS resource limits + a config_template folder.
@@ -138,6 +140,11 @@ export async function revokeSubscriptionAction(subscriptionId: string) {
       "web-admin subscriptions",
     );
   }
+
+  if (before && firstPlan(before.plans)?.product_id === CLOUD_OBS_PRODUCT_ID) {
+    await stopCloudObsWithoutPlan(adminClient, before.user_id);
+  }
+
   revalidateGrants();
   return { error: null };
 }
@@ -198,8 +205,37 @@ export async function updateSubscriptionAction(
       );
     }
   }
+  // past_due is read-only and an expiry in the past ends the plan, so either
+  // can leave a running container without a plan behind it.
+  if (before && firstPlan(before.plans)?.product_id === CLOUD_OBS_PRODUCT_ID) {
+    await stopCloudObsWithoutPlan(adminClient, before.user_id);
+  }
+
   revalidateGrants();
   return { error: null };
+}
+
+// ── Cloud OBS containers on plan loss (SW-478) ───────────────────────────────
+
+/**
+ * Stops the user's running Cloud OBS containers when they no longer hold a
+ * plan that may run them (another active grant for the product keeps them
+ * up). Best-effort: the subscription change already happened, and each node's
+ * plan sweep stops whatever this misses within a few minutes.
+ */
+async function stopCloudObsWithoutPlan(client: AdminClient, userId: string) {
+  try {
+    if (await getUserActiveSubscriptionId(client, userId, CLOUD_OBS_PRODUCT_ID)) return;
+    const running = await listRunningObsInstancesByUser(client, userId);
+    await Promise.all(
+      running.map(async (instance) => {
+        const { error } = await toggleInstanceAdminAction(instance.node_id, instance.id, "stop");
+        if (error) reportError(new Error(error), "actions/subscriptions:stop-instances");
+      }),
+    );
+  } catch (e) {
+    reportError(e, "actions/subscriptions:stop-instances");
+  }
 }
 
 // ── Platform log (SW-334) ────────────────────────────────────────────────────

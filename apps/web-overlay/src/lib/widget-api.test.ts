@@ -12,7 +12,7 @@ mock.module("@repo/supabase/queries/overlays", () => ({
   getOverlaySceneBySubscriberToken: async () => ({ data: null }),
 }));
 
-const { isPlausibleToken, isRateLimited } = await import("./widget-api");
+const { isPlausibleToken, isRateLimited, isUsersLookupLimited, takeUsersHelixBudget } = await import("./widget-api");
 
 const token = (fill: string) => fill.repeat(64);
 
@@ -38,5 +38,20 @@ describe("isRateLimited", () => {
     for (let i = 0; i < 60; i++) expect(isRateLimited(t)).toBe(false);
     expect(isRateLimited(t)).toBe(true);
     expect(isRateLimited(token("c"))).toBe(false);
+  });
+});
+
+describe("isUsersLookupLimited", () => {
+  test("allows 60 user lookups a minute per channel, whatever token they came in on", () => {
+    for (let i = 0; i < 60; i++) expect(isUsersLookupLimited("111")).toBe(false);
+    expect(isUsersLookupLimited("111")).toBe(true);
+    expect(isUsersLookupLimited("222")).toBe(false);
+  });
+});
+
+describe("takeUsersHelixBudget", () => {
+  test("hands out 120 Helix batches a minute for the whole instance, then refuses", () => {
+    for (let i = 0; i < 120; i++) expect(takeUsersHelixBudget()).toBe(true);
+    expect(takeUsersHelixBudget()).toBe(false);
   });
 });

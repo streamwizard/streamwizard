@@ -16,18 +16,25 @@ import {
   isUserAdmin,
   listObsInstancesByNode,
   listObsInstancesByUserOnNode,
+  listRunningObsInstancesByNode,
   sumAllocatedVramForNode,
   updateNodeTailscaleIp,
   updateObsInstanceForNode,
   updateObsInstanceByContainerIdForNode,
   userHasInstanceOnNode,
 } from "@repo/supabase/queries/obs-nodes";
-import { getSubscriptionLimits, isActiveSubscriptionOfUser } from "@repo/supabase/queries/subscriptions";
+import {
+  getSubscriptionLimits,
+  getUserActiveSubscriptionId,
+  isActiveSubscriptionOfUser,
+  usersWithActiveSubscription,
+} from "@repo/supabase/queries/subscriptions";
 import { env } from "../lib/env";
 import { mintTailscaleAuthKey } from "../lib/tailscale";
 import { nodeAuth } from "../middleware/node-auth";
 import { getStreamKeyForUser } from "../lib/twitch-stream-key";
 import { checkInstanceCreateToken } from "../lib/instance-create-token";
+import { unentitledInstanceIds } from "../lib/cloud-obs-plan";
 import { TtlCache } from "@repo/ttl-cache";
 
 const nodes = new Hono();
@@ -353,6 +360,20 @@ nodes.get("/instances/active-count", nodeAuth(), async (c) => {
   return c.json({ count });
 });
 
+// Running instances on this node whose owner has lost their Cloud OBS plan.
+// The node polls this and stops them, which covers a grant that simply
+// expires (no event fires for that) and backs up the stop web-admin sends on
+// revoke. A lookup failure is a 500, never an empty "stop nothing" or a full
+// "stop everything" answer.
+nodes.get("/instances/unentitled", nodeAuth(), async (c) => {
+  const nodeId = c.get("nodeId");
+  const running = await listRunningObsInstancesByNode(supabase, nodeId);
+  const ids = await unentitledInstanceIds(running, (userIds) =>
+    usersWithActiveSubscription(supabase, userIds, "cloud_obs"),
+  );
+  return c.json({ instance_ids: ids });
+});
+
 nodes.get("/instances/:id", nodeAuth(), async (c) => {
   const nodeId = c.get("nodeId");
   const id = c.req.param("id");
@@ -456,6 +477,21 @@ nodes.get("/users/:userId/is-admin", nodeAuth(), async (c) => {
   const userId = c.req.param("userId");
   const admin = await isUserAdmin(supabase, userId);
   return c.json({ is_admin: admin });
+});
+
+// Whether this user may start their Cloud OBS instance: an active or trialing
+// plan whose period hasn't ended. The node asks before every user start, since
+// the plan can be revoked after the instance was created. Checked by user and
+// product, not the instance's subscription_id, which a regrant leaves stale.
+// Like the stream key, only answered for users with an instance on this node.
+nodes.get("/users/:userId/cloud-obs-access", nodeAuth(), async (c) => {
+  const nodeId = c.get("nodeId");
+  const userId = c.req.param("userId");
+  if (!(await userHasInstanceOnNode(supabase, userId, nodeId))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+  const subscriptionId = await getUserActiveSubscriptionId(supabase, userId, "cloud_obs");
+  return c.json({ can_interact: subscriptionId !== null });
 });
 
 // ── Stream key ────────────────────────────────────────────────────────────────

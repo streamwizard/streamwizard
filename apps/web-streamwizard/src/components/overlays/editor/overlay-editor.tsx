@@ -38,6 +38,7 @@ import {
 } from "@/components/overlays/widgets/custom/widget-cache";
 import { DemoDeck } from "@/components/demo/demo-deck";
 import { env } from "@/lib/env";
+import { isLegacySlug } from "@/lib/overlay-slug";
 import { asCustomWidgetConfig } from "@/types/overlays";
 import type {
   OverlayItemConfig,
@@ -653,7 +654,12 @@ export function OverlayEditor({ initialScene, clipFolders, initialWidgets, rende
               const url = `${env.NEXT_PUBLIC_OVERLAY_URL}/${scene.slug}`;
               navigator.clipboard.writeText(url);
               trackAction("overlay_url_copied", { overlay_id: scene.id, location: "editor" });
-              toast.success("Overlay URL copied");
+              toast.success(
+                "Overlay URL copied",
+                isLegacySlug(scene.slug)
+                  ? { description: "It's an old, short URL. Get a safer one from the overlay list: ⋮ → Reset overlay URL." }
+                  : undefined,
+              );
             }}
             title="Copy OBS browser source URL"
           >

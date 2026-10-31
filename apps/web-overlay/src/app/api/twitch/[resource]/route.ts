@@ -24,6 +24,8 @@ import {
   corsHeaders,
   isPlausibleToken,
   isRateLimited,
+  isUsersLookupLimited,
+  takeUsersHelixBudget,
 } from "@/lib/widget-api";
 
 /**
@@ -171,7 +173,8 @@ async function handle(
       if (raw.some((id) => !/^\d+$/.test(id))) {
         return { error: "Ids must be numeric Twitch user ids", status: 400 };
       }
-      return { data: { users: await resolveUsers(raw) } };
+      if (isUsersLookupLimited(broadcasterId)) return { error: "Rate limited", status: 429 };
+      return { data: { users: await resolveUsers(raw, { allowFetch: takeUsersHelixBudget }) } };
     }
 
     case "game": {

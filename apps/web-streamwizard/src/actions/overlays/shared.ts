@@ -7,16 +7,7 @@ import type { z } from "zod";
 
 export const OVERLAYS_ERROR_SCOPE = "actions/overlays";
 
-export function generateSlug(name: string): string {
-  return (
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "") +
-    "-" +
-    Math.random().toString(36).substring(2, 8)
-  );
-}
+export { generateSlug } from "@/lib/overlay-slug";
 
 /**
  * Editor state holds not-yet-saved items under `temp-*` ids, so "has an id"

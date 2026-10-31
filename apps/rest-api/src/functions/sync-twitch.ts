@@ -1,21 +1,26 @@
 import { reportError } from "@repo/sentry";
 import { supabase, Database } from "@repo/supabase";
 import { getTwitchIntegrationByBroadcasterId, getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
-import { getClipSync, upsertClipSync, startClipSync, updateClipSyncStatus } from "@repo/supabase/queries/sync";
+import { claimClipSync, updateClipSyncStatus } from "@repo/supabase/queries/sync";
 import { upsertClips } from "@repo/supabase/queries/clips";
 import { getVodsByVideoIds } from "@repo/supabase/queries/vods";
 import type { TwitchApi } from "@repo/twitch-api";
+
+/** One full sync per user per hour. Each one fans out over Helix /clips on the shared app token. */
+const SYNC_COOLDOWN_MS = 60 * 60 * 1000;
 
 /**
  * Syncs Twitch clips for a given broadcaster_id.
  * This function can be called from multiple endpoints.
  * @param broadcaster_id - The Twitch broadcaster/user ID to sync clips for
  * @param TwitchAPI - The TwitchApi instance to use for API calls
- * @param options - Optional configuration
- * @param options.skipRecentCheck - Skip the 1-hour check for recent syncs (default: false)
- * @returns The total number of clips synced, or null if sync was skipped
+ * @returns The total number of clips synced, or `skipped` when a sync is
+ * already running or one started less than an hour ago
  */
-export async function syncTwitch(broadcaster_id: string, TwitchAPI: TwitchApi, options: { skipRecentCheck?: boolean } = {}): Promise<{ clipsCount: number } | { skipped: true; lastSync: string }| null> {
+export async function syncTwitch(
+  broadcaster_id: string,
+  TwitchAPI: TwitchApi,
+): Promise<{ clipsCount: number } | { skipped: true; running: boolean; lastSync: string | null }> {
   // Look up the user from the broadcaster_id
   const { data: user, error: userError } = await getTwitchIntegrationByBroadcasterId(supabase, broadcaster_id);
 
@@ -23,26 +28,9 @@ export async function syncTwitch(broadcaster_id: string, TwitchAPI: TwitchApi, o
     throw new Error(`User not found for broadcaster_id: ${broadcaster_id}`);
   }
 
-  // Check if the last sync was more than an hour ago (unless skipRecentCheck is true)
-  const lastSync = await getClipSync(supabase, user.user_id);
-
-  const now = new Date();
-  if (!options.skipRecentCheck && lastSync && lastSync.last_sync) {
-    const lastSyncDate = new Date(lastSync.last_sync);
-    const diffTime = Math.abs(now.getTime() - lastSyncDate.getTime());
-    const diffHours = diffTime / (1000 * 60 * 60);
-
-    if (diffHours < 1 && lastSync.sync_status === "completed") {
-      console.log("last sync was less than an hour ago, skipping sync");
-      return { skipped: true, lastSync: lastSync.last_sync };
-    }
-  }
-
-  // Create a new sync or update existing one
-  if (lastSync) {
-    await startClipSync(supabase, user.user_id, now.toISOString());
-  } else {
-    await upsertClipSync(supabase, user.user_id, now.toISOString());
+  const claim = await claimClipSync(supabase, user.user_id, new Date(), SYNC_COOLDOWN_MS);
+  if (!claim.claimed) {
+    return { skipped: true, running: claim.status === "syncing", lastSync: claim.lastSync };
   }
 
   try {

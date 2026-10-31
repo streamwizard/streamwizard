@@ -201,16 +201,22 @@ export async function getLatestSubscriberToken(client: DBClient, userId: string)
     .maybeSingle();
 }
 
-/** Rotates the token that authorizes read-only overlay subscribers. */
-export async function updateSceneSubscriberToken(
+/**
+ * Gives a scene a new URL and a new subscriber token in one write. Only the
+ * service role may change these two columns, so `client` must be an admin
+ * client; the user_id filter is what keeps it to the caller's own scene.
+ */
+export async function updateSceneUrlCredentials(
   client: DBClient,
   sceneId: string,
   userId: string,
-  token: string,
+  credentials: { slug: string; subscriber_token: string },
 ) {
   return client
     .from("overlay_scenes")
-    .update({ subscriber_token: token })
+    .update(credentials)
     .eq("id", sceneId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .select("slug")
+    .single();
 }
