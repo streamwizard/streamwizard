@@ -109,7 +109,9 @@ Use `logo-black.png` only where a mask cannot be applied and the background is g
 
 Maskable icons get cropped to a circle or squircle by the OS. Keep all meaningful content inside the center 80% safe zone, and let the padding be background.
 
-**TODO: there is no vector master.** Everything above is PNG, exported from a source nobody has committed. Producing an SVG master is open question 1 in governance.
+The current mark is the October 2026 redraw: a narrower hat with heavier strokes and a reworked beard. Every asset above is generated from one export of it, "StreamWizard Logo White Transparent 1259x1259.png". Keep each file's layout when regenerating: the transparent marks fill the full canvas height, the dark app icons hold the mark at 87.5% of the height, and the maskable icons hold it at 70%.
+
+**TODO: there is no vector master.** Everything above is PNG, and the largest export is 1259px. Producing an SVG master is open question 1 in governance.
 
 ### Clear space and minimum size
 
