@@ -112,15 +112,51 @@ export async function broadcasterIdForToken(token: string): Promise<string | nul
  */
 const RATE_LIMIT = 60;
 const RATE_WINDOW_MS = 60_000;
-const buckets = new TtlCache<{ count: number }>({ ttlMs: RATE_WINDOW_MS, maxEntries: 5000 });
+
+/** Fixed-window counter: true once `key` has gone past `limit` this window. */
+function windowCounter(limit: number, maxEntries = 5000) {
+  const buckets = new TtlCache<{ count: number }>({ ttlMs: RATE_WINDOW_MS, maxEntries });
+  return (key: string): boolean => {
+    const entry = buckets.get(key);
+    if (!entry) {
+      buckets.set(key, { count: 1 });
+      return false;
+    }
+    entry.count++;
+    return entry.count > limit;
+  };
+}
+
+const tokenLimited = windowCounter(RATE_LIMIT);
 
 export function isRateLimited(token: string): boolean {
   if (!isPlausibleToken(token)) return true;
-  const entry = buckets.get(token);
-  if (!entry) {
-    buckets.set(token, { count: 1 });
-    return false;
-  }
-  entry.count++;
-  return entry.count > RATE_LIMIT;
+  return tokenLimited(token);
+}
+
+/**
+ * `users` is the one resource that takes ids from the caller, and its misses
+ * go to Helix on the shared app token. A per-token limit alone doesn't bound
+ * that: every scene has its own token and a token can be reset, so one account
+ * could hold any number of buckets. This one is keyed on the channel the token
+ * resolves to, so all of an owner's scenes share it.
+ */
+const USERS_PER_OWNER_LIMIT = 60;
+const ownerLimited = windowCounter(USERS_PER_OWNER_LIMIT);
+
+export function isUsersLookupLimited(broadcasterId: string): boolean {
+  return ownerLimited(broadcasterId);
+}
+
+/**
+ * Helix `/users` batches this instance may send per minute for widget lookups,
+ * across every owner. The app token's bucket also serves EventSub, badges,
+ * stream state and the rest, so widget lookups get a slice of it, never all
+ * of it. Past the cap a request still answers, with cached users only.
+ */
+const USERS_HELIX_BUDGET = 120;
+const helixBudgetSpent = windowCounter(USERS_HELIX_BUDGET, 1);
+
+export function takeUsersHelixBudget(): boolean {
+  return !helixBudgetSpent("users");
 }
