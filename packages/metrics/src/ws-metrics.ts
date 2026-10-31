@@ -2,7 +2,7 @@ import { Point } from "@influxdata/influxdb-client";
 import { pushPoint } from "./influx-client";
 
 export function trackWsConnection(
-  role: "publisher" | "subscriber" | "bot" | "consumer",
+  role: "subscriber" | "bot" | "consumer",
   event: "open" | "close",
   durationMs?: number,
   source?: string,
@@ -25,7 +25,7 @@ export function trackWsConnection(
   pushPoint(point);
 }
 
-export function trackWsMessage(role: "publisher" | "subscriber" | "bot" | "consumer", messageType: string, source?: string): void {
+export function trackWsMessage(role: "subscriber" | "bot" | "consumer", messageType: string, source?: string): void {
   const point = new Point("ws_message")
     .tag("service", "ws-server")
     .tag("role", role)
@@ -40,7 +40,7 @@ export function trackWsMessage(role: "publisher" | "subscriber" | "bot" | "consu
 }
 
 export function trackWsAuthFailure(
-  role: "publisher" | "subscriber" | "bot" | "consumer" | "unknown",
+  role: "subscriber" | "bot" | "consumer" | "unknown",
   reason: "rate_limited" | "invalid_token" | "missing_token" | "invalid_role" | "invalid_bot_key" | "upgrade_failed",
 ): void {
   pushPoint(
@@ -53,8 +53,8 @@ export function trackWsAuthFailure(
 }
 
 export function trackWsMessageDrop(
-  role: "publisher" | "subscriber" | "bot",
-  reason: "room_not_found" | "malformed_json" | "malformed_node_metrics" | "not_primary",
+  role: "subscriber" | "bot",
+  reason: "room_not_found" | "malformed_json" | "malformed_node_metrics",
 ): void {
   pushPoint(
     new Point("ws_message_drop")
@@ -66,7 +66,7 @@ export function trackWsMessageDrop(
 }
 
 export function trackWsRoomEvent(
-  event: "created" | "deleted" | "publisher_joined" | "publisher_left" | "publisher_replaced",
+  event: "created" | "deleted",
 ): void {
   pushPoint(
     new Point("ws_room")

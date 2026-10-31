@@ -67,7 +67,6 @@ mock.module("../../services/viewer-count-poller", () => ({
     },
   },
 }));
-mock.module("../../lib/ws-server", () => ({ notifyStreamStatus: async () => {} }));
 mock.module("../../lib/user-state", () => ({ setStreamUserState: async () => {} }));
 mock.module("../../lib/platform-events", () => ({
   logStreamOnlineFailed: async (...args: unknown[]) => {

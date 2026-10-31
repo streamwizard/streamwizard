@@ -4,7 +4,7 @@ export interface MonitorEnvelope {
   ts: number;
   kind: "message" | "connect" | "disconnect" | "room" | "snapshot";
   direction: "inbound" | "outbound" | "system";
-  role: "publisher" | "subscriber" | "bot" | "consumer";
+  role: "subscriber" | "bot" | "consumer";
   roomId: string;
   eventType?: string;
   payload?: unknown;
@@ -12,9 +12,7 @@ export interface MonitorEnvelope {
   source?: string;
   meta?: {
     subscriberCount?: number;
-    hasPublisher?: boolean;
     durationMs?: number;
-    sessionId?: string;
     /**
      * For bot messages: whether a room existed and the message actually
      * reached subscribers. Mirrored envelopes are sent to monitors either way
@@ -26,17 +24,14 @@ export interface MonitorEnvelope {
 
 export interface ConnectionSnapshot {
   connId: string;
-  role: "publisher" | "subscriber";
+  role: "subscriber";
   connectedAt: number;
   channels: string[];
 }
 
 export interface RoomSnapshot {
   roomId: string;
-  hasPublisher: boolean;
   subscriberCount: number;
-  sessionId: string;
-  streamId: string | null;
   connections: ConnectionSnapshot[];
 }
 

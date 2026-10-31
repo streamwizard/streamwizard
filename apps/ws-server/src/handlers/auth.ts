@@ -4,22 +4,20 @@ import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlay
 import type { OverlayEventType } from "@repo/types";
 import { trackWsAuthFailure } from "@repo/metrics";
 import { isRateLimited } from "../rate-limit";
-import { rooms } from "../rooms";
-import { findCurrentStreamId, handleInternalRoute, isValidSecret } from "./internal-http";
+import { handleInternalRoute, isValidSecret } from "./internal-http";
 import type { ConnectionData } from "../types";
 
 type BunServer = import("bun").Server<ConnectionData>;
 
-const VALID_ROLES = new Set(["publisher", "subscriber", "bot", "monitor", "consumer"]);
+const VALID_ROLES = new Set(["subscriber", "bot", "monitor", "consumer"]);
 
 /** Monotonic per-connection id, used for metrics and the monitor feed. */
 let nextConnId = 1;
 
 /**
- * Resolves a connection token to a user id. Two kinds are accepted on both the
- * publisher and subscriber paths: a Supabase JWT (a signed-in dashboard user)
- * or an overlay scene's subscriber token (a browser source or the GPS overlay
- * page, which have no session).
+ * Resolves a subscriber token to a user id. Two kinds are accepted: a Supabase
+ * JWT (a signed-in dashboard user) or an overlay scene's subscriber token (a
+ * browser source, which has no session).
  *
  * The two shapes never overlap, so each token costs at most one Supabase call
  * and anything of neither shape costs none: subscriber_token is always 32
@@ -77,7 +75,7 @@ function parseCsvSet<T extends string>(url: URL, param: string): Set<T> {
 function upgradeOrFail(
   server: BunServer,
   req: Request,
-  role: "publisher" | "subscriber" | "bot" | "monitor" | "consumer",
+  role: ConnectionData["role"],
   data: Omit<ConnectionData, "connectedAt" | "connId">,
 ): Response | undefined {
   const upgraded = server.upgrade(req, {
@@ -156,51 +154,6 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       consumerTypes: parseCsvSet(url, "types"),
       channels: new Set<OverlayEventType>(),
     });
-  }
-
-  // --- Publisher ---
-  if (role === "publisher") {
-    if (isRateLimited("publisher", clientIp(req))) {
-      trackWsAuthFailure("publisher", "rate_limited");
-      return new Response("Too Many Requests", { status: 429 });
-    }
-
-    const token = url.searchParams.get("token");
-    if (!token) {
-      trackWsAuthFailure("publisher", "missing_token");
-      return new Response("Unauthorized: missing token", { status: 401 });
-    }
-
-    const resolved = await resolveToken(token);
-    if (!resolved) {
-      trackWsAuthFailure("publisher", "invalid_token");
-      return new Response("Unauthorized: invalid token", { status: 401 });
-    }
-    const resolvedUserId = resolved.userId;
-
-    const session_id = crypto.randomUUID();
-    const stream_id = await findCurrentStreamId(resolvedUserId);
-
-    const failed = upgradeOrFail(server, req, "publisher", {
-      role: "publisher",
-      userId: resolvedUserId,
-      session_id,
-      channels: new Set<OverlayEventType>(),
-      credential: resolved.credential,
-    });
-    if (failed) return failed;
-
-    console.log(`[publisher] connected userId=${resolvedUserId} session=${session_id} stream=${stream_id ?? "none"}`);
-
-    const existingRoom = rooms.get(resolvedUserId);
-    rooms.set(resolvedUserId, {
-      publisher: null,
-      subscribers: existingRoom?.subscribers ?? new Set(),
-      session_id,
-      stream_id,
-    });
-
-    return undefined;
   }
 
   // --- Subscriber ---

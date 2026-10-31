@@ -82,10 +82,10 @@ export default async function WsDashboard() {
   const authFailureCount1h = lastHourTotal(authFailures);
   const dropCount1h = lastHourTotal(droppedMessages);
 
-  const publisherDurations = connectionDuration.filter((d) => d.role === "publisher");
-  const avgPublisherDurationMs =
-    publisherDurations.length > 0
-      ? publisherDurations.reduce((acc, d) => acc + d.avgMs, 0) / publisherDurations.length
+  const subscriberDurations = connectionDuration.filter((d) => d.role === "subscriber");
+  const avgSubscriberDurationMs =
+    subscriberDurations.length > 0
+      ? subscriberDurations.reduce((acc, d) => acc + d.avgMs, 0) / subscriberDurations.length
       : null;
 
   const roomsCreated = roomEvents.filter((e) => e.event === "created").reduce((acc, e) => acc + e.count, 0);
@@ -118,9 +118,9 @@ export default async function WsDashboard() {
             className={dropCount1h > 0 ? "border-destructive/50" : undefined}
           />
           <StatCard
-            title="Publisher duration (avg)"
-            value={avgPublisherDurationMs !== null ? formatDuration(avgPublisherDurationMs) : "—"}
-            description="How long publishers stay connected"
+            title="Subscriber duration (avg)"
+            value={avgSubscriberDurationMs !== null ? formatDuration(avgSubscriberDurationMs) : "—"}
+            description="How long overlays stay connected"
           />
           <StatCard
             title="Active rooms"

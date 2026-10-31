@@ -4,9 +4,8 @@ import type { OverlayEventType } from "@repo/types";
 export type ServerWebSocket<T = any> = import("bun").ServerWebSocket<T>;
 
 export interface ConnectionData {
-  role: "publisher" | "subscriber" | "bot" | "monitor" | "consumer";
+  role: "subscriber" | "bot" | "monitor" | "consumer";
   userId: string;
-  session_id?: string;
   channels: Set<OverlayEventType>;
   connectedAt: number;
   connId: string;
@@ -23,7 +22,7 @@ export interface ConnectionData {
    */
   source?: string;
   /**
-   * Publisher/subscriber only: the credential the upgrade was authorised with,
+   * Subscriber only: the credential the upgrade was authorised with,
    * so it can be re-checked later (see revoke.ts). "scene" is an overlay's
    * subscriber_token, "session" a dashboard user's Supabase JWT.
    */
@@ -31,16 +30,5 @@ export interface ConnectionData {
 }
 
 export interface RoomData {
-  publisher: ServerWebSocket<ConnectionData> | null;
   subscribers: Set<ServerWebSocket<ConnectionData>>;
-  session_id: string;
-  stream_id: string | null;
-  /** epoch ms of the last irl_geo_track insert — gates DB write rate, not broadcasts */
-  lastGeoInsertAt?: number;
-  /**
-   * epoch ms of the last geo message ACCEPTED from the primary publisher.
-   * Lets a standby publisher take over when the primary goes silent (half-open
-   * TCP, page killed without a close frame) instead of the room going dark.
-   */
-  lastGeoAt?: number;
 }

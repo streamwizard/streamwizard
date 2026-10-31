@@ -4,21 +4,18 @@ import { reportError } from "@repo/sentry";
 import type { ConnectionData, ServerWebSocket } from "./types";
 
 /**
- * Credential revocation for publisher and subscriber sockets.
+ * Credential revocation for subscriber sockets.
  *
  * A token is only checked at upgrade. Resetting an overlay key or deleting a
  * scene changed the database, but sockets opened with the old subscriber_token
- * stayed in the room and kept receiving events (and could keep publishing
- * geo) for as long as they lived. Every credentialed socket is tracked here
- * by user, so it can be closed when its credential stops being valid:
+ * stayed in the room and kept receiving events for as long as they lived.
+ * Every credentialed socket is tracked here by user, so it can be closed when
+ * its credential stops being valid:
  *
  * - POST /internal/revoke (internal-http.ts), called by the apps right after
  *   a key reset, scene delete, ban or account deletion.
  * - A backstop sweep (index.ts) that re-checks every scene token once a
  *   minute, in one query, for whatever the explicit calls missed.
- *
- * The room map only holds the primary publisher, so standby publishers would
- * be invisible to a room walk; that's why this keeps its own registry.
  */
 
 export const REVOKED_CLOSE_CODE = 4001;

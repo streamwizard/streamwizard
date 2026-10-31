@@ -60,20 +60,9 @@ export function buildRoomSnapshot(): MonitorSnapshot {
 
   for (const [userId, room] of rooms.entries()) {
     const subCount = room.subscribers.size;
-    const hasPub = room.publisher !== null;
-    totalConnections += subCount + (hasPub ? 1 : 0);
+    totalConnections += subCount;
 
     const connections: ConnectionSnapshot[] = [];
-
-    if (room.publisher) {
-      const d = room.publisher.data;
-      connections.push({
-        connId: d.connId,
-        role: "publisher",
-        connectedAt: d.connectedAt,
-        channels: [],
-      });
-    }
 
     for (const sub of room.subscribers) {
       const d = sub.data;
@@ -87,10 +76,7 @@ export function buildRoomSnapshot(): MonitorSnapshot {
 
     roomSnapshots.push({
       roomId: maskRoomId(userId),
-      hasPublisher: hasPub,
       subscriberCount: subCount,
-      sessionId: room.session_id,
-      streamId: room.stream_id,
       connections,
     });
   }

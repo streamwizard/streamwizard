@@ -56,8 +56,7 @@ export default async function OverlayByIdPage({
     );
   }
 
-  // GPS overlays collect GPS on-device, feed it directly to IRL widgets, and
-  // publish it over the WS using the scene's own subscriber token.
+  // GPS overlays collect GPS on-device and feed it directly to IRL widgets.
   const renderMode = (result.scene as Record<string, unknown>).render_mode;
   const telemetry = (
     <OverlayTelemetry
@@ -71,11 +70,7 @@ export default async function OverlayByIdPage({
     return (
       <div style={{ minHeight: "100vh", background: "transparent" }}>
         {telemetry}
-        <GpsOverlayCanvas
-          scene={result.scene}
-          items={result.items}
-          token={result.scene.subscriber_token}
-        />
+        <GpsOverlayCanvas scene={result.scene} items={result.items} />
       </div>
     );
   }

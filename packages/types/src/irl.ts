@@ -7,6 +7,3 @@ export interface GeoPayload {
   accuracy: number;
   timestamp: number;
 }
-
-export type PublisherMessage =
-  | { type: "geo"; payload: GeoPayload }
