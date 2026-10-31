@@ -15,7 +15,7 @@ import {
 } from "@/lib/overlay-clip-query-builder";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
-import { getClipDownloadUrl } from "@/actions/twitch";
+import { ClipUnavailableError, getClipDownloadUrl } from "@/actions/twitch";
 import { isUuid, resolveOverlayItem, type AuthorizedOverlayItem } from "@/lib/overlay-item-auth";
 
 /** Minimal clip identity for Twitch Helix downloads (broadcaster id from clips row). */
@@ -279,6 +279,26 @@ const clipsItems = new TtlCache<AuthorizedOverlayItem>({
   maxEntries: 2000,
 });
 
+/**
+ * Calls per scene owner per minute, across all their scenes and items. A
+ * widget asks once per clip transition (a few times a minute, plus a burst of
+ * three while the player ring fills), and each answer can cost a Helix call on
+ * the shared app token, so a caller looping on this mustn't get to spend it
+ * freely. Per process, like the other limits in this app.
+ */
+const CLIPS_PER_OWNER_LIMIT = 30;
+const ownerCalls = new TtlCache<{ count: number }>({ ttlMs: 60_000, maxEntries: 2000 });
+
+function isOwnerRateLimited(userId: string): boolean {
+  const entry = ownerCalls.get(userId);
+  if (!entry) {
+    ownerCalls.set(userId, { count: 1 });
+    return false;
+  }
+  entry.count++;
+  return entry.count > CLIPS_PER_OWNER_LIMIT;
+}
+
 const MAX_EXCLUDED = 200;
 const TWITCH_CLIP_ID = /^[A-Za-z0-9_-]{1,128}$/;
 
@@ -326,6 +346,7 @@ export async function getNextOverlayClip(
   if (!item || item.type !== "clips_widget") return null;
 
   const sceneUserId = item.userId;
+  if (isOwnerRateLimited(sceneUserId)) return null;
   const c = slimClipsWidgetItemConfig(item.config);
   const cursor = parseCursor(rawCursor);
   const excludeTwitchClipIds = parseExcluded(rawExcludeTwitchClipIds);
@@ -363,6 +384,10 @@ export async function getNextOverlayClip(
       return { clip: toDisplayClip(row), videoUrl, cursor: nextCursor };
     } catch (err) {
       reportError(err, "clips.getNextOverlayClip.downloadUrl", { twitch_clip_id: row.twitch_clip_id });
+      // A 429 or a Twitch outage says nothing about the clip, and the next
+      // clip would hit it too. Hand back null; the widget keeps the current
+      // clip on screen and asks again on the next transition.
+      if (!(err instanceof ClipUnavailableError)) return null;
       deadClips.set(row.twitch_clip_id, Date.now() + DEAD_CLIP_TTL_MS);
       from = nextCursor;
       skipped.push(row.twitch_clip_id);
