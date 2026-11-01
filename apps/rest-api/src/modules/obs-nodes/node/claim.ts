@@ -120,7 +120,9 @@ export async function claimObsNode(c: Context) {
     S3_SECRET_KEY: env.OBS_S3_SECRET_KEY,
     S3_BUCKET: env.OBS_S3_BUCKET,
     S3_REGION: env.OBS_S3_REGION,
-    TOKEN_ENCRYPTION_KEY: env.TOKEN_ENCRYPTION_KEY,
+    // No TOKEN_ENCRYPTION_KEY: nodes get their instances' passwords in
+    // plaintext from GET /api/obs-nodes/instances/:id/secrets instead, so a
+    // compromised node can't decrypt anything else.
     // Present only when rest-api itself has InfluxDB configured for this
     // environment — omitted otherwise, same as the ingest-node claim route.
     // INFLUXDB_OBS_NODE_TOKEN (write-only on obs-nodes) when set, else the shared token.
