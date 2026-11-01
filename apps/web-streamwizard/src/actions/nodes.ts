@@ -126,9 +126,10 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
     return { data: null, error: "Connect Twitch first so your cloud OBS can stream with your key." };
   }
 
+  // Sent to the node in plaintext (it has to write it into OBS anyway).
+  // rest-api encrypts it when the node stores the row; the node never sees
+  // ciphertext or the encryption key.
   const obsWsPassword = randomUUID().replace(/-/g, "");
-  const { encryptToken } = await import("@repo/supabase/crypto");
-  const { ciphertext, iv, authTag } = encryptToken(obsWsPassword);
 
   // A 60-second token for this node and this one action, not the session.
   let token: string;
@@ -149,9 +150,6 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
       ...options,
       subscription_id: subscriptionId,
       obs_ws_password: obsWsPassword,
-      obs_ws_password_ciphertext: ciphertext,
-      obs_ws_password_iv: iv,
-      obs_ws_password_tag: authTag,
     }),
   });
 
