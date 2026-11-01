@@ -1,5 +1,5 @@
 import { R2Storage } from "@repo/storage";
-import { env } from "./env";
+import { env } from "../env";
 
 /** Shared R2 client for the asset bucket; null when the R2 env isn't set. */
 export const r2 =

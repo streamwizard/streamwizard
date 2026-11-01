@@ -1,12 +1,12 @@
 import { supabase } from "@repo/supabase";
 import { insertBackupEvent, listBackupEvents } from "@repo/supabase/queries/backups";
 import { Hono } from "hono";
-import { backupConfig } from "../lib/backup-config";
-import { cachedBackupEventsSince, cachedBackupPoll, invalidateBackupCache } from "../lib/backup-cache";
-import { env } from "../lib/env";
+import { backupConfig } from "../modules/backups/config";
+import { cachedBackupEventsSince, cachedBackupPoll, invalidateBackupCache } from "../modules/backups/cache";
+import { env } from "../env";
 import { internalAuth } from "../middleware/internal-auth";
-import { backupPoller } from "../services/backup-poller";
-import { createBackupsInternalRoute } from "./backups-internal";
+import { backupPoller } from "../modules/backups/poller";
+import { createBackupsInternalRoute } from "./internal-backups";
 import { createProxmoxWebhookRoute } from "./proxmox-webhook";
 
 // Wiring for backup monitoring. Both routes answer 404 unless the PBS config

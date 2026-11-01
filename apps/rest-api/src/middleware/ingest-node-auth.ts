@@ -10,7 +10,7 @@ declare module "hono" {
   }
 }
 
-/** Same cache, same reasoning, same staleness tradeoff as `node-auth.ts` —
+/** Same cache, same reasoning, same staleness tradeoff as `obs-node-auth.ts` —
  *  read that comment before changing either TTL. The stale window is even
  *  safer here: this key only guards `PATCH /me`, which updates the
  *  `ingest_nodes` row and matches nothing once that row is deleted. Separate

@@ -1,6 +1,6 @@
 import { reportError } from "@repo/sentry";
 import { broadcastToUser, revokeUserSockets, type BroadcastConfig, type BroadcastResult } from "@repo/ws-client";
-import { env } from "./env";
+import { env } from "../env";
 
 const wsConfig: BroadcastConfig = {
   wsServerUrl: env.WS_SERVER_URL,

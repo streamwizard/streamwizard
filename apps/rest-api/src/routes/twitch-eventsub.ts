@@ -3,7 +3,7 @@ import {
   MESSAGE_TYPE_VERIFICATION,
   MESSAGE_TYPE_NOTIFICATION,
   MESSAGE_TYPE_REVOCATION,
-} from "../utils/twitch-eventsub";
+} from "../modules/eventsub/message";
 import type {
   EventSubVerificationPayload,
   EventSubNotificationPayload,
@@ -11,7 +11,7 @@ import type {
 } from "@repo/types";
 import { trackEventSubReceived, trackEventSubRevocation } from "@repo/metrics";
 import { reportError } from "@repo/sentry";
-import handleEventsub from "../functions/handle-eventsub";
+import handleEventsub from "../modules/eventsub/dispatch";
 import { TwitchApi } from "@repo/twitch-api";
 
 export async function handleTwitchEventSub(c: Context) {

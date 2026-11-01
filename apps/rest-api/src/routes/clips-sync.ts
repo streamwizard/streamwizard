@@ -4,7 +4,7 @@ import { supabase } from "@repo/supabase";
 import { getTwitchIntegrationWithTokenByUserId } from "@repo/supabase/queries/user";
 import { getClipSync } from "@repo/supabase/queries/sync";
 import { TwitchApi } from "@repo/twitch-api";
-import { syncTwitch } from "../functions/sync-twitch";
+import { syncTwitch } from "../modules/streams/clip-sync";
 
 /**
  * POST /api/clips/sync
