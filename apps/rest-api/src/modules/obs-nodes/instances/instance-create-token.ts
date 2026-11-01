@@ -1,6 +1,6 @@
 import { NODE_TOKEN_TTL_SECONDS, verifyNodeToken } from "@repo/node-token";
 import { TtlCache } from "@repo/ttl-cache";
-import type { NodeTokenJwks } from "../../schemas/node-token-jwks";
+import type { NodeTokenJwks } from "../../../schemas/node-token-jwks";
 
 // POST /api/obs-nodes/instances takes user_id from the node. The node API key
 // alone can't prove that user asked for an instance there, and a row on a

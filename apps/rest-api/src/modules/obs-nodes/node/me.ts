@@ -2,8 +2,8 @@ import type { Context } from "hono";
 import { supabase } from "@repo/supabase";
 import { getNodeById, getNodeCommandKeyHash, updateNodeTailscaleIp } from "@repo/supabase/queries/obs-nodes";
 import { TtlCache } from "@repo/ttl-cache";
-import { env } from "../../env";
-import { patchNodeMeSchema } from "../../schemas/obs-nodes";
+import { env } from "../../../env";
+import { patchNodeMeSchema } from "../../../schemas/obs-nodes";
 
 /**
  * `/me` is two Supabase reads (node row + command key hash) on top of the auth

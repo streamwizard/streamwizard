@@ -58,7 +58,7 @@ export const envSchema = z.object({
   // /claim response so they can report host + instance metrics without a
   // manual .env edit per node. Optional: a claim still succeeds without
   // these, it just omits them from the response (see modules/ingest-nodes/claim.ts /
-  // modules/obs-nodes/claim.ts), same as install.sh already tolerates a missing tailscale_authkey.
+  // modules/obs-nodes/node/claim.ts), same as install.sh already tolerates a missing tailscale_authkey.
   INFLUXDB_URL: z.string().url().optional(),
   INFLUXDB_ORG: z.string().optional(),
   INFLUXDB_TOKEN: z.string().optional(),

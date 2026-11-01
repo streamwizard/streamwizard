@@ -3,8 +3,8 @@ import type { Context } from "hono";
 import { supabase } from "@repo/supabase";
 import { encryptToken } from "@repo/supabase/crypto";
 import { claimNodeByTokenHash, consumeClaimToken, insertNodeApiKey } from "@repo/supabase/queries/obs-nodes";
-import { env } from "../../env";
-import { mintTailscaleAuthKey } from "../../lib/tailscale";
+import { env } from "../../../env";
+import { mintTailscaleAuthKey } from "../../../lib/tailscale";
 
 // Lowercases and replaces runs of non-alphanumerics with a single hyphen, e.g.
 // "GPU Box 1" -> "gpu-box-1". The panel is the single source of truth for this

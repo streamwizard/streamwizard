@@ -23,7 +23,8 @@ EventSub notifications go through `src/modules/eventsub/registry.ts`, which disp
 src/
   index.ts        app wiring: middleware, routes, background jobs
   routes/         HTTP routes, one file per mount point; node route files only
-                  list routes, handlers live in modules/obs-nodes and modules/ingest-nodes
+                  list routes, handlers live in modules/obs-nodes and modules/ingest-nodes.
+                  obs-nodes.ts mounts obs-node-instances.ts at /api/obs-nodes/instances
   env.ts          parses process.env against schemas/env.ts once at boot
   sentry.ts       preloaded before index.ts
   schemas/        zod schemas: env, request bodies, webhook payloads
@@ -34,7 +35,9 @@ src/
     backups/      PBS/PVE poller, cache, store, config
     discord-live/ go-live posts, live role, role sweeper
     eventsub/     handler registry, handlers/
-    obs-nodes/    route handlers (claim, me, instances, users, ...), stream keys, create token
+    obs-nodes/
+      node/       node-level handlers (claim, me, reconcile, plan limits, users)
+      instances/  handlers for one of the node's instances (CRUD, stream key), create token, plan sweep
     ingest-nodes/ route handlers (claim, me)
     streams/      clip sync, viewer-count poller, stream video lookup
 ```

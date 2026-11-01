@@ -12,10 +12,10 @@ import {
   updateObsInstanceForNode,
 } from "@repo/supabase/queries/obs-nodes";
 import { isActiveSubscriptionOfUser, usersWithActiveSubscription } from "@repo/supabase/queries/subscriptions";
-import { env } from "../../env";
+import { env } from "../../../env";
 import { unentitledInstanceIds } from "./cloud-obs-plan";
 import { checkInstanceCreateToken } from "./instance-create-token";
-import { insertInstanceSchema, updateInstanceSchema } from "../../schemas/obs-nodes";
+import { insertInstanceSchema, updateInstanceSchema } from "../../../schemas/obs-nodes";
 
 export async function listInstances(c: Context) {
   const nodeId = c.get("nodeId");
@@ -49,7 +49,7 @@ export async function listUnentitledInstances(c: Context) {
   return c.json({ instance_ids: ids });
 }
 
-export async function getInstance(c: Context<Env, "/instances/:id">) {
+export async function getInstance(c: Context<Env, "/:id">) {
   const nodeId = c.get("nodeId");
   const id = c.req.param("id");
   const userId = c.req.query("user_id");
@@ -70,7 +70,7 @@ export async function createInstance(c: Context) {
   const { user_id: userId, subscription_id: subscriptionId } = parsed.data;
 
   // user_id comes from the node, so it has to be backed by the user's own
-  // launch token. See modules/obs-nodes/instance-create-token.ts.
+  // launch token. See ./instance-create-token.ts.
   const tokenCheck = await checkInstanceCreateToken({
     token: c.req.header("X-Node-Token"),
     nodeId,
@@ -93,7 +93,7 @@ export async function createInstance(c: Context) {
   }
 }
 
-export async function updateInstance(c: Context<Env, "/instances/:id">) {
+export async function updateInstance(c: Context<Env, "/:id">) {
   const nodeId = c.get("nodeId");
   const id = c.req.param("id");
   const parsed = updateInstanceSchema.safeParse(await c.req.json().catch(() => null));
@@ -109,7 +109,7 @@ export async function updateInstance(c: Context<Env, "/instances/:id">) {
   }
 }
 
-export async function updateInstanceByContainer(c: Context<Env, "/instances/by-container/:containerId">) {
+export async function updateInstanceByContainer(c: Context<Env, "/by-container/:containerId">) {
   const nodeId = c.get("nodeId");
   const containerId = c.req.param("containerId");
   const parsed = updateInstanceSchema.safeParse(await c.req.json().catch(() => null));
@@ -121,7 +121,7 @@ export async function updateInstanceByContainer(c: Context<Env, "/instances/by-c
   return c.json(instance);
 }
 
-export async function deleteInstance(c: Context<Env, "/instances/:id">) {
+export async function deleteInstance(c: Context<Env, "/:id">) {
   const nodeId = c.get("nodeId");
   const id = c.req.param("id");
   try {
