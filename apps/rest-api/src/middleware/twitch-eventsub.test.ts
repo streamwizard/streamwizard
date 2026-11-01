@@ -4,7 +4,7 @@ import { type Context, Hono } from "hono";
 
 const SECRET = "test-webhook-secret";
 
-mock.module("../lib/env", () => ({ env: { TWITCH_WEBHOOK_SECRET: SECRET } }));
+mock.module("../env", () => ({ env: { TWITCH_WEBHOOK_SECRET: SECRET } }));
 
 /** Every request that makes it past the middleware, with the type it was routed as. */
 let dispatched: string[] = [];

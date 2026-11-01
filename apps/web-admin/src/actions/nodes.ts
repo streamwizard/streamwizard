@@ -229,9 +229,10 @@ export async function createInstanceAction(
   if (!node?.api_url) return { data: null, error: "Node not found or has no API URL." };
   const apiUrl = node.api_url;
 
+  // Sent to the node in plaintext (it has to write it into OBS anyway).
+  // rest-api encrypts it when the node stores the row; the node never sees
+  // ciphertext or the encryption key.
   const obsWsPassword = randomUUID().replace(/-/g, "");
-  const { encryptToken } = await import("@repo/supabase/crypto");
-  const { ciphertext, iv, authTag } = encryptToken(obsWsPassword);
 
   let token: string;
   try {
@@ -250,9 +251,6 @@ export async function createInstanceAction(
     body: JSON.stringify({
       ...options,
       obs_ws_password: obsWsPassword,
-      obs_ws_password_ciphertext: ciphertext,
-      obs_ws_password_iv: iv,
-      obs_ws_password_tag: authTag,
     }),
   });
 

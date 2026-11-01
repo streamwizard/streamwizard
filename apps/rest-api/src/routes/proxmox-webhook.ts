@@ -5,8 +5,8 @@ import type { Json } from "@repo/supabase";
 import type { BackupEventInsert } from "@repo/supabase/queries/backups";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { z } from "zod";
 import { secretsMatch } from "../lib/secret-compare";
+import { proxmoxWebhookPayloadSchema } from "../schemas/proxmox-webhook";
 
 /**
  * Receiver for Proxmox VE / PBS notification webhooks (docs/backup-monitoring-plan.md).
@@ -21,20 +21,6 @@ export const WEBHOOK_TOKEN_HEADER = "x-proxmox-webhook-token";
 
 /** vzdump notifications include the full task log; this caps what we keep. */
 const MAX_STORED_MESSAGE_CHARS = 64 * 1024;
-
-const payloadSchema = z.object({
-  source: z
-    .string()
-    .min(1)
-    .max(64)
-    .regex(/^[A-Za-z0-9._-]+$/),
-  title: z.string().max(1000),
-  message: z.string(),
-  severity: z.enum(["info", "notice", "warning", "error", "unknown"]),
-  timestamp: z.number().int().positive(),
-  // Proxmox metadata fields are strings; accept scalars and stringify.
-  fields: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
-});
 
 export interface ProxmoxWebhookDeps {
   /** Unset disables the receiver (404). */
@@ -68,7 +54,7 @@ export function createProxmoxWebhookRoute(deps: ProxmoxWebhookDeps) {
       } catch {
         return c.json({ error: "Body must be JSON" }, 400);
       }
-      const parsed = payloadSchema.safeParse(body);
+      const parsed = proxmoxWebhookPayloadSchema.safeParse(body);
       if (!parsed.success) {
         return c.json({ error: "Invalid payload", issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) }, 400);
       }

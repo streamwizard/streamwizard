@@ -1,4 +1,4 @@
-import { env } from "./env";
+import { env } from "../env";
 
 // "-" is Tailscale's shorthand for "the tailnet this credential belongs to" --
 // works for OAuth clients since each one is scoped to exactly one tailnet.

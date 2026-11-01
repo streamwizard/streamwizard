@@ -5,7 +5,7 @@ type DBClient = SupabaseClient<Database>;
 
 // ── Node API keys ────────────────────────────────────────────────────────────
 
-// 'rest_api' — the node's own credential for calling the rest-api (nodeAuth).
+// 'rest_api' — the node's own credential for calling the rest-api (obsNodeAuth).
 // 'obs_command' — the key the obs-auto-switcher presents to the node's public
 // /obs command route. Kept as distinct rows so a leaked command key can never
 // authenticate as the node to the rest-api.
@@ -39,7 +39,7 @@ export async function insertNodeApiKey(
 }
 
 /** Returns the node_id for the given rest-api key hash, or null if not found.
- *  Used by nodeAuth middleware on every authenticated node request. Scoped to
+ *  Used by obsNodeAuth middleware on every authenticated node request. Scoped to
  *  type='rest_api' so an obs_command key can never authenticate as a node. */
 export async function lookupNodeByApiKeyHash(
   client: DBClient,
@@ -54,7 +54,7 @@ export async function lookupNodeByApiKeyHash(
   return data?.node_id ?? null;
 }
 
-/** The node's obs_command key hash, handed to the node via GET /api/nodes/me
+/** The node's obs_command key hash, handed to the node via GET /api/obs-nodes/me
  *  so it can validate the switcher's Bearer without ever holding the plaintext. */
 export async function getNodeCommandKeyHash(client: DBClient, nodeId: string): Promise<string | null> {
   const { data } = await client

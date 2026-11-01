@@ -5,7 +5,7 @@ The API gateway. Twitch EventSub webhooks, clip sync, and analytics endpoints �
 ## What it does
 
 - **Twitch webhooks** — the HMAC-verified entry point for EventSub notifications.
-- **Clip sync** — `src/functions/sync-twitch.ts` is the canonical sync, used by both the HTTP route and the `stream.offline` handler.
+- **Clip sync** — `src/modules/streams/clip-sync.ts` is the canonical sync, used by both the HTTP route and the `stream.offline` handler.
 - **Analytics** — serves historical viewer-count data.
 - **Auth** — Supabase-backed middleware on the user-facing endpoints.
 
@@ -15,7 +15,34 @@ The API gateway. Twitch EventSub webhooks, clip sync, and analytics endpoints �
 - `POST /api/clips/sync` — manually trigger a clip sync.
 - `GET /api/clips/sync-status` — current sync status.
 
-EventSub handlers live in `src/handlers/eventHandler.ts`, which dispatches to typed handlers in `src/functions/twitch-eventsub-events/`. All database access goes through `@repo/supabase/queries/*`; every Helix call goes through `@repo/twitch-api`.
+EventSub notifications go through `src/modules/eventsub/registry.ts`, which dispatches to typed handlers in `src/modules/eventsub/handlers/`. All database access goes through `@repo/supabase/queries/*`; every Helix call goes through `@repo/twitch-api`.
+
+## Layout
+
+```
+src/
+  index.ts        app wiring: middleware, routes, background jobs
+  routes/         HTTP routes, one file per mount point; node route files only
+                  list routes, handlers live in modules/obs-nodes and modules/ingest-nodes.
+                  obs-nodes.ts mounts obs-node-instances.ts at /api/obs-nodes/instances
+  env.ts          parses process.env against schemas/env.ts once at boot
+  sentry.ts       preloaded before index.ts
+  schemas/        zod schemas: env, request bodies, webhook payloads
+  middleware/     HTTP middleware: user auth, OBS/ingest node auth, Twitch signature check, raw body, security/
+  lib/            small helpers shared by several modules (R2, ws-server, user state, Tailscale keys)
+  jobs/           standalone background loops (asset reconciler, CMS scheduler, token validator)
+  modules/
+    backups/      PBS/PVE poller, cache, store, config
+    discord-live/ go-live posts, live role, role sweeper
+    eventsub/     handler registry, handlers/
+    obs-nodes/
+      node/       node-level handlers (claim, me, reconcile, plan limits, users)
+      instances/  handlers for one of the node's instances (CRUD, secrets, stream key), create token, plan sweep
+    ingest-nodes/ route handlers (claim, me)
+    streams/      clip sync, viewer-count poller, stream video lookup
+```
+
+A file goes in a module when only that feature uses it, and in `lib/` once two or more modules need it. Zod schemas for env and incoming bodies live in `schemas/`; Twitch EventSub schemas come from the shared `@repo/schemas` package. Tests sit next to the file they cover.
 
 ## Development notes
 

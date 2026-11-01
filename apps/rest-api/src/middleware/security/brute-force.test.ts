@@ -12,7 +12,8 @@ beforeAll(async () => {
   app.all("/api/private", (c) => c.json({ error: "Unauthorized" }, 401));
   app.all("/api/public", (c) => c.json({ ok: true }));
   app.post("/webhooks/twitch/eventsub", (c) => c.body(null, 401));
-  app.post("/api/nodes/claim", (c) => c.body(null, 401));
+  app.post("/api/obs-nodes/claim", (c) => c.body(null, 401));
+  app.post("/api/ingest-nodes/claim", (c) => c.body(null, 401));
 });
 
 async function hit(path: string, headers: Record<string, string>, method = "GET") {
@@ -41,7 +42,8 @@ describe("bruteForceProtection (SW-482)", () => {
     const twitch = { "cf-connecting-ip": "198.51.100.4" };
     for (let i = 0; i < 5; i++) {
       expect(await hit("/webhooks/twitch/eventsub", twitch, "POST")).toBe(401);
-      expect(await hit("/api/nodes/claim", twitch, "POST")).toBe(401);
+      expect(await hit("/api/obs-nodes/claim", twitch, "POST")).toBe(401);
+      expect(await hit("/api/ingest-nodes/claim", twitch, "POST")).toBe(401);
     }
     expect(await hit("/api/public", twitch)).toBe(200);
   });

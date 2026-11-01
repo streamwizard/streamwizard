@@ -1,7 +1,7 @@
 import { Sentry } from "./sentry";
 process.on("uncaughtException", (err) => { reportFatal(err, "rest-api"); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
-import "./lib/env";
+import "./env";
 import { Hono } from "hono";
 import { sentry } from "@sentry/hono/bun";
 import { configureTracking, flushTracking } from "@repo/posthog/server";
@@ -13,17 +13,17 @@ import { rawBodyMiddleware } from "./middleware/raw-body";
 import { twitchEventSubVerification } from "./middleware/twitch-eventsub";
 import { supabaseMiddleware, supabaseAuth } from "./middleware/auth";
 import { handleTwitchEventSub } from "./routes/twitch-eventsub";
-import { viewerCountPoller } from "./services/viewer-count-poller";
-import { twitchTokenValidator } from "./services/twitch-token-validator";
-import { liveRoleSweeper } from "./services/discord-live-role-sweeper";
-import { backupPoller } from "./services/backup-poller";
-import { assetReconciler } from "./services/asset-reconciler";
-import { cmsScheduler } from "./services/cms-scheduler";
+import { viewerCountPoller } from "./modules/streams/viewer-count-poller";
+import { twitchTokenValidator } from "./jobs/twitch-token-validator";
+import { liveRoleSweeper } from "./modules/discord-live/role-sweeper";
+import { backupPoller } from "./modules/backups/poller";
+import { assetReconciler } from "./jobs/asset-reconciler";
+import { cmsScheduler } from "./jobs/cms-scheduler";
 import { internalBackups, proxmoxWebhook } from "./routes/backups";
 import { syncClipsHandler, syncStatusHandler } from "./routes/clips-sync";
-import nodes from "./routes/nodes";
+import obsNodes from "./routes/obs-nodes";
 import ingestNodes from "./routes/ingest-nodes";
-import { nodeAuthCacheStats } from "./middleware/node-auth";
+import { obsNodeAuthCacheStats } from "./middleware/obs-node-auth";
 import { ingestNodeAuthCacheStats } from "./middleware/ingest-node-auth";
 
 initMetrics(BUCKETS.restApi);
@@ -40,7 +40,7 @@ const app = new Hono();
 app.get("/health", (c) =>
   c.json({
     ok: true,
-    caches: { nodeAuth: nodeAuthCacheStats(), ingestNodeAuth: ingestNodeAuthCacheStats() },
+    caches: { nodeAuth: obsNodeAuthCacheStats(), ingestNodeAuth: ingestNodeAuthCacheStats() },
   }),
 );
 
@@ -106,7 +106,7 @@ app.route("/internal/backups", internalBackups);
 // from a fresh, untrusted VM with a one-time token, no Supabase session
 // involved. Registered before the cookie/CORS-oriented "/api/*" middleware
 // below so it doesn't inherit either, same as the webhook route above.
-app.route("/api/nodes", nodes);
+app.route("/api/obs-nodes", obsNodes);
 
 // Same rationale as above, for ingest-server's install script.
 app.route("/api/ingest-nodes", ingestNodes);

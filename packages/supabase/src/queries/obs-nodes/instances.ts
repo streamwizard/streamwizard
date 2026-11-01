@@ -10,6 +10,30 @@ export type ObsInstance = Database["public"]["Tables"]["obs_instances"]["Row"];
 type ObsInstanceInsert = Database["public"]["Tables"]["obs_instances"]["Insert"];
 type ObsInstanceUpdate = Database["public"]["Tables"]["obs_instances"]["Update"];
 
+/**
+ * Columns an OBS node may see. Everything except the encrypted OBS WebSocket
+ * and VNC password columns: a node gets those passwords in plaintext, for its
+ * own instances only, from GET /api/obs-nodes/instances/:id/secrets, and never
+ * holds TOKEN_ENCRYPTION_KEY. Every node-facing read below uses this list
+ * instead of "*", so a new secret column stays hidden until it's added here.
+ */
+export const NODE_INSTANCE_COLUMNS =
+  "id, user_id, node_id, container_id, container_name, resolution, status, vram_allocated_mb, memory_mb, cpu_quota, shm_size, config_template, subscription_id, storage_quota_mb, used_storage_bytes, created_at, updated_at" as const;
+
+type PasswordColumn =
+  | "obs_ws_password_ciphertext"
+  | "obs_ws_password_iv"
+  | "obs_ws_password_tag"
+  | "vnc_password_ciphertext"
+  | "vnc_password_iv"
+  | "vnc_password_tag";
+
+/** An instance row as a node sees it: no password columns. */
+export type NodeObsInstance = Omit<ObsInstance, PasswordColumn>;
+
+/** The encrypted password columns of one instance. Server-side only. */
+export type ObsInstancePasswordFields = Pick<ObsInstance, PasswordColumn>;
+
 /** Returns the most recent running instance for the given user, or null. */
 export async function getUserRunningInstance(client: DBClient, userId: string): Promise<ObsInstance | null> {
   const { data } = await client
@@ -93,10 +117,10 @@ export async function getInstanceNode(
 
 // ── Instance CRUD (used by node-authenticated API endpoints) ─────────────────
 
-export async function listObsInstancesByNode(client: DBClient, nodeId: string): Promise<ObsInstance[]> {
+export async function listObsInstancesByNode(client: DBClient, nodeId: string): Promise<NodeObsInstance[]> {
   const { data, error } = await client
     .from("obs_instances")
-    .select("*")
+    .select(NODE_INSTANCE_COLUMNS)
     .eq("node_id", nodeId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -125,18 +149,18 @@ export async function getObsInstanceById(client: DBClient, instanceId: string, u
 
 /** Single instance by id, scoped to the calling node so one node can never
  * read another node's instance rows. */
-export async function getObsInstanceByIdForNode(client: DBClient, instanceId: string, nodeId: string): Promise<ObsInstance | null> {
+export async function getObsInstanceByIdForNode(client: DBClient, instanceId: string, nodeId: string): Promise<NodeObsInstance | null> {
   const { data } = await client
     .from("obs_instances")
-    .select("*")
+    .select(NODE_INSTANCE_COLUMNS)
     .eq("id", instanceId)
     .eq("node_id", nodeId)
     .maybeSingle();
   return data;
 }
 
-export async function insertObsInstance(client: DBClient, fields: ObsInstanceInsert): Promise<ObsInstance> {
-  const { data, error } = await client.from("obs_instances").insert(fields).select().single();
+export async function insertObsInstance(client: DBClient, fields: ObsInstanceInsert): Promise<NodeObsInstance> {
+  const { data, error } = await client.from("obs_instances").insert(fields).select(NODE_INSTANCE_COLUMNS).single();
   if (error) throw error;
   return data;
 }
@@ -149,13 +173,13 @@ export async function updateObsInstanceForNode(
   instanceId: string,
   nodeId: string,
   fields: ObsInstanceUpdate,
-): Promise<ObsInstance | null> {
+): Promise<NodeObsInstance | null> {
   const { data, error } = await client
     .from("obs_instances")
     .update(fields)
     .eq("id", instanceId)
     .eq("node_id", nodeId)
-    .select()
+    .select(NODE_INSTANCE_COLUMNS)
     .maybeSingle();
   if (error) throw error;
   return data;
@@ -166,13 +190,13 @@ export async function updateObsInstanceByContainerIdForNode(
   containerId: string,
   nodeId: string,
   fields: ObsInstanceUpdate,
-): Promise<ObsInstance | null> {
+): Promise<NodeObsInstance | null> {
   const { data } = await client
     .from("obs_instances")
     .update(fields)
     .eq("container_id", containerId)
     .eq("node_id", nodeId)
-    .select()
+    .select(NODE_INSTANCE_COLUMNS)
     .maybeSingle();
   return data;
 }
@@ -223,8 +247,8 @@ export async function userHasInstanceOnNode(client: DBClient, userId: string, no
 
 /** Instances that are up right now, for the plan sweep and for stopping a
  * user's containers when their plan goes away. */
-export async function listRunningObsInstancesByNode(client: DBClient, nodeId: string): Promise<ObsInstance[]> {
-  const { data, error } = await client.from("obs_instances").select("*").eq("node_id", nodeId).eq("status", "running");
+export async function listRunningObsInstancesByNode(client: DBClient, nodeId: string): Promise<NodeObsInstance[]> {
+  const { data, error } = await client.from("obs_instances").select(NODE_INSTANCE_COLUMNS).eq("node_id", nodeId).eq("status", "running");
   if (error) throw error;
   return data ?? [];
 }
@@ -237,10 +261,10 @@ export async function listRunningObsInstancesByUser(client: DBClient, userId: st
 
 /** A user's instances that live on this node — the only ones a node manager
  * can act on locally (it resolves each container_id against its own Docker). */
-export async function listObsInstancesByUserOnNode(client: DBClient, userId: string, nodeId: string): Promise<ObsInstance[]> {
+export async function listObsInstancesByUserOnNode(client: DBClient, userId: string, nodeId: string): Promise<NodeObsInstance[]> {
   const { data, error } = await client
     .from("obs_instances")
-    .select("*")
+    .select(NODE_INSTANCE_COLUMNS)
     .eq("user_id", userId)
     .eq("node_id", nodeId)
     .order("created_at", { ascending: false });
@@ -305,4 +329,54 @@ export async function getRunningInstanceWithNodeUrl(
     },
     error: null,
   };
+}
+
+// ── Instance secrets (rest-api only; plaintext never leaves rest-api except
+// to the instance's own node, via GET /api/obs-nodes/instances/:id/secrets) ──
+
+const PASSWORD_COLUMNS =
+  "obs_ws_password_ciphertext, obs_ws_password_iv, obs_ws_password_tag, vnc_password_ciphertext, vnc_password_iv, vnc_password_tag" as const;
+
+/** The encrypted password columns of one instance, scoped to the calling node.
+ * null when the instance doesn't exist or belongs to another node. */
+export async function getObsInstancePasswordFieldsForNode(
+  client: DBClient,
+  instanceId: string,
+  nodeId: string,
+): Promise<ObsInstancePasswordFields | null> {
+  const { data, error } = await client
+    .from("obs_instances")
+    .select(PASSWORD_COLUMNS)
+    .eq("id", instanceId)
+    .eq("node_id", nodeId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Stores a VNC password on a row that has none yet (rows created before the
+ * VNC-password feature). Only writes while the column is still null, so two
+ * concurrent callers can't overwrite each other's password: the loser gets
+ * false and must re-read the row to pick up the winner's value.
+ */
+export async function setObsInstanceVncPasswordIfMissingForNode(
+  client: DBClient,
+  instanceId: string,
+  nodeId: string,
+  encrypted: { ciphertext: string; iv: string; tag: string },
+): Promise<boolean> {
+  const { data, error } = await client
+    .from("obs_instances")
+    .update({
+      vnc_password_ciphertext: encrypted.ciphertext,
+      vnc_password_iv: encrypted.iv,
+      vnc_password_tag: encrypted.tag,
+    })
+    .eq("id", instanceId)
+    .eq("node_id", nodeId)
+    .is("vnc_password_ciphertext", null)
+    .select("id");
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
 }

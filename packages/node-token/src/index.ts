@@ -7,7 +7,7 @@ import { createLocalJWKSet, errors, importJWK, jwtVerify, SignJWT, type JSONWebK
 // against the whole platform for about an hour. A node token instead names
 // one node (aud), one action (scope) and, where it applies, one instance
 // (iid), and expires after 60 seconds. It is signed with an Ed25519 key only
-// the web apps hold; nodes get the public half through GET /api/nodes/me, so
+// the web apps hold; nodes get the public half through GET /api/obs-nodes/me, so
 // a node can check a token but never mint or alter one. One key pair per
 // environment, shared by every node in it -- adding a node needs no new env.
 

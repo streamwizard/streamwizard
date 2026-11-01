@@ -10,7 +10,7 @@ import {
   TWITCH_MESSAGE_SIGNATURE,
   TWITCH_MESSAGE_TYPE,
   verifySignature,
-} from "../utils/twitch-eventsub"
+} from "../modules/eventsub/message"
 import type { EventSubVerificationPayload, EventSubNotificationPayload, EventSubRevocationPayload } from "@repo/types";
 
 /**

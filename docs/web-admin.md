@@ -96,7 +96,7 @@ The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages ar
 
 Base URL is always the node's `api_url`, resolved server-side (never from the query string — the URL gets tokens/tickets attached).
 
-REST (Supabase JWT in `Authorization: Bearer`, verified against Supabase JWKS on the node; admin routes additionally check the role via rest-api `GET /api/nodes/users/:userId/is-admin`):
+REST (Supabase JWT in `Authorization: Bearer`, verified against Supabase JWKS on the node; admin routes additionally check the role via rest-api `GET /api/obs-nodes/users/:userId/is-admin`):
 
 - `GET /health` — node health badges / fleet table / alert probes
 - `POST /instances` — create instance (from node detail)

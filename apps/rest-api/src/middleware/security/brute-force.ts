@@ -28,7 +28,7 @@ const bruteForceStore = new Map<string, BruteForceRecord>();
 // Routes that prove the caller another way (Twitch's HMAC signature, bearer
 // secrets, node API keys). Their callers are a handful of fixed machines, so
 // a lockout here could only ever block Twitch or our own nodes (SW-482).
-const EXEMPT_PREFIXES = ["/webhooks/", "/internal/", "/api/nodes", "/api/ingest-nodes"];
+const EXEMPT_PREFIXES = ["/webhooks/", "/internal/", "/api/obs-nodes", "/api/ingest-nodes"];
 
 // Clean up expired records every 5 minutes
 setInterval(
