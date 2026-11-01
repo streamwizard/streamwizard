@@ -31,6 +31,9 @@ type PasswordColumn =
 /** An instance row as a node sees it: no password columns. */
 export type NodeObsInstance = Omit<ObsInstance, PasswordColumn>;
 
+/** The encrypted password columns of one instance. Server-side only. */
+export type ObsInstancePasswordFields = Pick<ObsInstance, PasswordColumn>;
+
 /** Returns the most recent running instance for the given user, or null. */
 export async function getUserRunningInstance(client: DBClient, userId: string): Promise<ObsInstance | null> {
   const { data } = await client
@@ -328,3 +331,52 @@ export async function getRunningInstanceWithNodeUrl(
   };
 }
 
+// ── Instance secrets (rest-api only; plaintext never leaves rest-api except
+// to the instance's own node, via GET /api/obs-nodes/instances/:id/secrets) ──
+
+const PASSWORD_COLUMNS =
+  "obs_ws_password_ciphertext, obs_ws_password_iv, obs_ws_password_tag, vnc_password_ciphertext, vnc_password_iv, vnc_password_tag" as const;
+
+/** The encrypted password columns of one instance, scoped to the calling node.
+ * null when the instance doesn't exist or belongs to another node. */
+export async function getObsInstancePasswordFieldsForNode(
+  client: DBClient,
+  instanceId: string,
+  nodeId: string,
+): Promise<ObsInstancePasswordFields | null> {
+  const { data, error } = await client
+    .from("obs_instances")
+    .select(PASSWORD_COLUMNS)
+    .eq("id", instanceId)
+    .eq("node_id", nodeId)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
+}
+
+/**
+ * Stores a VNC password on a row that has none yet (rows created before the
+ * VNC-password feature). Only writes while the column is still null, so two
+ * concurrent callers can't overwrite each other's password: the loser gets
+ * false and must re-read the row to pick up the winner's value.
+ */
+export async function setObsInstanceVncPasswordIfMissingForNode(
+  client: DBClient,
+  instanceId: string,
+  nodeId: string,
+  encrypted: { ciphertext: string; iv: string; tag: string },
+): Promise<boolean> {
+  const { data, error } = await client
+    .from("obs_instances")
+    .update({
+      vnc_password_ciphertext: encrypted.ciphertext,
+      vnc_password_iv: encrypted.iv,
+      vnc_password_tag: encrypted.tag,
+    })
+    .eq("id", instanceId)
+    .eq("node_id", nodeId)
+    .is("vnc_password_ciphertext", null)
+    .select("id");
+  if (error) throw error;
+  return (data?.length ?? 0) > 0;
+}

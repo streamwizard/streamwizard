@@ -11,7 +11,11 @@ let lookups = 0;
 let known = new Set<string>();
 
 mock.module("@repo/supabase", () => ({ supabase: {} }));
+// Spread the real exports: bun shares module mocks across test files, so a
+// mock with only this one function breaks later files that import others.
+const realQueries = await import("@repo/supabase/queries/obs-nodes");
 mock.module("@repo/supabase/queries/obs-nodes", () => ({
+  ...realQueries,
   lookupNodeByApiKeyHash: async (_client: unknown, keyHash: string) => {
     lookups++;
     return known.has(keyHash) ? `node-for-${keyHash.slice(0, 8)}` : null;

@@ -3,7 +3,8 @@ import { z } from "zod";
 // Field allowlists for the instance-write routes. node_id is never accepted
 // from the body — it's always forced to the authenticated node — and id/
 // user_id are immutable after creation, so neither can be used to move a row
-// to another node or reassign ownership. Unlisted keys are stripped by zod.
+// to another node or reassign ownership. Unlisted keys are stripped by zod,
+// including the encrypted *_password_* columns: rest-api writes those itself.
 export const insertInstanceSchema = z.object({
   id: z.string().uuid().optional(),
   user_id: z.string().uuid(),
@@ -17,12 +18,10 @@ export const insertInstanceSchema = z.object({
   shm_size: z.string().min(1),
   config_template: z.string().nullable().optional(),
   subscription_id: z.string().uuid().nullable().optional(),
-  obs_ws_password_ciphertext: z.string().nullable().optional(),
-  obs_ws_password_iv: z.string().nullable().optional(),
-  obs_ws_password_tag: z.string().nullable().optional(),
-  vnc_password_ciphertext: z.string().nullable().optional(),
-  vnc_password_iv: z.string().nullable().optional(),
-  vnc_password_tag: z.string().nullable().optional(),
+  // Plaintext. rest-api encrypts it; the node never sends or sees ciphertext.
+  // Taking ciphertext from a node would let it store any ciphertext it has
+  // and read the plaintext back from GET /instances/:id/secrets.
+  obs_ws_password: z.string().min(1),
 });
 
 export const updateInstanceSchema = z.object({
@@ -36,12 +35,8 @@ export const updateInstanceSchema = z.object({
   shm_size: z.string().min(1).optional(),
   config_template: z.string().nullable().optional(),
   subscription_id: z.string().uuid().nullable().optional(),
-  obs_ws_password_ciphertext: z.string().nullable().optional(),
-  obs_ws_password_iv: z.string().nullable().optional(),
-  obs_ws_password_tag: z.string().nullable().optional(),
-  vnc_password_ciphertext: z.string().nullable().optional(),
-  vnc_password_iv: z.string().nullable().optional(),
-  vnc_password_tag: z.string().nullable().optional(),
+  // No password columns: a node can't change its instances' passwords (see
+  // obs_ws_password on insertInstanceSchema for why it can't send ciphertext).
   // Reported by the node after media uploads/deletes so the dashboard's storage
   // bar stays accurate. storage_quota_mb is intentionally NOT accepted here --
   // quota is admin/plan-owned, not something a node can raise for itself.

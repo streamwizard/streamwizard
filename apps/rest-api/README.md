@@ -37,7 +37,7 @@ src/
     eventsub/     handler registry, handlers/
     obs-nodes/
       node/       node-level handlers (claim, me, reconcile, plan limits, users)
-      instances/  handlers for one of the node's instances (CRUD, stream key), create token, plan sweep
+      instances/  handlers for one of the node's instances (CRUD, secrets, stream key), create token, plan sweep
     ingest-nodes/ route handlers (claim, me)
     streams/      clip sync, viewer-count poller, stream video lookup
 ```
