@@ -1,0 +1,157 @@
+import { randomUUID } from "node:crypto";
+import { decodeProtectedHeader, errors, importJWK, jwtVerify, SignJWT, type JWK } from "jose";
+
+// Short-lived tokens our own services use to call ws-server.
+//
+// ws-server used to trust one shared CONSUMER_SECRET (and, for bot sockets,
+// the Supabase service-role key). Every holder could do everything: push any
+// event to any user, close anyone's sockets, read the firehose. Now each
+// service has its own Ed25519 key and signs a 60-second token for the one
+// thing it is about to do. ws-server holds only the public keys, knows which
+// service each key belongs to, and checks the action against SERVICE_POLICY.
+// A leaked key is limited to that service's actions; ws-server holds no
+// secret at all.
+
+export const SERVICE_TOKEN_ISSUER = "streamwizard-service-token";
+export const SERVICE_TOKEN_AUDIENCE = "ws-server";
+export const SERVICE_TOKEN_TTL_SECONDS = 60;
+
+/** What a token can be used for. One scope per token. */
+export const SERVICE_SCOPES = [
+  /** POST /internal/broadcast */
+  "broadcast",
+  /** POST /internal/revoke */
+  "revoke",
+  /** role=consumer socket: the firehose of every user's events */
+  "consumer",
+  /** role=bot socket: push events into any user's room */
+  "bot",
+] as const;
+export type ServiceScope = (typeof SERVICE_SCOPES)[number];
+
+/** Every service that calls ws-server, and what each one may do. */
+export const SERVICE_POLICY = {
+  "rest-api": ["broadcast", "revoke"],
+  "web-streamwizard": ["broadcast", "revoke"],
+  "web-admin": ["broadcast", "revoke"],
+  "web-overlay": ["broadcast"],
+  "obs-auto-switcher": ["consumer", "bot"],
+  "streamwizard-bot": ["bot"],
+} as const satisfies Record<string, readonly ServiceScope[]>;
+export type ServiceName = keyof typeof SERVICE_POLICY;
+export const SERVICE_NAMES = Object.keys(SERVICE_POLICY) as ServiceName[];
+
+export function isServiceName(value: unknown): value is ServiceName {
+  return typeof value === "string" && Object.hasOwn(SERVICE_POLICY, value);
+}
+
+export function serviceMay(service: ServiceName, scope: ServiceScope): boolean {
+  return (SERVICE_POLICY[service] as readonly ServiceScope[]).includes(scope);
+}
+
+/** A key as stored: a JWK plus the service it belongs to (`svc`). */
+export type ServiceJwk = JWK & { kid: string; svc: ServiceName };
+
+// ── Signing (the calling services) ──────────────────────────────────────────
+
+type SigningKey = { key: CryptoKey | Uint8Array; kid: string; service: ServiceName };
+let signingKey: Promise<SigningKey> | null = null;
+
+/** Parses WS_SERVICE_SIGNING_JWK once per process. */
+function loadSigningKey(raw: string): Promise<SigningKey> {
+  if (signingKey) return signingKey;
+  signingKey = (async () => {
+    const jwk = JSON.parse(raw) as Partial<ServiceJwk>;
+    if (jwk.kty !== "OKP" || jwk.crv !== "Ed25519" || !jwk.d || !jwk.kid || !isServiceName(jwk.svc)) {
+      throw new Error("WS_SERVICE_SIGNING_JWK must be an Ed25519 private JWK with a kid and a known svc");
+    }
+    return { key: await importJWK(jwk, "EdDSA"), kid: jwk.kid, service: jwk.svc };
+  })();
+  // Don't cache a failure: a fixed env on the next call should just work.
+  signingKey.catch(() => {
+    signingKey = null;
+  });
+  return signingKey;
+}
+
+/** Signs a 60-second token for one action. Throws if this service has no key. */
+export async function signServiceToken(scope: ServiceScope): Promise<string> {
+  const raw = process.env.WS_SERVICE_SIGNING_JWK;
+  if (!raw) throw new Error("WS_SERVICE_SIGNING_JWK is not set");
+  const { key, kid, service } = await loadSigningKey(raw);
+  return new SignJWT({ scope })
+    .setProtectedHeader({ alg: "EdDSA", kid, typ: "JWT" })
+    .setIssuer(SERVICE_TOKEN_ISSUER)
+    .setAudience(SERVICE_TOKEN_AUDIENCE)
+    .setSubject(service)
+    .setIssuedAt()
+    .setExpirationTime(`${SERVICE_TOKEN_TTL_SECONDS}s`)
+    .setJti(randomUUID())
+    .sign(key);
+}
+
+/**
+ * The Authorization header for one ws-server call: a fresh service token when
+ * this service has WS_SERVICE_SIGNING_JWK, else the legacy shared secret
+ * while environments without per-service keys still run on it, else null
+ * (ws-server pushes are off here).
+ */
+export async function serviceAuthHeader(scope: ServiceScope, legacySecret?: string | null): Promise<string | null> {
+  if (process.env.WS_SERVICE_SIGNING_JWK) return `Bearer ${await signServiceToken(scope)}`;
+  return legacySecret ? `Bearer ${legacySecret}` : null;
+}
+
+// ── Verifying (ws-server) ───────────────────────────────────────────────────
+
+const CLOCK_TOLERANCE_SECONDS = 5;
+
+/** Same three-part shape every JWT has; anything else is a legacy secret. */
+export function looksLikeJwt(token: string): boolean {
+  return token.split(".").length === 3;
+}
+
+export type ServiceTokenVerifier = (token: string, scope: ServiceScope) => Promise<ServiceName>;
+
+/**
+ * Builds a verifier from WS_SERVICE_JWKS ({ keys: ServiceJwk[] }). It returns
+ * the calling service, or throws when the token is invalid, the key is not
+ * bound to the service in `sub`, the token was signed for another action, or
+ * the service may not do this action.
+ */
+export function createServiceTokenVerifier(jwks: { keys: ServiceJwk[] }): ServiceTokenVerifier {
+  const byKid = new Map<string, { jwk: ServiceJwk; key: Promise<CryptoKey | Uint8Array> }>();
+  for (const jwk of jwks.keys) {
+    if (!jwk.kid || !isServiceName(jwk.svc)) throw new Error("every WS_SERVICE_JWKS key needs a kid and a known svc");
+    if (jwk.d) throw new Error("WS_SERVICE_JWKS must hold public keys only");
+    byKid.set(jwk.kid, { jwk, key: importJWK(jwk, "EdDSA") });
+  }
+
+  return async (token, scope) => {
+    const { kid, alg } = decodeProtectedHeader(token);
+    if (alg !== "EdDSA") throw new errors.JOSEAlgNotAllowed("only EdDSA service tokens are accepted");
+    const entry = kid ? byKid.get(kid) : undefined;
+    if (!entry) throw new errors.JWKSNoMatchingKey("unknown service key");
+
+    const { payload } = await jwtVerify(token, await entry.key, {
+      issuer: SERVICE_TOKEN_ISSUER,
+      audience: SERVICE_TOKEN_AUDIENCE,
+      algorithms: ["EdDSA"],
+      maxTokenAge: `${SERVICE_TOKEN_TTL_SECONDS}s`,
+      clockTolerance: CLOCK_TOLERANCE_SECONDS,
+      requiredClaims: ["sub", "exp", "iat", "jti"],
+    });
+
+    const service = entry.jwk.svc;
+    if (payload.sub !== service) throw new errors.JWTClaimValidationFailed("key belongs to another service", payload, "sub");
+    if (payload.scope !== scope) throw new errors.JWTClaimValidationFailed("token is for another action", payload, "scope");
+    if (!serviceMay(service, scope)) {
+      throw new errors.JWTClaimValidationFailed(`${service} may not ${scope}`, payload, "scope");
+    }
+    return service;
+  };
+}
+
+/** Test-only: forget the parsed key so a test can swap WS_SERVICE_SIGNING_JWK. */
+export function resetSigningKey(): void {
+  signingKey = null;
+}
