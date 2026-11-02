@@ -1,4 +1,5 @@
 import type { Context, Env } from "hono";
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import {
   countActiveObsInstancesForNode,
@@ -107,7 +108,10 @@ export async function createInstance(c: Context) {
     });
     return c.json(instance, 201);
   } catch (err) {
-    return c.json({ error: (err as Error).message }, 500);
+    // Never the raw DB error: a constraint name or detail would tell the node
+    // whether an id exists on another node.
+    reportError(err, "obs-nodes.instances.create", { nodeId });
+    return c.json({ error: "Could not create the instance" }, 500);
   }
 }
 
@@ -123,7 +127,10 @@ export async function updateInstance(c: Context<Env, "/:id">) {
     if (!instance) return c.json({ error: "Instance not found" }, 404);
     return c.json(instance);
   } catch (err) {
-    return c.json({ error: (err as Error).message }, 500);
+    // Never the raw DB error: a constraint name or detail would tell the node
+    // whether an id exists on another node.
+    reportError(err, "obs-nodes.instances.update", { nodeId });
+    return c.json({ error: "Could not update the instance" }, 500);
   }
 }
 
@@ -148,6 +155,9 @@ export async function deleteInstance(c: Context<Env, "/:id">) {
     instanceDeleted(nodeId, id, deleted.user_id);
     return c.json({ ok: true });
   } catch (err) {
-    return c.json({ error: (err as Error).message }, 500);
+    // Never the raw DB error: a constraint name or detail would tell the node
+    // whether an id exists on another node.
+    reportError(err, "obs-nodes.instances.delete", { nodeId });
+    return c.json({ error: "Could not delete the instance" }, 500);
   }
 }
