@@ -2855,6 +2855,7 @@ export type Database = {
           id: string
           key_id: string
           last_bitrate_kbps: number | null
+          node_id: string | null
           protocol: string
           remote_ip: unknown
           started_at: string
@@ -2865,6 +2866,7 @@ export type Database = {
           id?: string
           key_id: string
           last_bitrate_kbps?: number | null
+          node_id?: string | null
           protocol: string
           remote_ip?: unknown
           started_at?: string
@@ -2875,12 +2877,20 @@ export type Database = {
           id?: string
           key_id?: string
           last_bitrate_kbps?: number | null
+          node_id?: string | null
           protocol?: string
           remote_ip?: unknown
           started_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ingest_sessions_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "ingest_nodes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ingest_sessions_key_id_fkey"
             columns: ["key_id"]

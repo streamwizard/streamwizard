@@ -9,6 +9,8 @@ export type IngestProtocol = "rtmp" | "srt" | "srtla";
 export interface StreamKeyOwner {
   user_id: string;
   key_id: string;
+  /** Human label of the key ("Camera 1"). */
+  label: string;
 }
 
 /**
@@ -18,13 +20,13 @@ export interface StreamKeyOwner {
 export async function getStreamKeyOwner(client: DBClient, streamKey: string): Promise<StreamKeyOwner | null> {
   const { data } = await client
     .from("ingest_stream_keys")
-    .select("id, user_id")
+    .select("id, user_id, label")
     .eq("stream_key", streamKey)
     .eq("is_active", true)
     .maybeSingle();
 
   if (!data) return null;
-  return { user_id: data.user_id, key_id: data.id };
+  return { user_id: data.user_id, key_id: data.id, label: data.label };
 }
 
 export async function touchStreamKey(client: DBClient, streamKey: string): Promise<void> {
@@ -39,6 +41,8 @@ export interface IngestSessionInsert {
   key_id: string;
   protocol: IngestProtocol;
   remote_ip?: string | null;
+  /** The ingest node that opened it (rest-api takes it from the node's key). */
+  node_id: string;
 }
 
 /** Open a session row when a stream is authorized; returns the new session id. */
@@ -49,16 +53,98 @@ export const insertIngestSession = withMetrics(
     client.from("ingest_sessions").insert(data).select("id").single(),
 );
 
-/** Close a session row on disconnect. */
-export const endIngestSession = withMetrics(
+/** OBS output keys an authorized ingest key pushes to (active ones only). */
+export const getOutputKeysForKey = withMetrics(
+  "ingest_output_keys",
+  "select",
+  async (client: DBClient, keyId: string) =>
+    client.from("ingest_output_keys").select("output_key").eq("key_id", keyId).eq("is_active", true),
+);
+
+const closeOpenSessionForNode = withMetrics(
   "ingest_sessions",
   "update",
-  async (client: DBClient, sessionId: string, lastBitrateKbps?: number | null) =>
+  async (client: DBClient, sessionId: string, nodeId: string, lastBitrateKbps: number | null) =>
     client
       .from("ingest_sessions")
-      .update({ ended_at: new Date().toISOString(), last_bitrate_kbps: lastBitrateKbps ?? null })
-      .eq("id", sessionId),
+      .update({ ended_at: new Date().toISOString(), last_bitrate_kbps: lastBitrateKbps })
+      .eq("id", sessionId)
+      .eq("node_id", nodeId)
+      .is("ended_at", null)
+      .select("user_id"),
 );
+
+const selectSessionOwnerForNode = withMetrics(
+  "ingest_sessions",
+  "select",
+  async (client: DBClient, sessionId: string, nodeId: string) =>
+    client.from("ingest_sessions").select("user_id").eq("id", sessionId).eq("node_id", nodeId).maybeSingle(),
+);
+
+/**
+ * Ends one of the node's sessions. The first call sets ended_at and the last
+ * bitrate; later calls change nothing (endedNow: false). null when no session
+ * with this id was opened by this node, the same as a missing one.
+ */
+export async function endIngestSession(
+  client: DBClient,
+  sessionId: string,
+  nodeId: string,
+  lastBitrateKbps: number | null,
+): Promise<{ user_id: string; endedNow: boolean } | null> {
+  const closed = await closeOpenSessionForNode(client, sessionId, nodeId, lastBitrateKbps);
+  if (closed.error) throw closed.error;
+  if (closed.data?.[0]) return { user_id: closed.data[0].user_id, endedNow: true };
+
+  const existing = await selectSessionOwnerForNode(client, sessionId, nodeId);
+  if (existing.error) throw existing.error;
+  return existing.data ? { user_id: existing.data.user_id, endedNow: false } : null;
+}
+
+/** Owners of the node's own sessions among `sessionIds`. Ids that are unknown
+ *  or belong to another node are simply absent from the map. */
+export async function getIngestSessionOwnersForNode(
+  client: DBClient,
+  sessionIds: string[],
+  nodeId: string,
+): Promise<Map<string, string>> {
+  if (sessionIds.length === 0) return new Map();
+  const { data, error } = await client
+    .from("ingest_sessions")
+    .select("id, user_id")
+    .in("id", sessionIds)
+    .eq("node_id", nodeId);
+  if (error) throw error;
+  return new Map((data ?? []).map((r) => [r.id, r.user_id]));
+}
+
+export interface IngestSessionRoute {
+  user_id: string;
+  node_id: string | null;
+  key_id: string;
+  label: string | null;
+  ended_at: string | null;
+}
+
+/** What ws-server needs to route a live sample when its in-memory session
+ *  registry has no entry (after a restart, or on another replica). */
+export async function getIngestSessionRoute(client: DBClient, sessionId: string): Promise<IngestSessionRoute | null> {
+  const { data, error } = await client
+    .from("ingest_sessions")
+    .select("user_id, node_id, key_id, ended_at, ingest_stream_keys(label)")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const key = Array.isArray(data.ingest_stream_keys) ? data.ingest_stream_keys[0] : data.ingest_stream_keys;
+  return {
+    user_id: data.user_id,
+    node_id: data.node_id,
+    key_id: data.key_id,
+    label: key?.label ?? null,
+    ended_at: data.ended_at,
+  };
+}
 
 export interface IngestSessionStatsInsert {
   session_id: string;
