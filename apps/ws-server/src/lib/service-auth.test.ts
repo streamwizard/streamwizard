@@ -58,6 +58,7 @@ describe("service tokens", () => {
       ok: true,
       service: "rest-api",
       legacy: false,
+      claims: {},
     });
   });
 
@@ -88,6 +89,14 @@ describe("legacy secrets", () => {
     expect((await auth.authorize("Bearer shared-consumer", "broadcast")).ok).toBe(false);
     expect((await auth.authorize("Bearer service-role", "bot")).ok).toBe(false);
     expect((await auth.authorize(await bearer("streamwizard-bot", "bot"), "bot")).ok).toBe(true);
+  });
+
+  test("the new ingest actions never accept a shared secret", async () => {
+    const auth = createServiceAuth({ jwks: { keys }, required: false, ...legacy });
+    expect((await auth.authorize("Bearer shared-consumer", "ingest-node")).ok).toBe(false);
+    expect((await auth.authorize("Bearer service-role", "ingest-node")).ok).toBe(false);
+    expect((await auth.authorize("Bearer shared-consumer", "ingest-sessions")).ok).toBe(false);
+    expect(createServiceAuth({ required: false, ...legacy }).configured("ingest-node")).toBe(false);
   });
 
   test("configured() says when an action has no way in at all", () => {

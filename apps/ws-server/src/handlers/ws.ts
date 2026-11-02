@@ -7,10 +7,64 @@ import { addConsumer, removeConsumer } from "../consumers";
 import { trackCredentialSocket, untrackCredentialSocket } from "../revoke";
 import { routeBotBroadcast } from "../bot-router";
 import { updateNodeBandwidth } from "../ingest-nodes";
+import { ingestSessions } from "../ingest-sessions";
+import { nodeBandwidthFrom, parseIngestNodeMessage, resolveIngestStats } from "../ingest-node-messages";
 import type { ConnectionData, ServerWebSocket } from "../types";
 
+// role=ingest-node: pings, the node's NIC throughput and live session stats.
+// The node id comes from the socket's token (ws.data.ingestNodeId), never from
+// the message.
+function handleIngestNodeMessage(ws: ServerWebSocket<ConnectionData>, rawStr: string): void {
+  addBotSocket(ws);
+  const nodeId = ws.data.ingestNodeId;
+  const msg = parseIngestNodeMessage(rawStr);
+  if (!nodeId || !msg) {
+    trackWsMessageDrop("bot", "malformed_json");
+    return;
+  }
+
+  if (msg.kind === "ping") {
+    ws.send(JSON.stringify({ kind: "pong", ts: msg.ts }));
+    return;
+  }
+
+  if (msg.kind === "node_metrics") {
+    const payload = nodeBandwidthFrom(nodeId, msg.payload);
+    if (!payload) {
+      trackWsMessageDrop("bot", "malformed_node_metrics");
+      return;
+    }
+    trackWsMessage("bot", "node_metrics", ws.data.source);
+    updateNodeBandwidth(payload);
+    broadcastNodeBandwidth({ ts: Date.now(), kind: "node_bandwidth", source: ws.data.source, payload });
+    return;
+  }
+
+  if (msg.kind === "ingest_stats") {
+    // Async (a session the registry doesn't know is looked up once), so it
+    // can't throw into the caller's try/catch: report here instead.
+    void resolveIngestStats(ingestSessions, nodeId, msg)
+      .then((result) => {
+        if (!result.ok) {
+          trackWsMessageDrop("bot", result.reason);
+          return;
+        }
+        routeBotBroadcast({ userId: result.userId, type: "streamwizard.ingest_stats", payload: result.payload }, ws.data.source);
+      })
+      .catch((err) => reportError(err, "ws.ingest_stats", { source: ws.data.source }));
+    return;
+  }
+
+  trackWsMessageDrop("bot", "malformed_json");
+}
+
 function handleMessage(ws: ServerWebSocket<ConnectionData>, raw: string | Buffer): void {
-  // Only bots send. Subscribers, monitors and consumers are receive-only.
+  if (ws.data.role === "ingest-node") {
+    handleIngestNodeMessage(ws, typeof raw === "string" ? raw : raw.toString());
+    return;
+  }
+  // Only bots and ingest nodes send. Subscribers, monitors and consumers are
+  // receive-only.
   if (ws.data.role !== "bot") return;
 
   const rawStr = typeof raw === "string" ? raw : raw.toString();
@@ -75,10 +129,10 @@ export const websocketHandlers = {
       return;
     }
 
-    trackWsConnection(role, "open", undefined, ws.data.source);
+    trackWsConnection(role === "ingest-node" ? "bot" : role, "open", undefined, ws.data.source);
     trackCredentialSocket(ws);
 
-    if (role === "bot") {
+    if (role === "bot" || role === "ingest-node") {
       addBotSocket(ws);
       console.log(`[bot] connected source=${ws.data.source ?? "unknown"}`);
       broadcastToMonitors({ ts: Date.now(), kind: "connect", direction: "system", role: "bot", roomId: "_bot", source: ws.data.source });
@@ -127,10 +181,10 @@ export const websocketHandlers = {
       return;
     }
 
-    trackWsConnection(role, "close", durationMs, ws.data.source);
+    trackWsConnection(role === "ingest-node" ? "bot" : role, "close", durationMs, ws.data.source);
     untrackCredentialSocket(ws);
 
-    if (role === "bot") {
+    if (role === "bot" || role === "ingest-node") {
       removeBotSocket(ws);
       console.log(`[bot] disconnected source=${ws.data.source ?? "unknown"}`);
       broadcastToMonitors({ ts: Date.now(), kind: "disconnect", direction: "system", role: "bot", roomId: "_bot", source: ws.data.source, meta: { durationMs } });

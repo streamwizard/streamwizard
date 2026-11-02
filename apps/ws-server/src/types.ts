@@ -4,7 +4,7 @@ import type { OverlayEventType } from "@repo/types";
 export type ServerWebSocket<T = any> = import("bun").ServerWebSocket<T>;
 
 export interface ConnectionData {
-  role: "subscriber" | "bot" | "monitor" | "consumer";
+  role: "subscriber" | "bot" | "monitor" | "consumer" | "ingest-node";
   userId: string;
   channels: Set<OverlayEventType>;
   connectedAt: number;
@@ -12,15 +12,21 @@ export interface ConnectionData {
   /**
    * Consumer-only: message types this consumer wants (from `?types=` CSV).
    * Empty/absent = every bot-routed type. Unlike subscriber `channels`, a
-   * consumer sees ALL users' rooms — the role is gated on CONSUMER_SECRET.
+   * consumer sees ALL users' rooms — the role is gated on a service token.
    */
   consumerTypes?: Set<string>;
   /**
-   * Self-declared identity of a bot connection ("ingest-node:<id>",
-   * "streamwizard-bot"). Observability-only: every bot shares the same
-   * secret, so a forged source can mislabel but not escalate.
+   * Who a bot, consumer or ingest-node connection is ("streamwizard-bot",
+   * "ingest-node:<id>"). Taken from the verified service token where there is
+   * one; legacy-secret bots still self-declare it, which can mislabel but not
+   * escalate.
    */
   source?: string;
+  /**
+   * Ingest-node only: the node this socket speaks for, from the `node` claim
+   * of the token rest-api signed. Never from anything the node sends.
+   */
+  ingestNodeId?: string;
   /**
    * Subscriber only: the credential the upgrade was authorised with,
    * so it can be re-checked later (see revoke.ts). "scene" is an overlay's

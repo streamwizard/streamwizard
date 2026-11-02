@@ -11,7 +11,7 @@ import type { ConnectionData } from "../types";
 
 type BunServer = import("bun").Server<ConnectionData>;
 
-const VALID_ROLES = new Set(["subscriber", "bot", "monitor", "consumer"]);
+const VALID_ROLES = new Set(["subscriber", "bot", "monitor", "consumer", "ingest-node"]);
 
 /** Monotonic per-connection id, used for metrics and the monitor feed. */
 let nextConnId = 1;
@@ -84,7 +84,8 @@ function upgradeOrFail(
     data: { ...data, connectedAt: Date.now(), connId: `c-${nextConnId++}` } as ConnectionData,
   });
   if (!upgraded) {
-    trackWsAuthFailure(role === "monitor" ? "unknown" : role, "upgrade_failed");
+    // Ingest nodes report under the bot label, as they did when they were bots.
+    trackWsAuthFailure(role === "monitor" ? "unknown" : role === "ingest-node" ? "bot" : role, "upgrade_failed");
     return new Response("Upgrade Failed", { status: 500 });
   }
   return undefined;
@@ -154,6 +155,26 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       userId: "_consumer",
       source: auth.legacy ? parseSourceLabel(url) : auth.service,
       consumerTypes: parseCsvSet(url, "types"),
+      channels: new Set<OverlayEventType>(),
+    });
+  }
+
+  // --- Ingest node (one ingest node's live data; token signed by rest-api) ---
+  if (role === "ingest-node") {
+    if (!serviceAuthConfigured("ingest-node")) {
+      return new Response("Ingest nodes not configured", { status: 404 });
+    }
+    const auth = await authorizeService(req.headers.get("authorization"), "ingest-node");
+    const nodeId = auth.ok ? auth.claims.node : undefined;
+    if (!auth.ok || !nodeId) {
+      trackWsAuthFailure("bot", "invalid_bot_key");
+      return new Response("Unauthorized", { status: 401 });
+    }
+    return upgradeOrFail(server, req, "ingest-node", {
+      role: "ingest-node",
+      userId: "_bot",
+      ingestNodeId: nodeId,
+      source: `ingest-node:${nodeId}`,
       channels: new Set<OverlayEventType>(),
     });
   }

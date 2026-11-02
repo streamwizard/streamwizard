@@ -283,3 +283,30 @@ export interface BotBroadcastMessage {
 // node-scoped metrics and heartbeats. `"kind" in msg` splits fan-out from
 // node-scoped; discriminate the rest on `msg.kind`.
 export type BotOutboundMessage = BotBroadcastMessage | NodeMetricsMessage | BotPingMessage;
+
+// ── role=ingest-node socket ─────────────────────────────────────────────────
+// What an ingest node sends to ws-server. The node never names a user or its
+// own node id: ws-server takes the node from the socket's token (signed by
+// rest-api) and the user, stream key and label from the session rest-api
+// registered when it opened the session. A sample for a session that isn't
+// registered to this node is dropped. ws-server answers pings with
+// BotPongMessage, as it does for bots.
+
+/** One live quality sample; ws-server turns it into a streamwizard.ingest_stats event. */
+export interface IngestNodeStatsMessage {
+  kind: "ingest_stats";
+  session_id: string;
+  protocol: IngestStatsPayload["protocol"];
+  /** Raw transport counters plus the derived loss/drop/retrans percentages. */
+  stats: Record<string, number>;
+  /** ISO time the node received the sample. */
+  at: string;
+}
+
+/** This node's NIC throughput; ws-server adds node_id from the token. */
+export interface IngestNodeMetricsMessage {
+  kind: "node_metrics";
+  payload: Omit<IngestNodeBandwidthPayload, "node_id">;
+}
+
+export type IngestNodeOutboundMessage = IngestNodeStatsMessage | IngestNodeMetricsMessage | BotPingMessage;

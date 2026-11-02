@@ -1,4 +1,10 @@
-import { createServiceTokenVerifier, looksLikeJwt, type ServiceJwk, type ServiceScope } from "@repo/service-token";
+import {
+  createServiceTokenVerifier,
+  looksLikeJwt,
+  type ServiceJwk,
+  type ServiceScope,
+  type ServiceTokenClaims,
+} from "@repo/service-token";
 import { isValidSecret } from "./secret";
 import { env } from "./env";
 
@@ -9,7 +15,7 @@ import { env } from "./env";
 // an environment can move over one service at a time.
 
 export type ServiceAuthResult =
-  | { ok: true; service: string; legacy: boolean }
+  | { ok: true; service: string; legacy: boolean; claims: ServiceTokenClaims }
   | { ok: false; reason: "missing" | "invalid" };
 
 export interface ServiceAuthConfig {
@@ -25,7 +31,12 @@ export interface ServiceAuthConfig {
 
 export function createServiceAuth(config: ServiceAuthConfig) {
   const verify = config.jwks ? createServiceTokenVerifier(config.jwks) : null;
-  const legacySecretFor = (scope: ServiceScope) => (scope === "bot" ? config.botSecret : config.consumerSecret);
+  // The ingest scopes are new: they never had a shared secret.
+  const legacySecretFor = (scope: ServiceScope): string | undefined => {
+    if (scope === "bot") return config.botSecret;
+    if (scope === "ingest-node" || scope === "ingest-sessions") return undefined;
+    return config.consumerSecret;
+  };
 
   return {
     /** False when this environment has no way at all to authorize this action. */
@@ -40,7 +51,8 @@ export function createServiceAuth(config: ServiceAuthConfig) {
 
       if (verify && looksLikeJwt(token)) {
         try {
-          return { ok: true, service: await verify(token, scope), legacy: false };
+          const { service, claims } = await verify(token, scope);
+          return { ok: true, service, legacy: false, claims };
         } catch {
           return { ok: false, reason: "invalid" };
         }
@@ -48,7 +60,7 @@ export function createServiceAuth(config: ServiceAuthConfig) {
 
       const legacy = legacySecretFor(scope);
       if (!config.required && legacy && isValidSecret(token, legacy)) {
-        return { ok: true, service: "legacy", legacy: true };
+        return { ok: true, service: "legacy", legacy: true, claims: {} };
       }
       return { ok: false, reason: "invalid" };
     },
