@@ -39,7 +39,10 @@ turns that into the user, stream key and label through its session registry
 (`src/ingest-sessions.ts`), which rest-api fills with
 `POST /internal/ingest-sessions` and `POST /internal/ingest-sessions/:id/end`
 (scope `ingest-sessions`). Samples for a session the node didn't open, or
-that has ended, are dropped.
+that has ended, are dropped. When web-admin deletes a node it calls
+`POST /internal/ingest-nodes/:id/revoke` (scope `revoke`) to close the node's
+socket; the node can't open a new one, because rest-api only signs tokens for
+nodes that still exist.
 
 On a miss the registry looks the session up once in `ingest_sessions` (misses
 are remembered for 5s, one lookup per id at a time, and each node gets at most

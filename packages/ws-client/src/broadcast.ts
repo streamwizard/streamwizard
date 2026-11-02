@@ -132,3 +132,8 @@ export function endIngestSessionOnWs(sessionId: string, config: BroadcastConfig)
     { ...config, consumerSecret: null },
   );
 }
+
+/** Closes every live ws-server socket of an ingest node (after it was deleted). */
+export function revokeIngestNodeSockets(nodeId: string, config: BroadcastConfig): Promise<BroadcastResult> {
+  return postScoped(`/internal/ingest-nodes/${encodeURIComponent(nodeId)}/revoke`, "revoke", {}, config);
+}

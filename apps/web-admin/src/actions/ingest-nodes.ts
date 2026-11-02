@@ -6,6 +6,7 @@ import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
 import { env } from "@/lib/env";
 import { ingestNodeCapacitySchema } from "@/schemas/ingest-node";
+import { revokeIngestNodeWsSockets } from "@/lib/ws-revoke";
 import {
   type IngestNode,
   type IngestNodeCapacity,
@@ -119,6 +120,8 @@ export async function deleteIngestNodeAction(id: string): Promise<{ error: strin
   }
 
   const { error } = await deleteIngestNode(adminClient, id);
+  // Cut the node off now, not when its cached key runs out.
+  if (!error) await revokeIngestNodeWsSockets(id);
   revalidatePath(INGEST_NODES_PATH);
   return { error };
 }

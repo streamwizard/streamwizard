@@ -4,6 +4,8 @@ import { trackWsAuthFailure } from "@repo/metrics";
 import { routeBotBroadcast } from "../bot-router";
 import { revokeUser, type RevokeScope } from "../revoke";
 import { ingestSessions } from "../ingest-sessions";
+import { getBotSockets } from "../monitor";
+import { REVOKED_CLOSE_CODE } from "../revoke";
 
 /**
  * The plain-HTTP surface of ws-server: a liveness probe plus two injection
@@ -128,6 +130,32 @@ export async function handleEndIngestSession(req: Request, sessionId: string): P
   return Response.json({ ok: true });
 }
 
+const NODE_REVOKE = /^\/internal\/ingest-nodes\/([^/]+)\/revoke$/;
+
+/** Closes every live socket of one ingest node (it was deleted). The node
+ *  can't open a new one: rest-api only signs ingest-node tokens for a node
+ *  that still exists. */
+export async function handleRevokeIngestNode(req: Request, nodeId: string): Promise<Response> {
+  if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
+  if (!serviceAuthConfigured("revoke")) return new Response("Not Found", { status: 404 });
+  const auth = await authorizeService(req.headers.get("authorization"), "revoke");
+  if (!auth.ok) {
+    trackWsAuthFailure("bot", "invalid_bot_key");
+    return new Response("Unauthorized", { status: 401 });
+  }
+  if (!UUID.test(nodeId)) return new Response("Bad Request: node id must be a UUID", { status: 400 });
+
+  let closed = 0;
+  for (const ws of getBotSockets().values()) {
+    if (ws.data.role === "ingest-node" && ws.data.ingestNodeId === nodeId) {
+      ws.close(REVOKED_CLOSE_CODE, "node revoked");
+      closed++;
+    }
+  }
+  if (closed > 0) console.log(`[revoke] ingest node=${nodeId} closed=${closed}`);
+  return Response.json({ ok: true, closed });
+}
+
 export function handleInternalRoute(req: Request, pathname: string): Promise<Response> | Response | null {
   if (pathname === "/health") return Response.json({ ok: true });
   if (pathname === "/internal/broadcast") return handleInternalBroadcast(req);
@@ -135,5 +163,7 @@ export function handleInternalRoute(req: Request, pathname: string): Promise<Res
   if (pathname === "/internal/ingest-sessions") return handleRegisterIngestSession(req);
   const end = SESSION_END.exec(pathname);
   if (end) return handleEndIngestSession(req, end[1]!);
+  const revokeNode = NODE_REVOKE.exec(pathname);
+  if (revokeNode) return handleRevokeIngestNode(req, revokeNode[1]!);
   return null;
 }
