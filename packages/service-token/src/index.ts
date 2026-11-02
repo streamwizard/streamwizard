@@ -26,12 +26,17 @@ export const SERVICE_SCOPES = [
   "consumer",
   /** role=bot socket: push events into any user's room */
   "bot",
+  /** role=ingest-node socket: one ingest node's live data. rest-api signs
+   *  these for a node (claim `node`); the node holds the token, not a key. */
+  "ingest-node",
+  /** POST /internal/ingest-sessions(/:id/end): the live session registry */
+  "ingest-sessions",
 ] as const;
 export type ServiceScope = (typeof SERVICE_SCOPES)[number];
 
 /** Every service that calls ws-server, and what each one may do. */
 export const SERVICE_POLICY = {
-  "rest-api": ["broadcast", "revoke"],
+  "rest-api": ["broadcast", "revoke", "ingest-node", "ingest-sessions"],
   "web-streamwizard": ["broadcast", "revoke"],
   "web-admin": ["broadcast", "revoke"],
   "web-overlay": ["broadcast"],
@@ -47,6 +52,22 @@ export function isServiceName(value: unknown): value is ServiceName {
 
 export function serviceMay(service: ServiceName, scope: ServiceScope): boolean {
   return (SERVICE_POLICY[service] as readonly ServiceScope[]).includes(scope);
+}
+
+/** Extra claims a token can carry, e.g. `node` on an ingest-node token. */
+export type ServiceTokenClaims = Record<string, string>;
+
+/** Claims the token format owns; extra claims can't replace them. */
+const RESERVED_CLAIMS = new Set(["iss", "aud", "sub", "iat", "exp", "nbf", "jti", "scope"]);
+
+/** Scopes whose tokens must name something, and which claim does it. */
+const REQUIRED_CLAIM: Partial<Record<ServiceScope, string>> = { "ingest-node": "node" };
+
+function checkRequiredClaim(scope: ServiceScope, claims: ServiceTokenClaims): void {
+  const name = REQUIRED_CLAIM[scope];
+  if (name && !(typeof claims[name] === "string" && claims[name].length > 0)) {
+    throw new Error(`a ${scope} token needs a non-empty ${name} claim`);
+  }
 }
 
 /** A key as stored: a JWK plus the service it belongs to (`svc`). */
@@ -74,12 +95,25 @@ function loadSigningKey(raw: string): Promise<SigningKey> {
   return signingKey;
 }
 
-/** Signs a 60-second token for one action. Throws if this service has no key. */
-export async function signServiceToken(scope: ServiceScope): Promise<string> {
+/** True when this process has a service signing key. */
+export function hasServiceSigningKey(): boolean {
+  return Boolean(process.env.WS_SERVICE_SIGNING_JWK);
+}
+
+/**
+ * Signs a 60-second token for one action. `claims` adds fields such as
+ * `{ node }` on an ingest-node token; they can't replace the token's own
+ * claims. Throws if this service has no key, or a required claim is missing.
+ */
+export async function signServiceToken(scope: ServiceScope, claims: ServiceTokenClaims = {}): Promise<string> {
   const raw = process.env.WS_SERVICE_SIGNING_JWK;
   if (!raw) throw new Error("WS_SERVICE_SIGNING_JWK is not set");
+  for (const name of Object.keys(claims)) {
+    if (RESERVED_CLAIMS.has(name)) throw new Error(`claim ${name} is reserved`);
+  }
+  checkRequiredClaim(scope, claims);
   const { key, kid, service } = await loadSigningKey(raw);
-  return new SignJWT({ scope })
+  return new SignJWT({ ...claims, scope })
     .setProtectedHeader({ alg: "EdDSA", kid, typ: "JWT" })
     .setIssuer(SERVICE_TOKEN_ISSUER)
     .setAudience(SERVICE_TOKEN_AUDIENCE)
@@ -110,13 +144,20 @@ export function looksLikeJwt(token: string): boolean {
   return token.split(".").length === 3;
 }
 
-export type ServiceTokenVerifier = (token: string, scope: ServiceScope) => Promise<ServiceName>;
+export interface VerifiedServiceToken {
+  service: ServiceName;
+  /** The token's extra claims (string values only), e.g. `node`. */
+  claims: ServiceTokenClaims;
+}
+
+export type ServiceTokenVerifier = (token: string, scope: ServiceScope) => Promise<VerifiedServiceToken>;
 
 /**
  * Builds a verifier from WS_SERVICE_JWKS ({ keys: ServiceJwk[] }). It returns
- * the calling service, or throws when the token is invalid, the key is not
- * bound to the service in `sub`, the token was signed for another action, or
- * the service may not do this action.
+ * the calling service and the token's extra claims, or throws when the token
+ * is invalid, the key is not bound to the service in `sub`, the token was
+ * signed for another action, the service may not do this action, or a claim
+ * the action needs is missing.
  */
 export function createServiceTokenVerifier(jwks: { keys: ServiceJwk[] }): ServiceTokenVerifier {
   const byKid = new Map<string, { jwk: ServiceJwk; key: Promise<CryptoKey | Uint8Array> }>();
@@ -147,7 +188,16 @@ export function createServiceTokenVerifier(jwks: { keys: ServiceJwk[] }): Servic
     if (!serviceMay(service, scope)) {
       throw new errors.JWTClaimValidationFailed(`${service} may not ${scope}`, payload, "scope");
     }
-    return service;
+    const claims: ServiceTokenClaims = {};
+    for (const [name, value] of Object.entries(payload)) {
+      if (!RESERVED_CLAIMS.has(name) && typeof value === "string") claims[name] = value;
+    }
+    try {
+      checkRequiredClaim(scope, claims);
+    } catch (err) {
+      throw new errors.JWTClaimValidationFailed((err as Error).message, payload, REQUIRED_CLAIM[scope]);
+    }
+    return { service, claims };
   };
 }
 

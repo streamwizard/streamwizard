@@ -47,7 +47,7 @@ beforeEach(() => useKey(restApi));
 describe("sign and verify", () => {
   test("a service's token verifies as that service, for that action", async () => {
     const token = await signServiceToken("broadcast");
-    expect(await verify(token, "broadcast")).toBe("rest-api");
+    expect(await verify(token, "broadcast")).toEqual({ service: "rest-api", claims: {} });
   });
 
   test("a token signed for one action is refused for another", async () => {
@@ -96,6 +96,47 @@ describe("sign and verify", () => {
   test("the verifier refuses a private key in its key set", () => {
     const priv = JSON.parse(restApi.signing) as ServiceJwk;
     expect(() => createServiceTokenVerifier({ keys: [priv] })).toThrow("public keys only");
+  });
+});
+
+describe("ingest-node tokens", () => {
+  test("carry the node they were signed for", async () => {
+    const token = await signServiceToken("ingest-node", { node: "node-a" });
+    expect(await verify(token, "ingest-node")).toEqual({ service: "rest-api", claims: { node: "node-a" } });
+  });
+
+  test("can't be signed without a node", async () => {
+    await expect(signServiceToken("ingest-node")).rejects.toThrow("node claim");
+    await expect(signServiceToken("ingest-node", { node: "" })).rejects.toThrow("node claim");
+  });
+
+  test("are refused without a node even when the signature is valid", async () => {
+    const bare = await new SignJWT({ scope: "ingest-node" })
+      .setProtectedHeader({ alg: "EdDSA", kid: restApi.publicJwk.kid })
+      .setIssuer(SERVICE_TOKEN_ISSUER)
+      .setAudience(SERVICE_TOKEN_AUDIENCE)
+      .setSubject("rest-api")
+      .setIssuedAt()
+      .setExpirationTime("60s")
+      .setJti("j")
+      .sign(restApi.privateKey);
+    await expect(verify(bare, "ingest-node")).rejects.toThrow("node claim");
+  });
+
+  test("only rest-api may issue them", async () => {
+    useKey(overlay);
+    await expect(verify(await signServiceToken("ingest-node", { node: "node-a" }), "ingest-node")).rejects.toThrow(
+      "web-overlay may not ingest-node",
+    );
+  });
+
+  test("a token for another action can't open an ingest-node socket", async () => {
+    await expect(verify(await signServiceToken("broadcast"), "ingest-node")).rejects.toThrow();
+  });
+
+  test("extra claims can't replace the token's own", async () => {
+    await expect(signServiceToken("broadcast", { sub: "web-admin" })).rejects.toThrow("reserved");
+    await expect(signServiceToken("broadcast", { scope: "bot" })).rejects.toThrow("reserved");
   });
 });
 
