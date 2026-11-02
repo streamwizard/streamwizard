@@ -26,7 +26,11 @@ declare module "hono" {
  * reads only — every write path has an FK to `obs_nodes` and fails at the
  * database the moment the node row is gone, and the one sensitive read
  * (`/users/:userId/stream-key`) re-checks `userHasInstanceOnNode` against the
- * live database, whose rows cascade away with the node. An hour is therefore
+ * live database, whose rows cascade away with the node. One exception is not
+ * a DB write: `POST /instances/:id/events` forwards to ws-server and caches
+ * each instance's owner for 10 minutes (instances/events.ts), so for that
+ * long a deleted node can still send lifecycle and scene events to the
+ * owners of instances it hosted. An hour is therefore
  * bounded by comfort, not correctness: it trades a longer read-only window for
  * 1/12th the auth traffic of the previous 5 minutes. If you ever add a revoke
  * route, this comment is the reason it will not take effect immediately.
