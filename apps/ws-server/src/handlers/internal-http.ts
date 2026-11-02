@@ -1,21 +1,15 @@
-import { timingSafeEqual } from "crypto";
-import { env } from "../lib/env";
+import { authorizeService, serviceAuthConfigured } from "../lib/service-auth";
 import type { BotBroadcastMessage } from "@repo/types";
 import { trackWsAuthFailure } from "@repo/metrics";
 import { routeBotBroadcast } from "../bot-router";
 import { revokeUser, type RevokeScope } from "../revoke";
 
 /**
- * The plain-HTTP surface of ws-server: a liveness probe plus two secret-gated
- * injection points for processes that hold no bot socket (the Next apps and
- * rest-api). Everything else on this server is a WebSocket upgrade.
+ * The plain-HTTP surface of ws-server: a liveness probe plus two injection
+ * points for processes that hold no bot socket (the Next apps and rest-api),
+ * each gated by a service token for that action (lib/service-auth.ts).
+ * Everything else on this server is a WebSocket upgrade.
  */
-
-export function isValidSecret(candidate: string | null | undefined, secret: string): boolean {
-  const candidateBuf = Buffer.from(candidate ?? "");
-  const secretBuf = Buffer.from(secret);
-  return candidateBuf.length === secretBuf.length && timingSafeEqual(candidateBuf, secretBuf);
-}
 
 // Server-to-server injection of a bot-shaped broadcast over plain HTTP —
 // lets web server actions push config/override changes to the consumer feed
@@ -24,11 +18,11 @@ export async function handleInternalBroadcast(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
-  if (!env.CONSUMER_SECRET) {
+  if (!serviceAuthConfigured("broadcast")) {
     return new Response("Not Found", { status: 404 });
   }
-  const key = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (!isValidSecret(key, env.CONSUMER_SECRET)) {
+  const auth = await authorizeService(req.headers.get("authorization"), "broadcast");
+  if (!auth.ok) {
     trackWsAuthFailure("bot", "invalid_bot_key");
     return new Response("Unauthorized", { status: 401 });
   }
@@ -43,7 +37,7 @@ export async function handleInternalBroadcast(req: Request): Promise<Response> {
     return new Response("Bad Request: userId and type are required", { status: 400 });
   }
 
-  const { delivered } = routeBotBroadcast(msg, "internal-http");
+  const { delivered } = routeBotBroadcast(msg, `internal-http:${auth.service}`);
   return Response.json({ ok: true, delivered });
 }
 
@@ -57,11 +51,11 @@ export async function handleInternalRevoke(req: Request): Promise<Response> {
   if (req.method !== "POST") {
     return new Response("Method Not Allowed", { status: 405 });
   }
-  if (!env.CONSUMER_SECRET) {
+  if (!serviceAuthConfigured("revoke")) {
     return new Response("Not Found", { status: 404 });
   }
-  const key = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (!isValidSecret(key, env.CONSUMER_SECRET)) {
+  const auth = await authorizeService(req.headers.get("authorization"), "revoke");
+  if (!auth.ok) {
     trackWsAuthFailure("bot", "invalid_bot_key");
     return new Response("Unauthorized", { status: 401 });
   }

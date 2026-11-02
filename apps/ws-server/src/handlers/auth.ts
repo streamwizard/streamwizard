@@ -4,7 +4,9 @@ import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlay
 import type { OverlayEventType } from "@repo/types";
 import { trackWsAuthFailure } from "@repo/metrics";
 import { isRateLimited } from "../rate-limit";
-import { handleInternalRoute, isValidSecret } from "./internal-http";
+import { handleInternalRoute } from "./internal-http";
+import { isValidSecret } from "../lib/secret";
+import { authorizeService, serviceAuthConfigured } from "../lib/service-auth";
 import type { ConnectionData } from "../types";
 
 type BunServer = import("bun").Server<ConnectionData>;
@@ -124,33 +126,33 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
 
   // --- Bot ---
   if (role === "bot") {
-    const key = req.headers.get("authorization")?.replace("Bearer ", "");
-    if (key !== env.SUPABASE_SECRET_KEY) {
+    const auth = await authorizeService(req.headers.get("authorization"), "bot");
+    if (!auth.ok) {
       trackWsAuthFailure("bot", "invalid_bot_key");
       return new Response("Unauthorized", { status: 401 });
     }
     return upgradeOrFail(server, req, "bot", {
       role: "bot",
       userId: "_bot",
-      source: parseSourceLabel(url),
+      source: auth.legacy ? parseSourceLabel(url) : auth.service,
       channels: new Set<OverlayEventType>(),
     });
   }
 
   // --- Consumer (trusted server-side firehose: obs-auto-switcher) ---
   if (role === "consumer") {
-    if (!env.CONSUMER_SECRET) {
+    if (!serviceAuthConfigured("consumer")) {
       return new Response("Consumer not configured", { status: 404 });
     }
-    const key = req.headers.get("authorization")?.replace("Bearer ", "");
-    if (!isValidSecret(key, env.CONSUMER_SECRET)) {
+    const auth = await authorizeService(req.headers.get("authorization"), "consumer");
+    if (!auth.ok) {
       trackWsAuthFailure("consumer", "invalid_bot_key");
       return new Response("Unauthorized", { status: 401 });
     }
     return upgradeOrFail(server, req, "consumer", {
       role: "consumer",
       userId: "_consumer",
-      source: parseSourceLabel(url),
+      source: auth.legacy ? parseSourceLabel(url) : auth.service,
       consumerTypes: parseCsvSet(url, "types"),
       channels: new Set<OverlayEventType>(),
     });

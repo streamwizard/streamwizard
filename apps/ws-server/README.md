@@ -10,7 +10,23 @@ Three connection roles share one server, each authenticated differently:
 |------|------|-----------|
 | `publisher` | Supabase JWT *or* `overlay_scenes.subscriber_token` | The GPS overlay page sending on-device GPS. One per user room. |
 | `subscriber` | `overlay_scenes.subscriber_token` | An OBS overlay. Many per user room. |
-| `bot` | `Bearer <SUPABASE_SERVICE_ROLE_KEY>` | `streamwizard-bot` — one persistent connection, fans Twitch events out to subscribers. |
+| `bot` | `Bearer <service token, scope bot>` | `streamwizard-bot` and `obs-auto-switcher` — persistent connections that push events into users' rooms. |
+| `consumer` | `Bearer <service token, scope consumer>` | `obs-auto-switcher` — the firehose of every user's events. |
+
+### Service tokens
+
+Our own services authenticate with 60-second Ed25519 tokens, one per action
+(`packages/service-token`). Each service signs with its own
+`WS_SERVICE_SIGNING_JWK`; ws-server holds only the public keys in
+`WS_SERVICE_JWKS` and checks every action (`broadcast`, `revoke`, `consumer`,
+`bot`) against `SERVICE_POLICY`. The same tokens gate `POST /internal/broadcast`
+and `POST /internal/revoke`.
+
+The old shared secrets (`CONSUMER_SECRET`, and the service-role key for bots)
+are still accepted until `WS_SERVICE_AUTH_REQUIRED=true`. Ingest nodes still log
+in as bots with the service-role key, so turn that on only where no ingest
+node connects. Generate keys per environment with
+`bun packages/service-token/scripts/generate-keys.ts <out-dir>`.
 
 ### Connection URL
 
