@@ -23,8 +23,8 @@ function slugifyHostname(name: string): string {
 // session involved -- a fresh, untrusted VM hits this with nothing but the
 // one-time claim token in the body, which is why this lives in rest-api
 // (brute-force protection, security headers, HTTPS enforcement already wired
-// up here) instead of ingest-control, which doesn't even have its Supabase
-// credentials configured yet -- that's exactly what this endpoint delivers.
+// up here) instead of ingest-control, which has no credentials yet -- that's
+// exactly what this endpoint delivers.
 export async function claimIngestNode(c: Context) {
   const body = await c.req.json();
   const { token, cpu_cores, ram_total_mb, storage_total_mb, public_ip, lan_ip, tailscale_ip } = body as {
@@ -48,10 +48,9 @@ export async function claimIngestNode(c: Context) {
   const pendingNode = await claimIngestNodeByTokenHash(supabase, tokenHash);
   const hostname = slugifyHostname(pendingNode?.name ?? "ingest-node");
 
-  // Unlike OBS's shared NODE_API_KEY-scoped access, ingest-control talks to
-  // Supabase directly with a service-role key, so each box also needs its own
-  // INGEST_CONTROL_SECRET (replacing today's single Doppler-shared value).
-  // Minted fresh per claim and encrypted at rest so admins can retrieve/rotate it.
+  // Each box gets its own INGEST_CONTROL_SECRET (replacing the old single
+  // Doppler-shared value). Minted fresh per claim and encrypted at rest so
+  // admins can retrieve/rotate it.
   const controlSecret = randomBytes(32).toString("hex");
   const { ciphertext, iv, authTag } = encryptToken(controlSecret);
 
@@ -99,14 +98,15 @@ export async function claimIngestNode(c: Context) {
     description: `ingest-node claim ${linked.id}`,
   });
 
+  // The node gets no database credentials: it reaches the platform only
+  // through rest-api with node_api_key, and gets its ws-server address and
+  // token from GET /api/ingest-nodes/me/ws-token.
   return c.json({
     node_id: linked.id,
     hostname: linked.hostname,
     node_api_key: apiKey,
     ingest_control_secret: controlSecret,
     tailscale_authkey: tailscaleAuthKey,
-    supabase_url: env.SUPABASE_URL,
-    supabase_secret_key: env.SUPABASE_SECRET_KEY,
     rest_api_url: env.STREAMWIZARD_API_URL,
     // Present only when rest-api itself has InfluxDB configured for this
     // environment — omitted (not null/empty-string) otherwise, so a node
@@ -120,9 +120,5 @@ export async function claimIngestNode(c: Context) {
           influxdb_token: env.INFLUXDB_INGEST_NODE_TOKEN ?? env.INFLUXDB_TOKEN,
         }
       : {}),
-    // Same omit-when-unset rule. ingest-control dials ws-server as a bot
-    // client with SUPABASE_SECRET_KEY as its bearer, so the URL is all it
-    // needs — no CONSUMER_SECRET, unlike the OBS node claim.
-    ...(env.WS_SERVER_URL ? { ws_server_url: env.WS_SERVER_URL } : {}),
   });
 }
