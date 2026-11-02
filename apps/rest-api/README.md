@@ -38,7 +38,7 @@ src/
     obs-nodes/
       node/       node-level handlers (claim, me, reconcile, plan limits, users)
       instances/  handlers for one of the node's instances (CRUD, secrets, events, stream key), create token, plan sweep
-    ingest-nodes/ route handlers (claim, me)
+    ingest-nodes/ route handlers (claim, me, sessions, session-stats, ws-token)
     streams/      clip sync, viewer-count poller, stream video lookup
 ```
 

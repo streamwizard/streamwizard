@@ -47,8 +47,13 @@ const SCOPE_BY_PATH = {
 export type InternalPath = keyof typeof SCOPE_BY_PATH;
 
 /** POST to one of ws-server's service-gated `/internal/*` endpoints. */
-export async function postInternal(
-  path: InternalPath,
+export function postInternal(path: InternalPath, body: unknown, config: BroadcastConfig): Promise<BroadcastResult> {
+  return postScoped(path, SCOPE_BY_PATH[path], body, config);
+}
+
+async function postScoped(
+  path: string,
+  scope: ServiceScope,
   body: unknown,
   config: BroadcastConfig,
 ): Promise<BroadcastResult> {
@@ -57,7 +62,7 @@ export async function postInternal(
 
   let authorization: string | null;
   try {
-    authorization = await serviceAuthHeader(SCOPE_BY_PATH[path], consumerSecret);
+    authorization = await serviceAuthHeader(scope, consumerSecret);
   } catch (error) {
     return { ok: false, reason: "signing", error };
   }
@@ -99,4 +104,31 @@ export function revokeUserSockets(
   config: BroadcastConfig,
 ): Promise<BroadcastResult> {
   return postInternal("/internal/revoke", { userId, scope }, config);
+}
+
+export interface IngestSessionRegistration {
+  session_id: string;
+  user_id: string;
+  node_id: string;
+  stream_key_id: string;
+  label: string | null;
+}
+
+/**
+ * Tells ws-server about a session rest-api just opened for an ingest node, so
+ * the node's live samples can be routed to the right user. Service token
+ * only (scope ingest-sessions): there is no legacy secret for it.
+ */
+export function registerIngestSession(session: IngestSessionRegistration, config: BroadcastConfig): Promise<BroadcastResult> {
+  return postScoped("/internal/ingest-sessions", "ingest-sessions", session, { ...config, consumerSecret: null });
+}
+
+/** Marks an ingest session ended in ws-server's registry. */
+export function endIngestSessionOnWs(sessionId: string, config: BroadcastConfig): Promise<BroadcastResult> {
+  return postScoped(
+    `/internal/ingest-sessions/${encodeURIComponent(sessionId)}/end`,
+    "ingest-sessions",
+    {},
+    { ...config, consumerSecret: null },
+  );
 }

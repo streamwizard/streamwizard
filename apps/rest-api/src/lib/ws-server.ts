@@ -1,5 +1,13 @@
 import { reportError } from "@repo/sentry";
-import { broadcastToUser, revokeUserSockets, type BroadcastConfig, type BroadcastResult } from "@repo/ws-client";
+import {
+  broadcastToUser,
+  endIngestSessionOnWs,
+  registerIngestSession,
+  revokeUserSockets,
+  type BroadcastConfig,
+  type BroadcastResult,
+  type IngestSessionRegistration,
+} from "@repo/ws-client";
 import { env } from "@/env";
 
 const wsConfig: BroadcastConfig = {
@@ -36,4 +44,19 @@ export async function postInternalBroadcast(userId: string, type: string, payloa
 /** Ends every live ws-server socket of a deleted user. Best-effort, like the broadcast above. */
 export async function revokeAllUserSockets(userId: string): Promise<void> {
   logFailure("revoke", "scope=all", await revokeUserSockets(userId, "all", wsConfig));
+}
+
+/** Registration runs inside an ingest node's session open, which the media
+ *  plane times out after 5s; ws-server has a DB fallback for a miss. */
+const INGEST_REGISTRY_TIMEOUT_MS = 1_000;
+
+/** Registers a new ingest session with ws-server. Best effort, never throws. */
+export async function registerIngestSessionOnWs(session: IngestSessionRegistration): Promise<void> {
+  const result = await registerIngestSession(session, { ...wsConfig, timeoutMs: INGEST_REGISTRY_TIMEOUT_MS });
+  logFailure("ingest-session register", `session=${session.session_id}`, result);
+}
+
+/** Marks an ingest session ended in ws-server's registry. Best effort, never throws. */
+export async function endIngestSessionOnWsServer(sessionId: string): Promise<void> {
+  logFailure("ingest-session end", `session=${sessionId}`, await endIngestSessionOnWs(sessionId, wsConfig));
 }
