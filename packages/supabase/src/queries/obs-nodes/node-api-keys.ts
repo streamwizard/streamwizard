@@ -11,24 +11,22 @@ type DBClient = SupabaseClient<Database>;
 // authenticate as the node to the rest-api.
 export type NodeApiKeyType = "rest_api" | "obs_command";
 
-export interface NodeApiKeyFields {
-  type: NodeApiKeyType;
-  key_hash: string;
-  key_ciphertext: string;
-  key_iv: string;
-  key_tag: string;
-}
-
 export interface EncryptedNodeKey {
   key_ciphertext: string;
   key_iv: string;
   key_tag: string;
 }
 
-/** Stores the SHA-256 hash and AES-256-GCM encrypted form of a node API key.
- *  The hash enables O(1) auth lookup; the ciphertext lets admins/services
- *  retrieve or rotate the key — matching the Twitch token / OBS WS password
- *  storage pattern. */
+// A rest_api key is only ever checked by its hash, so it has no encrypted
+// copy (one would let TOKEN_ENCRYPTION_KEY rebuild the node's key). An
+// obs_command key keeps one: the obs-auto-switcher decrypts it to call the
+// node. The database enforces the same split (obs_node_api_keys_ciphertext_by_type).
+export type NodeApiKeyFields =
+  | { type: "rest_api"; key_hash: string }
+  | ({ type: "obs_command"; key_hash: string } & EncryptedNodeKey);
+
+/** Stores a node API key: always its SHA-256 hash (O(1) auth lookup), plus
+ *  the AES-256-GCM encrypted form for obs_command keys only. */
 export async function insertNodeApiKey(
   client: DBClient,
   nodeId: string,
@@ -79,5 +77,6 @@ export async function getNodeCommandKeyEncrypted(client: DBClient, nodeId: strin
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  return data;
+  if (!data?.key_ciphertext || !data.key_iv || !data.key_tag) return null;
+  return { key_ciphertext: data.key_ciphertext, key_iv: data.key_iv, key_tag: data.key_tag };
 }

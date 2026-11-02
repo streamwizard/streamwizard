@@ -3367,30 +3367,30 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          key_ciphertext: string
+          key_ciphertext: string | null
           key_hash: string
-          key_iv: string
-          key_tag: string
+          key_iv: string | null
+          key_tag: string | null
           node_id: string
           type: string
         }
         Insert: {
           created_at?: string
           id?: string
-          key_ciphertext: string
+          key_ciphertext?: string | null
           key_hash: string
-          key_iv: string
-          key_tag: string
+          key_iv?: string | null
+          key_tag?: string | null
           node_id: string
           type?: string
         }
         Update: {
           created_at?: string
           id?: string
-          key_ciphertext?: string
+          key_ciphertext?: string | null
           key_hash?: string
-          key_iv?: string
-          key_tag?: string
+          key_iv?: string | null
+          key_tag?: string | null
           node_id?: string
           type?: string
         }

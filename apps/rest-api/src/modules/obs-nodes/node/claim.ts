@@ -73,14 +73,13 @@ export async function claimObsNode(c: Context) {
     return c.json({ error: "Claim token has expired" }, 410);
   }
 
+  // Only the hash is stored: obsNodeAuth needs nothing else, and the key is
+  // returned once below. No encrypted copy, so TOKEN_ENCRYPTION_KEY can't
+  // rebuild it.
   const apiKey = randomBytes(32).toString("hex");
-  const { ciphertext, iv, authTag } = encryptToken(apiKey);
   await insertNodeApiKey(supabase, linked.id, {
     type: "rest_api",
     key_hash: createHash("sha256").update(apiKey).digest("hex"),
-    key_ciphertext: ciphertext,
-    key_iv: iv,
-    key_tag: authTag,
   });
 
   // Per-node command key for the obs-auto-switcher's /obs route. The node only
