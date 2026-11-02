@@ -83,13 +83,11 @@ export async function claimIngestNode(c: Context) {
     return c.json({ error: "Claim token has expired" }, 410);
   }
 
+  // Only the hash is stored: ingestNodeAuth needs nothing else, and the key
+  // is returned once below.
   const apiKey = randomBytes(32).toString("hex");
-  const encApiKey = encryptToken(apiKey);
   await insertIngestNodeApiKey(supabase, linked.id, {
     key_hash: createHash("sha256").update(apiKey).digest("hex"),
-    key_ciphertext: encApiKey.ciphertext,
-    key_iv: encApiKey.iv,
-    key_tag: encApiKey.authTag,
   });
 
   // Lets install.sh join Tailscale without an admin pasting a key by hand;

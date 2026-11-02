@@ -143,16 +143,11 @@ export async function consumeIngestClaimToken(
 
 export interface IngestNodeApiKeyFields {
   key_hash: string;
-  key_ciphertext: string;
-  key_iv: string;
-  key_tag: string;
 }
 
-/** Stores the SHA-256 hash and AES-256-GCM encrypted form of an ingest node
- *  API key. The hash enables O(1) auth lookup; the ciphertext lets admins
- *  retrieve/rotate the key -- matching the obs_node_api_keys pattern. Not
- *  consumed by anything yet (no ingest-node-authenticated endpoints exist in
- *  v1), written for forward-compat with a future heartbeat/reconcile route. */
+/** Stores the SHA-256 hash of an ingest node's API key, the only thing
+ *  ingestNodeAuth needs. No encrypted copy, so TOKEN_ENCRYPTION_KEY can't
+ *  rebuild it. */
 export async function insertIngestNodeApiKey(
   client: DBClient,
   nodeId: string,
