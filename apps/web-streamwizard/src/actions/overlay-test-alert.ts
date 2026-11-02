@@ -119,10 +119,6 @@ export async function sendTestEventToOverlay(
     return { ok: false, error: "Too many test events — slow down for a minute" };
   }
 
-  if (!env.CONSUMER_SECRET) {
-    return { ok: false, error: "Test alerts aren't configured on this server" };
-  }
-
   const msg =
     customPayload === undefined
       ? buildDemoEvent(event, undefined, variant)
@@ -135,6 +131,7 @@ export async function sendTestEventToOverlay(
     consumerSecret: env.CONSUMER_SECRET,
   });
   if (result.ok) return { ok: true };
-  if (result.reason === "network") reportError(result.error, "overlay: test alert broadcast");
+  if (result.reason === "unconfigured") return { ok: false, error: "Test alerts aren't configured on this server" };
+  if (result.reason === "network" || result.reason === "signing") reportError(result.error, "overlay: test alert broadcast");
   return { ok: false, error: "Could not reach the overlay server" };
 }

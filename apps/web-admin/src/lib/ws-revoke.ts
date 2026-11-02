@@ -13,6 +13,6 @@ export async function revokeWsSockets(userId: string, scope: "scene" | "session"
     consumerSecret: env.CONSUMER_SECRET,
   });
   if (!result.ok && result.reason !== "unconfigured") {
-    reportError(result.reason === "network" ? result.error : new Error(`ws-server revoke failed status=${result.status}`), "ws-revoke", { scope });
+    reportError(result.reason === "status" ? new Error(`ws-server revoke failed status=${result.status}`) : result.error, "ws-revoke", { scope });
   }
 }

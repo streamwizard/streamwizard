@@ -12,6 +12,7 @@ import { createEventSubLogGroup } from "./lib/eventsub-log-group";
 import { createEventSubTelemetry, createShardHeartbeat } from "./lib/eventsub-telemetry";
 import { overlayWsClient } from "./overlay-ws-client";
 import { isMetricsEnabled, initMetrics, BUCKETS } from "@repo/metrics";
+import { serviceAuthHeader } from "@repo/service-token";
 
 initMetrics(BUCKETS.bot);
 
@@ -21,7 +22,7 @@ const websocketUrl = env.WS_SERVER_URL;
 async function main() {
   try {
     if (websocketUrl) {
-      overlayWsClient.connect(websocketUrl, env.SUPABASE_SECRET_KEY);
+      overlayWsClient.connect(websocketUrl, () => serviceAuthHeader("bot", env.SUPABASE_SECRET_KEY));
     }
 
     // One receiver per conduit shard. Each shard gets its own logger and

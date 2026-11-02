@@ -15,14 +15,14 @@ import { env } from "@/lib/env";
 
 // Every write ends with a push through ws-server /internal/broadcast so the
 // engine reacts within ~1s. The DB row stays the source of truth: if the push
-// fails (or CONSUMER_SECRET isn't configured) the engine's periodic re-fetch
+// fails (or ws-server pushes aren't configured here) the engine's periodic re-fetch
 // picks the change up within a minute — so push failures never fail the save.
 async function pushConfigToEngine(row: AutoSwitcherConfigRow): Promise<void> {
   const result = await broadcastToUser(row.user_id, "streamwizard.auto_switcher_config", row, {
     wsServerUrl: env.WS_SERVER_URL,
     consumerSecret: env.CONSUMER_SECRET,
   });
-  if (!result.ok && result.reason === "network") {
+  if (!result.ok && (result.reason === "network" || result.reason === "signing")) {
     reportError(result.error, "auto-switcher: config push");
   }
 }

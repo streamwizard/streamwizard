@@ -9,7 +9,7 @@ import { env } from "./env";
  * pushes go over ws-server's /internal/broadcast HTTP endpoint — the same
  * server-to-server path rest-api uses for user state. Best-effort by
  * design (the service already treats broadcast failures as log-and-continue);
- * unconfigured CONSUMER_SECRET simply means no live push.
+ * no WS_SERVICE_SIGNING_JWK and no CONSUMER_SECRET simply means no live push.
  */
 async function broadcastUserState(userId: string, payload: UserStateUpdatePayload): Promise<void> {
   const result = await broadcastToUser(userId, "streamwizard.user_state", payload, {

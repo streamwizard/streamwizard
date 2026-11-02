@@ -15,7 +15,7 @@ import { env } from "@/lib/env";
 
 // Every write ends with a push through ws-server /internal/broadcast so the
 // engine reacts within ~1s. The DB row stays the source of truth: if the push
-// fails (or WS_SERVER_URL/CONSUMER_SECRET aren't configured here) the engine's
+// fails (or ws-server pushes aren't configured here) the engine's
 // periodic re-fetch picks the change up within a minute — so push failures
 // never fail the save.
 async function pushConfigToEngine(row: AutoSwitcherConfigRow): Promise<void> {
@@ -23,7 +23,7 @@ async function pushConfigToEngine(row: AutoSwitcherConfigRow): Promise<void> {
     wsServerUrl: env.WS_SERVER_URL,
     consumerSecret: env.CONSUMER_SECRET,
   });
-  if (!result.ok && result.reason === "network") {
+  if (!result.ok && (result.reason === "network" || result.reason === "signing")) {
     reportError(result.error, "web-admin auto-switcher: config push");
   }
 }

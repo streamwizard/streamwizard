@@ -13,6 +13,7 @@ import { StatsFeed } from "./stats-feed";
 import { StatusPublisher } from "./status-publisher";
 import { Engine } from "./engine/engine";
 import { initMetrics, BUCKETS } from "@repo/metrics";
+import { serviceAuthHeader } from "@repo/service-token";
 
 // IRL auto scene-switcher. Consumes the 1 Hz ingest stats feed from
 // ws-server, runs a per-user threshold/streak state machine, and drives
@@ -23,11 +24,13 @@ import { initMetrics, BUCKETS } from "@repo/metrics";
 
 initMetrics(BUCKETS.autoSwitcher);
 
-const statusPublisher = new StatusPublisher(env.WS_SERVER_URL, env.SUPABASE_SECRET_KEY);
+// Each (re)connect signs a fresh service token (bot / consumer scope); the
+// legacy secrets are only used where this service has no signing key yet.
+const statusPublisher = new StatusPublisher(env.WS_SERVER_URL, () => serviceAuthHeader("bot", env.SUPABASE_SECRET_KEY));
 const engine = new Engine(statusPublisher);
 const configStore = new ConfigStore((userId, config) => engine.onConfigChanged(userId, config));
 
-const statsFeed = new StatsFeed(env.WS_SERVER_URL, env.CONSUMER_SECRET, {
+const statsFeed = new StatsFeed(env.WS_SERVER_URL, () => serviceAuthHeader("consumer", env.CONSUMER_SECRET), {
   onIngestStats: (userId, payload) => engine.onStats(userId, payload),
   onConfigPush: (userId, payload) => void configStore.applyPush(userId, payload),
   onSessionEnded: (userId, payload) => engine.onSessionEnded(userId, payload),

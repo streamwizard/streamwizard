@@ -1,4 +1,5 @@
 import type { AutoSwitcherStatus } from "@repo/schemas";
+import type { AuthHeaderProvider } from "./stats-feed";
 
 const MAX_DELAY_MS = 30_000;
 
@@ -14,12 +15,12 @@ export class StatusPublisher {
 
   constructor(
     private url: string,
-    private serviceKey: string,
+    private authHeader: AuthHeaderProvider,
   ) {}
 
   connect(): void {
     this.stopping = false;
-    this.dial();
+    void this.dial();
   }
 
   disconnect(): void {
@@ -34,10 +35,29 @@ export class StatusPublisher {
     }
   }
 
-  private dial(): void {
+  private retry(): void {
+    if (this.stopping) return;
+    console.log(`[status-publisher] disconnected — retrying in ${this.delay}ms`);
+    this.retryTimer = setTimeout(() => void this.dial(), this.delay);
+    this.delay = Math.min(this.delay * 2, MAX_DELAY_MS);
+  }
+
+  private async dial(): Promise<void> {
+    let authorization: string | null;
+    try {
+      authorization = await this.authHeader();
+    } catch (err) {
+      console.error("[status-publisher] could not sign a ws-server token", err);
+      return this.retry();
+    }
+    if (!authorization) {
+      console.error("[status-publisher] no ws-server credential (WS_SERVICE_SIGNING_JWK); status pushes are off");
+      return;
+    }
+    if (this.stopping) return;
     const ws = new WebSocket(`${this.url}/ws?role=bot&source=obs-auto-switcher`, {
       // @ts-expect-error Bun WebSocket supports headers in options
-      headers: { Authorization: `Bearer ${this.serviceKey}` },
+      headers: { Authorization: authorization },
     });
     this.ws = ws;
 
@@ -46,12 +66,7 @@ export class StatusPublisher {
       this.delay = 1000;
     };
 
-    ws.onclose = () => {
-      if (this.stopping) return;
-      console.log(`[status-publisher] disconnected — retrying in ${this.delay}ms`);
-      this.retryTimer = setTimeout(() => this.dial(), this.delay);
-      this.delay = Math.min(this.delay * 2, MAX_DELAY_MS);
-    };
+    ws.onclose = () => this.retry();
 
     ws.onerror = () => {
       ws.close();

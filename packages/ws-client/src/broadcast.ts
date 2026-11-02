@@ -6,13 +6,20 @@
  * used to hand-roll the same fetch: ws:// → http:// rewrite, bearer secret,
  * 3s timeout. They differ only in what they do with a failure, so this returns
  * a typed result instead of deciding for them.
+ *
+ * Each call carries a fresh 60-second service token for that one action when
+ * the service has WS_SERVICE_SIGNING_JWK (@repo/service-token); otherwise the
+ * legacy shared secret, for environments that haven't moved over yet.
  */
+
+import { serviceAuthHeader, type ServiceScope } from "@repo/service-token";
 
 export interface BroadcastConfig {
   /** ws-server base URL. `ws://`/`wss://` is rewritten to http(s) automatically. */
   wsServerUrl: string | null | undefined;
-  /** Shared secret gating /internal/broadcast. Missing secret = no push. */
-  consumerSecret: string | null | undefined;
+  /** Legacy shared secret, used only when this service has no
+   *  WS_SERVICE_SIGNING_JWK. Neither = no push. */
+  consumerSecret?: string | null;
   /** Defaults to 3s — a push must never outlive the request that triggered it. */
   timeoutMs?: number;
 }
@@ -20,31 +27,47 @@ export interface BroadcastConfig {
 export type BroadcastResult =
   /** Delivered to ws-server (not necessarily to a connected client). */
   | { ok: true }
-  /** No ws-server URL or secret configured — pushes are simply off here. */
+  /** No ws-server URL, or no signing key and no secret — pushes are off here. */
   | { ok: false; reason: "unconfigured" }
   /** ws-server answered, but not with 2xx. */
   | { ok: false; reason: "status"; status: number }
   /** Never reached ws-server (DNS, connection refused, timeout). */
-  | { ok: false; reason: "network"; error: unknown };
+  | { ok: false; reason: "network"; error: unknown }
+  /** WS_SERVICE_SIGNING_JWK is set but unusable — a config bug, not an outage. */
+  | { ok: false; reason: "signing"; error: unknown };
 
 export function toHttpUrl(wsServerUrl: string): string {
   return wsServerUrl.replace(/^ws:/, "http:").replace(/^wss:/, "https:");
 }
 
-/** POST to any of ws-server's secret-gated `/internal/*` endpoints. */
+const SCOPE_BY_PATH = {
+  "/internal/broadcast": "broadcast",
+  "/internal/revoke": "revoke",
+} as const satisfies Record<string, ServiceScope>;
+export type InternalPath = keyof typeof SCOPE_BY_PATH;
+
+/** POST to one of ws-server's service-gated `/internal/*` endpoints. */
 export async function postInternal(
-  path: string,
+  path: InternalPath,
   body: unknown,
   config: BroadcastConfig,
 ): Promise<BroadcastResult> {
   const { wsServerUrl, consumerSecret, timeoutMs = 3_000 } = config;
-  if (!wsServerUrl || !consumerSecret) return { ok: false, reason: "unconfigured" };
+  if (!wsServerUrl) return { ok: false, reason: "unconfigured" };
+
+  let authorization: string | null;
+  try {
+    authorization = await serviceAuthHeader(SCOPE_BY_PATH[path], consumerSecret);
+  } catch (error) {
+    return { ok: false, reason: "signing", error };
+  }
+  if (!authorization) return { ok: false, reason: "unconfigured" };
 
   try {
     const res = await fetch(`${toHttpUrl(wsServerUrl)}${path}`, {
       method: "POST",
       headers: {
-        authorization: `Bearer ${consumerSecret}`,
+        authorization,
         "content-type": "application/json",
       },
       body: JSON.stringify(body),
