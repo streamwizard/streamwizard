@@ -1,6 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import { createHash, randomBytes } from "crypto";
 import { Hono } from "hono";
+import { calculateJwkThumbprint, exportJWK, generateKeyPair } from "jose";
+import { resetSigningKey, signNodeToken } from "@repo/node-token";
 
 // Real AES-GCM with a throwaway key: the tests decrypt what the routes stored.
 process.env.TOKEN_ENCRYPTION_KEY = randomBytes(32).toString("hex");
@@ -46,7 +48,7 @@ mock.module("@repo/supabase/queries/subscriptions", () => ({
   usersWithActiveSubscription: async () => new Set(),
 }));
 mock.module("@/env", () => ({
-  env: { NODE_TOKEN_PUBLIC_JWKS: undefined, NODE_CREATE_TOKEN_REQUIRED: false },
+  env: { NODE_TOKEN_PUBLIC_JWKS: undefined },
 }));
 // Spread the real exports: bun shares module mocks across test files.
 const realQueries = await import("@repo/supabase/queries/obs-nodes");
@@ -230,12 +232,34 @@ describe("POST /instances", () => {
     shm_size: "1g",
     obs_ws_password: "plain-obs-password",
   };
-  const post = (payload: unknown) =>
+  // Every create needs the user's own instances:create token (single use).
+  beforeAll(async () => {
+    const { privateKey, publicKey } = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
+    const pub = await exportJWK(publicKey);
+    const kid = await calculateJwkThumbprint(pub);
+    process.env.NODE_TOKEN_SIGNING_JWK = JSON.stringify({ ...(await exportJWK(privateKey)), kid });
+    resetSigningKey();
+    const { env } = await import("@/env");
+    (env as Record<string, unknown>).NODE_TOKEN_PUBLIC_JWKS = { keys: [{ kty: "OKP", crv: "Ed25519", x: pub.x!, kid, alg: "EdDSA" }] };
+  });
+  const createToken = (userId: string) =>
+    signNodeToken({ nodeId: "node-a", userId, scope: "instances:create", role: "user" });
+  const post = async (payload: unknown, opts: { token?: boolean } = {}) =>
     app.request("/instances", {
       method: "POST",
-      headers: { Authorization: `Bearer ${NODE_A_KEY}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${NODE_A_KEY}`,
+        "Content-Type": "application/json",
+        ...(opts.token === false ? {} : { "X-Node-Token": await createToken((payload as { user_id: string }).user_id) }),
+      },
       body: JSON.stringify(payload),
     });
+
+  it("refuses a create without the user's create token", async () => {
+    const res = await post(body, { token: false });
+    expect(res.status).toBe(401);
+    expect(inserted).toBeNull();
+  });
 
   it("encrypts the OBS WebSocket password and generates the VNC password itself", async () => {
     const res = await post(body);

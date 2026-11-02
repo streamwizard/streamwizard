@@ -134,14 +134,6 @@ export const envSchema = z.object({
       }
       return jwks;
     }),
-  // SW-473: once every node forwards the web app's instances:create token on
-  // POST /api/obs-nodes/instances, set this to "true" and a create without one is
-  // refused. Until then a missing token is let through (a sent one is always
-  // checked).
-  NODE_CREATE_TOKEN_REQUIRED: z
-    .enum(["true", "false"])
-    .optional()
-    .transform((value) => value === "true"),
 });
 
 export type Env = z.infer<typeof envSchema>;

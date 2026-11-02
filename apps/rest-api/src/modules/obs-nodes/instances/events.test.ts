@@ -23,7 +23,7 @@ mock.module("@repo/supabase/queries/subscriptions", () => ({
   usersWithActiveSubscription: async () => new Set(),
 }));
 mock.module("@/env", () => ({
-  env: { NODE_TOKEN_PUBLIC_JWKS: undefined, NODE_CREATE_TOKEN_REQUIRED: false },
+  env: { NODE_TOKEN_PUBLIC_JWKS: undefined },
 }));
 // Spread the real exports: bun shares module mocks across test files.
 const realQueries = await import("@repo/supabase/queries/obs-nodes");

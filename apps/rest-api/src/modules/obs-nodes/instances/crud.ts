@@ -79,7 +79,6 @@ export async function createInstance(c: Context) {
     nodeId,
     userId,
     jwks: env.NODE_TOKEN_PUBLIC_JWKS,
-    required: env.NODE_CREATE_TOKEN_REQUIRED,
   });
   if (!tokenCheck.ok) return c.json({ error: tokenCheck.error }, tokenCheck.status);
 

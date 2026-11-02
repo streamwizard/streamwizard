@@ -23,7 +23,7 @@ const createToken = (overrides: Partial<Parameters<typeof signNodeToken>[0]> = {
   signNodeToken({ nodeId: "node-a", userId: "user-1", scope: "instances:create", role: "user", ...overrides });
 
 const check = (token: string | undefined, extra: Partial<Parameters<typeof checkInstanceCreateToken>[0]> = {}) =>
-  checkInstanceCreateToken({ token, nodeId: "node-a", userId: "user-1", jwks, required: true, ...extra });
+  checkInstanceCreateToken({ token, nodeId: "node-a", userId: "user-1", jwks, ...extra });
 
 test("accepts the user's own create token for this node", async () => {
   expect(await check(await createToken())).toEqual({ ok: true });
@@ -55,16 +55,8 @@ test("refuses garbage", async () => {
   expect(await check("not-a-jwt")).toMatchObject({ ok: false, status: 401 });
 });
 
-test("a missing token is refused once required", async () => {
+test("a missing token is always refused", async () => {
   expect(await check(undefined)).toMatchObject({ ok: false, status: 401 });
-});
-
-test("a missing token is let through while not required", async () => {
-  expect(await check(undefined, { required: false })).toEqual({ ok: true });
-});
-
-test("a sent token is checked even while not required", async () => {
-  expect(await check(await createToken({ userId: "user-2" }), { required: false })).toMatchObject({ ok: false, status: 403 });
 });
 
 test("a sent token can't be checked without keys", async () => {
