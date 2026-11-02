@@ -2,7 +2,7 @@ import { reportError } from "@repo/sentry";
 import type { R2ObjectInfo, R2Storage } from "@repo/storage";
 import { supabase } from "@repo/supabase";
 import { assetKeyExists, deleteUserAsset, selectAllAssetKeys, selectStalePendingAssets } from "@repo/supabase/queries/assets";
-import { r2 } from "../lib/r2";
+import { r2 } from "@/lib/r2";
 
 /**
  * Media library hygiene. Postgres can't reach R2, so this runs here:

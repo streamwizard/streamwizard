@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { parseNodeTokenJwks } from "./node-token-jwks";
+import { parseNodeTokenJwks } from "@/schemas/node-token-jwks";
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),

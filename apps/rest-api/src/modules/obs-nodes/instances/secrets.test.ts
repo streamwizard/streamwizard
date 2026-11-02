@@ -45,7 +45,7 @@ mock.module("@repo/supabase/queries/subscriptions", () => ({
   isActiveSubscriptionOfUser: async () => true,
   usersWithActiveSubscription: async () => new Set(),
 }));
-mock.module("../../../env", () => ({
+mock.module("@/env", () => ({
   env: { NODE_TOKEN_PUBLIC_JWKS: undefined, NODE_CREATE_TOKEN_REQUIRED: false },
 }));
 // Spread the real exports: bun shares module mocks across test files.
@@ -93,13 +93,13 @@ mock.module("@repo/supabase/queries/obs-nodes", () => ({
 
 let app: Hono;
 let crypto: typeof import("@repo/supabase/crypto");
-let schemas: typeof import("../../../schemas/obs-nodes");
+let schemas: typeof import("@/schemas/obs-nodes");
 
 beforeAll(async () => {
   // The real instance router, so auth and route order are tested too.
-  const { default: obsNodeInstances } = await import("../../../routes/obs-node-instances");
+  const { default: obsNodeInstances } = await import("@/routes/obs-node-instances");
   crypto = await import("@repo/supabase/crypto");
-  schemas = await import("../../../schemas/obs-nodes");
+  schemas = await import("@/schemas/obs-nodes");
   app = new Hono();
   app.route("/instances", obsNodeInstances);
 });

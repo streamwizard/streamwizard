@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { parseNodeTokenJwks } from "./node-token-jwks";
+import { parseNodeTokenJwks } from "@/schemas/node-token-jwks";
 
 const publicKey = { kty: "OKP", crv: "Ed25519", x: "11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo", kid: "k1", alg: "EdDSA" };
 

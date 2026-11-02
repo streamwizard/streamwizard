@@ -86,12 +86,12 @@ mock.module("@repo/discord-api", () => ({
 
 process.env.DISCORD_BOT_TOKEN = "token";
 process.env.DISCORD_GUILD_ID = "guild";
-mock.module("../../env", () => ({ env: { DISCORD_BOT_TOKEN: "token", DISCORD_GUILD_ID: "guild" } }));
+mock.module("@/env", () => ({ env: { DISCORD_BOT_TOKEN: "token", DISCORD_GUILD_ID: "guild" } }));
 
-let mod: typeof import("./role");
+let mod: typeof import("@/modules/discord-live/role");
 
 beforeAll(async () => {
-  mod = await import("./role");
+  mod = await import("@/modules/discord-live/role");
 });
 
 const stream = {

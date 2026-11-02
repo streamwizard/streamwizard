@@ -10,9 +10,9 @@ mock.module("@repo/sentry", () => ({
 }));
 
 // Keeps the env schema (and R2 credentials) out of the test.
-mock.module("../lib/r2", () => ({ r2: null }));
+mock.module("@/lib/r2", () => ({ r2: null }));
 
-const { createAssetReconciler, MAX_ORPHANS_PER_SWEEP, ORPHAN_GRACE_MS } = await import("./asset-reconciler");
+const { createAssetReconciler, MAX_ORPHANS_PER_SWEEP, ORPHAN_GRACE_MS } = await import("@/jobs/asset-reconciler");
 
 const NOW = new Date("2026-10-03T12:00:00Z").getTime();
 const ago = (ms: number) => new Date(NOW - ms);

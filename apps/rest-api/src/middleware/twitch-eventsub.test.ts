@@ -4,7 +4,7 @@ import { type Context, Hono } from "hono";
 
 const SECRET = "test-webhook-secret";
 
-mock.module("../env", () => ({ env: { TWITCH_WEBHOOK_SECRET: SECRET } }));
+mock.module("@/env", () => ({ env: { TWITCH_WEBHOOK_SECRET: SECRET } }));
 
 /** Every request that makes it past the middleware, with the type it was routed as. */
 let dispatched: string[] = [];
@@ -14,7 +14,7 @@ let handlerStatus: 204 | 500 = 204;
 let app: Hono;
 
 beforeAll(async () => {
-  const { twitchEventSubVerification } = await import("./twitch-eventsub");
+  const { twitchEventSubVerification } = await import("@/middleware/twitch-eventsub");
   app = new Hono();
   app.post("/eventsub", twitchEventSubVerification(), (c: Context) => {
     dispatched.push(c.get("twitchMessageType"));

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { TwitchApi } from "@repo/twitch-api";
 import { supabase } from "@repo/supabase";
 import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/user";
-import { registerTwitchHandlers } from "./register";
+import { registerTwitchHandlers } from "@/modules/eventsub/register";
 
 /**
  * Context passed to all Twitch event handlers in rest-api

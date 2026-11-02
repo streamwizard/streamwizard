@@ -2,9 +2,9 @@ import { supabase } from "@repo/supabase";
 import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import { getTwitchScopesByBroadcasterId } from "@repo/supabase/queries/twitch-scopes";
 import { TwitchApi } from "@repo/twitch-api";
-import { resolveStreamKey, type StreamKeyLookup } from "./stream-key-policy";
+import { resolveStreamKey, type StreamKeyLookup } from "@/modules/obs-nodes/instances/stream-key-policy";
 
-export type { StreamKeyLookup, StreamKeyReason } from "./stream-key-policy";
+export type { StreamKeyLookup, StreamKeyReason } from "@/modules/obs-nodes/instances/stream-key-policy";
 
 /**
  * A user's Twitch stream key on behalf of a node. Token decryption, the

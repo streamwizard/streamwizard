@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { resolveStreamKey } from "./stream-key-policy";
+import { resolveStreamKey } from "@/modules/obs-nodes/instances/stream-key-policy";
 
 const fetchKey = async () => "live_123";
 

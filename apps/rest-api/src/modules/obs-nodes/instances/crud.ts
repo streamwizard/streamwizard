@@ -12,11 +12,11 @@ import {
   updateObsInstanceForNode,
 } from "@repo/supabase/queries/obs-nodes";
 import { isActiveSubscriptionOfUser, usersWithActiveSubscription } from "@repo/supabase/queries/subscriptions";
-import { env } from "../../../env";
-import { unentitledInstanceIds } from "./cloud-obs-plan";
-import { checkInstanceCreateToken } from "./instance-create-token";
-import { insertInstanceSchema, updateInstanceSchema } from "../../../schemas/obs-nodes";
-import { encryptPassword, generateVncPassword } from "./secrets";
+import { env } from "@/env";
+import { unentitledInstanceIds } from "@/modules/obs-nodes/instances/cloud-obs-plan";
+import { checkInstanceCreateToken } from "@/modules/obs-nodes/instances/instance-create-token";
+import { insertInstanceSchema, updateInstanceSchema } from "@/schemas/obs-nodes";
+import { encryptPassword, generateVncPassword } from "@/modules/obs-nodes/instances/secrets";
 
 export async function listInstances(c: Context) {
   const nodeId = c.get("nodeId");

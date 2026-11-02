@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { unentitledInstanceIds } from "./cloud-obs-plan";
+import { unentitledInstanceIds } from "@/modules/obs-nodes/instances/cloud-obs-plan";
 
 const instances = [
   { id: "i-1", user_id: "paid" },

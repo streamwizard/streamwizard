@@ -9,8 +9,8 @@ import {
 } from "@repo/backups";
 import type { BackupEventLiteRow, BackupEventRow } from "@repo/supabase/queries/backups";
 import { Hono } from "hono";
-import { toEventLite } from "../modules/backups/store";
-import type { PollResult } from "../modules/backups/poller";
+import { toEventLite } from "@/modules/backups/store";
+import type { PollResult } from "@/modules/backups/poller";
 
 /**
  * Read-only backup status for web-admin (docs/backup-monitoring-plan.md).

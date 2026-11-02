@@ -6,14 +6,14 @@ import { getCurrentStreamDetails, getVodVideoIdByStreamId, setVodVideoId } from 
 import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/user";
 import type { TwitchApi } from "@repo/twitch-api";
 import type { StreamOfflineEvent } from "@repo/schemas";
-import { syncTwitch } from "../../streams/clip-sync";
+import { syncTwitch } from "@/modules/streams/clip-sync";
 import { streamEventsLogger } from "@repo/logger";
-import { viewerCountPoller } from "../../streams/viewer-count-poller";
-import { setStreamUserState } from "../../../lib/user-state";
-import { findVideoIdForStream } from "../../streams/stream-video";
-import { markStreamOffline } from "../../streams/offline-marker";
-import { endGoLive } from "../../discord-live/posts";
-import { revokeLiveRole } from "../../discord-live/role";
+import { viewerCountPoller } from "@/modules/streams/viewer-count-poller";
+import { setStreamUserState } from "@/lib/user-state";
+import { findVideoIdForStream } from "@/modules/streams/stream-video";
+import { markStreamOffline } from "@/modules/streams/offline-marker";
+import { endGoLive } from "@/modules/discord-live/posts";
+import { revokeLiveRole } from "@/modules/discord-live/role";
 
 export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: TwitchApi) => {
   // First, so a stream.online still waiting on Helix sees it and backs off.

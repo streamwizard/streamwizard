@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { obsNodeAuth } from "../middleware/obs-node-auth";
+import { obsNodeAuth } from "@/middleware/obs-node-auth";
 import {
   countActiveInstances,
   createInstance,
@@ -10,8 +10,8 @@ import {
   listUnentitledInstances,
   updateInstance,
   updateInstanceByContainer,
-} from "../modules/obs-nodes/instances/crud";
-import { getInstanceSecrets } from "../modules/obs-nodes/instances/secrets";
+} from "@/modules/obs-nodes/instances/crud";
+import { getInstanceSecrets } from "@/modules/obs-nodes/instances/secrets";
 
 // /api/obs-nodes/instances: the calling node's own OBS instances. Every route
 // authenticates with the node API key (sets c.var.nodeId), and every handler

@@ -5,8 +5,8 @@ import type { Json } from "@repo/supabase";
 import type { BackupEventInsert } from "@repo/supabase/queries/backups";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
-import { secretsMatch } from "../lib/secret-compare";
-import { proxmoxWebhookPayloadSchema } from "../schemas/proxmox-webhook";
+import { secretsMatch } from "@/lib/secret-compare";
+import { proxmoxWebhookPayloadSchema } from "@/schemas/proxmox-webhook";
 
 /**
  * Receiver for Proxmox VE / PBS notification webhooks (docs/backup-monitoring-plan.md).

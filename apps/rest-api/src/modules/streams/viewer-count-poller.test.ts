@@ -69,7 +69,7 @@ mock.module("@repo/supabase/queries/vods", () => ({
     return true;
   },
 }));
-mock.module("./stream-video", () => ({
+mock.module("@/modules/streams/stream-video", () => ({
   findVideoIdForStream: async () => {
     lookupCalls++;
     return lookupResult();
@@ -96,18 +96,18 @@ mock.module("@repo/twitch-api", () => ({
     };
   },
 }));
-mock.module("./clip-sync", () => ({
+mock.module("@/modules/streams/clip-sync", () => ({
   formatClipsForDB: async (clips: Clip[]) => {
     if (formatGate) await formatGate;
     return clips.map((clip) => ({ twitch_clip_id: clip.id }));
   },
 }));
 
-let poller: typeof import("./viewer-count-poller").viewerCountPoller;
-let clipWindowStart: typeof import("./viewer-count-poller").clipWindowStart;
+let poller: typeof import("@/modules/streams/viewer-count-poller").viewerCountPoller;
+let clipWindowStart: typeof import("@/modules/streams/viewer-count-poller").clipWindowStart;
 
 beforeAll(async () => {
-  const mod = await import("./viewer-count-poller");
+  const mod = await import("@/modules/streams/viewer-count-poller");
   poller = mod.viewerCountPoller;
   clipWindowStart = mod.clipWindowStart;
 });

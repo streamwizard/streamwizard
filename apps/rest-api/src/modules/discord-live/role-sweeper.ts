@@ -1,5 +1,5 @@
 import { reportError } from "@repo/sentry";
-import { reconcileLiveRoles, type ReconcileResult } from "./role";
+import { reconcileLiveRoles, type ReconcileResult } from "@/modules/discord-live/role";
 
 /**
  * Keeps the Discord live role honest between events. stream.online and

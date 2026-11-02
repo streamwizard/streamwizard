@@ -7,8 +7,8 @@ import {
   consumeIngestClaimToken,
   insertIngestNodeApiKey,
 } from "@repo/supabase/queries/ingest-nodes";
-import { env } from "../../env";
-import { mintTailscaleAuthKey } from "../../lib/tailscale";
+import { env } from "@/env";
+import { mintTailscaleAuthKey } from "@/lib/tailscale";
 
 // slugifyHostname is duplicated from modules/obs-nodes/node/claim.ts rather than
 // shared, keeping the OBS and ingest claim domains fully independent.

@@ -1,5 +1,5 @@
 import type { MiddlewareHandler } from "hono";
-import { secretsMatch } from "../lib/secret-compare";
+import { secretsMatch } from "@/lib/secret-compare";
 
 /**
  * Server-to-server auth for /internal/* routes: `Authorization: Bearer <secret>`

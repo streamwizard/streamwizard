@@ -1,4 +1,4 @@
-import { handlers } from "./registry";
+import { handlers } from "@/modules/eventsub/registry";
 import type { EventSubNotificationPayload, EventSubSubscriptionType } from "@repo/types";
 
 const handleEventsub = async (payload: EventSubNotificationPayload) => {

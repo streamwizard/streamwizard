@@ -3,7 +3,7 @@ import { TwitchApi } from "@repo/twitch-api";
 import { ChannelUpdateEvent } from "@repo/schemas";
 import { supabase } from "@repo/supabase";
 import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
-import { refreshGoLive } from "../../discord-live/posts";
+import { refreshGoLive } from "@/modules/discord-live/posts";
 
 export async function handleChannelUpdate(event: ChannelUpdateEvent, twitchApi: TwitchApi) {
   console.log(

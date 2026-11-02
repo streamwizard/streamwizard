@@ -27,7 +27,7 @@ const hash = (token: string) => createHash("sha256").update(token).digest("hex")
 let app: Hono;
 
 beforeAll(async () => {
-  const { obsNodeAuth } = await import("./obs-node-auth");
+  const { obsNodeAuth } = await import("@/middleware/obs-node-auth");
   app = new Hono();
   app.get("/me", obsNodeAuth(), (c) => c.json({ nodeId: c.get("nodeId") }));
 });

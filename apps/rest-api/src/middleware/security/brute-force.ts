@@ -1,7 +1,7 @@
 // middleware/security/brute-force.ts
 import { Context, Next } from "hono";
-import { clientIp } from "./client-ip";
-import { logSecurityEvent } from "./utils";
+import { clientIp } from "@/middleware/security/client-ip";
+import { logSecurityEvent } from "@/middleware/security/utils";
 
 /**
  * Brute Force Protection Middleware

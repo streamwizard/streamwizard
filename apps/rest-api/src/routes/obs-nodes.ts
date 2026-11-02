@@ -1,12 +1,12 @@
 import { Hono } from "hono";
-import { obsNodeAuth } from "../middleware/obs-node-auth";
-import { claimObsNode } from "../modules/obs-nodes/node/claim";
-import { getObsNodeMe, updateObsNodeMe } from "../modules/obs-nodes/node/me";
-import { reportReconcile } from "../modules/obs-nodes/node/reconcile";
-import { getPlanLimits } from "../modules/obs-nodes/node/subscriptions";
-import { getCloudObsAccess, getUserIsAdmin, listUserInstances } from "../modules/obs-nodes/node/users";
-import { getStreamKey } from "../modules/obs-nodes/instances/stream-key";
-import obsNodeInstances from "./obs-node-instances";
+import { obsNodeAuth } from "@/middleware/obs-node-auth";
+import { claimObsNode } from "@/modules/obs-nodes/node/claim";
+import { getObsNodeMe, updateObsNodeMe } from "@/modules/obs-nodes/node/me";
+import { reportReconcile } from "@/modules/obs-nodes/node/reconcile";
+import { getPlanLimits } from "@/modules/obs-nodes/node/subscriptions";
+import { getCloudObsAccess, getUserIsAdmin, listUserInstances } from "@/modules/obs-nodes/node/users";
+import { getStreamKey } from "@/modules/obs-nodes/instances/stream-key";
+import obsNodeInstances from "@/routes/obs-node-instances";
 
 // /api/obs-nodes: called by obs-instance-manager. /claim is open (one-time
 // token in the body); every other route authenticates with the node API key,

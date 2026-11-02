@@ -60,45 +60,45 @@ mock.module("@repo/logger", () => ({
   streamEventsLogger: { logTwitchEvent: async () => {} },
 }));
 mock.module("@repo/twitch-api", () => ({ TwitchApi: class {} }));
-mock.module("../../streams/viewer-count-poller", () => ({
+mock.module("@/modules/streams/viewer-count-poller", () => ({
   viewerCountPoller: {
     startPolling: (...args: unknown[]) => {
       pollerStarts.push(args);
     },
   },
 }));
-mock.module("../../../lib/user-state", () => ({ setStreamUserState: async () => {} }));
-mock.module("../../../lib/platform-events", () => ({
+mock.module("@/lib/user-state", () => ({ setStreamUserState: async () => {} }));
+mock.module("@/lib/platform-events", () => ({
   logStreamOnlineFailed: async (...args: unknown[]) => {
     failures.push(args);
   },
 }));
-mock.module("../../streams/stream-video", () => ({
+mock.module("@/modules/streams/stream-video", () => ({
   findVideoIdForStream: async () => lookupResult,
 }));
-mock.module("../../discord-live/posts", () => ({
+mock.module("@/modules/discord-live/posts", () => ({
   postGoLive: async (posted: unknown) => {
     livePosts.push(posted);
     return "posted";
   },
   endGoLive: async () => "skipped",
 }));
-mock.module("../../discord-live/target", () => ({
+mock.module("@/modules/discord-live/target", () => ({
   resolveLiveTarget: async () => null,
 }));
-mock.module("../../discord-live/role", () => ({
+mock.module("@/modules/discord-live/role", () => ({
   grantLiveRole: async () => "skipped",
   revokeLiveRole: async () => "skipped",
 }));
-mock.module("../../streams/offline-marker", () => ({
+mock.module("@/modules/streams/offline-marker", () => ({
   markStreamOffline: () => {},
   wentOfflineSince: () => offline,
 }));
 
-let handleStreamOnline: typeof import("./stream-online").handleStreamOnline;
+let handleStreamOnline: typeof import("@/modules/eventsub/handlers/stream-online").handleStreamOnline;
 
 beforeAll(async () => {
-  ({ handleStreamOnline } = await import("./stream-online"));
+  ({ handleStreamOnline } = await import("@/modules/eventsub/handlers/stream-online"));
 });
 
 beforeEach(() => {

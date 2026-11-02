@@ -4,7 +4,7 @@ import type { BackupEventInsert } from "@repo/supabase/queries/backups";
 
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
 
-const { createProxmoxWebhookRoute, WEBHOOK_TOKEN_HEADER } = await import("./proxmox-webhook");
+const { createProxmoxWebhookRoute, WEBHOOK_TOKEN_HEADER } = await import("@/routes/proxmox-webhook");
 
 const SECRET = "s".repeat(40);
 const health = { okAt: null, attemptAt: null, error: null, failingSince: null };

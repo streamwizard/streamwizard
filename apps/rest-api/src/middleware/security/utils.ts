@@ -2,7 +2,7 @@
 import { Context, Next } from "hono";
 import { createHash } from "crypto";
 import { supabase } from "@repo/supabase";
-import { Sentry } from "../../sentry";
+import { Sentry } from "@/sentry";
 
 /**
  * Security Event Metadata Interface

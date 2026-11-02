@@ -1,10 +1,10 @@
 import { reportError } from "@repo/sentry";
-import { handleStreamOffline } from "./handlers/stream-offline";
+import { handleStreamOffline } from "@/modules/eventsub/handlers/stream-offline";
 import * as TwitchSchema from "@repo/schemas";
-import type { HandlerRegistry } from "./registry";
-import { handleStreamOnline } from "./handlers/stream-online";
-import { handleChannelUpdate } from "./handlers/channel-update";
-import { handleUserAuthorizationRevoke } from "./handlers/user-authorization-revoke";
+import type { HandlerRegistry } from "@/modules/eventsub/registry";
+import { handleStreamOnline } from "@/modules/eventsub/handlers/stream-online";
+import { handleChannelUpdate } from "@/modules/eventsub/handlers/channel-update";
+import { handleUserAuthorizationRevoke } from "@/modules/eventsub/handlers/user-authorization-revoke";
 
 /**
  * The long handlers (clip sync on stream.offline can page through thousands of

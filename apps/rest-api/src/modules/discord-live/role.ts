@@ -11,7 +11,7 @@ import {
   type DiscordLiveRoleGrant,
 } from "@repo/supabase/queries/discord-live-role";
 import type { Stream } from "@repo/types";
-import { liveEnv, resolveLiveTarget, type LiveTarget } from "./target";
+import { liveEnv, resolveLiveTarget, type LiveTarget } from "@/modules/discord-live/target";
 
 // Live role in the StreamWizard Discord. stream.online gives a broadcaster
 // with Discord linked the guild's live role, stream.offline takes it away.

@@ -4,10 +4,10 @@ import { trackBackupPoll } from "@repo/metrics";
 import { reportError } from "@repo/sentry";
 import { supabase, type Json } from "@repo/supabase";
 import { claimBackupPoll, saveBackupPollState } from "@repo/supabase/queries/backups";
-import { backupConfig, type BackupConfig } from "./config";
-import { fetchPbs, fetchPve, type SourceResult } from "./sources";
-import { invalidateBackupCache } from "./cache";
-import { loadBackupPoll, reconcileUnmatchedEvents } from "./store";
+import { backupConfig, type BackupConfig } from "@/modules/backups/config";
+import { fetchPbs, fetchPve, type SourceResult } from "@/modules/backups/sources";
+import { invalidateBackupCache } from "@/modules/backups/cache";
+import { loadBackupPoll, reconcileUnmatchedEvents } from "@/modules/backups/store";
 import { createProxmoxClient, pbsAuthorization, pveAuthorization } from "@repo/proxmox";
 
 /**

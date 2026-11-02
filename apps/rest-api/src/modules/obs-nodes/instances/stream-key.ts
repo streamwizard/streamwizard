@@ -1,7 +1,7 @@
 import type { Context, Env } from "hono";
 import { supabase } from "@repo/supabase";
 import { userHasInstanceOnNode } from "@repo/supabase/queries/obs-nodes";
-import { getStreamKeyForUser } from "./twitch-stream-key";
+import { getStreamKeyForUser } from "@/modules/obs-nodes/instances/twitch-stream-key";
 
 // Lives with the instance handlers: the node only asks for a stream key to
 // boot one of its instances. The URL is still /users/:userId/stream-key.

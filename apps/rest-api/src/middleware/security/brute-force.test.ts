@@ -1,12 +1,12 @@
 import { beforeAll, describe, expect, it, mock } from "bun:test";
 import { Hono } from "hono";
 
-mock.module("./utils", () => ({ logSecurityEvent: async () => {} }));
+mock.module("@/middleware/security/utils", () => ({ logSecurityEvent: async () => {} }));
 
 let app: Hono;
 
 beforeAll(async () => {
-  const { bruteForceProtection } = await import("./brute-force");
+  const { bruteForceProtection } = await import("@/middleware/security/brute-force");
   app = new Hono();
   app.use("*", bruteForceProtection({ maxAttempts: 3 }));
   app.all("/api/private", (c) => c.json({ error: "Unauthorized" }, 401));

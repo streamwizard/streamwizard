@@ -6,8 +6,8 @@ import { getVodVideoIdByStreamId, setVodVideoId } from "@repo/supabase/queries/v
 import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/user";
 import { insertViewerCount } from "@repo/supabase/queries/viewer-counts";
 import { TwitchApi } from "@repo/twitch-api";
-import { formatClipsForDB } from "./clip-sync";
-import { findVideoIdForStream } from "./stream-video";
+import { formatClipsForDB } from "@/modules/streams/clip-sync";
+import { findVideoIdForStream } from "@/modules/streams/stream-video";
 
 /**
  * Polling interval in milliseconds (5 minutes)
