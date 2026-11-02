@@ -132,13 +132,9 @@ export async function claimObsNode(c: Context) {
           INFLUXDB_TOKEN: env.INFLUXDB_OBS_NODE_TOKEN ?? env.INFLUXDB_TOKEN,
         }
       : {}),
-    // Present only when both are configured on rest-api — lets the node push
-    // container lifecycle events to browsers via ws-server /internal/broadcast.
-    ...(env.WS_SERVER_URL && env.CONSUMER_SECRET
-      ? {
-          WS_SERVER_URL: env.WS_SERVER_URL,
-          CONSUMER_SECRET: env.CONSUMER_SECRET,
-        }
-      : {}),
+    // No WS_SERVER_URL / CONSUMER_SECRET: the node sends lifecycle and scene
+    // events to POST /api/obs-nodes/instances/:id/events, and rest-api
+    // forwards them to ws-server for the instance's owner. CONSUMER_SECRET
+    // works for every user, so it stays off the nodes.
   });
 }

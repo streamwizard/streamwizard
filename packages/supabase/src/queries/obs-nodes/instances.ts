@@ -221,15 +221,37 @@ export async function updateObsInstancesByUser(
 
 /** Node-scoped delete. Returns false when nothing matched (missing, or another
  * node's row), so the caller can answer 404 instead of a silent 200. */
-export async function deleteObsInstanceForNode(client: DBClient, instanceId: string, nodeId: string): Promise<boolean> {
+/** Deletes one of the node's instances. Returns the owner of the deleted row
+ *  (so the caller can tell them), or null when nothing on this node matched. */
+export async function deleteObsInstanceForNode(
+  client: DBClient,
+  instanceId: string,
+  nodeId: string,
+): Promise<{ user_id: string } | null> {
   const { data, error } = await client
     .from("obs_instances")
     .delete()
     .eq("id", instanceId)
     .eq("node_id", nodeId)
-    .select("id");
+    .select("user_id");
   if (error) throw error;
-  return (data?.length ?? 0) > 0;
+  return data?.[0] ?? null;
+}
+
+/** The owner of one of the node's instances, or null when the id is missing or
+ *  on another node. */
+export async function getObsInstanceOwnerForNode(
+  client: DBClient,
+  instanceId: string,
+  nodeId: string,
+): Promise<string | null> {
+  const { data } = await client
+    .from("obs_instances")
+    .select("user_id")
+    .eq("id", instanceId)
+    .eq("node_id", nodeId)
+    .maybeSingle();
+  return data?.user_id ?? null;
 }
 
 /** True if the user has at least one instance provisioned on this node. Gates

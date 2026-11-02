@@ -16,6 +16,7 @@ import { env } from "@/env";
 import { unentitledInstanceIds } from "@/modules/obs-nodes/instances/cloud-obs-plan";
 import { checkInstanceCreateToken } from "@/modules/obs-nodes/instances/instance-create-token";
 import { insertInstanceSchema, updateInstanceSchema } from "@/schemas/obs-nodes";
+import { instanceDeleted } from "@/modules/obs-nodes/instances/events";
 import { encryptPassword, generateVncPassword } from "@/modules/obs-nodes/instances/secrets";
 
 export async function listInstances(c: Context) {
@@ -145,6 +146,7 @@ export async function deleteInstance(c: Context<Env, "/:id">) {
   try {
     const deleted = await deleteObsInstanceForNode(supabase, id, nodeId);
     if (!deleted) return c.json({ error: "Instance not found" }, 404);
+    instanceDeleted(nodeId, id, deleted.user_id);
     return c.json({ ok: true });
   } catch (err) {
     return c.json({ error: (err as Error).message }, 500);

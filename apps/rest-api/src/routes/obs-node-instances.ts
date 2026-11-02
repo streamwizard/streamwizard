@@ -11,6 +11,7 @@ import {
   updateInstance,
   updateInstanceByContainer,
 } from "@/modules/obs-nodes/instances/crud";
+import { postInstanceEvent } from "@/modules/obs-nodes/instances/events";
 import { getInstanceSecrets } from "@/modules/obs-nodes/instances/secrets";
 
 // /api/obs-nodes/instances: the calling node's own OBS instances. Every route
@@ -31,6 +32,8 @@ obsNodeInstances.patch("/by-container/:containerId", updateInstanceByContainer);
 obsNodeInstances.get("/:id", getInstance);
 // Plaintext OBS WebSocket + VNC passwords for one of this node's instances.
 obsNodeInstances.get("/:id/secrets", getInstanceSecrets);
+// Lifecycle and scene events, forwarded to the instance owner's ws-server room.
+obsNodeInstances.post("/:id/events", postInstanceEvent);
 obsNodeInstances.patch("/:id", updateInstance);
 obsNodeInstances.delete("/:id", deleteInstance);
 

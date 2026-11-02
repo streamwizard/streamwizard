@@ -82,7 +82,8 @@ mock.module("@repo/supabase/queries/obs-nodes", () => ({
     return { id: "new-instance", node_id: fields.node_id, user_id: fields.user_id };
   },
   countActiveObsInstancesForNode: async () => 0,
-  deleteObsInstanceForNode: async () => false,
+  deleteObsInstanceForNode: async () => null,
+  getObsInstanceOwnerForNode: async () => null,
   getObsInstanceByIdForNode: async () => null,
   listObsInstancesByNode: async () => [],
   listRunningObsInstancesByNode: async () => [],
