@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isLoopAlive, staleAfterMs } from "./liveness";
+import { isLoopAlive, staleAfterMs } from "@/worker/liveness";
 
 describe("staleAfterMs", () => {
   test("never drops below five minutes", () => {
