@@ -20,7 +20,7 @@ export default {
         { name: "Uptime", value: formatUptime(client.uptime ?? 0), inline: true },
         { name: "Gateway ping", value: `${client.ws.ping}ms`, inline: true },
         { name: "Servers", value: `${client.guilds.cache.size}`, inline: true },
-        { name: "Commands", value: `${client.commands.size}`, inline: true }
+        { name: "Commands", value: `${client.commands.size}`, inline: true },
       )
       .setTimestamp();
 
