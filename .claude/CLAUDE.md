@@ -1,5 +1,8 @@
 # StreamWizard
 
+## Architecture
+Follow the golden rules in @../ARCHITECTURE.md. The detail rules live in `.claude/rules/architecture/` and load automatically when you read or edit matching files. If you change a convention, update that rule file in the same PR.
+
 ## Pull Requests
 Always open PRs against the `staging` branch. Never target `main` or `production` (prod) as the base.
 

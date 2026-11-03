@@ -13,7 +13,7 @@ The chat bot and event processor. It holds a persistent connection to Twitch Eve
 - `src/handlers/` — registration and dispatch (`eventHandler.ts` is the hub).
 - `src/functions/` — the per-event business logic (what actually happens on a follow, a sub, a raid).
 
-This is a connect-out service — it dials Twitch and the WS server rather than listening on a port of its own. See the root [`ARCHITECTURE.md`](../../ARCHITECTURE.md) for how it plugs into the event bus.
+This is a connect-out service — it dials Twitch and the WS server rather than listening on a port of its own. See [`.claude/rules/architecture/backend-services.md`](../../.claude/rules/architecture/backend-services.md) for how it plugs into the event bus.
 
 ## Running locally
 

@@ -13,7 +13,7 @@ Takes the scenes you build in the dashboard (`web-streamwizard`) and renders the
 - **Clip video** — played straight from Twitch's CDN. The server only mints the signed MP4 URL; no video passes through this app.
 - **Widgets** — pure renderers live in `@repo/ui`; this app supplies the data containers (e.g. `ClipsWidgetContainer`) and registers them in `page.tsx`.
 
-The widget container/renderer split and the overlay data rules are documented in the root [`ARCHITECTURE.md`](../../ARCHITECTURE.md).
+The widget container/renderer split and the overlay data rules are documented in [`.claude/rules/architecture/web-apps.md`](../../.claude/rules/architecture/web-apps.md).
 
 > **Heads up:** this app runs a pinned, modified build of Next.js — see [`AGENTS.md`](./AGENTS.md). Check the bundled docs in `node_modules/next/dist/docs/` before assuming an API behaves the way the public docs say.
 

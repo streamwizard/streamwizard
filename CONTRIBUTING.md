@@ -76,7 +76,7 @@ StreamWizard is a **monorepo** — one repo, multiple apps and shared packages, 
 | `sentry` | Error tracking config shared across apps. |
 | `eslint-config` / `typescript-config` | Shared lint and TS config so every package agrees on the rules. |
 
-Want the deeper map — routing, the database access rule, the overlay widget split, the WebSocket protocol? That's all in [`ARCHITECTURE.md`](./ARCHITECTURE.md).
+Want the deeper map? [`ARCHITECTURE.md`](./ARCHITECTURE.md) has the golden rules and links to a detail page per area in [`.claude/rules/architecture/`](./.claude/rules/architecture/).
 
 ---
 
