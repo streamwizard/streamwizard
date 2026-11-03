@@ -3,6 +3,7 @@ import { obsNodeAuth } from "@/middleware/obs-node-auth";
 import { claimObsNode } from "@/modules/obs-nodes/node/claim";
 import { getObsNodeMe, updateObsNodeMe } from "@/modules/obs-nodes/node/me";
 import { reportReconcile } from "@/modules/obs-nodes/node/reconcile";
+import { getSharedStorageCredentials } from "@/modules/obs-nodes/node/storage-credentials";
 import { getPlanLimits } from "@/modules/obs-nodes/node/subscriptions";
 import { getCloudObsAccess, getUserIsAdmin, listUserInstances } from "@/modules/obs-nodes/node/users";
 import { getStreamKey } from "@/modules/obs-nodes/instances/stream-key";
@@ -23,6 +24,8 @@ obsNodes.get("/subscriptions/:subscriptionId/limits", obsNodeAuth(), getPlanLimi
 
 obsNodes.get("/me", obsNodeAuth(), getObsNodeMe);
 obsNodes.patch("/me", obsNodeAuth(), updateObsNodeMe);
+// Temporary read-only MinIO credentials for templates and plugins.
+obsNodes.post("/storage-credentials", obsNodeAuth(), getSharedStorageCredentials);
 
 obsNodes.get("/users/:userId/instances", obsNodeAuth(), listUserInstances);
 obsNodes.get("/users/:userId/is-admin", obsNodeAuth(), getUserIsAdmin);

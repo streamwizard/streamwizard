@@ -13,6 +13,7 @@ import {
 } from "@/modules/obs-nodes/instances/crud";
 import { postInstanceEvent } from "@/modules/obs-nodes/instances/events";
 import { getInstanceSecrets } from "@/modules/obs-nodes/instances/secrets";
+import { getInstanceStorageCredentials } from "@/modules/obs-nodes/instances/storage-credentials";
 
 // /api/obs-nodes/instances: the calling node's own OBS instances. Every route
 // authenticates with the node API key (sets c.var.nodeId), and every handler
@@ -32,6 +33,8 @@ obsNodeInstances.patch("/by-container/:containerId", updateInstanceByContainer);
 obsNodeInstances.get("/:id", getInstance);
 // Plaintext OBS WebSocket + VNC passwords for one of this node's instances.
 obsNodeInstances.get("/:id/secrets", getInstanceSecrets);
+// Temporary MinIO credentials for this instance's config and media folders.
+obsNodeInstances.post("/:id/storage-credentials", getInstanceStorageCredentials);
 // Lifecycle and scene events, forwarded to the instance owner's ws-server room.
 obsNodeInstances.post("/:id/events", postInstanceEvent);
 obsNodeInstances.patch("/:id", updateInstance);

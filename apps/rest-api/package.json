@@ -9,6 +9,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-sts": "^3.750.0",
     "@repo/backups": "workspace:*",
     "@repo/cms": "workspace:*",
     "@repo/discord-api": "workspace:*",
