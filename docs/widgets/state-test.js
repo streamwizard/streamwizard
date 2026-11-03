@@ -27,9 +27,8 @@ function save() {
   setStatus('Saving…', 'saving');
   fetch(stateUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + subscriberToken },
     body: JSON.stringify({
-      token: subscriberToken,
       itemId: overlayItemId,
       state: { elapsed_seconds: elapsedSeconds },
     }),
@@ -66,7 +65,7 @@ window.addEventListener('onWidgetLoad', function (e) {
   }
 
   // Load persisted elapsed time, then start ticking
-  fetch(stateUrl + '?token=' + encodeURIComponent(subscriberToken) + '&itemId=' + encodeURIComponent(overlayItemId))
+  fetch(stateUrl + '?itemId=' + encodeURIComponent(overlayItemId), { headers: { 'Authorization': 'Bearer ' + subscriberToken } })
     .then(function (r) { return r.json(); })
     .then(function (body) {
       console.log('[state-test] loaded state:', body);

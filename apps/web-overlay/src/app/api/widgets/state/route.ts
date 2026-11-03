@@ -26,9 +26,8 @@ async function resolveInstance(token: string, itemId: string) {
   return instance ?? null;
 }
 
-// The subscriber token is a secret; prefer the Authorization header so it
-// stays out of URLs and logs. Query/body token remains supported for widgets
-// written against the original contract.
+// The subscriber token is a secret: header only, so it stays out of URLs,
+// logs and request bodies.
 function bearerToken(req: NextRequest): string | null {
   const auth = req.headers.get("authorization");
   if (auth?.startsWith("Bearer ")) return auth.slice("Bearer ".length);
@@ -36,7 +35,7 @@ function bearerToken(req: NextRequest): string | null {
 }
 
 export async function GET(req: NextRequest) {
-  const token = bearerToken(req) ?? req.nextUrl.searchParams.get("token");
+  const token = bearerToken(req);
   const itemId = req.nextUrl.searchParams.get("itemId");
 
   if (!token || !itemId) {
@@ -59,8 +58,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400, headers: corsHeaders(req) });
   }
 
-  const { token: bodyToken, itemId, state } = body as Record<string, unknown>;
-  const token = bearerToken(req) ?? bodyToken;
+  const { itemId, state } = body as Record<string, unknown>;
+  const token = bearerToken(req);
 
   if (typeof token !== "string" || typeof itemId !== "string" || typeof state !== "object" || state === null || Array.isArray(state)) {
     return NextResponse.json({ error: "Missing or invalid fields" }, { status: 400, headers: corsHeaders(req) });
