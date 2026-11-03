@@ -8,7 +8,6 @@ export const envSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_PUBLIC_KEY: z.string().min(1),
   SUPABASE_SECRET_KEY: z.string().min(1),
-  SUPABASE_JWT_SECRET: z.string().min(1),
   TOKEN_ENCRYPTION_KEY: z.string().min(1),
 
   // Twitch
