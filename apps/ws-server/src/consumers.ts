@@ -3,7 +3,7 @@ import type { ConnectionData, ServerWebSocket } from "./types";
 // Trusted server-side consumers (obs-auto-switcher) that receive every
 // bot-routed message across ALL user rooms, unmasked — unlike monitors
 // (sanitized/masked observability) and subscribers (own room only). The
-// role is gated on CONSUMER_SECRET, never a user token.
+// role is gated on a service token (scope consumer), never a user token.
 export const consumers = new Set<ServerWebSocket<ConnectionData>>();
 
 export function addConsumer(ws: ServerWebSocket<ConnectionData>): void {

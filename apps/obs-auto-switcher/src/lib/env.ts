@@ -10,10 +10,8 @@ const schema = z.object({
 
   // ws-server: consumer feed in (ingest stats + config pushes), bot feed out
   // (status messages to user rooms). Authenticated with service tokens signed
-  // by WS_SERVICE_SIGNING_JWK (read by @repo/service-token); CONSUMER_SECRET is
-  // the legacy fallback for environments without per-service keys.
+  // by WS_SERVICE_SIGNING_JWK (read by @repo/service-token).
   WS_SERVER_URL: z.string().url(),
-  CONSUMER_SECRET: z.string().min(1).optional(),
 
   // Decrypts each node's per-node obs_command key (from obs_node_api_keys)
   // before calling the node's /obs route. Must match the key the rest-api /

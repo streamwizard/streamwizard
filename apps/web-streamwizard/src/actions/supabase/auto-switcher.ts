@@ -18,10 +18,7 @@ import { env } from "@/lib/env";
 // fails (or ws-server pushes aren't configured here) the engine's periodic re-fetch
 // picks the change up within a minute — so push failures never fail the save.
 async function pushConfigToEngine(row: AutoSwitcherConfigRow): Promise<void> {
-  const result = await broadcastToUser(row.user_id, "streamwizard.auto_switcher_config", row, {
-    wsServerUrl: env.WS_SERVER_URL,
-    consumerSecret: env.CONSUMER_SECRET,
-  });
+  const result = await broadcastToUser(row.user_id, "streamwizard.auto_switcher_config", row, { wsServerUrl: env.WS_SERVER_URL });
   if (!result.ok && (result.reason === "network" || result.reason === "signing")) {
     reportError(result.error, "auto-switcher: config push");
   }

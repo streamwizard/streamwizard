@@ -126,10 +126,7 @@ export async function sendTestEventToOverlay(
   const payload = forceVariation
     ? { ...(msg.payload as Record<string, unknown>), [ALERT_TEST_PAYLOAD_KEY]: forceVariation }
     : msg.payload;
-  const result = await broadcastToUser(user.id, msg.type, payload, {
-    wsServerUrl: env.WS_SERVER_URL,
-    consumerSecret: env.CONSUMER_SECRET,
-  });
+  const result = await broadcastToUser(user.id, msg.type, payload, { wsServerUrl: env.WS_SERVER_URL });
   if (result.ok) return { ok: true };
   if (result.reason === "unconfigured") return { ok: false, error: "Test alerts aren't configured on this server" };
   if (result.reason === "network" || result.reason === "signing") reportError(result.error, "overlay: test alert broadcast");

@@ -41,10 +41,9 @@ scale, shard users across replicas — don't duplicate them.
 
 | Var | Purpose |
 | --- | --- |
-| `SUPABASE_URL` / `SUPABASE_SECRET_KEY` | config reads, obs_instances/obs_nodes lookups, stream_events inserts, bot auth to ws-server |
+| `SUPABASE_URL` / `SUPABASE_SECRET_KEY` | config reads, obs_instances/obs_nodes lookups, stream_events inserts |
 | `WS_SERVER_URL` | ws-server base URL (ws(s)://) |
 | `WS_SERVICE_SIGNING_JWK` | this service's Ed25519 key; signs a 60-second token per ws-server connection (`role=consumer` stats feed, `role=bot` status pushes). See `packages/service-token` |
-| `CONSUMER_SECRET` | legacy fallback for `role=consumer` where the environment has no service keys yet (must match ws-server's env) |
 | `TOKEN_ENCRYPTION_KEY` | decrypts each node's per-node `obs_command` key (from `obs_node_api_keys`) before calling the node's `/obs` route |
 | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | chat notices via `@repo/twitch-api` |
 | `PORT` (default 8010) | `/health` liveness endpoint |

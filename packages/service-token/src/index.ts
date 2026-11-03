@@ -3,8 +3,8 @@ import { decodeProtectedHeader, errors, importJWK, jwtVerify, SignJWT, type JWK 
 
 // Short-lived tokens our own services use to call ws-server.
 //
-// ws-server used to trust one shared CONSUMER_SECRET (and, for bot sockets,
-// the Supabase service-role key). Every holder could do everything: push any
+// ws-server used to trust one shared secret (and, for bot sockets, the
+// Supabase service-role key). Every holder could do everything: push any
 // event to any user, close anyone's sockets, read the firehose. Now each
 // service has its own Ed25519 key and signs a 60-second token for the one
 // thing it is about to do. ws-server holds only the public keys, knows which
@@ -126,20 +126,19 @@ export async function signServiceToken(scope: ServiceScope, claims: ServiceToken
 
 /**
  * The Authorization header for one ws-server call: a fresh service token when
- * this service has WS_SERVICE_SIGNING_JWK, else the legacy shared secret
- * while environments without per-service keys still run on it, else null
- * (ws-server pushes are off here).
+ * this service has WS_SERVICE_SIGNING_JWK, else null (ws-server calls are off
+ * here).
  */
-export async function serviceAuthHeader(scope: ServiceScope, legacySecret?: string | null): Promise<string | null> {
+export async function serviceAuthHeader(scope: ServiceScope): Promise<string | null> {
   if (process.env.WS_SERVICE_SIGNING_JWK) return `Bearer ${await signServiceToken(scope)}`;
-  return legacySecret ? `Bearer ${legacySecret}` : null;
+  return null;
 }
 
 // ── Verifying (ws-server) ───────────────────────────────────────────────────
 
 const CLOCK_TOLERANCE_SECONDS = 5;
 
-/** Same three-part shape every JWT has; anything else is a legacy secret. */
+/** Same three-part shape every JWT has. */
 export function looksLikeJwt(token: string): boolean {
   return token.split(".").length === 3;
 }

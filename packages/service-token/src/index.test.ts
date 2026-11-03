@@ -142,14 +142,13 @@ describe("ingest-node tokens", () => {
 
 describe("serviceAuthHeader", () => {
   test("prefers a signed token when the service has a key", async () => {
-    const header = await serviceAuthHeader("broadcast", "legacy");
+    const header = await serviceAuthHeader("broadcast");
     expect(header?.startsWith("Bearer ")).toBe(true);
     expect(looksLikeJwt(header!.slice(7))).toBe(true);
   });
 
-  test("falls back to the legacy secret without a key, and to null without either", async () => {
+  test("is null without a key: there is no shared-secret fallback", async () => {
     useKey(null);
-    expect(await serviceAuthHeader("broadcast", "legacy")).toBe("Bearer legacy");
-    expect(await serviceAuthHeader("broadcast", undefined)).toBeNull();
+    expect(await serviceAuthHeader("broadcast")).toBeNull();
   });
 });

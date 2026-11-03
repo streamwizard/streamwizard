@@ -17,9 +17,7 @@ export interface ConnectionData {
   consumerTypes?: Set<string>;
   /**
    * Who a bot, consumer or ingest-node connection is ("streamwizard-bot",
-   * "ingest-node:<id>"). Taken from the verified service token where there is
-   * one; legacy-secret bots still self-declare it, which can mislabel but not
-   * escalate.
+   * "ingest-node:<id>"). Taken from the verified service token.
    */
   source?: string;
   /**

@@ -66,11 +66,11 @@ export const env = createEnv({
     // Encrypts OBS WS passwords written to obs_instances; must be byte-identical
     // to web-streamwizard's key or its user-facing pages can't decrypt them.
     TOKEN_ENCRYPTION_KEY: z.string().min(1),
-    // Auto-switcher config pushes ride ws-server's /internal/broadcast; both
-    // optional — without them saves still land in the DB and the engine's 60s
-    // reconcile picks them up.
+    // Auto-switcher config pushes and socket revokes ride ws-server's
+    // /internal/* routes, signed with WS_SERVICE_SIGNING_JWK. Optional —
+    // without it saves still land in the DB and the engine's 60s reconcile
+    // picks them up.
     WS_SERVER_URL: z.string().min(1).optional(),
-    CONSUMER_SECRET: z.string().min(1).optional(),
     // Bearer secret for rest-api's /internal/backups (the /backups page).
     // Must match rest-api's REST_API_INTERNAL_SECRET; without it the page
     // shows a "not configured" card.
@@ -132,7 +132,6 @@ export const env = createEnv({
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
     TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY,
     WS_SERVER_URL: process.env.WS_SERVER_URL,
-    CONSUMER_SECRET: process.env.CONSUMER_SECRET,
     REST_API_INTERNAL_SECRET: process.env.REST_API_INTERNAL_SECRET,
     PVE_HOSTS: process.env.PVE_HOSTS,
     TWITCH_CLIENT_ID: process.env.TWITCH_CLIENT_ID,

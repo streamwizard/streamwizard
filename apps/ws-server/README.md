@@ -23,10 +23,9 @@ Our own services authenticate with 60-second Ed25519 tokens, one per action
 `bot`) against `SERVICE_POLICY`. The same tokens gate `POST /internal/broadcast`
 and `POST /internal/revoke`.
 
-The old shared secrets (`CONSUMER_SECRET`, and the service-role key for bots)
-are still accepted until `WS_SERVICE_AUTH_REQUIRED=true`. Ingest nodes still log
-in as bots with the service-role key, so turn that on only where no ingest
-node connects. Generate keys per environment with
+There is no shared secret: a service without its own key can't reach these
+routes, and an environment without `WS_SERVICE_JWKS` answers them with 404.
+Generate keys per environment with
 `bun packages/service-token/scripts/generate-keys.ts <out-dir>`.
 
 ### Ingest nodes

@@ -28,11 +28,9 @@ async function bearer(svc: ServiceName, scope: ServiceScope) {
   return `Bearer ${await signServiceToken(scope)}`;
 }
 
-const legacy = { consumerSecret: "shared-consumer", botSecret: "service-role" };
-
 describe("service tokens", () => {
   test("each service gets exactly its own actions", async () => {
-    const auth = createServiceAuth({ jwks: { keys }, required: true });
+    const auth = createServiceAuth({ jwks: { keys } });
     const cases: [ServiceName, ServiceScope, boolean][] = [
       ["rest-api", "broadcast", true],
       ["rest-api", "revoke", true],
@@ -53,55 +51,41 @@ describe("service tokens", () => {
   });
 
   test("the verified service name comes back for logging", async () => {
-    const auth = createServiceAuth({ jwks: { keys }, required: true });
+    const auth = createServiceAuth({ jwks: { keys } });
     expect(await auth.authorize(await bearer("rest-api", "broadcast"), "broadcast")).toEqual({
       ok: true,
       service: "rest-api",
-      legacy: false,
       claims: {},
     });
   });
 
   test("a token for one action can't be replayed on another", async () => {
-    const auth = createServiceAuth({ jwks: { keys }, required: true });
+    const auth = createServiceAuth({ jwks: { keys } });
     expect((await auth.authorize(await bearer("rest-api", "broadcast"), "revoke")).ok).toBe(false);
   });
 
   test("no header, or no Bearer, is refused", async () => {
-    const auth = createServiceAuth({ jwks: { keys }, required: true });
+    const auth = createServiceAuth({ jwks: { keys } });
     expect(await auth.authorize(null, "broadcast")).toEqual({ ok: false, reason: "missing" });
     expect((await auth.authorize("Basic abc", "broadcast")).ok).toBe(false);
   });
 });
 
-describe("legacy secrets", () => {
-  test("still work while not required, each only for its own actions", async () => {
-    const auth = createServiceAuth({ jwks: { keys }, required: false, ...legacy });
-    expect((await auth.authorize("Bearer shared-consumer", "broadcast")).ok).toBe(true);
-    expect((await auth.authorize("Bearer shared-consumer", "consumer")).ok).toBe(true);
-    expect((await auth.authorize("Bearer service-role", "bot")).ok).toBe(true);
-    expect((await auth.authorize("Bearer service-role", "broadcast")).ok).toBe(false);
-    expect((await auth.authorize("Bearer shared-consumer", "bot")).ok).toBe(false);
+describe("shared secrets", () => {
+  test("are never accepted, for any action", async () => {
+    const auth = createServiceAuth({ jwks: { keys } });
+    for (const scope of ["broadcast", "revoke", "consumer", "bot", "ingest-node", "ingest-sessions"] as ServiceScope[]) {
+      expect((await auth.authorize("Bearer shared-consumer", scope)).ok).toBe(false);
+    }
   });
 
-  test("are refused once required, but service tokens keep working", async () => {
-    const auth = createServiceAuth({ jwks: { keys }, required: true, ...legacy });
-    expect((await auth.authorize("Bearer shared-consumer", "broadcast")).ok).toBe(false);
-    expect((await auth.authorize("Bearer service-role", "bot")).ok).toBe(false);
-    expect((await auth.authorize(await bearer("streamwizard-bot", "bot"), "bot")).ok).toBe(true);
+  test("without service keys nothing is configured and nothing gets in", async () => {
+    const auth = createServiceAuth({});
+    expect(auth.configured("broadcast")).toBe(false);
+    expect((await auth.authorize(await bearer("rest-api", "broadcast"), "broadcast")).ok).toBe(false);
   });
 
-  test("the new ingest actions never accept a shared secret", async () => {
-    const auth = createServiceAuth({ jwks: { keys }, required: false, ...legacy });
-    expect((await auth.authorize("Bearer shared-consumer", "ingest-node")).ok).toBe(false);
-    expect((await auth.authorize("Bearer service-role", "ingest-node")).ok).toBe(false);
-    expect((await auth.authorize("Bearer shared-consumer", "ingest-sessions")).ok).toBe(false);
-    expect(createServiceAuth({ required: false, ...legacy }).configured("ingest-node")).toBe(false);
-  });
-
-  test("configured() says when an action has no way in at all", () => {
-    expect(createServiceAuth({ required: true, ...legacy }).configured("broadcast")).toBe(false);
-    expect(createServiceAuth({ required: false, ...legacy }).configured("broadcast")).toBe(true);
-    expect(createServiceAuth({ jwks: { keys }, required: true }).configured("broadcast")).toBe(true);
+  test("configured() is true once service keys are set", () => {
+    expect(createServiceAuth({ jwks: { keys } }).configured("broadcast")).toBe(true);
   });
 });

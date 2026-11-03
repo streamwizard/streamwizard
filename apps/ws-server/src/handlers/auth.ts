@@ -52,16 +52,6 @@ function clientIp(req: Request): string {
   return req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "unknown";
 }
 
-/**
- * Self-declared identity label ("ingest-node:<id>"). Never reject on a
- * bad/missing source — older bot clients don't send one — just fall back, and
- * constrain the charset so it's safe as a metrics tag.
- */
-function parseSourceLabel(url: URL): string {
-  const raw = url.searchParams.get("source");
-  return raw && /^[a-zA-Z0-9:_.-]{1,64}$/.test(raw) ? raw : "unknown";
-}
-
 function parseCsvSet<T extends string>(url: URL, param: string): Set<T> {
   const raw = url.searchParams.get(param);
   if (!raw) return new Set<T>();
@@ -135,7 +125,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     return upgradeOrFail(server, req, "bot", {
       role: "bot",
       userId: "_bot",
-      source: auth.legacy ? parseSourceLabel(url) : auth.service,
+      source: auth.service,
       channels: new Set<OverlayEventType>(),
     });
   }
@@ -153,7 +143,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     return upgradeOrFail(server, req, "consumer", {
       role: "consumer",
       userId: "_consumer",
-      source: auth.legacy ? parseSourceLabel(url) : auth.service,
+      source: auth.service,
       consumerTypes: parseCsvSet(url, "types"),
       channels: new Set<OverlayEventType>(),
     });

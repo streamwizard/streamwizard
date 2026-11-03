@@ -65,17 +65,14 @@ export const envSchema = z.object({
   INFLUXDB_OBS_NODE_TOKEN: z.string().optional(),
   INFLUXDB_INGEST_NODE_TOKEN: z.string().optional(),
 
-  // ws-server broadcast — relayed to OBS nodes in the /claim response so the
-  // obs-instance-manager can push container lifecycle events to the owning
-  // user's browser room. Optional and paired: a claim omits both from the
-  // response unless both are set. CONSUMER_SECRET must match the ws-server's.
+  // ws-server: broadcasts, revokes and the ingest session registry, each
+  // signed with WS_SERVICE_SIGNING_JWK (@repo/service-token).
   WS_SERVER_URL: z.string().optional(),
   // The ws-server address ingest nodes dial (POST /api/ingest-nodes/me/ws-token).
   // Only needed when it differs from WS_SERVER_URL, e.g. rest-api reaches
   // ws-server on an internal address the nodes can't, or a local Docker node
   // needs host.docker.internal instead of localhost.
   WS_SERVER_NODE_URL: z.string().optional(),
-  CONSUMER_SECRET: z.string().optional(),
 
   // Go-live posts in the StreamWizard Discord (SW-336): stream.online posts an
   // embed in the guild's live channel through Discord REST, stream.offline

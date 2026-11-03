@@ -12,7 +12,6 @@ import { env } from "@/env";
 
 const wsConfig: BroadcastConfig = {
   wsServerUrl: env.WS_SERVER_URL,
-  consumerSecret: env.CONSUMER_SECRET,
 };
 
 function logFailure(label: string, context: string, result: BroadcastResult): void {

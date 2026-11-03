@@ -6,7 +6,7 @@ import { TtlCache } from "@repo/ttl-cache";
 import { postInternalBroadcast } from "@/lib/ws-server";
 import { nodeInstanceEventSchema } from "@/schemas/obs-nodes";
 
-// OBS nodes don't hold CONSUMER_SECRET: it would let them push any event to
+// OBS nodes hold no ws-server credential: one would let them push events to
 // any user's room. A node reports what happened to one of its own instances
 // here, and rest-api forwards it to ws-server for that instance's owner. The
 // node never names the user and can only send these two event types.

@@ -8,10 +8,7 @@ import { env } from "@/lib/env";
  * keys this misses, so a failure is reported and never fails the action.
  */
 export async function revokeWsSockets(userId: string, scope: "scene" | "session" | "all"): Promise<void> {
-  const result = await revokeUserSockets(userId, scope, {
-    wsServerUrl: env.WS_SERVER_URL,
-    consumerSecret: env.CONSUMER_SECRET,
-  });
+  const result = await revokeUserSockets(userId, scope, { wsServerUrl: env.WS_SERVER_URL });
   if (!result.ok && result.reason !== "unconfigured") {
     reportError(result.reason === "status" ? new Error(`ws-server revoke failed status=${result.status}`) : result.error, "ws-revoke", { scope });
   }

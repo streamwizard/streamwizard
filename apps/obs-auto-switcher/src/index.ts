@@ -24,13 +24,12 @@ import { serviceAuthHeader } from "@repo/service-token";
 
 initMetrics(BUCKETS.autoSwitcher);
 
-// Each (re)connect signs a fresh service token (bot / consumer scope); the
-// legacy secrets are only used where this service has no signing key yet.
-const statusPublisher = new StatusPublisher(env.WS_SERVER_URL, () => serviceAuthHeader("bot", env.SUPABASE_SECRET_KEY));
+// Each (re)connect signs a fresh service token (bot / consumer scope).
+const statusPublisher = new StatusPublisher(env.WS_SERVER_URL, () => serviceAuthHeader("bot"));
 const engine = new Engine(statusPublisher);
 const configStore = new ConfigStore((userId, config) => engine.onConfigChanged(userId, config));
 
-const statsFeed = new StatsFeed(env.WS_SERVER_URL, () => serviceAuthHeader("consumer", env.CONSUMER_SECRET), {
+const statsFeed = new StatsFeed(env.WS_SERVER_URL, () => serviceAuthHeader("consumer"), {
   onIngestStats: (userId, payload) => engine.onStats(userId, payload),
   onConfigPush: (userId, payload) => void configStore.applyPush(userId, payload),
   onSessionEnded: (userId, payload) => engine.onSessionEnded(userId, payload),

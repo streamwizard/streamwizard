@@ -7,9 +7,9 @@
  * 3s timeout. They differ only in what they do with a failure, so this returns
  * a typed result instead of deciding for them.
  *
- * Each call carries a fresh 60-second service token for that one action when
- * the service has WS_SERVICE_SIGNING_JWK (@repo/service-token); otherwise the
- * legacy shared secret, for environments that haven't moved over yet.
+ * Each call carries a fresh 60-second service token for that one action, signed
+ * with the service's WS_SERVICE_SIGNING_JWK (@repo/service-token). Without a
+ * key the call is skipped as "unconfigured".
  */
 
 import { serviceAuthHeader, type ServiceScope } from "@repo/service-token";
@@ -17,9 +17,6 @@ import { serviceAuthHeader, type ServiceScope } from "@repo/service-token";
 export interface BroadcastConfig {
   /** ws-server base URL. `ws://`/`wss://` is rewritten to http(s) automatically. */
   wsServerUrl: string | null | undefined;
-  /** Legacy shared secret, used only when this service has no
-   *  WS_SERVICE_SIGNING_JWK. Neither = no push. */
-  consumerSecret?: string | null;
   /** Defaults to 3s — a push must never outlive the request that triggered it. */
   timeoutMs?: number;
 }
@@ -27,7 +24,7 @@ export interface BroadcastConfig {
 export type BroadcastResult =
   /** Delivered to ws-server (not necessarily to a connected client). */
   | { ok: true }
-  /** No ws-server URL, or no signing key and no secret — pushes are off here. */
+  /** No ws-server URL, or no signing key — pushes are off here. */
   | { ok: false; reason: "unconfigured" }
   /** ws-server answered, but not with 2xx. */
   | { ok: false; reason: "status"; status: number }
@@ -57,12 +54,12 @@ async function postScoped(
   body: unknown,
   config: BroadcastConfig,
 ): Promise<BroadcastResult> {
-  const { wsServerUrl, consumerSecret, timeoutMs = 3_000 } = config;
+  const { wsServerUrl, timeoutMs = 3_000 } = config;
   if (!wsServerUrl) return { ok: false, reason: "unconfigured" };
 
   let authorization: string | null;
   try {
-    authorization = await serviceAuthHeader(scope, consumerSecret);
+    authorization = await serviceAuthHeader(scope);
   } catch (error) {
     return { ok: false, reason: "signing", error };
   }
@@ -116,11 +113,11 @@ export interface IngestSessionRegistration {
 
 /**
  * Tells ws-server about a session rest-api just opened for an ingest node, so
- * the node's live samples can be routed to the right user. Service token
- * only (scope ingest-sessions): there is no legacy secret for it.
+ * the node's live samples can be routed to the right user (scope
+ * ingest-sessions).
  */
 export function registerIngestSession(session: IngestSessionRegistration, config: BroadcastConfig): Promise<BroadcastResult> {
-  return postScoped("/internal/ingest-sessions", "ingest-sessions", session, { ...config, consumerSecret: null });
+  return postScoped("/internal/ingest-sessions", "ingest-sessions", session, config);
 }
 
 /** Marks an ingest session ended in ws-server's registry. */
@@ -129,7 +126,7 @@ export function endIngestSessionOnWs(sessionId: string, config: BroadcastConfig)
     `/internal/ingest-sessions/${encodeURIComponent(sessionId)}/end`,
     "ingest-sessions",
     {},
-    { ...config, consumerSecret: null },
+    config,
   );
 }
 

@@ -63,7 +63,7 @@ export class StatsFeed {
       return this.retry();
     }
     if (!authorization) {
-      console.error("[stats-feed] no ws-server credential (WS_SERVICE_SIGNING_JWK or CONSUMER_SECRET); stats feed is off");
+      console.error("[stats-feed] no ws-server credential (WS_SERVICE_SIGNING_JWK); stats feed is off");
       return;
     }
     if (this.stopping) return;
