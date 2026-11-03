@@ -181,7 +181,6 @@ export function DeckStreamPanel({
       <TitleField value={title} onChange={setTitle} disabled={!canInteract || submitting} />
 
       <CategoryPicker
-        broadcasterId={broadcasterId}
         value={category}
         onChange={setCategory}
         disabled={!canInteract || submitting}

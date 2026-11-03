@@ -115,8 +115,9 @@ export async function claimObsNode(c: Context) {
     rest_api_url: env.STREAMWIZARD_API_URL,
     supabase_url: env.SUPABASE_URL,
     S3_ENDPOINT: env.OBS_S3_ENDPOINT,
-    S3_ACCESS_KEY: env.OBS_S3_ACCESS_KEY,
-    S3_SECRET_KEY: env.OBS_S3_SECRET_KEY,
+    // No storage key: nodes get temporary per-instance credentials from
+    // POST /api/obs-nodes/instances/:id/storage-credentials, and read-only
+    // shared credentials from POST /api/obs-nodes/storage-credentials.
     S3_BUCKET: env.OBS_S3_BUCKET,
     S3_REGION: env.OBS_S3_REGION,
     // No TOKEN_ENCRYPTION_KEY: nodes get their instances' passwords in
@@ -132,9 +133,8 @@ export async function claimObsNode(c: Context) {
           INFLUXDB_TOKEN: env.INFLUXDB_OBS_NODE_TOKEN ?? env.INFLUXDB_TOKEN,
         }
       : {}),
-    // No WS_SERVER_URL / CONSUMER_SECRET: the node sends lifecycle and scene
+    // No ws-server URL or credential: the node sends lifecycle and scene
     // events to POST /api/obs-nodes/instances/:id/events, and rest-api
-    // forwards them to ws-server for the instance's owner. CONSUMER_SECRET
-    // works for every user, so it stays off the nodes.
+    // forwards them to ws-server for the instance's owner.
   });
 }

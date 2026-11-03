@@ -11,14 +11,12 @@ import { LookupTwitchGame } from "@/actions/twitch/twitch-api";
 import TwitchCategorySearch from "@/components/search-bars/twitch-category-search";
 
 interface StreamInfoPanelProps {
-  broadcasterId: string;
   currentTitle: string | null;
   currentCategory: string | null;
   currentGameId: string | null;
 }
 
 export function StreamInfoPanel({
-  broadcasterId,
   currentTitle,
   currentCategory,
   currentGameId,
@@ -124,7 +122,6 @@ export function StreamInfoPanel({
                     initalValue={currentGameId}
                     value={gameId}
                     setValue={setGameId}
-                    broadcasterId={broadcasterId}
                   />
                   {gameName && (
                     <p className="mt-1 truncate text-xs text-muted-foreground">{gameName}</p>

@@ -339,8 +339,8 @@ export function RemoveFactorButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Remove {label}?</AlertDialogTitle>
           <AlertDialogDescription>
-            They can&apos;t use it to sign in to this dashboard any more. With no second factor left, their next sign-in
-            asks them to set one up again.
+            They can&apos;t use it to sign in to this dashboard any more, and they&apos;re signed out everywhere. With no
+            second factor left, their next sign-in asks them to set one up again.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

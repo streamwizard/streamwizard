@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CloudOBSViewer } from "@repo/obs-web";
-import { getNodeApiUrlAction } from "@/actions/nodes";
+import { getInstanceNodeApiUrlAction } from "@/actions/nodes";
 import { DesktopOnly } from "@/components/widgets/desktop-only";
 import { mintNoVncConnection } from "@repo/obs-web";
 import { adminNodeToken } from "@/lib/node-token";
@@ -14,9 +14,10 @@ import { adminNodeToken } from "@/lib/node-token";
 // socket; the ticket-mint POST carries a 60-second admin node token, never the
 // admin's session (see lib/node-token.ts).
 //
-// apiUrl must come from a trusted lookup (getNodeApiUrlAction), never the query
-// string -- the URL gets a ticket appended and dialed as a WebSocket, so an
-// attacker-controlled apiUrl would exfiltrate that ticket to an arbitrary host.
+// apiUrl must come from a trusted lookup, never the query string -- the URL
+// gets a ticket appended and dialed as a WebSocket. It is resolved from the
+// instance (getInstanceNodeApiUrlAction), the same row that sets the node
+// token's aud, so the token only ever goes to the node that hosts it.
 function AdminVncView() {
   const searchParams = useSearchParams();
   const nodeId = searchParams.get("nodeId");
@@ -32,9 +33,9 @@ function AdminVncView() {
       return;
     }
 
-    getNodeApiUrlAction(nodeId).then(({ data: nodeData, error: nodeError }) => {
+    getInstanceNodeApiUrlAction(instanceId, nodeId).then(({ data: nodeData, error: nodeError }) => {
       if (nodeError || !nodeData) {
-        setError(nodeError ?? "Couldn't resolve this node's API URL.");
+        setError(nodeError ?? "Couldn't resolve this instance's node.");
         return;
       }
       setApiUrl(nodeData.apiUrl);

@@ -7,8 +7,10 @@ let admin = false;
 mock.module("@repo/supabase/next/proxy", () => ({
   refreshSession: async () => ({ response: NextResponse.next(), claims }),
 }));
-mock.module("@repo/supabase/next/admin", () => ({ supabaseAdmin: {} }));
-mock.module("@repo/supabase/queries/obs-nodes", () => ({ isUserAdmin: async () => admin }));
+// Mocks are shared across test files: keep every export, or later files fail to link.
+mock.module("@repo/supabase/next/admin", () => ({ supabaseAdmin: {}, createAdminClient: () => ({}) }));
+const realNodeQueries = await import("@repo/supabase/queries/obs-nodes");
+mock.module("@repo/supabase/queries/obs-nodes", () => ({ ...realNodeQueries, isUserAdmin: async () => admin }));
 
 const { proxy, config } = await import("./proxy");
 // Next's own matcher compiler, so the test sees exactly what the build does.

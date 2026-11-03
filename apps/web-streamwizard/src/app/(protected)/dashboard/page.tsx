@@ -217,7 +217,6 @@ export default async function DashboardPage() {
 
         <div className="flex min-w-0 flex-col gap-4">
           <StreamInfoPanel
-            broadcasterId={broadcasterId}
             currentTitle={stream.title}
             currentCategory={stream.category_name}
             currentGameId={stream.category_id}

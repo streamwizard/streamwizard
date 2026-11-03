@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useContext, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "@repo/ui";
 import { SearchBar } from "@repo/ui";
-import { SessionContext } from "@/providers/session-provider";
 import { LookupTwitchGame, searchTwitchCategories } from "@/actions/twitch/twitch-api";
 import { TwitchCategory } from "@/types/twitch";
 import { toast } from "sonner";
@@ -19,7 +18,6 @@ interface TwitchCategorySearchProps {
   setValue: (game_id: string) => void;
   value?: string;
   initalValue?: string | null;
-  broadcasterId?: string;
 }
 
 export default function TwitchCategorySearch({
@@ -29,12 +27,9 @@ export default function TwitchCategorySearch({
   setValue,
   value = "",
   initalValue,
-  broadcasterId,
 }: TwitchCategorySearchProps) {
   const [results, setResults] = useState<SearchResult[]>([]);
   const [displayValue, setDisplayValue] = useState("");
-  const session = useContext(SessionContext);
-  const effectiveBroadcasterId = broadcasterId ?? session?.user_metadata?.sub ?? "";
 
   useEffect(() => {
     if (!value) {
@@ -60,7 +55,7 @@ export default function TwitchCategorySearch({
 
   const search = async (searchTerm: string) => {
     try {
-      const data = await searchTwitchCategories(effectiveBroadcasterId, searchTerm);
+      const data = await searchTwitchCategories(searchTerm);
       if (data) {
         const match = data.find((category) => category.name.toLowerCase() === searchTerm.toLowerCase());
         const newResults: SearchResult[] = data.map((category) =>

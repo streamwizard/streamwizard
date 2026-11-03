@@ -192,12 +192,15 @@ export async function listNodeInstancesAction(
   return { data, error: null };
 }
 
-// Looks up a node's api_url server-side rather than trusting a client-supplied
-// URL -- the VNC viewer page forwards this ticket-bearing URL into a
-// WebSocket connection, so an attacker-controlled apiUrl in the query string
-// would exfiltrate the ticket to an arbitrary host.
-export async function getNodeApiUrlAction(
-  nodeId: string,
+// The API URL of the node that hosts an instance, for the VNC viewer. It comes
+// from the same instance row that sets the admin node token's aud
+// (mintAdminNodeTokenAction), so the token is only ever sent to the node it
+// names. Never from the query string: the URL gets a ticket appended and is
+// dialed as a WebSocket. `expectedNodeId` (from the link) must match the
+// instance's node, so a link naming another node fails before any token exists.
+export async function getInstanceNodeApiUrlAction(
+  instanceId: string,
+  expectedNodeId: string,
 ): Promise<{ data: { apiUrl: string } | null; error: string | null }> {
   let adminClient;
   try {
@@ -206,8 +209,10 @@ export async function getNodeApiUrlAction(
     return { data: null, error: "Forbidden" };
   }
 
-  const node = await getNodeById(adminClient, nodeId);
-  if (!node || !node.api_url) return { data: null, error: "Node not found or has no API URL." };
+  const instance = await getInstanceByIdWithOwner(adminClient, instanceId);
+  if (!instance || instance.node_id !== expectedNodeId) return { data: null, error: "Instance not found on this node." };
+  const node = await getNodeById(adminClient, instance.node_id);
+  if (!node?.api_url) return { data: null, error: "Node not found or has no API URL." };
 
   return { data: { apiUrl: node.api_url }, error: null };
 }

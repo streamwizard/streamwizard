@@ -22,8 +22,13 @@ export async function searchTwitchChannels(value: string, first: number = 10) {
   }
 }
 
-export async function searchTwitchCategories(broadcaster_id: string, query: string, first: number = 10) {
-  const api = new TwitchApi(broadcaster_id);
+// Category search is public data, so it runs on the signed-in user's own
+// Twitch token. Never on a caller-named broadcaster's.
+export async function searchTwitchCategories(query: string, first: number = 10) {
+  const supabase = await createClient();
+  const twitchUserId = await getTwitchUserId(supabase);
+  if (!twitchUserId) return null;
+  const api = new TwitchApi(twitchUserId);
   return api.search.searchCategories(query, first);
 }
 

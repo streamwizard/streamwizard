@@ -34,6 +34,18 @@ function revalidateUser(userId: string) {
   revalidatePath("/users");
 }
 
+/** Signs the user out everywhere: GoTrue sessions and dashboard sockets. False when the sessions couldn't be ended. */
+async function endAllSessions(userId: string, where: string): Promise<boolean> {
+  await revokeWsSockets(userId, "session");
+  try {
+    await revokeUserSessions(supabaseAdmin, userId);
+    return true;
+  } catch (e) {
+    reportError(e, where);
+    return false;
+  }
+}
+
 export async function setAdminRoleAction(userId: string, admin: boolean): Promise<Result> {
   const actorId = await assertAdmin();
   if (!admin && actorId === userId) return { error: "You can't remove your own admin role." };
@@ -51,10 +63,21 @@ export async function setAdminRoleAction(userId: string, admin: boolean): Promis
   }
 
   if (admin && !existing) {
-    const { error } = await client.from("user_roles").insert({ user_id: userId, role: ADMIN_ROLE });
+    const { data: inserted, error } = await client
+      .from("user_roles")
+      .insert({ user_id: userId, role: ADMIN_ROLE })
+      .select("id")
+      .single();
     if (error) {
       reportError(error, "actions/users:set-admin");
       return { error: error.message };
+    }
+    // The new admin has no second factor yet, so whichever session enrols one
+    // first becomes a full admin. Only a sign-in made after the grant may.
+    const ended = await endAllSessions(userId, "actions/users:set-admin-sessions");
+    if (!ended) {
+      await client.from("user_roles").delete().eq("id", inserted.id);
+      return { error: "Couldn't end their sessions, so the admin role was not granted. Try again." };
     }
   }
   if (!admin && existing) {
@@ -172,18 +195,25 @@ export async function resyncEventSubAction(userId: string): Promise<ResyncResult
 }
 
 // ── Second factors ──────────────────────────────────────────────────────────
-// For an admin who lost their phone: removing their authenticator sends them
-// through /auth/setup on their next sign-in. You can't remove your own (it is
+// For an admin who lost their phone: removing their authenticator signs them
+// out everywhere and sends them through /auth/setup on their next sign-in. You can't remove your own (it is
 // your only second factor); another admin has to.
 
 export async function removeUserTotpAction(userId: string, factorId: string): Promise<Result> {
   const actorId = await assertAdmin();
   if (actorId === userId) return { error: "Another admin has to reset your authenticator." };
+  // With no factor left, whichever session enrols a new one first becomes a
+  // full admin. Only a sign-in made after the reset may, so every session is
+  // ended before the factor goes (none left to race) and again after.
+  if (!(await endAllSessions(userId, "actions/users:remove-totp-sessions"))) {
+    return { error: "Couldn't end their sessions, so the authenticator was not reset. Try again." };
+  }
   const { error } = await supabaseAdmin.auth.admin.mfa.deleteFactor({ id: factorId, userId });
   if (error) {
     reportError(error, "actions/users:remove-totp");
     return { error: error.message };
   }
+  await endAllSessions(userId, "actions/users:remove-totp-sessions");
   revalidateUser(userId);
   return { error: null };
 }
