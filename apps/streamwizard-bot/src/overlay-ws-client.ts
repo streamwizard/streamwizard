@@ -10,8 +10,8 @@ class OverlayWsClient {
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private stopping = false;
 
-  /** `authHeader` runs on every (re)connect: a fresh service token, or the
-   *  legacy secret where this service has no signing key yet. */
+  /** `authHeader` runs on every (re)connect: a fresh service token, or
+   *  null when this service has no signing key. */
   connect(url: string, authHeader: () => Promise<string | null>): void {
     this.url = url;
     this.authHeader = authHeader;
@@ -53,7 +53,7 @@ class OverlayWsClient {
     if (this.stopping) return;
     // `source` labels this connection in ws-server's monitor view — several
     // bots connect at once (this one plus each ingest node's control plane).
-    const ws = new WebSocket(`${this.url}/ws?role=bot&source=streamwizard-bot`, {
+    const ws = new WebSocket(`${this.url}/ws?role=bot`, {
       // @ts-expect-error Bun WebSocket supports headers in options
       headers: { Authorization: authorization },
     });
