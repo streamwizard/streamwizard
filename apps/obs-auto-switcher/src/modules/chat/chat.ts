@@ -1,6 +1,7 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
+import { TtlCache } from "@repo/ttl-cache";
 import { TwitchApi } from "@repo/twitch-api";
 
 // Chat notices ride the app token but speak as the *broadcaster* (see
@@ -28,16 +29,14 @@ const FAILED_RETRY_MS = 5_000;
 // an arbitrary OBS scene name, so the rendered string can still cross it.
 const MAX_MESSAGE_LENGTH = 500;
 
-// Same shape as the instance cache in obs-client.ts: TTL'd rather than
-// permanent. A permanent cache meant a user who linked Twitch after the worker
-// booted had `null` pinned for the life of the process and never got a notice.
-// Misses expire faster than hits precisely because that is the case worth
-// re-checking.
-const BROADCASTER_TTL_MS = 300_000;
-const BROADCASTER_MISS_TTL_MS = 60_000;
+// TTL'd rather than permanent. A permanent cache meant a user who linked
+// Twitch after the worker booted had `null` pinned for the life of the process
+// and never got a notice. Misses expire faster than hits precisely because
+// that is the case worth re-checking.
+const broadcasterIdCache = new TtlCache<string>({ ttlMs: 300_000, negativeTtlMs: 60_000 });
 
-const broadcasterIdCache = new Map<string, { id: string | null; at: number }>();
-const lastSentAt = new Map<string, number>();
+/** `${userId}:${kind}` → present while that notice kind is cooling down. */
+const cooldowns = new TtlCache<true>({ ttlMs: RATE_LIMIT_MS });
 
 export interface ChatTemplateVars {
   bitrate?: number;
@@ -67,21 +66,14 @@ export function renderChatTemplate(
     : rendered;
 }
 
-async function getBroadcasterId(userId: string): Promise<string | null> {
-  const cached = broadcasterIdCache.get(userId);
-  if (cached) {
-    const ttl = cached.id ? BROADCASTER_TTL_MS : BROADCASTER_MISS_TTL_MS;
-    if (Date.now() - cached.at < ttl) return cached.id;
-  }
-  const broadcasterId = await getTwitchUserIdByUserIdMaybe(supabase, userId);
-  broadcasterIdCache.set(userId, { id: broadcasterId, at: Date.now() });
-  return broadcasterId;
+function getBroadcasterId(userId: string): Promise<string | null> {
+  return broadcasterIdCache.fetch(userId, () => getTwitchUserIdByUserIdMaybe(supabase, userId));
 }
 
 /** Drops a user's cached broadcaster id and rate-limit windows. */
 export function clearChatCaches(userId: string): void {
   broadcasterIdCache.delete(userId);
-  for (const kind of NOTICE_KINDS) lastSentAt.delete(`${userId}:${kind}`);
+  for (const kind of NOTICE_KINDS) cooldowns.delete(`${userId}:${kind}`);
 }
 
 /** Sends a chat notice; silently no-ops without a Twitch link or inside the per-kind rate limit. */
@@ -93,8 +85,7 @@ export async function sendChatNotice(
 ): Promise<void> {
   const key = `${userId}:${kind}`;
   const now = Date.now();
-  const last = lastSentAt.get(key) ?? 0;
-  if (now - last < RATE_LIMIT_MS) return;
+  if (cooldowns.get(key) !== undefined) return;
 
   const message = renderChatTemplate(template, vars);
   // A cleared template is valid config (the schema has no minimum) and Helix
@@ -107,7 +98,7 @@ export async function sendChatNotice(
 
     // Stamped before the request so an unreachable Twitch can't be hammered
     // once per switch; rolled back below if the message never landed.
-    lastSentAt.set(key, now);
+    cooldowns.set(key, true, { expiresAt: now + RATE_LIMIT_MS });
     const response = await new TwitchApi(broadcasterId).chat.sendMessage({
       message,
       sender: "broadcaster",
@@ -117,7 +108,7 @@ export async function sendChatNotice(
     // successful HTTP call is not on its own proof that chat saw anything.
     const sent = response?.data?.[0];
     if (sent && sent.is_sent === false) {
-      lastSentAt.set(key, now - RATE_LIMIT_MS + FAILED_RETRY_MS);
+      cooldowns.set(key, true, { expiresAt: now + FAILED_RETRY_MS });
       reportError(
         new Error(
           `chat notice held by Twitch: ${sent.drop_reason?.code ?? "unknown"}`,
@@ -127,7 +118,7 @@ export async function sendChatNotice(
       );
     }
   } catch (err) {
-    lastSentAt.set(key, now - RATE_LIMIT_MS + FAILED_RETRY_MS);
+    cooldowns.set(key, true, { expiresAt: now + FAILED_RETRY_MS });
     reportError(err, "chat.notice", { userId, kind });
   }
 }

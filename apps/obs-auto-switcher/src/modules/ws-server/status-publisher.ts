@@ -55,7 +55,7 @@ export class StatusPublisher {
       return;
     }
     if (this.stopping) return;
-    const ws = new WebSocket(`${this.url}/ws?role=bot&source=obs-auto-switcher`, {
+    const ws = new WebSocket(`${this.url}/ws?role=bot`, {
       // @ts-expect-error Bun WebSocket supports headers in options
       headers: { Authorization: authorization },
     });

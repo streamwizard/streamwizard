@@ -18,7 +18,7 @@ let reads: string[];
 
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
-mock.module("./lib/env", () => ({ env: { CONFIG_RECONCILE_INTERVAL_MS: 300_000 } }));
+mock.module("@/lib/env", () => ({ env: { CONFIG_RECONCILE_INTERVAL_MS: 300_000 } }));
 mock.module("@repo/supabase/queries/auto-switcher", () => ({
   selectAutoSwitcherConfig: async (_client: unknown, userId: string) => {
     reads.push(userId);

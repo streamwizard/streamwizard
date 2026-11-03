@@ -1,6 +1,7 @@
 import { supabase } from "@repo/supabase";
 import { decryptToken } from "@repo/supabase/crypto";
 import { getNodeCommandKeyEncrypted, getRunningInstanceWithNodeUrl } from "@repo/supabase/queries/obs-nodes";
+import { TtlCache } from "@repo/ttl-cache";
 
 export interface ObsCommand {
   request: string;
@@ -21,15 +22,13 @@ interface ResolvedInstance {
   commandKey: string;
 }
 
-const INSTANCE_CACHE_TTL_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 10_000;
 
-const cache = new Map<string, { resolved: ResolvedInstance; at: number }>();
+// "No running instance" is not cached (negativeTtlMs 0): a user who just
+// started OBS must be switchable on the next attempt, not 30s later.
+const cache = new TtlCache<ResolvedInstance>({ ttlMs: 30_000, negativeTtlMs: 0 });
 
-async function resolveInstance(userId: string): Promise<ResolvedInstance | null> {
-  const cached = cache.get(userId);
-  if (cached && Date.now() - cached.at < INSTANCE_CACHE_TTL_MS) return cached.resolved;
-
+async function loadInstance(userId: string): Promise<ResolvedInstance | null> {
   const { data, error } = await getRunningInstanceWithNodeUrl(supabase, userId);
 
   if (error) throw new Error(`obs_instances lookup failed: ${error.message}`);
@@ -40,9 +39,11 @@ async function resolveInstance(userId: string): Promise<ResolvedInstance | null>
   if (!enc) throw new Error(`no obs_command key provisioned for node ${data.node_id}`);
   const commandKey = decryptToken(enc.key_ciphertext, enc.key_iv, enc.key_tag);
 
-  const resolved = { instanceId: data.id, apiUrl: apiUrl.replace(/\/$/, ""), commandKey };
-  cache.set(userId, { resolved, at: Date.now() });
-  return resolved;
+  return { instanceId: data.id, apiUrl: apiUrl.replace(/\/$/, ""), commandKey };
+}
+
+function resolveInstance(userId: string): Promise<ResolvedInstance | null> {
+  return cache.fetch(userId, () => loadInstance(userId));
 }
 
 export function invalidateInstanceCache(userId: string): void {

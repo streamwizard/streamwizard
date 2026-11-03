@@ -6,8 +6,8 @@ import type {
 } from "@repo/schemas";
 import type { IngestStatsPayload } from "@repo/types";
 import { trackAutoSwitcherEvent } from "@repo/metrics";
-import type { EffectiveConfig } from "../config-store";
-import type { ChatNoticeKind } from "../actions/chat";
+import type { EffectiveConfig } from "@/modules/config/config-store";
+import type { ChatNoticeKind } from "@/modules/chat/chat";
 import { SessionTracker, type TrackedSession } from "./session-tracker";
 import { METRICS, MetricStreaks, pollLimits, type MetricKey } from "./metric-streaks";
 import { recordSwitch, getSwitchLog } from "./switch-log";

@@ -1,8 +1,8 @@
 import { test, expect, beforeEach, setSystemTime } from "bun:test";
 import { AUTO_SWITCHER_PRESET_THRESHOLDS, type AutoSwitcherConfig, type AutoSwitcherStatus } from "@repo/schemas";
 import type { IngestStatsPayload } from "@repo/types";
-import type { EffectiveConfig } from "../config-store";
-import type { ChatNoticeKind, ChatTemplateVars } from "../actions/chat";
+import type { EffectiveConfig } from "@/modules/config/config-store";
+import type { ChatNoticeKind, ChatTemplateVars } from "@/modules/chat/chat";
 import { UserMonitor, type MonitorDeps } from "./user-monitor";
 import { clearSwitchLog } from "./switch-log";
 

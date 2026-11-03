@@ -25,7 +25,7 @@ const schema = z.object({
   // How often the in-memory config is reloaded wholesale from Supabase. This
   // poll is only the safety net for a dropped consumer-feed push — a config
   // change that lands normally applies in ~1s — so it is tuned for egress, not
-  // latency. See the comment on RECONCILE_INTERVAL_MS in config-store.ts.
+  // latency. See the comment on RECONCILE_INTERVAL_MS in modules/config/config-store.ts.
   CONFIG_RECONCILE_INTERVAL_MS: z.coerce.number().int().positive().default(300_000),
 
   // Sentry

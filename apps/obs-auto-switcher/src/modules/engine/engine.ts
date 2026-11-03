@@ -1,13 +1,13 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import type { IngestStatsPayload } from "@repo/types";
-import type { EffectiveConfig } from "../config-store";
-import type { StatusPublisher } from "../status-publisher";
+import type { EffectiveConfig } from "@/modules/config/config-store";
+import type { StatusPublisher } from "@/modules/ws-server/status-publisher";
 import { UserMonitor, type MonitorDeps } from "./user-monitor";
 import { clearSwitchLog } from "./switch-log";
-import { resolveSceneItemId, setScene, setSceneItemEnabledById, stopStream, invalidateInstanceCache } from "../actions/obs-client";
-import { sendChatNotice, clearChatCaches } from "../actions/chat";
-import { logSwitchEvent } from "../actions/event-log";
+import { resolveSceneItemId, setScene, setSceneItemEnabledById, stopStream, invalidateInstanceCache } from "@/modules/obs/obs-client";
+import { sendChatNotice, clearChatCaches } from "@/modules/chat/chat";
+import { logSwitchEvent } from "@/modules/event-log/event-log";
 import { clearSceneOverride } from "@repo/supabase/queries/auto-switcher";
 
 const TICK_MS = 1_000;

@@ -7,7 +7,7 @@ import {
   type AutoSwitcherThresholds,
 } from "@repo/schemas";
 import { selectAutoSwitcherConfig, selectEnabledAutoSwitcherConfigs } from "@repo/supabase/queries/auto-switcher";
-import { env } from "./lib/env";
+import { env } from "@/lib/env";
 
 export interface EffectiveConfig {
   row: AutoSwitcherConfig;

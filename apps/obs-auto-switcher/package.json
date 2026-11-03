@@ -16,6 +16,7 @@
     "@repo/sentry": "workspace:*",
     "@repo/service-token": "workspace:*",
     "@repo/supabase": "workspace:*",
+    "@repo/ttl-cache": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/types": "workspace:*",
     "@sentry/bun": "^10",

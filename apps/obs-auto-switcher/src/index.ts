@@ -7,13 +7,8 @@ process.on("unhandledRejection", (reason) => {
 });
 
 import { flushSentry, reportFatal } from "@repo/sentry";
-import { env } from "./lib/env";
-import { ConfigStore } from "./config-store";
-import { StatsFeed } from "./stats-feed";
-import { StatusPublisher } from "./status-publisher";
-import { Engine } from "./engine/engine";
 import { initMetrics, BUCKETS } from "@repo/metrics";
-import { serviceAuthHeader } from "@repo/service-token";
+import { createApp } from "@/app";
 
 // IRL auto scene-switcher. Consumes the 1 Hz ingest stats feed from
 // ws-server, runs a per-user threshold/streak state machine, and drives
@@ -24,16 +19,7 @@ import { serviceAuthHeader } from "@repo/service-token";
 
 initMetrics(BUCKETS.autoSwitcher);
 
-// Each (re)connect signs a fresh service token (bot / consumer scope).
-const statusPublisher = new StatusPublisher(env.WS_SERVER_URL, () => serviceAuthHeader("bot"));
-const engine = new Engine(statusPublisher);
-const configStore = new ConfigStore((userId, config) => engine.onConfigChanged(userId, config));
-
-const statsFeed = new StatsFeed(env.WS_SERVER_URL, () => serviceAuthHeader("consumer"), {
-  onIngestStats: (userId, payload) => engine.onStats(userId, payload),
-  onConfigPush: (userId, payload) => void configStore.applyPush(userId, payload),
-  onSessionEnded: (userId, payload) => engine.onSessionEnded(userId, payload),
-});
+const { engine, configStore, statsFeed, statusPublisher, fetch } = createApp();
 
 await configStore.start();
 statusPublisher.connect();
@@ -42,17 +28,7 @@ engine.start();
 
 console.log(`[obs-auto-switcher] running — ${configStore.size} enabled config(s) loaded`);
 
-// Liveness probe (docker healthcheck / alert-worker).
-Bun.serve({
-  port: Number(process.env.PORT ?? 8010),
-  fetch(req) {
-    const url = new URL(req.url);
-    if (url.pathname === "/health") {
-      return Response.json({ ok: true, monitors: engine.monitorCount });
-    }
-    return new Response("Not Found", { status: 404 });
-  },
-});
+Bun.serve({ port: Number(process.env.PORT ?? 8010), fetch });
 
 const shutdown = async () => {
   console.log("[obs-auto-switcher] shutting down");
