@@ -1,13 +1,12 @@
-import { env } from "../lib/env";
 import { supabase } from "@repo/supabase";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
 import type { OverlayEventType } from "@repo/types";
 import { trackWsAuthFailure } from "@repo/metrics";
-import { isRateLimited } from "../rate-limit";
-import { handleInternalRoute } from "./internal-http";
-import { isValidSecret } from "../lib/secret";
-import { authorizeService, serviceAuthConfigured } from "../lib/service-auth";
-import type { ConnectionData } from "../types";
+import { env } from "@/lib/env";
+import { isValidSecret } from "@/lib/secret";
+import { isRateLimited } from "@/middleware/rate-limit";
+import { authorizeService, serviceAuthConfigured } from "@/middleware/service-auth";
+import type { ConnectionData } from "@/types";
 
 type BunServer = import("bun").Server<ConnectionData>;
 
@@ -25,7 +24,7 @@ let nextConnId = 1;
  * and anything of neither shape costs none: subscriber_token is always 32
  * random bytes as lowercase hex, a JWT is three base64url segments.
  *
- * The kind and token are kept on the socket so revoke.ts can re-check them
+ * The kind and token are kept on the socket so modules/revoke can re-check them
  * after a key reset, a scene delete or an account deletion.
  */
 const SCENE_TOKEN = /^[0-9a-f]{64}$/;
@@ -83,10 +82,6 @@ function upgradeOrFail(
 
 export async function handleUpgrade(req: Request, server: BunServer): Promise<Response | undefined> {
   const url = new URL(req.url);
-
-  // Plain HTTP first: the health probe and the secret-gated injection points.
-  const internal = handleInternalRoute(req, url.pathname);
-  if (internal) return internal;
 
   if (url.pathname !== "/ws") {
     return new Response("Not Found", { status: 404 });

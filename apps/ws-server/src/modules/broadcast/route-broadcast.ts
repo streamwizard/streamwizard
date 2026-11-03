@@ -1,8 +1,8 @@
 import type { BotBroadcastMessage } from "@repo/types";
 import { trackWsMessage, trackWsMessageDrop } from "@repo/metrics";
-import { rooms, broadcastToRoom } from "./rooms";
-import { broadcastToMonitors, sanitizePayload } from "./monitor";
-import { broadcastToConsumers } from "./consumers";
+import { rooms, broadcastToRoom } from "@/modules/rooms/rooms";
+import { broadcastToMonitors, sanitizePayload } from "@/modules/monitor";
+import { broadcastToConsumers } from "@/modules/consumers/consumers";
 
 /**
  * Single routing path for a `{userId, type, payload}` bot broadcast, shared

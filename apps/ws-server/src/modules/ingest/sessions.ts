@@ -1,5 +1,6 @@
 import { supabase } from "@repo/supabase";
 import { getIngestSessionRoute } from "@repo/supabase/queries/ingest";
+import { TtlCache } from "@repo/ttl-cache";
 
 // Live ingest sessions: who a session's stats belong to and which node may
 // send them. rest-api registers a session when it opens one and ends it when
@@ -59,10 +60,11 @@ export function createIngestSessionRegistry(options: IngestSessionRegistryOption
   const now = options.now ?? Date.now;
 
   const sessions = new Map<string, IngestSessionEntry>();
-  const misses = new Map<string, number>();
+  /** Session ids the DB didn't know, remembered for missTtlMs. */
+  const misses = new TtlCache<true>({ ttlMs: missTtlMs, maxEntries, now });
   const inflight = new Map<string, Promise<IngestSessionEntry | null>>();
-  /** requester -> lookups in the current window */
-  const budgets = new Map<string, { windowStart: number; used: number }>();
+  /** requester -> lookups in the current window (fixed window from the first lookup) */
+  const budgets = new TtlCache<{ used: number }>({ ttlMs: lookupWindowMs, maxEntries, now });
 
   /** Map insertion order is age order: drop the oldest entry when full. */
   function capped<V>(map: Map<string, V>): void {
@@ -73,11 +75,9 @@ export function createIngestSessionRegistry(options: IngestSessionRegistryOption
   }
 
   function takeLookup(requester: string): boolean {
-    const t = now();
     const budget = budgets.get(requester);
-    if (!budget || t - budget.windowStart >= lookupWindowMs) {
-      capped(budgets);
-      budgets.set(requester, { windowStart: t, used: 1 });
+    if (!budget) {
+      budgets.set(requester, { used: 1 });
       return true;
     }
     if (budget.used >= lookupsPerWindow) return false;
@@ -129,11 +129,7 @@ export function createIngestSessionRegistry(options: IngestSessionRegistryOption
       const hit = live(sessionId);
       if (hit) return hit;
 
-      const missedAt = misses.get(sessionId);
-      if (missedAt !== undefined) {
-        if (now() - missedAt < missTtlMs) return null;
-        misses.delete(sessionId);
-      }
+      if (misses.get(sessionId) !== undefined) return null;
 
       const pending = inflight.get(sessionId);
       if (pending) return pending;
@@ -143,8 +139,7 @@ export function createIngestSessionRegistry(options: IngestSessionRegistryOption
         try {
           const entry = await options.lookup(sessionId);
           if (!entry) {
-            capped(misses);
-            misses.set(sessionId, now());
+            misses.set(sessionId, true);
             return null;
           }
           // A session that ended before the lookup still gets the grace

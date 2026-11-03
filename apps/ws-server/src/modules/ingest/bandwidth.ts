@@ -1,5 +1,5 @@
 import type { IngestNodeBandwidthPayload } from "@repo/types";
-import type { IngestNodeLive } from "./monitor/types";
+import type { IngestNodeLive } from "@/modules/monitor/types";
 
 // Latest bandwidth reading per ingest node, fed by `node_metrics` bot
 // messages (one per node every ~1s). Keyed by the node's self-reported

@@ -1,8 +1,8 @@
-import type { ConnectionData, ServerWebSocket } from "../types";
+import type { ConnectionData, ServerWebSocket } from "@/types";
 import type { BotConnSnapshot, ConnectionSnapshot, ConsumerConnSnapshot, MonitorEnvelope, MonitorNodeBandwidth, MonitorSnapshot, RoomSnapshot } from "./types";
-import { rooms } from "../rooms";
-import { consumers } from "../consumers";
-import { getLiveIngestNodes } from "../ingest-nodes";
+import { rooms } from "@/modules/rooms/rooms";
+import { consumers } from "@/modules/consumers/consumers";
+import { getLiveIngestNodes } from "@/modules/ingest/bandwidth";
 
 export const monitors = new Set<ServerWebSocket<ConnectionData>>();
 

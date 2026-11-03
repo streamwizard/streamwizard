@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import type { ConnectionData, ServerWebSocket } from "./types";
+import type { ConnectionData, ServerWebSocket } from "@/types";
 
 /**
  * Sockets used to be checked only at upgrade: resetting an overlay key or

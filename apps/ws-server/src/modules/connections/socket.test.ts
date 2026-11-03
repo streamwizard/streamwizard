@@ -2,8 +2,8 @@ import { describe, expect, mock, test } from "bun:test";
 
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 
-const { websocketHandlers } = await import("./ws");
-const { rooms } = await import("../rooms");
+const { websocketHandlers } = await import("./socket");
+const { rooms } = await import("@/modules/rooms/rooms");
 
 function roomWithListener(userId: string): string[] {
   const got: string[] = [];

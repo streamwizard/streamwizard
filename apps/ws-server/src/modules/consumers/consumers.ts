@@ -1,4 +1,4 @@
-import type { ConnectionData, ServerWebSocket } from "./types";
+import type { ConnectionData, ServerWebSocket } from "@/types";
 
 // Trusted server-side consumers (obs-auto-switcher) that receive every
 // bot-routed message across ALL user rooms, unmasked — unlike monitors

@@ -25,7 +25,7 @@ mock.module("@repo/supabase/queries/overlays", () => ({
   selectSceneOwnersByTokens: () => Promise.resolve({ data: [] }),
 }));
 
-const { handleUpgrade } = await import("./auth");
+const { handleUpgrade } = await import("./upgrade");
 
 const server = { upgrade: () => true, requestIP: () => ({ address: "10.0.0.1" }) } as never;
 

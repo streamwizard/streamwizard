@@ -4,7 +4,7 @@ import {
   type ServiceScope,
   type ServiceTokenClaims,
 } from "@repo/service-token";
-import { env } from "./env";
+import { env } from "@/lib/env";
 
 // Who may call ws-server's server-to-server surface, and for what. Each of our
 // services signs a 60-second token per action (@repo/service-token); the

@@ -1,5 +1,5 @@
 import type { OverlayEventType } from "@repo/types";
-import type { ConnectionData, RoomData, ServerWebSocket } from "./types";
+import type { ConnectionData, RoomData, ServerWebSocket } from "@/types";
 
 export const rooms = new Map<string, RoomData>();
 

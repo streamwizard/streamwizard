@@ -1,5 +1,5 @@
 import type { IngestNodeBandwidthPayload, IngestNodeOutboundMessage, IngestStatsPayload } from "@repo/types";
-import type { IngestSessionRegistry } from "./ingest-sessions";
+import type { IngestSessionRegistry } from "./sessions";
 
 // What an ingest node may send on its role=ingest-node socket, turned into
 // what the rest of ws-server already understands. The node never names a

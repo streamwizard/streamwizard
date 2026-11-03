@@ -8,11 +8,11 @@ process.env.TOKEN_ENCRYPTION_KEY ??= "test-key";
 // The default registry's DB lookup is never used here; each test builds its own.
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 
-const { createIngestSessionRegistry } = await import("./ingest-sessions");
-const { resolveIngestStats, boundStats, nodeBandwidthFrom } = await import("./ingest-node-messages");
-const { routeBotBroadcast } = await import("./bot-router");
-const { consumers } = await import("./consumers");
-const { rooms } = await import("./rooms");
+const { createIngestSessionRegistry } = await import("./sessions");
+const { resolveIngestStats, boundStats, nodeBandwidthFrom } = await import("./messages");
+const { routeBotBroadcast } = await import("@/modules/broadcast/route-broadcast");
+const { consumers } = await import("@/modules/consumers/consumers");
+const { rooms } = await import("@/modules/rooms/rooms");
 
 const NODE_A = "aaaaaaaa-0000-4000-8000-000000000001";
 const NODE_B = "bbbbbbbb-0000-4000-8000-000000000002";

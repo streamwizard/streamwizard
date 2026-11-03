@@ -35,7 +35,7 @@ An ingest node gets a 60-second `ingest-node` token from rest-api
 `role=ingest-node`. It never names a user or its own node: the node comes from
 the token, and each `ingest_stats` sample only names a session id. ws-server
 turns that into the user, stream key and label through its session registry
-(`src/ingest-sessions.ts`), which rest-api fills with
+(`src/modules/ingest/sessions.ts`), which rest-api fills with
 `POST /internal/ingest-sessions` and `POST /internal/ingest-sessions/:id/end`
 (scope `ingest-sessions`). Samples for a session the node didn't open, or
 that has ended, are dropped. When web-admin deletes a node it calls
@@ -58,14 +58,26 @@ ws://<host>/ws?role=<publisher|subscriber|bot>&token=<token>&channels=<comma-sep
 
 `channels` is optional for subscribers — leave it off to receive every event type.
 
-Event types are Twitch EventSub strings (`channel.follow`, `channel.subscribe`, `channel.raid`, …) plus internal ones (`streamwizard.geo`, `streamwizard.status`). The full wire format, role auth, and bot integration are documented in the root [`ARCHITECTURE.md`](../../ARCHITECTURE.md).
+Event types are Twitch EventSub strings (`channel.follow`, `channel.subscribe`, `channel.raid`, …) plus internal ones (`streamwizard.geo`, `streamwizard.status`). Role auth is in [`.claude/rules/architecture/auth-and-security.md`](../../.claude/rules/architecture/auth-and-security.md); message shapes live in `@repo/types`.
 
 ## Internal structure
 
-- `src/index.ts` — the `Bun.serve` entry point.
-- `src/handlers/auth.ts` — the upgrade handshake and role auth.
-- `src/handlers/ws.ts` — message handling.
-- `src/rooms.ts` — per-user room membership and fan-out.
+Organized by domain, following the service layout in [`.claude/rules/architecture/backend-services.md`](../../.claude/rules/architecture/backend-services.md).
+
+```
+src/
+  index.ts                 Bun.serve, start jobs, shutdown
+  app.ts                   fetch (health + module routes, then /ws upgrade) and websocket handlers
+  middleware/              rate-limit.ts (pre-auth upgrade limiter), service-auth.ts (service tokens)
+  modules/
+    connections/           upgrade.ts (handshake + role auth), socket.ts (open/message/close), keepalive.ts
+    rooms/                 per-user room membership and fan-out
+    consumers/             trusted firehose consumers
+    broadcast/             route-broadcast.ts (one routing path), socket.ts (bot messages), routes.ts (/internal/broadcast)
+    revoke/                credential revocation, routes.ts (/internal/revoke, node revoke), jobs.ts (sweep)
+    ingest/                sessions.ts (registry), messages.ts, bandwidth.ts, socket.ts, routes.ts (/internal/ingest-sessions)
+    monitor/               ops monitor feed, sanitizing, jobs.ts (snapshots)
+```
 
 ## Running locally
 

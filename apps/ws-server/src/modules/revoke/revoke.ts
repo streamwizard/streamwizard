@@ -1,7 +1,7 @@
 import { supabase } from "@repo/supabase";
 import { selectSceneOwnersByTokens } from "@repo/supabase/queries/overlays";
 import { reportError } from "@repo/sentry";
-import type { ConnectionData, ServerWebSocket } from "./types";
+import type { ConnectionData, ServerWebSocket } from "@/types";
 
 /**
  * Credential revocation for subscriber sockets.
@@ -12,9 +12,9 @@ import type { ConnectionData, ServerWebSocket } from "./types";
  * Every credentialed socket is tracked here by user, so it can be closed when
  * its credential stops being valid:
  *
- * - POST /internal/revoke (internal-http.ts), called by the apps right after
+ * - POST /internal/revoke (routes.ts), called by the apps right after
  *   a key reset, scene delete, ban or account deletion.
- * - A backstop sweep (index.ts) that re-checks every scene token once a
+ * - A backstop sweep (jobs.ts) that re-checks every scene token once a
  *   minute, in one query, for whatever the explicit calls missed.
  */
 
@@ -40,7 +40,7 @@ export function untrackCredentialSocket(ws: ServerWebSocket<ConnectionData>): vo
 }
 
 function close(ws: ServerWebSocket<ConnectionData>): void {
-  // The close handler in ws.ts does the room bookkeeping. Untrack now so a
+  // The close handler in modules/connections/socket.ts does the room bookkeeping. Untrack now so a
   // second sweep before the close event lands doesn't count it twice.
   untrackCredentialSocket(ws);
   ws.close(REVOKED_CLOSE_CODE, "credential revoked");
