@@ -6,6 +6,7 @@ import { createAdminClient } from "@repo/supabase/next/admin";
 import { getInstanceNode } from "@repo/supabase/queries/obs-nodes";
 import { signNodeToken, type UserNodeScope } from "@repo/node-token";
 import { mintNodeTokenSchema } from "@/schemas/obs";
+import { reportError } from "@repo/sentry";
 
 // The browser calls the OBS node directly (start/stop, media files, ws-tickets)
 // but never with the user's Supabase session. It asks here first for a node
@@ -38,7 +39,7 @@ export async function mintNodeTokenAction(
     const token = await signNodeToken({ nodeId: node.nodeId, userId: ctx.user.id, scope: tokenScope, instanceId: id, role: "user" });
     return { data: { token }, error: null };
   } catch (err) {
-    console.error("node token signing failed", err);
+    reportError(err, "node-token: sign", { scope });
     return { data: null, error: "Couldn't authorize this request. Try again in a moment." };
   }
 }

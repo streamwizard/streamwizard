@@ -2,6 +2,8 @@ import type { z } from "zod";
 import { autoSwitcherConfigSchema, IngestStatsPayloadSchema, type IngestStatsPayload } from "@repo/schemas";
 import { consumerMessageSchema, ingestSessionEndedPayloadSchema, type IngestSessionEndedPayload } from "@repo/schemas/ws-server";
 import { trackAutoSwitcherEvent } from "@repo/metrics";
+import { reportError } from "@repo/sentry";
+import { createReportThrottle, errorFingerprint } from "@repo/sentry/throttle";
 
 const MAX_DELAY_MS = 30_000;
 
@@ -29,6 +31,10 @@ export type ParsedConsumerFrame = { ok: true; event: ConsumerEvent | null } | { 
  * frame of a type this service doesn't handle; `ok: false` is a malformed one
  * (the reason is a short label, never the frame).
  */
+// Stats arrive about once a second per live user, so a handler that breaks on
+// one message breaks on every one after it: report each reason once an hour.
+const allowReport = createReportThrottle({ intervalMs: 60 * 60_000 });
+
 export function parseConsumerFrame(raw: string): ParsedConsumerFrame {
   let json: unknown;
   try {
@@ -134,16 +140,23 @@ export class StatsFeed {
       }
       const ev = frame.event;
       if (!ev) return;
-      switch (ev.type) {
-        case "streamwizard.ingest_stats":
-          this.handlers.onIngestStats(ev.userId, ev.payload);
-          break;
-        case "streamwizard.auto_switcher_config":
-          this.handlers.onConfigPush(ev.userId, ev.payload);
-          break;
-        case "streamwizard.ingest_session_ended":
-          this.handlers.onSessionEnded?.(ev.userId, ev.payload);
-          break;
+      // One bad message must not reach the process handler, which exits.
+      try {
+        switch (ev.type) {
+          case "streamwizard.ingest_stats":
+            this.handlers.onIngestStats(ev.userId, ev.payload);
+            break;
+          case "streamwizard.auto_switcher_config":
+            this.handlers.onConfigPush(ev.userId, ev.payload);
+            break;
+          case "streamwizard.ingest_session_ended":
+            this.handlers.onSessionEnded?.(ev.userId, ev.payload);
+            break;
+        }
+      } catch (err) {
+        if (allowReport(`${ev.type} ${errorFingerprint(err)}`)) {
+          reportError(err, "stats-feed: message", { userId: ev.userId, type: ev.type });
+        }
       }
     };
 

@@ -53,15 +53,13 @@ export async function SyncBroadcasterClips(): Promise<{
         };
       }
       // No response means the request never got an answer (API down, wrong
-      // URL); `code` is then the only thing that says why, e.g. ECONNREFUSED.
-      console.error(
-        "[SyncBroadcasterClips] API error:",
-        error.response?.status ?? error.code ?? "no response",
-        JSON.stringify(error.response?.data ?? {}),
-      );
+      // URL): report it. rest-api reports its own 5xx, and a 4xx is the
+      // user's own state (no Twitch link, expired token).
+      if (!error.response) reportError(error, "clips: sync request");
+      else console.warn(`[clip-sync] rest-api answered ${error.response.status}`);
       return { message: clipSyncErrorMessage(error.response?.status), success: false };
     }
-    console.error("[SyncBroadcasterClips] Unexpected error:", error instanceof Error ? error.message : error);
+    reportError(error, "clips: sync request");
     return { message: clipSyncErrorMessage(500), success: false };
   }
 }

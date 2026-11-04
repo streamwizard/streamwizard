@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       topMessageTypes,
     });
   } catch (err) {
-    console.error("[ws metrics]", err);
+    console.warn("[ws metrics]", err);
     return NextResponse.json({
       connections: [],
       messages: [],

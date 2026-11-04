@@ -2,6 +2,7 @@
 
 import { randomBytes, createHash, randomUUID } from "crypto";
 import { assertAdmin } from "@/lib/assert-admin";
+import { reportError } from "@repo/sentry";
 import { isAdminNodeScope, signNodeToken, type AdminNodeScope, type NodeTokenScope } from "@repo/node-token";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { revalidatePath } from "next/cache";
@@ -77,7 +78,7 @@ export async function mintAdminNodeTokenAction(
   try {
     return { data: { token: await signAdminNodeToken(userId, nodeId, scope, instanceId) }, error: null };
   } catch (err) {
-    console.error("node token signing failed", err);
+    reportError(err, "node-token: sign");
     return { data: null, error: "Couldn't authorize this request." };
   }
 }
@@ -243,7 +244,7 @@ export async function createInstanceAction(
   try {
     token = await signAdminNodeToken(userId, node.id, "instances:create");
   } catch (err) {
-    console.error("node token signing failed", err);
+    reportError(err, "node-token: sign");
     return { data: null, error: "Couldn't authorize this request." };
   }
 
@@ -296,7 +297,7 @@ async function callInstanceManagerAdmin(
   try {
     token = await signAdminNodeToken(userId, node.id, "admin:instances", instanceId);
   } catch (err) {
-    console.error("node token signing failed", err);
+    reportError(err, "node-token: sign");
     return { data: null, error: "Couldn't authorize this request." };
   }
 

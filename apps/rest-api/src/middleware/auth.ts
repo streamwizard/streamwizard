@@ -2,7 +2,11 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { setCookie } from "hono/cookie";
 import { reportError } from "@repo/sentry";
+import { createReportThrottle, errorFingerprint } from "@repo/sentry/throttle";
 import { createRequestClient, type RequestClient } from "@repo/supabase/request-client";
+
+// GoTrue failures repeat on every request while it is down.
+const allowAuthReport = createReportThrottle({ intervalMs: 60 * 60_000 });
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -93,6 +97,11 @@ export const supabaseAuth = (): MiddlewareHandler => {
 
       if (error) {
         console.warn("[auth] getUser failed:", error.status, error.code);
+        // A missing, expired or forged token is an expected 401. Only GoTrue
+        // itself failing (5xx or no answer) is worth a report, once an hour.
+        if ((!error.status || error.status >= 500) && allowAuthReport(errorFingerprint(error))) {
+          reportError(error, "auth: get user", { status: error.status });
+        }
         return c.json(
           {
             error: "Unauthorized",
@@ -103,7 +112,6 @@ export const supabaseAuth = (): MiddlewareHandler => {
       }
 
       if (!user) {
-        console.error("No user found in session");
         return c.json(
           {
             error: "Unauthorized",

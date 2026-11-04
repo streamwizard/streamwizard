@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     const upstream = await fetch(target, { headers });
 
     if (!upstream.ok && upstream.status !== 206) {
-      console.error("Failed to fetch video:", upstream.status);
+      console.warn(`[preview-stream] clip video answered ${upstream.status}`);
       return NextResponse.json({ error: "Failed to fetch video" }, { status: 502 });
     }
 

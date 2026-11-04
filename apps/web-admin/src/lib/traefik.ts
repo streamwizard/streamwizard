@@ -75,7 +75,7 @@ export async function fetchTraefikSeries(scope: TraefikScope, range = "24h", win
     try {
       return await run();
     } catch (error) {
-      console.error(`[traefik ${label}]`, error);
+      console.warn(`[traefik ${label}]`, error);
       return empty;
     }
   };

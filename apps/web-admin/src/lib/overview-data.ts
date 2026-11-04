@@ -88,7 +88,7 @@ export async function loadOverview(): Promise<OverviewData> {
 
   const value = <T,>(result: PromiseSettledResult<T>, fallback: T, name: string): T => {
     if (result.status === "fulfilled") return result.value;
-    console.error(`[overview] ${name}`, result.reason);
+    console.warn(`[overview] ${name}`, result.reason);
     failed.push(name);
     return fallback;
   };

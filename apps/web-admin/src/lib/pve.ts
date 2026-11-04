@@ -11,6 +11,7 @@ import {
   type ProxmoxClient,
 } from "@repo/proxmox";
 import { env } from "@/lib/env";
+import { reportError } from "@repo/sentry";
 
 /**
  * What Influx can't tell about a guest, read from the PVE API when a page
@@ -69,7 +70,8 @@ function hostClients(): Map<string, HostClient> {
       });
     }
   } catch (error) {
-    console.error("[pve]", (error as Error).message);
+    // A fresh error with the message only: the value holds token secrets.
+    reportError(new Error(`PVE_HOSTS unreadable: ${(error as Error).message}`), "pve: parse hosts");
   }
   return clients;
 }

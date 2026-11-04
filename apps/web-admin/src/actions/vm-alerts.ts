@@ -7,6 +7,7 @@ import { setVmAlertRules } from "@repo/supabase/queries/proxmox";
 import { queryLatestProxmoxGuests } from "@repo/metrics";
 import { STREAMWIZARD_VM_TAG, isStreamwizardVm, isVmAlertRuleId } from "@repo/alerting/rules";
 import { assertAdmin } from "@/lib/assert-admin";
+import { reportError } from "@repo/sentry";
 
 /**
  * Replace which vm.* alerts a VM sends. The alert worker reads the list on

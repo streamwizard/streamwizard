@@ -1,7 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { TwitchApi } from "@repo/twitch-api";
-import { describeError } from "@repo/sentry/safe-error";
+import { reportError } from "@repo/sentry";
 
 /*
  * Category names for public pages. Clip rows carry game_id but not game_name
@@ -25,7 +25,7 @@ async function fetchGameNames(gameIds: string[]): Promise<Record<string, string>
     const games = await new TwitchApi().search.lookupGames(ids);
     return Object.fromEntries(games.map((game) => [game.id, game.name]));
   } catch (error) {
-    console.error(`[twitch-games] lookup failed: ${describeError(error)}`);
+    reportError(error, "twitch-games: lookup");
     return {};
   }
 }

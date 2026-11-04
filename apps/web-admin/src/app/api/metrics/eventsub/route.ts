@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     return NextResponse.json(await fetchEventsubMetrics(fluxRange, window));
   } catch (err) {
     // Only a bad range/window gets here; every source handles its own errors.
-    console.error("[eventsub metrics]", err);
+    console.warn("[eventsub metrics]", err);
     return NextResponse.json({ error: "bad request" }, { status: 400 });
   }
 }

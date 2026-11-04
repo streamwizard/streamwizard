@@ -41,8 +41,10 @@ export async function deleteAccount() {
         eventsub.deleteSubscription(sub.id, broadcasterId),
       ),
     );
-  } catch {
-    // Non-fatal: proceed with data deletion even if cleanup fails.
+  } catch (err) {
+    // Non-fatal: proceed with data deletion. Left behind, the subscriptions
+    // keep counting against the EventSub quota, so report it.
+    reportError(err, "actions/delete-account: eventsub cleanup", { broadcasterId });
   }
 
   // Best-effort: revoke the Verified Member role directly via the bot before

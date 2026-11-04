@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   try {
     return NextResponse.json(await fetchSupabaseMetrics(fluxRange, window));
   } catch (err) {
-    console.error("[supabase metrics]", err);
+    console.warn("[supabase metrics]", err);
     return NextResponse.json(EMPTY_SUPABASE_METRICS);
   }
 }

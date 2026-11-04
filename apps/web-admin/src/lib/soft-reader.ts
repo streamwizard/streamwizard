@@ -11,7 +11,7 @@ export function softReader(page: string) {
     try {
       return await run();
     } catch (error) {
-      console.error(`[${page} ${label}]`, error);
+      console.warn(`[${page} ${label}]`, error);
       failed.push(label);
       return fallback;
     }

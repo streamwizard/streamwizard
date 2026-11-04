@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { reportError } from "@repo/sentry";
 import type { Database } from "../types/supabase";
 import { fetchAllPages } from "./fetch-all-pages";
 
@@ -9,7 +10,7 @@ async function allPagesOrEmpty<T>(label: string, read: () => Promise<T[]>): Prom
   try {
     return await read();
   } catch (error) {
-    console.error(`[stream-analytics] ${label}:`, (error as { message?: string } | null)?.message ?? error);
+    reportError(error, `stream-analytics: ${label}`);
     return [];
   }
 }
@@ -24,7 +25,7 @@ export async function getLatestStreamForBroadcaster(client: DBClient, broadcaste
     .limit(1)
     .maybeSingle();
 
-  if (error) console.error("[stream-analytics] getLatestStreamForBroadcaster:", error.message);
+  if (error) reportError(error, "stream-analytics: getLatestStreamForBroadcaster");
   return data ?? null;
 }
 
@@ -70,7 +71,7 @@ export async function getActivityFeedEvents(client: DBClient, streamId: string, 
     .order("created_at", { ascending: false })
     .limit(100);
 
-  if (error) console.error("[stream-analytics] getActivityFeedEvents:", error.message);
+  if (error) reportError(error, "stream-analytics: getActivityFeedEvents");
   return data ?? [];
 }
 
@@ -83,7 +84,7 @@ export async function getRecentStreamsForBroadcaster(client: DBClient, broadcast
     .order("stream_started_at", { ascending: false })
     .limit(limit);
 
-  if (error) console.error("[stream-analytics] getRecentStreamsForBroadcaster:", error.message);
+  if (error) reportError(error, "stream-analytics: getRecentStreamsForBroadcaster");
   return data ?? [];
 }
 
@@ -130,7 +131,7 @@ export async function getBroadcasterProfile(client: DBClient) {
     .select("twitch_username, profile_image_url, broadcaster_type")
     .maybeSingle();
 
-  if (error) console.error("[stream-analytics] getBroadcasterProfile:", error.message);
+  if (error) reportError(error, "stream-analytics: getBroadcasterProfile");
   return data ?? null;
 }
 
@@ -156,7 +157,7 @@ export async function getVodByStreamId(client: DBClient, streamId: string) {
     .eq("stream_id", streamId)
     .maybeSingle();
 
-  if (error) console.error("[stream-analytics] getVodByStreamId:", error.message);
+  if (error) reportError(error, "stream-analytics: getVodByStreamId");
   return data ?? null;
 }
 
@@ -169,6 +170,6 @@ export async function getClipsByVideoId(client: DBClient, videoId: string) {
     .eq("video_id", videoId)
     .order("view_count", { ascending: false });
 
-  if (error) console.error("[stream-analytics] getClipsByVideoId:", error.message);
+  if (error) reportError(error, "stream-analytics: getClipsByVideoId");
   return data ?? [];
 }

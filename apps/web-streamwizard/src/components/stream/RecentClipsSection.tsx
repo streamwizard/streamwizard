@@ -1,4 +1,5 @@
 import { createClient } from "@repo/supabase/next/server";
+import { reportError } from "@repo/sentry";
 import { getRecentClipsByBroadcaster } from "@repo/supabase/queries/clips";
 import { Film } from "lucide-react";
 import { Database } from "@repo/supabase";
@@ -15,7 +16,7 @@ export async function RecentClipsSection({ broadcasterId, compact = false }: Rec
 
   const { data, error } = await getRecentClipsByBroadcaster(supabase, broadcasterId, 10);
 
-  if (error) console.error("[RecentClipsSection]", error.message);
+  if (error) reportError(error, "recent-clips: list", { broadcasterId });
 
   const clips = data ?? [];
   const label = "Recent clips";

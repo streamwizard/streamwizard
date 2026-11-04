@@ -68,6 +68,20 @@ describe("asset reconciler", () => {
     expect(deletedRows).toEqual([["a1", "u1"]]);
   });
 
+  it("reports a failed object delete once per sweep, not once per row", async () => {
+    const result = await make({
+      stale: [
+        { id: "a1", user_id: "u1", key: "assets/u1/a1/x.png" },
+        { id: "a2", user_id: "u1", key: "assets/u1/a2/y.png" },
+      ],
+      deleteObject: async () => {
+        throw new Error("R2 unavailable");
+      },
+    }).sweep();
+    expect(result.removedPending).toBe(2);
+    expect(reported).toEqual(["asset-reconciler: delete pending object"]);
+  });
+
   it("removes old orphans and keeps known keys", async () => {
     const result = await make({
       keys: ["assets/u1/a1/known.png"],

@@ -1,5 +1,6 @@
 import { TwitchApi } from "@repo/twitch-api";
-import { describeError } from "@repo/sentry/safe-error";
+import { reportError } from "@repo/sentry";
+import { createReportThrottle, errorFingerprint } from "@repo/sentry/throttle";
 import type { EventSubSubscriptionType, WebSocketNotificationMessage } from "@repo/types";
 import { z } from "zod";
 import { registerTwitchHandlers } from "./twitch";
@@ -23,7 +24,14 @@ type TwitchHandler<TData = unknown> = (data: TData, context: HandlerContext) => 
 /**
  * Internal handler wrapper
  */
-type InternalHandler = (data: unknown, context: HandlerContext) => Promise<void>;
+type InternalHandler = (data: unknown, context: HandlerContext, broadcasterId: string) => Promise<void>;
+
+// Handlers and the event log run once per notification, so a broken one fails
+// on every event. Report the first failure, then once an hour per type and
+// error. A payload that stops matching its schema stays broken until a
+// deploy: once per type.
+const allowFailureReport = createReportThrottle({ intervalMs: 60 * 60_000 });
+const allowSchemaReport = createReportThrottle({ intervalMs: Number.POSITIVE_INFINITY });
 
 /**
  * Handler Registry for smp-bridge supporting both Twitch and Minecraft events
@@ -47,12 +55,22 @@ export class HandlerRegistry {
     handler: TwitchHandler<TData>,
     schema?: z.ZodType<TData>,
   ): void {
-    this.twitchHandlers.set(eventType, async (data, context) => {
+    this.twitchHandlers.set(eventType, async (data, context, broadcasterId) => {
+      let parsedData = data as TData;
+      if (schema) {
+        const result = schema.safeParse(data);
+        if (!result.success) {
+          if (allowSchemaReport(eventType)) reportError(result.error, "eventsub: schema mismatch", { type: eventType, broadcasterId });
+          return;
+        }
+        parsedData = result.data;
+      }
       try {
-        const parsedData = schema ? schema.parse(data) : (data as TData);
         await handler(parsedData, context);
       } catch (error) {
-        console.log(`[eventsub] handler for ${eventType} failed: ${describeError(error)}`);
+        if (allowFailureReport(`${eventType} ${errorFingerprint(error)}`)) {
+          reportError(error, "eventsub: handler", { type: eventType, broadcasterId });
+        }
       }
     });
   }
@@ -74,7 +92,7 @@ export class HandlerRegistry {
     );
 
     if (!broadcasterId) {
-      console.log("No broadcaster ID found in event:", data.payload.event);
+      console.warn(`[eventsub] no broadcaster id in ${eventType} event, skipped`);
       return;
     }
 
@@ -88,7 +106,9 @@ export class HandlerRegistry {
           metadata: data.metadata,
         })
         .catch((error) => {
-          console.error(`Failed to log Twitch event ${eventType}:`, error);
+          if (allowFailureReport(`log ${eventType} ${errorFingerprint(error)}`)) {
+            reportError(error, "eventsub: log event", { type: eventType, broadcasterId });
+          }
         });
 
       // Latest follower/sub/cheer/... for the overlay labels, live or not.
@@ -96,7 +116,12 @@ export class HandlerRegistry {
       void recordStreamLabels(broadcasterId, eventType, data.payload.event);
     }
 
-    await broadcastOverlayEvent(broadcasterId, eventType, data.payload.event);
+    // Caught here so a failed broadcast still lets the bot handler run.
+    await broadcastOverlayEvent(broadcasterId, eventType, data.payload.event).catch((error) => {
+      if (allowFailureReport(`overlay ${eventType} ${errorFingerprint(error)}`)) {
+        reportError(error, "eventsub: overlay broadcast", { type: eventType, broadcasterId });
+      }
+    });
     const twitchApi = new TwitchApi(broadcasterId);
 
     const context: HandlerContext = {
@@ -107,7 +132,7 @@ export class HandlerRegistry {
     // above already records that.
     if (!handler) return;
 
-    await handler(data.payload.event, context);
+    await handler(data.payload.event, context, broadcasterId);
   }
 }
 

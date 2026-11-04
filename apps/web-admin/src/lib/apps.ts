@@ -128,7 +128,7 @@ async function series<T>(label: string, run: () => Promise<T>, empty: T): Promis
   try {
     return await run();
   } catch (error) {
-    console.error(`[apps ${label}]`, error);
+    console.warn(`[apps ${label}]`, error);
     return empty;
   }
 }

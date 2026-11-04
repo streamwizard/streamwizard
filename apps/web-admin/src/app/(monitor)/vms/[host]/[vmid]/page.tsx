@@ -113,7 +113,7 @@ export default async function VmDetailPage({ params }: { params: Promise<{ host:
 
   const [info, series] = await Promise.all([
     queryProxmoxGuestInfo(host, vmid).catch((error) => {
-      console.error("[vm info]", error);
+      console.warn("[vm info]", error);
       return null;
     }),
     fetchGuestSeries(host, vmid, "24h", "1h"),

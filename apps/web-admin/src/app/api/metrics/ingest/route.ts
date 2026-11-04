@@ -66,7 +66,7 @@ export async function GET(request: Request) {
       fleet,
     });
   } catch (err) {
-    console.error("[ingest metrics]", err);
+    console.warn("[ingest metrics]", err);
     return NextResponse.json({ hostCpu: [], hostMem: [], hostRx: [], hostTx: [], activeSignals: [] });
   }
 }

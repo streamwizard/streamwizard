@@ -3,6 +3,7 @@ import { ClipsDisplay } from "@/components/clips/clips-display";
 import { ClipsPaginationBar } from "@/components/nav/clips-pagination-bar";
 import { Button } from "@repo/ui/components/ui/button";
 import { createClient } from "@repo/supabase/next/server";
+import { reportError } from "@repo/sentry";
 import { getClipFolders } from "@repo/supabase/queries/clips";
 import buildClipQuery from "@/lib/utils/build-clip-query";
 import { parseClipPageSize } from "@/lib/utils/clip-pagination";
@@ -60,7 +61,7 @@ export default async function Page({ params, searchParams }: PageProps) {
 
   const { data, error, count } = await query;
   if (error) {
-    console.error(error);
+    reportError(error, "clips-page: list folder clips");
     return null;
   }
   const pageIndex = parsedSearchParams.page ? parseInt(parsedSearchParams.page, 10) : 1;

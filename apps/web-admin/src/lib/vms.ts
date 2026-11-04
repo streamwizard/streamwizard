@@ -75,7 +75,7 @@ async function soft<T>(label: string, run: () => Promise<T>, fallback: T): Promi
   try {
     return await run();
   } catch (error) {
-    console.error(`[vms ${label}]`, error);
+    console.warn(`[vms ${label}]`, error);
     return fallback;
   }
 }
@@ -109,7 +109,7 @@ async function alertRulesByVm(): Promise<Map<string, string[]>> {
 export async function getVmOverview(host?: string): Promise<VmOverview> {
   const [latest, nodes, rules, snapshot, sparks, nodeSnapshot, storages] = await Promise.all([
     queryLatestProxmoxGuests(LIST_RANGE).catch((error) => {
-      console.error("[vms list]", error);
+      console.warn("[vms list]", error);
       throw new Error(METRICS_DOWN);
     }),
     soft("nodes", () => queryLatestProxmoxNodes(LIST_RANGE), []),

@@ -3,6 +3,7 @@
 import axios from "axios";
 import { TwitchApi } from "@repo/twitch-api";
 import { describeError } from "@repo/sentry/safe-error";
+import { reportError } from "@repo/sentry";
 import { getCurrentStreamDetails as _getCurrentStreamDetails, getStreamData as _getStreamData, createPendingClip } from "@repo/supabase/queries/vods";
 import type { TwitchVideo, GetVideosResponse } from "@/types/twitch";
 import type { GetVideosResult, DeleteVideosResult, CreateClipResult, TwitchStreamMarkersResponse, GetStreamMarkersResult, CreateStreamMarkerResponse } from "@/types/twitch-video";
@@ -130,7 +131,8 @@ export async function createClipFromVOD(input: CreateClipFromVODProps): Promise<
 
     try {
       await createPendingClip(supabase, clip.id, broadcasterId);
-    } catch {
+    } catch (err) {
+      reportError(err, "vods: save pending clip", { clipId: clip.id });
       return { success: false, error: "Clip created but not added to pending clips table" };
     }
 

@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     ]);
     return NextResponse.json({ requests, routeStats });
   } catch (err) {
-    console.error("[http metrics]", err);
+    console.warn("[http metrics]", err);
     return NextResponse.json({ requests: [], routeStats: [] });
   }
 }

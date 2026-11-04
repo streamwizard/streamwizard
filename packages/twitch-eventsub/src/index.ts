@@ -215,7 +215,7 @@ export class TwitchEventSubReceiver {
         try {
             ws = new WebSocket(url);
         } catch (error) {
-            console.error('❌ Failed to create WebSocket:', error);
+            console.warn('⚠️ Failed to create WebSocket:', error);
             this.handleConnectionLoss(null, `socket creation failed: ${String(error)}`);
             return;
         }
@@ -248,7 +248,8 @@ export class TwitchEventSubReceiver {
 
         ws.onerror = (error) => {
             if (gen !== this.activeGen || this.disposed) return;
-            console.error('❌ WebSocket error:', error);
+            // A drop; onclose follows and reconnects (and emits the lifecycle event).
+            console.warn('⚠️ WebSocket error:', error);
         };
 
         ws.onclose = (event) => {
@@ -566,7 +567,7 @@ export class TwitchEventSubReceiver {
 
         const reconnectUrl = (payload as { session?: { reconnect_url?: string } }).session?.reconnect_url;
         if (!reconnectUrl) {
-            console.error('❌ Reconnect URL not provided in session_reconnect message');
+            console.warn('⚠️ Reconnect URL not provided in session_reconnect message');
             // Close the socket; the normal recovery path reconnects fresh
             this.handleConnectionLoss(null, 'session_reconnect without reconnect URL');
             return;
@@ -583,7 +584,7 @@ export class TwitchEventSubReceiver {
         try {
             pendingWs = new WebSocket(reconnectUrl);
         } catch (error) {
-            console.error('❌ Failed to open migration socket:', error);
+            console.warn('⚠️ Failed to open migration socket:', error);
             this.pendingGen = -1;
             this.handleConnectionLoss(null, 'migration socket creation failed');
             return;
@@ -613,7 +614,7 @@ export class TwitchEventSubReceiver {
 
         pendingWs.onerror = (error) => {
             if (gen !== this.pendingGen || this.disposed) return;
-            console.error('❌ Migration socket error:', error);
+            console.warn('⚠️ Migration socket error:', error);
         };
 
         this.pendingWelcomeTimer = setTimeout(() => {

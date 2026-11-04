@@ -66,7 +66,7 @@ export function createUserStateService({ client, broadcast }: UserStateServiceOp
     void Promise.resolve()
       .then(() => broadcast(userId, payload))
       .catch((error) => {
-        console.error("[user-state] broadcast failed", { userId, key: payload.key, error });
+        console.warn("[user-state] broadcast failed", { userId, key: payload.key, error });
       });
   }
 

@@ -8,6 +8,7 @@ import { createAdminClient } from "@repo/supabase/next/admin";
 import { getTwitchScopes } from "@repo/supabase/queries/twitch-scopes";
 import { missingTwitchScopes } from "@repo/schemas";
 import { signNodeToken } from "@repo/node-token";
+import { reportError } from "@repo/sentry";
 import { getProductAccess, getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions";
 import {
   type NodeObsInstance,
@@ -145,7 +146,7 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
   try {
     token = await signNodeToken({ nodeId: node.id, userId, scope: "instances:create", role: "user" });
   } catch (err) {
-    console.error("node token signing failed", err);
+    reportError(err, "node-token: sign", { scope: "instances:create" });
     return { data: null, error: "Couldn't reach Cloud OBS right now. Please try again later." };
   }
 

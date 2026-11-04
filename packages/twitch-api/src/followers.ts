@@ -26,7 +26,7 @@ export class TwitchFollowersClient extends TwitchApiBaseClient {
       const data = response.data?.data ?? [];
       return Array.isArray(data) && data.length > 0;
     } catch (error) {
-      console.error(`[twitch-api] follower check failed: ${describeError(error)}`);
+      console.warn(`[twitch-api] follower check failed: ${describeError(error)}`);
       return false;
     }
   }
@@ -49,7 +49,7 @@ export class TwitchFollowersClient extends TwitchApiBaseClient {
       }
       return null;
     } catch (error) {
-      console.error(`[twitch-api] follow info lookup failed: ${describeError(error)}`);
+      console.warn(`[twitch-api] follow info lookup failed: ${describeError(error)}`);
       return null;
     }
   }

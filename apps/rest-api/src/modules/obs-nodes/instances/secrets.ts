@@ -1,4 +1,5 @@
 import { randomBytes } from "crypto";
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { decryptToken, encryptToken } from "@repo/supabase/crypto";
 import {
@@ -88,9 +89,9 @@ export async function readInstanceSecrets(
 
     return { ok: true, secrets: { obs_ws_password: obsWsPassword, vnc_password: vncPassword } };
   } catch (err) {
-    // Message only: decrypt errors never contain the plaintext, but the
-    // response body must never be logged.
-    console.error(`[obs-nodes] instance secrets failed for ${id}: ${(err as Error).message}`);
+    // Decrypt errors never contain the plaintext; the response body (the
+    // passwords) is never logged or reported.
+    reportError(err, "obs-nodes: instance secrets", { instanceId: id });
     return { ok: false, reason: "failed" };
   }
 }

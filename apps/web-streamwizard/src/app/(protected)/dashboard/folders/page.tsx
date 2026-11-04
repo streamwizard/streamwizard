@@ -1,6 +1,7 @@
 import { FoldersOverview, type FolderOverviewRow } from "@/components/clips/folders-overview";
 import { FoldersOverviewSkeleton } from "@/components/clips/folders-overview-skeleton";
 import { getAuthContext } from "@/lib/auth";
+import { reportError } from "@repo/sentry";
 import {
   buildClipFolderTree,
   flattenClipFolderTree,
@@ -24,7 +25,7 @@ async function FoldersContent() {
     // A failed count degrades to "no numbers" instead of a blank page, the same
     // way the dashboard layout handles the sidebar badges.
     getClipFolderClipCounts(supabase, user.id).catch((err) => {
-      console.error("Failed to count clips per folder:", err);
+      reportError(err, "dashboard: folder clip counts");
       return {} as Record<string, number>;
     }),
   ]);
