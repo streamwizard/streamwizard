@@ -41,7 +41,7 @@ describe("warnRateLimited", () => {
 
 /* The interceptor itself, through a fake adapter so no request leaves the process. */
 
-mock.module("@repo/supabase", () => ({
+mock.module("@repo/supabase/queries/twitch/tokens", () => ({
   getTwitchAppToken: async () => ({ access_token: "app", expires_in: 3600, updated_at: new Date().toISOString() }),
   getChannelAccessToken: async () => "user",
   getChannelRefreshToken: async () => null,

@@ -1,5 +1,5 @@
 import { supabase } from "@repo/supabase";
-import { logPlatformEvent, type EmitPlatformEventInput } from "@repo/supabase/queries/platform-events";
+import { logPlatformEvent, type EmitPlatformEventInput } from "@repo/supabase/queries/platform/events";
 import type { EventSubLifecycleEvent } from "@repo/twitch-eventsub";
 
 const SERVICE = "streamwizard-bot";

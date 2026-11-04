@@ -10,10 +10,19 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./safe-error": {
+      "types": "./src/safe-error.ts",
+      "default": "./src/safe-error.ts"
+    },
+    "./throttle": {
+      "types": "./src/throttle.ts",
+      "default": "./src/throttle.ts"
     }
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@sentry/core": "^10",

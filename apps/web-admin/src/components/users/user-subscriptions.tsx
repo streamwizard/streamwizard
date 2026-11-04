@@ -1,13 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import type { AdminUserSubscription } from "@repo/supabase/queries/admin-users";
+import type { AdminUserSubscription } from "@repo/supabase/queries/users/admin-users";
 import { Badge, Card, CardContent } from "@repo/ui";
-import { EditDialog, RevokeDialog } from "@/components/subscriptions/subscription-dialogs";
-import type { SubscriptionRow, UserRow } from "@/components/subscriptions/types";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
-import { SectionHeading } from "@/components/widgets/section-heading";
-import { LIVE_PLAN_STATUSES, PLAN_STATUS_LABELS, planStatusVariant } from "@/lib/users";
+import { EditDialog, RevokeDialog } from "@/components/users/subscriptions/subscription-dialogs";
+import type { SubscriptionRow, UserRow } from "@/components/users/subscriptions/types";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
+import { SectionHeading } from "@/components/shared/page/section-heading";
+import { LIVE_PLAN_STATUSES, PLAN_STATUS_LABELS, planStatusVariant } from "@/lib/users/users";
 import { GrantAccessButton } from "./grant-access";
 
 // DataList is a container: these follow the list's own width, like its table/card switch at @2xl.

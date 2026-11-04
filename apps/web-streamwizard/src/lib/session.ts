@@ -1,7 +1,8 @@
 import { createClient } from "@repo/supabase/next/server";
-import { getUserPreferences } from "@repo/supabase/queries/user";
+import { getUserPreferences } from "@repo/supabase/queries/users/user";
 import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 export interface SessionPreferences {
   memes_enabled: boolean;
@@ -26,16 +27,27 @@ const defaultPreferences: SessionPreferences = {
   discord_live_role: true,
 };
 
-export async function getSession(): Promise<Session> {
+/**
+ * The signed-in user, or a redirect to /login. Wrapped in React's cache() so the
+ * (protected) layout and the dashboard layout share one auth call per request.
+ */
+export const getSessionUser = cache(async (): Promise<User> => {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
-
   if (error || !data.user) redirect("/login");
+  return data.user;
+});
 
-  const prefs = await getUserPreferences(supabase);
+/** The user's preferences row (RLS-scoped), read once per request. */
+export const getSessionPreferencesRow = cache(async () => getUserPreferences(await createClient()));
+
+export const getSession = cache(async (): Promise<Session> => {
+  // The preferences read is RLS-scoped, so it needs no user id and can go out
+  // alongside the auth check; without a session it simply finds nothing.
+  const [user, prefs] = await Promise.all([getSessionUser(), getSessionPreferencesRow()]);
 
   return {
-    user: data.user,
+    user,
     preferences: {
       memes_enabled: prefs?.memes_enabled ?? defaultPreferences.memes_enabled,
       sync_clips_on_end: prefs?.sync_clips_on_end ?? defaultPreferences.sync_clips_on_end,
@@ -46,4 +58,4 @@ export async function getSession(): Promise<Session> {
       discord_live_role: prefs?.discord_live_role ?? defaultPreferences.discord_live_role,
     },
   };
-}
+});

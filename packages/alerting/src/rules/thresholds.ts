@@ -63,7 +63,7 @@ export const EVENTSUB_SHARDS_DEGRADED_PCT = 25;
 export const EVENTSUB_SHARDS_DEGRADED_MIN_SHARDS = 2;
 export const INGEST_STALL_MIN_SESSION_AGE_MS = 2 * 60 * 1000;
 // Proxmox backups: the defaults live in @repo/backups so the /backups page
-// and these rules share one source (docs/backup-monitoring-plan.md).
+// and these rules share one source.
 export const BACKUP_STALE_WARN_HOURS = BACKUP_THRESHOLDS.staleWarnHours;
 export const BACKUP_STALE_CRIT_HOURS = BACKUP_THRESHOLDS.staleCritHours;
 export const BACKUP_DATASTORE_WARN_PCT = BACKUP_THRESHOLDS.datastoreWarnPct;

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { guidSchema } from "@repo/schemas/ids";
 import {
   EMPTY_DOC,
   extractText,
@@ -71,7 +72,7 @@ export const LIMITS = {
   prerequisite: 200,
 } as const;
 
-const uuid = z.string().uuid();
+const uuid = guidSchema;
 const text = (max: number) => z.string().max(max);
 
 /** What the save action accepts. Bodies are checked by sanitizeDoc, not here. */

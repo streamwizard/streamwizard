@@ -1,6 +1,6 @@
 import { MousePointerClick, VolumeX, ZoomIn } from "lucide-react";
 import { SectionView } from "../analytics/section-view";
-import { Reveal, RevealGroup } from "../home/reveal";
+import { Reveal, RevealGroup } from "@/components/public/common/reveal";
 import { EventStripDemo } from "./event-strip-demo";
 
 /*

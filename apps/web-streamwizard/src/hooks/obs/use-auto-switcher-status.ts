@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { AutoSwitcherStatus } from "@repo/schemas";
+import type { AutoSwitcherStatus } from "@repo/schemas/auto-switcher/auto-switcher";
 import { supabase } from "@repo/supabase/next/client";
 import { env } from "@/lib/env";
 

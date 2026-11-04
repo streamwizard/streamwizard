@@ -1,49 +1,19 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getGuildSettings } from "@repo/supabase/queries/discord";
-import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord-live";
-import { listLiveRoleGrants } from "@repo/supabase/queries/discord-live-role";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
-import { LiveForm } from "@/components/discord/live-form";
-import { DataList } from "@/components/widgets/data-list";
-import { PageHeader } from "@/components/widgets/page-header";
+import { getGuildSettings } from "@repo/supabase/queries/discord/discord";
+import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord/live";
+import { listLiveRoleGrants } from "@repo/supabase/queries/discord/live-role";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
+import { LiveForm } from "@/components/discord/live/live-form";
+import { LiveUser } from "@/components/discord/live/live-user";
+import { OnOff } from "@/components/discord/live/on-off";
+import { TwitchLink } from "@/components/discord/live/twitch-link";
+import { DataList } from "@/components/shared/data-list";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toChannelOptions, toRoleOptions } from "@/lib/discord/options";
-import { formatDateTime } from "@/lib/discord/tickets";
+import { formatDateTime } from "@/lib/discord/tickets/tickets";
 
 export const dynamic = "force-dynamic";
-
-function Avatar({ url }: { url: string | null }) {
-  if (!url?.startsWith("https://")) return <span className="size-6 shrink-0 rounded-full bg-muted" aria-hidden />;
-  // eslint-disable-next-line @next/next/no-img-element -- Twitch CDN avatar, same as the log page
-  return <img src={url} alt="" className="size-6 shrink-0 rounded-full object-cover" />;
-}
-
-function OnOff({ on }: { on: boolean }) {
-  return <span className={on ? undefined : "text-muted-foreground"}>{on ? "On" : "Off"}</span>;
-}
-
-function User({ name, avatarUrl }: { name: string | null; avatarUrl: string | null }) {
-  return (
-    <span className="flex items-center gap-2">
-      <Avatar url={avatarUrl} />
-      <span className="min-w-0 break-words">{name ?? "Unnamed"}</span>
-    </span>
-  );
-}
-
-function TwitchLink({ username }: { username: string }) {
-  return (
-    <a
-      href={`https://twitch.tv/${encodeURIComponent(username)}`}
-      target="_blank"
-      rel="noreferrer"
-      // Above the row's own link, so this one still opens Twitch.
-      className="relative z-10 font-medium underline-offset-4 hover:underline"
-    >
-      {username}
-    </a>
-  );
-}
 
 export default async function DiscordLivePage() {
   const { guildId } = requireDiscordContext();
@@ -96,7 +66,7 @@ export default async function DiscordLivePage() {
                     key: "user",
                     header: "User",
                     mobile: "title",
-                    cell: (row) => <User name={row.user?.name ?? null} avatarUrl={row.user?.avatarUrl ?? null} />,
+                    cell: (row) => <LiveUser name={row.user?.name ?? null} avatarUrl={row.user?.avatarUrl ?? null} />,
                   },
                   {
                     key: "twitch",
@@ -141,7 +111,7 @@ export default async function DiscordLivePage() {
                 rowKey={(row) => row.userId}
                 rowHref={(row) => `/users/${row.userId}`}
                 columns={[
-                  { key: "user", header: "User", mobile: "title", cell: (row) => <User name={row.name} avatarUrl={row.avatarUrl} /> },
+                  { key: "user", header: "User", mobile: "title", cell: (row) => <LiveUser name={row.name} avatarUrl={row.avatarUrl} /> },
                   {
                     key: "twitch",
                     header: "Twitch",

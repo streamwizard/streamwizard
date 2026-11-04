@@ -4,10 +4,11 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AlertTriangle, Check, ExternalLink, Loader2, Rocket, Wifi } from "lucide-react";
 import { Button, Card, CardContent, Input, Label } from "@repo/ui";
-import { createIngestKey, type IngestStreamKey } from "@/actions/ingest-keys";
+import { createIngestKey } from "@/actions/irl/ingest-keys";
+import type { IngestStreamKey } from "@repo/supabase/queries/ingest/ingest";
 import type { Scene, SceneItem } from "@repo/obs-web";
 import { ObsAlertsSources } from "@/components/irl/obs-alerts-sources";
-import { TwitchConnectButton } from "@/components/ui/twitch-scope-banner";
+import { TwitchConnectButton } from "@/components/shared/twitch/twitch-scope-banner";
 import { cn } from "@repo/ui";
 
 interface ObsSetupStepperProps {

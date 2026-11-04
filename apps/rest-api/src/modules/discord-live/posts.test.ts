@@ -47,19 +47,22 @@ mock.module("@repo/sentry", () => ({
   },
 }));
 mock.module("@repo/supabase", () => ({ supabase: {} }));
-mock.module("@repo/supabase/queries/discord", () => ({
+mock.module("@repo/supabase/queries/discord/discord", () => ({
   getGuildSettings: async () => settings,
 }));
-mock.module("@repo/supabase/queries/identity", () => ({
+mock.module("@repo/supabase/queries/users/identity", () => ({
   getUserIdentity: async () => identity,
 }));
 // Same export set as viewer-count-poller.test.ts: bun's mock.module is
 // process-wide, so every file mocking this module must agree on its shape.
-mock.module("@repo/supabase/queries/user", () => ({
+// Spread the real exports: bun shares module mocks across test files.
+const realUserQueries = await import("@repo/supabase/queries/users/user");
+mock.module("@repo/supabase/queries/users/user", () => ({
+  ...realUserQueries,
   getTwitchIntegrationByBroadcasterId: async () => null,
   getUserPreferencesByUserId: async () => preferences,
 }));
-mock.module("@repo/supabase/queries/discord-live", () => ({
+mock.module("@repo/supabase/queries/discord/live", () => ({
   getLatestLivePost: async () => latest,
   insertLivePost: async (_client: unknown, row: Record<string, unknown>) => {
     inserts.push(row);
@@ -96,12 +99,12 @@ mock.module("@repo/discord-api", () => ({
 
 process.env.DISCORD_BOT_TOKEN = "token";
 process.env.DISCORD_GUILD_ID = "guild";
-mock.module("../../env", () => ({ env: { DISCORD_BOT_TOKEN: "token", DISCORD_GUILD_ID: "guild" } }));
+mock.module("@/env", () => ({ env: { DISCORD_BOT_TOKEN: "token", DISCORD_GUILD_ID: "guild" } }));
 
-let mod: typeof import("./posts");
+let mod: typeof import("@/modules/discord-live/posts");
 
 beforeAll(async () => {
-  mod = await import("./posts");
+  mod = await import("@/modules/discord-live/posts");
 });
 
 const stream = {

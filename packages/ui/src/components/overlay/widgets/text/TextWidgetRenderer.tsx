@@ -3,8 +3,9 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useGoogleFont } from "../../hooks/use-google-font";
 import { getDesignSize } from "../../lib/item-scale";
-import { normalizeTextWidgetConfig } from "../../types";
-import type { OverlayItem, TextWidgetItemConfig } from "../../types";
+import { normalizeTextWidgetConfig } from "../../types/widgets";
+import type { TextWidgetItemConfig } from "../../types/widgets";
+import type { OverlayItem } from "../../types/item";
 import { hexToRgba } from "../goal/presets/shared";
 import { roundingRadiusPx } from "../media/media-widget-config";
 

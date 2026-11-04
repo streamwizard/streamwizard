@@ -2,7 +2,7 @@ import {
   DEFAULT_GOOGLE_FONT_FAMILY,
   isValidGoogleFontFamilyName,
   type GoogleFontFamily,
-} from "../../types";
+} from "../../types/base";
 
 /**
  * Shows the channel's Twitch poll: the question, each choice's share as votes

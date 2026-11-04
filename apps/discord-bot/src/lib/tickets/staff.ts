@@ -1,6 +1,6 @@
 import { PermissionFlagsBits, type GuildMember } from "discord.js";
-import type { TicketCategory } from "@repo/supabase/queries/ticket-config";
-import type { DiscordTicketSettings } from "@repo/supabase/queries/tickets";
+import type { TicketCategory } from "@repo/supabase/queries/tickets/config";
+import type { DiscordTicketSettings } from "@repo/supabase/queries/tickets/tickets";
 import { isStaffMember } from "./access";
 
 /**

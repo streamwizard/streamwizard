@@ -1,28 +1,23 @@
-"use client";
-
-import { PageHeader } from "@/components/widgets/page-header";
-import { WsMonitorProvider } from "@/components/ws-monitor-provider";
-import { WsRoomTable } from "@/components/ws-room-table";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { WsMonitorProvider } from "@/providers/ws-monitor-provider";
+import { WsRoomTable } from "@/components/ws/ws-room-table";
+import { MonitorUnconfigured } from "@/components/ws/monitor-unconfigured";
+import { monitorWsUrl } from "@/lib/monitor/monitor-config";
 
 export default function WsRoomsPage() {
-  const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? null;
-  const secret = process.env.NEXT_PUBLIC_MONITOR_SECRET ?? null;
+  const wsUrl = monitorWsUrl();
 
-  if (!wsUrl || !secret) {
+  if (!wsUrl) {
     return (
       <div className="space-y-2">
         <PageHeader title="Rooms" />
-        <p className="text-sm text-muted-foreground">
-          Set <code className="text-xs bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_WS_SERVER_URL</code> and{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_MONITOR_SECRET</code> in{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">.env.local</code> to enable room monitoring.
-        </p>
+        <MonitorUnconfigured what="room monitoring" />
       </div>
     );
   }
 
   return (
-    <WsMonitorProvider wsUrl={wsUrl} monitorSecret={secret}>
+    <WsMonitorProvider wsUrl={wsUrl}>
       <WsRoomTable />
     </WsMonitorProvider>
   );

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getAdminInventory } from "@/lib/admin-session";
+import { getAdminInventory } from "@/lib/auth/admin-session";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { VerifyPanel } from "@/components/auth/verify-panel";
 

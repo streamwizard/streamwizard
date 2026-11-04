@@ -12,12 +12,12 @@ import {
   Label,
 } from "@repo/ui";
 import { Monitor, Smartphone } from "lucide-react";
-import { NumberField } from "./number-field";
+import { NumberField } from "@/components/overlays/editor/inspector/number-field";
 import {
   describeResolutionChange,
   type ResolutionChangeMode,
   type SceneSize,
-} from "./scene-resize";
+} from "@/components/overlays/editor/canvas/scene-resize";
 
 /**
  * The sizes streamers actually use, so most changes are one click. Vertical is

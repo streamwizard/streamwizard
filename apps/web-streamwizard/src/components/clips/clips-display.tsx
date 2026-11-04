@@ -1,12 +1,12 @@
 "use client";
 
-import TwitchClipCard from "@/components/cards/clip-card";
+import TwitchClipCard from "@/components/shared/clips/clip-card";
 import { ClipsDetailsView } from "@/components/clips/clips-details-view";
-import { getClipViewContainerClass, type ClipView } from "@/lib/utils/clip-view";
-import { clipsWithFolders } from "@/types/database";
+import { getClipViewContainerClass, type ClipView } from "@/lib/clips/clip-view";
+import type { ClipWithFolders } from "@/types/database";
 
 type ClipsDisplayProps = {
-  clips: clipsWithFolders[];
+  clips: ClipWithFolders[];
   view: ClipView;
 };
 

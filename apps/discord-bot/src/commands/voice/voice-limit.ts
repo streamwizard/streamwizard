@@ -1,4 +1,4 @@
-import { VOICE_USER_LIMIT_MAX } from "@repo/supabase/queries/discord-voice";
+import { VOICE_USER_LIMIT_MAX } from "@repo/supabase/queries/discord/voice";
 import { reasonFor, voiceCommand, voiceCommandData } from "../../lib/voice/command";
 import { rememberOwnerPrefs } from "../../lib/voice/store";
 

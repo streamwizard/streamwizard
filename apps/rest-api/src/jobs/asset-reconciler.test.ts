@@ -10,9 +10,9 @@ mock.module("@repo/sentry", () => ({
 }));
 
 // Keeps the env schema (and R2 credentials) out of the test.
-mock.module("../lib/r2", () => ({ r2: null }));
+mock.module("@/lib/r2", () => ({ r2: null }));
 
-const { createAssetReconciler, MAX_ORPHANS_PER_SWEEP, ORPHAN_GRACE_MS } = await import("./asset-reconciler");
+const { createAssetReconciler, MAX_ORPHANS_PER_SWEEP, ORPHAN_GRACE_MS } = await import("@/jobs/asset-reconciler");
 
 const NOW = new Date("2026-10-03T12:00:00Z").getTime();
 const ago = (ms: number) => new Date(NOW - ms);
@@ -66,6 +66,20 @@ describe("asset reconciler", () => {
     }).sweep();
     expect(result.removedPending).toBe(1);
     expect(deletedRows).toEqual([["a1", "u1"]]);
+  });
+
+  it("reports a failed object delete once per sweep, not once per row", async () => {
+    const result = await make({
+      stale: [
+        { id: "a1", user_id: "u1", key: "assets/u1/a1/x.png" },
+        { id: "a2", user_id: "u1", key: "assets/u1/a2/y.png" },
+      ],
+      deleteObject: async () => {
+        throw new Error("R2 unavailable");
+      },
+    }).sweep();
+    expect(result.removedPending).toBe(2);
+    expect(reported).toEqual(["asset-reconciler: delete pending object"]);
   });
 
   it("removes old orphans and keeps known keys", async () => {

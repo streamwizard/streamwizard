@@ -1,7 +1,7 @@
-import type { ViewerCountBucket, ClipData, RawEvent } from "@/actions/supabase/analytics/stream-analytics";
+import type { ViewerCountBucket, ClipData, RawEvent } from "@/types/stream-analytics";
 import type { HourlyViewerStat } from "@/lib/analytics/hourly-buckets";
 import type { CategorySegmentStats } from "@/lib/analytics/category-segments";
-import type { ActivityEvent } from "@/actions/supabase/analytics/activity-feed";
+import type { ActivityEvent } from "@/types/stream-analytics";
 
 /*
  * One coherent demo stream for the landing page: 4h 12m, raid at 2:10:00,
@@ -262,7 +262,7 @@ export const demoActivityEvents: ActivityEvent[] = [
  * Offsets reuse the arrays above (7920/8460/8880 are demoFollowEvents rows,
  * raid/cheer/sub/redemption are demoActivityEvents, 9600 is the category
  * boundary from demoCategorySegments); labels and colors are
- * EVENT_TYPE_CONFIG's (lib/utils/stream-events.ts). Newest first, the way
+ * EVENT_TYPE_CONFIG's (lib/stream-events/stream-events.ts). Newest first, the way
  * the real feed lists them. `filter` is ActivityFeedClient's real bucket.
  */
 export interface DemoFeedRow {
@@ -599,7 +599,7 @@ export const demoVodLibraryRows: DemoVodLibraryRow[] = [
  * strip. Where the type already exists in the demo stream the offsets are
  * derived from it, so the strip cannot drift from the arrays the charts
  * count; the rest are made-up offsets on the same 4h 12m clock. Colors are
- * EVENT_TYPE_CONFIG's classes (lib/utils/stream-events.ts).
+ * EVENT_TYPE_CONFIG's classes (lib/stream-events/stream-events.ts).
  */
 export interface DemoEventStripType {
   /** Stable id for tracking: analytics property values must not follow copy edits. */

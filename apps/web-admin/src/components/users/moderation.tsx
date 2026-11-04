@@ -25,8 +25,8 @@ import {
   deleteUserAction,
   removeUserTotpAction,
   unbanUserAction,
-  type ModerationResult,
-} from "@/actions/users";
+} from "@/actions/users/users";
+import type { ModerationResult } from "@/types/users";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -34,7 +34,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 
 // Ban, lift ban and delete are opened from the Actions menu in the user header,
 // so they take `open` from outside and draw no trigger of their own.
@@ -339,8 +339,8 @@ export function RemoveFactorButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Remove {label}?</AlertDialogTitle>
           <AlertDialogDescription>
-            They can&apos;t use it to sign in to this dashboard any more. With no second factor left, their next sign-in
-            asks them to set one up again.
+            They can&apos;t use it to sign in to this dashboard any more, and they&apos;re signed out everywhere. With no
+            second factor left, their next sign-in asks them to set one up again.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

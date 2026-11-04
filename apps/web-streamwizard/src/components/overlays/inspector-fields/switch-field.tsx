@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { cn, Label, Switch } from "@repo/ui";
-import { InspectorHint } from "../editor/inspector-hint";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
 
 export interface SwitchFieldProps {
   id: string;

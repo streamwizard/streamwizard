@@ -1,12 +1,9 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import {
   ALERT_TEST_BROWSER_EVENT,
   type AlertTestBrowserEventDetail,
@@ -29,6 +26,8 @@ import {
   type FetchedAdSchedule,
 } from "./ad-widget-state";
 import { AD_KEYFRAMES, AD_PRESET_COMPONENTS, GOAL_KEYFRAMES, SWAP_ANIMATION } from "./presets";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
+import { EditorHint } from "../editor-hint";
 
 export interface AdWidgetRendererProps {
   item: OverlayItem;
@@ -86,35 +85,6 @@ function useFetchedSchedule(isEditor: boolean, token: string | undefined, refres
   return result;
 }
 
-function EditorHint({ title, body }: { title: string; body: string }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 4,
-        border: "1.5px dashed rgba(158,122,255,0.5)",
-        borderRadius: 8,
-        color: "rgba(255,255,255,0.6)",
-        fontFamily: "sans-serif",
-        fontSize: 13,
-        lineHeight: 1.35,
-        textAlign: "center",
-        padding: 10,
-        overflow: "hidden",
-      }}
-    >
-      <strong style={{ color: "rgba(255,255,255,0.85)", fontSize: 14 }}>{title}</strong>
-      <span>{body}</span>
-    </div>
-  );
-}
-
 export function AdWidgetRenderer({ item, scene, isEditor = false }: AdWidgetRendererProps) {
   const cfg = useMemo(() => normalizeAdWidgetConfig(item.config), [item.config]);
   useGoogleFonts(useMemo(() => [cfg.fontFamily], [cfg.fontFamily]));
@@ -144,11 +114,11 @@ export function AdWidgetRenderer({ item, scene, isEditor = false }: AdWidgetRend
     setState((prev) => applyAdFrame(prev, frame, at));
   }, []);
 
+  const wsUrl = useOverlayWsUrl();
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
     return subscribeToWsRoom(token, wsUrl, (raw) => apply(raw as AdWidgetFrame));
-  }, [token, apply]);
+  }, [token, wsUrl, apply]);
 
   // Editor: Local test fires, the heads-up preview, and the reset.
   useEffect(() => {
@@ -241,17 +211,18 @@ export function AdWidgetRenderer({ item, scene, isEditor = false }: AdWidgetRend
   if (shown.phase === "idle") {
     if (!isEditor) return null;
     if (fetched.status === "missing_scope") {
-      return <EditorHint title="Ads" body="Reconnect Twitch in this widget's settings so StreamWizard can read your ad schedule." />;
+      return <EditorHint compact title="Ads" body="Reconnect Twitch in this widget's settings so StreamWizard can read your ad schedule." />;
     }
     if (nextAdAt !== null && nextAdAt > now) {
       return (
         <EditorHint
+          compact
           title="Ads"
           body={`Next ad in ${formatAdTime((nextAdAt - now) / 1000)}. Shows on stream ${cfg.warnMinutes} min before.`}
         />
       );
     }
-    return <EditorHint title="Ads" body="No ad scheduled right now. Shows before and during your ad breaks." />;
+    return <EditorHint compact title="Ads" body="No ad scheduled right now. Shows before and during your ad breaks." />;
   }
 
   const Preset = AD_PRESET_COMPONENTS[cfg.preset];

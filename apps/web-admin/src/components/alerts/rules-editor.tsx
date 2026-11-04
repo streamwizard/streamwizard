@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui";
-import { saveRuleConfig, resetRuleConfig } from "@/actions/alert-rules";
+import { saveRuleConfig, resetRuleConfig } from "@/actions/alerts/rules";
 import {
   ResponsiveDialog,
   ResponsiveDialogClose,
@@ -39,8 +39,8 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
+} from "@/components/shared/responsive-dialog";
+import { StatusIndicator } from "@/components/shared/status-indicator";
 import { useWideScreen } from "@/hooks/use-wide-screen";
 import { cn } from "@/lib/utils";
 
@@ -114,40 +114,40 @@ function useRuleForm(rule: RuleView) {
   const save = (onSaved?: () => void) =>
     startTransition(async () => {
       setError(null);
-      try {
-        await saveRuleConfig({
-          ruleId: rule.id,
-          enabled,
-          warn: parse(warnText),
-          crit: parse(critText),
-          forTicks: parse(ticksText),
-          envs,
-        });
-        router.refresh();
-        toast.success(`Saved ${rule.title}`);
-        onSaved?.();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Couldn't save");
+      const { error } = await saveRuleConfig({
+        ruleId: rule.id,
+        enabled,
+        warn: parse(warnText),
+        crit: parse(critText),
+        forTicks: parse(ticksText),
+        envs,
+      });
+      if (error) {
+        setError(error);
+        return;
       }
+      router.refresh();
+      toast.success(`Saved ${rule.title}`);
+      onSaved?.();
     });
 
   const reset = (onReset?: () => void) =>
     startTransition(async () => {
       setError(null);
-      try {
-        await resetRuleConfig(rule.id);
-        // Back to what the form shows for a rule without an override row.
-        setEnabled(rule.defaultEnabled);
-        setWarnText("");
-        setCritText("");
-        setTicksText("");
-        setEnvs(null);
-        router.refresh();
-        toast.success(`${rule.title} is back on its defaults`);
-        onReset?.();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Couldn't reset");
+      const { error } = await resetRuleConfig(rule.id);
+      if (error) {
+        setError(error);
+        return;
       }
+      // Back to what the form shows for a rule without an override row.
+      setEnabled(rule.defaultEnabled);
+      setWarnText("");
+      setCritText("");
+      setTicksText("");
+      setEnvs(null);
+      router.refresh();
+      toast.success(`${rule.title} is back on its defaults`);
+      onReset?.();
     });
 
   return {

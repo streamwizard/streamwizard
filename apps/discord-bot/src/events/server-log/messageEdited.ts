@@ -2,7 +2,7 @@ import { Events } from "discord.js";
 import { emitServerEvent, shouldLogMessage } from "../../lib/server-log/emit";
 import type { BotEvent } from "../../types/discord";
 import { channelRef, messageText, userRef } from "../../lib/server-log/refs";
-import { archiveMessageUpdate } from "../../lib/tickets/archive";
+import { archiveMessageUpdate } from "@/lib/tickets/transcript/archive";
 
 // Discord also sends MessageUpdate when a link preview unfurls or a message is
 // pinned; only real text edits are logged. The old text is only known when the

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import type { ObsInstanceLifecyclePayload } from "@repo/types";
+import type { ObsInstanceLifecyclePayload } from "@repo/types/overlay-ws";
 import { supabase } from "@repo/supabase/next/client";
 import { env } from "@/lib/env";
 

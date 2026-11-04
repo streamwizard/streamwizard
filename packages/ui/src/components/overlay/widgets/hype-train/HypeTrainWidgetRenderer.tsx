@@ -1,8 +1,5 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import {
   Fragment,
   useCallback,
@@ -17,7 +14,7 @@ import {
 } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import {
   ALERT_TEST_BROWSER_EVENT,
   type AlertTestBrowserEventDetail,
@@ -70,6 +67,7 @@ import {
   trainDesignWidth,
   trainPaint,
 } from "./hype-train-parts";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
 
 export interface HypeTrainWidgetRendererProps {
   item: OverlayItem;
@@ -467,11 +465,11 @@ export function HypeTrainWidgetRenderer({ item, scene, isEditor = false }: HypeT
   const token = scene?.subscriber_token;
 
   // Real events and Live tests over the scene's WS room.
+  const wsUrl = useOverlayWsUrl();
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
     return subscribeToWsRoom(token, wsUrl, (raw) => onFrame(raw as HypeTrainFrame));
-  }, [token, onFrame]);
+  }, [token, wsUrl, onFrame]);
 
   // Editor: Local test fires arrive as a browser event.
   useEffect(() => {

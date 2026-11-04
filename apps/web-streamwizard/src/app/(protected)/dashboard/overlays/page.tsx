@@ -1,6 +1,6 @@
 import { getOverlayScenes } from "@/actions/overlays/scenes";
 import { getOverlayTemplates } from "@/actions/overlays/templates";
-import { OverlayScenesList } from "@/components/overlays/editor/overlay-scenes-list";
+import { OverlayScenesList } from "@/components/overlays/list/overlay-scenes-list";
 import { redirect } from "next/navigation";
 import { createClient } from "@repo/supabase/next/server";
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { mintWsUrl } from "@repo/obs-web";
-import { adminNodeToken } from "@/lib/node-token";
+import { adminNodeToken } from "@/lib/nodes/node-token";
 
 const INITIAL_RECONNECT_DELAY_MS = 1000;
 const MAX_RECONNECT_DELAY_MS = 30000;
@@ -56,7 +56,7 @@ type ServerMessage =
 // Connects straight to obs-instance-manager's /admin/metrics/stream from the
 // browser. Auth is a short-lived single-use ws-ticket minted over an
 // authenticated POST (an admin node token in the Authorization header, never on
-// the socket) -- see lib/node-token.ts. The stream is wrapped in a Twitch-style
+// the socket) -- see lib/nodes/node-token.ts. The stream is wrapped in a Twitch-style
 // session lifecycle: session_welcome, then notification frames, with
 // session_keepalive heartbeats and session_reconnect on node drain.
 export function useNodeMetricsStream(nodeId: string, nodeStatus: string, apiUrl: string | null) {

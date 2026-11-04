@@ -1,10 +1,17 @@
 import { reportError } from "@repo/sentry";
-import { handleStreamOffline } from "./handlers/stream-offline";
-import * as TwitchSchema from "@repo/schemas";
-import type { HandlerRegistry } from "./registry";
-import { handleStreamOnline } from "./handlers/stream-online";
-import { handleChannelUpdate } from "./handlers/channel-update";
-import { handleUserAuthorizationRevoke } from "./handlers/user-authorization-revoke";
+import { handleStreamOffline } from "@/modules/eventsub/handlers/stream-offline";
+import { ChannelUpdateEventSchema } from "@repo/schemas/eventsub/channel";
+import {
+  StreamOfflineEventSchema,
+  StreamOnlineEventSchema,
+  type StreamOfflineEvent,
+  type StreamOnlineEvent,
+} from "@repo/schemas/eventsub/stream";
+import { UserAuthorizationRevokeEventSchema } from "@repo/schemas/eventsub/user";
+import type { HandlerRegistry } from "@/modules/eventsub/registry";
+import { handleStreamOnline } from "@/modules/eventsub/handlers/stream-online";
+import { handleChannelUpdate } from "@/modules/eventsub/handlers/channel-update";
+import { handleUserAuthorizationRevoke } from "@/modules/eventsub/handlers/user-authorization-revoke";
 
 /**
  * The long handlers (clip sync on stream.offline can page through thousands of
@@ -20,19 +27,19 @@ export const registerTwitchHandlers = (handlers: HandlerRegistry) => {
   // stream offline event
   handlers.registerTwitchHandler(
     "stream.offline",
-    async (event: TwitchSchema.StreamOfflineEvent, context) => {
+    async (event: StreamOfflineEvent, context) => {
       detached("eventsub.stream-offline", event.broadcaster_user_id, handleStreamOffline(event, context.twitchApi));
     },
-    TwitchSchema.StreamOfflineEventSchema,
+    StreamOfflineEventSchema,
   );
 
   // stream online event
   handlers.registerTwitchHandler(
     "stream.online",
-    async (event: TwitchSchema.StreamOnlineEvent, context) => {
+    async (event: StreamOnlineEvent, context) => {
       detached("eventsub.stream-online", event.broadcaster_user_id, handleStreamOnline(event, context.twitchApi));
     },
-    TwitchSchema.StreamOnlineEventSchema,
+    StreamOnlineEventSchema,
   );
 
   // channel update event
@@ -41,7 +48,7 @@ export const registerTwitchHandlers = (handlers: HandlerRegistry) => {
     async (event, context) => {
       detached("eventsub.channel-update", event.broadcaster_user_id, handleChannelUpdate(event, context.twitchApi));
     },
-    TwitchSchema.ChannelUpdateEventSchema,
+    ChannelUpdateEventSchema,
   );
 
   // GDPR: delete all user data when a user revokes app authorization
@@ -50,6 +57,6 @@ export const registerTwitchHandlers = (handlers: HandlerRegistry) => {
     async (event) => {
       await handleUserAuthorizationRevoke(event);
     },
-    TwitchSchema.UserAuthorizationRevokeEventSchema,
+    UserAuthorizationRevokeEventSchema,
   );
 };

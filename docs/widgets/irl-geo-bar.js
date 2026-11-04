@@ -68,9 +68,8 @@ function saveState() {
   if (!stateUrl || !subscriberToken || !overlayItemId) return;
   fetch(stateUrl, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + subscriberToken },
     body: JSON.stringify({
-      token: subscriberToken,
       itemId: overlayItemId,
       state: { total_meters: totalMeters },
     }),
@@ -115,7 +114,7 @@ window.addEventListener('onWidgetLoad', function (e) {
 
   // Restore persisted distance
   if (stateUrl && subscriberToken && overlayItemId) {
-    fetch(stateUrl + '?token=' + encodeURIComponent(subscriberToken) + '&itemId=' + encodeURIComponent(overlayItemId))
+    fetch(stateUrl + '?itemId=' + encodeURIComponent(overlayItemId), { headers: { 'Authorization': 'Bearer ' + subscriberToken } })
       .then(function (r) { return r.json(); })
       .then(function (body) {
         if (body.state && body.state.total_meters != null) {

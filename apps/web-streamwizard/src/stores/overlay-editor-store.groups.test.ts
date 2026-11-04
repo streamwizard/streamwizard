@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { useOverlayStore } from "./overlay-editor-store";
-import { orderedChildren, topFirstRootIds } from "@/components/overlays/editor/item-groups";
-import type { OverlayItem, OverlaySceneWithItems } from "@/types/overlays";
+import { orderedChildren, topFirstRootIds } from "@/components/overlays/editor/layers/item-groups";
+import type { OverlayItem, OverlaySceneWithItems } from "@repo/ui/components/overlay/types/item";
 
 /** The acceptance list on SW-236, plus nesting and naming. */
 

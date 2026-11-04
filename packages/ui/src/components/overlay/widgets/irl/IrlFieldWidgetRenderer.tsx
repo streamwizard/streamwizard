@@ -1,8 +1,11 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import type { IrlFieldWidgetItemConfig, IrlFieldWidgetType, OverlayItem, OverlayScene } from "../../types";
-import { DEFAULT_IRL_FIELD_WIDGET_ITEM_CONFIG, IRL_FIELD_WIDGET_TYPES } from "../../types";
+import type { IrlFieldWidgetType } from "../../types/base";
+import type { IrlFieldWidgetItemConfig } from "../../types/widgets";
+import type { OverlayItem, OverlayScene } from "../../types/item";
+import { IRL_FIELD_WIDGET_TYPES } from "../../types/base";
+import { DEFAULT_IRL_FIELD_WIDGET_ITEM_CONFIG } from "../../types/widgets";
 import { useIrlGeoData } from "./use-irl-geo-data";
 import { useIrlGeoContext } from "../../hooks/use-irl-geo-context";
 

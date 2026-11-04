@@ -1,7 +1,8 @@
 import { escapeMarkdown, type APIEmbedField, type EmbedBuilder } from "discord.js";
-import { isPlatformEventType, type PlatformEventPayloads, type PlatformEventType } from "@repo/types";
-import type { PlatformEvent } from "@repo/supabase/queries/platform-events";
-import { formatTicketNumber } from "@repo/supabase/queries/tickets";
+import { isPlatformEventType, type PlatformEventType } from "@repo/schemas/platform-events";
+import type { PlatformEventPayloads } from "@repo/types/platform-events";
+import type { PlatformEvent } from "@repo/supabase/queries/platform/events";
+import { formatTicketNumber } from "@repo/supabase/queries/tickets/tickets";
 import {
   DESCRIPTION_MAX,
   base,

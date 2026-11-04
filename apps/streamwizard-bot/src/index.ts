@@ -3,6 +3,7 @@ process.on("uncaughtException", (err) => { reportFatal(err, "streamwizard-bot");
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import { configureTracking, flushTracking } from "@repo/posthog/server";
 import { flushSentry, reportError, reportFatal } from "@repo/sentry";
+import { describeError, toSafeError } from "@repo/sentry/safe-error";
 import { flushChatCommands } from "./functions/trackChatCommand";
 import { handlers } from "./handlers/eventHandler";
 import { ConduitShardManager, parseShardIds, type EventSubLifecycleEvent } from "@repo/twitch-eventsub";
@@ -12,6 +13,7 @@ import { createEventSubLogGroup } from "./lib/eventsub-log-group";
 import { createEventSubTelemetry, createShardHeartbeat } from "./lib/eventsub-telemetry";
 import { overlayWsClient } from "./overlay-ws-client";
 import { isMetricsEnabled, initMetrics, BUCKETS } from "@repo/metrics";
+import { serviceAuthHeader } from "@repo/service-token";
 
 initMetrics(BUCKETS.bot);
 
@@ -21,7 +23,7 @@ const websocketUrl = env.WS_SERVER_URL;
 async function main() {
   try {
     if (websocketUrl) {
-      overlayWsClient.connect(websocketUrl, env.SUPABASE_SECRET_KEY);
+      overlayWsClient.connect(websocketUrl, () => serviceAuthHeader("bot"));
     }
 
     // One receiver per conduit shard. Each shard gets its own logger and
@@ -60,7 +62,7 @@ async function main() {
     // the shards reconnect on their own, and a Twitch outage must not make
     // Swarm restart the bot in a loop. eventsub_shard metrics cover that.
     const healthServer = Bun.serve({
-      port: Number(process.env.PORT ?? 8030),
+      port: env.PORT,
       fetch(req) {
         const url = new URL(req.url);
         if (url.pathname === "/health") {
@@ -86,14 +88,14 @@ async function main() {
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
 
-    console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
+    console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
     console.log(`[eventsub] running shards ${shards.getShardIds().join(", ")} of ${env.EVENTSUB_SHARD_COUNT}`);
     await shards.start();
   } catch (error) {
     // Caught here, so the unhandledRejection hook above never sees it —
     // capture explicitly or a failed startup is invisible in Sentry.
-    console.error("❌ Failed to start receiver:", error);
-    Sentry.captureException(error);
+    console.error(`[eventsub] failed to start receiver: ${describeError(error)}`);
+    Sentry.captureException(toSafeError(error));
     await flushSentry();
     process.exit(1);
   }

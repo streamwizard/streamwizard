@@ -1,5 +1,5 @@
 import { escapeMarkdown, PermissionFlagsBits, time, TimestampStyles, type GuildMember } from "discord.js";
-import { DEFAULT_VOICE_NAME_TEMPLATE } from "@repo/supabase/queries/discord-voice";
+import { DEFAULT_VOICE_NAME_TEMPLATE } from "@repo/supabase/queries/discord/voice";
 import { asTempVoiceChannel, refreshVoicePanel } from "./channel";
 import { isVoiceStaff, serialized } from "./command";
 import { renameTempChannel } from "./rename";

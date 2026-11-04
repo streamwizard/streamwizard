@@ -1,5 +1,6 @@
 import { createEnv } from "@t3-oss/env-nextjs"
 import { z } from "zod"
+import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk"
 
 // Derive NEXT_PUBLIC_ vars from their non-prefixed Doppler counterparts so they
 // exist in process.env before createEnv validates them. The next.config.ts env:
@@ -27,12 +28,18 @@ deriveEnv(
 );
 
 export const env = createEnv({
-  server: {
+  // Readable on the server and in the browser.
+  shared: {
     NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
+    // Doppler's NODE_ENV, baked in by next.config.ts at build time: the
+    // standalone server forces NODE_ENV=production, so this is the real
+    // environment name. @repo/sentry and @repo/posthog/server read it too.
+    APP_ENV: z.enum(["development", "staging", "production"]).optional(),
+  },
+  server: {
     SUPABASE_URL: z.string().url(),
     SUPABASE_PUBLIC_KEY: z.string().min(1),
     SUPABASE_SECRET_KEY: z.string().min(1),
-    SUPABASE_JWT_SECRET: z.string().min(1),
     TOKEN_ENCRYPTION_KEY: z.string().min(1),
     TWITCH_CLIENT_ID: z.string().min(1),
     TWITCH_CLIENT_SECRET: z.string().min(1),
@@ -43,16 +50,16 @@ export const env = createEnv({
     DISCORD_BOT_TOKEN: z.string().min(1),
     DISCORD_GUILD_ID: z.string().min(1),
     WS_SERVER_URL: z.string(),
-    // Pushes auto-switcher config changes to ws-server /internal/broadcast
-    // so the engine reacts instantly; optional — without it the engine still
-    // picks changes up on its periodic re-fetch.
-    CONSUMER_SECRET: z.string().min(1).optional(),
     STREAMWIZARD_API_URL: z.string().url(),
     SENTRY_DSN: z.string().url().optional(),
     SENTRY_RELEASE: z.string().optional(),
     // Comma-separated account ids that objected to server-side analytics.
     // Nothing is sent to PostHog for them.
     POSTHOG_OPT_OUT_USER_IDS: z.string().optional(),
+    // Server-side PostHog (@repo/posthog/server, the crawler log in the proxy).
+    // The NEXT_PUBLIC_ pair is used when these are unset.
+    POSTHOG_KEY: z.string().min(1).optional(),
+    POSTHOG_HOST: z.url().optional(),
     // Cloudflare R2 for user-uploaded overlay assets (media library). Optional
     // so environments without the feature configured still boot; the asset
     // actions throw a clear error when missing.
@@ -68,6 +75,16 @@ export const env = createEnv({
     // one per environment, never per node. Optional so the app boots without
     // it; node calls fail with a clear error until it is set.
     NODE_TOKEN_SIGNING_JWK: z.string().min(1).optional(),
+    // Ed25519 private JWK that signs this app's ws-server tokens (broadcasts,
+    // socket revokes; @repo/service-token reads it). Secret. Optional: without
+    // it those calls are skipped as unconfigured; a malformed one stops boot.
+    WS_SERVICE_SIGNING_JWK: z.string().min(1).refine(isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR).optional(),
+    // web-admin's origin, allowed to frame the CMS draft previews (src/proxy.ts).
+    CMS_ADMIN_URL: z.url().optional(),
+    // Comma-separated extra hosts allowed to reach the dev server and its HMR
+    // websocket (next.config.ts allowedDevOrigins), e.g. a LAN address for
+    // testing from another device. Dev only; 127.0.0.1 is always allowed.
+    DEV_ALLOWED_ORIGINS: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -83,13 +100,19 @@ export const env = createEnv({
     // Separate from NEXT_PUBLIC_CDN_URL, which serves our own static assets.
     NEXT_PUBLIC_ASSET_CDN_URL: z.string().url().optional(),
     NEXT_PUBLIC_DOCS_URL: z.string().url().optional(),
+    // Shown in the IRL setup when the user has no ingest node with a public
+    // host or Tailscale IP yet (placeholders otherwise).
+    NEXT_PUBLIC_INGEST_HOST: z.string().min(1).optional(),
+    NEXT_PUBLIC_OBS_PULL_HOST: z.string().min(1).optional(),
+    // SRT latency of the OBS pull from the ingest node (lib/obs/obs-irl.ts).
+    NEXT_PUBLIC_OBS_PULL_LATENCY_MS: z.coerce.number().int().positive().optional(),
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
+    APP_ENV: process.env.APP_ENV,
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_PUBLIC_KEY: process.env.SUPABASE_PUBLIC_KEY,
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
-    SUPABASE_JWT_SECRET: process.env.SUPABASE_JWT_SECRET,
     TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY,
     TWITCH_CLIENT_ID: process.env.TWITCH_CLIENT_ID,
     TWITCH_CLIENT_SECRET: process.env.TWITCH_CLIENT_SECRET,
@@ -100,7 +123,6 @@ export const env = createEnv({
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID,
     WS_SERVER_URL: process.env.WS_SERVER_URL,
-    CONSUMER_SECRET: process.env.CONSUMER_SECRET,
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
     SENTRY_DSN: process.env.SENTRY_DSN,
     SENTRY_RELEASE: process.env.SENTRY_RELEASE,
@@ -111,6 +133,11 @@ export const env = createEnv({
     R2_ASSETS_BUCKET: process.env.R2_ASSETS_BUCKET,
     CMS_REVALIDATE_SECRET: process.env.CMS_REVALIDATE_SECRET,
     NODE_TOKEN_SIGNING_JWK: process.env.NODE_TOKEN_SIGNING_JWK,
+    WS_SERVICE_SIGNING_JWK: process.env.WS_SERVICE_SIGNING_JWK,
+    POSTHOG_KEY: process.env.POSTHOG_KEY,
+    POSTHOG_HOST: process.env.POSTHOG_HOST,
+    CMS_ADMIN_URL: process.env.CMS_ADMIN_URL,
+    DEV_ALLOWED_ORIGINS: process.env.DEV_ALLOWED_ORIGINS,
     // Derived in next.config.ts env: block from their non-prefixed Doppler counterparts
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -123,6 +150,9 @@ export const env = createEnv({
     NEXT_PUBLIC_CDN_URL: process.env.NEXT_PUBLIC_CDN_URL,
     NEXT_PUBLIC_ASSET_CDN_URL: process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     NEXT_PUBLIC_DOCS_URL: process.env.NEXT_PUBLIC_DOCS_URL,
+    NEXT_PUBLIC_INGEST_HOST: process.env.NEXT_PUBLIC_INGEST_HOST,
+    NEXT_PUBLIC_OBS_PULL_HOST: process.env.NEXT_PUBLIC_OBS_PULL_HOST,
+    NEXT_PUBLIC_OBS_PULL_LATENCY_MS: process.env.NEXT_PUBLIC_OBS_PULL_LATENCY_MS,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

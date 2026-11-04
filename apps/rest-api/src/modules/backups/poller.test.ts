@@ -10,10 +10,10 @@ mock.module("@repo/sentry", () => ({
 }));
 
 // Keeps the env schema (and its required prod vars) out of the test.
-mock.module("./config", () => ({ backupConfig: null }));
+mock.module("@/modules/backups/config", () => ({ backupConfig: null }));
 
-const { createBackupPoller, nextHealth } = await import("./poller");
-const { downloadSnapshotFile, fetchPbs, fetchPbsUsage, fetchPve } = await import("./sources");
+const { createBackupPoller, nextHealth } = await import("@/modules/backups/poller");
+const { downloadSnapshotFile, fetchPbs, fetchPbsUsage, fetchPve } = await import("@/modules/backups/sources");
 const { createProxmoxClient, pbsAuthorization, pveAuthorization, ProxmoxApiError } = await import("@repo/proxmox");
 
 const NOW = new Date("2026-09-28T12:00:00Z");

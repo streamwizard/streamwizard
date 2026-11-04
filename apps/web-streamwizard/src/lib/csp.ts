@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 export type CspOptions = {
   // Monaco Editor (only the widget editor route loads it) needs 'unsafe-eval'
   // for its language services and spawns same-origin module workers. Monaco is
@@ -31,10 +33,10 @@ const TWITCH_CLIP_CDN = "https://*.cloudfront.net";
 // drop 'unsafe-inline' from script-src.
 export function buildCsp(nonce: string, options: CspOptions = {}): string {
   const { monaco = false, cloudflareAccess = false, frameAncestor = null } = options;
-  const supabaseUrl = process.env.SUPABASE_URL ?? "";
+  const supabaseUrl = env.SUPABASE_URL ?? "";
   // Supabase realtime uses WebSocket — derive wss:// from the https:// URL
   const supabaseWs = supabaseUrl.replace(/^https:\/\//, "wss://");
-  const wsServerUrl = process.env.WS_SERVER_URL ?? "";
+  const wsServerUrl = env.WS_SERVER_URL ?? "";
 
   const directives: string[] = [
     "default-src 'self'",
@@ -48,7 +50,7 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     // Google Fonts actual font files, and fonts uploaded to the media library
     // for overlay text, previewed in the editor.
-    ["font-src 'self' https://fonts.gstatic.com", process.env.NEXT_PUBLIC_ASSET_CDN_URL]
+    ["font-src 'self' https://fonts.gstatic.com", env.NEXT_PUBLIC_ASSET_CDN_URL]
       .filter(Boolean)
       .join(" "),
     // Twitch CDN images + our own R2 CDN (e.g. error page gifs) + data URIs used
@@ -60,8 +62,8 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       "https://cdn.7tv.app https://cdn.betterttv.net https://cdn.frankerfacez.com",
       // Klipy: the GIF provider behind Discord's GIF picker.
       "https://klipy.com https://*.klipy.com",
-      process.env.NEXT_PUBLIC_CDN_URL,
-      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+      env.NEXT_PUBLIC_CDN_URL,
+      env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),
@@ -71,7 +73,7 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     //
     // CloudFront is where Twitch's signed clip MP4s land: the overlays page's
     // clips rotator plays the landscape_download_url that /helix/clips/downloads
-    // hands back (see lib/showcase-clip-videos), and that URL is on an opaque
+    // hands back (see lib/public/showcase-clip-videos), and that URL is on an opaque
     // per-distribution CloudFront host, not a twitch.tv one. Wildcarded because
     // the distribution is Twitch's to change and a pinned host would fail
     // silently — the rotator treats a blocked load as a dead clip and skips to
@@ -82,8 +84,8 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       TWITCH_CLIP_CDN,
       // Discord GIFs (Klipy) play as looping mp4s.
       "https://klipy.com https://*.klipy.com",
-      process.env.NEXT_PUBLIC_CDN_URL,
-      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+      env.NEXT_PUBLIC_CDN_URL,
+      env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),
@@ -103,16 +105,16 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
       // Custom-widget previews render in srcdoc iframes, which inherit this
       // policy: widgets fetch state from the overlay app and call the weather
       // and geocoding APIs (see buildWidgetSrcdoc in @repo/ui).
-      process.env.NEXT_PUBLIC_OVERLAY_URL,
+      env.NEXT_PUBLIC_OVERLAY_URL,
       "https://api.open-meteo.com",
       "https://nominatim.openstreetmap.org",
       // Media-library uploads PUT directly to presigned R2 URLs. The AWS SDK
       // signs these virtual-hosted-style (bucket name in the subdomain), so
       // the allowed host must carry the bucket, not just the account id.
-      process.env.R2_ACCOUNT_ID && process.env.R2_ASSETS_BUCKET
-        ? `https://${process.env.R2_ASSETS_BUCKET}.${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+      env.R2_ACCOUNT_ID && env.R2_ASSETS_BUCKET
+        ? `https://${env.R2_ASSETS_BUCKET}.${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
         : "",
-      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+      env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),

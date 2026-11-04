@@ -6,7 +6,7 @@ import {
   listUnmatchedBackupEvents,
   markBackupEventsMatched,
   type BackupEventLiteRow,
-} from "@repo/supabase/queries/backups";
+} from "@repo/supabase/queries/platform/backups";
 
 /** Unmatched events older than this are dropped even if discovery never ran. */
 const UNMATCHED_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;

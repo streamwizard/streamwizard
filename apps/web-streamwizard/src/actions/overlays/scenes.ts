@@ -1,9 +1,12 @@
 "use server";
 
-import { randomBytes, randomUUID } from "crypto";
+import { guidSchema } from "@repo/schemas/ids";
+import { randomUUID } from "crypto";
+import { randomHexKey } from "@/lib/random-key";
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
-import { track } from "@/lib/track";
+import { toActionError, zodErrorMessage } from "@/lib/action-error";
+import { track } from "@/lib/tracking/track";
 import type { Json } from "@repo/supabase";
 import {
   createOverlayScene as createSceneRow,
@@ -18,16 +21,17 @@ import {
   insertOverlayItemsReturningIds,
   updateOverlayScene as updateSceneRow,
   updateSceneUrlCredentials,
-} from "@repo/supabase/queries/overlays";
-import { createSceneSchema, updateSceneSchema } from "@/schemas/overlay";
-import type { ClipDisplayFieldItemConfig } from "@/types/overlays";
-import { overlayItemFromDbRow } from "@/types/overlays";
+} from "@repo/supabase/queries/overlays/overlays";
+import { updateSceneSchema } from "@/schemas/overlay";
+import { createSceneInputSchema } from "@/schemas/overlay-actions";
+import type { ClipDisplayFieldItemConfig } from "@repo/ui/components/overlay/types/clips";
+import { overlayItemFromDbRow } from "@repo/ui/components/overlay/types/item";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { tryAuthContext } from "@/lib/auth";
-import { isLegacySlug } from "@/lib/overlay-slug";
-import { revokeWsSockets } from "@/lib/ws-revoke";
-import { sanitizeGroups } from "@/components/overlays/editor/item-groups";
-import { OVERLAYS_ERROR_SCOPE, generateSlug } from "./shared";
+import { generateSlug, isLegacySlug } from "@/lib/overlays/overlay-slug";
+import { revokeWsSockets } from "@/lib/overlays/ws-revoke";
+import { sanitizeGroups } from "@/components/overlays/editor/layers/item-groups";
+import { OVERLAYS_ERROR_SCOPE } from "@/lib/overlays/overlay-items";
 
 export async function getOverlayScenes() {
   const ctx = await tryAuthContext();
@@ -35,8 +39,7 @@ export async function getOverlayScenes() {
 
   const { data, error } = await getSceneRows(ctx.supabase, ctx.user.id);
   if (error) {
-    reportError(error, OVERLAYS_ERROR_SCOPE);
-    return { data: null, error: error.message };
+    return { data: null, error: toActionError(error, OVERLAYS_ERROR_SCOPE, "Couldn't load your overlays. Try again?") };
   }
   return { data, error: null };
 }
@@ -44,11 +47,12 @@ export async function getOverlayScenes() {
 export async function getOverlayScene(id: string) {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
+  const parsedId = guidSchema.safeParse(id);
+  if (!parsedId.success) return { data: null, error: "Not found" };
 
-  const { scene, items, groups, error } = await getSceneWithItems(ctx.supabase, id, ctx.user.id);
+  const { scene, items, groups, error } = await getSceneWithItems(ctx.supabase, parsedId.data, ctx.user.id);
   if (error) {
-    reportError(error, OVERLAYS_ERROR_SCOPE);
-    return { data: null, error: error.message };
+    return { data: null, error: toActionError(error, OVERLAYS_ERROR_SCOPE, "Couldn't load this overlay. Try again?") };
   }
 
   return {
@@ -75,8 +79,9 @@ export async function createOverlayScene(formData: {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
 
-  const parsed = createSceneSchema.safeParse(formData);
-  if (!parsed.success) return { data: null, error: parsed.error.message };
+  const parsed = createSceneInputSchema.safeParse(formData);
+  if (!parsed.success) return { data: null, error: zodErrorMessage(parsed.error, "Check the overlay name and size.") };
+  const renderMode = parsed.data.render_mode ?? "obs";
 
   const { data, error } = await createSceneRow(ctx.supabase, {
     user_id: ctx.user.id,
@@ -84,18 +89,17 @@ export async function createOverlayScene(formData: {
     slug: generateSlug(parsed.data.name),
     width: parsed.data.width ?? 1920,
     height: parsed.data.height ?? 1080,
-    render_mode: formData.render_mode ?? "obs",
+    render_mode: renderMode,
     is_active: true,
   });
 
   if (error) {
-    reportError(error, OVERLAYS_ERROR_SCOPE);
-    return { data: null, error: error.message };
+    return { data: null, error: toActionError(error, OVERLAYS_ERROR_SCOPE, "Couldn't create the overlay. Try again?") };
   }
 
   await track(
     "overlay_created",
-    { overlay_id: data.id, template: "blank", render_mode: formData.render_mode ?? "obs" },
+    { overlay_id: data.id, template: "blank", render_mode: renderMode },
     ctx.user,
   );
   revalidatePath("/dashboard/overlays");
@@ -114,14 +118,13 @@ export async function updateOverlayScene(formData: {
   if (!ctx) return { data: null, error: "Unauthorized" };
 
   const parsed = updateSceneSchema.safeParse(formData);
-  if (!parsed.success) return { data: null, error: parsed.error.message };
+  if (!parsed.success) return { data: null, error: zodErrorMessage(parsed.error, "Check the overlay settings.") };
 
   const { id, ...updates } = parsed.data;
 
   const { data, error } = await updateSceneRow(ctx.supabase, id, ctx.user.id, updates);
   if (error) {
-    reportError(error, OVERLAYS_ERROR_SCOPE);
-    return { data: null, error: error.message };
+    return { data: null, error: toActionError(error, OVERLAYS_ERROR_SCOPE, "Couldn't save the overlay. Try again?") };
   }
 
   // The same action saves the canvas size from the editor; only the two list
@@ -137,14 +140,16 @@ export async function updateOverlayScene(formData: {
   return { data, error: null };
 }
 
-export async function deleteOverlayScene(id: string) {
+export async function deleteOverlayScene(sceneId: string) {
   const ctx = await tryAuthContext();
   if (!ctx) return { success: false, error: "Unauthorized" };
+  const parsedId = guidSchema.safeParse(sceneId);
+  if (!parsedId.success) return { success: false, error: "Not found" };
+  const id = parsedId.data;
 
   const { error } = await deleteSceneRow(ctx.supabase, id, ctx.user.id);
   if (error) {
-    reportError(error, OVERLAYS_ERROR_SCOPE);
-    return { success: false, error: error.message };
+    return { success: false, error: toActionError(error, OVERLAYS_ERROR_SCOPE, "Couldn't delete the overlay. Try again?") };
   }
 
   // Overlays still open with this scene's key lose their socket now.
@@ -155,15 +160,18 @@ export async function deleteOverlayScene(id: string) {
   return { success: true, error: null };
 }
 
-export async function duplicateOverlayScene(id: string) {
+export async function duplicateOverlayScene(sceneId: string) {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { supabase, user } = ctx;
+  const parsedId = guidSchema.safeParse(sceneId);
+  if (!parsedId.success) return { data: null, error: "Not found" };
+  const id = parsedId.data;
 
   const { data: original, error: fetchError } = await getOverlaySceneRow(supabase, id, user.id);
 
-  if (fetchError) reportError(fetchError, OVERLAYS_ERROR_SCOPE);
-  if (fetchError || !original) return { data: null, error: fetchError?.message ?? "Not found" };
+  if (fetchError) return { data: null, error: toActionError(fetchError, OVERLAYS_ERROR_SCOPE, "Couldn't duplicate the overlay. Try again?") };
+  if (!original) return { data: null, error: "Not found" };
 
   const { data: newScene, error: createError } = await createSceneRow(supabase, {
     user_id: user.id,
@@ -173,8 +181,8 @@ export async function duplicateOverlayScene(id: string) {
     height: original.height,
   });
 
-  if (createError) reportError(createError, OVERLAYS_ERROR_SCOPE);
-  if (createError || !newScene) return { data: null, error: createError?.message ?? "Failed to create" };
+  if (createError) return { data: null, error: toActionError(createError, OVERLAYS_ERROR_SCOPE, "Couldn't duplicate the overlay. Try again?") };
+  if (!newScene) return { data: null, error: "Couldn't duplicate the overlay. Try again?" };
 
   const { data: originalItems, error: itemsFetchErr } = await getAllOverlayItemsByScene(supabase, id);
   // Items failing to load means the duplicate is created empty — report it,
@@ -201,8 +209,7 @@ export async function duplicateOverlayScene(id: string) {
       })),
     );
     if (groupErr) {
-      reportError(groupErr, OVERLAYS_ERROR_SCOPE);
-      return { data: null, error: groupErr.message };
+      return { data: null, error: toActionError(groupErr, OVERLAYS_ERROR_SCOPE, "Couldn't duplicate the overlay. Try again?") };
     }
   }
   const copyGroupId = (groupId: string | null) =>
@@ -222,9 +229,9 @@ export async function duplicateOverlayScene(id: string) {
       })),
     );
 
-    if (rootErr) reportError(rootErr, OVERLAYS_ERROR_SCOPE);
-    if (rootErr || !insertedRoots) {
-      return { data: null, error: rootErr?.message ?? "Failed to copy items" };
+    if (rootErr) return { data: null, error: toActionError(rootErr, OVERLAYS_ERROR_SCOPE, "Couldn't duplicate the overlay. Try again?") };
+    if (!insertedRoots || insertedRoots.length !== roots.length) {
+      return { data: null, error: "Couldn't duplicate the overlay. Try again?" };
     }
 
     roots.forEach((row, idx) => {
@@ -248,8 +255,7 @@ export async function duplicateOverlayScene(id: string) {
       if (childRows.length > 0) {
         const { error: childErr } = await insertOverlayItems(supabase, childRows);
         if (childErr) {
-          reportError(childErr, OVERLAYS_ERROR_SCOPE);
-          return { data: null, error: childErr.message };
+          return { data: null, error: toActionError(childErr, OVERLAYS_ERROR_SCOPE, "Couldn't duplicate the overlay. Try again?") };
         }
       }
     }
@@ -274,23 +280,26 @@ export async function duplicateOverlayScene(id: string) {
  * to fetch the new one. Both columns are service-role only, so the write goes
  * through the admin client after the owner check.
  */
-export async function resetSceneUrl(sceneId: string): Promise<{ data: { slug: string } | null; error: string | null }> {
+export async function resetSceneUrl(rawSceneId: string): Promise<{ data: { slug: string } | null; error: string | null }> {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
+  const parsedId = guidSchema.safeParse(rawSceneId);
+  if (!parsedId.success) return { data: null, error: "Not found" };
+  const sceneId = parsedId.data;
 
   const { data: scene, error: fetchError } = await getOverlaySceneRow(ctx.supabase, sceneId, ctx.user.id);
-  if (fetchError) reportError(fetchError, OVERLAYS_ERROR_SCOPE);
-  if (fetchError || !scene) return { data: null, error: fetchError?.message ?? "Not found" };
+  if (fetchError) return { data: null, error: toActionError(fetchError, OVERLAYS_ERROR_SCOPE, "Couldn't reset the overlay URL.") };
+  if (!scene) return { data: null, error: "Not found" };
 
   const { data, error } = await updateSceneUrlCredentials(createAdminClient(), sceneId, ctx.user.id, {
     slug: generateSlug(scene.name),
-    subscriber_token: randomBytes(32).toString("hex"),
+    subscriber_token: randomHexKey(),
   });
 
   revalidatePath("/dashboard/overlays");
   if (error || !data) {
-    if (error) reportError(error, OVERLAYS_ERROR_SCOPE);
-    return { data: null, error: error?.message ?? "Couldn't reset the overlay URL." };
+    if (error) return { data: null, error: toActionError(error, OVERLAYS_ERROR_SCOPE, "Couldn't reset the overlay URL.") };
+    return { data: null, error: "Couldn't reset the overlay URL." };
   }
 
   // Sockets opened with the old token close now, not at the next sweep.

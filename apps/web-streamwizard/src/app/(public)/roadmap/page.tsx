@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { FaGithub } from "react-icons/fa";
-import { absoluteUrl } from "@/lib/seo";
-import { PageHero } from "@/components/public/layout/page-hero";
-import { Reveal } from "@/components/public/home/reveal";
+import { absoluteUrl } from "@/lib/seo/seo";
+import { PageHero } from "@/components/public/common/page-hero";
+import { Reveal } from "@/components/public/common/reveal";
 import { SectionView } from "@/components/public/analytics/section-view";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { Timeline, TimelineTail } from "@/components/public/roadmap/timeline";
 import { TimelineEntry, TimelineItem } from "@/components/public/roadmap/timeline-entry";
+import { LaneChip } from "@/components/public/roadmap/lane-chip";
 import { githubLink } from "@/lib/constant";
-import { BETA, PLANNED, SHIPPED } from "./roadmap-data";
+import { BETA, PLANNED, SHIPPED } from "@/components/public/roadmap/roadmap-data";
 
 /*
  * Out of the index on purpose (SW-308): the page is ~300 words of lane chips
@@ -23,21 +24,6 @@ export const metadata: Metadata = {
   alternates: { canonical: absoluteUrl("/roadmap") },
   robots: { index: false, follow: true },
 };
-
-/* Lane marker sitting on the spine; bg-background masks the line behind it. */
-function LaneChip({ children, tone = "muted" }: { children: string; tone?: "muted" | "purple" }) {
-  return (
-    <Reveal className="pl-10 md:flex md:justify-center md:pl-0">
-      <h2
-        className={`inline-flex rounded-full border border-white/[0.08] bg-background px-3 py-1 font-mono text-xs uppercase tracking-widest ${
-          tone === "purple" ? "text-purple-300" : "text-muted-foreground"
-        }`}
-      >
-        {children}
-      </h2>
-    </Reveal>
-  );
-}
 
 /*
  * The timeline runs future-first: plans fade in at the top, beta work sits in

@@ -4,9 +4,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, PackageCheck, X } from "lucide-react";
-import { approveLibraryEntry, rejectLibraryEntry } from "@/actions/widget-library";
+import { approveLibraryEntry, rejectLibraryEntry } from "@/actions/widget-library/widget-library";
 import { buildWidgetSrcdoc, mergeFieldValues } from "@repo/ui/overlay";
-import type { WidgetFieldSchema } from "@repo/ui/overlay";
+import type { PendingEntry } from "@/types/widget-library";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,20 +29,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@repo/ui";
-
-export interface PendingEntry {
-  id: string;
-  title: string;
-  description: string;
-  tags: string[];
-  created_at: string;
-  overlay_widgets: {
-    html: string;
-    js: string;
-    extra_css: string;
-    fields: WidgetFieldSchema;
-  };
-}
 
 const date = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 

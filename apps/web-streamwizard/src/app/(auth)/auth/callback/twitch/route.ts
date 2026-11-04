@@ -3,25 +3,26 @@ import { NextResponse } from "next/server";
 import { createClient } from "@repo/supabase/next/server";
 import checkEventSubscriptions from "@/server/twitch/eventsub/check-event-subscriptions";
 import { encryptToken } from "@repo/supabase/crypto";
-import { updateTwitchTokens } from "@repo/supabase/queries/user";
-import { getTwitchScopes, setTwitchScopesByUserId } from "@repo/supabase/queries/twitch-scopes";
-import { lostTwitchFeatures } from "@repo/schemas";
+import { updateTwitchTokens } from "@repo/supabase/queries/users/user";
+import { getTwitchScopes, setTwitchScopesByUserId } from "@repo/supabase/queries/twitch/scopes";
+import { lostTwitchFeatures } from "@repo/schemas/twitch-scopes";
 import { validateTwitchToken } from "@repo/twitch-api";
-import { track } from "@/lib/track";
+import { track } from "@/lib/tracking/track";
 import { reportError } from "@repo/sentry";
 import { safeNextPath } from "@/lib/safe-next-path";
-import { twitchAuthorizationUrl } from "@/lib/twitch-authorize";
+import { twitchAuthorizationUrl } from "@/lib/twitch/twitch-authorize";
 import { resolveBroadcasterId } from "@/lib/auth";
+import { env } from "@/lib/env";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const { searchParams } = requestUrl;
-  const isLocalEnv = process.env.NODE_ENV === "development";
+  const isLocalEnv = env.NODE_ENV === "development";
 
   // Use the configured base URL in production to prevent x-forwarded-host spoofing
   const origin = isLocalEnv
     ? requestUrl.origin
-    : (process.env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
+    : (env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
 
   const code = searchParams.get("code");
   // Sanitize next to a relative path only to prevent open redirect
@@ -39,9 +40,10 @@ export async function GET(request: Request) {
   const errorRedirect = (reason: string) =>
     NextResponse.redirect(`${origin}/auth/auth-code-error?provider=twitch&reason=${reason}`);
 
-  if (oauthError) {
-    console.error("[twitch callback] OAuth provider returned an error", {
-      error: oauthError,
+  // access_denied is the user saying no at Twitch; anything else is Twitch or
+  // GoTrue failing the sign-in.
+  if (oauthError && oauthError !== "access_denied") {
+    reportError(new Error(`OAuth provider returned ${oauthError}`), "auth/callback/twitch: provider error", {
       error_code: oauthErrorCode,
       error_description: oauthErrorDescription,
     });
@@ -52,8 +54,7 @@ export async function GET(request: Request) {
     const { error, data } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error || !data) {
-      console.error("[twitch callback] exchangeCodeForSession failed", {
-        message: error?.message,
+      reportError(error ?? new Error("exchangeCodeForSession returned no data"), "auth/callback/twitch: code exchange", {
         status: error?.status,
         code: error?.code,
       });
@@ -64,7 +65,7 @@ export async function GET(request: Request) {
       !data.session?.provider_token ||
       !data.session?.provider_refresh_token
     ) {
-      console.error("[twitch callback] missing provider tokens on session", {
+      reportError(new Error("Session has no Twitch provider tokens"), "auth/callback/twitch: missing tokens", {
         hasProviderToken: !!data.session?.provider_token,
         hasProviderRefreshToken: !!data.session?.provider_refresh_token,
         userId: data.session?.user?.id,
@@ -96,7 +97,7 @@ export async function GET(request: Request) {
     );
 
     if (err) {
-      console.error("[twitch callback] updateTwitchTokens failed", err);
+      reportError(err, "auth/callback/twitch: save tokens", { userId: data.session.user.id });
       return errorRedirect("token_save_failed");
     }
 
@@ -182,9 +183,8 @@ export async function GET(request: Request) {
     return errorRedirect(oauthError === "access_denied" ? "access_denied" : "provider_error");
   }
 
-  console.error("[twitch callback] no code and no error param on request", {
-    url: requestUrl.toString(),
-  });
+  // Crawlers and stale bookmarks land here without a code.
+  console.warn("[twitch callback] no code and no error param on request");
 
   // return the user to an error page with instructions
   return errorRedirect("missing_code");

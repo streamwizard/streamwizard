@@ -1,8 +1,8 @@
 import { Antenna, Layers } from "lucide-react";
 import { SectionView } from "@/components/public/analytics/section-view";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
-import { Reveal } from "@/components/public/home/reveal";
-import { CheckItem } from "@/components/public/layout/check-item";
+import { TrackedLink } from "@/components/shared/tracked-link";
+import { Reveal } from "@/components/public/common/reveal";
+import { CheckItem } from "@/components/public/common/check-item";
 import { docsLink } from "@/lib/constant";
 import { SignalPath } from "./signal-path";
 

@@ -2,14 +2,14 @@ import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getCmsContentForEditor, listCmsRevisions } from "@repo/supabase/queries/cms/content";
 import { RevisionList } from "@/components/content/revision-list";
+import { isGuid } from "@repo/schemas/ids";
 
 export const dynamic = "force-dynamic";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function RevisionsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!UUID.test(id)) notFound();
+  if (!isGuid(id)) notFound();
   const [{ data: row, error }, revisions] = await Promise.all([
     getCmsContentForEditor(supabaseAdmin, id),
     listCmsRevisions(supabaseAdmin, id),

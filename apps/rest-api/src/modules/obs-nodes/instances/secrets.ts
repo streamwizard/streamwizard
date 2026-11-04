@@ -1,11 +1,8 @@
 import { randomBytes } from "crypto";
-import type { Context, Env } from "hono";
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { decryptToken, encryptToken } from "@repo/supabase/crypto";
-import {
-  getObsInstancePasswordFieldsForNode,
-  setObsInstanceVncPasswordIfMissingForNode,
-} from "@repo/supabase/queries/obs-nodes";
+import { getObsInstancePasswordFieldsForNode, setObsInstanceVncPasswordIfMissingForNode } from "@repo/supabase/queries/obs-nodes/instances";
 
 // OBS nodes never hold TOKEN_ENCRYPTION_KEY. rest-api decrypts an instance's
 // OBS WebSocket and VNC passwords here and hands them only to the node that
@@ -51,20 +48,23 @@ async function ensureVncPassword(instanceId: string, nodeId: string): Promise<st
   return decryptColumns(fields.vnc_password_ciphertext, fields.vnc_password_iv, fields.vnc_password_tag);
 }
 
+export interface InstanceSecrets {
+  obs_ws_password: string | null;
+  vnc_password: string;
+}
+
 /**
  * GET /api/obs-nodes/instances/:id/secrets
- * → { obs_ws_password: string | null, vnc_password: string }
  *
- * 404 for a missing instance and for another node's instance alike, so a node
- * can't tell whether an id exists elsewhere.
+ * "not_found" for a missing instance and for another node's instance alike,
+ * so a node can't tell whether an id exists elsewhere.
  */
-export async function getInstanceSecrets(c: Context<Env, "/:id/secrets">) {
-  c.header("Cache-Control", "no-store");
-  const nodeId = c.get("nodeId");
-  const id = c.req.param("id");
-
+export async function readInstanceSecrets(
+  nodeId: string,
+  id: string,
+): Promise<{ ok: true; secrets: InstanceSecrets } | { ok: false; reason: "not_found" | "failed" }> {
   const fields = await getObsInstancePasswordFieldsForNode(supabase, id, nodeId);
-  if (!fields) return c.json({ error: "Instance not found" }, 404);
+  if (!fields) return { ok: false, reason: "not_found" };
 
   try {
     const obsWsPassword = decryptColumns(
@@ -81,14 +81,14 @@ export async function getInstanceSecrets(c: Context<Env, "/:id/secrets">) {
       }
       vncPassword = await ensureVncPassword(id, nodeId);
       // The row was deleted between the read and the write.
-      if (vncPassword === null) return c.json({ error: "Instance not found" }, 404);
+      if (vncPassword === null) return { ok: false, reason: "not_found" };
     }
 
-    return c.json({ obs_ws_password: obsWsPassword, vnc_password: vncPassword });
+    return { ok: true, secrets: { obs_ws_password: obsWsPassword, vnc_password: vncPassword } };
   } catch (err) {
-    // Message only: decrypt errors never contain the plaintext, but the
-    // response body must never be logged.
-    console.error(`[obs-nodes] instance secrets failed for ${id}: ${(err as Error).message}`);
-    return c.json({ error: "Could not read instance secrets" }, 500);
+    // Decrypt errors never contain the plaintext; the response body (the
+    // passwords) is never logged or reported.
+    reportError(err, "obs-nodes: instance secrets", { instanceId: id });
+    return { ok: false, reason: "failed" };
   }
 }

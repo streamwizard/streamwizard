@@ -14,8 +14,10 @@ type ObsInstanceUpdate = Database["public"]["Tables"]["obs_instances"]["Update"]
  * Columns an OBS node may see. Everything except the encrypted OBS WebSocket
  * and VNC password columns: a node gets those passwords in plaintext, for its
  * own instances only, from GET /api/obs-nodes/instances/:id/secrets, and never
- * holds TOKEN_ENCRYPTION_KEY. Every node-facing read below uses this list
- * instead of "*", so a new secret column stays hidden until it's added here.
+ * holds TOKEN_ENCRYPTION_KEY. Every node-facing and user-facing read below uses
+ * this list instead of "*", so a new secret column stays hidden until it's
+ * added here. Only getInstanceObsWsPasswordFields and the PASSWORD_COLUMNS
+ * read select the encrypted columns.
  */
 export const NODE_INSTANCE_COLUMNS =
   "id, user_id, node_id, container_id, container_name, resolution, status, vram_allocated_mb, memory_mb, cpu_quota, shm_size, config_template, subscription_id, storage_quota_mb, used_storage_bytes, created_at, updated_at" as const;
@@ -34,12 +36,14 @@ export type NodeObsInstance = Omit<ObsInstance, PasswordColumn>;
 /** The encrypted password columns of one instance. Server-side only. */
 export type ObsInstancePasswordFields = Pick<ObsInstance, PasswordColumn>;
 
+/** Instance rows of one user or one node, with the columns a node may see. */
+function nodeInstances(client: DBClient, owner: "user_id" | "node_id", id: string) {
+  return client.from("obs_instances").select(NODE_INSTANCE_COLUMNS).eq(owner, id);
+}
+
 /** Returns the most recent running instance for the given user, or null. */
-export async function getUserRunningInstance(client: DBClient, userId: string): Promise<ObsInstance | null> {
-  const { data } = await client
-    .from("obs_instances")
-    .select("*")
-    .eq("user_id", userId)
+export async function getUserRunningInstance(client: DBClient, userId: string): Promise<NodeObsInstance | null> {
+  const { data } = await nodeInstances(client, "user_id", userId)
     .eq("status", "running")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -48,22 +52,18 @@ export async function getUserRunningInstance(client: DBClient, userId: string): 
 }
 
 /** Returns the most recent instance for the user regardless of status, or null. */
-export async function getUserLatestInstance(client: DBClient, userId: string): Promise<ObsInstance | null> {
-  const { data } = await client
-    .from("obs_instances")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+export async function getUserLatestInstance(client: DBClient, userId: string): Promise<NodeObsInstance | null> {
+  const { data } = await nodeInstances(client, "user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
   return data;
 }
 
 /** Returns the first linked node that still has instance capacity, or null. */
-export async function pickAvailableNode(client: DBClient): Promise<ObsNode | null> {
+export async function pickAvailableNode(
+  client: DBClient,
+): Promise<Pick<ObsNode, "id" | "api_url" | "max_instances"> | null> {
   const { data: nodes } = await client
     .from("obs_nodes")
-    .select("*")
+    .select("id, api_url, max_instances")
     .eq("status", "linked")
     .order("created_at", { ascending: true });
   if (!nodes?.length) return null;
@@ -86,19 +86,11 @@ export async function getInstanceNodeApiUrl(
   instanceId: string,
   userId: string,
 ): Promise<string | null> {
-  const { data } = await client
-    .from("obs_instances")
-    .select("node_id, obs_nodes(api_url)")
-    .eq("id", instanceId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!data) return null;
-  const node = Array.isArray(data.obs_nodes) ? data.obs_nodes[0] : data.obs_nodes;
-  return node?.api_url ?? null;
+  return (await getInstanceNode(client, instanceId, userId))?.apiUrl ?? null;
 }
 
 /** The node an instance the user owns runs on: its id (the audience of a node
- *  token) and its api_url. Same ownership predicate as getInstanceNodeApiUrl. */
+ *  token) and its api_url. Null if the instance doesn't exist or isn't theirs. */
 export async function getInstanceNode(
   client: DBClient,
   instanceId: string,
@@ -118,44 +110,26 @@ export async function getInstanceNode(
 // ── Instance CRUD (used by node-authenticated API endpoints) ─────────────────
 
 export async function listObsInstancesByNode(client: DBClient, nodeId: string): Promise<NodeObsInstance[]> {
-  const { data, error } = await client
-    .from("obs_instances")
-    .select(NODE_INSTANCE_COLUMNS)
-    .eq("node_id", nodeId)
-    .order("created_at", { ascending: false });
+  const { data, error } = await nodeInstances(client, "node_id", nodeId).order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }
 
-export async function listObsInstancesByUser(client: DBClient, userId: string): Promise<ObsInstance[]> {
-  const { data, error } = await client
-    .from("obs_instances")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+export async function listObsInstancesByUser(client: DBClient, userId: string): Promise<NodeObsInstance[]> {
+  const { data, error } = await nodeInstances(client, "user_id", userId).order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
 }
 
-export async function getObsInstanceById(client: DBClient, instanceId: string, userId: string): Promise<ObsInstance | null> {
-  const { data } = await client
-    .from("obs_instances")
-    .select("*")
-    .eq("id", instanceId)
-    .eq("user_id", userId)
-    .maybeSingle();
+export async function getObsInstanceById(client: DBClient, instanceId: string, userId: string): Promise<NodeObsInstance | null> {
+  const { data } = await nodeInstances(client, "user_id", userId).eq("id", instanceId).maybeSingle();
   return data;
 }
 
 /** Single instance by id, scoped to the calling node so one node can never
  * read another node's instance rows. */
 export async function getObsInstanceByIdForNode(client: DBClient, instanceId: string, nodeId: string): Promise<NodeObsInstance | null> {
-  const { data } = await client
-    .from("obs_instances")
-    .select(NODE_INSTANCE_COLUMNS)
-    .eq("id", instanceId)
-    .eq("node_id", nodeId)
-    .maybeSingle();
+  const { data } = await nodeInstances(client, "node_id", nodeId).eq("id", instanceId).maybeSingle();
   return data;
 }
 
@@ -221,15 +195,37 @@ export async function updateObsInstancesByUser(
 
 /** Node-scoped delete. Returns false when nothing matched (missing, or another
  * node's row), so the caller can answer 404 instead of a silent 200. */
-export async function deleteObsInstanceForNode(client: DBClient, instanceId: string, nodeId: string): Promise<boolean> {
+/** Deletes one of the node's instances. Returns the owner of the deleted row
+ *  (so the caller can tell them), or null when nothing on this node matched. */
+export async function deleteObsInstanceForNode(
+  client: DBClient,
+  instanceId: string,
+  nodeId: string,
+): Promise<{ user_id: string } | null> {
   const { data, error } = await client
     .from("obs_instances")
     .delete()
     .eq("id", instanceId)
     .eq("node_id", nodeId)
-    .select("id");
+    .select("user_id");
   if (error) throw error;
-  return (data?.length ?? 0) > 0;
+  return data?.[0] ?? null;
+}
+
+/** The owner of one of the node's instances, or null when the id is missing or
+ *  on another node. */
+export async function getObsInstanceOwnerForNode(
+  client: DBClient,
+  instanceId: string,
+  nodeId: string,
+): Promise<string | null> {
+  const { data } = await client
+    .from("obs_instances")
+    .select("user_id")
+    .eq("id", instanceId)
+    .eq("node_id", nodeId)
+    .maybeSingle();
+  return data?.user_id ?? null;
 }
 
 /** True if the user has at least one instance provisioned on this node. Gates
@@ -248,13 +244,17 @@ export async function userHasInstanceOnNode(client: DBClient, userId: string, no
 /** Instances that are up right now, for the plan sweep and for stopping a
  * user's containers when their plan goes away. */
 export async function listRunningObsInstancesByNode(client: DBClient, nodeId: string): Promise<NodeObsInstance[]> {
-  const { data, error } = await client.from("obs_instances").select(NODE_INSTANCE_COLUMNS).eq("node_id", nodeId).eq("status", "running");
+  const { data, error } = await nodeInstances(client, "node_id", nodeId).eq("status", "running");
   if (error) throw error;
   return data ?? [];
 }
 
-export async function listRunningObsInstancesByUser(client: DBClient, userId: string): Promise<ObsInstance[]> {
-  const { data, error } = await client.from("obs_instances").select("*").eq("user_id", userId).eq("status", "running");
+/** Just what stopping them needs: which node to ask and which instance. */
+export async function listRunningObsInstancesByUser(
+  client: DBClient,
+  userId: string,
+): Promise<Pick<ObsInstance, "id" | "node_id">[]> {
+  const { data, error } = await client.from("obs_instances").select("id, node_id").eq("user_id", userId).eq("status", "running");
   if (error) throw error;
   return data ?? [];
 }
@@ -262,10 +262,7 @@ export async function listRunningObsInstancesByUser(client: DBClient, userId: st
 /** A user's instances that live on this node — the only ones a node manager
  * can act on locally (it resolves each container_id against its own Docker). */
 export async function listObsInstancesByUserOnNode(client: DBClient, userId: string, nodeId: string): Promise<NodeObsInstance[]> {
-  const { data, error } = await client
-    .from("obs_instances")
-    .select(NODE_INSTANCE_COLUMNS)
-    .eq("user_id", userId)
+  const { data, error } = await nodeInstances(client, "user_id", userId)
     .eq("node_id", nodeId)
     .order("created_at", { ascending: false });
   if (error) throw error;

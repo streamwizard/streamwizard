@@ -2,17 +2,32 @@
 
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
-import { selectOverlayWidget, selectWidgetInstanceFieldValues } from "@repo/supabase/queries/overlay-widgets";
+import { selectOverlayWidgetRuntime, selectWidgetInstanceFieldValues } from "@repo/supabase/queries/overlays/widgets";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
 import { isUuid, resolveOverlayItem } from "@/lib/overlay-item-auth";
+import { overlayTokenSchema } from "@/schemas/overlay-token";
+import { guidSchema } from "@repo/schemas/ids";
+import { z } from "zod";
 
-export interface CustomWidgetData {
+interface CustomWidgetData {
   html: string;
   js: string;
   extra_css: string;
   fields: WidgetFieldSchema;
   field_values: Record<string, unknown>;
 }
+
+/** A widget's own fields; more than this many is not a config the editor wrote. */
+const MAX_FIELD_VALUES = 200;
+
+const loadCustomWidgetInputSchema = z.object({
+  subscriberToken: overlayTokenSchema,
+  overlayItemId: guidSchema,
+  fieldValues: z
+    .record(z.string().max(128), z.unknown())
+    .refine((values) => Object.keys(values).length <= MAX_FIELD_VALUES)
+    .optional(),
+});
 
 /**
  * `fieldValues` comes from the overlay item's config, which the scene payload
@@ -29,6 +44,22 @@ export async function loadCustomWidgetData(
   overlayItemId: string,
   fieldValues?: Record<string, unknown>
 ): Promise<{ data: CustomWidgetData | null; error: string | null }> {
+  const parsed = loadCustomWidgetInputSchema.safeParse({ subscriberToken, overlayItemId, fieldValues });
+  if (!parsed.success) return { data: null, error: "Widget not found" };
+
+  try {
+    return await loadWidget(parsed.data.subscriberToken, parsed.data.overlayItemId, parsed.data.fieldValues);
+  } catch (err) {
+    reportError(err, "custom-widget.load");
+    return { data: null, error: "Couldn't load this widget." };
+  }
+}
+
+async function loadWidget(
+  subscriberToken: string,
+  overlayItemId: string,
+  fieldValues: Record<string, unknown> | undefined
+): Promise<{ data: CustomWidgetData | null; error: string | null }> {
   const item = await resolveOverlayItem(subscriberToken, overlayItemId);
   const config = (item?.type === "custom_widget" ? item.config : null) as
     | { widget_id?: unknown; instance_id?: unknown }
@@ -40,7 +71,7 @@ export async function loadCustomWidgetData(
   const instanceId = isUuid(config.instance_id) ? config.instance_id : undefined;
   const needsInstance = fieldValues === undefined && Boolean(instanceId);
   const [{ data: widget, error: wErr }, { data: instance, error: iErr }] = await Promise.all([
-    selectOverlayWidget(supabaseAdmin, widgetId, ownerUserId),
+    selectOverlayWidgetRuntime(supabaseAdmin, widgetId, ownerUserId),
     needsInstance
       ? selectWidgetInstanceFieldValues(supabaseAdmin, instanceId!, ownerUserId)
       : Promise.resolve({ data: null, error: null }),
@@ -55,7 +86,8 @@ export async function loadCustomWidgetData(
     reportError(iErr, "custom-widget.loadCustomWidgetData: instance query");
   }
 
-  if (wErr || !widget) return { data: null, error: wErr?.message ?? "Widget not found" };
+  if (wErr && wErr.code !== "PGRST116") return { data: null, error: "Couldn't load this widget." };
+  if (!widget) return { data: null, error: "Widget not found" };
 
   return {
     data: {

@@ -7,16 +7,25 @@ import {
   type BackupPollData,
   type BackupVmDetailResponse,
 } from "@repo/backups";
-import type { BackupEventLiteRow, BackupEventRow } from "@repo/supabase/queries/backups";
+import type { BackupEventLiteRow, BackupEventRow } from "@repo/supabase/queries/platform/backups";
 import { Hono } from "hono";
-import { toEventLite } from "../modules/backups/store";
-import type { PollResult } from "../modules/backups/poller";
+import { z } from "zod";
+import { toEventLite } from "@/modules/backups/store";
+import type { PollResult } from "@/modules/backups/poller";
 
 /**
- * Read-only backup status for web-admin (docs/backup-monitoring-plan.md).
+ * Read-only backup status for web-admin.
  * Everything is served from Supabase; nothing here calls PBS or PVE, except
  * /refresh, which runs one normal (rate-limited) poll.
  */
+
+const vmidParam = z.coerce.number().int().positive().max(999_999_999);
+
+/** GET /events query: a page of events older than `before` (the last page's nextBefore). */
+const eventsQuerySchema = z.object({
+  before: z.iso.datetime({ offset: true }).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
 
 /** Events read for per-VM "last event" and host webhook silence. */
 const EVENT_WINDOW_MS = 8 * 24 * 60 * 60 * 1000;
@@ -52,8 +61,9 @@ export function createBackupsInternalRoute(deps: BackupsInternalDeps) {
   });
 
   route.get("/vms/:vmid", async (c) => {
-    const vmid = Number(c.req.param("vmid"));
-    if (!Number.isInteger(vmid) || vmid <= 0) return c.json({ error: "Invalid vmid" }, 400);
+    const parsed = vmidParam.safeParse(c.req.param("vmid"));
+    if (!parsed.success) return c.json({ error: "Invalid vmid" }, 400);
+    const vmid = parsed.data;
 
     const { poll, overview: o } = await overview();
     const vm = o.vms.find((v) => v.vmid === vmid);
@@ -70,9 +80,9 @@ export function createBackupsInternalRoute(deps: BackupsInternalDeps) {
   });
 
   route.get("/events", async (c) => {
-    const before = c.req.query("before");
-    if (before && Number.isNaN(Date.parse(before))) return c.json({ error: "Invalid before" }, 400);
-    const limit = Math.min(Math.max(Number(c.req.query("limit") ?? 50) || 50, 1), 100);
+    const query = eventsQuerySchema.safeParse(c.req.query());
+    if (!query.success) return c.json({ error: "Invalid query" }, 400);
+    const { before, limit } = query.data;
     const rows = await deps.listEvents({ before, limit });
     const body: BackupEventsResponse = {
       events: rows.map(toEventDetail),

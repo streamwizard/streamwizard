@@ -1,7 +1,7 @@
 import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
 import type { Database } from "@repo/supabase";
-import { getLatestClipByUserId, getMostViewedClipByUserId } from "@repo/supabase/queries/clips";
+import { getLatestClipByUserId, getMostViewedClipByUserId } from "@repo/supabase/queries/clips/clips";
 import type { Command } from "../types/discord";
 import { requireLinkedAccount } from "../lib/account";
 

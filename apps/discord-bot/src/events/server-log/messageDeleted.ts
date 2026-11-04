@@ -2,7 +2,7 @@ import { AuditLogEvent, Events } from "discord.js";
 import { emitAuditedEvent, shouldLogMessage } from "../../lib/server-log/emit";
 import type { BotEvent } from "../../types/discord";
 import { channelRef, messageText, userRef } from "../../lib/server-log/refs";
-import { archiveMessageDeletes } from "../../lib/tickets/archive";
+import { archiveMessageDeletes } from "@/lib/tickets/transcript/archive";
 
 // Deletes of uncached messages arrive with only the ids, so author and text are
 // unknown. Discord only writes an audit entry when someone deletes another

@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../types/supabase";
-import { withMetrics } from "../with-metrics";
+import { withMetrics } from "../../lib/with-metrics";
 
 /**
  * CMS preview links. Only the sha256 of a token is stored, as PostgREST bytea

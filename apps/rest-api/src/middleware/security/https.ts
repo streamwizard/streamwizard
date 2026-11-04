@@ -1,6 +1,6 @@
 // middleware/security/https.ts
 import { Context, Next } from 'hono';
-import { env } from '../../env';
+import { env } from '@/env';
 
 /**
  * HTTPS Enforcement Middleware

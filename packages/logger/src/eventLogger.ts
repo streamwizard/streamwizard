@@ -4,8 +4,8 @@ import {
   insertStreamEvent,
   selectLiveStreamId,
   selectStreamStartedAt,
-} from "@repo/supabase/queries/stream-events";
-import type { EventSubSubscriptionType } from "@repo/types";
+} from "@repo/supabase/queries/stream/events";
+import type { EventSubSubscriptionType } from "@repo/types/eventsub";
 
 type StreamEvent = {
   broadcaster_id: string;

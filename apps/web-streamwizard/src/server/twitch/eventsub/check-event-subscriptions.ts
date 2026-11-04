@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 import { reportError } from "@repo/sentry";
 import CreateEventSubSubscription from "./create-event-subscription";
 import getSubscriptionFromTwitch from "./get-subscriptions-from-twitch";

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { toast } from "sonner";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
-import type { TwitchScopeFeature } from "@repo/schemas";
+import type { TwitchScopeFeature } from "@repo/schemas/twitch-scopes";
 import { getTwitchFeatureGrants } from "@/actions/auth/twitch-grants";
 import {
   ALERT_EVENT_LABELS,
@@ -22,13 +22,13 @@ import {
   type AlertVariation,
   type AlertWidgetItemConfig,
 } from "@repo/ui/overlay";
-import { useModKeyLabel } from "@/components/overlays/editor/use-mod-key";
+import { useModKeyLabel } from "@/components/overlays/editor/shortcuts/use-mod-key";
 import { AlertCopySourceDialog } from "./alert-copy-source-dialog";
 import { AlertDetail } from "./alert-detail";
 import { AlertList } from "./alert-list";
 import { AlertPermissionDialog } from "./alert-permission-dialog";
-import { AlertVariationEditor, type AlertVariationGroup } from "./alert-variation-editor";
-import { AlertVariationList } from "./alert-variation-list";
+import { AlertVariationEditor, type AlertVariationGroup } from "@/components/overlays/widgets/alert/variations/alert-variation-editor";
+import { AlertVariationList } from "@/components/overlays/widgets/alert/variations/alert-variation-list";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
 
 export function AlertWidgetSettings(props: OverlayInspectorAppendProps) {

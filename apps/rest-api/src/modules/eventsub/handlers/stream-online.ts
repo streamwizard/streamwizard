@@ -1,18 +1,18 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { setVodVideoId, upsertVod } from "@repo/supabase/queries/vods";
-import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
+import { setVodVideoId, upsertVod } from "@repo/supabase/queries/stream/vods";
+import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/stream/live-status";
 import { TwitchApi } from "@repo/twitch-api";
-import type { StreamOnlineEvent } from "@repo/schemas";
+import type { StreamOnlineEvent } from "@repo/schemas/eventsub/stream";
 import { streamEventsLogger } from "@repo/logger";
-import { viewerCountPoller } from "../../streams/viewer-count-poller";
-import { setStreamUserState } from "../../../lib/user-state";
-import { logStreamOnlineFailed } from "../../../lib/platform-events";
-import { findVideoIdForStream } from "../../streams/stream-video";
-import { postGoLive } from "../../discord-live/posts";
-import { grantLiveRole } from "../../discord-live/role";
-import { resolveLiveTarget } from "../../discord-live/target";
-import { wentOfflineSince } from "../../streams/offline-marker";
+import { viewerCountPoller } from "@/modules/streams/viewer-count-poller";
+import { setStreamUserState } from "@/lib/user-state";
+import { logStreamOnlineFailed } from "@/lib/platform-events";
+import { findVideoIdForStream } from "@/modules/streams/stream-video";
+import { postGoLive } from "@/modules/discord-live/posts";
+import { grantLiveRole } from "@/modules/discord-live/role";
+import { resolveLiveTarget } from "@/modules/discord-live/target";
+import { wentOfflineSince } from "@/modules/streams/offline-marker";
 
 /**
  * Waits between Helix lookups. EventSub can fire before /streams lists the

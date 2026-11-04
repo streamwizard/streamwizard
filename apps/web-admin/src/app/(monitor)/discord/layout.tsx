@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { getDiscordContext } from "@/lib/discord/api";
 
 export default function DiscordLayout({ children }: { children: React.ReactNode }) {

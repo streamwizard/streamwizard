@@ -1,19 +1,19 @@
 import { trackServer } from "@repo/posthog/server";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
-import { getCurrentStreamDetails, getVodVideoIdByStreamId, setVodVideoId } from "@repo/supabase/queries/vods";
-import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/user";
+import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/stream/live-status";
+import { getCurrentStreamDetails, getVodVideoIdByStreamId, setVodVideoId } from "@repo/supabase/queries/stream/vods";
+import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/users/user";
 import type { TwitchApi } from "@repo/twitch-api";
-import type { StreamOfflineEvent } from "@repo/schemas";
-import { syncTwitch } from "../../streams/clip-sync";
+import type { StreamOfflineEvent } from "@repo/schemas/eventsub/stream";
+import { syncTwitch } from "@/modules/streams/clip-sync";
 import { streamEventsLogger } from "@repo/logger";
-import { viewerCountPoller } from "../../streams/viewer-count-poller";
-import { setStreamUserState } from "../../../lib/user-state";
-import { findVideoIdForStream } from "../../streams/stream-video";
-import { markStreamOffline } from "../../streams/offline-marker";
-import { endGoLive } from "../../discord-live/posts";
-import { revokeLiveRole } from "../../discord-live/role";
+import { viewerCountPoller } from "@/modules/streams/viewer-count-poller";
+import { setStreamUserState } from "@/lib/user-state";
+import { findVideoIdForStream } from "@/modules/streams/stream-video";
+import { markStreamOffline } from "@/modules/streams/offline-marker";
+import { endGoLive } from "@/modules/discord-live/posts";
+import { revokeLiveRole } from "@/modules/discord-live/role";
 
 export const handleStreamOffline = async (event: StreamOfflineEvent, TwitchAPI: TwitchApi) => {
   // First, so a stream.online still waiting on Helix sees it and backs off.

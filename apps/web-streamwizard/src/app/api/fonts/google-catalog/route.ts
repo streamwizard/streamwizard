@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { FALLBACK_GOOGLE_FONT_FAMILIES } from "@/constants/google-fonts";
-import { parseGoogleFontsMetadataText } from "@/lib/google-fonts-catalog";
+import { parseGoogleFontsMetadataText } from "@/lib/overlays/google-fonts-catalog";
 
 export const revalidate = 86400;
 

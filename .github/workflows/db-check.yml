@@ -1,0 +1,53 @@
+name: DB Check
+
+# Catches database problems on the PR, before deploy-staging-db.yml or
+# deploy-prod-db.yml runs on merge. Needs no secrets and never touches a
+# remote database.
+on:
+  pull_request:
+    branches:
+      - staging
+      - main
+    paths:
+      - "supabase/**"
+      - ".github/scripts/check-migrations.sh"
+      - ".github/workflows/db-check.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  migrations:
+    name: Migration order & conflicts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check new migrations against the base branch
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: bash .github/scripts/check-migrations.sh "origin/$BASE_REF"
+
+  apply:
+    name: Apply migrations & DB tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@46f7f98c7f948ad727d22c1e67fab04c223a0520 # v3.0.0
+        with:
+          version: 2.104.0
+
+      # A throwaway Postgres on the runner: every migration from scratch, then
+      # seed.sql. Fails on any SQL error.
+      - name: Apply all migrations to a fresh database
+        run: supabase db start
+
+      - name: Run database tests (supabase/tests)
+        run: supabase test db

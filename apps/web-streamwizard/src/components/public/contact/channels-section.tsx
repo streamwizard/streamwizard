@@ -4,8 +4,8 @@ import { BookOpen } from "lucide-react";
 import type { IconType } from "react-icons";
 import type { LucideIcon } from "lucide-react";
 import { SectionView } from "@/components/public/analytics/section-view";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
-import { Reveal } from "@/components/public/home/reveal";
+import { TrackedLink } from "@/components/shared/tracked-link";
+import { Reveal } from "@/components/public/common/reveal";
 import { discordInviteLink, docsLink, githubLink, twitchChannelLink } from "@/lib/constant";
 
 const channels: {

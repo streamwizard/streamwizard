@@ -1,10 +1,10 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getGuildSettings, type DiscordGuildSettings } from "@repo/supabase/queries/discord";
-import { getUserIdentity } from "@repo/supabase/queries/identity";
-import { getUserPreferencesByUserId } from "@repo/supabase/queries/user";
+import { getGuildSettings, type DiscordGuildSettings } from "@repo/supabase/queries/discord/discord";
+import { getUserIdentity } from "@repo/supabase/queries/users/identity";
+import { getUserPreferencesByUserId } from "@repo/supabase/queries/users/user";
 import type { Database } from "@repo/supabase";
-import { env } from "../../env";
+import { env } from "@/env";
 
 // What both Discord live features (the go-live post and the live role) need
 // to know about a broadcaster before touching Discord: the guild's settings,

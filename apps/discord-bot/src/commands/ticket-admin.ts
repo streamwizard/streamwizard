@@ -1,7 +1,7 @@
 import { ChannelType, InteractionContextType, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { isActiveCategory } from "@repo/supabase/queries/ticket-config";
-import { getTicketSettings } from "@repo/supabase/queries/tickets";
+import { isActiveCategory } from "@repo/supabase/queries/tickets/config";
+import { getTicketSettings } from "@repo/supabase/queries/tickets/tickets";
 import type { Command } from "../types/discord";
 import { getTicketConfig, panelLocation, postTicketPanel, saveTicketSettings } from "../lib/tickets";
 

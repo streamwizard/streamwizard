@@ -1,12 +1,9 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import { twitchEmoteUrl } from "../../../chat/asset-urls";
 import {
   createChatAssetFetcher,
@@ -36,6 +33,7 @@ import {
   type ComboRules,
   type ComboState,
 } from "./combo-engine";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
 
 export interface ComboWidgetRendererProps {
   item: OverlayItem;
@@ -227,11 +225,11 @@ export function ComboWidgetRenderer({ item, scene, isEditor = false }: ComboWidg
   }, []);
 
   // Real chat and Live tests over the scene's WS room.
+  const wsUrl = useOverlayWsUrl();
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
     return subscribeToWsRoom(token, wsUrl, (raw) => onFrame(raw as EmoteWidgetFrame));
-  }, [token, onFrame]);
+  }, [token, wsUrl, onFrame]);
 
   // Editor: Local test fires arrive as a browser event.
   useEffect(() => {

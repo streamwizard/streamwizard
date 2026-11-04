@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import dagre from "@dagrejs/dagre";
 import type { Node, Edge } from "@xyflow/react";
-import type { BotConnSnapshot, ConsumerConnSnapshot, MonitorSnapshot } from "@/lib/monitor-ws";
+import type { BotConnSnapshot, ConsumerConnSnapshot, MonitorSnapshot } from "@repo/types/monitor";
 
 const SERVER_NODE_ID = "server";
 const NODE_WIDTH = 180;

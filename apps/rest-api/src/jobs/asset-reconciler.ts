@@ -1,8 +1,8 @@
 import { reportError } from "@repo/sentry";
 import type { R2ObjectInfo, R2Storage } from "@repo/storage";
 import { supabase } from "@repo/supabase";
-import { assetKeyExists, deleteUserAsset, selectAllAssetKeys, selectStalePendingAssets } from "@repo/supabase/queries/assets";
-import { r2 } from "../lib/r2";
+import { assetKeyExists, deleteUserAsset, selectAllAssetKeys, selectStalePendingAssets } from "@repo/supabase/queries/assets/assets";
+import { r2 } from "@/lib/r2";
 
 /**
  * Media library hygiene. Postgres can't reach R2, so this runs here:
@@ -56,9 +56,15 @@ export function createAssetReconciler(deps: AssetReconcilerDeps) {
     const cutoff = new Date(startedAt - PENDING_RESERVATION_MS).toISOString();
 
     const stale = await deps.selectStalePending(cutoff);
+    let deleteFailed = false;
     for (const row of stale) {
       // The object may exist if the client uploaded but never confirmed.
-      await deps.deleteObject(row.key).catch(() => {});
+      // The row goes either way; a failed delete leaves an orphan that a later
+      // sweep removes. One report per sweep, not one per row.
+      await deps.deleteObject(row.key).catch((err) => {
+        if (!deleteFailed) reportError(err, "asset-reconciler: delete pending object", { assetId: row.id });
+        deleteFailed = true;
+      });
       await deps.deleteRow(row.id, row.user_id);
     }
 

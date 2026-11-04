@@ -1,10 +1,8 @@
 "use client";
 
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  TextAlignSelect,
-} from "@/components/overlays/inspector-fields";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { TextAlignSelect } from "@/components/overlays/inspector-fields/text-align-select";
 import { ColorPicker, Label, Slider, Switch } from "@repo/ui";
 import {
   Select,
@@ -13,8 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui";
-import { resolvedTextWidgetFontFamily } from "@/types/overlays";
-import type { IrlFieldWidgetItemConfig } from "@/types/overlays";
+import { resolvedTextWidgetFontFamily } from "@repo/ui/components/overlay/types/widgets";
+import type { IrlFieldWidgetItemConfig } from "@repo/ui/components/overlay/types/widgets";
 import { DEFAULT_IRL_FIELD_WIDGET_ITEM_CONFIG } from "@repo/ui/overlay";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
 

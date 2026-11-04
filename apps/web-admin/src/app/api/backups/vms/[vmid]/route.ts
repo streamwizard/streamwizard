@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-session";
-import { getBackupVm } from "@/lib/backups";
+import { getAdminSession } from "@/lib/auth/admin-session";
+import { getBackupVm } from "@/lib/backups/backups";
 
 export const dynamic = "force-dynamic";
 

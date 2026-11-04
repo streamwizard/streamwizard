@@ -1,12 +1,12 @@
 import { TwitchApi } from "@repo/twitch-api";
 import { supabase } from "@repo/supabase";
-import { selectCreditsStream } from "@repo/supabase/queries/credits";
+import { selectCreditsStream } from "@repo/supabase/queries/stream/credits";
 import {
   selectLabelEventRows,
   selectLabelPeriodLeaders,
   selectRecentLabelEventRows,
   selectStreamLabelsRow,
-} from "@repo/supabase/queries/stream-labels";
+} from "@repo/supabase/queries/stream/labels";
 import {
   LABEL_EVENTS_CAP,
   buildLabelHistory,
@@ -16,7 +16,7 @@ import {
   latestLabelsFromRow,
   type LabelHelixTotals,
   type LabelSnapshot,
-} from "@repo/schemas";
+} from "@repo/schemas/widgets/stream-labels";
 import { singleFlight } from "./cache";
 import { liveFollowerTotal } from "./live";
 

@@ -17,19 +17,6 @@ export type WebSocketMessageType =
     | 'notification'          // The actual event data
     | 'revocation';           // Subscription was revoked
 
-/**
- * Webhook-specific message types (from Twitch-Eventsub-Message-Type header)
- */
-export type WebhookMessageType =
-    | 'notification'                    // The actual event data
-    | 'webhook_callback_verification'   // Verifying endpoint ownership
-    | 'revocation';                     // Subscription was revoked
-
-/**
- * All EventSub message types (union of both transports)
- */
-export type EventSubMessageType = WebSocketMessageType | WebhookMessageType;
-
 // ==============================================================================
 // 2. Subscription Types (The 'type' string)
 // ==============================================================================
@@ -226,47 +213,7 @@ export interface EventSubSubscriptionMetadata {
 }
 
 // ==============================================================================
-// 4. Webhook-Specific Types
-// ==============================================================================
-
-/**
- * Headers sent by Twitch with webhook requests
- */
-export interface WebhookRequestHeaders {
-    'twitch-eventsub-message-id': string;
-    'twitch-eventsub-message-retry': string;
-    'twitch-eventsub-message-type': WebhookMessageType;
-    'twitch-eventsub-message-signature': string;
-    'twitch-eventsub-message-timestamp': string;
-    'twitch-eventsub-subscription-type': EventSubSubscriptionType;
-    'twitch-eventsub-subscription-version': string;
-}
-
-/**
- * Payload for webhook verification challenges
- */
-export interface WebhookVerificationPayload {
-    subscription: EventSubSubscriptionMetadata;
-    challenge: string;
-}
-
-/**
- * Payload for webhook notifications
- */
-export interface WebhookNotificationPayload<T = any> {
-    subscription: EventSubSubscriptionMetadata;
-    event: T;
-}
-
-/**
- * Payload for webhook revocations
- */
-export interface WebhookRevocationPayload {
-    subscription: EventSubSubscriptionMetadata;
-}
-
-// ==============================================================================
-// 5. WebSocket-Specific Types
+// 4. WebSocket-Specific Types
 // ==============================================================================
 
 /**
@@ -350,22 +297,8 @@ export type WebSocketMessage<T = any> =
     | WebSocketNotificationMessage<T>
     | WebSocketRevocationMessage;
 
-/**
- * WebSocket close codes
- */
-export enum WebSocketCloseCode {
-    InternalServerError = 4000,
-    ClientSentInboundTraffic = 4001,
-    ClientFailedPingPong = 4002,
-    ConnectionUnused = 4003,
-    ReconnectGraceTimeExpired = 4004,
-    NetworkTimeout = 4005,
-    NetworkError = 4006,
-    InvalidReconnect = 4007,
-}
-
 // ==============================================================================
-// 6. Generic Payloads (For compatibility)
+// 5. Generic Payloads (For compatibility)
 // ==============================================================================
 
 /**

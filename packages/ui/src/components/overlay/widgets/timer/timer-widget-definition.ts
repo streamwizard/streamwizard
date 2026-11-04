@@ -1,5 +1,10 @@
 import type { WidgetBaseDefinition } from "../../widget-definition";
-import { TIMER_WIDGET_CONFIG_DEFAULTS, createDefaultTimerWidgetConfig, resolvedTextWidgetFontFamily, normalizeTimerWidgetConfig } from "../../types";
+import {
+  TIMER_WIDGET_CONFIG_DEFAULTS,
+  createDefaultTimerWidgetConfig,
+  resolvedTextWidgetFontFamily,
+  normalizeTimerWidgetConfig,
+} from "../../types/widgets";
 import { TimerWidgetRenderer } from "./TimerWidgetRenderer";
 
 export const TIMER_WIDGET_DEFAULT_SIZE = { w: 420, h: 100 } as const;

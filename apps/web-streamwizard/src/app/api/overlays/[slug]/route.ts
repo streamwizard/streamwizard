@@ -1,8 +1,11 @@
 import { createAdminClient } from "@repo/supabase/next/admin";
-import { overlayItemFromDbRow, toPublicOverlayApiItems } from "@/types/overlays";
+import {
+  overlayItemFromDbRow,
+  toPublicOverlayApiItems,
+} from "@repo/ui/components/overlay/types/item";
 import { NextRequest, NextResponse } from "next/server";
-import { getActiveOverlaySceneBySlug, getAllOverlayItemsByScene } from "@repo/supabase/queries/overlays";
-import { overlayCorsHeaders } from "@/lib/overlay-cors";
+import { getActiveOverlaySceneBySlug, getAllOverlayItemsByScene } from "@repo/supabase/queries/overlays/overlays";
+import { overlayCorsHeaders } from "@/lib/overlays/overlay-cors";
 import { reportError } from "@repo/sentry";
 import { MissLimiter } from "@repo/ttl-cache/miss-limiter";
 
@@ -66,10 +69,7 @@ export async function GET(
   } catch (error) {
     reportError(error, "api/overlays/[slug]");
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Internal server error",
-      },
+      { error: "Internal server error" },
       { status: 500, headers: CORS_HEADERS }
     );
   }

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@repo/supabase/next/server";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { signOut } from "@/lib/auth-actions";
+import { signOut } from "@/actions/auth/sign-out";
 
 // Where the dashboard sends people who are signed in but aren't admins. Kept
 // outside the (monitor) route group so it doesn't hit the admin gate itself.

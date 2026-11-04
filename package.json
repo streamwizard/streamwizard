@@ -1,5 +1,5 @@
 {
-  "name": "twitch-tools",
+  "name": "streamwizard",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -9,19 +9,15 @@
     "dev:admin": "turbo run dev --filter=@repo/web-admin",
     "dev:docs": "turbo run dev --filter=@repo/docs",
     "clean": "rm -rf apps/*/.next",
-    "doppler:sync": "bash scripts/sync-doppler-shared.sh",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "bun x turbo run check-types",
     "test:db": "supabase test db --local",
-    "cms:mock": "bun scripts/cms-mock/seed.ts seed",
-    "cms:mock:reset": "bun scripts/cms-mock/seed.ts reset",
-    "cms:mock:remove": "bun scripts/cms-mock/seed.ts remove",
-    "gen-types": "supabase gen types typescript --project-id jgxdrljoqployiyjedst --schema public > packages/supabase/src/types/supabase.ts"
+    "gen-types": "supabase gen types typescript --local --schema public > packages/supabase/src/types/supabase.ts",
+    "check:dupes": "bunx jscpd@4.0.5"
   },
   "devDependencies": {
     "prettier": "^3.7.4",
-    "shadcn": "^4.11.0",
     "turbo": "^2.9.15",
     "typescript": "5.9.2"
   },
@@ -42,9 +38,5 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ],
-  "dependencies": {
-    "ajv": "^8.17.1",
-    "server-only": "^0.0.1"
-  }
+  ]
 }

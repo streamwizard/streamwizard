@@ -1,6 +1,6 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { listTwitchIntegrationsWithToken, setTwitchScopesByBroadcasterId } from "@repo/supabase/queries/twitch-scopes";
+import { listTwitchIntegrationsWithToken, setTwitchScopesByBroadcasterId } from "@repo/supabase/queries/twitch/scopes";
 import { TwitchApi } from "@repo/twitch-api";
 
 /**

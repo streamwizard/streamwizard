@@ -1,6 +1,6 @@
 import { EmbedBuilder, InteractionContextType, MessageFlags, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { getLeaderboard, type LeaderboardMetric } from "@repo/supabase/queries/discord-activity";
+import { getLeaderboard, type LeaderboardMetric } from "@repo/supabase/queries/discord/activity";
 import type { Command } from "../types/discord";
 import {
   formatMetricValue,
@@ -10,7 +10,7 @@ import {
   resolveTimeframe,
   TIMEFRAME_CHOICES,
   type Timeframe,
-} from "../lib/activity-format";
+} from "@/lib/activity/activity-format";
 
 export default {
   data: new SlashCommandBuilder()

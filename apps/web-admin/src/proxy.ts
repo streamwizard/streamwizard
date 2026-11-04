@@ -1,9 +1,10 @@
 import { refreshSession } from "@repo/supabase/next/proxy";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { isUserAdmin } from "@repo/supabase/queries/obs-nodes";
+import { isUserAdmin } from "@repo/supabase/queries/auth/roles";
 import { isStrongSession, type JwtPayload } from "@repo/supabase/auth/session-strength";
 import { NextResponse, type NextRequest } from "next/server";
 import { buildCsp } from "@/lib/csp";
+import { env } from "@/lib/env";
 
 // Paths that render without an admin session. Everything else is denied here,
 // before any page runs: a layout gate alone is not enough, because App Router
@@ -55,7 +56,7 @@ export async function proxy(request: NextRequest) {
   // console so missing directives surface before staging. The *request* header
   // above must keep the enforcing name either way — Next reads the nonce from it.
   const responseHeader =
-    process.env.NODE_ENV === "development" ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy";
+    env.NODE_ENV === "development" ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy";
   response.headers.set(responseHeader, csp);
   return response;
 }

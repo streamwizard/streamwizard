@@ -1,5 +1,5 @@
-import { formatPerSec } from "@/components/apps/app-format";
-import type { TraefikScope } from "@/lib/traefik-model";
+import { formatPerSec } from "@/lib/apps/app-format";
+import type { TraefikScope } from "@/lib/traefik/traefik-model";
 
 /** The page for one scope. Production is the page without a filter. */
 export const traefikHref = (scope: TraefikScope) => (scope === "prod" ? "/traefik" : `/traefik?env=${scope}`);

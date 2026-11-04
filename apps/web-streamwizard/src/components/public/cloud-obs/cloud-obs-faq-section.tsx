@@ -1,7 +1,7 @@
 import { SectionView } from "@/components/public/analytics/section-view";
-import { Reveal } from "@/components/public/home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { FaqAccordion } from "@/components/public/home/faq-accordion";
-import { PRICING_FAQ_LINK } from "@/lib/pricing";
+import { PRICING_FAQ_LINK } from "@/lib/public/pricing";
 
 /*
  * The page's FAQ, and the last stop before the beta note. It defines the

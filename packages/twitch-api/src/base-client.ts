@@ -4,13 +4,22 @@ import {
   getTwitchAppToken,
   updateChannelAccessToken,
   updateTwitchAppToken,
-  type RefreshTwitchTokenResponse,
-} from "@repo/supabase";
+} from "@repo/supabase/queries/twitch/tokens";
 import { trackTwitchApiRequest, normalizeEndpoint } from "@repo/metrics";
+import { describeError } from "@repo/sentry/safe-error";
 import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import axios from "axios";
 import { logTokenRefreshFailure } from "./token-refresh-log";
 import { rateLimitMessage, rateLimitRetryDelay, ratelimitRemaining, warnRateLimited } from "./rate-limit";
+
+/** Body of Twitch's POST /oauth2/token refresh response. */
+type RefreshTwitchTokenResponse = {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  scope: string[];
+  token_type: string;
+};
 
 type RetryConfig = InternalAxiosRequestConfig & { __retryCount?: number; __rateLimitRetried?: boolean };
 type Headers = Record<string, unknown>;
@@ -120,7 +129,7 @@ export abstract class TwitchApiBaseClient {
             console.debug("✅ Token refreshed, retrying request");
             return api(config);
           } catch (refreshError) {
-            console.error("❌ Token refresh failed:", refreshError);
+            console.error(`[twitch-api] user token refresh failed: ${describeError(refreshError)}`);
             return Promise.reject(refreshError);
           }
         }
@@ -220,7 +229,7 @@ export abstract class TwitchApiBaseClient {
             console.debug("✅ Token refreshed, retrying request");
             return api(config);
           } catch (refreshError) {
-            console.error("❌ Token refresh failed:", refreshError);
+            console.error(`[twitch-api] app token refresh failed: ${describeError(refreshError)}`);
             return Promise.reject(refreshError);
           }
         }
@@ -290,7 +299,7 @@ export abstract class TwitchApiBaseClient {
       await updateChannelAccessToken(response.data, broadcaster_id);
       return response.data.access_token;
     } catch (error) {
-      console.error("❌ Token refresh failed:", error);
+      console.error(`[twitch-api] user token refresh failed: ${describeError(error)}`);
       void logTokenRefreshFailure(broadcaster_id, error);
       throw error;
     }
@@ -319,7 +328,7 @@ export abstract class TwitchApiBaseClient {
 
       return response.data.access_token;
     } catch (error) {
-      console.error("❌ Token refresh failed:", error);
+      console.error(`[twitch-api] app token refresh failed: ${describeError(error)}`);
       throw error;
     }
   }

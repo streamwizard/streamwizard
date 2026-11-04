@@ -153,7 +153,7 @@ export function downloadSnapshotFile(
 }
 
 /**
- * Deduplicated sizes for our namespace (docs/backup-sizes-plan.md). Only
+ * Deduplicated sizes for our namespace. Only
  * runs when the snapshot list changed since the last pass (a backup or a
  * prune); otherwise the previous result is reused without any download.
  * Upload stats never change, so each manifest is read once.

@@ -74,7 +74,10 @@ export * from "./components/ui/tooltip";
 export * from "./hooks/use-mobile";
 
 // Overlay widget types, utilities, hooks, and renderers
-export * from "./components/overlay/types";
+export * from "./components/overlay/types/base";
+export * from "./components/overlay/types/clips";
+export * from "./components/overlay/types/widgets";
+export * from "./components/overlay/types/item";
 export { formatCountdownMs, formatElapsedMs } from "./components/overlay/lib/format-countdown";
 export { formatClockWidgetDisplay } from "./components/overlay/lib/format-clock-widget";
 export { useGoogleFont, useGoogleFonts } from "./components/overlay/hooks/use-google-font";

@@ -1,9 +1,9 @@
 import { reportError } from "@repo/sentry";
 import { TwitchApi } from "@repo/twitch-api";
-import { ChannelUpdateEvent } from "@repo/schemas";
+import { ChannelUpdateEvent } from "@repo/schemas/eventsub/channel";
 import { supabase } from "@repo/supabase";
-import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
-import { refreshGoLive } from "../../discord-live/posts";
+import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/stream/live-status";
+import { refreshGoLive } from "@/modules/discord-live/posts";
 
 export async function handleChannelUpdate(event: ChannelUpdateEvent, twitchApi: TwitchApi) {
   console.log(

@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
-import type { OverlayItem, OverlayItemConfig, RootOverlayItemType } from "./types";
+import type { RootOverlayItemType } from "./types/base";
+import type { OverlayItem, OverlayItemConfig } from "./types/item";
 
 export interface WidgetRendererProps {
   item: OverlayItem;

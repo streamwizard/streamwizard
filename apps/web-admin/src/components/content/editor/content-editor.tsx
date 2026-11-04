@@ -54,9 +54,9 @@ import {
   TabsTrigger,
   Textarea,
 } from "@repo/ui";
-import { setContentReviewStateAction } from "@/actions/cms-comments";
-import { saveContentDraftAction, trashContentAction } from "@/actions/cms-content";
-import { createTagAction } from "@/actions/cms-taxonomy";
+import { setContentReviewStateAction } from "@/actions/cms/comments";
+import { saveContentDraftAction, trashContentAction } from "@/actions/cms/content";
+import { createTagAction } from "@/actions/cms/taxonomy";
 import { useAutosave, type AutosaveStatus } from "@/hooks/use-autosave";
 import { forgetOpeningDraft, useContentDraftRecovery } from "@/hooks/use-content-draft-recovery";
 import {
@@ -68,25 +68,25 @@ import {
   type ContentType,
   type Difficulty,
 } from "@/lib/cms/draft";
-import type { CmsMediaItem } from "@/lib/cms/media-items";
-import { clearLocalDraft, writeLocalDraft } from "@/lib/cms/local-draft";
-import { publishReadiness } from "@/lib/cms/readiness";
+import type { CmsMediaItem } from "@/lib/cms/media/media-items";
+import { clearLocalDraft, writeLocalDraft } from "@/lib/cms/editor/local-draft";
+import { publishReadiness } from "@/lib/cms/publish/readiness";
 import { REVIEW_BADGE, REVIEW_LABELS, nextReviewStates, type ReviewState } from "@/lib/cms/review";
-import { PageCrumb } from "@/lib/crumbs";
+import { PageCrumb } from "@/lib/nav/crumbs";
 import { cn } from "@/lib/utils";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
 import { ChipPicker, type PickerOption } from "./chip-picker";
-import { CommentsSheet } from "./comments-sheet";
+import { CommentsSheet } from "@/components/content/editor/dialogs/comments-sheet";
 import { EditorOutline } from "./editor-outline";
 import { EditorWorkspace, type LinkTarget } from "./editor-workspace";
-import { FindReplaceDialog } from "./find-replace-dialog";
-import { PreviewMenu } from "./preview-menu";
-import { PreviewPane } from "./preview-pane";
+import { FindReplaceDialog } from "@/components/content/editor/dialogs/find-replace-dialog";
+import { PreviewMenu } from "@/components/content/editor/preview/preview-menu";
+import { PreviewPane } from "@/components/content/editor/preview/preview-pane";
 import { PublishControls } from "./publish-controls";
-import { RestoreDraftDialog } from "./restore-draft-dialog";
+import { RestoreDraftDialog } from "@/components/content/editor/dialogs/restore-draft-dialog";
 import { RichTextEditor, WorkspaceToolbar } from "./rich-text-editor";
-import { SearchPreview } from "./search-preview";
+import { SearchPreview } from "@/components/content/editor/preview/search-preview";
 import { SectionList } from "./section-list";
 
 export type ContentStatus = "draft" | "scheduled" | "published" | "archived";

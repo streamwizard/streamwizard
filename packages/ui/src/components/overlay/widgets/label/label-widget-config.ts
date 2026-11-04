@@ -8,18 +8,19 @@ import {
   type LabelEntryKind,
   type LabelPeriod,
   type ResolvedLabel,
-} from "@repo/schemas";
+} from "@repo/schemas/widgets/stream-labels";
 import {
   DEFAULT_GOOGLE_FONT_FAMILY,
   isValidGoogleFontFamilyName,
   type GoogleFontFamily,
-} from "../../types";
+} from "../../types/base";
 
 /**
  * One label: latest follower, top cheerer, session bits, the event list, ...
- * Which one is `labelId`, an id from LABEL_CATALOG in @repo/schemas. Values
- * come from one snapshot per scene (GET /api/twitch/labels) and the raw
- * events the overlay room already delivers; see use-stream-labels.ts.
+ * Which one is `labelId`, an id from LABEL_CATALOG in
+ * @repo/schemas/widgets/stream-labels. Values come from one snapshot per scene
+ * (GET /api/twitch/labels) and the raw events the overlay room already
+ * delivers; see use-stream-labels.ts.
  */
 export const LABEL_WIDGET_TYPE = "label_widget" as const;
 export type LabelWidgetType = typeof LABEL_WIDGET_TYPE;

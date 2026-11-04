@@ -1,35 +1,16 @@
-import type { Context } from "hono";
-
-export interface ReconcileInstance {
-  instance_id: string;
-  action: "marked_error" | "marked_running" | "marked_stopped" | "no_change";
-}
-
-export interface ReconcilePayload {
-  reconciled_at: string;
-  orphaned_containers: string[];
-  instances: ReconcileInstance[];
-}
+import type { ReconcileReport } from "@/modules/obs-nodes/schemas";
 
 // Called by obs-instance-manager after boot-time container reconciliation.
 // node_id comes from the authenticated API key (obsNodeAuth), not the body.
-export async function reportReconcile(c: Context) {
-  const nodeId = c.get("nodeId");
-  const body = (await c.req.json()) as ReconcilePayload;
-  const { reconciled_at, orphaned_containers, instances } = body;
+export function recordReconcileReport(nodeId: string, report: ReconcileReport): void {
+  const { reconciled_at, orphaned_containers = [], instances = [] } = report;
 
-  if (!reconciled_at) {
-    return c.json({ error: "reconciled_at is required" }, 400);
-  }
-
-  const corrected = instances?.filter((i) => i.action !== "no_change") ?? [];
+  const corrected = instances.filter((i) => i.action !== "no_change");
 
   console.log(`[nodes] reconcile report from node ${nodeId}`, {
     reconciled_at,
-    orphaned: orphaned_containers?.length ?? 0,
+    orphaned: orphaned_containers.length,
     corrected: corrected.length,
-    total: instances?.length ?? 0,
+    total: instances.length,
   });
-
-  return c.json({ ok: true });
 }

@@ -14,8 +14,8 @@ import {
   getPlatformEventIdentity,
   logPlatformEvent,
   type EmitPlatformEventInput,
-} from "@repo/supabase/queries/platform-events";
-import { env } from "../env";
+} from "@repo/supabase/queries/platform/events";
+import { env } from "@/env";
 
 /**
  * Blog and guides, the part that runs on a clock (docs/cms-plan.md §3):

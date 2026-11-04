@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { LABEL_ENTRY_KINDS, getLabelDefinition, type LabelEntry, type ResolvedLabel } from "@repo/schemas";
+import { LABEL_ENTRY_KINDS, getLabelDefinition, type LabelEntry, type ResolvedLabel } from "@repo/schemas/widgets/stream-labels";
 import { labelWidgetItemConfigSchema } from "../../../../overlay-schemas";
 import {
   EVENT_LIST_LABEL_ID,

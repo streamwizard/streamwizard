@@ -1,0 +1,29 @@
+"use client";
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui";
+import { REFRESH_OPTIONS, useRefreshInterval } from "@/providers/refresh-interval-context";
+
+export function RefreshIntervalSelector() {
+  const { interval, setInterval } = useRefreshInterval();
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted-foreground">Refresh</span>
+      <Select
+        value={String(interval)}
+        onValueChange={(val) => setInterval(Number(val))}
+      >
+        <SelectTrigger className="h-9 w-[64px] px-2 text-xs md:h-7">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {REFRESH_OPTIONS.map((opt) => (
+            <SelectItem key={opt.value} value={String(opt.value)} className="text-xs">
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}

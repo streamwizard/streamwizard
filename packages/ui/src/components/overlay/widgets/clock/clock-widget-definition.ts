@@ -1,5 +1,9 @@
 import type { WidgetBaseDefinition } from "../../widget-definition";
-import { DEFAULT_CLOCK_WIDGET_ITEM_CONFIG, normalizeClockWidgetConfig, resolvedTextWidgetFontFamily } from "../../types";
+import {
+  DEFAULT_CLOCK_WIDGET_ITEM_CONFIG,
+  normalizeClockWidgetConfig,
+  resolvedTextWidgetFontFamily,
+} from "../../types/widgets";
 import { ClockWidgetRenderer } from "./ClockWidgetRenderer";
 
 export const CLOCK_WIDGET_DEFAULT_SIZE = { w: 400, h: 100 } as const;

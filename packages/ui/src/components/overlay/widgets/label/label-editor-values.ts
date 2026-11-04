@@ -5,7 +5,7 @@ import type {
   LatestLabelKey,
   LabelTopKey,
   ResolvedLabel,
-} from "@repo/schemas";
+} from "@repo/schemas/widgets/stream-labels";
 import type { EditorLabelValue } from "../../hooks/use-editor-preview-values";
 
 const LATEST_KINDS: Record<LatestLabelKey, LabelEntryKind> = {

@@ -1,6 +1,6 @@
 import { SectionView } from "@/components/public/analytics/section-view";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
-import { Reveal } from "@/components/public/home/reveal";
+import { TrackedLink } from "@/components/shared/tracked-link";
+import { Reveal } from "@/components/public/common/reveal";
 
 /*
  * Why linking Discord to StreamWizard matters for support: the ticket embed

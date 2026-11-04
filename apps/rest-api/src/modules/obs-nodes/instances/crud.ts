@@ -1,89 +1,81 @@
-import type { Context, Env } from "hono";
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
+import { countActiveObsInstancesForNode, deleteObsInstanceForNode, getObsInstanceByIdForNode, insertObsInstance, listObsInstancesByNode, listRunningObsInstancesByNode, sumAllocatedVramForNode, updateObsInstanceByContainerIdForNode, updateObsInstanceForNode } from "@repo/supabase/queries/obs-nodes/instances";
 import {
-  countActiveObsInstancesForNode,
-  deleteObsInstanceForNode,
-  getObsInstanceByIdForNode,
-  insertObsInstance,
-  listObsInstancesByNode,
-  listRunningObsInstancesByNode,
-  sumAllocatedVramForNode,
-  updateObsInstanceByContainerIdForNode,
-  updateObsInstanceForNode,
-} from "@repo/supabase/queries/obs-nodes";
-import { isActiveSubscriptionOfUser, usersWithActiveSubscription } from "@repo/supabase/queries/subscriptions";
-import { env } from "../../../env";
-import { unentitledInstanceIds } from "./cloud-obs-plan";
-import { checkInstanceCreateToken } from "./instance-create-token";
-import { insertInstanceSchema, updateInstanceSchema } from "../../../schemas/obs-nodes";
-import { encryptPassword, generateVncPassword } from "./secrets";
+  getUserActiveSubscriptionId,
+  isActiveSubscriptionOfUser,
+  usersWithActiveSubscription,
+} from "@repo/supabase/queries/subscriptions/subscriptions";
+import { env } from "@/env";
+import { launchSubscriptionId, unentitledInstanceIds } from "@/modules/obs-nodes/instances/cloud-obs-plan";
+import { checkInstanceCreateToken, type CreateTokenCheck } from "@/modules/obs-nodes/instances/instance-create-token";
+import type { InsertInstanceInput, UpdateInstanceInput } from "@/modules/obs-nodes/schemas";
+import { instanceDeleted } from "@/modules/obs-nodes/instances/events";
+import { encryptPassword, generateVncPassword } from "@/modules/obs-nodes/instances/secrets";
 
-export async function listInstances(c: Context) {
-  const nodeId = c.get("nodeId");
-  const rows = await listObsInstancesByNode(supabase, nodeId);
-  return c.json(rows);
+// Every function here is scoped to the calling node: nodeId always comes from
+// the node's API key (obsNodeAuth), never from the request.
+
+export function listInstances(nodeId: string) {
+  return listObsInstancesByNode(supabase, nodeId);
 }
 
-export async function getAllocatedVram(c: Context) {
-  const nodeId = c.get("nodeId");
-  const total = await sumAllocatedVramForNode(supabase, nodeId);
-  return c.json({ total_vram_mb: total });
+export function getAllocatedVram(nodeId: string): Promise<number> {
+  return sumAllocatedVramForNode(supabase, nodeId);
 }
 
-export async function countActiveInstances(c: Context) {
-  const nodeId = c.get("nodeId");
-  const count = await countActiveObsInstancesForNode(supabase, nodeId);
-  return c.json({ count });
+export function countActiveInstances(nodeId: string): Promise<number> {
+  return countActiveObsInstancesForNode(supabase, nodeId);
 }
 
 // Running instances on this node whose owner has lost their Cloud OBS plan.
 // The node polls this and stops them, which covers a grant that simply
 // expires (no event fires for that) and backs up the stop web-admin sends on
-// revoke. A lookup failure is a 500, never an empty "stop nothing" or a full
-// "stop everything" answer.
-export async function listUnentitledInstances(c: Context) {
-  const nodeId = c.get("nodeId");
+// revoke. A lookup failure throws (a 500), never an empty "stop nothing" or a
+// full "stop everything" answer.
+export async function listUnentitledInstances(nodeId: string): Promise<string[]> {
   const running = await listRunningObsInstancesByNode(supabase, nodeId);
-  const ids = await unentitledInstanceIds(running, (userIds) =>
-    usersWithActiveSubscription(supabase, userIds, "cloud_obs"),
-  );
-  return c.json({ instance_ids: ids });
+  return unentitledInstanceIds(running, (userIds) => usersWithActiveSubscription(supabase, userIds, "cloud_obs"));
 }
 
-export async function getInstance(c: Context<Env, "/:id">) {
-  const nodeId = c.get("nodeId");
-  const id = c.req.param("id");
-  const userId = c.req.query("user_id");
-  // Always scoped to the calling node; the optional user_id further narrows it.
+/** One of the node's instances; the optional userId further narrows it. null when there is no match. */
+export async function getInstance(nodeId: string, id: string, userId?: string) {
   const instance = await getObsInstanceByIdForNode(supabase, id, nodeId);
-  if (!instance || (userId && instance.user_id !== userId)) {
-    return c.json({ error: "Instance not found" }, 404);
-  }
-  return c.json(instance);
+  if (!instance || (userId && instance.user_id !== userId)) return null;
+  return instance;
 }
 
-export async function createInstance(c: Context) {
-  const nodeId = c.get("nodeId");
-  const parsed = insertInstanceSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
-  }
-  const { obs_ws_password: obsWsPassword, ...fields } = parsed.data;
+export type CreateInstanceResult =
+  | { ok: true; instance: Awaited<ReturnType<typeof insertObsInstance>> }
+  | { ok: false; reason: "create_token"; tokenCheck: Extract<CreateTokenCheck, { ok: false }> }
+  | { ok: false; reason: "subscription_inactive" | "failed" };
+
+export async function createInstance(input: {
+  nodeId: string;
+  fields: InsertInstanceInput;
+  /** The X-Node-Token header: the user's own instances:create token. */
+  createToken: string | undefined;
+}): Promise<CreateInstanceResult> {
+  const { nodeId, createToken } = input;
+  const { obs_ws_password: obsWsPassword, ...fields } = input.fields;
   const { user_id: userId, subscription_id: subscriptionId } = fields;
 
   // user_id comes from the node, so it has to be backed by the user's own
   // launch token. See ./instance-create-token.ts.
   const tokenCheck = await checkInstanceCreateToken({
-    token: c.req.header("X-Node-Token"),
+    token: createToken,
     nodeId,
     userId,
     jwks: env.NODE_TOKEN_PUBLIC_JWKS,
-    required: env.NODE_CREATE_TOKEN_REQUIRED,
   });
-  if (!tokenCheck.ok) return c.json({ error: tokenCheck.error }, tokenCheck.status);
+  if (!tokenCheck.ok) return { ok: false, reason: "create_token", tokenCheck };
 
-  if (subscriptionId && !(await isActiveSubscriptionOfUser(supabase, subscriptionId, userId))) {
-    return c.json({ error: "Subscription not found or inactive" }, 403);
+  const planSubscriptionId = await launchSubscriptionId(userId, subscriptionId, {
+    isOwnActivePlan: (id, owner) => isActiveSubscriptionOfUser(supabase, id, owner, "cloud_obs"),
+    activePlanOf: (owner) => getUserActiveSubscriptionId(supabase, owner, "cloud_obs"),
+  });
+  if (!planSubscriptionId) {
+    return { ok: false, reason: "subscription_inactive" };
   }
 
   // Both passwords are encrypted here, never by the node: the node holds no
@@ -97,6 +89,7 @@ export async function createInstance(c: Context) {
     // node_id is forced to the authenticated node, never taken from the body.
     const instance = await insertObsInstance(supabase, {
       ...fields,
+      subscription_id: planSubscriptionId,
       node_id: nodeId,
       obs_ws_password_ciphertext: obsWs.ciphertext,
       obs_ws_password_iv: obsWs.iv,
@@ -105,48 +98,51 @@ export async function createInstance(c: Context) {
       vnc_password_iv: vnc.iv,
       vnc_password_tag: vnc.tag,
     });
-    return c.json(instance, 201);
+    return { ok: true, instance };
   } catch (err) {
-    return c.json({ error: (err as Error).message }, 500);
+    // Never the raw DB error: a constraint name or detail would tell the node
+    // whether an id exists on another node.
+    reportError(err, "obs-nodes.instances.create", { nodeId });
+    return { ok: false, reason: "failed" };
   }
 }
 
-export async function updateInstance(c: Context<Env, "/:id">) {
-  const nodeId = c.get("nodeId");
-  const id = c.req.param("id");
-  const parsed = updateInstanceSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
-  }
+export type InstanceWriteFailure = "not_found" | "failed";
+
+type UpdatedInstance = NonNullable<Awaited<ReturnType<typeof updateObsInstanceForNode>>>;
+
+export async function updateInstance(
+  nodeId: string,
+  id: string,
+  fields: UpdateInstanceInput,
+): Promise<{ ok: true; instance: UpdatedInstance } | { ok: false; reason: InstanceWriteFailure }> {
   try {
-    const instance = await updateObsInstanceForNode(supabase, id, nodeId, parsed.data);
-    if (!instance) return c.json({ error: "Instance not found" }, 404);
-    return c.json(instance);
+    const instance = await updateObsInstanceForNode(supabase, id, nodeId, fields);
+    if (!instance) return { ok: false, reason: "not_found" };
+    return { ok: true, instance };
   } catch (err) {
-    return c.json({ error: (err as Error).message }, 500);
+    // Never the raw DB error: a constraint name or detail would tell the node
+    // whether an id exists on another node.
+    reportError(err, "obs-nodes.instances.update", { nodeId });
+    return { ok: false, reason: "failed" };
   }
 }
 
-export async function updateInstanceByContainer(c: Context<Env, "/by-container/:containerId">) {
-  const nodeId = c.get("nodeId");
-  const containerId = c.req.param("containerId");
-  const parsed = updateInstanceSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
-  }
-  const instance = await updateObsInstanceByContainerIdForNode(supabase, containerId, nodeId, parsed.data);
-  if (!instance) return c.json({ error: "Instance not found" }, 404);
-  return c.json(instance);
+/** null when no instance of this node runs in that container. */
+export function updateInstanceByContainer(nodeId: string, containerId: string, fields: UpdateInstanceInput) {
+  return updateObsInstanceByContainerIdForNode(supabase, containerId, nodeId, fields);
 }
 
-export async function deleteInstance(c: Context<Env, "/:id">) {
-  const nodeId = c.get("nodeId");
-  const id = c.req.param("id");
+export async function deleteInstance(nodeId: string, id: string): Promise<{ ok: true } | { ok: false; reason: InstanceWriteFailure }> {
   try {
     const deleted = await deleteObsInstanceForNode(supabase, id, nodeId);
-    if (!deleted) return c.json({ error: "Instance not found" }, 404);
-    return c.json({ ok: true });
+    if (!deleted) return { ok: false, reason: "not_found" };
+    instanceDeleted(nodeId, id, deleted.user_id);
+    return { ok: true };
   } catch (err) {
-    return c.json({ error: (err as Error).message }, 500);
+    // Never the raw DB error: a constraint name or detail would tell the node
+    // whether an id exists on another node.
+    reportError(err, "obs-nodes.instances.delete", { nodeId });
+    return { ok: false, reason: "failed" };
   }
 }

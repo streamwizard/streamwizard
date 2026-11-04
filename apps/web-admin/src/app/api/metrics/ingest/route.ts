@@ -12,10 +12,10 @@ import {
   queryActiveIngestSignals,
 } from "@repo/metrics";
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-session";
-import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
-import { getFleet } from "@/lib/node-fleet";
-import { mergeIngestNodes } from "@/lib/ingest-nodes";
+import { getAdminSession } from "@/lib/auth/admin-session";
+import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/nodes/registry-nodes";
+import { getFleet } from "@/lib/nodes/node-fleet";
+import { mergeIngestNodes } from "@/lib/nodes/ingest-nodes";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
       fleet,
     });
   } catch (err) {
-    console.error("[ingest metrics]", err);
+    console.warn("[ingest metrics]", err);
     return NextResponse.json({ hostCpu: [], hostMem: [], hostRx: [], hostTx: [], activeSignals: [] });
   }
 }

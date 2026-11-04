@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import type { AutoSwitcherStatus } from "@repo/schemas";
+import type { AutoSwitcherStatus } from "@repo/schemas/auto-switcher/auto-switcher";
 import {
   Button,
   Card,

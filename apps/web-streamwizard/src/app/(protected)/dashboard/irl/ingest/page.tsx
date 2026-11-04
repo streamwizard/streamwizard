@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireProductAccess } from "@/lib/require-product-access";
-import { listIngestKeys } from "@/actions/ingest-keys";
+import { listIngestKeys } from "@/actions/irl/ingest-keys";
 import { createAdminClient } from "@repo/supabase/next/admin";
-import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest-nodes";
+import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest/nodes";
 import { IngestLiveStats } from "@/components/irl/ingest-live-stats";
 import { IngestKeysSection } from "@/components/irl/ingest-keys-section";
-import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
+import { FeatureDisabledBanner } from "@/components/shared/feature-disabled-banner";
+import { env } from "@/lib/env";
 
 export default async function IrlIngestPage() {
   const access = await requireProductAccess("cloud_obs");
@@ -19,7 +20,7 @@ export default async function IrlIngestPage() {
   // Encoders push to the linked node's public domain (when ops has set one) or
   // its public IP, falling back to env/placeholder only when no node is linked.
   const ingestHost =
-    nodeHosts?.public_hostname ?? nodeHosts?.public_ip ?? process.env.NEXT_PUBLIC_INGEST_HOST ?? "your-stream-server";
+    nodeHosts?.public_hostname ?? nodeHosts?.public_ip ?? env.NEXT_PUBLIC_INGEST_HOST ?? "your-stream-server";
 
   return (
     <div className="w-full max-w-2xl space-y-6">

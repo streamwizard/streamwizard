@@ -60,7 +60,7 @@ export const EMPTY_CHAT_ASSETS: ChatAssets = {
   thirdPartyEmotes: {},
 };
 
-/** One EventSub message fragment. Structurally `ChatFragment` from @repo/schemas. */
+/** One EventSub message fragment. Structurally `ChatFragment` from @repo/schemas/eventsub/chat. */
 export interface ChatFragment {
   type: "text" | "cheermote" | "emote" | "mention" | "gif";
   text: string;

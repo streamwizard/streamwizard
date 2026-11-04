@@ -9,7 +9,7 @@ import {
   queryWsTopMessageTypes,
 } from "@repo/metrics";
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-session";
+import { getAdminSession } from "@/lib/auth/admin-session";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       topMessageTypes,
     });
   } catch (err) {
-    console.error("[ws metrics]", err);
+    console.warn("[ws metrics]", err);
     return NextResponse.json({
       connections: [],
       messages: [],

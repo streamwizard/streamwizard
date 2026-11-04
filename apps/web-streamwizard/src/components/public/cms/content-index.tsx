@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { contentIndexPath, type ContentType } from "@repo/cms";
-import { JsonLd } from "@/components/seo/json-ld";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import {
   facetsFor,
   filterCards,
@@ -14,7 +14,7 @@ import {
 import { cmsImageUrl } from "@/lib/cms/images";
 import { getPublicTaxonomy, listPublishedPosts } from "@/lib/cms/public";
 import { toCard } from "@/lib/cms/published";
-import { absoluteUrl, breadcrumbSchema } from "@/lib/seo";
+import { absoluteUrl, breadcrumbSchema } from "@/lib/seo/seo";
 import { AnimatedGrid } from "./animated-grid";
 import { ContentCard } from "./content-card";
 import { ContentEmptyState } from "./content-empty-state";

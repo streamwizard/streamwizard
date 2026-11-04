@@ -1,12 +1,10 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { subscribeToWsRoomWith, wsStatusFromMessage, type WsRoomOptions, type WsRoomStatus } from "./lib/ws-store";
 import { useIrlGeoContext } from "./hooks/use-irl-geo-context";
 import { useEditorAudioMuted } from "./hooks/use-editor-audio";
+import { useOverlayWsUrl } from "./hooks/use-overlay-ws-url";
 
 export interface CustomWidgetIframeHandle {
   postMessage: (msg: unknown) => void;
@@ -213,8 +211,8 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
     const contextGeoActiveRef = useRef(false);
     contextGeoActiveRef.current = contextGeo != null;
 
+    const wsUrl = useOverlayWsUrl();
     useEffect(() => {
-      const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
       if (!wsUrl) return;
       const opts: WsRoomOptions | null =
         wsRoom ??
@@ -240,7 +238,7 @@ export const CustomWidgetIframe = forwardRef<CustomWidgetIframeHandle, CustomWid
           "*"
         );
       });
-    }, [subscriberToken, wsRoom]);
+    }, [subscriberToken, wsUrl, wsRoom]);
 
     // In phone mode, forward local GPS into the iframe using the same event
     // format as WS events so widget authors don't need separate handling. That

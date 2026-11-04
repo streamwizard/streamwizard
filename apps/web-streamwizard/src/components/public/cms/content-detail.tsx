@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { notFound, permanentRedirect } from "next/navigation";
 import { contentPath, isValidSlug, type ContentType } from "@repo/cms";
 import type { ContentProps } from "@repo/posthog";
-import { JsonLd } from "@/components/seo/json-ld";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import { cmsImageUrl, imageResolver } from "@/lib/cms/images";
 import {
   getCurrentSlug,
@@ -25,7 +25,7 @@ import {
   type PublishedCardRow,
   type PublishedRow,
 } from "@/lib/cms/published";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/seo/seo";
 import { CmsArticle } from "./cms-article";
 import { ContentCard } from "./content-card";
 import { ContentTracker } from "./content-tracker";

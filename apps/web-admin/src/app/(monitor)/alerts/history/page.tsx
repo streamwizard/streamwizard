@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { getRuleCatalog } from "@repo/alerting/rules";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { listAlertEvents } from "@repo/supabase/queries/alerts";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle, NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@repo/ui";
-import { TicketFiltersForm } from "@/components/discord/ticket-filters-form";
-import { DataList } from "@/components/widgets/data-list";
-import { FilterPanel } from "@/components/widgets/filter-panel";
-import { PageHeader } from "@/components/widgets/page-header";
-import { StatusIndicator, type IndicatorStatus } from "@/components/widgets/status-indicator";
+import { listAlertEvents } from "@repo/supabase/queries/alerts/alerts";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
+import { NativeSelect, NativeSelectOptGroup, NativeSelectOption } from "@repo/ui/components/ui/native-select";
+import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
+import { DataList } from "@/components/shared/data-list";
+import { FilterPanel } from "@/components/shared/filter-panel";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { StatusIndicator, type IndicatorStatus } from "@/components/shared/status-indicator";
 import { homeEnv } from "@/lib/home-env";
 import { cn } from "@/lib/utils";
 

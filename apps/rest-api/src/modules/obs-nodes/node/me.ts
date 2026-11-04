@@ -1,9 +1,9 @@
-import type { Context } from "hono";
+import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getNodeById, getNodeCommandKeyHash, updateNodeTailscaleIp } from "@repo/supabase/queries/obs-nodes";
+import { getNodeById, updateNodeTailscaleIp } from "@repo/supabase/queries/obs-nodes/nodes";
+import { getNodeCommandKeyHash } from "@repo/supabase/queries/obs-nodes/node-api-keys";
 import { TtlCache } from "@repo/ttl-cache";
-import { env } from "../../../env";
-import { patchNodeMeSchema } from "../../../schemas/obs-nodes";
+import { env } from "@/env";
 
 /**
  * `/me` is two Supabase reads (node row + command key hash) on top of the auth
@@ -21,8 +21,8 @@ type NodeMePayload = NonNullable<Awaited<ReturnType<typeof getNodeById>>> & {
 
 const meByNodeId = new TtlCache<NodeMePayload>({ ttlMs: ME_TTL_MS });
 
-export async function getObsNodeMe(c: Context) {
-  const nodeId = c.get("nodeId");
+/** The node's own row plus what it needs to check callers; null when the node is gone. */
+export async function getObsNodeMe(nodeId: string): Promise<NodeMePayload | null> {
   // Cached as one composite payload rather than per-query, so a hit costs zero
   // Supabase requests instead of one. See ME_TTL_MS above for the tradeoff.
   const payload = await meByNodeId.fetch(nodeId, async () => {
@@ -35,8 +35,7 @@ export async function getObsNodeMe(c: Context) {
     // short-lived tokens web-admin and web-streamwizard sign with them.
     return { ...node, command_key_hash, node_token_jwks: env.NODE_TOKEN_PUBLIC_JWKS };
   });
-  if (!payload) return c.json({ error: "Node not found" }, 404);
-  return c.json(payload);
+  return payload;
 }
 
 // Called by obs-instance-manager's install script once it actually has a
@@ -47,19 +46,15 @@ export async function getObsNodeMe(c: Context) {
 // docker-compose.yml binds the API to loopback and the Tailscale address, so
 // the tailnet URL is the one default that works from other hosts. An admin
 // who has pointed api_url at the node's Cloudflare Tunnel keeps that value.
-export async function updateObsNodeMe(c: Context) {
-  const parsed = patchNodeMeSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json({ error: "tailscale_ip is required" }, 400);
-  }
-
-  const nodeId = c.get("nodeId");
-  const { data, error } = await updateNodeTailscaleIp(supabase, nodeId, parsed.data.tailscale_ip);
+export async function updateObsNodeMe(nodeId: string, tailscaleIp: string) {
+  const { data, error } = await updateNodeTailscaleIp(supabase, nodeId, tailscaleIp);
   if (error) {
-    return c.json({ error }, 500);
+    // Never the DB error itself.
+    reportError(new Error(error), "obs-nodes.me.update", { nodeId });
+    return { ok: false as const };
   }
   // The node reads api_url/tailscale_ip back through GET /me, which is
   // cached for 30s -- evict so its very next poll sees what it just reported.
   meByNodeId.delete(nodeId);
-  return c.json(data);
+  return { ok: true as const, node: data };
 }

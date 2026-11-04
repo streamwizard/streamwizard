@@ -1,22 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import { usePathname } from "next/navigation";
 import { AlarmClock, ExternalLink, Loader2, RotateCcw, Tv } from "lucide-react";
-import { buildDemoEvent } from "@repo/schemas";
+import { buildDemoEvent } from "@repo/schemas/widgets/demo-events";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
   Button,
   cn,
-  ColorPicker,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   ToggleGroup,
   ToggleGroupItem,
 } from "@repo/ui";
@@ -34,24 +28,23 @@ import {
   normalizeAdWidgetConfig,
   scheduleFrom,
   type AdResetBrowserEventDetail,
-  type AdScheduleSnapshot,
   type AdScheduleTestBrowserEventDetail,
   type AdWidgetItemConfig,
   type AdWidgetPreset,
   type FetchedAdSchedule,
 } from "@repo/ui/overlay";
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  InspectorHint,
-  InspectorReveal,
-  InspectorSection,
-  SliderField,
-  SwitchField,
-  presetGeometry,
-} from "@/components/overlays/inspector-fields";
-import { TwitchConnectButton } from "@/components/ui/twitch-scope-banner";
-import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import { presetGeometry } from "@/components/overlays/inspector-fields/preset-geometry";
+import { TwitchConnectButton } from "@/components/shared/twitch/twitch-scope-banner";
+import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
+import { ColorField } from "@/components/overlays/inspector-fields/color-field";
+import { OptionSelect } from "@/components/overlays/inspector-fields/option-select";
+import { twitchAccount, useTwitchAsset, type TwitchAccountBody } from "@/components/overlays/widgets/shared/use-twitch-widget-feed";
 
 /** Ads Manager, where the ad schedule is set. Without a login, the dashboard home. */
 function adsManagerUrl(login: string | null): string {
@@ -106,51 +99,6 @@ function PresetSketch({ preset }: { preset: AdWidgetPreset }) {
   }
 }
 
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="min-w-0 space-y-1.5">
-      <Label className="text-xs">{label}</Label>
-      <ColorPicker value={value} onChange={onChange} aria-label={`${label} color`} />
-    </div>
-  );
-}
-
-function OptionSelect<T extends string>({
-  id,
-  label,
-  value,
-  options,
-  labels,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: T;
-  options: readonly T[];
-  labels: Record<T, string>;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="min-w-0 space-y-2">
-      <Label htmlFor={id} className="text-xs">
-        {label}
-      </Label>
-      <Select value={value} onValueChange={(v) => onChange(v as T)}>
-        <SelectTrigger id={id} size="sm" className="w-full text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option} value={option} className="text-xs">
-              {labels[option]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
 function TextField({
   id,
   label,
@@ -179,42 +127,15 @@ function TextField({
   );
 }
 
-type ScheduleResponse =
-  | { status: "loading" }
-  | { status: "failed" }
-  | { status: "ready"; schedule: AdScheduleSnapshot | null; missingScope: boolean; login: string | null };
+interface AdScheduleBody extends TwitchAccountBody {
+  schedule?: FetchedAdSchedule | null;
+}
 
 /** The channel's ad schedule for the status card, read once when the panel opens. */
-function useTwitchAdSchedule() {
-  const [response, setResponse] = useState<ScheduleResponse>({ status: "loading" });
-  const [refreshKey, setRefreshKey] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/twitch/assets/ads");
-        if (!res.ok) throw new Error(String(res.status));
-        const body = (await res.json()) as { schedule?: FetchedAdSchedule | null; missing_scope?: boolean; login?: string | null };
-        if (cancelled) return;
-        setResponse({
-          status: "ready",
-          schedule: scheduleFrom(body.schedule),
-          missingScope: body.missing_scope === true,
-          login: typeof body.login === "string" && body.login ? body.login : null,
-        });
-      } catch {
-        if (!cancelled) setResponse({ status: "failed" });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
-
-  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
-  return { response, refresh };
-}
+const AD_SCHEDULE = {
+  resource: "ads",
+  ready: (body: AdScheduleBody) => ({ schedule: scheduleFrom(body.schedule), ...twitchAccount(body) }),
+};
 
 function useNow(): number {
   const [now, setNow] = useState(() => Date.now());
@@ -231,7 +152,7 @@ export function AdWidgetSettings({ item, updateItem }: OverlayInspectorAppendPro
   const cfg = normalizeAdWidgetConfig(item.config);
   const pathname = usePathname();
   const sceneId = useOverlayStore((s) => s.scene?.id);
-  const { response: twitch, refresh } = useTwitchAdSchedule();
+  const { response: twitch, refresh } = useTwitchAsset(AD_SCHEDULE);
   const { fire, mode } = useDemoFire();
   const [testBusy, setTestBusy] = useState<string | null>(null);
   const [testing, setTesting] = useState(false);

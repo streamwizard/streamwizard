@@ -3,13 +3,15 @@ import type { LucideIcon } from "lucide-react";
 import type { Database } from "@repo/supabase";
 import type {
   ChildOverlayItemType,
-  DisplayFieldKey,
+  OverlayItemType,
+  RootOverlayItemType,
+} from "@repo/ui/components/overlay/types/base";
+import type { DisplayFieldKey } from "@repo/ui/components/overlay/types/clips";
+import type {
   OverlayItem,
   OverlayItemConfig,
-  OverlayItemType,
   OverlaySceneWithItems,
-  RootOverlayItemType,
-} from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/item";
 import type { WidgetBaseDefinition } from "@repo/ui/overlay";
 
 export type WidgetCategory = "media" | "alerts" | "goals" | "polls" | "ads" | "credits" | "labels" | "layout" | "irl" | "other";

@@ -1,8 +1,8 @@
 import { EmbedBuilder, InteractionContextType, MessageFlags, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { getUserRank, getUserTotals } from "@repo/supabase/queries/discord-activity";
+import { getUserRank, getUserTotals } from "@repo/supabase/queries/discord/activity";
 import type { Command } from "../types/discord";
-import { formatDuration, formatNumber, resolveTimeframe, TIMEFRAME_CHOICES, type Timeframe } from "../lib/activity-format";
+import { formatDuration, formatNumber, resolveTimeframe, TIMEFRAME_CHOICES, type Timeframe } from "@/lib/activity/activity-format";
 
 export default {
   data: new SlashCommandBuilder()

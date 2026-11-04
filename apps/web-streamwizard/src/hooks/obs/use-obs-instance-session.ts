@@ -3,14 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { mintWsUrl, useObsWebSocket } from "@repo/obs-web";
-import type { ObsInstanceLifecyclePayload } from "@repo/types";
+import type { ObsInstanceLifecyclePayload } from "@repo/types/overlay-ws";
 import {
   getInstanceNodeApiUrlAction,
   getInstanceObsWsPasswordAction,
   getMyLatestInstanceAction,
-} from "@/actions/nodes";
+} from "@/actions/obs/nodes";
 import { useObsLifecycleNotifications } from "@/hooks/obs/use-obs-lifecycle-notifications";
-import { nodeToken } from "@/lib/node-token";
+import { nodeToken } from "@/lib/obs/node-token";
 
 export type ContainerStatus = "running" | "stopped" | "unknown";
 

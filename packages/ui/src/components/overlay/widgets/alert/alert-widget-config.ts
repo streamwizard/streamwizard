@@ -1,8 +1,5 @@
-import {
-  buildWidgetTestEvent,
-  type TwitchScopeFeature,
-  type WidgetTestEventType,
-} from "@repo/schemas";
+import { buildWidgetTestEvent, type WidgetTestEventType } from "@repo/schemas/widgets/test-events";
+import { type TwitchScopeFeature } from "@repo/schemas/twitch-scopes";
 import {
   ALERT_ENTER_ANIMATIONS,
   ALERT_EXIT_ANIMATIONS,
@@ -11,12 +8,9 @@ import {
   type AlertExitAnimation,
   type AlertHighlightAnimation,
 } from "./alert-animations";
-import {
-  DEFAULT_GOOGLE_FONT_FAMILY,
-  resolvedTextWidgetFontFamily,
-  type GoogleFontFamily,
-  type OverlayItemConfig,
-} from "../../types";
+import { DEFAULT_GOOGLE_FONT_FAMILY, type GoogleFontFamily } from "../../types/base";
+import { resolvedTextWidgetFontFamily } from "../../types/widgets";
+import type { OverlayItemConfig } from "../../types/item";
 
 // ─── Event types ────────────────────────────────────────────────────────────
 
@@ -2101,7 +2095,7 @@ export const ALERT_EVENT_SUBSCRIPTION_TYPES: Record<
  * real subscription type so custom widgets react to tests exactly like SE.
  * Used by the editor's local preview and the send-to-stream server action.
  *
- * Payloads live in `@repo/schemas` alongside every other test fixture, where a
+ * Payloads live in `@repo/schemas/widgets/test-events` alongside every other test fixture, where a
  * test asserts each one still parses against its zod schema.
  */
 export function buildTestAlertSocketMessage(

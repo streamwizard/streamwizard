@@ -1,10 +1,11 @@
 import { createHash, randomBytes } from "crypto";
-import type { Context } from "hono";
 import { supabase } from "@repo/supabase";
 import { encryptToken } from "@repo/supabase/crypto";
-import { claimNodeByTokenHash, consumeClaimToken, insertNodeApiKey } from "@repo/supabase/queries/obs-nodes";
-import { env } from "../../../env";
-import { mintTailscaleAuthKey } from "../../../lib/tailscale";
+import { claimNodeByTokenHash, consumeClaimToken } from "@repo/supabase/queries/obs-nodes/nodes";
+import { insertNodeApiKey } from "@repo/supabase/queries/obs-nodes/node-api-keys";
+import { env } from "@/env";
+import { mintTailscaleAuthKey } from "@/lib/tailscale";
+import type { ClaimObsNodeInput } from "@/modules/obs-nodes/schemas";
 
 // Lowercases and replaces runs of non-alphanumerics with a single hyphen, e.g.
 // "GPU Box 1" -> "gpu-box-1". The panel is the single source of truth for this
@@ -20,27 +21,16 @@ function slugifyHostname(name: string): string {
   );
 }
 
+/** Why a claim failed: unknown token, a node that was already claimed, or an expired token. */
+export type ClaimFailure = "invalid_token" | "already_claimed" | "expired";
+
 // Called by obs-instance-manager's install script during node setup. No
 // Supabase session involved -- a fresh, untrusted VM hits this with nothing
 // but the one-time claim token in the body, which is why this lives in
-// rest-api (brute-force protection, security headers, audit logging already
-// wired up here) instead of the session/cookie-oriented web app.
-export async function claimObsNode(c: Context) {
-  const body = await c.req.json();
-  const { token, gpu_bus_id, vram_total_mb, ram_total_mb, cpu_cores, gpu_model, storage_total_mb } = body as {
-    token?: string;
-    gpu_bus_id?: string;
-    vram_total_mb?: number;
-    ram_total_mb?: number;
-    cpu_cores?: number;
-    gpu_model?: string;
-    storage_total_mb?: number;
-  };
-
-  if (!token || !gpu_bus_id) {
-    return c.json({ error: "token and gpu_bus_id are required" }, 400);
-  }
-
+// rest-api (security headers, audit logging already wired up here) instead of
+// the session/cookie-oriented web app.
+export async function claimObsNode(input: ClaimObsNodeInput) {
+  const { token, gpu_bus_id, vram_total_mb, ram_total_mb, cpu_cores, gpu_model, storage_total_mb } = input;
   const tokenHash = createHash("sha256").update(token).digest("hex");
 
   // Look up the pending node first so we can derive its hostname slug from
@@ -64,23 +54,17 @@ export async function claimObsNode(c: Context) {
     // The atomic update matched nothing -- look the row up read-only just to
     // pick the right error code; this lookup never drives the mutation.
     const node = await claimNodeByTokenHash(supabase, tokenHash);
-    if (!node) {
-      return c.json({ error: "Invalid claim token" }, 404);
-    }
-    if (node.status === "linked") {
-      return c.json({ error: "This node has already been claimed" }, 409);
-    }
-    return c.json({ error: "Claim token has expired" }, 410);
+    const reason: ClaimFailure = !node ? "invalid_token" : node.status === "linked" ? "already_claimed" : "expired";
+    return { ok: false as const, reason };
   }
 
+  // Only the hash is stored: obsNodeAuth needs nothing else, and the key is
+  // returned once below. No encrypted copy, so TOKEN_ENCRYPTION_KEY can't
+  // rebuild it.
   const apiKey = randomBytes(32).toString("hex");
-  const { ciphertext, iv, authTag } = encryptToken(apiKey);
   await insertNodeApiKey(supabase, linked.id, {
     type: "rest_api",
     key_hash: createHash("sha256").update(apiKey).digest("hex"),
-    key_ciphertext: ciphertext,
-    key_iv: iv,
-    key_tag: authTag,
   });
 
   // Per-node command key for the obs-auto-switcher's /obs route. The node only
@@ -108,7 +92,7 @@ export async function claimObsNode(c: Context) {
     description: `obs-node claim ${linked.id}`,
   });
 
-  return c.json({
+  const credentials = {
     node_id: linked.id,
     node_api_key: apiKey,
     hostname: linked.hostname,
@@ -116,8 +100,9 @@ export async function claimObsNode(c: Context) {
     rest_api_url: env.STREAMWIZARD_API_URL,
     supabase_url: env.SUPABASE_URL,
     S3_ENDPOINT: env.OBS_S3_ENDPOINT,
-    S3_ACCESS_KEY: env.OBS_S3_ACCESS_KEY,
-    S3_SECRET_KEY: env.OBS_S3_SECRET_KEY,
+    // No storage key: nodes get temporary per-instance credentials from
+    // POST /api/obs-nodes/instances/:id/storage-credentials, and read-only
+    // shared credentials from POST /api/obs-nodes/storage-credentials.
     S3_BUCKET: env.OBS_S3_BUCKET,
     S3_REGION: env.OBS_S3_REGION,
     // No TOKEN_ENCRYPTION_KEY: nodes get their instances' passwords in
@@ -133,13 +118,9 @@ export async function claimObsNode(c: Context) {
           INFLUXDB_TOKEN: env.INFLUXDB_OBS_NODE_TOKEN ?? env.INFLUXDB_TOKEN,
         }
       : {}),
-    // Present only when both are configured on rest-api — lets the node push
-    // container lifecycle events to browsers via ws-server /internal/broadcast.
-    ...(env.WS_SERVER_URL && env.CONSUMER_SECRET
-      ? {
-          WS_SERVER_URL: env.WS_SERVER_URL,
-          CONSUMER_SECRET: env.CONSUMER_SECRET,
-        }
-      : {}),
-  });
+    // No ws-server URL or credential: the node sends lifecycle and scene
+    // events to POST /api/obs-nodes/instances/:id/events, and rest-api
+    // forwards them to ws-server for the instance's owner.
+  };
+  return { ok: true as const, credentials };
 }

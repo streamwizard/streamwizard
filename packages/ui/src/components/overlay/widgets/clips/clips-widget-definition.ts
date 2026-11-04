@@ -1,5 +1,5 @@
 import type { WidgetBaseDefinition } from "../../widget-definition";
-import { DEFAULT_CLIPS_WIDGET_ITEM_CONFIG } from "../../types";
+import { DEFAULT_CLIPS_WIDGET_ITEM_CONFIG } from "../../types/clips";
 
 export const CLIPS_WIDGET_DEFAULT_SIZE = { w: 1920, h: 1080 } as const;
 

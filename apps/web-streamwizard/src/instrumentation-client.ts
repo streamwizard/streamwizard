@@ -32,7 +32,7 @@ if (process.env.NODE_ENV !== "development") {
       integrations: [
         // Replay only for visitors who accepted analytics; the cookie banner
         // adds it at runtime for everyone else who accepts later. See
-        // src/lib/sentry-replay.ts.
+        // src/lib/tracking/sentry-replay.ts.
         ...(hasGrantedConsent() ? [Sentry.replayIntegration()] : []),
         createSupabaseIntegration(Sentry),
         createConsoleLogsIntegration(),

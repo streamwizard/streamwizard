@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { absoluteUrl, aboutPageSchema } from "@/lib/seo";
-import { JsonLd } from "@/components/seo/json-ld";
-import { PageHero } from "@/components/public/layout/page-hero";
+import { absoluteUrl, aboutPageSchema } from "@/lib/seo/seo";
+import { JsonLd } from "@/components/public/seo/json-ld";
+import { PageHero } from "@/components/public/common/page-hero";
 import { FinalCta } from "@/components/public/home/final-cta";
 import { OriginSection } from "@/components/public/about/origin-section";
 import { PillarsSection } from "@/components/public/about/pillars-section";

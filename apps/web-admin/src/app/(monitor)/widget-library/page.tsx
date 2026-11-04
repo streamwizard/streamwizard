@@ -1,7 +1,8 @@
-import { Alert, AlertDescription, AlertTitle } from "@repo/ui";
-import { getPendingLibraryEntries } from "@/actions/widget-library";
-import { AdminWidgetLibraryClient, type PendingEntry } from "@/components/widget-library/admin-widget-library-client";
-import { PageHeader } from "@/components/widgets/page-header";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
+import { getPendingLibraryEntries } from "@/actions/widget-library/widget-library";
+import { AdminWidgetLibraryClient } from "@/components/widget-library/admin-widget-library-client";
+import type { PendingEntry } from "@/types/widget-library";
+import { PageHeader } from "@/components/shared/page/page-header";
 
 export const dynamic = "force-dynamic";
 

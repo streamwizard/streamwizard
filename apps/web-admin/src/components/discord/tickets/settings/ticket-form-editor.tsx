@@ -1,0 +1,601 @@
+"use client";
+
+import { useId, useState } from "react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  Input,
+  Label,
+  NativeSelect,
+  NativeSelectOption,
+  Switch,
+} from "@repo/ui";
+import { SortableList } from "@repo/ui/components/sortable-list";
+import { saveTicketCategoryFormAction } from "@/actions/discord/ticket-design";
+import {
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/shared/responsive-dialog";
+import { useCategorySavePart } from "@/components/discord/tickets/settings/ticket-category-save";
+import { MoveMenuItems, TicketRowMenu } from "@/components/discord/ticket-row-menu";
+
+type FieldKind = "subject" | "description" | "product" | "text" | "select" | "file";
+
+interface OptionDraft {
+  label: string;
+  value: string;
+  description: string;
+  emoji: string;
+}
+
+/** A question as the editor holds it. `id` is the database id, or "new-…" until the first save. */
+export interface TicketFieldDraft {
+  id: string;
+  kind: FieldKind;
+  label: string;
+  placeholder: string;
+  style: "short" | "paragraph";
+  required: boolean;
+  minLength: number | null;
+  maxLength: number | null;
+  /** File uploads only. Null: at least one when required, and as many as Discord takes. */
+  minFiles: number | null;
+  maxFiles: number | null;
+  options: OptionDraft[];
+}
+
+interface Limits {
+  maxFields: number;
+  labelMax: number;
+  placeholderMax: number;
+  textMax: number;
+  subjectMax: number;
+  maxOptions: number;
+  optionMax: number;
+  /** Discord takes 10 files in one upload. */
+  filesMax: number;
+}
+
+interface TicketFormEditorProps {
+  categoryId: string;
+  initial: TicketFieldDraft[];
+  /** Without products the product question is skipped in Discord; the editor says so. */
+  hasProducts: boolean;
+  limits: Limits;
+}
+
+const KINDS: Record<FieldKind, { name: string; hint: string; once: boolean }> = {
+  subject: { name: "Subject", hint: "A short line. Becomes the ticket's title.", once: true },
+  description: { name: "Description", hint: "The long answer. Shown at the top of the ticket.", once: true },
+  product: { name: "Product", hint: "A dropdown of your products. Filters the ticket list.", once: true },
+  text: { name: "Text question", hint: "Anything else you want to ask.", once: false },
+  select: { name: "Dropdown question", hint: "Pick one from options you write.", once: false },
+  file: { name: "File upload", hint: "Screenshots, PDFs, logs or zips. Posted in the new ticket.", once: false },
+};
+
+/** Free text, the kinds with a placeholder, a style and lengths. */
+const isTextKind = (kind: FieldKind) => kind === "subject" || kind === "description" || kind === "text";
+
+/** What a file question's row says when it has no hint of its own. */
+const filesSummary = (field: TicketFieldDraft, filesMax: number) => {
+  const max = field.maxFiles ?? filesMax;
+  return max === 1 ? "One file" : `Up to ${max} files`;
+};
+
+const isNew = (id: string) => id.startsWith("new-");
+
+const blank = (kind: FieldKind): TicketFieldDraft => ({
+  id: `new-${crypto.randomUUID()}`,
+  kind,
+  label: kind === "text" || kind === "select" || kind === "file" ? "" : KINDS[kind].name,
+  placeholder: "",
+  style: kind === "description" ? "paragraph" : "short",
+  required: true,
+  minLength: null,
+  maxLength: null,
+  minFiles: null,
+  maxFiles: null,
+  options: [],
+});
+
+/** "Windows 11" gives "windows_11". Values are what is stored on the question, labels what people read. */
+const optionValue = (label: string, taken: string[]): string => {
+  const base =
+    label
+      .normalize("NFKD")
+      .replace(/\p{M}+/gu, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 80) || "option";
+  let value = base;
+  for (let n = 2; taken.includes(value); n++) value = `${base}_${n}`;
+  return value;
+};
+
+/** The questions a category's ticket form asks, in order. Saved as a whole, by the category page's save bar. */
+export function TicketFormEditor({ categoryId, initial, hasProducts, limits }: TicketFormEditorProps) {
+  const [fields, setFields] = useState(initial);
+  const [editing, setEditing] = useState<TicketFieldDraft | null>(null);
+  const [removing, setRemoving] = useState<TicketFieldDraft | null>(null);
+
+  const dirty = JSON.stringify(fields) !== JSON.stringify(initial);
+  const full = fields.length >= limits.maxFields;
+  const addable = (Object.keys(KINDS) as FieldKind[]).filter(
+    (kind) => !KINDS[kind].once || !fields.some((field) => field.kind === kind),
+  );
+
+  const saving = useCategorySavePart({
+    label: "Form",
+    saved: "Form saved.",
+    dirty,
+    reset: () => setFields(initial),
+    save: () =>
+      saveTicketCategoryFormAction(
+        categoryId,
+        fields.map((field) => ({
+          ...(isNew(field.id) ? {} : { id: field.id }),
+          kind: field.kind,
+          label: field.label,
+          placeholder: field.placeholder,
+          style: field.style,
+          required: field.required,
+          minLength: field.minLength,
+          maxLength: field.maxLength,
+          minFiles: field.minFiles,
+          maxFiles: field.maxFiles,
+          options: field.options.map((o) => ({
+            label: o.label,
+            value: o.value,
+            ...(o.description ? { description: o.description } : {}),
+            emoji: o.emoji || null,
+          })),
+        })),
+      ),
+  });
+
+  const upsert = (next: TicketFieldDraft) => {
+    setFields((current) =>
+      current.some((field) => field.id === next.id)
+        ? current.map((field) => (field.id === next.id ? next : field))
+        : [...current, next],
+    );
+    setEditing(null);
+  };
+
+  return (
+    <Card>
+      {/* The button drops under the title on a phone instead of squeezing it. */}
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="space-y-1.5">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+            Form
+            {dirty && <Badge variant="outline">Not saved</Badge>}
+          </CardTitle>
+          <CardDescription>
+            What members fill in to open a ticket here. Discord fits {limits.maxFields} questions in a form. With none,
+            the ticket opens straight away. <span className="hidden md:inline">Drag to change the order.</span>
+            <span className="md:hidden">Change the order from a row&apos;s menu.</span>
+          </CardDescription>
+        </div>
+        <div className="flex shrink-0 flex-col items-start gap-1 sm:items-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" className="h-11 md:h-8" disabled={saving || full}>
+                <Plus />
+                Add question
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              {addable.map((kind) => (
+                <DropdownMenuItem key={kind} onSelect={() => setEditing(blank(kind))} className="flex-col items-start gap-0.5">
+                  <span className="font-medium">{KINDS[kind].name}</span>
+                  <span className="text-xs text-muted-foreground">{KINDS[kind].hint}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          {full && <p className="text-xs text-muted-foreground">Discord fits {limits.maxFields} questions.</p>}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {fields.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No questions. Tickets in this category open without a form, filed under the category&apos;s name.
+          </p>
+        ) : (
+          <SortableList
+            id={`ticket-form-${categoryId}`}
+            items={fields}
+            onReorder={setFields}
+            disabled={saving}
+            itemLabel={(field) => field.label || KINDS[field.kind].name}
+            // No drag handle on a phone: the row's menu has Move up and Move down.
+            handleClassName="hidden md:flex"
+          >
+            {(field, move) => (
+              <div className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm font-medium">
+                    <span className="truncate">{field.label || "Untitled question"}</span>
+                    {/* "Subject · Subject" says nothing; the badge earns its place once the label differs. */}
+                    {field.label !== KINDS[field.kind].name && <Badge variant="outline">{KINDS[field.kind].name}</Badge>}
+                    {!field.required && <Badge variant="outline">Optional</Badge>}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {field.kind === "product" && !hasProducts
+                      ? "Skipped in Discord until you add a product."
+                      : field.kind === "select"
+                        ? field.options.map((o) => o.label).join(", ") || "No options yet"
+                        : field.kind === "file"
+                          ? field.placeholder || filesSummary(field, limits.filesMax)
+                          : field.placeholder || KINDS[field.kind].hint}
+                  </p>
+                </div>
+                <div className="hidden shrink-0 items-center gap-1 md:flex">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Edit ${field.label || "question"}`}
+                    title="Edit"
+                    disabled={saving}
+                    onClick={() => setEditing(field)}
+                  >
+                    <Pencil />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Remove ${field.label || "question"}`}
+                    title="Remove"
+                    disabled={saving}
+                    onClick={() => setRemoving(field)}
+                  >
+                    <Trash2 />
+                  </Button>
+                </div>
+                <TicketRowMenu label={field.label || "question"} disabled={saving} className="md:hidden">
+                  <DropdownMenuItem onSelect={() => setEditing(field)}>
+                    <Pencil />
+                    Edit
+                  </DropdownMenuItem>
+                  <MoveMenuItems move={move} />
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem variant="destructive" onSelect={() => setRemoving(field)}>
+                    <Trash2 />
+                    Remove
+                  </DropdownMenuItem>
+                </TicketRowMenu>
+              </div>
+            )}
+          </SortableList>
+        )}
+      </CardContent>
+
+      {editing && (
+        <FieldDialog key={editing.id} field={editing} limits={limits} onClose={() => setEditing(null)} onDone={upsert} />
+      )}
+
+      {removing && (
+        <AlertDialog open onOpenChange={(open) => !open && setRemoving(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove {removing.label || "this question"}?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Members aren&apos;t asked it anymore once you save. Answers on older tickets stay.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="h-11 md:h-9">Keep it</AlertDialogCancel>
+              <AlertDialogAction
+                className="h-11 md:h-9"
+                onClick={() => {
+                  setFields((current) => current.filter((f) => f.id !== removing.id));
+                  setRemoving(null);
+                }}
+              >
+                Remove
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+    </Card>
+  );
+}
+
+function FieldDialog({
+  field,
+  limits,
+  onClose,
+  onDone,
+}: {
+  field: TicketFieldDraft;
+  limits: Limits;
+  onClose: () => void;
+  onDone: (field: TicketFieldDraft) => void;
+}) {
+  const id = useId();
+  const [draft, setDraft] = useState(field);
+  const set = <K extends keyof TicketFieldDraft>(key: K, value: TicketFieldDraft[K]) =>
+    setDraft((current) => ({ ...current, [key]: value }));
+
+  const isText = isTextKind(draft.kind);
+  const isFile = draft.kind === "file";
+  const ceiling = draft.kind === "subject" ? limits.subjectMax : limits.textMax;
+  const number = (value: string, max: number): number | null => {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.min(parsed, max) : null;
+  };
+
+  const setOption = (index: number, patch: Partial<OptionDraft>) =>
+    set(
+      "options",
+      draft.options.map((o, i) => (i === index ? { ...o, ...patch } : o)),
+    );
+
+  const filesCrossed = isFile && draft.required && (draft.minFiles ?? 1) > (draft.maxFiles ?? limits.filesMax);
+  const ready =
+    draft.label.trim().length > 0 &&
+    !filesCrossed &&
+    (draft.kind !== "select" || (draft.options.length > 0 && draft.options.every((o) => o.label.trim())));
+
+  const submit = () => {
+    const taken: string[] = [];
+    onDone({
+      ...draft,
+      label: draft.label.trim(),
+      placeholder: draft.placeholder.trim(),
+      // The minimum is hidden for an optional upload, so it isn't kept either.
+      minFiles: isFile && draft.required ? draft.minFiles : null,
+      maxFiles: isFile ? draft.maxFiles : null,
+      // An option keeps its value once it has one, so old answers still match it.
+      options: draft.options.map((o) => {
+        const value = o.value || optionValue(o.label, taken);
+        taken.push(value);
+        return { ...o, label: o.label.trim(), description: o.description.trim(), emoji: o.emoji.trim(), value };
+      }),
+    });
+  };
+
+  return (
+    <ResponsiveDialog open onOpenChange={(open) => !open && onClose()}>
+      <ResponsiveDialogContent className="max-h-[90vh] overflow-y-auto">
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (ready) submit();
+          }}
+        >
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>{KINDS[draft.kind].name}</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>{KINDS[draft.kind].hint}</ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor={`${id}-label`}>Question</Label>
+            <Input
+              id={`${id}-label`}
+              value={draft.label}
+              onChange={(event) => set("label", event.target.value)}
+              maxLength={limits.labelMax}
+              className="h-11 md:h-9"
+              required
+              autoFocus
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor={`${id}-placeholder`}>{isFile ? "Hint" : "Placeholder"}</Label>
+            <Input
+              id={`${id}-placeholder`}
+              value={draft.placeholder}
+              onChange={(event) => set("placeholder", event.target.value)}
+              maxLength={limits.placeholderMax}
+              className="h-11 md:h-9"
+            />
+            <p className="text-xs text-muted-foreground">
+              {isFile
+                ? "Small text under the question. Optional. Leave it empty and members see which file types work."
+                : "Grey hint text inside the empty field. Optional."}
+            </p>
+          </div>
+
+          {isFile && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {/* An optional upload can be left empty, so a minimum only means something when it's required. */}
+              {draft.required && (
+                <div className="space-y-2">
+                  <Label htmlFor={`${id}-min-files`}>Fewest files</Label>
+                  <Input
+                    id={`${id}-min-files`}
+                    type="number"
+                    min={1}
+                    max={limits.filesMax}
+                    value={draft.minFiles ?? ""}
+                    onChange={(event) => set("minFiles", number(event.target.value, limits.filesMax) || null)}
+                    placeholder="1"
+                    className="h-11 md:h-9"
+                  />
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor={`${id}-max-files`}>Most files</Label>
+                <Input
+                  id={`${id}-max-files`}
+                  type="number"
+                  min={1}
+                  max={limits.filesMax}
+                  value={draft.maxFiles ?? ""}
+                  onChange={(event) => set("maxFiles", number(event.target.value, limits.filesMax) || null)}
+                  placeholder={String(limits.filesMax)}
+                  className="h-11 md:h-9"
+                />
+              </div>
+              {filesCrossed && (
+                <p className="text-xs text-destructive sm:col-span-2" role="alert">
+                  Fewest can&apos;t be more than most.
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground sm:col-span-2">
+                Discord takes up to {limits.filesMax} files here. Images (PNG, JPG, GIF, WebP), PDF, TXT, LOG and ZIP get
+                through, up to your server&apos;s upload size.
+              </p>
+            </div>
+          )}
+
+          {draft.kind === "text" && (
+            <div className="space-y-2">
+              <Label htmlFor={`${id}-style`}>Answer size</Label>
+              <NativeSelect
+                id={`${id}-style`}
+                value={draft.style}
+                onChange={(event) => set("style", event.target.value === "paragraph" ? "paragraph" : "short")}
+                className="h-11 text-base md:h-9 md:text-sm"
+              >
+                <NativeSelectOption value="short">One line</NativeSelectOption>
+                <NativeSelectOption value="paragraph">Paragraph</NativeSelectOption>
+              </NativeSelect>
+            </div>
+          )}
+
+          {isText && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor={`${id}-min`}>Shortest answer</Label>
+                <Input
+                  id={`${id}-min`}
+                  type="number"
+                  min={0}
+                  max={ceiling}
+                  value={draft.minLength ?? ""}
+                  onChange={(event) => set("minLength", number(event.target.value, ceiling))}
+                  placeholder="No minimum"
+                  className="h-11 md:h-9"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor={`${id}-max`}>Longest answer</Label>
+                <Input
+                  id={`${id}-max`}
+                  type="number"
+                  min={1}
+                  max={ceiling}
+                  value={draft.maxLength ?? ""}
+                  onChange={(event) => set("maxLength", number(event.target.value, ceiling) || null)}
+                  placeholder={String(ceiling)}
+                  className="h-11 md:h-9"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground sm:col-span-2">In characters. Discord allows {ceiling} here.</p>
+            </div>
+          )}
+
+          {draft.kind === "select" && (
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">Options</legend>
+              {draft.options.map((option, index) => (
+                <div key={index} className="flex items-start gap-2">
+                  <Input
+                    aria-label={`Option ${index + 1} emoji`}
+                    value={option.emoji}
+                    onChange={(event) => setOption(index, { emoji: event.target.value })}
+                    maxLength={64}
+                    placeholder="🙂"
+                    className="h-11 w-14 shrink-0 px-1 text-center md:h-9 md:w-16"
+                  />
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <Input
+                      aria-label={`Option ${index + 1} label`}
+                      value={option.label}
+                      onChange={(event) => setOption(index, { label: event.target.value })}
+                      maxLength={limits.optionMax}
+                      placeholder="Label"
+                      className="h-11 md:h-9"
+                      required
+                    />
+                    <Input
+                      aria-label={`Option ${index + 1} description`}
+                      value={option.description}
+                      onChange={(event) => setOption(index, { description: event.target.value })}
+                      maxLength={limits.optionMax}
+                      placeholder="Description (optional)"
+                      className="h-11 md:h-9"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-11 md:size-9"
+                    aria-label={`Remove option ${index + 1}`}
+                    onClick={() =>
+                      set(
+                        "options",
+                        draft.options.filter((_, i) => i !== index),
+                      )
+                    }
+                  >
+                    <X />
+                  </Button>
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-11 md:h-8"
+                disabled={draft.options.length >= limits.maxOptions}
+                onClick={() => set("options", [...draft.options, { label: "", value: "", description: "", emoji: "" }])}
+              >
+                <Plus />
+                Add option
+              </Button>
+            </fieldset>
+          )}
+
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label htmlFor={`${id}-required`}>Required</Label>
+              <p className="text-xs text-muted-foreground">Off lets members leave it empty.</p>
+            </div>
+            <Switch id={`${id}-required`} checked={draft.required} onCheckedChange={(value) => set("required", value)} />
+          </div>
+
+          <ResponsiveDialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={!ready}>
+              Done
+            </Button>
+          </ResponsiveDialogFooter>
+        </form>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
+  );
+}

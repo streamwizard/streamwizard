@@ -1,7 +1,6 @@
 import type { Context } from "hono";
-import { z } from "zod";
 
-export const snowflake = z.string().regex(/^\d{17,20}$/);
+export { snowflakeSchema as snowflake } from "@repo/schemas/ids";
 
 /**
  * The request body as JSON, or `fallback` when it is missing or malformed.

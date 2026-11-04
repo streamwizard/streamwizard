@@ -1,15 +1,12 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { useEditorAudioMuted } from "../../hooks/use-editor-audio";
 import { subscribeToWsRoom } from "../../lib/ws-store";
 import { scopeCss } from "../../lib/scope-css";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import {
   alertEffectKeyframes,
   alertEffectStyle,
@@ -37,6 +34,7 @@ import {
   type AlertPresentation,
   type AlertTestBrowserEventDetail,
 } from "./alert-widget-config";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
 
 export interface AlertWidgetRendererProps {
   item: OverlayItem;
@@ -362,16 +360,16 @@ export function AlertWidgetRenderer({ item, scene, isEditor = false }: AlertWidg
   // out read as broken next to one that reacted. It also means a Live test --
   // and a real sub mid-edit -- plays in the preview and on every open overlay
   // at once, which is the point of Live.
+  const wsUrl = useOverlayWsUrl();
   useEffect(() => {
     const token = scene?.subscriber_token;
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
     return subscribeToWsRoom(token, wsUrl, (raw) => {
       const message = raw as { type?: string; payload?: unknown };
       const alert = alertInstanceFromSocketMessage(message);
       if (alert) enqueue(alert, alertForcedVariationId(message.payload, item.id));
     });
-  }, [scene?.subscriber_token, enqueue, item.id]);
+  }, [scene?.subscriber_token, wsUrl, enqueue, item.id]);
 
   // Editor: local test fires from the inspector and the demo bar (no server
   // round-trip). Anything that isn't an alert maps to null and is ignored.

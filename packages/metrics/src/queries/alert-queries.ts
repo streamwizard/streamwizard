@@ -88,7 +88,7 @@ export async function queryLatestHostSystemFields(range = "10m"): Promise<HostSy
 
 /** Latest reading of every Proxmox guest (qemu VM or lxc container), one row
  * per (PVE node, vmid). Written by PVE's own External Metric Server into the
- * proxmox bucket, not by our code (docs/proxmox-monitoring-plan.md). */
+ * proxmox bucket, not by our code. */
 export interface ProxmoxGuestLatest {
   /** PVE node name (the `nodename` tag), equal to the PVE_HOSTS name. */
   nodename: string;

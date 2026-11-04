@@ -1,4 +1,5 @@
-import { Card, CardContent, CardFooter, CardHeader, Skeleton } from "@repo/ui";
+import { Card, CardContent, CardFooter, CardHeader } from "@repo/ui/components/ui/card";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import { DETAILS_GRID } from "@/components/clips/clips-details-view";
 import { cn } from "@/lib/utils";
 

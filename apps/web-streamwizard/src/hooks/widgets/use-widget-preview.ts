@@ -9,7 +9,7 @@ import {
   type CustomWidgetIframeHandle,
   type WidgetFieldSchema,
 } from "@repo/ui/overlay";
-import type { Widget } from "@/actions/widgets";
+import type { Widget } from "@/types/widgets";
 import { env } from "@/lib/env";
 import { coerceFields } from "@/components/widgets/editor/widget-editor-fields";
 import { parseFieldsJson, type WidgetSources } from "@/hooks/widgets/use-widget-draft";

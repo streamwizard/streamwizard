@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { Health, SubsystemStatus } from "@/lib/overview";
+import type { Health, SubsystemStatus } from "@/lib/overview/overview";
 import { cn } from "@/lib/utils";
 
 const DOT: Record<Health, string> = {

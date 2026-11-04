@@ -3,8 +3,8 @@ import {
   selectCreditsEventRows,
   selectCreditsStream,
   selectStreamPeakViewers,
-} from "@repo/supabase/queries/credits";
-import { aggregateCredits, emptyCredits, type CreditsData, type CreditsPerson } from "@repo/schemas";
+} from "@repo/supabase/queries/stream/credits";
+import { aggregateCredits, emptyCredits, type CreditsData, type CreditsPerson } from "@repo/schemas/widgets/credits";
 import { resolveUsers } from "./assets";
 import { singleFlight } from "./cache";
 

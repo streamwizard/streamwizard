@@ -13,7 +13,7 @@ mock.module("@repo/sentry", () => ({
 // token helpers from it, so loading it after them fails.
 mock.module("@repo/twitch-api", () => ({ TwitchApi: class {} }));
 
-const { createTwitchTokenValidator } = await import("./twitch-token-validator");
+const { createTwitchTokenValidator } = await import("@/jobs/twitch-token-validator");
 
 describe("twitch token validator sweep", () => {
   let saved: [string, string[]][];

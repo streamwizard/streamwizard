@@ -2,14 +2,15 @@ import { z } from "zod";
 import {
   DEFAULT_GOOGLE_FONT_FAMILY,
   isValidGoogleFontFamilyName,
+} from "./components/overlay/types/base";
+import {
   CLIP_SORT_OPTIONS,
   CLIP_SOURCE_MODES,
   DISPLAY_FIELD_KEYS,
-  TEXT_WIDGET_LIMITS,
   TIME_WINDOW_PRESETS,
-  TIMER_COUNTDOWN_MODES,
   type DisplayFieldKey,
-} from "./components/overlay/types";
+} from "./components/overlay/types/clips";
+import { TEXT_WIDGET_LIMITS, TIMER_COUNTDOWN_MODES } from "./components/overlay/types/widgets";
 import {
   ALERT_EVENT_TYPES,
   ALERT_ANIMATION_MAX_SECONDS,
@@ -77,7 +78,7 @@ import {
   SLIDESHOW_WIDGET_LIMITS,
   SLIDESHOW_WIDGET_TRANSITIONS,
 } from "./components/overlay/widgets/slideshow/slideshow-widget-config";
-import { LABEL_ENTRY_KINDS, LABEL_PERIODS } from "@repo/schemas";
+import { LABEL_ENTRY_KINDS, LABEL_PERIODS } from "@repo/schemas/widgets/stream-labels";
 import {
   LABEL_WIDGET_ANIMATIONS,
   LABEL_WIDGET_DIRECTIONS,

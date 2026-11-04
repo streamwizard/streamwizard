@@ -14,9 +14,12 @@
     "@repo/metrics": "workspace:*",
     "@repo/schemas": "workspace:*",
     "@repo/sentry": "workspace:*",
+    "@repo/service-token": "workspace:*",
     "@repo/supabase": "workspace:*",
+    "@repo/ttl-cache": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/types": "workspace:*",
+    "@repo/ws-client": "workspace:*",
     "@sentry/bun": "^10",
     "zod": "^4.4.3"
   },

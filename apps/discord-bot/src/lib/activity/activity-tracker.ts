@@ -1,0 +1,357 @@
+import type {
+  Client,
+  Guild,
+  GuildMember,
+  Message,
+  MessageReaction,
+  PartialMessageReaction,
+  PartialUser,
+  User,
+  VoiceBasedChannel,
+  VoiceState,
+} from "discord.js";
+import { supabase } from "@repo/supabase";
+import { TtlCache } from "@repo/ttl-cache";
+import {
+  closeVoiceSession,
+  getActivitySettings,
+  getIgnoredChannelIds,
+  getOpenVoiceSessions,
+  incrementDailyActivity,
+  openVoiceSession,
+  type DiscordActivitySettings,
+} from "@repo/supabase/queries/discord/activity";
+import { reportError } from "@repo/sentry";
+
+// How long a guild's settings + ignored-channel list stays cached before we
+// re-read it. Messages are high-frequency, so we must not hit the DB per event.
+const SETTINGS_TTL_MS = 60_000;
+
+type TrackingContext = {
+  settings: DiscordActivitySettings;
+  ignoredChannelIds: Set<string>;
+};
+
+// Defaults used when a guild has no settings row yet (tracking on).
+function defaultSettings(guildId: string): DiscordActivitySettings {
+  const now = new Date().toISOString();
+  return {
+    id: "",
+    guild_id: guildId,
+    tracking_enabled: true,
+    track_messages: true,
+    track_reactions: true,
+    track_voice: true,
+    voice_ignore_afk: true,
+    voice_require_others: true,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+const settingsCache = new TtlCache<TrackingContext>({ ttlMs: SETTINGS_TTL_MS });
+
+// Open voice sessions in memory, keyed by `${guildId}:${userId}`.
+type OpenSession = { sessionId: string; channelId: string; startedAt: Date };
+const openSessions = new Map<string, OpenSession>();
+
+// ---------------------------------------------------------------------------
+// Settings cache
+// ---------------------------------------------------------------------------
+
+async function getContext(guildId: string): Promise<TrackingContext> {
+  const ctx = await settingsCache.fetch(guildId, async () => {
+    const [settings, ignored] = await Promise.all([
+      getActivitySettings(supabase, guildId),
+      getIgnoredChannelIds(supabase, guildId),
+    ]);
+    return { settings: settings ?? defaultSettings(guildId), ignoredChannelIds: new Set(ignored) };
+  });
+  // The loader never returns null; this only narrows the type.
+  return ctx ?? { settings: defaultSettings(guildId), ignoredChannelIds: new Set() };
+}
+
+// Call after staff change a guild's tracking config so the next event re-reads it.
+export function invalidateSettingsCache(guildId: string): void {
+  settingsCache.delete(guildId);
+}
+
+// ---------------------------------------------------------------------------
+// Writes — straight through to the DB, no batching. If write volume becomes a
+// problem (busy servers, many guilds), reintroduce a buffer here — e.g. backed
+// by Redis instead of an in-memory Map, so counts survive a restart.
+// ---------------------------------------------------------------------------
+
+function utcDate(d: Date = new Date()): string {
+  return d.toISOString().slice(0, 10);
+}
+
+async function recordIncrement(
+  guildId: string,
+  userId: string,
+  date: string,
+  deltas: { messages?: number; reactionsAdded?: number; reactionsReceived?: number; voiceSeconds?: number },
+): Promise<void> {
+  try {
+    await incrementDailyActivity(supabase, { guildId, userId, date, ...deltas });
+  } catch (error) {
+    reportError(error, "discord-bot activity: record counts", { guildId, userId });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Message + reaction tracking
+// ---------------------------------------------------------------------------
+
+/**
+ * `categoryId` is a thread's grandparent: a thread under an ignored category
+ * is ignored too (see channelScope in server-log/refs.ts).
+ */
+function isChannelIgnored(
+  ctx: TrackingContext,
+  channelId: string | null,
+  parentId: string | null,
+  categoryId: string | null = null,
+): boolean {
+  return [channelId, parentId, categoryId].some((id) => !!id && ctx.ignoredChannelIds.has(id));
+}
+
+function threadCategoryId(guild: { channels: { cache: { get(id: string): { parentId?: string | null } | undefined } } } | null, channel: unknown): string | null {
+  const c = channel as { parentId?: string | null; isThread?: () => boolean } | null;
+  if (!guild || !c?.parentId || typeof c.isThread !== "function" || !c.isThread()) return null;
+  return guild.channels.cache.get(c.parentId)?.parentId ?? null;
+}
+
+export async function recordMessage(message: Message): Promise<void> {
+  if (!message.guildId || message.author?.bot) return;
+  try {
+    const ctx = await getContext(message.guildId);
+    if (!ctx.settings.tracking_enabled || !ctx.settings.track_messages) return;
+    if (
+      isChannelIgnored(
+        ctx,
+        message.channelId,
+        "parentId" in message.channel ? message.channel.parentId : null,
+        threadCategoryId(message.guild, message.channel),
+      )
+    )
+      return;
+    await recordIncrement(message.guildId, message.author.id, utcDate(), { messages: 1 });
+  } catch (error) {
+    reportError(error, "discord-bot activity: message");
+  }
+}
+
+export async function recordReaction(
+  reaction: MessageReaction | PartialMessageReaction,
+  user: User | PartialUser,
+): Promise<void> {
+  if (user.bot) return;
+  const guildId = reaction.message.guildId;
+  if (!guildId) return;
+  try {
+    const ctx = await getContext(guildId);
+    if (!ctx.settings.tracking_enabled || !ctx.settings.track_reactions) return;
+
+    const channel = reaction.message.channel;
+    const parentId = channel && "parentId" in channel ? channel.parentId : null;
+    if (isChannelIgnored(ctx, reaction.message.channelId, parentId, threadCategoryId(reaction.message.guild, channel))) return;
+
+    const date = utcDate();
+    const writes: Promise<void>[] = [recordIncrement(guildId, user.id, date, { reactionsAdded: 1 })];
+
+    // Credit the message author with a received reaction. The message may be a
+    // partial (uncached) — fetch it to learn the author.
+    let author = reaction.message.author;
+    if (!author) {
+      try {
+        author = (await reaction.message.fetch()).author;
+      } catch {
+        author = null;
+      }
+    }
+    if (author && !author.bot && author.id !== user.id) {
+      writes.push(recordIncrement(guildId, author.id, date, { reactionsReceived: 1 }));
+    }
+
+    await Promise.all(writes);
+  } catch (error) {
+    reportError(error, "discord-bot activity: reaction");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Voice tracking
+// ---------------------------------------------------------------------------
+
+function humanCount(channel: VoiceBasedChannel): number {
+  return channel.members.filter((m) => !m.user.bot).size;
+}
+
+function isVoiceEligible(member: GuildMember, ctx: TrackingContext): boolean {
+  const { settings } = ctx;
+  const voice = member.voice;
+  const channel = voice.channel;
+  if (!channel) return false;
+  if (isChannelIgnored(ctx, channel.id, channel.parentId)) return false;
+  if (settings.voice_ignore_afk && (voice.selfMute || voice.selfDeaf || voice.serverMute || voice.serverDeaf))
+    return false;
+  if (settings.voice_require_others && humanCount(channel) < 2) return false;
+  return true;
+}
+
+async function openSession(guildId: string, member: GuildMember, channelId: string): Promise<void> {
+  const startedAt = new Date();
+  try {
+    const sessionId = await openVoiceSession(supabase, { guildId, userId: member.id, channelId, joinedAt: startedAt });
+    openSessions.set(`${guildId}:${member.id}`, { sessionId, channelId, startedAt });
+  } catch (error) {
+    reportError(error, "discord-bot activity: open voice session", { guildId, memberId: member.id });
+  }
+}
+
+// Splits [start, end) into per-UTC-day second counts, so a call that crosses
+// midnight credits each day with the time actually spent on it.
+export function splitByUtcDay(start: Date, end: Date): { date: string; seconds: number }[] {
+  const chunks: { date: string; seconds: number }[] = [];
+  let cursor = start.getTime();
+  const endMs = end.getTime();
+
+  while (cursor < endMs) {
+    const day = new Date(cursor);
+    const nextMidnight = Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate() + 1);
+    const chunkEnd = Math.min(nextMidnight, endMs);
+    const seconds = Math.floor(chunkEnd / 1000) - Math.floor(cursor / 1000);
+    if (seconds > 0) chunks.push({ date: utcDate(day), seconds });
+    cursor = chunkEnd;
+  }
+
+  return chunks;
+}
+
+async function closeSession(guildId: string, userId: string): Promise<void> {
+  const key = `${guildId}:${userId}`;
+  const open = openSessions.get(key);
+  if (!open) return;
+  openSessions.delete(key);
+
+  const leftAt = new Date();
+  const durationSeconds = Math.max(0, Math.floor((leftAt.getTime() - open.startedAt.getTime()) / 1000));
+  try {
+    await closeVoiceSession(supabase, open.sessionId, leftAt, durationSeconds);
+    for (const { date, seconds } of splitByUtcDay(open.startedAt, leftAt)) {
+      await recordIncrement(guildId, userId, date, { voiceSeconds: seconds });
+    }
+  } catch (error) {
+    reportError(error, "discord-bot activity: close voice session", { guildId, userId });
+  }
+}
+
+// Closes every open voice session in a guild (crediting elapsed time) — used
+// when tracking is turned off, so nobody keeps accruing time afterwards.
+export async function closeGuildSessions(guildId: string): Promise<void> {
+  const prefix = `${guildId}:`;
+  const userIds = [...openSessions.keys()]
+    .filter((key) => key.startsWith(prefix))
+    .map((key) => key.slice(prefix.length));
+  await Promise.all(userIds.map((userId) => closeSession(guildId, userId)));
+}
+
+// Reconciles one member's open/closed state against their current eligibility.
+async function reevaluateMember(member: GuildMember, ctx: TrackingContext): Promise<void> {
+  if (member.user.bot) return;
+  const guildId = member.guild.id;
+  const key = `${guildId}:${member.id}`;
+  const open = openSessions.get(key);
+  const eligible = isVoiceEligible(member, ctx);
+  const channelId = member.voice.channelId;
+
+  if (eligible && channelId) {
+    if (!open) {
+      await openSession(guildId, member, channelId);
+    } else if (open.channelId !== channelId) {
+      await closeSession(guildId, member.id);
+      await openSession(guildId, member, channelId);
+    }
+  } else if (open) {
+    await closeSession(guildId, member.id);
+  }
+}
+
+export async function handleVoiceStateUpdate(oldState: VoiceState, newState: VoiceState): Promise<void> {
+  const guild = newState.guild ?? oldState.guild;
+  const mover = newState.member ?? oldState.member;
+  if (!guild || !mover) return;
+
+  try {
+    const ctx = await getContext(guild.id);
+    if (!ctx.settings.tracking_enabled || !ctx.settings.track_voice) {
+      // Tracking turned off mid-session — close everything still open in the guild.
+      await closeGuildSessions(guild.id);
+      return;
+    }
+
+    // "Alone" eligibility depends on everyone in the affected channels, and a
+    // join/leave only fires for the mover — so re-evaluate every human in both
+    // the old and new channel, plus the mover (who may have left voice).
+    const channels = new Set<VoiceBasedChannel>();
+    if (oldState.channel) channels.add(oldState.channel);
+    if (newState.channel) channels.add(newState.channel);
+
+    const seen = new Set<string>();
+    for (const channel of channels) {
+      for (const member of channel.members.values()) {
+        seen.add(member.id);
+        await reevaluateMember(member, ctx);
+      }
+    }
+    if (!seen.has(mover.id)) {
+      await reevaluateMember(mover, ctx);
+    }
+  } catch (error) {
+    reportError(error, "discord-bot activity: voice state");
+  }
+}
+
+// On startup, orphaned open sessions (from a crash/restart) can't be credited
+// accurately, so close them with zero duration, then open fresh sessions for
+// everyone currently sitting in voice.
+export async function reconcileVoiceSessions(client: Client): Promise<void> {
+  for (const guild of client.guilds.cache.values()) {
+    try {
+      const orphans = await getOpenVoiceSessions(supabase, guild.id);
+      const now = new Date();
+      await Promise.all(
+        orphans.map((s) =>
+          closeVoiceSession(supabase, s.id, now, 0).catch((error) =>
+            reportError(error, "discord-bot activity: close orphan session", { sessionId: s.id }),
+          ),
+        ),
+      );
+
+      const ctx = await getContext(guild.id);
+      if (!ctx.settings.tracking_enabled || !ctx.settings.track_voice) continue;
+
+      for (const channel of guild.channels.cache.values()) {
+        if (!channel.isVoiceBased()) continue;
+        for (const member of channel.members.values()) {
+          await reevaluateMember(member, ctx);
+        }
+      }
+    } catch (error) {
+      reportError(error, "discord-bot activity: reconcile", { guildId: guild.id });
+    }
+  }
+}
+
+// Closes every open voice session (crediting their elapsed time) — called on
+// graceful shutdown so an in-progress call isn't lost.
+export async function shutdownTracker(): Promise<void> {
+  const open = [...openSessions.keys()];
+  await Promise.all(
+    open.map((key) => {
+      const [guildId, userId] = key.split(":");
+      return guildId && userId ? closeSession(guildId, userId) : Promise.resolve();
+    }),
+  );
+}

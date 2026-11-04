@@ -1,9 +1,9 @@
 import { describe, expect, it } from "bun:test";
 import type { BackupPollData } from "@repo/backups";
-import type { BackupEventRow } from "@repo/supabase/queries/backups";
+import type { BackupEventRow } from "@repo/supabase/queries/platform/backups";
 import { Hono } from "hono";
-import { internalAuth } from "../middleware/internal-auth";
-import { createBackupsInternalRoute } from "./internal-backups";
+import { internalAuth } from "@/middleware/internal-auth";
+import { createBackupsInternalRoute } from "@/routes/internal-backups";
 
 const NOW = new Date("2026-09-28T12:00:00Z");
 const nowSec = NOW.getTime() / 1000;
@@ -99,6 +99,15 @@ describe("internal backup routes", () => {
     const body = await res.json();
     expect(body.nextBefore).toBe(recent);
     expect((await app().request("/events?before=garbage", { headers: auth })).status).toBe(400);
+  });
+
+  it("takes a Postgres timestamp as before and refuses an out-of-range limit", async () => {
+    const before = encodeURIComponent("2026-09-28T11:59:00.123456+00:00");
+    expect((await app().request(`/events?before=${before}`, { headers: auth })).status).toBe(200);
+    expect((await app().request("/events?limit=500", { headers: auth })).status).toBe(400);
+    expect((await app().request("/events?limit=0", { headers: auth })).status).toBe(400);
+    expect((await app().request("/events?limit=ten", { headers: auth })).status).toBe(400);
+    expect((await app().request("/vms/abc", { headers: auth })).status).toBe(400);
   });
 
   it("rate-limits refresh and reports a missing poller", async () => {

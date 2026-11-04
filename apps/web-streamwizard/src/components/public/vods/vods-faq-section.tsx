@@ -1,7 +1,7 @@
 import { SectionView } from "../analytics/section-view";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { FaqAccordion } from "../home/faq-accordion";
-import { PRICING_FAQ_LINK } from "@/lib/pricing";
+import { PRICING_FAQ_LINK } from "@/lib/public/pricing";
 
 /*
  * The page's FAQ, and the canonical home of the honest caveat: events are

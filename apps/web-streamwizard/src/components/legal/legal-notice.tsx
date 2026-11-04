@@ -2,7 +2,7 @@ import {
   LEGAL_CONTACT_EMAIL,
   LEGAL_HOSTING_PROVIDER,
   LEGAL_OPERATOR,
-} from "@/lib/legal";
+} from "@/lib/public/legal";
 
 type LegalNoticeProps = {
   variant: "normal" | "genz";

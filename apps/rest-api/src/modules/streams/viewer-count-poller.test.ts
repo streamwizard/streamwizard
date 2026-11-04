@@ -48,19 +48,19 @@ mock.module("@repo/sentry", () => ({
   },
 }));
 mock.module("@repo/supabase", () => ({ supabase: {} }));
-mock.module("@repo/supabase/queries/clips", () => ({
+mock.module("@repo/supabase/queries/clips/clips", () => ({
   upsertClips: async (_client: unknown, rows: unknown[]) => {
     if (upsertFails) throw new Error("upsert failed");
     upserts.push(rows);
   },
 }));
-mock.module("@repo/supabase/queries/live-status", () => ({
+mock.module("@repo/supabase/queries/stream/live-status", () => ({
   getLiveBroadcasters: async () => liveRows,
   upsertBroadcasterLiveStatus: async () => {},
 }));
 // Every export the rest-api tests need: bun's mock.module is process-wide,
 // so a partial mock here would break stream-online.test.ts in the same run.
-mock.module("@repo/supabase/queries/vods", () => ({
+mock.module("@repo/supabase/queries/stream/vods", () => ({
   upsertVod: async () => {},
   getVodVideoIdByStreamId: async () => dbVideoId,
   setVodVideoId: async (_client: unknown, streamId: string, videoId: string) => {
@@ -69,17 +69,20 @@ mock.module("@repo/supabase/queries/vods", () => ({
     return true;
   },
 }));
-mock.module("./stream-video", () => ({
+mock.module("@/modules/streams/stream-video", () => ({
   findVideoIdForStream: async () => {
     lookupCalls++;
     return lookupResult();
   },
 }));
-mock.module("@repo/supabase/queries/user", () => ({
+// Spread the real exports: bun shares module mocks across test files.
+const realUserQueries = await import("@repo/supabase/queries/users/user");
+mock.module("@repo/supabase/queries/users/user", () => ({
+  ...realUserQueries,
   getTwitchIntegrationByBroadcasterId: async () => integrationResult,
   getUserPreferencesByUserId: async () => preferences,
 }));
-mock.module("@repo/supabase/queries/viewer-counts", () => ({
+mock.module("@repo/supabase/queries/stream/viewer-counts", () => ({
   insertViewerCount: async (_client: unknown, row: unknown) => {
     viewerInserts.push(row);
   },
@@ -96,18 +99,18 @@ mock.module("@repo/twitch-api", () => ({
     };
   },
 }));
-mock.module("./clip-sync", () => ({
+mock.module("@/modules/streams/clip-sync", () => ({
   formatClipsForDB: async (clips: Clip[]) => {
     if (formatGate) await formatGate;
     return clips.map((clip) => ({ twitch_clip_id: clip.id }));
   },
 }));
 
-let poller: typeof import("./viewer-count-poller").viewerCountPoller;
-let clipWindowStart: typeof import("./viewer-count-poller").clipWindowStart;
+let poller: typeof import("@/modules/streams/viewer-count-poller").viewerCountPoller;
+let clipWindowStart: typeof import("@/modules/streams/viewer-count-poller").clipWindowStart;
 
 beforeAll(async () => {
-  const mod = await import("./viewer-count-poller");
+  const mod = await import("@/modules/streams/viewer-count-poller");
   poller = mod.viewerCountPoller;
   clipWindowStart = mod.clipWindowStart;
 });

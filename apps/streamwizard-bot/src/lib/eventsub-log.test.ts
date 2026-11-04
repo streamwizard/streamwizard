@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 
 const emitted: { type: string; payload: Record<string, unknown> }[] = [];
 mock.module("@repo/supabase", () => ({ supabase: {} }));
-mock.module("@repo/supabase/queries/platform-events", () => ({
+mock.module("@repo/supabase/queries/platform/events", () => ({
   logPlatformEvent: async (_client: unknown, event: { type: string; payload: Record<string, unknown> }) => {
     emitted.push({ type: event.type, payload: event.payload });
   },

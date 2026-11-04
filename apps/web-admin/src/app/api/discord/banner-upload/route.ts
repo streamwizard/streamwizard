@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { DISCORD_LIMITS, sniffBannerImageType, validateBannerImage } from "@repo/discord-message";
 import { reportError } from "@repo/sentry";
-import { assertAdmin } from "@/lib/assert-admin";
+import { assertAdmin } from "@/lib/auth/assert-admin";
 import { getDiscordContext } from "@/lib/discord/api";
-import { bannerUploadsEnabled, storeBannerImage } from "@/lib/discord/banner-storage";
+import { bannerUploadsEnabled, storeBannerImage } from "@/lib/discord/messages/banner-storage";
 
 // Banner image upload for the Discord message builder. A route handler and not
 // a server action: actions cap their body at 1 MB, banners go up to 10. The
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
   try {
     return NextResponse.json({ url: await storeBannerImage(discord.guildId, type, bytes) });
   } catch (error) {
-    reportError(error, "web-admin discord: banner upload");
+    reportError(error, "discord.banner-upload");
     return fail("Couldn't store that image. Try again?", 500);
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { TwitchVideo } from "@/types/twitch";
+import type { TwitchVideo } from "@/types/twitch-video";
 import { getVideos, deleteVideos } from "@/actions/twitch/vods";
 import { VodsTable } from "./vods-table";
 import { VodsTableSkeleton } from "./vods-table-skeleton";

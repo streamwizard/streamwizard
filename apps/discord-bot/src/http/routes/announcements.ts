@@ -3,7 +3,7 @@ import { z } from "zod";
 import { parseAnnouncement } from "@repo/discord-message";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { deleteAnnouncement, getAnnouncement, recordAnnouncementPosted } from "@repo/supabase/queries/discord-announcements";
+import { deleteAnnouncement, getAnnouncement, recordAnnouncementPosted } from "@repo/supabase/queries/discord/announcements";
 import {
   AnnouncementError,
   checkAnnouncementChannel,

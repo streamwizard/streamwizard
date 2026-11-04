@@ -4,7 +4,7 @@ import { Button } from "@repo/ui";
 import { Input } from "@repo/ui";
 import { Label } from "@repo/ui";
 import { Slider } from "@repo/ui";
-import type { ClipDisplayFieldLayout } from "@/types/overlays";
+import type { ClipDisplayFieldLayout } from "@repo/ui/components/overlay/types/clips";
 
 export interface DisplayFieldLayoutControlsProps {
   label: string;

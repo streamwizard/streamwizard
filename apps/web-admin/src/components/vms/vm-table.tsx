@@ -18,18 +18,18 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui";
-import { FilterPanel } from "@/components/widgets/filter-panel";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
-import { relative } from "@/components/backups/backup-format";
-import { HelpLabel } from "@/components/backups/hint-popover";
+import { FilterPanel } from "@/components/shared/filter-panel";
+import { StatusIndicator } from "@/components/shared/status-indicator";
+import { relative } from "@/lib/backups/backup-format";
+import { HelpLabel } from "@/components/shared/hint-popover";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { VmTableRow } from "@/lib/vms";
+import type { VmTableRow } from "@/lib/vms/vms";
 import { DiskUse, GuestAgent, GuestDisk, GuestIps, type GuestNetPromise } from "./guest-net-cells";
-import { Rate } from "./rate";
-import { Sparkline } from "./sparkline";
-import { UsageMeter } from "./usage-meter";
-import { HELD_ON_HOST_HINT, RAM_CACHE_HINT, formatPct, formatUptime, pctOf, vmHostHref, vmHref, vmStatusDisplay } from "./vm-format";
+import { Rate } from "@/components/shared/charts/rate";
+import { Sparkline } from "@/components/shared/charts/sparkline";
+import { UsageMeter } from "@/components/shared/charts/usage-meter";
+import { HELD_ON_HOST_HINT, RAM_CACHE_HINT, formatPct, formatUptime, pctOf, vmHostHref, vmHref, vmStatusDisplay } from "@/lib/vms/vm-format";
 
 type SortKey = "name" | "host" | "status" | "cpu" | "ram" | "held" | "net" | "uptime";
 type StatusFilter = "all" | "running" | "stopped" | "other";

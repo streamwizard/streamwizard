@@ -1,7 +1,7 @@
 import { describe, expect, it, mock } from "bun:test";
 import type { CmsRevalidation } from "@repo/supabase/queries/cms/schedule";
-import type { EmitPlatformEventInput } from "@repo/supabase/queries/platform-events";
-import type { CmsSchedulerDeps, DueResult, RevalidateRequest } from "./cms-scheduler";
+import type { EmitPlatformEventInput } from "@repo/supabase/queries/platform/events";
+import type { CmsSchedulerDeps, DueResult, RevalidateRequest } from "@/jobs/cms-scheduler";
 
 // Same process-wide mock shape as the other rest-api tests.
 const reported: string[] = [];
@@ -12,16 +12,16 @@ mock.module("@repo/sentry", () => ({
 }));
 // Keeps the env schema out of the test: the live instance at the bottom of
 // the module reads it on import.
-mock.module("../env", () => ({ env: {} }));
+mock.module("@/env", () => ({ env: {} }));
 // The live deps import these; the tests pass their own deps. Mocked so another
-// test's partial mock of @repo/supabase/queries/identity can't break the import.
+// test's partial mock of @repo/supabase/queries/users/identity can't break the import.
 mock.module("@repo/supabase", () => ({ supabase: {} }));
-mock.module("@repo/supabase/queries/platform-events", () => ({
+mock.module("@repo/supabase/queries/platform/events", () => ({
   getPlatformEventIdentity: async () => ({}),
   logPlatformEvent: async () => {},
 }));
 
-const { createCmsScheduler, retryDelayMs } = await import("./cms-scheduler");
+const { createCmsScheduler, retryDelayMs } = await import("@/jobs/cms-scheduler");
 
 const POST = "11111111-1111-4111-8111-111111111111";
 const ADMIN = "22222222-2222-4222-8222-222222222222";

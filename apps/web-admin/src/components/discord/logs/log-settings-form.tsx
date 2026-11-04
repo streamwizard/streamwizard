@@ -1,0 +1,230 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
+import {
+  PLATFORM_EVENT_GROUPS,
+  PLATFORM_EVENTS,
+  platformEventTypesInGroup,
+  type PlatformEventGroup,
+  type PlatformEventType,
+} from "@repo/schemas/platform-events";
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+  Label,
+  Switch,
+} from "@repo/ui";
+import { saveLogSettings, sendTestLogEvent } from "@/actions/discord/logs";
+import type { LogSettingsInput } from "@/schemas/discord";
+import type { PickerOption } from "@/lib/discord/options";
+import { MultiPicker, Picker } from "@/components/discord/pickers";
+import { SaveBar, SettingRow } from "@/components/discord/setting-row";
+import { toastResult } from "@/components/discord/toast-result";
+
+const HINTS: Partial<Record<PlatformEventType, string>> = {
+  "user.created": "Someone signs up for StreamWizard.",
+  "user.deleted": "Someone deletes their account, disconnects StreamWizard on Twitch, or an admin removes them.",
+  "user.banned": "An admin bans a user from the Users page.",
+  "user.unbanned": "An admin lifts a ban.",
+  "user.twitch_conflict": "Someone signs up with a Twitch account another StreamWizard account already holds.",
+  "discord.linked": "A user links a Discord account.",
+  "discord.unlinked": "A user unlinks their Discord account.",
+  "subscription.granted": "An admin grants a plan.",
+  "subscription.changed": "An admin changes a plan's status or expiry.",
+  "subscription.revoked": "An admin revokes a plan.",
+  "discord_settings.changed": "Anyone saves a setting in this dashboard.",
+  "log.test": "The test button on this page. Always posted.",
+  "eventsub.connected": "The bot started and got its first Twitch session. Shows restarts and deploys.",
+  "eventsub.connection_lost": "Every outage, the moment it starts. A short blip shows as a lost row and a reconnected row.",
+  "eventsub.session_migrated": "Twitch moves the session every so often. Routine, so off by default.",
+  "eventsub.conduit_update_failed": "Connected, but Twitch may not be delivering events. Worth a look right away.",
+  "member.left": "Leaving on their own. Kicks and bans have their own events.",
+  "member.roles_changed": "Includes roles the bot hands out (join and verified role).",
+  "message.edited": "Shows the text before and after.",
+  "message.deleted": "Shows the text if the bot saw the message since its last restart.",
+};
+
+export function LogSettingsForm({
+  initial,
+  textChannels,
+  ignorableChannels,
+}: {
+  initial: LogSettingsInput;
+  textChannels: PickerOption[];
+  ignorableChannels: PickerOption[];
+}) {
+  const router = useRouter();
+  const [values, setValues] = useState(initial);
+  const [saving, startSave] = useTransition();
+  const [testing, startTest] = useTransition();
+
+  const normalise = (v: LogSettingsInput) =>
+    JSON.stringify({
+      ...v,
+      ignoredChannelIds: [...v.ignoredChannelIds].sort(),
+      events: Object.fromEntries(Object.entries(v.events).sort(([a], [b]) => a.localeCompare(b))),
+    });
+  const dirty = normalise(values) !== normalise(initial);
+
+  const setEvent = (type: PlatformEventType, patch: Partial<LogSettingsInput["events"][string]>) =>
+    setValues((prev) => ({ ...prev, events: { ...prev.events, [type]: { ...prev.events[type]!, ...patch } } }));
+
+  const setGroupChannel = (group: PlatformEventGroup, channelId: string | null) =>
+    setValues((prev) => ({
+      ...prev,
+      events: {
+        ...prev.events,
+        ...Object.fromEntries(platformEventTypesInGroup(group).map((type) => [type, { ...prev.events[type]!, channelId }])),
+      },
+    }));
+
+  const save = () =>
+    startSave(async () => {
+      if (toastResult(await saveLogSettings(values), "Log settings saved.")) router.refresh();
+    });
+
+  const test = () =>
+    startTest(async () => {
+      if (toastResult(await sendTestLogEvent(), "Test event queued. Check the log channel.")) router.refresh();
+    });
+
+  const defaultLabel = textChannels.find((c) => c.value === values.defaultChannelId)?.label;
+  const testBlocked = dirty ? "Save your changes first." : !initial.defaultChannelId ? "Pick a default channel and save it first." : null;
+
+  return (
+    // A container, so the group headers lay out by the room they have: the open sidebar takes 256px of the viewport.
+    <div className="@container space-y-4">
+      <Card>
+        {/* The button drops under the title on a phone instead of squeezing it. */}
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-base">Default channel</CardTitle>
+            <CardDescription>Keep log channels staff-only: they show names, Discord ids and message text.</CardDescription>
+          </div>
+          <div className="shrink-0 space-y-1 sm:text-right">
+            <Button size="sm" variant="outline" className="h-11 md:h-8" onClick={test} disabled={testing || testBlocked !== null}>
+              {testing ? "Sending…" : "Send test event"}
+            </Button>
+            {testBlocked && <p className="text-xs text-muted-foreground">{testBlocked}</p>}
+          </div>
+        </CardHeader>
+        <CardContent className="divide-y">
+          <SettingRow
+            htmlFor="log-default-channel"
+            label="Default channel"
+            hint="Events without their own channel go here. Without any channel, events are still stored and show up in the log."
+          >
+            <Picker
+              id="log-default-channel"
+              options={textChannels}
+              value={values.defaultChannelId}
+              onChange={(v) => setValues((prev) => ({ ...prev, defaultChannelId: v }))}
+              placeholder="Pick a text channel"
+              emptyText="No channels match"
+              disabled={saving}
+            />
+          </SettingRow>
+          <SettingRow
+            htmlFor="log-ignored-channels"
+            label="Don't log messages in"
+            hint="Edits and deletes in these channels (or channels inside these categories) aren't logged. Log channels and open tickets are always skipped."
+          >
+            <MultiPicker
+              id="log-ignored-channels"
+              options={ignorableChannels}
+              value={values.ignoredChannelIds}
+              onChange={(v) => setValues((prev) => ({ ...prev, ignoredChannelIds: v }))}
+              placeholder="Pick channels or categories"
+              emptyText="No channels match"
+              disabled={saving}
+            />
+          </SettingRow>
+        </CardContent>
+      </Card>
+
+      {/* One section per group, closed until asked for: about 120 controls in one scroll was the problem. */}
+      {PLATFORM_EVENT_GROUPS.map((group) => {
+        const types = platformEventTypesInGroup(group.id);
+        const channels = new Set(types.map((type) => values.events[type]?.channelId ?? null));
+        const shared = channels.size === 1 ? [...channels][0]! : null;
+        const enabled = types.filter((type) => values.events[type]?.enabled).length;
+        return (
+          <Collapsible key={group.id} asChild>
+            <Card className="gap-0 py-0">
+              {/* The picker sits next to the trigger, not inside it: a control can't live in a button. */}
+              <div className="flex flex-col gap-3 p-4 sm:px-6 @2xl:flex-row @2xl:items-center @2xl:justify-between @2xl:gap-6">
+                <CollapsibleTrigger className="group flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-md text-left outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50">
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" aria-hidden />
+                  <span className="min-w-0 flex-1 space-y-1">
+                    <span className="block leading-none font-semibold">{group.label}</span>
+                    <span className="block text-sm text-muted-foreground">{group.hint}</span>
+                  </span>
+                  <Badge variant={enabled > 0 ? "secondary" : "outline"} className="shrink-0 tabular-nums">
+                    {enabled} of {types.length} on
+                  </Badge>
+                </CollapsibleTrigger>
+                <div className="w-full space-y-1 @2xl:w-64 @2xl:shrink-0">
+                  <Label htmlFor={`group-${group.id}`} className="text-xs text-muted-foreground">
+                    Channel for all {group.label.toLowerCase()} events
+                  </Label>
+                  <Picker
+                    id={`group-${group.id}`}
+                    options={textChannels}
+                    value={shared}
+                    onChange={(v) => setGroupChannel(group.id, v)}
+                    placeholder={channels.size > 1 ? "Mixed" : defaultLabel ? `Default (${defaultLabel})` : "Default channel"}
+                    emptyText="No channels match"
+                    disabled={saving}
+                  />
+                </div>
+              </div>
+              <CollapsibleContent>
+                <div className="divide-y border-t px-4 py-4 sm:px-6">
+                  {types.map((type) => {
+                    const meta = PLATFORM_EVENTS[type];
+                    const route = values.events[type]!;
+                    return (
+                      <SettingRow key={type} htmlFor={`event-${type}`} label={meta.label} hint={HINTS[type]}>
+                        <div className="flex w-full items-center gap-3">
+                          <Switch
+                            id={`event-${type}`}
+                            checked={route.enabled}
+                            onCheckedChange={(v) => setEvent(type, { enabled: v })}
+                            disabled={saving || ("alwaysOn" in meta && meta.alwaysOn)}
+                            aria-label={`Post ${meta.label.toLowerCase()} events`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <Picker
+                              options={textChannels}
+                              value={route.channelId}
+                              onChange={(v) => setEvent(type, { channelId: v })}
+                              placeholder={defaultLabel ? `Default (${defaultLabel})` : "Default channel"}
+                              emptyText="No channels match"
+                              disabled={saving || !route.enabled}
+                            />
+                          </div>
+                        </div>
+                      </SettingRow>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        );
+      })}
+
+      <SaveBar sticky dirty={dirty} pending={saving} onSave={save} onReset={() => setValues(initial)} />
+    </div>
+  );
+}

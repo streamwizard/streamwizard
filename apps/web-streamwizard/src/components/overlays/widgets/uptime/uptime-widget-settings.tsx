@@ -2,18 +2,14 @@
 
 import { useMemo } from "react";
 import { ColorPicker, Input, Label } from "@repo/ui";
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  InspectorHint,
-  InspectorReveal,
-  InspectorSection,
-  SegmentedField,
-  SliderField,
-  SwitchField,
-  TextAlignSelect,
-  type SegmentedOption,
-} from "@/components/overlays/inspector-fields";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import { TextAlignSelect } from "@/components/overlays/inspector-fields/text-align-select";
 import {
   UPTIME_WIDGET_LIMITS,
   normalizeUptimeWidgetConfig,

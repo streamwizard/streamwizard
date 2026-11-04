@@ -1,14 +1,14 @@
 import { SectionView } from "@/components/public/analytics/section-view";
 import { FaqAccordion } from "@/components/public/home/faq-accordion";
-import { Reveal } from "@/components/public/home/reveal";
-import { FREE_MAX_FILE_MB, FREE_MEDIA_QUOTA_MB } from "@/lib/pricing";
+import { Reveal } from "@/components/public/common/reveal";
+import { FREE_MAX_FILE_MB, FREE_MEDIA_QUOTA_MB } from "@/lib/public/pricing";
 
 /*
  * The money questions, in the order people ask them in Discord. This is the
  * page every other "What does it cost?" FAQ points at, so the answers are the
  * long form and stand on their own: PRICING_FAQ_ITEMS also feeds the page's
  * FAQPage JSON-LD, and AI answers quote them without the page around them.
- * The quota numbers come from lib/pricing.ts, which mirrors actions/assets.ts.
+ * The quota numbers come from lib/public/pricing.ts, which mirrors actions/media/assets.ts.
  */
 
 export const PRICING_FAQ_ITEMS = [

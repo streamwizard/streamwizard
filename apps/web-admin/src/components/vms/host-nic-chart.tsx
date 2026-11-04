@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Label, Switch } from "@repo/ui";
-import { NodeMetricChart, type NodeMetricPoint } from "@/components/charts/node-metric-chart";
+import { NodeMetricChart, type NodeMetricPoint } from "@/components/shared/charts/node-metric-chart";
 import { cn } from "@/lib/utils";
 
 // Per-VM firewall bridges and tap devices, loopback: one pair per guest NIC,

@@ -10,8 +10,8 @@ import {
   TWITCH_MESSAGE_SIGNATURE,
   TWITCH_MESSAGE_TYPE,
   verifySignature,
-} from "../modules/eventsub/message"
-import type { EventSubVerificationPayload, EventSubNotificationPayload, EventSubRevocationPayload } from "@repo/types";
+} from "@/modules/eventsub/message"
+import type { EventSubVerificationPayload, EventSubNotificationPayload, EventSubRevocationPayload } from "@repo/types/eventsub";
 
 /**
  * Message ids seen in the last MAX_MESSAGE_AGE_MS, mapped to when they expire.

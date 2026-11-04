@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildDemoLabelSnapshot, emptyLabelSnapshot, getLabelDefinition, resolveLabel } from "@repo/schemas";
+import { buildDemoLabelSnapshot, emptyLabelSnapshot, getLabelDefinition, resolveLabel } from "@repo/schemas/widgets/stream-labels";
 import { applyEditorLabelValue, editableLabelParts } from "./label-editor-values";
 
 const NOW = Date.parse("2026-10-27T12:00:00Z");

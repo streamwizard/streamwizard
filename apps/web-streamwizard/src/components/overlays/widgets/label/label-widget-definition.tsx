@@ -1,13 +1,13 @@
 "use client";
 
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 import {
   EVENT_LIST_LABEL_ID,
   LABEL_WIDGET_DEFAULT_SIZE,
   createDefaultLabelWidgetConfig,
-  type LabelWidgetItemConfig,
 } from "@repo/ui/overlay";
-import type { CreateRootItemContext } from "../../registry/overlay-widget-registry.types";
+import type { CreateRootItemContext } from "@/components/overlays/registry/overlay-widget-registry.types";
+import { createCenteredRootItem } from "@/components/overlays/registry/create-root-item";
 
 export { LABEL_WIDGET_DEFAULT_SIZE } from "@repo/ui/overlay";
 
@@ -18,46 +18,16 @@ export const LABEL_WIDGET_SIZES = {
   row: { w: 960, h: 64 },
 } as const;
 
-function createLabelItem(
-  ctx: CreateRootItemContext,
-  size: { w: number; h: number },
-  label: string,
-  config: LabelWidgetItemConfig,
-): OverlayItem {
-  const { w, h } = size;
-  return {
-    id: ctx.nextId(),
-    scene_id: ctx.scene.id,
-    type: "label_widget",
-    x: Math.round(ctx.scene.width / 2 - w / 2),
-    y: Math.round(ctx.scene.height / 2 - h / 2),
-    w,
-    h,
-    // New widgets are authored at their default size, so they start at scale 1.
-    design_w: w,
-    design_h: h,
-    crop_top: 0,
-    crop_right: 0,
-    crop_bottom: 0,
-    crop_left: 0,
-    anchor_x: "left",
-    anchor_y: "top",
-    z_index: ctx.maxZ + 1,
-    rotation: 0,
-    flip_h: false,
-    flip_v: false,
-    opacity: 1,
-    is_visible: true,
-    is_locked: false,
-    label,
-    config,
-  };
-}
-
 /** Places one label widget, centred, labelled "Label 2" and so on. */
 export function createLabelWidgetRootItems(ctx: CreateRootItemContext): OverlayItem[] {
-  const n = ctx.scene.items.filter((i) => i.type === "label_widget").length + 1;
-  return [createLabelItem(ctx, LABEL_WIDGET_DEFAULT_SIZE, `Label ${n}`, createDefaultLabelWidgetConfig())];
+  return [
+    createCenteredRootItem(ctx, {
+      type: "label_widget",
+      size: LABEL_WIDGET_DEFAULT_SIZE,
+      label: "Label",
+      config: createDefaultLabelWidgetConfig(),
+    }),
+  ];
 }
 
 /**
@@ -66,16 +36,20 @@ export function createLabelWidgetRootItems(ctx: CreateRootItemContext): OverlayI
  * picker in its settings can still turn it into something else.
  */
 export function createEventListRootItems(ctx: CreateRootItemContext): OverlayItem[] {
-  const n = ctx.scene.items.filter((i) => i.type === "label_widget").length + 1;
   return [
-    createLabelItem(ctx, LABEL_WIDGET_SIZES.stacked, `Event list ${n}`, {
-      ...createDefaultLabelWidgetConfig(),
-      labelId: EVENT_LIST_LABEL_ID,
-      period: "stream",
-      // A list of events says what it is; a heading above it only takes a row.
-      prefix: "",
-      align: "left",
-      fontSize: 22,
+    createCenteredRootItem(ctx, {
+      type: "label_widget",
+      size: LABEL_WIDGET_SIZES.stacked,
+      label: "Event list",
+      config: {
+        ...createDefaultLabelWidgetConfig(),
+        labelId: EVENT_LIST_LABEL_ID,
+        period: "stream",
+        // A list of events says what it is; a heading above it only takes a row.
+        prefix: "",
+        align: "left",
+        fontSize: 22,
+      },
     }),
   ];
 }

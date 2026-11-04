@@ -1,4 +1,4 @@
-import type { CreditsData, CreditsPerson } from "@repo/schemas";
+import type { CreditsData, CreditsPerson } from "@repo/schemas/widgets/credits";
 import {
   CREDITS_HERO_LABELS,
   type CreditsHeroCategory,

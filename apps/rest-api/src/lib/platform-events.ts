@@ -1,7 +1,7 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getPlatformEventIdentityByTwitchUserId, logPlatformEvent } from "@repo/supabase/queries/platform-events";
-import type { StreamOnlineFailureReason } from "@repo/types";
+import { getPlatformEventIdentityByTwitchUserId, logPlatformEvent } from "@repo/supabase/queries/platform/events";
+import type { StreamOnlineFailureReason } from "@repo/types/platform-events";
 
 // Emitters for the Discord log channel (SW-334) from rest-api. Never throw:
 // the thing being logged already happened, and an EventSub handler must not

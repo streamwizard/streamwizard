@@ -1,6 +1,8 @@
 import { beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import { createHash, randomBytes } from "crypto";
 import { Hono } from "hono";
+import { calculateJwkThumbprint, exportJWK, generateKeyPair } from "jose";
+import { resetSigningKey, signNodeToken } from "@repo/node-token";
 
 // Real AES-GCM with a throwaway key: the tests decrypt what the routes stored.
 process.env.TOKEN_ENCRYPTION_KEY = randomBytes(32).toString("hex");
@@ -40,19 +42,40 @@ const passwordFields = (r: Row) => ({
   vnc_password_tag: r.vnc_password_tag,
 });
 
-mock.module("@repo/supabase", () => ({ supabase: {} }));
-mock.module("@repo/supabase/queries/subscriptions", () => ({
-  isActiveSubscriptionOfUser: async () => true,
+// Spread the real exports (the client is lazy, so nothing connects): the
+// obs-nodes routes reach @repo/twitch-api, which imports more than the client.
+const realSupabase = await import("@repo/supabase");
+mock.module("@repo/supabase", () => ({ ...realSupabase, supabase: {} }));
+/** The user's active Cloud OBS subscription, and whether a sent id is one of theirs. */
+let activePlan: string | null;
+let sentPlanIsActive: boolean;
+let planChecks: unknown[][];
+
+const realSubscriptions = await import("@repo/supabase/queries/subscriptions/subscriptions");
+mock.module("@repo/supabase/queries/subscriptions/subscriptions", () => ({
+  ...realSubscriptions,
+  isActiveSubscriptionOfUser: async (...args: unknown[]) => {
+    planChecks.push(["isActiveSubscriptionOfUser", ...args.slice(1)]);
+    return sentPlanIsActive;
+  },
+  getUserActiveSubscriptionId: async (...args: unknown[]) => {
+    planChecks.push(["getUserActiveSubscriptionId", ...args.slice(1)]);
+    return activePlan;
+  },
   usersWithActiveSubscription: async () => new Set(),
 }));
-mock.module("../../../env", () => ({
-  env: { NODE_TOKEN_PUBLIC_JWKS: undefined, NODE_CREATE_TOKEN_REQUIRED: false },
+mock.module("@/env", () => ({
+  env: { NODE_TOKEN_PUBLIC_JWKS: undefined },
 }));
 // Spread the real exports: bun shares module mocks across test files.
-const realQueries = await import("@repo/supabase/queries/obs-nodes");
-mock.module("@repo/supabase/queries/obs-nodes", () => ({
-  ...realQueries,
+const realKeyQueries = await import("@repo/supabase/queries/obs-nodes/node-api-keys");
+mock.module("@repo/supabase/queries/obs-nodes/node-api-keys", () => ({
+  ...realKeyQueries,
   lookupNodeByApiKeyHash: async (_c: unknown, keyHash: string) => nodeByKeyHash.get(keyHash) ?? null,
+}));
+const realInstanceQueries = await import("@repo/supabase/queries/obs-nodes/instances");
+mock.module("@repo/supabase/queries/obs-nodes/instances", () => ({
+  ...realInstanceQueries,
   getObsInstancePasswordFieldsForNode: async (_c: unknown, id: string, nodeId: string) => {
     const r = rows.get(id);
     return r && r.node_id === nodeId ? passwordFields(r) : null;
@@ -82,7 +105,8 @@ mock.module("@repo/supabase/queries/obs-nodes", () => ({
     return { id: "new-instance", node_id: fields.node_id, user_id: fields.user_id };
   },
   countActiveObsInstancesForNode: async () => 0,
-  deleteObsInstanceForNode: async () => false,
+  deleteObsInstanceForNode: async () => null,
+  getObsInstanceOwnerForNode: async () => null,
   getObsInstanceByIdForNode: async () => null,
   listObsInstancesByNode: async () => [],
   listRunningObsInstancesByNode: async () => [],
@@ -93,15 +117,15 @@ mock.module("@repo/supabase/queries/obs-nodes", () => ({
 
 let app: Hono;
 let crypto: typeof import("@repo/supabase/crypto");
-let schemas: typeof import("../../../schemas/obs-nodes");
+let schemas: typeof import("@/modules/obs-nodes/schemas");
 
 beforeAll(async () => {
-  // The real instance router, so auth and route order are tested too.
-  const { default: obsNodeInstances } = await import("../../../routes/obs-node-instances");
+  // The real obs-nodes routes, so auth and route order are tested too.
+  const { obsNodeRoutes } = await import("@/modules/obs-nodes/routes");
   crypto = await import("@repo/supabase/crypto");
-  schemas = await import("../../../schemas/obs-nodes");
+  schemas = await import("@/modules/obs-nodes/schemas");
   app = new Hono();
-  app.route("/instances", obsNodeInstances);
+  app.route("/", obsNodeRoutes);
 });
 
 const enc = (plaintext: string) => {
@@ -134,29 +158,32 @@ beforeEach(() => {
   rows = new Map();
   inserted = null;
   raceWinner = null;
+  activePlan = "22222222-2222-4222-8222-222222222222";
+  sentPlanIsActive = true;
+  planChecks = [];
 });
 
 describe("GET /instances/:id/secrets", () => {
   it("returns the plaintext passwords of the node's own instance", async () => {
-    rows.set("i1", row("i1", "node-a", { obsWs: "obs-secret", vnc: "vnc-secret" }));
+    rows.set("1a1a0000-0000-4000-8000-000000000001", row("1a1a0000-0000-4000-8000-000000000001", "node-a", { obsWs: "obs-secret", vnc: "vnc-secret" }));
 
-    const res = await getSecrets("i1", NODE_A_KEY);
+    const res = await getSecrets("1a1a0000-0000-4000-8000-000000000001", NODE_A_KEY);
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ obs_ws_password: "obs-secret", vnc_password: "vnc-secret" });
   });
 
   it("sets Cache-Control: no-store", async () => {
-    rows.set("i1", row("i1", "node-a"));
+    rows.set("1a1a0000-0000-4000-8000-000000000001", row("1a1a0000-0000-4000-8000-000000000001", "node-a"));
 
-    expect((await getSecrets("i1", NODE_A_KEY)).headers.get("Cache-Control")).toBe("no-store");
+    expect((await getSecrets("1a1a0000-0000-4000-8000-000000000001", NODE_A_KEY)).headers.get("Cache-Control")).toBe("no-store");
     expect((await getSecrets("missing", NODE_A_KEY)).headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("answers another node's instance exactly like a missing one (404)", async () => {
-    rows.set("i1", row("i1", "node-a"));
+    rows.set("1a1a0000-0000-4000-8000-000000000001", row("1a1a0000-0000-4000-8000-000000000001", "node-a"));
 
-    const other = await getSecrets("i1", NODE_B_KEY);
+    const other = await getSecrets("1a1a0000-0000-4000-8000-000000000001", NODE_B_KEY);
     const missing = await getSecrets("does-not-exist", NODE_B_KEY);
 
     expect(other.status).toBe(404);
@@ -165,53 +192,53 @@ describe("GET /instances/:id/secrets", () => {
   });
 
   it("rejects a missing or unknown NODE_API_KEY with 401", async () => {
-    rows.set("i1", row("i1", "node-a"));
+    rows.set("1a1a0000-0000-4000-8000-000000000001", row("1a1a0000-0000-4000-8000-000000000001", "node-a"));
 
-    expect((await getSecrets("i1")).status).toBe(401);
-    expect((await getSecrets("i1", "not-a-real-node-key")).status).toBe(401);
+    expect((await getSecrets("1a1a0000-0000-4000-8000-000000000001")).status).toBe(401);
+    expect((await getSecrets("1a1a0000-0000-4000-8000-000000000001", "not-a-real-node-key")).status).toBe(401);
   });
 
   it("returns null for an instance without an OBS WebSocket password", async () => {
-    rows.set("i1", row("i1", "node-a", { obsWs: null }));
+    rows.set("1a1a0000-0000-4000-8000-000000000001", row("1a1a0000-0000-4000-8000-000000000001", "node-a", { obsWs: null }));
 
-    const body = await (await getSecrets("i1", NODE_A_KEY)).json();
+    const body = await (await getSecrets("1a1a0000-0000-4000-8000-000000000001", NODE_A_KEY)).json();
 
     expect(body.obs_ws_password).toBeNull();
     expect(body.vnc_password).toBe("vnc-pass");
   });
 
   it("generates, stores and returns a VNC password for an old row without one", async () => {
-    rows.set("old", row("old", "node-a", { vnc: null }));
+    rows.set("01d00000-0000-4000-8000-000000000001", row("01d00000-0000-4000-8000-000000000001", "node-a", { vnc: null }));
 
-    const first = await (await getSecrets("old", NODE_A_KEY)).json();
+    const first = await (await getSecrets("01d00000-0000-4000-8000-000000000001", NODE_A_KEY)).json();
 
     // 18 random bytes, base64: same shape the node used to generate.
     expect(Buffer.from(first.vnc_password, "base64")).toHaveLength(18);
-    const saved = rows.get("old")!;
+    const saved = rows.get("01d00000-0000-4000-8000-000000000001")!;
     expect(crypto.decryptToken(saved.vnc_password_ciphertext!, saved.vnc_password_iv!, saved.vnc_password_tag!)).toBe(
       first.vnc_password,
     );
 
     // Stable from then on.
-    const second = await (await getSecrets("old", NODE_A_KEY)).json();
+    const second = await (await getSecrets("01d00000-0000-4000-8000-000000000001", NODE_A_KEY)).json();
     expect(second.vnc_password).toBe(first.vnc_password);
   });
 
   it("returns the stored VNC password when a concurrent call saved one first", async () => {
-    rows.set("old", row("old", "node-a", { vnc: null }));
+    rows.set("01d00000-0000-4000-8000-000000000001", row("01d00000-0000-4000-8000-000000000001", "node-a", { vnc: null }));
     raceWinner = enc("winner-password");
 
-    const body = await (await getSecrets("old", NODE_A_KEY)).json();
+    const body = await (await getSecrets("01d00000-0000-4000-8000-000000000001", NODE_A_KEY)).json();
 
     expect(body.vnc_password).toBe("winner-password");
   });
 
   it("returns a 500 without the plaintext when decryption fails", async () => {
-    const r = row("i1", "node-a");
+    const r = row("1a1a0000-0000-4000-8000-000000000001", "node-a");
     r.obs_ws_password_tag = Buffer.alloc(16).toString("base64"); // wrong auth tag
-    rows.set("i1", r);
+    rows.set("1a1a0000-0000-4000-8000-000000000001", r);
 
-    const res = await getSecrets("i1", NODE_A_KEY);
+    const res = await getSecrets("1a1a0000-0000-4000-8000-000000000001", NODE_A_KEY);
 
     expect(res.status).toBe(500);
     expect(await res.text()).not.toContain("obs-pass");
@@ -225,16 +252,38 @@ describe("POST /instances", () => {
     resolution: "1920x1080",
     vram_allocated_mb: 4096,
     memory_mb: 4096,
-    cpu_quota: 200000,
+    cpu_quota: 2,
     shm_size: "1g",
     obs_ws_password: "plain-obs-password",
   };
-  const post = (payload: unknown) =>
+  // Every create needs the user's own instances:create token (single use).
+  beforeAll(async () => {
+    const { privateKey, publicKey } = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
+    const pub = await exportJWK(publicKey);
+    const kid = await calculateJwkThumbprint(pub);
+    process.env.NODE_TOKEN_SIGNING_JWK = JSON.stringify({ ...(await exportJWK(privateKey)), kid });
+    resetSigningKey();
+    const { env } = await import("@/env");
+    (env as Record<string, unknown>).NODE_TOKEN_PUBLIC_JWKS = { keys: [{ kty: "OKP", crv: "Ed25519", x: pub.x!, kid, alg: "EdDSA" }] };
+  });
+  const createToken = (userId: string) =>
+    signNodeToken({ nodeId: "node-a", userId, scope: "instances:create", role: "user" });
+  const post = async (payload: unknown, opts: { token?: boolean } = {}) =>
     app.request("/instances", {
       method: "POST",
-      headers: { Authorization: `Bearer ${NODE_A_KEY}`, "Content-Type": "application/json" },
+      headers: {
+        Authorization: `Bearer ${NODE_A_KEY}`,
+        "Content-Type": "application/json",
+        ...(opts.token === false ? {} : { "X-Node-Token": await createToken((payload as { user_id: string }).user_id) }),
+      },
       body: JSON.stringify(payload),
     });
+
+  it("refuses a create without the user's create token", async () => {
+    const res = await post(body, { token: false });
+    expect(res.status).toBe(401);
+    expect(inserted).toBeNull();
+  });
 
   it("encrypts the OBS WebSocket password and generates the VNC password itself", async () => {
     const res = await post(body);
@@ -268,10 +317,47 @@ describe("POST /instances", () => {
     expect(f.vnc_password_ciphertext).not.toBe(planted.ciphertext);
   });
 
+  it("checks the user's Cloud OBS plan when the node sends no subscription_id", async () => {
+    activePlan = null;
+    const res = await post(body);
+
+    expect(res.status).toBe(403);
+    expect(inserted).toBeNull();
+    expect(planChecks).toEqual([["getUserActiveSubscriptionId", body.user_id, "cloud_obs"]]);
+  });
+
+  it("records the plan it checked when the node sends no subscription_id", async () => {
+    const res = await post(body);
+
+    expect(res.status).toBe(201);
+    expect((inserted as Record<string, unknown>).subscription_id).toBe(activePlan);
+  });
+
+  it("refuses a subscription_id that isn't the user's active Cloud OBS plan", async () => {
+    sentPlanIsActive = false;
+    const sent = "33333333-3333-4333-8333-333333333333";
+    const res = await post({ ...body, subscription_id: sent });
+
+    expect(res.status).toBe(403);
+    expect(inserted).toBeNull();
+    expect(planChecks).toEqual([["isActiveSubscriptionOfUser", sent, body.user_id, "cloud_obs"]]);
+  });
+
+  it("refuses a subscription_id of null when the user has no plan", async () => {
+    activePlan = null;
+    const res = await post({ ...body, subscription_id: null });
+
+    expect(res.status).toBe(403);
+    expect(inserted).toBeNull();
+  });
+
   it("rejects a create without obs_ws_password", async () => {
     const { obs_ws_password: _omit, ...rest } = body;
 
-    expect((await post(rest)).status).toBe(400);
+    const res = await post(rest);
+    expect(res.status).toBe(400);
+    // A plain message: the schema's issues stay on our side.
+    expect(await res.json()).toEqual({ error: "Invalid instance payload" });
     expect(inserted).toBeNull();
   });
 });
@@ -306,8 +392,15 @@ describe("instance router", () => {
     expect(await (await get("/instances/active-count")).json()).toEqual({ count: 0 });
   });
 
+  it("answers an id that isn't a UUID like a missing instance", async () => {
+    for (const path of ["/instances/i1", "/instances/i1/secrets", "/instances/../vram/secrets"]) {
+      expect((await get(path)).status).toBe(404);
+    }
+    expect((await get("/instances/1a1a0000-0000-4000-8000-000000000001?user_id=nobody")).status).toBe(404);
+  });
+
   it("requires the node API key on every instance route", async () => {
-    for (const path of ["/instances", "/instances/vram", "/instances/i1", "/instances/i1/secrets"]) {
+    for (const path of ["/instances", "/instances/vram", "/instances/1a1a0000-0000-4000-8000-000000000001", "/instances/1a1a0000-0000-4000-8000-000000000001/secrets"]) {
       expect((await app.request(path)).status).toBe(401);
     }
   });

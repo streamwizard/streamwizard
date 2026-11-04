@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { reportError } from "@repo/sentry";
-import { closeGuildSessions, invalidateSettingsCache } from "../../lib/activity-tracker";
+import { closeGuildSessions, invalidateSettingsCache } from "@/lib/activity/activity-tracker";
 import { invalidateLogSettingsCache } from "../../lib/log-channel/worker";
 import { invalidateCommandPermissionCache, invalidateGuildPermissionCache } from "../../lib/permissions";
 import { invalidateTicketConfig } from "../../lib/tickets";

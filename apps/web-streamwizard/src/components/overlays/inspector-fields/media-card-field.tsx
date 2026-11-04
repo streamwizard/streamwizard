@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ImagePlus, Music, Play, Square } from "lucide-react";
 import { Button, Label } from "@repo/ui";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
-import type { AssetKind } from "@/lib/asset-mime";
+import type { AssetKind } from "@/lib/media/asset-mime";
 
 export interface MediaCardFieldProps {
   label: string;

@@ -1,11 +1,11 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord";
-import { deleteTicketAttachments } from "@repo/supabase/queries/tickets";
-import { getTwitchIntegrationByBroadcasterId, deleteUserData } from "@repo/supabase/queries/user";
-import type { UserAuthorizationRevokeEvent } from "@repo/schemas";
-import { r2 } from "../../../lib/r2";
-import { revokeAllUserSockets } from "../../../lib/ws-server";
+import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord/discord";
+import { deleteTicketAttachments } from "@repo/supabase/queries/tickets/tickets";
+import { getTwitchIntegrationByBroadcasterId, deleteUserData } from "@repo/supabase/queries/users/user";
+import type { UserAuthorizationRevokeEvent } from "@repo/schemas/eventsub/user";
+import { r2 } from "@/lib/r2";
+import { revokeAllUserSockets } from "@/lib/ws-server";
 
 // The user disconnected StreamWizard on Twitch. Same clean-up as the
 // delete-account action, minus the Twitch-side steps the user already did.

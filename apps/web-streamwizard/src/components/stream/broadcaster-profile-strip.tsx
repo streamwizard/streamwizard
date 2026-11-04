@@ -1,0 +1,33 @@
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/ui/avatar";
+import { Badge } from "@repo/ui/components/ui/badge";
+import type { BroadcasterProfile } from "@/types/stream-analytics";
+
+const BADGE_STYLES: Record<string, string> = {
+  partner: "bg-purple-600 text-white hover:bg-purple-600",
+  affiliate: "bg-indigo-500 text-white hover:bg-indigo-500",
+};
+
+interface BroadcasterProfileStripProps {
+  profile: BroadcasterProfile;
+}
+
+export function BroadcasterProfileStrip({ profile }: BroadcasterProfileStripProps) {
+  const badgeStyle = profile.broadcasterType ? BADGE_STYLES[profile.broadcasterType] : null;
+
+  return (
+    <div className="flex items-center gap-2 sm:gap-3">
+      <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+        <AvatarImage src={profile.profileImageUrl ?? undefined} alt={profile.username} />
+        <AvatarFallback>{profile.username.slice(0, 2).toUpperCase()}</AvatarFallback>
+      </Avatar>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <span className="text-base font-semibold sm:text-lg">{profile.username}</span>
+        {badgeStyle && (
+          <Badge className={badgeStyle}>
+            {profile.broadcasterType === "partner" ? "Partner" : "Affiliate"}
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+}

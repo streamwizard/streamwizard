@@ -23,13 +23,31 @@ this engine ──(role=bot)──► ws-server ──► user room             
   (bitrate / RTT / loss) bad/good streaks with trigger/recover/startup poll
   counts, a startup gate, stats-silence offline detection (plus the instant
   `ingest_session_ended` push), manual override with expiry, warning-source
-  toggle, and optional auto stop-stream. See `src/engine/user-monitor.ts`.
+  toggle, and optional auto stop-stream. See `src/modules/engine/user-monitor.ts`.
 - **Scene identity**: scenes are targeted by obs-websocket v5 `sceneUuid`, so
   renames in OBS don't break switching. Names are display-only.
 - **Feature toggles per user**: stream_events logging (`obs.scene_switch`,
   provider `streamwizard`; skipped while not live on Twitch), Twitch chat
   notices (app token + StreamWizard bot sender), warning overlay source,
   auto stop-stream.
+
+## Internal structure
+
+Organized by domain, following the service layout in [`.claude/rules/architecture/backend-services.md`](../../.claude/rules/architecture/backend-services.md).
+
+```
+src/
+  index.ts           start everything, /health server, shutdown
+  app.ts             wiring: engine, config store, ws-server clients, /health handler
+  lib/env.ts
+  modules/
+    engine/          Engine (1s tick), UserMonitor state machine, metric streaks, session tracker, switch log
+    config/          ConfigStore: DB reconcile + live config pushes
+    ws-server/       stats-feed.ts (role=consumer in), status-publisher.ts (role=bot out)
+    obs/             obs-client.ts: scene/stream commands through the node's /obs route
+    chat/            Twitch chat notices
+    event-log/       stream_events inserts for scene switches
+```
 
 ## Run exactly ONE replica
 
@@ -41,17 +59,18 @@ scale, shard users across replicas — don't duplicate them.
 
 | Var | Purpose |
 | --- | --- |
-| `SUPABASE_URL` / `SUPABASE_SECRET_KEY` | config reads, obs_instances/obs_nodes lookups, stream_events inserts, bot auth to ws-server |
+| `SUPABASE_URL` / `SUPABASE_SECRET_KEY` | config reads, obs_instances/obs_nodes lookups, stream_events inserts |
 | `WS_SERVER_URL` | ws-server base URL (ws(s)://) |
-| `CONSUMER_SECRET` | ws-server `role=consumer` + `/internal/broadcast` (must match ws-server's env) |
+| `WS_SERVICE_SIGNING_JWK` | this service's Ed25519 key; signs a 60-second token per ws-server connection (`role=consumer` stats feed, `role=bot` status pushes). See `packages/service-token` |
 | `TOKEN_ENCRYPTION_KEY` | decrypts each node's per-node `obs_command` key (from `obs_node_api_keys`) before calling the node's `/obs` route |
 | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | chat notices via `@repo/twitch-api` |
 | `PORT` (default 8010) | `/health` liveness endpoint |
 | `SENTRY_DSN` / `SENTRY_RELEASE` | optional |
+| `INFLUXDB_URL` / `INFLUXDB_TOKEN` / `INFLUXDB_ORG` | optional; metrics (`@repo/metrics`) are off unless all three are set |
 
 ## Dev
 
 ```
 bun run dev        # doppler config dev_obs_auto_switcher
-bun test           # state machine tests (src/engine/user-monitor.test.ts)
+bun test           # engine, config-store and chat tests
 ```

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import type { Edge } from "@xyflow/react";
-import type { MonitorEnvelope } from "@/lib/monitor-ws";
+import type { MonitorEnvelope } from "@repo/types/monitor";
 
 const DOT_TRAVEL_MS = 600;
 

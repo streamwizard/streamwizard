@@ -1,6 +1,6 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createClient } from "@repo/supabase/next/server";
-import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
+import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/users/user";
 import { cookies } from "next/headers";
 
 /**

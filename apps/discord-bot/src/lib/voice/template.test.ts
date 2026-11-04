@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { findUnknownVoicePlaceholders } from "@repo/supabase/queries/discord-voice";
+import { findUnknownVoicePlaceholders } from "@repo/supabase/queries/discord/voice";
 import { CHANNEL_NAME_MAX, cleanChannelName, renderChannelName } from "./template";
 
 const values = { username: "pogfrog", displayname: "Pog Frog" };

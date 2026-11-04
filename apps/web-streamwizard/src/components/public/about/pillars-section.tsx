@@ -1,5 +1,5 @@
 import { SectionView } from "@/components/public/analytics/section-view";
-import { Reveal } from "@/components/public/home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { PillarConstellation } from "./pillar-constellation";
 
 /*

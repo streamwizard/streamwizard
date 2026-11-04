@@ -1,4 +1,4 @@
-import { Skeleton } from "@repo/ui";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 
 // The /blog and /guides index while the server renders it: hero copy, toolbar,
 // featured post and a grid, in the same boxes the real page uses so nothing

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";
+import { env } from "@/lib/env";
 
 export async function GET(request: Request) {
   // Same origin handling as the callback routes: behind the proxy the
@@ -10,9 +11,9 @@ export async function GET(request: Request) {
   // allowlisted. Only trust the request origin in local dev.
   const requestUrl = new URL(request.url);
   const origin =
-    process.env.NODE_ENV === "development"
+    env.NODE_ENV === "development"
       ? requestUrl.origin
-      : (process.env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
+      : (env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
   const supabase = await createClient();
 
   const { data: userData, error: userError } = await supabase.auth.getUser();

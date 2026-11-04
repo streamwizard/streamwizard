@@ -1,30 +1,29 @@
 # @repo/types
 
-The central source of truth for TypeScript definitions across the StreamWizard ecosystem.
+Shared TypeScript contracts used by more than one app or package. Types only: no constants, helpers or lookup tables (a type guard for one of its own types is the one allowed function), so importing it never adds runtime code to a bundle.
 
-## 🚀 Overview
+## Entry points
 
-This package aggregates and exports all essential types, interfaces, and enums used by both applications and other shared packages. It ensures consistency and prevents type-duplication across the monorepo.
+There is no `.` entry. Import the file you need by subpath (`"./*": "./src/*.ts"`):
 
-## 🛠 Features
+- `@repo/types/eventsub`: Twitch EventSub messages, subscription types and metadata, transports, WebSocket frames.
+- `@repo/types/helix`: Twitch Helix request params and responses (streams, clips, VODs, chatters).
+- `@repo/types/irl`: the GPS sample (`GeoPayload`) IRL streams send.
+- `@repo/types/overlay-ws`: ws-server overlay messages (`OverlayEventType`, `OverlaySocketMessage`, `BotBroadcastMessage`) and payloads.
+- `@repo/types/monitor`: the frames ws-server sends to monitor sockets (`MonitorEnvelope`, `MonitorSnapshot`, `MonitorNodeBandwidth`, `IngestNodeLive`, `MonitorMessage`), read by web-admin.
+- `@repo/types/platform-events`: platform event payloads (`PlatformEventPayloads`) and the Discord refs they use.
 
-- **Helix API Types**: Comprehensive interfaces for Twitch Helix resources (Streams, VODs, Clips).
-- **EventSub Types**: Definitions for all Twitch EventSub notification payloads.
-- **WebSocket Types**: Structure for internal and external WebSocket messages.
-- **Provider Interfaces**: Generic types for stream providers and event handlers.
+Runtime code that used to live here moved to the package that owns it:
 
-## 📁 Key Components
+- EventSub subscription lists and builders: `@repo/twitch-eventsub/subscriptions`.
+- `WebSocketCloseCode`: `@repo/twitch-eventsub`.
+- Platform event tables, `PlatformEventType` and helpers: `@repo/schemas/platform-events`.
 
-- `src/helix.ts`: Typed definitions for Twitch API requests and responses.
-- `src/eventsub.ts`: Typed definitions for Twitch subscription events.
-- `src/index.ts`: Re-exports of all core types for easy consumption.
-
-## 🏁 Usage
+## Usage
 
 ```typescript
-import { Stream, EventSubSubscriptionType } from "@repo/types";
-
-const handleEvent = (type: EventSubSubscriptionType, data: any) => {
-  // ...
-};
+import type { EventSubSubscriptionType } from "@repo/types/eventsub";
+import type { Stream } from "@repo/types/helix";
 ```
+
+This package reads no env variables.

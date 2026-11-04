@@ -1,6 +1,6 @@
 import { MessageFlags, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord";
+import { getDiscordIntegrationByDiscordUserId } from "@repo/supabase/queries/discord/discord";
 import type { Command } from "../types/discord";
 import { buildLinkRow } from "../lib/account";
 import { expireReply } from "../lib/ephemeral";

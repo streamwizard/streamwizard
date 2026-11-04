@@ -7,8 +7,12 @@ let admin = false;
 mock.module("@repo/supabase/next/proxy", () => ({
   refreshSession: async () => ({ response: NextResponse.next(), claims }),
 }));
-mock.module("@repo/supabase/next/admin", () => ({ supabaseAdmin: {} }));
-mock.module("@repo/supabase/queries/obs-nodes", () => ({ isUserAdmin: async () => admin }));
+// Spread the real exports: bun shares module mocks across test files, and a
+// later file can't add names to a module this one mocked first.
+const realAdmin = await import("@repo/supabase/next/admin");
+mock.module("@repo/supabase/next/admin", () => ({ ...realAdmin, supabaseAdmin: {} }));
+const realRoleQueries = await import("@repo/supabase/queries/auth/roles");
+mock.module("@repo/supabase/queries/auth/roles", () => ({ ...realRoleQueries, isUserAdmin: async () => admin }));
 
 const { proxy, config } = await import("./proxy");
 // Next's own matcher compiler, so the test sees exactly what the build does.

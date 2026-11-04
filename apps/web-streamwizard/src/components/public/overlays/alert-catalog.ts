@@ -1,4 +1,4 @@
-import { ALERTS, type DemoAlert } from "../home/overlay-demo-alert";
+import { ALERTS, type DemoAlert } from "@/components/public/home/overlays/overlay-demo-alert";
 
 /*
  * The full 30-event alert catalog the playground cycles, grouped the way the

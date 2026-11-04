@@ -12,12 +12,12 @@ const LOG_CHANNEL = "log-chan";
 
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
-mock.module("@repo/supabase/queries/identity", () => ({ getUserIdentity: async () => null }));
+mock.module("@repo/supabase/queries/users/identity", () => ({ getUserIdentity: async () => null }));
 mock.module("../log-channel/worker", () => ({
   getLogRoutingFor: async () => ({ ignoredChannelIds: ["ignored-cat"] }),
   getLogChannelIds: async () => new Set([LOG_CHANNEL]),
 }));
-mock.module("../ticket-activity", () => ({
+mock.module("@/lib/tickets/ticket-activity", () => ({
   isOpenTicketChannel: async (_guildId: string, channelId: string) => channelId === OPEN_TICKET,
 }));
 mock.module("./audit", () => ({ findAuditEntry: async () => null }));

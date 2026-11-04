@@ -41,3 +41,40 @@ describe("internal app dashboard API", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("ticket routes", () => {
+  const SECRET = "s".repeat(16);
+  let fetches = 0;
+  const guild = {
+    id: "100000000000000001",
+    channels: {
+      fetch: async () => {
+        fetches++;
+        return null;
+      },
+    },
+  };
+  const readyClient = { isReady: () => true, guilds: { cache: { get: () => guild } } } as unknown as Client;
+  const post = (path: string, body: unknown) =>
+    createInternalApp(readyClient, SECRET).request(`/internal/guilds/${guild.id}${path}`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${SECRET}`, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+  test("a channel id that isn't a snowflake is a 404 without a Discord call", async () => {
+    fetches = 0;
+    for (const path of ["/tickets/general/claim", "/tickets/123/close", "/tickets/abc/release", "/tickets/1%2F2/message"]) {
+      const res = await post(path, { discordUserId: "200000000000000002", authorName: "a", authorAvatarUrl: null, content: "hi" });
+      expect(res.status).toBe(404);
+    }
+    expect(fetches).toBe(0);
+  });
+
+  test("a snowflake channel id is looked up", async () => {
+    fetches = 0;
+    const res = await post("/tickets/300000000000000003/claim", { discordUserId: "200000000000000002" });
+    expect(res.status).toBe(404);
+    expect(fetches).toBe(1);
+  });
+});

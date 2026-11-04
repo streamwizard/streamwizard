@@ -31,7 +31,7 @@ import {
   Ticket,
   TrainFront,
 } from "lucide-react";
-import { type DemoAlert } from "../home/overlay-demo-alert";
+import { type DemoAlert } from "@/components/public/home/overlays/overlay-demo-alert";
 import {
   ALERT_CATALOG,
   ALERT_TIERS,
