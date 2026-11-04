@@ -83,7 +83,7 @@ Everything about wording, humor, error copy, and empty states lives in `docs/ton
 
 Primary mark is a single-color silhouette at `apps/web-streamwizard/public/logo.png`.
 
-Render it with the `StreamWizardLogo` component at `apps/web-streamwizard/src/components/brand/streamwizard-logo.tsx`, never with a raw `<img>`. The component applies the PNG as a CSS mask over `bg-current`, so the mark inherits `currentColor`. That is the whole reason one file works on every background: change the text color, the logo follows.
+Render it with the `StreamWizardLogo` component at `apps/web-streamwizard/src/components/shared/streamwizard-logo.tsx`, never with a raw `<img>`. The component applies the PNG as a CSS mask over `bg-current`, so the mark inherits `currentColor`. That is the whole reason one file works on every background: change the text color, the logo follows.
 
 Defaults: 160x160, `role="img"`, `aria-label="StreamWizard"`, class `bg-current text-sidebar-foreground`.
 
@@ -359,7 +359,7 @@ Tailwind v4's preflight sets buttons to `cursor: default`. globals.css restores 
 | Docs theme and logos | `apps/docs/docs.json` |
 | Social and product links | `apps/web-streamwizard/src/lib/constant.ts` |
 | Overlay widget defaults | `packages/ui/src/components/overlay/types/base.ts` |
-| Logo component | `apps/web-streamwizard/src/components/brand/streamwizard-logo.tsx` |
+| Logo component | `apps/web-streamwizard/src/components/shared/streamwizard-logo.tsx` |
 
 ---
 

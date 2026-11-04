@@ -66,10 +66,10 @@ The sidebar has five groups and 19 items (`src/lib/nav-config.ts`). Sub-pages ar
 - **Breadcrumb**: group, item and tab come from the nav config; a detail page adds its own level by rendering `<PageCrumb label href />` (`src/lib/crumbs.tsx`). On phones the header shows the last level plus a back arrow.
 - **Header controls** (range, refresh, bandwidth) only show on pages whose nav entry lists them under `controls`.
 - Route URLs are stable: other apps link in (the Discord bot posts `/discord/tickets/{number}`).
-- **Search** (the header button, or Ctrl/Cmd+K) jumps to any page or tab, a ticket by number, or a user by name, email or Twitch name (`src/components/command-palette.tsx`).
+- **Search** (the header button, or Ctrl/Cmd+K) jumps to any page or tab, a ticket by number, or a user by name, email or Twitch name (`src/components/layout/command-palette.tsx`).
 - **Dashboard** (`/overview`): what needs attention, one status chip per subsystem (read from the alert engine's state, so it agrees with `/alerts`), live streamers and Cloud OBS load, who is live, shortcuts. Logic in `src/lib/overview.ts`, loading in `src/lib/overview-data.ts`.
-- **Desktop-only tools**: the message builder, the WebSocket live feed, the topology graphs and `/vnc` show a notice below 768px and are not mounted there (`src/components/widgets/desktop-only.tsx`).
-- **Shared page building blocks** live in `src/components/widgets/`: `PageHeader`, `StatGrid` / `ChartGrid`, `DataList` (a table that becomes cards when narrow), `FilterPanel`, `SaveBar`, `ResponsiveDialog` (a drawer on phones). New pages should start from these. The plan behind the layout is `docs/admin-redesign-plan.md`.
+- **Desktop-only tools**: the message builder, the WebSocket live feed, the topology graphs and `/vnc` show a notice below 768px and are not mounted there (`src/components/shared/desktop-only.tsx`).
+- **Shared page building blocks** live in `src/components/shared/`: `PageHeader`, `StatGrid` / `ChartGrid`, `DataList` (a table that becomes cards when narrow), `FilterPanel`, `SaveBar`, `ResponsiveDialog` (a drawer on phones). New pages should start from these. The plan behind the layout is `docs/admin-redesign-plan.md`.
 
 ## Pages
 
