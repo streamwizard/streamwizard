@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { OverlaySceneCanvas, overlayItemFromDbRow } from "@repo/ui/overlay";
 import { IrlGeoProvider } from "@repo/ui/components/overlay/hooks/use-irl-geo-context";
-import { ClipsWidgetContainer } from "@/components/widgets/clips-widget/ClipsWidgetContainer";
-import { CustomWidgetContainer } from "@/components/widgets/custom-widget/CustomWidgetContainer";
+import { ClipsWidgetContainer } from "@/components/overlay/widgets/clips-widget-container";
+import { CustomWidgetContainer } from "@/components/overlay/widgets/custom-widget-container";
 
 const OVERLAY_WIDGETS = [
   { id: "clips_widget", Component: ClipsWidgetContainer },

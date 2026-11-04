@@ -1,9 +1,9 @@
 import { loadOverlaySceneByOverlayId } from "@/actions/overlay";
 import { OverlaySceneCanvas, overlayItemFromDbRow } from "@repo/ui/overlay";
-import { ClipsWidgetContainer } from "@/components/widgets/clips-widget/ClipsWidgetContainer";
-import { CustomWidgetContainer } from "@/components/widgets/custom-widget/CustomWidgetContainer";
-import { GpsOverlayCanvas } from "@/components/gps-overlay-canvas";
-import { OverlayTelemetry } from "@/components/overlay-telemetry";
+import { ClipsWidgetContainer } from "@/components/overlay/widgets/clips-widget-container";
+import { CustomWidgetContainer } from "@/components/overlay/widgets/custom-widget-container";
+import { GpsOverlayCanvas } from "@/components/overlay/gps-overlay-canvas";
+import { OverlayTelemetry } from "@/components/overlay/overlay-telemetry";
 import { notFound } from "next/navigation";
 
 const OVERLAY_WIDGETS = [
