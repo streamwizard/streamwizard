@@ -20,16 +20,27 @@ Environment variables are in [env.md](env.md).
 | Route handlers that must set cookies on a response | `createRouteHandlerClient(req, res)` | `@repo/supabase/next/server` |
 | Client components | `supabase` / `createBrowserClient()` | `@repo/supabase/next/client` |
 | Next.js server code with no user session (overlay playback, admin ops) | `supabaseAdmin` (service role) | `@repo/supabase/next/admin` |
+| A fresh, non-singleton service-role client in Next server code | `createAdminClient()` | `@repo/supabase/next/admin` |
+| Server code outside a request (Next `unstable_cache` callbacks) that should see only anon RLS | `createAnonClient()` | `@repo/supabase/anon` |
 | `proxy.ts` session refresh | `updateSession` / `refreshSession` | `@repo/supabase/next/proxy` |
+| Bun/Hono routes acting as the signed-in user (cookie or bearer session, RLS applies) | `createRequestClient({ cookieHeader, authorizationHeader, setCookie })` | `@repo/supabase/request-client` |
 | Bun services (rest-api, bots, workers, ws-server) | `supabase` (service role) | `@repo/supabase` |
 
-Prefer the user-scoped client. Use a service-role client only when there is no user, and never ship it to the browser.
+Prefer the user-scoped client. Use a service-role client when there is no user, or, in a signed-in action or page, only **after** `getAuthContext()` / `tryAuthContext()` has authenticated the user and only for tables or RPCs whose RLS deliberately gives users no access (node and ingest keys, asset quota, Discord settings). Every such query takes `user.id` and filters on it (`selectIngestKeyForUser(admin, id, user.id)`), so it can only touch the caller's rows. Never import a service-role client into a `"use client"` file.
+
+Shared packages other than `@repo/supabase` take a `SupabaseClient<Database>` argument. Legacy: twitch-api, twitch-assets and logger still import the root `supabase` singleton.
 
 ## Query modules
 
-- One file per domain in `packages/supabase/src/queries/` (sub-folders for `cms/` and `obs-nodes/`).
+- One file per domain in `packages/supabase/src/queries/`. A big domain gets a sub-folder whose files are exported one by one as `./queries/<domain>/<name>` (like `cms/`). No barrel files; `queries/obs-nodes.ts` is the legacy exception. Internal helpers (`with-metrics.ts`, `clip-folder-utils.ts`) stay unexported.
 - Functions take the client as the first argument (`SupabaseClient<Database>`), so callers choose RLS or service role.
+- Query modules import only types and `@supabase/supabase-js` types, never a client instance, so client components can import their pure helpers and constants (`formatTicketNumber`).
 - A new module must be added to `exports` in `packages/supabase/package.json` as `./queries/<name>`; import it as `@repo/supabase/queries/<name>`.
+
+## Realtime and types
+
+- **Realtime subscriptions are the one database call allowed outside `queries/`:** open them in a `"use client"` hook with `createBrowserClient()` from `@repo/supabase/next/client` (RLS applies), and remove the channel on unmount. When Realtime is the right tool at all is in [performance.md](performance.md).
+- **Import `Database` and `Json` with `import type`.** In client components, import them from `@repo/supabase/types/supabase`, never from the root `@repo/supabase` entry, which holds the service-role client.
 
 ## Migrations and types
 
@@ -42,4 +53,4 @@ Prefer the user-scoped client. Use a service-role client only when there is no u
   - *Apply migrations & DB tests*: a throwaway Postgres runs every migration from scratch plus `seed.sql`, then `supabase test db` (`supabase/tests/`).
   - Run the first check yourself before opening the PR: `git fetch origin && .github/scripts/check-migrations.sh origin/staging`. Fix what it finds first; don't open the PR with a warning in the description.
 - **To check a migration landed,** look at the workflow run (`gh run list --workflow deploy-staging-db.yml`) rather than asking anyone to migrate.
-- Types: `bun run gen-types` regenerates `packages/supabase/src/types/supabase.ts` from the **local** DB. The file can drift; hand-edit new columns if a full regen would pull in unrelated changes.
+- Types: `bun run gen-types` **at the repo root** regenerates `packages/supabase/src/types/supabase.ts` from the **local** DB (`--local`). Don't use the `gen-types` script inside `packages/supabase`, which doesn't read the local DB. The file can drift; hand-edit new columns if a full regen would pull in unrelated changes.

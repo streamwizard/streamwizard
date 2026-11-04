@@ -74,7 +74,7 @@ StreamWizard is a **monorepo** — one repo, multiple apps and shared packages, 
 | `metrics` | Metrics collection for `web-admin`. |
 | `posthog` | Product analytics wiring. |
 | `sentry` | Error tracking config shared across apps. |
-| `eslint-config` / `typescript-config` | Shared lint and TS config so every package agrees on the rules. |
+| `typescript-config` | Shared TS config so every package agrees on the rules. |
 
 Want the deeper map? [`ARCHITECTURE.md`](./ARCHITECTURE.md) has the golden rules and links to a detail page per area in [`.claude/rules/architecture/`](./.claude/rules/architecture/).
 
@@ -234,31 +234,31 @@ git merge upstream/staging
 Never work directly on `staging` or `main`. Create a branch:
 
 ```bash
-git checkout -b feature/your-feature-name
+git checkout -b feat/your-feature-name
 ```
 
-Good branch names:
-- `feature/add-clip-sorting`
-- `fix/ws-server-reconnect`
+Good branch names (`<type>/<slug>`, with the Jira key when there is one):
+- `feat/add-clip-sorting`
+- `fix/sw-494-service-tokens`
 - `docs/update-readme`
+
+Types: `feat`, `fix`, `chore`, `refactor`, `docs`, `perf`, `ci`.
 
 ### Step 3 — Commit your changes
 
 ```bash
-git add .
-git commit -m "feat: add clip sorting by view count"
+git add <the files you changed>
+git commit -m "Add clip sorting by view count"
 ```
 
-Commit message prefixes:
-- `feat:` — new feature
-- `fix:` — bug fix
-- `docs:` — documentation only
-- `chore:` — maintenance, dependencies
+Stage the files you mean to commit by path rather than `git add .`.
+
+Commit messages use a short imperative subject ("Add ...", "Fix ..."), optionally prefixed with the app or package (`rest-api: fix ...`). Explain why in the body when it isn't obvious, and keep one logical change per commit.
 
 ### Step 4 — Push to your fork
 
 ```bash
-git push origin feature/your-feature-name
+git push origin feat/your-feature-name
 ```
 
 ---

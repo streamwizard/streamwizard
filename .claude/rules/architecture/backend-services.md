@@ -20,19 +20,23 @@ Every Bun service (rest-api, ws-server, streamwizard-bot, discord-bot, obs-auto-
 
 ```
 src/
-  index.ts             starts the process only: env, Sentry, listen, start jobs. No logic.
-  app.ts               builds the Hono app / WS server and mounts each module's routes (importable in tests)
+  index.ts             starts the process only: process handlers, start server and jobs, shutdown. No logic.
+  app.ts               builds the Hono app / WS server and mounts each module's routes, or wires a worker's
+                       parts without starting them (importable in tests). discord-bot's lives in http/app.ts.
   sentry.ts
   lib/env.ts           env schema (rest-api's src/env.ts is a legacy exception)
   modules/<domain>/    one folder per business domain: eventsub/, ingest-nodes/, rooms/, ...
-    routes.ts          entry point: a Hono sub-app mounted with app.route(), or WS message handlers.
+    routes.ts          HTTP entry point: a Hono sub-app mounted with app.route()
+                       (ws-server: a (req, pathname) => Response | null function).
                        Parses and validates input, calls the domain, returns the response.
+    socket.ts          WebSocket entry point: this domain's message handlers. Same job as routes.ts.
     <feature>.ts       domain logic: plain values in, plain values out
     schemas.ts         Zod schemas for this domain's input
-    jobs.ts            pollers/sweepers that belong to this domain
+    jobs.ts            pollers/sweepers and timers that belong to this domain
     *.test.ts          next to the file they cover
   middleware/          cross-cutting HTTP guards only: auth, rate limits, security headers
   lib/                 generic helpers with no domain (secret-compare, r2 client)
+  scripts/             one-off CLI scripts run from a package.json script
   types/<domain>.ts    exported app-wide types (see types.md; shared contracts go in @repo/types)
 ```
 
@@ -40,7 +44,7 @@ The three layers, per domain:
 
 | Layer | Where | Job |
 |-------|-------|-----|
-| Entry point | `modules/<domain>/routes.ts` (or WS handlers, job runners) | Adapt the request to plain values, validate, call the domain, shape the response. |
+| Entry point | `modules/<domain>/routes.ts`, `socket.ts` or job runners | Adapt the request to plain values, validate, call the domain, shape the response. |
 | Domain | `modules/<domain>/*.ts` | Business logic. Knows nothing about HTTP or WebSockets. |
 | Data access | `@repo/supabase/queries/*` (shared) | All database calls. |
 
@@ -49,13 +53,24 @@ Rules:
 - **Group by domain, not by technical role.** No app-wide `routes/`, `controllers/`, `services/` or `jobs/` folders; a domain's routes and jobs live in its module.
 - **Never pass Hono `Context` or `Request`/`Response` into domain code.** Read what you need in `routes.ts` and pass plain values, so the logic is testable and reusable from jobs and other transports. (In ws-server the connection registries hold sockets by design; that's their domain.)
 - **Routes use `app.route()` with per-domain sub-apps, handlers written inline.** No Rails-style controller classes (they break Hono's type inference). If a handler must be shared, use `factory.createHandlers()` from `hono/factory`.
-- **Modules talk through their public functions.** Don't reach into another module's internal files; if two modules need the same thing, it moves to `lib/` (generic) or a package (shared across apps).
+- **Context variables are declared by the middleware that sets them**, in a `declare module "hono" { interface ContextVariableMap { ... } }` block in that middleware file, so handlers read `c.var.x` without casts. Only read a variable on routes that mount its middleware; the type is global and does not prove the middleware ran.
+- **Modules talk through exported functions of their feature files.** Another module may import exported functions from `modules/<other>/<feature>.ts` (eventsub calling `postGoLive` from `discord-live/posts.ts`), but never its `routes.ts`, `socket.ts`, `jobs.ts`, `schemas.ts`, test files or unexported helpers, and no `index.ts` barrels. If two modules need the same helper, it moves to `lib/` (generic) or a package (shared across apps).
+- **A large domain may split into sub-folders** (`modules/obs-nodes/node/`, `modules/obs-nodes/instances/`, `modules/eventsub/handlers/`). The module still has one `routes.ts` at its root that mounts the sub-folders' handlers; sub-folders hold domain files and tests, and follow the same layering.
+- **Jobs are factories with injected deps.** A poller or sweeper exports `createX(deps)` returning `{ start, stop }` (tests drive it with fake deps) and one live instance built from the real deps, or `null` when its env is not set. `index.ts` starts each live instance; nothing starts itself on import. Put it in the domain's `jobs.ts`, or in a file named for the job (`poller.ts`, `role-sweeper.ts`) when a module has more than one.
 - **No new files at the `src/` root** besides `index.ts`, `app.ts` and `sentry.ts`. Exported types go in `src/types/` ([types.md](types.md)).
 - **A new domain gets a new `modules/<domain>/` folder**, even if it starts with one file.
-- **File names are kebab-case.** Exception: discord-bot `events/` files are named after discord.js events.
-- Framework folders are allowed when the framework needs them: discord-bot's `commands/`, `events/`, `handlers/` (auto-discovery) and `http/`. Domain logic those commands call still goes in `modules/`.
+- **File names are kebab-case.** Exception: discord-bot `events/` files are camelCase. A top-level `events/<name>.ts` is named after the discord.js event it listens to (`guildMemberAdd.ts`). A second listener for the same event goes in a subfolder named for its feature and is named after what it records (`events/server-log/memberBanned.ts` for `GuildBanAdd`). Commands in `commands/` stay kebab-case.
+- **Framework folders are allowed when the framework needs them:** discord-bot's `commands/`, `events/`, `handlers/` (auto-discovery) and `http/` (its Hono app, `routes/` and `middleware/`). One-off CLI scripts run from a `package.json` script go in `src/scripts/` (discord-bot `deploy-commands.ts`); ambient module augmentations go in `src/types/*.d.ts`. Domain logic those commands, events and routes call still goes in `modules/`.
 
-**Current state:** ws-server and obs-auto-switcher follow this layout (ws-server is the reference for a non-Hono server, obs-auto-switcher for a worker with no public routes). rest-api keeps app-wide `routes/` and `jobs/` folders, and several `modules/obs-nodes` and `modules/ingest-nodes` files take Hono `Context`. streamwizard-bot (`functions/`) still needs moving. New code follows the layout above; move existing files when you are already working on them, or in a dedicated restructure PR per app.
+**Current state:** ws-server and obs-auto-switcher are closest to this layout (ws-server is the reference for a non-Hono server, obs-auto-switcher for a worker with no public routes). ws-server still has `src/types.ts` at the root, a barrel `modules/monitor/index.ts`, its keepalive timer in `connections/keepalive.ts` and no Zod `schemas.ts` (messages are cast); obs-auto-switcher's `modules/ws-server/` is named after the peer instead of a domain. rest-api is furthest off: there is no `app.ts` (`src/index.ts` builds the app and registers the clip-sync and EventSub handlers on the root app); it keeps app-wide `routes/`, `jobs/` and `schemas/` folders; env is parsed in `src/env.ts` from `src/schemas/env.ts`; `lib/obs-storage-credentials.ts`, `lib/platform-events.ts` and `lib/user-state.ts` each belong to one module; and the route handlers in `modules/obs-nodes` and `modules/ingest-nodes` take Hono `Context` (the `routes/` files only list paths). streamwizard-bot still has `functions/`, an app-wide `handlers/`, domain code in `lib/` and `overlay-ws-client.ts` at the `src/` root, and its `index.ts` holds the shard wiring and health server. discord-bot keeps its domains in `lib/` (`tickets/`, `voice/`, `announcements/`, `log-channel/`, `server-log/`, plus loose `ticket-*.ts`) instead of `modules/`. alert-worker's loop lives in `src/worker/`. New code follows the layout above: don't add files to rest-api's `routes/`, `jobs/` or `schemas/`, and new node handlers go in a module `routes.ts` that passes plain values. Move existing files when you are already working on them, or in a dedicated restructure PR per app.
+
+### Startup, shutdown and health
+
+- **Sentry starts before anything else** through `bun --preload ./src/sentry.ts` in both the `dev` and `start` scripts. The first lines of `index.ts` register `uncaughtException` → `reportFatal` and `unhandledRejection` → `Sentry.captureException`. Imports are evaluated before those lines run, so keep work that can throw out of module scope.
+- **A failed startup is reported:** catch it around `main()`, `captureException`, `await flushSentry()`, `process.exit(1)`.
+- **SIGINT and SIGTERM run one `shutdown`:** stop the HTTP/WS server, disconnect clients, stop each job (a loop finishes its in-flight pass first), flush anything buffered (`flushTracking()`, log groups, counters), then `await flushSentry()` and `process.exit(0)`. Every `start*()` job has a matching `stop*()` that `shutdown` calls.
+- **Every service serves `GET /health` on its own port**, liveness only: it answers while the process runs and never checks Supabase, Discord, Twitch or another service, so an outage elsewhere can't make the orchestrator restart it in a loop. The Dockerfile `HEALTHCHECK` curls it. A worker may answer 503 only when its own loop stopped finishing passes.
+- **Interval loops use an interruptible sleep**, so `stop()` doesn't wait out a full interval. Several services keep their own copy of this helper today; extract it to a package instead of adding another.
 
 ### REST API (`apps/rest-api`)
 
@@ -67,7 +82,7 @@ Hono. Domains in `src/modules/`: eventsub, streams, obs-nodes, ingest-nodes, dis
 
 ### WebSocket service (`apps/ws-server`)
 
-Roles: `subscriber` (overlay browser sources), `bot`, `consumer`, `ingest-node` and `monitor`. Bot, consumer, ingest-node and monitor connections, and the `/internal/*` HTTP routes, authenticate with service tokens checked against `WS_SERVICE_JWKS` (a monitor token is signed by web-admin for an admin's browser). Message and event types live in `@repo/types`, and every frame and `/internal/*` body is parsed with the schemas in `@repo/schemas/ws-server` (a bad frame is dropped, counted and logged once; a bad body gets a plain 400); client helpers in `@repo/ws-client`. Treat `src/modules/connections/` (upgrade and socket lifecycle) and `@repo/types` as the source of truth for roles and message shapes. Each module owns its HTTP routes (`routes.ts`), its socket messages (`socket.ts`) and its timers (`jobs.ts`); `src/app.ts` mounts the routes.
+Roles: `subscriber` (overlay browser sources), `bot`, `consumer`, `ingest-node` and `monitor`. Bot, consumer, ingest-node and monitor connections, and the `/internal/*` HTTP routes, authenticate with service tokens checked against `WS_SERVICE_JWKS` (a monitor token is signed by web-admin for an admin's browser). Message and event types live in `@repo/types`, and every frame and `/internal/*` body is parsed with the schemas in `@repo/schemas/ws-server` (a bad frame is dropped, counted and logged once; a bad body gets a plain 400); the server-to-server HTTP client for the internal endpoints is `@repo/ws-client`. Treat `src/modules/connections/` (upgrade and socket lifecycle) and `@repo/types` as the source of truth for roles and message shapes. Each module owns its HTTP routes (`routes.ts`), its socket messages (`socket.ts`) and its timers (`jobs.ts`); `src/app.ts` mounts the routes.
 
 ### Discord bot (`apps/discord-bot`)
 
@@ -79,6 +94,6 @@ Independent long-running Bun services. The alert worker runs `@repo/alerting`; r
 
 ## Observability
 
-- Errors go to Sentry through each app's `src/sentry.ts` (built on `@repo/sentry`) or the Next `instrumentation*.ts` files.
+- Errors go to Sentry through each app's `src/sentry.ts` (built on `@repo/sentry`), preloaded with `bun --preload` so it initialises before any other module loads, or the Next `sentry.*.config.ts` and `instrumentation*.ts` files. rest-api is the exception: `@sentry/hono`'s `sentry(app, …)` middleware in `index.ts` initialises the SDK and must be the only init, so rest-api's `sentry.ts` only re-exports the SDK, and errors thrown while its modules load are not captured.
 - Product events go through `@repo/posthog`; metrics through `@repo/metrics`.
 - Operational events that admins or Discord log channels should see go through the platform events queue (`queries/platform-events`).

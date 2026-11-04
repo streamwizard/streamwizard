@@ -24,13 +24,13 @@ This file is the shared rulebook. Every change, whoever or whatever makes it, sh
 16. **Packages are organized too:** one purpose each, domain folders inside `src/`, public API only through `exports`, no barrel files, a README ([packages](.claude/rules/architecture/packages.md)).
 17. **Every new table has RLS on and its policies in the same migration;** `security definer` functions set `search_path = ''` ([database migrations](.claude/rules/architecture/database-migrations.md)).
 18. **Unexpected errors go to Sentry via `@repo/sentry`; users, nodes and third parties only ever see a generic message.** Never log secrets ([errors and logging](.claude/rules/architecture/errors-and-logging.md)).
-19. **Paid features check `requireProductAccess()` on the server at every entry point** and show `FeatureDisabledBanner` when access is missing ([paid features](.claude/rules/architecture/paid-features.md)).
+19. **Paid features check the plan on the server at every entry point:** `requireProductAccess()` on pages, the product's access helper in server actions, the subscription queries in rest-api; read-only plans show `FeatureDisabledBanner` ([paid features](.claude/rules/architecture/paid-features.md)).
 20. **Branch off `staging`, commit only when asked, nothing sensitive in PR text** (public repo), Jira key in the branch, Done after merge ([git, PRs and Jira](.claude/rules/architecture/git-and-prs.md)).
 21. **Logic and security checks get tests without a DB or network;** RLS and SQL functions get pgTAP tests ([testing](.claude/rules/architecture/testing.md)).
 22. **Select only needed columns, never poll the DB in a tight loop,** fetch on the server in parallel ([performance](.claude/rules/architecture/performance.md)).
 23. **Check for an existing package before adding a dependency;** one library per job, added to the workspace that uses it, `bun.lock` committed ([dependencies](.claude/rules/architecture/dependencies.md)).
 24. **Analytics go through `@repo/posthog` and its event map, with no personal data** ([analytics](.claude/rules/architecture/analytics.md)).
-25. **Exported types live in `src/types/<domain>.ts`; types only one file uses sit at the top of that file, unexported.** Zod-inferred types stay with their schema, props with their component ([types](.claude/rules/architecture/types.md)).
+25. **A module's API types are exported from that module; types shared with no single owner live in `src/types/<domain>.ts`; types only one file uses sit at the top of that file, unexported.** Zod-inferred types stay with their schema, props with their component ([types](.claude/rules/architecture/types.md)).
 26. **Every rule a tool can check is checked in CI:** Biome, dependency-cruiser, knip and `check:dupes` must pass, baselines only go down ([repo hygiene](.claude/rules/architecture/repo-hygiene.md)).
 27. **No dead code or clutter:** delete instead of commenting out, `docs/` holds lasting docs only (plans go to Confluence or Jira), every `TODO` names a Jira ticket, files stay under about 400 lines ([repo hygiene](.claude/rules/architecture/repo-hygiene.md)).
 

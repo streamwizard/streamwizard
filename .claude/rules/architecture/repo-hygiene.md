@@ -21,7 +21,6 @@ The rulebook only holds if machines check it. Every rule a tool can check should
 ## Lint and structure checks
 
 - **Biome** lints and formats every app and package (one root `biome.json`, no per-app configs). It checks at least:
-  - no `console.log` (`console.warn` / `console.error` only, see [errors-and-logging.md](errors-and-logging.md))
   - no `process.env` outside `env.ts` and the allowed exceptions ([env.md](env.md))
   - `import type` for type-only imports ([types.md](types.md))
   - no unused variables or imports
@@ -42,9 +41,10 @@ The rulebook only holds if machines check it. Every rule a tool can check should
 
 ## What lives in the repo
 
-- **`docs/` holds lasting documentation only:** guides, brand and tone, runbooks, the auth walkthrough. Plans, task prompts, research notes, audit results and one-off HTML go to Confluence or Jira, never the repo.
+- **`docs/` holds lasting documentation only:** guides, brand and tone, runbooks. Plans, task prompts, research notes, audit results and one-off HTML go to Confluence or Jira, never the repo.
+- **New files in `docs/` are git-ignored** (`/docs/` in `.gitignore`), so local notes there never get committed by accident; tracked docs stay tracked. A new lasting doc is added on purpose with `git add -f`, and only when it says nothing a public repo shouldn't (the auth walkthrough stays in Confluence, see [auth-and-security.md](auth-and-security.md)).
 - **No scratch files anywhere in the tree:** `CLEANUP.md`, `ISSUES.md`, `notes.md`, test output, screenshots that no doc uses.
-- **The repo root stays small:** config files, `README.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `LICENSE`. New root files need a reason.
+- **The repo root stays small:** config files, `.env.example`, `README.md`, `CONTRIBUTING.md`, `ARCHITECTURE.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `LICENSE`, and the `apps/`, `packages/`, `supabase/`, `scripts/` and `docs/` folders. New root files need a reason.
 
 ## TODOs
 
@@ -71,4 +71,4 @@ The rulebook only holds if machines check it. Every rule a tool can check should
 
 - **The whole repo is audited against this rulebook once a month**, with the audit prompt in `~/streamwizard-audits/rulebook-audit-prompt.md`, scheduled as a recurring task. Findings become Jira tickets; rule fixes go into this folder.
 
-**Current state:** none of the tools above is set up yet. `packages/eslint-config` is being removed, so the repo currently has no linter; `check:dupes` exists but doesn't run in CI; there is no knip, dependency-cruiser, lefthook or `.gitattributes`. Setting them up is its own piece of work, with baselines for what's already there.
+**Current state:** none of the tools above is set up yet. `packages/eslint-config` is gone; the three Next apps still lint with their own `eslint.config.mjs` (`eslint-config-next`), and the Bun services and packages have no linter. Biome replaces all of it. `check:dupes` exists but doesn't run in CI; there is no knip, dependency-cruiser, lefthook or `.gitattributes`. Setting them up is its own piece of work, with baselines for what's already there.
