@@ -12,3 +12,23 @@ export async function unentitledInstanceIds(
   const entitled = await entitledUsers([...new Set(instances.map((i) => i.user_id))]);
   return instances.filter((i) => !entitled.has(i.user_id)).map((i) => i.id);
 }
+
+/**
+ * The Cloud OBS subscription a new instance runs under, checked on the server
+ * whatever the node sends. A subscription id from the node must be the user's
+ * own active Cloud OBS plan; with none, the user's active Cloud OBS plan is
+ * used. Null means the user may not launch.
+ */
+export async function launchSubscriptionId(
+  userId: string,
+  sentSubscriptionId: string | null | undefined,
+  lookups: {
+    isOwnActivePlan: (subscriptionId: string, userId: string) => Promise<boolean>;
+    activePlanOf: (userId: string) => Promise<string | null>;
+  },
+): Promise<string | null> {
+  if (sentSubscriptionId) {
+    return (await lookups.isOwnActivePlan(sentSubscriptionId, userId)) ? sentSubscriptionId : null;
+  }
+  return lookups.activePlanOf(userId);
+}

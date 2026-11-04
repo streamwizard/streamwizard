@@ -43,8 +43,20 @@ const passwordFields = (r: Row) => ({
 });
 
 mock.module("@repo/supabase", () => ({ supabase: {} }));
+/** The user's active Cloud OBS subscription, and whether a sent id is one of theirs. */
+let activePlan: string | null;
+let sentPlanIsActive: boolean;
+let planChecks: unknown[][];
+
 mock.module("@repo/supabase/queries/subscriptions", () => ({
-  isActiveSubscriptionOfUser: async () => true,
+  isActiveSubscriptionOfUser: async (...args: unknown[]) => {
+    planChecks.push(["isActiveSubscriptionOfUser", ...args.slice(1)]);
+    return sentPlanIsActive;
+  },
+  getUserActiveSubscriptionId: async (...args: unknown[]) => {
+    planChecks.push(["getUserActiveSubscriptionId", ...args.slice(1)]);
+    return activePlan;
+  },
   usersWithActiveSubscription: async () => new Set(),
 }));
 mock.module("@/env", () => ({
@@ -137,6 +149,9 @@ beforeEach(() => {
   rows = new Map();
   inserted = null;
   raceWinner = null;
+  activePlan = "22222222-2222-4222-8222-222222222222";
+  sentPlanIsActive = true;
+  planChecks = [];
 });
 
 describe("GET /instances/:id/secrets", () => {
@@ -291,6 +306,40 @@ describe("POST /instances", () => {
     const f = inserted as Record<string, string>;
     expect(f.obs_ws_password_ciphertext).not.toBe(planted.ciphertext);
     expect(f.vnc_password_ciphertext).not.toBe(planted.ciphertext);
+  });
+
+  it("checks the user's Cloud OBS plan when the node sends no subscription_id", async () => {
+    activePlan = null;
+    const res = await post(body);
+
+    expect(res.status).toBe(403);
+    expect(inserted).toBeNull();
+    expect(planChecks).toEqual([["getUserActiveSubscriptionId", body.user_id, "cloud_obs"]]);
+  });
+
+  it("records the plan it checked when the node sends no subscription_id", async () => {
+    const res = await post(body);
+
+    expect(res.status).toBe(201);
+    expect((inserted as Record<string, unknown>).subscription_id).toBe(activePlan);
+  });
+
+  it("refuses a subscription_id that isn't the user's active Cloud OBS plan", async () => {
+    sentPlanIsActive = false;
+    const sent = "33333333-3333-4333-8333-333333333333";
+    const res = await post({ ...body, subscription_id: sent });
+
+    expect(res.status).toBe(403);
+    expect(inserted).toBeNull();
+    expect(planChecks).toEqual([["isActiveSubscriptionOfUser", sent, body.user_id, "cloud_obs"]]);
+  });
+
+  it("refuses a subscription_id of null when the user has no plan", async () => {
+    activePlan = null;
+    const res = await post({ ...body, subscription_id: null });
+
+    expect(res.status).toBe(403);
+    expect(inserted).toBeNull();
   });
 
   it("rejects a create without obs_ws_password", async () => {

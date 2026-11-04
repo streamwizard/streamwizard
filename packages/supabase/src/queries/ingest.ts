@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { getUserActiveSubscriptionId } from "./subscriptions";
 import { withMetrics } from "./with-metrics";
 
 type DBClient = SupabaseClient<Database>;
@@ -16,8 +17,16 @@ export interface StreamKeyOwner {
 /**
  * Validate a stream key and return its owner. Used by the ingest control plane
  * on every connect. Mirrors getIrlCollectorTokenUserId in ./irl.ts.
+ *
+ * The key must be active and its owner must hold a plan for `productId` that
+ * may start things (getUserActiveSubscriptionId: active or trialing, period
+ * not over). Null otherwise, the same answer as for an unknown key.
  */
-export async function getStreamKeyOwner(client: DBClient, streamKey: string): Promise<StreamKeyOwner | null> {
+export async function getStreamKeyOwner(
+  client: DBClient,
+  streamKey: string,
+  productId: string,
+): Promise<StreamKeyOwner | null> {
   const { data } = await client
     .from("ingest_stream_keys")
     .select("id, user_id, label")
@@ -26,7 +35,23 @@ export async function getStreamKeyOwner(client: DBClient, streamKey: string): Pr
     .maybeSingle();
 
   if (!data) return null;
+  if (!(await getUserActiveSubscriptionId(client, data.user_id, productId))) return null;
   return { user_id: data.user_id, key_id: data.id, label: data.label };
+}
+
+/**
+ * Turns all of a user's ingest keys on or off (keys are never deleted here).
+ * Only rows that change are written; returns their ids. Throws on error.
+ */
+export async function setIngestKeysActiveForUser(client: DBClient, userId: string, active: boolean): Promise<string[]> {
+  const { data, error } = await client
+    .from("ingest_stream_keys")
+    .update({ is_active: active })
+    .eq("user_id", userId)
+    .eq("is_active", !active)
+    .select("id");
+  if (error) throw error;
+  return (data ?? []).map((row) => row.id);
 }
 
 export async function touchStreamKey(client: DBClient, streamKey: string): Promise<void> {

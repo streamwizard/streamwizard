@@ -55,7 +55,7 @@ export async function openSession(c: Context) {
     return c.json({ error: "Too many invalid stream keys" }, 429);
   }
 
-  const owner = await getStreamKeyOwner(supabase, stream_key);
+  const owner = await getStreamKeyOwner(supabase, stream_key, "cloud_obs");
   if (!owner) return c.json({ error: "Invalid stream key" }, 403);
   // A valid key gives its attempt back.
   keyFailures.set(nodeId, Math.max(0, (keyFailures.get(nodeId) ?? 1) - 1));

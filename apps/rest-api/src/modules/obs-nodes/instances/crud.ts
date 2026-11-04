@@ -13,9 +13,13 @@ import {
   updateObsInstanceByContainerIdForNode,
   updateObsInstanceForNode,
 } from "@repo/supabase/queries/obs-nodes";
-import { isActiveSubscriptionOfUser, usersWithActiveSubscription } from "@repo/supabase/queries/subscriptions";
+import {
+  getUserActiveSubscriptionId,
+  isActiveSubscriptionOfUser,
+  usersWithActiveSubscription,
+} from "@repo/supabase/queries/subscriptions";
 import { env } from "@/env";
-import { unentitledInstanceIds } from "@/modules/obs-nodes/instances/cloud-obs-plan";
+import { launchSubscriptionId, unentitledInstanceIds } from "@/modules/obs-nodes/instances/cloud-obs-plan";
 import { checkInstanceCreateToken } from "@/modules/obs-nodes/instances/instance-create-token";
 import { containerIdParamSchema, insertInstanceSchema, updateInstanceSchema } from "@/schemas/obs-nodes";
 import { parseUuid } from "@/schemas/nodes-shared";
@@ -94,7 +98,11 @@ export async function createInstance(c: Context) {
   });
   if (!tokenCheck.ok) return c.json({ error: tokenCheck.error }, tokenCheck.status);
 
-  if (subscriptionId && !(await isActiveSubscriptionOfUser(supabase, subscriptionId, userId))) {
+  const planSubscriptionId = await launchSubscriptionId(userId, subscriptionId, {
+    isOwnActivePlan: (id, owner) => isActiveSubscriptionOfUser(supabase, id, owner, "cloud_obs"),
+    activePlanOf: (owner) => getUserActiveSubscriptionId(supabase, owner, "cloud_obs"),
+  });
+  if (!planSubscriptionId) {
     return c.json({ error: "Subscription not found or inactive" }, 403);
   }
 
@@ -109,6 +117,7 @@ export async function createInstance(c: Context) {
     // node_id is forced to the authenticated node, never taken from the body.
     const instance = await insertObsInstance(supabase, {
       ...fields,
+      subscription_id: planSubscriptionId,
       node_id: nodeId,
       obs_ws_password_ciphertext: obsWs.ciphertext,
       obs_ws_password_iv: obsWs.iv,

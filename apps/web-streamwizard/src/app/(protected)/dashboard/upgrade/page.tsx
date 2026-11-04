@@ -2,11 +2,6 @@ import { createClient } from "@repo/supabase/next/server";
 import { getProductName } from "@repo/supabase/queries/subscriptions";
 import { Lock } from "lucide-react";
 
-const PRODUCT_LABELS: Record<string, string> = {
-  cloud_obs: "Cloud OBS",
-  ingest_server: "Ingest Server",
-};
-
 export default async function UpgradePage({
   searchParams,
 }: {
@@ -15,11 +10,7 @@ export default async function UpgradePage({
   const { feature } = await searchParams;
   const supabase = await createClient();
 
-  let productName = feature ? (PRODUCT_LABELS[feature] ?? feature) : null;
-
-  if (feature && !productName) {
-    productName = (await getProductName(supabase, feature)) ?? productName;
-  }
+  const productName = feature ? ((await getProductName(supabase, feature)) ?? feature) : null;
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center px-4">

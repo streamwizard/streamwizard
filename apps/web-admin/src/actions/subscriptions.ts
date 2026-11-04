@@ -14,15 +14,17 @@ import {
   getPlanProductId,
   getPlanWithProduct,
   getSubscriptionWithPlan,
-  getUserActiveSubscriptionId,
   updateSubscriptionGrant,
   upsertSubscriptionGrant,
+  usersWithActiveSubscription,
 } from "@repo/supabase/queries/subscriptions";
+import { setIngestKeysActiveForUser } from "@repo/supabase/queries/ingest";
 import { listRunningObsInstancesByUser, updateObsInstancesByUser } from "@repo/supabase/queries/obs-nodes";
 import { toggleInstanceAdminAction } from "@/actions/nodes";
 import { revalidatePath } from "next/cache";
 
 // Product whose plans carry cloud-OBS resource limits + a config_template folder.
+// IRL ingest is part of it too (web-streamwizard's INGEST_PRODUCT).
 const CLOUD_OBS_PRODUCT_ID = "cloud_obs";
 
 const SUBSCRIPTIONS_PATH = "/subscriptions";
@@ -100,6 +102,7 @@ export async function grantSubscriptionAction(
     } catch (e) {
       reportError(e, "actions/subscriptions:reapply-instances");
     }
+    await applyCloudObsPlan(adminClient, userId);
   }
 
   revalidateGrants();
@@ -142,7 +145,7 @@ export async function revokeSubscriptionAction(subscriptionId: string) {
   }
 
   if (before && firstPlan(before.plans)?.product_id === CLOUD_OBS_PRODUCT_ID) {
-    await stopCloudObsWithoutPlan(adminClient, before.user_id);
+    await applyCloudObsPlan(adminClient, before.user_id);
   }
 
   revalidateGrants();
@@ -206,26 +209,41 @@ export async function updateSubscriptionAction(
     }
   }
   // past_due is read-only and an expiry in the past ends the plan, so either
-  // can leave a running container without a plan behind it.
+  // can leave a running container or usable ingest keys without a plan behind
+  // them. A change back to active turns the ingest keys on again.
   if (before && firstPlan(before.plans)?.product_id === CLOUD_OBS_PRODUCT_ID) {
-    await stopCloudObsWithoutPlan(adminClient, before.user_id);
+    await applyCloudObsPlan(adminClient, before.user_id);
   }
 
   revalidateGrants();
   return { error: null };
 }
 
-// ── Cloud OBS containers on plan loss (SW-478) ───────────────────────────────
+// ── Cloud OBS containers and ingest keys on plan change (SW-478, SW-501) ─────
 
 /**
- * Stops the user's running Cloud OBS containers when they no longer hold a
- * plan that may run them (another active grant for the product keeps them
- * up). Best-effort: the subscription change already happened, and each node's
- * plan sweep stops whatever this misses within a few minutes.
+ * Brings the user's Cloud OBS containers and IRL ingest keys in line with
+ * their plan after a grant change (another active grant for the product
+ * counts). Without a plan that may start things, running containers are
+ * stopped and ingest keys are turned off, so a new ingest session is refused;
+ * with one, ingest keys are turned back on. Keys are never deleted.
+ * Best-effort: the subscription change already happened, and each node's plan
+ * sweep stops containers this misses within a few minutes. A failed plan
+ * lookup changes nothing.
  */
-async function stopCloudObsWithoutPlan(client: AdminClient, userId: string) {
+async function applyCloudObsPlan(client: AdminClient, userId: string) {
+  let hasPlan: boolean;
   try {
-    if (await getUserActiveSubscriptionId(client, userId, CLOUD_OBS_PRODUCT_ID)) return;
+    hasPlan = (await usersWithActiveSubscription(client, [userId], CLOUD_OBS_PRODUCT_ID)).has(userId);
+  } catch (e) {
+    reportError(e, "actions/subscriptions:plan-lookup", { userId });
+    return;
+  }
+  await Promise.all([hasPlan ? null : stopRunningInstances(client, userId), setIngestKeys(client, userId, hasPlan)]);
+}
+
+async function stopRunningInstances(client: AdminClient, userId: string) {
+  try {
     const running = await listRunningObsInstancesByUser(client, userId);
     await Promise.all(
       running.map(async (instance) => {
@@ -235,6 +253,17 @@ async function stopCloudObsWithoutPlan(client: AdminClient, userId: string) {
     );
   } catch (e) {
     reportError(e, "actions/subscriptions:stop-instances");
+  }
+}
+
+async function setIngestKeys(client: AdminClient, userId: string, active: boolean) {
+  try {
+    const changed = await setIngestKeysActiveForUser(client, userId, active);
+    if (changed.length > 0) {
+      console.log(`[subscriptions] ingest keys turned ${active ? "on" : "off"}`, { userId, keys: changed.length });
+    }
+  } catch (e) {
+    reportError(e, "actions/subscriptions:ingest-keys", { userId, active });
   }
 }
 

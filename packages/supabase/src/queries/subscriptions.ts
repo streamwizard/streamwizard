@@ -76,14 +76,17 @@ export async function getPlanLimits(
   return data.limits as unknown as CloudObsPlanLimits;
 }
 
+/** Limits of a subscription that may launch things, only when its plan belongs to `productId`. */
 export async function getSubscriptionLimits(
   supabase: SupabaseClient<Database>,
   subscriptionId: string,
+  productId: string,
 ): Promise<CloudObsPlanLimits | null> {
   const { data } = await supabase
     .from("user_subscriptions")
-    .select("plans(limits)")
+    .select("plans!inner(limits, product_id)")
     .eq("id", subscriptionId)
+    .eq("plans.product_id", productId)
     .in("status", INTERACTIVE_SUBSCRIPTION_STATUSES)
     .or(periodNotOverFilter())
     .maybeSingle();
@@ -93,17 +96,19 @@ export async function getSubscriptionLimits(
   return plan.limits as unknown as CloudObsPlanLimits;
 }
 
-/** True when the subscription is the user's own and may launch things. */
+/** True when the subscription is the user's own, belongs to `productId` and may launch things. */
 export async function isActiveSubscriptionOfUser(
   supabase: SupabaseClient<Database>,
   subscriptionId: string,
   userId: string,
+  productId: string,
 ): Promise<boolean> {
   const { data } = await supabase
     .from("user_subscriptions")
-    .select("id")
+    .select("id, plans!inner(product_id)")
     .eq("id", subscriptionId)
     .eq("user_id", userId)
+    .eq("plans.product_id", productId)
     .in("status", INTERACTIVE_SUBSCRIPTION_STATUSES)
     .or(periodNotOverFilter())
     .maybeSingle();
