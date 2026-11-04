@@ -7,6 +7,11 @@ import type {
     HandlerRegistry,
 } from "./types";
 
+// Longest start() waits for one shard to bind (or fail) before starting the
+// next. A healthy connect + bind takes well under a second; this only matters
+// when a socket hangs, and keeps startup bounded at roughly N × 5s.
+const SETTLE_TIMEOUT_MS = 5_000;
+
 export interface ConduitShardManagerOptions {
     conduitId: string;
     /** Shards the conduit should have. The manager raises shard_count to this, never lowers it. */
@@ -15,7 +20,7 @@ export interface ConduitShardManagerOptions {
     shardIds?: string[];
     wsUrl?: string;
     twitchApi?: TwitchApi;
-    /** Gap between starting two receivers, so N binds don't hit Helix at once (default: 250ms) */
+    /** Gap between one receiver binding (or failing) and the next one starting, so N binds don't hit Helix at once (default: 250ms) */
     staggerMs?: number;
     /** How often onHeartbeat fires (default: 30000ms) */
     heartbeatIntervalMs?: number;
@@ -74,6 +79,19 @@ export class ConduitShardManager {
         this.twitchApi = options.twitchApi ?? new TwitchApi();
     }
 
+    /** Resolves when `settled` does, or after SETTLE_TIMEOUT_MS, whichever comes first. */
+    private async settledOrTimeout(settled: Promise<void>): Promise<void> {
+        let timer: NodeJS.Timeout | undefined;
+        const timeout = new Promise<void>((resolve) => {
+            timer = setTimeout(resolve, SETTLE_TIMEOUT_MS);
+        });
+        try {
+            await Promise.race([settled, timeout]);
+        } finally {
+            clearTimeout(timer);
+        }
+    }
+
     /** The shard ids this process runs. */
     getShardIds(): string[] {
         return [...this.shardIds];
@@ -123,16 +141,29 @@ export class ConduitShardManager {
             if (this.stopped) return;
             if (index > 0 && stagger > 0) await new Promise((resolve) => setTimeout(resolve, stagger));
             if (this.stopped) return;
+            // connect() returns once the socket is dialled, not once it's open,
+            // so staggering from that point let a slow handshake squeeze two
+            // binds together. Wait for this shard's first outcome (bound or
+            // lost) before the next one's stagger starts, capped so a hung
+            // socket can't hold up the rest.
+            let settle!: () => void;
+            const settled = new Promise<void>((resolve) => {
+                settle = resolve;
+            });
             const receiver = new TwitchEventSubReceiver(this.handlers, {
                 ...this.options.receiverOptions,
                 conduitId: this.options.conduitId,
                 shardId,
                 wsUrl: this.options.wsUrl,
                 twitchApi: this.twitchApi,
-                onLifecycleEvent: (event) => this.options.onLifecycleEvent?.(shardId, event),
+                onLifecycleEvent: (event) => {
+                    if (event.type === "connected" || event.type === "connection_lost") settle();
+                    this.options.onLifecycleEvent?.(shardId, event);
+                },
             });
             this.receivers.set(shardId, receiver);
             await receiver.connect();
+            if (stagger > 0) await this.settledOrTimeout(settled);
         }
 
         const interval = this.options.heartbeatIntervalMs ?? 30_000;
