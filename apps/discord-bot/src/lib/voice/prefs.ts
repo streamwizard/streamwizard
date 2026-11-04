@@ -1,4 +1,4 @@
-import type { VoiceHub, VoiceOwnerPrefs } from "@repo/supabase/queries/discord-voice";
+import type { VoiceHub, VoiceOwnerPrefs } from "@repo/supabase/queries/discord/voice";
 import { cleanChannelName } from "./template";
 
 // What an owner's new channel starts as: what they saved for this hub, or the

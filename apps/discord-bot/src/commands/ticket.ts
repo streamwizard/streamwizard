@@ -1,9 +1,9 @@
 import { ChannelType, InteractionContextType, MessageFlags, SlashCommandBuilder, escapeMarkdown } from "discord.js";
 import type { ChatInputCommandInteraction, GuildMember, TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { isActiveCategory } from "@repo/supabase/queries/ticket-config";
-import { isTicketPriority, listTicketsForOpener, TICKET_PRIORITIES } from "@repo/supabase/queries/ticket-lifecycle";
-import { formatTicketNumber } from "@repo/supabase/queries/tickets";
+import { isActiveCategory } from "@repo/supabase/queries/tickets/config";
+import { isTicketPriority, listTicketsForOpener, TICKET_PRIORITIES } from "@repo/supabase/queries/tickets/lifecycle";
+import { formatTicketNumber } from "@repo/supabase/queries/tickets/tickets";
 import type { Command } from "../types/discord";
 import {
   addMember,

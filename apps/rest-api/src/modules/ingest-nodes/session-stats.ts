@@ -1,5 +1,5 @@
 import { supabase } from "@repo/supabase";
-import { getIngestSessionOwnersForNode, insertIngestSessionStatsBatch } from "@repo/supabase/queries/ingest";
+import { getIngestSessionOwnersForNode, insertIngestSessionStatsBatch } from "@repo/supabase/queries/ingest/ingest";
 import type { IngestSessionStatsRow } from "@/modules/ingest-nodes/schemas";
 
 // How many session ids go into one owner lookup (they travel in the URL).

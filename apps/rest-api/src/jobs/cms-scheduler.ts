@@ -14,7 +14,7 @@ import {
   getPlatformEventIdentity,
   logPlatformEvent,
   type EmitPlatformEventInput,
-} from "@repo/supabase/queries/platform-events";
+} from "@repo/supabase/queries/platform/events";
 import { env } from "@/env";
 
 /**

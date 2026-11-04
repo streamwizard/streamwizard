@@ -7,7 +7,7 @@ import {
   type BackupPollData,
   type BackupVmDetailResponse,
 } from "@repo/backups";
-import type { BackupEventLiteRow, BackupEventRow } from "@repo/supabase/queries/backups";
+import type { BackupEventLiteRow, BackupEventRow } from "@repo/supabase/queries/platform/backups";
 import { Hono } from "hono";
 import { z } from "zod";
 import { toEventLite } from "@/modules/backups/store";

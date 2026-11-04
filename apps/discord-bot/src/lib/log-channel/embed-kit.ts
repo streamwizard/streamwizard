@@ -1,13 +1,10 @@
 import { EmbedBuilder, escapeMarkdown, type APIEmbedField } from "discord.js";
-import {
-  PLATFORM_EVENT_LABELS,
-  type DiscordUserRef,
-  type PlatformEventPayloads,
-  type PlatformEventType,
-} from "@repo/types";
-import type { PlatformEvent } from "@repo/supabase/queries/platform-events";
-import { formatDuration, formatNumber } from "../activity-format";
+import { PLATFORM_EVENT_LABELS, type PlatformEventType } from "@repo/schemas/platform-events";
+import type { DiscordUserRef, PlatformEventPayloads } from "@repo/types/platform-events";
+import type { PlatformEvent } from "@repo/supabase/queries/platform/events";
+import { formatDuration, formatNumber } from "@/lib/activity/activity-format";
 import { DANGER_RED, DISCORD_BLURPLE, TWITCH_PURPLE } from "../branding";
+import { isSnowflake } from "@repo/schemas/ids";
 
 export { formatNumber };
 
@@ -122,7 +119,6 @@ export function twitchLink(name?: string | null): string | null {
   return isTwitchLogin(name) ? `[${name}](https://twitch.tv/${name})` : escapeMarkdown(name);
 }
 
-const isSnowflake = (id?: string | null): id is string => !!id && /^\d{17,20}$/.test(id);
 
 export function discordMention(id?: string | null): string | null {
   return isSnowflake(id) ? `<@${id}>` : null;

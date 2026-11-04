@@ -1,5 +1,5 @@
 import { supabase } from "@repo/supabase";
-import { insertBackupEvent, listBackupEvents } from "@repo/supabase/queries/backups";
+import { insertBackupEvent, listBackupEvents } from "@repo/supabase/queries/platform/backups";
 import { Hono } from "hono";
 import { backupConfig } from "@/modules/backups/config";
 import { cachedBackupEventsSince, cachedBackupPoll, invalidateBackupCache } from "@/modules/backups/cache";

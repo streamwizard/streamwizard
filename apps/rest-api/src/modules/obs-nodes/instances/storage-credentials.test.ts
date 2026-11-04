@@ -35,10 +35,14 @@ mock.module("@/env", () => ({
   },
 }));
 // Spread the real exports: bun shares module mocks across test files.
-const realObsQueries = await import("@repo/supabase/queries/obs-nodes");
-mock.module("@repo/supabase/queries/obs-nodes", () => ({
-  ...realObsQueries,
+const realKeyQueries = await import("@repo/supabase/queries/obs-nodes/node-api-keys");
+mock.module("@repo/supabase/queries/obs-nodes/node-api-keys", () => ({
+  ...realKeyQueries,
   lookupNodeByApiKeyHash: async (_c: unknown, keyHash: string) => nodeByKeyHash.get(keyHash) ?? null,
+}));
+const realInstanceQueries = await import("@repo/supabase/queries/obs-nodes/instances");
+mock.module("@repo/supabase/queries/obs-nodes/instances", () => ({
+  ...realInstanceQueries,
   getObsInstanceOwnerForNode: async (_c: unknown, id: string, nodeId: string) => {
     const row = instances.get(id);
     return row && row.node === nodeId ? row.owner : null;

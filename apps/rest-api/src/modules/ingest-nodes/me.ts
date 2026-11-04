@@ -1,6 +1,6 @@
 import { supabase } from "@repo/supabase";
 import { reportError } from "@repo/sentry";
-import { updateIngestNodeTailscaleIp } from "@repo/supabase/queries/ingest-nodes";
+import { updateIngestNodeTailscaleIp } from "@repo/supabase/queries/ingest/nodes";
 
 // Called by ingest-server's install script once it actually has a Tailscale
 // IP -- in the deferred-join case that's only true after /claim already

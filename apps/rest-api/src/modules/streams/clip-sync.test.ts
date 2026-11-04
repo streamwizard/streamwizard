@@ -15,15 +15,15 @@ let helixFails: boolean;
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 // Spread the real exports: bun shares module mocks across test files.
-const realUser = await import("@repo/supabase/queries/user");
-mock.module("@repo/supabase/queries/user", () => ({
+const realUser = await import("@repo/supabase/queries/users/user");
+mock.module("@repo/supabase/queries/users/user", () => ({
   ...realUser,
   getTwitchIntegrationByBroadcasterId: async (_c: unknown, broadcasterId: string) =>
     broadcasterId === "1001" ? { data: { user_id: "user-1" }, error: null } : { data: null, error: null },
-  getTwitchIntegrationByUserId: async () => ({ data: { twitch_user_id: "1001" }, error: null }),
+  getTwitchUserIdByUserId: async () => "1001",
 }));
-const realSync = await import("@repo/supabase/queries/sync");
-mock.module("@repo/supabase/queries/sync", () => ({
+const realSync = await import("@repo/supabase/queries/clips/sync");
+mock.module("@repo/supabase/queries/clips/sync", () => ({
   ...realSync,
   claimClipSync: async (_c: unknown, userId: string, _now: Date, cooldownMs: number) => {
     claimCalls.push({ userId, cooldownMs });
@@ -33,10 +33,10 @@ mock.module("@repo/supabase/queries/sync", () => ({
     statusUpdates.push({ status, count, error });
   },
 }));
-const realClips = await import("@repo/supabase/queries/clips");
-mock.module("@repo/supabase/queries/clips", () => ({ ...realClips, upsertClips: async () => {} }));
-const realVods = await import("@repo/supabase/queries/vods");
-mock.module("@repo/supabase/queries/vods", () => ({ ...realVods, getVodsByVideoIds: async () => new Set<string>() }));
+const realClips = await import("@repo/supabase/queries/clips/clips");
+mock.module("@repo/supabase/queries/clips/clips", () => ({ ...realClips, upsertClips: async () => {} }));
+const realVods = await import("@repo/supabase/queries/stream/vods");
+mock.module("@repo/supabase/queries/stream/vods", () => ({ ...realVods, getVodsByVideoIds: async () => new Set<string>() }));
 
 const { syncTwitch } = await import("./clip-sync");
 

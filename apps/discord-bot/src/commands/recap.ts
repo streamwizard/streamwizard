@@ -1,8 +1,8 @@
 import { EmbedBuilder, InteractionContextType, MessageFlags, SlashCommandBuilder } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { getUserDailyRows, getUserRank, getUserTotals } from "@repo/supabase/queries/discord-activity";
+import { getUserDailyRows, getUserRank, getUserTotals } from "@repo/supabase/queries/discord/activity";
 import type { Command } from "../types/discord";
-import { formatDuration, formatNumber, yearRange } from "../lib/activity-format";
+import { formatDuration, formatNumber, yearRange } from "@/lib/activity/activity-format";
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 

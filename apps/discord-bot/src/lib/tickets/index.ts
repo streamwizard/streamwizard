@@ -1,23 +1,23 @@
 import { MessageFlags } from "discord.js";
 import type { ButtonInteraction, ModalSubmitInteraction, StringSelectMenuInteraction } from "discord.js";
 import { reportError } from "@repo/sentry";
-import { describeDiscordError } from "./actions";
-import { handleClaimButton, handleReleaseButton } from "./claim";
+import { describeDiscordError } from "@/lib/tickets/manage/actions";
+import { handleClaimButton, handleReleaseButton } from "@/lib/tickets/manage/claim";
 import {
   handleCloseButton,
   handleCloseCancel,
   handleCloseConfirm,
   handleCloseReasonButton,
   handleCloseSubmit,
-} from "./close";
+} from "@/lib/tickets/close/close";
 import {
   handleCloseAcceptButton,
   handleCloseRejectButton,
   handleCloseRequestButton,
-} from "./close-request";
-import { handleFeedbackButton, handleFeedbackCommentSubmit } from "./feedback";
+} from "@/lib/tickets/close/close-request";
+import { handleFeedbackButton, handleFeedbackCommentSubmit } from "@/lib/tickets/close/feedback";
 import { parseTicketId, RETIRED_GITHUB_ID, TICKET_IDS } from "./ids";
-import { handleCategoryPick, handleCreateButton, handleModalSubmit } from "./open";
+import { handleCategoryPick, handleCreateButton, handleModalSubmit } from "@/lib/tickets/open/open";
 
 export {
   addMember,
@@ -30,10 +30,10 @@ export {
   removeMember,
   transferTicket,
   type TicketActionResult,
-} from "./actions";
-export { archiveMessageDeletes, archiveMessageUpdate, archiveNewMessage } from "./archive";
-export { claimTicketAs, type ClaimTicketResult } from "./claim";
-export { buildTranscriptFile } from "./close-dm";
+} from "@/lib/tickets/manage/actions";
+export { archiveMessageDeletes, archiveMessageUpdate, archiveNewMessage } from "@/lib/tickets/transcript/archive";
+export { claimTicketAs, type ClaimTicketResult } from "@/lib/tickets/manage/claim";
+export { buildTranscriptFile } from "@/lib/tickets/close/close-dm";
 export {
   CLOSE_REASON_MAX,
   CLOSE_RESULT_MESSAGES,
@@ -42,7 +42,7 @@ export {
   closeTicketsOfDepartedMember,
   finalizeTicketClose,
   type CloseTicketResult,
-} from "./close";
+} from "@/lib/tickets/close/close";
 export {
   acceptCloseRequest,
   canCloseDirectly,
@@ -50,17 +50,17 @@ export {
   rejectCloseRequest,
   requestClose,
   type CloseMode,
-} from "./close-request";
+} from "@/lib/tickets/close/close-request";
 export { findCategory, getTicketConfig, invalidateTicketConfig, saveTicketSettings } from "./config";
 export { logTicketReply } from "./events";
 export { TICKET_IDS } from "./ids";
-export { findDmTicketGuild, handleCreate } from "./open";
-export { peekPendingOpen, setPendingOpen, takePendingOpen } from "./pending";
+export { findDmTicketGuild, handleCreate } from "@/lib/tickets/open/open";
+export { peekPendingOpen, setPendingOpen, takePendingOpen } from "@/lib/tickets/open/pending";
 export { matchTags, searchTags } from "./tags";
-export { deleteTicketPanel, NO_PANEL, panelLocation, postTicketPanel } from "./panel";
+export { deleteTicketPanel, NO_PANEL, panelLocation, postTicketPanel } from "@/lib/tickets/panel/panel";
 export { isStaff } from "./staff";
 export { ticketStatsValues } from "./stats";
-export { startTicketSweeper, stopTicketSweeper, sweepGuildTickets } from "./sweeper";
+export { startTicketSweeper, stopTicketSweeper, sweepGuildTickets } from "@/lib/tickets/automation/sweeper";
 
 export type TicketInteraction = ButtonInteraction | ModalSubmitInteraction | StringSelectMenuInteraction;
 

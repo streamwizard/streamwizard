@@ -1,6 +1,6 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getObsInstanceOwnerForNode } from "@repo/supabase/queries/obs-nodes";
+import { getObsInstanceOwnerForNode } from "@repo/supabase/queries/obs-nodes/instances";
 import { env } from "@/env";
 import { getStorageCredentials, instanceStoragePolicy, type StorageCredentials } from "@/modules/obs-nodes/storage-credentials";
 

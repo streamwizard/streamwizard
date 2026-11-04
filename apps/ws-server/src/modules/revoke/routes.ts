@@ -3,7 +3,7 @@ import { revokeRequestSchema } from "@repo/schemas/ws-server";
 import { trackWsAuthFailure } from "@repo/metrics";
 import { badRequest, parseJsonBody } from "@/lib/parse-body";
 import { authorizeService, serviceAuthConfigured } from "@/middleware/service-auth";
-import { getBotSockets } from "@/modules/monitor";
+import { getBotSockets } from "@/modules/monitor/broadcast";
 import { REVOKED_CLOSE_CODE, revokeUser } from "./revoke";
 
 // Server-to-server credential revocation. The apps call it right after a

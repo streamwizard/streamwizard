@@ -40,7 +40,7 @@ mock.module("@repo/sentry", () => ({
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 // Same export set as viewer-count-poller.test.ts: bun's mock.module is
 // process-wide, so both files must agree on the module's shape.
-mock.module("@repo/supabase/queries/vods", () => ({
+mock.module("@repo/supabase/queries/stream/vods", () => ({
   getVodVideoIdByStreamId: async () => null,
   upsertVod: async (_client: unknown, row: Record<string, unknown>) => {
     vodUpserts.push(row);
@@ -50,7 +50,7 @@ mock.module("@repo/supabase/queries/vods", () => ({
     return true;
   },
 }));
-mock.module("@repo/supabase/queries/live-status", () => ({
+mock.module("@repo/supabase/queries/stream/live-status", () => ({
   getLiveBroadcasters: async () => [],
   upsertBroadcasterLiveStatus: async (_client: unknown, row: Record<string, unknown>) => {
     liveStatusUpserts.push(row);

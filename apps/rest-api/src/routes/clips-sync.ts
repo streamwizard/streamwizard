@@ -1,8 +1,8 @@
 import { type Context } from "hono";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getTwitchIntegrationWithTokenByUserId } from "@repo/supabase/queries/user";
-import { getClipSync } from "@repo/supabase/queries/sync";
+import { getTwitchIntegrationWithTokenByUserId } from "@repo/supabase/queries/users/user";
+import { getClipSync } from "@repo/supabase/queries/clips/sync";
 import { TwitchApi } from "@repo/twitch-api";
 import { startTwitchSync } from "@/modules/streams/clip-sync";
 

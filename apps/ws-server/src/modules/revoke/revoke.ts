@@ -1,8 +1,9 @@
 import { supabase } from "@repo/supabase";
-import { selectSceneOwnersByTokens } from "@repo/supabase/queries/overlays";
+import { selectSceneOwnersByTokens } from "@repo/supabase/queries/overlays/overlays";
 import { reportError } from "@repo/sentry";
 import type { RevokeRequest } from "@repo/schemas/ws-server";
-import type { ConnectionData, ServerWebSocket } from "@/types";
+import type { ServerWebSocket } from "bun";
+import type { ConnectionData } from "@/types/connections";
 
 /**
  * Credential revocation for subscriber sockets.

@@ -3,7 +3,7 @@ import { reportError } from "@repo/sentry";
 import { emitAuditedEvent } from "../../lib/server-log/emit";
 import type { BotEvent } from "../../types/discord";
 import { channelRef } from "../../lib/server-log/refs";
-import { isOpenTicketChannel } from "../../lib/ticket-activity";
+import { isOpenTicketChannel } from "@/lib/tickets/ticket-activity";
 import { closeOrphanedTicket } from "../../lib/tickets";
 
 // Closed tickets delete their channel; the ticket log already covers that.

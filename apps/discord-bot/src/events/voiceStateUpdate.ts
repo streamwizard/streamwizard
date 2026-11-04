@@ -1,5 +1,5 @@
 import { Events } from "discord.js";
-import { handleVoiceStateUpdate } from "../lib/activity-tracker";
+import { handleVoiceStateUpdate } from "@/lib/activity/activity-tracker";
 import { handleTempVoiceState } from "../lib/voice/lifecycle";
 import type { BotEvent } from "../types/discord";
 

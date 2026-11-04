@@ -1,7 +1,8 @@
 import { createHash, randomBytes } from "crypto";
 import { supabase } from "@repo/supabase";
 import { encryptToken } from "@repo/supabase/crypto";
-import { claimNodeByTokenHash, consumeClaimToken, insertNodeApiKey } from "@repo/supabase/queries/obs-nodes";
+import { claimNodeByTokenHash, consumeClaimToken } from "@repo/supabase/queries/obs-nodes/nodes";
+import { insertNodeApiKey } from "@repo/supabase/queries/obs-nodes/node-api-keys";
 import { env } from "@/env";
 import { mintTailscaleAuthKey } from "@/lib/tailscale";
 import type { ClaimObsNodeInput } from "@/modules/obs-nodes/schemas";

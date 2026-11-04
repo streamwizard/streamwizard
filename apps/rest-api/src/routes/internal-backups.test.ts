@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 import type { BackupPollData } from "@repo/backups";
-import type { BackupEventRow } from "@repo/supabase/queries/backups";
+import type { BackupEventRow } from "@repo/supabase/queries/platform/backups";
 import { Hono } from "hono";
 import { internalAuth } from "@/middleware/internal-auth";
 import { createBackupsInternalRoute } from "@/routes/internal-backups";

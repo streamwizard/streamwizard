@@ -1,5 +1,5 @@
 import { PermissionFlagsBits, type AuditLogEvent, type Guild, type GuildAuditLogsEntry } from "discord.js";
-import type { DiscordUserRef } from "@repo/types";
+import type { DiscordUserRef } from "@repo/types/platform-events";
 import { userRef } from "./refs";
 
 // Who did it, from the audit log. Discord writes the entry a moment after the

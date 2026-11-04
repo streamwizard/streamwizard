@@ -1,4 +1,4 @@
-import type { BotBroadcastMessage } from "@repo/types";
+import type { BotBroadcastMessage } from "@repo/types/overlay-ws";
 import { ServiceSocket, type AuthHeaderProvider } from "@repo/ws-client/service-socket";
 
 class OverlayWsClient {

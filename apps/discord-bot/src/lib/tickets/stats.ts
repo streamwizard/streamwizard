@@ -1,6 +1,6 @@
 import type { VariableValues } from "@repo/discord-message";
 import { supabase } from "@repo/supabase";
-import { formatDurationShort, getTicketStatsSummary } from "@repo/supabase/queries/ticket-stats";
+import { formatDurationShort, getTicketStatsSummary } from "@repo/supabase/queries/tickets/stats";
 import { TtlCache } from "@repo/ttl-cache";
 
 // The [stats.*] placeholders: rolling 30-day numbers a server can quote in

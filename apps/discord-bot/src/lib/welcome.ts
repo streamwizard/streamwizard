@@ -2,9 +2,9 @@ import { ChannelType, EmbedBuilder, PermissionFlagsBits } from "discord.js";
 import { markSelfAction } from "./server-log/self-actions";
 import type { Guild, GuildMember, Message, TextChannel } from "discord.js";
 import { supabase } from "@repo/supabase";
-import { getGuildSettings, recordGuildMemberJoin, toPublicTwitchIntegration } from "@repo/supabase/queries/discord";
-import type { PublicTwitchIntegration } from "@repo/supabase/queries/discord";
-import { getUserIdentity } from "@repo/supabase/queries/identity";
+import { getGuildSettings, recordGuildMemberJoin, toPublicTwitchIntegration } from "@repo/supabase/queries/discord/discord";
+import type { PublicTwitchIntegration } from "@repo/supabase/queries/discord/discord";
+import { getUserIdentity } from "@repo/supabase/queries/users/identity";
 import { reportError } from "@repo/sentry";
 import { buildLinkRow } from "./account";
 

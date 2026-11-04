@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { BackupPollData } from "@repo/backups";
-import type { BackupEventInsert } from "@repo/supabase/queries/backups";
+import type { BackupEventInsert } from "@repo/supabase/queries/platform/backups";
 
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
 

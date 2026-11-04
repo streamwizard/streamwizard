@@ -1,8 +1,8 @@
 import { TwitchApi } from "@repo/twitch-api";
 import { supabase } from "@repo/supabase";
 import { reportError } from "@repo/sentry";
-import { getEnabledCommandsByChannel } from "@repo/supabase/queries/commands";
-import type { ChannelChatMessageEvent } from "@repo/schemas";
+import { getEnabledCommandsByChannel } from "@repo/supabase/queries/twitch/commands";
+import type { ChannelChatMessageEvent } from "@repo/schemas/eventsub/chat";
 import { createCommandLookup, type MatchedCommand } from "../../functions/commandLookup";
 import { resolveVariables } from "../../functions/resolveVariables";
 import { recordChatCommand } from "../../functions/trackChatCommand";

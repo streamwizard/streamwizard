@@ -2,7 +2,7 @@ import { TwitchApi } from "@repo/twitch-api";
 import { reportError } from "@repo/sentry";
 import { createReportThrottle, errorFingerprint } from "@repo/sentry/throttle";
 import { extractReceivingBroadcasterId } from "@repo/twitch-eventsub/receiving-broadcaster";
-import type { EventSubSubscriptionType, WebSocketNotificationMessage } from "@repo/types";
+import type { EventSubSubscriptionType, WebSocketNotificationMessage } from "@repo/types/eventsub";
 import { z } from "zod";
 import { registerTwitchHandlers } from "./twitch";
 import { streamEventsLogger } from "@repo/logger";

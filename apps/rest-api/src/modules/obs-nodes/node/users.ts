@@ -1,6 +1,7 @@
 import { supabase } from "@repo/supabase";
-import { isUserAdmin, listObsInstancesByUserOnNode, userHasInstanceOnNode } from "@repo/supabase/queries/obs-nodes";
-import { getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions";
+import { listObsInstancesByUserOnNode, userHasInstanceOnNode } from "@repo/supabase/queries/obs-nodes/instances";
+import { isUserAdmin } from "@repo/supabase/queries/auth/roles";
+import { getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions/subscriptions";
 
 export function listUserInstances(nodeId: string, userId: string) {
   // Only this node's instances for the user — a node has no business

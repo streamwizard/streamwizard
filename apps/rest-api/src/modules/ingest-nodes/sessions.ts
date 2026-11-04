@@ -5,7 +5,7 @@ import {
   getStreamKeyOwner,
   insertIngestSession,
   touchStreamKey,
-} from "@repo/supabase/queries/ingest";
+} from "@repo/supabase/queries/ingest/ingest";
 import { TtlCache } from "@repo/ttl-cache";
 import { endIngestSessionOnWsServer, postInternalBroadcast, registerIngestSessionOnWs } from "@/lib/ws-server";
 import type { OpenIngestSessionInput } from "@/modules/ingest-nodes/schemas";

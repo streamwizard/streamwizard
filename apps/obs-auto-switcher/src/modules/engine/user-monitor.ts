@@ -3,8 +3,8 @@ import type {
   AutoSwitcherSwitchEntry,
   AutoSwitcherSwitchReason,
   AutoSwitcherThresholds,
-} from "@repo/schemas";
-import type { IngestStatsPayload } from "@repo/types";
+} from "@repo/schemas/auto-switcher/auto-switcher";
+import type { IngestStatsPayload } from "@repo/types/overlay-ws";
 import { trackAutoSwitcherEvent } from "@repo/metrics";
 import type { EffectiveConfig } from "@/modules/config/config-store";
 import type { ChatNoticeKind } from "@/modules/chat/chat";

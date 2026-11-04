@@ -1,10 +1,10 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { upsertClips } from "@repo/supabase/queries/clips";
-import { getLiveBroadcasters } from "@repo/supabase/queries/live-status";
-import { getVodVideoIdByStreamId, setVodVideoId } from "@repo/supabase/queries/vods";
-import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/user";
-import { insertViewerCount } from "@repo/supabase/queries/viewer-counts";
+import { upsertClips } from "@repo/supabase/queries/clips/clips";
+import { getLiveBroadcasters } from "@repo/supabase/queries/stream/live-status";
+import { getVodVideoIdByStreamId, setVodVideoId } from "@repo/supabase/queries/stream/vods";
+import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/users/user";
+import { insertViewerCount } from "@repo/supabase/queries/stream/viewer-counts";
 import { TwitchApi } from "@repo/twitch-api";
 import { formatClipsForDB } from "@/modules/streams/clip-sync";
 import { findVideoIdForStream } from "@/modules/streams/stream-video";

@@ -1,5 +1,5 @@
 import { supabase } from "@repo/supabase";
-import { userHasInstanceOnNode } from "@repo/supabase/queries/obs-nodes";
+import { userHasInstanceOnNode } from "@repo/supabase/queries/obs-nodes/instances";
 import { getStreamKeyForUser, type StreamKeyLookup } from "@/modules/obs-nodes/instances/twitch-stream-key";
 
 // Lives with the instance code: the node only asks for a stream key to boot

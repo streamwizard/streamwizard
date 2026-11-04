@@ -10,9 +10,10 @@ mock.module("@repo/sentry", () => ({
   },
 }));
 mock.module("@repo/supabase", () => ({ supabase: {} }));
-// Same export set as viewer-count-poller.test.ts: bun's mock.module is
-// process-wide, so the files must agree on the module's shape.
-mock.module("@repo/supabase/queries/user", () => ({
+// Spread the real exports: bun shares module mocks across test files.
+const realUserQueries = await import("@repo/supabase/queries/users/user");
+mock.module("@repo/supabase/queries/users/user", () => ({
+  ...realUserQueries,
   getTwitchIntegrationByBroadcasterId: async () => lookup,
   getUserPreferencesByUserId: async () => null,
 }));

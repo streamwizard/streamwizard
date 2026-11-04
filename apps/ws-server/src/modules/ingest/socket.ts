@@ -1,9 +1,10 @@
 import { reportError } from "@repo/sentry";
 import { trackWsMessage, trackWsMessageDrop } from "@repo/metrics";
 import { warnOnce } from "@/lib/warn-once";
-import { addBotSocket, broadcastNodeBandwidth } from "@/modules/monitor";
+import { addBotSocket, broadcastNodeBandwidth } from "@/modules/monitor/broadcast";
 import { routeBotBroadcast } from "@/modules/broadcast/route-broadcast";
-import type { ConnectionData, ServerWebSocket } from "@/types";
+import type { ServerWebSocket } from "bun";
+import type { ConnectionData } from "@/types/connections";
 import { updateNodeBandwidth } from "./bandwidth";
 import { ingestSessions } from "./sessions";
 import { nodeBandwidthFrom, parseIngestNodeMessage, resolveIngestStats } from "./messages";

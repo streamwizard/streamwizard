@@ -1,10 +1,10 @@
 import { reportError } from "@repo/sentry";
 import { describeError } from "@repo/sentry/safe-error";
 import { supabase, Database } from "@repo/supabase";
-import { getTwitchIntegrationByBroadcasterId, getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
-import { claimClipSync, updateClipSyncStatus } from "@repo/supabase/queries/sync";
-import { upsertClips } from "@repo/supabase/queries/clips";
-import { getVodsByVideoIds } from "@repo/supabase/queries/vods";
+import { getTwitchIntegrationByBroadcasterId, getTwitchUserIdByUserId } from "@repo/supabase/queries/users/user";
+import { claimClipSync, updateClipSyncStatus } from "@repo/supabase/queries/clips/sync";
+import { upsertClips } from "@repo/supabase/queries/clips/clips";
+import { getVodsByVideoIds } from "@repo/supabase/queries/stream/vods";
 import type { TwitchApi } from "@repo/twitch-api";
 import { createClipSyncStarter, type ClipSyncSkipped } from "./clip-sync-start";
 
@@ -81,14 +81,13 @@ export async function syncTwitchClips(user_id: string, TwitchAPI: TwitchApi) {
   const MAX_ITERATIONS = 1000; // Safety limit: max 100,000 clips (1000 * 100)
   const seenCursors = new Set<string | undefined>(); // Track cursors to detect infinite loops
 
-  const { data: integration, error } = await getTwitchIntegrationByUserId(supabase, user_id);
-
-  if (error || !integration || !integration.twitch_user_id) {
-    // The throw below replaces the Supabase error with a generic message, so
-    // report the original first or the actual cause never leaves this frame.
-    if (error) reportError(error, "sync-twitch.integration-lookup", { user_id });
-    throw new Error("Twitch integration not found for user");
-  }
+  // The throw below replaces a failed read with a generic message, so report
+  // the original first or the actual cause never leaves this frame.
+  const twitchUserId = await getTwitchUserIdByUserId(supabase, user_id).catch((error: unknown) => {
+    reportError(error, "sync-twitch.integration-lookup", { user_id });
+    return null;
+  });
+  if (!twitchUserId) throw new Error("Twitch integration not found for user");
 
   console.log("Starting sync for user:", user_id);
   // loop until there are no more clips
@@ -109,7 +108,7 @@ export async function syncTwitchClips(user_id: string, TwitchAPI: TwitchApi) {
     iterationCount++;
 
     try {
-      const clipsResponse = await fetchAndFormatTwitchClips(integration.twitch_user_id, TwitchAPI, cursor);
+      const clipsResponse = await fetchAndFormatTwitchClips(twitchUserId, TwitchAPI, cursor);
 
       if (!clipsResponse) {
         break;

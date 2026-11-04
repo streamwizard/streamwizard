@@ -1,5 +1,6 @@
 import type { z } from "zod";
-import { autoSwitcherConfigSchema, IngestStatsPayloadSchema, type IngestStatsPayload } from "@repo/schemas";
+import { autoSwitcherConfigSchema } from "@repo/schemas/auto-switcher/auto-switcher";
+import { IngestStatsPayloadSchema, type IngestStatsPayload } from "@repo/schemas/streamwizard-events";
 import { consumerMessageSchema, ingestSessionEndedPayloadSchema, type IngestSessionEndedPayload } from "@repo/schemas/ws-server";
 import { trackAutoSwitcherEvent } from "@repo/metrics";
 import { reportError } from "@repo/sentry";

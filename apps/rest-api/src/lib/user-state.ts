@@ -1,6 +1,6 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/user";
+import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/users/user";
 import { createUserStateService } from "@repo/user-state";
 import { postInternalBroadcast } from "@/lib/ws-server";
 

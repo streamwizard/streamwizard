@@ -1,7 +1,8 @@
 import type { BotBroadcast } from "@repo/schemas/ws-server";
 import { trackWsMessage, trackWsMessageDrop } from "@repo/metrics";
 import { rooms, broadcastToRoom } from "@/modules/rooms/rooms";
-import { broadcastToMonitors, sanitizePayload } from "@/modules/monitor";
+import { broadcastToMonitors } from "@/modules/monitor/broadcast";
+import { sanitizePayload } from "@/modules/monitor/sanitize";
 import { broadcastToConsumers } from "@/modules/consumers/consumers";
 
 /**

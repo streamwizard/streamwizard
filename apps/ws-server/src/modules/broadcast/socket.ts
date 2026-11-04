@@ -1,10 +1,11 @@
 import { botBroadcastMessageSchema, botNodeScopedMessageSchema } from "@repo/schemas/ws-server";
 import { trackWsMessage, trackWsMessageDrop } from "@repo/metrics";
 import { warnOnce } from "@/lib/warn-once";
-import { addBotSocket, broadcastNodeBandwidth } from "@/modules/monitor";
+import { addBotSocket, broadcastNodeBandwidth } from "@/modules/monitor/broadcast";
 import { updateNodeBandwidth } from "@/modules/ingest/bandwidth";
 import { nodeBandwidthFrom } from "@/modules/ingest/messages";
-import type { ConnectionData, ServerWebSocket } from "@/types";
+import type { ServerWebSocket } from "bun";
+import type { ConnectionData } from "@/types/connections";
 import { routeBotBroadcast } from "./route-broadcast";
 
 function drop(ws: ServerWebSocket<ConnectionData>, reason: "malformed_json" | "malformed_node_metrics"): void {

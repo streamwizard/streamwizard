@@ -1,9 +1,9 @@
 import { supabase } from "@repo/supabase";
-import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
+import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays/overlays";
 import { trackWsAuthFailure } from "@repo/metrics";
 import { isRateLimited } from "@/middleware/rate-limit";
 import { authorizeService, serviceAuthConfigured } from "@/middleware/service-auth";
-import type { ConnectionData } from "@/types";
+import type { ConnectionData } from "@/types/connections";
 import { parseUpgradeQuery } from "./schemas";
 
 type BunServer = import("bun").Server<ConnectionData>;

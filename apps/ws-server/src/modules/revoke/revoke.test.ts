@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import type { ConnectionData, ServerWebSocket } from "@/types";
+import type { ServerWebSocket } from "bun";
+import type { ConnectionData } from "@/types/connections";
 
 /**
  * Sockets used to be checked only at upgrade: resetting an overlay key or
@@ -15,7 +16,7 @@ let queries: string[][];
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
 // Mocks are process-wide in bun test, so keep every export auth.ts links against.
-mock.module("@repo/supabase/queries/overlays", () => ({
+mock.module("@repo/supabase/queries/overlays/overlays", () => ({
   getOverlaySceneBySubscriberToken: async () => ({ data: null }),
   selectSceneOwnersByTokens: async (_client: unknown, tokens: string[]) => {
     queries.push(tokens);
@@ -102,7 +103,7 @@ describe("ws credential revocation", () => {
 
   test("a failed lookup closes nothing", async () => {
     const ws = open(socket("scene", "key"));
-    mock.module("@repo/supabase/queries/overlays", () => ({
+    mock.module("@repo/supabase/queries/overlays/overlays", () => ({
       getOverlaySceneBySubscriberToken: async () => ({ data: null }),
       selectSceneOwnersByTokens: async () => ({ data: null, error: new Error("db down") }),
     }));

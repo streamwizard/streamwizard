@@ -9,14 +9,14 @@ import {
   toApiEmbed,
   type VariableValues,
 } from "@repo/discord-message";
-import { ticketOptionLabel, type TicketAnswerInput } from "@repo/supabase/queries/ticket-config";
-import { parseWorkingHours } from "@repo/supabase/queries/ticket-hours";
-import { formatTicketNumber, type DiscordTicket, type TicketOpenerProfile } from "@repo/supabase/queries/tickets";
+import { ticketOptionLabel, type TicketAnswerInput } from "@repo/supabase/queries/tickets/config";
+import { parseWorkingHours } from "@repo/supabase/queries/tickets/hours";
+import { formatTicketNumber, type DiscordTicket, type TicketOpenerProfile } from "@repo/supabase/queries/tickets/tickets";
 import { TWITCH_PURPLE } from "../branding";
 import { memberVariableValues } from "../built-message";
 import { findCategory, findProduct, type TicketConfig } from "./config";
 import { TICKET_IDS } from "./ids";
-import { discordRelative, isWithinWorkingHours, nextOpening } from "./working-hours";
+import { discordRelative, isWithinWorkingHours, nextOpening } from "@/lib/tickets/automation/working-hours";
 
 const CLAIMED_BY = "Claimed by";
 /** Discord: 25 fields per embed, 1024 characters per field value. */

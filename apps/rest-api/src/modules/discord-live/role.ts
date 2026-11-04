@@ -1,7 +1,7 @@
 import { DiscordApi, DiscordMemberNotFoundError, DiscordRoleNotFoundError } from "@repo/discord-api";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getGuildSettings } from "@repo/supabase/queries/discord";
+import { getGuildSettings } from "@repo/supabase/queries/discord/discord";
 import {
   deleteLiveRoleGrant,
   getLiveRoleGrantByBroadcaster,
@@ -9,8 +9,8 @@ import {
   listLiveRoleGrants,
   upsertLiveRoleGrant,
   type DiscordLiveRoleGrant,
-} from "@repo/supabase/queries/discord-live-role";
-import type { Stream } from "@repo/types";
+} from "@repo/supabase/queries/discord/live-role";
+import type { Stream } from "@repo/types/helix";
 import { liveEnv, resolveLiveTarget, type LiveTarget } from "@/modules/discord-live/target";
 
 // Live role in the StreamWizard Discord. stream.online gives a broadcaster

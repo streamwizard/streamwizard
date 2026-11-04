@@ -31,14 +31,14 @@ mock.module("@/env", () => ({
   env: { NODE_TOKEN_PUBLIC_JWKS: undefined, WS_SERVER_URL: "ws://ws.test" },
 }));
 // Spread the real exports: bun shares module mocks across test files.
-const realNodeQueries = await import("@repo/supabase/queries/ingest-nodes");
-mock.module("@repo/supabase/queries/ingest-nodes", () => ({
+const realNodeQueries = await import("@repo/supabase/queries/ingest/nodes");
+mock.module("@repo/supabase/queries/ingest/nodes", () => ({
   ...realNodeQueries,
   lookupIngestNodeByApiKeyHash: async (_c: unknown, keyHash: string) => nodeByKeyHash.get(keyHash) ?? null,
   getIngestNodeById: async (_c: unknown, id: string) => (deletedNodes.has(id) ? null : { id, status: "linked" }),
 }));
-const realIngest = await import("@repo/supabase/queries/ingest");
-mock.module("@repo/supabase/queries/ingest", () => ({
+const realIngest = await import("@repo/supabase/queries/ingest/ingest");
+mock.module("@repo/supabase/queries/ingest/ingest", () => ({
   ...realIngest,
   getStreamKeyOwner: async (_c: unknown, key: string) =>
     key === "good-key" ? { user_id: USER, key_id: KEY_ID, label: "Camera 1" } : null,

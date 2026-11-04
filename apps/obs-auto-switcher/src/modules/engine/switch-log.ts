@@ -1,4 +1,4 @@
-import type { AutoSwitcherSwitchEntry } from "@repo/schemas";
+import type { AutoSwitcherSwitchEntry } from "@repo/schemas/auto-switcher/auto-switcher";
 
 // In-memory ring of recent switches per user (xpudu recordSwitch pattern).
 // Always written, independent of the stream_events toggle — stream_events

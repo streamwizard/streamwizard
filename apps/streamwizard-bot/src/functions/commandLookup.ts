@@ -1,5 +1,5 @@
 import { TtlCache } from "@repo/ttl-cache";
-import type { getEnabledCommandsByChannel } from "@repo/supabase/queries/commands";
+import type { getEnabledCommandsByChannel } from "@repo/supabase/queries/twitch/commands";
 
 type ChannelCommandRows = Awaited<ReturnType<typeof getEnabledCommandsByChannel>>;
 type CommandRow = ChannelCommandRows[number];

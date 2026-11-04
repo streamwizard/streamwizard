@@ -1,6 +1,6 @@
 import { hasServiceSigningKey, signServiceToken } from "@repo/service-token";
 import { supabase } from "@repo/supabase";
-import { getIngestNodeById } from "@repo/supabase/queries/ingest-nodes";
+import { getIngestNodeById } from "@repo/supabase/queries/ingest/nodes";
 import { env } from "@/env";
 
 /** The ws(s):// base of ws-server, without a trailing /ws (the node adds it). */

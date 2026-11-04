@@ -5,7 +5,7 @@ import {
   claimIngestNodeByTokenHash,
   consumeIngestClaimToken,
   insertIngestNodeApiKey,
-} from "@repo/supabase/queries/ingest-nodes";
+} from "@repo/supabase/queries/ingest/nodes";
 import { env } from "@/env";
 import { mintTailscaleAuthKey } from "@/lib/tailscale";
 import type { ClaimIngestNodeInput } from "@/modules/ingest-nodes/schemas";

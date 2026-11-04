@@ -1,5 +1,5 @@
 import { supabase } from "@repo/supabase";
-import { getSubscriptionLimits } from "@repo/supabase/queries/subscriptions";
+import { getSubscriptionLimits } from "@repo/supabase/queries/subscriptions/subscriptions";
 
 // Returns the plan limits for an active subscription. Called by obs-instance-manager
 // when provisioning a container so it can enforce subscription-defined resource

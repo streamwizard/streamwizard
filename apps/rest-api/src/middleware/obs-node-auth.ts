@@ -1,5 +1,5 @@
 import { supabase } from "@repo/supabase";
-import { lookupNodeByApiKeyHash } from "@repo/supabase/queries/obs-nodes";
+import { lookupNodeByApiKeyHash } from "@repo/supabase/queries/obs-nodes/node-api-keys";
 import { TtlCache } from "@repo/ttl-cache";
 import { createNodeKeyAuth } from "@/middleware/node-key-auth";
 

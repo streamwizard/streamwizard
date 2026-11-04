@@ -1,5 +1,5 @@
 import { rooms } from "@/modules/rooms/rooms";
-import { monitors, getBotSockets } from "@/modules/monitor";
+import { monitors, getBotSockets } from "@/modules/monitor/broadcast";
 import { consumers } from "@/modules/consumers/consumers";
 
 const PING_INTERVAL_MS = 30_000;

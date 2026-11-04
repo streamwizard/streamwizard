@@ -4,7 +4,7 @@ import {
   type IngestNodeStats,
   type NodeBandwidthSample,
 } from "@repo/schemas/ws-server";
-import type { IngestNodeBandwidthPayload, IngestStatsPayload } from "@repo/types";
+import type { IngestNodeBandwidthPayload, IngestStatsPayload } from "@repo/types/overlay-ws";
 import type { IngestSessionRegistry } from "./sessions";
 
 // What an ingest node may send on its role=ingest-node socket, turned into

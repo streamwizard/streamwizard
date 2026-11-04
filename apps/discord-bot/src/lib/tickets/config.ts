@@ -9,9 +9,9 @@ import {
   type TicketCategory,
   type TicketFormField,
   type TicketProduct,
-} from "@repo/supabase/queries/ticket-config";
-import { listTicketTags, type TicketTag } from "@repo/supabase/queries/ticket-tags";
-import { getTicketSettings, upsertTicketSettings, type DiscordTicketSettings } from "@repo/supabase/queries/tickets";
+} from "@repo/supabase/queries/tickets/config";
+import { listTicketTags, type TicketTag } from "@repo/supabase/queries/tickets/tags";
+import { getTicketSettings, upsertTicketSettings, type DiscordTicketSettings } from "@repo/supabase/queries/tickets/tickets";
 import { TtlCache } from "@repo/ttl-cache";
 
 // Everything web-admin configures about tickets, in one cached read. Button

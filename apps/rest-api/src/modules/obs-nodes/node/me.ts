@@ -1,6 +1,7 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getNodeById, getNodeCommandKeyHash, updateNodeTailscaleIp } from "@repo/supabase/queries/obs-nodes";
+import { getNodeById, updateNodeTailscaleIp } from "@repo/supabase/queries/obs-nodes/nodes";
+import { getNodeCommandKeyHash } from "@repo/supabase/queries/obs-nodes/node-api-keys";
 import { TtlCache } from "@repo/ttl-cache";
 import { env } from "@/env";
 

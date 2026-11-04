@@ -4,7 +4,7 @@ The chat bot and event processor. It holds a persistent connection to Twitch Eve
 
 ## What it does
 
-- **Chat commands** — listens to Twitch chat over EventSub and responds via `@repo/twitch-api`. Command lookups go through `@repo/supabase/queries/commands`.
+- **Chat commands** — listens to Twitch chat over EventSub and responds via `@repo/twitch-api`. Command lookups go through `@repo/supabase/queries/twitch/commands`.
 - **Event processing** — handles follows, subs, gifts, raids, cheers, and stream state changes, validating each payload against shared schemas at the boundary.
 - **Overlay fan-out** — after every non-chat event, `processTwitchEvent` resolves the broadcaster to a user and pushes the event to `ws-server`, which relays it to that user's overlays. Only connects to the WS server if `OVERLAY_WS_URL` is set.
 

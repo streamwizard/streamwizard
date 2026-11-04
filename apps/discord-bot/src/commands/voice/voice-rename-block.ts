@@ -1,5 +1,5 @@
 import { InteractionContextType, MessageFlags, SlashCommandBuilder } from "discord.js";
-import { VOICE_RENAME_BLOCK_REASON_MAX } from "@repo/supabase/queries/discord-voice";
+import { VOICE_RENAME_BLOCK_REASON_MAX } from "@repo/supabase/queries/discord/voice";
 import type { Command } from "../../types/discord";
 import { isServerVoiceStaff, resetOwnedChannelName } from "../../lib/voice/rename-block";
 import { renameBlockRefusal } from "../../lib/voice/rules";

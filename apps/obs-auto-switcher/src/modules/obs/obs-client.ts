@@ -1,6 +1,7 @@
 import { supabase } from "@repo/supabase";
 import { decryptToken } from "@repo/supabase/crypto";
-import { getNodeCommandKeyEncrypted, getRunningInstanceWithNodeUrl } from "@repo/supabase/queries/obs-nodes";
+import { getNodeCommandKeyEncrypted } from "@repo/supabase/queries/obs-nodes/node-api-keys";
+import { getRunningInstanceWithNodeUrl } from "@repo/supabase/queries/obs-nodes/instances";
 import { TtlCache } from "@repo/ttl-cache";
 
 export interface ObsCommand {

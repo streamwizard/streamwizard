@@ -1,9 +1,9 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { setVodVideoId, upsertVod } from "@repo/supabase/queries/vods";
-import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
+import { setVodVideoId, upsertVod } from "@repo/supabase/queries/stream/vods";
+import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/stream/live-status";
 import { TwitchApi } from "@repo/twitch-api";
-import type { StreamOnlineEvent } from "@repo/schemas";
+import type { StreamOnlineEvent } from "@repo/schemas/eventsub/stream";
 import { streamEventsLogger } from "@repo/logger";
 import { viewerCountPoller } from "@/modules/streams/viewer-count-poller";
 import { setStreamUserState } from "@/lib/user-state";

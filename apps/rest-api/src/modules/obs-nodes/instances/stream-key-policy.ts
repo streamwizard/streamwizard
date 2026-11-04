@@ -1,4 +1,4 @@
-import { missingTwitchScopes } from "@repo/schemas";
+import { missingTwitchScopes } from "@repo/schemas/twitch-scopes";
 
 /**
  * Why a stream key is or is not available. The node treats `scope_missing`

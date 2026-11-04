@@ -1,11 +1,11 @@
-import type { EventSubNotificationPayload, EventSubSubscriptionType } from "@repo/types";
+import type { EventSubNotificationPayload, EventSubSubscriptionType } from "@repo/types/eventsub";
 import { z } from "zod";
 import { TwitchApi } from "@repo/twitch-api";
 import { reportError } from "@repo/sentry";
 import { createReportThrottle, errorFingerprint } from "@repo/sentry/throttle";
 import { extractReceivingBroadcasterId } from "@repo/twitch-eventsub/receiving-broadcaster";
 import { supabase } from "@repo/supabase";
-import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/user";
+import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/users/user";
 import { registerTwitchHandlers } from "@/modules/eventsub/register";
 
 /**

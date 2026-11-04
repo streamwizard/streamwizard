@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { classifyEvent, jobLevelGuests, parseVzdumpGuests, type BackupPollData } from "@repo/backups";
 import { reportError } from "@repo/sentry";
 import type { Json } from "@repo/supabase";
-import type { BackupEventInsert } from "@repo/supabase/queries/backups";
+import type { BackupEventInsert } from "@repo/supabase/queries/platform/backups";
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { secretsMatch } from "@/lib/secret-compare";

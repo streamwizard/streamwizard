@@ -35,22 +35,22 @@ mock.module("@repo/sentry", () => ({
   },
 }));
 mock.module("@repo/supabase", () => ({ supabase: {} }));
-mock.module("@repo/supabase/queries/discord", () => ({
+mock.module("@repo/supabase/queries/discord/discord", () => ({
   getGuildSettings: async () => settings,
 }));
-mock.module("@repo/supabase/queries/identity", () => ({
+mock.module("@repo/supabase/queries/users/identity", () => ({
   getUserIdentity: async () => identity,
 }));
 // Same export set as viewer-count-poller.test.ts: bun's mock.module is
 // process-wide, so every file mocking this module must agree on its shape.
 // Spread the real exports: bun shares module mocks across test files.
-const realUserQueries = await import("@repo/supabase/queries/user");
-mock.module("@repo/supabase/queries/user", () => ({
+const realUserQueries = await import("@repo/supabase/queries/users/user");
+mock.module("@repo/supabase/queries/users/user", () => ({
   ...realUserQueries,
   getTwitchIntegrationByBroadcasterId: async () => null,
   getUserPreferencesByUserId: async () => preferences,
 }));
-mock.module("@repo/supabase/queries/discord-live-role", () => ({
+mock.module("@repo/supabase/queries/discord/live-role", () => ({
   getLiveRoleGrantByBroadcaster: async (_client: unknown, broadcasterId: string) =>
     grants.find((row) => row.broadcaster_id === broadcasterId) ?? null,
   listLiveRoleGrants: async () => grants,

@@ -1,12 +1,13 @@
 import { reportError } from "@repo/sentry";
 import { trackWsConnection, trackWsRoomEvent } from "@repo/metrics";
 import { rooms } from "@/modules/rooms/rooms";
-import { monitors, broadcastToMonitors, broadcastSnapshot, addBotSocket, removeBotSocket } from "@/modules/monitor";
+import { monitors, broadcastToMonitors, broadcastSnapshot, addBotSocket, removeBotSocket } from "@/modules/monitor/broadcast";
 import { addConsumer, removeConsumer } from "@/modules/consumers/consumers";
 import { trackCredentialSocket, untrackCredentialSocket } from "@/modules/revoke/revoke";
 import { handleBotMessage } from "@/modules/broadcast/socket";
 import { handleIngestNodeMessage } from "@/modules/ingest/socket";
-import type { ConnectionData, ServerWebSocket } from "@/types";
+import type { ServerWebSocket } from "bun";
+import type { ConnectionData } from "@/types/connections";
 
 // Socket lifecycle for every role: register on open, hand each message to the
 // module that owns the sender's role, clean up on close.

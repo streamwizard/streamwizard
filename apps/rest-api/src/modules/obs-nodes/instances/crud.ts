@@ -1,21 +1,11 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import {
-  countActiveObsInstancesForNode,
-  deleteObsInstanceForNode,
-  getObsInstanceByIdForNode,
-  insertObsInstance,
-  listObsInstancesByNode,
-  listRunningObsInstancesByNode,
-  sumAllocatedVramForNode,
-  updateObsInstanceByContainerIdForNode,
-  updateObsInstanceForNode,
-} from "@repo/supabase/queries/obs-nodes";
+import { countActiveObsInstancesForNode, deleteObsInstanceForNode, getObsInstanceByIdForNode, insertObsInstance, listObsInstancesByNode, listRunningObsInstancesByNode, sumAllocatedVramForNode, updateObsInstanceByContainerIdForNode, updateObsInstanceForNode } from "@repo/supabase/queries/obs-nodes/instances";
 import {
   getUserActiveSubscriptionId,
   isActiveSubscriptionOfUser,
   usersWithActiveSubscription,
-} from "@repo/supabase/queries/subscriptions";
+} from "@repo/supabase/queries/subscriptions/subscriptions";
 import { env } from "@/env";
 import { launchSubscriptionId, unentitledInstanceIds } from "@/modules/obs-nodes/instances/cloud-obs-plan";
 import { checkInstanceCreateToken, type CreateTokenCheck } from "@/modules/obs-nodes/instances/instance-create-token";

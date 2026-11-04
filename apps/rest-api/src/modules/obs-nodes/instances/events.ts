@@ -1,6 +1,6 @@
-import type { ObsInstanceLifecyclePayload, ObsSceneChangedPayload } from "@repo/schemas";
+import type { ObsInstanceLifecyclePayload, ObsSceneChangedPayload } from "@repo/schemas/streamwizard-events";
 import { supabase } from "@repo/supabase";
-import { getObsInstanceOwnerForNode } from "@repo/supabase/queries/obs-nodes";
+import { getObsInstanceOwnerForNode } from "@repo/supabase/queries/obs-nodes/instances";
 import { TtlCache } from "@repo/ttl-cache";
 import { postInternalBroadcast } from "@/lib/ws-server";
 import type { NodeInstanceEvent } from "@/modules/obs-nodes/schemas";

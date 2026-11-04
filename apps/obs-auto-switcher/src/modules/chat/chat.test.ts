@@ -16,7 +16,10 @@ let reported: { context: string; extra?: Record<string, unknown> }[] = [];
 
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 
-mock.module("@repo/supabase/queries/user", () => ({
+// Spread the real exports: bun shares module mocks across test files.
+const realUserQueries = await import("@repo/supabase/queries/users/user");
+mock.module("@repo/supabase/queries/users/user", () => ({
+  ...realUserQueries,
   getTwitchUserIdByUserIdMaybe: async () => {
     broadcasterLookups++;
     return linkedBroadcasterId;

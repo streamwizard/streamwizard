@@ -1,4 +1,4 @@
-import type { IngestStatsPayload } from "@repo/types";
+import type { IngestStatsPayload } from "@repo/types/overlay-ws";
 
 export interface TrackedSession {
   sessionId: string;

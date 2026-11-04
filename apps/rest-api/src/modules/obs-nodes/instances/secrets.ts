@@ -2,10 +2,7 @@ import { randomBytes } from "crypto";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import { decryptToken, encryptToken } from "@repo/supabase/crypto";
-import {
-  getObsInstancePasswordFieldsForNode,
-  setObsInstanceVncPasswordIfMissingForNode,
-} from "@repo/supabase/queries/obs-nodes";
+import { getObsInstancePasswordFieldsForNode, setObsInstanceVncPasswordIfMissingForNode } from "@repo/supabase/queries/obs-nodes/instances";
 
 // OBS nodes never hold TOKEN_ENCRYPTION_KEY. rest-api decrypts an instance's
 // OBS WebSocket and VNC passwords here and hands them only to the node that

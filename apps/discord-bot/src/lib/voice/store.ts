@@ -20,7 +20,7 @@ import {
   type VoiceOwnerPrefsPatch,
   type VoiceRenameBlock,
   type VoiceSettings,
-} from "@repo/supabase/queries/discord-voice";
+} from "@repo/supabase/queries/discord/voice";
 import { TtlCache } from "@repo/ttl-cache";
 import type { TempChannel } from "./rules";
 

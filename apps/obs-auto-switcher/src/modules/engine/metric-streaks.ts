@@ -1,5 +1,5 @@
-import type { AutoSwitcherThresholds } from "@repo/schemas";
-import type { IngestStatsPayload } from "@repo/types";
+import type { AutoSwitcherThresholds } from "@repo/schemas/auto-switcher/auto-switcher";
+import type { IngestStatsPayload } from "@repo/types/overlay-ws";
 
 /**
  * Consecutive-poll bookkeeping for the three link metrics the switcher judges.
@@ -62,7 +62,7 @@ export class MetricStreaks {
    * SRT retransmits, so a healthy cellular link fully recovered by the 4 s
    * ingest buffer still reports several percent of it. drop_pct is what the
    * receiver gave up on — the part the viewer sees. See the threshold notes in
-   * @repo/schemas; the field names stay `loss_*` so stored advanced_thresholds
+   * @repo/schemas/auto-switcher/auto-switcher; the field names stay `loss_*` so stored advanced_thresholds
    * JSON keeps parsing.
    */
   update(payload: IngestStatsPayload, thresholds: AutoSwitcherThresholds): void {

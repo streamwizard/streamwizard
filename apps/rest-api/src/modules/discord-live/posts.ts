@@ -13,9 +13,9 @@ import {
   reviveLivePost,
   updateLivePostDetails,
   type DiscordLivePost,
-} from "@repo/supabase/queries/discord-live";
-import { getUserIdentity } from "@repo/supabase/queries/identity";
-import type { Stream } from "@repo/types";
+} from "@repo/supabase/queries/discord/live";
+import { getUserIdentity } from "@repo/supabase/queries/users/identity";
+import type { Stream } from "@repo/types/helix";
 import { liveEnv, resolveLiveTarget, type LiveTarget } from "@/modules/discord-live/target";
 
 // Go-live posts in the StreamWizard Discord (SW-336). stream.online posts one

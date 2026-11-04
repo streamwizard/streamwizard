@@ -1,6 +1,6 @@
 import type { BackupPollData } from "@repo/backups";
 import { supabase } from "@repo/supabase";
-import { listBackupEventsSince, type BackupEventLiteRow } from "@repo/supabase/queries/backups";
+import { listBackupEventsSince, type BackupEventLiteRow } from "@repo/supabase/queries/platform/backups";
 import { TtlCache } from "@repo/ttl-cache";
 import { loadBackupPoll } from "@/modules/backups/store";
 

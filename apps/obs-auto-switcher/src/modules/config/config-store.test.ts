@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import type { AutoSwitcherConfig } from "@repo/schemas";
+import type { AutoSwitcherConfig } from "@repo/schemas/auto-switcher/auto-switcher";
 
 /**
  * Config pushes arrive over the consumer feed with a ws-server envelope
@@ -19,7 +19,7 @@ let reads: string[];
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
 mock.module("@/lib/env", () => ({ env: { CONFIG_RECONCILE_INTERVAL_MS: 300_000 } }));
-mock.module("@repo/supabase/queries/auto-switcher", () => ({
+mock.module("@repo/supabase/queries/irl/auto-switcher", () => ({
   selectAutoSwitcherConfig: async (_client: unknown, userId: string) => {
     reads.push(userId);
     return { data: rows[userId] ?? null, error: null };

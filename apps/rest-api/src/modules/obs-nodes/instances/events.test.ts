@@ -21,8 +21,8 @@ let ownerLookups: number;
 // obs-nodes routes reach @repo/twitch-api, which imports more than the client.
 const realSupabase = await import("@repo/supabase");
 mock.module("@repo/supabase", () => ({ ...realSupabase, supabase: {} }));
-const realSubscriptions = await import("@repo/supabase/queries/subscriptions");
-mock.module("@repo/supabase/queries/subscriptions", () => ({
+const realSubscriptions = await import("@repo/supabase/queries/subscriptions/subscriptions");
+mock.module("@repo/supabase/queries/subscriptions/subscriptions", () => ({
   ...realSubscriptions,
   isActiveSubscriptionOfUser: async () => true,
   usersWithActiveSubscription: async () => new Set(),
@@ -31,10 +31,14 @@ mock.module("@/env", () => ({
   env: { NODE_TOKEN_PUBLIC_JWKS: undefined },
 }));
 // Spread the real exports: bun shares module mocks across test files.
-const realQueries = await import("@repo/supabase/queries/obs-nodes");
-mock.module("@repo/supabase/queries/obs-nodes", () => ({
-  ...realQueries,
+const realKeyQueries = await import("@repo/supabase/queries/obs-nodes/node-api-keys");
+mock.module("@repo/supabase/queries/obs-nodes/node-api-keys", () => ({
+  ...realKeyQueries,
   lookupNodeByApiKeyHash: async (_c: unknown, keyHash: string) => nodeByKeyHash.get(keyHash) ?? null,
+}));
+const realInstanceQueries = await import("@repo/supabase/queries/obs-nodes/instances");
+mock.module("@repo/supabase/queries/obs-nodes/instances", () => ({
+  ...realInstanceQueries,
   getObsInstanceOwnerForNode: async (_c: unknown, id: string, nodeId: string) => {
     ownerLookups++;
     const r = rows.get(id);

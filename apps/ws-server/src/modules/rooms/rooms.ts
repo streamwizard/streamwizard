@@ -1,4 +1,9 @@
-import type { ConnectionData, RoomData, ServerWebSocket } from "@/types";
+import type { ServerWebSocket } from "bun";
+import type { ConnectionData } from "@/types/connections";
+
+export interface RoomData {
+  subscribers: Set<ServerWebSocket<ConnectionData>>;
+}
 
 export const rooms = new Map<string, RoomData>();
 

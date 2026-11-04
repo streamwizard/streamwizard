@@ -30,14 +30,18 @@ let lookups = 0;
 /** What the pending-node lookup returns; the claim consumes the token only for "pending". */
 let lookupRow: { id: string; name: string; status: string } | null;
 // Spread the real exports: bun shares module mocks across test files.
-const realNodeQueries = await import("@repo/supabase/queries/obs-nodes");
-mock.module("@repo/supabase/queries/obs-nodes", () => ({
+const realNodeQueries = await import("@repo/supabase/queries/obs-nodes/nodes");
+mock.module("@repo/supabase/queries/obs-nodes/nodes", () => ({
   ...realNodeQueries,
   claimNodeByTokenHash: async () => {
     lookups++;
     return lookupRow;
   },
   consumeClaimToken: async () => (lookupRow?.status === "pending" ? { id: NODE_ID, hostname: "gpu-box-1" } : null),
+}));
+const realKeyQueries = await import("@repo/supabase/queries/obs-nodes/node-api-keys");
+mock.module("@repo/supabase/queries/obs-nodes/node-api-keys", () => ({
+  ...realKeyQueries,
   insertNodeApiKey: async () => {},
 }));
 mock.module("@/lib/tailscale", () => ({ mintTailscaleAuthKey: async () => null }));

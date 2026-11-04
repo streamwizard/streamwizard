@@ -6,8 +6,8 @@ import {
   type DiscordTicket,
   type DiscordTicketEventType,
   type TicketEventInput,
-} from "@repo/supabase/queries/tickets";
-import type { DiscordUserRef, PlatformEventPayloads, TicketEventSource } from "@repo/types";
+} from "@repo/supabase/queries/tickets/tickets";
+import type { DiscordUserRef, PlatformEventPayloads, TicketEventSource } from "@repo/types/platform-events";
 import { reportError } from "@repo/sentry";
 import { env } from "../env";
 import { emitServerEvent } from "../server-log/emit";

@@ -1,5 +1,14 @@
-import type { ConnectionData, ServerWebSocket } from "@/types";
-import type { BotConnSnapshot, ConnectionSnapshot, ConsumerConnSnapshot, MonitorEnvelope, MonitorNodeBandwidth, MonitorSnapshot, RoomSnapshot } from "./types";
+import type { ServerWebSocket } from "bun";
+import type { ConnectionData } from "@/types/connections";
+import type {
+  BotConnSnapshot,
+  ConnectionSnapshot,
+  ConsumerConnSnapshot,
+  MonitorEnvelope,
+  MonitorNodeBandwidth,
+  MonitorSnapshot,
+  RoomSnapshot,
+} from "@repo/types/monitor";
 import { rooms } from "@/modules/rooms/rooms";
 import { consumers } from "@/modules/consumers/consumers";
 import { getLiveIngestNodes } from "@/modules/ingest/bandwidth";

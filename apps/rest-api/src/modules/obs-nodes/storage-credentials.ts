@@ -1,6 +1,7 @@
 import { AssumeRoleCommand, STSClient } from "@aws-sdk/client-sts";
 import { TtlCache } from "@repo/ttl-cache";
 import { env } from "@/env";
+import { isGuid } from "@repo/schemas/ids";
 
 // Temporary MinIO credentials for OBS nodes. rest-api holds the long-lived OBS
 // storage key; a node only ever gets short-lived keys from MinIO's STS
@@ -31,13 +32,12 @@ export interface StoragePolicy {
   Statement: Statement[];
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The folders one instance owns. Must match obs-instance-manager's s3Prefix /
  *  s3MediaPrefix (services/storage/obs-config/paths.ts). */
 export function instancePrefixes(userId: string, instanceId: string): string[] {
   // Both ids land inside a policy; a "*" or "/" would widen it.
-  if (!UUID.test(userId) || !UUID.test(instanceId)) throw new Error("user and instance ids must be UUIDs");
+  if (!isGuid(userId) || !isGuid(instanceId)) throw new Error("user and instance ids must be UUIDs");
   return [`obs-configs/${userId}/${instanceId}/`, `obs-media/${userId}/${instanceId}/`];
 }
 

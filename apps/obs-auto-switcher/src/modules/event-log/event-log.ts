@@ -1,8 +1,8 @@
 import { streamEventsLogger } from "@repo/logger";
 import { supabase } from "@repo/supabase";
-import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
-import type { AutoSwitcherSwitchEntry } from "@repo/schemas";
-import type { IngestStatsPayload } from "@repo/types";
+import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/users/user";
+import type { AutoSwitcherSwitchEntry } from "@repo/schemas/auto-switcher/auto-switcher";
+import type { IngestStatsPayload } from "@repo/types/overlay-ws";
 
 // stream_events insert for a scene switch. The logger resolves the live
 // stream_id + offset from broadcaster_live_status and skips (returns false)

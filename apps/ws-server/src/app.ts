@@ -3,7 +3,7 @@ import { handleUpgrade } from "@/modules/connections/upgrade";
 import { websocketHandlers } from "@/modules/connections/socket";
 import { ingestRoutes } from "@/modules/ingest/routes";
 import { revokeRoutes } from "@/modules/revoke/routes";
-import type { ConnectionData } from "@/types";
+import type { ConnectionData } from "@/types/connections";
 
 type BunServer = import("bun").Server<ConnectionData>;
 

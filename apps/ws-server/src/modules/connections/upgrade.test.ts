@@ -19,7 +19,7 @@ mock.module("@repo/supabase", () => ({
     },
   },
 }));
-mock.module("@repo/supabase/queries/overlays", () => ({
+mock.module("@repo/supabase/queries/overlays/overlays", () => ({
   getOverlaySceneBySubscriberToken: () => {
     calls.sceneLookup++;
     return Promise.resolve({ data: null });

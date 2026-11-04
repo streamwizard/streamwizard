@@ -8,7 +8,7 @@ import { fetch, websocket } from "@/app";
 import { startKeepalive } from "@/modules/connections/keepalive";
 import { startMonitorSnapshots } from "@/modules/monitor/jobs";
 import { startRevokeSweep } from "@/modules/revoke/jobs";
-import type { ConnectionData } from "@/types";
+import type { ConnectionData } from "@/types/connections";
 
 initMetrics(BUCKETS.wsServer);
 

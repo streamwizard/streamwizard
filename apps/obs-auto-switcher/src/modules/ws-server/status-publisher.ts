@@ -1,4 +1,4 @@
-import type { AutoSwitcherStatus } from "@repo/schemas";
+import type { AutoSwitcherStatus } from "@repo/schemas/auto-switcher/auto-switcher";
 import { ServiceSocket, type AuthHeaderProvider } from "@repo/ws-client/service-socket";
 
 // Bot-role client pushing streamwizard.auto_switcher_status into the user's

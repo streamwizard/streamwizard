@@ -3,7 +3,7 @@ import { computeBackupOverview, type BackupPollData, type PbsData, type PveHostD
 import { trackBackupPoll } from "@repo/metrics";
 import { reportError } from "@repo/sentry";
 import { supabase, type Json } from "@repo/supabase";
-import { claimBackupPoll, saveBackupPollState } from "@repo/supabase/queries/backups";
+import { claimBackupPoll, saveBackupPollState } from "@repo/supabase/queries/platform/backups";
 import { backupConfig, type BackupConfig } from "@/modules/backups/config";
 import { fetchPbs, fetchPve, type SourceResult } from "@/modules/backups/sources";
 import { invalidateBackupCache } from "@/modules/backups/cache";

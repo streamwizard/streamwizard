@@ -17,13 +17,13 @@ mock.module("@/env", () => ({
 // The control secret is encrypted with the real crypto and a throwaway key.
 process.env.TOKEN_ENCRYPTION_KEY ??= randomBytes(32).toString("hex");
 // Spread the real exports: bun shares module mocks across test files.
-const realNodeQueries = await import("@repo/supabase/queries/ingest-nodes");
+const realNodeQueries = await import("@repo/supabase/queries/ingest/nodes");
 let insertedKeyFields: Record<string, unknown> | null = null;
 let claimedFields: Record<string, unknown> | null = null;
 let lookups = 0;
 /** What the pending-node lookup returns; the claim consumes the token only for "pending". */
 let lookupRow: { id: string; name: string; status: string } | null;
-mock.module("@repo/supabase/queries/ingest-nodes", () => ({
+mock.module("@repo/supabase/queries/ingest/nodes", () => ({
   ...realNodeQueries,
   claimIngestNodeByTokenHash: async () => {
     lookups++;

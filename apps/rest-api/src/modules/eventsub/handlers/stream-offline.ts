@@ -1,11 +1,11 @@
 import { trackServer } from "@repo/posthog/server";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/live-status";
-import { getCurrentStreamDetails, getVodVideoIdByStreamId, setVodVideoId } from "@repo/supabase/queries/vods";
-import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/user";
+import { upsertBroadcasterLiveStatus } from "@repo/supabase/queries/stream/live-status";
+import { getCurrentStreamDetails, getVodVideoIdByStreamId, setVodVideoId } from "@repo/supabase/queries/stream/vods";
+import { getTwitchIntegrationByBroadcasterId, getUserPreferencesByUserId } from "@repo/supabase/queries/users/user";
 import type { TwitchApi } from "@repo/twitch-api";
-import type { StreamOfflineEvent } from "@repo/schemas";
+import type { StreamOfflineEvent } from "@repo/schemas/eventsub/stream";
 import { syncTwitch } from "@/modules/streams/clip-sync";
 import { streamEventsLogger } from "@repo/logger";
 import { viewerCountPoller } from "@/modules/streams/viewer-count-poller";

@@ -1,5 +1,5 @@
 import { supabase } from "@repo/supabase";
-import { getIngestSessionRoute } from "@repo/supabase/queries/ingest";
+import { getIngestSessionRoute } from "@repo/supabase/queries/ingest/ingest";
 import { TtlCache } from "@repo/ttl-cache";
 
 // Live ingest sessions: who a session's stats belong to and which node may

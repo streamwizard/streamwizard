@@ -1,6 +1,6 @@
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
-import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
+import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/users/user";
 import { TtlCache } from "@repo/ttl-cache";
 import { TwitchApi } from "@repo/twitch-api";
 
