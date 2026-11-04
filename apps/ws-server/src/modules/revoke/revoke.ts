@@ -1,6 +1,7 @@
 import { supabase } from "@repo/supabase";
 import { selectSceneOwnersByTokens } from "@repo/supabase/queries/overlays";
 import { reportError } from "@repo/sentry";
+import type { RevokeRequest } from "@repo/schemas/ws-server";
 import type { ConnectionData, ServerWebSocket } from "@/types";
 
 /**
@@ -21,7 +22,7 @@ import type { ConnectionData, ServerWebSocket } from "@/types";
 export const REVOKED_CLOSE_CODE = 4001;
 
 /** "scene": re-check overlay tokens; "session": dashboard JWTs; "all": both, no questions. */
-export type RevokeScope = "scene" | "session" | "all";
+export type RevokeScope = RevokeRequest["scope"];
 
 const socketsByUser = new Map<string, Set<ServerWebSocket<ConnectionData>>>();
 

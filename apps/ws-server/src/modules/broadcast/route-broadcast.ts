@@ -1,18 +1,18 @@
-import type { BotBroadcastMessage } from "@repo/types";
+import type { BotBroadcast } from "@repo/schemas/ws-server";
 import { trackWsMessage, trackWsMessageDrop } from "@repo/metrics";
 import { rooms, broadcastToRoom } from "@/modules/rooms/rooms";
 import { broadcastToMonitors, sanitizePayload } from "@/modules/monitor";
 import { broadcastToConsumers } from "@/modules/consumers/consumers";
 
 /**
- * Single routing path for a `{userId, type, payload}` bot broadcast, shared
- * by the bot WS message handler and POST /internal/broadcast: mirror to
+ * Single routing path for a parsed `{userId, type, payload}` bot broadcast,
+ * shared by the bot WS message handler and POST /internal/broadcast: mirror to
  * monitors, fan out to trusted consumers (even when no room exists — the
  * obs-auto-switcher must see stats while no dashboard is open), then deliver
  * to the user's room subscribers.
  */
-export function routeBotBroadcast(msg: BotBroadcastMessage, source?: string): { delivered: boolean } {
-  trackWsMessage("bot", msg.type ?? "unknown", source);
+export function routeBotBroadcast(msg: BotBroadcast, source?: string): { delivered: boolean } {
+  trackWsMessage("bot", msg.type, source);
 
   const room = rooms.get(msg.userId);
   // Mirror to monitors even when nobody subscribes — ops needs to see

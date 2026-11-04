@@ -14,6 +14,10 @@
     "./signing-jwk": {
       "types": "./src/signing-jwk.ts",
       "default": "./src/signing-jwk.ts"
+    },
+    "./jwks": {
+      "types": "./src/jwks.ts",
+      "default": "./src/jwks.ts"
     }
   },
   "scripts": {
@@ -22,7 +26,8 @@
     "generate-keys": "bun scripts/generate-keys.ts"
   },
   "dependencies": {
-    "jose": "^6.2.3"
+    "jose": "^6.2.3",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@repo/typescript-config": "workspace:*",

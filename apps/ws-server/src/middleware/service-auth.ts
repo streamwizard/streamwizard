@@ -16,7 +16,7 @@ export type ServiceAuthResult =
   | { ok: false; reason: "missing" | "invalid" };
 
 export interface ServiceAuthConfig {
-  /** WS_SERVICE_JWKS, parsed. */
+  /** WS_SERVICE_JWKS, parsed by lib/env.ts. */
   jwks?: { keys: ServiceJwk[] };
 }
 
@@ -44,9 +44,7 @@ export function createServiceAuth(config: ServiceAuthConfig) {
   };
 }
 
-const serviceAuth = createServiceAuth({
-  jwks: env.WS_SERVICE_JWKS ? (JSON.parse(env.WS_SERVICE_JWKS) as { keys: ServiceJwk[] }) : undefined,
-});
+const serviceAuth = createServiceAuth({ jwks: env.WS_SERVICE_JWKS });
 
 export const serviceAuthConfigured = serviceAuth.configured;
 export const authorizeService = serviceAuth.authorize;

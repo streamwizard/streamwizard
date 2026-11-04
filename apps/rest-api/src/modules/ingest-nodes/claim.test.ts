@@ -19,10 +19,18 @@ process.env.TOKEN_ENCRYPTION_KEY ??= randomBytes(32).toString("hex");
 // Spread the real exports: bun shares module mocks across test files.
 const realNodeQueries = await import("@repo/supabase/queries/ingest-nodes");
 let insertedKeyFields: Record<string, unknown> | null = null;
+let claimedFields: Record<string, unknown> | null = null;
+let lookups = 0;
 mock.module("@repo/supabase/queries/ingest-nodes", () => ({
   ...realNodeQueries,
-  claimIngestNodeByTokenHash: async () => ({ id: NODE_ID, name: "Ingest 1", status: "pending" }),
-  consumeIngestClaimToken: async () => ({ id: NODE_ID, hostname: "ingest-1" }),
+  claimIngestNodeByTokenHash: async () => {
+    lookups++;
+    return { id: NODE_ID, name: "Ingest 1", status: "pending" };
+  },
+  consumeIngestClaimToken: async (_c: unknown, _hash: string, fields: Record<string, unknown>) => {
+    claimedFields = fields;
+    return { id: NODE_ID, hostname: "ingest-1" };
+  },
   insertIngestNodeApiKey: async (_c: unknown, _id: string, fields: Record<string, unknown>) => {
     insertedKeyFields = fields;
   },
@@ -51,5 +59,40 @@ describe("POST /api/ingest-nodes/claim", () => {
     expect(typeof body.node_api_key).toBe("string");
     // Only the hash of the API key is stored.
     expect(Object.keys(insertedKeyFields ?? {})).toEqual(["key_hash"]);
+  });
+
+  const claim = (body: string) =>
+    new Hono().post("/claim", claimIngestNode).request("/claim", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    });
+
+  it("stores only parsed hardware fields; a junk self-reported IP becomes null", async () => {
+    const res = await claim(
+      JSON.stringify({
+        token: "claim-token",
+        cpu_cores: 8,
+        ram_total_mb: 16000,
+        storage_total_mb: 500000,
+        public_ip: "<html>error</html>",
+        lan_ip: "192.168.1.20",
+        tailscale_ip: null,
+        status: "linked",
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(claimedFields).toMatchObject({ cpu_cores: 8, public_ip: null, lan_ip: "192.168.1.20", tailscale_ip: null });
+    expect(claimedFields).not.toHaveProperty("status");
+  });
+
+  it("refuses malformed bodies with a 400 before any lookup", async () => {
+    lookups = 0;
+    for (const body of ["{not json", JSON.stringify({}), JSON.stringify({ token: 5 }), JSON.stringify({ token: "t", cpu_cores: "8" }), JSON.stringify({ token: "x".repeat(257) })]) {
+      const res = await claim(body);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "Invalid body: token is required" });
+    }
+    expect(lookups).toBe(0);
   });
 });

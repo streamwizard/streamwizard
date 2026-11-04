@@ -19,7 +19,7 @@ export function createApp() {
   const statsFeed = new StatsFeed(env.WS_SERVER_URL, () => serviceAuthHeader("consumer"), {
     onIngestStats: (userId, payload) => engine.onStats(userId, payload),
     onConfigPush: (userId, payload) => void configStore.applyPush(userId, payload),
-    onSessionEnded: (userId, payload) => engine.onSessionEnded(userId, payload),
+    onSessionEnded: (userId, payload) => engine.onSessionEnded(userId, payload.session_id),
   });
 
   /** Liveness probe (docker healthcheck / alert-worker). */

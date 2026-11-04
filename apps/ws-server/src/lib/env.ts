@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { serviceJwksJsonSchema } from "@repo/service-token/jwks"
 
 const schema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
@@ -12,10 +13,11 @@ const schema = z.object({
   SUPABASE_SECRET_KEY: z.string().min(1),
   TOKEN_ENCRYPTION_KEY: z.string().min(1),
 
-  // Per-service public keys (@repo/service-token): { keys: [{ ...jwk, kid, svc }] }.
+  // Per-service public keys (@repo/service-token): { keys: [{ ...jwk, kid, svc }] },
+  // parsed and checked here (public Ed25519 keys of known services only).
   // Gates the /internal/* routes and the role=bot, consumer, ingest-node and
   // monitor upgrades, each by the calling service's SERVICE_POLICY. Not secret.
-  WS_SERVICE_JWKS: z.string().min(1).optional(),
+  WS_SERVICE_JWKS: serviceJwksJsonSchema.optional(),
 
   // InfluxDB (@repo/metrics). Metrics are off unless all three are set.
   INFLUXDB_URL: z.string().url().optional(),

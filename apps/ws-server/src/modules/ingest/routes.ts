@@ -1,8 +1,10 @@
+import { z } from "zod";
+import { ingestSessionRegistrationSchema } from "@repo/schemas/ws-server";
 import { trackWsAuthFailure } from "@repo/metrics";
+import { badRequest, parseJsonBody } from "@/lib/parse-body";
 import { authorizeService, serviceAuthConfigured } from "@/middleware/service-auth";
 import { ingestSessions } from "./sessions";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SESSION_END = /^\/internal\/ingest-sessions\/([^/]+)\/end$/;
 
 // The live ingest session registry (sessions.ts), fed by rest-api when
@@ -22,23 +24,14 @@ export async function handleRegisterIngestSession(req: Request): Promise<Respons
   const denied = await authorizeIngestSessions(req);
   if (denied) return denied;
 
-  let body: Record<string, unknown>;
-  try {
-    body = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return new Response("Bad Request: invalid JSON", { status: 400 });
-  }
-  const { session_id, user_id, node_id, stream_key_id, label } = body;
-  const ids = [session_id, user_id, node_id, stream_key_id];
-  if (!ids.every((v) => typeof v === "string" && UUID.test(v)) || (label !== null && label !== undefined && typeof label !== "string")) {
-    return new Response("Bad Request: session_id, user_id, node_id and stream_key_id must be UUIDs", { status: 400 });
-  }
+  const body = await parseJsonBody(req, ingestSessionRegistrationSchema);
+  if (!body) return badRequest();
   ingestSessions.register({
-    sessionId: session_id as string,
-    userId: user_id as string,
-    nodeId: node_id as string,
-    streamKeyId: stream_key_id as string,
-    label: (label as string | null | undefined) ?? null,
+    sessionId: body.session_id,
+    userId: body.user_id,
+    nodeId: body.node_id,
+    streamKeyId: body.stream_key_id,
+    label: body.label ?? null,
   });
   return Response.json({ ok: true });
 }
@@ -46,8 +39,9 @@ export async function handleRegisterIngestSession(req: Request): Promise<Respons
 export async function handleEndIngestSession(req: Request, sessionId: string): Promise<Response> {
   const denied = await authorizeIngestSessions(req);
   if (denied) return denied;
-  if (!UUID.test(sessionId)) return new Response("Bad Request: session id must be a UUID", { status: 400 });
-  ingestSessions.end(sessionId);
+  const id = z.uuid().safeParse(sessionId);
+  if (!id.success) return badRequest();
+  ingestSessions.end(id.data);
   return Response.json({ ok: true });
 }
 

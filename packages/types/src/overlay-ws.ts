@@ -284,6 +284,10 @@ export interface BotBroadcastMessage {
 // node-scoped; discriminate the rest on `msg.kind`.
 export type BotOutboundMessage = BotBroadcastMessage | NodeMetricsMessage | BotPingMessage;
 
+// ws-server parses everything a bot or ingest node sends with the schemas in
+// @repo/schemas/ws-server. Those are the receiver's side of the types here and
+// looser on purpose: a stat that isn't a number is dropped there, not refused.
+
 // ── role=ingest-node socket ─────────────────────────────────────────────────
 // What an ingest node sends to ws-server. The node never names a user or its
 // own node id: ws-server takes the node from the socket's token (signed by

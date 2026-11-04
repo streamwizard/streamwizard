@@ -5,6 +5,7 @@ import { encryptToken } from "@repo/supabase/crypto";
 import { claimNodeByTokenHash, consumeClaimToken, insertNodeApiKey } from "@repo/supabase/queries/obs-nodes";
 import { env } from "@/env";
 import { mintTailscaleAuthKey } from "@/lib/tailscale";
+import { claimObsNodeSchema } from "@/schemas/obs-nodes";
 
 // Lowercases and replaces runs of non-alphanumerics with a single hyphen, e.g.
 // "GPU Box 1" -> "gpu-box-1". The panel is the single source of truth for this
@@ -26,20 +27,12 @@ function slugifyHostname(name: string): string {
 // rest-api (brute-force protection, security headers, audit logging already
 // wired up here) instead of the session/cookie-oriented web app.
 export async function claimObsNode(c: Context) {
-  const body = await c.req.json();
-  const { token, gpu_bus_id, vram_total_mb, ram_total_mb, cpu_cores, gpu_model, storage_total_mb } = body as {
-    token?: string;
-    gpu_bus_id?: string;
-    vram_total_mb?: number;
-    ram_total_mb?: number;
-    cpu_cores?: number;
-    gpu_model?: string;
-    storage_total_mb?: number;
-  };
-
-  if (!token || !gpu_bus_id) {
-    return c.json({ error: "token and gpu_bus_id are required" }, 400);
+  // Parsed before anything else: a malformed body costs no lookup.
+  const parsed = claimObsNodeSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "Invalid body: token and gpu_bus_id are required" }, 400);
   }
+  const { token, gpu_bus_id, vram_total_mb, ram_total_mb, cpu_cores, gpu_model, storage_total_mb } = parsed.data;
 
   const tokenHash = createHash("sha256").update(token).digest("hex");
 

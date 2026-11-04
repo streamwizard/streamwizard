@@ -1,12 +1,13 @@
-import type { OverlayEventType } from "@repo/types";
+import type { CONNECTION_ROLES } from "@/modules/connections/schemas";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type ServerWebSocket<T = any> = import("bun").ServerWebSocket<T>;
 
 export interface ConnectionData {
-  role: "subscriber" | "bot" | "monitor" | "consumer" | "ingest-node";
+  role: (typeof CONNECTION_ROLES)[number];
   userId: string;
-  channels: Set<OverlayEventType>;
+  /** Subscriber only: event types from `?channels=` CSV. Empty = every type. */
+  channels: Set<string>;
   connectedAt: number;
   connId: string;
   /**

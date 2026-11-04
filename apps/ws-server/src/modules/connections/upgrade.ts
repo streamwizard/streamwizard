@@ -1,14 +1,12 @@
 import { supabase } from "@repo/supabase";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
-import type { OverlayEventType } from "@repo/types";
 import { trackWsAuthFailure } from "@repo/metrics";
 import { isRateLimited } from "@/middleware/rate-limit";
 import { authorizeService, serviceAuthConfigured } from "@/middleware/service-auth";
 import type { ConnectionData } from "@/types";
+import { parseUpgradeQuery } from "./schemas";
 
 type BunServer = import("bun").Server<ConnectionData>;
-
-const VALID_ROLES = new Set(["subscriber", "bot", "monitor", "consumer", "ingest-node"]);
 
 /** Monotonic per-connection id, used for metrics and the monitor feed. */
 let nextConnId = 1;
@@ -49,17 +47,6 @@ function clientIp(req: Request): string {
   return req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for") ?? "unknown";
 }
 
-function parseCsvSet<T extends string>(url: URL, param: string): Set<T> {
-  const raw = url.searchParams.get(param);
-  if (!raw) return new Set<T>();
-  return new Set(
-    raw
-      .split(",")
-      .map((s) => s.trim())
-      .filter((s) => s.length > 0) as T[],
-  );
-}
-
 /** Every role ends the same way: upgrade, or report why it couldn't. */
 function upgradeOrFail(
   server: BunServer,
@@ -85,12 +72,14 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     return new Response("Not Found", { status: 404 });
   }
 
-  const role = url.searchParams.get("role");
-
-  if (!role || !VALID_ROLES.has(role)) {
-    trackWsAuthFailure("unknown", "invalid_role");
-    return new Response("Bad Request: missing or invalid role", { status: 400 });
+  const parsedQuery = parseUpgradeQuery(url);
+  if (!parsedQuery.ok) {
+    // A malformed token or channel list counts with the bad tokens.
+    const invalidRole = parsedQuery.reason === "invalid_role";
+    trackWsAuthFailure("unknown", invalidRole ? "invalid_role" : "invalid_token");
+    return new Response(invalidRole ? "Bad Request: missing or invalid role" : "Bad Request", { status: 400 });
   }
+  const { role, token, channels, types } = parsedQuery.query;
 
   // --- Monitor (the sanitized ops feed; token signed by web-admin) ---
   // Browsers can't set headers on a WebSocket, so the admin page sends its
@@ -100,8 +89,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     if (!serviceAuthConfigured("monitor")) {
       return new Response("Monitor not configured", { status: 404 });
     }
-    const queryToken = url.searchParams.get("token");
-    const auth = await authorizeService(req.headers.get("authorization") ?? (queryToken ? `Bearer ${queryToken}` : null), "monitor");
+    const auth = await authorizeService(req.headers.get("authorization") ?? (token ? `Bearer ${token}` : null), "monitor");
     if (!auth.ok) {
       trackWsAuthFailure("unknown", "invalid_token");
       return new Response("Unauthorized", { status: 401 });
@@ -110,7 +98,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       role: "monitor",
       userId: "_monitor",
       source: auth.service,
-      channels: new Set<OverlayEventType>(),
+      channels: new Set<string>(),
     });
   }
 
@@ -125,7 +113,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       role: "bot",
       userId: "_bot",
       source: auth.service,
-      channels: new Set<OverlayEventType>(),
+      channels: new Set<string>(),
     });
   }
 
@@ -143,8 +131,8 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       role: "consumer",
       userId: "_consumer",
       source: auth.service,
-      consumerTypes: parseCsvSet(url, "types"),
-      channels: new Set<OverlayEventType>(),
+      consumerTypes: types,
+      channels: new Set<string>(),
     });
   }
 
@@ -164,7 +152,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
       userId: "_bot",
       ingestNodeId: nodeId,
       source: `ingest-node:${nodeId}`,
-      channels: new Set<OverlayEventType>(),
+      channels: new Set<string>(),
     });
   }
 
@@ -174,7 +162,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     return new Response("Too Many Requests", { status: 429 });
   }
 
-  const subscriberToken = url.searchParams.get("token");
+  const subscriberToken = token;
   if (!subscriberToken) {
     trackWsAuthFailure("subscriber", "missing_token");
     return new Response("Unauthorized: missing token", { status: 401 });
@@ -189,7 +177,7 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
   return upgradeOrFail(server, req, "subscriber", {
     role: "subscriber",
     userId: subscriber.userId,
-    channels: parseCsvSet<OverlayEventType>(url, "channels"),
+    channels,
     credential: subscriber.credential,
   });
 }

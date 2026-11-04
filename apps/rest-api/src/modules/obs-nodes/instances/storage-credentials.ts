@@ -4,8 +4,7 @@ import { supabase } from "@repo/supabase";
 import { getObsInstanceOwnerForNode } from "@repo/supabase/queries/obs-nodes";
 import { env } from "@/env";
 import { getStorageCredentials, instanceStoragePolicy } from "@/lib/obs-storage-credentials";
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { parseUuid } from "@/schemas/nodes-shared";
 
 /**
  * POST /api/obs-nodes/instances/:id/storage-credentials
@@ -21,8 +20,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export async function getInstanceStorageCredentials(c: Context<Env, "/:id/storage-credentials">) {
   c.header("Cache-Control", "no-store");
   const nodeId = c.get("nodeId");
-  const id = c.req.param("id");
-  if (!UUID.test(id)) return c.json({ error: "Instance not found" }, 404);
+  const id = parseUuid(c.req.param("id"));
+  if (!id) return c.json({ error: "Instance not found" }, 404);
 
   const userId = await getObsInstanceOwnerForNode(supabase, id, nodeId);
   if (!userId) return c.json({ error: "Instance not found" }, 404);

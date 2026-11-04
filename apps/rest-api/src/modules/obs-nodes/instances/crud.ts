@@ -1,4 +1,5 @@
 import type { Context, Env } from "hono";
+import type { z } from "zod";
 import { reportError } from "@repo/sentry";
 import { supabase } from "@repo/supabase";
 import {
@@ -16,7 +17,8 @@ import { isActiveSubscriptionOfUser, usersWithActiveSubscription } from "@repo/s
 import { env } from "@/env";
 import { unentitledInstanceIds } from "@/modules/obs-nodes/instances/cloud-obs-plan";
 import { checkInstanceCreateToken } from "@/modules/obs-nodes/instances/instance-create-token";
-import { insertInstanceSchema, updateInstanceSchema } from "@/schemas/obs-nodes";
+import { containerIdParamSchema, insertInstanceSchema, updateInstanceSchema } from "@/schemas/obs-nodes";
+import { parseUuid } from "@/schemas/nodes-shared";
 import { instanceDeleted } from "@/modules/obs-nodes/instances/events";
 import { encryptPassword, generateVncPassword } from "@/modules/obs-nodes/instances/secrets";
 
@@ -52,10 +54,18 @@ export async function listUnentitledInstances(c: Context) {
   return c.json({ instance_ids: ids });
 }
 
+/** Field names (never values) of a refused payload, for the node's operator. */
+function refusedFields(error: z.ZodError): string {
+  return [...new Set(error.issues.map((i) => i.path.join(".") || "(body)"))].join(",");
+}
+
 export async function getInstance(c: Context<Env, "/:id">) {
   const nodeId = c.get("nodeId");
-  const id = c.req.param("id");
-  const userId = c.req.query("user_id");
+  const id = parseUuid(c.req.param("id"));
+  const rawUserId = c.req.query("user_id");
+  const userId = rawUserId === undefined ? undefined : parseUuid(rawUserId);
+  // A malformed id can't be an instance: same 404 as a missing one.
+  if (!id || userId === null) return c.json({ error: "Instance not found" }, 404);
   // Always scoped to the calling node; the optional user_id further narrows it.
   const instance = await getObsInstanceByIdForNode(supabase, id, nodeId);
   if (!instance || (userId && instance.user_id !== userId)) {
@@ -68,7 +78,8 @@ export async function createInstance(c: Context) {
   const nodeId = c.get("nodeId");
   const parsed = insertInstanceSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) {
-    return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
+    console.warn(`[obs-nodes] instance create refused node=${nodeId} fields=${refusedFields(parsed.error)}`);
+    return c.json({ error: "Invalid instance payload" }, 400);
   }
   const { obs_ws_password: obsWsPassword, ...fields } = parsed.data;
   const { user_id: userId, subscription_id: subscriptionId } = fields;
@@ -115,15 +126,22 @@ export async function createInstance(c: Context) {
   }
 }
 
+/** The PATCH body, parsed; null (and one log line) when the node sent junk. */
+async function readInstanceUpdate(c: Context, nodeId: string): Promise<z.infer<typeof updateInstanceSchema> | null> {
+  const parsed = updateInstanceSchema.safeParse(await c.req.json().catch(() => null));
+  if (parsed.success) return parsed.data;
+  console.warn(`[obs-nodes] instance update refused node=${nodeId} fields=${refusedFields(parsed.error)}`);
+  return null;
+}
+
 export async function updateInstance(c: Context<Env, "/:id">) {
   const nodeId = c.get("nodeId");
-  const id = c.req.param("id");
-  const parsed = updateInstanceSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
-  }
+  const id = parseUuid(c.req.param("id"));
+  if (!id) return c.json({ error: "Instance not found" }, 404);
+  const fields = await readInstanceUpdate(c, nodeId);
+  if (!fields) return c.json({ error: "Invalid instance payload" }, 400);
   try {
-    const instance = await updateObsInstanceForNode(supabase, id, nodeId, parsed.data);
+    const instance = await updateObsInstanceForNode(supabase, id, nodeId, fields);
     if (!instance) return c.json({ error: "Instance not found" }, 404);
     return c.json(instance);
   } catch (err) {
@@ -136,19 +154,19 @@ export async function updateInstance(c: Context<Env, "/:id">) {
 
 export async function updateInstanceByContainer(c: Context<Env, "/by-container/:containerId">) {
   const nodeId = c.get("nodeId");
-  const containerId = c.req.param("containerId");
-  const parsed = updateInstanceSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json({ error: "Invalid instance payload", details: parsed.error.flatten() }, 400);
-  }
-  const instance = await updateObsInstanceByContainerIdForNode(supabase, containerId, nodeId, parsed.data);
+  const containerId = containerIdParamSchema.safeParse(c.req.param("containerId"));
+  if (!containerId.success) return c.json({ error: "Instance not found" }, 404);
+  const fields = await readInstanceUpdate(c, nodeId);
+  if (!fields) return c.json({ error: "Invalid instance payload" }, 400);
+  const instance = await updateObsInstanceByContainerIdForNode(supabase, containerId.data, nodeId, fields);
   if (!instance) return c.json({ error: "Instance not found" }, 404);
   return c.json(instance);
 }
 
 export async function deleteInstance(c: Context<Env, "/:id">) {
   const nodeId = c.get("nodeId");
-  const id = c.req.param("id");
+  const id = parseUuid(c.req.param("id"));
+  if (!id) return c.json({ error: "Instance not found" }, 404);
   try {
     const deleted = await deleteObsInstanceForNode(supabase, id, nodeId);
     if (!deleted) return c.json({ error: "Instance not found" }, 404);

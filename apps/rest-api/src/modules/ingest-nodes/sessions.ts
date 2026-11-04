@@ -10,13 +10,12 @@ import {
 import { TtlCache } from "@repo/ttl-cache";
 import { endIngestSessionOnWsServer, postInternalBroadcast, registerIngestSessionOnWs } from "@/lib/ws-server";
 import { endIngestSessionSchema, openIngestSessionSchema } from "@/schemas/ingest-nodes";
+import { parseUuid } from "@/schemas/nodes-shared";
 
 // An ingest node opens a session when a streamer connects and ends it when
 // they leave. The node never names the user: it comes from the stream key on
 // open and from the session row on end. A node can only end sessions it
 // opened; another node's session gets the same 404 as a missing one.
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Stream-key lookups per node, against a node probing keys through this route
@@ -113,8 +112,8 @@ export async function openSession(c: Context) {
  */
 export async function endSession(c: Context<Env, "/sessions/:id/end">) {
   const nodeId = c.get("ingestNodeId");
-  const id = c.req.param("id");
-  if (!UUID.test(id)) return c.json({ error: "Session not found" }, 404);
+  const id = parseUuid(c.req.param("id"));
+  if (!id) return c.json({ error: "Session not found" }, 404);
 
   const parsed = endIngestSessionSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid body" }, 400);

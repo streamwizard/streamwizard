@@ -72,9 +72,8 @@ export class ConfigStore {
    * /internal/broadcast could send it), so it only names which row to re-read,
    * and only when it agrees with the envelope.
    */
-  async applyPush(envelopeUserId: string, payload: unknown): Promise<void> {
-    const bodyUserId = (payload as { user_id?: unknown } | null)?.user_id;
-    if (bodyUserId !== envelopeUserId) {
+  async applyPush(envelopeUserId: string, payload: { user_id: string }): Promise<void> {
+    if (payload.user_id !== envelopeUserId) {
       console.warn(`[config-store] dropping config push not bound to its room user=${envelopeUserId}`);
       return;
     }

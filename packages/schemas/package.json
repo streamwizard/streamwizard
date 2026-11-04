@@ -14,6 +14,10 @@
     "./auto-switcher-constants": {
       "types": "./src/auto-switcher-constants.ts",
       "default": "./src/auto-switcher-constants.ts"
+    },
+    "./ws-server": {
+      "types": "./src/ws-server.ts",
+      "default": "./src/ws-server.ts"
     }
   },
   "scripts": {

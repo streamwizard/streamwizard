@@ -1,12 +1,20 @@
-import type { BotOutboundMessage } from "@repo/types";
+import { botBroadcastMessageSchema, botNodeScopedMessageSchema } from "@repo/schemas/ws-server";
 import { trackWsMessage, trackWsMessageDrop } from "@repo/metrics";
+import { warnOnce } from "@/lib/warn-once";
 import { addBotSocket, broadcastNodeBandwidth } from "@/modules/monitor";
 import { updateNodeBandwidth } from "@/modules/ingest/bandwidth";
+import { nodeBandwidthFrom } from "@/modules/ingest/messages";
 import type { ConnectionData, ServerWebSocket } from "@/types";
 import { routeBotBroadcast } from "./route-broadcast";
 
+function drop(ws: ServerWebSocket<ConnectionData>, reason: "malformed_json" | "malformed_node_metrics"): void {
+  trackWsMessageDrop("bot", reason);
+  warnOnce(`bot:${reason}`, `[bot] dropped a frame (${reason}) source=${ws.data.source ?? "unknown"}`);
+}
+
 // role=bot: fan-out broadcasts into users' rooms, plus heartbeats and the
-// legacy node-scoped bandwidth messages.
+// legacy node-scoped bandwidth messages. Frames are parsed against
+// @repo/schemas/ws-server; a bad one is dropped, counted, and logged once.
 export function handleBotMessage(ws: ServerWebSocket<ConnectionData>, rawStr: string): void {
   // Re-register on every message (Map.set by connId — effectively free).
   // The registry fills at open(), but a dev --hot reload resets module
@@ -15,18 +23,21 @@ export function handleBotMessage(ws: ServerWebSocket<ConnectionData>, rawStr: st
   // in the snapshot/topology until it reconnected.
   addBotSocket(ws);
 
-  let msg: BotOutboundMessage;
+  let json: unknown;
   try {
-    msg = JSON.parse(rawStr) as BotOutboundMessage;
+    json = JSON.parse(rawStr);
   } catch {
-    console.warn("[bot] malformed message");
-    trackWsMessageDrop("bot", "malformed_json");
-    return;
+    return drop(ws, "malformed_json");
   }
 
   // Node-scoped messages: never room-routed. (`kind` only exists on
-  // node-scoped messages, so `in` splits them from fan-out broadcasts.)
-  if ("kind" in msg) {
+  // node-scoped messages, so it splits them from fan-out broadcasts.)
+  if (typeof json === "object" && json !== null && "kind" in json) {
+    const parsed = botNodeScopedMessageSchema.safeParse(json);
+    if (!parsed.success) {
+      return drop(ws, (json as { kind?: unknown }).kind === "node_metrics" ? "malformed_node_metrics" : "malformed_json");
+    }
+    const msg = parsed.data;
     // Heartbeat echo — the bot client uses the pong to tell a healthy
     // link from a half-open TCP connection.
     if (msg.kind === "ping") {
@@ -36,23 +47,15 @@ export function handleBotMessage(ws: ServerWebSocket<ConnectionData>, rawStr: st
 
     // Metrics fold into the per-node bandwidth state (feeds the 5s
     // snapshot) and forward live to monitors.
-    const p = msg.payload;
-    if (typeof p?.node_id !== "string" || p.node_id.length === 0 || typeof p.rx_bytes_per_sec !== "number" || typeof p.tx_bytes_per_sec !== "number") {
-      trackWsMessageDrop("bot", "malformed_node_metrics");
-      return;
-    }
+    const payload = nodeBandwidthFrom(msg.payload.node_id, msg.payload);
     trackWsMessage("bot", "node_metrics", ws.data.source);
-    updateNodeBandwidth(p);
-    broadcastNodeBandwidth({ ts: Date.now(), kind: "node_bandwidth", source: ws.data.source, payload: p });
+    updateNodeBandwidth(payload);
+    broadcastNodeBandwidth({ ts: Date.now(), kind: "node_bandwidth", source: ws.data.source, payload });
     return;
   }
 
-  // A broadcast without a target user can't be routed or mirrored
-  // (maskRoomId needs a string) — treat it as malformed.
-  if (typeof msg.userId !== "string" || msg.userId.length === 0) {
-    trackWsMessageDrop("bot", "malformed_json");
-    return;
-  }
-
-  routeBotBroadcast(msg, ws.data.source);
+  // A broadcast without a target user or type can't be routed or mirrored.
+  const parsed = botBroadcastMessageSchema.safeParse(json);
+  if (!parsed.success) return drop(ws, "malformed_json");
+  routeBotBroadcast(parsed.data, ws.data.source);
 }

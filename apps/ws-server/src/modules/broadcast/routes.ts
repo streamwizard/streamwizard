@@ -1,5 +1,6 @@
-import type { BotBroadcastMessage } from "@repo/types";
+import { botBroadcastMessageSchema } from "@repo/schemas/ws-server";
 import { trackWsAuthFailure } from "@repo/metrics";
+import { badRequest, parseJsonBody } from "@/lib/parse-body";
 import { authorizeService, serviceAuthConfigured } from "@/middleware/service-auth";
 import { routeBotBroadcast } from "./route-broadcast";
 
@@ -20,15 +21,8 @@ export async function handleInternalBroadcast(req: Request): Promise<Response> {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  let msg: BotBroadcastMessage;
-  try {
-    msg = (await req.json()) as BotBroadcastMessage;
-  } catch {
-    return new Response("Bad Request: invalid JSON", { status: 400 });
-  }
-  if (typeof msg.userId !== "string" || msg.userId.length === 0 || typeof msg.type !== "string" || msg.type.length === 0) {
-    return new Response("Bad Request: userId and type are required", { status: 400 });
-  }
+  const msg = await parseJsonBody(req, botBroadcastMessageSchema);
+  if (!msg) return badRequest();
 
   const { delivered } = routeBotBroadcast(msg, `internal-http:${auth.service}`);
   return Response.json({ ok: true, delivered });

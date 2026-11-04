@@ -6,6 +6,7 @@ import {
   getObsInstancePasswordFieldsForNode,
   setObsInstanceVncPasswordIfMissingForNode,
 } from "@repo/supabase/queries/obs-nodes";
+import { parseUuid } from "@/schemas/nodes-shared";
 
 // OBS nodes never hold TOKEN_ENCRYPTION_KEY. rest-api decrypts an instance's
 // OBS WebSocket and VNC passwords here and hands them only to the node that
@@ -61,7 +62,8 @@ async function ensureVncPassword(instanceId: string, nodeId: string): Promise<st
 export async function getInstanceSecrets(c: Context<Env, "/:id/secrets">) {
   c.header("Cache-Control", "no-store");
   const nodeId = c.get("nodeId");
-  const id = c.req.param("id");
+  const id = parseUuid(c.req.param("id"));
+  if (!id) return c.json({ error: "Instance not found" }, 404);
 
   const fields = await getObsInstancePasswordFieldsForNode(supabase, id, nodeId);
   if (!fields) return c.json({ error: "Instance not found" }, 404);

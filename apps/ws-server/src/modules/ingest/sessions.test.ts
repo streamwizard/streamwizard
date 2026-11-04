@@ -9,7 +9,8 @@ process.env.TOKEN_ENCRYPTION_KEY ??= "test-key";
 mock.module("@repo/supabase", () => ({ supabase: {} }));
 
 const { createIngestSessionRegistry } = await import("./sessions");
-const { resolveIngestStats, boundStats, nodeBandwidthFrom } = await import("./messages");
+const { resolveIngestStats, nodeBandwidthFrom, parseIngestNodeMessage } = await import("./messages");
+const { ingestStatValuesSchema } = await import("@repo/schemas/ws-server");
 const { routeBotBroadcast } = await import("@/modules/broadcast/route-broadcast");
 const { consumers } = await import("@/modules/consumers/consumers");
 const { rooms } = await import("@/modules/rooms/rooms");
@@ -36,12 +37,20 @@ function registry() {
   });
 }
 
-const sample = (overrides: Record<string, unknown> = {}) => ({
+type Sample = { session_id: string; protocol: "rtmp" | "srt" | "srtla"; stats: Record<string, number> };
+const sample = (overrides: Partial<Sample> = {}): Sample => ({
   session_id: SESSION,
   protocol: "srt",
   stats: { kbps: 4500, rtt_ms: 30 },
   ...overrides,
 });
+
+/** A sample as the node sends it, through the real frame parser. */
+function parsedStats(frame: Record<string, unknown>): Sample {
+  const parsed = parseIngestNodeMessage(JSON.stringify({ kind: "ingest_stats", ...frame }));
+  if (!parsed.ok || parsed.msg.kind !== "ingest_stats") throw new Error("expected an ingest_stats frame");
+  return parsed.msg;
+}
 
 beforeEach(() => {
   clock = 1_000_000;
@@ -74,7 +83,7 @@ describe("ingest_stats routing", () => {
     const res = await resolveIngestStats(
       reg,
       NODE_A,
-      sample({ stats: { kbps: 1, node_id: 7, stream_key_id: 8, label: 9, session_id: 10, protocol: 11 } }),
+      parsedStats({ ...sample(), stats: { kbps: 1, node_id: 7, stream_key_id: 8, label: 9, session_id: 10, protocol: 11 } }),
     );
     if (!res.ok) throw new Error("expected ok");
     expect(res.payload).toEqual({ kbps: 1, session_id: SESSION, protocol: "srt", node_id: NODE_A, stream_key_id: KEY });
@@ -117,12 +126,13 @@ describe("ingest_stats routing", () => {
     expect(lookups).toBe(0);
   });
 
-  test("malformed samples are dropped before any lookup", async () => {
-    const reg = registry();
-    for (const bad of [sample({ session_id: "not-a-uuid" }), sample({ protocol: "webrtc" }), sample({ stats: "x" })]) {
-      expect(await resolveIngestStats(reg, NODE_A, bad)).toEqual({ ok: false, reason: "malformed_ingest_stats" });
+  test("malformed frames are refused by the parser, before any lookup", () => {
+    for (const bad of [{ session_id: "not-a-uuid" }, { protocol: "webrtc" }, { stats: "x" }, { stats: [1, 2] }]) {
+      expect(parseIngestNodeMessage(JSON.stringify({ kind: "ingest_stats", ...sample(), ...bad }))).toEqual({
+        ok: false,
+        reason: "malformed_ingest_stats",
+      });
     }
-    expect(lookups).toBe(0);
   });
 });
 
@@ -158,12 +168,17 @@ describe("lookup budget", () => {
 describe("bounds", () => {
   test("stats keep numbers only, at most 64 keys", () => {
     const many = Object.fromEntries(Array.from({ length: 100 }, (_, i) => [`k${i}`, i]));
-    expect(Object.keys(boundStats(many)!)).toHaveLength(64);
-    expect(boundStats({ a: 1, b: "2", c: Number.NaN, d: null })).toEqual({ a: 1 });
+    expect(Object.keys(ingestStatValuesSchema.parse(many))).toHaveLength(64);
+    expect(ingestStatValuesSchema.parse({ a: 1, b: "2", c: Number.NaN, d: null, ["x".repeat(65)]: 3 })).toEqual({ a: 1 });
   });
 
   test("node_metrics takes the node from the token, never from the payload", () => {
-    expect(nodeBandwidthFrom(NODE_A, { node_id: NODE_B, ts: 1, rx_bytes_per_sec: 10, tx_bytes_per_sec: 20 })).toEqual({
+    const parsed = parseIngestNodeMessage(
+      JSON.stringify({ kind: "node_metrics", payload: { node_id: NODE_B, ts: 1, rx_bytes_per_sec: 10, tx_bytes_per_sec: 20 } }),
+    );
+    if (!parsed.ok || parsed.msg.kind !== "node_metrics") throw new Error("expected a node_metrics frame");
+    expect(parsed.msg.payload).not.toHaveProperty("node_id");
+    expect(nodeBandwidthFrom(NODE_A, parsed.msg.payload)).toEqual({
       ts: 1,
       rx_bytes_per_sec: 10,
       tx_bytes_per_sec: 20,
@@ -171,7 +186,10 @@ describe("bounds", () => {
       tailscale_tx_bytes_per_sec: 0,
       node_id: NODE_A,
     });
-    expect(nodeBandwidthFrom(NODE_A, { rx_bytes_per_sec: "x" })).toBeNull();
+    expect(parseIngestNodeMessage(JSON.stringify({ kind: "node_metrics", payload: { rx_bytes_per_sec: "x" } }))).toEqual({
+      ok: false,
+      reason: "malformed_node_metrics",
+    });
   });
 });
 

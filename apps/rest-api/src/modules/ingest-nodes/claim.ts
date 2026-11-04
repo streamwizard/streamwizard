@@ -9,6 +9,7 @@ import {
 } from "@repo/supabase/queries/ingest-nodes";
 import { env } from "@/env";
 import { mintTailscaleAuthKey } from "@/lib/tailscale";
+import { claimIngestNodeSchema } from "@/schemas/ingest-nodes";
 
 // slugifyHostname is duplicated from modules/obs-nodes/node/claim.ts rather than
 // shared, keeping the OBS and ingest claim domains fully independent.
@@ -26,20 +27,12 @@ function slugifyHostname(name: string): string {
 // up here) instead of ingest-control, which has no credentials yet -- that's
 // exactly what this endpoint delivers.
 export async function claimIngestNode(c: Context) {
-  const body = await c.req.json();
-  const { token, cpu_cores, ram_total_mb, storage_total_mb, public_ip, lan_ip, tailscale_ip } = body as {
-    token?: string;
-    cpu_cores?: number;
-    ram_total_mb?: number;
-    storage_total_mb?: number;
-    public_ip?: string;
-    lan_ip?: string;
-    tailscale_ip?: string;
-  };
-
-  if (!token) {
-    return c.json({ error: "token is required" }, 400);
+  // Parsed before anything else: a malformed body costs no lookup.
+  const parsed = claimIngestNodeSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) {
+    return c.json({ error: "Invalid body: token is required" }, 400);
   }
+  const { token, cpu_cores, ram_total_mb, storage_total_mb, public_ip, lan_ip, tailscale_ip } = parsed.data;
 
   const tokenHash = createHash("sha256").update(token).digest("hex");
 

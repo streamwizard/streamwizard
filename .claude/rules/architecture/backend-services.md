@@ -67,7 +67,7 @@ Hono. Domains in `src/modules/`: eventsub, streams, obs-nodes, ingest-nodes, dis
 
 ### WebSocket service (`apps/ws-server`)
 
-Roles: `subscriber` (overlay browser sources), `bot`, `consumer`, `ingest-node` and `monitor`. Bot, consumer, ingest-node and monitor connections, and the `/internal/*` HTTP routes, authenticate with service tokens checked against `WS_SERVICE_JWKS` (a monitor token is signed by web-admin for an admin's browser). Message and event types live in `@repo/types`; client helpers in `@repo/ws-client`. Treat `src/modules/connections/` (upgrade and socket lifecycle) and `@repo/types` as the source of truth for roles and message shapes. Each module owns its HTTP routes (`routes.ts`), its socket messages (`socket.ts`) and its timers (`jobs.ts`); `src/app.ts` mounts the routes.
+Roles: `subscriber` (overlay browser sources), `bot`, `consumer`, `ingest-node` and `monitor`. Bot, consumer, ingest-node and monitor connections, and the `/internal/*` HTTP routes, authenticate with service tokens checked against `WS_SERVICE_JWKS` (a monitor token is signed by web-admin for an admin's browser). Message and event types live in `@repo/types`, and every frame and `/internal/*` body is parsed with the schemas in `@repo/schemas/ws-server` (a bad frame is dropped, counted and logged once; a bad body gets a plain 400); client helpers in `@repo/ws-client`. Treat `src/modules/connections/` (upgrade and socket lifecycle) and `@repo/types` as the source of truth for roles and message shapes. Each module owns its HTTP routes (`routes.ts`), its socket messages (`socket.ts`) and its timers (`jobs.ts`); `src/app.ts` mounts the routes.
 
 ### Discord bot (`apps/discord-bot`)
 

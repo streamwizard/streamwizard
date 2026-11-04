@@ -100,9 +100,9 @@ export interface IngestNodeSelfReportedFields {
   cpu_cores?: number;
   ram_total_mb?: number;
   storage_total_mb?: number;
-  public_ip?: string;
-  lan_ip?: string;
-  tailscale_ip?: string;
+  public_ip?: string | null;
+  lan_ip?: string | null;
+  tailscale_ip?: string | null;
   hostname: string;
   control_secret_ciphertext: string;
   control_secret_iv: string;

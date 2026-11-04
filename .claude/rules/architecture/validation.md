@@ -35,19 +35,19 @@ Part of the StreamWizard rulebook; Claude Code loads it automatically when worki
 - **Bound everything:** a `max()` on every string and array, `int()` plus `min()`/`max()` on numbers. Query-string numbers use `z.coerce.number()`.
 - **Use Zod's built-in formats** (`z.uuid()`, `z.email()`, `z.url()`, `z.jwt()`, `z.iso.datetime()`, `z.enum([...])`) instead of hand-written regexes. When a custom pattern is needed (for example the 64-hex overlay token), define it once in the schemas file and reuse it.
 - **Message kinds use `z.discriminatedUnion("kind", [...])`** (or `"type"`), so each kind gets its own fields.
-- **Unknown keys:** `z.object` strips them by default, which is what most inputs want. Use `.strict()` where an extra key means a bug or an attack (node and service payloads).
+- **Unknown keys:** `z.object` strips them by default, and that is the default for node and service payloads too: list only the fields we accept, and say in a comment which keys a sender may send that we drop on purpose (for example `node_id` on instance writes). Use `.strict()` only on a new contract whose sender ships in the same deploy, or after every deployed sender has stopped sending the extra keys. Turning on `.strict()` for a live node contract is a breaking change with its own deploy order (node first, then rest-api).
 - **Defaults and transforms belong in the schema** (`.default()`, `.transform()` for a CSV param), not in the code after it.
 
 ## Where schemas live
 
 - **Bun services:** `modules/<domain>/schemas.ts`, next to the routes that use them ([backend-services.md](backend-services.md)).
 - **Next apps:** `src/schemas/<domain>.ts`, shared by the form (client) and the server action (server).
-- **Used by more than one app or package:** `@repo/schemas`, or the package that owns the data (overlay configs in `@repo/ui`).
+- **Used by more than one app or package:** `@repo/schemas`, or the package that owns the data (overlay configs in `@repo/ui`). What ws-server receives (bot and ingest-node frames, `/internal/*` bodies) and what its consumers receive is in `@repo/schemas/ws-server`, parsed on both sides. The `WS_SERVICE_JWKS` key set is checked by `@repo/service-token/jwks`.
 - **Types come from the schema** (`z.infer<typeof schema>`) and stay in the schema file ([types.md](types.md)). Never write the same shape twice as an interface and a schema.
 - **One Zod major version** across the repo (`import { z } from "zod"`, Zod 4).
 
 ## Tests
 
-Schemas that guard security-relevant input (auth, tokens, node and service payloads, uploads) get a test: valid input passes, and each kind of bad input (missing field, wrong type, too long, extra key where `.strict()`) is refused ([testing.md](testing.md)).
+Schemas that guard security-relevant input (auth, tokens, node and service payloads, uploads) get a test: valid input passes, each kind of bad input (missing field, wrong type, too long) is refused, and an extra key is stripped (or refused, where the schema is `.strict()`) ([testing.md](testing.md)).
 
-**Current state:** several boundaries still validate by hand, for example the ws-server upgrade query and internal route bodies (`typeof` checks, a UUID regex copied in three files). Move them to schemas when you touch the file.
+**Current state:** ws-server (upgrade query, socket frames, `/internal/*` bodies), obs-auto-switcher's consumer feed, and rest-api's node routes (bodies, path and query ids) parse with Zod. Other boundaries still validate by hand, for example several Next route handlers and a UUID regex copied across the web apps. Move them to schemas when you touch the file.

@@ -12,7 +12,10 @@
  * key the call is skipped as "unconfigured".
  */
 
+import type { IngestSessionRegistration, RevokeRequest } from "@repo/schemas/ws-server";
 import { serviceAuthHeader, type ServiceScope } from "@repo/service-token";
+
+export type { IngestSessionRegistration };
 
 export interface BroadcastConfig {
   /** ws-server base URL. `ws://`/`wss://` is rewritten to http(s) automatically. */
@@ -97,24 +100,16 @@ export function broadcastToUser(
  */
 export function revokeUserSockets(
   userId: string,
-  scope: "scene" | "session" | "all",
+  scope: RevokeRequest["scope"],
   config: BroadcastConfig,
 ): Promise<BroadcastResult> {
   return postInternal("/internal/revoke", { userId, scope }, config);
 }
 
-export interface IngestSessionRegistration {
-  session_id: string;
-  user_id: string;
-  node_id: string;
-  stream_key_id: string;
-  label: string | null;
-}
-
 /**
  * Tells ws-server about a session rest-api just opened for an ingest node, so
  * the node's live samples can be routed to the right user (scope
- * ingest-sessions).
+ * ingest-sessions). ws-server parses the body with the same schema.
  */
 export function registerIngestSession(session: IngestSessionRegistration, config: BroadcastConfig): Promise<BroadcastResult> {
   return postScoped("/internal/ingest-sessions", "ingest-sessions", session, config);

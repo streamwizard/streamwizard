@@ -1,8 +1,24 @@
 import { z } from "zod";
+import { claimToken, ipv4, mbCount, selfReportedIp } from "@/schemas/nodes-shared";
 
 // Bodies an ingest node sends to /api/ingest-nodes/*. A node never names a
 // user or its own node id: rest-api takes the node from its API key and the
-// user from the stream key or the session row.
+// user from the stream key or the session row. Unlisted keys are stripped,
+// not refused, so a node sending a field we don't take keeps working.
+
+/** POST /claim: install.sh on a fresh VM, with only the claim token. */
+export const claimIngestNodeSchema = z.object({
+  token: claimToken,
+  cpu_cores: z.number().int().min(0).max(4096).optional(),
+  ram_total_mb: mbCount.optional(),
+  storage_total_mb: mbCount.optional(),
+  public_ip: selfReportedIp,
+  lan_ip: selfReportedIp,
+  tailscale_ip: selfReportedIp,
+});
+
+/** PATCH /me: the node reports its Tailscale IP once it has joined (`tailscale ip -4`). */
+export const patchIngestNodeMeSchema = z.object({ tailscale_ip: ipv4 });
 
 const protocol = z.enum(["rtmp", "srt", "srtla"]);
 
@@ -25,9 +41,9 @@ export const ingestSessionStatsSchema = z.object({
   rows: z
     .array(
       z.object({
-        session_id: z.string().uuid(),
+        session_id: z.uuid(),
         protocol,
-        recorded_at: z.string().datetime(),
+        recorded_at: z.iso.datetime(),
         kbps: stat,
         mbps_recv_rate: stat,
         mbps_bandwidth: stat,

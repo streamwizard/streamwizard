@@ -23,11 +23,15 @@ mock.module("@/env", () => ({
 }));
 // The command key is encrypted with the real crypto and a throwaway key.
 process.env.TOKEN_ENCRYPTION_KEY ??= randomBytes(32).toString("hex");
+let lookups = 0;
 // Spread the real exports: bun shares module mocks across test files.
 const realNodeQueries = await import("@repo/supabase/queries/obs-nodes");
 mock.module("@repo/supabase/queries/obs-nodes", () => ({
   ...realNodeQueries,
-  claimNodeByTokenHash: async () => ({ id: NODE_ID, name: "GPU Box 1", status: "pending" }),
+  claimNodeByTokenHash: async () => {
+    lookups++;
+    return { id: NODE_ID, name: "GPU Box 1", status: "pending" };
+  },
   consumeClaimToken: async () => ({ id: NODE_ID, hostname: "gpu-box-1" }),
   insertNodeApiKey: async () => {},
 }));
@@ -58,5 +62,21 @@ describe("POST /api/obs-nodes/claim", () => {
       S3_REGION: "us-east-1",
     });
     expect(typeof body.node_api_key).toBe("string");
+  });
+
+  it("refuses malformed bodies with a 400 before any lookup", async () => {
+    lookups = 0;
+    const app = new Hono().post("/claim", claimObsNode);
+    for (const body of [
+      "{not json",
+      JSON.stringify({ token: "t" }),
+      JSON.stringify({ token: "t", gpu_bus_id: 1 }),
+      JSON.stringify({ token: "t", gpu_bus_id: "PCI:0:1:0", cpu_cores: 1.5 }),
+      JSON.stringify({ token: "t", gpu_bus_id: "PCI:0:1:0", gpu_model: "g".repeat(257) }),
+    ]) {
+      const res = await app.request("/claim", { method: "POST", headers: { "content-type": "application/json" }, body });
+      expect(res.status).toBe(400);
+    }
+    expect(lookups).toBe(0);
   });
 });

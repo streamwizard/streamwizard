@@ -1,19 +1,61 @@
-import type { IngestStatsPayload } from "@repo/types";
+import type { z } from "zod";
+import { autoSwitcherConfigSchema, IngestStatsPayloadSchema, type IngestStatsPayload } from "@repo/schemas";
+import { consumerMessageSchema, ingestSessionEndedPayloadSchema, type IngestSessionEndedPayload } from "@repo/schemas/ws-server";
 import { trackAutoSwitcherEvent } from "@repo/metrics";
 
 const MAX_DELAY_MS = 30_000;
 
-export interface ConsumerMessage {
-  userId: string;
-  type: string;
-  payload: unknown;
-  ts?: number;
-}
+/** The one field of a config push the store reads: which row to re-read. */
+const configPushSchema = autoSwitcherConfigSchema.pick({ user_id: true });
+export type ConfigPush = z.infer<typeof configPushSchema>;
 
 export interface StatsFeedHandlers {
   onIngestStats: (userId: string, payload: IngestStatsPayload) => void;
-  onConfigPush: (userId: string, payload: unknown) => void;
-  onSessionEnded?: (userId: string, payload: unknown) => void;
+  onConfigPush: (userId: string, payload: ConfigPush) => void;
+  onSessionEnded?: (userId: string, payload: IngestSessionEndedPayload) => void;
+}
+
+/** A consumer frame, parsed. What each handler gets is parsed too, so nothing
+ *  that drives a scene switch is a cast. */
+export type ConsumerEvent =
+  | { type: "streamwizard.ingest_stats"; userId: string; payload: IngestStatsPayload }
+  | { type: "streamwizard.auto_switcher_config"; userId: string; payload: ConfigPush }
+  | { type: "streamwizard.ingest_session_ended"; userId: string; payload: IngestSessionEndedPayload };
+
+export type ParsedConsumerFrame = { ok: true; event: ConsumerEvent | null } | { ok: false; reason: string };
+
+/**
+ * Parses one frame from ws-server's consumer feed. `event: null` is a valid
+ * frame of a type this service doesn't handle; `ok: false` is a malformed one
+ * (the reason is a short label, never the frame).
+ */
+export function parseConsumerFrame(raw: string): ParsedConsumerFrame {
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    return { ok: false, reason: "invalid_json" };
+  }
+  const envelope = consumerMessageSchema.safeParse(json);
+  if (!envelope.success) return { ok: false, reason: "invalid_envelope" };
+  const { userId, type, payload } = envelope.data;
+
+  switch (type) {
+    case "streamwizard.ingest_stats": {
+      const parsed = IngestStatsPayloadSchema.safeParse(payload);
+      return parsed.success ? { ok: true, event: { type, userId, payload: parsed.data } } : { ok: false, reason: type };
+    }
+    case "streamwizard.auto_switcher_config": {
+      const parsed = configPushSchema.safeParse(payload);
+      return parsed.success ? { ok: true, event: { type, userId, payload: parsed.data } } : { ok: false, reason: type };
+    }
+    case "streamwizard.ingest_session_ended": {
+      const parsed = ingestSessionEndedPayloadSchema.safeParse(payload);
+      return parsed.success ? { ok: true, event: { type, userId, payload: parsed.data } } : { ok: false, reason: type };
+    }
+    default:
+      return { ok: true, event: null };
+  }
 }
 
 // Consumer-role client on ws-server: receives every user's ingest stats and
@@ -28,6 +70,8 @@ export class StatsFeed {
   private delay = 1000;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private stopping = false;
+  /** Malformed-frame reasons already logged, so a bad producer shows up once. */
+  private warned = new Set<string>();
 
   constructor(
     private url: string,
@@ -80,23 +124,25 @@ export class StatsFeed {
     };
 
     ws.onmessage = (event) => {
-      let msg: ConsumerMessage;
-      try {
-        msg = JSON.parse(String(event.data)) as ConsumerMessage;
-      } catch {
+      const frame = parseConsumerFrame(String(event.data));
+      if (!frame.ok) {
+        if (!this.warned.has(frame.reason)) {
+          this.warned.add(frame.reason);
+          console.warn(`[stats-feed] dropped a malformed frame (${frame.reason})`);
+        }
         return;
       }
-      if (typeof msg.userId !== "string" || typeof msg.type !== "string") return;
-
-      switch (msg.type) {
+      const ev = frame.event;
+      if (!ev) return;
+      switch (ev.type) {
         case "streamwizard.ingest_stats":
-          this.handlers.onIngestStats(msg.userId, msg.payload as IngestStatsPayload);
+          this.handlers.onIngestStats(ev.userId, ev.payload);
           break;
         case "streamwizard.auto_switcher_config":
-          this.handlers.onConfigPush(msg.userId, msg.payload);
+          this.handlers.onConfigPush(ev.userId, ev.payload);
           break;
         case "streamwizard.ingest_session_ended":
-          this.handlers.onSessionEnded?.(msg.userId, msg.payload);
+          this.handlers.onSessionEnded?.(ev.userId, ev.payload);
           break;
       }
     };

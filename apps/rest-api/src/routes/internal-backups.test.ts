@@ -101,6 +101,15 @@ describe("internal backup routes", () => {
     expect((await app().request("/events?before=garbage", { headers: auth })).status).toBe(400);
   });
 
+  it("takes a Postgres timestamp as before and refuses an out-of-range limit", async () => {
+    const before = encodeURIComponent("2026-09-28T11:59:00.123456+00:00");
+    expect((await app().request(`/events?before=${before}`, { headers: auth })).status).toBe(200);
+    expect((await app().request("/events?limit=500", { headers: auth })).status).toBe(400);
+    expect((await app().request("/events?limit=0", { headers: auth })).status).toBe(400);
+    expect((await app().request("/events?limit=ten", { headers: auth })).status).toBe(400);
+    expect((await app().request("/vms/abc", { headers: auth })).status).toBe(400);
+  });
+
   it("rate-limits refresh and reports a missing poller", async () => {
     expect((await app(true).request("/refresh", { method: "POST", headers: auth })).status).toBe(200);
     expect((await app(false).request("/refresh", { method: "POST", headers: auth })).status).toBe(429);

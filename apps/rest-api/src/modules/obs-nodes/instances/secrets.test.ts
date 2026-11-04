@@ -141,25 +141,25 @@ beforeEach(() => {
 
 describe("GET /instances/:id/secrets", () => {
   it("returns the plaintext passwords of the node's own instance", async () => {
-    rows.set("i1", row("i1", "node-a", { obsWs: "obs-secret", vnc: "vnc-secret" }));
+    rows.set("1a1a0000-0000-4000-8000-000000000001", row("1a1a0000-0000-4000-8000-000000000001", "node-a", { obsWs: "obs-secret", vnc: "vnc-secret" }));
 
-    const res = await getSecrets("i1", NODE_A_KEY);
+    const res = await getSecrets("1a1a0000-0000-4000-8000-000000000001", NODE_A_KEY);
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ obs_ws_password: "obs-secret", vnc_password: "vnc-secret" });
   });
 
   it("sets Cache-Control: no-store", async () => {
-    rows.set("i1", row("i1", "node-a"));
+    rows.set("1a1a0000-0000-4000-8000-000000000001", row("1a1a0000-0000-4000-8000-000000000001", "node-a"));
 
-    expect((await getSecrets("i1", NODE_A_KEY)).headers.get("Cache-Control")).toBe("no-store");
+    expect((await getSecrets("1a1a0000-0000-4000-8000-000000000001", NODE_A_KEY)).headers.get("Cache-Control")).toBe("no-store");
     expect((await getSecrets("missing", NODE_A_KEY)).headers.get("Cache-Control")).toBe("no-store");
   });
 
   it("answers another node's instance exactly like a missing one (404)", async () => {
-    rows.set("i1", row("i1", "node-a"));
+    rows.set("1a1a0000-0000-4000-8000-000000000001", row("1a1a0000-0000-4000-8000-000000000001", "node-a"));
 
-    const other = await getSecrets("i1", NODE_B_KEY);
+    const other = await getSecrets("1a1a0000-0000-4000-8000-000000000001", NODE_B_KEY);
     const missing = await getSecrets("does-not-exist", NODE_B_KEY);
 
     expect(other.status).toBe(404);
@@ -168,53 +168,53 @@ describe("GET /instances/:id/secrets", () => {
   });
 
   it("rejects a missing or unknown NODE_API_KEY with 401", async () => {
-    rows.set("i1", row("i1", "node-a"));
+    rows.set("1a1a0000-0000-4000-8000-000000000001", row("1a1a0000-0000-4000-8000-000000000001", "node-a"));
 
-    expect((await getSecrets("i1")).status).toBe(401);
-    expect((await getSecrets("i1", "not-a-real-node-key")).status).toBe(401);
+    expect((await getSecrets("1a1a0000-0000-4000-8000-000000000001")).status).toBe(401);
+    expect((await getSecrets("1a1a0000-0000-4000-8000-000000000001", "not-a-real-node-key")).status).toBe(401);
   });
 
   it("returns null for an instance without an OBS WebSocket password", async () => {
-    rows.set("i1", row("i1", "node-a", { obsWs: null }));
+    rows.set("1a1a0000-0000-4000-8000-000000000001", row("1a1a0000-0000-4000-8000-000000000001", "node-a", { obsWs: null }));
 
-    const body = await (await getSecrets("i1", NODE_A_KEY)).json();
+    const body = await (await getSecrets("1a1a0000-0000-4000-8000-000000000001", NODE_A_KEY)).json();
 
     expect(body.obs_ws_password).toBeNull();
     expect(body.vnc_password).toBe("vnc-pass");
   });
 
   it("generates, stores and returns a VNC password for an old row without one", async () => {
-    rows.set("old", row("old", "node-a", { vnc: null }));
+    rows.set("01d00000-0000-4000-8000-000000000001", row("01d00000-0000-4000-8000-000000000001", "node-a", { vnc: null }));
 
-    const first = await (await getSecrets("old", NODE_A_KEY)).json();
+    const first = await (await getSecrets("01d00000-0000-4000-8000-000000000001", NODE_A_KEY)).json();
 
     // 18 random bytes, base64: same shape the node used to generate.
     expect(Buffer.from(first.vnc_password, "base64")).toHaveLength(18);
-    const saved = rows.get("old")!;
+    const saved = rows.get("01d00000-0000-4000-8000-000000000001")!;
     expect(crypto.decryptToken(saved.vnc_password_ciphertext!, saved.vnc_password_iv!, saved.vnc_password_tag!)).toBe(
       first.vnc_password,
     );
 
     // Stable from then on.
-    const second = await (await getSecrets("old", NODE_A_KEY)).json();
+    const second = await (await getSecrets("01d00000-0000-4000-8000-000000000001", NODE_A_KEY)).json();
     expect(second.vnc_password).toBe(first.vnc_password);
   });
 
   it("returns the stored VNC password when a concurrent call saved one first", async () => {
-    rows.set("old", row("old", "node-a", { vnc: null }));
+    rows.set("01d00000-0000-4000-8000-000000000001", row("01d00000-0000-4000-8000-000000000001", "node-a", { vnc: null }));
     raceWinner = enc("winner-password");
 
-    const body = await (await getSecrets("old", NODE_A_KEY)).json();
+    const body = await (await getSecrets("01d00000-0000-4000-8000-000000000001", NODE_A_KEY)).json();
 
     expect(body.vnc_password).toBe("winner-password");
   });
 
   it("returns a 500 without the plaintext when decryption fails", async () => {
-    const r = row("i1", "node-a");
+    const r = row("1a1a0000-0000-4000-8000-000000000001", "node-a");
     r.obs_ws_password_tag = Buffer.alloc(16).toString("base64"); // wrong auth tag
-    rows.set("i1", r);
+    rows.set("1a1a0000-0000-4000-8000-000000000001", r);
 
-    const res = await getSecrets("i1", NODE_A_KEY);
+    const res = await getSecrets("1a1a0000-0000-4000-8000-000000000001", NODE_A_KEY);
 
     expect(res.status).toBe(500);
     expect(await res.text()).not.toContain("obs-pass");
@@ -228,7 +228,7 @@ describe("POST /instances", () => {
     resolution: "1920x1080",
     vram_allocated_mb: 4096,
     memory_mb: 4096,
-    cpu_quota: 200000,
+    cpu_quota: 2,
     shm_size: "1g",
     obs_ws_password: "plain-obs-password",
   };
@@ -296,7 +296,10 @@ describe("POST /instances", () => {
   it("rejects a create without obs_ws_password", async () => {
     const { obs_ws_password: _omit, ...rest } = body;
 
-    expect((await post(rest)).status).toBe(400);
+    const res = await post(rest);
+    expect(res.status).toBe(400);
+    // A plain message: the schema's issues stay on our side.
+    expect(await res.json()).toEqual({ error: "Invalid instance payload" });
     expect(inserted).toBeNull();
   });
 });
@@ -331,8 +334,15 @@ describe("instance router", () => {
     expect(await (await get("/instances/active-count")).json()).toEqual({ count: 0 });
   });
 
+  it("answers an id that isn't a UUID like a missing instance", async () => {
+    for (const path of ["/instances/i1", "/instances/i1/secrets", "/instances/../vram/secrets"]) {
+      expect((await get(path)).status).toBe(404);
+    }
+    expect((await get("/instances/1a1a0000-0000-4000-8000-000000000001?user_id=nobody")).status).toBe(404);
+  });
+
   it("requires the node API key on every instance route", async () => {
-    for (const path of ["/instances", "/instances/vram", "/instances/i1", "/instances/i1/secrets"]) {
+    for (const path of ["/instances", "/instances/vram", "/instances/1a1a0000-0000-4000-8000-000000000001", "/instances/1a1a0000-0000-4000-8000-000000000001/secrets"]) {
       expect((await app.request(path)).status).toBe(401);
     }
   });

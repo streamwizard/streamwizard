@@ -75,8 +75,9 @@ const postEvent = (id: string, body: unknown, key: string | null = NODE_A_KEY) =
 
 beforeEach(() => {
   testNo++;
-  A = `inst-a-${testNo}`;
-  B = `inst-b-${testNo}`;
+  // Fresh ids per test (the owner cache is module state).
+  A = `aaaaaaaa-0000-4000-8000-${String(testNo).padStart(12, "0")}`;
+  B = `bbbbbbbb-0000-4000-8000-${String(testNo).padStart(12, "0")}`;
   rows = new Map([
     [A, { node_id: "node-a", user_id: "user-1" }],
     [B, { node_id: "node-b", user_id: "user-2" }],

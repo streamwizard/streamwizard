@@ -86,14 +86,12 @@ export class Engine {
     }
   }
 
+  /** `payload` is parsed by the stats feed. */
   onStats(userId: string, payload: IngestStatsPayload): void {
-    if (!payload || typeof payload.session_id !== "string") return;
     this.monitors.get(userId)?.onStats(payload, Date.now());
   }
 
-  onSessionEnded(userId: string, payload: unknown): void {
-    const sessionId = (payload as { session_id?: string })?.session_id;
-    if (typeof sessionId !== "string") return;
+  onSessionEnded(userId: string, sessionId: string): void {
     this.monitors.get(userId)?.onSessionEnded(sessionId, Date.now());
   }
 }

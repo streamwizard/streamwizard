@@ -4,6 +4,7 @@ import { supabase } from "@repo/supabase";
 import { getObsInstanceOwnerForNode } from "@repo/supabase/queries/obs-nodes";
 import { TtlCache } from "@repo/ttl-cache";
 import { postInternalBroadcast } from "@/lib/ws-server";
+import { parseUuid } from "@/schemas/nodes-shared";
 import { nodeInstanceEventSchema } from "@/schemas/obs-nodes";
 
 // OBS nodes hold no ws-server credential: one would let them push events to
@@ -59,7 +60,8 @@ export function instanceDeleted(nodeId: string, instanceId: string, userId: stri
  */
 export async function postInstanceEvent(c: Context<Env, "/:id/events">) {
   const nodeId = c.get("nodeId");
-  const id = c.req.param("id");
+  const id = parseUuid(c.req.param("id"));
+  if (!id) return c.json({ error: "Instance not found" }, 404);
 
   let body: unknown;
   try {
