@@ -25,7 +25,6 @@
     "@repo/user-state": "workspace:*",
     "@sentry/bun": "^10",
     "date-fns": "^4.1.0",
-    "lovely-logs": "^2.7.2",
     "zod": "^4.4.3"
   },
   "devDependencies": {

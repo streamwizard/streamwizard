@@ -18,8 +18,5 @@
     "pngjs": "^7.0.0",
     "sharp": "^0.34.4",
     "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "@repo/schemas": "workspace:*"
   }
 }

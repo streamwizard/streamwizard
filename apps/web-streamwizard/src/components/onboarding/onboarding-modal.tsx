@@ -3,7 +3,7 @@
 import { trackAction } from "@/lib/track-action";
 import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion } from "motion/react";
 import { useSessionStore } from "@/stores/session-store";
 import { linkDiscord } from "@/actions/auth/link-discord";
 import { completeOnboarding, saveOnboardingProgress } from "@/actions/supabase/user/settings";
