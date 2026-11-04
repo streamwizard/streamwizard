@@ -57,6 +57,10 @@ export const env = createEnv({
     // (@repo/service-token reads it). Secret. Optional: without it broadcasts
     // are skipped as unconfigured; a malformed one stops boot.
     WS_SERVICE_SIGNING_JWK: z.string().min(1).refine(isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR).optional(),
+    // Comma-separated extra hosts allowed to reach the dev server and its HMR
+    // websocket (next.config.ts allowedDevOrigins), e.g. a LAN address for
+    // testing from another device. Dev only; 127.0.0.1 is always allowed.
+    DEV_ALLOWED_ORIGINS: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -84,6 +88,7 @@ export const env = createEnv({
     POSTHOG_HOST: process.env.POSTHOG_HOST,
     POSTHOG_OPT_OUT_USER_IDS: process.env.POSTHOG_OPT_OUT_USER_IDS,
     WS_SERVICE_SIGNING_JWK: process.env.WS_SERVICE_SIGNING_JWK,
+    DEV_ALLOWED_ORIGINS: process.env.DEV_ALLOWED_ORIGINS,
     // Derived in next.config.ts env: block from their non-prefixed Doppler counterparts
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

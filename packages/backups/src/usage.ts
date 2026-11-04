@@ -1,4 +1,4 @@
-// What our backups really take on PBS (docs/backup-sizes-plan.md).
+// What our backups really take on PBS.
 //
 // PBS 4.2 has no per-group or per-snapshot unique size, so we work it out
 // from the chunk index of every kept snapshot:

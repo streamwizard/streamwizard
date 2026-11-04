@@ -9,7 +9,7 @@ import { secretsMatch } from "@/lib/secret-compare";
 import { proxmoxWebhookPayloadSchema } from "@/schemas/proxmox-webhook";
 
 /**
- * Receiver for Proxmox VE / PBS notification webhooks (docs/backup-monitoring-plan.md).
+ * Receiver for Proxmox VE / PBS notification webhooks.
  *
  * Proxmox sends each notification once, with a 10 s timeout and no retry, so
  * this does the minimum before answering: check the token, validate, decide

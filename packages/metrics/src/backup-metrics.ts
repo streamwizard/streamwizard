@@ -2,8 +2,7 @@ import { Point } from "@influxdata/influxdb-client";
 import { pushPoint } from "./influx-client";
 import { BUCKETS } from "./buckets";
 
-// Proxmox backup monitoring (docs/backup-monitoring-plan.md,
-// docs/backup-sizes-plan.md). rest-api's poller writes one set of points per
+// Proxmox backup monitoring. rest-api's poller writes one set of points per
 // successful PBS poll (every 6 h, and a minute after each webhook), so
 // /backups can chart usage and backup age over time. Current state and
 // webhook events stay in Supabase; these are only the numbers.

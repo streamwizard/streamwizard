@@ -258,8 +258,7 @@ export function reportFatal(error: unknown, context: string): void {
 // Only `warn` and `error` are forwarded. `log`/`info` are routine lifecycle
 // chatter (ticks, reconnects, chat traffic) that made up >95% of the volume,
 // and logs are a metered category; they still print to the container output.
-// Call Sentry.logger.info directly for the rare info line worth keeping. See
-// docs/sentry-log-noise-plan.md for the policy.
+// Call Sentry.logger.info directly for the rare info line worth keeping.
 export function createConsoleLogsIntegration() {
   return consoleLoggingIntegration({ levels: ["warn", "error"] });
 }

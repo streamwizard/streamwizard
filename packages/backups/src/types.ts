@@ -64,7 +64,7 @@ export interface PbsData {
   /** Verify/prune jobs that cover our namespace (whole store or streamwizard). */
   verifyJobs: PbsJob[];
   pruneJobs: PbsJob[];
-  /** Deduplicated sizes from the chunk indexes (docs/backup-sizes-plan.md). */
+  /** Deduplicated sizes from the chunk indexes. */
   usage?: PbsUsage | null;
 }
 

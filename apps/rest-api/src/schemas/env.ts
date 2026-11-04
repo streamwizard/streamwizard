@@ -95,7 +95,7 @@ export const envSchema = z.object({
   DISCORD_BOT_TOKEN: z.string().min(1).optional(),
   DISCORD_GUILD_ID: z.string().min(1).optional(),
 
-  // Proxmox backup monitoring (docs/backup-monitoring-plan.md). Prod only:
+  // Proxmox backup monitoring. Prod only:
   // without PBS_URL + PBS_NAMESPACE + both token vars the poller never starts.
   // The token only holds DatastoreAudit, so it can read backup metadata but
   // never change, restore or delete anything.

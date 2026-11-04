@@ -10,16 +10,7 @@ declare module "hono" {
   }
 }
 
-/** Same cache, same reasoning, same staleness tradeoff as `obs-node-auth.ts` —
- *  read that comment before changing either TTL. A deleted node's key keeps
- *  passing this check until its entry expires, so every route behind it must
- *  hold up on its own once the node row is gone:
- *  - `PATCH /me` updates the node's own row, which no longer matches.
- *  - `POST /sessions` inserts with this node_id, which the foreign key refuses.
- *  - `/sessions/:id/end` and `/session-stats` only match the node's sessions,
- *    whose node_id became NULL with the delete.
- *  - `POST /me/ws-token` reads the node row itself and refuses (ws-token.ts);
- *    web-admin also closes the node's open socket on delete.
+/** Key hash -> ingest node id, cached like `obs-node-auth.ts` (same TTLs).
  *  Separate instance so the two key spaces can never collide. */
 const KEY_TTL_MS = 60 * 60 * 1000;
 const NEGATIVE_TTL_MS = 5 * 1000;

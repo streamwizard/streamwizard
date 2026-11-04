@@ -30,3 +30,5 @@ bun dev --filter=@repo/web-streamwizard
 ```
 
 Then open [http://localhost:3000](http://localhost:3000).
+
+To open the dev server from another device (a phone on your network), set `DEV_ALLOWED_ORIGINS` to a comma-separated list of the hosts you use, for example your machine's LAN address. Next blocks dev requests and HMR from any other origin; `127.0.0.1` is always allowed.

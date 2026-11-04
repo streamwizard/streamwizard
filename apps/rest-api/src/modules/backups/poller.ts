@@ -11,7 +11,7 @@ import { loadBackupPoll, reconcileUnmatchedEvents } from "@/modules/backups/stor
 import { createProxmoxClient, pbsAuthorization, pveAuthorization } from "@repo/proxmox";
 
 /**
- * Polls PBS and the PVE hosts into backup_poll_state (docs/backup-monitoring-plan.md).
+ * Polls PBS and the PVE hosts into backup_poll_state.
  * Webhooks tell us fast when a job finishes; this is what notices when one
  * never ran, and it's the only source for snapshot, verify and GC state.
  */

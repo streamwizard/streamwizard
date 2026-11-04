@@ -12,28 +12,7 @@ declare module "hono" {
 
 /**
  * Key hash -> node id, so the agent's poll loop stops costing a Supabase
- * request per request.
- *
- * TTL-only, with no invalidation hook, and that is deliberate. These keys are
- * insert-only — written once at `POST /claim`, with no rotate or revoke route —
- * so the *entire* invalidation surface is node deletion, which cascades the row
- * away. That happens in `deleteNodeAction` inside the **web-admin Next.js
- * process**, which cannot reliably signal this one: an HTTP invalidate reaches
- * a single rest-api replica and the replica count lives in the Dokploy UI, not
- * in this repo.
- *
- * So a deleted node's key keeps authenticating for up to TTL. That window leaks
- * reads only — every write path has an FK to `obs_nodes` and fails at the
- * database the moment the node row is gone, and the one sensitive read
- * (`/users/:userId/stream-key`) re-checks `userHasInstanceOnNode` against the
- * live database, whose rows cascade away with the node. One exception is not
- * a DB write: `POST /instances/:id/events` forwards to ws-server and caches
- * each instance's owner for 10 minutes (instances/events.ts), so for that
- * long a deleted node can still send lifecycle and scene events to the
- * owners of instances it hosted. An hour is therefore
- * bounded by comfort, not correctness: it trades a longer read-only window for
- * 1/12th the auth traffic of the previous 5 minutes. If you ever add a revoke
- * route, this comment is the reason it will not take effect immediately.
+ * request per request. Entries are cached for KEY_TTL_MS (one hour).
  */
 const KEY_TTL_MS = 60 * 60 * 1000;
 /** Shorter, so a wrong key retried in a loop can't amplify, but a node that

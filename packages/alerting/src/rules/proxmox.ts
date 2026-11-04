@@ -25,7 +25,7 @@ import {
 } from "./thresholds";
 
 /**
- * Proxmox VM rules (docs/proxmox-monitoring-plan.md). Everything comes from
+ * Proxmox VM rules. Everything comes from
  * the metrics Proxmox VE pushes to Influx every ~10 s: guest status, tags,
  * CPU and RAM, node load and storages. Stopped guests keep pushing, so a
  * guest or node that goes quiet for VM_STALE_SECONDS is gone or cut off.

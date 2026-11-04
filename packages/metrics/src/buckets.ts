@@ -69,9 +69,9 @@ export const MEASUREMENT_BUCKETS = {
   backup_datastore: [BUCKETS.vmBackups],
   backup_vm: [BUCKETS.vmBackups],
   backup_snapshot: [BUCKETS.vmBackups],
-  // Proxmox VE's own InfluxDB plugin (docs/proxmox-monitoring-plan.md,
-  // "InfluxDB schema (verified)"). "system" holds guests, nodes and storages,
-  // told apart by the object tag (qemu|lxc|nodes|storages).
+  // Proxmox VE's own InfluxDB plugin (schema in queries/proxmox-queries.ts).
+  // "system" holds guests, nodes and storages, told apart by the object tag
+  // (qemu|lxc|nodes|storages).
   system: [BUCKETS.proxmox],
   cpustat: [BUCKETS.proxmox],
   memory: [BUCKETS.proxmox],

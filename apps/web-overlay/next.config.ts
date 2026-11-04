@@ -34,6 +34,13 @@ function loadDotenvFilesIntoProcessEnv(fromDir: string) {
 
 loadDotenvFilesIntoProcessEnv(turbopackRoot);
 
+function splitList(value: string | undefined) {
+  return (value ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 const wsServerUrl = process.env.WS_SERVER_URL ?? "";
 
 /**
@@ -119,7 +126,10 @@ const nextConfig: NextConfig = {
       process.env.NEXT_PUBLIC_ASSET_CDN_URL ?? process.env.ASSET_CDN_URL ?? process.env.NEXT_PUBLIC_CDN_URL ?? "",
   },
   transpilePackages: ["@t3-oss/env-nextjs", "@t3-oss/env-core"],
-  allowedDevOrigins: ["10.10.10.73"],
+  // Hosts besides localhost that may reach the dev server and its HMR
+  // websocket. DEV_ALLOWED_ORIGINS adds more (comma-separated), e.g. a LAN
+  // address when testing from another device.
+  allowedDevOrigins: ["127.0.0.1", ...splitList(process.env.DEV_ALLOWED_ORIGINS)],
   turbopack: {
     root: turbopackRoot,
   },

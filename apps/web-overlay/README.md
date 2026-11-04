@@ -26,3 +26,5 @@ bun dev --filter=@repo/web-overlay
 ```
 
 Runs on [https://localhost:3001](https://localhost:3001) — it serves over **HTTPS** (`--experimental-https`) because OBS browser sources expect a secure origin.
+
+To open it from another device (OBS on a second PC), set `DEV_ALLOWED_ORIGINS` to a comma-separated list of the hosts you use, for example your machine's LAN address. Next blocks dev requests and HMR from any other origin; `127.0.0.1` is always allowed.

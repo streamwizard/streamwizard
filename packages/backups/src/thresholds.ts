@@ -1,4 +1,4 @@
-// Code defaults for backup health (confirmed 2026-09-28, docs/backup-monitoring-plan.md).
+// Code defaults for backup health (confirmed 2026-09-28).
 // The alert rules re-export these through @repo/alerting/thresholds so the
 // /backups page and /alerts agree; per-rule overrides live in alert_rule_config.
 

@@ -14,7 +14,7 @@ import { toEventLite } from "@/modules/backups/store";
 import type { PollResult } from "@/modules/backups/poller";
 
 /**
- * Read-only backup status for web-admin (docs/backup-monitoring-plan.md).
+ * Read-only backup status for web-admin.
  * Everything is served from Supabase; nothing here calls PBS or PVE, except
  * /refresh, which runs one normal (rate-limited) poll.
  */

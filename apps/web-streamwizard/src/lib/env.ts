@@ -83,6 +83,10 @@ export const env = createEnv({
     CMS_ADMIN_URL: z.url().optional(),
     // "1" turns on the docs screenshot routes in local dev ((harness)/layout.tsx).
     DOCS_SHOTS: z.enum(["0", "1"]).optional(),
+    // Comma-separated extra hosts allowed to reach the dev server and its HMR
+    // websocket (next.config.ts allowedDevOrigins), e.g. a LAN address for
+    // testing from another device. Dev only; 127.0.0.1 is always allowed.
+    DEV_ALLOWED_ORIGINS: z.string().optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -136,6 +140,7 @@ export const env = createEnv({
     POSTHOG_HOST: process.env.POSTHOG_HOST,
     CMS_ADMIN_URL: process.env.CMS_ADMIN_URL,
     DOCS_SHOTS: process.env.DOCS_SHOTS,
+    DEV_ALLOWED_ORIGINS: process.env.DEV_ALLOWED_ORIGINS,
     // Derived in next.config.ts env: block from their non-prefixed Doppler counterparts
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
