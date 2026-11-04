@@ -6,7 +6,7 @@ import { useGoogleFonts } from "../../hooks/use-google-font";
 import { useEditorAudioMuted } from "../../hooks/use-editor-audio";
 import { subscribeToWsRoom } from "../../lib/ws-store";
 import { scopeCss } from "../../lib/scope-css";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import {
   alertEffectKeyframes,
   alertEffectStyle,

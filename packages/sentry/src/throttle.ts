@@ -7,6 +7,7 @@
 //
 // Kept free of Sentry imports so tests can use it while mocking @repo/sentry.
 
+import { failureKey } from "./failure-key";
 import { describeError } from "./safe-error";
 
 export interface ReportThrottleOptions {
@@ -41,8 +42,5 @@ export function createReportThrottle(options: ReportThrottleOptions): (key: stri
  * numbers blanked, so "clip 123 failed" and "clip 456 failed" share a key.
  */
 export function errorFingerprint(error: unknown): string {
-  return describeError(error)
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>")
-    .replace(/\d+/g, "<n>")
-    .slice(0, 200);
+  return failureKey(describeError(error));
 }

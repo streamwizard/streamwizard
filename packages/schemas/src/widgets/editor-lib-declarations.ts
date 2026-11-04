@@ -1,6 +1,6 @@
 // Hand-written Monaco extra-lib declarations for the widget editor, covering
 // the libraries and globals the srcdoc sandbox injects (see buildWidgetSrcdoc
-// in @repo/ui). The Twitch event catalog lives in widget-editor-declarations.ts
+// in @repo/ui). The Twitch event catalog lives in ./editor-declarations.ts
 // (generated - do not merge these into that file, it gets overwritten).
 
 export const GSAP_DECLARATIONS = `

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import { normalizePollWidgetConfig } from "./poll-widget-config";
 import {
   POLL_RESET_BROWSER_EVENT,

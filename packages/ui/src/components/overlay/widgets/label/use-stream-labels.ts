@@ -6,7 +6,7 @@ import {
   emptyLabelSnapshot,
   isLabelEventType,
   type LabelSnapshot,
-} from "@repo/schemas";
+} from "@repo/schemas/widgets/stream-labels";
 import { subscribeToWsRoom } from "../../lib/ws-store";
 import { ALERT_TEST_BROWSER_EVENT, type AlertTestBrowserEventDetail } from "../alert/alert-widget-config";
 import { streamChangedFromFrame, type CreditsWidgetFrame } from "../credits/credits-widget-state";

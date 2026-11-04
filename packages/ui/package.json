@@ -26,6 +26,10 @@
       "types": "./src/overlay-schemas.ts",
       "default": "./src/overlay-schemas.ts"
     },
+    "./components/overlay/types/*": {
+      "types": "./src/components/overlay/types/*.ts",
+      "default": "./src/components/overlay/types/*.ts"
+    },
     "./components/*": {
       "types": "./src/components/*.tsx",
       "default": "./src/components/*.tsx"

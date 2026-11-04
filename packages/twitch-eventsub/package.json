@@ -14,6 +14,10 @@
     "./receiving-broadcaster": {
       "types": "./src/receiving-broadcaster.ts",
       "default": "./src/receiving-broadcaster.ts"
+    },
+    "./subscriptions": {
+      "types": "./src/subscriptions.ts",
+      "default": "./src/subscriptions.ts"
     }
   },
   "scripts": {

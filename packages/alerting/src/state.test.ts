@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { computeTransitions, RENOTIFY_INTERVAL_MS } from "./state";
-import type { AlertState } from "@repo/supabase/queries/alerts";
+import type { AlertState } from "@repo/supabase/queries/alerts/alerts";
 import type { AlertRule, Breach } from "./types";
 
 // Pure state-machine semantics: for_ticks counting, fire-once, 30m crit

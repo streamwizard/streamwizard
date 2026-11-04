@@ -7,7 +7,7 @@ import {
   normalizeTimerWidgetConfig,
   resolvedTextWidgetFontFamily,
   type TimerWidgetItemConfig,
-} from "../../types";
+} from "../../types/widgets";
 import type { WidgetRenderProps } from "../text/TextWidgetRenderer";
 
 function justifyForAlign(align: "left" | "center" | "right"): string {

@@ -1,6 +1,6 @@
 import { supabase } from "@repo/supabase";
 import { TtlCache } from "@repo/ttl-cache";
-import { selectCachedAsset, upsertCachedAsset } from "@repo/supabase/queries/asset-cache";
+import { selectCachedAsset, upsertCachedAsset } from "@repo/supabase/queries/assets/cache";
 
 const SECOND = 1000;
 const MINUTE = 60 * SECOND;

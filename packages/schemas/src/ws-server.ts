@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { IngestStatsPayloadSchema } from "./streamwizard";
+import { IngestStatsPayloadSchema } from "./streamwizard-events";
 
 // What ws-server receives, and what its consumers receive from it. Each side
 // of these contracts parses with the schema here: ws-server for bot and
 // ingest-node frames and its /internal/* bodies, obs-auto-switcher for the
-// consumer feed. The senders build them from the types in @repo/types and
+// consumer feed. The senders build them from @repo/types/overlay-ws and
 // @repo/ws-client (ingest-server keeps its own copy of the ingest-node types).
 //
 // Objects strip unknown keys on purpose: senders ship on their own schedule

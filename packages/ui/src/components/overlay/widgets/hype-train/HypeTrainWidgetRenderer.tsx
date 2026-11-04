@@ -14,7 +14,7 @@ import {
 } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import {
   ALERT_TEST_BROWSER_EVENT,
   type AlertTestBrowserEventDetail,

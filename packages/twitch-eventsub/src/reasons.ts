@@ -1,5 +1,19 @@
 /** Human-readable explanations for Twitch's EventSub status and close codes. */
 
+/** Close codes Twitch sends when it ends an EventSub WebSocket. */
+export const WebSocketCloseCode = {
+    InternalServerError: 4000,
+    ClientSentInboundTraffic: 4001,
+    ClientFailedPingPong: 4002,
+    ConnectionUnused: 4003,
+    ReconnectGraceTimeExpired: 4004,
+    NetworkTimeout: 4005,
+    NetworkError: 4006,
+    InvalidReconnect: 4007,
+} as const;
+
+export type WebSocketCloseCode = (typeof WebSocketCloseCode)[keyof typeof WebSocketCloseCode];
+
 export function revocationReason(status: string | undefined): string {
     switch (status) {
         case 'user_removed':

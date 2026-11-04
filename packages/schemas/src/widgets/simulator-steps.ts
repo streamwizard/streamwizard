@@ -1,7 +1,8 @@
-import type { OverlayGeoEvent } from "./streamwizard";
-import { DEMO_POLL_ID, WIDGET_TEST_EVENTS } from "./widget-test-events";
-import { AUTO_SWITCHER_PRESET_THRESHOLDS, type AutoSwitcherStatus } from "./auto-switcher";
-import { buildDemoSwitcherStatus } from "./widget-demo-events";
+import type { OverlayGeoEvent } from "../streamwizard-events";
+import { DEMO_POLL_ID, WIDGET_TEST_EVENTS } from "./test-events";
+import type { AutoSwitcherStatus } from "../auto-switcher/auto-switcher";
+import { AUTO_SWITCHER_PRESET_THRESHOLDS } from "../auto-switcher/constants";
+import { buildDemoSwitcherStatus } from "./demo-events";
 
 /**
  * The maths behind the looping demo simulators, kept apart from the timers that

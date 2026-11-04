@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { subscribeToWsRoom } from "../lib/ws-store";
-import type { OverlayScene } from "../types";
+import type { OverlayScene } from "../types/item";
 import { ALERT_TEST_BROWSER_EVENT, type AlertTestBrowserEventDetail } from "../widgets/alert/alert-widget-config";
 import { useOverlayWsUrl } from "./use-overlay-ws-url";
 

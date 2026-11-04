@@ -4,14 +4,22 @@ import {
   getTwitchAppToken,
   updateChannelAccessToken,
   updateTwitchAppToken,
-  type RefreshTwitchTokenResponse,
-} from "@repo/supabase";
+} from "@repo/supabase/queries/twitch/tokens";
 import { trackTwitchApiRequest, normalizeEndpoint } from "@repo/metrics";
 import { describeError } from "@repo/sentry/safe-error";
 import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import axios from "axios";
 import { logTokenRefreshFailure } from "./token-refresh-log";
 import { rateLimitMessage, rateLimitRetryDelay, ratelimitRemaining, warnRateLimited } from "./rate-limit";
+
+/** Body of Twitch's POST /oauth2/token refresh response. */
+type RefreshTwitchTokenResponse = {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  scope: string[];
+  token_type: string;
+};
 
 type RetryConfig = InternalAxiosRequestConfig & { __retryCount?: number; __rateLimitRetried?: boolean };
 type Headers = Record<string, unknown>;

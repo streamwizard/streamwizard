@@ -3,10 +3,10 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { CSSProperties } from "react";
-import type { ChannelChatMessageEvent, ChannelChatNotificationEvent } from "@repo/schemas";
+import type { ChannelChatMessageEvent, ChannelChatNotificationEvent } from "@repo/schemas/eventsub/chat";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import { badgeTitle, badgeUrl, type ChatBadge } from "../../../chat/asset-urls";
 import { tokenizeChatMessage } from "../../../chat/tokenize";
 import { resolveUserColor } from "../../../chat/user-color";

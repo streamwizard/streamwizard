@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { GeoPayload } from "../../types";
+import type { GeoPayload } from "../../types/base";
 import { subscribeToWsRoom } from "../../lib/ws-store";
 import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
 

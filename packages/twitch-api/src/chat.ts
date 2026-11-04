@@ -1,4 +1,4 @@
-import type { GetChattersResponse } from "@repo/types";
+import type { GetChattersResponse } from "@repo/types/helix";
 import { describeError } from "@repo/sentry/safe-error";
 import { TwitchApiBaseClient } from "./base-client";
 

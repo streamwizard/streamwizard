@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { creditsDataSchema, type CreditsData } from "@repo/schemas";
+import { creditsDataSchema, type CreditsData } from "@repo/schemas/widgets/credits";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import { normalizeCreditsWidgetConfig } from "./credits-widget-config";
 import {
   CREDITS_RESET_BROWSER_EVENT,

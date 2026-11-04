@@ -6,7 +6,7 @@ import {
   type BackupPollData,
   type BackupVmIssueCode,
 } from "@repo/backups";
-import { listBackupEventsSince } from "@repo/supabase/queries/backups";
+import { listBackupEventsSince } from "@repo/supabase/queries/platform/backups";
 import type { AlertRule, Breach, EnvContext, RuleOverrides } from "../types";
 import { customRule } from "./builders";
 import {

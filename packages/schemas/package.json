@@ -4,20 +4,11 @@
   "private": true,
   "license": "MIT",
   "type": "module",
-  "main": "./index.ts",
-  "types": "./index.ts",
+  "sideEffects": false,
   "exports": {
-    ".": {
-      "types": "./index.ts",
-      "default": "./index.ts"
-    },
-    "./auto-switcher-constants": {
-      "types": "./src/auto-switcher-constants.ts",
-      "default": "./src/auto-switcher-constants.ts"
-    },
-    "./ws-server": {
-      "types": "./src/ws-server.ts",
-      "default": "./src/ws-server.ts"
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
     }
   },
   "scripts": {

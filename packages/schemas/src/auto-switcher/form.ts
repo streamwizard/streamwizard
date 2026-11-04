@@ -1,10 +1,6 @@
 import { z } from "zod";
-import {
-  autoSwitcherConfigSchema,
-  type AutoSwitcherSensitivityPreset,
-  type AutoSwitcherThresholds,
-} from "./auto-switcher";
-import { AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS } from "./auto-switcher-constants";
+import { autoSwitcherConfigSchema, type AutoSwitcherThresholds } from "./auto-switcher";
+import { AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS, type AutoSwitcherSensitivityPreset } from "./constants";
 
 // The switcher settings form, shared by the streamer dashboard, the phone deck
 // and web-admin's per-user editor so the three surfaces can't drift on
@@ -39,8 +35,6 @@ export const autoSwitcherFormSchema = autoSwitcherConfigSchema
   });
 
 export type AutoSwitcherFormValues = z.infer<typeof autoSwitcherFormSchema>;
-
-export { AUTO_SWITCHER_CHAT_TEMPLATE_DEFAULTS, PRESET_COPY } from "./auto-switcher-constants";
 
 /**
  * The subset of the config row the form reads. Declared structurally so this

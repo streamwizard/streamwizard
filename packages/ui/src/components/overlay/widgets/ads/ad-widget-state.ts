@@ -31,7 +31,7 @@ export interface AdWidgetFrame {
 
 /**
  * The test ad break carries `demo: true` (see the channel.ad_break.begin
- * fixture in @repo/schemas); a real one never does, and has no id to mark.
+ * fixture in @repo/schemas/widgets/test-events); a real one never does, and has no id to mark.
  */
 export function isDemoAdFrame(frame: AdWidgetFrame): boolean {
   return (frame?.payload as { demo?: unknown } | null | undefined)?.demo === true;

@@ -10,15 +10,15 @@ import {
   ChannelSubscriptionGiftEventSchema,
   ChannelSubscriptionMessageEventSchema,
   ChannelUpdateEventSchema,
-} from "./channel";
+} from "../eventsub/channel";
 import {
   ChannelChatClearEventSchema,
   ChannelChatClearUserMessagesEventSchema,
   ChannelChatMessageDeleteEventSchema,
   ChannelChatMessageEventSchema,
   ChannelChatNotificationEventSchema,
-} from "./chat";
-import { ChannelPointsCustomRewardRedemptionAddEventSchema } from "./channel-points";
+} from "../eventsub/chat";
+import { ChannelPointsCustomRewardRedemptionAddEventSchema } from "../eventsub/channel-points";
 import {
   ChannelGoalBeginEventSchema,
   ChannelGoalEndEventSchema,
@@ -28,7 +28,7 @@ import {
   ChannelHypeTrainProgressEventSchema,
   ChannelShoutoutCreateEventSchema,
   ChannelShoutoutReceiveEventSchema,
-} from "./misc";
+} from "../eventsub/misc";
 import {
   ChannelPollBeginEventSchema,
   ChannelPollEndEventSchema,
@@ -37,9 +37,9 @@ import {
   ChannelPredictionEndEventSchema,
   ChannelPredictionLockEventSchema,
   ChannelPredictionProgressEventSchema,
-} from "./polls-predictions";
-import { StreamOfflineEventSchema, StreamOnlineEventSchema } from "./stream";
-import { ChannelModeratorAddEventSchema, ChannelVipAddEventSchema } from "./moderate";
+} from "../eventsub/polls-predictions";
+import { StreamOfflineEventSchema, StreamOnlineEventSchema } from "../eventsub/stream";
+import { ChannelModeratorAddEventSchema, ChannelVipAddEventSchema } from "../eventsub/moderate";
 
 /**
  * Canonical synthetic EventSub payloads, used everywhere a StreamWizard surface

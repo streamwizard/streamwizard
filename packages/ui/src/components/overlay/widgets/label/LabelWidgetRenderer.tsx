@@ -9,9 +9,9 @@ import {
   resolveLabel,
   type LabelSnapshot,
   type ResolvedLabel,
-} from "@repo/schemas";
+} from "@repo/schemas/widgets/stream-labels";
 import { useGoogleFont } from "../../hooks/use-google-font";
-import type { OverlayItem, OverlayScene } from "../../types";
+import type { OverlayItem, OverlayScene } from "../../types/item";
 import {
   applyLabelEventKinds,
   LABEL_ANIMATE_PREVIEW_EVENT,

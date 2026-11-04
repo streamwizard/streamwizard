@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, ReactNode } from "react";
-import type { OverlayItem } from "./types";
+import type { OverlayItem } from "./types/item";
 import {
   getCropInsets,
   getDesignSize,

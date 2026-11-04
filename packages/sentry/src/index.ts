@@ -9,6 +9,7 @@ import {
   type Log,
   type TransactionEvent,
 } from "@sentry/core";
+import { failureKey } from "./failure-key";
 import { toSafeError } from "./safe-error";
 
 export interface SentryConfig {
@@ -141,10 +142,7 @@ export interface ErrorLimiterOptions {
 export function errorLimitKey(event: Event): string {
   const ex = event.exception?.values?.at(-1);
   const raw = ex ? `${ex.type ?? "Error"}: ${ex.value ?? ""}` : (event.message ?? "unknown");
-  return raw
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>")
-    .replace(/\d+/g, "<n>")
-    .slice(0, 200);
+  return failureKey(raw);
 }
 
 export function createErrorLimiter(options: ErrorLimiterOptions): (event: Event) => boolean {

@@ -1,4 +1,4 @@
-import type { EventSubSubscriptionType } from "./eventsub";
+import type { EventSubSubscriptionType } from "@repo/types/eventsub";
 
 /**
  * The EventSub subscriptions StreamWizard creates for every connected
@@ -193,7 +193,7 @@ export const CONDUIT_SUBSCRIPTIONS: readonly EventSubSubscriptionConfig[] = [
   },
   /*
    * Alert box events behind an on-demand scope set (alert_bans, alert_vips,
-   * alert_mods in @repo/schemas). They are only created once the streamer
+   * alert_mods in @repo/schemas/twitch-scopes). They are only created once the streamer
    * turns that alert on and grants the scope. channel.moderate is left out on
    * purpose: its ban and raid actions would fire those alerts a second time.
    */

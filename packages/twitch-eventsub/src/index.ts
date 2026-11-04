@@ -1,9 +1,4 @@
-import type {
-    EventSubSubscriptionType,
-    WebSocketMessage,
-    WebSocketNotificationMessage,
-    WebSocketCloseCode,
-} from '@repo/types';
+import type { EventSubSubscriptionType, WebSocketMessage, WebSocketNotificationMessage } from '@repo/types/eventsub';
 import { TwitchApi } from "@repo/twitch-api";
 import { closeReason, revocationReason } from "./reasons";
 
@@ -678,12 +673,13 @@ export class TwitchEventSubReceiver {
 
 export { ConduitShardManager, parseShardIds, type ConduitShardManagerOptions } from "./shard-manager";
 
-// Re-export types from @repo/types for convenience
+export { WebSocketCloseCode } from "./reasons";
+
+// Re-export types from @repo/types/eventsub for convenience
 export type {
     EventSubSubscriptionType,
     WebSocketMessage,
     WebSocketNotificationMessage,
-    WebSocketCloseCode,
     EventSubNotificationPayload,
     EventSubSubscriptionMetadata,
-} from '@repo/types';
+} from '@repo/types/eventsub';

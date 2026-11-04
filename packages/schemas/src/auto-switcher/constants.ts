@@ -1,8 +1,7 @@
 // Plain auto switcher data with no zod at runtime: the sensitivity presets,
 // their wording and the default chat notices. Kept apart from ./auto-switcher
-// and ./auto-switcher-form so the marketing pages can show the real numbers and
-// strings without shipping zod. Bundle-sensitive code imports it as
-// "@repo/schemas/auto-switcher-constants"; it is also re-exported from the root.
+// and ./form so the marketing pages can show the real numbers and strings
+// without shipping zod. Import it as "@repo/schemas/auto-switcher/constants".
 
 import type { AutoSwitcherThresholds } from "./auto-switcher";
 

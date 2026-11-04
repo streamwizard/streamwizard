@@ -4,7 +4,7 @@ import {
   WIDGET_TEST_EVENT_TYPES,
   buildWidgetTestEvent,
   isWidgetTestEventType,
-} from "./widget-test-events";
+} from "./test-events";
 
 describe("widget test events", () => {
   // The whole point of centralising the fixtures: if a Twitch payload shape

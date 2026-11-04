@@ -5,14 +5,14 @@ import {
   DEMO_EVENT_TYPES,
   buildDemoEvent,
   isDemoEventType,
-} from "./widget-demo-events";
-import { OverlayGeoEventSchema } from "./streamwizard";
-import { ChannelChatMessageEventSchema } from "./chat";
+} from "./demo-events";
+import { OverlayGeoEventSchema } from "../streamwizard-events";
+import { ChannelChatMessageEventSchema } from "../eventsub/chat";
 import {
   ChannelPollBeginEventSchema,
   ChannelPollEndEventSchema,
   ChannelPollProgressEventSchema,
-} from "./polls-predictions";
+} from "../eventsub/polls-predictions";
 import {
   initPollCycle,
   stepPollCycle,
@@ -21,7 +21,7 @@ import {
   stepChatStream,
   stepGeoWalk,
   type GeoWalkOptions,
-} from "./widget-simulator-steps";
+} from "./simulator-steps";
 
 describe("demo events", () => {
   // Same guard the EventSub fixtures have: if a schema is updated and a demo

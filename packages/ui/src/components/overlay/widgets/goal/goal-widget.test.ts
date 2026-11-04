@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildWidgetTestEvent } from "@repo/schemas";
+import { buildWidgetTestEvent } from "@repo/schemas/widgets/test-events";
 import {
   createDefaultGoalWidgetConfig,
   normalizeGoalWidgetConfig,

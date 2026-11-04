@@ -6,7 +6,7 @@ import {
   TEXT_WIDGET_LIMITS,
   normalizeTextWidgetConfig,
   normalizeTimerWidgetConfig,
-} from "../../types";
+} from "../../types/widgets";
 
 /** A text row as it was saved before outline, background and ticker existed. */
 const LEGACY_TEXT = {

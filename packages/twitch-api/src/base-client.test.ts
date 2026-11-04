@@ -12,7 +12,7 @@ const USER_TOKEN = ["user", "token", "must", "not", "leak"].join("-");
 process.env.TWITCH_CLIENT_ID = "test-client-id";
 process.env.TWITCH_CLIENT_SECRET = CLIENT_SECRET;
 
-mock.module("@repo/supabase", () => ({
+mock.module("@repo/supabase/queries/twitch/tokens", () => ({
   getTwitchAppToken: async () => ({ access_token: "app", expires_in: 3600, updated_at: new Date().toISOString() }),
   getChannelAccessToken: async () => USER_TOKEN,
   getChannelRefreshToken: async () => REFRESH_TOKEN,

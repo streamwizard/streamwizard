@@ -3,10 +3,7 @@
 import { useEffect, useState } from "react";
 import { useGoogleFont } from "../../hooks/use-google-font";
 import { formatClockWidgetDisplay } from "../../lib/format-clock-widget";
-import {
-  normalizeClockWidgetConfig,
-  resolvedTextWidgetFontFamily,
-} from "../../types";
+import { normalizeClockWidgetConfig, resolvedTextWidgetFontFamily } from "../../types/widgets";
 import type { WidgetRenderProps } from "../text/TextWidgetRenderer";
 
 function justifyForAlign(align: "left" | "center" | "right"): string {

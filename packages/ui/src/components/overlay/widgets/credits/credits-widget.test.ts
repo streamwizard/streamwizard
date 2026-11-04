@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { buildDemoCreditsData, emptyCredits } from "@repo/schemas";
+import { buildDemoCreditsData, emptyCredits } from "@repo/schemas/widgets/credits";
 import {
   CREDITS_SECTION_IDS,
   CREDITS_WIDGET_ARCADE_FONT,

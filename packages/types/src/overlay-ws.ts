@@ -7,7 +7,8 @@ import type {
   ObsSceneChangedPayload,
   IngestStatsPayload,
   UserStateUpdatePayload,
-  // channel
+} from "@repo/schemas/streamwizard-events";
+import type {
   ChannelUpdateEvent,
   ChannelFollowEvent,
   ChannelAdBreakBeginEvent,
@@ -21,52 +22,11 @@ import type {
   ChannelUnbanEvent,
   ChannelUnbanRequestCreateEvent,
   ChannelUnbanRequestResolveEvent,
+} from "@repo/schemas/eventsub/channel";
+import type {
   ChannelSharedChatBeginEvent,
   ChannelSharedChatUpdateEvent,
   ChannelSharedChatEndEvent,
-  // chat
-  ChannelChatClearEvent,
-  ChannelChatClearUserMessagesEvent,
-  ChannelChatMessageEvent,
-  ChannelChatMessageDeleteEvent,
-  ChannelChatNotificationEvent,
-  ChannelChatSettingsUpdateEvent,
-  ChannelChatUserMessageHoldEvent,
-  ChannelChatUserMessageUpdateEvent,
-  // channel points
-  ChannelPointsAutomaticRewardRedemptionAddEvent,
-  ChannelPointsAutomaticRewardRedemptionAddV2Event,
-  ChannelPointsCustomRewardAddEvent,
-  ChannelPointsCustomRewardUpdateEvent,
-  ChannelPointsCustomRewardRemoveEvent,
-  ChannelPointsCustomRewardRedemptionAddEvent,
-  ChannelPointsCustomRewardRedemptionUpdateEvent,
-  ChannelCustomPowerUpRedemptionAddEvent,
-  // guest star
-  ChannelGuestStarSessionBeginEvent,
-  ChannelGuestStarSessionEndEvent,
-  ChannelGuestStarGuestUpdateEvent,
-  ChannelGuestStarSettingsUpdateEvent,
-  // polls & predictions
-  ChannelPollBeginEvent,
-  ChannelPollProgressEvent,
-  ChannelPollEndEvent,
-  ChannelPredictionBeginEvent,
-  ChannelPredictionProgressEvent,
-  ChannelPredictionLockEvent,
-  ChannelPredictionEndEvent,
-  // moderation
-  ChannelModerateEvent,
-  ChannelModerateV2Event,
-  ChannelModeratorAddEvent,
-  ChannelModeratorRemoveEvent,
-  ChannelWarningSendEvent,
-  ChannelWarningAcknowledgeEvent,
-  ChannelSuspiciousUserMessageEvent,
-  ChannelSuspiciousUserUpdateEvent,
-  ChannelVipAddEvent,
-  ChannelVipRemoveEvent,
-  // misc
   ChannelHypeTrainBeginEvent,
   ChannelHypeTrainProgressEvent,
   ChannelHypeTrainEndEvent,
@@ -81,23 +41,68 @@ import type {
   ChannelGoalBeginEvent,
   ChannelGoalProgressEvent,
   ChannelGoalEndEvent,
-  // conduit
-  ConduitShardDisabledEvent,
-  // drops & extensions
-  DropEntitlementGrantEvent,
-  ExtensionBitsTransactionCreateEvent,
-  // stream
-  StreamOnlineEvent,
-  StreamOfflineEvent,
-  // user
+} from "@repo/schemas/eventsub/misc";
+import type {
+  ChannelChatClearEvent,
+  ChannelChatClearUserMessagesEvent,
+  ChannelChatMessageEvent,
+  ChannelChatMessageDeleteEvent,
+  ChannelChatNotificationEvent,
+  ChannelChatSettingsUpdateEvent,
+  ChannelChatUserMessageHoldEvent,
+  ChannelChatUserMessageUpdateEvent,
+} from "@repo/schemas/eventsub/chat";
+import type {
+  ChannelPointsAutomaticRewardRedemptionAddEvent,
+  ChannelPointsAutomaticRewardRedemptionAddV2Event,
+  ChannelPointsCustomRewardAddEvent,
+  ChannelPointsCustomRewardUpdateEvent,
+  ChannelPointsCustomRewardRemoveEvent,
+  ChannelPointsCustomRewardRedemptionAddEvent,
+  ChannelPointsCustomRewardRedemptionUpdateEvent,
+  ChannelCustomPowerUpRedemptionAddEvent,
+} from "@repo/schemas/eventsub/channel-points";
+import type {
+  ChannelGuestStarSessionBeginEvent,
+  ChannelGuestStarSessionEndEvent,
+  ChannelGuestStarGuestUpdateEvent,
+  ChannelGuestStarSettingsUpdateEvent,
+} from "@repo/schemas/eventsub/guest-star";
+import type {
+  ChannelPollBeginEvent,
+  ChannelPollProgressEvent,
+  ChannelPollEndEvent,
+  ChannelPredictionBeginEvent,
+  ChannelPredictionProgressEvent,
+  ChannelPredictionLockEvent,
+  ChannelPredictionEndEvent,
+} from "@repo/schemas/eventsub/polls-predictions";
+import type {
+  ChannelModerateEvent,
+  ChannelModerateV2Event,
+  ChannelModeratorAddEvent,
+  ChannelModeratorRemoveEvent,
+  ChannelWarningSendEvent,
+  ChannelWarningAcknowledgeEvent,
+  ChannelSuspiciousUserMessageEvent,
+  ChannelSuspiciousUserUpdateEvent,
+  ChannelVipAddEvent,
+  ChannelVipRemoveEvent,
+} from "@repo/schemas/eventsub/moderate";
+import type { ConduitShardDisabledEvent } from "@repo/schemas/eventsub/conduit";
+import type { DropEntitlementGrantEvent } from "@repo/schemas/eventsub/drops";
+import type { ExtensionBitsTransactionCreateEvent } from "@repo/schemas/eventsub/extensions";
+import type { StreamOnlineEvent, StreamOfflineEvent } from "@repo/schemas/eventsub/stream";
+import type {
   UserAuthorizationGrantEvent,
   UserAuthorizationRevokeEvent,
   UserUpdateEvent,
   UserWhisperMessageEvent,
-  // obs-auto-switcher
+} from "@repo/schemas/eventsub/user";
+import type {
   AutoSwitcherStatus,
   AutoSwitcherConfig,
-} from "@repo/schemas";
+} from "@repo/schemas/auto-switcher/auto-switcher";
 
 export type { OverlayGeoPayload, OverlayGeoEvent, OverlayStatusPayload };
 
@@ -133,7 +138,7 @@ export type StreamWizardEventType =
 
 export type OverlayEventType = EventSubSubscriptionType | StreamWizardEventType;
 
-// Both of these are zod-derived in @repo/schemas -- re-exported rather than
+// Both of these are zod-derived in @repo/schemas/streamwizard-events -- re-exported rather than
 // redeclared so the wire type and the validator can't drift apart. Their docs
 // live on the schemas.
 export type { ObsInstanceLifecyclePayload, IngestStatsPayload, ObsSceneChangedPayload, UserStateUpdatePayload };
@@ -148,27 +153,6 @@ export interface IngestNodeBandwidthPayload {
   tx_bytes_per_sec: number;
   tailscale_rx_bytes_per_sec: number;
   tailscale_tx_bytes_per_sec: number;
-}
-
-// Node-scoped bot message: never delivered to user rooms (so it's not an
-// OverlayEventType) — ws-server folds it into monitor state instead.
-export interface NodeMetricsMessage {
-  kind: "node_metrics";
-  payload: IngestNodeBandwidthPayload;
-}
-
-// App-level heartbeat: bot sockets are otherwise send-only, so without a
-// reply the client can't tell a healthy link from a half-open TCP connection.
-export interface BotPingMessage {
-  kind: "ping";
-  /** Epoch ms at send time; echoed back in the pong. */
-  ts: number;
-}
-
-// ws-server's reply to BotPingMessage — the only message a bot ever receives.
-export interface BotPongMessage {
-  kind: "pong";
-  ts: number;
 }
 
 export type OverlaySocketMessage =
@@ -279,38 +263,6 @@ export interface BotBroadcastMessage {
   payload: unknown;
 }
 
-// Everything a bot socket may send: room-scoped fan-out messages plus
-// node-scoped metrics and heartbeats. `"kind" in msg` splits fan-out from
-// node-scoped; discriminate the rest on `msg.kind`.
-export type BotOutboundMessage = BotBroadcastMessage | NodeMetricsMessage | BotPingMessage;
-
-// ws-server parses everything a bot or ingest node sends with the schemas in
-// @repo/schemas/ws-server. Those are the receiver's side of the types here and
-// looser on purpose: a stat that isn't a number is dropped there, not refused.
-
-// ── role=ingest-node socket ─────────────────────────────────────────────────
-// What an ingest node sends to ws-server. The node never names a user or its
-// own node id: ws-server takes the node from the socket's token (signed by
-// rest-api) and the user, stream key and label from the session rest-api
-// registered when it opened the session. A sample for a session that isn't
-// registered to this node is dropped. ws-server answers pings with
-// BotPongMessage, as it does for bots.
-
-/** One live quality sample; ws-server turns it into a streamwizard.ingest_stats event. */
-export interface IngestNodeStatsMessage {
-  kind: "ingest_stats";
-  session_id: string;
-  protocol: IngestStatsPayload["protocol"];
-  /** Raw transport counters plus the derived loss/drop/retrans percentages. */
-  stats: Record<string, number>;
-  /** ISO time the node received the sample. */
-  at: string;
-}
-
-/** This node's NIC throughput; ws-server adds node_id from the token. */
-export interface IngestNodeMetricsMessage {
-  kind: "node_metrics";
-  payload: Omit<IngestNodeBandwidthPayload, "node_id">;
-}
-
-export type IngestNodeOutboundMessage = IngestNodeStatsMessage | IngestNodeMetricsMessage | BotPingMessage;
+// Everything else a bot or ingest node sends (pings, node_metrics,
+// ingest_stats) is described and parsed by the schemas in
+// @repo/schemas/ws-server.

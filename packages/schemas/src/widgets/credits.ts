@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { WIDGET_TEST_EVENTS } from "./widget-test-events";
+import { WIDGET_TEST_EVENTS } from "./test-events";
 
 /**
  * End-of-stream credits: who followed, subbed, gifted, cheered and raided
@@ -7,7 +7,7 @@ import { WIDGET_TEST_EVENTS } from "./widget-test-events";
  * wrote while the channel was live.
  *
  * Everything here is pure. The database read lives in
- * `@repo/supabase/queries/credits`, the orchestration (stream selection,
+ * `@repo/supabase/queries/stream/credits`, the orchestration (stream selection,
  * avatars) in `@repo/twitch-assets`, and the widget only ever sees
  * `CreditsData`. Keeping the roll-up in one testable function is what lets the
  * editor's sample data go through the exact same code as a real stream.

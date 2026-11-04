@@ -3,7 +3,7 @@ import {
   AUTO_SWITCHER_PRESET_THRESHOLDS,
   AUTO_SWITCHER_SENSITIVITY_PRESETS,
   type AutoSwitcherSensitivityPreset,
-} from "./auto-switcher-constants";
+} from "./constants";
 
 // ─── Thresholds ──────────────────────────────────────────────────────────────
 // One "poll" = one ingest stats sample = 1 second (the SRT sampler reports at
@@ -39,9 +39,8 @@ export const autoSwitcherThresholdsSchema = z.object({
 
 export type AutoSwitcherThresholds = z.infer<typeof autoSwitcherThresholdsSchema>;
 
-// Presets live in ./auto-switcher-constants (no zod, so the marketing demo can
-// import them cheaply). Re-exported here so existing imports keep working.
-export { AUTO_SWITCHER_PRESET_THRESHOLDS, AUTO_SWITCHER_SENSITIVITY_PRESETS, type AutoSwitcherSensitivityPreset };
+// Presets live in ./constants (no zod, so the marketing demo can import them
+// cheaply); import them from @repo/schemas/auto-switcher/constants.
 
 // ─── Config row ──────────────────────────────────────────────────────────────
 // Mirrors public.obs_auto_switcher_configs. Used by the web server actions to

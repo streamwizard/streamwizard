@@ -1,3 +1,4 @@
+/// <reference path="./novnc.d.ts" />
 "use client";
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";

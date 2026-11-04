@@ -4,18 +4,18 @@ import {
   ObsInstanceLifecyclePayloadSchema,
   ObsSceneChangedPayloadSchema,
   OverlayGeoEventSchema,
-} from "./streamwizard";
+} from "../streamwizard-events";
 import {
-  AUTO_SWITCHER_PRESET_THRESHOLDS,
   autoSwitcherConfigSchema,
   autoSwitcherStatusSchema,
   type AutoSwitcherStatus,
-} from "./auto-switcher";
+} from "../auto-switcher/auto-switcher";
+import { AUTO_SWITCHER_PRESET_THRESHOLDS } from "../auto-switcher/constants";
 import {
   WIDGET_TEST_EVENTS,
   type WidgetTestEventDef,
   type WidgetTestEventOptions,
-} from "./widget-test-events";
+} from "./test-events";
 
 /**
  * The demo catalogue: every event a widget can be fed from the editor without

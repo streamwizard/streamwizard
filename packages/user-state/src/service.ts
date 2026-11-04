@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@repo/supabase/types/supabase";
-import type { UserStateUpdatePayload } from "@repo/types";
+import type { UserStateUpdatePayload } from "@repo/types/overlay-ws";
 import {
   applyUserStateOp,
   getUserStates,
@@ -9,7 +9,7 @@ import {
   upsertUserStateDefinition,
   type UserStateEntry,
   type UserStateOpResult,
-} from "@repo/supabase/queries/user-states";
+} from "@repo/supabase/queries/users/user-states";
 
 type DBClient = SupabaseClient<Database>;
 
