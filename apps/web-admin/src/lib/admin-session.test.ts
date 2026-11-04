@@ -29,7 +29,10 @@ mock.module("@repo/supabase/queries/obs-nodes", () => ({
 }));
 
 const { getAdminSession } = await import("./admin-session");
-const { assertAdmin } = await import("./assert-admin");
+// Other test files mock "@/lib/assert-admin" for the whole run (bun shares
+// module mocks across files); the query string loads this file's real module.
+const realAssertAdminSpecifier = "./assert-admin?real";
+const { assertAdmin } = (await import(realAssertAdminSpecifier)) as typeof import("./assert-admin");
 
 const TOTP: Factor = { id: "f1", factor_type: "totp", status: "verified" };
 
