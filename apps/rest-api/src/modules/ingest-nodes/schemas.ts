@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { claimToken, ipv4, mbCount, selfReportedIp } from "@/schemas/nodes-shared";
+import { claimToken, ipv4, mbCount, selfReportedIp } from "@/lib/node-schemas";
 
 // Bodies an ingest node sends to /api/ingest-nodes/*. A node never names a
 // user or its own node id: rest-api takes the node from its API key and the
@@ -16,6 +16,7 @@ export const claimIngestNodeSchema = z.object({
   lan_ip: selfReportedIp,
   tailscale_ip: selfReportedIp,
 });
+export type ClaimIngestNodeInput = z.infer<typeof claimIngestNodeSchema>;
 
 /** PATCH /me: the node reports its Tailscale IP once it has joined (`tailscale ip -4`). */
 export const patchIngestNodeMeSchema = z.object({ tailscale_ip: ipv4 });
@@ -28,6 +29,7 @@ export const openIngestSessionSchema = z.object({
   stream_key: z.string().min(1).max(256),
   remote_ip: z.string().max(64).nullable().optional(),
 });
+export type OpenIngestSessionInput = z.infer<typeof openIngestSessionSchema>;
 
 /** POST /sessions/:id/end */
 export const endIngestSessionSchema = z.object({
@@ -57,3 +59,4 @@ export const ingestSessionStatsSchema = z.object({
     )
     .max(5000),
 });
+export type IngestSessionStatsRow = z.infer<typeof ingestSessionStatsSchema>["rows"][number];

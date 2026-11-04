@@ -1,4 +1,4 @@
-import { describe, expect, it, mock } from "bun:test";
+import { beforeEach, describe, expect, it, mock } from "bun:test";
 import { randomBytes } from "crypto";
 import { Hono } from "hono";
 
@@ -21,15 +21,17 @@ const realNodeQueries = await import("@repo/supabase/queries/ingest-nodes");
 let insertedKeyFields: Record<string, unknown> | null = null;
 let claimedFields: Record<string, unknown> | null = null;
 let lookups = 0;
+/** What the pending-node lookup returns; the claim consumes the token only for "pending". */
+let lookupRow: { id: string; name: string; status: string } | null;
 mock.module("@repo/supabase/queries/ingest-nodes", () => ({
   ...realNodeQueries,
   claimIngestNodeByTokenHash: async () => {
     lookups++;
-    return { id: NODE_ID, name: "Ingest 1", status: "pending" };
+    return lookupRow;
   },
   consumeIngestClaimToken: async (_c: unknown, _hash: string, fields: Record<string, unknown>) => {
     claimedFields = fields;
-    return { id: NODE_ID, hostname: "ingest-1" };
+    return lookupRow?.status === "pending" ? { id: NODE_ID, hostname: "ingest-1" } : null;
   },
   insertIngestNodeApiKey: async (_c: unknown, _id: string, fields: Record<string, unknown>) => {
     insertedKeyFields = fields;
@@ -38,10 +40,15 @@ mock.module("@repo/supabase/queries/ingest-nodes", () => ({
 mock.module("@/lib/tailscale", () => ({ mintTailscaleAuthKey: async () => null }));
 
 const { claimIngestNode } = await import("./claim");
+const { ingestNodeRoutes } = await import("@/modules/ingest-nodes/routes");
+const app = new Hono().route("/", ingestNodeRoutes);
+
+beforeEach(() => {
+  lookupRow = { id: NODE_ID, name: "Ingest 1", status: "pending" };
+});
 
 describe("POST /api/ingest-nodes/claim", () => {
   it("hands out node-scoped credentials only, never database credentials", async () => {
-    const app = new Hono().post("/claim", claimIngestNode);
     const res = await app.request("/claim", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -62,7 +69,7 @@ describe("POST /api/ingest-nodes/claim", () => {
   });
 
   const claim = (body: string) =>
-    new Hono().post("/claim", claimIngestNode).request("/claim", {
+    app.request("/claim", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body,
@@ -94,5 +101,32 @@ describe("POST /api/ingest-nodes/claim", () => {
       expect(await res.json()).toEqual({ error: "Invalid body: token is required" });
     }
     expect(lookups).toBe(0);
+  });
+
+  it("maps each failed claim to its status and message", async () => {
+    const cases = [
+      [null, 404, "Invalid claim token"],
+      [{ id: NODE_ID, name: "Ingest 1", status: "linked" }, 409, "This node has already been claimed"],
+      [{ id: NODE_ID, name: "Ingest 1", status: "expired" }, 410, "Claim token has expired"],
+    ] as const;
+    for (const [row, status, error] of cases) {
+      lookupRow = row;
+      const res = await claim(JSON.stringify({ token: "claim-token" }));
+      expect(res.status).toBe(status);
+      expect(await res.json()).toEqual({ error });
+    }
+  });
+});
+
+describe("claimIngestNode", () => {
+  it("says why a claim failed, without issuing an API key", async () => {
+    insertedKeyFields = null;
+    lookupRow = null;
+    expect(await claimIngestNode({ token: "claim-token" })).toEqual({ ok: false, reason: "invalid_token" });
+    lookupRow = { id: NODE_ID, name: "Ingest 1", status: "linked" };
+    expect(await claimIngestNode({ token: "claim-token" })).toEqual({ ok: false, reason: "already_claimed" });
+    lookupRow = { id: NODE_ID, name: "Ingest 1", status: "expired" };
+    expect(await claimIngestNode({ token: "claim-token" })).toEqual({ ok: false, reason: "expired" });
+    expect(insertedKeyFields).toBeNull();
   });
 });

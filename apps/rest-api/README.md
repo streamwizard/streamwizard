@@ -21,28 +21,30 @@ EventSub notifications go through `src/modules/eventsub/registry.ts`, which disp
 
 ```
 src/
-  index.ts        app wiring: middleware, routes, background jobs
-  routes/         HTTP routes, one file per mount point; node route files only
-                  list routes, handlers live in modules/obs-nodes and modules/ingest-nodes.
-                  obs-nodes.ts mounts obs-node-instances.ts at /api/obs-nodes/instances
-  env.ts          parses process.env against schemas/env.ts once at boot
+  index.ts        starts the process: env, Sentry handlers, Bun.serve, background jobs, shutdown
+  app.ts          createApp(): middleware chain in order, then each module's routes
+  routes/         legacy handlers (EventSub webhook, clip sync, backups), mounted from app.ts
+  env.ts          parses process.env against schemas/env.ts once at boot (legacy location)
   sentry.ts       preloaded before index.ts
-  schemas/        zod schemas: env, request bodies, webhook payloads
+  schemas/        legacy: env and Proxmox webhook schemas
   middleware/     HTTP middleware: user auth, OBS/ingest node auth, Twitch signature check, raw body, security/
-  lib/            small helpers shared by several modules (R2, ws-server, user state, Tailscale keys)
+  lib/            generic helpers (R2, ws-server, Tailscale keys, node field schemas, node token JWKS)
   jobs/           standalone background loops (asset reconciler, CMS scheduler, token validator)
   modules/
     backups/      PBS/PVE poller, cache, store, config
     discord-live/ go-live posts, live role, role sweeper
-    eventsub/     handler registry, handlers/
+    eventsub/     routes.ts (webhook mount), handler registry, handlers/
     obs-nodes/
-      node/       node-level handlers (claim, me, reconcile, plan limits, users)
-      instances/  handlers for one of the node's instances (CRUD, secrets, events, stream key), create token, plan sweep
-    ingest-nodes/ route handlers (claim, me, sessions, session-stats, ws-token)
-    streams/      clip sync, viewer-count poller, stream video lookup
+      routes.ts   every /api/obs-nodes route, /instances included
+      schemas.ts  bodies an OBS node sends
+      storage-credentials.ts  MinIO STS policies and credential cache
+      node/       node-level domain code (claim, me, reconcile, plan limits, users, shared storage)
+      instances/  domain code for one of the node's instances (CRUD, secrets, events, storage, stream key), create token, plan sweep
+    ingest-nodes/ routes.ts, schemas.ts, domain code (claim, me, sessions, session-stats, ws-token)
+    streams/      routes.ts (clip sync mount), clip sync, viewer-count poller, stream video lookup
 ```
 
-A file goes in a module when only that feature uses it, and in `lib/` once two or more modules need it. Zod schemas for env and incoming bodies live in `schemas/`; Twitch EventSub schemas come from the shared `@repo/schemas` package. Tests sit next to the file they cover.
+The target layout is in [backend-services.md](../../.claude/rules/architecture/backend-services.md): a module's `routes.ts` reads and parses the request, calls plain domain functions (no Hono `Context`), and shapes the response. Zod schemas for a module's input live in its `schemas.ts`; Twitch EventSub schemas come from the shared `@repo/schemas` package. Tests sit next to the file they cover.
 
 ## Development notes
 

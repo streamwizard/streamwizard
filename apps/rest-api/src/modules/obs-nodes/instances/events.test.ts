@@ -17,8 +17,13 @@ let rows: Map<string, { node_id: string; user_id: string }>;
 let broadcasts: { userId: string; type: string; payload: Record<string, unknown> }[];
 let ownerLookups: number;
 
-mock.module("@repo/supabase", () => ({ supabase: {} }));
+// Spread the real exports (the client is lazy, so nothing connects): the
+// obs-nodes routes reach @repo/twitch-api, which imports more than the client.
+const realSupabase = await import("@repo/supabase");
+mock.module("@repo/supabase", () => ({ ...realSupabase, supabase: {} }));
+const realSubscriptions = await import("@repo/supabase/queries/subscriptions");
 mock.module("@repo/supabase/queries/subscriptions", () => ({
+  ...realSubscriptions,
   isActiveSubscriptionOfUser: async () => true,
   usersWithActiveSubscription: async () => new Set(),
 }));
@@ -57,10 +62,10 @@ let A: string;
 let B: string;
 
 beforeAll(async () => {
-  // The real instance router, so auth and route order are tested too.
-  const { default: obsNodeInstances } = await import("@/routes/obs-node-instances");
+  // The real obs-nodes routes, so auth and route order are tested too.
+  const { obsNodeRoutes } = await import("@/modules/obs-nodes/routes");
   app = new Hono();
-  app.route("/instances", obsNodeInstances);
+  app.route("/", obsNodeRoutes);
 });
 
 const postEvent = (id: string, body: unknown, key: string | null = NODE_A_KEY) =>

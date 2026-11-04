@@ -42,13 +42,18 @@ const passwordFields = (r: Row) => ({
   vnc_password_tag: r.vnc_password_tag,
 });
 
-mock.module("@repo/supabase", () => ({ supabase: {} }));
+// Spread the real exports (the client is lazy, so nothing connects): the
+// obs-nodes routes reach @repo/twitch-api, which imports more than the client.
+const realSupabase = await import("@repo/supabase");
+mock.module("@repo/supabase", () => ({ ...realSupabase, supabase: {} }));
 /** The user's active Cloud OBS subscription, and whether a sent id is one of theirs. */
 let activePlan: string | null;
 let sentPlanIsActive: boolean;
 let planChecks: unknown[][];
 
+const realSubscriptions = await import("@repo/supabase/queries/subscriptions");
 mock.module("@repo/supabase/queries/subscriptions", () => ({
+  ...realSubscriptions,
   isActiveSubscriptionOfUser: async (...args: unknown[]) => {
     planChecks.push(["isActiveSubscriptionOfUser", ...args.slice(1)]);
     return sentPlanIsActive;
@@ -108,15 +113,15 @@ mock.module("@repo/supabase/queries/obs-nodes", () => ({
 
 let app: Hono;
 let crypto: typeof import("@repo/supabase/crypto");
-let schemas: typeof import("@/schemas/obs-nodes");
+let schemas: typeof import("@/modules/obs-nodes/schemas");
 
 beforeAll(async () => {
-  // The real instance router, so auth and route order are tested too.
-  const { default: obsNodeInstances } = await import("@/routes/obs-node-instances");
+  // The real obs-nodes routes, so auth and route order are tested too.
+  const { obsNodeRoutes } = await import("@/modules/obs-nodes/routes");
   crypto = await import("@repo/supabase/crypto");
-  schemas = await import("@/schemas/obs-nodes");
+  schemas = await import("@/modules/obs-nodes/schemas");
   app = new Hono();
-  app.route("/instances", obsNodeInstances);
+  app.route("/", obsNodeRoutes);
 });
 
 const enc = (plaintext: string) => {

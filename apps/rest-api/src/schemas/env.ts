@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk";
-import { parseNodeTokenJwks } from "@/schemas/node-token-jwks";
+import { parseNodeTokenJwks } from "@/lib/node-token-jwks";
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),

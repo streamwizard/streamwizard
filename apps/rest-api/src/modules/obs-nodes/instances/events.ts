@@ -1,11 +1,9 @@
-import type { Context, Env } from "hono";
 import type { ObsInstanceLifecyclePayload, ObsSceneChangedPayload } from "@repo/schemas";
 import { supabase } from "@repo/supabase";
 import { getObsInstanceOwnerForNode } from "@repo/supabase/queries/obs-nodes";
 import { TtlCache } from "@repo/ttl-cache";
 import { postInternalBroadcast } from "@/lib/ws-server";
-import { parseUuid } from "@/schemas/nodes-shared";
-import { nodeInstanceEventSchema } from "@/schemas/obs-nodes";
+import type { NodeInstanceEvent } from "@/modules/obs-nodes/schemas";
 
 // OBS nodes hold no ws-server credential: one would let them push events to
 // any user's room. A node reports what happened to one of its own instances
@@ -50,32 +48,15 @@ export function instanceDeleted(nodeId: string, instanceId: string, userId: stri
 }
 
 /**
- * POST /api/obs-nodes/instances/:id/events
- *   { type: "lifecycle", action, at? } | { type: "scene_changed", sceneName, sceneUuid, at? }
- * → 202 { ok: true }
- *
- * 404 for a missing instance and for another node's instance alike. 202 means
- * accepted, not delivered: the forward to ws-server runs after the answer, and
- * postInternalBroadcast reports its own failures.
+ * POST /api/obs-nodes/instances/:id/events: forwards one event to the owner of
+ * instance `id`. false for a missing instance and for another node's instance
+ * alike. true means accepted, not delivered: the forward to ws-server is not
+ * awaited, and postInternalBroadcast reports its own failures.
  */
-export async function postInstanceEvent(c: Context<Env, "/:id/events">) {
-  const nodeId = c.get("nodeId");
-  const id = parseUuid(c.req.param("id"));
-  if (!id) return c.json({ error: "Instance not found" }, 404);
-
-  let body: unknown;
-  try {
-    body = await c.req.json();
-  } catch {
-    return c.json({ error: "Invalid JSON body" }, 400);
-  }
-  const parsed = nodeInstanceEventSchema.safeParse(body);
-  if (!parsed.success) return c.json({ error: "Invalid event" }, 400);
-
+export async function forwardInstanceEvent(nodeId: string, id: string, event: NodeInstanceEvent): Promise<boolean> {
   const userId = await instanceOwner(nodeId, id);
-  if (!userId) return c.json({ error: "Instance not found" }, 404);
+  if (!userId) return false;
 
-  const event = parsed.data;
   const observedAt = event.at ?? new Date().toISOString();
   if (event.type === "lifecycle") {
     const payload: ObsInstanceLifecyclePayload = { instanceId: id, action: event.action, at: observedAt };
@@ -89,5 +70,5 @@ export async function postInstanceEvent(c: Context<Env, "/:id/events">) {
     };
     void postInternalBroadcast(userId, SCENE_EVENT_TYPE, payload);
   }
-  return c.json({ ok: true }, 202);
+  return true;
 }

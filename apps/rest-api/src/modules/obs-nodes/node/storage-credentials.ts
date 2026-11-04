@@ -1,7 +1,6 @@
-import type { Context } from "hono";
 import { reportError } from "@repo/sentry";
 import { env } from "@/env";
-import { getStorageCredentials, sharedStoragePolicy } from "@/lib/obs-storage-credentials";
+import { getStorageCredentials, sharedStoragePolicy } from "@/modules/obs-nodes/storage-credentials";
 
 /**
  * POST /api/obs-nodes/storage-credentials
@@ -13,14 +12,12 @@ import { getStorageCredentials, sharedStoragePolicy } from "@/lib/obs-storage-cr
  *
  * Never log the response body.
  */
-export async function getSharedStorageCredentials(c: Context) {
-  c.header("Cache-Control", "no-store");
-  const nodeId = c.get("nodeId");
+export async function issueSharedStorageCredentials(nodeId: string) {
   try {
     const creds = await getStorageCredentials(`${nodeId}:shared`, () => sharedStoragePolicy(env.OBS_S3_BUCKET));
-    return c.json(creds);
+    return { ok: true as const, creds };
   } catch (err) {
     reportError(err, "obs-nodes.storage-credentials.shared", { nodeId });
-    return c.json({ error: "Could not issue storage credentials" }, 503);
+    return { ok: false as const };
   }
 }

@@ -1,5 +1,4 @@
 import { createHash, randomBytes } from "crypto";
-import type { Context } from "hono";
 import { supabase } from "@repo/supabase";
 import { encryptToken } from "@repo/supabase/crypto";
 import {
@@ -9,7 +8,7 @@ import {
 } from "@repo/supabase/queries/ingest-nodes";
 import { env } from "@/env";
 import { mintTailscaleAuthKey } from "@/lib/tailscale";
-import { claimIngestNodeSchema } from "@/schemas/ingest-nodes";
+import type { ClaimIngestNodeInput } from "@/modules/ingest-nodes/schemas";
 
 // slugifyHostname is duplicated from modules/obs-nodes/node/claim.ts rather than
 // shared, keeping the OBS and ingest claim domains fully independent.
@@ -20,19 +19,17 @@ function slugifyHostname(name: string): string {
     .replace(/^-+|-+$/g, "") || "ingest-node";
 }
 
+/** Why a claim failed: unknown token, a node that was already claimed, or an expired token. */
+export type ClaimFailure = "invalid_token" | "already_claimed" | "expired";
+
 // Called by ingest-server's install script during node setup. No Supabase
 // session involved -- a fresh, untrusted VM hits this with nothing but the
 // one-time claim token in the body, which is why this lives in rest-api
 // (security headers, HTTPS enforcement already wired up here) instead of
 // ingest-control, which has no credentials yet -- that's exactly what this
 // endpoint delivers.
-export async function claimIngestNode(c: Context) {
-  // Parsed before anything else: a malformed body costs no lookup.
-  const parsed = claimIngestNodeSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json({ error: "Invalid body: token is required" }, 400);
-  }
-  const { token, cpu_cores, ram_total_mb, storage_total_mb, public_ip, lan_ip, tailscale_ip } = parsed.data;
+export async function claimIngestNode(input: ClaimIngestNodeInput) {
+  const { token, cpu_cores, ram_total_mb, storage_total_mb, public_ip, lan_ip, tailscale_ip } = input;
 
   const tokenHash = createHash("sha256").update(token).digest("hex");
 
@@ -66,13 +63,8 @@ export async function claimIngestNode(c: Context) {
     // The atomic update matched nothing -- look the row up read-only just to
     // pick the right error code; this lookup never drives the mutation.
     const node = await claimIngestNodeByTokenHash(supabase, tokenHash);
-    if (!node) {
-      return c.json({ error: "Invalid claim token" }, 404);
-    }
-    if (node.status === "linked") {
-      return c.json({ error: "This node has already been claimed" }, 409);
-    }
-    return c.json({ error: "Claim token has expired" }, 410);
+    const reason: ClaimFailure = !node ? "invalid_token" : node.status === "linked" ? "already_claimed" : "expired";
+    return { ok: false as const, reason };
   }
 
   // Only the hash is stored: ingestNodeAuth needs nothing else, and the key
@@ -94,7 +86,7 @@ export async function claimIngestNode(c: Context) {
   // The node gets no database credentials: it reaches the platform only
   // through rest-api with node_api_key, and gets its ws-server address and
   // token from GET /api/ingest-nodes/me/ws-token.
-  return c.json({
+  const credentials = {
     node_id: linked.id,
     hostname: linked.hostname,
     node_api_key: apiKey,
@@ -113,5 +105,6 @@ export async function claimIngestNode(c: Context) {
           influxdb_token: env.INFLUXDB_INGEST_NODE_TOKEN ?? env.INFLUXDB_TOKEN,
         }
       : {}),
-  });
+  };
+  return { ok: true as const, credentials };
 }

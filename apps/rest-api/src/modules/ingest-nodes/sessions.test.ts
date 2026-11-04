@@ -86,11 +86,11 @@ let resetKeyFailures: () => void;
 let publicKey: Record<string, unknown>;
 
 beforeAll(async () => {
-  const { default: ingestNodes } = await import("@/routes/ingest-nodes");
+  const { ingestNodeRoutes } = await import("@/modules/ingest-nodes/routes");
   ({ resetKeyFailures } = await import("./sessions"));
   service = await import("@repo/service-token");
   app = new Hono();
-  app.route("/api/ingest-nodes", ingestNodes);
+  app.route("/api/ingest-nodes", ingestNodeRoutes);
 
   const pair = await generateKeyPair("EdDSA", { crv: "Ed25519", extractable: true });
   const pub = await exportJWK(pair.publicKey);

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { claimIngestNodeSchema, patchIngestNodeMeSchema } from "./ingest-nodes";
-import { parseUuid } from "./nodes-shared";
+import { claimIngestNodeSchema, patchIngestNodeMeSchema } from "./schemas";
+import { parseUuid } from "@/lib/node-schemas";
 
 describe("ingest node bodies", () => {
   // What ingest-server's install.sh sends.

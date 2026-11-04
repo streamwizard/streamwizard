@@ -75,7 +75,10 @@ mock.module("@/modules/streams/stream-video", () => ({
     return lookupResult();
   },
 }));
+// Spread the real exports: bun shares module mocks across test files.
+const realUserQueries = await import("@repo/supabase/queries/user");
 mock.module("@repo/supabase/queries/user", () => ({
+  ...realUserQueries,
   getTwitchIntegrationByBroadcasterId: async () => integrationResult,
   getUserPreferencesByUserId: async () => preferences,
 }));

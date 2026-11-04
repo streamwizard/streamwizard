@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { claimToken, ipv4, mbCount } from "@/schemas/nodes-shared";
+import { claimToken, ipv4, mbCount } from "@/lib/node-schemas";
 
 // Bodies an OBS node (obs-instance-manager) sends to /api/obs-nodes/*.
 //
@@ -66,6 +66,8 @@ export const updateInstanceSchema = z.object({
   // quota is admin/plan-owned, not something a node can raise for itself.
   used_storage_bytes: z.number().int().nonnegative().max(1e15).optional(),
 });
+export type InsertInstanceInput = z.infer<typeof insertInstanceSchema>;
+export type UpdateInstanceInput = z.infer<typeof updateInstanceSchema>;
 
 /** PATCH /instances/by-container/:containerId */
 export const containerIdParamSchema = containerId;
@@ -82,6 +84,7 @@ export const claimObsNodeSchema = z.object({
   gpu_model: z.string().max(256).optional(),
   storage_total_mb: mbCount.optional(),
 });
+export type ClaimObsNodeInput = z.infer<typeof claimObsNodeSchema>;
 
 /** PATCH /api/obs-nodes/me: the node reports its Tailscale IP once it has
  *  joined. rest-api builds the node's default api_url from it, so it must be
@@ -128,3 +131,4 @@ export const nodeInstanceEventSchema = z.discriminatedUnion("type", [
     at: eventAt,
   }),
 ]);
+export type NodeInstanceEvent = z.infer<typeof nodeInstanceEventSchema>;

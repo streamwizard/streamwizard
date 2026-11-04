@@ -1,4 +1,3 @@
-import type { Context, Env } from "hono";
 import { supabase } from "@repo/supabase";
 import {
   endIngestSession,
@@ -9,8 +8,7 @@ import {
 } from "@repo/supabase/queries/ingest";
 import { TtlCache } from "@repo/ttl-cache";
 import { endIngestSessionOnWsServer, postInternalBroadcast, registerIngestSessionOnWs } from "@/lib/ws-server";
-import { endIngestSessionSchema, openIngestSessionSchema } from "@/schemas/ingest-nodes";
-import { parseUuid } from "@/schemas/nodes-shared";
+import type { OpenIngestSessionInput } from "@/modules/ingest-nodes/schemas";
 
 // An ingest node opens a session when a streamer connects and ends it when
 // they leave. The node never names the user: it comes from the stream key on
@@ -33,30 +31,37 @@ export function resetKeyFailures(): void {
   keyFailures.clear();
 }
 
+export interface OpenedSession {
+  session_id: string;
+  user_id: string;
+  stream_key_id: string;
+  label: string | null;
+  output_keys: string[];
+}
+
 /**
- * POST /api/ingest-nodes/sessions
- *   { protocol, stream_key, remote_ip? }
- * → 201 { session_id, user_id, stream_key_id, label, output_keys }
- * → 403 for an unknown or inactive key (the node rejects the streamer)
+ * POST /api/ingest-nodes/sessions: authorizes a stream key and opens a
+ * session on the calling node. "invalid_key" for an unknown or inactive key
+ * (the node rejects the streamer).
  *
  * Latency matters: the media plane gives up after 5s.
  */
-export async function openSession(c: Context) {
-  const nodeId = c.get("ingestNodeId");
-  const parsed = openIngestSessionSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json({ error: "Invalid body" }, 400);
-  const { protocol, stream_key, remote_ip } = parsed.data;
+export async function openSession(
+  nodeId: string,
+  input: OpenIngestSessionInput,
+): Promise<{ ok: true; session: OpenedSession } | { ok: false; reason: "rate_limited" | "invalid_key" | "failed" }> {
+  const { protocol, stream_key, remote_ip } = input;
 
   // Count the attempt before the lookup (synchronously, so concurrent
   // requests each see the ones before them).
   const attempts = (keyFailures.get(nodeId) ?? 0) + 1;
   keyFailures.set(nodeId, Math.min(attempts, KEY_FAILURE_LIMIT + 1));
   if (attempts > KEY_FAILURE_LIMIT) {
-    return c.json({ error: "Too many invalid stream keys" }, 429);
+    return { ok: false, reason: "rate_limited" };
   }
 
   const owner = await getStreamKeyOwner(supabase, stream_key, "cloud_obs");
-  if (!owner) return c.json({ error: "Invalid stream key" }, 403);
+  if (!owner) return { ok: false, reason: "invalid_key" };
   // A valid key gives its attempt back.
   keyFailures.set(nodeId, Math.max(0, (keyFailures.get(nodeId) ?? 1) - 1));
 
@@ -73,13 +78,13 @@ export async function openSession(c: Context) {
     getOutputKeysForKey(supabase, owner.key_id),
   ]);
   if (inserted.error || !inserted.data) {
-    return c.json({ error: "Could not open the session" }, 500);
+    return { ok: false, reason: "failed" };
   }
   const sessionId = inserted.data.id;
   if (outputs.error) {
     // Don't leave an open session behind for a stream the node will reject.
     await endIngestSession(supabase, sessionId, nodeId, null).catch(() => {});
-    return c.json({ error: "Could not open the session" }, 500);
+    return { ok: false, reason: "failed" };
   }
 
   // Short timeout and never throws: ws-server looks a session up in the DB
@@ -92,35 +97,26 @@ export async function openSession(c: Context) {
     label: owner.label,
   });
 
-  return c.json(
-    {
+  return {
+    ok: true,
+    session: {
       session_id: sessionId,
       user_id: owner.user_id,
       stream_key_id: owner.key_id,
       label: owner.label,
       output_keys: (outputs.data ?? []).map((o) => o.output_key),
     },
-    201,
-  );
+  };
 }
 
 /**
  * POST /api/ingest-nodes/sessions/:id/end
- *   { last_bitrate_kbps }
- * → 200 { ok: true }, also when it had already ended
- * → 404 when no session with this id was opened by this node
+ * → true, also when it had already ended
+ * → false when no session with this id was opened by this node
  */
-export async function endSession(c: Context<Env, "/sessions/:id/end">) {
-  const nodeId = c.get("ingestNodeId");
-  const id = parseUuid(c.req.param("id"));
-  if (!id) return c.json({ error: "Session not found" }, 404);
-
-  const parsed = endIngestSessionSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) return c.json({ error: "Invalid body" }, 400);
-  const bitrate = parsed.data.last_bitrate_kbps;
-
+export async function endSession(nodeId: string, id: string, bitrate: number | null): Promise<boolean> {
   const ended = await endIngestSession(supabase, id, nodeId, bitrate === null ? null : Math.round(bitrate));
-  if (!ended) return c.json({ error: "Session not found" }, 404);
+  if (!ended) return false;
 
   void endIngestSessionOnWsServer(id);
   if (ended.endedNow) {
@@ -128,5 +124,5 @@ export async function endSession(c: Context<Env, "/sessions/:id/end">) {
     // at once instead of waiting for its stats to time out.
     void postInternalBroadcast(ended.user_id, "streamwizard.ingest_session_ended", { session_id: id, node_id: nodeId });
   }
-  return c.json({ ok: true });
+  return true;
 }

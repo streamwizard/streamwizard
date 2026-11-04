@@ -5,7 +5,7 @@ import {
   patchNodeMeSchema,
   reconcileReportSchema,
   updateInstanceSchema,
-} from "./obs-nodes";
+} from "./schemas";
 
 const USER = "0e0e0000-0000-4000-8000-000000000001";
 const INSTANCE = "1a1a0000-0000-4000-8000-000000000001";

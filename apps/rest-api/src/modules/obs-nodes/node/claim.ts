@@ -1,11 +1,10 @@
 import { createHash, randomBytes } from "crypto";
-import type { Context } from "hono";
 import { supabase } from "@repo/supabase";
 import { encryptToken } from "@repo/supabase/crypto";
 import { claimNodeByTokenHash, consumeClaimToken, insertNodeApiKey } from "@repo/supabase/queries/obs-nodes";
 import { env } from "@/env";
 import { mintTailscaleAuthKey } from "@/lib/tailscale";
-import { claimObsNodeSchema } from "@/schemas/obs-nodes";
+import type { ClaimObsNodeInput } from "@/modules/obs-nodes/schemas";
 
 // Lowercases and replaces runs of non-alphanumerics with a single hyphen, e.g.
 // "GPU Box 1" -> "gpu-box-1". The panel is the single source of truth for this
@@ -21,19 +20,16 @@ function slugifyHostname(name: string): string {
   );
 }
 
+/** Why a claim failed: unknown token, a node that was already claimed, or an expired token. */
+export type ClaimFailure = "invalid_token" | "already_claimed" | "expired";
+
 // Called by obs-instance-manager's install script during node setup. No
 // Supabase session involved -- a fresh, untrusted VM hits this with nothing
 // but the one-time claim token in the body, which is why this lives in
 // rest-api (security headers, audit logging already wired up here) instead of
 // the session/cookie-oriented web app.
-export async function claimObsNode(c: Context) {
-  // Parsed before anything else: a malformed body costs no lookup.
-  const parsed = claimObsNodeSchema.safeParse(await c.req.json().catch(() => null));
-  if (!parsed.success) {
-    return c.json({ error: "Invalid body: token and gpu_bus_id are required" }, 400);
-  }
-  const { token, gpu_bus_id, vram_total_mb, ram_total_mb, cpu_cores, gpu_model, storage_total_mb } = parsed.data;
-
+export async function claimObsNode(input: ClaimObsNodeInput) {
+  const { token, gpu_bus_id, vram_total_mb, ram_total_mb, cpu_cores, gpu_model, storage_total_mb } = input;
   const tokenHash = createHash("sha256").update(token).digest("hex");
 
   // Look up the pending node first so we can derive its hostname slug from
@@ -57,13 +53,8 @@ export async function claimObsNode(c: Context) {
     // The atomic update matched nothing -- look the row up read-only just to
     // pick the right error code; this lookup never drives the mutation.
     const node = await claimNodeByTokenHash(supabase, tokenHash);
-    if (!node) {
-      return c.json({ error: "Invalid claim token" }, 404);
-    }
-    if (node.status === "linked") {
-      return c.json({ error: "This node has already been claimed" }, 409);
-    }
-    return c.json({ error: "Claim token has expired" }, 410);
+    const reason: ClaimFailure = !node ? "invalid_token" : node.status === "linked" ? "already_claimed" : "expired";
+    return { ok: false as const, reason };
   }
 
   // Only the hash is stored: obsNodeAuth needs nothing else, and the key is
@@ -100,7 +91,7 @@ export async function claimObsNode(c: Context) {
     description: `obs-node claim ${linked.id}`,
   });
 
-  return c.json({
+  const credentials = {
     node_id: linked.id,
     node_api_key: apiKey,
     hostname: linked.hostname,
@@ -129,5 +120,6 @@ export async function claimObsNode(c: Context) {
     // No ws-server URL or credential: the node sends lifecycle and scene
     // events to POST /api/obs-nodes/instances/:id/events, and rest-api
     // forwards them to ws-server for the instance's owner.
-  });
+  };
+  return { ok: true as const, credentials };
 }

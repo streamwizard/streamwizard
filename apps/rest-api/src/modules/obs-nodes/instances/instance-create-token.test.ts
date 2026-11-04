@@ -2,7 +2,7 @@ import { beforeAll, beforeEach, expect, test } from "bun:test";
 import { calculateJwkThumbprint, exportJWK, generateKeyPair } from "jose";
 import { resetSigningKey, signNodeToken } from "@repo/node-token";
 import { checkInstanceCreateToken, resetInstanceCreateTokenState } from "@/modules/obs-nodes/instances/instance-create-token";
-import type { NodeTokenJwks } from "@/schemas/node-token-jwks";
+import type { NodeTokenJwks } from "@/lib/node-token-jwks";
 
 let jwks: NodeTokenJwks;
 

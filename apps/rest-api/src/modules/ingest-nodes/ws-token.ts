@@ -1,4 +1,3 @@
-import type { Context } from "hono";
 import { hasServiceSigningKey, signServiceToken } from "@repo/service-token";
 import { supabase } from "@repo/supabase";
 import { getIngestNodeById } from "@repo/supabase/queries/ingest-nodes";
@@ -15,8 +14,9 @@ export function wsBaseUrl(url: string): string {
 
 /**
  * POST /api/ingest-nodes/me/ws-token
- * → 200 { token, ws_server_url }
- * → 404 when this environment has no ws-server or no service signing key
+ * → { token, ws_server_url }
+ * → "unavailable" when this environment has no ws-server or no service
+ *   signing key, "not_found" when the node is gone or not linked
  *
  * The URL is WS_SERVER_NODE_URL when set (the address nodes can reach),
  * else WS_SERVER_URL.
@@ -28,15 +28,13 @@ export function wsBaseUrl(url: string): string {
  * service token signed by rest-api with the node's id in its `node` claim;
  * the node can't make one for another node.
  */
-export async function getWsToken(c: Context) {
-  c.header("Cache-Control", "no-store");
+export async function issueWsToken(
+  nodeId: string,
+): Promise<{ ok: true; token: string; ws_server_url: string } | { ok: false; reason: "unavailable" | "not_found" }> {
   const url = env.WS_SERVER_NODE_URL || env.WS_SERVER_URL;
-  if (!url || !hasServiceSigningKey()) {
-    return c.json({ error: "No ws-server in this environment" }, 404);
-  }
-  const nodeId = c.get("ingestNodeId");
+  if (!url || !hasServiceSigningKey()) return { ok: false, reason: "unavailable" };
   const node = await getIngestNodeById(supabase, nodeId);
-  if (!node || node.status !== "linked") return c.json({ error: "Node not found" }, 404);
+  if (!node || node.status !== "linked") return { ok: false, reason: "not_found" };
   const token = await signServiceToken("ingest-node", { node: nodeId });
-  return c.json({ token, ws_server_url: wsBaseUrl(url) });
+  return { ok: true, token, ws_server_url: wsBaseUrl(url) };
 }
