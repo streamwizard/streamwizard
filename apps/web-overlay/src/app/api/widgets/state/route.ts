@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
-import { getOverlaySceneBySubscriberToken, overlayItemBelongsToScene } from "@repo/supabase/queries/overlays";
-import { selectWidgetInstanceStateByItem, updateWidgetInstanceState } from "@repo/supabase/queries/overlay-widgets";
+import { getOverlaySceneBySubscriberToken, overlayItemBelongsToScene } from "@repo/supabase/queries/overlays/overlays";
+import { selectWidgetInstanceStateByItem, updateWidgetInstanceState } from "@repo/supabase/queries/overlays/widgets";
 // Was a second copy of the same allowlist. Shared now so the sandboxed-iframe
 // origin can't be handled in one route and forgotten in the other.
 import { corsHeaders, isPlausibleToken, isRateLimited } from "@/lib/widget-api";

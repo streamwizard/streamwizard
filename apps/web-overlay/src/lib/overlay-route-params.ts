@@ -1,6 +1,4 @@
-/** Matches UUID-shaped scene ids from `overlay_scenes.id`. */
-const OVERLAY_SCENE_UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isGuid } from "@repo/schemas/ids";
 
 export function safeDecodeOverlaySegment(segment: string): string {
   try {
@@ -10,6 +8,7 @@ export function safeDecodeOverlaySegment(segment: string): string {
   }
 }
 
+/** Matches UUID-shaped scene ids from `overlay_scenes.id`. */
 export function isOverlaySceneUuid(value: string): boolean {
-  return OVERLAY_SCENE_UUID_RE.test(value.trim());
+  return isGuid(value.trim());
 }

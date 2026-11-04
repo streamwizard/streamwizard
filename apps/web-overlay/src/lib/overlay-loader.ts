@@ -1,10 +1,10 @@
-"use server";
+import "server-only";
 
 import {
   getActiveOverlaySceneBySlugMaybe,
   getAllOverlayItemsByScene,
   getOverlaySceneByIdForEmbed,
-} from "@repo/supabase/queries/overlays";
+} from "@repo/supabase/queries/overlays/overlays";
 import type { Json } from "@repo/supabase";
 import type { OverlayItemRow, OverlaySceneRow } from "@/types/overlays";
 import {
@@ -19,6 +19,7 @@ import {
   DISPLAY_FIELD_KEYS,
   type DisplayFieldKey,
 } from "@repo/ui/overlay";
+import { z } from "zod";
 
 type LoadOverlayErrorCode =
   | "MISSING_LOOKUP"
@@ -32,6 +33,9 @@ type LoadOverlayResult =
 // Overlay pages load once and then stay open, so a real visitor misses a slug
 // a handful of times at most (a typo, a deleted overlay).
 const slugMisses = new MissLimiter({ limit: 30, windowMs: 60_000 });
+
+/** The `[overlayId]` route segment: a scene id or an overlay slug. */
+const overlayIdSchema = z.string().max(512);
 
 const SLUG_NOT_FOUND: LoadOverlayResult = {
   ok: false,
@@ -211,7 +215,7 @@ function mergeDisplayChildrenIntoClipsWidgets(
  * Trusted server fetch (service role). Slug lookups require an active scene;
  * direct scene UUID lookup does not enforce is_active (embed/back-office flexibility).
  */
-export async function loadOverlayBySlugOrId(args: {
+async function loadOverlayBySlugOrId(args: {
   slug?: string | null;
   sceneId?: string | null;
 }): Promise<LoadOverlayResult> {
@@ -291,11 +295,17 @@ export async function loadOverlayBySlugOrId(args: {
 /**
  * Path segment from `/overlay/[overlayId]`: UUID loads by primary key (any `is_active`);
  * anything else is treated as an active scene slug.
+ *
+ * A public read by design: the overlay page has no session, and the slug or
+ * scene id is the credential. Only the page calls it, so it is a plain
+ * server-only function rather than a server action anyone could POST to.
  */
 export async function loadOverlaySceneByOverlayId(
   overlayId: string,
 ): Promise<LoadOverlayResult> {
-  const raw = overlayId.trim();
+  const parsed = overlayIdSchema.safeParse(overlayId);
+  if (!parsed.success) return SLUG_NOT_FOUND;
+  const raw = parsed.data.trim();
   if (!raw) {
     return {
       ok: false,

@@ -22,7 +22,7 @@ mock.module("@repo/twitch-api", () => ({
   },
 }));
 
-const { ClipUnavailableError, getClipDownloadUrl } = await import("./twitch");
+const { ClipUnavailableError, getClipDownloadUrl } = await import("./clip-download-url");
 
 function helixError(status: number): AxiosError {
   const config = { headers: {} } as InternalAxiosRequestConfig;

@@ -9,7 +9,8 @@ import {
   DEFAULT_CLIPS_WIDGET_CONFIG,
 } from "@repo/ui/overlay";
 import type { OverlayWidgetProps } from "@repo/ui/overlay";
-import { getNextOverlayClip, type ClipCursor } from "@/actions/clips";
+import { getNextOverlayClip } from "@/actions/clips";
+import type { ClipCursor } from "@/types/clips";
 
 function parseCompositeConfig(raw: unknown): ClipsWidgetConfig {
   if (raw && typeof raw === "object" && !Array.isArray(raw)) {

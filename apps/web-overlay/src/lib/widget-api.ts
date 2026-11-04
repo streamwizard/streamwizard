@@ -1,10 +1,13 @@
+import "server-only";
+
 import type { NextRequest } from "next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
-import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
+import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/users/user";
+import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays/overlays";
 import { TtlCache } from "@repo/ttl-cache";
 import { env } from "@/lib/env";
 import { readBearerToken } from "@repo/service-token/bearer";
+import { overlayTokenSchema } from "@/schemas/overlay-token";
 
 /**
  * Shared plumbing for the API routes overlay widgets call from inside their
@@ -59,8 +62,6 @@ export function bearerToken(req: NextRequest): string | null {
   return readBearerToken(req.headers.get("authorization"));
 }
 
-const TOKEN_FORMAT = /^[0-9a-f]{64}$/;
-
 /**
  * subscriber_token is always 32 random bytes as lowercase hex (the column
  * default and resetSceneUrl). Routes answer 403 for anything else
@@ -68,7 +69,7 @@ const TOKEN_FORMAT = /^[0-9a-f]{64}$/;
  * any size never gets stored.
  */
 export function isPlausibleToken(token: unknown): token is string {
-  return typeof token === "string" && TOKEN_FORMAT.test(token);
+  return overlayTokenSchema.safeParse(token).success;
 }
 
 /**

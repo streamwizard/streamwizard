@@ -9,7 +9,8 @@ Takes the scenes you build in the dashboard (`web-streamwizard`) and renders the
 ## How it's wired
 
 - **`app/[overlayId]/page.tsx`** — the server-rendered canvas. `overlayId` is either an active overlay **slug** or a scene **UUID** (the UUID path skips the `is_active` check, for embed tooling).
-- **Server Actions** (`app/actions/*`) — trusted reads via the service-role Supabase client (`@repo/supabase/next/admin`) and the shared `queries/*`. No end-user auth — OBS just loads a URL.
+- **Scene loading** (`src/lib/overlay-loader.ts`, server-only) — trusted reads via the service-role Supabase client (`@repo/supabase/next/admin`) and the shared `queries/*`. No end-user auth — OBS just loads a URL.
+- **Server actions** (`src/actions/*`) — clip playlists and custom widgets. Each parses the scene token and item id with Zod, then checks them with `resolveOverlayItem`.
 - **Clip video** — played straight from Twitch's CDN. The server only mints the signed MP4 URL; no video passes through this app.
 - **Widgets** — pure renderers live in `@repo/ui`; this app supplies the data containers (e.g. `ClipsWidgetContainer`) and registers them in `page.tsx`.
 

@@ -1,6 +1,8 @@
+import "server-only";
+
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { createUserStateService } from "@repo/user-state";
-import type { UserStateUpdatePayload } from "@repo/types";
+import type { UserStateUpdatePayload } from "@repo/types/overlay-ws";
 import { broadcastToUser } from "@repo/ws-client";
 import { env } from "./env";
 

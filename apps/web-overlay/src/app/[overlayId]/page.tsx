@@ -1,4 +1,4 @@
-import { loadOverlaySceneByOverlayId } from "@/actions/overlay";
+import { loadOverlaySceneByOverlayId } from "@/lib/overlay-loader";
 import { OverlaySceneCanvas, overlayItemFromDbRow } from "@repo/ui/overlay";
 import { ClipsWidgetContainer } from "@/components/overlay/widgets/clips-widget-container";
 import { CustomWidgetContainer } from "@/components/overlay/widgets/custom-widget-container";

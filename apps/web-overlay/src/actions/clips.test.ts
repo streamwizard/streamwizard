@@ -24,8 +24,8 @@ mock.module("@repo/supabase/next/admin", () => ({ supabaseAdmin: {} }));
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
 // Spread the real exports: bun shares module mocks across test files, so a
 // mock with only these functions breaks later files that import others.
-const realOverlayQueries = await import("@repo/supabase/queries/overlays");
-mock.module("@repo/supabase/queries/overlays", () => ({
+const realOverlayQueries = await import("@repo/supabase/queries/overlays/overlays");
+mock.module("@repo/supabase/queries/overlays/overlays", () => ({
   ...realOverlayQueries,
   getOverlaySceneBySubscriberToken: async (_client: unknown, token: string) => ({
     data: token === TOKEN ? SCENE : null,
@@ -37,11 +37,13 @@ mock.module("@repo/supabase/queries/overlays", () => ({
         : null,
   }),
 }));
-mock.module("@repo/supabase/queries/user", () => ({
+// Spread the real exports: bun shares module mocks across test files.
+const realUserQueries = await import("@repo/supabase/queries/users/user");
+mock.module("@repo/supabase/queries/users/user", () => ({
+  ...realUserQueries,
   getTwitchUserIdByUserIdMaybe: async (_client: unknown, userId: string) => `twitch-of-${userId}`,
-  getTwitchUserIdByUserId: async () => null,
 }));
-mock.module("@repo/supabase/queries/clips", () => ({
+mock.module("@repo/supabase/queries/clips/clips", () => ({
   createOverlayPlaylistClipQuery: () => {
     throw new Error("sequential path not used in this test");
   },
@@ -64,7 +66,7 @@ mock.module("@repo/supabase/queries/clips", () => ({
     };
   },
 }));
-// Helix is mocked rather than @/actions/twitch, so the real download-URL
+// Helix is mocked rather than @/lib/clip-download-url, so the real download-URL
 // cache and error classification run here too (and so twitch.test.ts, which
 // tests that module, isn't handed a mock of it: bun's module mocks are global).
 let download: () => Promise<{ data: { landscape_download_url?: string }[] }>;
@@ -131,6 +133,16 @@ describe("getNextOverlayClip", () => {
     expect(downloadCalls).toBe(1);
     expect(await getNextOverlayClip(TOKEN, ITEM_ID, null, [])).toBeNull();
     expect(downloadCalls).toBe(1);
+  });
+
+  test("a malformed cursor or exclude list starts the rotation over instead of failing", async () => {
+    const next = await getNextOverlayClip(
+      TOKEN,
+      ITEM_ID,
+      { sortValue: { nested: true }, clipId: "not-a-guid" } as never,
+      ["ok-id", 42, "bad id!"] as never,
+    );
+    expect(next?.videoUrl).toBe("https://clips.example/x.mp4");
   });
 
   test("limits each scene owner to 30 calls a minute", async () => {

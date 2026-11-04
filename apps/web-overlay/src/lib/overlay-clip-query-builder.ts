@@ -1,7 +1,7 @@
-import type { ClipsWidgetConfig, TimeWindowPreset } from "@/types/overlays";
+import type { ClipsWidgetItemConfig } from "@repo/ui/components/overlay/types/clips";
 
 export function getTimeWindowDates(
-  timeWindow: TimeWindowPreset,
+  timeWindow: ClipsWidgetItemConfig["timeWindow"],
   customRange?: { start?: string; end?: string }
 ): { start?: string; end?: string } {
   if (timeWindow === "all") return {};
@@ -55,7 +55,7 @@ export const CLIP_SORT_COLUMNS: Record<
  * then `.limit()` last (see `getNextOverlayClip`).
  */
 export function buildOverlayClipQuery<T>(
-  config: ClipsWidgetConfig,
+  config: ClipsWidgetItemConfig,
   query: T,
   options?: { userId?: string }
 ): T {

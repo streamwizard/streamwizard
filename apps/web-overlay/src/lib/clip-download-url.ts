@@ -1,11 +1,13 @@
+import "server-only";
+
 import { TwitchApi } from "@repo/twitch-api";
 import { TtlCache } from "@repo/ttl-cache";
 import axios, { type AxiosError } from "axios";
 
-// Deliberately not "use server": every export of a "use server" file is a
-// server action anyone can POST to, and this one takes any clip and
-// broadcaster id and spends the shared app token on it. Its only caller is
-// getNextOverlayClip, which authorises the overlay first.
+// Not a server action on purpose: every export of a "use server" file is an
+// endpoint anyone can POST to, and this one takes any clip and broadcaster id
+// and spends the shared app token on it. Its only caller is the
+// getNextOverlayClip action, which authorises the overlay first.
 
 /**
  * Twitch said the clip has no download (deleted, never downloadable, or a
@@ -29,9 +31,7 @@ const downloadUrls = new TtlCache<string>({ ttlMs: DOWNLOAD_URL_TTL_MS, maxEntri
 
 /**
  * Twitch's signed landscape MP4 URL. OBS plays it straight from Twitch's CDN;
- * no clip bytes pass through this server. Mirrors dashboard
- * `GetClipDownloadURL` in `apps/web-streamwizard/src/actions/twitch/clips.ts`:
- * `new TwitchApi(broadcasterId)` then `api.clips.getClipDownloadUrl(...)`.
+ * no clip bytes pass through this server.
  */
 export async function getClipDownloadUrl(
   clipId: string,

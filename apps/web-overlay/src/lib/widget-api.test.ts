@@ -7,11 +7,16 @@ import { describe, expect, mock, test } from "bun:test";
  */
 
 mock.module("@repo/supabase/next/admin", () => ({ supabaseAdmin: {} }));
-mock.module("@repo/supabase/queries/user", () => ({ getTwitchUserIdByUserIdMaybe: async () => null }));
+// Spread the real exports: bun shares module mocks across test files.
+const realUserQueries = await import("@repo/supabase/queries/users/user");
+mock.module("@repo/supabase/queries/users/user", () => ({
+  ...realUserQueries,
+  getTwitchUserIdByUserIdMaybe: async () => null,
+}));
 // Spread the real exports: bun shares module mocks across test files, so a
 // mock with only these functions breaks later files that import others.
-const realOverlayQueries = await import("@repo/supabase/queries/overlays");
-mock.module("@repo/supabase/queries/overlays", () => ({
+const realOverlayQueries = await import("@repo/supabase/queries/overlays/overlays");
+mock.module("@repo/supabase/queries/overlays/overlays", () => ({
   ...realOverlayQueries,
   getOverlaySceneBySubscriberToken: async () => ({ data: null }),
 }));

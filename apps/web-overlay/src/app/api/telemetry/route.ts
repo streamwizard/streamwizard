@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { configureTracking, trackServer } from "@repo/posthog/server";
 import { reportError } from "@repo/sentry";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
+import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays/overlays";
 import { TtlCache } from "@repo/ttl-cache";
 import { HEARTBEAT_SECONDS, parseBeacon } from "@/lib/telemetry";
 import { bearerToken } from "@/lib/widget-api";

@@ -33,9 +33,9 @@ mock.module("@repo/sentry", () => ({
 }));
 // Spread the real exports: bun shares module mocks across test files, so a
 // mock with only these functions breaks later files that import others.
-const realOverlayQueries = await import("@repo/supabase/queries/overlays");
-const realWidgetQueries = await import("@repo/supabase/queries/overlay-widgets");
-mock.module("@repo/supabase/queries/overlays", () => ({
+const realOverlayQueries = await import("@repo/supabase/queries/overlays/overlays");
+const realWidgetQueries = await import("@repo/supabase/queries/overlays/widgets");
+mock.module("@repo/supabase/queries/overlays/overlays", () => ({
   ...realOverlayQueries,
   getOverlaySceneBySubscriberToken: async (_client: unknown, token: string) => {
     sceneLookups.push(token);
@@ -44,7 +44,7 @@ mock.module("@repo/supabase/queries/overlays", () => ({
   overlayItemBelongsToScene: async (_client: unknown, itemId: string, sceneId: string) =>
     itemId === ITEM_ID && sceneId === SCENE.id,
 }));
-mock.module("@repo/supabase/queries/overlay-widgets", () => ({
+mock.module("@repo/supabase/queries/overlays/widgets", () => ({
   ...realWidgetQueries,
   selectWidgetInstanceStateByItem: async () => ({
     data: { id: INSTANCE_ID, widget_state: { deaths: 3 } },
