@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "doppler run --config dev_rest_api -- bun --preload ./src/sentry.ts --hot src/index.ts",
     "start": "bun --preload ./src/sentry.ts src/index.ts",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@aws-sdk/client-sts": "^3.750.0",
