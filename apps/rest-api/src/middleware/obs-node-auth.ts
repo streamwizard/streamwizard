@@ -20,7 +20,7 @@ declare module "hono" {
  * away. That happens in `deleteNodeAction` inside the **web-admin Next.js
  * process**, which cannot reliably signal this one: an HTTP invalidate reaches
  * a single rest-api replica and the replica count lives in the Dokploy UI, not
- * in this repo (see the same warning in `middleware/rate-limit.ts`).
+ * in this repo.
  *
  * So a deleted node's key keeps authenticating for up to TTL. That window leaks
  * reads only — every write path has an FK to `obs_nodes` and fails at the

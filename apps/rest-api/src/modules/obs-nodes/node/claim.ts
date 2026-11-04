@@ -24,8 +24,8 @@ function slugifyHostname(name: string): string {
 // Called by obs-instance-manager's install script during node setup. No
 // Supabase session involved -- a fresh, untrusted VM hits this with nothing
 // but the one-time claim token in the body, which is why this lives in
-// rest-api (brute-force protection, security headers, audit logging already
-// wired up here) instead of the session/cookie-oriented web app.
+// rest-api (security headers, audit logging already wired up here) instead of
+// the session/cookie-oriented web app.
 export async function claimObsNode(c: Context) {
   // Parsed before anything else: a malformed body costs no lookup.
   const parsed = claimObsNodeSchema.safeParse(await c.req.json().catch(() => null));
