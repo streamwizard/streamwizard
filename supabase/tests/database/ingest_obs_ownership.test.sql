@@ -60,7 +60,8 @@ SELECT results_eq('SELECT container_name FROM public.obs_instances', ARRAY['sw50
 SELECT is_empty(
   $$WITH d AS (DELETE FROM public.obs_instances WHERE node_id = '50900000-0000-4000-8000-0000000006c1' AND user_id <> '50900000-0000-4000-8000-0000000006b1' RETURNING 1) SELECT * FROM d$$,
   'another user cannot delete someone else''s instance');
-SELECT is_empty('SELECT 1 FROM public.obs_nodes WHERE name = ''sw509-node''', 'users cannot read the OBS node registry');
+-- Service-role only: users hold no grant on the node registry at all.
+SELECT throws_ok('SELECT 1 FROM public.obs_nodes', '42501', NULL, 'users cannot read the OBS node registry');
 RESET ROLE;
 
 -- Visitors ---------------------------------------------------------------------
@@ -71,7 +72,7 @@ SELECT is_empty('SELECT 1 FROM public.obs_instances', 'anon reads no OBS instanc
 SELECT throws_ok(
   $$INSERT INTO public.ingest_stream_keys (user_id, stream_key) VALUES ('50900000-0000-4000-8000-0000000006a1', 'sw509-anon')$$,
   '42501', NULL, 'anon cannot mint ingest keys');
-SELECT is_empty('SELECT 1 FROM public.obs_nodes WHERE name = ''sw509-node''', 'anon cannot read the OBS node registry');
+SELECT throws_ok('SELECT 1 FROM public.obs_nodes', '42501', NULL, 'anon cannot read the OBS node registry');
 RESET ROLE;
 
 SELECT * FROM finish();
