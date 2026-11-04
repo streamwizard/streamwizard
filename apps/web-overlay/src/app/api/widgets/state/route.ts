@@ -13,6 +13,7 @@ import {
   widgetStateBytes,
   widgetStateWriteSchema,
 } from "@/schemas/widget-state";
+import { readBearerToken } from "@repo/service-token/bearer";
 
 export function OPTIONS(req: NextRequest) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(req) });
@@ -54,9 +55,7 @@ async function resolveInstance(token: string, itemId: string) {
 // The subscriber token is a secret: header only, so it stays out of URLs,
 // logs and request bodies.
 function bearerToken(req: NextRequest): string | null {
-  const auth = req.headers.get("authorization");
-  if (auth?.startsWith("Bearer ")) return auth.slice("Bearer ".length);
-  return null;
+  return readBearerToken(req.headers.get("authorization"));
 }
 
 export async function GET(req: NextRequest) {

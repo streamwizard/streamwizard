@@ -40,7 +40,7 @@ Every caller proves who it is with its own credential, scoped to what it may do.
 | OBS browser source → web-overlay `/api/*` | the scene's `subscriber_token` in `Authorization: Bearer` | `lib/widget-api.ts` + `getOverlaySceneBySubscriberToken` |
 | Our services → ws-server (`bot`, `consumer`, `/internal/*`) | 60-second Ed25519 service token, one scope per token | `@repo/service-token`; ws-server holds only public keys (`WS_SERVICE_JWKS`) and checks `SERVICE_POLICY` |
 | Node install script → rest-api `/api/{obs,ingest}-nodes/claim` | one-time claim token (32 random bytes, only its SHA-256 stored, expires) | `modules/*/claim.ts`, atomic `consume*ClaimToken` |
-| Ingest / OBS node → rest-api | per-node API key from the one-time claim; only its SHA-256 hash is stored | `middleware/ingest-node-auth.ts`, `middleware/obs-node-auth.ts` |
+| Ingest / OBS node → rest-api | per-node API key from the one-time claim; only its SHA-256 hash is stored | `middleware/node-key-auth.ts` (shared), wrapped by `middleware/ingest-node-auth.ts` and `middleware/obs-node-auth.ts` |
 | Ingest node → ws-server (`ingest-node`) | 60-second service token rest-api signs before each dial, node id in the token | ws-server upgrade |
 | Admin browser → ws-server (`monitor`) | 60-second service token (scope `monitor`) that web-admin signs in `mintMonitorTokenAction` after `assertAdmin()`, minted before each dial; sent as `?token=` because browsers can't set WebSocket headers | `modules/connections/upgrade.ts`, `SERVICE_POLICY` (web-admin only) |
 | Browser or web-admin → OBS node | 60-second node token: one node, one scope, one instance | minted by a server action after ownership + plan checks; the node verifies with the public JWKS from `GET /api/obs-nodes/me` |

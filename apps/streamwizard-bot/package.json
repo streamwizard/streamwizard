@@ -23,6 +23,7 @@
     "@repo/types": "workspace:*",
     "@repo/ttl-cache": "workspace:*",
     "@repo/user-state": "workspace:*",
+    "@repo/ws-client": "workspace:*",
     "@sentry/bun": "^10",
     "date-fns": "^4.1.0",
     "zod": "^4.4.3"

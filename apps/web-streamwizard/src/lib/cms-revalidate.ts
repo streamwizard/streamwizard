@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 import { isCmsTag, isContentPath } from "@repo/cms";
 import { z } from "zod";
+import { readBearerToken } from "@repo/service-token/bearer";
 
 // The logic behind POST /api/revalidate, without Next in the way so it can be
 // tested. web-admin (on publish, update, unpublish) and the rest-api CMS
@@ -49,8 +50,7 @@ export function secretsMatch(given: string | null, expected: string): boolean {
 export async function handleRevalidate(request: Request, deps: RevalidateDeps): Promise<RevalidateResult> {
   if (!deps.secret) return { status: 404, body: { error: "Not found" } };
 
-  const header = request.headers.get("authorization") ?? "";
-  const token = header.startsWith("Bearer ") ? header.slice("Bearer ".length) : null;
+  const token = readBearerToken(request.headers.get("authorization"));
   if (!secretsMatch(token, deps.secret)) return { status: 401, body: { error: "Unauthorized" } };
 
   const raw = await request.text();

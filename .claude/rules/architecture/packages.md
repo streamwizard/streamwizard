@@ -26,7 +26,7 @@ Part of the StreamWizard rulebook; Claude Code loads it automatically when worki
 |---------|-----------|
 | `@repo/supabase` | All Supabase clients, generated `Database` types, query modules, token helpers. |
 | `@repo/twitch-api` | Typed Twitch Helix client (`TwitchApi`). |
-| `@repo/twitch-eventsub` | EventSub transport and shard management. |
+| `@repo/twitch-eventsub` | EventSub transport and shard management; which channel a notification belongs to (`/receiving-broadcaster`). |
 | `@repo/twitch-assets` | Twitch-derived widget data: ads, polls, predictions, labels, emotes, credits. |
 | `@repo/discord-api`, `@repo/discord-message` | Discord REST client; message builder schema, buttons, variables, limits, themes. |
 | `@repo/telegram-api` | Telegram client. |
@@ -37,10 +37,10 @@ Part of the StreamWizard rulebook; Claude Code loads it automatically when worki
 | `@repo/sentry` | Sentry options and integrations. Bun services wire it in `src/sentry.ts`; Next apps in `sentry.server.config.ts`, `sentry.edge.config.ts` and `src/instrumentation*.ts`. |
 | `@repo/posthog`, `@repo/metrics` | Product analytics; metrics. |
 | `@repo/logger` | Stream-event logger only (`streamEventsLogger`), not a general logger. |
-| `@repo/service-token`, `@repo/node-token` | Per-service Ed25519 tokens; OBS/ingest node tokens. |
+| `@repo/service-token`, `@repo/node-token` | Per-service Ed25519 tokens and `Authorization: Bearer` parsing (`/bearer`); OBS/ingest node tokens. |
 | `@repo/ttl-cache` | The in-process TTL cache (`TtlCache`) and `MissLimiter`. Every cache, cooldown and fixed-window counter (see [caching.md](caching.md)). |
 | `@repo/user-state` | Per-user widget state service. |
-| `@repo/ws-client` | Server-to-server HTTP calls into ws-server's internal endpoints (broadcast, socket revoke, ingest sessions), signed with `@repo/service-token`. Not a browser WebSocket client. |
+| `@repo/ws-client` | Server-to-server ws-server clients: HTTP calls into its internal endpoints (broadcast, socket revoke, ingest sessions), signed with `@repo/service-token`, and `ServiceSocket` (`/service-socket`) for reconnecting service sockets. Not a browser WebSocket client. |
 | `@repo/docs-shots` | Playwright screenshots for `apps/docs` (outside the Turbo pipeline). |
 | `@repo/typescript-config` | Shared tsconfig bases. |
 

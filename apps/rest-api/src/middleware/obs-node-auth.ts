@@ -1,8 +1,7 @@
-import { createHash } from "crypto";
-import type { MiddlewareHandler } from "hono";
 import { supabase } from "@repo/supabase";
 import { lookupNodeByApiKeyHash } from "@repo/supabase/queries/obs-nodes";
 import { TtlCache } from "@repo/ttl-cache";
+import { createNodeKeyAuth } from "@/middleware/node-key-auth";
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -29,34 +28,8 @@ export const obsNodeAuthCacheStats = () => nodeIdByKeyHash.stats();
 // Authenticates requests from OBS nodes using per-node API keys. The key is
 // generated at /claim time; only its SHA-256 hash is stored in obs_node_api_keys.
 // Sets c.var.nodeId on success so route handlers know which node is calling.
-export const obsNodeAuth = (): MiddlewareHandler => {
-  return async (c, next) => {
-    const auth = c.req.header("Authorization");
-
-    if (!auth) {
-      return c.json({ error: "Authorization header is required" }, 401);
-    }
-
-    if (!auth.startsWith("Bearer ")) {
-      return c.json({ error: "Authorization header must use Bearer scheme" }, 401);
-    }
-
-    const token = auth.slice(7).trim();
-
-    if (!token) {
-      return c.json({ error: "Bearer token is empty" }, 401);
-    }
-
-    // Keyed on the hash, never the plaintext token — the hash is already what
-    // the table stores, so the cache holds nothing the database doesn't.
-    const keyHash = createHash("sha256").update(token).digest("hex");
-    const nodeId = await nodeIdByKeyHash.fetch(keyHash, () => lookupNodeByApiKeyHash(supabase, keyHash));
-
-    if (!nodeId) {
-      return c.json({ error: "Node API key not recognised — re-run the claim step or contact an admin" }, 401);
-    }
-
-    c.set("nodeId", nodeId);
-    await next();
-  };
-};
+export const obsNodeAuth = createNodeKeyAuth({
+  cache: nodeIdByKeyHash,
+  lookup: (keyHash) => lookupNodeByApiKeyHash(supabase, keyHash),
+  varName: "nodeId",
+});

@@ -4,8 +4,8 @@ import { consumerMessageSchema, ingestSessionEndedPayloadSchema, type IngestSess
 import { trackAutoSwitcherEvent } from "@repo/metrics";
 import { reportError } from "@repo/sentry";
 import { createReportThrottle, errorFingerprint } from "@repo/sentry/throttle";
+import { ServiceSocket, type AuthHeaderProvider } from "@repo/ws-client/service-socket";
 
-const MAX_DELAY_MS = 30_000;
 
 /** The one field of a config push the store reads: which row to re-read. */
 const configPushSchema = autoSwitcherConfigSchema.pick({ user_id: true });
@@ -64,106 +64,68 @@ export function parseConsumerFrame(raw: string): ParsedConsumerFrame {
   }
 }
 
-// Consumer-role client on ws-server: receives every user's ingest stats and
-// config pushes, server-to-server (same reconnect shape as the bot clients —
-// see apps/streamwizard-bot/src/overlay-ws-client.ts).
-/** Builds the Authorization header for each (re)connect: a fresh service
- *  token (@repo/service-token), or null when this service has no key. */
-export type AuthHeaderProvider = () => Promise<string | null>;
+export type { AuthHeaderProvider };
 
+// Consumer-role client on ws-server: receives every user's ingest stats and
+// config pushes, server-to-server. Reconnects through ServiceSocket.
 export class StatsFeed {
-  private ws: WebSocket | null = null;
-  private delay = 1000;
-  private retryTimer: ReturnType<typeof setTimeout> | null = null;
-  private stopping = false;
+  private socket: ServiceSocket;
   /** Malformed-frame reasons already logged, so a bad producer shows up once. */
   private warned = new Set<string>();
 
   constructor(
-    private url: string,
-    private authHeader: AuthHeaderProvider,
+    url: string,
+    authHeader: AuthHeaderProvider,
     private handlers: StatsFeedHandlers,
-  ) {}
+  ) {
+    const types = ["streamwizard.ingest_stats", "streamwizard.auto_switcher_config", "streamwizard.ingest_session_ended"].join(",");
+    this.socket = new ServiceSocket({
+      url,
+      query: { role: "consumer", types },
+      authHeader,
+      name: "stats-feed",
+      noCredentialMessage: "no ws-server credential (WS_SERVICE_SIGNING_JWK); stats feed is off",
+      onMessage: (data) => this.handleMessage(data),
+      onReconnect: () => trackAutoSwitcherEvent("feed_reconnect"),
+    });
+  }
 
   connect(): void {
-    this.stopping = false;
-    void this.dial();
+    this.socket.connect();
   }
 
   disconnect(): void {
-    this.stopping = true;
-    if (this.retryTimer) clearTimeout(this.retryTimer);
-    this.ws?.close();
+    this.socket.disconnect();
   }
 
-  private retry(): void {
-    if (this.stopping) return;
-    trackAutoSwitcherEvent("feed_reconnect");
-    console.log(`[stats-feed] disconnected — retrying in ${this.delay}ms`);
-    this.retryTimer = setTimeout(() => void this.dial(), this.delay);
-    this.delay = Math.min(this.delay * 2, MAX_DELAY_MS);
-  }
-
-  private async dial(): Promise<void> {
-    let authorization: string | null;
-    try {
-      authorization = await this.authHeader();
-    } catch (err) {
-      console.error("[stats-feed] could not sign a ws-server token", err);
-      return this.retry();
-    }
-    if (!authorization) {
-      console.error("[stats-feed] no ws-server credential (WS_SERVICE_SIGNING_JWK); stats feed is off");
+  private handleMessage(data: unknown): void {
+    const frame = parseConsumerFrame(String(data));
+    if (!frame.ok) {
+      if (!this.warned.has(frame.reason)) {
+        this.warned.add(frame.reason);
+        console.warn(`[stats-feed] dropped a malformed frame (${frame.reason})`);
+      }
       return;
     }
-    if (this.stopping) return;
-    const types = ["streamwizard.ingest_stats", "streamwizard.auto_switcher_config", "streamwizard.ingest_session_ended"].join(",");
-    const ws = new WebSocket(`${this.url}/ws?role=consumer&types=${encodeURIComponent(types)}`, {
-      // @ts-expect-error Bun WebSocket supports headers in options
-      headers: { Authorization: authorization },
-    });
-    this.ws = ws;
-
-    ws.onopen = () => {
-      console.log("[stats-feed] connected");
-      this.delay = 1000;
-    };
-
-    ws.onmessage = (event) => {
-      const frame = parseConsumerFrame(String(event.data));
-      if (!frame.ok) {
-        if (!this.warned.has(frame.reason)) {
-          this.warned.add(frame.reason);
-          console.warn(`[stats-feed] dropped a malformed frame (${frame.reason})`);
-        }
-        return;
+    const ev = frame.event;
+    if (!ev) return;
+    // One bad message must not reach the process handler, which exits.
+    try {
+      switch (ev.type) {
+        case "streamwizard.ingest_stats":
+          this.handlers.onIngestStats(ev.userId, ev.payload);
+          break;
+        case "streamwizard.auto_switcher_config":
+          this.handlers.onConfigPush(ev.userId, ev.payload);
+          break;
+        case "streamwizard.ingest_session_ended":
+          this.handlers.onSessionEnded?.(ev.userId, ev.payload);
+          break;
       }
-      const ev = frame.event;
-      if (!ev) return;
-      // One bad message must not reach the process handler, which exits.
-      try {
-        switch (ev.type) {
-          case "streamwizard.ingest_stats":
-            this.handlers.onIngestStats(ev.userId, ev.payload);
-            break;
-          case "streamwizard.auto_switcher_config":
-            this.handlers.onConfigPush(ev.userId, ev.payload);
-            break;
-          case "streamwizard.ingest_session_ended":
-            this.handlers.onSessionEnded?.(ev.userId, ev.payload);
-            break;
-        }
-      } catch (err) {
-        if (allowReport(`${ev.type} ${errorFingerprint(err)}`)) {
-          reportError(err, "stats-feed: message", { userId: ev.userId, type: ev.type });
-        }
+    } catch (err) {
+      if (allowReport(`${ev.type} ${errorFingerprint(err)}`)) {
+        reportError(err, "stats-feed: message", { userId: ev.userId, type: ev.type });
       }
-    };
-
-    ws.onclose = () => this.retry();
-
-    ws.onerror = () => {
-      ws.close();
-    };
+    }
   }
 }

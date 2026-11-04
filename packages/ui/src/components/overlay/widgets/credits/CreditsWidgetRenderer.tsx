@@ -19,6 +19,7 @@ import { creditsTimeline, heroIndexAt, scrollOffsetAt, scrollProgressAt } from "
 import { useCreditsMeasured, useCreditsPlayback, useReducedMotion, useRollOnVisible } from "./use-credits-playback";
 import { CREDITS_KEYFRAMES, CREDITS_PRESET_COMPONENTS } from "./presets";
 import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
+import { EditorHint } from "../editor-hint";
 
 export interface CreditsWidgetRendererProps {
   item: OverlayItem;
@@ -69,34 +70,6 @@ function useFetchedCredits(isEditor: boolean, token: string | undefined, refresh
   }, [isEditor, token, refreshKey, avatars]);
 
   return result;
-}
-
-function EditorHint({ title, body }: { title: string; body: string }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 4,
-        border: "1.5px dashed rgba(158,122,255,0.5)",
-        borderRadius: 8,
-        color: "rgba(255,255,255,0.6)",
-        fontFamily: "sans-serif",
-        fontSize: 14,
-        lineHeight: 1.4,
-        textAlign: "center",
-        padding: 12,
-      }}
-    >
-      <strong style={{ color: "rgba(255,255,255,0.85)", fontSize: 15 }}>{title}</strong>
-      <span>{body}</span>
-    </div>
-  );
 }
 
 /** The editor's idle canvas: the roll's first screen, dimmed, with how to preview it. */

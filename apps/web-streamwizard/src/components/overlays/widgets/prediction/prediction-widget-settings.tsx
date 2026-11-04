@@ -1,14 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { env } from "@/lib/env";
-import { useOverlayStore } from "@/stores/overlay-editor-store";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { ExternalLink, Flag, Loader2, Lock, RotateCcw, Swords, Trophy, TrendingUp, Undo2 } from "lucide-react";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import { Button, Input, Label, ToggleGroup, ToggleGroupItem } from "@repo/ui";
 import {
-  ALERT_TEST_BROWSER_EVENT,
   GOAL_WIDGET_ANIMATION_LABELS,
   POLL_WIDGET_ANIMATIONS_IN,
   POLL_WIDGET_ANIMATIONS_OUT,
@@ -22,13 +19,9 @@ import {
   isDemoPredictionFrame,
   normalizePredictionWidgetConfig,
   seedPrediction,
-  subscribeToWsRoom,
-  type AlertTestBrowserEventDetail,
   type FetchedPrediction,
   type PollWidgetColorMode,
   type PollWidgetPreset,
-  type PredictionResetBrowserEventDetail,
-  type PredictionWidgetFrame,
   type PredictionWidgetItemConfig,
   type PredictionWidgetState,
 } from "@repo/ui/overlay";
@@ -44,9 +37,12 @@ import {
   presetGeometry,
 } from "@/components/overlays/inspector-fields";
 import { TwitchConnectButton } from "@/components/ui/twitch-scope-banner";
-import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
+import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
+import { ColorField } from "@/components/overlays/inspector-fields/color-field";
+import { OptionSelect } from "@/components/overlays/inspector-fields/option-select";
+import { twitchAccount, useTwitchWidgetFeed, type TwitchAccountBody } from "@/components/overlays/widgets/shared/use-twitch-widget-feed";
 // A prediction is drawn by the poll designs, so it borrows their pickers too.
-import { CELEBRATION_LABELS, ColorField, OptionSelect, PresetSketch } from "../poll/poll-widget-settings";
+import { CELEBRATION_LABELS, PresetSketch } from "@/components/overlays/widgets/poll/poll-widget-settings";
 
 /**
  * Predictions are started on Twitch, from Stream Manager's quick actions (or
@@ -62,10 +58,9 @@ const COLOR_MODE_OPTIONS: readonly SegmentedOption<PollWidgetColorMode>[] = [
   { value: "leader", label: "Leader only" },
 ];
 
-type PredictionResponse =
-  | { status: "loading" }
-  | { status: "failed" }
-  | { status: "ready"; missingScope: boolean; login: string | null };
+interface PredictionBody extends TwitchAccountBody {
+  prediction?: FetchedPrediction | null;
+}
 
 /**
  * The channel's prediction for the "On Twitch now" line: fetched once, then
@@ -73,78 +68,15 @@ type PredictionResponse =
  * reads. The test prediction is left out; it isn't on Twitch. `testing` says
  * one reached the canvas, so the panel can offer to go back to the real data.
  */
-function useTwitchPrediction() {
-  const [response, setResponse] = useState<PredictionResponse>({ status: "loading" });
-  const [prediction, setPrediction] = useState<PredictionWidgetState>(null);
-  const [testing, setTesting] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const token = useOverlayStore((s) => s.scene?.subscriber_token);
-  const sceneId = useOverlayStore((s) => s.scene?.id);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/twitch/assets/prediction");
-        if (!res.ok) throw new Error(String(res.status));
-        const body = (await res.json()) as {
-          prediction?: FetchedPrediction | null;
-          missing_scope?: boolean;
-          login?: string | null;
-        };
-        if (cancelled) return;
-        // A refetch after a reset is the truth, so it replaces rather than merges.
-        setPrediction((prev) => seedPrediction(refreshKey > 0 ? null : prev, body.prediction ?? null));
-        setResponse({
-          status: "ready",
-          missingScope: body.missing_scope === true,
-          login: typeof body.login === "string" && body.login ? body.login : null,
-        });
-      } catch {
-        if (!cancelled) setResponse({ status: "failed" });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
-
-  useEffect(() => {
-    const wsUrl = env.NEXT_PUBLIC_WS_SERVER_URL;
-    if (!token || !wsUrl) return;
-    return subscribeToWsRoom(token, wsUrl, (raw) => {
-      const frame = raw as PredictionWidgetFrame;
-      if (isDemoPredictionFrame(frame)) {
-        // A Live-mode test: it reached the canvas through the room.
-        setTesting(true);
-        return;
-      }
-      setPrediction((prev) => applyPredictionFrame(prev, frame, Date.now()));
-    });
-  }, [token]);
-
-  // Local-mode tests, from these Test buttons or the demo bar.
-  useEffect(() => {
-    const onTest = (e: Event) => {
-      const detail = (e as CustomEvent<AlertTestBrowserEventDetail>).detail;
-      if (detail && detail.sceneId === sceneId && isDemoPredictionFrame(detail.message)) setTesting(true);
-    };
-    window.addEventListener(ALERT_TEST_BROWSER_EVENT, onTest);
-    return () => window.removeEventListener(ALERT_TEST_BROWSER_EVENT, onTest);
-  }, [sceneId]);
-
-  /** Drops the test prediction on the canvas and reads Twitch again, here and there. */
-  const reset = useCallback(() => {
-    if (!sceneId) return;
-    setTesting(false);
-    setRefreshKey((k) => k + 1);
-    window.dispatchEvent(
-      new CustomEvent<PredictionResetBrowserEventDetail>(PREDICTION_RESET_BROWSER_EVENT, { detail: { sceneId } }),
-    );
-  }, [sceneId]);
-
-  return { response, prediction, testing, reset };
-}
+const PREDICTION_FEED = {
+  resource: "prediction",
+  ready: twitchAccount,
+  empty: (): PredictionWidgetState => null,
+  seed: (prev: PredictionWidgetState, body: PredictionBody) => seedPrediction(prev, body.prediction ?? null),
+  applyFrame: applyPredictionFrame,
+  isDemoFrame: isDemoPredictionFrame,
+  resetEvent: PREDICTION_RESET_BROWSER_EVENT,
+};
 
 type PredictionTest = "begin" | "points" | "close" | "lock" | "win" | "refund";
 
@@ -162,7 +94,7 @@ const numberFormat = new Intl.NumberFormat();
 export function PredictionWidgetSettings({ item, updateItem }: OverlayInspectorAppendProps) {
   const cfg = normalizePredictionWidgetConfig(item.config);
   const pathname = usePathname();
-  const { response: twitch, prediction, testing, reset } = useTwitchPrediction();
+  const { response: twitch, state: prediction, testing, reset } = useTwitchWidgetFeed(PREDICTION_FEED);
   const { fire } = useDemoFire();
   const [testBusy, setTestBusy] = useState<PredictionTest | null>(null);
 

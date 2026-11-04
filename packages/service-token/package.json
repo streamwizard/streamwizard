@@ -18,6 +18,10 @@
     "./jwks": {
       "types": "./src/jwks.ts",
       "default": "./src/jwks.ts"
+    },
+    "./bearer": {
+      "types": "./src/bearer.ts",
+      "default": "./src/bearer.ts"
     }
   },
   "scripts": {

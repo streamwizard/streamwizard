@@ -5,6 +5,7 @@ import {
   type ServiceTokenClaims,
 } from "@repo/service-token";
 import { env } from "@/lib/env";
+import { readBearerToken } from "@repo/service-token/bearer";
 
 // Who may call ws-server's server-to-server surface, and for what. Each of our
 // services signs a 60-second token per action (@repo/service-token); the
@@ -31,7 +32,7 @@ export function createServiceAuth(config: ServiceAuthConfig) {
 
     /** Checks `Authorization: Bearer <service token>` for one action. Never throws. */
     async authorize(header: string | null, scope: ServiceScope): Promise<ServiceAuthResult> {
-      const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : "";
+      const token = readBearerToken(header) ?? "";
       if (!token) return { ok: false, reason: "missing" };
       if (!verify) return { ok: false, reason: "invalid" };
       try {

@@ -1,8 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { env } from "@/lib/env";
-import { useOverlayStore } from "@/stores/overlay-editor-store";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { ExternalLink, Flag, Gauge, Loader2, PartyPopper, RotateCcw, TrendingUp } from "lucide-react";
 import { buildDemoEvent } from "@repo/schemas";
@@ -10,19 +8,12 @@ import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
   Button,
   cn,
-  ColorPicker,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   ToggleGroup,
   ToggleGroupItem,
 } from "@repo/ui";
 import {
-  ALERT_TEST_BROWSER_EVENT,
   GOAL_RESET_BROWSER_EVENT,
   GOAL_WIDGET_ANIMATION_LABELS,
   GOAL_WIDGET_ANIMATIONS_IN,
@@ -41,13 +32,9 @@ import {
   normalizeGoalWidgetConfig,
   pickGoal,
   seedGoals,
-  subscribeToWsRoom,
   TWITCH_GOAL_TYPE_LABELS,
   twitchGoalTypesFor,
-  type AlertTestBrowserEventDetail,
   type FetchedGoal,
-  type GoalResetBrowserEventDetail,
-  type GoalWidgetFrame,
   type GoalWidgetState,
   type GoalWidgetItemConfig,
   type GoalWidgetFillMode,
@@ -57,7 +44,6 @@ import {
 import {
   FontWeightSelect,
   GoogleFontSelect,
-  InspectorHint,
   InspectorReveal,
   InspectorSection,
   MediaField,
@@ -68,7 +54,10 @@ import {
   presetGeometry,
 } from "@/components/overlays/inspector-fields";
 import { TwitchConnectButton } from "@/components/ui/twitch-scope-banner";
-import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
+import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
+import { ColorField } from "@/components/overlays/inspector-fields/color-field";
+import { OptionSelect } from "@/components/overlays/inspector-fields/option-select";
+import { twitchAccount, useTwitchWidgetFeed, type TwitchAccountBody } from "@/components/overlays/widgets/shared/use-twitch-widget-feed";
 
 /**
  * Goals are made on Twitch; Helix has no way to create one. The dashboard's
@@ -160,65 +149,16 @@ function PresetSketch({ preset }: { preset: GoalWidgetPreset }) {
   }
 }
 
-function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="min-w-0 space-y-1.5">
-      <Label className="text-xs">{label}</Label>
-      <ColorPicker value={value} onChange={onChange} aria-label={`${label} color`} />
-    </div>
-  );
-}
-
-function OptionSelect<T extends string>({
-  id,
-  label,
-  value,
-  options,
-  labels,
-  hint,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: T;
-  options: readonly T[];
-  labels: Record<T, string>;
-  hint?: ReactNode;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="min-w-0 space-y-2">
-      <div className="flex items-center gap-1">
-        <Label htmlFor={id} className="text-xs">
-          {label}
-        </Label>
-        {hint ? <InspectorHint label={`About ${label.toLowerCase()}`}>{hint}</InspectorHint> : null}
-      </div>
-      <Select value={value} onValueChange={(v) => onChange(v as T)}>
-        <SelectTrigger id={id} size="sm" className="w-full text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option} value={option} className="text-xs">
-              {labels[option]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
 const ON_END_OPTIONS: readonly SegmentedOption<GoalWidgetOnEnd>[] = [
   { value: "keep", label: "Keep showing" },
   { value: "hide", label: "Hide" },
 ];
 
-type GoalsResponse =
-  | { status: "loading" }
-  | { status: "failed" }
-  | { status: "ready"; goals: FetchedGoal[]; missingScope: boolean; login: string | null };
+interface GoalsBody extends TwitchAccountBody {
+  goals?: FetchedGoal[];
+}
+
+const fetchedGoals = (body: GoalsBody): FetchedGoal[] => (Array.isArray(body.goals) ? body.goals : []);
 
 /**
  * The channel's goals for the "On Twitch now" line: fetched once, then kept
@@ -226,80 +166,15 @@ type GoalsResponse =
  * Test goals are left out; they aren't on Twitch. `testing` says one reached
  * the canvas, so the panel can offer to go back to the real data.
  */
-function useTwitchGoals() {
-  const [response, setResponse] = useState<GoalsResponse>({ status: "loading" });
-  const [goals, setGoals] = useState<GoalWidgetState>({});
-  const [testing, setTesting] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const token = useOverlayStore((s) => s.scene?.subscriber_token);
-  const sceneId = useOverlayStore((s) => s.scene?.id);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/twitch/assets/goals");
-        if (!res.ok) throw new Error(String(res.status));
-        const body = (await res.json()) as {
-          goals?: FetchedGoal[];
-          missing_scope?: boolean;
-          login?: string | null;
-        };
-        if (cancelled) return;
-        const fetched = Array.isArray(body.goals) ? body.goals : [];
-        // A refetch after a reset is the truth, so it replaces rather than merges.
-        setGoals((prev) => seedGoals(refreshKey > 0 ? {} : prev, fetched));
-        setResponse({
-          status: "ready",
-          goals: fetched,
-          missingScope: body.missing_scope === true,
-          login: typeof body.login === "string" && body.login ? body.login : null,
-        });
-      } catch {
-        if (!cancelled) setResponse({ status: "failed" });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
-
-  useEffect(() => {
-    const wsUrl = env.NEXT_PUBLIC_WS_SERVER_URL;
-    if (!token || !wsUrl) return;
-    return subscribeToWsRoom(token, wsUrl, (raw) => {
-      const frame = raw as GoalWidgetFrame;
-      if (isDemoGoalFrame(frame)) {
-        // A Live-mode test: it reached the canvas through the room.
-        setTesting(true);
-        return;
-      }
-      setGoals((prev) => applyGoalFrame(prev, frame, Date.now()));
-    });
-  }, [token]);
-
-  // Local-mode tests, from these Test buttons or the demo bar.
-  useEffect(() => {
-    const onTest = (e: Event) => {
-      const detail = (e as CustomEvent<AlertTestBrowserEventDetail>).detail;
-      if (detail && detail.sceneId === sceneId && isDemoGoalFrame(detail.message)) setTesting(true);
-    };
-    window.addEventListener(ALERT_TEST_BROWSER_EVENT, onTest);
-    return () => window.removeEventListener(ALERT_TEST_BROWSER_EVENT, onTest);
-  }, [sceneId]);
-
-  /** Drops the test goals on the canvas and reads Twitch again, here and there. */
-  const reset = useCallback(() => {
-    if (!sceneId) return;
-    setTesting(false);
-    setRefreshKey((k) => k + 1);
-    window.dispatchEvent(
-      new CustomEvent<GoalResetBrowserEventDetail>(GOAL_RESET_BROWSER_EVENT, { detail: { sceneId } }),
-    );
-  }, [sceneId]);
-
-  return { response, goals, testing, reset };
-}
+const GOAL_FEED = {
+  resource: "goals",
+  ready: (body: GoalsBody) => ({ goals: fetchedGoals(body), ...twitchAccount(body) }),
+  empty: (): GoalWidgetState => ({}),
+  seed: (prev: GoalWidgetState, body: GoalsBody) => seedGoals(prev, fetchedGoals(body)),
+  applyFrame: applyGoalFrame,
+  isDemoFrame: isDemoGoalFrame,
+  resetEvent: GOAL_RESET_BROWSER_EVENT,
+};
 
 const numberFormat = new Intl.NumberFormat();
 
@@ -309,7 +184,7 @@ export function GoalWidgetSettings({ item, updateItem }: OverlayInspectorAppendP
   const labels = GOAL_WIDGET_LABELS[type];
   const types = twitchGoalTypesFor(type);
   const pathname = usePathname();
-  const { response: twitch, goals, testing, reset } = useTwitchGoals();
+  const { response: twitch, state: goals, testing, reset } = useTwitchWidgetFeed(GOAL_FEED);
   const { fire } = useDemoFire();
   const [testBusy, setTestBusy] = useState<string | null>(null);
 

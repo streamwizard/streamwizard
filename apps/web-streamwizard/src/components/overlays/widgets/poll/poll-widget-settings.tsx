@@ -1,27 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { env } from "@/lib/env";
-import { useOverlayStore } from "@/stores/overlay-editor-store";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { ExternalLink, Flag, Loader2, RotateCcw, Swords, Trophy, TrendingUp } from "lucide-react";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
   Button,
   cn,
-  ColorPicker,
   Input,
   Label,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
   ToggleGroup,
   ToggleGroupItem,
 } from "@repo/ui";
 import {
-  ALERT_TEST_BROWSER_EVENT,
   POLL_RESET_BROWSER_EVENT,
   POLL_WIDGET_ANIMATIONS_IN,
   POLL_WIDGET_ANIMATIONS_OUT,
@@ -35,13 +26,9 @@ import {
   isDemoPollFrame,
   normalizePollWidgetConfig,
   seedPoll,
-  subscribeToWsRoom,
-  type AlertTestBrowserEventDetail,
   type FetchedPoll,
-  type PollResetBrowserEventDetail,
   type PollWidgetCelebration,
   type PollWidgetColorMode,
-  type PollWidgetFrame,
   type PollWidgetItemConfig,
   type PollWidgetPreset,
   type PollWidgetState,
@@ -49,7 +36,6 @@ import {
 import {
   FontWeightSelect,
   GoogleFontSelect,
-  InspectorHint,
   InspectorReveal,
   InspectorSection,
   SegmentedField,
@@ -59,7 +45,10 @@ import {
   presetGeometry,
 } from "@/components/overlays/inspector-fields";
 import { TwitchConnectButton } from "@/components/ui/twitch-scope-banner";
-import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
+import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
+import { ColorField } from "@/components/overlays/inspector-fields/color-field";
+import { OptionSelect } from "@/components/overlays/inspector-fields/option-select";
+import { twitchAccount, useTwitchWidgetFeed, type TwitchAccountBody } from "@/components/overlays/widgets/shared/use-twitch-widget-feed";
 
 /**
  * Polls are started on Twitch, from Stream Manager's quick actions (or /poll
@@ -143,60 +132,9 @@ export function PresetSketch({ preset }: { preset: PollWidgetPreset }) {
   }
 }
 
-export function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="min-w-0 space-y-1.5">
-      <Label className="text-xs">{label}</Label>
-      <ColorPicker value={value} onChange={onChange} aria-label={`${label} color`} />
-    </div>
-  );
+interface PollBody extends TwitchAccountBody {
+  poll?: FetchedPoll | null;
 }
-
-export function OptionSelect<T extends string>({
-  id,
-  label,
-  value,
-  options,
-  labels,
-  hint,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  value: T;
-  options: readonly T[];
-  labels: Record<T, string>;
-  hint?: ReactNode;
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div className="min-w-0 space-y-2">
-      <div className="flex items-center gap-1">
-        <Label htmlFor={id} className="text-xs">
-          {label}
-        </Label>
-        {hint ? <InspectorHint label={`About ${label.toLowerCase()}`}>{hint}</InspectorHint> : null}
-      </div>
-      <Select value={value} onValueChange={(v) => onChange(v as T)}>
-        <SelectTrigger id={id} size="sm" className="w-full text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option} value={option} className="text-xs">
-              {labels[option]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
-type PollResponse =
-  | { status: "loading" }
-  | { status: "failed" }
-  | { status: "ready"; missingScope: boolean; login: string | null };
 
 /**
  * The channel's poll for the "On Twitch now" line: fetched once, then kept
@@ -204,74 +142,15 @@ type PollResponse =
  * The test poll is left out; it isn't on Twitch. `testing` says one reached
  * the canvas, so the panel can offer to go back to the real data.
  */
-function useTwitchPoll() {
-  const [response, setResponse] = useState<PollResponse>({ status: "loading" });
-  const [poll, setPoll] = useState<PollWidgetState>(null);
-  const [testing, setTesting] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const token = useOverlayStore((s) => s.scene?.subscriber_token);
-  const sceneId = useOverlayStore((s) => s.scene?.id);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/twitch/assets/poll");
-        if (!res.ok) throw new Error(String(res.status));
-        const body = (await res.json()) as { poll?: FetchedPoll | null; missing_scope?: boolean; login?: string | null };
-        if (cancelled) return;
-        // A refetch after a reset is the truth, so it replaces rather than merges.
-        setPoll((prev) => seedPoll(refreshKey > 0 ? null : prev, body.poll ?? null));
-        setResponse({
-          status: "ready",
-          missingScope: body.missing_scope === true,
-          login: typeof body.login === "string" && body.login ? body.login : null,
-        });
-      } catch {
-        if (!cancelled) setResponse({ status: "failed" });
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshKey]);
-
-  useEffect(() => {
-    const wsUrl = env.NEXT_PUBLIC_WS_SERVER_URL;
-    if (!token || !wsUrl) return;
-    return subscribeToWsRoom(token, wsUrl, (raw) => {
-      const frame = raw as PollWidgetFrame;
-      if (isDemoPollFrame(frame)) {
-        // A Live-mode test: it reached the canvas through the room.
-        setTesting(true);
-        return;
-      }
-      setPoll((prev) => applyPollFrame(prev, frame, Date.now()));
-    });
-  }, [token]);
-
-  // Local-mode tests, from these Test buttons or the demo bar.
-  useEffect(() => {
-    const onTest = (e: Event) => {
-      const detail = (e as CustomEvent<AlertTestBrowserEventDetail>).detail;
-      if (detail && detail.sceneId === sceneId && isDemoPollFrame(detail.message)) setTesting(true);
-    };
-    window.addEventListener(ALERT_TEST_BROWSER_EVENT, onTest);
-    return () => window.removeEventListener(ALERT_TEST_BROWSER_EVENT, onTest);
-  }, [sceneId]);
-
-  /** Drops the test poll on the canvas and reads Twitch again, here and there. */
-  const reset = useCallback(() => {
-    if (!sceneId) return;
-    setTesting(false);
-    setRefreshKey((k) => k + 1);
-    window.dispatchEvent(
-      new CustomEvent<PollResetBrowserEventDetail>(POLL_RESET_BROWSER_EVENT, { detail: { sceneId } }),
-    );
-  }, [sceneId]);
-
-  return { response, poll, testing, reset };
-}
+const POLL_FEED = {
+  resource: "poll",
+  ready: twitchAccount,
+  empty: (): PollWidgetState => null,
+  seed: (prev: PollWidgetState, body: PollBody) => seedPoll(prev, body.poll ?? null),
+  applyFrame: applyPollFrame,
+  isDemoFrame: isDemoPollFrame,
+  resetEvent: POLL_RESET_BROWSER_EVENT,
+};
 
 type PollTest = "begin" | "votes" | "close" | "end";
 
@@ -280,7 +159,7 @@ const numberFormat = new Intl.NumberFormat();
 export function PollWidgetSettings({ item, updateItem }: OverlayInspectorAppendProps) {
   const cfg = normalizePollWidgetConfig(item.config);
   const pathname = usePathname();
-  const { response: twitch, poll, testing, reset } = useTwitchPoll();
+  const { response: twitch, state: poll, testing, reset } = useTwitchWidgetFeed(POLL_FEED);
   const { fire } = useDemoFire();
   const [testBusy, setTestBusy] = useState<PollTest | null>(null);
 

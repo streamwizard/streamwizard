@@ -19,6 +19,7 @@
     "@repo/ttl-cache": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/types": "workspace:*",
+    "@repo/ws-client": "workspace:*",
     "@sentry/bun": "^10",
     "zod": "^4.4.3"
   },

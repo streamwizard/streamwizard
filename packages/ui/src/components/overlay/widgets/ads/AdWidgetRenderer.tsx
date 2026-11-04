@@ -27,6 +27,7 @@ import {
 } from "./ad-widget-state";
 import { AD_KEYFRAMES, AD_PRESET_COMPONENTS, GOAL_KEYFRAMES, SWAP_ANIMATION } from "./presets";
 import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
+import { EditorHint } from "../editor-hint";
 
 export interface AdWidgetRendererProps {
   item: OverlayItem;
@@ -82,35 +83,6 @@ function useFetchedSchedule(isEditor: boolean, token: string | undefined, refres
   }, [isEditor, token, refreshKey]);
 
   return result;
-}
-
-function EditorHint({ title, body }: { title: string; body: string }) {
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        gap: 4,
-        border: "1.5px dashed rgba(158,122,255,0.5)",
-        borderRadius: 8,
-        color: "rgba(255,255,255,0.6)",
-        fontFamily: "sans-serif",
-        fontSize: 13,
-        lineHeight: 1.35,
-        textAlign: "center",
-        padding: 10,
-        overflow: "hidden",
-      }}
-    >
-      <strong style={{ color: "rgba(255,255,255,0.85)", fontSize: 14 }}>{title}</strong>
-      <span>{body}</span>
-    </div>
-  );
 }
 
 export function AdWidgetRenderer({ item, scene, isEditor = false }: AdWidgetRendererProps) {
@@ -239,17 +211,18 @@ export function AdWidgetRenderer({ item, scene, isEditor = false }: AdWidgetRend
   if (shown.phase === "idle") {
     if (!isEditor) return null;
     if (fetched.status === "missing_scope") {
-      return <EditorHint title="Ads" body="Reconnect Twitch in this widget's settings so StreamWizard can read your ad schedule." />;
+      return <EditorHint compact title="Ads" body="Reconnect Twitch in this widget's settings so StreamWizard can read your ad schedule." />;
     }
     if (nextAdAt !== null && nextAdAt > now) {
       return (
         <EditorHint
+          compact
           title="Ads"
           body={`Next ad in ${formatAdTime((nextAdAt - now) / 1000)}. Shows on stream ${cfg.warnMinutes} min before.`}
         />
       );
     }
-    return <EditorHint title="Ads" body="No ad scheduled right now. Shows before and during your ad breaks." />;
+    return <EditorHint compact title="Ads" body="No ad scheduled right now. Shows before and during your ad breaks." />;
   }
 
   const Preset = AD_PRESET_COMPONENTS[cfg.preset];

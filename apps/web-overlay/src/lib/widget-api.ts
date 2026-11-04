@@ -4,6 +4,7 @@ import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
 import { TtlCache } from "@repo/ttl-cache";
 import { env } from "@/lib/env";
+import { readBearerToken } from "@repo/service-token/bearer";
 
 /**
  * Shared plumbing for the API routes overlay widgets call from inside their
@@ -55,9 +56,7 @@ export function corsHeaders(req: NextRequest): Record<string, string> {
  * against the original contract.
  */
 export function bearerToken(req: NextRequest): string | null {
-  const auth = req.headers.get("authorization");
-  if (auth?.startsWith("Bearer ")) return auth.slice("Bearer ".length);
-  return null;
+  return readBearerToken(req.headers.get("authorization"));
 }
 
 const TOKEN_FORMAT = /^[0-9a-f]{64}$/;

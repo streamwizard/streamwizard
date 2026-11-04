@@ -21,3 +21,10 @@ import { TwitchEventSubReceiver } from '@repo/twitch-eventsub';
 const receiver = new TwitchEventSubReceiver({ ... });
 await receiver.subscribe('channel.follow', { broadcaster_user_id: '123' });
 ```
+
+## Entry points
+
+- `@repo/twitch-eventsub`: the shard manager and EventSub types.
+- `@repo/twitch-eventsub/receiving-broadcaster`: `extractReceivingBroadcasterId(eventType, condition, event)`, which picks the channel a notification belongs to. The subscription condition wins; body fields are a fallback (raids use `to_broadcaster_user_id`, user-scoped events fall back to `user_id`). Used by both EventSub consumers (streamwizard-bot and rest-api), so they always agree.
+
+This package reads no env variables.

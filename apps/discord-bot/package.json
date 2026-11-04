@@ -14,6 +14,7 @@
     "@repo/discord-message": "workspace:*",
     "@repo/posthog": "workspace:*",
     "@repo/sentry": "workspace:*",
+    "@repo/service-token": "workspace:*",
     "@repo/storage": "workspace:*",
     "@repo/ttl-cache": "workspace:*",
     "@repo/supabase": "workspace:*",
