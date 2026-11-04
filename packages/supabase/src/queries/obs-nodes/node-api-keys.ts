@@ -20,7 +20,7 @@ export interface EncryptedNodeKey {
 // A rest_api key is only ever checked by its hash, so it has no encrypted
 // copy (one would let TOKEN_ENCRYPTION_KEY rebuild the node's key). An
 // obs_command key keeps one: the obs-auto-switcher decrypts it to call the
-// node. The database enforces the same split (obs_node_api_keys_ciphertext_by_type).
+// node.
 export type NodeApiKeyFields =
   | { type: "rest_api"; key_hash: string }
   | ({ type: "obs_command"; key_hash: string } & EncryptedNodeKey);

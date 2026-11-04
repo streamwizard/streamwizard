@@ -2646,19 +2646,28 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          key_ciphertext: string | null
           key_hash: string
+          key_iv: string | null
+          key_tag: string | null
           node_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          key_ciphertext?: string | null
           key_hash: string
+          key_iv?: string | null
+          key_tag?: string | null
           node_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          key_ciphertext?: string | null
           key_hash?: string
+          key_iv?: string | null
+          key_tag?: string | null
           node_id?: string
         }
         Relationships: [
