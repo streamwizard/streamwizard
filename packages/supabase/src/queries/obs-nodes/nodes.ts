@@ -188,6 +188,8 @@ export interface ObsNodeSelfReportedFields {
   hostname: string;
 }
 
+// Twin of consumeIngestClaimToken in ingest/nodes.ts on purpose: the two node
+// tables have their own columns, and a shared helper needs a generic over both.
 export async function consumeClaimToken(
   client: DBClient,
   tokenHash: string,

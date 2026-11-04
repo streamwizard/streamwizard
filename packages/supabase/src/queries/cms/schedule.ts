@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../../types/supabase";
-import { withMetrics } from "../with-metrics";
+import { withMetrics } from "../../lib/with-metrics";
 
 /**
  * Scheduled publishing and the cache-refresh retry queue. Service-role only:

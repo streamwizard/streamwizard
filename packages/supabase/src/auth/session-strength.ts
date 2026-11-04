@@ -16,7 +16,7 @@ export type { Factor, JwtPayload, User };
  * without aal2.
  *
  * web-admin requires a strong session before rendering anything or running a
- * server action; see apps/web-admin/src/lib/admin-session.ts. The SQL twin is
+ * server action; see apps/web-admin/src/lib/auth/admin-session.ts. The SQL twin is
  * public.is_strong_admin().
  */
 export function isStrongSession(claims: Pick<JwtPayload, "aal"> | null | undefined): boolean {
