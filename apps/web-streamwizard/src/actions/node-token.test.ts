@@ -17,11 +17,18 @@ const instances: Record<string, { userId: string; nodeId: string }> = {
 mock.module("@/lib/auth", () => ({
   tryAuthContext: async () => (signedIn ? { user: signedIn, supabase: {} } : null),
 }));
+// Spread the real exports: bun shares module mocks across test files, so a
+// partial mock here breaks later files that import other names from it.
+const realSubscriptions = await import("@repo/supabase/queries/subscriptions");
 mock.module("@repo/supabase/queries/subscriptions", () => ({
+  ...realSubscriptions,
   getProductAccess: async () => ({ ...access, status: "active", plan: null }),
 }));
-mock.module("@repo/supabase/next/admin", () => ({ createAdminClient: () => ({}) }));
+const realAdmin = await import("@repo/supabase/next/admin");
+mock.module("@repo/supabase/next/admin", () => ({ ...realAdmin, createAdminClient: () => ({}) }));
+const realObsNodes = await import("@repo/supabase/queries/obs-nodes");
 mock.module("@repo/supabase/queries/obs-nodes", () => ({
+  ...realObsNodes,
   getInstanceNode: async (_client: unknown, instanceId: string, userId: string) => {
     const row = instances[instanceId];
     return row && row.userId === userId ? { nodeId: row.nodeId, apiUrl: "http://node" } : null;

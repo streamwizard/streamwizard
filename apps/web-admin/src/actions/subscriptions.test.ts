@@ -44,7 +44,11 @@ mock.module("@repo/sentry", () => ({
 mock.module("next/cache", () => ({ revalidatePath: () => {} }));
 mock.module("@/lib/assert-admin", () => ({ assertAdmin: async () => "admin-1" }));
 mock.module("@/lib/platform-events", () => ({ actorIdentity: async () => ({}), eventIdentity: async () => ({}) }));
+// Spread the real exports: bun shares module mocks across test files, and
+// nodes.test.ts imports the real actions from this module.
+const realNodes = await import("@/actions/nodes");
 mock.module("@/actions/nodes", () => ({
+  ...realNodes,
   toggleInstanceAdminAction: async (_nodeId: string, instanceId: string) => {
     stops.push(instanceId);
     return { error: null };
