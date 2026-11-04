@@ -1,4 +1,5 @@
 import { TwitchApi } from "@repo/twitch-api";
+import { describeError } from "@repo/sentry/safe-error";
 import type { EventSubSubscriptionType, WebSocketNotificationMessage } from "@repo/types";
 import { z } from "zod";
 import { registerTwitchHandlers } from "./twitch";
@@ -51,7 +52,7 @@ export class HandlerRegistry {
         const parsedData = schema ? schema.parse(data) : (data as TData);
         await handler(parsedData, context);
       } catch (error) {
-        console.log(`Error in Twitch handler for ${eventType}:`, error);
+        console.log(`[eventsub] handler for ${eventType} failed: ${describeError(error)}`);
       }
     });
   }

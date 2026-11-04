@@ -1,6 +1,7 @@
 "use server";
 
 import { TwitchApi } from "@repo/twitch-api";
+import { describeError } from "@repo/sentry/safe-error";
 import { createClient } from "@repo/supabase/next/server";
 import { getBroadcasterId as _getBroadcasterId } from "@repo/supabase/queries/user";
 import { getCurrentStreamDetails as _getCurrentStreamDetails, getStreamData as _getStreamData, createPendingClip } from "@repo/supabase/queries/vods";
@@ -44,7 +45,7 @@ export async function getVideos(cursor?: string): Promise<GetVideosResult> {
       cursor: response.pagination?.cursor,
     };
   } catch (error) {
-    console.error("Error fetching videos:", error);
+    console.error(`[vods] get videos failed: ${describeError(error)}`);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error fetching videos",
@@ -71,7 +72,7 @@ export async function deleteVideos(videoIds: string[]): Promise<DeleteVideosResu
 
     return { success: true, deletedIds };
   } catch (error) {
-    console.error("Error deleting videos:", error);
+    console.error(`[vods] delete videos failed: ${describeError(error)}`);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error deleting videos",
@@ -132,7 +133,7 @@ export async function createClipFromVOD({ vodId, vod_offset, duration, title }: 
       },
     };
   } catch (error) {
-    console.error("Error creating clip from VOD:", error);
+    console.error(`[vods] create clip from VOD failed: ${describeError(error)}`);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error creating clip from VOD",
@@ -151,7 +152,7 @@ export async function getVideo(videoId: string): Promise<TwitchVideo | null> {
     const vod = await api.videos.getVodById(videoId);
     return (vod as TwitchVideo | undefined) ?? null;
   } catch (error) {
-    console.error("Error fetching video:", error);
+    console.error(`[vods] get video failed: ${describeError(error)}`);
     return null;
   }
 }
@@ -215,7 +216,7 @@ export async function getStreamMarkers(videoId: string): Promise<GetStreamMarker
 
     return { success: true, markers: allMarkers };
   } catch (error) {
-    console.error("Error fetching stream markers:", error);
+    console.error(`[vods] get stream markers failed: ${describeError(error)}`);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error fetching stream markers",
@@ -247,7 +248,7 @@ export async function createStreamMarker(description?: string): Promise<ActionRe
       },
     };
   } catch (error) {
-    console.error("Error creating stream marker:", error);
+    console.error(`[vods] create stream marker failed: ${describeError(error)}`);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error creating stream marker",

@@ -1,5 +1,6 @@
 "use server";
 import { TwitchApi } from "@repo/twitch-api";
+import { describeError } from "@repo/sentry/safe-error";
 import { createClient } from "@repo/supabase/next/server";
 import { getTwitchUserId } from "@repo/supabase/queries/user";
 import type { ChannelSearchResult, TwitchUser, TwitchGame } from "@repo/twitch-api";
@@ -17,7 +18,7 @@ export async function searchTwitchChannels(value: string, first: number = 10) {
     const api = new TwitchApi(twitchUserId);
     return await api.search.searchChannels(value, first);
   } catch (error) {
-    console.error(error);
+    console.error(`[twitch-search] channel search failed: ${describeError(error)}`);
     return null;
   }
 }

@@ -7,6 +7,7 @@ import {
   type RefreshTwitchTokenResponse,
 } from "@repo/supabase";
 import { trackTwitchApiRequest, normalizeEndpoint } from "@repo/metrics";
+import { describeError } from "@repo/sentry/safe-error";
 import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from "axios";
 import axios from "axios";
 import { logTokenRefreshFailure } from "./token-refresh-log";
@@ -120,7 +121,7 @@ export abstract class TwitchApiBaseClient {
             console.debug("✅ Token refreshed, retrying request");
             return api(config);
           } catch (refreshError) {
-            console.error("❌ Token refresh failed:", refreshError);
+            console.error(`[twitch-api] user token refresh failed: ${describeError(refreshError)}`);
             return Promise.reject(refreshError);
           }
         }
@@ -220,7 +221,7 @@ export abstract class TwitchApiBaseClient {
             console.debug("✅ Token refreshed, retrying request");
             return api(config);
           } catch (refreshError) {
-            console.error("❌ Token refresh failed:", refreshError);
+            console.error(`[twitch-api] app token refresh failed: ${describeError(refreshError)}`);
             return Promise.reject(refreshError);
           }
         }
@@ -290,7 +291,7 @@ export abstract class TwitchApiBaseClient {
       await updateChannelAccessToken(response.data, broadcaster_id);
       return response.data.access_token;
     } catch (error) {
-      console.error("❌ Token refresh failed:", error);
+      console.error(`[twitch-api] user token refresh failed: ${describeError(error)}`);
       void logTokenRefreshFailure(broadcaster_id, error);
       throw error;
     }
@@ -319,7 +320,7 @@ export abstract class TwitchApiBaseClient {
 
       return response.data.access_token;
     } catch (error) {
-      console.error("❌ Token refresh failed:", error);
+      console.error(`[twitch-api] app token refresh failed: ${describeError(error)}`);
       throw error;
     }
   }

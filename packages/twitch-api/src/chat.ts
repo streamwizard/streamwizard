@@ -1,4 +1,5 @@
 import type { GetChattersResponse } from "@repo/types";
+import { describeError } from "@repo/sentry/safe-error";
 import { TwitchApiBaseClient } from "./base-client";
 
 /**
@@ -75,7 +76,7 @@ export class TwitchChatClient extends TwitchApiBaseClient {
       });
       return response.data.data;
     } catch (error) {
-      console.error(error);
+      console.error(`[twitch-api] get chatters failed: ${describeError(error)}`);
     }
   }
 

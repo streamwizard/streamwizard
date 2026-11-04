@@ -10,6 +10,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./safe-error": {
+      "types": "./src/safe-error.ts",
+      "default": "./src/safe-error.ts"
     }
   },
   "scripts": {

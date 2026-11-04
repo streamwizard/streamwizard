@@ -3,6 +3,7 @@ process.on("uncaughtException", (err) => { reportFatal(err, "streamwizard-bot");
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
 import { configureTracking, flushTracking } from "@repo/posthog/server";
 import { flushSentry, reportError, reportFatal } from "@repo/sentry";
+import { describeError, toSafeError } from "@repo/sentry/safe-error";
 import { flushChatCommands } from "./functions/trackChatCommand";
 import { handlers } from "./handlers/eventHandler";
 import { ConduitShardManager, parseShardIds, type EventSubLifecycleEvent } from "@repo/twitch-eventsub";
@@ -93,8 +94,8 @@ async function main() {
   } catch (error) {
     // Caught here, so the unhandledRejection hook above never sees it —
     // capture explicitly or a failed startup is invisible in Sentry.
-    console.error("❌ Failed to start receiver:", error);
-    Sentry.captureException(error);
+    console.error(`[eventsub] failed to start receiver: ${describeError(error)}`);
+    Sentry.captureException(toSafeError(error));
     await flushSentry();
     process.exit(1);
   }

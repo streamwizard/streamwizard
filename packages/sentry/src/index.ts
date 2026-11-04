@@ -9,6 +9,7 @@ import {
   type Log,
   type TransactionEvent,
 } from "@sentry/core";
+import { toSafeError } from "./safe-error";
 
 export interface SentryConfig {
   dsn: string;
@@ -20,6 +21,9 @@ const PII_PATTERNS: RegExp[] = [
   /oauth2?[_-]?token[\s=:]+\S+/gi,     // OAuth tokens in messages/frames
   /access_token[\s=:]+\S+/gi,
   /refresh_token[\s=:]+\S+/gi,
+  /"(?:access|refresh)_token"\s*:\s*"[^"]*"/gi, // JSON-serialized token fields
+  /client_secret["']?\s*[=:]\s*["']?[^\s&"',;}]+/gi, // query string, JSON and inspected objects
+  /client_id=[^\s&"']+/gi,           // OAuth client id in a URL or query string
   /Bearer\s+[A-Za-z0-9\-._~+/]+=*/gi, // Authorization header values
   /eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]*/g, // raw JWTs
 ];
@@ -210,10 +214,14 @@ export function getSentryOptions(config: SentryConfig) {
 // message (which broadcaster, which iteration). It stays out of the `context`
 // tag on purpose: tags are indexed for grouping, so folding an id into one
 // gives every occurrence its own bucket and the issue never aggregates.
+//
+// Axios errors are reduced to toSafeError's summary first: logged or captured
+// whole, they carry the request config, params and headers.
 export function reportError(error: unknown, context: string, extra?: Record<string, unknown>): void {
-  if (extra) console.error(`[${context}]`, extra, error);
-  else console.error(`[${context}]`, error);
-  captureException(error, { tags: { context }, extra });
+  const safe = toSafeError(error);
+  if (extra) console.error(`[${context}]`, extra, safe);
+  else console.error(`[${context}]`, safe);
+  captureException(safe, { tags: { context }, extra });
 }
 
 // Sentry batches events and sends them in the background, so a process that
@@ -241,8 +249,9 @@ export async function flushSentry(timeoutMs = 2000): Promise<void> {
 // usually a local mistake rather than a corrupted process, and exiting on one
 // turns a logged warning into an outage.
 export function reportFatal(error: unknown, context: string): void {
-  console.error(`[${context}] fatal — exiting`, error);
-  captureException(error);
+  const safe = toSafeError(error);
+  console.error(`[${context}] fatal — exiting`, safe);
+  captureException(safe);
   // Never let a hung transport hold the process open; flushSentry is already
   // bounded and never throws.
   void flushSentry().finally(() => {

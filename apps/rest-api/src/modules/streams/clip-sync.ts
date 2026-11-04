@@ -1,4 +1,5 @@
 import { reportError } from "@repo/sentry";
+import { describeError } from "@repo/sentry/safe-error";
 import { supabase, Database } from "@repo/supabase";
 import { getTwitchIntegrationByBroadcasterId, getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
 import { claimClipSync, updateClipSyncStatus } from "@repo/supabase/queries/sync";
@@ -42,7 +43,7 @@ export async function syncTwitch(
 
     return { clipsCount: totalClips };
   } catch (error) {
-    console.error("Sync failed:", error);
+    console.error(`[clip-sync] sync failed: ${describeError(error)}`);
     // Mark as failed; the status trigger posts clips.sync_failed with the message.
     const message = error instanceof Error ? error.message : String(error);
     await updateClipSyncStatus(supabase, user.user_id, "failed", undefined, message);
@@ -112,7 +113,7 @@ export async function syncTwitchClips(user_id: string, TwitchAPI: TwitchApi) {
       // Clear the formatted clips array reference to help GC
       // (formattedClips will be garbage collected after upsert completes)
     } catch (error) {
-      console.error(`Error during clip sync iteration ${iterationCount}:`, error);
+      console.error(`[clip-sync] iteration ${iterationCount} failed: ${describeError(error)}`);
       throw error;
     }
   }

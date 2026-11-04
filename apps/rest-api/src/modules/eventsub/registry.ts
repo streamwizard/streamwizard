@@ -1,6 +1,7 @@
 import type { EventSubNotificationPayload, EventSubSubscriptionType } from "@repo/types";
 import { z } from "zod";
 import { TwitchApi } from "@repo/twitch-api";
+import { describeError } from "@repo/sentry/safe-error";
 import { supabase } from "@repo/supabase";
 import { getTwitchIntegrationByBroadcasterId } from "@repo/supabase/queries/user";
 import { registerTwitchHandlers } from "@/modules/eventsub/register";
@@ -51,7 +52,7 @@ export class HandlerRegistry {
         const parsedData = schema ? schema.parse(data) : (data as TData);
         await handler(parsedData, context);
       } catch (error) {
-        console.log(`Error in handler for ${eventType}:`, error);
+        console.log(`[eventsub] handler for ${eventType} failed: ${describeError(error)}`);
       }
     });
   }

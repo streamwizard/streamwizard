@@ -1,5 +1,5 @@
 import { TwitchApi } from "@repo/twitch-api";
-import { TwitchEventSubReceiver } from "./index";
+import { describeBindError, TwitchEventSubReceiver } from "./index";
 import type {
     EventSubLifecycleEvent,
     EventSubReceiverOptions,
@@ -108,7 +108,7 @@ export class ConduitShardManager {
             await this.twitchApi.eventsub.updateConduit(this.options.conduitId, wanted);
             return { shardCount: wanted, resized: true };
         } catch (error) {
-            console.error("❌ Failed to check conduit shard count:", error);
+            console.error(`❌ Failed to check conduit shard count: ${describeBindError(error).text}`);
             return { shardCount: null, resized: false };
         }
     }
