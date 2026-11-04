@@ -1,29 +1,29 @@
 import Link from "next/link";
 import { Link2Off } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord";
-import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
+import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord/discord";
+import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/tickets/config";
 import {
   type DiscordTicket,
   type OpenTicketCounts,
   type TicketListFilters,
   getOpenTicketCounts,
   listTickets,
-} from "@repo/supabase/queries/tickets";
+} from "@repo/supabase/queries/tickets/tickets";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
 import { Button } from "@repo/ui/components/ui/button";
 import { Input } from "@repo/ui/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@repo/ui/components/ui/native-select";
 import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
-import { TicketEmptyList } from "@/components/discord/ticket-empty-list";
-import { TicketList } from "@/components/discord/ticket-list";
-import { TicketListLive } from "@/components/discord/ticket-list-live";
-import { PageTabs } from "@/components/shared/page-tabs";
+import { TicketEmptyList } from "@/components/discord/tickets/ticket-empty-list";
+import { TicketList } from "@/components/discord/tickets/ticket-list";
+import { TicketListLive } from "@/components/discord/tickets/ticket-list-live";
+import { PageTabs } from "@/components/shared/page/page-tabs";
 import { FilterPanel } from "@/components/shared/filter-panel";
-import { PageHeader } from "@/components/shared/page-header";
-import { assertAdmin } from "@/lib/assert-admin";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { assertAdmin } from "@/lib/auth/assert-admin";
 import { requireDiscordContext } from "@/lib/discord/api";
-import { TICKET_CLOSE_CODE_LABELS } from "@/lib/discord/tickets";
+import { TICKET_CLOSE_CODE_LABELS } from "@/lib/discord/tickets/tickets";
 import { resolveDiscordProfiles } from "@/lib/discord/users";
 
 export const dynamic = "force-dynamic";

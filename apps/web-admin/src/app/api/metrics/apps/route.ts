@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertAppEnv, assertAppName, assertValidFluxDuration } from "@repo/metrics";
-import { getAdminSession } from "@/lib/admin-session";
-import { fetchAppSeries, fetchServerSeries } from "@/lib/apps";
+import { getAdminSession } from "@/lib/auth/admin-session";
+import { fetchAppSeries, fetchServerSeries } from "@/lib/apps/apps";
 
 export const dynamic = "force-dynamic";
 

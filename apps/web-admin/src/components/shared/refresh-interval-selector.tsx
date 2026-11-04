@@ -1,7 +1,7 @@
 "use client";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui";
-import { REFRESH_OPTIONS, useRefreshInterval } from "@/lib/refresh-interval-context";
+import { REFRESH_OPTIONS, useRefreshInterval } from "@/providers/refresh-interval-context";
 
 export function RefreshIntervalSelector() {
   const { interval, setInterval } = useRefreshInterval();

@@ -1,7 +1,7 @@
 import { MessageSquareDashed } from "lucide-react";
 import { parseBuiltMessage } from "@repo/discord-message";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { listBuiltMessages, type DiscordBuiltMessage } from "@repo/supabase/queries/discord-built-messages";
+import { listBuiltMessages, type DiscordBuiltMessage } from "@repo/supabase/queries/discord/built-messages";
 import {
   Empty,
   EmptyContent,
@@ -10,12 +10,12 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@repo/ui/components/ui/empty";
-import { BuiltMessageList, type BuiltMessageListItem } from "@/components/discord/built-message-list";
-import { NewBuiltMessageButton } from "@/components/discord/built-message-new";
-import { PageHeader } from "@/components/shared/page-header";
+import { BuiltMessageList, type BuiltMessageListItem } from "@/components/discord/messages/built-message-list";
+import { NewBuiltMessageButton } from "@/components/discord/messages/built-message-new";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { getGuildChannels, requireDiscordContext } from "@/lib/discord/api";
-import { builtMessageStatus, channelNameFor } from "@/lib/discord/built-messages";
-import { formatDateTime } from "@/lib/discord/tickets";
+import { builtMessageStatus, channelNameFor } from "@/lib/discord/messages/built-messages";
+import { formatDateTime } from "@/lib/discord/tickets/tickets";
 
 export const dynamic = "force-dynamic";
 

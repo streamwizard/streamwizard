@@ -23,8 +23,8 @@ import { WsAuthFailureChart } from "@/components/ws/ws-auth-failure-chart";
 import { WsMessageDropChart } from "@/components/ws/ws-message-drop-chart";
 import { WsConnectionDurationChart } from "@/components/ws/ws-connection-duration-chart";
 import { WsTopEventsTable } from "@/components/ws/ws-top-events-table";
-import { PageHeader } from "@/components/shared/page-header";
-import { SectionHeading } from "@/components/shared/section-heading";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { SectionHeading } from "@/components/shared/page/section-heading";
 import { StatCard } from "@/components/shared/stat-card";
 import { ChartGrid, StatGrid } from "@/components/shared/stat-grid";
 

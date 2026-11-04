@@ -25,8 +25,8 @@ import {
   deleteUserAction,
   removeUserTotpAction,
   unbanUserAction,
-  type ModerationResult,
-} from "@/actions/users";
+} from "@/actions/users/users";
+import type { ModerationResult } from "@/types/users";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,

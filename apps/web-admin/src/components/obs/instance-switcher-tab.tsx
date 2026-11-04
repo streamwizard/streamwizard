@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { Badge } from "@repo/ui";
 import { AutoSwitcherForm, AutoSwitcherOverrideControls, mintWsUrl, useObsWebSocket } from "@repo/obs-web";
-import type { AutoSwitcherFormValues } from "@repo/schemas";
-import { getInstanceObsWsPasswordAdminAction } from "@/actions/nodes";
-import { adminNodeToken } from "@/lib/node-token";
-import { clearSceneOverrideForUser, setSceneOverrideForUser, upsertAutoSwitcherConfigForUser } from "@/actions/auto-switcher";
-import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher";
+import type { AutoSwitcherFormValues } from "@repo/schemas/auto-switcher/form";
+import { getInstanceObsWsPasswordAdminAction } from "@/actions/nodes/obs";
+import { adminNodeToken } from "@/lib/nodes/node-token";
+import { clearSceneOverrideForUser, setSceneOverrideForUser, upsertAutoSwitcherConfigForUser } from "@/actions/nodes/auto-switcher";
+import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/irl/auto-switcher";
 
 interface InstanceSwitcherTabProps {
   /** Owner of the config — the instance's user. */

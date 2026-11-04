@@ -1,9 +1,9 @@
 import type { Json } from "@repo/supabase";
 import { reportError } from "@repo/sentry";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord";
-import { insertDiscordSettingsAudit } from "@repo/supabase/queries/discord-audit";
-import { logPlatformEvent } from "@repo/supabase/queries/platform-events";
+import { getDiscordUserIdForUser } from "@repo/supabase/queries/discord/discord";
+import { insertDiscordSettingsAudit } from "@repo/supabase/queries/discord/audit";
+import { logPlatformEvent } from "@repo/supabase/queries/platform/events";
 import { actorIdentity } from "@/lib/platform-events";
 
 // Server-only. One place to record dashboard changes: the audit row for the
@@ -67,7 +67,7 @@ export async function recordChange({
       changed_by_discord_id: discordUserId,
     });
   } catch (error) {
-    reportError(error, "web-admin discord: audit", { section, action });
+    reportError(error, "discord.audit", { section, action });
   }
 
   // A test log event is its own entry in the log; don't announce it twice.
@@ -87,6 +87,6 @@ export async function recordChange({
         ),
       },
     },
-    "web-admin discord: audit event",
+    "discord.audit-event",
   );
 }

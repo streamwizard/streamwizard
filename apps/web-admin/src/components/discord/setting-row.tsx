@@ -28,4 +28,4 @@ export function SettingRow({
 
 // The save bar moved next to the other shared widgets; re-exported so the
 // settings forms keep importing both from here.
-export { SaveBar } from "@/components/shared/save-bar";
+export { SaveBar } from "@/components/shared/page/save-bar";

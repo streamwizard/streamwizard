@@ -30,14 +30,14 @@ import {
 } from "@repo/ui";
 import { Sparkline } from "@/components/eventsub/sparkline";
 import type { IndicatorStatus } from "@/components/shared/status-indicator";
-import { ChartEmptyState } from "@/components/shared/chart-empty-state";
+import { ChartEmptyState } from "@/components/shared/charts/chart-empty-state";
 import { formatElapsed } from "@/lib/format";
-import { byWorstFirst, padShardThroughput, TILE_VIEW_MAX_SHARDS, type ShardView } from "@/lib/eventsub-health";
-import type { LifecycleRow } from "@/lib/eventsub-metrics";
+import { byWorstFirst, padShardThroughput, TILE_VIEW_MAX_SHARDS, type ShardView } from "@/lib/eventsub/eventsub-health";
+import type { LifecycleRow } from "@/lib/eventsub/eventsub-metrics";
 import { DASHBOARD_COOKIE, writeDashboardCookie } from "@/lib/dashboard-prefs";
-import { useHydrated } from "@/lib/use-hydrated";
+import { useHydrated } from "@/hooks/use-hydrated";
 import { cn, formatTime } from "@/lib/utils";
-import { AXIS_TICK, CHART_TOOLTIP_STYLE, ChartBody } from "@/components/shared/chart-kit";
+import { AXIS_TICK, CHART_TOOLTIP_STYLE, ChartBody } from "@/components/shared/charts/chart-kit";
 
 export type ShardGridView = "grid" | "heatmap";
 

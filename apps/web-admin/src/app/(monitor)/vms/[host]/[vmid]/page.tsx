@@ -7,10 +7,10 @@ import { Button } from "@repo/ui/components/ui/button";
 import { Card, CardContent } from "@repo/ui/components/ui/card";
 import { STREAMWIZARD_VM_TAG, VM_ALERT_RULES, isStreamwizardVm } from "@repo/alerting/rules";
 import { assertProxmoxName, queryProxmoxGuestInfo } from "@repo/metrics";
-import { NodeMetricChart } from "@/components/shared/node-metric-chart";
-import { relative } from "@/lib/backup-format";
+import { NodeMetricChart } from "@/components/shared/charts/node-metric-chart";
+import { relative } from "@/lib/backups/backup-format";
 import { When } from "@/components/shared/hint-popover";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { StatusIndicator } from "@/components/shared/status-indicator";
@@ -28,11 +28,11 @@ import {
   usageTone,
   vmHostHref,
   vmStatusDisplay,
-} from "@/lib/vm-format";
+} from "@/lib/vms/vm-format";
 import { AutoRefresh } from "@/components/vms/auto-refresh";
 import { formatBytes } from "@/lib/format";
-import { fetchGuestSeries, getVm, guestRef } from "@/lib/vms";
-import { PageCrumb } from "@/lib/crumbs";
+import { fetchGuestSeries, getVm, guestRef } from "@/lib/vms/vms";
+import { PageCrumb } from "@/lib/nav/crumbs";
 
 export const dynamic = "force-dynamic";
 

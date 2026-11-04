@@ -44,20 +44,20 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/shared/responsive-dialog";
-import type { BlockId } from "@/lib/cms/blocks";
-import { activeTextStyle, TEXT_STYLES, textStyleLabel, type TextStyle, type TextStyleId } from "@/lib/cms/text-styles";
+import type { BlockId } from "@/lib/cms/editor/blocks";
+import { activeTextStyle, TEXT_STYLES, textStyleLabel, type TextStyle, type TextStyleId } from "@/lib/cms/editor/text-styles";
 import { cn } from "@/lib/utils";
-import type { CmsMediaItem } from "@/lib/cms/media-items";
-import { CMS_IMAGE_TYPES } from "@/lib/cms/media";
+import type { CmsMediaItem } from "@/lib/cms/media/media-items";
+import { CMS_IMAGE_TYPES } from "@/lib/cms/media/media";
 import { FormField } from "../form-field";
 import { ImagePickerDialog } from "../image-picker-dialog";
 import { ImageUploadDialog } from "../image-upload-dialog";
-import { BlockHandle } from "./block-handle";
-import { BlockInserter, insertBlock } from "./block-inserter";
+import { BlockHandle } from "@/components/content/editor/blocks/block-handle";
+import { BlockInserter, insertBlock } from "@/components/content/editor/blocks/block-inserter";
 import { useEditorWorkspace, type EditorDialog, type LinkTarget } from "./editor-workspace";
-import { ImportDocxDialog } from "./import-docx-dialog";
-import { CODE_LANGUAGES, cmsExtensions } from "./extensions";
-import { SlashMenu, SlashMenuList, type SlashMenuState } from "./slash-menu";
+import { ImportDocxDialog } from "@/components/content/editor/dialogs/import-docx-dialog";
+import { CODE_LANGUAGES, cmsExtensions } from "@/components/content/editor/blocks/extensions";
+import { SlashMenu, SlashMenuList, type SlashMenuState } from "@/components/content/editor/blocks/slash-menu";
 
 // Prose styles for the editing surface. The public site has its own; these
 // only need to make the structure (headings, lists, quotes) obvious.

@@ -6,9 +6,9 @@ import { LiveNow } from "@/components/overview/live-now";
 import { OverviewRefresh } from "@/components/overview/overview-refresh";
 import { Shortcuts } from "@/components/overview/shortcuts";
 import { StatusStrip } from "@/components/overview/status-strip";
-import { PageHeader } from "@/components/shared/page-header";
-import { SectionHeading } from "@/components/shared/section-heading";
-import { loadOverview } from "@/lib/overview-data";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { SectionHeading } from "@/components/shared/page/section-heading";
+import { loadOverview } from "@/lib/overview/overview-data";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
-import { AGENT_LABEL } from "@/lib/vm-format";
-import { getGuestNet, pveConfigured, type GuestRef } from "@/lib/pve";
+import { AGENT_LABEL } from "@/lib/vms/vm-format";
+import { getGuestNet, pveConfigured, type GuestRef } from "@/lib/vms/pve";
 
 /** IPs and agent state from the PVE API, streamed in after the page. */
 export async function GuestNetLine({ guest }: { guest: GuestRef }) {

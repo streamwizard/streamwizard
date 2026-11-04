@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { parseWorkingHours } from "@repo/supabase/queries/ticket-hours";
-import { getTicketSettings } from "@repo/supabase/queries/tickets";
-import { TicketAutomationForm } from "@/components/discord/ticket-automation-form";
+import { parseWorkingHours } from "@repo/supabase/queries/tickets/hours";
+import { getTicketSettings } from "@repo/supabase/queries/tickets/tickets";
+import { TicketAutomationForm } from "@/components/discord/tickets/settings/ticket-automation-form";
 import { requireDiscordContext } from "@/lib/discord/api";
 
 export const dynamic = "force-dynamic";

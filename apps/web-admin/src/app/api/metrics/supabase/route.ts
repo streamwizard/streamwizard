@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-session";
-import { EMPTY_SUPABASE_METRICS, fetchSupabaseMetrics } from "@/lib/supabase-metrics";
+import { getAdminSession } from "@/lib/auth/admin-session";
+import { EMPTY_SUPABASE_METRICS, fetchSupabaseMetrics } from "@/lib/supabase/supabase-metrics";
 
 export const dynamic = "force-dynamic";
 

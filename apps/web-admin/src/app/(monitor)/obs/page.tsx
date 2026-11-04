@@ -1,6 +1,6 @@
-import { PageTabs } from "@/components/shared/page-tabs";
+import { PageTabs } from "@/components/shared/page/page-tabs";
 import { LiveIndicator } from "@/components/shared/live-indicator";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { ObsFleetTab } from "@/components/obs/obs-fleet-tab";
 import { ObsManageTab } from "@/components/obs/obs-manage-tab";
 

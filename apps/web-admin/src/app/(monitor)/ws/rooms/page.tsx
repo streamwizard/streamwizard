@@ -1,8 +1,8 @@
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { WsMonitorProvider } from "@/providers/ws-monitor-provider";
 import { WsRoomTable } from "@/components/ws/ws-room-table";
 import { MonitorUnconfigured } from "@/components/ws/monitor-unconfigured";
-import { monitorWsUrl } from "@/lib/monitor-config";
+import { monitorWsUrl } from "@/lib/monitor/monitor-config";
 
 export default function WsRoomsPage() {
   const wsUrl = monitorWsUrl();

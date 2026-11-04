@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
+import { useRefreshInterval } from "@/providers/refresh-interval-context";
 
 /**
  * Re-renders the server page at the header's refresh interval, so VM status,

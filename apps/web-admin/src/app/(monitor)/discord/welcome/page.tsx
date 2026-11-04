@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getGuildSettings } from "@repo/supabase/queries/discord";
-import { WelcomeForm } from "@/components/discord/welcome-form";
-import { PageHeader } from "@/components/shared/page-header";
+import { getGuildSettings } from "@repo/supabase/queries/discord/discord";
+import { WelcomeForm } from "@/components/discord/welcome/welcome-form";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { getGuild, getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toChannelOptions, toRoleOptions } from "@/lib/discord/options";
 

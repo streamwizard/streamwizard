@@ -1,6 +1,6 @@
-import { confirmCmsUploadAction, createCmsUploadAction } from "@/actions/cms-media";
-import { validateCmsUpload, type CmsUploadPurpose } from "@/lib/cms/media";
-import type { CmsMediaItem } from "@/lib/cms/media-items";
+import { confirmCmsUploadAction, createCmsUploadAction } from "@/actions/cms/media";
+import { validateCmsUpload, type CmsUploadPurpose } from "@/lib/cms/media/media";
+import type { CmsMediaItem } from "@/lib/cms/media/media-items";
 
 // Browser side of a CMS image upload: read the size, ask for a presigned URL,
 // PUT the file straight to R2 (XHR for real progress), confirm.

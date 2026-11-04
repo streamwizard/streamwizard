@@ -2,8 +2,8 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
 import {
   getAlertNotificationConfigs,
   type AlertNotificationConfig,
-} from "@repo/supabase/queries/alert-notification-config";
-import { PageHeader } from "@/components/shared/page-header";
+} from "@repo/supabase/queries/alerts/notification-config";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { NotificationsEditor, type EnvNotifyView } from "@/components/alerts/notifications-editor";
 import { defaultRoute } from "@repo/alerting/notify";
 import { homeEnv } from "@/lib/home-env";

@@ -1,9 +1,9 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getAdminUserUsage, listUserActivity } from "@repo/supabase/queries/admin-users";
+import { getAdminUserUsage, listUserActivity } from "@repo/supabase/queries/users/admin-users";
 import { UserOverview } from "@/components/users/user-overview";
-import { assertAdmin } from "@/lib/assert-admin";
-import { loadUserAuthState } from "@/lib/user-auth";
-import { loadAdminUser } from "@/lib/users";
+import { assertAdmin } from "@/lib/auth/assert-admin";
+import { loadUserAuthState } from "@/lib/users/user-auth";
+import { loadAdminUser } from "@/lib/users/users";
 
 export const dynamic = "force-dynamic";
 

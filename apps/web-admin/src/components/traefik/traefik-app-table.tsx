@@ -1,10 +1,10 @@
-import { appHref, errorTone, formatErrorPct, formatMs } from "@/lib/app-format";
+import { appHref, errorTone, formatErrorPct, formatMs } from "@/lib/apps/app-format";
 import { HelpLabel } from "@/components/shared/hint-popover";
-import { Rate } from "@/components/shared/rate";
-import { Sparkline } from "@/components/shared/sparkline";
+import { Rate } from "@/components/shared/charts/rate";
+import { Sparkline } from "@/components/shared/charts/sparkline";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
-import { ENV_LABEL } from "@/lib/apps-model";
-import type { TraefikRow } from "@/lib/traefik-model";
+import { ENV_LABEL } from "@/lib/apps/apps-model";
+import type { TraefikRow } from "@/lib/traefik/traefik-model";
 import { CLIENT_ERRORS_HINT, DATA_HINT, REQUESTS_HINT, RESPONSE_HINT, SERVER_ERRORS_HINT, SLOW_HINT, formatRequestRate } from "./traefik-format";
 
 const TONE = {

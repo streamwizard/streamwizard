@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-session";
-import { getNavCounts } from "@/lib/nav-counts";
+import { getAdminSession } from "@/lib/auth/admin-session";
+import { getNavCounts } from "@/lib/nav/nav-counts";
 
 export const dynamic = "force-dynamic";
 

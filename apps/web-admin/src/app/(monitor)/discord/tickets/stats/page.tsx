@@ -1,17 +1,17 @@
 import { Clock, MessageSquareReply, Star, Ticket, TicketCheck } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { listTicketCategories } from "@repo/supabase/queries/ticket-config";
+import { listTicketCategories } from "@repo/supabase/queries/tickets/config";
 import {
   formatDurationShort,
   getTicketStatsByCategory,
   getTicketStatsByDay,
   getTicketStatsSummary,
-} from "@repo/supabase/queries/ticket-stats";
+} from "@repo/supabase/queries/tickets/stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
-import { TicketStatsChart } from "@/components/discord/ticket-stats-chart";
-import { PageTabs } from "@/components/shared/page-tabs";
+import { TicketStatsChart } from "@/components/discord/tickets/ticket-stats-chart";
+import { PageTabs } from "@/components/shared/page/page-tabs";
 import { DataList } from "@/components/shared/data-list";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { requireDiscordContext } from "@/lib/discord/api";

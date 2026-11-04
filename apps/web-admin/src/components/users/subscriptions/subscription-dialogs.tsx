@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui";
-import { grantSubscriptionAction, revokeSubscriptionAction, updateSubscriptionAction } from "@/actions/subscriptions";
+import { grantSubscriptionAction, revokeSubscriptionAction, updateSubscriptionAction } from "@/actions/users/subscriptions";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,

@@ -12,8 +12,8 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/shared/responsive-dialog";
-import { CMS_IMAGE_TYPES, MAX_ALT_LENGTH, type CmsUploadPurpose } from "@/lib/cms/media";
-import type { CmsMediaItem } from "@/lib/cms/media-items";
+import { CMS_IMAGE_TYPES, MAX_ALT_LENGTH, type CmsUploadPurpose } from "@/lib/cms/media/media";
+import type { CmsMediaItem } from "@/lib/cms/media/media-items";
 import { FormField } from "./form-field";
 import { uploadCmsImage } from "./upload-image";
 

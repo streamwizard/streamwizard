@@ -17,9 +17,9 @@ import {
   Input,
   Textarea,
 } from "@repo/ui";
-import { deleteCategoryAction, saveCategoryAction } from "@/actions/cms-taxonomy";
+import { deleteCategoryAction, saveCategoryAction } from "@/actions/cms/taxonomy";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,

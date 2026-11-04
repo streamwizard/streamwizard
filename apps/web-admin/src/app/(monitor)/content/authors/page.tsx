@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { listCmsAuthors } from "@repo/supabase/queries/cms/authors";
 import { AuthorsView } from "@/components/content/authors-view";
-import { cmsAssetUrl } from "@/lib/cms/storage";
+import { cmsAssetUrl } from "@/lib/cms/media/storage";
 
 export const dynamic = "force-dynamic";
 

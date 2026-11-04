@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
 import { useSidebar } from "@repo/ui";
 import { useNavCounts } from "@/hooks/use-nav-counts";
-import { BOTTOM_NAV_HREFS, findNavItem, findNavLocation, type NavItem } from "@/lib/nav-config";
+import { BOTTOM_NAV_HREFS, findNavItem, findNavLocation, type NavItem } from "@/lib/nav/nav-config";
 import { cn } from "@/lib/utils";
 
 // Shorter than the sidebar label where five slots across a phone need it.

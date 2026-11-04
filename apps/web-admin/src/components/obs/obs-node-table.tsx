@@ -3,19 +3,19 @@
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import type { ObsInstanceSnapshot, ObsNodeSnapshot } from "@repo/metrics";
-import type { ObsNode } from "@repo/supabase/queries/obs-nodes";
-import { FleetHealth, FleetState, RelativeTime, healthCheckText } from "@/components/shared/fleet-cells";
+import type { ObsNode } from "@repo/supabase/queries/obs-nodes/nodes";
+import { FleetHealth, FleetState, RelativeTime, healthCheckText } from "@/components/shared/nodes/fleet-cells";
 import { ObsInstanceTable } from "@/components/obs/obs-instance-table";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { fetcher, formatBandwidth } from "@/lib/utils";
 import { formatMb } from "@/lib/format";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
-import type { FleetNode } from "@/lib/node-fleet";
+import { useRefreshInterval } from "@/providers/refresh-interval-context";
+import { useBandwidthUnit } from "@/providers/bandwidth-unit-context";
+import type { FleetNode } from "@/lib/nodes/node-fleet";
+import { isGuid } from "@repo/schemas/ids";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The registry columns the fleet list shows. Read once with the page; they
  *  only change when someone edits the node. */
@@ -61,7 +61,7 @@ export function mergeObsNodes(fleet: FleetNode[], facts: ObsNodeFacts[], snapsho
     } else {
       rows.set(snapshot.nodeId, {
         key: snapshot.nodeId,
-        id: UUID.test(snapshot.nodeId) ? snapshot.nodeId : null,
+        id: isGuid(snapshot.nodeId) ? snapshot.nodeId : null,
         name: snapshot.nodeId,
         fleet: null,
         facts: null,

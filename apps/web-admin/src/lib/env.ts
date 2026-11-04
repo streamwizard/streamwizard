@@ -1,6 +1,7 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk";
+import { snowflakeSchema } from "@repo/schemas/ids";
 
 // Derive NEXT_PUBLIC_ vars from their non-prefixed Doppler counterparts.
 // next.config.ts does the same to bake them into the client bundle at build time.
@@ -49,8 +50,8 @@ export const env = createEnv({
     // slash commands; the INTERNAL pair reaches the bot's Hono server for
     // cache refreshes and actions — without it saves still land in the DB and
     // the bot's cache TTLs pick them up.
-    DISCORD_GUILD_ID: z.string().regex(/^\d{17,20}$/).optional(),
-    DISCORD_CLIENT_ID: z.string().regex(/^\d{17,20}$/).optional(),
+    DISCORD_GUILD_ID: snowflakeSchema.optional(),
+    DISCORD_CLIENT_ID: snowflakeSchema.optional(),
     DISCORD_BOT_INTERNAL_URL: z.string().url().optional(),
     DISCORD_BOT_INTERNAL_SECRET: z.string().min(16).optional(),
     // Banner uploads in the Discord message builder go to the shared CDN
@@ -80,7 +81,7 @@ export const env = createEnv({
     // /internal/* routes, signed with WS_SERVICE_SIGNING_JWK. Optional —
     // without it saves still land in the DB and the engine's 60s reconcile
     // picks them up. The same key signs the live monitor's 60-second socket
-    // tokens (actions/monitor.ts); the browser dials NEXT_PUBLIC_WS_SERVER_URL,
+    // tokens (actions/ws/monitor-token.ts); the browser dials NEXT_PUBLIC_WS_SERVER_URL,
     // which next.config.ts derives from this.
     WS_SERVER_URL: z.string().min(1).optional(),
     // Ed25519 private JWK this app signs its ws-server tokens with

@@ -15,7 +15,7 @@ import {
   AlertDialogTitle,
   Button,
 } from "@repo/ui";
-import { resyncEventSubAction, setAdminRoleAction, unlinkDiscordAction } from "@/actions/users";
+import { resyncEventSubAction, setAdminRoleAction, unlinkDiscordAction } from "@/actions/users/users";
 
 interface Controlled {
   open: boolean;

@@ -19,7 +19,7 @@ import {
   LEGEND_WRAPPER_STYLE,
   stackByTime,
   useMetricsPoll,
-} from "@/components/shared/chart-kit";
+} from "@/components/shared/charts/chart-kit";
 
 interface Props {
   initialData: WsAuthFailurePoint[];

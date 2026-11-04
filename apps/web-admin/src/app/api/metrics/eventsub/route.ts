@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-session";
-import { fetchEventsubMetrics } from "@/lib/eventsub-metrics";
+import { getAdminSession } from "@/lib/auth/admin-session";
+import { fetchEventsubMetrics } from "@/lib/eventsub/eventsub-metrics";
 
 export const dynamic = "force-dynamic";
 

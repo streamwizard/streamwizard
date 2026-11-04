@@ -8,18 +8,18 @@ import {
   Ticket,
 } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getGuildCommandPermissions, getGuildSettings } from "@repo/supabase/queries/discord";
-import { getActivitySettings, getIgnoredChannelIds } from "@repo/supabase/queries/discord-activity";
-import { listDiscordSettingsAudit } from "@repo/supabase/queries/discord-audit";
-import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord-live";
-import { listVoiceChannels, listVoiceHubs } from "@repo/supabase/queries/discord-voice";
-import { getLogRouting, resolveLogRoute } from "@repo/supabase/queries/platform-events";
-import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets";
-import { PLATFORM_EVENT_TYPES } from "@repo/types";
+import { getGuildCommandPermissions, getGuildSettings } from "@repo/supabase/queries/discord/discord";
+import { getActivitySettings, getIgnoredChannelIds } from "@repo/supabase/queries/discord/activity";
+import { listDiscordSettingsAudit } from "@repo/supabase/queries/discord/audit";
+import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord/live";
+import { listVoiceChannels, listVoiceHubs } from "@repo/supabase/queries/discord/voice";
+import { getLogRouting, resolveLogRoute } from "@repo/supabase/queries/platform/events";
+import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets/tickets";
+import { PLATFORM_EVENT_TYPES } from "@repo/schemas/platform-events";
 import { Card, CardContent } from "@repo/ui/components/ui/card";
-import { AuditList } from "@/components/discord/audit-list";
-import { PageHeader } from "@/components/shared/page-header";
-import { FeatureRow } from "@/components/discord/feature-row";
+import { AuditList } from "@/components/discord/overview/audit-list";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { FeatureRow } from "@/components/discord/overview/feature-row";
 import { getGuild, getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { buildNameMap } from "@/lib/discord/names";
 

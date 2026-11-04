@@ -1,17 +1,17 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getGuildSettings } from "@repo/supabase/queries/discord";
-import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord-live";
-import { listLiveRoleGrants } from "@repo/supabase/queries/discord-live-role";
+import { getGuildSettings } from "@repo/supabase/queries/discord/discord";
+import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord/live";
+import { listLiveRoleGrants } from "@repo/supabase/queries/discord/live-role";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
-import { LiveForm } from "@/components/discord/live-form";
-import { LiveUser } from "@/components/discord/live-user";
-import { OnOff } from "@/components/discord/on-off";
-import { TwitchLink } from "@/components/discord/twitch-link";
+import { LiveForm } from "@/components/discord/live/live-form";
+import { LiveUser } from "@/components/discord/live/live-user";
+import { OnOff } from "@/components/discord/live/on-off";
+import { TwitchLink } from "@/components/discord/live/twitch-link";
 import { DataList } from "@/components/shared/data-list";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toChannelOptions, toRoleOptions } from "@/lib/discord/options";
-import { formatDateTime } from "@/lib/discord/tickets";
+import { formatDateTime } from "@/lib/discord/tickets/tickets";
 
 export const dynamic = "force-dynamic";
 

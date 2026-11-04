@@ -2,10 +2,10 @@
 
 import useSWR from "swr";
 import { Bar, BarChart, CartesianGrid, Legend, Tooltip, XAxis, YAxis } from "recharts";
-import { AXIS_TICK, CHART_TOOLTIP_STYLE, ChartCard, LEGEND_WRAPPER_STYLE, rowsByTime } from "@/components/shared/chart-kit";
-import type { NodeMetricPoint } from "@/components/shared/node-metric-chart";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useTimeRange } from "@/lib/time-range-context";
+import { AXIS_TICK, CHART_TOOLTIP_STYLE, ChartCard, LEGEND_WRAPPER_STYLE, rowsByTime } from "@/components/shared/charts/chart-kit";
+import type { NodeMetricPoint } from "@/components/shared/charts/node-metric-chart";
+import { useRefreshInterval } from "@/providers/refresh-interval-context";
+import { useTimeRange } from "@/providers/time-range-context";
 import { fetcher } from "@/lib/utils";
 
 interface Props {

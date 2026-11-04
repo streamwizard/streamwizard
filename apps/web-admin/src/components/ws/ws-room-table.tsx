@@ -3,7 +3,7 @@
 import { Users } from "lucide-react";
 import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { DataList } from "@/components/shared/data-list";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { StatusIndicator } from "@/components/shared/status-indicator";

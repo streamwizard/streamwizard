@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getPlatformStats } from "@repo/supabase/queries/platform-stats";
-import { PageHeader } from "@/components/shared/page-header";
-import { SectionHeading } from "@/components/shared/section-heading";
+import { getPlatformStats } from "@repo/supabase/queries/platform/stats";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { SectionHeading } from "@/components/shared/page/section-heading";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 

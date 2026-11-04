@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@repo/ui";
-import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
+import { useBandwidthUnit } from "@/providers/bandwidth-unit-context";
 
 // Flips every bandwidth readout in the dashboard between bits/s and bytes/s.
 // Sits in the header alongside the time-range and refresh selectors.

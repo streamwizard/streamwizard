@@ -1,9 +1,10 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 import { BellOff, ChevronDown } from "lucide-react";
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@repo/ui";
-import { silenceAlert } from "@/actions/alerts";
+import { silenceAlert } from "@/actions/alerts/silence";
 
 const DURATIONS = [
   { label: "1 hour", hours: 1 },
@@ -13,6 +14,10 @@ const DURATIONS = [
 
 export function SilenceMenu({ stateId, silenced }: { stateId: string; silenced: boolean }) {
   const [pending, startTransition] = useTransition();
+  const silence = async (hours: number | null) => {
+    const { error } = await silenceAlert(stateId, hours);
+    if (error) toast.error(error);
+  };
 
   return (
     <DropdownMenu>
@@ -25,12 +30,12 @@ export function SilenceMenu({ stateId, silenced }: { stateId: string; silenced: 
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         {DURATIONS.map(({ label, hours }) => (
-          <DropdownMenuItem key={hours} onClick={() => startTransition(() => silenceAlert(stateId, hours))}>
+          <DropdownMenuItem key={hours} onClick={() => startTransition(() => silence(hours))}>
             Silence for {label}
           </DropdownMenuItem>
         ))}
         {silenced && (
-          <DropdownMenuItem onClick={() => startTransition(() => silenceAlert(stateId, null))}>
+          <DropdownMenuItem onClick={() => startTransition(() => silence(null))}>
             Unsilence
           </DropdownMenuItem>
         )}

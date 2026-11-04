@@ -4,7 +4,7 @@ import Link from "next/link";
 import { LogOut, MoonStar, ShieldCheck, Sun, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from "@repo/ui";
-import { signOut } from "@/lib/auth-actions";
+import { signOut } from "@/actions/auth/sign-out";
 
 export function NavUser({ email }: { email: string }) {
   const { isMobile } = useSidebar();

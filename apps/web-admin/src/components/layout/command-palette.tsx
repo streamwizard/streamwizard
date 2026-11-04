@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Ticket, User } from "lucide-react";
 import { Button, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, Kbd } from "@repo/ui";
-import { searchUsersForPalette, type PaletteUser } from "@/actions/command-search";
-import { navGroups } from "@/lib/nav-config";
+import { searchUsersForPalette } from "@/actions/users/search";
+import type { PaletteUser } from "@/types/users";
+import { navGroups } from "@/lib/nav/nav-config";
 
 // Every page and tab from the nav config, so a new nav entry is searchable for free.
 const PAGES = navGroups.flatMap((group) =>
@@ -52,7 +53,7 @@ export function CommandPalette() {
         }
         searchUsersForPalette(term)
           .then((found) => {
-            if (!stale) setUsers(found);
+            if (!stale) setUsers(found.data ?? []);
           })
           .catch(() => {
             if (!stale) setUsers([]);

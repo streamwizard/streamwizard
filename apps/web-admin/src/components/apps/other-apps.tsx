@@ -1,6 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import { Card } from "@repo/ui/components/ui/card";
-import type { AppRow } from "@/lib/apps-model";
+import type { AppRow } from "@/lib/apps/apps-model";
 import { AppTable } from "./app-table";
 
 /** Everything on the server that is not ours, folded away at the bottom of /apps. No alerts, no status colours. */

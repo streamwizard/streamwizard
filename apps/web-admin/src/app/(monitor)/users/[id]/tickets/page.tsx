@@ -1,11 +1,11 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { listUserTickets } from "@repo/supabase/queries/admin-users";
-import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
+import { listUserTickets } from "@repo/supabase/queries/users/admin-users";
+import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/tickets/config";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui/components/ui/empty";
-import { TicketList } from "@/components/discord/ticket-list";
+import { TicketList } from "@/components/discord/tickets/ticket-list";
 import { getDiscordContext } from "@/lib/discord/api";
 import { resolveDiscordProfiles } from "@/lib/discord/users";
-import { loadAdminUser } from "@/lib/users";
+import { loadAdminUser } from "@/lib/users/users";
 
 export const dynamic = "force-dynamic";
 

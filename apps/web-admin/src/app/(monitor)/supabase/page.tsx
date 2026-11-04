@@ -10,20 +10,20 @@ import {
   SUPABASE_DB_DISK_WARN_PCT,
 } from "@repo/alerting/thresholds";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getQueryStats, type QueryStat } from "@repo/supabase/queries/query-stats";
+import { getQueryStats, type QueryStat } from "@repo/supabase/queries/platform/query-stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components/ui/table";
-import { PlatformMetricChart } from "@/components/shared/platform-metric-chart";
+import { PlatformMetricChart } from "@/components/shared/charts/platform-metric-chart";
 import { PlatformMultiSeriesChart } from "@/components/supabase/platform-multi-series-chart";
 import { HealthSection, SupabaseHealthBanner, SupabaseKpiTiles } from "@/components/supabase/supabase-health";
 import { QueryText } from "@/components/supabase/query-text";
 import { DataList } from "@/components/shared/data-list";
 import { LiveIndicator } from "@/components/shared/live-indicator";
-import { PageHeader } from "@/components/shared/page-header";
-import { SectionHeading } from "@/components/shared/section-heading";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { SectionHeading } from "@/components/shared/page/section-heading";
 import { ChartGrid } from "@/components/shared/stat-grid";
 import { homeEnv } from "@/lib/home-env";
-import { EMPTY_SUPABASE_METRICS, fetchSupabaseMetrics, type SupabaseMetrics } from "@/lib/supabase-metrics";
+import { EMPTY_SUPABASE_METRICS, fetchSupabaseMetrics, type SupabaseMetrics } from "@/lib/supabase/supabase-metrics";
 
 export const dynamic = "force-dynamic";
 

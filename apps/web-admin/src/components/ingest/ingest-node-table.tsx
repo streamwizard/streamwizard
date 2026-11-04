@@ -4,18 +4,18 @@ import useSWR from "swr";
 import { ArrowDown, ArrowDownToLine, ArrowUp, Radio, Server, Users } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import type { ActiveIngestSignal } from "@repo/metrics";
-import type { IngestNode as IngestNodeRow } from "@repo/supabase/queries/ingest-nodes";
-import { FleetHealth, FleetState, RelativeTime, healthCheckText } from "@/components/shared/fleet-cells";
-import type { NodeMetricPoint } from "@/components/shared/node-metric-chart";
+import type { IngestNode as IngestNodeRow } from "@repo/supabase/queries/ingest/nodes";
+import { FleetHealth, FleetState, RelativeTime, healthCheckText } from "@/components/shared/nodes/fleet-cells";
+import type { NodeMetricPoint } from "@/components/shared/charts/node-metric-chart";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { fetcher, formatBandwidth } from "@/lib/utils";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
-import { useIngestLive } from "@/lib/ingest-live-context";
-import type { FleetNode } from "@/lib/node-fleet";
-import type { IngestNode } from "@/lib/ingest-nodes";
+import { useRefreshInterval } from "@/providers/refresh-interval-context";
+import { useBandwidthUnit } from "@/providers/bandwidth-unit-context";
+import { useIngestLive } from "@/providers/ingest-live-context";
+import type { FleetNode } from "@/lib/nodes/node-fleet";
+import type { IngestNode } from "@/lib/nodes/ingest-nodes";
 
 /** The registry columns the fleet list shows. Read once with the page; they
  *  only change when someone edits the node. */

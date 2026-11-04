@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { DesktopOnly } from "@/components/shared/desktop-only";
+import { DesktopOnly } from "@/components/shared/page/desktop-only";
 import { AdminVncView } from "@/components/obs/admin-vnc-view";
 
 export default function AdminVncPage() {

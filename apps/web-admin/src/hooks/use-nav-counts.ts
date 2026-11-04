@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { EMPTY_NAV_COUNTS, type NavCounts } from "@/lib/nav-counts-shared";
+import { EMPTY_NAV_COUNTS, type NavCounts } from "@/lib/nav/nav-counts-shared";
 
 const fetcher = async (url: string): Promise<NavCounts> => {
   const response = await fetch(url);

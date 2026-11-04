@@ -7,7 +7,7 @@ import { Activity } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarRail, useSidebar } from "@repo/ui";
 import { NavUser } from "@/components/layout/nav-user";
 import { useNavCounts } from "@/hooks/use-nav-counts";
-import { navGroups, findNavLocation, type NavBadge } from "@/lib/nav-config";
+import { navGroups, findNavLocation, type NavBadge } from "@/lib/nav/nav-config";
 import { cn } from "@/lib/utils";
 
 interface MonitorSidebarProps {

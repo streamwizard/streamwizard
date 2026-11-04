@@ -13,16 +13,16 @@ import {
   queryObsInstanceSnapshot,
 } from "@repo/metrics";
 import { Cpu, MonitorPlay, Network } from "lucide-react";
-import type { NodeMetricPoint } from "@/components/shared/node-metric-chart";
-import { NodeMetricChart } from "@/components/shared/node-metric-chart";
+import type { NodeMetricPoint } from "@/components/shared/charts/node-metric-chart";
+import { NodeMetricChart } from "@/components/shared/charts/node-metric-chart";
 import { ObsFleetOverview, type ObsNodeFacts } from "@/components/obs/obs-node-table";
-import { CollapsibleCharts } from "@/components/shared/collapsible-charts";
-import { SectionHeading } from "@/components/shared/section-heading";
+import { CollapsibleCharts } from "@/components/shared/charts/collapsible-charts";
+import { SectionHeading } from "@/components/shared/page/section-heading";
 import { ChartGrid } from "@/components/shared/stat-grid";
-import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
-import { getFleet, type FleetNode } from "@/lib/node-fleet";
+import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/nodes/registry-nodes";
+import { getFleet, type FleetNode } from "@/lib/nodes/node-fleet";
 import { settled } from "@/lib/settled";
-import { listNodesAction } from "@/actions/nodes";
+import { listNodesAction } from "@/actions/nodes/obs";
 
 const API_PATH = "/api/metrics/obs";
 

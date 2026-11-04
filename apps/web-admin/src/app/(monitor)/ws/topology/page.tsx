@@ -1,8 +1,8 @@
-import { DesktopOnly } from "@/components/shared/desktop-only";
+import { DesktopOnly } from "@/components/shared/page/desktop-only";
 import { WsMonitorProvider } from "@/providers/ws-monitor-provider";
 import { WsTopology } from "@/components/topology/ws-topology";
 import { MonitorUnconfigured } from "@/components/ws/monitor-unconfigured";
-import { monitorWsUrl } from "@/lib/monitor-config";
+import { monitorWsUrl } from "@/lib/monitor/monitor-config";
 
 export default function WsTopologyPage() {
   const wsUrl = monitorWsUrl();

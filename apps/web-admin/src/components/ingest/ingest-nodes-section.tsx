@@ -4,9 +4,9 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from "@repo/ui";
-import type { IngestNode, IngestNodeCapacity } from "@repo/supabase/queries/ingest-nodes";
-import { createIngestNodeAction, deleteIngestNodeAction, updateIngestNodeAction } from "@/actions/ingest-nodes";
-import { DeleteNodeDialog, InstallCommandCard } from "@/components/shared/node-manage-kit";
+import type { IngestNode, IngestNodeCapacity } from "@repo/supabase/queries/ingest/nodes";
+import { createIngestNodeAction, deleteIngestNodeAction, updateIngestNodeAction } from "@/actions/nodes/ingest";
+import { DeleteNodeDialog, InstallCommandCard } from "@/components/shared/nodes/node-manage-kit";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
 import {
   ResponsiveDialog,
@@ -19,7 +19,7 @@ import {
 } from "@/components/shared/responsive-dialog";
 import { ingestNodeCapacitySchema } from "@/schemas/ingest-node";
 import { formatMb } from "@/lib/format";
-import { nodeStatusVariant } from "@/lib/node-ui";
+import { nodeStatusVariant } from "@/lib/nodes/node-ui";
 
 const EMPTY_FORM: IngestNodeCapacity = {
   name: "",

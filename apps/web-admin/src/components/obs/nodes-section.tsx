@@ -4,10 +4,10 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Pencil, Trash2 } from "lucide-react";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from "@repo/ui";
-import type { ObsNode, ObsNodeCapacity } from "@repo/supabase/queries/obs-nodes";
-import type { NodeHealthStatus } from "@/lib/node-health";
-import { createNodeAction, deleteNodeAction, updateNodeAction } from "@/actions/nodes";
-import { DeleteNodeDialog, InstallCommandCard } from "@/components/shared/node-manage-kit";
+import type { ObsNode, ObsNodeCapacity } from "@repo/supabase/queries/obs-nodes/nodes";
+import type { NodeHealthStatus } from "@/lib/nodes/node-health";
+import { createNodeAction, deleteNodeAction, updateNodeAction } from "@/actions/nodes/obs";
+import { DeleteNodeDialog, InstallCommandCard } from "@/components/shared/nodes/node-manage-kit";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
 import {
   ResponsiveDialog,
@@ -20,7 +20,7 @@ import {
 } from "@/components/shared/responsive-dialog";
 import { obsNodeCapacitySchema } from "@/schemas/obs-node";
 import { formatMb } from "@/lib/format";
-import { nodeHealthLabel, nodeHealthVariant, nodeStatusVariant } from "@/lib/node-ui";
+import { nodeHealthLabel, nodeHealthVariant, nodeStatusVariant } from "@/lib/nodes/node-ui";
 
 const EMPTY_FORM: ObsNodeCapacity = {
   name: "",

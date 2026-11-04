@@ -4,7 +4,7 @@ import type { HttpRequestPoint, HttpRouteStatPoint } from "@repo/metrics";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
 import { HttpRequestChart } from "@/components/http/http-request-chart";
 import { HttpRouteTable } from "@/components/http/http-route-table";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 

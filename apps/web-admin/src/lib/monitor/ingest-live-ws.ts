@@ -1,0 +1,136 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { IngestNodeLive, MonitorMessage } from "@repo/types/monitor";
+import type { IngestStatsPayload } from "@repo/types/overlay-ws";
+import { runMonitorSocket, type MonitorSocketStatus } from "@/lib/monitor/monitor-socket";
+
+// Dedicated live-data socket for the /ingest page. Deliberately NOT
+// useMonitorWs: that hook buffers 5000 envelopes for the ws/live feed, while
+// this page only needs "latest per node" bandwidth and "latest per session"
+// stream stats — tiny bounded maps, no event history.
+
+/** The fields of an ingest stats sample this page shows. */
+export type LiveStreamStats = Pick<
+  IngestStatsPayload,
+  | "session_id" | "protocol" | "node_id" | "stream_key_id" | "label"
+  | "kbps" | "mbps_recv_rate" | "mbps_bandwidth" | "rtt_ms"
+  | "pkt_recv_loss" | "pkt_recv_drop" | "pkt_recv_retrans" | "ms_rcv_buf" | "byte_recv_total"
+  | "loss_pct" | "drop_pct" | "retrans_pct"
+>;
+
+export type LiveStreamEntry = {
+  stats: LiveStreamStats;
+  /** Masked room id from the envelope — groups sessions per user. */
+  roomId: string;
+  receivedAt: number;
+};
+
+// Nodes and streams both report every ~1s. Node eviction stays at 30s because
+// the node's bot reconnect backoff caps at 30s — shorter would flap during
+// reconnects; streams evict fast since a stopped stream never comes back
+// under the same session_id.
+const NODE_STALE_MS = 30_000;
+const STREAM_STALE_MS = 10_000;
+const EVICT_SWEEP_MS = 2_000;
+
+export type LiveStatus = MonitorSocketStatus;
+
+export function useIngestLiveWs(wsUrl: string | null) {
+  const [status, setStatus] = useState<LiveStatus>("disconnected");
+  const [nodes, setNodes] = useState<Map<string, { entry: IngestNodeLive; receivedAt: number }>>(new Map());
+  const [streams, setStreams] = useState<Map<string, LiveStreamEntry>>(new Map());
+
+  useEffect(() => {
+    if (!wsUrl) return;
+    return runMonitorSocket<MonitorMessage>(wsUrl, {
+      onStatus: setStatus,
+      onMessage: (msg) => {
+        if (msg.kind === "node_bandwidth") {
+          const p = msg.payload;
+          setNodes((prev) => {
+            const next = new Map(prev);
+            next.set(p.node_id, {
+              entry: {
+                nodeId: p.node_id,
+                ts: p.ts,
+                rxBps: p.rx_bytes_per_sec,
+                txBps: p.tx_bytes_per_sec,
+                tsRxBps: p.tailscale_rx_bytes_per_sec,
+                tsTxBps: p.tailscale_tx_bytes_per_sec,
+              },
+              receivedAt: Date.now(),
+            });
+            return next;
+          });
+          return;
+        }
+
+        if (msg.kind === "snapshot") {
+          // Seed/refresh from the 5s snapshot so a late-joining page paints
+          // immediately instead of waiting for each node's next tick.
+          setNodes((prev) => {
+            const next = new Map(prev);
+            for (const n of msg.ingestNodes ?? []) {
+              const existing = next.get(n.nodeId);
+              // Live ticks are fresher than snapshots — never regress.
+              if (!existing || existing.entry.ts <= n.ts) {
+                next.set(n.nodeId, { entry: n, receivedAt: Date.now() });
+              }
+            }
+            return next;
+          });
+          return;
+        }
+
+        if (msg.kind === "message" && msg.eventType === "streamwizard.ingest_stats") {
+          const stats = msg.payload as LiveStreamStats;
+          if (!stats?.session_id) return;
+          setStreams((prev) => {
+            const next = new Map(prev);
+            next.set(stats.session_id, { stats, roomId: msg.roomId, receivedAt: Date.now() });
+            return next;
+          });
+        }
+      },
+    });
+  }, [wsUrl]);
+
+  // Age out nodes/streams that stopped reporting so a dead node doesn't
+  // freeze at its last reading.
+  useEffect(() => {
+    const sweep = setInterval(() => {
+      const now = Date.now();
+      setNodes((prev) => {
+        if (![...prev.values()].some((v) => now - v.receivedAt > NODE_STALE_MS)) return prev;
+        return new Map([...prev].filter(([, v]) => now - v.receivedAt <= NODE_STALE_MS));
+      });
+      setStreams((prev) => {
+        if (![...prev.values()].some((v) => now - v.receivedAt > STREAM_STALE_MS)) return prev;
+        return new Map([...prev].filter(([, v]) => now - v.receivedAt <= STREAM_STALE_MS));
+      });
+    }, EVICT_SWEEP_MS);
+    return () => clearInterval(sweep);
+  }, []);
+
+  const nodeList = useMemo(
+    () => [...nodes.values()].map((v) => v.entry).sort((a, b) => a.nodeId.localeCompare(b.nodeId)),
+    [nodes],
+  );
+
+  const fleet = useMemo(
+    () => ({
+      rxBps: nodeList.reduce((sum, n) => sum + n.rxBps, 0),
+      txBps: nodeList.reduce((sum, n) => sum + n.txBps, 0),
+      nodeCount: nodeList.length,
+    }),
+    [nodeList],
+  );
+
+  const streamList = useMemo(
+    () => [...streams.values()].sort((a, b) => a.roomId.localeCompare(b.roomId) || a.stats.session_id.localeCompare(b.stats.session_id)),
+    [streams],
+  );
+
+  return { status, nodes: nodeList, fleet, streams: streamList };
+}

@@ -1,6 +1,6 @@
 import { queryActiveIngestSignals } from "@repo/metrics";
 import { IngestLivePanel } from "@/components/ingest/ingest-live-panel";
-import { listIngestNodesAction } from "@/actions/ingest-nodes";
+import { listIngestNodesAction } from "@/actions/nodes/ingest";
 
 export async function IngestLiveTab() {
   // The socket carries node ids; the registry turns them into names.

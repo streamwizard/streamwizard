@@ -22,12 +22,12 @@ import {
   TableRow,
 } from "@repo/ui";
 import { DataList } from "@/components/shared/data-list";
-import { SectionHeading } from "@/components/shared/section-heading";
-import { ChartEmptyState } from "@/components/shared/chart-empty-state";
-import { buildEventsubChecks, buildKpis, buildShardViews, COST_WARN_PCT } from "@/lib/eventsub-health";
-import type { EventsubMetrics, LifecycleRow, SubscriptionInventory } from "@/lib/eventsub-metrics";
+import { SectionHeading } from "@/components/shared/page/section-heading";
+import { ChartEmptyState } from "@/components/shared/charts/chart-empty-state";
+import { buildEventsubChecks, buildKpis, buildShardViews, COST_WARN_PCT } from "@/lib/eventsub/eventsub-health";
+import type { EventsubMetrics, LifecycleRow, SubscriptionInventory } from "@/lib/eventsub/eventsub-metrics";
 import { cn } from "@/lib/utils";
-import { AXIS_TICK, CHART_TOOLTIP_STYLE, ChartBody, LEGEND_WRAPPER_STYLE, chartColor, stackByTime, useMetricsPoll } from "@/components/shared/chart-kit";
+import { AXIS_TICK, CHART_TOOLTIP_STYLE, ChartBody, LEGEND_WRAPPER_STYLE, chartColor, stackByTime, useMetricsPoll } from "@/components/shared/charts/chart-kit";
 import { EventsubHealthBanner, EventsubKpiTiles } from "./eventsub-health";
 import { EventsubShardGrid, type ShardGridView } from "./eventsub-shard-grid";
 

@@ -9,8 +9,8 @@ import { RefreshIntervalSelector } from "@/components/shared/refresh-interval-se
 import { TimeRangeSelector } from "@/components/shared/time-range-selector";
 import { BandwidthUnitToggle } from "@/components/layout/bandwidth-unit-toggle";
 import { CommandPalette } from "@/components/layout/command-palette";
-import { usePageCrumbs } from "@/lib/crumbs";
-import { findNavLocation, getHeaderControls, getNavTrail, type HeaderControl } from "@/lib/nav-config";
+import { usePageCrumbs } from "@/lib/nav/crumbs";
+import { findNavLocation, getHeaderControls, getNavTrail, type HeaderControl } from "@/lib/nav/nav-config";
 import { cn } from "@/lib/utils";
 
 const ENV_BADGE_CLASSES: Record<string, string> = {

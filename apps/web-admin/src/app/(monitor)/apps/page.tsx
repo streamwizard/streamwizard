@@ -4,9 +4,9 @@ import { AppsNotice, MissingData } from "@/components/apps/apps-notice";
 import { OtherApps } from "@/components/apps/other-apps";
 import { ServerCard } from "@/components/apps/server-card";
 import { AutoRefresh } from "@/components/vms/auto-refresh";
-import { PageHeader } from "@/components/shared/page-header";
-import { getAppsOverview } from "@/lib/apps";
-import { ENV_LABEL, OUR_ENVS, rowsOf } from "@/lib/apps-model";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { getAppsOverview } from "@/lib/apps/apps";
+import { ENV_LABEL, OUR_ENVS, rowsOf } from "@/lib/apps/apps-model";
 
 export const dynamic = "force-dynamic";
 

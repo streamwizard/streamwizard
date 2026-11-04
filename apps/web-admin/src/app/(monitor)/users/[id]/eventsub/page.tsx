@@ -6,10 +6,10 @@ import { When } from "@/components/users/detail";
 import { ResyncEventSubButton } from "@/components/users/user-actions";
 import { EventSubMessage } from "@/components/users/eventsub-message";
 import { DataList } from "@/components/shared/data-list";
-import { formatRelativeTime } from "@/lib/discord/tickets";
-import type { UserSubscriptionState } from "@/lib/user-eventsub";
-import { loadUserEventSub, type UserEventSubState } from "@/lib/user-eventsub-server";
-import { loadAdminUser } from "@/lib/users";
+import { formatRelativeTime } from "@/lib/discord/tickets/tickets";
+import type { UserSubscriptionState } from "@/lib/users/user-eventsub";
+import { loadUserEventSub, type UserEventSubState } from "@/lib/users/user-eventsub-server";
+import { loadAdminUser } from "@/lib/users/users";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";

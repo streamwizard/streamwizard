@@ -4,10 +4,10 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { formatBandwidth } from "@/lib/utils";
-import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
+import { useBandwidthUnit } from "@/providers/bandwidth-unit-context";
 import type { ObsInstanceSnapshot } from "@repo/metrics";
+import { isGuid } from "@repo/schemas/ids";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Enough of a registered node to turn a snapshot's node label back into a link. */
 export interface InstanceNodeRef {
@@ -22,7 +22,7 @@ interface Props {
 
 // Influx only knows ids. Eight characters are enough to tell rows apart; the
 // instance page has the container name and the owner.
-const shortId = (id: string) => (UUID.test(id) ? id.slice(0, 8) : id);
+const shortId = (id: string) => (isGuid(id) ? id.slice(0, 8) : id);
 
 // One row per currently-running OBS instance: which node it's on, whose it
 // is, and what it's using. Each row opens the instance page.
@@ -36,7 +36,7 @@ export function ObsInstanceTable({ rows, nodes }: Props) {
     nodeByLabel.set(node.id, node);
     nodeByLabel.set(node.name, node);
   }
-  const nodeIdOf = (row: ObsInstanceSnapshot) => nodeByLabel.get(row.nodeId)?.id ?? (UUID.test(row.nodeId) ? row.nodeId : undefined);
+  const nodeIdOf = (row: ObsInstanceSnapshot) => nodeByLabel.get(row.nodeId)?.id ?? (isGuid(row.nodeId) ? row.nodeId : undefined);
 
   const columns: DataColumn<ObsInstanceSnapshot>[] = [
     {
@@ -51,14 +51,14 @@ export function ObsInstanceTable({ rows, nodes }: Props) {
       // A node only Influx knows has no name: its id stands in, shortened like the others.
       cell: (row) => {
         const name = nodeByLabel.get(row.nodeId)?.name ?? row.nodeId;
-        return UUID.test(name) ? <span className="font-mono text-xs">{shortId(name)}</span> : name;
+        return isGuid(name) ? <span className="font-mono text-xs">{shortId(name)}</span> : name;
       },
     },
     {
       key: "user",
       header: "User",
       cell: (row) =>
-        UUID.test(row.userId) ? (
+        isGuid(row.userId) ? (
           // Above the row link, so the user page stays one tap away.
           <Link href={`/users/${row.userId}`} className="relative z-10 font-mono text-xs underline decoration-muted-foreground/50 underline-offset-4">
             {shortId(row.userId)}

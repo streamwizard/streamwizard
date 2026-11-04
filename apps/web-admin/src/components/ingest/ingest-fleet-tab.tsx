@@ -12,16 +12,16 @@ import {
   queryActiveIngestSignals,
 } from "@repo/metrics";
 import { Cpu, Network } from "lucide-react";
-import type { NodeMetricPoint } from "@/components/shared/node-metric-chart";
-import { NodeMetricChart } from "@/components/shared/node-metric-chart";
+import type { NodeMetricPoint } from "@/components/shared/charts/node-metric-chart";
+import { NodeMetricChart } from "@/components/shared/charts/node-metric-chart";
 import { IngestFleetOverview, type IngestNodeFacts } from "@/components/ingest/ingest-node-table";
-import { CollapsibleCharts } from "@/components/shared/collapsible-charts";
-import { SectionHeading } from "@/components/shared/section-heading";
+import { CollapsibleCharts } from "@/components/shared/charts/collapsible-charts";
+import { SectionHeading } from "@/components/shared/page/section-heading";
 import { ChartGrid } from "@/components/shared/stat-grid";
-import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/registry-nodes";
-import { getFleet, type FleetNode } from "@/lib/node-fleet";
-import { mergeIngestNodes } from "@/lib/ingest-nodes";
-import { listIngestNodesAction } from "@/actions/ingest-nodes";
+import { getRegisteredNodeIds, filterToRegistered, labelNodes } from "@/lib/nodes/registry-nodes";
+import { getFleet, type FleetNode } from "@/lib/nodes/node-fleet";
+import { mergeIngestNodes } from "@/lib/nodes/ingest-nodes";
+import { listIngestNodesAction } from "@/actions/nodes/ingest";
 
 const API_PATH = "/api/metrics/ingest";
 

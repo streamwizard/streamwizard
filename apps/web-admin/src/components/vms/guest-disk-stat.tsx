@@ -1,8 +1,8 @@
 import { HardDrive } from "lucide-react";
 import { StatCard } from "@/components/shared/stat-card";
-import { formatPct, pctOf, usageTone } from "@/lib/vm-format";
+import { formatPct, pctOf, usageTone } from "@/lib/vms/vm-format";
 import { formatBytes } from "@/lib/format";
-import { getGuestNet, type GuestRef } from "@/lib/pve";
+import { getGuestNet, type GuestRef } from "@/lib/vms/pve";
 
 /** Disk use from the guest agent (qemu) or Proxmox itself (lxc). */
 export async function GuestDiskStat({ guest, lxcDisk }: { guest: GuestRef; lxcDisk: { used: number; total: number } | null }) {

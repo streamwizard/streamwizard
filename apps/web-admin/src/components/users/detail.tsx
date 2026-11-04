@@ -1,5 +1,5 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/ui/popover";
-import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
+import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets/tickets";
 
 /** One labelled line in a user card: label left, value right. */
 export function Row({ label, children }: { label: string; children: React.ReactNode }) {

@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { StatusIndicator } from "@/components/shared/status-indicator";
-import type { EventsubCheck, EventsubCheckId, EventsubKpis } from "@/lib/eventsub-health";
-import { summarize } from "@/lib/eventsub-health";
+import type { EventsubCheck, EventsubCheckId, EventsubKpis } from "@/lib/eventsub/eventsub-health";
+import { summarize } from "@/lib/eventsub/eventsub-health";
 import { BANNER_BORDER, TILE_TONE } from "@/lib/health-kit";
 
 const CHECK_ICON: Record<EventsubCheckId, LucideIcon> = {

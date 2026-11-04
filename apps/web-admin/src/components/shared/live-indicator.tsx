@@ -1,7 +1,7 @@
 "use client";
 
-import { REFRESH_OPTIONS, useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useTimeRange } from "@/lib/time-range-context";
+import { REFRESH_OPTIONS, useRefreshInterval } from "@/providers/refresh-interval-context";
+import { useTimeRange } from "@/providers/time-range-context";
 
 // Honest "this page is live" badge: a pulsing dot plus the *actual* refresh
 // cadence and selected range read from context — replaces the old hardcoded

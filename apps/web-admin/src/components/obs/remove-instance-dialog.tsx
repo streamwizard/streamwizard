@@ -12,7 +12,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@repo/ui";
-import { removeInstanceAdminAction } from "@/actions/nodes";
+import { removeInstanceAdminAction } from "@/actions/nodes/obs";
 
 interface RemovableInstance {
   id: string;

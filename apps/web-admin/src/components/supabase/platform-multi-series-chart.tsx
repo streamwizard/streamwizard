@@ -12,16 +12,16 @@ import {
 } from "recharts";
 import type { MultiPoint } from "@repo/metrics";
 import { formatTime } from "@/lib/utils";
-import type { SupabaseMultiSeriesKey } from "@/lib/supabase-metrics";
+import type { SupabaseMultiSeriesKey } from "@/lib/supabase/supabase-metrics";
 import {
   AXIS_TICK,
   CHART_TOOLTIP_STYLE,
   ChartCard,
   LEGEND_WRAPPER_STYLE,
   useMetricsPoll,
-} from "@/components/shared/chart-kit";
-import type { ChartReference } from "@/components/shared/platform-metric-chart";
-import { formatPlatformValue, type PlatformValueFormat } from "@/lib/platform-format";
+} from "@/components/shared/charts/chart-kit";
+import type { ChartReference } from "@/components/shared/charts/platform-metric-chart";
+import { formatPlatformValue, type PlatformValueFormat } from "@/lib/supabase/platform-format";
 
 export interface SeriesSpec {
   /** Key inside MultiPoint.values. */

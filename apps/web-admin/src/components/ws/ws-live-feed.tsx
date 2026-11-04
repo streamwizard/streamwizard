@@ -9,7 +9,7 @@ import { Badge, Card, CardContent, Select, SelectContent, SelectItem, SelectTrig
 import { StatCard } from "@/components/shared/stat-card";
 import { cn } from "@/lib/utils";
 import { useMonitor } from "@/providers/ws-monitor-provider";
-import type { MonitorEnvelope } from "@/lib/monitor-ws";
+import type { MonitorEnvelope } from "@repo/types/monitor";
 
 const ROLE_COLORS: Record<string, string> = {
   subscriber: "bg-green-600/20 text-green-400 border-green-600/30",

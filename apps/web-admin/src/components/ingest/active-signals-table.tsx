@@ -7,9 +7,10 @@ import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import type { ActiveIngestSignal } from "@repo/metrics";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { cn, fetcher } from "@/lib/utils";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useIngestLive } from "@/lib/ingest-live-context";
-import type { LiveStreamEntry } from "@/lib/ingest-live-ws";
+import { useRefreshInterval } from "@/providers/refresh-interval-context";
+import { useIngestLive } from "@/providers/ingest-live-context";
+import type { LiveStreamEntry } from "@/lib/monitor/ingest-live-ws";
+import { isGuid } from "@repo/schemas/ids";
 
 interface Props {
   initialData: ActiveIngestSignal[];
@@ -17,7 +18,6 @@ interface Props {
   nodeNames: Record<string, string>;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * The one set of loss thresholds for ingest streams: amber from 0.5%, red from
@@ -131,7 +131,7 @@ export function IngestStreamList({ rows, nodeNames }: { rows: IngestStreamRow[];
       key: "user",
       header: "User",
       cell: (row) =>
-        row.userId && UUID.test(row.userId) ? (
+        row.userId && isGuid(row.userId) ? (
           <Link href={`/users/${row.userId}`} className="font-mono text-xs underline decoration-muted-foreground/50 underline-offset-4">
             {row.userId.slice(0, 8)}
           </Link>

@@ -1,17 +1,17 @@
 import { Ban } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getTwitchUsernames } from "@repo/supabase/queries/platform-events";
-import { listProductsWithPlans } from "@repo/supabase/queries/subscriptions";
+import { getTwitchUsernames } from "@repo/supabase/queries/users/user";
+import { listProductsWithPlans } from "@repo/supabase/queries/subscriptions/subscriptions";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
 import { GrantAccessProvider } from "@/components/users/grant-access";
 import { UnbanButton } from "@/components/users/moderation";
 import { UserHeader } from "@/components/users/user-header";
-import { PageTabs } from "@/components/shared/page-tabs";
-import { assertAdmin } from "@/lib/assert-admin";
-import { PageCrumb } from "@/lib/crumbs";
-import { formatDateTime } from "@/lib/discord/tickets";
-import { loadUserAuthState } from "@/lib/user-auth";
-import { LIVE_PLAN_STATUSES, loadAdminUser, userDisplayName } from "@/lib/users";
+import { PageTabs } from "@/components/shared/page/page-tabs";
+import { assertAdmin } from "@/lib/auth/assert-admin";
+import { PageCrumb } from "@/lib/nav/crumbs";
+import { formatDateTime } from "@/lib/discord/tickets/tickets";
+import { loadUserAuthState } from "@/lib/users/user-auth";
+import { LIVE_PLAN_STATUSES, loadAdminUser, userDisplayName } from "@/lib/users/users";
 
 export default async function UserLayout({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;

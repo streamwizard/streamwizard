@@ -1,7 +1,7 @@
-import { PageTabs } from "@/components/shared/page-tabs";
-import { IngestLiveProvider } from "@/lib/ingest-live-context";
-import { monitorWsUrl } from "@/lib/monitor-config";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageTabs } from "@/components/shared/page/page-tabs";
+import { IngestLiveProvider } from "@/providers/ingest-live-context";
+import { monitorWsUrl } from "@/lib/monitor/monitor-config";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { LiveIndicator } from "@/components/shared/live-indicator";
 import { IngestFleetTab } from "@/components/ingest/ingest-fleet-tab";
 import { IngestLiveTab } from "@/components/ingest/ingest-live-tab";

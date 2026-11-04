@@ -19,10 +19,10 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@repo/ui";
-import { deleteTagAction, mergeTagsAction, saveTagAction } from "@/actions/cms-taxonomy";
+import { deleteTagAction, mergeTagsAction, saveTagAction } from "@/actions/cms/taxonomy";
 import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,

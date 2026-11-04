@@ -1,8 +1,8 @@
 import { cache } from "react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getGuildSettings } from "@repo/supabase/queries/discord";
-import { getLogRouting } from "@repo/supabase/queries/platform-events";
-import { getTicketSettings } from "@repo/supabase/queries/tickets";
+import { getGuildSettings } from "@repo/supabase/queries/discord/discord";
+import { getLogRouting } from "@repo/supabase/queries/platform/events";
+import { getTicketSettings } from "@repo/supabase/queries/tickets/tickets";
 import { getDiscordContext } from "./api";
 
 // Server-only: feeds the "Not set up" badges in the sidebar and the tab rows. Runs on every dashboard

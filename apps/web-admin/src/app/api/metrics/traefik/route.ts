@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { assertTraefikScope, assertValidFluxDuration } from "@repo/metrics";
-import { getAdminSession } from "@/lib/admin-session";
-import { fetchTraefikSeries } from "@/lib/traefik";
+import { getAdminSession } from "@/lib/auth/admin-session";
+import { fetchTraefikSeries } from "@/lib/traefik/traefik";
 
 export const dynamic = "force-dynamic";
 

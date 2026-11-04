@@ -3,15 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CloudOBSViewer } from "@repo/obs-web";
-import { getInstanceNodeApiUrlAction } from "@/actions/nodes";
+import { getInstanceNodeApiUrlAction } from "@/actions/nodes/obs";
 import { mintNoVncConnection } from "@repo/obs-web";
-import { adminNodeToken } from "@/lib/node-token";
+import { adminNodeToken } from "@/lib/nodes/node-token";
 
 // Admin's noVNC proxy lives at /admin/instances/:id/novnc on the node's API
 // (vs. the end-user /instances/:id/novnc), gated by the admin's own role
 // instead of instance ownership. A fresh single-use ws-ticket rides on the
 // socket; the ticket-mint POST carries a 60-second admin node token, never the
-// admin's session (see lib/node-token.ts).
+// admin's session (see lib/nodes/node-token.ts).
 //
 // apiUrl must come from a trusted lookup, never the query string -- the URL
 // gets a ticket appended and dialed as a WebSocket. It is resolved from the

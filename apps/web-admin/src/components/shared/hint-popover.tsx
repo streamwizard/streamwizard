@@ -2,7 +2,7 @@
 
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
 import { cn } from "@/lib/utils";
-import { formatWhen, relative } from "@/lib/backup-format";
+import { formatWhen, relative } from "@/lib/backups/backup-format";
 
 // Sits above a card-wide link on a phone card, so a tap opens the popover
 // instead of the detail page.

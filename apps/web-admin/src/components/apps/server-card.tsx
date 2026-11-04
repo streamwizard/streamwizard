@@ -1,15 +1,15 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@repo/ui/components/ui/card";
-import { relative } from "@/lib/backup-format";
+import { relative } from "@/lib/backups/backup-format";
 import { When } from "@/components/shared/hint-popover";
-import { Rate } from "@/components/shared/rate";
-import { UsageMeter } from "@/components/shared/usage-meter";
-import { formatLoad, formatPct, formatUptime, hostStatusDisplay } from "@/lib/vm-format";
+import { Rate } from "@/components/shared/charts/rate";
+import { UsageMeter } from "@/components/shared/charts/usage-meter";
+import { formatLoad, formatPct, formatUptime, hostStatusDisplay } from "@/lib/vms/vm-format";
 import { StatusIndicator } from "@/components/shared/status-indicator";
-import type { ServerView } from "@/lib/apps";
+import type { ServerView } from "@/lib/apps/apps";
 import { formatBytes } from "@/lib/format";
-import { SERVER_HREF } from "@/lib/app-format";
+import { SERVER_HREF } from "@/lib/apps/app-format";
 
 function Figure({ label, children }: { label: string; children: React.ReactNode }) {
   return (

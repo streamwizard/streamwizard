@@ -1,9 +1,9 @@
 import { Activity, ArrowUpDown, Ban, Cable, ServerCrash, Timer } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
-import { errorTone, formatErrorPct, formatMs } from "@/lib/app-format";
+import { errorTone, formatErrorPct, formatMs } from "@/lib/apps/app-format";
 import { AppsNotice, MissingData } from "@/components/apps/apps-notice";
-import { NodeMetricChart } from "@/components/shared/node-metric-chart";
-import { PageTabs } from "@/components/shared/page-tabs";
+import { NodeMetricChart } from "@/components/shared/charts/node-metric-chart";
+import { PageTabs } from "@/components/shared/page/page-tabs";
 import { ErrorCodeTable } from "@/components/traefik/error-code-table";
 import { SpeedBandChart } from "@/components/traefik/speed-band-chart";
 import { TraefikAppTable } from "@/components/traefik/traefik-app-table";
@@ -22,12 +22,12 @@ import {
 } from "@/components/traefik/traefik-format";
 import { AutoRefresh } from "@/components/vms/auto-refresh";
 import { ChartSection } from "@/components/vms/chart-section";
-import { Rate } from "@/components/shared/rate";
-import { PageHeader } from "@/components/shared/page-header";
+import { Rate } from "@/components/shared/charts/rate";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
-import { fetchTraefikSeries, getTraefikOverview } from "@/lib/traefik";
-import { SCOPES, SCOPE_LABEL, parseScope } from "@/lib/traefik-model";
+import { fetchTraefikSeries, getTraefikOverview } from "@/lib/traefik/traefik";
+import { SCOPES, SCOPE_LABEL, parseScope } from "@/lib/traefik/traefik-model";
 
 export const dynamic = "force-dynamic";
 

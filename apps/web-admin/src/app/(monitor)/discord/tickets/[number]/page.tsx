@@ -1,19 +1,19 @@
 import { notFound } from "next/navigation";
-import { getDiscordUserIdForUser, getLinkedStreamWizardAccount } from "@repo/supabase/queries/discord";
+import { getDiscordUserIdForUser, getLinkedStreamWizardAccount } from "@repo/supabase/queries/discord/discord";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { formatTicketNumber, getTicketByNumber } from "@repo/supabase/queries/tickets";
+import { formatTicketNumber, getTicketByNumber } from "@repo/supabase/queries/tickets/tickets";
 import {
   isActiveCategory,
   listTicketAnswers,
   listTicketCategories,
   listTicketProducts,
-} from "@repo/supabase/queries/ticket-config";
-import { listTicketTags } from "@repo/supabase/queries/ticket-tags";
-import { TicketPage } from "@/components/discord/ticket-page/ticket-page";
-import { assertAdmin } from "@/lib/assert-admin";
+} from "@repo/supabase/queries/tickets/config";
+import { listTicketTags } from "@repo/supabase/queries/tickets/tags";
+import { TicketPage } from "@/components/discord/tickets/detail/ticket-page";
+import { assertAdmin } from "@/lib/auth/assert-admin";
 import { requireDiscordContext } from "@/lib/discord/api";
-import { buildTicketSnapshot } from "@/lib/discord/ticket-snapshot";
-import { PageCrumb } from "@/lib/crumbs";
+import { buildTicketSnapshot } from "@/lib/discord/tickets/ticket-snapshot";
+import { PageCrumb } from "@/lib/nav/crumbs";
 
 export const dynamic = "force-dynamic";
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CheckCircle2, ChevronRight, CircleAlert, Info, TriangleAlert, type LucideIcon } from "lucide-react";
 import { Card } from "@repo/ui/components/ui/card";
-import type { AttentionItem, AttentionTone } from "@/lib/overview";
+import type { AttentionItem, AttentionTone } from "@/lib/overview/overview";
 import { cn } from "@/lib/utils";
 
 const TONE: Record<AttentionTone, { icon: LucideIcon; className: string; label: string }> = {

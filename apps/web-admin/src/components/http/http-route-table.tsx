@@ -4,8 +4,8 @@ import useSWR from "swr";
 import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
 import { DataList } from "@/components/shared/data-list";
 import { fetcher } from "@/lib/utils";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useTimeRange } from "@/lib/time-range-context";
+import { useRefreshInterval } from "@/providers/refresh-interval-context";
+import { useTimeRange } from "@/providers/time-range-context";
 import type { HttpRouteStatPoint } from "@repo/metrics";
 
 interface Props {

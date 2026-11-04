@@ -8,13 +8,13 @@ import {
 } from "@repo/supabase/queries/cms/content";
 import { listCmsCategories } from "@repo/supabase/queries/cms/taxonomy";
 import { ContentListView, type ContentListFilters } from "@/components/content/content-list-view";
-import { describeScheduleError } from "@/lib/cms/content-errors";
+import { describeScheduleError } from "@/lib/cms/publish/content-errors";
 import { asReviewState, type ReviewState } from "@/lib/cms/review";
+import { isGuid } from "@repo/schemas/ids";
 
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 25;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TYPES = ["blog", "guide"] as const;
 const STATUSES = ["draft", "scheduled", "published", "archived"] as const;
 const REVIEW_FILTERS = ["requested", "changes", "approved"] as const;
@@ -44,8 +44,8 @@ export default async function ContentPage({ searchParams }: { searchParams: Prom
     type: pick<CmsContentType>(params.type, TYPES),
     status: pick<CmsContentStatus>(params.status, STATUSES),
     reviewState: pick<Exclude<ReviewState, "none">>(params.review, REVIEW_FILTERS),
-    authorId: params.author && UUID.test(params.author) ? params.author : undefined,
-    categoryId: params.category && UUID.test(params.category) ? params.category : undefined,
+    authorId: params.author && isGuid(params.author) ? params.author : undefined,
+    categoryId: params.category && isGuid(params.category) ? params.category : undefined,
     sort: pick<CmsContentSort>(params.sort, SORTS) ?? "updated",
     trash: params.trash === "1",
   };

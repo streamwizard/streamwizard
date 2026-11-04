@@ -20,13 +20,13 @@ import {
   DropdownMenuTrigger,
   Progress,
 } from "@repo/ui";
-import type { ObsNode, ObsNodeInstanceOwner } from "@repo/supabase/queries/obs-nodes";
-import { createInstanceAction, listNodeInstancesAction, toggleInstanceAdminAction } from "@/actions/nodes";
+import type { ObsNode, ObsNodeInstanceOwner } from "@repo/supabase/queries/obs-nodes/nodes";
+import { createInstanceAction, listNodeInstancesAction, toggleInstanceAdminAction } from "@/actions/nodes/obs";
 import { useNodeMetricsStream, type ConnectionStatus, type ContainerMetrics } from "@/hooks/use-node-metrics-stream";
 import { HostMetricsCharts } from "@/components/obs/metrics-charts";
 import { RemoveInstanceDialog } from "@/components/obs/remove-instance-dialog";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { formatMb } from "@/lib/format";
 
 const INSTANCES_POLL_INTERVAL_MS = 5000;

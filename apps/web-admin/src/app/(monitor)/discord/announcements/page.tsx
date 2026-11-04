@@ -1,7 +1,8 @@
 import { Megaphone } from "lucide-react";
 import { parseAnnouncement } from "@repo/discord-message";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getUserNames, listAnnouncements } from "@repo/supabase/queries/discord-announcements";
+import { listAnnouncements } from "@repo/supabase/queries/discord/announcements";
+import { getUserNames } from "@repo/supabase/queries/users/user";
 import {
   Empty,
   EmptyContent,
@@ -10,10 +11,10 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@repo/ui/components/ui/empty";
-import { AnnouncementList, type AnnouncementListItem } from "@/components/discord/announcement-list";
-import { NewAnnouncementButton } from "@/components/discord/announcement-new";
-import { PageHeader } from "@/components/shared/page-header";
-import { announcementStatus } from "@/lib/discord/announcements";
+import { AnnouncementList, type AnnouncementListItem } from "@/components/discord/announcements/announcement-list";
+import { NewAnnouncementButton } from "@/components/discord/announcements/announcement-new";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { announcementStatus } from "@/lib/discord/messages/announcements";
 import { getGuildChannels, requireDiscordContext } from "@/lib/discord/api";
 
 export const dynamic = "force-dynamic";

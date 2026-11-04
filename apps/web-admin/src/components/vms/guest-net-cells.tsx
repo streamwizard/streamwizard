@@ -2,13 +2,13 @@
 
 import { Suspense, use } from "react";
 import { formatBytes } from "@/lib/format";
-import type { GuestNet } from "@/lib/pve";
+import type { GuestNet } from "@/lib/vms/pve";
 import { cn } from "@/lib/utils";
-import { UsageMeter } from "@/components/shared/usage-meter";
-import { AGENT_LABEL, pctOf } from "@/lib/vm-format";
+import { UsageMeter } from "@/components/shared/charts/usage-meter";
+import { AGENT_LABEL, pctOf } from "@/lib/vms/vm-format";
 
 /** Guest IPs, agent state and disk use, keyed "<host>:<vmid>". The server
- * reads them from the PVE API after the table renders (lib/pve.ts), so each
+ * reads them from the PVE API after the table renders (lib/vms/pve.ts), so each
  * cell waits on the same promise under its own Suspense boundary. */
 export type GuestNetPromise = Promise<Record<string, GuestNet>>;
 

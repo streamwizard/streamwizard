@@ -7,16 +7,16 @@ import { Archive, ChevronDown, Clock, HardDrive, Layers, Server, ShieldCheck, Up
 import type { BackupVmDetailResponse, PbsSnapshot } from "@repo/backups";
 import { Button, Card, CardContent, CardHeader, CardTitle, Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
 import { DataList } from "@/components/shared/data-list";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { StatusIndicator } from "@/components/shared/status-indicator";
-import { vmHref } from "@/lib/vm-format";
-import type { BackupFetch } from "@/lib/backups";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
+import { vmHref } from "@/lib/vms/vm-format";
+import type { BackupFetch } from "@/lib/backups/backups";
+import { useRefreshInterval } from "@/providers/refresh-interval-context";
 import { cn, fetcher } from "@/lib/utils";
 import { VerificationBadge } from "./backup-dashboard";
-import { BANNER_BORDER, SIZE_HELP, STATUS_DISPLAY, epochToIso, formatAge, formatApprox, formatBytes, formatWhen, relative } from "@/lib/backup-format";
+import { BANNER_BORDER, SIZE_HELP, STATUS_DISPLAY, epochToIso, formatAge, formatApprox, formatBytes, formatWhen, relative } from "@/lib/backups/backup-format";
 import { HelpLabel } from "@/components/shared/hint-popover";
 
 /**

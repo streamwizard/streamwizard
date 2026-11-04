@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getTwitchUsernames } from "@repo/supabase/queries/platform-events";
+import { getTwitchUsernames } from "@repo/supabase/queries/users/user";
 import { UserSubscriptions } from "@/components/users/user-subscriptions";
-import { loadAdminUser } from "@/lib/users";
+import { loadAdminUser } from "@/lib/users/users";
 
 export const dynamic = "force-dynamic";
 

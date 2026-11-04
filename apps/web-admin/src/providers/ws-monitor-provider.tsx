@@ -1,7 +1,8 @@
 "use client";
 
 import { createContext, useContext, type ReactNode } from "react";
-import { useMonitorWs, type MonitorEnvelope, type MonitorSnapshot, type ConnectionStatus } from "@/lib/monitor-ws";
+import type { MonitorEnvelope, MonitorSnapshot } from "@repo/types/monitor";
+import { useMonitorWs, type ConnectionStatus } from "@/lib/monitor/monitor-ws";
 
 interface MonitorContextValue {
   events: MonitorEnvelope[];

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getTwitchUsernames, listPlatformEvents, type PlatformEventListFilters } from "@repo/supabase/queries/platform-events";
+import { listPlatformEvents, type PlatformEventListFilters } from "@repo/supabase/queries/platform/events";
+import { getTwitchUsernames } from "@repo/supabase/queries/users/user";
 import {
   PLATFORM_EVENT_GROUPS,
   PLATFORM_EVENT_LABELS,
@@ -11,14 +12,14 @@ import {
   platformEventTypesInGroup,
   type PlatformEventGroup,
   type PlatformEventStatus,
-} from "@repo/types";
+} from "@repo/schemas/platform-events";
 import { Button } from "@repo/ui/components/ui/button";
 import { Card, CardContent } from "@repo/ui/components/ui/card";
 import { Input } from "@repo/ui/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@repo/ui/components/ui/native-select";
-import { EventLogList, actorIdsToLookUp } from "@/components/discord/event-log-list";
+import { EventLogList, actorIdsToLookUp } from "@/components/discord/logs/event-log-list";
 import { FilterPanel } from "@/components/shared/filter-panel";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 
 export const dynamic = "force-dynamic";
 

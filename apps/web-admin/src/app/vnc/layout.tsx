@@ -1,4 +1,4 @@
-import { requireAdminSession } from "@/lib/admin-session";
+import { requireAdminSession } from "@/lib/auth/admin-session";
 
 // /vnc lives outside the (monitor) group so the popup gets a bare full-viewport
 // page without the sidebar chrome — which also means it misses that layout's

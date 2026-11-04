@@ -16,12 +16,12 @@ import {
 } from "@repo/alerting/thresholds";
 import { Badge, Card, CardContent, Collapsible, CollapsibleContent, CollapsibleTrigger } from "@repo/ui";
 import { cn } from "@/lib/utils";
-import { SectionHeading } from "@/components/shared/section-heading";
+import { SectionHeading } from "@/components/shared/page/section-heading";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { useWideScreen } from "@/hooks/use-wide-screen";
 import { StatusIndicator, type IndicatorStatus } from "@/components/shared/status-indicator";
-import { useMetricsPoll } from "@/components/shared/chart-kit";
+import { useMetricsPoll } from "@/components/shared/charts/chart-kit";
 import { BANNER_BORDER, SEVERITY, TILE_TONE, band, worstStatus } from "@/lib/health-kit";
 
 // Tile and banner colours use the same numbers as the alert rules (code

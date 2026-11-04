@@ -19,7 +19,7 @@ import {
   Label,
   Textarea,
 } from "@repo/ui";
-import { deleteCmsAssetAction, updateCmsAssetAction } from "@/actions/cms-media";
+import { deleteCmsAssetAction, updateCmsAssetAction } from "@/actions/cms/media";
 import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
 import {
   ResponsiveDialog,
@@ -29,10 +29,10 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
 } from "@/components/shared/responsive-dialog";
-import { PageHeader } from "@/components/shared/page-header";
-import { MAX_ALT_LENGTH } from "@/lib/cms/media";
-import type { CmsMediaItem } from "@/lib/cms/media-items";
-import { formatBytes } from "@/lib/users";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { MAX_ALT_LENGTH } from "@/lib/cms/media/media";
+import type { CmsMediaItem } from "@/lib/cms/media/media-items";
+import { formatBytes } from "@/lib/users/users";
 import { ConfirmButton } from "./confirm-button";
 import { FormField } from "./form-field";
 import { ImageUploadDialog } from "./image-upload-dialog";

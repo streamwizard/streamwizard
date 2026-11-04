@@ -1,10 +1,10 @@
 import type { DiscordApplicationCommand } from "@repo/discord-api";
 import { reportError } from "@repo/sentry";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getGuildCommandPermissions } from "@repo/supabase/queries/discord";
+import { getGuildCommandPermissions } from "@repo/supabase/queries/discord/discord";
 import { Card, CardContent } from "@repo/ui/components/ui/card";
-import { CommandPermissionList, type CommandView } from "@/components/discord/command-permission-row";
-import { PageHeader } from "@/components/shared/page-header";
+import { CommandPermissionList, type CommandView } from "@/components/discord/permissions/command-permission-row";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toRoleOptions } from "@/lib/discord/options";
 import { env } from "@/lib/env";
@@ -19,7 +19,7 @@ export default async function DiscordPermissionsPage() {
     try {
       deployed = await api.guilds.listApplicationCommands(env.DISCORD_CLIENT_ID);
     } catch (error) {
-      reportError(error, "web-admin discord: list commands");
+      reportError(error, "discord.list-commands");
     }
   }
 

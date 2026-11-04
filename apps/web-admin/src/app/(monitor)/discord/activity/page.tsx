@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getActivitySettings, getIgnoredChannelIds } from "@repo/supabase/queries/discord-activity";
-import { ActivityForm } from "@/components/discord/activity-form";
-import { PageHeader } from "@/components/shared/page-header";
+import { getActivitySettings, getIgnoredChannelIds } from "@repo/supabase/queries/discord/activity";
+import { ActivityForm } from "@/components/discord/activity/activity-form";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { getGuildChannels, requireDiscordContext } from "@/lib/discord/api";
 import { toChannelOptions } from "@/lib/discord/options";
 

@@ -1,18 +1,18 @@
 import { Activity, Clock, Cpu, HardDrive, MemoryStick, Skull } from "lucide-react";
-import { SERVER_HREF } from "@/lib/app-format";
+import { SERVER_HREF } from "@/lib/apps/app-format";
 import { AppsNotice, MissingData } from "@/components/apps/apps-notice";
-import { relative } from "@/lib/backup-format";
+import { relative } from "@/lib/backups/backup-format";
 import { When } from "@/components/shared/hint-popover";
-import { NodeMetricChart } from "@/components/shared/node-metric-chart";
+import { NodeMetricChart } from "@/components/shared/charts/node-metric-chart";
 import { AutoRefresh } from "@/components/vms/auto-refresh";
 import { ChartSection } from "@/components/vms/chart-section";
-import { formatLoad, formatPct, formatUptime, hostStatusDisplay, usageTone } from "@/lib/vm-format";
-import { PageHeader } from "@/components/shared/page-header";
+import { formatLoad, formatPct, formatUptime, hostStatusDisplay, usageTone } from "@/lib/vms/vm-format";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { StatusIndicator } from "@/components/shared/status-indicator";
-import { fetchServerSeries, getServer } from "@/lib/apps";
-import { PageCrumb } from "@/lib/crumbs";
+import { fetchServerSeries, getServer } from "@/lib/apps/apps";
+import { PageCrumb } from "@/lib/nav/crumbs";
 import { formatBytes } from "@/lib/format";
 
 export const dynamic = "force-dynamic";

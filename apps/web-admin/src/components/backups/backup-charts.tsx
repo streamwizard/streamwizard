@@ -1,7 +1,7 @@
-import { NodeMetricChart } from "@/components/shared/node-metric-chart";
-import { PlatformMetricChart } from "@/components/shared/platform-metric-chart";
+import { NodeMetricChart } from "@/components/shared/charts/node-metric-chart";
+import { PlatformMetricChart } from "@/components/shared/charts/platform-metric-chart";
 import { ChartGrid } from "@/components/shared/stat-grid";
-import type { BackupSeries } from "@/lib/backup-series";
+import type { BackupSeries } from "@/lib/backups/backup-series";
 
 const ENDPOINT = "/api/metrics/backups";
 

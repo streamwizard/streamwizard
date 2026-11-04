@@ -1,7 +1,7 @@
 "use client";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui";
-import { TIME_RANGE_OPTIONS, useTimeRange } from "@/lib/time-range-context";
+import { TIME_RANGE_OPTIONS, useTimeRange } from "@/providers/time-range-context";
 
 export function TimeRangeSelector() {
   const { range, setRange } = useTimeRange();

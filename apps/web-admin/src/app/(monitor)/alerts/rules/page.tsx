@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getAlertRuleConfigs, type AlertRuleConfig } from "@repo/supabase/queries/alert-rule-config";
+import { getAlertRuleConfigs, type AlertRuleConfig } from "@repo/supabase/queries/alerts/rule-config";
 import { getRuleCatalog } from "@repo/alerting/rules";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { RulesEditor, type RuleView } from "@/components/alerts/rules-editor";
 
 export const dynamic = "force-dynamic";

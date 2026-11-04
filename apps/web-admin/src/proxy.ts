@@ -1,6 +1,6 @@
 import { refreshSession } from "@repo/supabase/next/proxy";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { isUserAdmin } from "@repo/supabase/queries/obs-nodes";
+import { isUserAdmin } from "@repo/supabase/queries/auth/roles";
 import { isStrongSession, type JwtPayload } from "@repo/supabase/auth/session-strength";
 import { NextResponse, type NextRequest } from "next/server";
 import { buildCsp } from "@/lib/csp";

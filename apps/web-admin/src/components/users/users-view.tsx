@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CreditCard, Search, SearchX, ShieldCheck, Users } from "lucide-react";
-import type { UserListFilter, UserListRow, UserListSort, UserListStats } from "@repo/supabase/queries/admin-users";
+import type { UserListFilter, UserListRow, UserListSort, UserListStats } from "@repo/supabase/queries/users/admin-users";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/ui/avatar";
 import { Badge } from "@repo/ui/components/ui/badge";
 import { Button } from "@repo/ui/components/ui/button";
@@ -19,11 +19,11 @@ import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
 import type { ProductWithPlans } from "@/components/users/subscriptions/types";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { FilterPanel } from "@/components/shared/filter-panel";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
-import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
-import { PLAN_STATUS_LABELS, planStatusVariant, userAvatarUrl, userDisplayName } from "@/lib/users";
+import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets/tickets";
+import { PLAN_STATUS_LABELS, planStatusVariant, userAvatarUrl, userDisplayName } from "@/lib/users/users";
 import { GrantAccessProvider } from "./grant-access";
 import { UserRowMenu } from "./user-row-menu";
 

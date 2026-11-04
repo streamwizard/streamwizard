@@ -8,14 +8,14 @@ import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { StatCard } from "@/components/shared/stat-card";
 import { StatGrid } from "@/components/shared/stat-grid";
 import { cn, formatBandwidth } from "@/lib/utils";
-import { useBandwidthUnit } from "@/lib/bandwidth-unit-context";
-import { useIngestLive } from "@/lib/ingest-live-context";
-import type { LiveStatus } from "@/lib/ingest-live-ws";
-import type { IngestNodeLive } from "@/lib/monitor-ws";
+import { useBandwidthUnit } from "@/providers/bandwidth-unit-context";
+import { useIngestLive } from "@/providers/ingest-live-context";
+import type { LiveStatus } from "@/lib/monitor/ingest-live-ws";
+import type { IngestNodeLive } from "@repo/types/monitor";
 
 // The Live tab of the ingest page: fleet and per-node NIC bandwidth plus
 // per-stream transport health straight off the ws-server monitor socket
-// (shared via IngestLiveProvider, see lib/ingest-live-context.tsx).
+// (shared via IngestLiveProvider, see providers/ingest-live-context.tsx).
 // Deliberately network-only: cpu/ram/disk stay on the Fleet tab.
 
 const STATUS_DISPLAY: Record<LiveStatus, { dot: string; label: string }> = {

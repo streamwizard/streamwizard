@@ -2,12 +2,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui
 import { STREAMWIZARD_VM_TAG, VM_ALERT_RULES } from "@repo/alerting/rules";
 import { VmsMessage } from "@/components/vms/vms-message";
 import { VmsPageHeader } from "@/components/vms/vms-page-header";
-import { getGuestNet } from "@/lib/pve";
+import { getGuestNet } from "@/lib/vms/pve";
 import { OtherVms } from "@/components/vms/other-vms";
 import { HostCard } from "@/components/vms/host-card";
 import { VmTable } from "@/components/vms/vm-table";
 import { AutoRefresh } from "@/components/vms/auto-refresh";
-import { getVmOverview, guestRef, splitVms, toTableRow, type VmOverview } from "@/lib/vms";
+import { getVmOverview, guestRef, splitVms, toTableRow, type VmOverview } from "@/lib/vms/vms";
 
 export const dynamic = "force-dynamic";
 

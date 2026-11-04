@@ -20,15 +20,15 @@ import {
   NativeSelect,
   NativeSelectOption,
 } from "@repo/ui";
-import { createContentAction, untrashContentAction } from "@/actions/cms-content";
+import { createContentAction, untrashContentAction } from "@/actions/cms/content";
 import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { FilterPanel } from "@/components/shared/filter-panel";
-import { PageHeader } from "@/components/shared/page-header";
-import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
+import { PageHeader } from "@/components/shared/page/page-header";
+import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets/tickets";
 import type { ContentType } from "@/lib/cms/draft";
 import { REVIEW_BADGE, REVIEW_FILTER_STATES, REVIEW_LABELS, type ReviewState } from "@/lib/cms/review";
-import { templatesFor } from "@/lib/cms/templates";
+import { templatesFor } from "@/lib/cms/editor/templates";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,

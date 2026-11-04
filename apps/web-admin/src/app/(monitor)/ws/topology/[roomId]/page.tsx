@@ -1,9 +1,9 @@
-import { DesktopOnly } from "@/components/shared/desktop-only";
+import { DesktopOnly } from "@/components/shared/page/desktop-only";
 import { WsMonitorProvider } from "@/providers/ws-monitor-provider";
 import { WsRoomTopology } from "@/components/topology/ws-room-topology";
 import { MonitorUnconfigured } from "@/components/ws/monitor-unconfigured";
-import { PageCrumb } from "@/lib/crumbs";
-import { monitorWsUrl } from "@/lib/monitor-config";
+import { PageCrumb } from "@/lib/nav/crumbs";
+import { monitorWsUrl } from "@/lib/monitor/monitor-config";
 
 export default async function WsRoomTopologyPage({ params }: { params: Promise<{ roomId: string }> }) {
   const { roomId } = await params;

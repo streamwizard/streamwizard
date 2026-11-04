@@ -1,6 +1,6 @@
 import { queryHttpRequests, queryHttpRouteStats } from "@repo/metrics";
 import { NextResponse } from "next/server";
-import { getAdminSession } from "@/lib/admin-session";
+import { getAdminSession } from "@/lib/auth/admin-session";
 
 export const dynamic = "force-dynamic";
 

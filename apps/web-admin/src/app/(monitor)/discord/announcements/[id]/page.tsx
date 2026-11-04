@@ -1,22 +1,22 @@
 import { notFound } from "next/navigation";
 import { createAnnouncement, parseAnnouncement } from "@repo/discord-message";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getAnnouncement } from "@repo/supabase/queries/discord-announcements";
-import { AnnouncementEditor } from "@/components/discord/announcement-editor";
-import { ANNOUNCEMENT_CHANNEL_KINDS } from "@/lib/discord/announcements";
+import { getAnnouncement } from "@repo/supabase/queries/discord/announcements";
+import { AnnouncementEditor } from "@/components/discord/announcements/announcement-editor";
+import { ANNOUNCEMENT_CHANNEL_KINDS } from "@/lib/discord/messages/announcements";
 import { getBotProfile, getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
-import { bannerUploadsEnabled } from "@/lib/discord/banner-storage";
+import { bannerUploadsEnabled } from "@/lib/discord/messages/banner-storage";
 import { env } from "@/lib/env";
 import { toChannelOptions, toRoleOptions } from "@/lib/discord/options";
-import { PageCrumb } from "@/lib/crumbs";
+import { PageCrumb } from "@/lib/nav/crumbs";
+import { isGuid } from "@repo/schemas/ids";
 
 export const dynamic = "force-dynamic";
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default async function DiscordAnnouncementPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  if (!UUID.test(id)) notFound();
+  if (!isGuid(id)) notFound();
 
   const { guildId } = requireDiscordContext();
   const [row, channels, roles, bot] = await Promise.all([

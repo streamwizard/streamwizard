@@ -3,8 +3,8 @@
 import useSWR from "swr";
 import { Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
 import { fetcher } from "@/lib/utils";
-import { useRefreshInterval } from "@/lib/refresh-interval-context";
-import { useTimeRange } from "@/lib/time-range-context";
+import { useRefreshInterval } from "@/providers/refresh-interval-context";
+import { useTimeRange } from "@/providers/time-range-context";
 import type { WsTopMessageTypePoint } from "@repo/metrics";
 
 interface Props {

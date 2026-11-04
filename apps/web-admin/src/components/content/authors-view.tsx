@@ -20,9 +20,9 @@ import {
   EmptyTitle,
   Input,
 } from "@repo/ui";
-import { createAuthorAction } from "@/actions/cms-authors";
+import { createAuthorAction } from "@/actions/cms/authors";
 import { DataList, type DataColumn } from "@/components/shared/data-list";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/page/page-header";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
