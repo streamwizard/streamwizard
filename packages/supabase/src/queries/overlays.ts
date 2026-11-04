@@ -151,6 +151,26 @@ export async function insertOverlayItemsReturningIds(
   return client.from("overlay_items").insert(items).select("id");
 }
 
+/** Insert that hands back the full rows, so a save can answer without re-reading the scene. */
+export async function insertOverlayItemsReturningRows(
+  client: DBClient,
+  items: Database["public"]["Tables"]["overlay_items"]["Insert"][]
+) {
+  return client.from("overlay_items").insert(items).select("*");
+}
+
+/**
+ * Writes changed items of one save in a single request. Every row must carry
+ * the same keys (bulk upsert sets a missing key to null) and an id the caller
+ * has read from the scene, so the conflict path is the one taken.
+ */
+export async function upsertOverlayItemsReturningRows(
+  client: DBClient,
+  items: Array<Database["public"]["Tables"]["overlay_items"]["Insert"] & { id: string }>
+) {
+  return client.from("overlay_items").upsert(items, { onConflict: "id" }).select("*");
+}
+
 export async function insertOverlayItems(
   client: DBClient,
   items: Database["public"]["Tables"]["overlay_items"]["Insert"][]

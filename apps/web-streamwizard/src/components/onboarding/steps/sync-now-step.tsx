@@ -29,7 +29,11 @@ export function SyncNowStep({ clipCount, state, errorMessage }: SyncNowStepProps
 
   let heading: string;
   let description: string;
-  if (hasSynced) {
+  if (state === "done") {
+    // The sync runs in the background; "done" means it has started.
+    heading = "On its way.";
+    description = "Your clips are coming in now. A big clip history takes a few minutes, so carry on.";
+  } else if (hasSynced) {
     heading = "All caught up.";
     description = "Your clips are in StreamWizard, ready to sort. You can pull in more any time.";
   } else if (hasClips) {

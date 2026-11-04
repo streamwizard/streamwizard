@@ -51,7 +51,7 @@ function canonical(value: unknown): unknown {
   return sorted;
 }
 
-function sameConfig(a: unknown, b: unknown): boolean {
+export function sameConfig(a: unknown, b: unknown): boolean {
   return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 }
 

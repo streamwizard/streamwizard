@@ -6,23 +6,15 @@ import { claimClipSync, updateClipSyncStatus } from "@repo/supabase/queries/sync
 import { upsertClips } from "@repo/supabase/queries/clips";
 import { getVodsByVideoIds } from "@repo/supabase/queries/vods";
 import type { TwitchApi } from "@repo/twitch-api";
+import { createClipSyncStarter, type ClipSyncSkipped } from "./clip-sync-start";
 
 /** One full sync per user per hour. Each one fans out over Helix /clips on the shared app token. */
 const SYNC_COOLDOWN_MS = 60 * 60 * 1000;
 
-/**
- * Syncs Twitch clips for a given broadcaster_id.
- * This function can be called from multiple endpoints.
- * @param broadcaster_id - The Twitch broadcaster/user ID to sync clips for
- * @param TwitchAPI - The TwitchApi instance to use for API calls
- * @returns The total number of clips synced, or `skipped` when a sync is
- * already running or one started less than an hour ago
- */
-export async function syncTwitch(
-  broadcaster_id: string,
-  TwitchAPI: TwitchApi,
-): Promise<{ clipsCount: number } | { skipped: true; running: boolean; lastSync: string | null }> {
-  // Look up the user from the broadcaster_id
+type ClaimedClipSync = { claimed: true; userId: string };
+
+/** Takes the user's sync slot (cooldown and "already running" checks included). */
+async function claimTwitchSync(broadcaster_id: string): Promise<ClaimedClipSync | ClipSyncSkipped> {
   const { data: user, error: userError } = await getTwitchIntegrationByBroadcasterId(supabase, broadcaster_id);
 
   if (userError || !user) {
@@ -33,22 +25,52 @@ export async function syncTwitch(
   if (!claim.claimed) {
     return { skipped: true, running: claim.status === "syncing", lastSync: claim.lastSync };
   }
+  return { claimed: true, userId: user.user_id };
+}
 
+/** Runs a sync that has been claimed, and records how it ended on the sync row. */
+async function runClaimedSync(userId: string, TwitchAPI: TwitchApi): Promise<number> {
   try {
-    // Start the sync
-    const totalClips = await syncTwitchClips(user.user_id, TwitchAPI);
-
-    // Mark as completed
-    await updateClipSyncStatus(supabase, user.user_id, "completed", totalClips);
-
-    return { clipsCount: totalClips };
+    const totalClips = await syncTwitchClips(userId, TwitchAPI);
+    await updateClipSyncStatus(supabase, userId, "completed", totalClips);
+    return totalClips;
   } catch (error) {
     console.error(`[clip-sync] sync failed: ${describeError(error)}`);
     // Mark as failed; the status trigger posts clips.sync_failed with the message.
     const message = error instanceof Error ? error.message : String(error);
-    await updateClipSyncStatus(supabase, user.user_id, "failed", undefined, message);
+    await updateClipSyncStatus(supabase, userId, "failed", undefined, message);
     throw error;
   }
+}
+
+/**
+ * Syncs Twitch clips for a given broadcaster_id and waits for it to finish.
+ * For callers with no one waiting on them (the stream.offline handler).
+ * @param broadcaster_id - The Twitch broadcaster/user ID to sync clips for
+ * @param TwitchAPI - The TwitchApi instance to use for API calls
+ * @returns The total number of clips synced, or `skipped` when a sync is
+ * already running or one started less than an hour ago
+ */
+export async function syncTwitch(
+  broadcaster_id: string,
+  TwitchAPI: TwitchApi,
+): Promise<{ clipsCount: number } | ClipSyncSkipped> {
+  const claim = await claimTwitchSync(broadcaster_id);
+  if (!("claimed" in claim)) return claim;
+  return { clipsCount: await runClaimedSync(claim.userId, TwitchAPI) };
+}
+
+/**
+ * Claims a sync and runs it in the background, for the manual sync request: a
+ * full history pull can take hundreds of Helix pages, far longer than a
+ * request should stay open. Progress lives on the twitch_clip_syncs row.
+ */
+export function startTwitchSync(broadcaster_id: string, TwitchAPI: TwitchApi) {
+  return createClipSyncStarter({
+    claim: claimTwitchSync,
+    run: (userId) => runClaimedSync(userId, TwitchAPI),
+    reportError,
+  })(broadcaster_id);
 }
 
 export async function syncTwitchClips(user_id: string, TwitchAPI: TwitchApi) {

@@ -4,9 +4,19 @@ import { clipSyncErrorMessage } from "@/lib/clip-sync-error";
 import { tryAuthContext } from "@/lib/auth";
 import axios from "axios";
 import { env } from "@/lib/env";
-import { revalidatePath } from "next/cache";
 
-export async function SyncBroadcasterClips(): Promise<{ message: string; success: boolean; skipped?: boolean; lastSync?: string }> {
+/**
+ * Starts a clip sync. rest-api answers as soon as the sync is claimed and runs
+ * it in the background, so success means "started", not "finished": the clips
+ * come in over the next minute or so.
+ */
+export async function SyncBroadcasterClips(): Promise<{
+  message: string;
+  success: boolean;
+  started?: boolean;
+  skipped?: boolean;
+  lastSync?: string;
+}> {
   const ctx = await tryAuthContext();
   if (!ctx) return { message: "Unauthorized", success: false };
 
@@ -24,10 +34,10 @@ export async function SyncBroadcasterClips(): Promise<{ message: string; success
     });
 
     await track("clips_synced", { trigger: "manual", skipped: false }, ctx.user);
-    revalidatePath("/dashboard/clips", "page");
     return {
-      message: "Clips synced successfully",
+      message: "Syncing your clips. They show up here as they come in.",
       success: true,
+      started: true,
     };
   } catch (error: unknown) {
     if (axios.isAxiosError<{ skipped: boolean; message: string; success: boolean; lastSync?: string }>(error)) {

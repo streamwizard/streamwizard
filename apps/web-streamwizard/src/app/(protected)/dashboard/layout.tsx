@@ -7,13 +7,14 @@ import { ClipFolderProvider } from "@/providers/clips-provider";
 import { ModalProvider } from "@/providers/modal-provider";
 import { ClipFolderDialogProvider } from "@/providers/clip-folder-dialog-provider";
 import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
-import { redirect } from "next/navigation";
 import { getClipFolders, getClipFolderClipCounts, countClipsByUserId } from "@repo/supabase/queries/clips";
 import { checkProductAccess } from "@repo/supabase/queries/subscriptions";
-import { getUserPreferences, getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
+import { getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { getGuildMemberRoleIds } from "@/server/discord/roles";
 import { env } from "@/lib/env";
+import { getSessionPreferencesRow, getSessionUser } from "@/lib/session";
+import { loadDashboardLayoutData } from "@/server/dashboard/layout-data";
 
 export default async function layout({
   children,
@@ -21,59 +22,36 @@ export default async function layout({
   children: React.ReactNode;
 }>) {
   const supabase = await createClient();
-  const { data, error } = await supabase.auth.getUser();
-
-  if (error) {
-    console.log(error);
-    redirect("/login");
-  }
-
-  if (!data || !data.user) {
-    redirect("/login");
-  }
-
-  const [{ data: folders }, folderClipCounts] = await Promise.all([
-    getClipFolders(supabase, data.user.id),
-    getClipFolderClipCounts(supabase, data.user.id).catch((err) => {
-      console.error("Failed to count clips per folder:", err);
-      return {};
-    }),
-  ]);
-  const clipCount = await countClipsByUserId(supabase, data.user.id);
-
-  // Only checked while onboarding is still in progress — avoids an extra
-  // Discord REST call on every dashboard page load for everyone past it.
-  let discordStatus: "verified" | "not_member" | "not_linked" = "not_linked";
-  const prefs = await getUserPreferences(supabase);
-  if (!prefs?.onboarding_completed) {
-    const discordUserId = await getDiscordUserIdByUserIdMaybe(supabase, data.user.id);
-    if (discordUserId) {
-      const [settings, roleIds] = await Promise.all([
-        getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID),
-        getGuildMemberRoleIds(discordUserId),
-      ]);
-      discordStatus =
-        roleIds && settings?.verified_role_id && roleIds.includes(settings.verified_role_id) ? "verified" : "not_member";
-    }
-  }
-
-  const hasCloudObsAccess = await checkProductAccess(supabase, "cloud_obs");
+  // getSessionUser and the preferences row are cached per request, so the
+  // (protected) layout above and this one share the same two reads.
+  const { user, folders, folderClipCounts, clipCount, onboardingCompleted, discordStatus, hasCloudObsAccess } =
+    await loadDashboardLayoutData({
+      getUser: getSessionUser,
+      getPreferences: getSessionPreferencesRow,
+      hasCloudObsAccess: () => checkProductAccess(supabase, "cloud_obs"),
+      getFolders: async (userId) => (await getClipFolders(supabase, userId)).data,
+      getFolderClipCounts: (userId) => getClipFolderClipCounts(supabase, userId),
+      countClips: (userId) => countClipsByUserId(supabase, userId),
+      getDiscordUserId: (userId) => getDiscordUserIdByUserIdMaybe(supabase, userId),
+      getVerifiedRoleId: async () => (await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID))?.verified_role_id ?? null,
+      getMemberRoleIds: getGuildMemberRoleIds,
+    });
 
   return (
     <SidebarProvider>
       <OnboardingModal
         clipCount={clipCount}
         discordStatus={discordStatus}
-        initialOnboardingCompleted={!!prefs?.onboarding_completed}
+        initialOnboardingCompleted={onboardingCompleted}
       />
-      <ClipFolderProvider ClipFolders={folders || []}>
+      <ClipFolderProvider ClipFolders={folders}>
         <ModalProvider>
           <ClipFolderDialogProvider>
             <AppSidebar
-              user={data.user}
-              folders={folders || []}
+              user={user}
+              folders={folders}
               folderClipCounts={folderClipCounts}
-              hasCloudObsAccess={!!hasCloudObsAccess}
+              hasCloudObsAccess={hasCloudObsAccess}
               variant="inset"
             />
             <DashboardFrame>{children}</DashboardFrame>
