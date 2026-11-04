@@ -22,7 +22,11 @@ let itemType: string;
 
 mock.module("@repo/supabase/next/admin", () => ({ supabaseAdmin: {} }));
 mock.module("@repo/sentry", () => ({ reportError: () => {} }));
+// Spread the real exports: bun shares module mocks across test files, so a
+// mock with only these functions breaks later files that import others.
+const realOverlayQueries = await import("@repo/supabase/queries/overlays");
 mock.module("@repo/supabase/queries/overlays", () => ({
+  ...realOverlayQueries,
   getOverlaySceneBySubscriberToken: async (_client: unknown, token: string) => ({
     data: token === TOKEN ? SCENE : null,
   }),
