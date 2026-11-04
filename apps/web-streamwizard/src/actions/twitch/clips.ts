@@ -1,5 +1,6 @@
 "use server";
 import { track } from "@/lib/track";
+import { reportError } from "@repo/sentry";
 import { clipSyncErrorMessage } from "@/lib/clip-sync-error";
 import { tryAuthContext } from "@/lib/auth";
 import axios from "axios";
