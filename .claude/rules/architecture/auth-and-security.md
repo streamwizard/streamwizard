@@ -39,7 +39,6 @@ Every caller proves who it is with its own credential, scoped to what it may do.
 | OBS browser source → ws-server (`subscriber`) | the scene's `subscriber_token` (resettable), or a dashboard JWT | `modules/connections/upgrade.ts`; a key reset closes live sockets (`modules/revoke`) |
 | OBS browser source → web-overlay `/api/*` | the scene's `subscriber_token` in `Authorization: Bearer` | `lib/widget-api.ts` + `getOverlaySceneBySubscriberToken` |
 | Our services → ws-server (`bot`, `consumer`, `/internal/*`) | 60-second Ed25519 service token, one scope per token | `@repo/service-token`; ws-server holds only public keys (`WS_SERVICE_JWKS`) and checks `SERVICE_POLICY` |
-| web-admin → ws-server (`monitor`) | `MONITOR_SECRET` | `modules/connections/upgrade.ts`, `isValidSecret` |
 | Node install script → rest-api `/api/{obs,ingest}-nodes/claim` | one-time claim token (32 random bytes, only its SHA-256 stored, expires) | `modules/*/claim.ts`, atomic `consume*ClaimToken` |
 | Ingest / OBS node → rest-api | per-node API key from the one-time claim; only its SHA-256 hash is stored | `middleware/ingest-node-auth.ts`, `middleware/obs-node-auth.ts` |
 | Ingest node → ws-server (`ingest-node`) | 60-second service token rest-api signs before each dial, node id in the token | ws-server upgrade |
