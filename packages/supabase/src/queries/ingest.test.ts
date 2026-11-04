@@ -14,7 +14,7 @@ type Row = Record<string, unknown>;
 /** Reads a column, following one level of embedding ("plans.product_id"). */
 function valueOf(row: Row, column: string): unknown {
   const [head, tail] = column.split(".", 2);
-  if (tail === undefined) return row[column];
+  if (head === undefined || tail === undefined) return row[column];
   const embedded = row[head] as Row | Row[] | null;
   return Array.isArray(embedded) ? embedded[0]?.[tail] : embedded?.[tail];
 }
@@ -23,6 +23,7 @@ function valueOf(row: Row, column: string): unknown {
 function orTermMatches(row: Row, term: string): boolean {
   const [column, op, ...rest] = term.split(".");
   const value = rest.join(".");
+  if (column === undefined) throw new Error(`unsupported or() term ${term}`);
   const actual = valueOf(row, column);
   if (op === "is" && value === "null") return actual === null;
   if (op === "gt") return typeof actual === "string" && new Date(actual) > new Date(value);
@@ -91,13 +92,13 @@ function subscription(overrides: Row = {}): Row {
 let keys: Row[];
 
 beforeEach(() => {
-  keys = [{ id: "key-1", user_id: "u1", stream_key: "sk-live", is_active: true }];
+  keys = [{ id: "key-1", user_id: "u1", label: "Camera 1", stream_key: "sk-live", is_active: true }];
 });
 
 describe("getStreamKeyOwner", () => {
   test("an active key whose owner has an active plan opens", async () => {
     const client = fakeClient({ ingest_stream_keys: keys, user_subscriptions: [subscription()] });
-    expect(await getStreamKeyOwner(client, "sk-live", "cloud_obs")).toEqual({ user_id: "u1", key_id: "key-1" });
+    expect(await getStreamKeyOwner(client, "sk-live", "cloud_obs")).toEqual({ user_id: "u1", key_id: "key-1", label: "Camera 1" });
   });
 
   test("a trialing plan with a period still running opens", async () => {
@@ -143,7 +144,7 @@ describe("getStreamKeyOwner", () => {
 
   test("an inactive or unknown key is refused", async () => {
     const client = fakeClient({ ingest_stream_keys: keys, user_subscriptions: [subscription()] });
-    keys[0].is_active = false;
+    keys[0]!.is_active = false;
     expect(await getStreamKeyOwner(client, "sk-live", "cloud_obs")).toBeNull();
     expect(await getStreamKeyOwner(client, "sk-other", "cloud_obs")).toBeNull();
   });
