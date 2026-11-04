@@ -12,8 +12,8 @@ import {
   setAuthorDeletedAction,
   type AccountOption,
 } from "@/actions/cms-authors";
-import { PageHeader } from "@/components/widgets/page-header";
-import { SaveBar } from "@/components/widgets/save-bar";
+import { PageHeader } from "@/components/shared/page-header";
+import { SaveBar } from "@/components/shared/save-bar";
 import { MAX_BIO_LENGTH, SOCIAL_LINKS, parseSocialLinks, type SocialLinks } from "@/lib/cms/authors";
 import { PageCrumb } from "@/lib/crumbs";
 import { ConfirmButton } from "./confirm-button";

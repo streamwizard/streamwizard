@@ -20,9 +20,9 @@ import {
   NativeSelectOption,
 } from "@repo/ui";
 import { deleteTagAction, mergeTagsAction, saveTagAction } from "@/actions/cms-taxonomy";
-import { TicketFiltersForm } from "@/components/discord/ticket-filters-form";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
-import { PageHeader } from "@/components/widgets/page-header";
+import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -30,7 +30,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import { ConfirmButton } from "./confirm-button";
 import { FormField } from "./form-field";
 

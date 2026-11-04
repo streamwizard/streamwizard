@@ -13,7 +13,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 
 // A Word file, read in the browser and put through the same cleaner as a
 // paste. Nothing is uploaded: mammoth turns the .docx into HTML here, and

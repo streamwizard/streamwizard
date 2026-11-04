@@ -14,7 +14,7 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
   ResponsiveDialogTrigger,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import { useTicketRealtime, type TicketRealtimeHandlers } from "@/hooks/use-ticket-realtime";
 import { displayName } from "@/lib/discord/profile-names";
 import type { TicketSnapshot } from "@/lib/discord/ticket-snapshot";

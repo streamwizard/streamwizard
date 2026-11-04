@@ -1,6 +1,6 @@
 import { formatTicketNumber, type DiscordTicket } from "@repo/supabase/queries/tickets";
 import { Card, CardContent } from "@repo/ui/components/ui/card";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { displayName, type DiscordProfile } from "@/lib/discord/profile-names";
 import {
   PRIORITY_LABELS,

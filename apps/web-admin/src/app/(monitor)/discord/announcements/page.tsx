@@ -12,7 +12,7 @@ import {
 } from "@repo/ui/components/ui/empty";
 import { AnnouncementList, type AnnouncementListItem } from "@/components/discord/announcement-list";
 import { NewAnnouncementButton } from "@/components/discord/announcement-new";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { announcementStatus } from "@/lib/discord/announcements";
 import { getGuildChannels, requireDiscordContext } from "@/lib/discord/api";
 

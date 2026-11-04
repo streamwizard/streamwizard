@@ -17,8 +17,8 @@ import { Card, CardContent } from "@repo/ui/components/ui/card";
 import { Input } from "@repo/ui/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@repo/ui/components/ui/native-select";
 import { EventLogList, actorIdsToLookUp } from "@/components/discord/event-log-list";
-import { FilterPanel } from "@/components/widgets/filter-panel";
-import { PageHeader } from "@/components/widgets/page-header";
+import { FilterPanel } from "@/components/shared/filter-panel";
+import { PageHeader } from "@/components/shared/page-header";
 
 export const dynamic = "force-dynamic";
 

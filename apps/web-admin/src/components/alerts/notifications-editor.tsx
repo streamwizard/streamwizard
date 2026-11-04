@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
+import { StatusIndicator } from "@/components/shared/status-indicator";
 import { cn } from "@/lib/utils";
 import {
   saveNotificationConfig,

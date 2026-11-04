@@ -9,11 +9,11 @@ import {
 } from "@repo/supabase/queries/ticket-stats";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { TicketStatsChart } from "@/components/discord/ticket-stats-chart";
-import { PageTabs } from "@/components/page-tabs";
-import { DataList } from "@/components/widgets/data-list";
-import { PageHeader } from "@/components/widgets/page-header";
-import { StatCard } from "@/components/widgets/stat-card";
-import { StatGrid } from "@/components/widgets/stat-grid";
+import { PageTabs } from "@/components/shared/page-tabs";
+import { DataList } from "@/components/shared/data-list";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { StatGrid } from "@/components/shared/stat-grid";
 import { requireDiscordContext } from "@/lib/discord/api";
 
 export const dynamic = "force-dynamic";

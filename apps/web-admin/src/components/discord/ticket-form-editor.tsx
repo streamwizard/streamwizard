@@ -38,7 +38,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import { useCategorySavePart } from "./ticket-category-save";
 import { MoveMenuItems, TicketRowMenu } from "./ticket-row-menu";
 

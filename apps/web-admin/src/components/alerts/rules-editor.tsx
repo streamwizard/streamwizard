@@ -39,8 +39,8 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
+} from "@/components/shared/responsive-dialog";
+import { StatusIndicator } from "@/components/shared/status-indicator";
 import { useWideScreen } from "@/hooks/use-wide-screen";
 import { cn } from "@/lib/utils";
 

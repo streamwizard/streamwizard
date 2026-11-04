@@ -1,5 +1,5 @@
 import { requireAdminSession } from "@/lib/admin-session";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { SecuritySettings } from "@/components/auth/security-settings";
 
 export const dynamic = "force-dynamic";

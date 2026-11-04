@@ -2,11 +2,11 @@ import { TriangleAlert } from "lucide-react";
 import { queryHttpRequestCount, queryHttpRequests, queryHttpRouteStats } from "@repo/metrics";
 import type { HttpRequestPoint, HttpRouteStatPoint } from "@repo/metrics";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
-import { HttpRequestChart } from "@/components/charts/http-request-chart";
-import { HttpRouteTable } from "@/components/charts/http-route-table";
-import { PageHeader } from "@/components/widgets/page-header";
-import { StatCard } from "@/components/widgets/stat-card";
-import { StatGrid } from "@/components/widgets/stat-grid";
+import { HttpRequestChart } from "@/components/http/http-request-chart";
+import { HttpRouteTable } from "@/components/http/http-route-table";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { StatGrid } from "@/components/shared/stat-grid";
 
 export const dynamic = "force-dynamic";
 

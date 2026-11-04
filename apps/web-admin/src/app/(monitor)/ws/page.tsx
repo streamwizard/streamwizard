@@ -17,16 +17,16 @@ import type {
   WsRoomEventPoint,
   WsTopMessageTypePoint,
 } from "@repo/metrics";
-import { WsConnectionChart } from "@/components/charts/ws-connection-chart";
-import { WsMessageChart } from "@/components/charts/ws-message-chart";
-import { WsAuthFailureChart } from "@/components/charts/ws-auth-failure-chart";
-import { WsMessageDropChart } from "@/components/charts/ws-message-drop-chart";
-import { WsConnectionDurationChart } from "@/components/charts/ws-connection-duration-chart";
-import { WsTopEventsTable } from "@/components/charts/ws-top-events-table";
-import { PageHeader } from "@/components/widgets/page-header";
-import { SectionHeading } from "@/components/widgets/section-heading";
-import { StatCard } from "@/components/widgets/stat-card";
-import { ChartGrid, StatGrid } from "@/components/widgets/stat-grid";
+import { WsConnectionChart } from "@/components/ws/ws-connection-chart";
+import { WsMessageChart } from "@/components/ws/ws-message-chart";
+import { WsAuthFailureChart } from "@/components/ws/ws-auth-failure-chart";
+import { WsMessageDropChart } from "@/components/ws/ws-message-drop-chart";
+import { WsConnectionDurationChart } from "@/components/ws/ws-connection-duration-chart";
+import { WsTopEventsTable } from "@/components/ws/ws-top-events-table";
+import { PageHeader } from "@/components/shared/page-header";
+import { SectionHeading } from "@/components/shared/section-heading";
+import { StatCard } from "@/components/shared/stat-card";
+import { ChartGrid, StatGrid } from "@/components/shared/stat-grid";
 
 export const dynamic = "force-dynamic";
 

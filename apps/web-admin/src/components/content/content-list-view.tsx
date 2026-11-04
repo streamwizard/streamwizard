@@ -21,10 +21,10 @@ import {
   NativeSelectOption,
 } from "@repo/ui";
 import { createContentAction, untrashContentAction } from "@/actions/cms-content";
-import { TicketFiltersForm } from "@/components/discord/ticket-filters-form";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
-import { FilterPanel } from "@/components/widgets/filter-panel";
-import { PageHeader } from "@/components/widgets/page-header";
+import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
+import { FilterPanel } from "@/components/shared/filter-panel";
+import { PageHeader } from "@/components/shared/page-header";
 import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
 import type { ContentType } from "@/lib/cms/draft";
 import { REVIEW_BADGE, REVIEW_FILTER_STATES, REVIEW_LABELS, type ReviewState } from "@/lib/cms/review";
@@ -35,7 +35,7 @@ import {
   ResponsiveDialogDescription,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import type { PickerOption } from "./editor/chip-picker";
 
 /** What a new post starts from. Blank is a template like any other. */

@@ -1,6 +1,6 @@
-import { DesktopOnly } from "@/components/widgets/desktop-only";
-import { WsMonitorProvider } from "@/components/ws-monitor-provider";
-import { WsLiveFeed } from "@/components/ws-live-feed";
+import { DesktopOnly } from "@/components/shared/desktop-only";
+import { WsMonitorProvider } from "@/providers/ws-monitor-provider";
+import { WsLiveFeed } from "@/components/ws/ws-live-feed";
 import { MonitorUnconfigured } from "@/components/ws/monitor-unconfigured";
 import { monitorWsUrl } from "@/lib/monitor-config";
 

@@ -4,7 +4,7 @@ import { type UserActivitySource, listUserActivity } from "@repo/supabase/querie
 import { Button } from "@repo/ui/components/ui/button";
 import { Card, CardContent } from "@repo/ui/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui/components/ui/empty";
-import { PageTabs } from "@/components/page-tabs";
+import { PageTabs } from "@/components/shared/page-tabs";
 import { ActivityList } from "@/components/users/activity-list";
 import { loadAdminUser } from "@/lib/users";
 

@@ -20,7 +20,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { Circle, Expand, Shrink, Zap, ZapOff } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMonitor } from "@/components/ws-monitor-provider";
+import { useMonitor } from "@/providers/ws-monitor-provider";
 import { useTopologyLayout } from "@/hooks/topology/use-topology-layout";
 import { useEdgeAnimation } from "@/hooks/topology/use-edge-animation";
 import { ServerNode } from "./nodes/server-node";

@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/aler
 import { GrantAccessProvider } from "@/components/users/grant-access";
 import { UnbanButton } from "@/components/users/moderation";
 import { UserHeader } from "@/components/users/user-header";
-import { PageTabs } from "@/components/page-tabs";
+import { PageTabs } from "@/components/shared/page-tabs";
 import { assertAdmin } from "@/lib/assert-admin";
 import { PageCrumb } from "@/lib/crumbs";
 import { formatDateTime } from "@/lib/discord/tickets";

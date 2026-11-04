@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { getNodeAction } from "@/actions/nodes";
-import { NodeDetailClient } from "@/components/admin/node-detail-client";
-import { NodeMetricChart, type NodeMetricPoint } from "@/components/charts/node-metric-chart";
+import { NodeDetailClient } from "@/components/obs/node-detail-client";
+import { NodeMetricChart, type NodeMetricPoint } from "@/components/shared/node-metric-chart";
 import {
   queryObsNodeCpu,
   queryObsNodeRam,
@@ -11,9 +11,9 @@ import {
   queryObsNodeBandwidth,
 } from "@repo/metrics";
 import { History } from "lucide-react";
-import { CollapsibleCharts } from "@/components/admin/collapsible-charts";
-import { SectionHeading } from "@/components/widgets/section-heading";
-import { ChartGrid } from "@/components/widgets/stat-grid";
+import { CollapsibleCharts } from "@/components/shared/collapsible-charts";
+import { SectionHeading } from "@/components/shared/section-heading";
+import { ChartGrid } from "@/components/shared/stat-grid";
 import { PageCrumb } from "@/lib/crumbs";
 
 export const dynamic = "force-dynamic";

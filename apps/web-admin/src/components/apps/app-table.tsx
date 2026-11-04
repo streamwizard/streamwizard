@@ -1,9 +1,9 @@
-import { relative } from "@/components/backups/backup-format";
-import { HelpLabel } from "@/components/backups/hint-popover";
-import { Rate } from "@/components/vms/rate";
-import { Sparkline } from "@/components/vms/sparkline";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
+import { relative } from "@/lib/backup-format";
+import { HelpLabel } from "@/components/shared/hint-popover";
+import { Rate } from "@/components/shared/rate";
+import { Sparkline } from "@/components/shared/sparkline";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
+import { StatusIndicator } from "@/components/shared/status-indicator";
 import type { AppRow } from "@/lib/apps-model";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ import {
   formatMs,
   formatPerSec,
   healthDisplay,
-} from "./app-format";
+} from "@/lib/app-format";
 
 const STALE_HINT = "Telegraf has not reported this app for a while. The numbers are from its last report.";
 

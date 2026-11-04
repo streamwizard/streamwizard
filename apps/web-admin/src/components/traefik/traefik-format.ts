@@ -1,4 +1,4 @@
-import { formatPerSec } from "@/components/apps/app-format";
+import { formatPerSec } from "@/lib/app-format";
 import type { TraefikScope } from "@/lib/traefik-model";
 
 /** The page for one scope. Production is the page without a filter. */

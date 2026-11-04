@@ -4,8 +4,8 @@ import { Suspense, use } from "react";
 import { formatBytes } from "@/lib/format";
 import type { GuestNet } from "@/lib/pve";
 import { cn } from "@/lib/utils";
-import { UsageMeter } from "./usage-meter";
-import { AGENT_LABEL, pctOf } from "./vm-format";
+import { UsageMeter } from "@/components/shared/usage-meter";
+import { AGENT_LABEL, pctOf } from "@/lib/vm-format";
 
 /** Guest IPs, agent state and disk use, keyed "<host>:<vmid>". The server
  * reads them from the PVE API after the table renders (lib/pve.ts), so each

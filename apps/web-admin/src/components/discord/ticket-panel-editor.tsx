@@ -15,7 +15,7 @@ import {
   type TicketPanelLayout,
 } from "@repo/discord-message";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, Input, NativeSelect, NativeSelectOption } from "@repo/ui";
-import { DesktopOnly } from "@/components/widgets/desktop-only";
+import { DesktopOnly } from "@/components/shared/desktop-only";
 import { MessageBuilder, type BuilderTheme } from "@repo/ui/message-builder";
 import { saveTicketPanelAction } from "@/actions/discord-ticket-design";
 import { uploadBanner } from "@/lib/discord/banner-upload-client";

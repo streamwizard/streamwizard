@@ -43,7 +43,7 @@ import {
   scheduleAnnouncementAction,
   unscheduleAnnouncementAction,
 } from "@/actions/discord-announcement";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { useAutosave, type AutosaveStatus } from "@/hooks/use-autosave";
 import {
   ANNOUNCEMENT_STATUS_LABELS,

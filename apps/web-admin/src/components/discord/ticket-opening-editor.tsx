@@ -10,7 +10,7 @@ import {
   type BuiltMessage,
 } from "@repo/discord-message";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
-import { DesktopOnly } from "@/components/widgets/desktop-only";
+import { DesktopOnly } from "@/components/shared/desktop-only";
 import { MessageBuilder, type BuilderTheme } from "@repo/ui/message-builder";
 import { saveTicketOpeningMessageAction } from "@/actions/discord-ticket-design";
 import { useCategorySavePart } from "./ticket-category-save";

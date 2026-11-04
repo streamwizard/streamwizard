@@ -20,7 +20,7 @@ import {
   Textarea,
 } from "@repo/ui";
 import { deleteCmsAssetAction, updateCmsAssetAction } from "@/actions/cms-media";
-import { TicketFiltersForm } from "@/components/discord/ticket-filters-form";
+import { TicketFiltersForm } from "@/components/shared/ticket-filters-form";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -28,8 +28,8 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
-import { PageHeader } from "@/components/widgets/page-header";
+} from "@/components/shared/responsive-dialog";
+import { PageHeader } from "@/components/shared/page-header";
 import { MAX_ALT_LENGTH } from "@/lib/cms/media";
 import type { CmsMediaItem } from "@/lib/cms/media-items";
 import { formatBytes } from "@/lib/users";

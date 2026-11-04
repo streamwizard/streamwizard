@@ -1,7 +1,7 @@
 import { EVENTSUB_HEARTBEAT_STALE_MIN, EVENTSUB_SILENCE_MIN } from "@repo/alerting/thresholds";
 import type { EventsubShardHeartbeatRow, EventsubShardThroughputPoint } from "@repo/metrics";
-import type { IndicatorStatus } from "@/components/widgets/status-indicator";
-import { band, SEVERITY, worstStatus } from "@/components/charts/health-kit";
+import type { IndicatorStatus } from "@/components/shared/status-indicator";
+import { band, SEVERITY, worstStatus } from "@/lib/health-kit";
 import type { EventsubMetrics, HelixShard } from "./eventsub-metrics";
 
 // Pure: turns one /api/metrics/eventsub payload into shard statuses, banner

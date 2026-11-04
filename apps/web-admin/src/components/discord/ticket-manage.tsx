@@ -28,7 +28,7 @@ import {
   ResponsiveDialogDescription,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import { TicketPanel } from "./ticket-page/ticket-panel";
 import { toastResult } from "./toast-result";
 

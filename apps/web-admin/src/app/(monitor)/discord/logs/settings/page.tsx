@@ -2,7 +2,7 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getLogRouting, resolveLogRoute } from "@repo/supabase/queries/platform-events";
 import { PLATFORM_EVENT_TYPES } from "@repo/types";
 import { LogSettingsForm } from "@/components/discord/log-settings-form";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { getGuildChannels, requireDiscordContext } from "@/lib/discord/api";
 import { toChannelOptions } from "@/lib/discord/options";
 

@@ -38,7 +38,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import type { ReadinessItem } from "@/lib/cms/readiness";
 import { defaultScheduleTime, fromLocalInputValue, toLocalInputValue } from "@/lib/cms/schedule-time";
 import type { ContentStatus } from "./content-editor";

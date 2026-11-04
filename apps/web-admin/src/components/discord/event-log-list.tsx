@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import type { PlatformEvent } from "@repo/supabase/queries/platform-events";
 import { PLATFORM_EVENT_LABELS, PLATFORM_EVENT_STATUS_LABELS, isPlatformEventType, type PlatformEventStatus } from "@repo/types";
 import { Badge } from "@repo/ui/components/ui/badge";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { formatDateTime } from "@/lib/discord/tickets";
 
 // The rows of the event log. No hooks and no data fetching, so the log page

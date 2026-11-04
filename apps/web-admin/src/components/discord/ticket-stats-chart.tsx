@@ -2,7 +2,7 @@
 
 import { CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
 import type { TicketStatsDay } from "@repo/supabase/queries/ticket-stats";
-import { AXIS_TICK, CHART_TOOLTIP_STYLE, chartColor, ChartCard, LEGEND_WRAPPER_STYLE } from "@/components/charts/chart-kit";
+import { AXIS_TICK, CHART_TOOLTIP_STYLE, chartColor, ChartCard, LEGEND_WRAPPER_STYLE } from "@/components/shared/chart-kit";
 
 const dayLabel = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
 

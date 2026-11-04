@@ -14,7 +14,7 @@ import {
 import { VoiceHubsManager } from "@/components/discord/voice-hubs-manager";
 import { VoiceRenameBlocks } from "@/components/discord/voice-rename-blocks";
 import { VoiceStaffForm } from "@/components/discord/voice-staff-form";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { getGuildChannels, getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { buildNameMap } from "@/lib/discord/names";
 import { toChannelOptions, toRoleOptions } from "@/lib/discord/options";

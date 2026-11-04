@@ -3,7 +3,7 @@ import {
   getAlertNotificationConfigs,
   type AlertNotificationConfig,
 } from "@repo/supabase/queries/alert-notification-config";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { NotificationsEditor, type EnvNotifyView } from "@/components/alerts/notifications-editor";
 import { defaultRoute } from "@repo/alerting/notify";
 import { homeEnv } from "@/lib/home-env";

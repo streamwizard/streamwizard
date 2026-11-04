@@ -43,7 +43,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import type { BlockId } from "@/lib/cms/blocks";
 import { activeTextStyle, TEXT_STYLES, textStyleLabel, type TextStyle, type TextStyleId } from "@/lib/cms/text-styles";
 import { cn } from "@/lib/utils";

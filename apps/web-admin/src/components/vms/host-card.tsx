@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@repo/ui/components/ui/card";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
-import { relative } from "@/components/backups/backup-format";
-import { When } from "@/components/backups/hint-popover";
+import { StatusIndicator } from "@/components/shared/status-indicator";
+import { relative } from "@/lib/backup-format";
+import { When } from "@/components/shared/hint-popover";
 import { formatBytes } from "@/lib/format";
 import type { HostView } from "@/lib/vms";
-import { UsageMeter } from "./usage-meter";
-import { formatLoad, formatPct, hostStatusDisplay, pctOf, vmHostHref } from "./vm-format";
+import { UsageMeter } from "@/components/shared/usage-meter";
+import { formatLoad, formatPct, hostStatusDisplay, pctOf, vmHostHref } from "@/lib/vm-format";
 
 /** One Proxmox host at the top of /vms: load at a glance, linking to the host's page. */
 export function HostCard({ host, guests, running }: { host: HostView; guests: number; running: number }) {

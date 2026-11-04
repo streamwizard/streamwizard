@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@repo/ui/components/ui/card";
-import { DataList } from "@/components/widgets/data-list";
+import { DataList } from "@/components/shared/data-list";
 import type { LiveRow } from "@/lib/overview-data";
 
 /** Who is live right now, most viewers first. Rows open the user when the channel belongs to one. */

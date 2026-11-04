@@ -1,9 +1,9 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getPlatformStats } from "@repo/supabase/queries/platform-stats";
-import { PageHeader } from "@/components/widgets/page-header";
-import { SectionHeading } from "@/components/widgets/section-heading";
-import { StatCard } from "@/components/widgets/stat-card";
-import { StatGrid } from "@/components/widgets/stat-grid";
+import { PageHeader } from "@/components/shared/page-header";
+import { SectionHeading } from "@/components/shared/section-heading";
+import { StatCard } from "@/components/shared/stat-card";
+import { StatGrid } from "@/components/shared/stat-grid";
 
 export const dynamic = "force-dynamic";
 

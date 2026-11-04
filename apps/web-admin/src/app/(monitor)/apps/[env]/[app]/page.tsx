@@ -15,19 +15,19 @@ import {
   formatMs,
   formatPerSec,
   healthDisplay,
-} from "@/components/apps/app-format";
+} from "@/lib/app-format";
 import { AppsNotice, MissingData } from "@/components/apps/apps-notice";
 import { ContainerList } from "@/components/apps/container-list";
-import { relative } from "@/components/backups/backup-format";
-import { When } from "@/components/backups/hint-popover";
-import { NodeMetricChart } from "@/components/charts/node-metric-chart";
+import { relative } from "@/lib/backup-format";
+import { When } from "@/components/shared/hint-popover";
+import { NodeMetricChart } from "@/components/shared/node-metric-chart";
 import { AutoRefresh } from "@/components/vms/auto-refresh";
 import { ChartSection } from "@/components/vms/chart-section";
-import { Rate } from "@/components/vms/rate";
-import { PageHeader } from "@/components/widgets/page-header";
-import { StatCard } from "@/components/widgets/stat-card";
-import { StatGrid } from "@/components/widgets/stat-grid";
-import { StatusIndicator } from "@/components/widgets/status-indicator";
+import { Rate } from "@/components/shared/rate";
+import { PageHeader } from "@/components/shared/page-header";
+import { StatCard } from "@/components/shared/stat-card";
+import { StatGrid } from "@/components/shared/stat-grid";
+import { StatusIndicator } from "@/components/shared/status-indicator";
 import { fetchAppSeries, getApp } from "@/lib/apps";
 import { ENV_LABEL } from "@/lib/apps-model";
 import { PageCrumb } from "@/lib/crumbs";

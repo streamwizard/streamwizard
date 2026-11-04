@@ -21,8 +21,8 @@ import {
   Input,
 } from "@repo/ui";
 import { createAuthorAction } from "@/actions/cms-authors";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
-import { PageHeader } from "@/components/widgets/page-header";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   ResponsiveDialog,
   ResponsiveDialogContent,
@@ -30,7 +30,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import { FormField } from "./form-field";
 
 export interface AuthorRow {

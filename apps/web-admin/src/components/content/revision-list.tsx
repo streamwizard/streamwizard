@@ -17,8 +17,8 @@ import {
   EmptyTitle,
 } from "@repo/ui";
 import { restoreRevisionAction } from "@/actions/cms-content";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
-import { PageHeader } from "@/components/widgets/page-header";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
+import { PageHeader } from "@/components/shared/page-header";
 import { REVISION_KIND_LABELS, type RevisionKind } from "@/lib/cms/revision-kinds";
 import { PageCrumb } from "@/lib/crumbs";
 import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";

@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
-import { EventsubDashboard, type ShardGridView } from "@/components/charts/eventsub-dashboard";
-import { LiveIndicator } from "@/components/widgets/live-indicator";
-import { PageHeader } from "@/components/widgets/page-header";
+import { EventsubDashboard, type ShardGridView } from "@/components/eventsub/eventsub-dashboard";
+import { LiveIndicator } from "@/components/shared/live-indicator";
+import { PageHeader } from "@/components/shared/page-header";
 import { DASHBOARD_COOKIE } from "@/lib/dashboard-prefs";
 import { fetchEventsubMetrics } from "@/lib/eventsub-metrics";
 import { homeEnv } from "@/lib/home-env";

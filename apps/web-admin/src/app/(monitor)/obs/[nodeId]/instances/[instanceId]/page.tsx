@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
 import { getNodeAction, getInstanceAction } from "@/actions/nodes";
 import { getAutoSwitcherConfigForUser } from "@/actions/auto-switcher";
-import { InstanceActions, InstanceDetailClient } from "@/components/admin/instance-detail-client";
-import { InstanceSwitcherTab } from "@/components/admin/instance-switcher-tab";
-import { NodeMetricChart, type NodeMetricPoint } from "@/components/charts/node-metric-chart";
+import { InstanceActions, InstanceDetailClient } from "@/components/obs/instance-detail-client";
+import { InstanceSwitcherTab } from "@/components/obs/instance-switcher-tab";
+import { NodeMetricChart, type NodeMetricPoint } from "@/components/shared/node-metric-chart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/ui/tabs";
 import {
   queryObsInstanceCpu,
@@ -18,8 +18,8 @@ import {
   type ObsInstanceMetricPoint,
   type IngestSignalMetricPoint,
 } from "@repo/metrics";
-import { PageHeader } from "@/components/widgets/page-header";
-import { ChartGrid } from "@/components/widgets/stat-grid";
+import { PageHeader } from "@/components/shared/page-header";
+import { ChartGrid } from "@/components/shared/stat-grid";
 import { PageCrumb } from "@/lib/crumbs";
 
 export const dynamic = "force-dynamic";

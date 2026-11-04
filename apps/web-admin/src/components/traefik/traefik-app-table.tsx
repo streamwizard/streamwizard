@@ -1,8 +1,8 @@
-import { appHref, errorTone, formatErrorPct, formatMs } from "@/components/apps/app-format";
-import { HelpLabel } from "@/components/backups/hint-popover";
-import { Rate } from "@/components/vms/rate";
-import { Sparkline } from "@/components/vms/sparkline";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
+import { appHref, errorTone, formatErrorPct, formatMs } from "@/lib/app-format";
+import { HelpLabel } from "@/components/shared/hint-popover";
+import { Rate } from "@/components/shared/rate";
+import { Sparkline } from "@/components/shared/sparkline";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { ENV_LABEL } from "@/lib/apps-model";
 import type { TraefikRow } from "@/lib/traefik-model";
 import { CLIENT_ERRORS_HINT, DATA_HINT, REQUESTS_HINT, RESPONSE_HINT, SERVER_ERRORS_HINT, SLOW_HINT, formatRequestRate } from "./traefik-format";

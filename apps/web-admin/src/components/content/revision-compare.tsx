@@ -3,7 +3,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { Button } from "@repo/ui/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@repo/ui/components/ui/empty";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import type { DiffLine } from "@/lib/cms/revision-diff";
 import { REVISION_KIND_LABELS } from "@/lib/cms/revision-kinds";
 import { PageCrumb } from "@/lib/crumbs";

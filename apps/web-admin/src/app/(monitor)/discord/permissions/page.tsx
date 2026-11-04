@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getGuildCommandPermissions } from "@repo/supabase/queries/discord";
 import { Card, CardContent } from "@repo/ui/components/ui/card";
 import { CommandPermissionList, type CommandView } from "@/components/discord/command-permission-row";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { getGuildRoles, requireDiscordContext } from "@/lib/discord/api";
 import { toRoleOptions } from "@/lib/discord/options";
 import { env } from "@/lib/env";

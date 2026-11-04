@@ -6,10 +6,10 @@ import { AlertTriangle, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { validateMessage, type BuiltMessage } from "@repo/discord-message";
 import { Badge, Button, Card, CardContent, CardDescription, CardHeader, CardTitle, Input, Label } from "@repo/ui";
-import { DesktopOnly } from "@/components/widgets/desktop-only";
+import { DesktopOnly } from "@/components/shared/desktop-only";
 import { MessageBuilder, type BuilderTheme } from "@repo/ui/message-builder";
 import { publishBuiltMessageAction, saveBuiltMessageDraftAction } from "@/actions/discord-built-message";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { useAutosave, type AutosaveStatus } from "@/hooks/use-autosave";
 import {
   MESSAGE_BUILDER_PRESETS,

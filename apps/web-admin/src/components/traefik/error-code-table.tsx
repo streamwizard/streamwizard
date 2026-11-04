@@ -2,8 +2,8 @@
 
 import useSWR from "swr";
 import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
-import { formatErrorPct } from "@/components/apps/app-format";
-import { DataList } from "@/components/widgets/data-list";
+import { formatErrorPct } from "@/lib/app-format";
+import { DataList } from "@/components/shared/data-list";
 import { ENV_LABEL } from "@/lib/apps-model";
 import { useRefreshInterval } from "@/lib/refresh-interval-context";
 import { useTimeRange } from "@/lib/time-range-context";

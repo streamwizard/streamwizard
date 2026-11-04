@@ -1,5 +1,5 @@
-import { DesktopOnly } from "@/components/widgets/desktop-only";
-import { WsMonitorProvider } from "@/components/ws-monitor-provider";
+import { DesktopOnly } from "@/components/shared/desktop-only";
+import { WsMonitorProvider } from "@/providers/ws-monitor-provider";
 import { WsRoomTopology } from "@/components/topology/ws-room-topology";
 import { MonitorUnconfigured } from "@/components/ws/monitor-unconfigured";
 import { PageCrumb } from "@/lib/crumbs";

@@ -19,7 +19,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ArrowLeft, Circle, Zap, ZapOff } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useMonitor } from "@/components/ws-monitor-provider";
+import { useMonitor } from "@/providers/ws-monitor-provider";
 import type { MonitorEnvelope } from "@/lib/monitor-ws";
 import { RoomNode } from "./nodes/room-node";
 import { ConnectionNode } from "./nodes/connection-node";

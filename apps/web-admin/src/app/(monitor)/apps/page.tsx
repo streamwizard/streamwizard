@@ -4,7 +4,7 @@ import { AppsNotice, MissingData } from "@/components/apps/apps-notice";
 import { OtherApps } from "@/components/apps/other-apps";
 import { ServerCard } from "@/components/apps/server-card";
 import { AutoRefresh } from "@/components/vms/auto-refresh";
-import { PageHeader } from "@/components/widgets/page-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { getAppsOverview } from "@/lib/apps";
 import { ENV_LABEL, OUR_ENVS, rowsOf } from "@/lib/apps-model";
 

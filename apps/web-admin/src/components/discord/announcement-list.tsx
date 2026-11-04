@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Badge, Card, CardContent } from "@repo/ui";
-import { DataList, type DataColumn } from "@/components/widgets/data-list";
+import { DataList, type DataColumn } from "@/components/shared/data-list";
 import { ANNOUNCEMENT_STATUS_LABELS, type AnnouncementStatus } from "@/lib/discord/announcements";
 import { DeleteAnnouncementButton } from "./announcement-delete";
 import { LocalDateTime } from "./local-date-time";

@@ -11,7 +11,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import { FormField } from "../form-field";
 import { useEditorWorkspace } from "./editor-workspace";
 

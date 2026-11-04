@@ -18,7 +18,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import { formatDateTime } from "@/lib/discord/tickets";
 
 const DURATION_LABELS: Record<(typeof PREVIEW_DURATIONS_HOURS)[number], string> = {

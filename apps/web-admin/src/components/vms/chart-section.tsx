@@ -3,8 +3,8 @@
 import { Children, useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Button } from "@repo/ui";
-import { SectionHeading } from "@/components/widgets/section-heading";
-import { ChartGrid } from "@/components/widgets/stat-grid";
+import { SectionHeading } from "@/components/shared/section-heading";
+import { ChartGrid } from "@/components/shared/stat-grid";
 import { useWideScreen } from "@/hooks/use-wide-screen";
 import { cn } from "@/lib/utils";
 

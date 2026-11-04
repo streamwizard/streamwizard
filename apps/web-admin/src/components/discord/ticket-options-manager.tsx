@@ -39,7 +39,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import { Picker } from "./pickers";
 import { MoveMenuItems, TicketRowMenu } from "./ticket-row-menu";
 import { toastResult } from "./toast-result";

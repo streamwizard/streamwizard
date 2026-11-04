@@ -34,7 +34,7 @@ import {
   ResponsiveDialogFooter,
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 
 // Ban, lift ban and delete are opened from the Actions menu in the user header,
 // so they take `open` from outside and draw no trigger of their own.

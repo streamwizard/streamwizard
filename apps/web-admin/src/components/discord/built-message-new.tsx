@@ -14,7 +14,7 @@ import {
   ResponsiveDialogHeader,
   ResponsiveDialogTitle,
   ResponsiveDialogTrigger,
-} from "@/components/widgets/responsive-dialog";
+} from "@/components/shared/responsive-dialog";
 import { MESSAGE_NAME_MAX } from "@/lib/discord/built-messages";
 
 /** "New message": a name and a starting point, then straight into the editor. */
