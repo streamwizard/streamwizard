@@ -2,8 +2,6 @@ import { supabase } from "@repo/supabase";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
 import type { OverlayEventType } from "@repo/types";
 import { trackWsAuthFailure } from "@repo/metrics";
-import { env } from "@/lib/env";
-import { isValidSecret } from "@/lib/secret";
 import { isRateLimited } from "@/middleware/rate-limit";
 import { authorizeService, serviceAuthConfigured } from "@/middleware/service-auth";
 import type { ConnectionData } from "@/types";
@@ -94,18 +92,24 @@ export async function handleUpgrade(req: Request, server: BunServer): Promise<Re
     return new Response("Bad Request: missing or invalid role", { status: 400 });
   }
 
-  // --- Monitor ---
+  // --- Monitor (the sanitized ops feed; token signed by web-admin) ---
+  // Browsers can't set headers on a WebSocket, so the admin page sends its
+  // 60-second service token as ?token=. It fetches a fresh one before every
+  // dial; the Authorization header works too, for server-side callers.
   if (role === "monitor") {
-    if (!env.MONITOR_SECRET) {
+    if (!serviceAuthConfigured("monitor")) {
       return new Response("Monitor not configured", { status: 404 });
     }
-    if (!isValidSecret(url.searchParams.get("token"), env.MONITOR_SECRET)) {
+    const queryToken = url.searchParams.get("token");
+    const auth = await authorizeService(req.headers.get("authorization") ?? (queryToken ? `Bearer ${queryToken}` : null), "monitor");
+    if (!auth.ok) {
       trackWsAuthFailure("unknown", "invalid_token");
       return new Response("Unauthorized", { status: 401 });
     }
     return upgradeOrFail(server, req, "monitor", {
       role: "monitor",
       userId: "_monitor",
+      source: auth.service,
       channels: new Set<OverlayEventType>(),
     });
   }

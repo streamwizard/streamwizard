@@ -74,7 +74,7 @@ describe("service tokens", () => {
 describe("shared secrets", () => {
   test("are never accepted, for any action", async () => {
     const auth = createServiceAuth({ jwks: { keys } });
-    for (const scope of ["broadcast", "revoke", "consumer", "bot", "ingest-node", "ingest-sessions"] as ServiceScope[]) {
+    for (const scope of ["broadcast", "revoke", "consumer", "bot", "ingest-node", "ingest-sessions", "monitor"] as ServiceScope[]) {
       expect((await auth.authorize("Bearer shared-consumer", scope)).ok).toBe(false);
     }
   });

@@ -16,7 +16,7 @@ export interface ConnectionData {
    */
   consumerTypes?: Set<string>;
   /**
-   * Who a bot, consumer or ingest-node connection is ("streamwizard-bot",
+   * Who a bot, consumer, ingest-node or monitor connection is ("streamwizard-bot",
    * "ingest-node:<id>"). Taken from the verified service token.
    */
   source?: string;

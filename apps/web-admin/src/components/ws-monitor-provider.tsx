@@ -16,14 +16,13 @@ const MonitorContext = createContext<MonitorContextValue | null>(null);
 
 export function WsMonitorProvider({
   wsUrl,
-  monitorSecret,
   children,
 }: {
+  /** From monitorWsUrl() on the server; null turns the socket off. */
   wsUrl: string | null;
-  monitorSecret: string | null;
   children: ReactNode;
 }) {
-  const value = useMonitorWs(wsUrl, monitorSecret);
+  const value = useMonitorWs(wsUrl);
 
   return (
     <MonitorContext.Provider value={value}>

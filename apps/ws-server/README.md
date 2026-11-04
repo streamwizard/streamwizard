@@ -13,6 +13,7 @@ Three connection roles share one server, each authenticated differently:
 | `bot` | `Bearer <service token, scope bot>` | `streamwizard-bot` and `obs-auto-switcher` — persistent connections that push events into users' rooms. |
 | `consumer` | `Bearer <service token, scope consumer>` | `obs-auto-switcher` — the firehose of every user's events. |
 | `ingest-node` | `Bearer <service token, scope ingest-node>` signed by rest-api, with the node in its `node` claim | one ingest node: live session stats and NIC bandwidth. |
+| `monitor` | service token (scope `monitor`) signed by web-admin, in `?token=` or `Authorization: Bearer` | web-admin's live monitor pages: the sanitized ops feed. |
 
 ### Service tokens
 
@@ -20,11 +21,20 @@ Our own services authenticate with 60-second Ed25519 tokens, one per action
 (`packages/service-token`). Each service signs with its own
 `WS_SERVICE_SIGNING_JWK`; ws-server holds only the public keys in
 `WS_SERVICE_JWKS` and checks every action (`broadcast`, `revoke`, `consumer`,
-`bot`) against `SERVICE_POLICY`. The same tokens gate `POST /internal/broadcast`
+`bot`, `ingest-node`, `ingest-sessions`, `monitor`) against `SERVICE_POLICY`. The same tokens gate `POST /internal/broadcast`
 and `POST /internal/revoke`.
 
 There is no shared secret: a service without its own key can't reach these
 routes, and an environment without `WS_SERVICE_JWKS` answers them with 404.
+
+### Monitor
+
+web-admin's live pages (`/ws/live`, `/ws/rooms`, `/ws/topology`, `/ingest`)
+ask web-admin's `mintMonitorTokenAction` for a 60-second `monitor` token
+before every dial. The action runs web-admin's admin check first and signs
+with web-admin's own `WS_SERVICE_SIGNING_JWK`, so the browser only ever holds
+a token. Browsers can't set headers on a WebSocket, so the token goes in
+`?token=`; server-side callers can use `Authorization: Bearer` instead.
 Generate keys per environment with
 `bun packages/service-token/scripts/generate-keys.ts <out-dir>`.
 

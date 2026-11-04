@@ -20,6 +20,7 @@ import { CollapsibleCharts } from "@/components/admin/collapsible-charts";
 import { IngestNodesSection } from "@/components/admin/ingest-nodes-section";
 import { PageTabs } from "@/components/page-tabs";
 import { IngestLiveProvider } from "@/lib/ingest-live-context";
+import { monitorWsUrl } from "@/lib/monitor-config";
 import { PageHeader } from "@/components/widgets/page-header";
 import { SectionHeading } from "@/components/widgets/section-heading";
 import { LiveIndicator } from "@/components/widgets/live-indicator";
@@ -62,10 +63,7 @@ export default async function IngestDashboard({ searchParams }: { searchParams: 
       ) : (
         // One shared monitor WebSocket for every live consumer below: the
         // Live tab, and the Fleet list's network column.
-        <IngestLiveProvider
-          wsUrl={process.env.NEXT_PUBLIC_WS_SERVER_URL ?? null}
-          monitorSecret={process.env.NEXT_PUBLIC_MONITOR_SECRET ?? null}
-        >
+        <IngestLiveProvider wsUrl={monitorWsUrl()}>
           {view === "live" ? <LiveTab /> : <FleetTab />}
         </IngestLiveProvider>
       )}

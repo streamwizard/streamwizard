@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback, useState } from "react";
+import { runMonitorSocket, type MonitorSocketStatus } from "@/lib/monitor-socket";
 
 export type MonitorEnvelope = {
   ts: number;
@@ -99,19 +100,16 @@ function isSnapshot(msg: MonitorMessage): msg is MonitorSnapshot {
 }
 
 const MAX_EVENTS = 5000;
-const RECONNECT_DELAY_MS = 3000;
 
-export type ConnectionStatus = "connecting" | "connected" | "disconnected";
+export type ConnectionStatus = MonitorSocketStatus;
 
-export function useMonitorWs(wsUrl: string | null, monitorSecret: string | null) {
+export function useMonitorWs(wsUrl: string | null) {
   const [events, setEvents] = useState<MonitorEnvelope[]>([]);
   const [snapshot, setSnapshot] = useState<MonitorSnapshot | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
   const [eventsPerSec, setEventsPerSec] = useState(0);
 
   const pausedRef = useRef(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const eventCountRef = useRef(0);
 
   const clearEvents = useCallback(() => setEvents([]), []);
@@ -129,77 +127,31 @@ export function useMonitorWs(wsUrl: string | null, monitorSecret: string | null)
   }, []);
 
   useEffect(() => {
-    if (!wsUrl || !monitorSecret) return;
-
-    let disposed = false;
-
-    function connect() {
-      if (disposed) return;
-      setStatus("connecting");
-
-      const url = `${wsUrl}/ws?role=monitor&token=${encodeURIComponent(monitorSecret!)}`;
-      const ws = new WebSocket(url);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        setStatus("connected");
-      };
-
-      ws.onmessage = (e) => {
-        try {
-          const msg: MonitorMessage = JSON.parse(e.data as string);
-
-          if (isSnapshot(msg)) {
-            setSnapshot(msg);
-            return;
-          }
-
-          // Per-node bandwidth ticks arrive every ~10s per node — routing them
-          // into the event buffer would flood the live feed. The /ingest live
-          // panel consumes these via its own dedicated hook instead.
-          if (msg.kind === "node_bandwidth") return;
-
-          eventCountRef.current++;
-
-          if (pausedRef.current) return;
-
-          setEvents((prev) => {
-            const next = [msg, ...prev];
-            return next.length > MAX_EVENTS ? next.slice(0, MAX_EVENTS) : next;
-          });
-        } catch {
-          // ignore malformed
+    if (!wsUrl) return;
+    return runMonitorSocket<MonitorMessage>(wsUrl, {
+      onStatus: setStatus,
+      onMessage: (msg) => {
+        if (isSnapshot(msg)) {
+          setSnapshot(msg);
+          return;
         }
-      };
 
-      ws.onclose = () => {
-        wsRef.current = null;
-        // Don't resurrect the socket after teardown — otherwise every unmount
-        // or wsUrl/secret change leaks a detached reconnect loop.
-        if (disposed) return;
-        setStatus("disconnected");
-        reconnectTimer.current = setTimeout(connect, RECONNECT_DELAY_MS);
-      };
+        // Per-node bandwidth ticks arrive every ~10s per node — routing them
+        // into the event buffer would flood the live feed. The /ingest live
+        // panel consumes these via its own dedicated hook instead.
+        if (msg.kind === "node_bandwidth") return;
 
-      ws.onerror = () => {
-        ws.close();
-      };
-    }
+        eventCountRef.current++;
 
-    connect();
+        if (pausedRef.current) return;
 
-    return () => {
-      disposed = true;
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
-      const ws = wsRef.current;
-      wsRef.current = null;
-      if (ws) {
-        // Drop handlers first so the pending close can't schedule a reconnect.
-        ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
-        ws.close();
-      }
-    };
-  }, [wsUrl, monitorSecret]);
+        setEvents((prev) => {
+          const next = [msg, ...prev];
+          return next.length > MAX_EVENTS ? next.slice(0, MAX_EVENTS) : next;
+        });
+      },
+    });
+  }, [wsUrl]);
 
   return { events, snapshot, status, eventsPerSec, clearEvents, setPaused };
 }

@@ -21,7 +21,6 @@ export const env = createEnv({
     INFLUXDB_TOKEN: z.string().min(1),
     INFLUXDB_ORG: z.string().min(1),
     NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
-    MONITOR_SECRET: z.string().min(1).optional(),
     SUPABASE_URL: z.string().url(),
     SUPABASE_PUBLIC_KEY: z.string().min(1),
     SUPABASE_SECRET_KEY: z.string().min(1),
@@ -69,7 +68,9 @@ export const env = createEnv({
     // Auto-switcher config pushes and socket revokes ride ws-server's
     // /internal/* routes, signed with WS_SERVICE_SIGNING_JWK. Optional —
     // without it saves still land in the DB and the engine's 60s reconcile
-    // picks them up.
+    // picks them up. The same key signs the live monitor's 60-second socket
+    // tokens (actions/monitor.ts); the browser dials NEXT_PUBLIC_WS_SERVER_URL,
+    // which next.config.ts derives from this.
     WS_SERVER_URL: z.string().min(1).optional(),
     // Bearer secret for rest-api's /internal/backups (the /backups page).
     // Must match rest-api's REST_API_INTERNAL_SECRET; without it the page
@@ -97,7 +98,6 @@ export const env = createEnv({
   },
   client: {
     NEXT_PUBLIC_WS_SERVER_URL: z.string().min(1).optional(),
-    NEXT_PUBLIC_MONITOR_SECRET: z.string().min(1).optional(),
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
     NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
@@ -108,7 +108,6 @@ export const env = createEnv({
     INFLUXDB_TOKEN: process.env.INFLUXDB_TOKEN,
     INFLUXDB_ORG: process.env.INFLUXDB_ORG,
     NODE_ENV: process.env.NODE_ENV,
-    MONITOR_SECRET: process.env.MONITOR_SECRET,
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_PUBLIC_KEY: process.env.SUPABASE_PUBLIC_KEY,
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
@@ -140,7 +139,6 @@ export const env = createEnv({
     TWITCH_WEBHOOK_SECRET: process.env.TWITCH_WEBHOOK_SECRET,
     NODE_TOKEN_SIGNING_JWK: process.env.NODE_TOKEN_SIGNING_JWK,
     NEXT_PUBLIC_WS_SERVER_URL: process.env.NEXT_PUBLIC_WS_SERVER_URL,
-    NEXT_PUBLIC_MONITOR_SECRET: process.env.NEXT_PUBLIC_MONITOR_SECRET,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,

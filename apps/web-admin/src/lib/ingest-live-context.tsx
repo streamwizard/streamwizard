@@ -9,7 +9,7 @@ import type { IngestNodeLive } from "./monitor-ws";
 // calling useIngestLiveWs directly would open its own socket.
 
 type IngestLiveContextValue = {
-  /** False when the WS env vars aren't set — consumers fall back to polled data. */
+  /** False when the live monitor isn't set up here — consumers fall back to polled data. */
   configured: boolean;
   status: LiveStatus;
   nodes: IngestNodeLive[];
@@ -27,16 +27,15 @@ const IngestLiveContext = createContext<IngestLiveContextValue>({
 
 export function IngestLiveProvider({
   wsUrl,
-  monitorSecret,
   children,
 }: {
+  /** From monitorWsUrl() on the server; null turns the socket off. */
   wsUrl: string | null;
-  monitorSecret: string | null;
   children: React.ReactNode;
 }) {
-  const live = useIngestLiveWs(wsUrl, monitorSecret);
+  const live = useIngestLiveWs(wsUrl);
   return (
-    <IngestLiveContext.Provider value={{ configured: !!wsUrl && !!monitorSecret, ...live }}>
+    <IngestLiveContext.Provider value={{ configured: !!wsUrl, ...live }}>
       {children}
     </IngestLiveContext.Provider>
   );

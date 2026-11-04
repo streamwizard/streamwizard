@@ -1,22 +1,17 @@
-"use client";
-
 import { DesktopOnly } from "@/components/widgets/desktop-only";
 import { WsMonitorProvider } from "@/components/ws-monitor-provider";
 import { WsLiveFeed } from "@/components/ws-live-feed";
+import { MonitorUnconfigured } from "@/components/ws/monitor-unconfigured";
+import { monitorWsUrl } from "@/lib/monitor-config";
 
 export default function WsLivePage() {
-  const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? null;
-  const secret = process.env.NEXT_PUBLIC_MONITOR_SECRET ?? null;
+  const wsUrl = monitorWsUrl();
 
-  if (!wsUrl || !secret) {
+  if (!wsUrl) {
     return (
       <div className="space-y-2">
         <h1 className="text-xl font-semibold">Live feed</h1>
-        <p className="text-sm text-muted-foreground">
-          Set <code className="text-xs bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_WS_SERVER_URL</code> and{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">NEXT_PUBLIC_MONITOR_SECRET</code> in{" "}
-          <code className="text-xs bg-muted px-1 py-0.5 rounded">.env.local</code> to enable the live monitor.
-        </p>
+        <MonitorUnconfigured what="the live monitor" />
       </div>
     );
   }
@@ -24,7 +19,7 @@ export default function WsLivePage() {
   return (
     // Phones get the Rooms tab instead; the socket only opens once the tool mounts.
     <DesktopOnly tool="The live feed" backHref="/ws/rooms" backLabel="Open rooms">
-      <WsMonitorProvider wsUrl={wsUrl} monitorSecret={secret}>
+      <WsMonitorProvider wsUrl={wsUrl}>
         <WsLiveFeed />
       </WsMonitorProvider>
     </DesktopOnly>

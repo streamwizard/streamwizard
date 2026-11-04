@@ -31,6 +31,10 @@ export const SERVICE_SCOPES = [
   "ingest-node",
   /** POST /internal/ingest-sessions(/:id/end): the live session registry */
   "ingest-sessions",
+  /** role=monitor socket: the sanitized ops feed. web-admin signs these in a
+   *  server action after its admin check; the admin's browser holds the
+   *  token, not a key. */
+  "monitor",
 ] as const;
 export type ServiceScope = (typeof SERVICE_SCOPES)[number];
 
@@ -38,7 +42,7 @@ export type ServiceScope = (typeof SERVICE_SCOPES)[number];
 export const SERVICE_POLICY = {
   "rest-api": ["broadcast", "revoke", "ingest-node", "ingest-sessions"],
   "web-streamwizard": ["broadcast", "revoke"],
-  "web-admin": ["broadcast", "revoke"],
+  "web-admin": ["broadcast", "revoke", "monitor"],
   "web-overlay": ["broadcast"],
   "obs-auto-switcher": ["consumer", "bot"],
   "streamwizard-bot": ["bot"],

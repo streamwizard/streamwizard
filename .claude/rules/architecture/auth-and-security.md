@@ -32,6 +32,7 @@ Every caller proves who it is with its own credential, scoped to what it may do.
 | Our services → ws-server (`bot`, `consumer`, `/internal/*`) | 60-second Ed25519 service token, one scope per token | `@repo/service-token`; ws-server holds only public keys (`WS_SERVICE_JWKS`) and checks `SERVICE_POLICY` |
 | Ingest / OBS node → rest-api | per-node API key from the one-time claim; only its SHA-256 hash is stored | `middleware/ingest-node-auth.ts`, `middleware/obs-node-auth.ts` |
 | Ingest node → ws-server (`ingest-node`) | 60-second service token rest-api signs before each dial, node id in the token | ws-server upgrade |
+| Admin browser → ws-server (`monitor`) | 60-second service token (scope `monitor`) that web-admin signs in `mintMonitorTokenAction` after `assertAdmin()`, minted before each dial; sent as `?token=` because browsers can't set WebSocket headers | `modules/connections/upgrade.ts`, `SERVICE_POLICY` (web-admin only) |
 | Browser or web-admin → OBS node | 60-second node token: one node, one scope, one instance | minted by a server action after ownership + plan checks; the node verifies with the public JWKS from `GET /api/obs-nodes/me` |
 | obs-auto-switcher → OBS node | per-node `obs_command` key, stored encrypted | the node's `/obs` route |
 | Twitch → rest-api webhook | HMAC signature, timestamp freshness, message-id dedupe | `middleware/twitch-eventsub.ts` |
@@ -58,12 +59,13 @@ Every caller proves who it is with its own credential, scoped to what it may do.
 - **Twitch tokens and node keys are encrypted** with AES-256-GCM (`@repo/supabase/crypto`, `TOKEN_ENCRYPTION_KEY`). Only server processes that must decrypt hold the key; nodes and browsers never do.
 - **API keys are stored as hashes only.** The plaintext is shown once, at claim time.
 - **Secrets live in Doppler**, per app and environment. Never in the repo, logs, Sentry events or error messages. Routes that return secrets never log their response body.
-- **Compare secrets in constant time** (`secretsMatch` in rest-api, `isValidSecret` in ws-server). Never `===`.
+- **Compare secrets in constant time** (`secretsMatch` in rest-api). Never `===`. ws-server holds no shared secrets.
 - **The ws-server monitor feed is sanitized**: names masked, messages and GPS redacted, token fields dropped.
 
 ## Rules for new code
 
 - **A new ws-server action** gets a new scope in `SERVICE_SCOPES` and is granted per service in `SERVICE_POLICY`. Every service signs with its own key; never share one.
+- **A browser that needs a ws-server credential gets a service token from its app's server**, minted per dial after the app's own auth check (like `monitor`). Signing keys and shared secrets never go in a `NEXT_PUBLIC_*` variable or a client bundle.
 - **A new OBS node action** gets a new node-token scope, minted in a server action only after checking the user owns the instance.
 - **A new endpoint for nodes, services or third parties goes in rest-api** behind the matching middleware, never in a Next app.
 - **Prefer service tokens over new bearer secrets.** The remaining bearer-secret routes (`/internal/*` in rest-api, discord-bot HTTP) are server-to-server only and never reach a browser; moving them to service tokens is SW-494.

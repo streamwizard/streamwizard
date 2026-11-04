@@ -100,8 +100,8 @@ export function IngestLivePanel({ initialSignals, nodeNames }: Props) {
       ) : (
         <Card>
           <CardContent className="text-sm break-words text-muted-foreground">
-            Set <code className="font-mono text-xs break-all">NEXT_PUBLIC_WS_SERVER_URL</code> and{" "}
-            <code className="font-mono text-xs break-all">NEXT_PUBLIC_MONITOR_SECRET</code>{" "}
+            Set <code className="font-mono text-xs break-all">WS_SERVER_URL</code> and{" "}
+            <code className="font-mono text-xs break-all">WS_SERVICE_SIGNING_JWK</code>{" "}
             to turn on the monitor socket. Until then the streams below come from polled metrics only, and node bandwidth is on the
             Fleet tab.
           </CardContent>
