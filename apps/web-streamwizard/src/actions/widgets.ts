@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
 import { track } from "@/lib/track";
 import {
-  getWidgetTemplates as getWidgetTemplateRows,
+  getWidgetTemplateSummaries,
   getWidgetTemplateById,
 } from "@repo/supabase/queries/overlay-templates";
 import {
@@ -230,7 +230,7 @@ export async function getWidgetTemplates() {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
 
-  const { data, error } = await getWidgetTemplateRows(ctx.supabase);
+  const { data, error } = await getWidgetTemplateSummaries(ctx.supabase);
   if (error) {
     reportError(error, ERROR_SCOPE);
     return { data: null, error: error.message };
@@ -286,7 +286,7 @@ export async function installWidgetFromLibrary(entryId: string) {
     return { data: null, error: entryError?.message ?? "Entry not found" };
   }
 
-  const source = (entry as unknown as { overlay_widgets: Widget }).overlay_widgets;
+  const source = entry.overlay_widgets;
 
   const { data: forked, error: forkError } = await insertOverlayWidget(
     ctx.supabase,

@@ -2,7 +2,7 @@
 
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { reportError } from "@repo/sentry";
-import { selectOverlayWidget, selectWidgetInstanceFieldValues } from "@repo/supabase/queries/overlay-widgets";
+import { selectOverlayWidgetRuntime, selectWidgetInstanceFieldValues } from "@repo/supabase/queries/overlay-widgets";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
 import { isUuid, resolveOverlayItem } from "@/lib/overlay-item-auth";
 
@@ -40,7 +40,7 @@ export async function loadCustomWidgetData(
   const instanceId = isUuid(config.instance_id) ? config.instance_id : undefined;
   const needsInstance = fieldValues === undefined && Boolean(instanceId);
   const [{ data: widget, error: wErr }, { data: instance, error: iErr }] = await Promise.all([
-    selectOverlayWidget(supabaseAdmin, widgetId, ownerUserId),
+    selectOverlayWidgetRuntime(supabaseAdmin, widgetId, ownerUserId),
     needsInstance
       ? selectWidgetInstanceFieldValues(supabaseAdmin, instanceId!, ownerUserId)
       : Promise.resolve({ data: null, error: null }),

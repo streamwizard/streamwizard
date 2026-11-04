@@ -5,7 +5,23 @@ type DBClient = SupabaseClient<Database>;
 
 /** The OBS node registry: rows, capacity, and the install-time claim flow. */
 
-export type ObsNode = Database["public"]["Tables"]["obs_nodes"]["Row"];
+type ObsNodeRow = Database["public"]["Tables"]["obs_nodes"]["Row"];
+
+/** A node row as admin pages and the node itself see it: no claim-token hash. */
+export type ObsNode = Omit<ObsNodeRow, "claim_token_hash">;
+
+/**
+ * Every obs_nodes column except the claim-token hash. Every read and every
+ * write's returned row uses this list instead of "*" (GET /me sends the row to
+ * the node), so a new secret column stays out until it's added here.
+ */
+export const OBS_NODE_COLUMNS =
+  "id, name, status, maintenance, api_url, tailscale_ip, hostname, gpu_bus_id, gpu_model, total_vram_mb, ram_total_mb, cpu_cores, storage_total_mb, max_instances, max_encoder_sessions, claim_token_expires_at, created_at, updated_at" as const;
+
+/** What the fleet overview needs: identity, status and the api_url it probes. */
+export const OBS_NODE_REGISTRY_COLUMNS = "id, name, status, maintenance, created_at, api_url" as const;
+
+export type ObsNodeRegistryRow = Pick<ObsNodeRow, "id" | "name" | "status" | "maintenance" | "created_at" | "api_url">;
 
 export interface ObsNodeCapacity {
   name: string;
@@ -54,12 +70,23 @@ export interface ObsNodeClaimFields {
 }
 
 export async function listNodes(client: DBClient): Promise<{ data: ObsNode[] | null; error: string | null }> {
-  const { data, error } = await client.from("obs_nodes").select("*").order("created_at", { ascending: false });
+  const { data, error } = await client.from("obs_nodes").select(OBS_NODE_COLUMNS).order("created_at", { ascending: false });
+  return { data, error: error?.message ?? null };
+}
+
+/** The registry rows the fleet overview probes; polled by the admin metrics pages. */
+export async function listNodeRegistryRows(
+  client: DBClient,
+): Promise<{ data: ObsNodeRegistryRow[] | null; error: string | null }> {
+  const { data, error } = await client
+    .from("obs_nodes")
+    .select(OBS_NODE_REGISTRY_COLUMNS)
+    .order("created_at", { ascending: false });
   return { data, error: error?.message ?? null };
 }
 
 export async function getNodeById(client: DBClient, id: string): Promise<ObsNode | null> {
-  const { data } = await client.from("obs_nodes").select("*").eq("id", id).maybeSingle();
+  const { data } = await client.from("obs_nodes").select(OBS_NODE_COLUMNS).eq("id", id).maybeSingle();
   return data;
 }
 
@@ -81,7 +108,7 @@ export async function createNode(
   const { data, error } = await client
     .from("obs_nodes")
     .insert({ ...fields, status: "pending" })
-    .select("*")
+    .select(OBS_NODE_COLUMNS)
     .single();
   return { data, error: describeNodeError(error) };
 }
@@ -91,7 +118,7 @@ export async function updateNodeCapacity(
   id: string,
   fields: Partial<ObsNodeCapacity>,
 ): Promise<{ data: ObsNode | null; error: string | null }> {
-  const { data, error } = await client.from("obs_nodes").update(fields).eq("id", id).select("*").single();
+  const { data, error } = await client.from("obs_nodes").update(fields).eq("id", id).select(OBS_NODE_COLUMNS).single();
   return { data, error: describeNodeError(error) };
 }
 
@@ -119,7 +146,7 @@ export async function updateNodeTailscaleIp(
   const patch: Database["public"]["Tables"]["obs_nodes"]["Update"] = { tailscale_ip: tailscaleIp };
   if (!current.api_url?.trim()) patch.api_url = `http://${tailscaleIp}:3000`;
 
-  const { data, error } = await client.from("obs_nodes").update(patch).eq("id", id).select("*").single();
+  const { data, error } = await client.from("obs_nodes").update(patch).eq("id", id).select(OBS_NODE_COLUMNS).single();
   return { data, error: error?.message ?? null };
 }
 
@@ -132,7 +159,7 @@ export async function deleteNode(client: DBClient, id: string): Promise<{ error:
  * near-simultaneous replay is still found (lets the claim endpoint return 409
  * instead of a misleading 404). */
 export async function claimNodeByTokenHash(client: DBClient, tokenHash: string): Promise<ObsNode | null> {
-  const { data } = await client.from("obs_nodes").select("*").eq("claim_token_hash", tokenHash).maybeSingle();
+  const { data } = await client.from("obs_nodes").select(OBS_NODE_COLUMNS).eq("claim_token_hash", tokenHash).maybeSingle();
   return data;
 }
 
@@ -171,7 +198,7 @@ export async function consumeClaimToken(
     .eq("claim_token_hash", tokenHash)
     .neq("status", "linked")
     .gt("claim_token_expires_at", new Date().toISOString())
-    .select("*")
+    .select(OBS_NODE_COLUMNS)
     .maybeSingle();
   return data;
 }

@@ -8,7 +8,7 @@ import {
   getOverlayTemplates as getTemplateRows,
   getOverlayTemplateBySlug,
   getWidgetTemplatesByIds,
-  type WidgetTemplateRow,
+  type WidgetTemplateSource,
 } from "@repo/supabase/queries/overlay-templates";
 import {
   createOverlayScene as createSceneRow,
@@ -68,7 +68,7 @@ export async function createOverlayFromTemplate(formData: {
   const widgetTemplateIds = [
     ...new Set(templateItems.map((i) => i.widget_template_id).filter((id): id is string => !!id)),
   ];
-  const widgetTemplatesById = new Map<string, WidgetTemplateRow>();
+  const widgetTemplatesById = new Map<string, WidgetTemplateSource>();
   if (widgetTemplateIds.length > 0) {
     const { data: widgetTemplates, error: widgetTemplatesError } = await getWidgetTemplatesByIds(
       supabase,

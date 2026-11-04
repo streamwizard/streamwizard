@@ -3,8 +3,11 @@ import { supabase } from "@repo/supabase";
 import { reportError } from "@repo/sentry";
 import { getEnabledCommandsByChannel } from "@repo/supabase/queries/commands";
 import type { ChannelChatMessageEvent } from "@repo/schemas";
+import { createCommandLookup, type MatchedCommand } from "../../functions/commandLookup";
 import { resolveVariables } from "../../functions/resolveVariables";
 import { recordChatCommand } from "../../functions/trackChatCommand";
+
+const commandLookup = createCommandLookup((channelId) => getEnabledCommandsByChannel(supabase, channelId));
 
 export async function handleChatMessage(message: ChannelChatMessageEvent, twitchApi: TwitchApi) {
   // split the message into parts
@@ -18,9 +21,9 @@ export async function handleChatMessage(message: ChannelChatMessageEvent, twitch
   let returnMessage: string = "";
   let action: string | null = null;
   if (command.startsWith("!")) {
-    let data: Awaited<ReturnType<typeof getEnabledCommandsByChannel>>;
+    let match: MatchedCommand | null;
     try {
-      data = await getEnabledCommandsByChannel(supabase, message.broadcaster_user_id);
+      match = await commandLookup.find(message.broadcaster_user_id, command);
     } catch (error) {
       reportError(error, "chat-message.load-commands", {
         broadcaster_user_id: message.broadcaster_user_id,
@@ -28,38 +31,12 @@ export async function handleChatMessage(message: ChannelChatMessageEvent, twitch
       return;
     }
 
-    if (!data || data.length === 0) {
-      console.log("No commands found for this channel");
+    if (!match) {
       return;
     }
 
-    // Find the command that matches (check both custom and default)
-    const matchingCommand = data.find((cmd) => {
-      return (cmd.custom_commands && cmd.custom_commands.command === command) ||
-        (cmd.default_chat_commands && cmd.default_chat_commands.command === command);
-    });
-
-    if (!matchingCommand) {
-      return;
-    }
-
-    // Use the matching command data (check which one actually matches)
-    let commandData = null;
-    if (matchingCommand.custom_commands && matchingCommand.custom_commands.command === command) {
-      commandData = matchingCommand.custom_commands;
-    } else if (matchingCommand.default_chat_commands && matchingCommand.default_chat_commands.command === command) {
-      commandData = matchingCommand.default_chat_commands;
-    }
-
-    if (!commandData) {
-      return;
-    }
-
-    recordChatCommand(
-      message.broadcaster_user_id,
-      commandData === matchingCommand.custom_commands ? "custom" : "default",
-      command,
-    );
+    const commandData = match.data;
+    recordChatCommand(message.broadcaster_user_id, match.source, command);
 
     returnMessage = commandData.message || "";
     action = commandData.action || "";

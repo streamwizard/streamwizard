@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LABEL_EVENT_TYPES, type LabelCalendarPeriod, type LabelEntry, type LabelEventRow, type LabelLeader } from "@repo/schemas";
 import type { Database } from "../types/supabase";
+import { fetchAllPages } from "./fetch-all-pages";
 
 /**
  * The stream_labels row (see its migration): one row per streamer, one
@@ -36,22 +37,23 @@ export async function upsertLatestLabels(client: DBClient, broadcasterId: string
     }) as unknown as Promise<{ error: { message: string } | null }>;
 }
 
-/** One stream's label events, oldest first. */
+/** Every one of a stream's label events, oldest first, paged past max_rows. */
 export async function selectLabelEventRows(
   client: DBClient,
   streamId: string,
   broadcasterId: string,
 ): Promise<LabelEventRow[]> {
-  const { data, error } = await client
-    .from("stream_events")
-    .select("event_type, event_data, created_at")
-    .eq("stream_id", streamId)
-    .eq("broadcaster_id", broadcasterId)
-    .in("event_type", [...LABEL_EVENT_TYPES])
-    .order("created_at", { ascending: true });
-
-  if (error) throw error;
-  return data ?? [];
+  return fetchAllPages((from, to) =>
+    client
+      .from("stream_events")
+      .select("event_type, event_data, created_at")
+      .eq("stream_id", streamId)
+      .eq("broadcaster_id", broadcasterId)
+      .in("event_type", [...LABEL_EVENT_TYPES])
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 }
 
 /** The newest label events across all streams, newest first (the event list's history). */

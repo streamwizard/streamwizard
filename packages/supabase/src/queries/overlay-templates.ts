@@ -5,7 +5,18 @@ type DBClient = SupabaseClient<Database>;
 
 export type OverlayTemplateRow = Database["public"]["Tables"]["overlay_templates"]["Row"];
 export type OverlayTemplateItemRow = Database["public"]["Tables"]["overlay_template_items"]["Row"];
-export type WidgetTemplateRow = Database["public"]["Tables"]["overlay_widget_templates"]["Row"];
+type WidgetTemplateRow = Database["public"]["Tables"]["overlay_widget_templates"]["Row"];
+
+/** The library's Starters tab: catalog facts only, never the widget source. */
+export const WIDGET_TEMPLATE_SUMMARY_COLUMNS = "id, slug, name, description, tags" as const;
+
+/** Installing a widget template copies its source (see OverlayWidgetSource). */
+export const WIDGET_TEMPLATE_SOURCE_COLUMNS = "id, name, description, html, js, extra_css, fields, tags" as const;
+
+export type WidgetTemplateSource = Pick<
+  WidgetTemplateRow,
+  "id" | "name" | "description" | "html" | "js" | "extra_css" | "fields" | "tags"
+>;
 
 /** Published templates for the "start from" picker, in catalog order. */
 export async function getOverlayTemplates(client: DBClient) {
@@ -41,24 +52,34 @@ export async function getOverlayTemplateBySlug(client: DBClient, slug: string) {
   return { template, items: items ?? [], error: null };
 }
 
-/** Published widget templates, also shown as the library's Starters tab. */
-export async function getWidgetTemplates(client: DBClient) {
+/** Published widget templates for the library's Starters tab, without their source. */
+export async function getWidgetTemplateSummaries(client: DBClient) {
   return client
     .from("overlay_widget_templates")
-    .select("*")
+    .select(WIDGET_TEMPLATE_SUMMARY_COLUMNS)
     .eq("is_published", true)
     .order("sort_order", { ascending: true });
 }
 
 export async function getWidgetTemplateById(client: DBClient, id: string) {
-  return client.from("overlay_widget_templates").select("*").eq("id", id).eq("is_published", true).maybeSingle();
+  return client
+    .from("overlay_widget_templates")
+    .select(WIDGET_TEMPLATE_SOURCE_COLUMNS)
+    .eq("id", id)
+    .eq("is_published", true)
+    .maybeSingle();
 }
 
 export async function getWidgetTemplateBySlug(client: DBClient, slug: string) {
-  return client.from("overlay_widget_templates").select("*").eq("slug", slug).eq("is_published", true).maybeSingle();
+  return client
+    .from("overlay_widget_templates")
+    .select(WIDGET_TEMPLATE_SOURCE_COLUMNS)
+    .eq("slug", slug)
+    .eq("is_published", true)
+    .maybeSingle();
 }
 
 /** Widget templates referenced by an overlay template's items. */
 export async function getWidgetTemplatesByIds(client: DBClient, ids: string[]) {
-  return client.from("overlay_widget_templates").select("*").in("id", ids).eq("is_published", true);
+  return client.from("overlay_widget_templates").select(WIDGET_TEMPLATE_SOURCE_COLUMNS).in("id", ids).eq("is_published", true);
 }

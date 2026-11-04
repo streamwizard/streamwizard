@@ -35,6 +35,25 @@ export function overlayWidgetColumns(source: OverlayWidgetSource, userId: string
   };
 }
 
+/** What the overlay needs to render a placed custom widget. */
+export const OVERLAY_WIDGET_RUNTIME_COLUMNS = "html, js, extra_css, fields" as const;
+
+/** The editor's per-item instance row; leaves out the runtime `widget_state`. */
+export const WIDGET_INSTANCE_EDITOR_COLUMNS =
+  "id, overlay_item_id, widget_id, user_id, field_values, created_at, updated_at" as const;
+
+/** A library card: the entry plus the widget source its live preview renders. */
+export const LIBRARY_ENTRY_CARD_COLUMNS =
+  "id, title, description, tags, installs, overlay_widgets(html, js, extra_css, fields)" as const;
+
+/** A pending submission in web-admin: the card plus when it was submitted. */
+export const LIBRARY_ENTRY_REVIEW_COLUMNS =
+  "id, title, description, tags, created_at, overlay_widgets(html, js, extra_css, fields)" as const;
+
+/** Installing from the library copies the widget's source (see OverlayWidgetSource). */
+export const LIBRARY_ENTRY_INSTALL_COLUMNS =
+  "id, overlay_widgets(name, description, html, js, extra_css, fields, tags)" as const;
+
 export async function selectOverlayWidgets(client: DBClient, userId: string) {
   return client
     .from("overlay_widgets")
@@ -45,6 +64,11 @@ export async function selectOverlayWidgets(client: DBClient, userId: string) {
 
 export async function selectOverlayWidget(client: DBClient, id: string, userId: string) {
   return client.from("overlay_widgets").select("*").eq("id", id).eq("user_id", userId).single();
+}
+
+/** Overlay playback: one widget's source, pinned to the scene owner. */
+export async function selectOverlayWidgetRuntime(client: DBClient, id: string, userId: string) {
+  return client.from("overlay_widgets").select(OVERLAY_WIDGET_RUNTIME_COLUMNS).eq("id", id).eq("user_id", userId).single();
 }
 
 export async function selectOverlayWidgetsByIds(client: DBClient, userId: string, ids: string[]) {
@@ -71,7 +95,7 @@ export async function deleteOverlayWidget(client: DBClient, id: string, userId: 
 export async function selectWidgetInstanceByItem(client: DBClient, overlayItemId: string, userId: string) {
   return client
     .from("overlay_widget_instances")
-    .select("*")
+    .select(WIDGET_INSTANCE_EDITOR_COLUMNS)
     .eq("overlay_item_id", overlayItemId)
     .eq("user_id", userId)
     .single();
@@ -122,7 +146,7 @@ export async function insertOverlayWidgetInstance(client: DBClient, payload: Ove
 export async function selectApprovedLibraryEntries(client: DBClient) {
   return client
     .from("overlay_widget_library_entries")
-    .select("*, overlay_widgets(*)")
+    .select(LIBRARY_ENTRY_CARD_COLUMNS)
     .eq("is_approved", true)
     .order("installs", { ascending: false });
 }
@@ -130,7 +154,7 @@ export async function selectApprovedLibraryEntries(client: DBClient) {
 export async function selectApprovedLibraryEntry(client: DBClient, entryId: string) {
   return client
     .from("overlay_widget_library_entries")
-    .select("*, overlay_widgets(*)")
+    .select(LIBRARY_ENTRY_INSTALL_COLUMNS)
     .eq("id", entryId)
     .eq("is_approved", true)
     .single();
@@ -150,7 +174,7 @@ export async function insertLibraryEntry(
 export async function selectPendingLibraryEntries(client: DBClient) {
   return client
     .from("overlay_widget_library_entries")
-    .select("*, overlay_widgets(*)")
+    .select(LIBRARY_ENTRY_REVIEW_COLUMNS)
     .eq("is_approved", false)
     .order("created_at", { ascending: true });
 }

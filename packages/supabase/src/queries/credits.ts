@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { CREDITS_EVENT_TYPES, type CreditsEventRow } from "@repo/schemas";
 import type { Database } from "../types/supabase";
+import { fetchAllPages } from "./fetch-all-pages";
 
 /**
  * Reads for the end-of-stream credits widget: which stream to roll, its
@@ -65,22 +66,23 @@ export async function selectCreditsStream(
   return { stream_id: latest.stream_id, is_live: false, started_at: latest.started_at ?? null };
 }
 
-/** The stream's events credits read, oldest first. */
+/** Every one of the stream's events credits read, oldest first, paged past max_rows. */
 export async function selectCreditsEventRows(
   client: DBClient,
   streamId: string,
   broadcasterId: string,
 ): Promise<CreditsEventRow[]> {
-  const { data, error } = await client
-    .from("stream_events")
-    .select("event_type, event_data, created_at, offset_seconds")
-    .eq("stream_id", streamId)
-    .eq("broadcaster_id", broadcasterId)
-    .in("event_type", [...CREDITS_EVENT_TYPES])
-    .order("created_at", { ascending: true });
-
-  if (error) throw error;
-  return data ?? [];
+  return fetchAllPages((from, to) =>
+    client
+      .from("stream_events")
+      .select("event_type, event_data, created_at, offset_seconds")
+      .eq("stream_id", streamId)
+      .eq("broadcaster_id", broadcasterId)
+      .in("event_type", [...CREDITS_EVENT_TYPES])
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
 }
 
 /** The highest viewer sample for the stream, or null when there were none. */

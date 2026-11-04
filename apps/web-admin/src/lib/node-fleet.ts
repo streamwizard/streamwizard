@@ -1,7 +1,7 @@
 import { queryLastWriteByTag } from "@repo/metrics";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { listNodes } from "@repo/supabase/queries/obs-nodes";
-import { listIngestNodes } from "@repo/supabase/queries/ingest-nodes";
+import { listNodeRegistryRows } from "@repo/supabase/queries/obs-nodes";
+import { listIngestNodeRegistryRows } from "@repo/supabase/queries/ingest-nodes";
 
 // Fleet overview for the /ingest and /obs dashboards: every REGISTERED node
 // (the registry is the source of truth, not Influx) with a live /health probe
@@ -40,7 +40,7 @@ interface RegistryRow {
 
 async function loadRegistryRows(kind: "ingest" | "obs"): Promise<RegistryRow[]> {
   if (kind === "obs") {
-    const { data, error } = await listNodes(supabaseAdmin);
+    const { data, error } = await listNodeRegistryRows(supabaseAdmin);
     if (error || !data) throw new Error(`Couldn't load obs_nodes: ${error}`);
     return data.map((n) => ({
       id: n.id,
@@ -52,7 +52,7 @@ async function loadRegistryRows(kind: "ingest" | "obs"): Promise<RegistryRow[]> 
       healthUrl: n.api_url ? `${n.api_url.replace(/\/$/, "")}/health` : null,
     }));
   }
-  const { data, error } = await listIngestNodes(supabaseAdmin);
+  const { data, error } = await listIngestNodeRegistryRows(supabaseAdmin);
   if (error || !data) throw new Error(`Couldn't load ingest_nodes: ${error}`);
   return data.map((n) => ({
     id: n.id,

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { POSTGREST_MAX_ROWS } from "./fetch-all-pages";
 
 /**
  * Platform-wide row counts for the admin dashboard. Service-role only — these
@@ -112,6 +113,13 @@ export interface OverviewStats {
   enabledCommands: number;
 }
 
+/**
+ * How far back the overview looks for a live streamer's latest viewer count:
+ * three ticks of rest-api's 5-minute viewer-count poller, so one missed tick
+ * doesn't blank the number.
+ */
+const LATEST_VIEWER_COUNT_WINDOW_MS = 15 * 60 * 1000;
+
 /** Snapshot for the admin overview dashboard. */
 export async function getOverviewStats(client: DBClient): Promise<OverviewStats> {
   const [liveStreamers, clips, failedClipSyncs, activeOverlayScenes, enabledCommands] = await Promise.all([
@@ -129,15 +137,21 @@ export async function getOverviewStats(client: DBClient): Promise<OverviewStats>
   const viewerCounts = new Map<string, number>();
 
   if (streamers.length > 0) {
-    // Newest first, so the first row seen per broadcaster is their latest count.
+    // Newest first, so the first row seen per broadcaster is their latest
+    // count. Only the last few poll ticks: a live stream has a sample in that
+    // window, and the read stays a few rows per streamer instead of every
+    // sample ever recorded.
+    const since = new Date(Date.now() - LATEST_VIEWER_COUNT_WINDOW_MS).toISOString();
     const { data: viewerRows } = await client
       .from("stream_viewer_counts")
-      .select("broadcaster_id, viewer_count, recorded_at")
+      .select("broadcaster_id, viewer_count")
       .in(
         "broadcaster_id",
         streamers.map((s) => s.broadcaster_id),
       )
-      .order("recorded_at", { ascending: false });
+      .gte("recorded_at", since)
+      .order("recorded_at", { ascending: false })
+      .limit(POSTGREST_MAX_ROWS);
 
     for (const row of viewerRows ?? []) {
       if (!viewerCounts.has(row.broadcaster_id)) viewerCounts.set(row.broadcaster_id, row.viewer_count);

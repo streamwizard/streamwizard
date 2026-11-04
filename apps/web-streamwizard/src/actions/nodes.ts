@@ -10,6 +10,7 @@ import { missingTwitchScopes } from "@repo/schemas";
 import { signNodeToken } from "@repo/node-token";
 import { getProductAccess, getUserActiveSubscriptionId } from "@repo/supabase/queries/subscriptions";
 import {
+  type NodeObsInstance,
   type ObsInstance,
   getInstanceNodeApiUrl,
   getInstanceObsWsPasswordFields,
@@ -33,7 +34,7 @@ async function cloudObsContext() {
   return { ctx, error: null };
 }
 
-export async function getMyRunningInstanceAction(): Promise<{ data: ObsInstance | null; error: string | null }> {
+export async function getMyRunningInstanceAction(): Promise<{ data: NodeObsInstance | null; error: string | null }> {
   const { ctx, error } = await cloudObsContext();
   if (!ctx) return { data: null, error };
   const userId = ctx.user.id;
@@ -77,7 +78,7 @@ export async function getInstanceObsWsPasswordAction(
 }
 
 /** Returns the user's most recent instance regardless of status (e.g. stopped). */
-export async function getMyLatestInstanceAction(): Promise<{ data: ObsInstance | null; error: string | null }> {
+export async function getMyLatestInstanceAction(): Promise<{ data: NodeObsInstance | null; error: string | null }> {
   const { ctx, error } = await cloudObsContext();
   if (!ctx) return { data: null, error };
   const userId = ctx.user.id;

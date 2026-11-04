@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { fetchAllPages } from "./fetch-all-pages";
 
 type DBClient = SupabaseClient<Database>;
 
@@ -139,40 +140,25 @@ export async function getOpenVoiceSessions(client: DBClient, guildId: string): P
 // (e.g. "all time" on a long-running, active guild).
 // ---------------------------------------------------------------------------
 
-const PAGE_SIZE = 1000;
-
 type DailyMetricRow = Pick<DiscordDailyActivity, "user_id" | "messages_sent" | "reactions_added" | "reactions_received" | "voice_seconds">;
 
-async function fetchDailyMetricRows(
+function fetchDailyMetricRows(
   client: DBClient,
   guildId: string,
   from: string,
   to: string,
   userId?: string
 ): Promise<DailyMetricRow[]> {
-  const rows: DailyMetricRow[] = [];
-  let offset = 0;
-
-  while (true) {
+  return fetchAllPages((start, end) => {
     let query = client
       .from("discord_daily_activity")
       .select("user_id, messages_sent, reactions_added, reactions_received, voice_seconds")
       .eq("guild_id", guildId)
       .gte("activity_date", from)
-      .lte("activity_date", to)
-      .range(offset, offset + PAGE_SIZE - 1);
+      .lte("activity_date", to);
     if (userId) query = query.eq("user_id", userId);
-
-    const { data, error } = await query;
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-
-    rows.push(...data);
-    if (data.length < PAGE_SIZE) break;
-    offset += PAGE_SIZE;
-  }
-
-  return rows;
+    return query.order("id", { ascending: true }).range(start, end);
+  });
 }
 
 function metricValue(metric: LeaderboardMetric, row: DailyMetricRow): number {

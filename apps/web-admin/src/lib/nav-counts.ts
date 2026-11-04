@@ -1,17 +1,9 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { getAlertStates } from "@repo/supabase/queries/alerts";
+import { countFiringAlertStates } from "@repo/supabase/queries/alerts";
 import { getOpenTicketCounts } from "@repo/supabase/queries/tickets";
 import { getDiscordContext } from "@/lib/discord/api";
 import { homeEnv } from "@/lib/home-env";
 import type { NavCounts } from "@/lib/nav-counts-shared";
-
-async function countFiringAlerts(): Promise<number> {
-  const states = await getAlertStates(supabaseAdmin, homeEnv());
-  const now = Date.now();
-  return states.filter(
-    (state) => state.status === "firing" && !(state.silenced_until && new Date(state.silenced_until).getTime() > now),
-  ).length;
-}
 
 export async function countTicketsAwaitingStaff(): Promise<number> {
   const ctx = getDiscordContext();
@@ -31,7 +23,7 @@ export async function countPendingWidgets(): Promise<number> {
 /** Each counter fails on its own: a broken query shows 0, never takes the nav down. */
 export async function getNavCounts(): Promise<NavCounts> {
   const [alerts, tickets, widgets] = await Promise.allSettled([
-    countFiringAlerts(),
+    countFiringAlertStates(supabaseAdmin, homeEnv()),
     countTicketsAwaitingStaff(),
     countPendingWidgets(),
   ]);

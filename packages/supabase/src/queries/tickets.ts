@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { fetchAllPages } from "./fetch-all-pages";
 
 type DBClient = SupabaseClient<Database>;
 
@@ -385,13 +386,16 @@ export async function getTicketHistory(
   client: DBClient,
   ticketId: string,
 ): Promise<{ messages: DiscordTicketMessage[]; events: DiscordTicketEvent[] }> {
+  // Paged: a long ticket can pass max_rows, and a cut-off history drops the newest messages.
   const [messages, events] = await Promise.all([
-    client.from("discord_ticket_messages").select("*").eq("ticket_id", ticketId).order("created_at"),
-    client.from("discord_ticket_events").select("*").eq("ticket_id", ticketId).order("created_at"),
+    fetchAllPages((from, to) =>
+      client.from("discord_ticket_messages").select("*").eq("ticket_id", ticketId).order("created_at").order("id").range(from, to),
+    ),
+    fetchAllPages((from, to) =>
+      client.from("discord_ticket_events").select("*").eq("ticket_id", ticketId).order("created_at").order("id").range(from, to),
+    ),
   ]);
-  if (messages.error) throw messages.error;
-  if (events.error) throw events.error;
-  return { messages: messages.data, events: events.data };
+  return { messages, events };
 }
 
 /** R2 keys of attachments a Discord user posted in tickets, for account deletion. */

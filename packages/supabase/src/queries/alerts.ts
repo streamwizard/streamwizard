@@ -14,6 +14,18 @@ export async function getAlertStates(client: DBClient, env: string): Promise<Ale
   return data;
 }
 
+/** Firing, unsilenced states of one env, counted in the database (the admin nav badge). */
+export async function countFiringAlertStates(client: DBClient, env: string, now: Date = new Date()): Promise<number> {
+  const { count, error } = await client
+    .from("alert_state")
+    .select("id", { count: "exact", head: true })
+    .eq("env", env)
+    .eq("status", "firing")
+    .or(`silenced_until.is.null,silenced_until.lte.${now.toISOString()}`);
+  if (error) throw new Error(`Couldn't count firing alerts for ${env}: ${error.message}`);
+  return count ?? 0;
+}
+
 /** silencedUntil = null clears the silence. */
 export async function silenceAlertState(client: DBClient, stateId: string, silencedUntil: string | null): Promise<void> {
   const { error } = await client

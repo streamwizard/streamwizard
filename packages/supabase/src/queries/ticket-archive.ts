@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Json } from "../types/supabase";
+import { fetchAllPages } from "./fetch-all-pages";
 import type { DiscordTicketMessage, DiscordTicketMessageInsert } from "./tickets";
 
 type DBClient = SupabaseClient<Database>;
@@ -143,9 +144,15 @@ export async function listOpenTicketRefs(client: DBClient, guildId: string): Pro
   );
 }
 
-/** Text for the transcript file: the ticket's messages in order, deleted ones included and flagged. */
-export async function listTicketMessages(client: DBClient, ticketId: string): Promise<DiscordTicketMessage[]> {
-  const { data, error } = await client.from("discord_ticket_messages").select("*").eq("ticket_id", ticketId).order("created_at");
-  if (error) throw error;
-  return data;
+/** Text for the transcript file: every message of the ticket in order, deleted ones included and flagged. */
+export function listTicketMessages(client: DBClient, ticketId: string): Promise<DiscordTicketMessage[]> {
+  return fetchAllPages((from, to) =>
+    client
+      .from("discord_ticket_messages")
+      .select("*")
+      .eq("ticket_id", ticketId)
+      .order("created_at")
+      .order("id")
+      .range(from, to),
+  );
 }

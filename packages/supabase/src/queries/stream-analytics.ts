@@ -1,7 +1,18 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../types/supabase";
+import { fetchAllPages } from "./fetch-all-pages";
 
 type DBClient = SupabaseClient<Database>;
+
+/** These reads log and fall back to no rows, so one failed chart doesn't fail the page. */
+async function allPagesOrEmpty<T>(label: string, read: () => Promise<T[]>): Promise<T[]> {
+  try {
+    return await read();
+  } catch (error) {
+    console.error(`[stream-analytics] ${label}:`, (error as { message?: string } | null)?.message ?? error);
+    return [];
+  }
+}
 
 export async function getLatestStreamForBroadcaster(client: DBClient, broadcasterId: string) {
   const { data, error } = await client
@@ -79,30 +90,38 @@ export async function getRecentStreamsForBroadcaster(client: DBClient, broadcast
 export async function getBulkStreamPeakViewers(client: DBClient, streamIds: string[]) {
   if (streamIds.length === 0) return new Map<string, number>();
 
-  const { data, error } = await client
-    .from("stream_viewer_counts")
-    .select("stream_id, viewer_count")
-    .in("stream_id", streamIds);
-
-  if (error) console.error("[stream-analytics] getBulkStreamPeakViewers:", error.message);
+  const data = await allPagesOrEmpty("getBulkStreamPeakViewers", () =>
+    fetchAllPages((from, to) =>
+      client
+        .from("stream_viewer_counts")
+        .select("stream_id, viewer_count")
+        .in("stream_id", streamIds)
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+  );
 
   const peakByStream = new Map<string, number>();
-  for (const row of data ?? []) {
+  for (const row of data) {
     const current = peakByStream.get(row.stream_id) ?? 0;
     if (row.viewer_count > current) peakByStream.set(row.stream_id, row.viewer_count);
   }
   return peakByStream;
 }
 
-export async function getStreamViewerCounts(client: DBClient, streamId: string) {
-  const { data, error } = await client
-    .from("stream_viewer_counts")
-    .select("offset_seconds, viewer_count, game_id, game_name, title")
-    .eq("stream_id", streamId)
-    .order("offset_seconds", { ascending: true });
-
-  if (error) console.error("[stream-analytics] getStreamViewerCounts:", error.message);
-  return data ?? [];
+/** Every viewer sample of the stream, in stream order, paged past max_rows. */
+export function getStreamViewerCounts(client: DBClient, streamId: string) {
+  return allPagesOrEmpty("getStreamViewerCounts", () =>
+    fetchAllPages((from, to) =>
+      client
+        .from("stream_viewer_counts")
+        .select("offset_seconds, viewer_count, game_id, game_name, title")
+        .eq("stream_id", streamId)
+        .order("offset_seconds", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+  );
 }
 
 export async function getBroadcasterProfile(client: DBClient) {
@@ -115,14 +134,19 @@ export async function getBroadcasterProfile(client: DBClient) {
   return data ?? null;
 }
 
-export async function getStreamEvents(client: DBClient, streamId: string) {
-  const { data, error } = await client
-    .from("stream_events")
-    .select("event_type, event_data, offset_seconds")
-    .eq("stream_id", streamId);
-
-  if (error) console.error("[stream-analytics] getStreamEvents:", error.message);
-  return data ?? [];
+/** Every event of the stream, oldest first, paged past max_rows: the stats count them all. */
+export function getStreamEvents(client: DBClient, streamId: string) {
+  return allPagesOrEmpty("getStreamEvents", () =>
+    fetchAllPages((from, to) =>
+      client
+        .from("stream_events")
+        .select("event_type, event_data, offset_seconds")
+        .eq("stream_id", streamId)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+  );
 }
 
 export async function getVodByStreamId(client: DBClient, streamId: string) {

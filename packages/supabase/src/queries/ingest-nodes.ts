@@ -3,7 +3,28 @@ import type { Database } from "../types/supabase";
 
 type DBClient = SupabaseClient<Database>;
 
-export type IngestNode = Database["public"]["Tables"]["ingest_nodes"]["Row"];
+type IngestNodeRow = Database["public"]["Tables"]["ingest_nodes"]["Row"];
+type IngestNodeSecretColumn =
+  | "claim_token_hash"
+  | "control_secret_ciphertext"
+  | "control_secret_iv"
+  | "control_secret_tag";
+
+/** An ingest node as admin pages and the node itself see it: no claim hash, no control-secret columns. */
+export type IngestNode = Omit<IngestNodeRow, IngestNodeSecretColumn>;
+
+/**
+ * Every ingest_nodes column except the claim-token hash and the encrypted
+ * control secret. Every read and every write's returned row uses this list
+ * instead of "*", so a new secret column stays out until it's added here.
+ */
+export const INGEST_NODE_COLUMNS =
+  "id, name, status, maintenance, hostname, public_hostname, public_ip, lan_ip, tailscale_ip, cpu_cores, ram_total_mb, storage_total_mb, max_concurrent_sessions, claim_token_expires_at, created_at, updated_at" as const;
+
+/** What the fleet overview needs: identity, status and the tailnet address it probes. */
+export const INGEST_NODE_REGISTRY_COLUMNS = "id, name, status, maintenance, created_at, tailscale_ip" as const;
+
+export type IngestNodeRegistryRow = Pick<IngestNodeRow, "id" | "name" | "status" | "maintenance" | "created_at" | "tailscale_ip">;
 
 export interface IngestNodeCapacity {
   name: string;
@@ -19,12 +40,26 @@ export interface IngestNodeClaimFields {
 }
 
 export async function listIngestNodes(client: DBClient): Promise<{ data: IngestNode[] | null; error: string | null }> {
-  const { data, error } = await client.from("ingest_nodes").select("*").order("created_at", { ascending: false });
+  const { data, error } = await client
+    .from("ingest_nodes")
+    .select(INGEST_NODE_COLUMNS)
+    .order("created_at", { ascending: false });
+  return { data, error: error?.message ?? null };
+}
+
+/** The registry rows the fleet overview probes; polled by the admin metrics pages. */
+export async function listIngestNodeRegistryRows(
+  client: DBClient,
+): Promise<{ data: IngestNodeRegistryRow[] | null; error: string | null }> {
+  const { data, error } = await client
+    .from("ingest_nodes")
+    .select(INGEST_NODE_REGISTRY_COLUMNS)
+    .order("created_at", { ascending: false });
   return { data, error: error?.message ?? null };
 }
 
 export async function getIngestNodeById(client: DBClient, id: string): Promise<IngestNode | null> {
-  const { data } = await client.from("ingest_nodes").select("*").eq("id", id).maybeSingle();
+  const { data } = await client.from("ingest_nodes").select(INGEST_NODE_COLUMNS).eq("id", id).maybeSingle();
   return data;
 }
 
@@ -69,7 +104,7 @@ export async function createIngestNode(
   const { data, error } = await client
     .from("ingest_nodes")
     .insert({ ...fields, status: "pending" })
-    .select("*")
+    .select(INGEST_NODE_COLUMNS)
     .single();
   return { data, error: describeIngestNodeError(error) };
 }
@@ -79,7 +114,7 @@ export async function updateIngestNodeCapacity(
   id: string,
   fields: IngestNodeCapacity,
 ): Promise<{ data: IngestNode | null; error: string | null }> {
-  const { data, error } = await client.from("ingest_nodes").update(fields).eq("id", id).select("*").single();
+  const { data, error } = await client.from("ingest_nodes").update(fields).eq("id", id).select(INGEST_NODE_COLUMNS).single();
   return { data, error: describeIngestNodeError(error) };
 }
 
@@ -92,7 +127,7 @@ export async function deleteIngestNode(client: DBClient, id: string): Promise<{ 
  * near-simultaneous replay is still found (lets the claim endpoint return 409
  * instead of a misleading 404). */
 export async function claimIngestNodeByTokenHash(client: DBClient, tokenHash: string): Promise<IngestNode | null> {
-  const { data } = await client.from("ingest_nodes").select("*").eq("claim_token_hash", tokenHash).maybeSingle();
+  const { data } = await client.from("ingest_nodes").select(INGEST_NODE_COLUMNS).eq("claim_token_hash", tokenHash).maybeSingle();
   return data;
 }
 
@@ -134,7 +169,7 @@ export async function consumeIngestClaimToken(
     .eq("claim_token_hash", tokenHash)
     .neq("status", "linked")
     .gt("claim_token_expires_at", new Date().toISOString())
-    .select("*")
+    .select(INGEST_NODE_COLUMNS)
     .maybeSingle();
   return data;
 }
@@ -184,7 +219,7 @@ export async function updateIngestNodeTailscaleIp(
     .from("ingest_nodes")
     .update({ tailscale_ip: tailscaleIp })
     .eq("id", id)
-    .select("*")
+    .select(INGEST_NODE_COLUMNS)
     .single();
   return { data, error: error?.message ?? null };
 }
