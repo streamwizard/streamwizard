@@ -14,7 +14,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
-import type { ViewerCountBucket, ClipData, RawEvent } from "@/actions/supabase/analytics/stream-analytics";
+import type { ViewerCountBucket, ClipData, RawEvent } from "@/types/stream-analytics";
 import { formatOffset } from "@/lib/format";
 
 function formatNumber(n: number): string {

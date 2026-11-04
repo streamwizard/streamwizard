@@ -5,7 +5,6 @@ import { track } from "@/lib/track";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
-import { createClient } from "@repo/supabase/next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { deleteDiscordIntegration, getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
@@ -13,16 +12,21 @@ import { assignRole, DiscordMemberNotFoundError, removeRole } from "@/server/dis
 import { env } from "@/lib/env";
 import { reportAndRedirect } from "@/lib/report-redirect";
 import { safeNextPath } from "@/lib/safe-next-path";
+import { tryAuthContext } from "@/lib/auth";
+import { nextPathSchema } from "@/schemas/auth";
 
 export async function linkDiscord(next?: string) {
-  const supabase = await createClient();
+  const ctx = await tryAuthContext();
+  if (!ctx) redirect("/login");
+  const { supabase } = ctx;
+  const parsedNext = nextPathSchema.safeParse(next);
 
   const headersList = await headers();
   const origin = headersList.get("origin");
   // Only relative, same-origin paths are allowed through — the callback
   // route re-validates this too, but reject early so we never embed an
   // attacker-controlled absolute/protocol-relative URL in the redirect chain.
-  const safeNext = safeNextPath(next);
+  const safeNext = parsedNext.success ? safeNextPath(parsedNext.data) : null;
   const redirectTo = `${origin}/auth/callback/discord${safeNext ? `?next=${encodeURIComponent(safeNext)}` : ""}`;
 
   const { error, data } = await supabase.auth.linkIdentity({
@@ -47,17 +51,11 @@ export async function linkDiscord(next?: string) {
 // it was removed manually or never landed (no OAuth needed — the role is
 // assigned directly via the bot, see server/discord/roles.ts).
 export async function reassignDiscordRole() {
-  const supabase = await createClient();
+  const ctx = await tryAuthContext();
+  if (!ctx) redirect("/login");
+  const { supabase, user } = ctx;
 
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    reportAndRedirect(userError ?? new Error("reassignDiscordRole: no user session"), "/error");
-  }
-
-  const { data: integration, error: integrationError } = await getDiscordIntegrationByUserId(
-    supabase,
-    userData.user.id
-  );
+  const { data: integration, error: integrationError } = await getDiscordIntegrationByUserId(supabase, user.id);
   if (integrationError || !integration?.discord_user_id) {
     reportAndRedirect(integrationError ?? new Error("reassignDiscordRole: no linked Discord integration"), "/error");
   }
@@ -82,12 +80,9 @@ export async function reassignDiscordRole() {
 }
 
 export async function unlinkDiscord() {
-  const supabase = await createClient();
-
-  const { data: userData, error: userError } = await supabase.auth.getUser();
-  if (userError || !userData.user) {
-    reportAndRedirect(userError ?? new Error("unlinkDiscord: no user session"), "/error");
-  }
+  const ctx = await tryAuthContext();
+  if (!ctx) redirect("/login");
+  const { supabase, user } = ctx;
 
   const { data: identitiesData, error: identitiesError } = await supabase.auth.getUserIdentities();
   if (identitiesError) {
@@ -113,7 +108,7 @@ export async function unlinkDiscord() {
   // Best-effort: revoke the Verified Member role directly via the bot. A
   // failure here must not block the disconnect itself.
   try {
-    const { data: integration } = await getDiscordIntegrationByUserId(supabase, userData.user.id);
+    const { data: integration } = await getDiscordIntegrationByUserId(supabase, user.id);
     const settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
     if (integration?.discord_user_id && settings?.verified_role_id) {
       await removeRole(integration.discord_user_id, settings.verified_role_id);
@@ -125,8 +120,8 @@ export async function unlinkDiscord() {
     captureException(revokeErr);
   }
 
-  await deleteDiscordIntegration(supabase, userData.user.id);
-  await track("discord_unlinked", {}, userData.user);
+  await deleteDiscordIntegration(supabase, user.id);
+  await track("discord_unlinked", {}, user);
 
   revalidatePath("/dashboard/settings/integrations");
 }

@@ -1,4 +1,4 @@
-import { getViewerChartData } from "@/actions/supabase/analytics/viewer-chart";
+import { getViewerChartData } from "@/server/analytics/viewer-chart";
 import { ViewerCountChart } from "@/components/stream-analytics/viewer-count-chart";
 
 interface ViewerChartSectionProps {

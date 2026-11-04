@@ -19,6 +19,8 @@ import { kindFromMime, type AssetKind } from "@/lib/asset-mime";
 import { tryAuthContext, type AuthContext } from "@/lib/auth";
 import { track } from "@/lib/track";
 import { env } from "@/lib/env";
+import { idSchema } from "@/schemas/ids";
+import { createAssetUploadSchema, MAX_ASSET_FILE_BYTES } from "@/schemas/assets";
 
 // Media library: streamer-uploaded overlay assets (alert images/sounds/videos)
 // stored in Cloudflare R2. Upload flow is presign -> browser PUT -> confirm:
@@ -33,7 +35,6 @@ import { env } from "@/lib/env";
 // Every account gets 100MB for now, paid plans included. A plan can still raise
 // it via plans.limits->storage->asset_quota_mb.
 const DEFAULT_QUOTA_MB = 100;
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
 const PENDING_RESERVATION_MS = 60 * 60 * 1000;
 const PRESIGN_EXPIRY_SECONDS = 300;
 
@@ -131,20 +132,18 @@ export async function createAssetUpload(input: {
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { supabase, user } = ctx;
 
-  const kind = kindFromMime(input.mimeType);
+  const parsed = createAssetUploadSchema.safeParse(input);
+  if (!parsed.success) return { data: null, error: parsed.error.issues[0]?.message ?? "Can't read that file." };
+  const upload = parsed.data;
+
+  const kind = kindFromMime(upload.mimeType);
   if (!kind) return { data: null, error: "That file type isn't supported. Upload an image, sound, video, or font." };
-  if (!Number.isFinite(input.sizeBytes) || input.sizeBytes <= 0) {
-    return { data: null, error: "Can't read that file's size." };
-  }
-  if (input.sizeBytes > MAX_FILE_BYTES) {
-    return { data: null, error: "Files can be up to 10MB." };
-  }
 
   try {
     const r2 = getR2();
     const quota = await getQuotaBytes(supabase, user.id);
 
-    const fileName = sanitizeFileName(input.fileName);
+    const fileName = sanitizeFileName(upload.fileName);
     const assetId = crypto.randomUUID();
     const key = `assets/${user.id}/${assetId}/${fileName}`;
 
@@ -155,8 +154,8 @@ export async function createAssetUpload(input: {
       userId: user.id,
       key,
       fileName,
-      mimeType: input.mimeType,
-      sizeBytes: input.sizeBytes,
+      mimeType: upload.mimeType,
+      sizeBytes: upload.sizeBytes,
       kind,
       quotaBytes: quota,
       reservationCutoff: new Date(Date.now() - PENDING_RESERVATION_MS).toISOString(),
@@ -169,7 +168,7 @@ export async function createAssetUpload(input: {
       return { data: null, error: "Not enough storage left. Delete something to make room." };
     }
 
-    const uploadUrl = await r2.presignPut(key, input.mimeType, input.sizeBytes, PRESIGN_EXPIRY_SECONDS);
+    const uploadUrl = await r2.presignPut(key, upload.mimeType, upload.sizeBytes, PRESIGN_EXPIRY_SECONDS);
     return { data: { assetId, uploadUrl, url: assetUrl(key) }, error: null };
   } catch (err) {
     reportError(err, "actions/assets");
@@ -183,8 +182,10 @@ export async function confirmAssetUpload(
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { supabase, user } = ctx;
+  const parsedId = idSchema.safeParse(assetId);
+  if (!parsedId.success) return { data: null, error: "Upload not found." };
 
-  const { data: asset } = await selectUserAsset(supabase, assetId, user.id);
+  const { data: asset } = await selectUserAsset(supabase, parsedId.data, user.id);
   if (!asset) return { data: null, error: "Upload not found." };
 
   try {
@@ -198,7 +199,7 @@ export async function confirmAssetUpload(
       }
       // HeadObject is the source of truth. The signed URL should already pin
       // size and type; if R2 holds anything else, throw the upload away.
-      if (head.size > MAX_FILE_BYTES || head.size !== asset.size_bytes || head.contentType !== asset.mime_type) {
+      if (head.size > MAX_ASSET_FILE_BYTES || head.size !== asset.size_bytes || head.contentType !== asset.mime_type) {
         await r2.deleteObject(asset.key);
         await deleteUserAsset(admin, asset.id, user.id);
         return { data: null, error: "That upload doesn't match the file you picked. Try again." };
@@ -222,8 +223,10 @@ export async function deleteAsset(assetId: string): Promise<{ data: AssetListing
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { supabase, user } = ctx;
+  const parsedId = idSchema.safeParse(assetId);
+  if (!parsedId.success) return { data: null, error: "File not found." };
 
-  const { data: asset } = await selectUserAsset(supabase, assetId, user.id);
+  const { data: asset } = await selectUserAsset(supabase, parsedId.data, user.id);
   if (!asset) return { data: null, error: "File not found." };
   // Rows written before the RLS lockdown could carry a rewritten key; only
   // ever delete objects under this user's own prefix.

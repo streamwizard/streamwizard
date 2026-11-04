@@ -7,14 +7,17 @@ import { createClient } from "@repo/supabase/next/server";
 import { twitchScopesFor } from "@repo/schemas";
 import { reportAndRedirect } from "@/lib/report-redirect";
 import { safeNextPath } from "@/lib/safe-next-path";
+import { nextPathSchema } from "@/schemas/auth";
 
+/** Starts Twitch sign-in, so it runs before there is a session to check. */
 export async function login(next?: string | null) {
+  const parsedNext = nextPathSchema.safeParse(next);
   const supabase = await createClient();
 
   const headersList = await headers();
   const origin = headersList.get("origin");
 
-  const safeNext = safeNextPath(next) ?? "/dashboard";
+  const safeNext = (parsedNext.success && safeNextPath(parsedNext.data)) || "/dashboard";
 
   // Already signed in: skip the round trip to Supabase and Twitch entirely.
   const { data: userData } = await supabase.auth.getUser();

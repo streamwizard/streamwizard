@@ -1,5 +1,5 @@
 import { Clock, Eye, Star, Tv, UserPlus, Users } from "lucide-react";
-import { getStatsRowData } from "@/actions/supabase/analytics/stream-stats";
+import { getStatsRowData } from "@/server/analytics/stream-stats";
 import { StatCard } from "./StatCard";
 import { formatDuration } from "@/lib/format";
 

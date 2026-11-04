@@ -1,8 +1,8 @@
 "use server";
 
-import { createClient } from "@repo/supabase/next/server";
 import { getTwitchScopes } from "@repo/supabase/queries/twitch-scopes";
 import { TWITCH_SCOPE_FEATURES, hasTwitchFeature, type TwitchScopeFeature } from "@repo/schemas";
+import { tryAuthContext } from "@/lib/auth";
 
 /**
  * The Twitch feature sets the signed-in user's token carries in full. The
@@ -10,7 +10,8 @@ import { TWITCH_SCOPE_FEATURES, hasTwitchFeature, type TwitchScopeFeature } from
  * Twitch first. Empty when signed out or not yet validated.
  */
 export async function getTwitchFeatureGrants(): Promise<TwitchScopeFeature[]> {
-  const supabase = await createClient();
-  const scopes = await getTwitchScopes(supabase);
+  const ctx = await tryAuthContext();
+  if (!ctx) return [];
+  const scopes = await getTwitchScopes(ctx.supabase);
   return TWITCH_SCOPE_FEATURES.filter((feature) => hasTwitchFeature(scopes, feature));
 }

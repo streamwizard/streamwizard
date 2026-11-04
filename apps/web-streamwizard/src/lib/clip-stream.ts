@@ -7,11 +7,10 @@
  * clips), and only then fetches. These helpers keep both ends narrow.
  */
 
-/** Twitch clip ids are slugs: letters, digits, `-` and `_`. */
-const CLIP_ID = /^[A-Za-z0-9_-]{1,128}$/;
+import { twitchClipIdSchema } from "@/schemas/ids";
 
 export function isTwitchClipId(value: string | null | undefined): value is string {
-  return typeof value === "string" && CLIP_ID.test(value);
+  return twitchClipIdSchema.safeParse(value).success;
 }
 
 /**

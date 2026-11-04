@@ -6,6 +6,7 @@ import type { ClipsWidgetConfig } from "@/types/overlays";
 import { tryAuthContext } from "@/lib/auth";
 import { getTwitchIntegrationByUserId } from "@repo/supabase/queries/user";
 import { getClipFolderJunctions, getOverlayClips } from "@repo/supabase/queries/clips";
+import { previewClipsConfigSchema } from "@/schemas/overlay-actions";
 
 /**
  * The editor preview only needs enough clips to show the rotation working. The
@@ -28,13 +29,17 @@ export interface PreviewClip {
   thumbnail_url: string | null;
 }
 
-export async function getPreviewClips(config: ClipsWidgetConfig): Promise<{
+export async function getPreviewClips(widgetConfig: ClipsWidgetConfig): Promise<{
   clips: PreviewClip[];
   error: string | null;
 }> {
   const ctx = await tryAuthContext();
   if (!ctx) return { clips: [], error: "Unauthorized" };
   const { supabase, user } = ctx;
+
+  const parsed = previewClipsConfigSchema.safeParse(widgetConfig);
+  if (!parsed.success) return { clips: [], error: "These clip filters aren't valid." };
+  const config = parsed.data;
 
   const { data: twitchIntegration } = await getTwitchIntegrationByUserId(supabase, user.id);
   const twitchUserId = twitchIntegration?.twitch_user_id ?? null;

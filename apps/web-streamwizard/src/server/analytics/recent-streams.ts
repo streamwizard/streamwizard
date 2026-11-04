@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@repo/supabase/next/server";
@@ -6,16 +6,7 @@ import {
   getRecentStreamsForBroadcaster,
   getBulkStreamPeakViewers,
 } from "@repo/supabase/queries/stream-analytics";
-
-export interface RecentStream {
-  streamId: string;
-  title: string | null;
-  categoryName: string | null;
-  startedAt: string | null;
-  endedAt: string | null;
-  durationSeconds: number | null;
-  peakViewers: number;
-}
+import type { RecentStream } from "@/types/stream-analytics";
 
 export const getRecentStreamsData = cache(
   async (broadcasterId: string, excludeStreamId?: string): Promise<RecentStream[]> => {

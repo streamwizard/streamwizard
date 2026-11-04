@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";
 import {
   DEMO_EVENTS,
@@ -11,6 +10,8 @@ import {
 import { broadcastToUser } from "@repo/ws-client";
 import { ALERT_TEST_PAYLOAD_KEY, type AlertForcedVariation } from "@repo/ui/overlay";
 import { env } from "@/lib/env";
+import { tryAuthContext } from "@/lib/auth";
+import { testOverlayEventSchema } from "@/schemas/overlay-actions";
 
 /**
  * A looping simulator in Live mode is one round trip per tick, per open editor
@@ -38,19 +39,6 @@ function withinRateLimit(userId: string, now: number): boolean {
   if (entry.count >= RATE_LIMIT_MAX) return false;
   entry.count++;
   return true;
-}
-
-const TEST_ID = /^[\w-]{1,64}$/;
-
-function isForcedVariation(value: unknown): value is AlertForcedVariation {
-  if (!value || typeof value !== "object") return false;
-  const { itemId, variationId } = value as Record<string, unknown>;
-  return (
-    typeof itemId === "string" &&
-    TEST_ID.test(itemId) &&
-    typeof variationId === "string" &&
-    TEST_ID.test(variationId)
-  );
 }
 
 /**
@@ -84,47 +72,47 @@ export async function sendTestEventToOverlay(
    */
   forceVariation?: AlertForcedVariation
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!isDemoEventType(event)) {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+  const { user } = ctx;
+
+  const parsed = testOverlayEventSchema.safeParse({ event, customPayload, variant, forceVariation });
+  if (!parsed.success) return { ok: false, error: "That test event isn't valid" };
+  const input = parsed.data;
+
+  if (!isDemoEventType(input.event)) {
     return { ok: false, error: "Unknown event type" };
   }
-  if (NOT_BROADCASTABLE.has(event)) {
+  const eventType = input.event;
+  if (NOT_BROADCASTABLE.has(eventType)) {
     return { ok: false, error: "This event can't be sent as a test" };
   }
 
   // DEMO_EVENT_DEFS is the widened view; DEMO_EVENTS keeps its literal types,
   // so only some of its members declare `variants` at all.
-  if (variant !== undefined && !DEMO_EVENT_DEFS[event].variants?.[variant]) {
+  if (input.variant !== undefined && !DEMO_EVENT_DEFS[eventType].variants?.[input.variant]) {
     return { ok: false, error: "Unknown event variant" };
   }
 
-  if (forceVariation !== undefined && !isForcedVariation(forceVariation)) {
-    return { ok: false, error: "Unknown alert variation" };
-  }
-
-  if (customPayload !== undefined) {
-    const parsed = DEMO_EVENTS[event].schema.safeParse(customPayload);
-    if (!parsed.success) {
-      return { ok: false, error: `Payload doesn't match ${event}` };
+  let payloadOverride: unknown;
+  if (input.customPayload !== undefined) {
+    const payload = DEMO_EVENTS[eventType].schema.safeParse(input.customPayload);
+    if (!payload.success) {
+      return { ok: false, error: `Payload doesn't match ${eventType}` };
     }
+    payloadOverride = payload.data;
   }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) return { ok: false, error: "Not signed in" };
 
   if (!withinRateLimit(user.id, Date.now())) {
     return { ok: false, error: "Too many test events — slow down for a minute" };
   }
 
   const msg =
-    customPayload === undefined
-      ? buildDemoEvent(event, undefined, variant)
-      : { type: event, payload: customPayload };
-  const payload = forceVariation
-    ? { ...(msg.payload as Record<string, unknown>), [ALERT_TEST_PAYLOAD_KEY]: forceVariation }
+    payloadOverride === undefined
+      ? buildDemoEvent(eventType, undefined, input.variant)
+      : { type: eventType, payload: payloadOverride };
+  const payload = input.forceVariation
+    ? { ...(msg.payload as Record<string, unknown>), [ALERT_TEST_PAYLOAD_KEY]: input.forceVariation }
     : msg.payload;
   const result = await broadcastToUser(user.id, msg.type, payload, { wsServerUrl: env.WS_SERVER_URL });
   if (result.ok) return { ok: true };

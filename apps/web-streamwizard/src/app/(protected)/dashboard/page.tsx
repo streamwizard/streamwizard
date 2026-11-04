@@ -20,7 +20,7 @@ import { CategoryStatsSection } from "@/components/stream/CategoryStatsSection";
 import { ActivityFeedSection } from "@/components/stream/ActivityFeed";
 import { RecentStreams } from "@/components/stream/RecentStreams";
 import { StreamInfoPanel } from "@/components/stream/StreamInfoPanel";
-import type { BroadcasterProfile } from "@/actions/supabase/analytics/stream-analytics";
+import type { BroadcasterProfile } from "@/types/stream-analytics";
 
 export const dynamic = "force-dynamic";
 

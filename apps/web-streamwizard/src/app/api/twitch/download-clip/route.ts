@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GetClipDownloadURL } from "@/actions/twitch/clips";
+import { getClipDownloadUrl } from "@/server/twitch/clip-download";
 import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";
 import { track } from "@/lib/track";
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the download URL
-    const urlResult = await GetClipDownloadURL(clipId, user.id);
+    const urlResult = await getClipDownloadUrl(clipId, user.id);
     if (!urlResult.success || !urlResult.data) {
       return NextResponse.json(
         { error: urlResult.message },

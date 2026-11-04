@@ -1,4 +1,4 @@
-import { getCategoryStatsData } from "@/actions/supabase/analytics/category-stats";
+import { getCategoryStatsData } from "@/server/analytics/category-stats";
 import { CategoryStatsTable } from "@/components/stream-analytics/category-stats-table";
 
 interface CategoryStatsSectionProps {

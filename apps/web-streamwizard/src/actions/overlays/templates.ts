@@ -24,6 +24,7 @@ import {
 } from "@repo/supabase/queries/overlay-widgets";
 import { createClipDisplayFieldChildItems } from "@repo/ui/overlay";
 import { createSceneSchema } from "@/schemas/overlay";
+import { createFromTemplateSchema } from "@/schemas/overlay-actions";
 import { tryAuthContext } from "@/lib/auth";
 import { OVERLAYS_ERROR_SCOPE, generateSlug } from "./shared";
 
@@ -43,7 +44,7 @@ export async function getOverlayTemplates() {
   return { data, error: null };
 }
 
-export async function createOverlayFromTemplate(formData: {
+export async function createOverlayFromTemplate(input: {
   name: string;
   templateId: string;
   render_mode?: "obs" | "gps";
@@ -51,6 +52,9 @@ export async function createOverlayFromTemplate(formData: {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { supabase, user } = ctx;
+  const parsedInput = createFromTemplateSchema.safeParse(input);
+  if (!parsedInput.success) return { data: null, error: "Check the overlay name and template, then try again." };
+  const formData = parsedInput.data;
 
   // templateId is the template's slug ("starting-soon"), not its uuid.
   const {

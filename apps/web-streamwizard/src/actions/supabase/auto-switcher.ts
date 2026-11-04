@@ -1,6 +1,5 @@
 "use server";
 
-import { createClient } from "@repo/supabase/next/server";
 import {
   selectAutoSwitcherConfig,
   updateSceneOverride,
@@ -12,6 +11,8 @@ import { reportError } from "@repo/sentry";
 import { track } from "@/lib/track";
 import { broadcastToUser } from "@repo/ws-client";
 import { env } from "@/lib/env";
+import { tryAuthContext } from "@/lib/auth";
+import { sceneOverrideSchema } from "@/schemas/auto-switcher";
 
 // Every write ends with a push through ws-server /internal/broadcast so the
 // engine reacts within ~1s. The DB row stays the source of truth: if the push
@@ -25,25 +26,23 @@ async function pushConfigToEngine(row: AutoSwitcherConfigRow): Promise<void> {
 }
 
 export async function getAutoSwitcherConfig(): Promise<AutoSwitcherConfigRow | null> {
-  const supabase = await createClient();
-  const { data } = await selectAutoSwitcherConfig(supabase);
+  const ctx = await tryAuthContext();
+  if (!ctx) return null;
+  const { data } = await selectAutoSwitcherConfig(ctx.supabase);
   return data;
 }
 
 export async function upsertAutoSwitcherConfig(
   values: AutoSwitcherFormValues,
 ): Promise<{ ok: boolean; data?: AutoSwitcherConfigRow; error?: string }> {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { ok: false, error: "Not signed in" };
+  const { supabase, user } = ctx;
+
   const parsed = autoSwitcherFormSchema.safeParse(values);
   if (!parsed.success) {
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid settings" };
   }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) return { ok: false, error: "Not signed in" };
 
   const { data, error } = await upsertConfigRow(supabase, user.id, parsed.data);
   if (error) {
@@ -63,25 +62,23 @@ export async function setSceneOverride(
   sceneName: string | null,
   durationMinutes: number | null,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!sceneUuid || sceneUuid.length > 200) return { ok: false, error: "Invalid scene" };
-  if (durationMinutes !== null && (!Number.isFinite(durationMinutes) || durationMinutes < 1 || durationMinutes > 24 * 60)) {
-    return { ok: false, error: "Invalid duration" };
-  }
+  // tryAuthContext's getUser refreshes an expired session (and distinguishes
+  // "logged out" from "no config row") -- the deck stays open for hours on a
+  // phone, so a stale cookie is a real path here, not an edge case.
+  const ctx = await tryAuthContext();
+  if (!ctx) return { ok: false, error: "Session expired. Refresh the page." };
+  const { supabase, user } = ctx;
 
-  const supabase = await createClient();
-  // getUser refreshes an expired session (and distinguishes "logged out" from
-  // "no config row") -- the deck stays open for hours on a phone, so a stale
-  // cookie is a real path here, not an edge case.
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) return { ok: false, error: "Session expired. Refresh the page." };
+  const parsed = sceneOverrideSchema.safeParse({ sceneUuid, sceneName, durationMinutes });
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid scene" };
+  const override = parsed.data;
 
   const { data, error } = await updateSceneOverride(supabase, user.id, {
-    override_scene_uuid: sceneUuid,
-    override_scene_name: sceneName,
-    override_expires_at: durationMinutes ? new Date(Date.now() + durationMinutes * 60_000).toISOString() : null,
+    override_scene_uuid: override.sceneUuid,
+    override_scene_name: override.sceneName,
+    override_expires_at: override.durationMinutes
+      ? new Date(Date.now() + override.durationMinutes * 60_000).toISOString()
+      : null,
   });
   if (error || !data) {
     reportError(error, "auto-switcher: override set");
@@ -89,17 +86,14 @@ export async function setSceneOverride(
   }
 
   await pushConfigToEngine(data);
-  await track("scene_override_set", { timed: durationMinutes !== null }, user);
+  await track("scene_override_set", { timed: override.durationMinutes !== null }, user);
   return { ok: true };
 }
 
 export async function clearSceneOverride(): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-  if (authError || !user) return { ok: false, error: "Session expired. Refresh the page." };
+  const ctx = await tryAuthContext();
+  if (!ctx) return { ok: false, error: "Session expired. Refresh the page." };
+  const { supabase, user } = ctx;
 
   const { data, error } = await updateSceneOverride(supabase, user.id, {
     override_scene_uuid: null,

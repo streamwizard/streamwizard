@@ -19,7 +19,9 @@ import {
   updateOverlayScene as updateSceneRow,
   updateSceneUrlCredentials,
 } from "@repo/supabase/queries/overlays";
-import { createSceneSchema, updateSceneSchema } from "@/schemas/overlay";
+import { updateSceneSchema } from "@/schemas/overlay";
+import { createSceneInputSchema } from "@/schemas/overlay-actions";
+import { idSchema } from "@/schemas/ids";
 import type { ClipDisplayFieldItemConfig } from "@/types/overlays";
 import { overlayItemFromDbRow } from "@/types/overlays";
 import { createAdminClient } from "@repo/supabase/next/admin";
@@ -44,8 +46,10 @@ export async function getOverlayScenes() {
 export async function getOverlayScene(id: string) {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return { data: null, error: "Not found" };
 
-  const { scene, items, groups, error } = await getSceneWithItems(ctx.supabase, id, ctx.user.id);
+  const { scene, items, groups, error } = await getSceneWithItems(ctx.supabase, parsedId.data, ctx.user.id);
   if (error) {
     reportError(error, OVERLAYS_ERROR_SCOPE);
     return { data: null, error: error.message };
@@ -75,8 +79,9 @@ export async function createOverlayScene(formData: {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
 
-  const parsed = createSceneSchema.safeParse(formData);
+  const parsed = createSceneInputSchema.safeParse(formData);
   if (!parsed.success) return { data: null, error: parsed.error.message };
+  const renderMode = parsed.data.render_mode ?? "obs";
 
   const { data, error } = await createSceneRow(ctx.supabase, {
     user_id: ctx.user.id,
@@ -84,7 +89,7 @@ export async function createOverlayScene(formData: {
     slug: generateSlug(parsed.data.name),
     width: parsed.data.width ?? 1920,
     height: parsed.data.height ?? 1080,
-    render_mode: formData.render_mode ?? "obs",
+    render_mode: renderMode,
     is_active: true,
   });
 
@@ -95,7 +100,7 @@ export async function createOverlayScene(formData: {
 
   await track(
     "overlay_created",
-    { overlay_id: data.id, template: "blank", render_mode: formData.render_mode ?? "obs" },
+    { overlay_id: data.id, template: "blank", render_mode: renderMode },
     ctx.user,
   );
   revalidatePath("/dashboard/overlays");
@@ -137,9 +142,12 @@ export async function updateOverlayScene(formData: {
   return { data, error: null };
 }
 
-export async function deleteOverlayScene(id: string) {
+export async function deleteOverlayScene(sceneId: string) {
   const ctx = await tryAuthContext();
   if (!ctx) return { success: false, error: "Unauthorized" };
+  const parsedId = idSchema.safeParse(sceneId);
+  if (!parsedId.success) return { success: false, error: "Not found" };
+  const id = parsedId.data;
 
   const { error } = await deleteSceneRow(ctx.supabase, id, ctx.user.id);
   if (error) {
@@ -155,10 +163,13 @@ export async function deleteOverlayScene(id: string) {
   return { success: true, error: null };
 }
 
-export async function duplicateOverlayScene(id: string) {
+export async function duplicateOverlayScene(sceneId: string) {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { supabase, user } = ctx;
+  const parsedId = idSchema.safeParse(sceneId);
+  if (!parsedId.success) return { data: null, error: "Not found" };
+  const id = parsedId.data;
 
   const { data: original, error: fetchError } = await getOverlaySceneRow(supabase, id, user.id);
 
@@ -274,9 +285,12 @@ export async function duplicateOverlayScene(id: string) {
  * to fetch the new one. Both columns are service-role only, so the write goes
  * through the admin client after the owner check.
  */
-export async function resetSceneUrl(sceneId: string): Promise<{ data: { slug: string } | null; error: string | null }> {
+export async function resetSceneUrl(rawSceneId: string): Promise<{ data: { slug: string } | null; error: string | null }> {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
+  const parsedId = idSchema.safeParse(rawSceneId);
+  if (!parsedId.success) return { data: null, error: "Not found" };
+  const sceneId = parsedId.data;
 
   const { data: scene, error: fetchError } = await getOverlaySceneRow(ctx.supabase, sceneId, ctx.user.id);
   if (fetchError) reportError(fetchError, OVERLAYS_ERROR_SCOPE);

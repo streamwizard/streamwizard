@@ -5,10 +5,10 @@ import { Loader2 } from "lucide-react";
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import * as z from "zod";
+import type * as z from "zod";
 
 import { createClipFolder, deleteClipFolder, editClipFolder } from "@/actions/supabase/clips/clips";
-import { useSession } from "@/providers/session-provider";
+import { folderNameSchema } from "@/schemas/clip-folders";
 import {
   Button,
   Dialog,
@@ -26,15 +26,6 @@ import {
   Input,
 } from "@repo/ui";
 
-const folderNameSchema = z.object({
-  name: z
-    .string()
-    .min(1, { message: "Folder name must be at least 1 character." })
-    .max(255, { message: "Folder name must not exceed 255 characters." })
-    .regex(/^[a-zA-Z0-9-_\s]+$/, {
-      message: "Folder name can only contain letters, numbers, spaces, hyphens, and underscores.",
-    }),
-});
 
 type FolderNameValues = z.infer<typeof folderNameSchema>;
 
@@ -54,7 +45,6 @@ const ClipFolderDialogContext = createContext<ClipFolderDialogContextType | null
 
 export function ClipFolderDialogProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<DialogState>({ mode: null });
-  const { id: userId } = useSession();
 
   const openCreateFolder = useCallback((parentFolderId?: string, parentFolderName?: string) => {
     setState({ mode: "create", parentFolderId, parentFolderName });
@@ -73,7 +63,7 @@ export function ClipFolderDialogProvider({ children }: { children: ReactNode }) 
   return (
     <ClipFolderDialogContext.Provider value={{ openCreateFolder, openRenameFolder, openDeleteFolder }}>
       {children}
-      <CreateRenameFolderDialog state={state} userId={userId} onClose={close} />
+      <CreateRenameFolderDialog state={state} onClose={close} />
       <DeleteFolderDialog state={state} onClose={close} />
     </ClipFolderDialogContext.Provider>
   );
@@ -85,15 +75,7 @@ export function useClipFolderDialog() {
   return context;
 }
 
-function CreateRenameFolderDialog({
-  state,
-  userId,
-  onClose,
-}: {
-  state: DialogState;
-  userId: string;
-  onClose: () => void;
-}) {
+function CreateRenameFolderDialog({ state, onClose }: { state: DialogState; onClose: () => void }) {
   const isOpen = state.mode === "create" || state.mode === "rename";
   const isRename = state.mode === "rename";
 
@@ -112,7 +94,7 @@ function CreateRenameFolderDialog({
     if (state.mode === "rename") {
       toast.promise(
         async () => {
-          const res = await editClipFolder(state.folderId, values.name, userId);
+          const res = await editClipFolder(state.folderId, values.name);
           if (!res.success) throw new Error(res.message);
           return res.message;
         },
@@ -129,7 +111,7 @@ function CreateRenameFolderDialog({
     } else if (state.mode === "create") {
       toast.promise(
         async () => {
-          const res = await createClipFolder(values.name, userId, state.parentFolderId);
+          const res = await createClipFolder(values.name, state.parentFolderId);
           if (!res.success) throw new Error(res.message);
           return res.message;
         },

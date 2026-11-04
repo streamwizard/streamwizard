@@ -24,7 +24,7 @@ export const FREE_TIER_OFFER_DESCRIPTION = `Free tier: ${FREE_TIER_SUMMARY}. ${P
 /** Mirrors FREE_QUOTA_MB in actions/assets.ts, which enforces it. */
 export const FREE_MEDIA_QUOTA_MB = 100;
 
-/** Mirrors MAX_FILE_BYTES in actions/assets.ts, which enforces it. */
+/** Mirrors MAX_ASSET_FILE_BYTES in schemas/assets.ts, which enforces it. */
 export const FREE_MAX_FILE_MB = 10;
 
 /**

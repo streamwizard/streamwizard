@@ -11,6 +11,8 @@ import {
   selectOutputKeys,
 } from "@repo/supabase/queries/ingest";
 import { tryAuthContext } from "@/lib/auth";
+import { idSchema } from "@/schemas/ids";
+import { ingestKeyLabelSchema } from "@/schemas/ingest";
 import { canCreateIngestKeys, INGEST_PLAN_REQUIRED } from "@/lib/ingest-access";
 import { track } from "@/lib/track";
 import { createAdminClient } from "@repo/supabase/next/admin";
@@ -44,18 +46,22 @@ export async function createOutputKey(
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { user } = ctx;
+  const parsedKeyId = idSchema.safeParse(keyId);
+  if (!parsedKeyId.success) return { data: null, error: "Stream key not found" };
+  const parsedLabel = ingestKeyLabelSchema.safeParse(label);
+  if (!parsedLabel.success) return { data: null, error: parsedLabel.error.issues[0]?.message ?? "Invalid name" };
   if (!(await canCreateIngestKeys(ctx.supabase))) return { data: null, error: INGEST_PLAN_REQUIRED };
 
   const adminClient = createAdminClient();
-  if (!(await assertOwnsKey(adminClient, keyId, user.id))) {
+  if (!(await assertOwnsKey(adminClient, parsedKeyId.data, user.id))) {
     return { data: null, error: "Stream key not found" };
   }
 
   const { data, error } = await insertOutputKey(adminClient, {
     user_id: user.id,
-    key_id: keyId,
+    key_id: parsedKeyId.data,
     output_key: generateOutputKey(),
-    label: label.trim() || "My OBS Output Key",
+    label: parsedLabel.data || "My OBS Output Key",
   });
 
   if (error) {
@@ -74,9 +80,11 @@ export async function listOutputKeys(
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { user } = ctx;
+  const parsedKeyId = idSchema.optional().safeParse(keyId);
+  if (!parsedKeyId.success) return { data: null, error: "Stream key not found" };
 
   const adminClient = createAdminClient();
-  const { data, error } = await selectOutputKeys(adminClient, user.id, keyId);
+  const { data, error } = await selectOutputKeys(adminClient, user.id, parsedKeyId.data);
   if (error) reportError(error, "actions/ingest-output-keys");
   return { data, error: error?.message ?? null };
 }
@@ -87,10 +95,12 @@ export async function rotateOutputKey(
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { user } = ctx;
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return { data: null, error: "Key not found" };
   if (!(await canCreateIngestKeys(ctx.supabase))) return { data: null, error: INGEST_PLAN_REQUIRED };
 
   const adminClient = createAdminClient();
-  const { data, error } = await rotateOutputKeySecret(adminClient, id, user.id, generateOutputKey());
+  const { data, error } = await rotateOutputKeySecret(adminClient, parsedId.data, user.id, generateOutputKey());
 
   if (error) {
     reportError(error, "actions/ingest-output-keys");
@@ -106,9 +116,11 @@ export async function deleteOutputKey(id: string): Promise<{ error: string | nul
   const ctx = await tryAuthContext();
   if (!ctx) return { error: "Unauthorized" };
   const { user } = ctx;
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return { error: "Key not found" };
 
   const adminClient = createAdminClient();
-  const { error } = await deleteOutputKeyRow(adminClient, id, user.id);
+  const { error } = await deleteOutputKeyRow(adminClient, parsedId.data, user.id);
 
   revalidatePath(INGEST_SETTINGS_PATH);
   if (error) reportError(error, "actions/ingest-output-keys");

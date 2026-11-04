@@ -1,5 +1,5 @@
 import { TrendingDown, TrendingUp } from "lucide-react";
-import type { RecentStream } from "@/actions/supabase/analytics/recent-streams";
+import type { RecentStream } from "@/types/stream-analytics";
 import { formatDuration, formatDate } from "@/lib/format";
 
 interface RecentStreamRowProps {

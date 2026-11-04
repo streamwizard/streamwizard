@@ -18,6 +18,8 @@ import {
   getUserLatestInstance,
   pickAvailableNode,
 } from "@repo/supabase/queries/obs-nodes";
+import { idSchema } from "@/schemas/ids";
+import { launchInstanceOptionsSchema } from "@/schemas/obs";
 
 // All actions below use the admin client so they can join across
 // obs_instances and obs_nodes without requiring RLS policies on obs_nodes that
@@ -52,9 +54,11 @@ export async function getInstanceNodeApiUrlAction(
 ): Promise<{ data: { apiUrl: string } | null; error: string | null }> {
   const { ctx, error } = await cloudObsContext();
   if (!ctx) return { data: null, error };
+  const parsed = idSchema.safeParse(instanceId);
+  if (!parsed.success) return { data: null, error: "Instance not found or node has no API URL." };
   const userId = ctx.user.id;
   const adminClient = createAdminClient();
-  const apiUrl = await getInstanceNodeApiUrl(adminClient, instanceId, userId);
+  const apiUrl = await getInstanceNodeApiUrl(adminClient, parsed.data, userId);
   if (!apiUrl) return { data: null, error: "Instance not found or node has no API URL." };
   return { data: { apiUrl }, error: null };
 }
@@ -64,10 +68,12 @@ export async function getInstanceObsWsPasswordAction(
 ): Promise<{ data: { password: string } | null; error: string | null }> {
   const { ctx, error } = await cloudObsContext();
   if (!ctx) return { data: null, error };
+  const parsed = idSchema.safeParse(instanceId);
+  if (!parsed.success) return { data: null, error: "Instance not found." };
   const userId = ctx.user.id;
 
   const adminClient = createAdminClient();
-  const fields = await getInstanceObsWsPasswordFields(adminClient, instanceId, userId);
+  const fields = await getInstanceObsWsPasswordFields(adminClient, parsed.data, userId);
   if (!fields) return { data: null, error: "Instance not found." };
   const { ciphertext, iv, tag } = fields;
   if (!ciphertext || !iv || !tag) return { data: null, error: "Password not set on this instance." };
@@ -97,6 +103,8 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
 }> {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthenticated" };
+  const parsedOptions = launchInstanceOptionsSchema.safeParse(options);
+  if (!parsedOptions.success) return { data: null, error: "Those launch settings aren't valid." };
   const { supabase } = ctx;
   const userId = ctx.user.id;
 
@@ -148,7 +156,7 @@ export async function launchMyInstanceAction(options: { resolution?: string; tem
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
-      ...options,
+      ...parsedOptions.data,
       subscription_id: subscriptionId,
       obs_ws_password: obsWsPassword,
     }),

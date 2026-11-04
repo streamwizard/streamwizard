@@ -14,6 +14,8 @@ import {
   selectIngestKeys,
 } from "@repo/supabase/queries/ingest";
 import { tryAuthContext } from "@/lib/auth";
+import { idSchema } from "@/schemas/ids";
+import { ingestKeyLabelSchema } from "@/schemas/ingest";
 import { canCreateIngestKeys, INGEST_PLAN_REQUIRED } from "@/lib/ingest-access";
 import { track } from "@/lib/track";
 import { createAdminClient } from "@repo/supabase/next/admin";
@@ -101,9 +103,11 @@ export async function sendIngestKeyDiscordDM(id: string): Promise<{ error: strin
   const ctx = await tryAuthContext();
   if (!ctx) return { error: "Unauthorized" };
   const { user } = ctx;
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return { error: "Key not found" };
 
   const adminClient = createAdminClient();
-  const { data: key, error: keyError } = await selectIngestKeyForUser(adminClient, id, user.id);
+  const { data: key, error: keyError } = await selectIngestKeyForUser(adminClient, parsedId.data, user.id);
   if (keyError) reportError(keyError, "actions/ingest-keys");
   if (keyError || !key) return { error: keyError?.message ?? "Key not found" };
 
@@ -126,6 +130,8 @@ export async function createIngestKey(label: string): Promise<{ data: IngestStre
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { user } = ctx;
+  const parsedLabel = ingestKeyLabelSchema.safeParse(label);
+  if (!parsedLabel.success) return { data: null, error: parsedLabel.error.issues[0]?.message ?? "Invalid name" };
   if (!(await canCreateIngestKeys(ctx.supabase))) return { data: null, error: INGEST_PLAN_REQUIRED };
 
   const adminClient = createAdminClient();
@@ -140,7 +146,7 @@ export async function createIngestKey(label: string): Promise<{ data: IngestStre
   const { data, error } = await insertIngestKey(adminClient, {
     user_id: user.id,
     stream_key: generateStreamKey(),
-    label: label.trim() || "My Ingest Key",
+    label: parsedLabel.data || "My Ingest Key",
   });
 
   if (error) {
@@ -180,10 +186,12 @@ export async function rotateIngestKey(id: string): Promise<{ data: IngestStreamK
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { user } = ctx;
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return { data: null, error: "Key not found" };
   if (!(await canCreateIngestKeys(ctx.supabase))) return { data: null, error: INGEST_PLAN_REQUIRED };
 
   const adminClient = createAdminClient();
-  const { data, error } = await rotateIngestKeySecret(adminClient, id, user.id, generateStreamKey());
+  const { data, error } = await rotateIngestKeySecret(adminClient, parsedId.data, user.id, generateStreamKey());
 
   if (error) {
     reportError(error, "actions/ingest-keys");
@@ -199,9 +207,11 @@ export async function deleteIngestKey(id: string): Promise<{ error: string | nul
   const ctx = await tryAuthContext();
   if (!ctx) return { error: "Unauthorized" };
   const { user } = ctx;
+  const parsedId = idSchema.safeParse(id);
+  if (!parsedId.success) return { error: "Key not found" };
 
   const adminClient = createAdminClient();
-  const { error } = await deleteIngestKeyRow(adminClient, id, user.id);
+  const { error } = await deleteIngestKeyRow(adminClient, parsedId.data, user.id);
 
   revalidatePath(INGEST_SETTINGS_PATH);
   if (error) reportError(error, "actions/ingest-keys");

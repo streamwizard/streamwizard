@@ -1,4 +1,4 @@
-"use server";
+import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@repo/supabase/next/server";
@@ -8,7 +8,7 @@ import {
   getVodByStreamId,
   getClipsByVideoId,
 } from "@repo/supabase/queries/stream-analytics";
-import type { ViewerCountBucket, RawEvent, ClipData } from "@/actions/supabase/analytics/stream-analytics";
+import type { ViewerCountBucket, RawEvent, ClipData } from "@/types/stream-analytics";
 import { SUB_EVENT_TYPES } from "@/lib/utils/stream-events";
 
 export interface ViewerChartData {

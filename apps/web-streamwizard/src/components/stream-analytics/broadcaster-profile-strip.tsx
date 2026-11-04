@@ -1,6 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/ui/avatar";
 import { Badge } from "@repo/ui/components/ui/badge";
-import type { BroadcasterProfile } from "@/actions/supabase/analytics/stream-analytics";
+import type { BroadcasterProfile } from "@/types/stream-analytics";
 
 const BADGE_STYLES: Record<string, string> = {
   partner: "bg-purple-600 text-white hover:bg-purple-600",

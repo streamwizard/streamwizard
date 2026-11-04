@@ -1,4 +1,4 @@
-import type { ActivityEvent } from "@/actions/supabase/analytics/activity-feed";
+import type { ActivityEvent } from "@/types/stream-analytics";
 import { EVENT_CONFIG } from "@/lib/event-config";
 import { formatOffset } from "@/lib/format";
 

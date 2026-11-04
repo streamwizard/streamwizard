@@ -1,7 +1,7 @@
-import type { ViewerCountBucket, ClipData, RawEvent } from "@/actions/supabase/analytics/stream-analytics";
+import type { ViewerCountBucket, ClipData, RawEvent } from "@/types/stream-analytics";
 import type { HourlyViewerStat } from "@/lib/analytics/hourly-buckets";
 import type { CategorySegmentStats } from "@/lib/analytics/category-segments";
-import type { ActivityEvent } from "@/actions/supabase/analytics/activity-feed";
+import type { ActivityEvent } from "@/types/stream-analytics";
 
 /*
  * One coherent demo stream for the landing page: 4h 12m, raid at 2:10:00,

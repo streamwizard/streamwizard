@@ -3,11 +3,12 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 
-import { createClient } from "@repo/supabase/next/server";
 import type { TwitchScopeFeature } from "@repo/schemas";
+import { tryAuthContext } from "@/lib/auth";
 import { reportAndRedirect } from "@/lib/report-redirect";
 import { safeNextPath } from "@/lib/safe-next-path";
 import { twitchAuthorizationUrl } from "@/lib/twitch-authorize";
+import { authorizeTwitchFeatureSchema } from "@/schemas/auth";
 
 /**
  * Re-run the Twitch authorization so the stored token gains a feature's
@@ -20,19 +21,21 @@ import { twitchAuthorizationUrl } from "@/lib/twitch-authorize";
  * The callback route overwrites the stored tokens and records the new scopes.
  */
 export async function authorizeTwitchFeature(feature: TwitchScopeFeature | "base", next?: string | null) {
-  const supabase = await createClient();
+  const ctx = await tryAuthContext();
+  if (!ctx) redirect("/login");
+  const { supabase } = ctx;
 
-  const { data: userData } = await supabase.auth.getUser();
-  if (!userData.user) redirect("/login");
+  const parsed = authorizeTwitchFeatureSchema.safeParse({ feature, next });
+  if (!parsed.success) redirect("/dashboard");
 
-  const safeNext = safeNextPath(next) ?? "/dashboard";
+  const safeNext = safeNextPath(parsed.data.next) ?? "/dashboard";
 
   const headersList = await headers();
   const origin = headersList.get("origin");
 
   let url: string | null;
   try {
-    url = await twitchAuthorizationUrl(supabase, { requested: feature, next: safeNext, origin: origin ?? "" });
+    url = await twitchAuthorizationUrl(supabase, { requested: parsed.data.feature, next: safeNext, origin: origin ?? "" });
   } catch (error) {
     reportAndRedirect(error, "/error?code=auth");
   }

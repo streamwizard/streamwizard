@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { createBrowserClient } from "@repo/supabase/next/client";
-import type { ActivityEvent } from "@/actions/supabase/analytics/activity-feed";
+import type { ActivityEvent } from "@/types/stream-analytics";
 
 interface ActivityFeedRealtimeListenerProps {
   streamId: string;

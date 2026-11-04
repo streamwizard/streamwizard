@@ -1,7 +1,6 @@
 "use client";
 
 import { updateUserPreferences } from "@/actions/supabase/user/settings";
-import { useSession } from "@/providers/session-provider";
 import { useSessionStore } from "@/stores/session-store";
 import { userPreferencesSchema } from "@/schemas/user-preferences";
 import { Database } from "@repo/supabase";
@@ -23,7 +22,6 @@ interface UserPreferencesFormProps {
 }
 
 export function UserPreferencesForm({ UserPreferences, discordLinked }: UserPreferencesFormProps) {
-  const { id } = useSession();
   const setPreference = useSessionStore((s) => s.setPreference);
   const form = useForm<z.infer<typeof userPreferencesSchema>>({
     resolver: zodResolver(userPreferencesSchema),
@@ -38,7 +36,7 @@ export function UserPreferencesForm({ UserPreferences, discordLinked }: UserPref
 
   // 2. Define a submit handler.
   function onSubmit(values: z.infer<typeof userPreferencesSchema>) {
-    toast.promise(updateUserPreferences(id, values), {
+    toast.promise(updateUserPreferences(values), {
       loading: "Updating preferences...",
       success: () => {
         if (values.memes_enabled !== undefined)

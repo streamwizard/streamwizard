@@ -2,7 +2,7 @@ import { createClient } from "@repo/supabase/next/server";
 import { NextRequest, NextResponse } from "next/server";
 import { reportError } from "@repo/sentry";
 import { TtlCache } from "@repo/ttl-cache";
-import { GetClipDownloadURL } from "@/actions/twitch/clips";
+import { getClipDownloadUrl } from "@/server/twitch/clip-download";
 import { isTwitchClipId, parseClipVideoUrl } from "@/lib/clip-stream";
 
 // A <video> element makes several range requests per clip; resolve the signed
@@ -12,7 +12,7 @@ const signedUrls = new TtlCache<string>({ ttlMs: 10 * 60_000, negativeTtlMs: 30_
 
 async function resolveSignedUrl(userId: string, clipId: string): Promise<URL | null> {
   const raw = await signedUrls.fetch(`${userId}:${clipId}`, async () => {
-    const result = await GetClipDownloadURL(clipId, userId);
+    const result = await getClipDownloadUrl(clipId, userId);
     return (result.success && result.data?.data?.[0]?.landscape_download_url) || null;
   });
   return parseClipVideoUrl(raw);

@@ -5,7 +5,6 @@ import { Database } from "@repo/supabase";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext } from "react";
 import { toast } from "sonner";
-import { useSession } from "./session-provider";
 
 type AddToFolderType = {
   folderName: string;
@@ -33,7 +32,6 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
   // The folder list is owned by the server component above us; mirroring it into
   // state only bought an extra render per prop change.
   const folders = ClipFolders;
-  const { id: userId } = useSession();
   const router = useRouter();
 
   // Get folders excluding the specified folder ID
@@ -60,7 +58,7 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
   const AddToFolder = ({ folderName, folderId, clipId }: AddToFolderType) => {
     toast.promise(
       async () => {
-        const res = await addClipToFolder({ clipId, userId, folderId, folderName });
+        const res = await addClipToFolder({ clipId, folderId, folderName });
         if (!res.success) {
           throw new Error(res.message);
         }
@@ -78,7 +76,7 @@ export function ClipFolderProvider({ children, ClipFolders }: Props) {
   const handleRemoveClipFromFolder = (folderId: string, clipId: string, folderName: string) => {
     toast.promise(
       async () => {
-        const res = await removeClipFromFolder(clipId, folderId, userId);
+        const res = await removeClipFromFolder(clipId, folderId);
         if (!res.success) {
           throw new Error(res.message);
         }

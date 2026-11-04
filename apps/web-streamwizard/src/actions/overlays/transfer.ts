@@ -12,6 +12,7 @@ import {
   insertOverlayItemsReturningIds,
 } from "@repo/supabase/queries/overlays";
 import { overlayItemSchema } from "@/schemas/overlay";
+import { overlayImportTextSchema } from "@/schemas/overlay-actions";
 import {
   OVERLAY_EXPORT_KIND,
   OVERLAY_EXPORT_SCHEMA_VERSION,
@@ -49,6 +50,8 @@ export async function exportOverlayScene(sceneId: string): Promise<{
   data: OverlayExportDocument | null;
   error: string | null;
 }> {
+  // getOverlayScene checks the session (tryAuthContext), parses the id and
+  // only returns a scene the caller owns.
   const { data: scene, error } = await getOverlayScene(sceneId);
   if (error || !scene) return { data: null, error: error ?? "Not found" };
 
@@ -199,9 +202,16 @@ export async function importOverlayScene(rawJson: string): Promise<{
   /** Plain-language notes about what changed on the way in. */
   notes: string[];
 }> {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized", notes: [] };
+  const { supabase, user } = ctx;
+
+  const text = overlayImportTextSchema.safeParse(rawJson);
+  if (!text.success) return { data: null, error: "That file is too big to be an overlay export.", notes: [] };
+
   let parsedJson: unknown;
   try {
-    parsedJson = JSON.parse(rawJson);
+    parsedJson = JSON.parse(text.data);
   } catch {
     return { data: null, error: "That file isn't valid JSON.", notes: [] };
   }
@@ -255,10 +265,6 @@ export async function importOverlayScene(rawJson: string): Promise<{
       };
     }
   }
-
-  const ctx = await tryAuthContext();
-  if (!ctx) return { data: null, error: "Unauthorized", notes: [] };
-  const { supabase, user } = ctx;
 
   const notes: string[] = [];
   const createdWidgetIds: string[] = [];

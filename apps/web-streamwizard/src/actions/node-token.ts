@@ -4,7 +4,8 @@ import { tryAuthContext } from "@/lib/auth";
 import { getCloudObsAccess, NO_CLOUD_OBS_PLAN } from "@/lib/cloud-obs-access";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { getInstanceNode } from "@repo/supabase/queries/obs-nodes";
-import { isUserNodeScope, signNodeToken, type UserNodeScope } from "@repo/node-token";
+import { signNodeToken, type UserNodeScope } from "@repo/node-token";
+import { mintNodeTokenSchema } from "@/schemas/obs";
 
 // The browser calls the OBS node directly (start/stop, media files, ws-tickets)
 // but never with the user's Supabase session. It asks here first for a node
@@ -21,18 +22,20 @@ export async function mintNodeTokenAction(
 ): Promise<{ data: { token: string } | null; error: string | null }> {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthenticated" };
-  if (!isUserNodeScope(scope)) return { data: null, error: "Invalid scope" };
+  const parsed = mintNodeTokenSchema.safeParse({ instanceId, scope });
+  if (!parsed.success) return { data: null, error: "Invalid request" };
+  const { instanceId: id, scope: tokenScope } = parsed.data;
 
   const access = await getCloudObsAccess(ctx.supabase);
-  if (!access.canAccess || (scope === "instances:create" && !access.canInteract)) {
+  if (!access.canAccess || (tokenScope === "instances:create" && !access.canInteract)) {
     return { data: null, error: NO_CLOUD_OBS_PLAN };
   }
 
-  const node = await getInstanceNode(createAdminClient(), instanceId, ctx.user.id);
+  const node = await getInstanceNode(createAdminClient(), id, ctx.user.id);
   if (!node) return { data: null, error: "Instance not found." };
 
   try {
-    const token = await signNodeToken({ nodeId: node.nodeId, userId: ctx.user.id, scope, instanceId, role: "user" });
+    const token = await signNodeToken({ nodeId: node.nodeId, userId: ctx.user.id, scope: tokenScope, instanceId: id, role: "user" });
     return { data: { token }, error: null };
   } catch (err) {
     console.error("node token signing failed", err);

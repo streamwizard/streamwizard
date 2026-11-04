@@ -1,6 +1,6 @@
 import { History, Inbox } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
-import { getRecentStreamsData } from "@/actions/supabase/analytics/recent-streams";
+import { getRecentStreamsData } from "@/server/analytics/recent-streams";
 import { RecentStreamRow } from "./RecentStreamRow";
 
 interface RecentStreamsProps {

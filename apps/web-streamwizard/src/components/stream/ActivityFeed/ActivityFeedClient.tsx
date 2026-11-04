@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { Inbox } from "lucide-react";
-import type { ActivityEvent } from "@/actions/supabase/analytics/activity-feed";
+import type { ActivityEvent } from "@/types/stream-analytics";
 import { EVENT_CONFIG, type FilterGroup } from "@/lib/event-config";
 import { ActivityFeedItem } from "./ActivityFeedItem";
 import { ActivityFeedRealtimeListener } from "./ActivityFeedRealtimeListener";

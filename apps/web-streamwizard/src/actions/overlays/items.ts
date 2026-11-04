@@ -8,11 +8,13 @@ import {
   deleteOverlayItemsByIds,
   getOverlayItemGroups,
   getOverlayItems,
+  getOverlaySceneRow,
   insertOverlayItemsReturningIds,
   updateOverlayItemData,
   upsertOverlayItemGroups,
 } from "@repo/supabase/queries/overlays";
-import { overlayItemGroupSchema, overlayItemSchema } from "@/schemas/overlay";
+import { overlayItemSchema } from "@/schemas/overlay";
+import { saveOverlayItemsSchema } from "@/schemas/overlay-actions";
 import {
   overlayItemFromDbRow,
   type OverlayItem,
@@ -73,9 +75,9 @@ interface OverlayItemInput {
  * ids come from the editor, so they need no remap.
  */
 export async function saveAllOverlayItems(
-  sceneId: string,
-  rawItems: Array<OverlayItemInput & { temp_id: string }>,
-  rawGroups: OverlayItemGroup[] = [],
+  rawSceneId: string,
+  itemsInput: Array<OverlayItemInput & { temp_id: string }>,
+  groupsInput: OverlayItemGroup[] = [],
 ): Promise<{
   success: boolean;
   error: string | null;
@@ -87,12 +89,19 @@ export async function saveAllOverlayItems(
   if (!ctx) return { success: false, error: "Unauthorized", data: null, idMap: {} };
   const { supabase } = ctx;
 
-  for (const group of rawGroups) {
-    const parsed = overlayItemGroupSchema.safeParse({ ...group, scene_id: sceneId });
-    if (!parsed.success) {
-      return { success: false, error: parsed.error.message, data: null, idMap: {} };
-    }
+  const input = saveOverlayItemsSchema.safeParse({ sceneId: rawSceneId, items: itemsInput, groups: groupsInput });
+  if (!input.success) {
+    return { success: false, error: "This overlay couldn't be saved. Reload the editor and try again.", data: null, idMap: {} };
   }
+  const sceneId = input.data.sceneId;
+  // Each item is validated against overlayItemSchema below, before it's written.
+  const rawItems = input.data.items as unknown as typeof itemsInput;
+  const rawGroups = input.data.groups;
+
+  // RLS on overlay_items limits writes to the owner's scenes too; checking
+  // here turns someone else's scene into a clear error before any delete.
+  const { data: ownedScene } = await getOverlaySceneRow(supabase, sceneId, ctx.user.id);
+  if (!ownedScene) return { success: false, error: "Not found", data: null, idMap: {} };
   // Only the group tree is cleaned here (dangling refs, cycles, empty groups);
   // each item is still validated on its own below.
   const sanitized = sanitizeGroups(
