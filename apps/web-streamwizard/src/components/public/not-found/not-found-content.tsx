@@ -1,4 +1,4 @@
-import { Button } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
 import { TrackedLink } from "@/components/public/analytics/tracked-link";
 import { docsLink } from "@/lib/constant";
 

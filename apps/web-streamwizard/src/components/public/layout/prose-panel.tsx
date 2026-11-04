@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@repo/ui";
+import { cn } from "@/lib/utils";
 
 /*
  * The hairline panel the public pages use for anything that isn't a demo:

@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import type { UserActivityRow } from "@repo/supabase/queries/admin-users";
 import { PLATFORM_EVENT_LABELS } from "@repo/types";
-import { Badge } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
 import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
 import { cn } from "@/lib/utils";
 

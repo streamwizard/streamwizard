@@ -1,5 +1,5 @@
 import { Folder, FolderOpen, Play } from "lucide-react";
-import { cn } from "@repo/ui";
+import { cn } from "@/lib/utils";
 import { SectionView } from "../analytics/section-view";
 import { Reveal } from "../home/reveal";
 

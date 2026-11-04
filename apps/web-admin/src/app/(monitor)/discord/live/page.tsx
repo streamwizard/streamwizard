@@ -2,7 +2,7 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getGuildSettings } from "@repo/supabase/queries/discord";
 import { listDiscordLiveOptIns } from "@repo/supabase/queries/discord-live";
 import { listLiveRoleGrants } from "@repo/supabase/queries/discord-live-role";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { LiveForm } from "@/components/discord/live-form";
 import { DataList } from "@/components/widgets/data-list";
 import { PageHeader } from "@/components/widgets/page-header";

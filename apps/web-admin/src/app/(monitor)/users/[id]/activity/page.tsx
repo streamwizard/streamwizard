@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { type UserActivitySource, listUserActivity } from "@repo/supabase/queries/admin-users";
-import { Button, Card, CardContent, Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui/components/ui/empty";
 import { PageTabs } from "@/components/page-tabs";
 import { ActivityList } from "@/components/users/activity-list";
 import { loadAdminUser } from "@/lib/users";

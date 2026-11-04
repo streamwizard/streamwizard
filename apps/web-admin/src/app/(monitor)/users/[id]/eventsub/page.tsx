@@ -1,5 +1,8 @@
 import { reportError } from "@repo/sentry";
-import { Badge, Card, CardContent, Empty, EmptyDescription, EmptyHeader, EmptyTitle, Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui/components/ui/empty";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/ui/popover";
 import { When } from "@/components/users/detail";
 import { ResyncEventSubButton } from "@/components/users/user-actions";
 import { DataList } from "@/components/widgets/data-list";

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { missingTwitchScopes } from "@repo/schemas";
 import type { AdminUserDetail, AdminUserUsage, UserActivityRow } from "@repo/supabase/queries/admin-users";
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { formatDateTime } from "@/lib/discord/tickets";
 import type { UserAuthState } from "@/lib/user-auth";
 import { LIVE_PLAN_STATUSES, PLAN_STATUS_LABELS, formatBytes, isPast, planStatusVariant, userAvatarUrl, userDisplayName } from "@/lib/users";

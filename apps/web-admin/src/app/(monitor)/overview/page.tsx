@@ -1,5 +1,5 @@
 import { TriangleAlert } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@repo/ui";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
 import { AttentionList } from "@/components/overview/attention-list";
 import { KeyNumbers } from "@/components/overview/key-numbers";
 import { LiveNow } from "@/components/overview/live-now";

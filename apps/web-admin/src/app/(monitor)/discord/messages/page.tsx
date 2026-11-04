@@ -2,7 +2,14 @@ import { MessageSquareDashed } from "lucide-react";
 import { parseBuiltMessage } from "@repo/discord-message";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { listBuiltMessages, type DiscordBuiltMessage } from "@repo/supabase/queries/discord-built-messages";
-import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@repo/ui";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@repo/ui/components/ui/empty";
 import { BuiltMessageList, type BuiltMessageListItem } from "@/components/discord/built-message-list";
 import { NewBuiltMessageButton } from "@/components/discord/built-message-new";
 import { PageHeader } from "@/components/widgets/page-header";

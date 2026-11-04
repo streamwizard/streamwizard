@@ -18,7 +18,7 @@ import {
   ticketSelectOptions,
   type TicketFieldKind,
 } from "@repo/supabase/queries/ticket-config";
-import { Badge } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
 import { getTicketSettings } from "@repo/supabase/queries/tickets";
 import { TicketCategoryRulesForm } from "@/components/discord/ticket-category-rules-form";
 import { TicketCategorySave } from "@/components/discord/ticket-category-save";

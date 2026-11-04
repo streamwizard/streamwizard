@@ -1,6 +1,6 @@
 import type { Json } from "@repo/supabase";
 import type { DiscordSettingsAuditWithUser } from "@repo/supabase/queries/discord-audit";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 
 const SECTION_LABELS: Record<string, string> = {
   welcome: "Welcome",

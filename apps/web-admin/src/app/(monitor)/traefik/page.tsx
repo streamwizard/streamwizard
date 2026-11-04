@@ -1,5 +1,5 @@
 import { Activity, ArrowUpDown, Ban, Cable, ServerCrash, Timer } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { errorTone, formatErrorPct, formatMs } from "@/components/apps/app-format";
 import { AppsNotice, MissingData } from "@/components/apps/apps-notice";
 import { NodeMetricChart } from "@/components/charts/node-metric-chart";

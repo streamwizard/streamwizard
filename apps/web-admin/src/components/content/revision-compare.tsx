@@ -1,17 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, Check } from "lucide-react";
-import {
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@repo/ui/components/ui/empty";
 import { PageHeader } from "@/components/widgets/page-header";
 import type { DiffLine } from "@/lib/cms/revision-diff";
 import { REVISION_KIND_LABELS } from "@/lib/cms/revision-kinds";

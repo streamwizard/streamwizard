@@ -1,4 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { AppTable } from "@/components/apps/app-table";
 import { AppsNotice, MissingData } from "@/components/apps/apps-notice";
 import { OtherApps } from "@/components/apps/other-apps";

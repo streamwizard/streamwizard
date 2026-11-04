@@ -11,7 +11,8 @@ import {
 } from "@repo/alerting/thresholds";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getQueryStats, type QueryStat } from "@repo/supabase/queries/query-stats";
-import { Card, CardContent, CardHeader, CardTitle, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@repo/ui/components/ui/table";
 import { PlatformMetricChart } from "@/components/charts/platform-metric-chart";
 import { PlatformMultiSeriesChart } from "@/components/charts/platform-multi-series-chart";
 import { HealthSection, SupabaseHealthBanner, SupabaseKpiTiles } from "@/components/charts/supabase-health";

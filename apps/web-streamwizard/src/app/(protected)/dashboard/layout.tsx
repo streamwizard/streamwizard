@@ -1,6 +1,6 @@
 import { AppSidebar } from "@/components/nav/sidebar-app";
 import { DashboardFrame } from "@/components/dashboard-frame";
-import { SidebarProvider } from "@repo/ui";
+import { SidebarProvider } from "@repo/ui/components/ui/sidebar";
 import { createClient } from "@repo/supabase/next/server";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { ClipFolderProvider } from "@/providers/clips-provider";

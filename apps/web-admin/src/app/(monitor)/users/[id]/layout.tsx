@@ -2,7 +2,7 @@ import { Ban } from "lucide-react";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getTwitchUsernames } from "@repo/supabase/queries/platform-events";
 import { listProductsWithPlans } from "@repo/supabase/queries/subscriptions";
-import { Alert, AlertDescription, AlertTitle } from "@repo/ui";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
 import { GrantAccessProvider } from "@/components/users/grant-access";
 import { UnbanButton } from "@/components/users/moderation";
 import { UserHeader } from "@/components/users/user-header";

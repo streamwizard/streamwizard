@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Clock, Cpu, Database, Gauge, HardDrive, MemoryStick, Server } from "lucide-react";
-import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { STREAMWIZARD_VM_TAG, VM_ALERT_RULES } from "@repo/alerting/rules";
 import { assertProxmoxName } from "@repo/metrics";
 import { NodeMetricChart } from "@/components/charts/node-metric-chart";

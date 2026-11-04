@@ -1,5 +1,5 @@
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
-import { Card } from "@repo/ui";
+import { Card } from "@repo/ui/components/ui/card";
 import type { LucideIcon } from "lucide-react";
 
 interface Trend {

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { Card, CardContent } from "@repo/ui";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
 import { relative } from "@/components/backups/backup-format";
 import { When } from "@/components/backups/hint-popover";
 import { Rate } from "@/components/vms/rate";

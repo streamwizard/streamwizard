@@ -1,4 +1,5 @@
-import { Avatar, AvatarFallback, AvatarImage, Badge } from "@repo/ui";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/ui/avatar";
+import { Badge } from "@repo/ui/components/ui/badge";
 import type { BroadcasterProfile } from "@/actions/supabase/analytics/stream-analytics";
 
 const BADGE_STYLES: Record<string, string> = {

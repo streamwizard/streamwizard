@@ -1,5 +1,5 @@
 import { Activity } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { getActivityFeedData } from "@/actions/supabase/analytics/activity-feed";
 import { ActivityFeedClient } from "./ActivityFeedClient";
 

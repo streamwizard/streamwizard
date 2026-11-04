@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { Activity, Clapperboard, Radio, Users } from "lucide-react";
-import { Skeleton } from "@repo/ui";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import { createClient } from "@repo/supabase/next/server";
 import {
   getLatestStreamForBroadcaster,

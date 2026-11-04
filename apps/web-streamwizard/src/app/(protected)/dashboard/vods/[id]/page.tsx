@@ -1,6 +1,6 @@
 import { getVideo } from "@/actions/twitch/vods";
 import { VodDetailClient } from "@/components/vods/vod-detail-client";
-import { Button } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 

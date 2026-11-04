@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { cn } from "@repo/ui";
+import { cn } from "@/lib/utils";
 import { SectionView } from "@/components/public/analytics/section-view";
 
 /*

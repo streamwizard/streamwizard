@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import { Card } from "@repo/ui";
+import { Card } from "@repo/ui/components/ui/card";
 import type { AppRow } from "@/lib/apps-model";
 import { AppTable } from "./app-table";
 

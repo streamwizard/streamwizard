@@ -1,4 +1,4 @@
-import { Label } from "@repo/ui";
+import { Label } from "@repo/ui/components/ui/label";
 
 /** One labelled setting: label and hint on the left, control on the right. Stacks when its own
  * column is narrow (a phone, or a tablet with the sidebar open), not just on a small screen. */

@@ -1,4 +1,4 @@
-import { Badge } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
 import { StatusIndicator, type IndicatorStatus } from "@/components/widgets/status-indicator";
 import type { FleetNode } from "@/lib/node-fleet";
 

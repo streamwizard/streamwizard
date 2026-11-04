@@ -7,7 +7,7 @@ import {
   getTicketStatsByDay,
   getTicketStatsSummary,
 } from "@repo/supabase/queries/ticket-stats";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { TicketStatsChart } from "@/components/discord/ticket-stats-chart";
 import { PageTabs } from "@/components/page-tabs";
 import { DataList } from "@/components/widgets/data-list";

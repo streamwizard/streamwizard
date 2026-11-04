@@ -1,6 +1,8 @@
 import { ExternalLink } from "lucide-react";
 import type { AdminUserDetail } from "@repo/supabase/queries/admin-users";
-import { Avatar, AvatarFallback, AvatarImage, Badge, Button } from "@repo/ui";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/ui/avatar";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Button } from "@repo/ui/components/ui/button";
 import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
 import { userAvatarUrl, userDisplayName } from "@/lib/users";
 import { CopyIdsMenu } from "./copy-ids-menu";

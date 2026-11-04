@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Button } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
 import { ResetAnalyticsIdentity } from "@/components/public/analytics/reset-analytics-identity";
 import { TrackedLink } from "@/components/public/analytics/tracked-link";
 import type { Metadata } from "next";

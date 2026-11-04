@@ -1,8 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { TriangleAlert } from "lucide-react";
-import { Button } from "@repo/ui";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { StreamWizardLogo } from "@/components/brand/streamwizard-logo";
 import { IntegrationIcon } from "@/components/settings/integration-icon";
 import { discordInviteLink } from "@/lib/constant";

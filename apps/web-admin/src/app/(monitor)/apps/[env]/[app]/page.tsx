@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Activity, Cpu, MemoryStick, Network, RotateCcw, Timer } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { assertAppName, isAppEnv } from "@repo/metrics";
 import {
   CPU_HINT,

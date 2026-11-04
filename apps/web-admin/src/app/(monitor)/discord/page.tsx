@@ -19,7 +19,7 @@ import { listVoiceChannels, listVoiceHubs } from "@repo/supabase/queries/discord
 import { getLogRouting, resolveLogRoute } from "@repo/supabase/queries/platform-events";
 import { countOpenTickets, getTicketSettings } from "@repo/supabase/queries/tickets";
 import { PLATFORM_EVENT_TYPES } from "@repo/types";
-import { Card, CardContent } from "@repo/ui";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
 import { AuditList } from "@/components/discord/audit-list";
 import { PageHeader } from "@/components/widgets/page-header";
 import { StatusIndicator } from "@/components/widgets/status-indicator";

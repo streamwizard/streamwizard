@@ -1,5 +1,7 @@
 import { Info, type LucideIcon } from "lucide-react";
-import { Badge, Card, CardContent, CardHeader, CardTitle, Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 type StatTone = "default" | "positive" | "warning" | "danger";

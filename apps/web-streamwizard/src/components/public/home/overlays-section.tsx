@@ -1,7 +1,7 @@
 import { TrackedLink } from "../analytics/tracked-link";
 import { SectionView } from "../analytics/section-view";
 import { ArrowRight } from "lucide-react";
-import { Button } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
 import { productLinks } from "@/lib/constant";
 import { Reveal } from "./reveal";
 import { StreamOverlayDemo } from "./stream-overlay-demo";

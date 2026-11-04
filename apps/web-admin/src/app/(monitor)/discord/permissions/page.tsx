@@ -2,7 +2,7 @@ import type { DiscordApplicationCommand } from "@repo/discord-api";
 import { reportError } from "@repo/sentry";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getGuildCommandPermissions } from "@repo/supabase/queries/discord";
-import { Card, CardContent } from "@repo/ui";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
 import { CommandPermissionList, type CommandView } from "@/components/discord/command-permission-row";
 import { PageHeader } from "@/components/widgets/page-header";
 import { getGuildRoles, requireDiscordContext } from "@/lib/discord/api";

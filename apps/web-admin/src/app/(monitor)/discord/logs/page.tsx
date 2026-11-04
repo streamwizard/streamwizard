@@ -12,7 +12,10 @@ import {
   type PlatformEventGroup,
   type PlatformEventStatus,
 } from "@repo/types";
-import { Button, Card, CardContent, Input, NativeSelect, NativeSelectOption } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
+import { Input } from "@repo/ui/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@repo/ui/components/ui/native-select";
 import { EventLogList, actorIdsToLookUp } from "@/components/discord/event-log-list";
 import { FilterPanel } from "@/components/widgets/filter-panel";
 import { PageHeader } from "@/components/widgets/page-header";

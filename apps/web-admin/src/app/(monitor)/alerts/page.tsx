@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getAlertStates } from "@repo/supabase/queries/alerts";
-import { Badge, Card, CardContent, CardHeader, CardTitle } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { SilenceMenu } from "@/components/alerts/silence-menu";
 import { DataList } from "@/components/widgets/data-list";
 import { PageHeader } from "@/components/widgets/page-header";

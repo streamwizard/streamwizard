@@ -1,6 +1,6 @@
 import { FaDiscord } from "react-icons/fa";
 import { BookOpen } from "lucide-react";
-import { Button } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
 import { discordInviteLink, docsLink } from "@/lib/constant";
 import { FREE_TIER_SUMMARY, PAID_PLAN_SUMMARY, PRICING_FAQ_LINK } from "@/lib/pricing";
 import { Reveal } from "./reveal";

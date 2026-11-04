@@ -1,4 +1,4 @@
-import { Card, CardContent } from "@repo/ui";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
 import { DataList } from "@/components/widgets/data-list";
 import type { LiveRow } from "@/lib/overview-data";
 

@@ -1,24 +1,20 @@
 import Link from "next/link";
 import { CreditCard, Search, SearchX, ShieldCheck, Users } from "lucide-react";
 import type { UserListFilter, UserListRow, UserListSort, UserListStats } from "@repo/supabase/queries/admin-users";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/ui/avatar";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Button } from "@repo/ui/components/ui/button";
+import { Card, CardContent } from "@repo/ui/components/ui/card";
 import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-  Badge,
-  Button,
-  Card,
-  CardContent,
   Empty,
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-  Input,
-  NativeSelect,
-  NativeSelectOption,
-} from "@repo/ui";
+} from "@repo/ui/components/ui/empty";
+import { Input } from "@repo/ui/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@repo/ui/components/ui/native-select";
 import { TicketFiltersForm } from "@/components/discord/ticket-filters-form";
 import type { ProductWithPlans } from "@/components/subscriptions/types";
 import { DataList, type DataColumn } from "@/components/widgets/data-list";

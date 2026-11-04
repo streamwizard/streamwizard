@@ -1,4 +1,4 @@
-import { Button } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**

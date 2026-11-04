@@ -1,5 +1,5 @@
 import { ChevronRight } from "lucide-react";
-import { Card } from "@repo/ui";
+import { Card } from "@repo/ui/components/ui/card";
 import { STREAMWIZARD_VM_TAG } from "@repo/alerting/rules";
 import type { VmTableRow } from "@/lib/vms";
 import type { GuestNetPromise } from "./guest-net-cells";

@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { listUserTickets } from "@repo/supabase/queries/admin-users";
 import { listTicketCategories, listTicketProducts } from "@repo/supabase/queries/ticket-config";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui/components/ui/empty";
 import { TicketList } from "@/components/discord/ticket-list";
 import { getDiscordContext } from "@/lib/discord/api";
 import { resolveDiscordProfiles } from "@/lib/discord/users";

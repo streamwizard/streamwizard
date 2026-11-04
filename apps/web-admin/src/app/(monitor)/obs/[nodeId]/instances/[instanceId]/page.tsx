@@ -4,7 +4,7 @@ import { getAutoSwitcherConfigForUser } from "@/actions/auto-switcher";
 import { InstanceActions, InstanceDetailClient } from "@/components/admin/instance-detail-client";
 import { InstanceSwitcherTab } from "@/components/admin/instance-switcher-tab";
 import { NodeMetricChart, type NodeMetricPoint } from "@/components/charts/node-metric-chart";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/ui/tabs";
 import {
   queryObsInstanceCpu,
   queryObsInstanceRam,

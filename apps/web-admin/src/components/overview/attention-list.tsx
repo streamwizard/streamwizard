@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CheckCircle2, ChevronRight, CircleAlert, Info, TriangleAlert, type LucideIcon } from "lucide-react";
-import { Card } from "@repo/ui";
+import { Card } from "@repo/ui/components/ui/card";
 import type { AttentionItem, AttentionTone } from "@/lib/overview";
 import { cn } from "@/lib/utils";
 

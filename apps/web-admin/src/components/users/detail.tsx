@@ -1,4 +1,4 @@
-import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/ui/popover";
 import { formatDateTime, formatRelativeTime } from "@/lib/discord/tickets";
 
 /** One labelled line in a user card: label left, value right. */

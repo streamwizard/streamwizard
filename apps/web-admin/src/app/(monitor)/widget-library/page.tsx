@@ -1,4 +1,4 @@
-import { Alert, AlertDescription, AlertTitle } from "@repo/ui";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
 import { getPendingLibraryEntries } from "@/actions/widget-library";
 import { AdminWidgetLibraryClient, type PendingEntry } from "@/components/widget-library/admin-widget-library-client";
 import { PageHeader } from "@/components/widgets/page-header";

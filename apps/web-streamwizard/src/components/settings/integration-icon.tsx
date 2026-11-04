@@ -1,4 +1,4 @@
-import { cn } from "@repo/ui";
+import { cn } from "@/lib/utils";
 import { FaDiscord, FaTwitch } from "react-icons/fa";
 
 const BRAND = {

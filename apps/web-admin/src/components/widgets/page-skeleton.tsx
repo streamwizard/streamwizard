@@ -1,4 +1,5 @@
-import { Card, CardContent, CardHeader, Skeleton } from "@repo/ui";
+import { Card, CardContent, CardHeader } from "@repo/ui/components/ui/card";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import { StatGrid } from "@/components/widgets/stat-grid";
 
 const clampCols = (count: number) => Math.min(6, Math.max(2, count)) as 2 | 3 | 4 | 5 | 6;

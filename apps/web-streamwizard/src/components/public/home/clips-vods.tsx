@@ -1,7 +1,8 @@
 import { TrackedLink } from "../analytics/tracked-link";
 import { SectionView } from "../analytics/section-view";
 import { ArrowRight, Download, FolderInput, FolderTree, Search } from "lucide-react";
-import { Button, cn } from "@repo/ui";
+import { Button } from "@repo/ui/components/ui/button";
+import { cn } from "@/lib/utils";
 import { productLinks } from "@/lib/constant";
 import { getShowcaseClips } from "@/lib/showcase-clips";
 import { Reveal } from "./reveal";

@@ -1,4 +1,5 @@
-import { Badge, Card, CardContent, CardHeader } from "@repo/ui";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Card, CardContent, CardHeader } from "@repo/ui/components/ui/card";
 import { IntegrationIcon } from "@/components/settings/integration-icon";
 
 export function TwitchIntegrationSection({ twitchUsername }: { twitchUsername: string | null }) {

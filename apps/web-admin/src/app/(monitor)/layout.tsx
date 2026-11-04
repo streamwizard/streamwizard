@@ -5,7 +5,7 @@ import { MonitorSidebar } from "@/components/monitor-sidebar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { NavTabs } from "@/components/page-tabs";
 import { CrumbsProvider } from "@/lib/crumbs";
-import { SidebarInset, SidebarProvider } from "@repo/ui";
+import { SidebarInset, SidebarProvider } from "@repo/ui/components/ui/sidebar";
 import { RefreshIntervalProvider } from "@/lib/refresh-interval-context";
 import { TimeRangeProvider } from "@/lib/time-range-context";
 import { BandwidthUnitProvider } from "@/lib/bandwidth-unit-context";

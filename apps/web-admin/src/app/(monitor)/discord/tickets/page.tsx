@@ -11,21 +11,18 @@ import {
   getOpenTicketCounts,
   listTickets,
 } from "@repo/supabase/queries/tickets";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/ui/alert";
+import { Button } from "@repo/ui/components/ui/button";
 import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-  Button,
   Empty,
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-  Input,
-  NativeSelect,
-  NativeSelectOption,
-} from "@repo/ui";
+} from "@repo/ui/components/ui/empty";
+import { Input } from "@repo/ui/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@repo/ui/components/ui/native-select";
 import { TicketFiltersForm } from "@/components/discord/ticket-filters-form";
 import { TicketList } from "@/components/discord/ticket-list";
 import { TicketListLive } from "@/components/discord/ticket-list-live";
