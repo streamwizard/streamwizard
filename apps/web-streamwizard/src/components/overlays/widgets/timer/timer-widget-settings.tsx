@@ -13,7 +13,7 @@ import {
   resolvedTextWidgetFontFamily,
   type TimerCountdownMode,
   type TimerWidgetItemConfig,
-} from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/widgets";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
 
 function isoToDatetimeLocalValue(iso: string): string {

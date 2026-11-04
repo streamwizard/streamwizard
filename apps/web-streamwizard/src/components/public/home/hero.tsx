@@ -5,7 +5,7 @@ import { FaDiscord } from "react-icons/fa";
 // through the `@repo/ui` barrel put every client module in the kit (recharts,
 // cmdk, vaul...) into the home page bundle.
 import { BorderBeam } from "@repo/ui/components/ui/border-beam";
-import TwitchLogin from "@/components/shared/twitch-login";
+import TwitchLogin from "@/components/shared/twitch/twitch-login";
 import { discordInviteLink } from "@/lib/constant";
 
 /*

@@ -1,6 +1,6 @@
 "use client";
 
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 import { POLL_WIDGET_DEFAULT_SIZE, createDefaultPollWidgetConfig } from "@repo/ui/overlay";
 import type { CreateRootItemContext } from "@/components/overlays/registry/overlay-widget-registry.types";
 import { createCenteredRootItem } from "@/components/overlays/registry/create-root-item";

@@ -15,7 +15,7 @@ import {
   ToggleGroupItem,
 } from "@repo/ui";
 import { EmoteCodePicker, EmotePicker } from "@/components/overlays/inspector-fields/emote-picker";
-import { InspectorHint } from "@/components/overlays/editor/inspector-hint";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
 import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
 import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
 import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";

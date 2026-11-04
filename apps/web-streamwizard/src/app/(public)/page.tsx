@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import { JsonLd } from "@/components/public/seo/json-ld";
-import { absoluteUrl, faqPageSchema, softwareApplicationSchema, webSiteSchema } from "@/lib/seo";
+import { absoluteUrl, faqPageSchema, softwareApplicationSchema, webSiteSchema } from "@/lib/seo/seo";
 import { Hero } from "@/components/public/home/hero";
 import { TrustBand } from "@/components/public/home/trust-band";
-import { CloudObsShowcase } from "@/components/public/home/cloud-obs-showcase";
-import { OverlaysSection } from "@/components/public/home/overlays-section";
-import { ClipsVods } from "@/components/public/home/clips-vods";
-import { VodClipping } from "@/components/public/home/vod-clipping-section";
-import { AnalyticsDemo } from "@/components/public/home/analytics-demo";
+import { CloudObsShowcase } from "@/components/public/home/obs/cloud-obs-showcase";
+import { OverlaysSection } from "@/components/public/home/overlays/overlays-section";
+import { ClipsVods } from "@/components/public/home/clips/clips-vods";
+import { VodClipping } from "@/components/public/home/clips/vod-clipping-section";
+import { AnalyticsDemo } from "@/components/public/home/analytics/analytics-demo";
 import { Faq, FAQ_ITEMS } from "@/components/public/home/faq";
 import { FinalCta } from "@/components/public/home/final-cta";
 
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 // The clips marquee reads from the database; the hourly refresh lives on the
-// cached data call in src/lib/showcase-clips.ts (this route renders
+// cached data call in src/lib/public/showcase-clips.ts (this route renders
 // dynamically because JsonLd carries the per-request CSP nonce).
 export default function Home() {
   return (

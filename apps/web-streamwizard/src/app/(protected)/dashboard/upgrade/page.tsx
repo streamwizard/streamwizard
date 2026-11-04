@@ -1,5 +1,5 @@
 import { createClient } from "@repo/supabase/next/server";
-import { getProductName } from "@repo/supabase/queries/subscriptions";
+import { getProductName } from "@repo/supabase/queries/subscriptions/subscriptions";
 import { Lock } from "lucide-react";
 
 export default async function UpgradePage({

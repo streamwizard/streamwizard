@@ -21,11 +21,11 @@ import type {
   ClockLayoutMode,
   ClockTimeStyle,
   ClockWidgetItemConfig,
-} from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/widgets";
 import {
   normalizeClockWidgetConfig,
   resolvedTextWidgetFontFamily,
-} from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/widgets";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
 
 export function ClockWidgetSettings({

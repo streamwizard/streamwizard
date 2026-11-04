@@ -1,5 +1,5 @@
 import { TermsOfServiceContent } from "@/components/legal/terms-of-service-content";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/seo/seo";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { absoluteUrl, aboutPageSchema } from "@/lib/seo";
+import { absoluteUrl, aboutPageSchema } from "@/lib/seo/seo";
 import { JsonLd } from "@/components/public/seo/json-ld";
 import { PageHero } from "@/components/public/common/page-hero";
 import { FinalCta } from "@/components/public/home/final-cta";

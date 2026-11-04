@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { formatDuration } from "@/types/twitch-video";
+import { formatDuration } from "@/lib/format";
 import { calculateTimestamps } from "./timeline-utils";
 
 interface TimelineRulerProps {

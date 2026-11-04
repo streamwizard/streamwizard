@@ -3,13 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Input, cn } from "@repo/ui";
 import { Check, Loader2, Search, X } from "lucide-react";
-import { searchTwitchCategories } from "@/actions/twitch/twitch-api";
-import type { TwitchCategory } from "@/types/twitch";
+import { searchTwitchCategories } from "@/actions/twitch/search";
+import type { TwitchCategory } from "@repo/twitch-api";
 
 /**
  * Category search for the deck.
  *
- * The dashboard has its own picker (`components/shared/twitch-category-search`),
+ * The dashboard has its own picker (`components/shared/twitch/twitch-category-search`),
  * but it is built around a fixed-height desktop dropdown with small controls;
  * this one is full-width rows at deck touch size, and shows the current pick as
  * a card rather than a line of text.

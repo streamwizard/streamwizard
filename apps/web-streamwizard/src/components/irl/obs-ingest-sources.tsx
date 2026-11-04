@@ -19,9 +19,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@repo/ui";
-import { listOutputKeys, type IngestOutputKey } from "@/actions/ingest-output-keys";
+import { listOutputKeys } from "@/actions/irl/ingest-output-keys";
+import type { IngestOutputKey } from "@repo/supabase/queries/ingest/ingest";
 import type { Scene } from "@repo/obs-web";
-import { obsPullUrl } from "@/lib/obs-irl";
+import { obsPullUrl } from "@/lib/obs/obs-irl";
 import { IngestLiveStats } from "./ingest-live-stats";
 
 interface ObsIngestSourcesProps {

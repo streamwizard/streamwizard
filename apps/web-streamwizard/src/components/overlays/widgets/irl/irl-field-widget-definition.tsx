@@ -1,8 +1,8 @@
 "use client";
 
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 import { DEFAULT_IRL_FIELD_WIDGET_ITEM_CONFIG, IRL_FIELD_WIDGET_DEFAULT_SIZE } from "@repo/ui/overlay";
-import type { IrlFieldWidgetType } from "@/types/overlays";
+import type { IrlFieldWidgetType } from "@repo/ui/components/overlay/types/base";
 import type { CreateRootItemContext } from "@/components/overlays/registry/overlay-widget-registry.types";
 import { createCenteredRootItem } from "@/components/overlays/registry/create-root-item";
 

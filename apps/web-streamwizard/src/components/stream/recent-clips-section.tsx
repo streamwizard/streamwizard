@@ -1,9 +1,9 @@
 import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";
-import { getRecentClipsByBroadcaster } from "@repo/supabase/queries/clips";
+import { getRecentClipsByBroadcaster } from "@repo/supabase/queries/clips/clips";
 import { Film } from "lucide-react";
 import { Database } from "@repo/supabase";
-import TwitchClipCard from "@/components/shared/clip-card";
+import TwitchClipCard from "@/components/shared/clips/clip-card";
 import { ClipScrollStrip } from "./clip-scroll-strip";
 
 interface RecentClipsSectionProps {

@@ -4,11 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button, Card, CardContent } from "@repo/ui";
 import { AlertTriangle, Loader2, RotateCw } from "lucide-react";
-import {
-  getMyChannelInfo,
-  updateChannelInfo,
-  type ChannelInfoResult,
-} from "@/actions/twitch/channels";
+import { getMyChannelInfo, updateChannelInfo } from "@/actions/twitch/channels";
+import type { ChannelInfoResult } from "@/types/twitch-channel";
 import type { SaveBarActions, SaveBarState } from "@/components/deck/switcher-settings-panel";
 import { CategoryPicker } from "@/components/deck/stream-info/category-picker";
 import { TitleField } from "@/components/deck/stream-info/title-field";

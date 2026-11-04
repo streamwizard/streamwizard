@@ -1,5 +1,5 @@
 import { SectionView } from "@/components/public/analytics/section-view";
-import { Reveal } from "@/components/public/home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 
 /*
  * The closing statement: where the project is headed and who it belongs to.

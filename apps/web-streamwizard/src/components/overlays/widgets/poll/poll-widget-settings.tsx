@@ -40,7 +40,7 @@ import { SegmentedField, type SegmentedOption } from "@/components/overlays/insp
 import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
 import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
 import { presetGeometry } from "@/components/overlays/inspector-fields/preset-geometry";
-import { TwitchConnectButton } from "@/components/shared/twitch-scope-banner";
+import { TwitchConnectButton } from "@/components/shared/twitch/twitch-scope-banner";
 import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
 import { ColorField } from "@/components/overlays/inspector-fields/color-field";
 import { OptionSelect } from "@/components/overlays/inspector-fields/option-select";

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 
 import { createClient } from "@repo/supabase/next/server";
-import { twitchScopesFor } from "@repo/schemas";
+import { twitchScopesFor } from "@repo/schemas/twitch-scopes";
 import { reportAndRedirect } from "@/lib/report-redirect";
 import { safeNextPath } from "@/lib/safe-next-path";
 import { nextPathSchema } from "@/schemas/auth";

@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@repo/ui";
 import { useClipFolderDialog } from "@/providers/clip-folder-dialog-provider";
-import { formatFolderClipCount, getFolderUrl, type FolderClipCount } from "@/lib/utils/clip-folders";
+import { formatFolderClipCount, getFolderUrl, type FolderClipCount } from "@/lib/clips/clip-folders";
 import { EllipsisVertical, Folder, Plus } from "lucide-react";
 import Link from "next/link";
 

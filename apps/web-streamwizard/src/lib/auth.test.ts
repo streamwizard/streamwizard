@@ -10,8 +10,8 @@ let fallbackLookups: string[];
 let integrationTwitchId: string | null;
 
 // Spread the real exports: bun shares module mocks across test files.
-const realUserQueries = await import("@repo/supabase/queries/user");
-mock.module("@repo/supabase/queries/user", () => ({
+const realUserQueries = await import("@repo/supabase/queries/users/user");
+mock.module("@repo/supabase/queries/users/user", () => ({
   ...realUserQueries,
   getTwitchUserIdByUserIdMaybe: async (_client: unknown, userId: string) => {
     fallbackLookups.push(userId);

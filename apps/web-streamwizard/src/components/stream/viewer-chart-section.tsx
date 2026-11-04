@@ -1,5 +1,5 @@
 import { getViewerChartData } from "@/server/analytics/viewer-chart";
-import { ViewerCountChart } from "@/components/shared/viewer-count-chart";
+import { ViewerCountChart } from "@/components/shared/stats/viewer-count-chart";
 
 interface ViewerChartSectionProps {
   streamId: string;

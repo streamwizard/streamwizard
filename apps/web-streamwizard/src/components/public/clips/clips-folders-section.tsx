@@ -1,7 +1,7 @@
 import { Folder, FolderOpen, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SectionView } from "../analytics/section-view";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 
 /*
  * The depth story the interactive mock above skims past: nesting has no

@@ -1,6 +1,9 @@
 "use client";
 
-import type { ClipDisplayFieldLayout, DisplayFieldKey } from "@/types/overlays";
+import type {
+  ClipDisplayFieldLayout,
+  DisplayFieldKey,
+} from "@repo/ui/components/overlay/types/clips";
 import { getClipNestedFieldLabel } from "./registry";
 import { DisplayFieldLayoutControls } from "./shared/display-field-layout-controls";
 

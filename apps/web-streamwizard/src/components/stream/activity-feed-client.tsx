@@ -3,8 +3,8 @@
 import { useCallback, useState } from "react";
 import { Inbox } from "lucide-react";
 import type { ActivityEvent } from "@/types/stream-analytics";
-import { EVENT_CONFIG, type FilterGroup } from "@/lib/event-config";
-import { ActivityFeedItem } from "@/components/shared/activity-feed-item";
+import { EVENT_CONFIG, type FilterGroup } from "@/lib/stream-events/event-config";
+import { ActivityFeedItem } from "@/components/shared/stats/activity-feed-item";
 import { ActivityFeedRealtimeListener } from "./activity-feed-realtime-listener";
 
 const FILTERS: { label: string; value: FilterGroup | "all" }[] = [

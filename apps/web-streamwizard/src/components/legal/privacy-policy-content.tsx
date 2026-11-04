@@ -1,6 +1,6 @@
 import { LegalNotice } from "@/components/legal/legal-notice";
 import { LegalTabs } from "@/components/legal/legal-tabs";
-import { LEGAL_CONTACT_EMAIL } from "@/lib/legal";
+import { LEGAL_CONTACT_EMAIL } from "@/lib/public/legal";
 import Link from "next/link";
 
 const LAST_UPDATED = "26 October 2026";

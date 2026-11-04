@@ -1,4 +1,4 @@
-import { Reveal } from "@/components/public/home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 
 /* Lane marker sitting on the spine; bg-background masks the line behind it. */
 export function LaneChip({ children, tone = "muted" }: { children: string; tone?: "muted" | "purple" }) {

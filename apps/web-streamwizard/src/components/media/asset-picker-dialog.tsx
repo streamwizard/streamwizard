@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@repo/ui";
 import { toast } from "sonner";
-import { listAssets, type AssetListing, type UserAsset } from "@/actions/assets";
-import type { AssetKind } from "@/lib/asset-mime";
+import { listAssets } from "@/actions/media/assets";
+import type { AssetListing, UserAsset } from "@/types/media";
+import type { AssetKind } from "@/lib/media/asset-mime";
 import { MediaLibrary } from "./media-library";
 
 interface AssetPickerDialogProps {

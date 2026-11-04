@@ -3,9 +3,9 @@ import { Button } from "@repo/ui/components/ui/button";
 import { productSectionLinks } from "@/lib/constant";
 import { SectionView } from "../analytics/section-view";
 import { TrackedLink } from "@/components/shared/tracked-link";
-import { Reveal } from "../home/reveal";
-import { IrlOverlayDemo } from "../home/irl-overlay-demo";
-import { DemoAlertProvider } from "../home/overlay-demo-alert";
+import { Reveal } from "@/components/public/common/reveal";
+import { IrlOverlayDemo } from "@/components/public/home/overlays/irl-overlay-demo";
+import { DemoAlertProvider } from "@/components/public/home/overlays/overlay-demo-alert";
 
 /*
  * The IRL widgets sold as widgets, for anyone with a phone: the cloud OBS page

@@ -1,9 +1,9 @@
 import { requireProductAccess } from "@/lib/require-product-access";
-import { getMissingTwitchScopes } from "@/lib/twitch-scopes";
-import { listIngestKeys } from "@/actions/ingest-keys";
-import { getAutoSwitcherConfig } from "@/actions/supabase/auto-switcher";
+import { getMissingTwitchScopes } from "@/lib/twitch/twitch-scopes";
+import { listIngestKeys } from "@/actions/irl/ingest-keys";
+import { getAutoSwitcherConfig } from "@/actions/irl/auto-switcher";
 import { createAdminClient } from "@repo/supabase/next/admin";
-import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest-nodes";
+import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest/nodes";
 import { CloudObsContent } from "@/components/irl/cloud-obs/cloud-obs-content";
 import { env } from "@/lib/env";
 

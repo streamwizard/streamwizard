@@ -1,6 +1,6 @@
 "use client";
 
-import { trackAction } from "@/lib/track-action";
+import { trackAction } from "@/lib/tracking/track-action";
 import { useCallback } from "react";
 import { toast } from "sonner";
 import {

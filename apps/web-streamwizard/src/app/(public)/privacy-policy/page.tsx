@@ -1,5 +1,5 @@
 import { PrivacyPolicyContent } from "@/components/legal/privacy-policy-content";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/seo/seo";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

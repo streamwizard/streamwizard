@@ -1,6 +1,6 @@
 "use client";
 
-import { trackAction } from "@/lib/track-action";
+import { trackAction } from "@/lib/tracking/track-action";
 import { Button, Separator, SidebarTrigger, useSidebar } from "@repo/ui";
 import { EditorAudioProvider, EditorPreviewValuesProvider, normalizeLabelWidgetConfig } from "@repo/ui/overlay";
 import { useEditorStateData } from "@/components/shared/demo/editor-state-data";
@@ -31,34 +31,34 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { saveAllOverlayItems } from "@/actions/overlays/items";
 import { updateOverlayScene } from "@/actions/overlays/scenes";
-import type { Widget } from "@/actions/widgets";
+import type { Widget } from "@/types/widgets";
 import {
   getCachedWidget,
   primeWidgetCache,
 } from "@/components/overlays/widgets/custom/widget-cache";
 import { DemoDeck } from "@/components/shared/demo/demo-deck";
 import { env } from "@/lib/env";
-import { isLegacySlug } from "@/lib/overlay-slug";
-import { asCustomWidgetConfig } from "@/types/overlays";
+import { isLegacySlug } from "@/lib/overlays/overlay-slug";
+import { asCustomWidgetConfig } from "@repo/ui/components/overlay/types/item";
 import type {
   OverlayItemConfig,
   OverlaySceneWithItems,
-} from "@/types/overlays";
-import { EditorCanvas } from "./editor-canvas";
-import { EditorLayers } from "./editor-layers";
-import { EditorInspector } from "./editor-inspector";
+} from "@repo/ui/components/overlay/types/item";
+import { EditorCanvas } from "@/components/overlays/editor/canvas/editor-canvas";
+import { EditorLayers } from "@/components/overlays/editor/layers/editor-layers";
+import { EditorInspector } from "@/components/overlays/editor/inspector/editor-inspector";
 import type { OverlayRenderMode } from "../registry/overlay-widget-registry.types";
-import { OverlayWidgetSheet } from "./overlay-widget-sheet";
-import { WidgetLibraryModal } from "./widget-library-modal";
-import { ShortcutsDialog } from "./shortcuts-dialog";
+import { OverlayWidgetSheet } from "@/components/overlays/editor/library/overlay-widget-sheet";
+import { WidgetLibraryModal } from "@/components/overlays/editor/library/widget-library-modal";
+import { ShortcutsDialog } from "@/components/overlays/editor/shortcuts/shortcuts-dialog";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
 import { UnsavedChangesDialog } from "@/components/shared/unsaved-changes-dialog";
 import { useOverlayDraft } from "@/hooks/overlays/use-overlay-draft";
 import { RestoreDraftDialog } from "./restore-draft-dialog";
-import { centerPan, computeFitZoom } from "./canvas-zoom";
+import { centerPan, computeFitZoom } from "@/components/overlays/editor/canvas/canvas-zoom";
 import { ResolutionDialog } from "./resolution-dialog";
-import { CanvasViewPopover } from "./canvas-view-popover";
+import { CanvasViewPopover } from "@/components/overlays/editor/canvas/canvas-view-popover";
 
 interface OverlayEditorProps {
   initialScene: OverlaySceneWithItems;

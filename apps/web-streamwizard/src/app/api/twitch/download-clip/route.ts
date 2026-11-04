@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getClipDownloadUrl } from "@/server/twitch/clip-download";
 import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";
-import { track } from "@/lib/track";
+import { track } from "@/lib/tracking/track";
 
 export async function POST(request: NextRequest) {
   try {

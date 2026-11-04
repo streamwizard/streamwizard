@@ -1,6 +1,6 @@
 import { Clock, Eye, Star, Tv, UserPlus, Users } from "lucide-react";
 import { getStatsRowData } from "@/server/analytics/stream-stats";
-import { StatCard } from "@/components/shared/stat-card";
+import { StatCard } from "@/components/shared/stats/stat-card";
 import { formatDuration } from "@/lib/format";
 
 function formatOnAir(seconds: number): string {

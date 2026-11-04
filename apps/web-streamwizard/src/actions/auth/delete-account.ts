@@ -3,17 +3,15 @@
 import { reportError } from "@repo/sentry";
 
 import { tryAuthContext } from "@/lib/auth";
-import { getDiscordIntegrationByUserId, deleteUserData } from "@repo/supabase/queries/user";
-import { getGuildSettings } from "@repo/supabase/queries/discord";
-import { deleteTicketAttachments } from "@repo/supabase/queries/tickets";
-import { R2Storage } from "@repo/storage";
+import { getDiscordIntegrationByUserId, deleteUserData } from "@repo/supabase/queries/users/user";
+import { deleteTicketAttachments } from "@repo/supabase/queries/tickets/tickets";
 import { createAdminClient, supabaseAdmin } from "@repo/supabase/next/admin";
 import { TwitchApi } from "@repo/twitch-api";
 import { redirect } from "next/navigation";
-import { removeRole } from "@/server/discord/roles";
-import { env } from "@/lib/env";
-import { track } from "@/lib/track";
-import { revokeWsSockets } from "@/lib/ws-revoke";
+import { revokeVerifiedRole } from "@/server/discord/roles";
+import { getAssetsStorage } from "@/lib/media/assets-storage";
+import { track } from "@/lib/tracking/track";
+import { revokeWsSockets } from "@/lib/overlays/ws-revoke";
 
 export async function deleteAccount() {
   const ctx = await tryAuthContext();
@@ -47,33 +45,17 @@ export async function deleteAccount() {
     reportError(err, "actions/delete-account: eventsub cleanup", { broadcasterId });
   }
 
-  // Best-effort: revoke the Verified Member role directly via the bot before
-  // wiping the integration row, since deleting the account doesn't remove
-  // the user from the Discord server itself. A failure here must not block
-  // account deletion.
-  try {
-    const { data: integration } = await getDiscordIntegrationByUserId(supabase, user.id);
-    const settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
-    if (integration?.discord_user_id && settings?.verified_role_id) {
-      await removeRole(integration.discord_user_id, settings.verified_role_id);
-    }
-  } catch (revokeErr) {
-    const { captureException } = await import("@sentry/nextjs");
-    captureException(revokeErr);
-  }
+  // Deleting the account doesn't remove the user from the Discord server
+  // itself, so the Verified Member role goes first, while the integration row
+  // still says who they are on Discord.
+  await revokeVerifiedRole(supabase, user.id);
 
   // delete_user_data can't reach R2, so the user's files go first: Discord
   // ticket screenshots (it only anonymises the messages) and media library
   // uploads (their rows cascade away with the account). Best-effort, like the
   // steps above; rest-api's hourly asset reconciler removes media left behind.
-  if (env.R2_ACCOUNT_ID && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_ASSETS_BUCKET) {
-    const r2 = new R2Storage({
-      accountId: env.R2_ACCOUNT_ID,
-      accessKeyId: env.R2_ACCESS_KEY_ID,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-      bucket: env.R2_ASSETS_BUCKET,
-    });
-
+  const r2 = getAssetsStorage();
+  if (r2) {
     try {
       const { data: integration } = await getDiscordIntegrationByUserId(supabase, user.id);
       if (integration?.discord_user_id) {

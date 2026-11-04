@@ -1,4 +1,4 @@
+import { guidSchema } from "@repo/schemas/ids";
 import { z } from "zod";
-import { idSchema } from "./ids";
 
-export const toggleDefaultCommandSchema = z.object({ defaultCommandId: idSchema, enabled: z.boolean() });
+export const toggleDefaultCommandSchema = z.object({ defaultCommandId: guidSchema, enabled: z.boolean() });

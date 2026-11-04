@@ -1,9 +1,9 @@
+import { guidSchema } from "@repo/schemas/ids";
 import { z } from "zod";
 import { USER_NODE_SCOPES } from "@repo/node-token";
-import { idSchema } from "./ids";
 
 export const mintNodeTokenSchema = z.object({
-  instanceId: idSchema,
+  instanceId: guidSchema,
   scope: z.enum(USER_NODE_SCOPES),
 });
 

@@ -1,6 +1,6 @@
 import { updateSession } from "@repo/supabase/next/proxy";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
-import { logCrawlerVisit } from "@/lib/crawler-log";
+import { logCrawlerVisit } from "@/lib/seo/crawler-log";
 import { buildCsp } from "@/lib/csp";
 import { env } from "@/lib/env";
 

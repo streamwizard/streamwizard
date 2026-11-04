@@ -6,8 +6,8 @@ import {
   getStreamViewerCounts,
   getStreamEvents,
   getPreviousStreamForBroadcaster,
-} from "@repo/supabase/queries/stream-analytics";
-import { SUB_EVENT_TYPES } from "@/lib/utils/stream-events";
+} from "@repo/supabase/queries/stream/analytics";
+import { SUB_EVENT_TYPES } from "@/lib/stream-events/stream-events";
 
 export interface StreamStatValues {
   peakViewers: number;

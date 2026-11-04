@@ -3,11 +3,11 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 
-import type { TwitchScopeFeature } from "@repo/schemas";
+import type { TwitchScopeFeature } from "@repo/schemas/twitch-scopes";
 import { tryAuthContext } from "@/lib/auth";
 import { reportAndRedirect } from "@/lib/report-redirect";
 import { safeNextPath } from "@/lib/safe-next-path";
-import { twitchAuthorizationUrl } from "@/lib/twitch-authorize";
+import { twitchAuthorizationUrl } from "@/lib/twitch/twitch-authorize";
 import { authorizeTwitchFeatureSchema } from "@/schemas/auth";
 
 /**

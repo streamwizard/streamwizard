@@ -1,5 +1,5 @@
 import { createClient } from "@repo/supabase/next/server";
-import { getUserPreferences } from "@repo/supabase/queries/user";
+import { getUserPreferences } from "@repo/supabase/queries/users/user";
 import type { User } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { cache } from "react";

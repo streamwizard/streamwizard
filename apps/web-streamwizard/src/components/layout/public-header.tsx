@@ -28,7 +28,7 @@ import { Menu } from "lucide-react";
 import { BsTwitch } from "react-icons/bs";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import type { IconType } from "react-icons";
-import TwitchLogin from "@/components/shared/twitch-login";
+import TwitchLogin from "@/components/shared/twitch/twitch-login";
 import { socialLinks } from "@/lib/constant";
 import { TrackedLink } from "@/components/shared/tracked-link";
 import {

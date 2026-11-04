@@ -1,4 +1,4 @@
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 import type { CreateRootItemContext } from "./overlay-widget-registry.types";
 
 export interface RootItemSpec {

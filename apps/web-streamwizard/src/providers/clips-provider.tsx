@@ -1,6 +1,6 @@
 "use client";
-import { addClipToFolder, removeClipFromFolder } from "@/actions/supabase/clips/clips";
-import { getFolderDisplayName } from "@/lib/utils/clip-folders";
+import { addClipToFolder, removeClipFromFolder } from "@/actions/clips/folders";
+import { getFolderDisplayName } from "@/lib/clips/clip-folders";
 import { Database } from "@repo/supabase";
 import { useRouter } from "next/navigation";
 import React, { createContext, useContext } from "react";

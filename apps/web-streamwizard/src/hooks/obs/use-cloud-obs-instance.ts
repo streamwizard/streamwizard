@@ -1,10 +1,10 @@
 "use client";
 
-import { trackAction } from "@/lib/track-action";
+import { trackAction } from "@/lib/tracking/track-action";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { launchMyInstanceAction } from "@/actions/nodes";
-import { toggleInstance } from "@/lib/instance-actions";
+import { launchMyInstanceAction } from "@/actions/obs/nodes";
+import { toggleInstance } from "@/lib/obs/instance-actions";
 import { useObsInstanceSession } from "@/hooks/obs/use-obs-instance-session";
 
 /**

@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@repo/ui";
-import { InspectorHint } from "../editor/inspector-hint";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
 
 /** A labelled dropdown over a fixed list of string options, with an optional "?" hint. */
 export function OptionSelect<T extends string>({

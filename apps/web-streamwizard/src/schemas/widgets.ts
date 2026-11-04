@@ -1,5 +1,5 @@
+import { guidSchema } from "@repo/schemas/ids";
 import { z } from "zod";
-import { idSchema } from "./ids";
 
 /** Per source file (html, js, css) of a custom widget. */
 export const MAX_WIDGET_SOURCE_CHARS = 500_000;
@@ -32,7 +32,7 @@ const widgetSourceShape = {
 export const createWidgetSchema = z.object({ name: widgetName, ...widgetSourceShape }).partial().required({ name: true });
 
 export const updateWidgetSchema = z.object({
-  id: idSchema,
+  id: guidSchema,
   updates: z.object({ name: widgetName, ...widgetSourceShape }).partial(),
 });
 
@@ -40,12 +40,12 @@ export const updateWidgetSchema = z.object({
 export const widgetIdsSchema = z
   .array(z.string().max(100))
   .max(500)
-  .transform((ids) => [...new Set(ids)].filter((id) => idSchema.safeParse(id).success));
+  .transform((ids) => [...new Set(ids)].filter((id) => guidSchema.safeParse(id).success));
 
-export const widgetInstanceSchema = z.object({ overlayItemId: idSchema, widgetId: idSchema });
+export const widgetInstanceSchema = z.object({ overlayItemId: guidSchema, widgetId: guidSchema });
 
 export const publishWidgetSchema = z.object({
-  widgetId: idSchema,
+  widgetId: guidSchema,
   title: z.string().trim().min(1, "Give the listing a title").max(200, "Keep the title under 200 characters"),
   description: widgetDescription,
   tags: widgetTags,

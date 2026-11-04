@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo";
+import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo/seo";
 import { JsonLd } from "@/components/public/seo/json-ld";
-import { VodClipping } from "@/components/public/home/vod-clipping-section";
+import { VodClipping } from "@/components/public/home/clips/vod-clipping-section";
 import { VodsLibrarySection } from "@/components/public/vods/vods-library-section";
 import { VodsEventsSection } from "@/components/public/vods/vods-events-section";
 import { SceneSwitchesSection } from "@/components/public/vods/scene-switches-section";

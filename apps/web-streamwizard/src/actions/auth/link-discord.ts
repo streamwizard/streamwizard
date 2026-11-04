@@ -1,14 +1,15 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { track } from "@/lib/track";
+import { reportError } from "@repo/sentry";
+import { track } from "@/lib/tracking/track";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 
 import { supabaseAdmin } from "@repo/supabase/next/admin";
-import { deleteDiscordIntegration, getDiscordIntegrationByUserId } from "@repo/supabase/queries/user";
-import { getGuildSettings } from "@repo/supabase/queries/discord";
-import { assignRole, DiscordMemberNotFoundError, removeRole } from "@/server/discord/roles";
+import { deleteDiscordIntegration, getDiscordIntegrationByUserId } from "@repo/supabase/queries/users/user";
+import { getGuildSettings } from "@repo/supabase/queries/discord/discord";
+import { assignRole, DiscordMemberNotFoundError, revokeVerifiedRole } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 import { reportAndRedirect } from "@/lib/report-redirect";
 import { safeNextPath } from "@/lib/safe-next-path";
@@ -60,7 +61,12 @@ export async function reassignDiscordRole() {
     reportAndRedirect(integrationError ?? new Error("reassignDiscordRole: no linked Discord integration"), "/error");
   }
 
-  const settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
+  let settings: Awaited<ReturnType<typeof getGuildSettings>>;
+  try {
+    settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
+  } catch (error) {
+    reportAndRedirect(error, "/error");
+  }
   if (settings?.verified_role_id) {
     try {
       await assignRole(integration.discord_user_id, settings.verified_role_id);
@@ -68,8 +74,7 @@ export async function reassignDiscordRole() {
       if (roleErr instanceof DiscordMemberNotFoundError) {
         redirect("/dashboard/settings/integrations?discordRole=pending_membership");
       }
-      const { captureException } = await import("@sentry/nextjs");
-      captureException(roleErr);
+      reportError(roleErr, "discord-link.reassign-role");
       redirect("/dashboard/settings/integrations?discordRole=failed");
     }
   } else {
@@ -105,22 +110,14 @@ export async function unlinkDiscord() {
     }
   }
 
-  // Best-effort: revoke the Verified Member role directly via the bot. A
-  // failure here must not block the disconnect itself.
-  try {
-    const { data: integration } = await getDiscordIntegrationByUserId(supabase, user.id);
-    const settings = await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID);
-    if (integration?.discord_user_id && settings?.verified_role_id) {
-      await removeRole(integration.discord_user_id, settings.verified_role_id);
-    } else {
-      console.log(`[discord/unlink] No verified_role_id configured for guild ${env.DISCORD_GUILD_ID}, skipping role removal.`);
-    }
-  } catch (revokeErr) {
-    const { captureException } = await import("@sentry/nextjs");
-    captureException(revokeErr);
-  }
+  // Best-effort: a failure here must not block the disconnect itself.
+  await revokeVerifiedRole(supabase, user.id);
 
-  await deleteDiscordIntegration(supabase, user.id);
+  try {
+    await deleteDiscordIntegration(supabase, user.id);
+  } catch (error) {
+    reportAndRedirect(error, "/error");
+  }
   await track("discord_unlinked", {}, user);
 
   revalidatePath("/dashboard/settings/integrations");

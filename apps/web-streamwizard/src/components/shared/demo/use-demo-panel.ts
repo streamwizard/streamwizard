@@ -8,7 +8,7 @@ import {
   DEMO_EVENT_TYPES,
   isDemoEventType,
   type DemoEventType,
-} from "@repo/schemas";
+} from "@repo/schemas/widgets/demo-events";
 import { WIDGET_SIMULATORS, scanWidgetListeners } from "@repo/ui/overlay";
 import type { DemoFireRequest, FireMode } from "./demo-fire";
 

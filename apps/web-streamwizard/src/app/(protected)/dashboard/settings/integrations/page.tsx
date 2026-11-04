@@ -1,5 +1,5 @@
 import { getAuthContext } from "@/lib/auth";
-import { getDiscordIntegrationByUserId, getTwitchUsernameByUserId } from "@repo/supabase/queries/user";
+import { getDiscordIntegrationByUserId, getTwitchUsernameByUserId } from "@repo/supabase/queries/users/user";
 import { DiscordIntegrationSection } from "@/components/settings/discord-integration-section";
 import { TwitchIntegrationSection } from "@/components/settings/twitch-integration-section";
 

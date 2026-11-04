@@ -1,4 +1,4 @@
-import { getWidget } from "@/actions/widgets";
+import { getWidget } from "@/actions/widgets/widget-library";
 import { notFound } from "next/navigation";
 import { WidgetEditorClient } from "@/components/widgets/editor/widget-editor-client";
 

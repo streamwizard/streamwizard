@@ -1,13 +1,13 @@
 import { ListOrdered, ListFilter, Radio } from "lucide-react";
 import { SectionView } from "./section-view";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { ActivityFeedDemo } from "./activity-feed-demo";
 
 /*
  * The activity feed deep dive. ActivityFeedDemo carries the filter claim
  * with the real FILTERS list as working chips over the demo stream's raid
  * window; the rail beside it keeps the words. The event inventory in the
- * copy comes from EVENT_CONFIG (lib/event-config.ts): polls, hype trains and
+ * copy comes from EVENT_CONFIG (lib/stream-events/event-config.ts): polls, hype trains and
  * ad breaks are real entries, not embellishment.
  */
 

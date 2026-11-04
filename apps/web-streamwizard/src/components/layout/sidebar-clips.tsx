@@ -16,7 +16,7 @@ import {
   getActiveFolderHref,
   getFolderUrl,
   type ClipFolderNode,
-} from "@/lib/utils/clip-folders";
+} from "@/lib/clips/clip-folders";
 import { cn } from "@/lib/utils";
 import { Clapperboard, ChevronRight, EllipsisVertical, Folder, FolderOpen, Plus } from "lucide-react";
 import Link from "next/link";

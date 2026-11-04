@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@repo/supabase/next/server";
-import { getActivityFeedEvents } from "@repo/supabase/queries/stream-analytics";
+import { getActivityFeedEvents } from "@repo/supabase/queries/stream/analytics";
 import type { ActivityEvent } from "@/types/stream-analytics";
 
 export const getActivityFeedData = cache(

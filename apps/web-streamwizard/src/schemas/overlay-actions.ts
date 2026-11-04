@@ -1,10 +1,10 @@
+import { guidSchema } from "@repo/schemas/ids";
 import { z } from "zod";
 import {
   clipsWidgetItemConfigSchema,
   createSceneSchema,
   overlayItemGroupSchema,
 } from "@repo/ui/overlay-schemas";
-import { idSchema } from "./ids";
 
 // Arguments of the overlay server actions. Item and config shapes themselves
 // live in @repo/ui/overlay-schemas (re-exported from ./overlay).
@@ -31,7 +31,7 @@ const MAX_SAVED_GROUPS = 500;
  * as it is written, so here it only has to carry its temp id.
  */
 export const saveOverlayItemsSchema = z.object({
-  sceneId: idSchema,
+  sceneId: guidSchema,
   items: z.array(z.looseObject({ temp_id: z.string().max(100) })).max(MAX_SAVED_ITEMS),
   groups: z.array(overlayItemGroupSchema.omit({ scene_id: true })).max(MAX_SAVED_GROUPS),
 });
@@ -43,7 +43,7 @@ export const overlayImportTextSchema = z.string().min(1).max(1024 * 1024);
 export const previewClipsConfigSchema = clipsWidgetItemConfigSchema
   .pick({ timeWindow: true, customDateRange: true, sort: true, minViewCount: true, isFeaturedOnly: true })
   .extend({
-    folderIds: z.array(idSchema).max(200),
+    folderIds: z.array(guidSchema).max(200),
     gameIds: z.array(z.string().max(32)).max(200),
     creatorIds: z.array(z.string().max(32)).max(200),
   });

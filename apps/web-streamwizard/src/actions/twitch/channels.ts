@@ -1,10 +1,11 @@
 "use server";
 
-import { TwitchApi, type ChannelInformation } from "@repo/twitch-api";
-import { track } from "@/lib/track";
+import { TwitchApi } from "@repo/twitch-api";
+import { track } from "@/lib/tracking/track";
 import { reportError } from "@repo/sentry";
 import { tryAuthContext } from "@/lib/auth";
 import { updateChannelInfoSchema } from "@/schemas/twitch";
+import type { ChannelInfoResult } from "@/types/twitch-channel";
 
 /**
  * Reading and writing the signed-in streamer's own channel info.
@@ -13,20 +14,6 @@ import { updateChannelInfoSchema } from "@/schemas/twitch";
  * taken from the caller — an id in the argument list is an id a client can
  * change, which would turn this into a way to rewrite other people's titles.
  */
-
-export interface ChannelInfoResult {
-  ok: boolean;
-  info?: ChannelInformation;
-  /**
-   * Box art for `info.game_id`, which `GET /channels` doesn't return.
-   *
-   * Resolved here rather than by the client so opening the tab costs one round
-   * trip from the phone instead of two chained ones. Still a Helix template
-   * with `{width}`/`{height}` in it — the caller picks the size it renders at.
-   */
-  boxArtUrl?: string;
-  error?: string;
-}
 
 export async function getMyChannelInfo(): Promise<ChannelInfoResult> {
   const ctx = await tryAuthContext();
@@ -57,7 +44,7 @@ export async function getMyChannelInfo(): Promise<ChannelInfoResult> {
   }
 }
 
-export interface UpdateChannelInfoResult {
+interface UpdateChannelInfoResult {
   ok: boolean;
   error?: string;
 }

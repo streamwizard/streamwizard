@@ -3,9 +3,11 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { OnMount, Monaco } from "@monaco-editor/react";
-import type { Widget } from "@/actions/widgets";
+import type { Widget } from "@/types/widgets";
 import { env } from "@/lib/env";
-import { WIDGET_EDITOR_DECLARATIONS, WIDGET_EDITOR_LIB_DECLARATIONS, DEMO_EVENT_TYPES } from "@repo/schemas";
+import { WIDGET_EDITOR_DECLARATIONS } from "@repo/schemas/widgets/editor-declarations";
+import { WIDGET_EDITOR_LIB_DECLARATIONS } from "@repo/schemas/widgets/editor-lib-declarations";
+import { DEMO_EVENT_TYPES } from "@repo/schemas/widgets/demo-events";
 import { CustomWidgetIframe, scanWidgetListeners } from "@repo/ui/overlay";
 import { AssetPickerDialog } from "@/components/media/asset-picker-dialog";
 import { UnsavedChangesDialog } from "@/components/shared/unsaved-changes-dialog";

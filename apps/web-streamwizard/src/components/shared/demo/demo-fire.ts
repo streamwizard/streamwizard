@@ -1,12 +1,12 @@
 import { toast } from "sonner";
-import { buildDemoEvent, type DemoEventType } from "@repo/schemas";
+import { buildDemoEvent, type DemoEventType } from "@repo/schemas/widgets/demo-events";
 import {
   ALERT_TEST_BROWSER_EVENT,
   ALERT_TEST_PAYLOAD_KEY,
   type AlertForcedVariation,
   type AlertTestBrowserEventDetail,
 } from "@repo/ui/overlay";
-import { sendTestEventToOverlay } from "@/actions/overlay-test-alert";
+import { sendTestEventToOverlay } from "@/actions/overlays/test-alert";
 
 /**
  * Where a test event goes. Local stays in this tab: straight into the canvas

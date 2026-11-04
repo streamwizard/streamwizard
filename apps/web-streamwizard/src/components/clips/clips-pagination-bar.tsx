@@ -5,7 +5,7 @@ import {
   CLIP_PAGE_SIZE_OPTIONS,
   getClipPageRange,
   type ClipPageSize,
-} from "@/lib/utils/clip-pagination";
+} from "@/lib/clips/clip-pagination";
 import {
   Select,
   SelectContent,

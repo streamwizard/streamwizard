@@ -1,7 +1,7 @@
 import "server-only";
 import { TwitchApi } from "@repo/twitch-api";
 import { createClient } from "@repo/supabase/next/server";
-import { getClipBroadcasterId } from "@repo/supabase/queries/clips";
+import { getClipBroadcasterId } from "@repo/supabase/queries/clips/clips";
 import axios from "axios";
 import { reportError } from "@repo/sentry";
 

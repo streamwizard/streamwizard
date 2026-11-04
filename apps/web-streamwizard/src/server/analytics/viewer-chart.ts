@@ -5,11 +5,11 @@ import { createClient } from "@repo/supabase/next/server";
 import {
   getStreamViewerCounts,
   getStreamEvents,
-  getVodByStreamId,
+  getStreamVideoId,
   getClipsByVideoId,
-} from "@repo/supabase/queries/stream-analytics";
+} from "@repo/supabase/queries/stream/analytics";
 import type { ViewerCountBucket, RawEvent, ClipData } from "@/types/stream-analytics";
-import { SUB_EVENT_TYPES } from "@/lib/utils/stream-events";
+import { SUB_EVENT_TYPES } from "@/lib/stream-events/stream-events";
 
 export interface ViewerChartData {
   viewerBuckets: ViewerCountBucket[];
@@ -23,13 +23,13 @@ export const getViewerChartData = cache(
   async (streamId: string, broadcasterId: string): Promise<ViewerChartData> => {
     const supabase = await createClient();
 
-    const [viewerRows, eventRows, vod] = await Promise.all([
+    const [viewerRows, eventRows, videoId] = await Promise.all([
       getStreamViewerCounts(supabase, streamId),
       getStreamEvents(supabase, streamId),
-      getVodByStreamId(supabase, streamId),
+      getStreamVideoId(supabase, streamId),
     ]);
 
-    const clipRows = vod?.video_id ? await getClipsByVideoId(supabase, vod.video_id) : [];
+    const clipRows = videoId ? await getClipsByVideoId(supabase, videoId) : [];
 
     const viewerByBucket = new Map<number, number[]>();
     for (const row of viewerRows) {

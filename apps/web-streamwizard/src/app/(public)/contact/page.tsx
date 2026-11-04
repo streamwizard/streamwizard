@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { FaDiscord } from "react-icons/fa";
-import { absoluteUrl, contactPageSchema } from "@/lib/seo";
+import { absoluteUrl, contactPageSchema } from "@/lib/seo/seo";
 import { JsonLd } from "@/components/public/seo/json-ld";
 import { discordInviteLink } from "@/lib/constant";
 import { PageHero } from "@/components/public/common/page-hero";

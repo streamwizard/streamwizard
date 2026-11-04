@@ -1,9 +1,9 @@
 import { TrackedLink } from "@/components/shared/tracked-link";
 import { SectionView } from "@/components/public/analytics/section-view";
 import { discordInviteLink, docsLink } from "@/lib/constant";
-import { Reveal } from "@/components/public/home/reveal";
-import { IrlOverlayDemo } from "@/components/public/home/irl-overlay-demo";
-import { DemoAlertProvider } from "@/components/public/home/overlay-demo-alert";
+import { Reveal } from "@/components/public/common/reveal";
+import { IrlOverlayDemo } from "@/components/public/home/overlays/irl-overlay-demo";
+import { DemoAlertProvider } from "@/components/public/home/overlays/overlay-demo-alert";
 
 /*
  * The overlays section scoped to what matters on this page: the IRL overlays

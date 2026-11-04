@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { OverlayItem, OverlaySceneWithItems } from "@/types/overlays";
+import type { OverlayItem, OverlaySceneWithItems } from "@repo/ui/components/overlay/types/item";
 import { createCenteredRootItem } from "./create-root-item";
 import type { CreateRootItemContext } from "./overlay-widget-registry.types";
 

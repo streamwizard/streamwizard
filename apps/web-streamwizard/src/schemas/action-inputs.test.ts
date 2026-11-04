@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createAssetUploadSchema } from "./assets";
 import { addClipToFolderSchema, createClipFolderSchema } from "./clip-folders";
-import { idSchema, twitchClipIdSchema, twitchIdSchema } from "./ids";
+import { guidSchema, twitchClipIdSchema } from "@repo/schemas/ids";
+import { twitchIdSchema } from "./ids";
 import { launchInstanceOptionsSchema, mintNodeTokenSchema } from "./obs";
 import { overlayImportTextSchema, saveOverlayItemsSchema } from "./overlay-actions";
 import { createClipFromVodSchema, deleteVideosSchema } from "./twitch";
@@ -10,9 +11,9 @@ import { widgetIdsSchema } from "./widgets";
 const ID = "4a1f0c2e-8b7d-4c3a-9e5f-1d2c3b4a5e6f";
 
 describe("ids", () => {
-  test("row ids must be uuids", () => {
-    expect(idSchema.safeParse(ID).success).toBe(true);
-    for (const bad of ["", "1", "temp-3", `${ID} `, "../x"]) expect(idSchema.safeParse(bad).success).toBe(false);
+  test("row ids must be guids", () => {
+    expect(guidSchema.safeParse(ID).success).toBe(true);
+    for (const bad of ["", "1", "temp-3", `${ID} `, "../x"]) expect(guidSchema.safeParse(bad).success).toBe(false);
   });
 
   test("Twitch ids are numeric strings", () => {

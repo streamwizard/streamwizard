@@ -1,5 +1,5 @@
 import { getCategoryStatsData } from "@/server/analytics/category-stats";
-import { CategoryStatsTable } from "@/components/shared/category-stats-table";
+import { CategoryStatsTable } from "@/components/shared/stats/category-stats-table";
 
 interface CategoryStatsSectionProps {
   streamId: string;

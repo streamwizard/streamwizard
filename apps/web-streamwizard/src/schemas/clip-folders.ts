@@ -1,5 +1,5 @@
+import { guidSchema, twitchClipIdSchema } from "@repo/schemas/ids";
 import { z } from "zod";
-import { idSchema, twitchClipIdSchema } from "./ids";
 
 /** Shared by the folder dialog (client) and the folder actions (server). */
 export const folderNameSchema = z.object({
@@ -14,20 +14,20 @@ export const folderNameSchema = z.object({
 
 export const addClipToFolderSchema = z.object({
   clipId: twitchClipIdSchema,
-  folderId: idSchema,
+  folderId: guidSchema,
   // Only the label in the reply; the folder must already exist.
   folderName: z.string().min(1).max(1000),
 });
 
 export const removeClipFromFolderSchema = z.object({
   clipId: twitchClipIdSchema,
-  folderId: idSchema,
+  folderId: guidSchema,
 });
 
 export const createClipFolderSchema = folderNameSchema.extend({
-  parentFolderId: idSchema.optional(),
+  parentFolderId: guidSchema.optional(),
 });
 
 export const editClipFolderSchema = folderNameSchema.extend({
-  folderId: idSchema,
+  folderId: guidSchema,
 });

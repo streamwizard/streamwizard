@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo";
+import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo/seo";
 import { JsonLd } from "@/components/public/seo/json-ld";
-import { OverlaysSection } from "@/components/public/home/overlays-section";
+import { OverlaysSection } from "@/components/public/home/overlays/overlays-section";
 import { AlertBoxSection } from "@/components/public/overlays/alert-box-section";
 import { ClipsRotatorSection } from "@/components/public/overlays/clips-rotator-section";
 import { WidgetLibrarySection } from "@/components/public/overlays/widget-library-section";

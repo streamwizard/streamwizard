@@ -1,5 +1,5 @@
 import { getHourlyViewerStatsData } from "@/server/analytics/hourly-stats";
-import { HourlyViewerChart } from "@/components/shared/hourly-viewer-chart";
+import { HourlyViewerChart } from "@/components/shared/stats/hourly-viewer-chart";
 
 interface HourlyStatsSectionProps {
   streamId: string;

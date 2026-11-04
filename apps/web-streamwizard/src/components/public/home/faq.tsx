@@ -2,8 +2,8 @@ import { FaDiscord } from "react-icons/fa";
 import { BookOpen } from "lucide-react";
 import { Button } from "@repo/ui/components/ui/button";
 import { discordInviteLink, docsLink } from "@/lib/constant";
-import { FREE_TIER_SUMMARY, PAID_PLAN_SUMMARY, PRICING_FAQ_LINK } from "@/lib/pricing";
-import { Reveal } from "./reveal";
+import { FREE_TIER_SUMMARY, PAID_PLAN_SUMMARY, PRICING_FAQ_LINK } from "@/lib/public/pricing";
+import { Reveal } from "@/components/public/common/reveal";
 import { FaqAccordion } from "./faq-accordion";
 import { TrackedLink } from "@/components/shared/tracked-link";
 import { SectionView } from "../analytics/section-view";
@@ -15,12 +15,12 @@ import { SectionView } from "../analytics/section-view";
  * clips, and why the OAuth screen asks for so much.
  *
  * FAQ_ITEMS is also the source for the FAQPage JSON-LD on the home page
- * (lib/seo.ts), so answers must stay self-contained: search and AI answers
+ * (lib/seo/seo.ts), so answers must stay self-contained: search and AI answers
  * quote them without the surrounding page. The last item is a joke and is
  * rendered only, never fed to the schema: a rich result is a bad place for a
  * bit.
  *
- * The cost answer is the short form, built from lib/pricing.ts and pointing at
+ * The cost answer is the short form, built from lib/public/pricing.ts and pointing at
  * /pricing for the rest (SW-303). Every pillar page does the same, each in its
  * own words, so a pricing change is one edit and the five do not read as copies.
  */

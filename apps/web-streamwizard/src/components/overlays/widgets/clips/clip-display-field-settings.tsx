@@ -2,7 +2,7 @@
 
 import { Button } from "@repo/ui";
 import { ChevronLeft } from "lucide-react";
-import { asClipDisplayFieldConfig } from "@/types/overlays";
+import { asClipDisplayFieldConfig } from "@repo/ui/components/overlay/types/clips";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import { ClipDisplayFieldInspector } from "./nested-fields/clip-display-field-inspector";

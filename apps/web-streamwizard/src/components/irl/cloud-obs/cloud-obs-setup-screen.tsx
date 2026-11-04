@@ -1,10 +1,10 @@
 "use client";
 
-import type { IngestStreamKey } from "@/actions/ingest-keys";
+import type { IngestStreamKey } from "@repo/supabase/queries/ingest/ingest";
 import { FeatureDisabledBanner } from "@/components/shared/feature-disabled-banner";
 import { ObsSetupStepper } from "@/components/irl/obs-setup-stepper";
 import { ObsVncPreview } from "@/components/irl/obs-vnc-preview";
-import { ALERTS_SCENE_NAME } from "@/lib/obs-irl";
+import { ALERTS_SCENE_NAME } from "@/lib/obs/obs-irl";
 import type { useObsWebSocket } from "@repo/obs-web";
 import type { ObsFlowState } from "@/components/irl/cloud-obs/obs-flow-state";
 import { ObsSetupStatusBadge } from "@/components/irl/cloud-obs/obs-status-badge";

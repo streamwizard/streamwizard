@@ -3,7 +3,7 @@ import { LightModeOverlay } from "@/components/layout/light-mode-overlay";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { OverlayWsUrlProvider } from "@repo/ui/components/overlay/hooks/use-overlay-ws-url";
 import { PHProvider, PostHogPageView } from "@repo/posthog";
-import { isIndexableEnvironment, siteUrl } from "@/lib/seo";
+import { isIndexableEnvironment, siteUrl } from "@/lib/seo/seo";
 import { env } from "@/lib/env";
 import { Metadata } from "next";
 import { headers } from "next/headers";

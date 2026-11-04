@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CloudOBSViewer } from "@repo/obs-web";
-import { getInstanceNodeApiUrlAction } from "@/actions/nodes";
+import { getInstanceNodeApiUrlAction } from "@/actions/obs/nodes";
 import { mintNoVncConnection } from "@repo/obs-web";
-import { nodeToken } from "@/lib/node-token";
+import { nodeToken } from "@/lib/obs/node-token";
 
 export function ObsViewerContent() {
   const searchParams = useSearchParams();

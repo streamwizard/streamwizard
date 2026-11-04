@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import { usePathname } from "next/navigation";
 import { AlarmClock, ExternalLink, Loader2, RotateCcw, Tv } from "lucide-react";
-import { buildDemoEvent } from "@repo/schemas";
+import { buildDemoEvent } from "@repo/schemas/widgets/demo-events";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
   Button,
@@ -35,12 +35,12 @@ import {
 } from "@repo/ui/overlay";
 import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
 import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
-import { InspectorHint } from "@/components/overlays/editor/inspector-hint";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
 import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
 import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
 import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
 import { presetGeometry } from "@/components/overlays/inspector-fields/preset-geometry";
-import { TwitchConnectButton } from "@/components/shared/twitch-scope-banner";
+import { TwitchConnectButton } from "@/components/shared/twitch/twitch-scope-banner";
 import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
 import { ColorField } from "@/components/overlays/inspector-fields/color-field";
 import { OptionSelect } from "@/components/overlays/inspector-fields/option-select";

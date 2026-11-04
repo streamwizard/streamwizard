@@ -5,7 +5,7 @@ import { denyConsent, getConsentStatus, grantConsent, hasGlobalPrivacyControl } 
 import { ChevronDown } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { enableSentryReplay } from "@/lib/sentry-replay";
+import { enableSentryReplay } from "@/lib/tracking/sentry-replay";
 
 const content = {
   normal: {

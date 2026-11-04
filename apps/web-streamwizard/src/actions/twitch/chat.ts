@@ -1,7 +1,7 @@
 "use server";
 
 import { TwitchApi } from "@repo/twitch-api";
-import { track } from "@/lib/track";
+import { track } from "@/lib/tracking/track";
 import { reportError } from "@repo/sentry";
 import { tryAuthContext } from "@/lib/auth";
 import { deckChatMessageSchema } from "@/schemas/twitch";
@@ -12,7 +12,7 @@ import { deckChatMessageSchema } from "@/schemas/twitch";
  * the bot is the bot's own job and not something this surface offers.
  */
 
-export interface SendDeckChatResult {
+interface SendDeckChatResult {
   ok: boolean;
   /** Helix's id for the sent message; the socket echo arrives under the same id. */
   messageId?: string;

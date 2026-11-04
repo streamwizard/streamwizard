@@ -1,13 +1,13 @@
 "use client";
 
-import { trackAction } from "@/lib/track-action";
-import { AddToFolderItems } from "@/components/shared/add-to-folder-menu";
+import { trackAction } from "@/lib/tracking/track-action";
+import { AddToFolderItems } from "@/components/shared/clips/add-to-folder-menu";
 import { formatClipDuration, formatDate } from "@/lib/format";
-import { buildClipFolderTree, type ClipFolderNode } from "@/lib/utils/clip-folders";
-import { downloadClip } from "@/lib/utils/download-clip";
+import { buildClipFolderTree, type ClipFolderNode } from "@/lib/clips/clip-folders";
+import { downloadClip } from "@/lib/clips/download-clip";
 import { useClipFolders } from "@/providers/clips-provider";
 import { useClipFolderDialog } from "@/providers/clip-folder-dialog-provider";
-import { clipsWithFolders } from "@/types/database";
+import type { ClipWithFolders } from "@/types/database";
 import {
   Badge,
   Button,
@@ -41,7 +41,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 type TwitchClipDialogProps = {
-  clip: clipsWithFolders | null;
+  clip: ClipWithFolders | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
@@ -60,7 +60,7 @@ function InfoCell({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
-function ClipDialogBody({ clip }: { clip: clipsWithFolders }) {
+function ClipDialogBody({ clip }: { clip: ClipWithFolders }) {
   const { openCreateFolder } = useClipFolderDialog();
   const { folders, getRemovableFolders, getFolderLabel, AddToFolder, handleRemoveClipFromFolder } = useClipFolders();
   const [isDownloading, setIsDownloading] = useState(false);

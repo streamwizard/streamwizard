@@ -8,7 +8,11 @@ import { SliderField } from "@/components/overlays/inspector-fields/slider-field
 import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
 import { TextAlignSelect } from "@/components/overlays/inspector-fields/text-align-select";
 import { ColorPicker, Label, Textarea } from "@repo/ui";
-import { TEXT_WIDGET_LIMITS, normalizeTextWidgetConfig, type TextWidgetItemConfig } from "@/types/overlays";
+import {
+  TEXT_WIDGET_LIMITS,
+  normalizeTextWidgetConfig,
+  type TextWidgetItemConfig,
+} from "@repo/ui/components/overlay/types/widgets";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
 
 export function TextWidgetSettings({ item, updateItem }: OverlayInspectorAppendProps) {

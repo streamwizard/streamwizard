@@ -81,8 +81,6 @@ export const env = createEnv({
     WS_SERVICE_SIGNING_JWK: z.string().min(1).refine(isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR).optional(),
     // web-admin's origin, allowed to frame the CMS draft previews (src/proxy.ts).
     CMS_ADMIN_URL: z.url().optional(),
-    // "1" turns on the docs screenshot routes in local dev ((harness)/layout.tsx).
-    DOCS_SHOTS: z.enum(["0", "1"]).optional(),
     // Comma-separated extra hosts allowed to reach the dev server and its HMR
     // websocket (next.config.ts allowedDevOrigins), e.g. a LAN address for
     // testing from another device. Dev only; 127.0.0.1 is always allowed.
@@ -106,7 +104,7 @@ export const env = createEnv({
     // host or Tailscale IP yet (placeholders otherwise).
     NEXT_PUBLIC_INGEST_HOST: z.string().min(1).optional(),
     NEXT_PUBLIC_OBS_PULL_HOST: z.string().min(1).optional(),
-    // SRT latency of the OBS pull from the ingest node (lib/obs-irl.ts).
+    // SRT latency of the OBS pull from the ingest node (lib/obs/obs-irl.ts).
     NEXT_PUBLIC_OBS_PULL_LATENCY_MS: z.coerce.number().int().positive().optional(),
   },
   runtimeEnv: {
@@ -139,7 +137,6 @@ export const env = createEnv({
     POSTHOG_KEY: process.env.POSTHOG_KEY,
     POSTHOG_HOST: process.env.POSTHOG_HOST,
     CMS_ADMIN_URL: process.env.CMS_ADMIN_URL,
-    DOCS_SHOTS: process.env.DOCS_SHOTS,
     DEV_ALLOWED_ORIGINS: process.env.DEV_ALLOWED_ORIGINS,
     // Derived in next.config.ts env: block from their non-prefixed Doppler counterparts
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,

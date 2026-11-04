@@ -1,8 +1,8 @@
 import { TwitchApi } from "@repo/twitch-api";
 import { reportError } from "@repo/sentry";
-import type { CreateEventSubSubscriptionRequest } from "@/types/twitch";
+import type { NeededEventSubscription } from "@repo/twitch-eventsub/subscriptions";
 
-export default async function CreateEventSubSubscription(subscription: CreateEventSubSubscriptionRequest) {
+export default async function CreateEventSubSubscription(subscription: NeededEventSubscription) {
   try {
     const api = new TwitchApi(null);
     const res = await api.eventsub.createSubscription(subscription, "");

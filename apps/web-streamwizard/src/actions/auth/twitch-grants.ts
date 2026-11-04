@@ -1,7 +1,7 @@
 "use server";
 
-import { getTwitchScopes } from "@repo/supabase/queries/twitch-scopes";
-import { TWITCH_SCOPE_FEATURES, hasTwitchFeature, type TwitchScopeFeature } from "@repo/schemas";
+import { getTwitchScopes } from "@repo/supabase/queries/twitch/scopes";
+import { TWITCH_SCOPE_FEATURES, hasTwitchFeature, type TwitchScopeFeature } from "@repo/schemas/twitch-scopes";
 import { tryAuthContext } from "@/lib/auth";
 
 /**

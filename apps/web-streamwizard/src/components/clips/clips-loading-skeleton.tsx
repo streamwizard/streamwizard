@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { ClipsDetailsSkeleton, ClipsGridSkeleton } from "@/components/clips/clips-skeleton";
-import { parseClipView } from "@/lib/utils/clip-view";
+import { parseClipView } from "@/lib/clips/clip-view";
 
 export function ClipsLoadingSkeleton() {
   const searchParams = useSearchParams();

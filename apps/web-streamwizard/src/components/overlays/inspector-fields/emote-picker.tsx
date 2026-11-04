@@ -5,7 +5,7 @@ import { Loader2, Plus, X } from "lucide-react";
 import { Button, Input, Label, Popover, PopoverContent, PopoverTrigger } from "@repo/ui";
 import type { EmotePick } from "@repo/ui/overlay";
 import { cn } from "@/lib/utils";
-import { InspectorHint } from "../editor/inspector-hint";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
 
 /**
  * Emote picking for overlay settings: a row of picked emotes plus a pop-up

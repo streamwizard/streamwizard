@@ -2,10 +2,10 @@ import { ClipsDisplay } from "@/components/clips/clips-display";
 import { ClipsPaginationBar } from "@/components/clips/clips-pagination-bar";
 import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";
-import buildClipQuery from "@/lib/utils/build-clip-query";
-import { parseClipPageSize } from "@/lib/utils/clip-pagination";
-import { parseClipView } from "@/lib/utils/clip-view";
-import { normalizeClipsWithFolders } from "@/types/database";
+import buildClipQuery from "@/lib/clips/build-clip-query";
+import { parseClipPageSize } from "@/lib/clips/clip-pagination";
+import { parseClipView } from "@/lib/clips/clip-view";
+import { normalizeClipsWithFolders } from "@/lib/clips/clips-with-folders";
 import { ClipSearchParams } from "@/types/pages";
 import { redirect } from "next/navigation";
 

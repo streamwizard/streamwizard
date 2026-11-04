@@ -73,7 +73,7 @@ export function buildCsp(nonce: string, options: CspOptions = {}): string {
     //
     // CloudFront is where Twitch's signed clip MP4s land: the overlays page's
     // clips rotator plays the landscape_download_url that /helix/clips/downloads
-    // hands back (see lib/showcase-clip-videos), and that URL is on an opaque
+    // hands back (see lib/public/showcase-clip-videos), and that URL is on an opaque
     // per-distribution CloudFront host, not a twitch.tv one. Wildcarded because
     // the distribution is Twitch's to change and a pinned host would fail
     // silently — the rotator treats a blocked load as a dead clip and skips to

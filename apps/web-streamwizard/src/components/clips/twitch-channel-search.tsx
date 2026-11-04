@@ -1,6 +1,6 @@
 "use client";
-import { searchTwitchChannels, LookupTwitchUser } from "@/actions/twitch/twitch-api";
-import { ChannelSearchResult } from "@/types/twitch";
+import { searchTwitchChannels, LookupTwitchUser } from "@/actions/twitch/search";
+import type { ChannelSearchResult } from "@repo/twitch-api";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import Image from "next/image";

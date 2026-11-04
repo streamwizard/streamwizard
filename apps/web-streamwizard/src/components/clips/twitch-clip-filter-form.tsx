@@ -1,6 +1,6 @@
 "use client";
 
-import { trackAction } from "@/lib/track-action";
+import { trackAction } from "@/lib/tracking/track-action";
 import {
   Badge,
   Button,
@@ -17,12 +17,12 @@ import {
 } from "@repo/ui";
 import { useSession } from "@/providers/session-provider";
 import SyncTwitchClipsButton from "@/components/clips/sync-twitch-clips";
-import { LookupTwitchGame, LookupTwitchUser } from "@/actions/twitch/twitch-api";
+import { LookupTwitchGame, LookupTwitchUser } from "@/actions/twitch/search";
 import { SlidersHorizontal, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DatePickerWithPresets } from "@/components/shared/date-picker";
-import TwitchCategorySearch from "@/components/shared/twitch-category-search";
+import TwitchCategorySearch from "@/components/shared/twitch/twitch-category-search";
 import TwitchSearchBar from "./twitch-channel-search";
 
 export default function TwitchClipSearchForm() {

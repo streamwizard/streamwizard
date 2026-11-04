@@ -4,7 +4,7 @@ import { useState } from "react";
 import { cn } from "@repo/ui";
 import { ChatMessage, ChatNotice, type ChatAssets, type ChatFragment } from "@repo/ui/chat";
 import { Inbox } from "lucide-react";
-import { EVENT_CONFIG } from "@/lib/event-config";
+import { EVENT_CONFIG } from "@/lib/stream-events/event-config";
 import type { ChatEntry } from "@/hooks/deck/use-deck-chat-room";
 
 /**

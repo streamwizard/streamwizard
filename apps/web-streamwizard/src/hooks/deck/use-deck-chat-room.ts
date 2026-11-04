@@ -3,16 +3,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@repo/supabase/next/client";
 import { subscribeToWsRoomWith, wsStatusFromMessage, type WsRoomStatus } from "@repo/ui/overlay";
-import { isSharedChatNotice } from "@repo/schemas";
+import { isSharedChatNotice } from "@repo/schemas/eventsub/chat";
 import type {
   ChannelChatClearUserMessagesEvent,
   ChannelChatMessageDeleteEvent,
   ChannelChatMessageEvent,
   ChannelChatNotificationEvent,
-} from "@repo/schemas";
+} from "@repo/schemas/eventsub/chat";
 import { useSession } from "@/providers/session-provider";
 import { env } from "@/lib/env";
-import { EVENT_CONFIG } from "@/lib/event-config";
+import { EVENT_CONFIG } from "@/lib/stream-events/event-config";
 
 /**
  * The deck's live chat + events feed.

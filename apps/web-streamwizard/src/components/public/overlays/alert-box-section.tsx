@@ -2,7 +2,7 @@ import { docsLink } from "@/lib/constant";
 import { SectionView } from "../analytics/section-view";
 import { TrackedLink } from "@/components/shared/tracked-link";
 import { CheckItem } from "@/components/public/common/check-item";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { AlertBoxPlayground } from "./alert-box-playground";
 
 /*

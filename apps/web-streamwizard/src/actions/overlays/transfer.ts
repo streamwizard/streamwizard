@@ -3,14 +3,14 @@
 import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
-import { track } from "@/lib/track";
+import { track } from "@/lib/tracking/track";
 import {
   createOverlayScene as createSceneRow,
   deleteOverlayScene as deleteSceneRow,
   insertOverlayItemGroups,
   insertOverlayItems,
   insertOverlayItemsReturningIds,
-} from "@repo/supabase/queries/overlays";
+} from "@repo/supabase/queries/overlays/overlays";
 import { overlayItemSchema } from "@/schemas/overlay";
 import { overlayImportTextSchema } from "@/schemas/overlay-actions";
 import {
@@ -20,17 +20,17 @@ import {
   type ExportedOverlayItem,
   type OverlayExportDocument,
 } from "@/schemas/overlay-export";
-import type {
-  ClipDisplayFieldItemConfig,
-  CustomWidgetItemConfig,
-  OverlayItem,
-} from "@/types/overlays";
-import { createWidget, deleteWidget, getWidgetsByIds } from "@/actions/widgets";
-import { sanitizeGroups } from "@/components/overlays/editor/item-groups";
+import type { ClipDisplayFieldItemConfig } from "@repo/ui/components/overlay/types/clips";
+import type { CustomWidgetItemConfig } from "@repo/ui/components/overlay/types/widgets";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
+import { createWidget, deleteWidget, getWidgetsByIds } from "@/actions/widgets/widget-library";
+import { sanitizeGroups } from "@/components/overlays/editor/layers/item-groups";
 import type { WidgetFieldSchema } from "@repo/ui/overlay";
+import { guidSchema } from "@repo/schemas/ids";
 import { tryAuthContext } from "@/lib/auth";
 import { getOverlayScene } from "./scenes";
-import { OVERLAYS_ERROR_SCOPE, generateSlug, overlayItemColumns } from "./shared";
+import { generateSlug } from "@/lib/overlays/overlay-slug";
+import { OVERLAYS_ERROR_SCOPE, overlayItemColumns } from "@/lib/overlays/overlay-items";
 
 /** Stands in while items are validated, before a real scene row exists. */
 const UNASSIGNED_ID = "00000000-0000-0000-0000-000000000000";
@@ -50,9 +50,13 @@ export async function exportOverlayScene(sceneId: string): Promise<{
   data: OverlayExportDocument | null;
   error: string | null;
 }> {
-  // getOverlayScene checks the session (tryAuthContext), parses the id and
-  // only returns a scene the caller owns.
-  const { data: scene, error } = await getOverlayScene(sceneId);
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const parsedId = guidSchema.safeParse(sceneId);
+  if (!parsedId.success) return { data: null, error: "Not found" };
+
+  // Only returns a scene the caller owns.
+  const { data: scene, error } = await getOverlayScene(parsedId.data);
   if (error || !scene) return { data: null, error: error ?? "Not found" };
 
   const refById = new Map<string, string>();
@@ -139,11 +143,15 @@ export async function exportOverlayScene(sceneId: string): Promise<{
     };
   });
 
-  await track("overlay_exported", {
-    overlay_id: sceneId,
-    item_count: scene.items.filter((item) => item.type !== "clip_display_field").length,
-    custom_widget_count: widgets.length,
-  });
+  await track(
+    "overlay_exported",
+    {
+      overlay_id: parsedId.data,
+      item_count: scene.items.filter((item) => item.type !== "clip_display_field").length,
+      custom_widget_count: widgets.length,
+    },
+    ctx.user,
+  );
 
   return {
     data: {

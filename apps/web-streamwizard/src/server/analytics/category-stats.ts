@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 import { createClient } from "@repo/supabase/next/server";
-import { getStreamViewerCounts, getStreamEvents } from "@repo/supabase/queries/stream-analytics";
+import { getStreamViewerCounts, getStreamEvents } from "@repo/supabase/queries/stream/analytics";
 import { buildCategorySegments, type CategorySegmentStats } from "@/lib/analytics/category-segments";
 
 export const getCategoryStatsData = cache(

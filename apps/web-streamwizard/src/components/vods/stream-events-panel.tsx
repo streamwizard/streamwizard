@@ -1,8 +1,8 @@
 "use client";
 
 import { StreamEvent } from "@/types/stream-events";
-import { getStreamEventDisplayInfo } from "@/lib/utils/stream-events";
-import { formatDuration } from "@/types/twitch-video";
+import { getStreamEventDisplayInfo } from "@/lib/stream-events/stream-events";
+import { formatDuration } from "@/lib/format";
 import { Badge } from "@repo/ui";
 import { Skeleton } from "@repo/ui";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";

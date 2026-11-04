@@ -10,8 +10,8 @@ import {
   isRootLayerType,
   isRootOverlayDefinition,
 } from "@/components/overlays/registry/overlay-widget-registry";
-import type { OverlayItem, OverlaySceneWithItems } from "@/types/overlays";
-import { asClipDisplayFieldConfig } from "@/types/overlays";
+import type { OverlayItem, OverlaySceneWithItems } from "@repo/ui/components/overlay/types/item";
+import { asClipDisplayFieldConfig } from "@repo/ui/components/overlay/types/clips";
 
 /** Pure geometry/item helpers behind the overlay editor store. No store access. */
 

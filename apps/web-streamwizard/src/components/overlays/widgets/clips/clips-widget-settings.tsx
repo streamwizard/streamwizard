@@ -3,8 +3,8 @@
 import {
   DEFAULT_CLIPS_WIDGET_ITEM_CONFIG,
   type ClipsWidgetItemConfig,
-  type OverlayItem,
-} from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/clips";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
 import { ClipsWidgetConfigPanel } from "./clips-widget-config";
 

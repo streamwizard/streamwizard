@@ -1,6 +1,6 @@
 "use client";
 
-import { trackAction } from "@/lib/track-action";
+import { trackAction } from "@/lib/tracking/track-action";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -20,17 +20,17 @@ import {
   cn,
 } from "@repo/ui";
 import { AlertTriangle, Loader2, MonitorOff, Radio, Square, Wifi, WifiOff } from "lucide-react";
-import { getMyLatestInstanceAction } from "@/actions/nodes";
-import { setSceneOverride } from "@/actions/supabase/auto-switcher";
-import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher";
-import { toggleInstance } from "@/lib/instance-actions";
+import { getMyLatestInstanceAction } from "@/actions/obs/nodes";
+import { setSceneOverride } from "@/actions/irl/auto-switcher";
+import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/irl/auto-switcher";
+import { toggleInstance } from "@/lib/obs/instance-actions";
 import type { Scene } from "@repo/obs-web";
 import { useObsInstanceSession } from "@/hooks/obs/use-obs-instance-session";
 import { useObsReconnectOnWake } from "@/hooks/obs/use-obs-reconnect-on-wake";
 import { useDeckTabs } from "@/hooks/deck/use-deck-tabs";
-import { ObsBootProgress } from "@/components/shared/obs-boot-progress";
-import { ObsOfflineState } from "@/components/shared/obs-offline-state";
-import { ObsLifecycleBanner } from "@/components/shared/obs-lifecycle-banner";
+import { ObsBootProgress } from "@/components/shared/obs/obs-boot-progress";
+import { ObsOfflineState } from "@/components/shared/obs/obs-offline-state";
+import { ObsLifecycleBanner } from "@/components/shared/obs/obs-lifecycle-banner";
 import { FeatureDisabledBanner } from "@/components/shared/feature-disabled-banner";
 import { AutoSwitcherHoldCard } from "@/components/deck/auto-switcher-hold-card";
 import { InstallPrompt } from "@/components/deck/install-prompt";

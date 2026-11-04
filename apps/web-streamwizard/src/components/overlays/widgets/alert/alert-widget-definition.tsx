@@ -1,6 +1,6 @@
 "use client";
 
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 import {
   ALERT_WIDGET_DEFAULT_SIZE,
   createDefaultAlertWidgetConfig,

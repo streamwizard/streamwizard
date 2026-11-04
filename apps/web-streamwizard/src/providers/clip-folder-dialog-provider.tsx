@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type * as z from "zod";
 
-import { createClipFolder, deleteClipFolder, editClipFolder } from "@/actions/supabase/clips/clips";
+import { createClipFolder, deleteClipFolder, editClipFolder } from "@/actions/clips/folders";
 import { folderNameSchema } from "@/schemas/clip-folders";
 import {
   Button,

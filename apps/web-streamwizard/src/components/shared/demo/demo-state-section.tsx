@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { RotateCcw, Undo2, X } from "lucide-react";
 import { Button, Input, Switch, Textarea } from "@repo/ui";
-import { LABEL_CATALOG } from "@repo/schemas";
+import { LABEL_CATALOG } from "@repo/schemas/widgets/stream-labels";
 import {
   GOAL_WIDGET_LABELS,
   GOAL_WIDGET_TYPES,

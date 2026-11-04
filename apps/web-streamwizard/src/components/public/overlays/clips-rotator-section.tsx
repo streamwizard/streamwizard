@@ -1,12 +1,12 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@repo/ui/components/ui/button";
 import { productSectionLinks } from "@/lib/constant";
-import { getRotatorClips } from "@/lib/showcase-clips";
-import { getShowcaseClipVideos } from "@/lib/showcase-clip-videos";
+import { getRotatorClips } from "@/lib/public/showcase-clips";
+import { getShowcaseClipVideos } from "@/lib/public/showcase-clip-videos";
 import { SectionView } from "../analytics/section-view";
 import { TrackedLink } from "@/components/shared/tracked-link";
 import { CheckItem } from "@/components/public/common/check-item";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { ClipsRotatorDemo } from "./clips-rotator-demo";
 
 /*

@@ -2,12 +2,8 @@
 
 import { useState, type ComponentProps, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Play, RotateCcw, Square } from "lucide-react";
-import {
-  DEMO_EVENTS,
-  buildDemoCreditsData,
-  buildDemoEvent,
-  type DemoEventType,
-} from "@repo/schemas";
+import { DEMO_EVENTS, buildDemoEvent, type DemoEventType } from "@repo/schemas/widgets/demo-events";
+import { buildDemoCreditsData } from "@repo/schemas/widgets/credits";
 import {
   ALERT_EVENT_CATEGORIES,
   ALERT_EVENT_LABELS,

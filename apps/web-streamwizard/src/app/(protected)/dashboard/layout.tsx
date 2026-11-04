@@ -8,10 +8,9 @@ import { ClipFolderProvider } from "@/providers/clips-provider";
 import { ModalProvider } from "@/providers/modal-provider";
 import { ClipFolderDialogProvider } from "@/providers/clip-folder-dialog-provider";
 import { OnboardingModal } from "@/components/onboarding/onboarding-modal";
-import { getClipFolders, getClipFolderClipCounts, countClipsByUserId } from "@repo/supabase/queries/clips";
-import { checkProductAccess } from "@repo/supabase/queries/subscriptions";
-import { getDiscordUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
-import { getGuildSettings } from "@repo/supabase/queries/discord";
+import { getClipFolders, getClipFolderClipCounts, countClipsByUserId } from "@repo/supabase/queries/clips/clips";
+import { checkProductAccess } from "@repo/supabase/queries/subscriptions/subscriptions";
+import { getDiscordUserIdForUser, getGuildSettings } from "@repo/supabase/queries/discord/discord";
 import { getGuildMemberRoleIds } from "@/server/discord/roles";
 import { env } from "@/lib/env";
 import { getSessionPreferencesRow, getSessionUser } from "@/lib/session";
@@ -32,8 +31,16 @@ export default async function layout({
       hasCloudObsAccess: () => checkProductAccess(supabase, "cloud_obs"),
       getFolders: async (userId) => (await getClipFolders(supabase, userId)).data,
       getFolderClipCounts: (userId) => getClipFolderClipCounts(supabase, userId),
-      countClips: (userId) => countClipsByUserId(supabase, userId),
-      getDiscordUserId: (userId) => getDiscordUserIdByUserIdMaybe(supabase, userId),
+      countClips: (userId) =>
+        countClipsByUserId(supabase, userId).catch((error: unknown) => {
+          reportError(error, "dashboard-layout.clip-count", { userId });
+          return 0;
+        }),
+      getDiscordUserId: (userId) =>
+        getDiscordUserIdForUser(supabase, userId).catch((error: unknown) => {
+          reportError(error, "dashboard-layout.discord-lookup", { userId });
+          return null;
+        }),
       getVerifiedRoleId: async () => (await getGuildSettings(supabaseAdmin, env.DISCORD_GUILD_ID))?.verified_role_id ?? null,
       getMemberRoleIds: getGuildMemberRoleIds,
     });

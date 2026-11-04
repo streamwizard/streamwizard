@@ -1,14 +1,14 @@
 "use client";
 
-import { trackAction } from "@/lib/track-action";
+import { trackAction } from "@/lib/tracking/track-action";
 import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { useSessionStore } from "@/stores/session-store";
 import { linkDiscord } from "@/actions/auth/link-discord";
-import { completeOnboarding, saveOnboardingProgress } from "@/actions/supabase/user/settings";
+import { completeOnboarding, saveOnboardingProgress } from "@/actions/user/settings";
 import { discordInviteLink } from "@/lib/constant";
-import { SyncBroadcasterClips } from "@/actions/twitch/clips";
+import { SyncBroadcasterClips } from "@/actions/clips/sync";
 import { SyncNowStep, type SyncState } from "./steps/sync-now-step";
 import { DiscordLinkStep } from "./steps/discord-link-step";
 import { DiscordJoinStep } from "./steps/discord-join-step";

@@ -6,7 +6,7 @@ import {
   pinToSceneEdge,
   reanchorInPlace,
 } from "./overlay-item-helpers";
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 
 const scene = { width: 1920, height: 1080 };
 

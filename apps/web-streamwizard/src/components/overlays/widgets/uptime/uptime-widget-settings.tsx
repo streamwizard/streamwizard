@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { ColorPicker, Input, Label } from "@repo/ui";
 import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
 import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
-import { InspectorHint } from "@/components/overlays/editor/inspector-hint";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
 import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
 import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
 import { SliderField } from "@/components/overlays/inspector-fields/slider-field";

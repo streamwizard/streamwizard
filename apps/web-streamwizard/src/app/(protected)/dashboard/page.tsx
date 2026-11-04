@@ -5,9 +5,9 @@ import { createClient } from "@repo/supabase/next/server";
 import {
   getLatestStreamForBroadcaster,
   getBroadcasterProfile,
-  getVodByStreamId,
-} from "@repo/supabase/queries/stream-analytics";
-import { getUserPreferences } from "@repo/supabase/queries/user";
+  getStreamVideoId,
+} from "@repo/supabase/queries/stream/analytics";
+import { getUserPreferences } from "@repo/supabase/queries/users/user";
 import { ClipDialogProvider } from "@/providers/clip-dialog-provider";
 import { resolveBroadcasterId } from "@/lib/auth";
 import { BroadcasterProfileStrip } from "@/components/stream/broadcaster-profile-strip";
@@ -100,9 +100,9 @@ export default async function DashboardPage() {
     );
   }
 
-  const [profile, vod] = await Promise.all([
+  const [profile, videoId] = await Promise.all([
     getBroadcasterProfile(supabase),
-    getVodByStreamId(supabase, stream.stream_id),
+    getStreamVideoId(supabase, stream.stream_id),
   ]);
 
   const broadcasterProfile: BroadcasterProfile | null = profile
@@ -113,7 +113,7 @@ export default async function DashboardPage() {
       }
     : null;
 
-  const hasVod = !!vod?.video_id;
+  const hasVod = !!videoId;
   const isLive = stream.is_live;
   const showStats = prefs?.show_stream_stats ?? true;
 

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { FaGithub } from "react-icons/fa";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/seo/seo";
 import { PageHero } from "@/components/public/common/page-hero";
-import { Reveal } from "@/components/public/home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { SectionView } from "@/components/public/analytics/section-view";
 import { TrackedLink } from "@/components/shared/tracked-link";
 import { Timeline, TimelineTail } from "@/components/public/roadmap/timeline";

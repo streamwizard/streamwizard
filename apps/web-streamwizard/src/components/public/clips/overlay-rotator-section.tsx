@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { productSectionLinks } from "@/lib/constant";
 import { SectionView } from "../analytics/section-view";
 import { TrackedLink } from "@/components/shared/tracked-link";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 
 /*
  * Cross-sell band, kept small on purpose: the rotator's full demo and its

@@ -9,8 +9,8 @@ import {
   type AlertEventType,
   type AlertVariantConfig,
 } from "@repo/ui/overlay";
-import { InspectorHint } from "@/components/overlays/editor/inspector-hint";
-import { NumberField } from "@/components/overlays/editor/number-field";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
+import { NumberField } from "@/components/overlays/editor/inspector/number-field";
 import { AlertPresentationFields, type AlertFieldGroup } from "./alert-presentation-fields";
 
 export interface AlertDetailProps {

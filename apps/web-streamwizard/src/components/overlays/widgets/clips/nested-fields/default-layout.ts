@@ -2,7 +2,7 @@ import {
   DEFAULT_CLIPS_WIDGET_CONFIG,
   type ClipDisplayFieldLayout,
   type DisplayFieldKey,
-} from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/clips";
 
 export function getDefaultLayoutForField(
   field: DisplayFieldKey

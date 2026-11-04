@@ -5,7 +5,7 @@ import { createClient } from "@repo/supabase/next/server";
 import {
   getRecentStreamsForBroadcaster,
   getBulkStreamPeakViewers,
-} from "@repo/supabase/queries/stream-analytics";
+} from "@repo/supabase/queries/stream/analytics";
 import type { RecentStream } from "@/types/stream-analytics";
 
 export const getRecentStreamsData = cache(

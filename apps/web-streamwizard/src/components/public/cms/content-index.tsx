@@ -14,7 +14,7 @@ import {
 import { cmsImageUrl } from "@/lib/cms/images";
 import { getPublicTaxonomy, listPublishedPosts } from "@/lib/cms/public";
 import { toCard } from "@/lib/cms/published";
-import { absoluteUrl, breadcrumbSchema } from "@/lib/seo";
+import { absoluteUrl, breadcrumbSchema } from "@/lib/seo/seo";
 import { AnimatedGrid } from "./animated-grid";
 import { ContentCard } from "./content-card";
 import { ContentEmptyState } from "./content-empty-state";

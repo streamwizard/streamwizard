@@ -4,7 +4,7 @@ import type { IconType } from "react-icons";
 import type { LucideIcon } from "lucide-react";
 import { TrackedLink } from "@/components/shared/tracked-link";
 import { discordInviteLink, githubLink } from "@/lib/constant";
-import { routeLastModified } from "@/lib/seo";
+import { routeLastModified } from "@/lib/seo/seo";
 
 /*
  * The trust facts every product page ends on (SW-309): what is verifiably

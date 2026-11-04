@@ -1,5 +1,5 @@
 "use client";
-import { SyncBroadcasterClips } from "@/actions/twitch/clips";
+import { SyncBroadcasterClips } from "@/actions/clips/sync";
 import { RefreshCcw } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";

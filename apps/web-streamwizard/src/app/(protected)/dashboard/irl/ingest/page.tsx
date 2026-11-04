@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { requireProductAccess } from "@/lib/require-product-access";
-import { listIngestKeys } from "@/actions/ingest-keys";
+import { listIngestKeys } from "@/actions/irl/ingest-keys";
 import { createAdminClient } from "@repo/supabase/next/admin";
-import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest-nodes";
+import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest/nodes";
 import { IngestLiveStats } from "@/components/irl/ingest-live-stats";
 import { IngestKeysSection } from "@/components/irl/ingest-keys-section";
 import { FeatureDisabledBanner } from "@/components/shared/feature-disabled-banner";

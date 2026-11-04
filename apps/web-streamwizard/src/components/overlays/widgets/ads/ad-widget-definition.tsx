@@ -1,6 +1,6 @@
 "use client";
 
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 import { AD_WIDGET_DEFAULT_SIZE, createDefaultAdWidgetConfig } from "@repo/ui/overlay";
 import type { CreateRootItemContext } from "@/components/overlays/registry/overlay-widget-registry.types";
 import { createCenteredRootItem } from "@/components/overlays/registry/create-root-item";

@@ -1,9 +1,9 @@
 "use server";
-import { toggleDefaultCommand as _toggleDefaultCommand } from "@repo/supabase/queries/commands";
+import { guidSchema } from "@repo/schemas/ids";
+import { toggleDefaultCommand as _toggleDefaultCommand } from "@repo/supabase/queries/twitch/commands";
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
 import { tryAuthContext } from "@/lib/auth";
-import { idSchema } from "@/schemas/ids";
 import { toggleDefaultCommandSchema } from "@/schemas/commands";
 
 export async function toggleDefaultCommand(defaultCommandId: string, enabled: boolean) {
@@ -26,7 +26,7 @@ export async function duplicateToCustomCommand(defaultCommandId: string) {
   // TODO: Implement duplication to custom commands table
   const ctx = await tryAuthContext();
   if (!ctx) return false;
-  const parsed = idSchema.safeParse(defaultCommandId);
+  const parsed = guidSchema.safeParse(defaultCommandId);
   if (!parsed.success) return false;
 
   console.log("Duplicating command to custom commands:", parsed.data, ctx.broadcasterId);

@@ -1,6 +1,6 @@
 "use client";
 
-import type { OverlayItem } from "@/types/overlays";
+import type { OverlayItem } from "@repo/ui/components/overlay/types/item";
 import {
   EVENT_LIST_LABEL_ID,
   LABEL_WIDGET_DEFAULT_SIZE,

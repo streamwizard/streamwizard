@@ -3,7 +3,7 @@
  * `childFields`). Add new roots here; keep heavy logic in `widgets/<name>/`.
  *
  * To add a root widget:
- * 1. Extend `OverlayItemType` / config in `src/types/overlays.ts`
+ * 1. Extend `OverlayItemType` (`base.ts`) and its config (`item.ts`) in `packages/ui/src/components/overlay/types/`
  * 2. Add Zod in `src/schemas/overlay.ts` (and DB enum if applicable)
  * 3. Add a key to `OVERLAY_WIDGET_REGISTRY` and any helpers under `widgets/<name>/`
  */
@@ -42,11 +42,13 @@ import {
   Video,
   Vote,
 } from "lucide-react";
-import type { ChildOverlayItemType, OverlayItemType, RootOverlayItemType } from "@/types/overlays";
-import {
-  getClipDisplayChildren,
-  isRootOverlayItemType,
-} from "@/types/overlays";
+import type {
+  ChildOverlayItemType,
+  OverlayItemType,
+  RootOverlayItemType,
+} from "@repo/ui/components/overlay/types/base";
+import { isRootOverlayItemType } from "@repo/ui/components/overlay/types/base";
+import { getClipDisplayChildren } from "@repo/ui/components/overlay/types/clips";
 import {
   CLIPS_WIDGET_DEFAULT_SIZE,
   createClipsWidgetRootItems,

@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { reportError } from "@repo/sentry";
 import { TtlCache } from "@repo/ttl-cache";
 import { getClipDownloadUrl } from "@/server/twitch/clip-download";
-import { isTwitchClipId, parseClipVideoUrl } from "@/lib/clip-stream";
+import { parseClipVideoUrl } from "@/lib/clips/clip-stream";
+import { isTwitchClipId } from "@repo/schemas/ids";
 
 // A <video> element makes several range requests per clip; resolve the signed
 // URL once per user and clip instead of calling Helix on each one. Twitch signs

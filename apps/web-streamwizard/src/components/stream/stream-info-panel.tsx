@@ -7,8 +7,8 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { Button, Input } from "@repo/ui";
 import { updateChannelInfo } from "@/actions/twitch/channels";
-import { LookupTwitchGame } from "@/actions/twitch/twitch-api";
-import TwitchCategorySearch from "@/components/shared/twitch-category-search";
+import { LookupTwitchGame } from "@/actions/twitch/search";
+import TwitchCategorySearch from "@/components/shared/twitch/twitch-category-search";
 
 interface StreamInfoPanelProps {
   currentTitle: string | null;

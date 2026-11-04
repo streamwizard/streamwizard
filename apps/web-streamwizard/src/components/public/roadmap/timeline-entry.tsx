@@ -1,7 +1,7 @@
 import { Check, Timer } from "lucide-react";
 import type { ReactNode } from "react";
 import type { TimelineEntryData, TimelineStatus } from "@/components/public/roadmap/roadmap-data";
-import { Reveal } from "@/components/public/home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { TimelineNode } from "./timeline-node";
 
 /*

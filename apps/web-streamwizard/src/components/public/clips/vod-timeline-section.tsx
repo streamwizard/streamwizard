@@ -3,7 +3,7 @@ import { Button } from "@repo/ui/components/ui/button";
 import { productSectionLinks } from "@/lib/constant";
 import { SectionView } from "../analytics/section-view";
 import { TrackedLink } from "@/components/shared/tracked-link";
-import { Reveal } from "../home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 
 /*
  * Cross-sell band, kept small on purpose: the timeline, its events and the

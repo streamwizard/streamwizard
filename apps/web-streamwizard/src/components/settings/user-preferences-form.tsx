@@ -1,6 +1,6 @@
 "use client";
 
-import { updateUserPreferences } from "@/actions/supabase/user/settings";
+import { updateUserPreferences } from "@/actions/user/settings";
 import { useSessionStore } from "@/stores/session-store";
 import { userPreferencesSchema } from "@/schemas/user-preferences";
 import { Database } from "@repo/supabase";

@@ -1,11 +1,11 @@
 import { FaDiscord } from "react-icons/fa";
-import TwitchLogin from "@/components/shared/twitch-login";
+import TwitchLogin from "@/components/shared/twitch/twitch-login";
 import { SectionView } from "@/components/public/analytics/section-view";
 import { TrackedLink } from "@/components/shared/tracked-link";
-import { RevealGroup } from "@/components/public/home/reveal";
+import { RevealGroup } from "@/components/public/common/reveal";
 import { CheckItem } from "@/components/public/common/check-item";
 import { discordInviteLink, productLinks } from "@/lib/constant";
-import { FREE_MEDIA_QUOTA_MB, FREE_TIER_SUMMARY, PAID_PLAN_SUMMARY } from "@/lib/pricing";
+import { FREE_MEDIA_QUOTA_MB, FREE_TIER_SUMMARY, PAID_PLAN_SUMMARY } from "@/lib/public/pricing";
 
 /*
  * The two things you can have: the free tools and the Cloud OBS plan. Two
@@ -14,7 +14,7 @@ import { FREE_MEDIA_QUOTA_MB, FREE_TIER_SUMMARY, PAID_PLAN_SUMMARY } from "@/lib
  * placeholder would be quoted by AI answers as if it were real.
  *
  * Every Cloud OBS bullet matches an entry in the SoftwareApplication
- * featureList in lib/seo.ts, so nothing here is aspirational.
+ * featureList in lib/seo/seo.ts, so nothing here is aspirational.
  */
 
 const FREE_FEATURES = [

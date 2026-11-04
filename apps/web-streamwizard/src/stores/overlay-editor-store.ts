@@ -7,7 +7,7 @@ import {
   OVERLAY_WIDGET_REGISTRY,
   getLibraryRootItemFactory,
 } from "@/components/overlays/registry/overlay-widget-registry";
-import { clampZoom } from "@/components/overlays/editor/canvas-zoom";
+import { clampZoom } from "@/components/overlays/editor/canvas/canvas-zoom";
 import {
   clampGridLineWidth,
   clampGridSize,
@@ -21,11 +21,11 @@ import {
   type CanvasBackground,
   type GridSettings,
   type SnapAxes,
-} from "@/components/overlays/editor/canvas-preferences";
+} from "@/components/overlays/editor/canvas/canvas-preferences";
 import {
   rescaleItemsForResolution,
   type ResolutionChangeMode,
-} from "@/components/overlays/editor/scene-resize";
+} from "@/components/overlays/editor/canvas/scene-resize";
 import {
   alignUpdates,
   distributeUpdates,
@@ -37,7 +37,7 @@ import {
   type FlipAxis,
   type ItemLayoutUpdate,
   type MatchDimension,
-} from "@/components/overlays/editor/selection-layout";
+} from "@/components/overlays/editor/canvas/selection-layout";
 import {
   MIN_ITEM_SIZE,
   applyLayerOrder,
@@ -67,17 +67,19 @@ import {
   ungroup,
   wrapInGroup,
   type LayerNode,
-} from "@/components/overlays/editor/item-groups";
+} from "@/components/overlays/editor/layers/item-groups";
 import { resolveAnchoredPosition, withAbsolutePosition } from "@repo/ui/overlay";
+import type { RootOverlayItemType } from "@repo/ui/components/overlay/types/base";
 import type {
   ClipDisplayFieldItemConfig,
   DisplayFieldKey,
+} from "@repo/ui/components/overlay/types/clips";
+import type {
   OverlayItem,
   OverlayItemGroup,
-  RootOverlayItemType,
   OverlaySceneWithItems,
-} from "@/types/overlays";
-import { asClipDisplayFieldConfig } from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/item";
+import { asClipDisplayFieldConfig } from "@repo/ui/components/overlay/types/clips";
 
 /**
  * One undo step. The scene's size rides along with the items because changing

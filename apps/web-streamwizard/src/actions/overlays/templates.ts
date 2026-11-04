@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { track } from "@/lib/track";
+import { track } from "@/lib/tracking/track";
 import { toActionError, zodErrorMessage } from "@/lib/action-error";
 import type { Database, Json } from "@repo/supabase";
 import {
@@ -9,24 +9,25 @@ import {
   getOverlayTemplateBySlug,
   getWidgetTemplatesByIds,
   type WidgetTemplateSource,
-} from "@repo/supabase/queries/overlay-templates";
+} from "@repo/supabase/queries/overlays/templates";
 import {
   createOverlayScene as createSceneRow,
   deleteOverlayScene as deleteSceneRow,
   insertOverlayItems,
   insertOverlayItemsReturningIds,
   updateOverlayItemData,
-} from "@repo/supabase/queries/overlays";
+} from "@repo/supabase/queries/overlays/overlays";
 import {
   insertOverlayWidget,
   insertOverlayWidgetInstance,
   overlayWidgetColumns,
-} from "@repo/supabase/queries/overlay-widgets";
+} from "@repo/supabase/queries/overlays/widgets";
 import { createClipDisplayFieldChildItems } from "@repo/ui/overlay";
 import { createSceneSchema } from "@/schemas/overlay";
 import { createFromTemplateSchema } from "@/schemas/overlay-actions";
 import { tryAuthContext } from "@/lib/auth";
-import { OVERLAYS_ERROR_SCOPE, generateSlug } from "./shared";
+import { generateSlug } from "@/lib/overlays/overlay-slug";
+import { OVERLAYS_ERROR_SCOPE } from "@/lib/overlays/overlay-items";
 
 const TEMPLATE_FAILED = "Couldn't create the overlay from that template. Try again?";
 
@@ -159,7 +160,7 @@ export async function createOverlayFromTemplate(input: {
     }));
 
     const { data: inserted, error: itemsError } = await insertOverlayItemsReturningIds(supabase, roots);
-    if (itemsError || !inserted) {
+    if (itemsError || !inserted || inserted.length !== roots.length) {
       return abort(itemsError);
     }
 

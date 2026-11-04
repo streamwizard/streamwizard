@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { env } from "@/lib/env";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import { Loader2, Pencil, Play, Plus, RefreshCw, Sparkles, Square, X } from "lucide-react";
-import { buildDemoCreditsData, type CreditsData } from "@repo/schemas";
+import { buildDemoCreditsData, type CreditsData } from "@repo/schemas/widgets/credits";
 import {
   Button,
   cn,
@@ -62,7 +62,7 @@ import {
 } from "@repo/ui/overlay";
 import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
 import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
-import { InspectorHint } from "@/components/overlays/editor/inspector-hint";
+import { InspectorHint } from "@/components/overlays/editor/inspector/inspector-hint";
 import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
 import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
 import { SliderField } from "@/components/overlays/inspector-fields/slider-field";

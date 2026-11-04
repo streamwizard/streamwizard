@@ -1,10 +1,12 @@
 "use server";
 
-import { randomBytes, randomUUID } from "crypto";
+import { guidSchema } from "@repo/schemas/ids";
+import { randomUUID } from "crypto";
+import { randomHexKey } from "@/lib/random-key";
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
 import { toActionError, zodErrorMessage } from "@/lib/action-error";
-import { track } from "@/lib/track";
+import { track } from "@/lib/tracking/track";
 import type { Json } from "@repo/supabase";
 import {
   createOverlayScene as createSceneRow,
@@ -19,18 +21,17 @@ import {
   insertOverlayItemsReturningIds,
   updateOverlayScene as updateSceneRow,
   updateSceneUrlCredentials,
-} from "@repo/supabase/queries/overlays";
+} from "@repo/supabase/queries/overlays/overlays";
 import { updateSceneSchema } from "@/schemas/overlay";
 import { createSceneInputSchema } from "@/schemas/overlay-actions";
-import { idSchema } from "@/schemas/ids";
-import type { ClipDisplayFieldItemConfig } from "@/types/overlays";
-import { overlayItemFromDbRow } from "@/types/overlays";
+import type { ClipDisplayFieldItemConfig } from "@repo/ui/components/overlay/types/clips";
+import { overlayItemFromDbRow } from "@repo/ui/components/overlay/types/item";
 import { createAdminClient } from "@repo/supabase/next/admin";
 import { tryAuthContext } from "@/lib/auth";
-import { isLegacySlug } from "@/lib/overlay-slug";
-import { revokeWsSockets } from "@/lib/ws-revoke";
-import { sanitizeGroups } from "@/components/overlays/editor/item-groups";
-import { OVERLAYS_ERROR_SCOPE, generateSlug } from "./shared";
+import { generateSlug, isLegacySlug } from "@/lib/overlays/overlay-slug";
+import { revokeWsSockets } from "@/lib/overlays/ws-revoke";
+import { sanitizeGroups } from "@/components/overlays/editor/layers/item-groups";
+import { OVERLAYS_ERROR_SCOPE } from "@/lib/overlays/overlay-items";
 
 export async function getOverlayScenes() {
   const ctx = await tryAuthContext();
@@ -46,7 +47,7 @@ export async function getOverlayScenes() {
 export async function getOverlayScene(id: string) {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
-  const parsedId = idSchema.safeParse(id);
+  const parsedId = guidSchema.safeParse(id);
   if (!parsedId.success) return { data: null, error: "Not found" };
 
   const { scene, items, groups, error } = await getSceneWithItems(ctx.supabase, parsedId.data, ctx.user.id);
@@ -142,7 +143,7 @@ export async function updateOverlayScene(formData: {
 export async function deleteOverlayScene(sceneId: string) {
   const ctx = await tryAuthContext();
   if (!ctx) return { success: false, error: "Unauthorized" };
-  const parsedId = idSchema.safeParse(sceneId);
+  const parsedId = guidSchema.safeParse(sceneId);
   if (!parsedId.success) return { success: false, error: "Not found" };
   const id = parsedId.data;
 
@@ -163,7 +164,7 @@ export async function duplicateOverlayScene(sceneId: string) {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const { supabase, user } = ctx;
-  const parsedId = idSchema.safeParse(sceneId);
+  const parsedId = guidSchema.safeParse(sceneId);
   if (!parsedId.success) return { data: null, error: "Not found" };
   const id = parsedId.data;
 
@@ -229,7 +230,9 @@ export async function duplicateOverlayScene(sceneId: string) {
     );
 
     if (rootErr) return { data: null, error: toActionError(rootErr, OVERLAYS_ERROR_SCOPE, "Couldn't duplicate the overlay. Try again?") };
-    if (!insertedRoots) return { data: null, error: "Couldn't duplicate the overlay. Try again?" };
+    if (!insertedRoots || insertedRoots.length !== roots.length) {
+      return { data: null, error: "Couldn't duplicate the overlay. Try again?" };
+    }
 
     roots.forEach((row, idx) => {
       oldIdToNew.set(row.id, insertedRoots[idx]!.id);
@@ -280,7 +283,7 @@ export async function duplicateOverlayScene(sceneId: string) {
 export async function resetSceneUrl(rawSceneId: string): Promise<{ data: { slug: string } | null; error: string | null }> {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
-  const parsedId = idSchema.safeParse(rawSceneId);
+  const parsedId = guidSchema.safeParse(rawSceneId);
   if (!parsedId.success) return { data: null, error: "Not found" };
   const sceneId = parsedId.data;
 
@@ -290,7 +293,7 @@ export async function resetSceneUrl(rawSceneId: string): Promise<{ data: { slug:
 
   const { data, error } = await updateSceneUrlCredentials(createAdminClient(), sceneId, ctx.user.id, {
     slug: generateSlug(scene.name),
-    subscriber_token: randomBytes(32).toString("hex"),
+    subscriber_token: randomHexKey(),
   });
 
   revalidatePath("/dashboard/overlays");

@@ -24,7 +24,7 @@ import {
   type ClipTransitionMode,
   type ClipsWidgetItemConfig,
   type TimeWindowPreset,
-} from "@/types/overlays";
+} from "@repo/ui/components/overlay/types/clips";
 
 interface ClipsWidgetConfigPanelProps {
   config: ClipsWidgetItemConfig;

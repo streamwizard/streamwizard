@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo";
+import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo/seo";
 import { JsonLd } from "@/components/public/seo/json-ld";
-import { AnalyticsDemo } from "@/components/public/home/analytics-demo";
+import { AnalyticsDemo } from "@/components/public/home/analytics/analytics-demo";
 import { ViewerGraphSection } from "@/components/public/analytics/viewer-graph-section";
 import { BestHourSection } from "@/components/public/analytics/best-hour-section";
 import { CategoryStatsSection } from "@/components/public/analytics/category-stats-section";

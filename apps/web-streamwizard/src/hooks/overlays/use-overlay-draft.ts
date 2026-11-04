@@ -8,8 +8,8 @@ import {
   parseOverlayDraft,
   readOverlayDraftRaw,
   writeOverlayDraft,
-} from "@/lib/overlay-draft";
-import type { OverlaySceneWithItems } from "@/types/overlays";
+} from "@/lib/overlays/overlay-draft";
+import type { OverlaySceneWithItems } from "@repo/ui/components/overlay/types/item";
 
 /** Long enough that a drag writes once, short enough to survive a crash. */
 const DRAFT_WRITE_DEBOUNCE_MS = 1000;

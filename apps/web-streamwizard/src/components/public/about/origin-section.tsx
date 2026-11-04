@@ -1,5 +1,5 @@
 import { SectionView } from "@/components/public/analytics/section-view";
-import { Reveal } from "@/components/public/home/reveal";
+import { Reveal } from "@/components/public/common/reveal";
 import { TrackedLink } from "@/components/shared/tracked-link";
 import { OriginTrace } from "./origin-trace";
 import { OriginClips } from "./origin-clips";

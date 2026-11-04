@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipCardActions, useClipCardActions } from "@/components/shared/clip-card";
+import { ClipCardActions, useClipCardActions } from "@/components/shared/clips/clip-card";
 import { formatClipDuration, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -8,8 +8,8 @@ import {
   type ClipSortKey,
   parseClipSortAscending,
   parseClipSortKey,
-} from "@/lib/utils/clip-sort";
-import { clipsWithFolders } from "@/types/database";
+} from "@/lib/clips/clip-sort";
+import type { ClipWithFolders } from "@/types/database";
 import { ArrowDown, ArrowUp, ArrowUpDown, Star } from "lucide-react";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -62,7 +62,7 @@ function SortHeader({
   );
 }
 
-function ClipDetailsRow({ clip }: { clip: clipsWithFolders }) {
+function ClipDetailsRow({ clip }: { clip: ClipWithFolders }) {
   const { OpenClip } = useClipCardActions(clip);
 
   return (
@@ -127,7 +127,7 @@ function ClipDetailsRow({ clip }: { clip: clipsWithFolders }) {
 }
 
 type ClipsDetailsViewProps = {
-  clips: clipsWithFolders[];
+  clips: ClipWithFolders[];
 };
 
 export function ClipsDetailsView({ clips }: ClipsDetailsViewProps) {

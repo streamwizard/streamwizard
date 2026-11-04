@@ -13,7 +13,7 @@ import {
   insertOverlayItemsReturningRows,
   upsertOverlayItemGroups,
   upsertOverlayItemsReturningRows,
-} from "@repo/supabase/queries/overlays";
+} from "@repo/supabase/queries/overlays/overlays";
 import { overlayItemSchema } from "@/schemas/overlay";
 import { saveOverlayItemsSchema } from "@/schemas/overlay-actions";
 import {
@@ -22,19 +22,19 @@ import {
   type OverlayItemConfig,
   type OverlayItemGroup,
   type OverlaySceneWithItems,
-} from "@/types/overlays";
-import { sanitizeGroups } from "@/components/overlays/editor/item-groups";
+} from "@repo/ui/components/overlay/types/item";
+import { sanitizeGroups } from "@/components/overlays/editor/layers/item-groups";
 import { tryAuthContext } from "@/lib/auth";
-import { track } from "@/lib/track";
-import { mergeSavedItemRows, overlayItemRowChanged } from "./save-batch";
-import { diffOverlaySave, type StoredOverlayItem, type WidgetRef } from "./save-diff";
+import { track } from "@/lib/tracking/track";
+import { mergeSavedItemRows, overlayItemRowChanged } from "@/lib/overlays/save-batch";
+import { diffOverlaySave, type StoredOverlayItem, type WidgetRef } from "@/lib/overlays/save-diff";
 import { getOverlayScene } from "./scenes";
 import {
   OVERLAYS_ERROR_SCOPE,
   isPersistedOverlayItemId,
   overlayItemColumns,
   resolveClipFieldParentRefs,
-} from "./shared";
+} from "@/lib/overlays/overlay-items";
 
 const SAVE_FAILED = "This overlay couldn't be saved. Reload the editor and try again.";
 

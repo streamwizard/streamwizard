@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import { absoluteUrl, breadcrumbSchema, softwareApplicationSchema } from "@/lib/seo";
+import { absoluteUrl, breadcrumbSchema, softwareApplicationSchema } from "@/lib/seo/seo";
 import { JsonLd } from "@/components/public/seo/json-ld";
-import { ClipsVods } from "@/components/public/home/clips-vods";
+import { ClipsVods } from "@/components/public/home/clips/clips-vods";
 import { ClipsSyncSection } from "@/components/public/clips/clips-sync-section";
 import { ClipsFoldersSection } from "@/components/public/clips/clips-folders-section";
 import { ClipsFiltersSection } from "@/components/public/clips/clips-filters-section";

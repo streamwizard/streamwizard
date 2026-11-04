@@ -25,7 +25,7 @@ import {
   type PublishedCardRow,
   type PublishedRow,
 } from "@/lib/cms/published";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl } from "@/lib/seo/seo";
 import { CmsArticle } from "./cms-article";
 import { ContentCard } from "./content-card";
 import { ContentTracker } from "./content-tracker";

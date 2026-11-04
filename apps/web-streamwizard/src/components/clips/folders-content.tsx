@@ -5,8 +5,8 @@ import {
   buildClipFolderTree,
   flattenClipFolderTree,
   rollupFolderClipCounts,
-} from "@/lib/utils/clip-folders";
-import { getClipFolderClipCounts, getClipFolders } from "@repo/supabase/queries/clips";
+} from "@/lib/clips/clip-folders";
+import { getClipFolderClipCounts, getClipFolders } from "@repo/supabase/queries/clips/clips";
 
 export async function FoldersContent() {
   const { supabase, user } = await getAuthContext();

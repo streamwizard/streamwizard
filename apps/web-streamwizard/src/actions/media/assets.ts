@@ -1,0 +1,236 @@
+"use server";
+
+import { guidSchema } from "@repo/schemas/ids";
+import { reportError } from "@repo/sentry";
+import { ActionError, toActionError } from "@/lib/action-error";
+import type { R2Storage } from "@repo/storage";
+import { getAssetsStorage } from "@/lib/media/assets-storage";
+import { getUserAssetQuotaMb } from "@repo/supabase/queries/subscriptions/subscriptions";
+import { createAdminClient } from "@repo/supabase/next/admin";
+import { revalidatePath } from "next/cache";
+
+import {
+  deleteUserAsset,
+  markAssetReady,
+  reserveUserAsset,
+  selectReadyAssets,
+  selectStorageUsage,
+  selectUserAsset,
+} from "@repo/supabase/queries/assets/assets";
+
+import { kindFromMime, type AssetKind } from "@/lib/media/asset-mime";
+import type { AssetListing } from "@/types/media";
+import { tryAuthContext, type AuthContext } from "@/lib/auth";
+import { track } from "@/lib/tracking/track";
+import { env } from "@/lib/env";
+import { createAssetUploadSchema, MAX_ASSET_FILE_BYTES } from "@/schemas/assets";
+
+// Media library: streamer-uploaded overlay assets (alert images/sounds/videos)
+// stored in Cloudflare R2. Upload flow is presign -> browser PUT -> confirm:
+// createAssetUpload checks quota and mints a presigned PUT, the client uploads
+// directly to R2, confirmAssetUpload verifies the object via HeadObject and
+// records its exact size. Only confirmed ('ready') rows count toward usage;
+// pending rows younger than an hour reserve quota so parallel uploads can't
+// oversubscribe it. Users can only read user_assets; every write here uses the
+// service-role client, scoped by user_id. rest-api's asset reconciler cleans
+// up abandoned uploads and orphaned objects every hour.
+
+// Every account gets 100MB for now, paid plans included. A plan can still raise
+// it via plans.limits->storage->asset_quota_mb.
+const DEFAULT_QUOTA_MB = 100;
+const PENDING_RESERVATION_MS = 60 * 60 * 1000;
+const PRESIGN_EXPIRY_SECONDS = 300;
+
+function getR2(): R2Storage {
+  const r2 = getAssetsStorage();
+  if (!r2) throw new ActionError("Media storage is not configured on this environment.");
+  return r2;
+}
+
+function assetUrl(key: string): string {
+  if (!env.NEXT_PUBLIC_ASSET_CDN_URL) throw new ActionError("Media storage is not configured on this environment.");
+  return `${env.NEXT_PUBLIC_ASSET_CDN_URL.replace(/\/$/, "")}/${key}`;
+}
+
+function sanitizeFileName(name: string): string {
+  const cleaned = name.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^[-.]+|[-.]+$/g, "");
+  return cleaned.slice(0, 128) || "file";
+}
+
+async function getQuotaBytes(supabase: AuthContext["supabase"], userId: string): Promise<number> {
+  const planQuotaMb = await getUserAssetQuotaMb(supabase, userId);
+  return (planQuotaMb ?? DEFAULT_QUOTA_MB) * 1024 * 1024;
+}
+
+async function getUsedBytes(supabase: AuthContext["supabase"], userId: string): Promise<number> {
+  const { data: usage } = await selectStorageUsage(supabase, userId);
+  return usage?.used_bytes ?? 0;
+}
+
+export async function listAssets(): Promise<{ data: AssetListing | null; error: string | null }> {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { supabase, user } = ctx;
+
+  const { data, error } = await selectReadyAssets(supabase, user.id);
+  if (error) {
+    reportError(error, "actions/assets");
+    return { data: null, error: "Failed to load your media." };
+  }
+
+  try {
+    const [used_bytes, quota_bytes] = await Promise.all([
+      getUsedBytes(supabase, user.id),
+      getQuotaBytes(supabase, user.id),
+    ]);
+    return {
+      data: {
+        files: (data ?? []).map((row) => ({
+          id: row.id,
+          file_name: row.file_name,
+          mime_type: row.mime_type,
+          size_bytes: row.size_bytes,
+          kind: row.kind as AssetKind,
+          url: assetUrl(row.key),
+          created_at: row.created_at,
+        })),
+        used_bytes,
+        quota_bytes,
+      },
+      error: null,
+    };
+  } catch (err) {
+    return { data: null, error: toActionError(err, "actions/assets", "Failed to load your media.") };
+  }
+}
+
+export async function createAssetUpload(input: {
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+}): Promise<{ data: { assetId: string; uploadUrl: string; url: string } | null; error: string | null }> {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { supabase, user } = ctx;
+
+  const parsed = createAssetUploadSchema.safeParse(input);
+  if (!parsed.success) return { data: null, error: parsed.error.issues[0]?.message ?? "Can't read that file." };
+  const upload = parsed.data;
+
+  const kind = kindFromMime(upload.mimeType);
+  if (!kind) return { data: null, error: "That file type isn't supported. Upload an image, sound, video, or font." };
+
+  try {
+    const r2 = getR2();
+    const quota = await getQuotaBytes(supabase, user.id);
+
+    const fileName = sanitizeFileName(upload.fileName);
+    const assetId = crypto.randomUUID();
+    const key = `assets/${user.id}/${assetId}/${fileName}`;
+
+    // Quota check + pending insert happen in one locked step in Postgres, so
+    // parallel uploads can't each pass the check and overshoot together.
+    const { data: reserved, error: reserveError } = await reserveUserAsset(createAdminClient(), {
+      id: assetId,
+      userId: user.id,
+      key,
+      fileName,
+      mimeType: upload.mimeType,
+      sizeBytes: upload.sizeBytes,
+      kind,
+      quotaBytes: quota,
+      reservationCutoff: new Date(Date.now() - PENDING_RESERVATION_MS).toISOString(),
+    });
+    if (reserveError) {
+      reportError(reserveError, "actions/assets");
+      return { data: null, error: "Failed to start the upload." };
+    }
+    if (!reserved) {
+      return { data: null, error: "Not enough storage left. Delete something to make room." };
+    }
+
+    const uploadUrl = await r2.presignPut(key, upload.mimeType, upload.sizeBytes, PRESIGN_EXPIRY_SECONDS);
+    return { data: { assetId, uploadUrl, url: assetUrl(key) }, error: null };
+  } catch (err) {
+    return { data: null, error: toActionError(err, "actions/assets", "Failed to start the upload.") };
+  }
+}
+
+export async function confirmAssetUpload(
+  assetId: string,
+): Promise<{ data: AssetListing | null; error: string | null }> {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { supabase, user } = ctx;
+  const parsedId = guidSchema.safeParse(assetId);
+  if (!parsedId.success) return { data: null, error: "Upload not found." };
+
+  const { data: asset } = await selectUserAsset(supabase, parsedId.data, user.id);
+  if (!asset) return { data: null, error: "Upload not found." };
+
+  try {
+    if (asset.status !== "ready") {
+      const admin = createAdminClient();
+      const r2 = getR2();
+      const head = await r2.headObject(asset.key);
+      if (!head) {
+        await deleteUserAsset(admin, asset.id, user.id);
+        return { data: null, error: "The upload didn't finish. Try again." };
+      }
+      // HeadObject is the source of truth. The signed URL should already pin
+      // size and type; if R2 holds anything else, throw the upload away.
+      if (head.size > MAX_ASSET_FILE_BYTES || head.size !== asset.size_bytes || head.contentType !== asset.mime_type) {
+        await r2.deleteObject(asset.key);
+        await deleteUserAsset(admin, asset.id, user.id);
+        return { data: null, error: "That upload doesn't match the file you picked. Try again." };
+      }
+      const { error: updateError } = await markAssetReady(admin, asset.id, user.id, head.size);
+      if (updateError) {
+        reportError(updateError, "actions/assets");
+        return { data: null, error: "Failed to finish the upload." };
+      }
+      await track("media_uploaded", { mime_type: asset.mime_type, size_kb: Math.round(head.size / 1024) }, user);
+    }
+    revalidatePath("/dashboard/media");
+    return listAssets();
+  } catch (err) {
+    reportError(err, "actions/assets");
+    return { data: null, error: "Failed to finish the upload." };
+  }
+}
+
+export async function deleteAsset(assetId: string): Promise<{ data: AssetListing | null; error: string | null }> {
+  const ctx = await tryAuthContext();
+  if (!ctx) return { data: null, error: "Unauthorized" };
+  const { supabase, user } = ctx;
+  const parsedId = guidSchema.safeParse(assetId);
+  if (!parsedId.success) return { data: null, error: "File not found." };
+
+  const { data: asset } = await selectUserAsset(supabase, parsedId.data, user.id);
+  if (!asset) return { data: null, error: "File not found." };
+  // Rows written before the RLS lockdown could carry a rewritten key; only
+  // ever delete objects under this user's own prefix.
+  if (!asset.key.startsWith(`assets/${user.id}/${asset.id}/`)) {
+    reportError(new Error("Asset key outside the owner's prefix"), "actions/assets", { assetId: asset.id });
+    return { data: null, error: "Failed to delete the file." };
+  }
+
+  try {
+    // Row first: if the R2 delete then fails, the file is just an orphan the
+    // hourly reconcile sweep removes, instead of a broken entry in the library.
+    const { error: deleteError } = await deleteUserAsset(createAdminClient(), asset.id, user.id);
+    if (deleteError) {
+      reportError(deleteError, "actions/assets");
+      return { data: null, error: "Failed to delete the file." };
+    }
+    await getR2()
+      .deleteObject(asset.key)
+      .catch((err) => reportError(err, "actions/assets: delete object", { assetId: asset.id }));
+    await track("media_deleted", { mime_type: asset.mime_type, size_kb: Math.round(asset.size_bytes / 1024) }, user);
+    revalidatePath("/dashboard/media");
+    return listAssets();
+  } catch (err) {
+    reportError(err, "actions/assets");
+    return { data: null, error: "Failed to delete the file." };
+  }
+}

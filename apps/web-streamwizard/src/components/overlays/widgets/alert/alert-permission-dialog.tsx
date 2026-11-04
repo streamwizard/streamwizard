@@ -11,8 +11,8 @@ import {
   DialogTitle,
 } from "@repo/ui";
 import { ALERT_EVENT_LABELS, type AlertEventType } from "@repo/ui/overlay";
-import type { TwitchScopeFeature } from "@repo/schemas";
-import { TwitchConnectButton, TWITCH_SCOPE_COPY } from "@/components/shared/twitch-scope-banner";
+import type { TwitchScopeFeature } from "@repo/schemas/twitch-scopes";
+import { TwitchConnectButton, TWITCH_SCOPE_COPY } from "@/components/shared/twitch/twitch-scope-banner";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 
 export interface AlertPermissionDialogProps {
