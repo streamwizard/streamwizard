@@ -3,6 +3,7 @@ import { Context, Next } from "hono";
 import { createHash } from "crypto";
 import { supabase } from "@repo/supabase";
 import { Sentry } from "@/sentry";
+import { env } from "@/env";
 
 /**
  * Security Event Metadata Interface
@@ -78,7 +79,7 @@ export function safeErrorHandler() {
       await next();
     } catch (error: any) {
       const requestId = c.get("requestId") || "unknown";
-      const isDevelopment = process.env.NODE_ENV === "development";
+      const isDevelopment = env.NODE_ENV === "development";
 
       // Log the full error internally
       console.error("API Error:", {

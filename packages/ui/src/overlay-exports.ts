@@ -696,6 +696,7 @@ export {
   EditorAudioProvider,
   useEditorAudioMuted,
 } from "./components/overlay/hooks/use-editor-audio";
+export { OverlayWsUrlProvider, useOverlayWsUrl } from "./components/overlay/hooks/use-overlay-ws-url";
 export {
   EditorPreviewValuesProvider,
   useEditorPreviewValues,

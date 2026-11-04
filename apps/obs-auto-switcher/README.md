@@ -66,6 +66,7 @@ scale, shard users across replicas — don't duplicate them.
 | `TWITCH_CLIENT_ID` / `TWITCH_CLIENT_SECRET` | chat notices via `@repo/twitch-api` |
 | `PORT` (default 8010) | `/health` liveness endpoint |
 | `SENTRY_DSN` / `SENTRY_RELEASE` | optional |
+| `INFLUXDB_URL` / `INFLUXDB_TOKEN` / `INFLUXDB_ORG` | optional; metrics (`@repo/metrics`) are off unless all three are set |
 
 ## Dev
 

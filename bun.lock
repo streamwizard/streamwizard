@@ -224,6 +224,7 @@
       "dependencies": {
         "@repo/posthog": "workspace:*",
         "@repo/sentry": "workspace:*",
+        "@repo/service-token": "workspace:*",
         "@repo/supabase": "workspace:*",
         "@repo/ttl-cache": "workspace:*",
         "@repo/twitch-api": "workspace:*",
@@ -302,6 +303,7 @@
         "@repo/posthog": "workspace:*",
         "@repo/schemas": "workspace:*",
         "@repo/sentry": "workspace:*",
+        "@repo/service-token": "workspace:*",
         "@repo/storage": "workspace:*",
         "@repo/supabase": "workspace:*",
         "@repo/ttl-cache": "workspace:*",

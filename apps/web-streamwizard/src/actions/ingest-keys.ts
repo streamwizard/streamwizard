@@ -39,7 +39,7 @@ const STREAMWIZARD_BLURPLE = 0x7c5cff;
 async function resolveIngestHost(adminClient: ReturnType<typeof createAdminClient>): Promise<string> {
   const hosts = await getActiveIngestNodeHosts(adminClient);
   return (
-    hosts?.public_hostname ?? hosts?.public_ip ?? process.env.NEXT_PUBLIC_INGEST_HOST ?? "your-stream-server"
+    hosts?.public_hostname ?? hosts?.public_ip ?? env.NEXT_PUBLIC_INGEST_HOST ?? "your-stream-server"
   );
 }
 

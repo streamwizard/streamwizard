@@ -1,8 +1,13 @@
 import { z } from "zod";
+import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk";
 import { parseNodeTokenJwks } from "@/schemas/node-token-jwks";
 
 export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
+  // Read by @repo/sentry (and @repo/posthog/server) as the environment name,
+  // before NODE_ENV. Usually unset on the Bun services.
+  APP_ENV: z.string().optional(),
+  PORT: z.coerce.number().int().positive().default(8080),
 
   // Supabase
   SUPABASE_URL: z.string().url(),
@@ -32,7 +37,9 @@ export const envSchema = z.object({
   TAILSCALE_OAUTH_CLIENT_ID: z.string().min(1),
   TAILSCALE_OAUTH_CLIENT_SECRET: z.string().min(1),
 
-  // Sentry
+  // Sentry. Staging and production share one Doppler config, so the DSN is
+  // namespaced per app; SENTRY_DSN is the fallback for the per-app dev configs.
+  SENTRY_DSN_REST_API: z.string().url().optional(),
   SENTRY_DSN: z.string().url().optional(),
   SENTRY_RELEASE: z.string().optional(),
 
@@ -67,6 +74,14 @@ export const envSchema = z.object({
   // ws-server: broadcasts, revokes and the ingest session registry, each
   // signed with WS_SERVICE_SIGNING_JWK (@repo/service-token).
   WS_SERVER_URL: z.string().optional(),
+  // Ed25519 private JWK this service signs its ws-server tokens with
+  // (@repo/service-token reads it). Secret. Optional: without it every
+  // ws-server call is skipped as unconfigured; a malformed one stops boot.
+  WS_SERVICE_SIGNING_JWK: z
+    .string()
+    .min(1)
+    .refine(isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR)
+    .optional(),
   // The ws-server address ingest nodes dial (POST /api/ingest-nodes/me/ws-token).
   // Only needed when it differs from WS_SERVER_URL, e.g. rest-api reaches
   // ws-server on an internal address the nodes can't, or a local Docker node

@@ -1,8 +1,5 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
@@ -29,6 +26,7 @@ import {
   type FetchedAdSchedule,
 } from "./ad-widget-state";
 import { AD_KEYFRAMES, AD_PRESET_COMPONENTS, GOAL_KEYFRAMES, SWAP_ANIMATION } from "./presets";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
 
 export interface AdWidgetRendererProps {
   item: OverlayItem;
@@ -144,11 +142,11 @@ export function AdWidgetRenderer({ item, scene, isEditor = false }: AdWidgetRend
     setState((prev) => applyAdFrame(prev, frame, at));
   }, []);
 
+  const wsUrl = useOverlayWsUrl();
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
     return subscribeToWsRoom(token, wsUrl, (raw) => apply(raw as AdWidgetFrame));
-  }, [token, apply]);
+  }, [token, wsUrl, apply]);
 
   // Editor: Local test fires, the heads-up preview, and the reset.
   useEffect(() => {

@@ -12,16 +12,17 @@ import { reportError } from "@repo/sentry";
 import { safeNextPath } from "@/lib/safe-next-path";
 import { twitchAuthorizationUrl } from "@/lib/twitch-authorize";
 import { resolveBroadcasterId } from "@/lib/auth";
+import { env } from "@/lib/env";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const { searchParams } = requestUrl;
-  const isLocalEnv = process.env.NODE_ENV === "development";
+  const isLocalEnv = env.NODE_ENV === "development";
 
   // Use the configured base URL in production to prevent x-forwarded-host spoofing
   const origin = isLocalEnv
     ? requestUrl.origin
-    : (process.env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
+    : (env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
 
   const code = searchParams.get("code");
   // Sanitize next to a relative path only to prevent open redirect

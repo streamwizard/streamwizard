@@ -1,7 +1,7 @@
 import { Sentry } from "./sentry";
 process.on("uncaughtException", (err) => { reportFatal(err, "ws-server"); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
-import "@/lib/env";
+import { env } from "@/lib/env";
 import { flushSentry, reportFatal } from "@repo/sentry";
 import { isMetricsEnabled, initMetrics, BUCKETS } from "@repo/metrics";
 import { fetch, websocket } from "@/app";
@@ -12,9 +12,7 @@ import type { ConnectionData } from "@/types";
 
 initMetrics(BUCKETS.wsServer);
 
-const PORT = Number(process.env.PORT ?? 8000);
-
-const server = Bun.serve<ConnectionData>({ port: PORT, fetch, websocket });
+const server = Bun.serve<ConnectionData>({ port: env.PORT, fetch, websocket });
 
 startKeepalive();
 startMonitorSnapshots();
@@ -32,4 +30,4 @@ process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
 console.log(`[ws-server] listening on port ${server.port}`);
-console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
+console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

@@ -1,13 +1,13 @@
 import { isLoopAlive } from "@/worker/liveness";
 
 /** Start the container health endpoint, tracking when the loop last finished a pass. */
-export function startHealthServer(tickSeconds: number): {
+export function startHealthServer(port: number, tickSeconds: number): {
   markPassFinished(): void;
   stop(): void;
 } {
   let lastPassAt = Date.now();
   const server = Bun.serve({
-    port: Number(process.env.PORT ?? 8020),
+    port,
     fetch(req) {
       const url = new URL(req.url);
       if (url.pathname === "/health") {

@@ -72,7 +72,7 @@ export async function startWorker(): Promise<void> {
     process.exit(ok ? 0 : 1);
   }
 
-  const healthServer = startHealthServer(env.TICK_SECONDS);
+  const healthServer = startHealthServer(env.PORT, env.TICK_SECONDS);
   while (!stopped) {
     await tick();
     healthServer.markPassFinished();

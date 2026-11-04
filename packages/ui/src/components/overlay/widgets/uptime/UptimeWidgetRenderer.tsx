@@ -1,8 +1,5 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useGoogleFont } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
@@ -16,6 +13,7 @@ import {
   type UptimeWidgetFrame,
   type UptimeWidgetItemConfig,
 } from "./uptime-widget-config";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
 
 export interface UptimeWidgetRendererProps {
   item: OverlayItem;
@@ -94,14 +92,14 @@ export function UptimeWidgetRenderer({ item, scene, isEditor = false }: UptimeWi
   const [pushed, setPushed] = useState<{ startedAt: number | null; at: number } | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
+  const wsUrl = useOverlayWsUrl();
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
     return subscribeToWsRoom(token, wsUrl, (raw) => {
       const next = startedAtFromFrame(raw as UptimeWidgetFrame);
       if (next !== undefined) setPushed({ startedAt: next, at: Date.now() });
     });
-  }, [token]);
+  }, [token, wsUrl]);
 
   const startedAt = pushed && pushed.at > fetched.at ? pushed.startedAt : fetched.startedAt;
   const live = startedAt !== null;

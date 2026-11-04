@@ -10,6 +10,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./signing-jwk": {
+      "types": "./src/signing-jwk.ts",
+      "default": "./src/signing-jwk.ts"
     }
   },
   "scripts": {

@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 // Built per-request in src/proxy.ts so script-src can carry a fresh nonce —
 // Next.js reads the nonce from the request's Content-Security-Policy header
 // and stamps it on its inline (hydration/RSC) scripts, which is what lets us
@@ -5,17 +7,17 @@
 /** The public site's origin (CMS_SITE_URL), or null when unset or invalid. */
 function siteOrigin(): string | null {
   try {
-    return process.env.CMS_SITE_URL ? new URL(process.env.CMS_SITE_URL).origin : null;
+    return env.CMS_SITE_URL ? new URL(env.CMS_SITE_URL).origin : null;
   } catch {
     return null;
   }
 }
 
 export function buildCsp(nonce: string): string {
-  const supabaseUrl = process.env.SUPABASE_URL ?? "";
+  const supabaseUrl = env.SUPABASE_URL ?? "";
   // Supabase realtime uses WebSocket — derive wss:// from the https:// URL
   const supabaseWs = supabaseUrl.replace(/^https:\/\//, "wss://");
-  const wsServerUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? process.env.WS_SERVER_URL ?? "";
+  const wsServerUrl = env.NEXT_PUBLIC_WS_SERVER_URL ?? env.WS_SERVER_URL ?? "";
 
   const directives: string[] = [
     "default-src 'self'",
@@ -35,16 +37,16 @@ export function buildCsp(nonce: string): string {
       // Content section uploads: the file the admin picked, as a local blob:
       // URL, for the preview and for reading its width and height.
       "blob:",
-      process.env.NEXT_PUBLIC_CDN_URL,
-      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+      env.NEXT_PUBLIC_CDN_URL,
+      env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),
     // Klipy: Discord GIFs in ticket conversations play as looping mp4s.
     [
       "media-src 'self' https://klipy.com https://*.klipy.com",
-      process.env.NEXT_PUBLIC_CDN_URL,
-      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+      env.NEXT_PUBLIC_CDN_URL,
+      env.NEXT_PUBLIC_ASSET_CDN_URL,
     ]
       .filter(Boolean)
       .join(" "),
@@ -65,14 +67,14 @@ export function buildCsp(nonce: string): string {
       // Widget-moderation previews render in srcdoc iframes, which inherit
       // this policy: widgets fetch overlay state plus the weather and
       // geocoding APIs (see buildWidgetSrcdoc in @repo/ui).
-      process.env.NEXT_PUBLIC_OVERLAY_URL,
+      env.NEXT_PUBLIC_OVERLAY_URL,
       "https://api.open-meteo.com",
       "https://nominatim.openstreetmap.org",
-      process.env.NEXT_PUBLIC_ASSET_CDN_URL,
+      env.NEXT_PUBLIC_ASSET_CDN_URL,
       // Content section image uploads PUT straight to presigned R2 URLs. The
       // AWS SDK signs them virtual-hosted-style, so the host carries the bucket.
-      process.env.R2_ACCOUNT_ID && process.env.R2_ASSETS_BUCKET
-        ? `https://${process.env.R2_ASSETS_BUCKET}.${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
+      env.R2_ACCOUNT_ID && env.R2_ASSETS_BUCKET
+        ? `https://${env.R2_ASSETS_BUCKET}.${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`
         : "",
     ]
       .filter(Boolean)

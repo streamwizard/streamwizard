@@ -254,13 +254,14 @@ export const SCENE_VIDEOS: Record<string, string> = {
   IRL: "https://cdn.streamwizard.org/public/vods/irl-preview-480p.webm",
 };
 
-/** Absolute CDN URL for a scene's clip, or null when it has none. */
-export function sceneVideoUrl(scene: string): string | null {
+/** Absolute CDN URL for a scene's clip, or null when it has none. `cdnUrl` is
+ *  NEXT_PUBLIC_CDN_URL, passed down from the page (env.ts would put zod in the
+ *  home page bundle). */
+export function sceneVideoUrl(scene: string, cdnUrl: string | undefined): string | null {
   const path = SCENE_VIDEOS[scene];
   if (!path) return null;
   if (/^https?:\/\//.test(path)) return path;
-  const base = process.env.NEXT_PUBLIC_CDN_URL;
-  return base ? `${base}${path}` : null;
+  return cdnUrl ? `${cdnUrl}${path}` : null;
 }
 
 export const DEFAULT_TITLE = "Late night walk through the city, come vibe";

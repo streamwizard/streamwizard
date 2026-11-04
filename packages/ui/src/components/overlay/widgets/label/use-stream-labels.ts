@@ -1,8 +1,5 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { useEffect, useMemo, useSyncExternalStore } from "react";
 import {
   applyLabelEvent,
@@ -13,6 +10,7 @@ import {
 import { subscribeToWsRoom } from "../../lib/ws-store";
 import { ALERT_TEST_BROWSER_EVENT, type AlertTestBrowserEventDetail } from "../alert/alert-widget-config";
 import { streamChangedFromFrame, type CreditsWidgetFrame } from "../credits/credits-widget-state";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
 
 /**
  * One label snapshot per scene, shared by every Label widget in it.
@@ -59,6 +57,8 @@ interface StoreOptions {
   isEditor: boolean;
   token: string | undefined;
   sceneId: string | undefined;
+  /** ws-server URL from the host app; "" means no live updates. */
+  wsUrl: string;
 }
 
 class LabelStore {
@@ -94,9 +94,9 @@ class LabelStore {
   private start() {
     void this.load();
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
-    if (this.opts.token && wsUrl) {
-      this.cleanups.push(subscribeToWsRoom(this.opts.token, wsUrl, (raw) => this.onFrame(raw)));
+    const { token, wsUrl } = this.opts;
+    if (token && wsUrl) {
+      this.cleanups.push(subscribeToWsRoom(token, wsUrl, (raw) => this.onFrame(raw)));
     }
 
     if (typeof window !== "undefined") {
@@ -206,8 +206,8 @@ class LabelStore {
 
 const stores = new Map<string, LabelStore>();
 
-function storeKey({ isEditor, token, sceneId }: StoreOptions): string {
-  return `${isEditor ? "editor" : "overlay"}:${token ?? ""}:${sceneId ?? ""}`;
+function storeKey({ isEditor, token, sceneId, wsUrl }: StoreOptions): string {
+  return `${isEditor ? "editor" : "overlay"}:${token ?? ""}:${sceneId ?? ""}:${wsUrl}`;
 }
 
 function acquire(opts: StoreOptions): LabelStore {
@@ -222,7 +222,8 @@ function acquire(opts: StoreOptions): LabelStore {
 
 const SERVER_STATE: LabelsState = { status: "loading", snapshot: emptyLabelSnapshot(), demo: false };
 
-export function useStreamLabels(opts: StoreOptions): LabelsState {
+export function useStreamLabels(options: Omit<StoreOptions, "wsUrl">): LabelsState {
+  const opts: StoreOptions = { ...options, wsUrl: useOverlayWsUrl() };
   const key = storeKey(opts);
   // Stores stay in the map once made (one per scene and mode, tiny), so a
   // Strict Mode unmount/remount or a quick remount reuses the same instance

@@ -2,6 +2,7 @@ import { updateSession } from "@repo/supabase/next/proxy";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 import { logCrawlerVisit } from "@/lib/crawler-log";
 import { buildCsp } from "@/lib/csp";
+import { env } from "@/lib/env";
 
 // Crawler-facing files with no session to refresh and no page to protect.
 // They reach the proxy only so a crawler fetching them can be recorded.
@@ -10,7 +11,7 @@ const CRAWLER_FILES = new Set(["/robots.txt", "/sitemap.xml", "/llms.txt"]);
 /** The admin app's origin (CMS_ADMIN_URL), allowed to frame draft previews. Null when unset or invalid. */
 function adminOrigin(): string | null {
   try {
-    return process.env.CMS_ADMIN_URL ? new URL(process.env.CMS_ADMIN_URL).origin : null;
+    return env.CMS_ADMIN_URL ? new URL(env.CMS_ADMIN_URL).origin : null;
   } catch {
     return null;
   }
@@ -35,9 +36,8 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   const needsMonaco = request.nextUrl.pathname.startsWith("/dashboard/widgets/");
   // Only staging sits behind Cloudflare Access — see the cloudflareAccess
   // option doc in csp.ts for why this needs its own manifest-src carve-out.
-  // NODE_ENV is "staging" there (see src/lib/env.ts), which the built-in
-  // NodeJS.ProcessEnv type doesn't know about, hence the cast.
-  const cloudflareAccess = (process.env.NODE_ENV as string) === "staging";
+  // NODE_ENV is "staging" there (see src/lib/env.ts).
+  const cloudflareAccess = env.NODE_ENV === "staging";
   const frameAncestor = request.nextUrl.pathname.startsWith("/preview/") ? adminOrigin() : null;
   const csp = buildCsp(nonce, { monaco: needsMonaco, cloudflareAccess, frameAncestor });
   request.headers.set("content-security-policy", csp);
@@ -53,7 +53,7 @@ export async function proxy(request: NextRequest, event: NextFetchEvent) {
   // console so missing directives surface before staging. The *request* header
   // above must keep the enforcing name either way — Next reads the nonce from it.
   const responseHeader =
-    process.env.NODE_ENV === "development" ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy";
+    env.NODE_ENV === "development" ? "Content-Security-Policy-Report-Only" : "Content-Security-Policy";
   response.headers.set(responseHeader, csp);
   return response;
 }

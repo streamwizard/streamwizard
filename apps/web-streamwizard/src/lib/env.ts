@@ -1,5 +1,6 @@
 import { createEnv } from "@t3-oss/env-nextjs"
 import { z } from "zod"
+import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk"
 
 // Derive NEXT_PUBLIC_ vars from their non-prefixed Doppler counterparts so they
 // exist in process.env before createEnv validates them. The next.config.ts env:
@@ -27,8 +28,15 @@ deriveEnv(
 );
 
 export const env = createEnv({
-  server: {
+  // Readable on the server and in the browser.
+  shared: {
     NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
+    // Doppler's NODE_ENV, baked in by next.config.ts at build time: the
+    // standalone server forces NODE_ENV=production, so this is the real
+    // environment name. @repo/sentry and @repo/posthog/server read it too.
+    APP_ENV: z.enum(["development", "staging", "production"]).optional(),
+  },
+  server: {
     SUPABASE_URL: z.string().url(),
     SUPABASE_PUBLIC_KEY: z.string().min(1),
     SUPABASE_SECRET_KEY: z.string().min(1),
@@ -48,6 +56,10 @@ export const env = createEnv({
     // Comma-separated account ids that objected to server-side analytics.
     // Nothing is sent to PostHog for them.
     POSTHOG_OPT_OUT_USER_IDS: z.string().optional(),
+    // Server-side PostHog (@repo/posthog/server, the crawler log in the proxy).
+    // The NEXT_PUBLIC_ pair is used when these are unset.
+    POSTHOG_KEY: z.string().min(1).optional(),
+    POSTHOG_HOST: z.url().optional(),
     // Cloudflare R2 for user-uploaded overlay assets (media library). Optional
     // so environments without the feature configured still boot; the asset
     // actions throw a clear error when missing.
@@ -63,6 +75,14 @@ export const env = createEnv({
     // one per environment, never per node. Optional so the app boots without
     // it; node calls fail with a clear error until it is set.
     NODE_TOKEN_SIGNING_JWK: z.string().min(1).optional(),
+    // Ed25519 private JWK that signs this app's ws-server tokens (broadcasts,
+    // socket revokes; @repo/service-token reads it). Secret. Optional: without
+    // it those calls are skipped as unconfigured; a malformed one stops boot.
+    WS_SERVICE_SIGNING_JWK: z.string().min(1).refine(isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR).optional(),
+    // web-admin's origin, allowed to frame the CMS draft previews (src/proxy.ts).
+    CMS_ADMIN_URL: z.url().optional(),
+    // "1" turns on the docs screenshot routes in local dev ((harness)/layout.tsx).
+    DOCS_SHOTS: z.enum(["0", "1"]).optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -78,9 +98,16 @@ export const env = createEnv({
     // Separate from NEXT_PUBLIC_CDN_URL, which serves our own static assets.
     NEXT_PUBLIC_ASSET_CDN_URL: z.string().url().optional(),
     NEXT_PUBLIC_DOCS_URL: z.string().url().optional(),
+    // Shown in the IRL setup when the user has no ingest node with a public
+    // host or Tailscale IP yet (placeholders otherwise).
+    NEXT_PUBLIC_INGEST_HOST: z.string().min(1).optional(),
+    NEXT_PUBLIC_OBS_PULL_HOST: z.string().min(1).optional(),
+    // SRT latency of the OBS pull from the ingest node (lib/obs-irl.ts).
+    NEXT_PUBLIC_OBS_PULL_LATENCY_MS: z.coerce.number().int().positive().optional(),
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
+    APP_ENV: process.env.APP_ENV,
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_PUBLIC_KEY: process.env.SUPABASE_PUBLIC_KEY,
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
@@ -104,6 +131,11 @@ export const env = createEnv({
     R2_ASSETS_BUCKET: process.env.R2_ASSETS_BUCKET,
     CMS_REVALIDATE_SECRET: process.env.CMS_REVALIDATE_SECRET,
     NODE_TOKEN_SIGNING_JWK: process.env.NODE_TOKEN_SIGNING_JWK,
+    WS_SERVICE_SIGNING_JWK: process.env.WS_SERVICE_SIGNING_JWK,
+    POSTHOG_KEY: process.env.POSTHOG_KEY,
+    POSTHOG_HOST: process.env.POSTHOG_HOST,
+    CMS_ADMIN_URL: process.env.CMS_ADMIN_URL,
+    DOCS_SHOTS: process.env.DOCS_SHOTS,
     // Derived in next.config.ts env: block from their non-prefixed Doppler counterparts
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -116,6 +148,9 @@ export const env = createEnv({
     NEXT_PUBLIC_CDN_URL: process.env.NEXT_PUBLIC_CDN_URL,
     NEXT_PUBLIC_ASSET_CDN_URL: process.env.NEXT_PUBLIC_ASSET_CDN_URL,
     NEXT_PUBLIC_DOCS_URL: process.env.NEXT_PUBLIC_DOCS_URL,
+    NEXT_PUBLIC_INGEST_HOST: process.env.NEXT_PUBLIC_INGEST_HOST,
+    NEXT_PUBLIC_OBS_PULL_HOST: process.env.NEXT_PUBLIC_OBS_PULL_HOST,
+    NEXT_PUBLIC_OBS_PULL_LATENCY_MS: process.env.NEXT_PUBLIC_OBS_PULL_LATENCY_MS,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,

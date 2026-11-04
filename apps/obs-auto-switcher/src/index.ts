@@ -9,6 +9,7 @@ process.on("unhandledRejection", (reason) => {
 import { flushSentry, reportFatal } from "@repo/sentry";
 import { initMetrics, BUCKETS } from "@repo/metrics";
 import { createApp } from "@/app";
+import { env } from "@/lib/env";
 
 // IRL auto scene-switcher. Consumes the 1 Hz ingest stats feed from
 // ws-server, runs a per-user threshold/streak state machine, and drives
@@ -28,7 +29,7 @@ engine.start();
 
 console.log(`[obs-auto-switcher] running — ${configStore.size} enabled config(s) loaded`);
 
-Bun.serve({ port: Number(process.env.PORT ?? 8010), fetch });
+Bun.serve({ port: env.PORT, fetch });
 
 const shutdown = async () => {
   console.log("[obs-auto-switcher] shutting down");

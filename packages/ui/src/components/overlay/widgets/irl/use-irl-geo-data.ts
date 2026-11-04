@@ -1,11 +1,9 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { useEffect, useState } from "react";
 import type { GeoPayload } from "../../types";
 import { subscribeToWsRoom } from "../../lib/ws-store";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
 
 export type IrlConnectionStatus = "connecting" | "connected" | "offline" | "disconnected";
 
@@ -37,6 +35,7 @@ export function useIrlGeoData(
     geo: mockData ? MOCK_GEO : null,
     status: mockData ? "connected" : "connecting",
   }));
+  const wsUrl = useOverlayWsUrl();
 
   useEffect(() => {
     if (mockData) {
@@ -47,7 +46,10 @@ export function useIrlGeoData(
       setState({ geo: null, status: "connecting" });
       return;
     }
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "ws://localhost:3009";
+    if (!wsUrl) {
+      setState({ geo: null, status: "disconnected" });
+      return;
+    }
     return subscribeToWsRoom(subscriberToken, wsUrl, (raw) => {
       const msg = raw as IrlMessage;
       if (msg.type === "ws:open") {
@@ -63,7 +65,7 @@ export function useIrlGeoData(
         }
       }
     });
-  }, [subscriberToken, mockData]);
+  }, [subscriberToken, wsUrl, mockData]);
 
   return state;
 }

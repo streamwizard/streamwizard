@@ -15,6 +15,7 @@
   "dependencies": {
     "@repo/posthog": "workspace:*",
     "@repo/sentry": "workspace:*",
+    "@repo/service-token": "workspace:*",
     "@repo/supabase": "workspace:*",
     "@repo/twitch-api": "workspace:*",
     "@repo/ttl-cache": "workspace:*",

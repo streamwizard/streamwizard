@@ -61,7 +61,7 @@ async function main() {
     // the shards reconnect on their own, and a Twitch outage must not make
     // Swarm restart the bot in a loop. eventsub_shard metrics cover that.
     const healthServer = Bun.serve({
-      port: Number(process.env.PORT ?? 8030),
+      port: env.PORT,
       fetch(req) {
         const url = new URL(req.url);
         if (url.pathname === "/health") {
@@ -87,7 +87,7 @@ async function main() {
     process.on("SIGINT", shutdown);
     process.on("SIGTERM", shutdown);
 
-    console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
+    console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
     console.log(`[eventsub] running shards ${shards.getShardIds().join(", ")} of ${env.EVENTSUB_SHARD_COUNT}`);
     await shards.start();
   } catch (error) {

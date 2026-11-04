@@ -1,7 +1,7 @@
 import { Sentry } from "@/sentry";
 process.on("uncaughtException", (err) => { reportFatal(err, "rest-api"); });
 process.on("unhandledRejection", (reason) => { Sentry.captureException(reason); });
-import "@/env";
+import { env } from "@/env";
 import { Hono } from "hono";
 import { sentry } from "@sentry/hono/bun";
 import { configureTracking, flushTracking } from "@repo/posthog/server";
@@ -51,9 +51,9 @@ app.get("/health", (c) =>
 // Sentry must be first — sets up tracing and Hono's onError capture.
 // Staging and production share one Doppler config, so the DSN is namespaced
 // per app; the bare SENTRY_DSN fallback keeps the per-app dev configs working.
-const sentryDsn = process.env.SENTRY_DSN_REST_API || process.env.SENTRY_DSN;
+const sentryDsn = env.SENTRY_DSN_REST_API || env.SENTRY_DSN;
 
-if (sentryDsn && process.env.NODE_ENV !== "development") {
+if (sentryDsn && env.NODE_ENV !== "development") {
   app.use("*", sentry(app, {
     ...getSentryOptions({ dsn: sentryDsn, service: "rest-api" }),
     integrations: [createSupabaseIntegration(Sentry), createConsoleLogsIntegration()],
@@ -138,7 +138,7 @@ app.get("/api/clips/sync-status", supabaseAuth(), syncStatusHandler);
 const server = Bun.serve({
   fetch: app.fetch,
   hostname: "0.0.0.0",
-  port: Number(process.env.PORT ?? 8080),
+  port: env.PORT,
 });
 
 // Without a signal handler the container is killed outright on deploy and any
@@ -155,7 +155,7 @@ const shutdown = async () => {
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
-console.log(`[rest-api] listening on port ${process.env.PORT ?? 8080}`);
+console.log(`[rest-api] listening on port ${env.PORT}`);
 
 // Pollers live in memory only; pick up streams that were live across the restart.
 void viewerCountPoller.resume();
@@ -179,4 +179,4 @@ if (assetReconciler) {
   assetReconciler.start();
   console.log("[asset-reconciler] active");
 }
-console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + process.env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);
+console.log(`[metrics] ${isMetricsEnabled() ? "active — sending to " + env.INFLUXDB_URL : "disabled — set INFLUXDB_* env vars to enable"}`);

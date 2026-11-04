@@ -1,5 +1,6 @@
 import { createEnv } from "@t3-oss/env-nextjs"
 import { z } from "zod"
+import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk"
 
 // Derive NEXT_PUBLIC_ vars from their non-prefixed Doppler counterparts so they
 // exist in process.env before createEnv validates them. The next.config.ts env:
@@ -28,8 +29,15 @@ deriveEnv(
 export const env = createEnv({
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
-  server: {
+  // Readable on the server and in the browser.
+  shared: {
     NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
+    // Doppler's NODE_ENV, baked in by next.config.ts at build time: the
+    // standalone server forces NODE_ENV=production, so this is the real
+    // environment name. @repo/sentry and @repo/posthog/server read it too.
+    APP_ENV: z.enum(["development", "staging", "production"]).optional(),
+  },
+  server: {
     SUPABASE_URL: z.string().url(),
     SUPABASE_PUBLIC_KEY: z.string().min(1),
     SUPABASE_SECRET_KEY: z.string().min(1),
@@ -45,6 +53,10 @@ export const env = createEnv({
     POSTHOG_HOST: z.string().url().optional(),
     // Comma-separated account ids that objected; nothing is sent for them.
     POSTHOG_OPT_OUT_USER_IDS: z.string().optional(),
+    // Ed25519 private JWK this app signs its ws-server broadcasts with
+    // (@repo/service-token reads it). Secret. Optional: without it broadcasts
+    // are skipped as unconfigured; a malformed one stops boot.
+    WS_SERVICE_SIGNING_JWK: z.string().min(1).refine(isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR).optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -57,6 +69,7 @@ export const env = createEnv({
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
+    APP_ENV: process.env.APP_ENV,
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_PUBLIC_KEY: process.env.SUPABASE_PUBLIC_KEY,
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
@@ -70,6 +83,7 @@ export const env = createEnv({
     POSTHOG_KEY: process.env.POSTHOG_KEY,
     POSTHOG_HOST: process.env.POSTHOG_HOST,
     POSTHOG_OPT_OUT_USER_IDS: process.env.POSTHOG_OPT_OUT_USER_IDS,
+    WS_SERVICE_SIGNING_JWK: process.env.WS_SERVICE_SIGNING_JWK,
     // Derived in next.config.ts env: block from their non-prefixed Doppler counterparts
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,

@@ -100,8 +100,8 @@ function DockToolbar({ extra }: { extra?: boolean }) {
  * a preview. The clip only plays while the window is on screen, so the page
  * does not keep decoding video nobody can see.
  */
-function SceneClip({ scene, active }: { scene: string; active: boolean }) {
-  const src = sceneVideoUrl(scene);
+function SceneClip({ scene, active, cdnUrl }: { scene: string; active: boolean; cdnUrl: string }) {
+  const src = sceneVideoUrl(scene, cdnUrl);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [failed, setFailed] = useState(false);
 
@@ -136,11 +136,11 @@ function SceneClip({ scene, active }: { scene: string; active: boolean }) {
 }
 
 /** The IRL scene: the incoming feed, over the drawn evening-street gradient. */
-function IrlPreview({ active }: { active: boolean }) {
+function IrlPreview({ active, cdnUrl }: { active: boolean; cdnUrl: string }) {
   return (
     <div className="relative h-full w-full bg-[linear-gradient(160deg,#1b2440_0%,#2a1c3d_55%,#12161f_100%)]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_35%,rgba(158,122,255,0.35),transparent_60%)]" />
-      <SceneClip scene="IRL" active={active} />
+      <SceneClip scene="IRL" active={active} cdnUrl={cdnUrl} />
       <div className="absolute top-2 left-2 flex items-center gap-1.5 rounded bg-black/50 px-1.5 py-0.5 text-[9px] text-white/90">
         <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-500" />
         IRL CAM
@@ -185,9 +185,19 @@ function AwayPreview({
   );
 }
 
-function ScenePreview({ kind, scene, active }: { kind: DemoScene["preview"]; scene: string; active: boolean }) {
+function ScenePreview({
+  kind,
+  scene,
+  active,
+  cdnUrl,
+}: {
+  kind: DemoScene["preview"];
+  scene: string;
+  active: boolean;
+  cdnUrl: string;
+}) {
   if (kind === "irl") {
-    return <IrlPreview active={active} />;
+    return <IrlPreview active={active} cdnUrl={cdnUrl} />;
   }
 
   if (kind === "empty" || !kind) {
@@ -198,7 +208,8 @@ function ScenePreview({ kind, scene, active }: { kind: DemoScene["preview"]; sce
   return <AwayPreview kind={kind} scene={scene} active={active} />;
 }
 
-export function ObsWindowMock() {
+/** `cdnUrl` is NEXT_PUBLIC_CDN_URL from the server parent, for the IRL clip. */
+export function ObsWindowMock({ cdnUrl }: { cdnUrl: string }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const inView = useInView(rootRef, { margin: "-64px" });
 
@@ -368,14 +379,14 @@ export function ObsWindowMock() {
                   <div key={pane}>
                     <p className="mb-1 text-center text-[9px] text-[#9aa1b2]">{pane}</p>
                     <div className="aspect-video w-full overflow-hidden">
-                      <ScenePreview kind={scene.preview} scene={scene.name} active={inView} />
+                      <ScenePreview kind={scene.preview} scene={scene.name} active={inView} cdnUrl={cdnUrl} />
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="aspect-video w-full overflow-hidden">
-                <ScenePreview kind={scene.preview} scene={scene.name} active={inView} />
+                <ScenePreview kind={scene.preview} scene={scene.name} active={inView} cdnUrl={cdnUrl} />
               </div>
             )}
           </div>

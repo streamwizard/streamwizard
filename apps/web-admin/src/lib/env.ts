@@ -1,5 +1,6 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
+import { isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR } from "@repo/service-token/signing-jwk";
 
 // Derive NEXT_PUBLIC_ vars from their non-prefixed Doppler counterparts.
 // next.config.ts does the same to bake them into the client bundle at build time.
@@ -16,11 +17,18 @@ derive("NEXT_PUBLIC_SENTRY_DSN", process.env.NEXT_PUBLIC_SENTRY_DSN ?? process.e
 export const env = createEnv({
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
+  // Readable on the server and in the browser.
+  shared: {
+    NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
+    // Doppler's NODE_ENV, baked in by next.config.ts at build time: the
+    // standalone server forces NODE_ENV=production, so this is the real
+    // environment name. @repo/sentry reads it too.
+    APP_ENV: z.enum(["development", "staging", "production"]).optional(),
+  },
   server: {
     INFLUXDB_URL: z.string().url(),
     INFLUXDB_TOKEN: z.string().min(1),
     INFLUXDB_ORG: z.string().min(1),
-    NODE_ENV: z.enum(["development", "staging", "production"]).default("development"),
     SUPABASE_URL: z.string().url(),
     SUPABASE_PUBLIC_KEY: z.string().min(1),
     SUPABASE_SECRET_KEY: z.string().min(1),
@@ -32,6 +40,9 @@ export const env = createEnv({
     // deployments must state their env explicitly for alert routing.
     ALERT_ENV: z.enum(["prod", "staging", "dev"]).optional(),
     ALERT_DISCORD_CHANNEL_ID: z.string().min(1).optional(),
+    // The alert-worker's tick length; @repo/alerting's rules derive some
+    // debounces from it (default 15 when unset).
+    TICK_SECONDS: z.coerce.number().int().positive().optional(),
     DISCORD_BOT_TOKEN: z.string().min(1).optional(),
     // Discord dashboard (/discord). The pages show a "not configured" card
     // until the guild id and bot token are set. CLIENT_ID lists deployed
@@ -72,6 +83,10 @@ export const env = createEnv({
     // tokens (actions/monitor.ts); the browser dials NEXT_PUBLIC_WS_SERVER_URL,
     // which next.config.ts derives from this.
     WS_SERVER_URL: z.string().min(1).optional(),
+    // Ed25519 private JWK this app signs its ws-server tokens with
+    // (@repo/service-token reads it). Secret. Optional: without it those calls
+    // are skipped as unconfigured; a malformed one stops boot.
+    WS_SERVICE_SIGNING_JWK: z.string().min(1).refine(isServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR).optional(),
     // Bearer secret for rest-api's /internal/backups (the /backups page).
     // Must match rest-api's REST_API_INTERNAL_SECRET; without it the page
     // shows a "not configured" card.
@@ -102,12 +117,17 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
     NEXT_PUBLIC_SENTRY_DSN: z.string().url().optional(),
     NEXT_PUBLIC_CDN_URL: z.string().url().optional(),
+    // Allowed in the CSP (src/lib/csp.ts) for the widget-moderation previews:
+    // the overlay app the widgets call, and the media-library asset CDN.
+    NEXT_PUBLIC_OVERLAY_URL: z.url().optional(),
+    NEXT_PUBLIC_ASSET_CDN_URL: z.url().optional(),
   },
   runtimeEnv: {
     INFLUXDB_URL: process.env.INFLUXDB_URL,
     INFLUXDB_TOKEN: process.env.INFLUXDB_TOKEN,
     INFLUXDB_ORG: process.env.INFLUXDB_ORG,
     NODE_ENV: process.env.NODE_ENV,
+    APP_ENV: process.env.APP_ENV,
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_PUBLIC_KEY: process.env.SUPABASE_PUBLIC_KEY,
     SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
@@ -115,6 +135,7 @@ export const env = createEnv({
     SENTRY_RELEASE: process.env.SENTRY_RELEASE,
     ALERT_ENV: process.env.ALERT_ENV,
     ALERT_DISCORD_CHANNEL_ID: process.env.ALERT_DISCORD_CHANNEL_ID,
+    TICK_SECONDS: process.env.TICK_SECONDS,
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID,
     DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID,
@@ -131,6 +152,7 @@ export const env = createEnv({
     STREAMWIZARD_API_URL: process.env.STREAMWIZARD_API_URL,
     TOKEN_ENCRYPTION_KEY: process.env.TOKEN_ENCRYPTION_KEY,
     WS_SERVER_URL: process.env.WS_SERVER_URL,
+    WS_SERVICE_SIGNING_JWK: process.env.WS_SERVICE_SIGNING_JWK,
     REST_API_INTERNAL_SECRET: process.env.REST_API_INTERNAL_SECRET,
     PVE_HOSTS: process.env.PVE_HOSTS,
     TWITCH_CLIENT_ID: process.env.TWITCH_CLIENT_ID,
@@ -143,5 +165,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
     NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
     NEXT_PUBLIC_CDN_URL: process.env.NEXT_PUBLIC_CDN_URL,
+    NEXT_PUBLIC_OVERLAY_URL: process.env.NEXT_PUBLIC_OVERLAY_URL,
+    NEXT_PUBLIC_ASSET_CDN_URL: process.env.NEXT_PUBLIC_ASSET_CDN_URL,
   },
 });

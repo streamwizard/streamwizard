@@ -1,5 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { buildHttpLog, crawlerName, createCrawlerLimiter, isPublicPageRequest, logCrawlerVisit } from "./crawler-log";
+import {
+  buildHttpLog,
+  crawlerName,
+  createCrawlerLimiter,
+  isPublicPageRequest,
+  logCrawlerVisit,
+  type CrawlerLogConfig,
+} from "./crawler-log";
 
 describe("crawlerName", () => {
   it("names the AI and search crawlers", () => {
@@ -133,29 +140,29 @@ describe("logCrawlerVisit", () => {
       return new Response("{}");
     },
   });
-  const KEYS = ["APP_ENV", "POSTHOG_KEY", "POSTHOG_HOST", "NEXT_PUBLIC_BASE_URL"] as const;
-  const saved = Object.fromEntries(KEYS.map((key) => [key, process.env[key]]));
+  let config: CrawlerLogConfig;
 
   beforeAll(() => {
-    process.env.APP_ENV = "production";
-    process.env.POSTHOG_KEY = "phc_test";
-    process.env.POSTHOG_HOST = `http://127.0.0.1:${sink.port}/`;
-    process.env.NEXT_PUBLIC_BASE_URL = "https://streamwizard.org";
+    config = {
+      environment: "production",
+      apiKey: "phc_test",
+      host: `http://127.0.0.1:${sink.port}/`,
+      baseUrl: "https://streamwizard.org",
+    };
   });
   afterAll(() => {
     sink.stop(true);
-    for (const key of KEYS) {
-      if (saved[key] === undefined) delete process.env[key];
-      else process.env[key] = saved[key];
-    }
   });
 
   const visit = (userAgent: string, pathname: string, method = "GET") =>
-    logCrawlerVisit({
-      method,
-      headers: new Headers({ "user-agent": userAgent, "x-forwarded-for": "203.0.113.7" }),
-      nextUrl: { pathname, origin: "http://0.0.0.0:3000" },
-    });
+    logCrawlerVisit(
+      {
+        method,
+        headers: new Headers({ "user-agent": userAgent, "x-forwarded-for": "203.0.113.7" }),
+        nextUrl: { pathname, origin: "http://0.0.0.0:3000" },
+      },
+      config,
+    );
 
   it("sends a crawler visit to the capture endpoint, once", async () => {
     const first = visit("Mozilla/5.0 (compatible; GPTBot/1.2)", "/llms.txt");
@@ -175,14 +182,14 @@ describe("logCrawlerVisit", () => {
     expect(visit(chrome, "/pricing")).toBeNull();
     expect(visit("GPTBot/1.2", "/dashboard/clips")).toBeNull();
     expect(visit("GPTBot/1.2", "/pricing", "POST")).toBeNull();
-    process.env.APP_ENV = "development";
+    config = { ...config, environment: "development" };
     expect(visit("GPTBot/1.2", "/about")).toBeNull();
-    process.env.APP_ENV = "production";
+    config = { ...config, environment: "production" };
     expect(received).toHaveLength(1);
   });
 
   it("does not fail the request when PostHog is unreachable", async () => {
-    process.env.POSTHOG_HOST = "http://127.0.0.1:1";
+    config = { ...config, host: "http://127.0.0.1:1" };
     const result = visit("ClaudeBot/1.0", "/pricing");
     expect(result).not.toBeNull();
     await expect(result).resolves.toBeUndefined();

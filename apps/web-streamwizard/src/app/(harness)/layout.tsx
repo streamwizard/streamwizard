@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { env } from "@/lib/env";
 
 /**
  * Screenshot harness for apps/docs.
@@ -15,6 +16,6 @@ import { notFound } from "next/navigation";
  * DOCS_SHOTS=1 is set.
  */
 export default function HarnessLayout({ children }: { children: React.ReactNode }) {
-  if (process.env.NODE_ENV === "production" || process.env.DOCS_SHOTS !== "1") notFound();
+  if (env.NODE_ENV === "production" || env.DOCS_SHOTS !== "1") notFound();
   return <>{children}</>;
 }

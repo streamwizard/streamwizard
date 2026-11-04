@@ -12,11 +12,11 @@ import { safeNextPath } from "@/lib/safe-next-path";
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const { searchParams } = requestUrl;
-  const isLocalEnv = process.env.NODE_ENV === "development";
+  const isLocalEnv = env.NODE_ENV === "development";
 
   const origin = isLocalEnv
     ? requestUrl.origin
-    : (process.env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
+    : (env.NEXT_PUBLIC_BASE_URL ?? requestUrl.origin);
 
   const code = searchParams.get("code");
   const oauthError = searchParams.get("error");

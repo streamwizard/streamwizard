@@ -1,8 +1,10 @@
 import { CookieBanner } from "@/components/cookie-banner";
 import { LightModeOverlay } from "@/components/global/light-mode-overlay";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { OverlayWsUrlProvider } from "@repo/ui/components/overlay/hooks/use-overlay-ws-url";
 import { PHProvider, PostHogPageView } from "@repo/posthog";
 import { isIndexableEnvironment, siteUrl } from "@/lib/seo";
+import { env } from "@/lib/env";
 import { Metadata } from "next";
 import { headers } from "next/headers";
 import localFont from "next/font/local";
@@ -87,13 +89,14 @@ export default async function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <PHProvider>
           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange nonce={nonce}>
-            <LightModeOverlay />
+            <LightModeOverlay cdnUrl={env.NEXT_PUBLIC_CDN_URL} />
             <Suspense>
               <PostHogPageView />
             </Suspense>
             <Toaster position="bottom-right" theme="dark" expand visibleToasts={5} />
             <CookieBanner />
-            {children}
+            {/* The ws-server URL the overlay widgets (editor, previews) subscribe to. */}
+            <OverlayWsUrlProvider url={env.NEXT_PUBLIC_WS_SERVER_URL}>{children}</OverlayWsUrlProvider>
           </ThemeProvider>
         </PHProvider>
       </body>

@@ -16,47 +16,19 @@ export const SERVICE_TOKEN_ISSUER = "streamwizard-service-token";
 export const SERVICE_TOKEN_AUDIENCE = "ws-server";
 export const SERVICE_TOKEN_TTL_SECONDS = 60;
 
-/** What a token can be used for. One scope per token. */
-export const SERVICE_SCOPES = [
-  /** POST /internal/broadcast */
-  "broadcast",
-  /** POST /internal/revoke */
-  "revoke",
-  /** role=consumer socket: the firehose of every user's events */
-  "consumer",
-  /** role=bot socket: push events into any user's room */
-  "bot",
-  /** role=ingest-node socket: one ingest node's live data. rest-api signs
-   *  these for a node (claim `node`); the node holds the token, not a key. */
-  "ingest-node",
-  /** POST /internal/ingest-sessions(/:id/end): the live session registry */
-  "ingest-sessions",
-  /** role=monitor socket: the sanitized ops feed. web-admin signs these in a
-   *  server action after its admin check; the admin's browser holds the
-   *  token, not a key. */
-  "monitor",
-] as const;
-export type ServiceScope = (typeof SERVICE_SCOPES)[number];
+import { isServiceName, serviceMay, type ServiceName, type ServiceScope } from "./policy";
+import { parseServiceSigningJwk, SERVICE_SIGNING_JWK_ERROR, type ServiceJwk } from "./signing-jwk";
 
-/** Every service that calls ws-server, and what each one may do. */
-export const SERVICE_POLICY = {
-  "rest-api": ["broadcast", "revoke", "ingest-node", "ingest-sessions"],
-  "web-streamwizard": ["broadcast", "revoke"],
-  "web-admin": ["broadcast", "revoke", "monitor"],
-  "web-overlay": ["broadcast"],
-  "obs-auto-switcher": ["consumer", "bot"],
-  "streamwizard-bot": ["bot"],
-} as const satisfies Record<string, readonly ServiceScope[]>;
-export type ServiceName = keyof typeof SERVICE_POLICY;
-export const SERVICE_NAMES = Object.keys(SERVICE_POLICY) as ServiceName[];
-
-export function isServiceName(value: unknown): value is ServiceName {
-  return typeof value === "string" && Object.hasOwn(SERVICE_POLICY, value);
-}
-
-export function serviceMay(service: ServiceName, scope: ServiceScope): boolean {
-  return (SERVICE_POLICY[service] as readonly ServiceScope[]).includes(scope);
-}
+export {
+  SERVICE_SCOPES,
+  SERVICE_POLICY,
+  SERVICE_NAMES,
+  isServiceName,
+  serviceMay,
+  type ServiceScope,
+  type ServiceName,
+} from "./policy";
+export { type ServiceJwk } from "./signing-jwk";
 
 /** Extra claims a token can carry, e.g. `node` on an ingest-node token. */
 export type ServiceTokenClaims = Record<string, string>;
@@ -74,9 +46,6 @@ function checkRequiredClaim(scope: ServiceScope, claims: ServiceTokenClaims): vo
   }
 }
 
-/** A key as stored: a JWK plus the service it belongs to (`svc`). */
-export type ServiceJwk = JWK & { kid: string; svc: ServiceName };
-
 // ── Signing (the calling services) ──────────────────────────────────────────
 
 type SigningKey = { key: CryptoKey | Uint8Array; kid: string; service: ServiceName };
@@ -86,10 +55,8 @@ let signingKey: Promise<SigningKey> | null = null;
 function loadSigningKey(raw: string): Promise<SigningKey> {
   if (signingKey) return signingKey;
   signingKey = (async () => {
-    const jwk = JSON.parse(raw) as Partial<ServiceJwk>;
-    if (jwk.kty !== "OKP" || jwk.crv !== "Ed25519" || !jwk.d || !jwk.kid || !isServiceName(jwk.svc)) {
-      throw new Error("WS_SERVICE_SIGNING_JWK must be an Ed25519 private JWK with a kid and a known svc");
-    }
+    const jwk = parseServiceSigningJwk(raw);
+    if (!jwk) throw new Error(`WS_SERVICE_SIGNING_JWK ${SERVICE_SIGNING_JWK_ERROR}`);
     return { key: await importJWK(jwk, "EdDSA"), kid: jwk.kid, service: jwk.svc };
   })();
   // Don't cache a failure: a fixed env on the next call should just work.

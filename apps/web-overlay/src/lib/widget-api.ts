@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { getTwitchUserIdByUserIdMaybe } from "@repo/supabase/queries/user";
 import { getOverlaySceneBySubscriberToken } from "@repo/supabase/queries/overlays";
 import { TtlCache } from "@repo/ttl-cache";
+import { env } from "@/lib/env";
 
 /**
  * Shared plumbing for the API routes overlay widgets call from inside their
@@ -28,8 +29,8 @@ const OPAQUE_ORIGIN = "null";
 
 const ALLOWED_ORIGINS = new Set(
   [
-    process.env.NEXT_PUBLIC_OVERLAY_URL, // prod overlay URL
-    process.env.NEXT_PUBLIC_BASE_URL, // streamwizard dashboard (editor preview)
+    env.NEXT_PUBLIC_OVERLAY_URL, // prod overlay URL
+    env.NEXT_PUBLIC_BASE_URL, // streamwizard dashboard (editor preview)
     OPAQUE_ORIGIN, // sandboxed widget iframe on either of the above
   ].filter(Boolean)
 );

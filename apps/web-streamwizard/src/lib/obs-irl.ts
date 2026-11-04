@@ -1,3 +1,5 @@
+import { env } from "@/lib/env";
+
 // The fixed scene/source StreamWizard auto-wires a user's primary ingest key
 // into. Fixed names (rather than per-key naming) keep the auto-wire and
 // missing-source checks a simple lookup instead of a persisted mapping.
@@ -25,8 +27,7 @@ export const WELCOME_SCENE_NAME = "Welcome (Delete me)";
  * Override per environment with NEXT_PUBLIC_OBS_PULL_LATENCY_MS if a node runs
  * a non-default egress latency. */
 const DEFAULT_PULL_LATENCY_MS = 300;
-export const OBS_PULL_LATENCY_MS =
-  Number(process.env.NEXT_PUBLIC_OBS_PULL_LATENCY_MS) || DEFAULT_PULL_LATENCY_MS;
+export const OBS_PULL_LATENCY_MS = env.NEXT_PUBLIC_OBS_PULL_LATENCY_MS ?? DEFAULT_PULL_LATENCY_MS;
 
 /** The SRT URL an OBS Media Source uses to pull a feed from the ingest server.
  * `host` is the ingest node's tailnet IP, resolved server-side from the linked

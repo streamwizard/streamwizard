@@ -1,8 +1,5 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useGoogleFonts } from "../../hooks/use-google-font";
 import { subscribeToWsRoom } from "../../lib/ws-store";
@@ -31,6 +28,7 @@ import {
   usePollCelebration,
   useVotePulses,
 } from "./presets";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
 
 export interface PollWidgetRendererProps {
   item: OverlayItem;
@@ -166,11 +164,11 @@ export function PollWidgetRenderer({ item, scene, isEditor = false }: PollWidget
   }, []);
 
   // Live poll events over the scene's shared WS room.
+  const wsUrl = useOverlayWsUrl();
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
     return subscribeToWsRoom(token, wsUrl, (raw) => apply(raw as PollWidgetFrame));
-  }, [token, apply]);
+  }, [token, wsUrl, apply]);
 
   // Editor: Local test fires arrive as a browser event.
   useEffect(() => {

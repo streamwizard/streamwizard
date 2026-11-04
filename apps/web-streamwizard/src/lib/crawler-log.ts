@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { env } from "@/lib/env";
 import { TtlCache } from "@repo/ttl-cache";
 
 /*
@@ -124,19 +125,40 @@ export function buildHttpLog(apiKey: string, input: HttpLogInput) {
 const allow = createCrawlerLimiter();
 const SENDING_ENVIRONMENTS = new Set(["production", "staging"]);
 
+/** Where and whether crawler visits are sent. Read from env.ts by default. */
+export type CrawlerLogConfig = {
+  /** APP_ENV, else NODE_ENV. Only production and staging send. */
+  environment: string;
+  apiKey: string | undefined;
+  host: string;
+  /** The public origin; behind the reverse proxy the request's own is the container's. */
+  baseUrl: string | undefined;
+};
+
+function configFromEnv(): CrawlerLogConfig {
+  return {
+    environment: env.APP_ENV || env.NODE_ENV || "",
+    apiKey: env.POSTHOG_KEY ?? env.NEXT_PUBLIC_POSTHOG_KEY,
+    host: env.POSTHOG_HOST ?? env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com",
+    baseUrl: env.NEXT_PUBLIC_BASE_URL,
+  };
+}
+
 /**
  * Returns the send as a promise when this request is a crawler visit worth
  * recording, or null. The caller hands the promise to `event.waitUntil`, so
  * the response never waits for PostHog.
  */
-export function logCrawlerVisit(request: {
-  method: string;
-  headers: Headers;
-  nextUrl: { pathname: string; origin: string };
-}): Promise<void> | null {
-  const environment = process.env.APP_ENV || process.env.NODE_ENV || "";
+export function logCrawlerVisit(
+  request: {
+    method: string;
+    headers: Headers;
+    nextUrl: { pathname: string; origin: string };
+  },
+  config: CrawlerLogConfig = configFromEnv(),
+): Promise<void> | null {
+  const { environment, apiKey, host } = config;
   if (!SENDING_ENVIRONMENTS.has(environment)) return null;
-  const apiKey = process.env.POSTHOG_KEY ?? process.env.NEXT_PUBLIC_POSTHOG_KEY;
   if (!apiKey) return null;
 
   const userAgent = request.headers.get("user-agent");
@@ -145,13 +167,12 @@ export function logCrawlerVisit(request: {
   if (!userAgent || !crawler || !isPublicPageRequest(request.method, pathname)) return null;
   if (!allow(crawler, pathname)) return null;
 
-  const host = process.env.POSTHOG_HOST ?? process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
   const payload = buildHttpLog(apiKey, {
     userAgent,
     method: request.method,
     pathname,
     // Behind the reverse proxy the request's own origin is the container's.
-    origin: process.env.NEXT_PUBLIC_BASE_URL ?? request.nextUrl.origin,
+    origin: config.baseUrl ?? request.nextUrl.origin,
     referer: request.headers.get("referer"),
     environment,
   });

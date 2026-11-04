@@ -1,8 +1,5 @@
 "use client";
 
-// Next.js replaces NEXT_PUBLIC_* at build time; declare process so tsc is happy in this library package.
-declare const process: { env: Record<string, string | undefined> };
-
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { CSSProperties } from "react";
@@ -38,6 +35,7 @@ import {
   type ChatWidgetFrame,
   type ChatWidgetRow,
 } from "./chat-widget-feed";
+import { useOverlayWsUrl } from "../../hooks/use-overlay-ws-url";
 
 export interface ChatWidgetRendererProps {
   item: OverlayItem;
@@ -555,11 +553,11 @@ export function ChatWidgetRenderer({ item, scene, isEditor = false }: ChatWidget
   // Real chat and Live tests over the scene's WS room. No channel filter: the
   // socket is shared per room, and an alert box on the same scene needs the
   // rest of the feed.
+  const wsUrl = useOverlayWsUrl();
   useEffect(() => {
-    const wsUrl = process.env.NEXT_PUBLIC_WS_SERVER_URL ?? "";
     if (!token || !wsUrl) return;
     return subscribeToWsRoom(token, wsUrl, (raw) => enqueue(raw as ChatWidgetFrame));
-  }, [token, enqueue]);
+  }, [token, wsUrl, enqueue]);
 
   // Editor: Local fires from the demo panel arrive as a browser event. The
   // name says alert because the alert box used it first; it carries any frame.

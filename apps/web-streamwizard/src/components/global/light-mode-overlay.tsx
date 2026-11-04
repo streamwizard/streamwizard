@@ -4,7 +4,9 @@ import { useRef } from "react";
 import { useTheme } from "next-themes";
 import { useThemeTransitionStore } from "@/stores/light-mode-transition-store";
 
-export function LightModeOverlay() {
+// The CDN base comes in from the root layout rather than from env.ts: this
+// mounts on every page, and env.ts would put zod in the home page bundle.
+export function LightModeOverlay({ cdnUrl }: { cdnUrl: string }) {
   const { setTheme } = useTheme();
   const { isPlaying, reset } = useThemeTransitionStore();
   const hasSwitchedRef = useRef(false);
@@ -35,7 +37,7 @@ export function LightModeOverlay() {
     <div style={{ position: "fixed", inset: 0, zIndex: 9999, pointerEvents: "all" }}>
       <video
         ref={videoRef}
-        src={`${process.env.NEXT_PUBLIC_CDN_URL}/public/animations/lightmode-transfer.a3be503ecf4b.webm`}
+        src={`${cdnUrl}/public/animations/lightmode-transfer.a3be503ecf4b.webm`}
         autoPlay
         playsInline
         onPlay={(e) => { e.currentTarget.volume = 0.40; }}

@@ -9,6 +9,7 @@ import { ObsWindowMock } from "./obs-window-mock";
 import { ObsDemoProvider } from "./obs-demo-store";
 import { HandoffArrow } from "./handoff-arrow";
 import { CheckItem } from "../layout/check-item";
+import { env } from "@/lib/env";
 
 /*
  * Cloud OBS is the IRL pillar: for streamers who want to go live away from a
@@ -56,7 +57,7 @@ export function CloudObsShowcase({
                 </ul>
               </Reveal>
               <Reveal direction="right">
-                <ObsWindowMock />
+                <ObsWindowMock cdnUrl={env.NEXT_PUBLIC_CDN_URL} />
                 {/* The scene previews and the away screens' clip rotator play
                     xpudu's streams. Credit sits with the component that shows
                     the footage, so it travels to /cloud-obs too. */}
