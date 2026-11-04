@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
+import { toActionError, zodErrorMessage } from "@/lib/action-error";
 import type { Database } from "@repo/supabase";
 import {
   deleteOverlayItemGroupsByIds,
@@ -39,6 +40,9 @@ const SAVE_FAILED = "This overlay couldn't be saved. Reload the editor and try a
 
 // A save that swaps out a whole overlay is still one save, not 200 events.
 const MAX_WIDGET_EVENTS_PER_SAVE = 40;
+
+// A widget whose settings fail the schema; Zod's first hint is shown when it has one.
+const INVALID_ITEM = "One of the widgets has settings we can't save.";
 
 interface OverlayItemInput {
   id?: string;
@@ -156,7 +160,7 @@ export async function saveAllOverlayItems(
     const rows: ItemInsert[] = [];
     for (const item of batch) {
       const parsed = overlayItemSchema.safeParse({ ...item, id: undefined, config: config(item) });
-      if (!parsed.success) return { rows: [], error: parsed.error.message };
+      if (!parsed.success) return { rows: [], error: zodErrorMessage(parsed.error, INVALID_ITEM) };
       rows.push({ scene_id: sceneId, ...overlayItemColumns(parsed.data) });
     }
     return { rows };
@@ -172,7 +176,7 @@ export async function saveAllOverlayItems(
       config: resolveClipFieldParentRefs(item.config, idMap),
     });
     if (!parsed.success) {
-      return { success: false, error: parsed.error.message, data: null, idMap: {} };
+      return { success: false, error: zodErrorMessage(parsed.error, INVALID_ITEM), data: null, idMap: {} };
     }
     const columns = overlayItemColumns(parsed.data);
     const row = { id: item.id!, scene_id: sceneId, ...columns };
@@ -198,8 +202,7 @@ export async function saveAllOverlayItems(
   ]);
   const firstWriteErr = groupRes?.error ?? delRes?.error;
   if (firstWriteErr) {
-    reportError(firstWriteErr, OVERLAYS_ERROR_SCOPE);
-    return { success: false, error: firstWriteErr.message, data: null, idMap: {} };
+    return { success: false, error: toActionError(firstWriteErr, OVERLAYS_ERROR_SCOPE, SAVE_FAILED), data: null, idMap: {} };
   }
 
   // Changed items in one upsert, new root items in one insert, side by side.
@@ -209,8 +212,7 @@ export async function saveAllOverlayItems(
   ]);
   const itemWriteErr = updateRes?.error ?? rootRes?.error;
   if (itemWriteErr) {
-    reportError(itemWriteErr, OVERLAYS_ERROR_SCOPE);
-    return { success: false, error: itemWriteErr.message, data: null, idMap: {} };
+    return { success: false, error: toActionError(itemWriteErr, OVERLAYS_ERROR_SCOPE, SAVE_FAILED), data: null, idMap: {} };
   }
   const insertedRoots = rootRes?.data ?? [];
   if (insertedRoots.length !== newRoots.length) {
@@ -230,8 +232,7 @@ export async function saveAllOverlayItems(
 
     const { data, error: chErr } = await insertOverlayItemsReturningRows(supabase, rows);
     if (chErr) {
-      reportError(chErr, OVERLAYS_ERROR_SCOPE);
-      return { success: false, error: chErr.message, data: null, idMap: {} };
+      return { success: false, error: toActionError(chErr, OVERLAYS_ERROR_SCOPE, "Couldn't save the overlay. Try again?"), data: null, idMap: {} };
     }
     insertedChildren = data ?? [];
     newChildren.forEach((item, idx) => {

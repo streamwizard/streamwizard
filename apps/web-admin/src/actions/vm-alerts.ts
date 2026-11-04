@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { reportError } from "@repo/sentry";
 import { supabaseAdmin } from "@repo/supabase/next/admin";
 import { setVmAlertRules } from "@repo/supabase/queries/proxmox";
 import { queryLatestProxmoxGuests } from "@repo/metrics";
@@ -30,8 +31,8 @@ export async function setVmAlerts(host: string, vmid: number, rules: string[]): 
     if (!isStreamwizardVm(vm.tags)) return { error: `Add the tag ${STREAMWIZARD_VM_TAG} in Proxmox to enable alerts.` };
     await setVmAlertRules(supabaseAdmin, host, vmid, rules, userId);
   } catch (error) {
-    console.error("[setVmAlerts]", error);
-    return { error: (error as Error).message };
+    reportError(error, "vm-alerts.save", { host, vmid });
+    return { error: "Couldn't save the VM alerts. Try again?" };
   }
 
   revalidatePath("/vms");

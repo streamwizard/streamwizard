@@ -1,6 +1,6 @@
 "use server";
 
-import { reportError } from "@repo/sentry";
+import { toActionError } from "@/lib/action-error";
 
 import type { ClipsWidgetConfig } from "@/types/overlays";
 import { tryAuthContext } from "@/lib/auth";
@@ -74,8 +74,7 @@ export async function getPreviewClips(widgetConfig: ClipsWidgetConfig): Promise<
   );
 
   if (error) {
-    reportError(error, "actions/overlays-preview");
-    return { clips: [], error: error.message };
+    return { clips: [], error: toActionError(error, "actions/overlays-preview", "Couldn't load preview clips. Try again?") };
   }
 
   let result = (clips ?? []) as unknown as PreviewClip[];

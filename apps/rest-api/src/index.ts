@@ -10,6 +10,7 @@ import { metricsMiddleware, isMetricsEnabled, initMetrics, BUCKETS } from "@repo
 import { cors } from "hono/cors";
 import { securityMiddleware } from "@/middleware/security";
 import { rawBodyMiddleware } from "@/middleware/raw-body";
+import { createApiErrorHandler } from "@/middleware/error-handler";
 import { twitchEventSubVerification } from "@/middleware/twitch-eventsub";
 import { supabaseMiddleware, supabaseAuth } from "@/middleware/auth";
 import { handleTwitchEventSub } from "@/routes/twitch-eventsub";
@@ -75,8 +76,8 @@ app.use("*", securityMiddleware.securityHeaders());
 // 6. Brute force protection (after auth, before routes)
 app.use("*", securityMiddleware.bruteForceProtection());
 
-// 11. Safe error handler (should be last)
-app.use("*", securityMiddleware.safeErrorHandler());
+// Anything a route or middleware throws: generic JSON 500 with the request id.
+app.onError(createApiErrorHandler());
 
 // ============================================
 // ROUTES

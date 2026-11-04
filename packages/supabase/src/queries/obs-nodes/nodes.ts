@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { reportError } from "@repo/sentry";
 import type { Database } from "../../types/supabase";
 
 type DBClient = SupabaseClient<Database>;
@@ -98,7 +99,8 @@ export async function getNodeById(client: DBClient, id: string): Promise<ObsNode
 function describeNodeError(error: { code?: string; message: string } | null): string | null {
   if (!error) return null;
   if (error.code === "23505") return "A node with this name already exists. Names must be unique.";
-  return error.message;
+  reportError(error, "obs-nodes.save");
+  return "Couldn't save the node. Try again?";
 }
 
 export async function createNode(
@@ -152,7 +154,11 @@ export async function updateNodeTailscaleIp(
 
 export async function deleteNode(client: DBClient, id: string): Promise<{ error: string | null }> {
   const { error } = await client.from("obs_nodes").delete().eq("id", id);
-  return { error: error?.message ?? null };
+  if (!error) return { error: null };
+  // foreign_key_violation: something still points at the node.
+  if (error.code === "23503") return { error: "This node still has instances or sessions. Remove those first." };
+  reportError(error, "obs-nodes.delete");
+  return { error: "Couldn't delete the node. Try again?" };
 }
 
 /** Looks up by hash regardless of status, so an already-linked row from a

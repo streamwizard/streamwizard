@@ -1,6 +1,7 @@
 "use server";
 
 import { reportError } from "@repo/sentry";
+import { ActionError, toActionError } from "@/lib/action-error";
 import { R2Storage } from "@repo/storage";
 import { getUserAssetQuotaMb } from "@repo/supabase/queries/subscriptions";
 import { createAdminClient } from "@repo/supabase/next/admin";
@@ -56,7 +57,7 @@ export interface AssetListing {
 
 function getR2(): R2Storage {
   if (!env.R2_ACCOUNT_ID || !env.R2_ACCESS_KEY_ID || !env.R2_SECRET_ACCESS_KEY || !env.R2_ASSETS_BUCKET) {
-    throw new Error("Media storage is not configured on this environment.");
+    throw new ActionError("Media storage is not configured on this environment.");
   }
   return new R2Storage({
     accountId: env.R2_ACCOUNT_ID,
@@ -67,7 +68,7 @@ function getR2(): R2Storage {
 }
 
 function assetUrl(key: string): string {
-  if (!env.NEXT_PUBLIC_ASSET_CDN_URL) throw new Error("Media storage is not configured on this environment.");
+  if (!env.NEXT_PUBLIC_ASSET_CDN_URL) throw new ActionError("Media storage is not configured on this environment.");
   return `${env.NEXT_PUBLIC_ASSET_CDN_URL.replace(/\/$/, "")}/${key}`;
 }
 
@@ -119,7 +120,7 @@ export async function listAssets(): Promise<{ data: AssetListing | null; error: 
       error: null,
     };
   } catch (err) {
-    return { data: null, error: err instanceof Error ? err.message : "Failed to load your media." };
+    return { data: null, error: toActionError(err, "actions/assets", "Failed to load your media.") };
   }
 }
 
@@ -171,8 +172,7 @@ export async function createAssetUpload(input: {
     const uploadUrl = await r2.presignPut(key, upload.mimeType, upload.sizeBytes, PRESIGN_EXPIRY_SECONDS);
     return { data: { assetId, uploadUrl, url: assetUrl(key) }, error: null };
   } catch (err) {
-    reportError(err, "actions/assets");
-    return { data: null, error: err instanceof Error ? err.message : "Failed to start the upload." };
+    return { data: null, error: toActionError(err, "actions/assets", "Failed to start the upload.") };
   }
 }
 

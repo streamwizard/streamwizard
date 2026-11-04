@@ -81,6 +81,8 @@ describe("proxmox webhook receiver", () => {
     expect((await send("not json")).status).toBe(400);
     expect((await send({ ...vzdump, severity: "loud" })).status).toBe(400);
     expect((await send({ ...vzdump, source: "../etc" })).status).toBe(400);
+    // The caller learns it was rejected, not which schema rule failed.
+    expect(await (await send({ ...vzdump, severity: "loud" })).json()).toEqual({ error: "Invalid payload" });
   });
 
   it("stores our job with parsed guests and pokes the poller", async () => {

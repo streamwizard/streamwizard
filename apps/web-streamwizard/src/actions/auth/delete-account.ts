@@ -91,7 +91,7 @@ export async function deleteAccount() {
   const { error: rpcError } = await deleteUserData(supabase, broadcasterId);
   if (rpcError) {
     reportError(rpcError, "actions/delete-account");
-    return { success: false, error: rpcError.message };
+    return { success: false, error: "Couldn't delete your account. Try again, or contact us if it keeps failing." };
   }
 
   const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
@@ -99,7 +99,7 @@ export async function deleteAccount() {
   );
   if (authError) {
     reportError(authError, "actions/delete-account");
-    return { success: false, error: authError.message };
+    return { success: false, error: "Couldn't finish deleting your account. Try again, or contact us if it keeps failing." };
   }
 
   await revokeWsSockets(user.id, "all");

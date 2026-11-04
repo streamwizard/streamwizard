@@ -1,6 +1,7 @@
 "use server";
 
 import {
+  ClipFolderError,
   addClipToFolder as _addClipToFolder,
   removeClipFromFolder as _removeClipFromFolder,
   createClipFolder as _createClipFolder,
@@ -9,6 +10,7 @@ import {
 } from "@repo/supabase/queries/clips";
 import { revalidatePath } from "next/cache";
 import { tryAuthContext } from "@/lib/auth";
+import { toActionError, zodErrorMessage } from "@/lib/action-error";
 import { track } from "@/lib/track";
 import { idSchema } from "@/schemas/ids";
 import {
@@ -23,7 +25,13 @@ const UNAUTHORIZED = { success: false, message: "Unauthorized" } as const;
 
 /** The first issue's message, for the folder dialog to show next to the field. */
 function invalid(error: z.ZodError) {
-  return { success: false, message: error.issues[0]?.message ?? "Invalid input" } as const;
+  return { success: false, message: zodErrorMessage(error, "Invalid input") } as const;
+}
+
+/** A ClipFolderError says what to fix; anything else is reported and replaced by the fallback. */
+function failed(error: unknown, fallback: string) {
+  const message = error instanceof ClipFolderError ? error.message : toActionError(error, "actions/clip-folders", fallback);
+  return { success: false, message } as const;
 }
 
 export async function addClipToFolder(input: z.input<typeof addClipToFolderSchema>) {
@@ -38,8 +46,7 @@ export async function addClipToFolder(input: z.input<typeof addClipToFolderSchem
     revalidatePath("/dashboard", "layout");
     return result;
   } catch (error) {
-    console.error("Error adding clip to Favorites:", error);
-    return { success: false, message: error instanceof Error ? error.message : "An unknown error occurred" };
+    return failed(error, "Couldn't add the clip to that folder. Try again?");
   }
 }
 
@@ -55,8 +62,7 @@ export async function removeClipFromFolder(clipId: string, folderId: string) {
     revalidatePath("/dashboard", "layout");
     return result;
   } catch (error) {
-    console.error("Error removing clip from Favorites:", error);
-    return { success: false, message: error instanceof Error ? error.message : "An unknown error occurred" };
+    return failed(error, "Couldn't remove the clip from that folder. Try again?");
   }
 }
 
@@ -72,8 +78,7 @@ export async function createClipFolder(folderName: string, parentFolderId?: stri
     revalidatePath("/dashboard", "layout");
     return { success: true, message: "Folder created successfully", data };
   } catch (error) {
-    console.error("Error creating folder:", error);
-    return { success: false, message: error instanceof Error ? error.message : "An unknown error occurred" };
+    return failed(error, "Couldn't create the folder. Try again?");
   }
 }
 
@@ -88,8 +93,7 @@ export async function editClipFolder(folderId: string, folderName: string) {
     revalidatePath("/dashboard", "layout");
     return { success: true, message: "Folder edited successfully" };
   } catch (error) {
-    console.error("Error editing folder:", error);
-    return { success: false, message: error instanceof Error ? error.message : "An unknown error occurred" };
+    return failed(error, "Couldn't rename the folder. Try again?");
   }
 }
 
@@ -106,7 +110,6 @@ export async function deleteClipFolder(folderId: string) {
     revalidatePath("/dashboard", "layout");
     return { success: true, message: "Folder deleted successfully" };
   } catch (error) {
-    console.error("Error deleting folder:", error);
-    return { success: false, message: error instanceof Error ? error.message : "An unknown error occurred" };
+    return failed(error, "Couldn't delete the folder. Try again?");
   }
 }

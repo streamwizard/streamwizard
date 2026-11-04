@@ -18,14 +18,19 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const range = searchParams.get("range") ?? "24h";
   const window = searchParams.get("window") ?? "1h";
+  // Only the input checks answer 400 with their message; a failed Influx
+  // query is left to Next's generic 500.
+  let target: { env: ReturnType<typeof assertAppEnv>; app: ReturnType<typeof assertAppName> } | null = null;
   try {
     assertValidFluxDuration(range, "range");
     assertValidFluxDuration(window, "window");
-    if (searchParams.has("server")) return NextResponse.json(await fetchServerSeries(range, window));
-    const env = assertAppEnv(searchParams.get("env") ?? "");
-    const app = assertAppName(searchParams.get("app") ?? "");
-    return NextResponse.json(await fetchAppSeries(env, app, range, window));
+    if (!searchParams.has("server")) {
+      target = { env: assertAppEnv(searchParams.get("env") ?? ""), app: assertAppName(searchParams.get("app") ?? "") };
+    }
   } catch (error) {
     return NextResponse.json({ error: (error as Error).message }, { status: 400 });
   }
+
+  if (!target) return NextResponse.json(await fetchServerSeries(range, window));
+  return NextResponse.json(await fetchAppSeries(target.env, target.app, range, window));
 }

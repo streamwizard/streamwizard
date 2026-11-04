@@ -39,6 +39,9 @@ const SLUG_NOT_FOUND: LoadOverlayResult = {
   message: "No active overlay scene found for that URL.",
 };
 
+// Shown in OBS when the database read fails; the detail goes to Sentry.
+const OVERLAY_LOAD_FAILED = "Couldn't load this overlay. It retries on the next refresh.";
+
 function asRecord(j: Json): Record<string, unknown> {
   return typeof j === "object" && j !== null && !Array.isArray(j)
     ? (j as Record<string, unknown>)
@@ -249,7 +252,7 @@ export async function loadOverlayBySlugOrId(args: {
     return {
       ok: false,
       code: "DATABASE_ERROR",
-      message: sceneErr.message,
+      message: OVERLAY_LOAD_FAILED,
     };
   }
 
@@ -273,7 +276,7 @@ export async function loadOverlayBySlugOrId(args: {
     return {
       ok: false,
       code: "DATABASE_ERROR",
-      message: itemsError.message,
+      message: OVERLAY_LOAD_FAILED,
     };
   }
 

@@ -74,7 +74,7 @@ export async function grantSubscriptionAction(
 
   if (error) {
     reportError(error, "actions/subscriptions");
-    return { error: error.message };
+    return { error: "Couldn't grant the plan. Try again?" };
   }
 
   await logGrant(adminClient, { userId, planId, productId, status, expiresAt, adminUserId, toCancel });
@@ -117,7 +117,7 @@ export async function revokeSubscriptionAction(subscriptionId: string) {
 
   if (error) {
     reportError(error, "actions/subscriptions");
-    return { error: error.message };
+    return { error: "Couldn't revoke the plan. Try again?" };
   }
 
   if (before && before.status !== "canceled") {
@@ -171,7 +171,7 @@ export async function updateSubscriptionAction(
 
   if (error) {
     reportError(error, "actions/subscriptions");
-    return { error: error.message };
+    return { error: "Couldn't update the plan. Try again?" };
   }
 
   // The grant note is internal and can hold anything, so only status and

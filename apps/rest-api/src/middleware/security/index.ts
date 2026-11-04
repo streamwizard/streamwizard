@@ -12,14 +12,14 @@ export { bruteForceProtection } from '@/middleware/security/brute-force';
 export { securityHeaders } from '@/middleware/security/headers';
 
 // Utilities
-export { requestId, safeErrorHandler, logSecurityEvent } from '@/middleware/security/utils';
+export { requestId, logSecurityEvent } from '@/middleware/security/utils';
 export type { SecurityEventMetadata } from '@/middleware/security/utils';
 
 // Import for the securityMiddleware object
 import { enforceHttps } from '@/middleware/security/https';
 import { bruteForceProtection } from '@/middleware/security/brute-force';
 import { securityHeaders } from '@/middleware/security/headers';
-import { requestId, safeErrorHandler } from '@/middleware/security/utils';
+import { requestId } from '@/middleware/security/utils';
 
 /**
  * Pre-configured security middleware collection
@@ -33,13 +33,11 @@ import { requestId, safeErrorHandler } from '@/middleware/security/utils';
  * app.use('*', securityMiddleware.enforceHttps());
  * app.use('*', securityMiddleware.securityHeaders());
  * app.use('/api/*', securityMiddleware.bruteForceProtection());
- * app.use('*', securityMiddleware.safeErrorHandler());
  * ```
  */
 export const securityMiddleware = {
   enforceHttps,
   bruteForceProtection,
   securityHeaders,
-  requestId,
-  safeErrorHandler
+  requestId
 };

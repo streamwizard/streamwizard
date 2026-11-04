@@ -59,7 +59,7 @@ export async function setAdminRoleAction(userId: string, admin: boolean): Promis
     .maybeSingle();
   if (readError) {
     reportError(readError, "actions/users:set-admin");
-    return { error: readError.message };
+    return { error: "Couldn't change the admin role. Try again?" };
   }
 
   if (admin && !existing) {
@@ -70,7 +70,7 @@ export async function setAdminRoleAction(userId: string, admin: boolean): Promis
       .single();
     if (error) {
       reportError(error, "actions/users:set-admin");
-      return { error: error.message };
+      return { error: "Couldn't change the admin role. Try again?" };
     }
     // The new admin has no second factor yet, so whichever session enrols one
     // first becomes a full admin. Only a sign-in made after the grant may.
@@ -84,7 +84,7 @@ export async function setAdminRoleAction(userId: string, admin: boolean): Promis
     const { error } = await client.from("user_roles").delete().eq("id", existing.id);
     if (error) {
       reportError(error, "actions/users:set-admin");
-      return { error: error.message };
+      return { error: "Couldn't change the admin role. Try again?" };
     }
   }
 
@@ -101,7 +101,10 @@ export async function unlinkDiscordAction(userId: string): Promise<Result> {
     .select("discord_user_id")
     .eq("user_id", userId)
     .maybeSingle();
-  if (readError) return { error: readError.message };
+  if (readError) {
+    reportError(readError, "actions/users:unlink-discord");
+    return { error: "Couldn't unlink Discord. Try again?" };
+  }
   if (!integration) return { error: "This user has no Discord account linked." };
 
   // Best effort, like the user's own unlink: take back the Verified Member
@@ -122,7 +125,7 @@ export async function unlinkDiscordAction(userId: string): Promise<Result> {
     await deleteDiscordIntegration(client, userId);
   } catch (error) {
     reportError(error, "actions/users:unlink-discord");
-    return { error: error instanceof Error ? error.message : "Unlink failed" };
+    return { error: "Couldn't unlink Discord. Try again?" };
   }
 
   revalidateUser(userId);
@@ -152,7 +155,10 @@ export async function resyncEventSubAction(userId: string): Promise<ResyncResult
     .select("twitch_user_id, twitch_scopes")
     .eq("user_id", userId)
     .maybeSingle();
-  if (readError) return { ...empty, error: readError.message };
+  if (readError) {
+    reportError(readError, "actions/users:resync-eventsub");
+    return { ...empty, error: "Couldn't read their Twitch link. Try again?" };
+  }
   if (!twitch) return { ...empty, error: "This user has no Twitch account linked." };
 
   const state = await loadUserEventSub(twitch.twitch_user_id, twitch.twitch_scopes);
@@ -211,7 +217,7 @@ export async function removeUserTotpAction(userId: string, factorId: string): Pr
   const { error } = await supabaseAdmin.auth.admin.mfa.deleteFactor({ id: factorId, userId });
   if (error) {
     reportError(error, "actions/users:remove-totp");
-    return { error: error.message };
+    return { error: "Couldn't remove the authenticator. Try again?" };
   }
   await endAllSessions(userId, "actions/users:remove-totp-sessions");
   revalidateUser(userId);
@@ -226,7 +232,6 @@ export interface ModerationResult extends Result {
 }
 
 const failure = (error: string): ModerationResult => ({ error, warnings: [] });
-const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
 
 /** Admins can't be banned or deleted from here: take the role away first, on purpose. */
 async function guardTarget(actorId: string, userId: string) {
@@ -262,7 +267,7 @@ export async function banUserAction(
   });
   if (error) {
     reportError(error, "actions/users:ban");
-    return failure(error.message);
+    return failure("Couldn't ban them. Try again?");
   }
 
   const warnings: string[] = [];
@@ -272,7 +277,7 @@ export async function banUserAction(
     await revokeUserSessions(supabaseAdmin, userId);
   } catch (e) {
     reportError(e, "actions/users:ban-sessions");
-    warnings.push(`Couldn't end their sessions (${errorText(e)}); they stay signed in until their token expires, within the hour.`);
+    warnings.push("Couldn't end their sessions; they stay signed in until their token expires, within the hour.");
   }
 
   let discordBanned = false;
@@ -285,7 +290,7 @@ export async function banUserAction(
         discordBanned = true;
       } catch (e) {
         reportError(e, "actions/users:ban-discord");
-        warnings.push(`Discord ban failed: ${errorText(e)}. The bot needs Ban Members and a role above theirs.`);
+        warnings.push("Discord ban failed. The bot needs Ban Members and a role above theirs.");
       }
     }
   }
@@ -295,7 +300,7 @@ export async function banUserAction(
       await deleteAllEventSub(user.twitch.userId);
     } catch (e) {
       reportError(e, "actions/users:ban-eventsub");
-      warnings.push(`Couldn't delete their EventSub subscriptions: ${errorText(e)}.`);
+      warnings.push("Couldn't delete their EventSub subscriptions. Run Resync on the EventSub tab.");
     }
   }
 
@@ -323,7 +328,7 @@ export async function unbanUserAction(userId: string, options: { unbanDiscord: b
   const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, { ban_duration: "none", app_metadata: { ban: null } });
   if (error) {
     reportError(error, "actions/users:unban");
-    return failure(error.message);
+    return failure("Couldn't unban them. Try again?");
   }
 
   const warnings: string[] = [];
@@ -338,7 +343,7 @@ export async function unbanUserAction(userId: string, options: { unbanDiscord: b
         discordUnbanned = true;
       } catch (e) {
         reportError(e, "actions/users:unban-discord");
-        warnings.push(`Discord unban failed: ${errorText(e)}.`);
+        warnings.push("Discord unban failed. Unban them in the server settings.");
       }
     }
   }
@@ -398,7 +403,7 @@ export async function deleteUserAction(
       await step();
     } catch (e) {
       reportError(e, `actions/users:delete-${label}`);
-      warnings.push(`${label}: ${errorText(e)}`);
+      warnings.push(`${label}: failed, see Sentry for the detail.`);
     }
   };
 
@@ -434,7 +439,7 @@ export async function deleteUserAction(
     const { error } = await deleteUserData(client, user.twitch.userId, "admin", actorId);
     if (error) {
       reportError(error, "actions/users:delete");
-      return { error: error.message, warnings };
+      return { error: "Couldn't delete their data. Try again?", warnings };
     }
   } else {
     // No Twitch, so delete_user_data can't find them; the auth delete below
@@ -450,7 +455,7 @@ export async function deleteUserAction(
   const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
   if (error) {
     reportError(error, "actions/users:delete-auth");
-    return { error: error.message, warnings };
+    return { error: "Their data is gone but the sign-in account wasn't deleted. Try again?", warnings };
   }
   await revokeWsSockets(userId, "all");
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { reportError } from "@repo/sentry";
+import { toActionError } from "@/lib/action-error";
 
 import { randomBytes } from "crypto";
 import {
@@ -65,8 +65,7 @@ export async function createOutputKey(
   });
 
   if (error) {
-    reportError(error, "actions/ingest-output-keys");
-    return { data: null, error: error.message };
+    return { data: null, error: toActionError(error, "actions/ingest-output-keys", "Couldn't create the output key. Try again?") };
   }
 
   revalidatePath(INGEST_SETTINGS_PATH);
@@ -85,8 +84,7 @@ export async function listOutputKeys(
 
   const adminClient = createAdminClient();
   const { data, error } = await selectOutputKeys(adminClient, user.id, parsedKeyId.data);
-  if (error) reportError(error, "actions/ingest-output-keys");
-  return { data, error: error?.message ?? null };
+  return { data, error: error ? toActionError(error, "actions/ingest-output-keys", "Couldn't load your output keys. Try again?") : null };
 }
 
 export async function rotateOutputKey(
@@ -103,8 +101,7 @@ export async function rotateOutputKey(
   const { data, error } = await rotateOutputKeySecret(adminClient, parsedId.data, user.id, generateOutputKey());
 
   if (error) {
-    reportError(error, "actions/ingest-output-keys");
-    return { data: null, error: error.message };
+    return { data: null, error: toActionError(error, "actions/ingest-output-keys", "Couldn't rotate the output key. Try again?") };
   }
 
   revalidatePath(INGEST_SETTINGS_PATH);
@@ -123,7 +120,7 @@ export async function deleteOutputKey(id: string): Promise<{ error: string | nul
   const { error } = await deleteOutputKeyRow(adminClient, parsedId.data, user.id);
 
   revalidatePath(INGEST_SETTINGS_PATH);
-  if (error) reportError(error, "actions/ingest-output-keys");
-  if (!error) await track("ingest_key_deleted", { kind: "output" }, user);
-  return { error: error?.message ?? null };
+  if (error) return { error: toActionError(error, "actions/ingest-output-keys", "Couldn't delete the output key. Try again?") };
+  await track("ingest_key_deleted", { kind: "output" }, user);
+  return { error: null };
 }

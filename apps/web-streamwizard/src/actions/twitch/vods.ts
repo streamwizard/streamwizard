@@ -1,5 +1,6 @@
 "use server";
 
+import axios from "axios";
 import { TwitchApi } from "@repo/twitch-api";
 import { describeError } from "@repo/sentry/safe-error";
 import { getCurrentStreamDetails as _getCurrentStreamDetails, getStreamData as _getStreamData, createPendingClip } from "@repo/supabase/queries/vods";
@@ -9,6 +10,7 @@ import type { GetStreamDataResult, StreamEvent, Clip } from "@/types/stream-even
 import { ActionResponse } from "@/types/actions";
 import { track } from "@/lib/track";
 import { tryAuthContext } from "@/lib/auth";
+import { toActionError } from "@/lib/action-error";
 import { twitchIdSchema } from "@/schemas/ids";
 import {
   createClipFromVodSchema,
@@ -18,6 +20,19 @@ import {
 } from "@/schemas/twitch";
 
 const UNAUTHORIZED = { success: false, error: "Unauthorized" } as const;
+
+/**
+ * A failed Twitch or Supabase call, as the browser sees it. Helix 4xx answers
+ * (not live, no permission, expired link) are expected and only logged;
+ * anything else is reported. Either way the caller gets the fallback.
+ */
+function failure(error: unknown, fallback: string) {
+  if (axios.isAxiosError(error) && error.response && error.response.status < 500) {
+    console.warn(`[vods] Twitch answered ${error.response.status}`);
+    return { success: false, error: fallback } as const;
+  }
+  return { success: false, error: toActionError(error, "actions/vods", fallback) } as const;
+}
 
 // =============================================================================
 // Get Videos
@@ -53,11 +68,7 @@ export async function getVideos(cursor?: string): Promise<GetVideosResult> {
       cursor: response.pagination?.cursor,
     };
   } catch (error) {
-    console.error(`[vods] get videos failed: ${describeError(error)}`);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error fetching videos",
-    };
+    return failure(error, "Couldn't load your videos from Twitch. Try again?");
   }
 }
 
@@ -78,11 +89,7 @@ export async function deleteVideos(videoIds: string[]): Promise<DeleteVideosResu
 
     return { success: true, deletedIds };
   } catch (error) {
-    console.error(`[vods] delete videos failed: ${describeError(error)}`);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error deleting videos",
-    };
+    return failure(error, "Couldn't delete those videos on Twitch. Try again?");
   }
 }
 
@@ -137,11 +144,7 @@ export async function createClipFromVOD(input: CreateClipFromVODProps): Promise<
       },
     };
   } catch (error) {
-    console.error(`[vods] create clip from VOD failed: ${describeError(error)}`);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error creating clip from VOD",
-    };
+    return failure(error, "Couldn't create that clip on Twitch. Try again?");
   }
 }
 
@@ -181,11 +184,7 @@ export async function getStreamData(videoId: string): Promise<GetStreamDataResul
 
     return { success: true, events: events as StreamEvent[], clips: clips as Clip[] };
   } catch (error) {
-    console.error("Error fetching stream data:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error fetching stream data",
-    };
+    return failure(error, "Couldn't load this stream's events. Try again?");
   }
 }
 
@@ -225,11 +224,7 @@ export async function getStreamMarkers(videoId: string): Promise<GetStreamMarker
 
     return { success: true, markers: allMarkers };
   } catch (error) {
-    console.error(`[vods] get stream markers failed: ${describeError(error)}`);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error fetching stream markers",
-    };
+    return failure(error, "Couldn't load the stream markers from Twitch. Try again?");
   }
 }
 
@@ -257,10 +252,6 @@ export async function createStreamMarker(description?: string): Promise<ActionRe
       },
     };
   } catch (error) {
-    console.error(`[vods] create stream marker failed: ${describeError(error)}`);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error creating stream marker",
-    };
+    return failure(error, "Couldn't add a stream marker. Markers only work while you're live.");
   }
 }

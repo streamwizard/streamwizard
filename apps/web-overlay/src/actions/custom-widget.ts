@@ -55,7 +55,8 @@ export async function loadCustomWidgetData(
     reportError(iErr, "custom-widget.loadCustomWidgetData: instance query");
   }
 
-  if (wErr || !widget) return { data: null, error: wErr?.message ?? "Widget not found" };
+  if (wErr && wErr.code !== "PGRST116") return { data: null, error: "Couldn't load this widget." };
+  if (!widget) return { data: null, error: "Widget not found" };
 
   return {
     data: {

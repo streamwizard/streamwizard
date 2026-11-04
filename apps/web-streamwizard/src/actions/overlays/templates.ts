@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { track } from "@/lib/track";
-import { reportError } from "@repo/sentry";
+import { toActionError, zodErrorMessage } from "@/lib/action-error";
 import type { Database, Json } from "@repo/supabase";
 import {
   getOverlayTemplates as getTemplateRows,
@@ -28,6 +28,8 @@ import { createFromTemplateSchema } from "@/schemas/overlay-actions";
 import { tryAuthContext } from "@/lib/auth";
 import { OVERLAYS_ERROR_SCOPE, generateSlug } from "./shared";
 
+const TEMPLATE_FAILED = "Couldn't create the overlay from that template. Try again?";
+
 /**
  * Published widgetTemplate templates for the "start from" picker. Catalog rows, so any
  * signed-in user can read them.
@@ -38,8 +40,7 @@ export async function getOverlayTemplates() {
 
   const { data, error } = await getTemplateRows(ctx.supabase);
   if (error) {
-    reportError(error, OVERLAYS_ERROR_SCOPE);
-    return { data: null, error: error.message };
+    return { data: null, error: toActionError(error, OVERLAYS_ERROR_SCOPE, "Couldn't load the templates. Try again?") };
   }
   return { data, error: null };
 }
@@ -63,8 +64,7 @@ export async function createOverlayFromTemplate(input: {
     error: templateError,
   } = await getOverlayTemplateBySlug(supabase, formData.templateId);
   if (templateError) {
-    reportError(templateError, OVERLAYS_ERROR_SCOPE);
-    return { data: null, error: templateError.message };
+    return { data: null, error: toActionError(templateError, OVERLAYS_ERROR_SCOPE, TEMPLATE_FAILED) };
   }
   if (!template || !templateItems) return { data: null, error: "Unknown template" };
 
@@ -79,8 +79,7 @@ export async function createOverlayFromTemplate(input: {
       widgetTemplateIds,
     );
     if (widgetTemplatesError) {
-      reportError(widgetTemplatesError, OVERLAYS_ERROR_SCOPE);
-      return { data: null, error: widgetTemplatesError.message };
+      return { data: null, error: toActionError(widgetTemplatesError, OVERLAYS_ERROR_SCOPE, TEMPLATE_FAILED) };
     }
     for (const wt of widgetTemplates ?? []) widgetTemplatesById.set(wt.id, wt);
   }
@@ -90,7 +89,7 @@ export async function createOverlayFromTemplate(input: {
     width: template.width,
     height: template.height,
   });
-  if (!parsed.success) return { data: null, error: parsed.error.message };
+  if (!parsed.success) return { data: null, error: zodErrorMessage(parsed.error, "Check the overlay name, then try again.") };
 
   const { data: scene, error: sceneError } = await createSceneRow(supabase, {
     user_id: user.id,
@@ -103,15 +102,14 @@ export async function createOverlayFromTemplate(input: {
   });
 
   if (sceneError) {
-    reportError(sceneError, OVERLAYS_ERROR_SCOPE);
-    return { data: null, error: sceneError.message };
+    return { data: null, error: toActionError(sceneError, OVERLAYS_ERROR_SCOPE, TEMPLATE_FAILED) };
   }
 
   if (templateItems.length > 0) {
     // A scene without its items is a broken template instance, so every failure
     // below deletes the scene again rather than leaving a half-built overlay.
-    const abort = async (error: unknown, message: string) => {
-      reportError(error, OVERLAYS_ERROR_SCOPE);
+    const abort = async (error: unknown) => {
+      const message = toActionError(error ?? new Error("Template copy wrote no row"), OVERLAYS_ERROR_SCOPE, TEMPLATE_FAILED);
       await deleteSceneRow(supabase, scene.id, user.id);
       return { data: null, error: message };
     };
@@ -128,7 +126,7 @@ export async function createOverlayFromTemplate(input: {
         overlayWidgetColumns(widgetTemplate, user.id),
       );
       if (widgetError || !widget) {
-        return abort(widgetError, widgetError?.message ?? "Failed to create widget from template");
+        return abort(widgetError);
       }
       widgetTemplateItemIds.set(idx, widget.id);
     }
@@ -162,7 +160,7 @@ export async function createOverlayFromTemplate(input: {
 
     const { data: inserted, error: itemsError } = await insertOverlayItemsReturningIds(supabase, roots);
     if (itemsError || !inserted) {
-      return abort(itemsError, itemsError?.message ?? "Failed to create template items");
+      return abort(itemsError);
     }
 
     // Wire each widget-template item to its own instance row (holds per-item
@@ -175,7 +173,7 @@ export async function createOverlayFromTemplate(input: {
         user_id: user.id,
       });
       if (instanceError || !instance) {
-        return abort(instanceError, instanceError?.message ?? "Failed to create widget instance");
+        return abort(instanceError);
       }
       const { error: cfgError } = await updateOverlayItemData(supabase, itemId, {
         config: {
@@ -184,7 +182,7 @@ export async function createOverlayFromTemplate(input: {
           instance_id: instance.id,
         } as unknown as Json,
       });
-      if (cfgError) return abort(cfgError, cfgError.message);
+      if (cfgError) return abort(cfgError);
     }
 
     // Clips widgets carry per-field child rows (title/creator/game/...) that
@@ -228,7 +226,7 @@ export async function createOverlayFromTemplate(input: {
 
     if (childRows.length > 0) {
       const { error: childError } = await insertOverlayItems(supabase, childRows);
-      if (childError) return abort(childError, childError.message);
+      if (childError) return abort(childError);
     }
   }
 

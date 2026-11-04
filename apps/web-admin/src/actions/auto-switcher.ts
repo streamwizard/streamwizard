@@ -79,7 +79,7 @@ export async function setSceneOverrideForUser(
   });
   if (error || !data) {
     reportError(error, "web-admin auto-switcher: override set");
-    return { ok: false, error: error ? `Could not set the override (${error.message})` : "The user has no switcher settings yet" };
+    return { ok: false, error: error ? "Could not set the override. Try again?" : "The user has no switcher settings yet" };
   }
 
   await pushConfigToEngine(data);
@@ -100,7 +100,7 @@ export async function clearSceneOverrideForUser(userId: string): Promise<{ ok: b
   });
   if (error || !data) {
     reportError(error, "web-admin auto-switcher: override clear");
-    return { ok: false, error: error ? `Could not clear the override (${error.message})` : "Could not clear the override" };
+    return { ok: false, error: error ? "Could not clear the override. Try again?" : "Could not clear the override" };
   }
 
   await pushConfigToEngine(data);

@@ -90,15 +90,9 @@ export async function syncClipsHandler(c: Context) {
       202,
     );
   } catch (error) {
-    // Answered as a 500 instead of rethrown, so safeErrorHandler never sees it.
+    // Answered as a 500 instead of rethrown.
     reportError(error, "clips-sync.start");
-    return c.json(
-      {
-        error: "Sync failed",
-        message: error instanceof Error ? error.message : "Unknown error occurred",
-      },
-      500,
-    );
+    return c.json({ error: "Sync failed", message: "Something broke on our end. Try again?" }, 500);
   }
 }
 
@@ -144,12 +138,6 @@ export async function syncStatusHandler(c: Context) {
     );
   } catch (error) {
     reportError(error, "clips-sync.status");
-    return c.json(
-      {
-        error: "Failed to get sync status",
-        message: error instanceof Error ? error.message : "Unknown error occurred",
-      },
-      500,
-    );
+    return c.json({ error: "Failed to get sync status", message: "Something broke on our end. Try again?" }, 500);
   }
 }

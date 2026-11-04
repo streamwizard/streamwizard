@@ -6,6 +6,11 @@ export { buildFolderHref, folderHrefToUrlPath, urlPathToFolderHref } from "./cli
 
 type DBClient = SupabaseClient<Database>;
 
+/** A folder problem the user can fix (name taken, folder gone); its message is written to be shown as is. */
+export class ClipFolderError extends Error {
+  override name = "ClipFolderError";
+}
+
 interface ClipFolder {
   clipId: string;
   userId: string;
@@ -79,12 +84,12 @@ export async function createClipFolder(client: DBClient, folderName: string, use
       .eq("user_id", userId)
       .single();
 
-    if (parentError || !parent) throw new Error("Parent folder not found");
+    if (parentError || !parent) throw new ClipFolderError("Parent folder not found");
     parentHref = parent.href;
   }
 
   if (await siblingFolderNameExists(client, userId, folderName, parentFolderId ?? null)) {
-    throw new Error("A folder with this name already exists here.");
+    throw new ClipFolderError("A folder with this name already exists here.");
   }
 
   const { data, error } = await client
@@ -110,10 +115,10 @@ export async function editClipFolder(client: DBClient, folderId: string, folderN
     .eq("user_id", userId)
     .single();
 
-  if (folderError || !folder) throw new Error("Folder not found");
+  if (folderError || !folder) throw new ClipFolderError("Folder not found");
 
   if (await siblingFolderNameExists(client, userId, folderName, folder.parent_folder_id, folderId)) {
-    throw new Error("A folder with this name already exists here.");
+    throw new ClipFolderError("A folder with this name already exists here.");
   }
 
   let parentHref: string | null = null;
@@ -125,7 +130,7 @@ export async function editClipFolder(client: DBClient, folderId: string, folderN
       .eq("user_id", userId)
       .single();
 
-    if (parentError || !parent) throw new Error("Parent folder not found");
+    if (parentError || !parent) throw new ClipFolderError("Parent folder not found");
     parentHref = parent.href;
   }
 

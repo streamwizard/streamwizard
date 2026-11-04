@@ -1,6 +1,7 @@
 "use server";
 
 import { reportError } from "@repo/sentry";
+import { toActionError } from "@/lib/action-error";
 
 import { randomBytes } from "crypto";
 import { env } from "@/lib/env";
@@ -108,8 +109,8 @@ export async function sendIngestKeyDiscordDM(id: string): Promise<{ error: strin
 
   const adminClient = createAdminClient();
   const { data: key, error: keyError } = await selectIngestKeyForUser(adminClient, parsedId.data, user.id);
-  if (keyError) reportError(keyError, "actions/ingest-keys");
-  if (keyError || !key) return { error: keyError?.message ?? "Key not found" };
+  if (keyError) return { error: toActionError(keyError, "actions/ingest-keys", "Couldn't send that DM. Try again?") };
+  if (!key) return { error: "Key not found" };
 
   const discordUserId = await getDiscordUserIdByUserIdMaybe(adminClient, user.id);
   if (!discordUserId) {
@@ -120,7 +121,10 @@ export async function sendIngestKeyDiscordDM(id: string): Promise<{ error: strin
     const host = await resolveIngestHost(adminClient);
     await sendDiscordDirectMessage(discordUserId, ingestKeyDmEmbed(key.label, key.stream_key, host));
   } catch (err) {
-    return { error: err instanceof Error ? err.message : "Couldn't send that DM" };
+    // Usually the user has DMs from server members turned off: theirs to fix,
+    // not a bug, so it's logged rather than reported.
+    console.warn("[ingest-keys] DM failed:", err instanceof Error ? err.message : err);
+    return { error: "Couldn't send that DM. Check that Discord lets server members DM you." };
   }
 
   return { error: null };
@@ -150,8 +154,7 @@ export async function createIngestKey(label: string): Promise<{ data: IngestStre
   });
 
   if (error) {
-    reportError(error, "actions/ingest-keys");
-    return { data: null, error: error.message };
+    return { data: null, error: toActionError(error, "actions/ingest-keys", "Couldn't create your ingest key. Try again?") };
   }
 
   // Every incoming key needs an OBS output key to be pullable. The user never
@@ -178,8 +181,7 @@ export async function listIngestKeys(): Promise<{ data: IngestStreamKey[] | null
   const adminClient = createAdminClient();
   const { data, error } = await selectIngestKeys(adminClient, user.id);
 
-  if (error) reportError(error, "actions/ingest-keys");
-  return { data, error: error?.message ?? null };
+  return { data, error: error ? toActionError(error, "actions/ingest-keys", "Couldn't load your ingest keys. Try again?") : null };
 }
 
 export async function rotateIngestKey(id: string): Promise<{ data: IngestStreamKey | null; error: string | null }> {
@@ -194,8 +196,7 @@ export async function rotateIngestKey(id: string): Promise<{ data: IngestStreamK
   const { data, error } = await rotateIngestKeySecret(adminClient, parsedId.data, user.id, generateStreamKey());
 
   if (error) {
-    reportError(error, "actions/ingest-keys");
-    return { data: null, error: error.message };
+    return { data: null, error: toActionError(error, "actions/ingest-keys", "Couldn't rotate your ingest key. Try again?") };
   }
 
   revalidatePath(INGEST_SETTINGS_PATH);
@@ -214,7 +215,7 @@ export async function deleteIngestKey(id: string): Promise<{ error: string | nul
   const { error } = await deleteIngestKeyRow(adminClient, parsedId.data, user.id);
 
   revalidatePath(INGEST_SETTINGS_PATH);
-  if (error) reportError(error, "actions/ingest-keys");
-  else await track("ingest_key_deleted", { kind: "ingest" }, user);
-  return { error: error?.message ?? null };
+  if (error) return { error: toActionError(error, "actions/ingest-keys", "Couldn't delete your ingest key. Try again?") };
+  await track("ingest_key_deleted", { kind: "ingest" }, user);
+  return { error: null };
 }

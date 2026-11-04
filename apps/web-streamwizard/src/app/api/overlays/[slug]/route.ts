@@ -66,10 +66,7 @@ export async function GET(
   } catch (error) {
     reportError(error, "api/overlays/[slug]");
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Internal server error",
-      },
+      { error: "Internal server error" },
       { status: 500, headers: CORS_HEADERS }
     );
   }

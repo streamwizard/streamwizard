@@ -56,7 +56,7 @@ export async function getPendingLibraryEntries() {
   }
   const { data, error } = await selectPendingLibraryEntries(adminClient);
   if (error) reportError(error, "actions/widget-library");
-  return { data, error: error?.message ?? null };
+  return { data, error: error ? "Couldn't load the pending widgets. Try again?" : null };
 }
 
 export async function approveLibraryEntry(entryId: string) {
@@ -69,7 +69,7 @@ export async function approveLibraryEntry(entryId: string) {
   const { error } = await approveEntry(adminClient, entryId);
   revalidatePath(WIDGET_LIBRARY_PATH);
   if (error) reportError(error, "actions/widget-library");
-  return { error: error?.message ?? null };
+  return { error: error ? "Couldn't approve that widget. Try again?" : null };
 }
 
 export async function rejectLibraryEntry(entryId: string) {
@@ -82,5 +82,5 @@ export async function rejectLibraryEntry(entryId: string) {
   const { error } = await deleteLibraryEntry(adminClient, entryId);
   revalidatePath(WIDGET_LIBRARY_PATH);
   if (error) reportError(error, "actions/widget-library");
-  return { error: error?.message ?? null };
+  return { error: error ? "Couldn't reject that widget. Try again?" : null };
 }

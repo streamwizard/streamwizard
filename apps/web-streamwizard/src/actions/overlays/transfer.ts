@@ -314,7 +314,7 @@ export async function importOverlayScene(rawJson: string): Promise<{
   if (sceneError || !newScene) {
     if (sceneError) reportError(sceneError, OVERLAYS_ERROR_SCOPE);
     await rollback();
-    return { data: null, error: sceneError?.message ?? "Couldn't create the overlay.", notes: [] };
+    return { data: null, error: "Couldn't create the overlay.", notes: [] };
   }
 
   // Groups get fresh ids and go in before the items that point at them.
@@ -383,11 +383,7 @@ export async function importOverlayScene(rawJson: string): Promise<{
     if (insertError || !inserted || inserted.length !== roots.length) {
       if (insertError) reportError(insertError, OVERLAYS_ERROR_SCOPE);
       await rollback(newScene.id);
-      return {
-        data: null,
-        error: insertError?.message ?? "Couldn't add this overlay's widgets.",
-        notes: [],
-      };
+      return { data: null, error: "Couldn't add this overlay's widgets.", notes: [] };
     }
     roots.forEach((item, index) => idByRef.set(item.ref, inserted[index]!.id));
   }
@@ -412,7 +408,7 @@ export async function importOverlayScene(rawJson: string): Promise<{
       if (childError) {
         reportError(childError, OVERLAYS_ERROR_SCOPE);
         await rollback(newScene.id);
-        return { data: null, error: childError.message, notes: [] };
+        return { data: null, error: "Couldn't add this overlay's clip fields.", notes: [] };
       }
     }
     if (childRows.length !== children.length) {

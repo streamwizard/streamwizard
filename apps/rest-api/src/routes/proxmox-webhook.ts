@@ -56,7 +56,9 @@ export function createProxmoxWebhookRoute(deps: ProxmoxWebhookDeps) {
       }
       const parsed = proxmoxWebhookPayloadSchema.safeParse(body);
       if (!parsed.success) {
-        return c.json({ error: "Invalid payload", issues: parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`) }, 400);
+        // Which fields failed stays in our logs; the caller only learns it was rejected.
+        console.warn("[proxmox-webhook] invalid payload:", parsed.error.issues.map((i) => i.path.join(".") || "(root)").join(", "));
+        return c.json({ error: "Invalid payload" }, 400);
       }
 
       const payload = parsed.data;

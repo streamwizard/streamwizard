@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { reportError } from "@repo/sentry";
+import { toActionError, zodErrorMessage } from "@/lib/action-error";
 import { track } from "@/lib/track";
 import {
   getWidgetTemplateSummaries,
@@ -35,11 +36,6 @@ import {
 
 const ERROR_SCOPE = "actions/widgets";
 const NOT_FOUND = "Widget not found";
-
-/** The first issue's message; every message in the widget schemas is written for the editor to show. */
-function firstIssue(error: { issues: { message: string }[] }, fallback: string): string {
-  return error.issues[0]?.message ?? fallback;
-}
 
 export interface Widget {
   id: string;
@@ -86,8 +82,7 @@ export async function getWidgets() {
   if (!ctx) return { data: null, error: "Unauthorized" };
 
   const { data, error } = await selectOverlayWidgets(ctx.supabase, ctx.user.id);
-  if (error) reportError(error, ERROR_SCOPE);
-  return { data: data as unknown as Widget[] | null, error: error?.message ?? null };
+  return { data: data as unknown as Widget[] | null, error: error ? toActionError(error, ERROR_SCOPE, "Couldn't load your widgets. Try again?") : null };
 }
 
 export async function getWidget(id: string) {
@@ -97,8 +92,7 @@ export async function getWidget(id: string) {
   if (!parsed.success) return { data: null, error: NOT_FOUND };
 
   const { data, error } = await selectOverlayWidget(ctx.supabase, parsed.data, ctx.user.id);
-  if (error) reportError(error, ERROR_SCOPE);
-  return { data: data as unknown as Widget | null, error: error?.message ?? null };
+  return { data: data as unknown as Widget | null, error: error ? toActionError(error, ERROR_SCOPE, "Couldn't load that widget. Try again?") : null };
 }
 
 /** Batch form of getWidget, for warming a whole scene's widgets in one trip. */
@@ -111,8 +105,7 @@ export async function getWidgetsByIds(ids: string[]) {
   if (unique.length === 0) return { data: [] as Widget[], error: null };
 
   const { data, error } = await selectOverlayWidgetsByIds(ctx.supabase, ctx.user.id, unique);
-  if (error) reportError(error, ERROR_SCOPE);
-  return { data: data as unknown as Widget[] | null, error: error?.message ?? null };
+  return { data: data as unknown as Widget[] | null, error: error ? toActionError(error, ERROR_SCOPE, "Couldn't load your widgets. Try again?") : null };
 }
 
 export async function createWidget(input: {
@@ -127,7 +120,7 @@ export async function createWidget(input: {
   const ctx = await tryAuthContext();
   if (!ctx) return { data: null, error: "Unauthorized" };
   const parsed = createWidgetSchema.safeParse(input);
-  if (!parsed.success) return { data: null, error: firstIssue(parsed.error, "Couldn't create that widget") };
+  if (!parsed.success) return { data: null, error: zodErrorMessage(parsed.error, "Couldn't create that widget") };
   const widget = parsed.data;
 
   const { data, error } = await insertOverlayWidget(
@@ -146,9 +139,9 @@ export async function createWidget(input: {
     ),
   );
   revalidatePath("/dashboard/widget-library");
-  if (error) reportError(error, ERROR_SCOPE);
-  else if (data) await track("custom_widget_created", { widget_id: data.id }, ctx.user);
-  return { data: data as unknown as Widget | null, error: error?.message ?? null };
+  if (error) return { data: null, error: toActionError(error, ERROR_SCOPE, "Couldn't create that widget. Try again?") };
+  if (data) await track("custom_widget_created", { widget_id: data.id }, ctx.user);
+  return { data: data as unknown as Widget | null, error: null };
 }
 
 export async function updateWidget(
@@ -166,15 +159,14 @@ export async function updateWidget(
   const ctx = await tryAuthContext();
   if (!ctx) return { error: "Unauthorized" };
   const parsed = updateWidgetSchema.safeParse({ id, updates });
-  if (!parsed.success) return { error: firstIssue(parsed.error, "Couldn't save that widget") };
+  if (!parsed.success) return { error: zodErrorMessage(parsed.error, "Couldn't save that widget") };
 
   const { error } = await updateOverlayWidget(ctx.supabase, parsed.data.id, ctx.user.id, {
     ...parsed.data.updates,
     fields: parsed.data.updates.fields as never,
     updated_at: new Date().toISOString(),
   });
-  if (error) reportError(error, ERROR_SCOPE);
-  return { error: error?.message ?? null };
+  return { error: error ? toActionError(error, ERROR_SCOPE, "Couldn't save that widget. Try again?") : null };
 }
 
 export async function deleteWidget(id: string) {
@@ -185,8 +177,7 @@ export async function deleteWidget(id: string) {
 
   const { error } = await deleteOverlayWidget(ctx.supabase, parsed.data, ctx.user.id);
   revalidatePath("/dashboard/widget-library");
-  if (error) reportError(error, ERROR_SCOPE);
-  return { error: error?.message ?? null };
+  return { error: error ? toActionError(error, ERROR_SCOPE, "Couldn't delete that widget. Try again?") : null };
 }
 
 // --- Overlay Widget Instances ---
@@ -206,8 +197,7 @@ export async function getOrCreateWidgetInstance(overlayItemId: string, widgetId:
     user_id: ctx.user.id,
     field_values: {},
   });
-  if (error) reportError(error, ERROR_SCOPE);
-  return { data: data as unknown as OverlayWidgetInstance | null, error: error?.message ?? null };
+  return { data: data as unknown as OverlayWidgetInstance | null, error: error ? toActionError(error, ERROR_SCOPE, "Couldn't set up that widget. Try again?") : null };
 }
 
 // --- Library ---
@@ -217,8 +207,7 @@ export async function getApprovedLibraryEntries() {
   if (!ctx) return { data: null, error: "Unauthorized" };
 
   const { data, error } = await selectApprovedLibraryEntries(ctx.supabase);
-  if (error) reportError(error, ERROR_SCOPE);
-  return { data, error: error?.message ?? null };
+  return { data, error: error ? toActionError(error, ERROR_SCOPE, "Couldn't load the widget library. Try again?") : null };
 }
 
 export async function publishWidgetToLibrary(
@@ -228,7 +217,7 @@ export async function publishWidgetToLibrary(
   const ctx = await tryAuthContext();
   if (!ctx) return { error: "Unauthorized" };
   const parsed = publishWidgetSchema.safeParse({ widgetId, ...input });
-  if (!parsed.success) return { error: firstIssue(parsed.error, "Couldn't publish that widget") };
+  if (!parsed.success) return { error: zodErrorMessage(parsed.error, "Couldn't publish that widget") };
   const listing = parsed.data;
 
   const { error } = await insertLibraryEntry(ctx.supabase, {
@@ -238,9 +227,9 @@ export async function publishWidgetToLibrary(
     description: listing.description,
     tags: listing.tags,
   });
-  if (error) reportError(error, ERROR_SCOPE);
-  else await track("custom_widget_published", { widget_id: listing.widgetId }, ctx.user);
-  return { error: error?.message ?? null };
+  if (error) return { error: toActionError(error, ERROR_SCOPE, "Couldn't publish that widget. Try again?") };
+  await track("custom_widget_published", { widget_id: listing.widgetId }, ctx.user);
+  return { error: null };
 }
 
 export interface WidgetTemplate {
@@ -261,8 +250,7 @@ export async function getWidgetTemplates() {
 
   const { data, error } = await getWidgetTemplateSummaries(ctx.supabase);
   if (error) {
-    reportError(error, ERROR_SCOPE);
-    return { data: null, error: error.message };
+    return { data: null, error: toActionError(error, ERROR_SCOPE, "Couldn't load the widget templates. Try again?") };
   }
 
   return {
@@ -286,8 +274,7 @@ export async function installWidgetTemplate(templateId: string) {
 
   const { data: widgetTemplate, error: templateError } = await getWidgetTemplateById(ctx.supabase, parsed.data);
   if (templateError) {
-    reportError(templateError, ERROR_SCOPE);
-    return { data: null, error: templateError.message };
+    return { data: null, error: toActionError(templateError, ERROR_SCOPE, "Couldn't install that widget. Try again?") };
   }
   if (!widgetTemplate) return { data: null, error: "Widget template not found" };
 
@@ -297,8 +284,7 @@ export async function installWidgetTemplate(templateId: string) {
   );
 
   if (installError) {
-    reportError(installError, ERROR_SCOPE);
-    return { data: null, error: installError.message };
+    return { data: null, error: toActionError(installError, ERROR_SCOPE, "Couldn't install that widget. Try again?") };
   }
 
   if (installed) {
@@ -317,7 +303,9 @@ export async function installWidgetFromLibrary(rawEntryId: string) {
   const { data: entry, error: entryError } = await selectApprovedLibraryEntry(ctx.supabase, entryId);
 
   if (entryError || !entry) {
-    return { data: null, error: entryError?.message ?? "Entry not found" };
+    // PGRST116 is .single() finding no row: an unknown or unapproved entry.
+    if (entryError && entryError.code !== "PGRST116") reportError(entryError, ERROR_SCOPE);
+    return { data: null, error: "Entry not found" };
   }
 
   const source = entry.overlay_widgets;
@@ -328,8 +316,7 @@ export async function installWidgetFromLibrary(rawEntryId: string) {
   );
 
   if (forkError) {
-    reportError(forkError, ERROR_SCOPE);
-    return { data: null, error: forkError.message };
+    return { data: null, error: toActionError(forkError, ERROR_SCOPE, "Couldn't install that widget. Try again?") };
   }
 
   await incrementWidgetInstalls(ctx.supabase, entryId);
