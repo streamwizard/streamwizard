@@ -3,7 +3,7 @@ paths:
   - "apps/web-streamwizard/src/**"
   - "apps/web-admin/src/**"
   - "apps/rest-api/src/**"
-  - "packages/supabase/src/queries/subscriptions.ts"
+  - "packages/supabase/src/queries/subscriptions/subscriptions.ts"
 ---
 
 # Paid features and access
@@ -19,15 +19,15 @@ Access to features is driven by products and plans (`products`, plans and subscr
 | `cloud_obs` | Cloud OBS instances, the deck, the auto switcher, IRL ingest keys | `requireProductAccess("cloud_obs")` on `/dashboard/irl/obs`, `/dashboard/irl/ingest`, `/deck` | `getCloudObsAccess()` / `canCreateIngestKeys()` in actions; in rest-api, `getUserActiveSubscriptionId()` behind `/users/:userId/cloud-obs-access`, `isActiveSubscriptionOfUser()` on instance create, and the `/instances/unentitled` sweep |
 | `ingest_server` | nothing yet (seeded, unused) | | |
 
-- **Don't scatter product id literals.** New code takes the id from one exported constant (add it to `@repo/supabase/queries/subscriptions` with its first new use) instead of typing `"cloud_obs"` again.
-- **The admin grants screen reads products and plans from the DB**, so a new product only needs a migration. Code that must react to a plan change (stopping containers on revoke) goes in `apps/web-admin/src/actions/subscriptions.ts`.
+- **Don't scatter product id literals.** New code takes the id from one exported constant (add it to `@repo/supabase/queries/subscriptions/subscriptions` with its first new use) instead of typing `"cloud_obs"` again.
+- **The admin grants screen reads products and plans from the DB**, so a new product only needs a migration. Code that must react to a plan change (stopping containers on revoke) goes in `apps/web-admin/src/actions/users/subscriptions.ts`.
 
 ## Rules
 
 - **Every feature that belongs to a product checks access on the server before doing the work.** Use the helper for the place you're in:
   - **web-streamwizard pages:** `requireProductAccess(productId)` (`src/lib/require-product-access.ts`). It redirects to `/dashboard/upgrade` when there is no access, and otherwise returns the `ProductAccess` (`canAccess`, `canInteract`, `status`, `plan`).
-  - **web-streamwizard server actions:** the product's helper on `getProductAccess()` (`getCloudObsAccess()` in `src/lib/cloud-obs-access.ts`, `canCreateIngestKeys()` in `src/lib/ingest-access.ts`), and return `{ data: null, error }` when it says no. Never call `requireProductAccess()` in an action: it redirects instead of returning an error.
-  - **rest-api and other service-role code (no user session):** `getUserActiveSubscriptionId()`, `isActiveSubscriptionOfUser()` or `usersWithActiveSubscription()` from `@repo/supabase/queries/subscriptions`.
+  - **web-streamwizard server actions:** the product's helper on `getProductAccess()` (`getCloudObsAccess()` in `src/lib/obs/cloud-obs-access.ts`, `canCreateIngestKeys()` in `src/lib/obs/ingest-access.ts`), and return `{ data: null, error }` when it says no. Never call `requireProductAccess()` in an action: it redirects instead of returning an error.
+  - **rest-api and other service-role code (no user session):** `getUserActiveSubscriptionId()`, `isActiveSubscriptionOfUser()` or `usersWithActiveSubscription()` from `@repo/supabase/queries/subscriptions/subscriptions`.
   - Hiding a button is not a check.
 - **The UI shows why.** No access: the page's `requireProductAccess()` sends the user to `/dashboard/upgrade?feature=<product>`. Read-only access (`past_due`, `canAccess` without `canInteract`): the page renders, shows `FeatureDisabledBanner` (`src/components/shared/feature-disabled-banner.tsx`) and passes `canInteract` down so start and create controls are disabled. Server actions return a short `error` sentence, never a raw error.
 - **Check at every entry point.** If a feature can be reached from a server action, an API route and a node (Cloud OBS), each one checks. OBS nodes ask rest-api (`/users/:userId/cloud-obs-access`) before each start rather than trusting the browser.

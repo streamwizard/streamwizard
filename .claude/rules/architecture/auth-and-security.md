@@ -2,14 +2,15 @@
 paths:
   - "apps/*/src/proxy.ts"
   - "apps/web-streamwizard/src/lib/auth.ts"
-  - "apps/web-streamwizard/src/lib/node-token.ts"
-  - "apps/web-streamwizard/src/lib/cms-revalidate.ts"
-  - "apps/web-streamwizard/src/actions/nodes.ts"
-  - "apps/web-admin/src/lib/admin-session.ts"
-  - "apps/web-admin/src/lib/assert-admin.ts"
-  - "apps/web-admin/src/actions/nodes.ts"
+  - "apps/web-streamwizard/src/lib/obs/node-token.ts"
+  - "apps/web-streamwizard/src/lib/cms/cms-revalidate.ts"
+  - "apps/web-streamwizard/src/actions/obs/*.ts"
+  - "apps/web-admin/src/lib/auth/admin-session.ts"
+  - "apps/web-admin/src/lib/auth/assert-admin.ts"
+  - "apps/web-admin/src/lib/auth/admin-context.ts"
+  - "apps/web-admin/src/actions/nodes/*.ts"
   - "apps/web-overlay/src/lib/widget-api.ts"
-  - "apps/*/src/actions/node-token.ts"
+  - "apps/web-overlay/src/lib/overlay-item-auth.ts"
   - "apps/rest-api/src/middleware/**"
   - "apps/rest-api/src/routes/**"
   - "apps/rest-api/src/lib/secret-compare.ts"
@@ -34,7 +35,7 @@ Every caller proves who it is with its own credential, scoped to what it may do.
 | Caller → callee | Credential | Checked in |
 |-----------------|------------|-----------|
 | Streamer browser → web-streamwizard | Supabase session cookie (Twitch sign-in) | `src/proxy.ts` + `(protected)` layout; every server action starts with `tryAuthContext()` (or `getAuthContext()`) from `lib/auth.ts` and takes user and broadcaster ids only from it, never from its arguments; RLS in Postgres is the second line, not the only one |
-| Admin browser → web-admin | Supabase session + verified TOTP (`aal2`) + admin role | `src/proxy.ts` (deny by default), `requireAdminSession()` in layouts, `assertAdmin()` (`lib/assert-admin.ts`) in every action, `getAdminSession()` in every route handler, SQL `is_strong_admin()` |
+| Admin browser → web-admin | Supabase session + verified TOTP (`aal2`) + admin role | `src/proxy.ts` (deny by default), `requireAdminSession()` in layouts, the `lib/auth/admin-context.ts` helpers (built on `assertAdmin()`, `lib/auth/assert-admin.ts`) in every action, `getAdminSession()` in every route handler, SQL `is_strong_admin()` |
 | web-streamwizard server action → rest-api `/api/clips/*` | the signed-in user's Supabase JWT, forwarded by the server | `supabaseMiddleware()` / `supabaseAuth()` |
 | OBS browser source → ws-server (`subscriber`) | the scene's `subscriber_token` (resettable), or a dashboard JWT | `modules/connections/upgrade.ts`; a key reset closes live sockets (`modules/revoke`) |
 | OBS browser source → web-overlay `/api/*` | the scene's `subscriber_token` in `Authorization: Bearer` | `lib/widget-api.ts` + `getOverlaySceneBySubscriberToken` |
@@ -42,16 +43,16 @@ Every caller proves who it is with its own credential, scoped to what it may do.
 | Node install script → rest-api `/api/{obs,ingest}-nodes/claim` | one-time claim token (32 random bytes, only its SHA-256 stored, expires) | `modules/*/claim.ts`, atomic `consume*ClaimToken` |
 | Ingest / OBS node → rest-api | per-node API key from the one-time claim; only its SHA-256 hash is stored | `middleware/node-key-auth.ts` (shared), wrapped by `middleware/ingest-node-auth.ts` and `middleware/obs-node-auth.ts` |
 | Ingest node → ws-server (`ingest-node`) | 60-second service token rest-api signs before each dial, node id in the token | ws-server upgrade |
-| Admin browser → ws-server (`monitor`) | 60-second service token (scope `monitor`) that web-admin signs in `mintMonitorTokenAction` after `assertAdmin()`, minted before each dial; sent as `?token=` because browsers can't set WebSocket headers | `modules/connections/upgrade.ts`, `SERVICE_POLICY` (web-admin only) |
+| Admin browser → ws-server (`monitor`) | 60-second service token (scope `monitor`) that web-admin signs in `mintMonitorTokenAction` after `requireAdmin()`, minted before each dial; sent as `?token=` because browsers can't set WebSocket headers | `modules/connections/upgrade.ts`, `SERVICE_POLICY` (web-admin only) |
 | Browser or web-admin → OBS node | 60-second node token: one node, one scope, one instance | minted by a server action after ownership + plan checks; the node verifies with the public JWKS from `GET /api/obs-nodes/me` |
 | obs-auto-switcher → OBS node | per-node `obs_command` key, stored encrypted | the node's `/obs` route |
 | Twitch → rest-api webhook | HMAC signature, timestamp freshness, message-id dedupe | `middleware/twitch-eventsub.ts` |
 | Proxmox VE / PBS → rest-api `/webhooks/proxmox` | `x-proxmox-webhook-token` header = `BACKUP_WEBHOOK_SECRET` | `routes/proxmox-webhook.ts`, `secretsMatch` |
 | web-admin → rest-api `/internal/*` | bearer secret | `middleware/internal-auth.ts` |
-| web-admin, rest-api cms-scheduler → web-streamwizard `/api/revalidate` | bearer `CMS_REVALIDATE_SECRET` | `lib/cms-revalidate.ts` |
+| web-admin, rest-api cms-scheduler → web-streamwizard `/api/revalidate` | bearer `CMS_REVALIDATE_SECRET` | `lib/cms/cms-revalidate.ts` |
 | Our apps → discord-bot HTTP | bearer secret | `src/http/middleware/bearer-secret.ts` |
 
-**Current state:** about half of web-streamwizard's server actions still rely on `createClient()` + RLS alone instead of starting with `tryAuthContext()`. Move them when you touch the file.
+Every web-streamwizard server action except `login()` / `logout()` starts with `tryAuthContext()`.
 
 ## Ingest nodes
 

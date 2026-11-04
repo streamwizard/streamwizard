@@ -34,14 +34,15 @@ All three use the Next.js App Router (Next 16, which differs from older docs: re
   - Next-only work: generated files like `llms.txt`
 - **A server action is a public POST endpoint.** Anyone can call it with any arguments. Every action checks auth itself as its first step, and validates input with Zod. Never rely on the button being hidden.
   - web-streamwizard: `getAuthContext()` / `tryAuthContext()` (`src/lib/auth.ts`).
-  - web-admin: `assertAdmin()` (`src/lib/assert-admin.ts`), or the section wrappers `requireCmsAdmin()` (`lib/cms/action.ts`) and `requireDiscordAdmin()` (`lib/discord/action.ts`).
-  - web-overlay (no user session): `resolveOverlayItem(subscriberToken, itemId)` (`src/lib/overlay-item-auth.ts`). The owner and config come from that lookup, never from arguments.
+  - web-admin: `requireAdmin()`, `requireAdminContext()` (gives `{ userId, adminClient }`) or `tryAdminContext()` (returns `null`) from `src/lib/auth/admin-context.ts`, all built on `assertAdmin()` (`src/lib/auth/assert-admin.ts`). CMS and Discord actions use the section wrappers `requireCmsAdmin()` / `parseCmsInput` (`lib/cms/action.ts`) and `requireDiscordAdmin()` / `parseInput` / `parseId` (`lib/discord/action.ts`).
+  - web-overlay (no user session): parse the subscriber token and item id with Zod, then call `resolveOverlayItem(subscriberToken, itemId)` (`src/lib/overlay-item-auth.ts`). The owner and config come from that lookup, never from arguments.
+- **Layout:** `src/actions/<domain>/<file>.ts`, the domain named after the route section (`clips/`, `discord/`, `nodes/`). No loose files at the `actions/` root, and split a folder once it holds about 15 files. Every file in `actions/` (tests aside) is `"use server"`; helpers without it go to `src/lib/<domain>/`.
 - **Don't wrap a route handler in a server action, call our own API from a server action, or import a server action into a route handler.** Both call the same server-only helper (`src/server/`, `src/lib/`) or `@repo/supabase/queries/*` function.
 - **Backend services** (rest-api, ws-server, bots) are not Next.js apps. Calls between services stay HTTP with service tokens.
 
 ### Dashboard (`apps/web-streamwizard`)
 
-- Route groups: `(public)`, `(auth)`, `(protected)` dashboard, `(harness)` (docs screenshot routes; `notFound()` in production or unless `DOCS_SHOTS=1`), and `api`. `src/proxy.ts` plus the `(protected)` layout gate signed-in routes.
+- Route groups: `(public)`, `(auth)`, `(protected)` dashboard, and `api`. `src/proxy.ts` plus the `(protected)` layout gate signed-in routes.
 - **Mutations are server actions in `src/actions/`**, following one pattern:
   1. `getAuthContext()` (throws) or `tryAuthContext()` (returns `null`) from `src/lib/auth.ts` gives `{ supabase, user, broadcasterId }`.
   2. Validate input with Zod (schemas in `src/schemas/`).
@@ -56,10 +57,11 @@ Separate, access-controlled ops console with its own proxy, actions and API rout
 
 - `src/proxy.ts` denies every page to anyone who isn't a strong-session admin, but lets `/api/*` through. **Every route handler starts with `const { session } = await getAdminSession(); if (!session) return 401`**; only `/api/health` and `/auth/callback` are open.
 - Route handlers here are SWR polling endpoints for the dashboards (`/api/metrics/*`, `/api/backups*`, `/api/nav-counts`) and uploads (`/api/discord/banner-upload`). Mutations are server actions in `src/actions/`.
+- Actions report failures through `src/lib/actions/action-error.ts`: throw an `ActionError` for a message the admin should see, and catch with `toActionError(error, tag, fallback)` (`{ success, error }`) or `toDataError(...)` (`{ data, error }`), which report anything else and return the fallback.
 
 ### Overlay playback (`apps/web-overlay`)
 
-`src/app/[overlayId]/page.tsx` renders the OBS browser source. Scenes (`overlay_scenes`) and items (`overlay_items`) load server-side via `supabaseAdmin` and query modules. Clip video plays straight from Twitch's CDN; the server only fetches the URL.
+`src/app/[overlayId]/page.tsx` renders the OBS browser source. Scenes (`overlay_scenes`) and items (`overlay_items`) load server-side through `src/lib/overlay-loader.ts` (`server-only`, `supabaseAdmin` plus query modules), not through a server action. Clip video plays straight from Twitch's CDN; the server only fetches the URL.
 
 ### Page metadata (every new page)
 
@@ -69,14 +71,14 @@ Every new `page.tsx` exports metadata: `export const metadata: Metadata` for sta
 
 **Public pages** (web-streamwizard `(public)`):
 
-> A public page must rank in Google **and** be quotable by AI search (ChatGPT, Perplexity, Google AI Overviews). Beyond the metadata below: one `<h1>`, clear headings, alt text on images, links to related pages, and the page's main answer in plain words near the top. Facts AI tools can lift as-is (what it does, who it's for, what it costs) beat marketing lines. Add an FAQ with `faqPageSchema` where people have real questions, and list the page in `lib/llms.ts` (the `/llms.txt` index).
+> A public page must rank in Google **and** be quotable by AI search (ChatGPT, Perplexity, Google AI Overviews). Beyond the metadata below: one `<h1>`, clear headings, alt text on images, links to related pages, and the page's main answer in plain words near the top. Facts AI tools can lift as-is (what it does, who it's for, what it costs) beat marketing lines. Add an FAQ with `faqPageSchema` where people have real questions, and list the page in `lib/seo/llms.ts` (the `/llms.txt` index).
 
 - **`title`: the page name only.** The root layout template adds ` – StreamWizard`; don't repeat the brand.
 - **`description`:** one or two plain sentences, about 150 characters, saying what the page gives the streamer.
-- **`alternates: { canonical: absoluteUrl("/path") }`** from `@/lib/seo`.
-- **Never set your own `openGraph` or `twitter` block.** It replaces the root one and drops the segment's `opengraph-image.tsx`. Next copies the page's title and description into the share cards by itself. For a custom share image, add an `opengraph-image.tsx` in that route segment built with `renderOgImage()` from `@/lib/og-image` (title lines mirror the page's `<h1>`, subline is the first sentence of its description), plus a `twitter-image.tsx` that re-exports it: `export { default, alt, size, contentType } from "./opengraph-image";`
-- **Structured data** through `<JsonLd schema={...} />` (`@/components/public/seo/json-ld`) with the builders in `@/lib/seo` (`breadcrumbSchema`, `faqPageSchema`, `softwareApplicationSchema`, ...). Don't write JSON-LD by hand.
-- **Add the path to `PUBLIC_ROUTES` in `lib/seo.ts`.** That allowlist feeds the sitemap and `/llms.txt`; a page not on it is not in the sitemap. Bump its `lastModified` when the page copy changes.
+- **`alternates: { canonical: absoluteUrl("/path") }`** from `@/lib/seo/seo`.
+- **Never set your own `openGraph` or `twitter` block.** It replaces the root one and drops the segment's `opengraph-image.tsx`. Next copies the page's title and description into the share cards by itself. For a custom share image, add an `opengraph-image.tsx` in that route segment built with `renderOgImage()` from `@/lib/seo/og-image` (title lines mirror the page's `<h1>`, subline is the first sentence of its description), plus a `twitter-image.tsx` that re-exports it: `export { default, alt, size, contentType } from "./opengraph-image";`
+- **Structured data** through `<JsonLd schema={...} />` (`@/components/public/seo/json-ld`) with the builders in `@/lib/seo/seo` (`breadcrumbSchema`, `faqPageSchema`, `softwareApplicationSchema`, ...). Don't write JSON-LD by hand.
+- **Add the path to `PUBLIC_ROUTES` in `lib/seo/seo.ts`.** That allowlist feeds the sitemap and `/llms.txt`; a page not on it is not in the sitemap. Bump its `lastModified` when the page copy changes.
 - **Pages that must stay out of search** (roadmap, goodbye, error pages): `robots: { index: false }` and leave them off `PUBLIC_ROUTES`.
 - **Dynamic pages** (blog, guides): build title, description and canonical from the record in `generateMetadata`, and call `notFound()` for an unknown slug. They are *not* in `PUBLIC_ROUTES`: `app/sitemap.ts` adds `/blog`, `/guides` and every published post from `listSitemapEntries()`. Filtered index views (`?q=`, `?tag=` ...) get `robots: { index: false, follow: true }`. To list `/blog` or `/guides` in `/llms.txt`, extend the `llms.test.ts` allowlist with the CMS index paths rather than adding them to `PUBLIC_ROUTES`.
 
@@ -85,7 +87,7 @@ Every new `page.tsx` exports metadata: `export const metadata: Metadata` for sta
 - **`title` only**, so the browser tab says where you are. No description, canonical or JSON-LD, and never in `PUBLIC_ROUTES`.
 - **Exception: `/login`** is meant to rank for "streamwizard login": it keeps a description and `alternates: { canonical: absoluteUrl("/login") }` (which folds `?next=` variants), and stays off `DISALLOWED_PATHS` and off `PUBLIC_ROUTES`.
 - Dead-end auth pages (`/unauthorized`, `/auth/auth-code-error`) add `robots: { index: false, follow: false }`.
-- A new top-level signed-in path (not under `/dashboard`) goes in `DISALLOWED_PATHS` in `lib/seo.ts` so `robots.txt` blocks it.
+- A new top-level signed-in path (not under `/dashboard`) goes in `DISALLOWED_PATHS` in `lib/seo/seo.ts` so `robots.txt` blocks it.
 
 **web-admin and web-overlay:** `title` only, the page name without the brand (web-overlay's root layout adds ` · StreamWizard Overlay` through its `title.template`). Both root layouts already set `robots: { index: false }`; don't override or repeat it.
 
@@ -117,6 +119,7 @@ Rules:
 
 - **No components in `src/app/`.** A page imports from `@/components/...` and only composes them. No `_components/` or other private folders.
 - **No loose files at the `components/` root.** Every file belongs to a feature, `shared/` or `layout/`.
+- **Split a folder once it holds about 15 files** (tests not counted). Group by sub-area, named after the route or the part of the screen: `discord/tickets/settings/`, `overlays/editor/canvas/`, `shared/charts/`. Pieces several sub-areas use stay at the folder root. Sub-areas of one feature may import each other.
 - **Features don't import other features.** Imports flow one way: `@repo/ui`, then `shared/` and `layout/`, then `<feature>/`, then `app/`. If two features need the same component, move it to `shared/`. The page is where features meet.
 - **Generic primitives** (button, dialog, card, inputs) live in `@repo/ui`, not in an app. `shared/` is for StreamWizard-specific pieces used by more than one feature.
 - **Don't make it shared until it repeats.** A component starts in its feature and moves to `shared/` when a second feature needs it.

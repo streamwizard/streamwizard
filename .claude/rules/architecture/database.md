@@ -32,10 +32,12 @@ Shared packages other than `@repo/supabase` take a `SupabaseClient<Database>` ar
 
 ## Query modules
 
-- One file per domain in `packages/supabase/src/queries/`. A big domain gets a sub-folder whose files are exported one by one as `./queries/<domain>/<name>` (like `cms/`). No barrel files; `queries/obs-nodes.ts` is the legacy exception. Internal helpers (`with-metrics.ts`, `clip-folder-utils.ts`) stay unexported.
+- One file per domain in `packages/supabase/src/queries/`. Related files share a domain folder named without the prefix (`queries/discord/voice.ts`, `queries/tickets/config.ts`, `queries/obs-nodes/instances.ts`), and the domain's main file is named after the folder (`queries/tickets/tickets.ts`). Every module sits in a domain folder, none at the `queries/` root; group by the data it reads, not by the feature that shows it (`stream/credits.ts` feeds the credits widget). A folder holds at most about 15 files. No barrel files. Internal helpers (`with-metrics.ts`, `clip-folder-utils.ts`, `fetch-all-pages.ts`) live in `packages/supabase/src/lib/`, never in `queries/`, because everything in `queries/` is public.
+- **Cross-domain checks have one home.** Roles and the admin check (`isUserAdmin`, `grantAdminRole`) live in `queries/auth/roles.ts`; don't put them in a feature's module or query `user_roles` from an app.
 - Functions take the client as the first argument (`SupabaseClient<Database>`), so callers choose RLS or service role.
 - Query modules import only types and `@supabase/supabase-js` types, never a client instance, so client components can import their pure helpers and constants (`formatTicketNumber`).
-- A new module must be added to `exports` in `packages/supabase/package.json` as `./queries/<name>`; import it as `@repo/supabase/queries/<name>`.
+- `exports` publishes the whole folder with one pattern, `"./queries/*": "./src/queries/*.ts"`, so a new module needs no `package.json` change; import it by its path, `@repo/supabase/queries/<domain>/<name>`.
+- Legacy: `queries/twitch/tokens.ts` (the Twitch token helpers) and `queries/feedback.ts` use the root service-role `supabase` singleton instead of taking a client.
 
 ## Realtime and types
 

@@ -140,7 +140,7 @@ All tokens live in `apps/web-streamwizard/src/app/globals.css` unless stated oth
 
 | Name | Value | Where it lives | Use |
 |---|---|---|---|
-| Twitch purple | `#9146FF` | `TWITCH_PURPLE` in `apps/web-streamwizard/src/lib/og-image.tsx`, `0x9146ff` in `apps/discord-bot/src/lib/branding.ts` | Borrowed authority, on someone else's surface |
+| Twitch purple | `#9146FF` | `TWITCH_PURPLE` in `apps/web-streamwizard/src/lib/seo/og-image.tsx`, `0x9146ff` in `apps/discord-bot/src/lib/branding.ts` | Borrowed authority, on someone else's surface |
 | Wizard purple | `#9e7aff` | `--color-three` in globals.css, `primary` in `apps/docs/docs.json`, widget accent default | StreamWizard's own purple, inside the product |
 | Gradient amber | `#ffbd7a` | `--color-one` | Atmosphere only |
 | Gradient pink | `#fe8bbb` | `--color-two` | Atmosphere only |
@@ -205,7 +205,7 @@ Ordered steps of one thing (speed bands, size classes) are not five series: they
 
 ### Social card colors
 
-Fixed, in `apps/web-streamwizard/src/lib/og-image.tsx`:
+Fixed, in `apps/web-streamwizard/src/lib/seo/og-image.tsx`:
 
 | Role | Value |
 |---|---|
@@ -284,7 +284,7 @@ Covered in section 4. Radial, heavily transparent, background only.
 
 ### Social cards
 
-One layout for every public route, in `apps/web-streamwizard/src/lib/og-image.tsx`. 1200x630 PNG.
+One layout for every public route, in `apps/web-streamwizard/src/lib/seo/og-image.tsx`. 1200x630 PNG.
 
 Layout, top to bottom:
 
@@ -354,7 +354,7 @@ Tailwind v4's preflight sets buttons to `cursor: default`. globals.css restores 
 | Concern | File |
 |---|---|
 | Theme tokens, radius, animations, base layer | `apps/web-streamwizard/src/app/globals.css` |
-| Social card colors and layout | `apps/web-streamwizard/src/lib/og-image.tsx` |
+| Social card colors and layout | `apps/web-streamwizard/src/lib/seo/og-image.tsx` |
 | Discord embed accent | `apps/discord-bot/src/lib/branding.ts` |
 | Docs theme and logos | `apps/docs/docs.json` |
 | Social and product links | `apps/web-streamwizard/src/lib/constant.ts` |
