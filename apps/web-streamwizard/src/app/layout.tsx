@@ -1,5 +1,5 @@
-import { CookieBanner } from "@/components/cookie-banner";
-import { LightModeOverlay } from "@/components/global/light-mode-overlay";
+import { CookieBanner } from "@/components/layout/cookie-banner";
+import { LightModeOverlay } from "@/components/layout/light-mode-overlay";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { OverlayWsUrlProvider } from "@repo/ui/components/overlay/hooks/use-overlay-ws-url";
 import { PHProvider, PostHogPageView } from "@repo/posthog";

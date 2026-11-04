@@ -2,7 +2,7 @@
 
 import { VodDetailClient } from "@/components/vods/vod-detail-client";
 import { ModalProvider } from "@/providers/modal-provider";
-import { SHOT_VOD } from "../fixtures";
+import { SHOT_VOD } from "@/components/shots/vod-fixtures";
 
 /**
  * One VOD's detail page: player, timeline and the stream events panel.

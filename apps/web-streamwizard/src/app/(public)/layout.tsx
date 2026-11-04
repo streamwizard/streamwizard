@@ -1,7 +1,7 @@
-import { Footer } from "@/components/public/layout/footer";
-import Header from "@/components/public/layout/header";
-import { ScrollToTop } from "@/components/buttons/scroll-to-top";
-import { JsonLd } from "@/components/seo/json-ld";
+import { Footer } from "@/components/layout/public-footer";
+import Header from "@/components/layout/public-header";
+import { ScrollToTop } from "@/components/layout/scroll-to-top";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import { organizationSchema } from "@/lib/seo";
 import { hasSessionCookie } from "@/lib/auth";
 

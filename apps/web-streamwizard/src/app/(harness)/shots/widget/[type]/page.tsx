@@ -4,8 +4,8 @@ import { use } from "react";
 import { OverlaySceneCanvas } from "@repo/ui/overlay";
 import { OVERLAY_WIDGET_REGISTRY } from "@/components/overlays/registry/overlay-widget-registry";
 import type { OverlayItem, RootOverlayItemType } from "@/types/overlays";
-import { ShotBridge } from "../../shot-bridge";
-import { shotScene } from "../../shot-scene";
+import { ShotBridge } from "@/components/shots/shot-bridge";
+import { shotScene } from "@/components/shots/shot-scene";
 
 /**
  * One widget, drawn exactly as the live overlay draws it.

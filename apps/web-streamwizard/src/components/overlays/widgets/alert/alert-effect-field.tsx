@@ -14,7 +14,8 @@ import {
   SelectValue,
 } from "@repo/ui";
 import { alertEffectKeyframes, alertEffectStyle, type AlertEffect } from "@repo/ui/overlay";
-import { InspectorHint, NumberField } from "@/components/overlays/inspector-fields";
+import { InspectorHint } from "@/components/overlays/editor/inspector-hint";
+import { NumberField } from "@/components/overlays/editor/number-field";
 import { alertEffectLabel, groupAlertEffects } from "./alert-widget-labels";
 
 /** What an effect gets when it is picked while its time is still 0: with no time it would not show at all. */

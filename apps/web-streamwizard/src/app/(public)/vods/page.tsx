@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo";
-import { JsonLd } from "@/components/seo/json-ld";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import { VodClipping } from "@/components/public/home/vod-clipping-section";
 import { VodsLibrarySection } from "@/components/public/vods/vods-library-section";
 import { VodsEventsSection } from "@/components/public/vods/vods-events-section";
@@ -9,7 +9,7 @@ import { VodsClipCreationSection } from "@/components/public/vods/vods-clip-crea
 import { ClipLibrarySection } from "@/components/public/vods/clip-library-section";
 import { VodsFaqSection, VODS_FAQ_ITEMS } from "@/components/public/vods/vods-faq-section";
 import { FinalCta } from "@/components/public/home/final-cta";
-import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-strip";
+import { FeatureTrustStrip } from "@/components/public/common/feature-trust-strip";
 
 /*
  * The VODs product page: hero, the landing page's band as the overview (its

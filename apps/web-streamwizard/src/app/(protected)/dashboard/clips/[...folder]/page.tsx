@@ -1,6 +1,6 @@
 import { AddClipsHelpDialog } from "@/components/clips/add-clips-help-dialog";
 import { ClipsDisplay } from "@/components/clips/clips-display";
-import { ClipsPaginationBar } from "@/components/nav/clips-pagination-bar";
+import { ClipsPaginationBar } from "@/components/clips/clips-pagination-bar";
 import { Button } from "@repo/ui/components/ui/button";
 import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";

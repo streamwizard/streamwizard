@@ -15,7 +15,7 @@ import {
 } from "@repo/ui/overlay";
 import type { CustomWidgetIframeHandle, WidgetFieldSchema } from "@repo/ui/overlay";
 import { env } from "@/lib/env";
-import { applyEditorStateWrite, useEditorStateData } from "@/components/demo/editor-state-data";
+import { applyEditorStateWrite, useEditorStateData } from "@/components/shared/demo/editor-state-data";
 
 /**
  * Reloading the document restarts the widget's script, so a slider drag waits

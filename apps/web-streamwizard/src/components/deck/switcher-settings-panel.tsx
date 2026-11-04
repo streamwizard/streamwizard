@@ -16,8 +16,8 @@ import type { AutoSwitcherConfigRow } from "@repo/supabase/queries/auto-switcher
 import { autoSwitcherFormSchema, type AutoSwitcherFormValues } from "@repo/schemas";
 import { PRESET_COPY, defaultsFrom } from "@repo/schemas";
 import { useAutoSwitcherStatus } from "@/hooks/obs/use-auto-switcher-status";
-import { SwitcherStatusStrip } from "@/components/deck/switcher-status-strip";
-import { ChoiceCards, SettingRow, SettingSection, StepperRow, SwitchRow } from "@/components/deck/setting-row";
+import { SwitcherStatusStrip } from "@/components/shared/switcher-status-strip";
+import { ChoiceCards, SettingRow, SettingSection, StepperRow, SwitchRow } from "@/components/shared/setting-row";
 
 // Sensitivity-only slice of the dashboard's AutoSwitcherForm. Same schema, same
 // server action, same defaults -- every other field round-trips untouched, so

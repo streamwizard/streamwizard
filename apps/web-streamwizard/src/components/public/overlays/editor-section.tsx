@@ -1,5 +1,5 @@
 import { SectionView } from "../analytics/section-view";
-import { CheckItem } from "../layout/check-item";
+import { CheckItem } from "@/components/public/common/check-item";
 import { Reveal } from "../home/reveal";
 import { EditorCanvasSketch } from "./editor-canvas-sketch";
 

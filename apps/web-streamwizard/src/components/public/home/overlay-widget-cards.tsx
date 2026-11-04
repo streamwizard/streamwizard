@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { productSectionLinks } from "@/lib/constant";
-import { TrackedLink } from "../analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { Bell, Clapperboard, Code2, Layers, Lock, MapPin, Timer } from "lucide-react";
 import { ClipsRotatorMini, CountdownMini, GoalsMini, SubathonMini, WalkingStatsMini } from "./overlay-widget-demos";
 import { AlertBoxSketch } from "./alert-box-sketch";

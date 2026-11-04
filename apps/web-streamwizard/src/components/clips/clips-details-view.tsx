@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipCardActions, useClipCardActions } from "@/components/cards/clip-card";
+import { ClipCardActions, useClipCardActions } from "@/components/shared/clip-card";
 import { formatClipDuration, formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {

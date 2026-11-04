@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { BarChart2, Clock, Eye, Star, Tv, UserPlus, Users } from "lucide-react";
 import { Label, Switch } from "@repo/ui";
-import { StatCard } from "@/components/stream/StatsRow/StatCard";
+import { StatCard } from "@/components/shared/stat-card";
 import { demoStats } from "./demo-data";
 import { useDemoTracking } from "../analytics/use-demo-tracking";
 

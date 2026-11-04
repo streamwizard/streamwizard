@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { FaDiscord } from "react-icons/fa";
 import { absoluteUrl, contactPageSchema } from "@/lib/seo";
-import { JsonLd } from "@/components/seo/json-ld";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import { discordInviteLink } from "@/lib/constant";
-import { PageHero } from "@/components/public/layout/page-hero";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
+import { PageHero } from "@/components/public/common/page-hero";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { TicketSection } from "@/components/public/contact/ticket-section";
 import { LinkDiscordSection } from "@/components/public/contact/link-discord-section";
 import { IdeasSection } from "@/components/public/contact/ideas-section";

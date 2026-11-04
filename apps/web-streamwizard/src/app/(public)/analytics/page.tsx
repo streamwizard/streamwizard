@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo";
-import { JsonLd } from "@/components/seo/json-ld";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import { AnalyticsDemo } from "@/components/public/home/analytics-demo";
 import { ViewerGraphSection } from "@/components/public/analytics/viewer-graph-section";
 import { BestHourSection } from "@/components/public/analytics/best-hour-section";
@@ -10,7 +10,7 @@ import { ActivityFeedSection } from "@/components/public/analytics/activity-feed
 import { VodsDoorSection } from "@/components/public/analytics/vods-door-section";
 import { AnalyticsFaqSection, ANALYTICS_FAQ_ITEMS } from "@/components/public/analytics/analytics-faq-section";
 import { FinalCta } from "@/components/public/home/final-cta";
-import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-strip";
+import { FeatureTrustStrip } from "@/components/public/common/feature-trust-strip";
 
 /*
  * The analytics product page: hero, the landing page's band as the overview

@@ -6,7 +6,7 @@ import { createAdminClient } from "@repo/supabase/next/admin";
 import { getActiveIngestNodeHosts } from "@repo/supabase/queries/ingest-nodes";
 import { IngestLiveStats } from "@/components/irl/ingest-live-stats";
 import { IngestKeysSection } from "@/components/irl/ingest-keys-section";
-import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
+import { FeatureDisabledBanner } from "@/components/shared/feature-disabled-banner";
 import { env } from "@/lib/env";
 
 export default async function IrlIngestPage() {

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { absoluteUrl, breadcrumbSchema, softwareApplicationSchema } from "@/lib/seo";
-import { JsonLd } from "@/components/seo/json-ld";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import { ClipsVods } from "@/components/public/home/clips-vods";
 import { ClipsSyncSection } from "@/components/public/clips/clips-sync-section";
 import { ClipsFoldersSection } from "@/components/public/clips/clips-folders-section";
@@ -9,7 +9,7 @@ import { OverlayRotatorSection } from "@/components/public/clips/overlay-rotator
 import { ClipsDownloadsSection } from "@/components/public/clips/clips-downloads-section";
 import { VodTimelineSection } from "@/components/public/clips/vod-timeline-section";
 import { FinalCta } from "@/components/public/home/final-cta";
-import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-strip";
+import { FeatureTrustStrip } from "@/components/public/common/feature-trust-strip";
 
 /*
  * The clips product page: hero, the landing page's library section as the

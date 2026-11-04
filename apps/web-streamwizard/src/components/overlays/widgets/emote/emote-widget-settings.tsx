@@ -14,15 +14,11 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@repo/ui";
-import {
-  EmoteCodePicker,
-  EmotePicker,
-  InspectorHint,
-  InspectorReveal,
-  InspectorSection,
-  SliderField,
-  SwitchField,
-} from "@/components/overlays/inspector-fields";
+import { EmoteCodePicker, EmotePicker } from "@/components/overlays/inspector-fields/emote-picker";
+import { InspectorHint } from "@/components/overlays/editor/inspector-hint";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
 import {
   EMOTE_ANIMATIONS,
   EMOTE_ANIMATION_LABELS,
@@ -41,7 +37,7 @@ import {
   type EmoteWidgetItemConfig,
 } from "@repo/ui/overlay";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
-import type { DemoFireRequest } from "@/components/demo/demo-fire";
+import type { DemoFireRequest } from "@/components/shared/demo/demo-fire";
 import type { OverlayInspectorAppendProps } from "../../registry/overlay-widget-registry.types";
 import { useListDraft } from "./emote-list-fields";
 

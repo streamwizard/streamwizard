@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Metadata } from "next";
 import { BarChart3, Cloud, Scissors } from "lucide-react";
 
-import TwitchLogin from "@/components/buttons/twitch-login";
+import TwitchLogin from "@/components/shared/twitch-login";
 import { discordInviteLink } from "@/lib/constant";
 import { absoluteUrl } from "@/lib/seo";
 

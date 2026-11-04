@@ -3,7 +3,7 @@
 import { trackAction } from "@/lib/track-action";
 import { Button, Separator, SidebarTrigger, useSidebar } from "@repo/ui";
 import { EditorAudioProvider, EditorPreviewValuesProvider, normalizeLabelWidgetConfig } from "@repo/ui/overlay";
-import { useEditorStateData } from "@/components/demo/editor-state-data";
+import { useEditorStateData } from "@/components/shared/demo/editor-state-data";
 import { Database } from "@repo/supabase";
 import { useDemoFire } from "@/hooks/overlays/use-demo-fire";
 import {
@@ -36,7 +36,7 @@ import {
   getCachedWidget,
   primeWidgetCache,
 } from "@/components/overlays/widgets/custom/widget-cache";
-import { DemoDeck } from "@/components/demo/demo-deck";
+import { DemoDeck } from "@/components/shared/demo/demo-deck";
 import { env } from "@/lib/env";
 import { isLegacySlug } from "@/lib/overlay-slug";
 import { asCustomWidgetConfig } from "@/types/overlays";
@@ -53,7 +53,7 @@ import { WidgetLibraryModal } from "./widget-library-modal";
 import { ShortcutsDialog } from "./shortcuts-dialog";
 import { useOverlayStore } from "@/stores/overlay-editor-store";
 import { useUnsavedChangesGuard } from "@/hooks/use-unsaved-changes-guard";
-import { UnsavedChangesDialog } from "@/components/modals/unsaved-changes-dialog";
+import { UnsavedChangesDialog } from "@/components/shared/unsaved-changes-dialog";
 import { useOverlayDraft } from "@/hooks/overlays/use-overlay-draft";
 import { RestoreDraftDialog } from "./restore-draft-dialog";
 import { centerPan, computeFitZoom } from "./canvas-zoom";

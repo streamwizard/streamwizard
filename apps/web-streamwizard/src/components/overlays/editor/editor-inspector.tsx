@@ -37,7 +37,7 @@ import { NO_CROP, getAnchor, type CropInsets } from "@repo/ui/overlay";
 import { getOverlayWidgetDefinition, isRootLayerType } from "../registry/overlay-widget-registry";
 import { AnchorPicker } from "./anchor-picker";
 import { InspectorHint } from "./inspector-hint";
-import { InspectorSection } from "./inspector-section";
+import { InspectorSection } from "@/components/shared/inspector-section";
 import { NumberField } from "./number-field";
 import { MIN_DISTRIBUTE_ITEMS } from "./selection-layout";
 import { selectedGroupId } from "./item-groups";

@@ -9,7 +9,7 @@ import type { TwitchCategory } from "@/types/twitch";
 /**
  * Category search for the deck.
  *
- * The dashboard has its own picker (`components/search-bars/twitch-category-search`),
+ * The dashboard has its own picker (`components/shared/twitch-category-search`),
  * but it is built around a fixed-height desktop dropdown with small controls;
  * this one is full-width rows at deck touch size, and shows the current pick as
  * a card rather than a line of text.

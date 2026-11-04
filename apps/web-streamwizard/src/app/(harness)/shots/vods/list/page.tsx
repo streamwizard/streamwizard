@@ -1,7 +1,7 @@
 "use client";
 
 import { VodsPageClient } from "@/components/vods/vods-page-client";
-import { SHOT_VODS } from "../fixtures";
+import { SHOT_VODS } from "@/components/shots/vod-fixtures";
 
 /**
  * The VOD list with fixture rows. /dashboard/vods calls Twitch Helix on every

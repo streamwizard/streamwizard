@@ -1,6 +1,6 @@
 "use client";
 
-import TwitchClipModal from "@/components/modals/twitch-clip-modal";
+import TwitchClipModal from "@/components/shared/twitch-clip-modal";
 import { openTwitchUrl } from "@/lib/utils/open-twitch-url";
 import { StreamEvent, StreamEventType } from "@/types/stream-events";
 import { LucideIcon, Scissors, ExternalLink, Copy, Flag, Crosshair, Play } from "lucide-react";

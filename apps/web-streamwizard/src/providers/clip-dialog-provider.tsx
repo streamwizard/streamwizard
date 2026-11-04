@@ -1,6 +1,6 @@
 "use client";
 
-import { TwitchClipDialog } from "@/components/modals/twitch-clip-dialog";
+import { TwitchClipDialog } from "@/components/clips/twitch-clip-dialog";
 import { clipsWithFolders } from "@/types/database";
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 

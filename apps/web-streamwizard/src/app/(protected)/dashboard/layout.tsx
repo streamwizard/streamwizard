@@ -1,5 +1,5 @@
-import { AppSidebar } from "@/components/nav/sidebar-app";
-import { DashboardFrame } from "@/components/dashboard-frame";
+import { AppSidebar } from "@/components/layout/sidebar-app";
+import { DashboardFrame } from "@/components/layout/dashboard-frame";
 import { SidebarProvider } from "@repo/ui/components/ui/sidebar";
 import { createClient } from "@repo/supabase/next/server";
 import { reportError } from "@repo/sentry";

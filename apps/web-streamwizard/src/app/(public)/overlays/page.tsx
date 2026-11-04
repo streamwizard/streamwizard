@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { absoluteUrl, breadcrumbSchema, faqPageSchema, softwareApplicationSchema } from "@/lib/seo";
-import { JsonLd } from "@/components/seo/json-ld";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import { OverlaysSection } from "@/components/public/home/overlays-section";
 import { AlertBoxSection } from "@/components/public/overlays/alert-box-section";
 import { ClipsRotatorSection } from "@/components/public/overlays/clips-rotator-section";
@@ -9,7 +9,7 @@ import { IrlWidgetsSection } from "@/components/public/overlays/irl-widgets-sect
 import { EditorSection } from "@/components/public/overlays/editor-section";
 import { OverlaysFaqSection, OVERLAY_FAQ_ITEMS } from "@/components/public/overlays/overlays-faq-section";
 import { FinalCta } from "@/components/public/home/final-cta";
-import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-strip";
+import { FeatureTrustStrip } from "@/components/public/common/feature-trust-strip";
 
 /*
  * Overlays, same shape as /cloud-obs: the landing page's section is the

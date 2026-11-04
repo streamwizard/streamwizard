@@ -4,8 +4,8 @@ import dynamic from "next/dynamic";
 import { Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, Skeleton } from "@repo/ui";
 import { ModalProvider } from "@/providers/modal-provider";
-import { ActivityFeedItem } from "@/components/stream/ActivityFeed/ActivityFeedItem";
-import { CategoryStatsTable } from "@/components/stream-analytics/category-stats-table";
+import { ActivityFeedItem } from "@/components/shared/activity-feed-item";
+import { CategoryStatsTable } from "@/components/shared/category-stats-table";
 import {
   demoActivityEvents,
   demoCategorySegments,
@@ -25,12 +25,12 @@ import {
  */
 
 const ViewerCountChart = dynamic(
-  () => import("@/components/stream-analytics/viewer-count-chart").then((m) => m.ViewerCountChart),
+  () => import("@/components/shared/viewer-count-chart").then((m) => m.ViewerCountChart),
   { ssr: false, loading: () => <Skeleton className="h-[340px] w-full rounded-xl" /> },
 );
 
 const HourlyViewerChart = dynamic(
-  () => import("@/components/stream-analytics/hourly-viewer-chart").then((m) => m.HourlyViewerChart),
+  () => import("@/components/shared/hourly-viewer-chart").then((m) => m.HourlyViewerChart),
   { ssr: false, loading: () => <Skeleton className="h-[380px] w-full rounded-xl" /> },
 );
 

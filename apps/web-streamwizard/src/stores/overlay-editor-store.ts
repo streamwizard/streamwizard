@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { FireMode } from "@/components/demo/demo-fire";
+import type { FireMode } from "@/components/shared/demo/demo-fire";
 import {
   getOverlayWidgetDefinition,
   isRootLayerType,

@@ -1,4 +1,4 @@
-import { TrackedLink } from "../analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { SectionView } from "../analytics/section-view";
 import { ArrowRight, Download, FolderInput, FolderTree, Search } from "lucide-react";
 import { Button } from "@repo/ui/components/ui/button";

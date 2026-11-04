@@ -1,15 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import {
-  InspectorSection,
-  MediaCardField,
-  SegmentedField,
-  SliderField,
-  SwitchField,
-  presetGeometry,
-  type SegmentedOption,
-} from "@/components/overlays/inspector-fields";
+import { InspectorSection } from "@/components/shared/inspector-section";
+import { MediaCardField } from "@/components/overlays/inspector-fields/media-card-field";
+import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import { presetGeometry } from "@/components/overlays/inspector-fields/preset-geometry";
 import {
   MEDIA_WIDGET_LIMITS,
   getDesignSize,

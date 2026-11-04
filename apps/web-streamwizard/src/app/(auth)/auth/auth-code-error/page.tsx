@@ -3,7 +3,7 @@ import Image from "next/image";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@repo/ui/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
-import { StreamWizardLogo } from "@/components/brand/streamwizard-logo";
+import { StreamWizardLogo } from "@/components/shared/streamwizard-logo";
 import { IntegrationIcon } from "@/components/settings/integration-icon";
 import { discordInviteLink } from "@/lib/constant";
 import { env } from "@/lib/env";

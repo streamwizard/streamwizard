@@ -33,17 +33,14 @@ import {
   type AdWidgetPreset,
   type FetchedAdSchedule,
 } from "@repo/ui/overlay";
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  InspectorHint,
-  InspectorReveal,
-  InspectorSection,
-  SliderField,
-  SwitchField,
-  presetGeometry,
-} from "@/components/overlays/inspector-fields";
-import { TwitchConnectButton } from "@/components/ui/twitch-scope-banner";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { InspectorHint } from "@/components/overlays/editor/inspector-hint";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import { presetGeometry } from "@/components/overlays/inspector-fields/preset-geometry";
+import { TwitchConnectButton } from "@/components/shared/twitch-scope-banner";
 import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
 import { ColorField } from "@/components/overlays/inspector-fields/color-field";
 import { OptionSelect } from "@/components/overlays/inspector-fields/option-select";

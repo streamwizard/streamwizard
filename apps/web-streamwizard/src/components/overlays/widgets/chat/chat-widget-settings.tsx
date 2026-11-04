@@ -50,18 +50,14 @@ import {
   type ChatWidgetNameColorMode,
   type ChatWidgetPreset,
 } from "@repo/ui/overlay";
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  GroupLabel,
-  InspectorHint,
-  InspectorReveal,
-  InspectorSection,
-  SegmentedField,
-  SliderField,
-  SwitchField,
-  type SegmentedOption,
-} from "@/components/overlays/inspector-fields";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { GroupLabel } from "@/components/overlays/inspector-fields/panel-labels";
+import { InspectorHint } from "@/components/overlays/editor/inspector-hint";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
 import type { OverlayItem } from "@/types/overlays";
 import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
 import { OptionSelect } from "@/components/overlays/inspector-fields/option-select";

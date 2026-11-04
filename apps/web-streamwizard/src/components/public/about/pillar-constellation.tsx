@@ -3,8 +3,8 @@
 import { useRef } from "react";
 import Image from "next/image";
 import { AnimatedBeam } from "@repo/ui";
-import { productNavItems } from "@/components/public/layout/header-nav-items";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
+import { productNavItems } from "@/components/layout/public-header-nav-items";
+import { TrackedLink } from "@/components/shared/tracked-link";
 
 /*
  * The five product pillars around the StreamWizard mark, wired up with

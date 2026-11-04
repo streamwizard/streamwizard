@@ -1,0 +1,1091 @@
+import { LegalNotice } from "@/components/legal/legal-notice";
+import { LegalTabs } from "@/components/legal/legal-tabs";
+import { LEGAL_CONTACT_EMAIL } from "@/lib/legal";
+import Link from "next/link";
+
+const LAST_UPDATED = "26 October 2026";
+const CONTACT_EMAIL = LEGAL_CONTACT_EMAIL;
+
+function NormalContent() {
+  return (
+    <>
+      <h1 className="text-4xl font-bold mb-2">Privacy Policy</h1>
+      <p className="text-sm text-muted-foreground mb-12">
+        Last updated: {LAST_UPDATED}
+      </p>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">1. Who We Are</h2>
+        <p className="text-muted-foreground leading-relaxed">
+          StreamWizard is a Twitch stream management tool that helps streamers
+          organise clips, manage overlays, and interact with their audience. The
+          service is operated by J. van der Wit and can be contacted at{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            {CONTACT_EMAIL}
+          </a>
+          . Our servers are hosted at Hetzner Online GmbH, Industriestr. 25,
+          91710 Gunzenhausen, Germany.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          2. What Data We Collect
+        </h2>
+
+        <h3 className="text-lg font-medium mb-2">
+          Account &amp; Authentication Data
+        </h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          When you sign in via Twitch OAuth we receive and store your Twitch
+          user ID, display name, email address, profile picture URL, and OAuth
+          access and refresh tokens (stored encrypted). We request only the
+          Twitch scopes required to deliver the service.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">App Content</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          We store the content you create inside StreamWizard: clip folders,
+          overlay configurations, widget settings, and related metadata.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">IRL GPS Location</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          If you open a GPS overlay on your phone and allow location access,
+          your phone&apos;s browser sends its position to our servers:
+          latitude, longitude, altitude, speed, heading, GPS accuracy and the
+          time of each reading. Nothing is read unless a GPS overlay is open
+          and you have allowed it. We pass each reading straight on to your own
+          overlays so the IRL widgets can show it. We only store readings while
+          you are live on Twitch: each one is saved with your account ID and
+          the stream it belongs to, up to about one per second while you move
+          and one every 10 seconds while you stand still. Readings from before
+          you go live or after your stream ends reach your overlays but are
+          never saved. We use the stored track to fix and improve the GPS
+          widgets, such as the distance counter. Your stored readings are
+          included when you download your data.
+        </p>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          The Walking stats overlay template can show your town and the
+          weather. To do that, the browser running your overlay sends your
+          coordinates (rounded to a few metres) directly to{" "}
+          <Link
+            href="https://osmfoundation.org/wiki/Privacy_Policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            OpenStreetMap Nominatim ↗
+          </Link>{" "}
+          for the place name and to{" "}
+          <Link
+            href="https://open-meteo.com/en/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            Open-Meteo ↗
+          </Link>{" "}
+          for the weather. These are independent services, not our
+          processors: they also see that browser&apos;s IP address, and their
+          own privacy policies apply. Turn off the location or weather field in
+          the widget&apos;s settings and those requests stop. Custom widgets
+          you add to an overlay can make the same requests.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">Discord Support Tickets</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          If you open a support ticket in the StreamWizard Discord server, we
+          save the conversation as it happens: the messages, the Discord names
+          and avatars of everyone who wrote in it, and images up to 500 KB.
+          Other attachments are kept as file name and size only. A message you
+          edit is updated; a message you delete is kept and marked as deleted,
+          so our team can still follow what the ticket was about. When the
+          ticket closes you get a copy of the conversation by Discord DM, unless
+          the server has turned that off. That DM may ask you to rate the
+          ticket; the rating and any comment you add are stored with the
+          ticket. If you send the bot a direct message, it only answers with a
+          button to open a ticket; the text of that message is not read or
+          stored. Our team uses this history to follow up on your issue and to
+          see how support is doing.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">Discord Server Moderation Log</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          To keep the StreamWizard Discord server safe, our bot keeps a log for
+          our moderators of what happens in the server: members joining,
+          leaving, being kicked, banned or timed out, nickname and role
+          changes, changes to roles and channels, and edited or deleted
+          messages. For edited and deleted messages the log includes the
+          author, the channel and the text of the message. It also records
+          your Discord name, Discord user ID and avatar, and, if you linked
+          Discord to StreamWizard, your Twitch username. The log is posted to
+          staff-only channels in the server and stored with our other
+          platform logs.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">Analytics Data</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          We use PostHog (EU region) to collect page-view events and click
+          interactions. Your IP address is discarded at ingestion and is never
+          stored with analytics events. If you accept analytics and sign in,
+          your PostHog analytics profile is linked to your StreamWizard
+          account ID so we can understand how the product is used. If you
+          decline, we count page views in cookieless mode instead: no cookies,
+          no identifiers, no profile. Only anonymous, aggregated statistics
+          that cannot be tied to you. Separately, our servers record what you
+          do with your account (for example signing in, finishing onboarding,
+          creating or saving an overlay, uploading a file, syncing clips,
+          starting Cloud OBS, or one of your overlays loading in OBS), tied to
+          your account ID under legitimate interest, whether or not you
+          accepted analytics. Those server-side events carry your
+          browser&apos;s user-agent string (so PostHog can tell them apart from
+          automated traffic) but never your IP address or location, and never
+          create an analytics profile on their own; one only exists if you
+          accepted analytics. You can object to them at any time (see Your
+          Rights below). If your browser sends the Global Privacy Control signal,
+          we treat that as declining analytics and do not show the cookie
+          banner. If you accept analytics, PostHog also records session
+          replays: how the page looked and where you clicked, so we can see
+          where people get stuck. Every piece of text and everything you type
+          is masked in your browser before anything is sent, and images and
+          video are left out. If you decline, or have not answered yet,
+          nothing is recorded. When an automated crawler (a search engine or an AI
+          assistant) reads one of our public pages, we record which page and
+          the crawler&apos;s user-agent string, never an IP address. PostHog
+          stores data on EU infrastructure.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">
+          Error &amp; Performance Data
+        </h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          We use Sentry to capture application errors. Error reports may contain
+          your account ID, browser type, operating system, and the URL where the
+          error occurred. No passwords or payment data are included in error
+          reports. If you accept analytics, Sentry may also record a session
+          replay of a visit where an error occurs, so we can see what led up
+          to a bug. Replays mask all text and block images and video. If you
+          decline, no replay is recorded.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">Server Logs</h3>
+        <p className="text-muted-foreground leading-relaxed">
+          Our servers automatically log IP addresses, request timestamps, HTTP
+          methods, and response status codes. These logs are used for security
+          monitoring and are not shared with third parties.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          3. Why We Process Your Data
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-muted-foreground border-collapse">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 pr-4 font-medium text-foreground">
+                  Purpose
+                </th>
+                <th className="text-left py-2 pr-4 font-medium text-foreground">
+                  Legal basis (GDPR Art. 6)
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              <tr>
+                <td className="py-2 pr-4">
+                  Providing the service (auth, app features)
+                </td>
+                <td className="py-2">
+                  Performance of a contract (Art. 6(1)(b))
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Showing your live GPS position on your overlays
+                </td>
+                <td className="py-2">
+                  Performance of a contract (Art. 6(1)(b))
+                </td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Storing your GPS track while you are live, to fix and improve
+                  the GPS widgets
+                </td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Product analytics &amp; improvement
+                </td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Error tracking &amp; service stability
+                </td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">Security &amp; fraud prevention</td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Support ticket history (Discord)
+                </td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  Discord server moderation log
+                </td>
+                <td className="py-2">Legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          4. Third-Party Processors
+        </h2>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          We share data with the following sub-processors, all of whom operate
+          under GDPR-compliant data processing agreements:
+        </p>
+        <ul className="space-y-4 text-muted-foreground">
+          <li>
+            <span className="font-medium text-foreground">Supabase</span> —
+            authentication and database. Data is stored in the EU region.{" "}
+            <Link
+              href="https://supabase.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            >
+              Privacy policy ↗
+            </Link>
+          </li>
+          <li>
+            <span className="font-medium text-foreground">PostHog Inc.</span> —
+            product analytics. We use PostHog&apos;s EU region
+            (eu.i.posthog.com). PostHog may process data outside the EEA
+            including in the US; this is covered by a signed Data Processing
+            Agreement, Standard Contractual Clauses (EU Commission Decision
+            2021/914), and PostHog&apos;s participation in the EU-US Data Privacy
+            Framework.{" "}
+            <Link
+              href="https://posthog.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            >
+              Privacy policy ↗
+            </Link>
+          </li>
+          <li>
+            <span className="font-medium text-foreground">Sentry</span> — error
+            and performance monitoring.{" "}
+            <Link
+              href="https://sentry.io/privacy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            >
+              Privacy policy ↗
+            </Link>
+          </li>
+          <li>
+            <span className="font-medium text-foreground">
+              Hetzner Online GmbH
+            </span>{" "}
+            — server hosting in Germany.{" "}
+            <Link
+              href="https://www.hetzner.com/legal/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            >
+              Privacy policy ↗
+            </Link>
+          </li>
+          <li>
+            <span className="font-medium text-foreground">
+              Twitch Interactive, Inc.
+            </span>{" "}
+            — OAuth authentication provider. Your use of Twitch is governed by
+            Twitch&apos;s own privacy policy.{" "}
+            <Link
+              href="https://www.twitch.tv/p/en/legal/privacy-notice/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            >
+              Privacy policy ↗
+            </Link>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">5. Data Retention</h2>
+        <ul className="space-y-2 text-muted-foreground leading-relaxed list-disc list-inside">
+          <li>
+            Account and app data: retained while your account is active. Upon
+            account closure, your account and app data are explicitly purged
+            from active systems and backups within 3 months.
+          </li>
+          <li>
+            Analytics data (PostHog): data linked to your account is deleted 12
+            months after your last activity. Anonymous, aggregated statistics
+            that cannot be tied to you may be kept for up to 7 years.
+          </li>
+          <li>Session replays (PostHog): deleted after 30 days.</li>
+          <li>
+            IRL GPS readings: deleted 30 days after they are saved, or right
+            away if you delete your account.
+          </li>
+          <li>
+            Discord support tickets: conversations, images and your feedback
+            comment are deleted 12 months after the ticket closes; the rating
+            itself stays as an anonymous number. If you delete your account
+            while your Discord account is linked, your messages in tickets are
+            anonymised, your feedback comment and images removed. Replies from
+            our team stay.
+          </li>
+          <li>
+            Discord server moderation log: the text of edited and deleted
+            messages is removed from our database after 30 days, or right away
+            if you delete your account while your Discord account is linked.
+            The rest of the entry (who, where, when) is kept. Copies already
+            posted in our staff channels stay until a moderator removes them.
+          </li>
+          <li>Error reports (Sentry): retained for 90 days.</li>
+          <li>Server logs: retained for 30 days.</li>
+        </ul>
+        <p className="text-muted-foreground leading-relaxed mt-4">
+          You can delete your account at any time from{" "}
+          <Link
+            href="/dashboard/settings/account"
+            rel="nofollow"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            Settings → Account
+          </Link>
+          , or by emailing{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            {CONTACT_EMAIL}
+          </a>
+          .
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          6. Your Rights Under GDPR
+        </h2>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          As a data subject under the GDPR you have the following rights:
+        </p>
+        <ul className="space-y-2 text-muted-foreground leading-relaxed list-disc list-inside">
+          <li>
+            <span className="text-foreground font-medium">Access</span> —
+            request a copy of the personal data we hold about you.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Rectification</span> —
+            request correction of inaccurate data.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Erasure</span> —
+            request deletion of your personal data (&quot;right to be forgotten&quot;).
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Restriction</span> —
+            request that we limit how we use your data.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Portability</span> —
+            receive your data in a structured, machine-readable format.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Objection</span> —
+            object to processing based on legitimate interest.
+          </li>
+        </ul>
+        <p className="text-muted-foreground leading-relaxed mt-4">
+          To exercise any of these rights, email{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            {CONTACT_EMAIL}
+          </a>
+          . We will respond within 30 days. You also have the right to lodge a
+          complaint with a supervisory authority — in the Netherlands, the{" "}
+          <Link
+            href="https://www.autoriteitpersoonsgegevens.nl"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            Autoriteit Persoonsgegevens ↗
+          </Link>
+          .
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          7. Cookies &amp; Browser Storage
+        </h2>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          We use the following browser storage:
+        </p>
+        <ul className="space-y-2 text-muted-foreground leading-relaxed list-disc list-inside">
+          <li>
+            <span className="text-foreground font-medium">
+              Authentication cookies
+            </span>{" "}
+            (Supabase) — strictly necessary to keep you signed in. These cannot
+            be disabled without breaking the service.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">
+              Analytics storage
+            </span>{" "}
+            (PostHog) — not a cookie: one entry in your browser&apos;s local
+            storage holding a random device ID, only written if you accept
+            analytics. It is how we recognise your browser on your next visit.
+            It never leaves your browser as a cookie; analytics requests go to
+            our own domain and carry the ID in the request body. If you
+            decline, no analytics storage or identifier is written at all.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Consent record</span>{" "}
+            (PostHog) — one entry in your browser&apos;s local storage that
+            remembers whether you accepted or declined analytics, so we do not
+            ask on every visit. Stored either way you answer; it contains no
+            identifier.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">
+              Preference cookie
+            </span>{" "}
+            (StreamWizard) — <code>sidebar_state</code> remembers whether you
+            collapsed the dashboard sidebar. Kept for 7 days, used for nothing
+            else.
+          </li>
+        </ul>
+        <p className="text-muted-foreground leading-relaxed mt-4">
+          We do not use advertising, remarketing, or third-party tracking
+          cookies, and PostHog sets no cookies of its own. We honour the
+          Global Privacy Control browser signal as a decline. Changed your
+          mind about analytics? Cookie settings in the footer clears your
+          choice and asks again.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          8. International Data Transfers
+        </h2>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          Most personal data is processed within the EU/EEA (Supabase EU region,
+          Hetzner Germany, PostHog EU region). However, some data may be
+          transferred outside the EEA:
+        </p>
+        <ul className="space-y-2 text-muted-foreground leading-relaxed list-disc list-inside mb-4">
+          <li>
+            <span className="text-foreground font-medium">
+              PostHog Inc. (US)
+            </span>{" "}
+            — covered by a signed Data Processing Agreement, EU Standard
+            Contractual Clauses (Module 2, Commission Decision 2021/914), and
+            PostHog&apos;s self-certification under the EU-US Data Privacy Framework.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">
+              Twitch Interactive, Inc. (US)
+            </span>{" "}
+            — data shared as part of OAuth authentication is governed by
+            Twitch&apos;s own Privacy Policy and their EU data transfer mechanisms.
+          </li>
+        </ul>
+        <p className="text-muted-foreground leading-relaxed">
+          We do not transfer personal data to any other countries outside the
+          EEA without adequate safeguards in place.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          9. Changes to This Policy
+        </h2>
+        <p className="text-muted-foreground leading-relaxed">
+          We may update this Privacy Policy from time to time. When we do, we
+          will update the &quot;Last updated&quot; date at the top of this page. We
+          encourage you to review this page periodically. Continued use of the
+          service after changes constitutes acceptance of the updated policy.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">10. Contact</h2>
+        <p className="text-muted-foreground leading-relaxed">
+          For any privacy-related questions or to exercise your GDPR rights,
+          contact us at{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            {CONTACT_EMAIL}
+          </a>
+          .
+        </p>
+      </section>
+
+      <LegalNotice variant="normal" />
+
+      <div className="mt-16 pt-8 border-t border-border">
+        <Link
+          href="/terms-of-service"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+        >
+          Read our Terms of Service →
+        </Link>
+      </div>
+    </>
+  );
+}
+
+function GenZContent() {
+  return (
+    <>
+      <h1 className="text-4xl font-bold mb-2">Privacy Policy 🔒</h1>
+      <p className="text-sm text-muted-foreground mb-12">
+        last updated: {LAST_UPDATED} (yes we actually update it fr)
+      </p>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          1. who even are we 👀
+        </h2>
+        <p className="text-muted-foreground leading-relaxed">
+          StreamWizard is a Twitch tool for streamers. run by J. van der Wit,
+          servers living their best life in Germany (Hetzner). hit us up at{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            {CONTACT_EMAIL}
+          </a>{" "}
+          if u got beef (or just questions, that&apos;s fine too).
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          2. what data we&apos;re holding 💾
+        </h2>
+
+        <h3 className="text-lg font-medium mb-2">ur account stuff</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          when u log in via Twitch we get ur Twitch ID, display name, email, pfp
+          URL, and OAuth tokens (encrypted, we&apos;re not animals). we only ask for
+          the scopes we actually need. no weird scope grabs.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">the stuff u make</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          clip folders, overlays, widget configs — all that. it&apos;s yours. we just
+          hold it for you.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">ur GPS (IRL) 📍</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          open a GPS overlay on ur phone and allow location, and ur phone
+          sends us where it is: latitude, longitude, altitude, speed, heading,
+          GPS accuracy and the time. no GPS overlay open or no permission =
+          nothing. we pass it straight to ur own overlays so the IRL widgets
+          work. we only save it while ur live on Twitch, tagged with ur
+          account ID and that stream, about once a second while u move and
+          once every 10 seconds while u stand still. before u go live or after
+          u end the stream? ur overlays still get it, we save nothing. we use
+          the saved track to fix and improve the GPS widgets (like the distance
+          counter). it&apos;s in ur data download too.
+        </p>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          the Walking stats template can show ur town and the weather. for
+          that, the browser running ur overlay sends ur coordinates (rounded
+          to a few metres) straight to{" "}
+          <Link
+            href="https://osmfoundation.org/wiki/Privacy_Policy"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            OpenStreetMap Nominatim ↗
+          </Link>{" "}
+          (place name) and{" "}
+          <Link
+            href="https://open-meteo.com/en/terms"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            Open-Meteo ↗
+          </Link>{" "}
+          (weather). they&apos;re their own thing, not us: they see that
+          browser&apos;s IP too, and their privacy policies apply. turn off
+          the location or weather field in the widget settings and those
+          requests stop. custom widgets u add can do the same.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">support tickets 🎫</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          opened a ticket in our Discord? we save the chat as it happens: the
+          messages, everyone&apos;s Discord name + avatar, and images up to 500
+          KB. anything bigger (or not an image) we only keep the file name and
+          size. edits update, deletes stay but get a &quot;deleted&quot; tag.
+          when it closes you get the chat as a file in your DMs, and maybe a
+          &quot;rate this ticket&quot; ask. the stars + your comment get saved
+          with the ticket. DM the bot and all it does is hand you a button to
+          open a ticket, we don&apos;t read or keep the DM. it&apos;s so we can
+          actually help if the same bug comes back, and see how we&apos;re
+          doing.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">our Discord mod log 🛡️</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          our bot keeps a log for the mods of what happens in the server: who
+          joins, leaves, gets kicked, banned or timed out, nickname and role
+          changes, channel and role changes, and messages that get edited or
+          deleted. for edits and deletes that includes the message text, who
+          wrote it and where. it saves ur Discord name, ID and avatar, plus ur
+          Twitch name if u linked Discord. it goes to staff-only channels and
+          our own logs. nobody else sees it.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">analytics</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          we use PostHog to see what pages people visit + where they click. ur
+          IP gets dropped at the door, never stored with analytics. once ur
+          logged in we link ur PostHog profile to ur account ID so we can
+          understand what&apos;s cooked vs what slaps. EU region only. said no to
+          cookies? then it&apos;s cookieless mode: no cookies, no profile, ur just
+          an anonymous +1 in the page stats. nothing traces back to u.
+          separate thing: our servers log what u do with ur account (logging
+          in, finishing onboarding, making or saving an overlay, uploading
+          stuff, syncing clips, starting Cloud OBS, an overlay of urs loading
+          in OBS) so we know what actually gets used. that happens whether u
+          said yes to cookies or not. it&apos;s tied to ur account ID, never ur IP
+          or location, and it doesn&apos;t build a profile on its own. no yes to
+          cookies = no profile, period. don&apos;t want it? u can object, see ur
+          rights below. said yes to cookies? PostHog also records session
+          replays: what the page looked like + where u clicked, so we can see
+          where people get stuck. all text and everything u type is masked
+          before it leaves ur browser, images + video left out. said no (or
+          didn&apos;t answer yet)? nothing gets recorded. bots too: when a crawler (Google, ChatGPT and friends)
+          reads a public page we note which page + which bot. no IP.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">when things go wrong 💀</h3>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          Sentry catches app errors. it might grab ur account ID, browser type,
+          OS, and the URL that caused the chaos. no passwords, no payment info.
+          just vibes and stack traces. said yes to cookies? Sentry might also
+          record a replay of a visit where something breaks so we can see how
+          the bug happened. all text is masked, images + video blocked. said
+          no? zero replays.
+        </p>
+
+        <h3 className="text-lg font-medium mb-2">server logs</h3>
+        <p className="text-muted-foreground leading-relaxed">
+          our servers log IP addresses, request timestamps, HTTP methods, and
+          status codes. purely for security. not shared. not sold. not vibed
+          with by randos.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          3. why we even process ur data 🤔
+        </h2>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-muted-foreground border-collapse">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left py-2 pr-4 font-medium text-foreground">
+                  what we&apos;re doing
+                </th>
+                <th className="text-left py-2 pr-4 font-medium text-foreground">
+                  legal reason (GDPR Art. 6)
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              <tr>
+                <td className="py-2 pr-4">
+                  running the actual service (auth, features)
+                </td>
+                <td className="py-2">contract performance (Art. 6(1)(b))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  showing ur live GPS on ur overlays
+                </td>
+                <td className="py-2">contract performance (Art. 6(1)(b))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  saving ur GPS track while live, to fix the GPS widgets
+                </td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  analytics so we stop shipping L updates
+                </td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">
+                  catching errors before they go viral
+                </td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">keeping the bad guys out</td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">remembering ur support tickets</td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4">keeping our Discord safe (mod log)</td>
+                <td className="py-2">legitimate interest (Art. 6(1)(f))</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          4. companies we fw (the trusted ones) 🤝
+        </h2>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          we share data with these guys. all GDPR-compliant, all have proper
+          data processing agreements. no randos. no sketchy stuff.
+        </p>
+        <ul className="space-y-4 text-muted-foreground">
+          <li>
+            <span className="font-medium text-foreground">Supabase</span> — auth
+            + database, chilling in the EU.{" "}
+            <Link
+              href="https://supabase.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            >
+              their privacy policy ↗
+            </Link>
+          </li>
+          <li>
+            <span className="font-medium text-foreground">PostHog Inc.</span> —
+            analytics. EU region (eu.i.posthog.com). they can
+            process data in the US but it&apos;s covered by a signed DPA, Standard
+            Contractual Clauses, and the EU-US Data Privacy Framework. we did
+            the paperwork fr.{" "}
+            <Link
+              href="https://posthog.com/privacy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            >
+              their privacy policy ↗
+            </Link>
+          </li>
+          <li>
+            <span className="font-medium text-foreground">Sentry</span> —
+            catches errors so we know when things go boom.{" "}
+            <Link
+              href="https://sentry.io/privacy/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            >
+              their privacy policy ↗
+            </Link>
+          </li>
+          <li>
+            <span className="font-medium text-foreground">
+              Hetzner Online GmbH
+            </span>{" "}
+            — our German server landlords.{" "}
+            <Link
+              href="https://www.hetzner.com/legal/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            >
+              their privacy policy ↗
+            </Link>
+          </li>
+          <li>
+            <span className="font-medium text-foreground">
+              Twitch Interactive, Inc.
+            </span>{" "}
+            — OAuth login provider. ur Twitch usage is covered by Twitch&apos;s own
+            policy, not ours.{" "}
+            <Link
+              href="https://www.twitch.tv/p/en/legal/privacy-notice/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+            >
+              their privacy policy ↗
+            </Link>
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          5. how long we keep ur stuff ⏳
+        </h2>
+        <ul className="space-y-2 text-muted-foreground leading-relaxed list-disc list-inside">
+          <li>
+            account + app data: kept while ur account&apos;s alive. when u close
+            it, we purge it from active systems AND backups within 3 months.
+            actually gone, not vibes.
+          </li>
+          <li>
+            analytics (PostHog): anything tied to ur account gets deleted 12
+            months after u last showed up. anonymous aggregate stats that
+            can&apos;t trace back to u can stick around up to 7 years.
+          </li>
+          <li>session replays (PostHog): gone after 30 days.</li>
+          <li>
+            GPS readings: gone 30 days after we save them, or straight away if
+            u delete ur account.
+          </li>
+          <li>
+            support tickets: chats, images + ur feedback comment get deleted 12
+            months after the ticket closes (the star rating stays, as a
+            number). delete ur account with Discord linked and ur ticket
+            messages get anonymised, ur comment + images removed. our replies
+            stay.
+          </li>
+          <li>
+            Discord mod log: message text gets wiped from our database after
+            30 days, or straight away if u delete ur account with Discord
+            linked. the who/where/when stays. posts already in the staff
+            channels stay until a mod cleans them up.
+          </li>
+          <li>error reports (Sentry): 90 days.</li>
+          <li>server logs: 30 days.</li>
+        </ul>
+        <p className="text-muted-foreground leading-relaxed mt-4">
+          want out? hit{" "}
+          <Link
+            href="/dashboard/settings/account"
+            rel="nofollow"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            Settings → Account
+          </Link>{" "}
+          and delete ur account, or email{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            {CONTACT_EMAIL}
+          </a>
+          . we&apos;ll sort it. no cap.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          6. ur rights (they&apos;re real, use them) ✊
+        </h2>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          GDPR gives u actual rights and we have to honour them. here&apos;s the
+          list:
+        </p>
+        <ul className="space-y-2 text-muted-foreground leading-relaxed list-disc list-inside">
+          <li>
+            <span className="text-foreground font-medium">Access</span> — ask us
+            what data we have on u.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Rectification</span> —
+            something wrong? we fix it.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Erasure</span> — the
+            right to be forgotten. it&apos;s a thing. use it.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Restriction</span> —
+            tell us to chill on how we use ur data.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Portability</span> —
+            get ur data in a format u can actually use.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Objection</span> —
+            disagree with how we&apos;re processing ur data? say so.
+          </li>
+        </ul>
+        <p className="text-muted-foreground leading-relaxed mt-4">
+          email{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            {CONTACT_EMAIL}
+          </a>{" "}
+          to use any of these. we respond within 30 days. if we&apos;re being
+          cooked about it u can also complain to the{" "}
+          <Link
+            href="https://www.autoriteitpersoonsgegevens.nl"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            Autoriteit Persoonsgegevens ↗
+          </Link>{" "}
+          (Dutch data watchdog, they&apos;re based).
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          7. cookies &amp; browser storage 🍪
+        </h2>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          here&apos;s what&apos;s living in ur browser:
+        </p>
+        <ul className="space-y-2 text-muted-foreground leading-relaxed list-disc list-inside">
+          <li>
+            <span className="text-foreground font-medium">auth cookies</span>{" "}
+            (Supabase) — keeps u logged in. strictly necessary. turning these
+            off breaks everything and that&apos;s on u.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">
+              analytics storage
+            </span>{" "}
+            (PostHog) — not even a cookie. one local storage entry with a
+            random device ID, only if u accepted. that&apos;s how we know
+            it&apos;s u again next time. stays in ur browser, the ID travels in
+            the request body to our own domain. declined? zero analytics
+            storage, zero identifiers. fr.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">consent record</span>{" "}
+            (PostHog) — one local storage entry that remembers if u said yes or
+            no, so we don&apos;t ask every single time. saved either way. no
+            identifier in it.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">preference cookie</span>{" "}
+            (StreamWizard) — <code>sidebar_state</code> remembers if u collapsed
+            the dashboard sidebar. 7 days. that&apos;s literally it.
+          </li>
+        </ul>
+        <p className="text-muted-foreground leading-relaxed mt-4">
+          zero advertising cookies. zero remarketing. zero PostHog cookies,
+          period. zero selling ur attention to randos. that&apos;s loser
+          behavior ngl. wanna un-consent? cookie settings in the footer, one
+          click, we ask again.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          8. data leaving the EU 🌍
+        </h2>
+        <p className="text-muted-foreground leading-relaxed mb-4">
+          mostly ur data stays in the EU. but two companies process stuff in the
+          US:
+        </p>
+        <ul className="space-y-2 text-muted-foreground leading-relaxed list-disc list-inside mb-4">
+          <li>
+            <span className="text-foreground font-medium">PostHog (US)</span> —
+            covered by signed DPA + EU Standard Contractual Clauses (Module 2,
+            Decision 2021/914) + EU-US Data Privacy Framework. we did the legal
+            homework.
+          </li>
+          <li>
+            <span className="text-foreground font-medium">Twitch (US)</span> —
+            their OAuth, their rules. covered by Twitch&apos;s own EU transfer
+            mechanisms.
+          </li>
+        </ul>
+        <p className="text-muted-foreground leading-relaxed">
+          nobody else gets ur data outside the EEA. fr.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          9. if this policy changes 📝
+        </h2>
+        <p className="text-muted-foreground leading-relaxed">
+          we&apos;ll update the date at the top. check back sometimes.
+          continuing to use StreamWizard after changes means u accept the new
+          version. we&apos;ll try to flag big changes tho, we&apos;re not sneaky
+          about it.
+        </p>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-semibold mt-10 mb-4">
+          10. questions? concerns? just vibing? 💬
+        </h2>
+        <p className="text-muted-foreground leading-relaxed">
+          slide into our inbox at{" "}
+          <a
+            href={`mailto:${CONTACT_EMAIL}`}
+            className="text-foreground underline underline-offset-4 hover:text-muted-foreground transition-colors"
+          >
+            {CONTACT_EMAIL}
+          </a>
+          . we actually read these.
+        </p>
+      </section>
+
+      <LegalNotice variant="genz" />
+
+      <div className="mt-16 pt-8 border-t border-border">
+        <Link
+          href="/terms-of-service"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+        >
+          Read our Terms of Service →
+        </Link>
+      </div>
+    </>
+  );
+}
+
+export function PrivacyPolicyContent() {
+  return <LegalTabs normal={<NormalContent />} genz={<GenZContent />} />;
+}

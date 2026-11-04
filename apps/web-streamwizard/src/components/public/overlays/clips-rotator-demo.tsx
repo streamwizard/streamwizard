@@ -30,7 +30,7 @@ import {
   type ClipTransitionMode,
   type TimeWindowPreset,
 } from "@repo/ui/overlay";
-import { InspectorReveal, InspectorSection } from "@/components/overlays/editor/inspector-section";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
 import { createPlaybackOrder, seededRng } from "@/lib/clip-playback-order";
 import { formatDate } from "@/lib/format";
 import { clipAlt, type RealClipCard } from "../home/demo-data";

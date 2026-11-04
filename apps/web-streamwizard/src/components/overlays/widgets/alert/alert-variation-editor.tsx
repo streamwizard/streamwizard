@@ -11,7 +11,8 @@ import {
   type AlertPresentation,
   type AlertVariation,
 } from "@repo/ui/overlay";
-import { InspectorSection, SliderField } from "@/components/overlays/inspector-fields";
+import { InspectorSection } from "@/components/shared/inspector-section";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
 import { DraftInput } from "./alert-draft-input";
 import { AlertPresentationFields, type AlertFieldGroup } from "./alert-presentation-fields";
 import { AlertVariationConditions } from "./alert-variation-conditions";

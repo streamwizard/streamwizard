@@ -1,4 +1,4 @@
-import { UserPreferencesForm } from "@/components/forms/user-preferences-form";
+import { UserPreferencesForm } from "@/components/settings/user-preferences-form";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@repo/ui/components/ui/card";
 import { getAuthContext } from "@/lib/auth";
 import { getDiscordIntegrationByUserId, getUserPreferences } from "@repo/supabase/queries/user";

@@ -48,7 +48,7 @@ import {
   getRootOverlayWidgetDefinition,
   isRootLayerType,
 } from "../registry/overlay-widget-registry";
-import { DISPLAY_FIELD_LABELS } from "../widgets/clips/nested-fields";
+import { DISPLAY_FIELD_LABELS } from "@/components/overlays/widgets/clips/nested-fields/registry";
 import {
   ClipFieldContextMenu,
   GroupContextMenu,

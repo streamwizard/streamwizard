@@ -21,8 +21,8 @@ import {
   SlidersHorizontal,
   Square,
 } from "lucide-react";
-import { ChoiceCards, SettingSection, StepperRow, SwitchRow } from "@/components/deck/setting-row";
-import { SwitcherStatusStrip } from "@/components/deck/switcher-status-strip";
+import { ChoiceCards, SettingSection, StepperRow, SwitchRow } from "@/components/shared/setting-row";
+import { SwitcherStatusStrip } from "@/components/shared/switcher-status-strip";
 import {
   AMBIENT_CHAT,
   BADGES,

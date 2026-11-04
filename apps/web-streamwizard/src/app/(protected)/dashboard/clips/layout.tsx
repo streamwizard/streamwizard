@@ -1,5 +1,5 @@
 import { ClipsViewSelector } from "@/components/clips/clips-view-selector";
-import TwitchClipSearchForm from "@/components/forms/twitch-clip-filter-form";
+import TwitchClipSearchForm from "@/components/clips/twitch-clip-filter-form";
 import { ClipDialogProvider } from "@/providers/clip-dialog-provider";
 import { Suspense } from "react";
 

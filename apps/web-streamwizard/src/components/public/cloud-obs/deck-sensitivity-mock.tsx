@@ -3,8 +3,8 @@
 import { PRESET_COPY } from "@repo/schemas/auto-switcher-constants";
 import type { AutoSwitcherSensitivityPreset, AutoSwitcherStatus } from "@repo/schemas";
 import { Badge } from "@repo/ui";
-import { ChoiceCards, SettingSection, StepperRow, SwitchRow } from "@/components/deck/setting-row";
-import { SwitcherStatusStrip } from "@/components/deck/switcher-status-strip";
+import { ChoiceCards, SettingSection, StepperRow, SwitchRow } from "@/components/shared/setting-row";
+import { SwitcherStatusStrip } from "@/components/shared/switcher-status-strip";
 import { useSwitcherDemo, useSwitcherViewport } from "./switcher-demo-store";
 
 /*

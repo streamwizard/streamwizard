@@ -5,7 +5,7 @@ import { discordInviteLink, docsLink } from "@/lib/constant";
 import { FREE_TIER_SUMMARY, PAID_PLAN_SUMMARY, PRICING_FAQ_LINK } from "@/lib/pricing";
 import { Reveal } from "./reveal";
 import { FaqAccordion } from "./faq-accordion";
-import { TrackedLink } from "../analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { SectionView } from "../analytics/section-view";
 
 /*

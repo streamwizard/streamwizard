@@ -1,7 +1,7 @@
 "use client";
 
 import type { IngestStreamKey } from "@/actions/ingest-keys";
-import { FeatureDisabledBanner } from "@/components/ui/feature-disabled-banner";
+import { FeatureDisabledBanner } from "@/components/shared/feature-disabled-banner";
 import { ObsSetupStepper } from "@/components/irl/obs-setup-stepper";
 import { ObsVncPreview } from "@/components/irl/obs-vnc-preview";
 import { ALERTS_SCENE_NAME } from "@/lib/obs-irl";

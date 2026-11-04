@@ -19,7 +19,8 @@ import {
   type AlertEventType,
   type AlertVariation,
 } from "@repo/ui/overlay";
-import { InspectorSection, SwitchField } from "@/components/overlays/inspector-fields";
+import { InspectorSection } from "@/components/shared/inspector-section";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
 
 export interface AlertVariationListProps {
   /** Scopes the row ids, so two alert boxes never share one. */

@@ -14,7 +14,7 @@ import {
   fireDemoEvent,
   type DemoFireRequest,
   type FireMode,
-} from "@/components/demo/demo-fire";
+} from "@/components/shared/demo/demo-fire";
 import { alertSkipMessage } from "@/components/overlays/widgets/alert/alert-test-feedback";
 
 export interface UseDemoFire {

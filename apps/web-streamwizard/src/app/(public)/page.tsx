@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { JsonLd } from "@/components/seo/json-ld";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import { absoluteUrl, faqPageSchema, softwareApplicationSchema, webSiteSchema } from "@/lib/seo";
 import { Hero } from "@/components/public/home/hero";
 import { TrustBand } from "@/components/public/home/trust-band";

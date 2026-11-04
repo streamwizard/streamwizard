@@ -25,7 +25,9 @@ import {
   type AlertVariationOperator,
   type AlertVariationParameter,
 } from "@repo/ui/overlay";
-import { InspectorHint, NumberField, SegmentedField } from "@/components/overlays/inspector-fields";
+import { InspectorHint } from "@/components/overlays/editor/inspector-hint";
+import { NumberField } from "@/components/overlays/editor/number-field";
+import { SegmentedField } from "@/components/overlays/inspector-fields/segmented-field";
 import { DraftInput } from "./alert-draft-input";
 import { alertAmountTitle, alertParameterLabel, OPERATOR_LABELS } from "./alert-widget-labels";
 

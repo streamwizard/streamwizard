@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { Button } from "@repo/ui/components/ui/button";
 import { ResetAnalyticsIdentity } from "@/components/public/analytics/reset-analytics-identity";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import type { Metadata } from "next";
 
 // Offboarding page: reachable, but nothing here belongs in a search result.

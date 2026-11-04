@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { contentIndexPath, type ContentType } from "@repo/cms";
-import { JsonLd } from "@/components/seo/json-ld";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import {
   facetsFor,
   filterCards,

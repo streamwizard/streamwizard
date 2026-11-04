@@ -7,7 +7,7 @@ import { Badge } from "@repo/ui";
 import { Input } from "@repo/ui";
 import { Label } from "@repo/ui";
 import { TwitchPlayerComponent, type TwitchPlayer } from "@/components/vods/twitch-player";
-import { VideoTimeline } from "./timeline";
+import { VideoTimeline } from "./timeline/video-timeline";
 import { StreamEventsPanel } from "./stream-events-panel";
 import { EventTypeFilter } from "./event-type-filter";
 import { useVideoPlayerStore } from "@/stores/video-dialog-store";

@@ -1,10 +1,8 @@
 "use client";
 
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  TextAlignSelect,
-} from "@/components/overlays/inspector-fields";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { TextAlignSelect } from "@/components/overlays/inspector-fields/text-align-select";
 import { ColorPicker, Label, Slider, Switch } from "@repo/ui";
 import {
   Select,

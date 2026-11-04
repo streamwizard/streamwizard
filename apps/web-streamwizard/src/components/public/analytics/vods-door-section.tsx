@@ -2,7 +2,7 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@repo/ui/components/ui/button";
 import { productSectionLinks } from "@/lib/constant";
 import { SectionView } from "./section-view";
-import { TrackedLink } from "./tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { Reveal } from "../home/reveal";
 import { DoorSpikeBeat } from "./door-spike-beat";
 

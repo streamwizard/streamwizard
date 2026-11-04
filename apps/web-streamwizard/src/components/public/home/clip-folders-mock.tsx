@@ -77,10 +77,10 @@ import { clipAlt, type RealClipCard } from "./demo-data";
  * Everything visible is the product's own component (@repo/ui primitives, the
  * dashboard's date range picker, sonner toasts) arranged the way the dashboard
  * arranges it, and the copy is lifted from the same files: the filter form
- * (components/forms/twitch-clip-filter-form.tsx), the clip menu and card
- * (components/cards/clip-card.tsx), the details table
+ * (components/clips/twitch-clip-filter-form.tsx), the clip menu and card
+ * (components/shared/clip-card.tsx), the details table
  * (components/clips/clips-details-view.tsx), the sidebar tree
- * (components/nav/sidebar-clips.tsx) and the folder dialogs
+ * (components/layout/sidebar-clips.tsx) and the folder dialogs
  * (providers/clip-folder-dialog-provider.tsx).
  *
  * The plumbing is where it differs: the dashboard keeps filter state in the URL
@@ -98,7 +98,7 @@ import { clipAlt, type RealClipCard } from "./demo-data";
 
 /* Keeps react-day-picker and date-fns out of the landing page's first load. */
 const DatePickerWithPresets = dynamic(
-  () => import("@/components/date-picker").then((mod) => mod.DatePickerWithPresets),
+  () => import("@/components/shared/date-picker").then((mod) => mod.DatePickerWithPresets),
   { ssr: false },
 );
 

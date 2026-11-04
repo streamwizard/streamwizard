@@ -41,19 +41,15 @@ import {
   type GoalWidgetOnEnd,
   type GoalWidgetPreset,
 } from "@repo/ui/overlay";
-import {
-  FontWeightSelect,
-  GoogleFontSelect,
-  InspectorReveal,
-  InspectorSection,
-  MediaField,
-  SegmentedField,
-  SliderField,
-  SwitchField,
-  type SegmentedOption,
-  presetGeometry,
-} from "@/components/overlays/inspector-fields";
-import { TwitchConnectButton } from "@/components/ui/twitch-scope-banner";
+import { FontWeightSelect } from "@/components/overlays/inspector-fields/font-weight-select";
+import { GoogleFontSelect } from "@/components/overlays/inspector-fields/google-font-select";
+import { InspectorReveal, InspectorSection } from "@/components/shared/inspector-section";
+import { MediaField } from "@/components/overlays/inspector-fields/media-field";
+import { SegmentedField, type SegmentedOption } from "@/components/overlays/inspector-fields/segmented-field";
+import { SliderField } from "@/components/overlays/inspector-fields/slider-field";
+import { SwitchField } from "@/components/overlays/inspector-fields/switch-field";
+import { presetGeometry } from "@/components/overlays/inspector-fields/preset-geometry";
+import { TwitchConnectButton } from "@/components/shared/twitch-scope-banner";
 import type { OverlayInspectorAppendProps } from "@/components/overlays/registry/overlay-widget-registry.types";
 import { ColorField } from "@/components/overlays/inspector-fields/color-field";
 import { OptionSelect } from "@/components/overlays/inspector-fields/option-select";

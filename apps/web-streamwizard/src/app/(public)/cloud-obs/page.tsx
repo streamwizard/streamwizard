@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { absoluteUrl, breadcrumbSchema, faqPageSchema } from "@/lib/seo";
-import { JsonLd } from "@/components/seo/json-ld";
+import { JsonLd } from "@/components/public/seo/json-ld";
 import { CloudObsShowcase } from "@/components/public/home/cloud-obs-showcase";
 import { IngestSection } from "@/components/public/cloud-obs/ingest-section";
 import { AutoSwitcherSection } from "@/components/public/cloud-obs/auto-switcher-section";
@@ -12,7 +12,7 @@ import { IrlOverlaysSection } from "@/components/public/cloud-obs/irl-overlays-s
 import { CloudObsFaqSection, CLOUD_OBS_FAQ_ITEMS } from "@/components/public/cloud-obs/cloud-obs-faq-section";
 import { BetaNote } from "@/components/public/cloud-obs/beta-note";
 import { FinalCta } from "@/components/public/home/final-cta";
-import { FeatureTrustStrip } from "@/components/public/layout/feature-trust-strip";
+import { FeatureTrustStrip } from "@/components/public/common/feature-trust-strip";
 
 /*
  * Cloud OBS for IRL streamers. The showcase is the summary, shared with the

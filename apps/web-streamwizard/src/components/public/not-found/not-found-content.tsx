@@ -1,5 +1,5 @@
 import { Button } from "@repo/ui/components/ui/button";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { docsLink } from "@/lib/constant";
 
 /**

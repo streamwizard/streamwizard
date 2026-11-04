@@ -1,4 +1,4 @@
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { SectionView } from "@/components/public/analytics/section-view";
 import { discordInviteLink, docsLink } from "@/lib/constant";
 import { Reveal } from "@/components/public/home/reveal";

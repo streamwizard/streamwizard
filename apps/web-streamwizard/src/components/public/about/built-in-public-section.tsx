@@ -1,6 +1,6 @@
 import { SectionView } from "@/components/public/analytics/section-view";
 import { Reveal } from "@/components/public/home/reveal";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { discordInviteLink, githubLink } from "@/lib/constant";
 import { BuildLog } from "./build-log";
 

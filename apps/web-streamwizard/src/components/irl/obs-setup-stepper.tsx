@@ -7,7 +7,7 @@ import { Button, Card, CardContent, Input, Label } from "@repo/ui";
 import { createIngestKey, type IngestStreamKey } from "@/actions/ingest-keys";
 import type { Scene, SceneItem } from "@repo/obs-web";
 import { ObsAlertsSources } from "@/components/irl/obs-alerts-sources";
-import { TwitchConnectButton } from "@/components/ui/twitch-scope-banner";
+import { TwitchConnectButton } from "@/components/shared/twitch-scope-banner";
 import { cn } from "@repo/ui";
 
 interface ObsSetupStepperProps {

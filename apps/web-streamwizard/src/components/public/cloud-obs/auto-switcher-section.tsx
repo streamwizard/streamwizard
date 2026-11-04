@@ -1,5 +1,5 @@
 import { SectionView } from "@/components/public/analytics/section-view";
-import { CheckItem } from "@/components/public/layout/check-item";
+import { CheckItem } from "@/components/public/common/check-item";
 import { Reveal } from "@/components/public/home/reveal";
 import { DeckSensitivityMock } from "./deck-sensitivity-mock";
 import { SwitcherFlow } from "./switcher-flow";

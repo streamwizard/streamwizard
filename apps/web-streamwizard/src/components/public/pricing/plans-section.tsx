@@ -1,9 +1,9 @@
 import { FaDiscord } from "react-icons/fa";
-import TwitchLogin from "@/components/buttons/twitch-login";
+import TwitchLogin from "@/components/shared/twitch-login";
 import { SectionView } from "@/components/public/analytics/section-view";
-import { TrackedLink } from "@/components/public/analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { RevealGroup } from "@/components/public/home/reveal";
-import { CheckItem } from "@/components/public/layout/check-item";
+import { CheckItem } from "@/components/public/common/check-item";
 import { discordInviteLink, productLinks } from "@/lib/constant";
 import { FREE_MEDIA_QUOTA_MB, FREE_TIER_SUMMARY, PAID_PLAN_SUMMARY } from "@/lib/pricing";
 

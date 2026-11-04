@@ -1,4 +1,4 @@
-import { TrackedLink } from "../analytics/tracked-link";
+import { TrackedLink } from "@/components/shared/tracked-link";
 import { SectionView } from "../analytics/section-view";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@repo/ui/components/ui/button";
@@ -8,7 +8,7 @@ import { DeckMock } from "./deck-mock";
 import { ObsWindowMock } from "./obs-window-mock";
 import { ObsDemoProvider } from "./obs-demo-store";
 import { HandoffArrow } from "./handoff-arrow";
-import { CheckItem } from "../layout/check-item";
+import { CheckItem } from "@/components/public/common/check-item";
 import { env } from "@/lib/env";
 
 /*
