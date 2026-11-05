@@ -153,7 +153,6 @@
       "version": "0.1.0",
       "dependencies": {
         "@dagrejs/dagre": "^3.0.0",
-        "@novnc/novnc": "^1.7.0",
         "@repo/alerting": "workspace:*",
         "@repo/backups": "workspace:*",
         "@repo/cms": "workspace:*",
@@ -264,7 +263,6 @@
         "@emmetio/expand-abbreviation": "^0.7.3",
         "@hookform/resolvers": "^5.2.2",
         "@monaco-editor/react": "^4.7.0",
-        "@novnc/novnc": "^1.7.0",
         "@repo/cms": "workspace:*",
         "@repo/discord-api": "workspace:*",
         "@repo/node-token": "workspace:*",
@@ -453,7 +451,6 @@
       "version": "0.0.0",
       "dependencies": {
         "@hookform/resolvers": "^5.2.2",
-        "@novnc/novnc": "^1.7.0",
         "@repo/schemas": "workspace:*",
         "@repo/ui": "workspace:*",
         "lucide-react": "^1.14.0",
@@ -1180,8 +1177,6 @@
     "@nodelib/fs.walk": ["@nodelib/fs.walk@1.2.8", "", { "dependencies": { "@nodelib/fs.scandir": "2.1.5", "fastq": "^1.6.0" } }, "sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg=="],
 
     "@nolyfill/is-core-module": ["@nolyfill/is-core-module@1.0.39", "", {}, "sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA=="],
-
-    "@novnc/novnc": ["@novnc/novnc@1.7.0", "", {}, "sha512-ucEJOx4T2avIRCleodk7YobZj5O2Ga2AeLfQ69A/yjG9HHba2+PDgwSkN3FttrmG+70ZGx21sElNFouK13RzyA=="],
 
     "@openapi-contrib/openapi-schema-to-json-schema": ["@openapi-contrib/openapi-schema-to-json-schema@3.2.0", "", { "dependencies": { "fast-deep-equal": "^3.1.3" } }, "sha512-Gj6C0JwCr8arj0sYuslWXUBSP/KnUlEGnPW4qxlXvAl543oaNQgMgIgkQUA6vs5BCCvwTEiL8m/wdWzfl4UvSw=="],
 

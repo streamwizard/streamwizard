@@ -2,22 +2,21 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CloudOBSViewer } from "@repo/obs-web";
+import { CloudOBSViewer, mintSelkiesViewerUrl } from "@repo/obs-web";
 import { getInstanceNodeApiUrlAction } from "@/actions/nodes/obs";
-import { mintNoVncConnection } from "@repo/obs-web";
 import { adminNodeToken } from "@/lib/nodes/node-token";
 
-// Admin's noVNC proxy lives at /admin/instances/:id/novnc on the node's API
-// (vs. the end-user /instances/:id/novnc), gated by the admin's own role
+// Admin's Selkies viewer lives at /admin/instances/:id/selkies/ on the node's
+// API (vs. the end-user /instances/:id/selkies/), gated by the admin's own role
 // instead of instance ownership. A fresh single-use ws-ticket rides on the
-// socket; the ticket-mint POST carries a 60-second admin node token, never the
-// admin's session (see lib/nodes/node-token.ts).
+// entry URL; the ticket-mint POST carries a 60-second admin node token, never
+// the admin's session (see lib/nodes/node-token.ts).
 //
 // apiUrl must come from a trusted lookup, never the query string -- the URL
-// gets a ticket appended and dialed as a WebSocket. It is resolved from the
+// gets a ticket appended and this window navigates to it. It is resolved from the
 // instance (getInstanceNodeApiUrlAction), the same row that sets the node
 // token's aud, so the token only ever goes to the node that hosts it.
-export function AdminVncView() {
+export function AdminObsDesktopView() {
   const searchParams = useSearchParams();
   const nodeId = searchParams.get("nodeId");
   const instanceId = searchParams.get("instanceId");
@@ -41,11 +40,11 @@ export function AdminVncView() {
     });
   }, [nodeId, instanceId]);
 
-  const getConnection = useCallback(() => {
+  const getViewerUrl = useCallback(() => {
     if (!apiUrl || !instanceId) return Promise.reject(new Error("Instance not ready."));
-    return mintNoVncConnection(apiUrl, {
+    return mintSelkiesViewerUrl(apiUrl, {
       ticketPath: `/admin/instances/${instanceId}/ws-ticket`,
-      wsPath: `/admin/instances/${instanceId}/novnc`,
+      viewerPath: `/admin/instances/${instanceId}/selkies/`,
       getToken: () => adminNodeToken({ instanceId }, "admin:ws-ticket"),
     });
   }, [apiUrl, instanceId]);
@@ -64,7 +63,7 @@ export function AdminVncView() {
             </button>
           </div>
         ) : apiUrl && instanceId ? (
-          <CloudOBSViewer getConnection={getConnection} />
+          <CloudOBSViewer getViewerUrl={getViewerUrl} />
         ) : (
           <p className="p-4 text-sm text-white/60">Resolving node…</p>
         )}

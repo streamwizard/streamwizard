@@ -1,9 +1,9 @@
 import { requireAdminSession } from "@/lib/auth/admin-session";
 
-// /vnc lives outside the (monitor) group so the popup gets a bare full-viewport
+// /obs-desktop lives outside the (monitor) group so the popup gets a bare full-viewport
 // page without the sidebar chrome — which also means it misses that layout's
 // admin gate, so the same check runs here.
-export default async function VncLayout({ children }: { children: React.ReactNode }) {
+export default async function ObsDesktopLayout({ children }: { children: React.ReactNode }) {
   await requireAdminSession();
   return children;
 }

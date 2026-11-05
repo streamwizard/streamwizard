@@ -18,7 +18,7 @@ interface DesktopOnlyProps {
 
 /**
  * For the few tools that need a pointer and room: the message builder, the
- * topology graph, the live feed, VNC. Below 768px it shows a short notice
+ * topology graph, the live feed, the OBS desktop. Below 768px it shows a short notice
  * instead. The tool isn't mounted there at all, so it opens no socket in the
  * background; the notice itself is plain CSS, so it never flashes on a desktop.
  */

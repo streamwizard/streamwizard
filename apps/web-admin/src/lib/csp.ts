@@ -60,7 +60,7 @@ export function buildCsp(nonce: string): string {
       // Cloud OBS / ingest nodes are provisioned dynamically as
       // *.streamwizard.org subdomains: the node/instance pages fetch
       // obs-instance-manager REST (start/stop/remove, ws-tickets) and open
-      // WebSockets (metrics stream, noVNC, obsws) straight from the browser.
+      // WebSockets (metrics stream, obsws) straight from the browser.
       // Single-label names only — Cloudflare Universal SSL covers one level.
       "wss://*.streamwizard.org",
       "https://*.streamwizard.org",

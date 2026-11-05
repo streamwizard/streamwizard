@@ -279,7 +279,7 @@ export function ObsWindowMock({ cdnUrl }: { cdnUrl: string }) {
         </span>
       </div>
 
-      {/* noVNC window title bar */}
+      {/* Viewer window title bar */}
       <div style={{ background: SURFACE }}>
         <div className="flex h-6 items-center bg-black px-2 font-mono text-[10px] text-white/90">Cloud OBS</div>
         <div className="h-5" style={{ background: CHROME }} />

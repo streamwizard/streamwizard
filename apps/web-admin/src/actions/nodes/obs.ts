@@ -44,7 +44,7 @@ function signAdminNodeToken(userId: string, nodeId: string, scope: NodeTokenScop
 }
 
 // For the admin pages that call a node from the browser (ws-tickets for the
-// metrics stream, noVNC and obsws). The node is resolved server-side: from
+// metrics stream, Selkies viewer and obsws). The node is resolved server-side: from
 // the instance when there is one, so the token always names the node that
 // actually hosts it.
 export async function mintAdminNodeTokenAction(
@@ -174,7 +174,7 @@ export async function listNodeInstancesAction(nodeId: string): Promise<DataResul
   }
 }
 
-// The API URL of the node that hosts an instance, for the VNC viewer. It comes
+// The API URL of the node that hosts an instance, for the OBS desktop viewer. It comes
 // from the same instance row that sets the admin node token's aud
 // (mintAdminNodeTokenAction), so the token is only ever sent to the node it
 // names. Never from the query string: the URL gets a ticket appended and is

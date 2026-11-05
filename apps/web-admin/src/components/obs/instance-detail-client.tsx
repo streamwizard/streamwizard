@@ -39,7 +39,7 @@ interface InstanceActionsProps {
   instance: { id: string; container_name: string; status: string };
 }
 
-/** The buttons in the instance page header: Start or Stop, VNC and Remove.
+/** The buttons in the instance page header: Start or Stop, Desktop and Remove.
  *  They sit above the tabs so they stay in reach on every one of them. */
 export function InstanceActions({ nodeId, apiUrl, instance }: InstanceActionsProps) {
   const router = useRouter();
@@ -73,14 +73,14 @@ export function InstanceActions({ nodeId, apiUrl, instance }: InstanceActionsPro
     }
   };
 
-  const openVnc = () => {
+  const openDesktop = () => {
     if (!apiUrl) return;
     const params = new URLSearchParams({
       nodeId,
       instanceId: instance.id,
       name: instance.container_name,
     });
-    window.open(`/vnc?${params.toString()}`, `vnc-${instance.id}`, "width=1280,height=800");
+    window.open(`/obs-desktop?${params.toString()}`, `obs-desktop-${instance.id}`, "width=1280,height=800");
   };
 
   return (
@@ -88,9 +88,9 @@ export function InstanceActions({ nodeId, apiUrl, instance }: InstanceActionsPro
       <Button size="sm" variant="outline" className="h-11 min-w-20 md:h-8" disabled={!canToggle || isPending || !apiUrl} onClick={handleToggle}>
         {isPending ? "Working…" : isRunning ? "Stop" : "Start"}
       </Button>
-      {/* VNC needs a desktop: the button is not shown below 768px. */}
-      <Button size="sm" variant="outline" className="hidden md:inline-flex" disabled={!isRunning || !apiUrl} onClick={openVnc}>
-        VNC
+      {/* The OBS desktop needs a desktop screen: the button is not shown below 768px. */}
+      <Button size="sm" variant="outline" className="hidden md:inline-flex" disabled={!isRunning || !apiUrl} onClick={openDesktop}>
+        Desktop
       </Button>
       <Button
         size="sm"

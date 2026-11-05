@@ -12,7 +12,8 @@ type ObsInstanceUpdate = Database["public"]["Tables"]["obs_instances"]["Update"]
 
 /**
  * Columns an OBS node may see. Everything except the encrypted OBS WebSocket
- * and VNC password columns: a node gets those passwords in plaintext, for its
+ * and VNC password columns (the VNC password is now the Selkies viewer's
+ * basic-auth password): a node gets those passwords in plaintext, for its
  * own instances only, from GET /api/obs-nodes/instances/:id/secrets, and never
  * holds TOKEN_ENCRYPTION_KEY. Every node-facing and user-facing read below uses
  * this list instead of "*", so a new secret column stays hidden until it's

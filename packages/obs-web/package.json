@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
-    "@novnc/novnc": "^1.7.0",
     "@repo/schemas": "workspace:*",
     "@repo/ui": "workspace:*",
     "lucide-react": "^1.14.0",
